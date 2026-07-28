@@ -125,7 +125,7 @@ function Harness({
               setBlockerPrefill((prev) => ({
                 signal: (prev?.signal ?? 0) + 1,
                 productId: products[0]?.id ?? "",
-                stageIds: [],
+                stageNames: [],
                 severity: "blocked",
               }))
             }
@@ -393,7 +393,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     await user.type(screen.getByLabelText(/^Impact \*/i), "Impact");
     await user.type(screen.getByLabelText(/^Mitigation \*/i), "Mitigation");
 
-    // Dev is the only mine-owned stage — computeInitialStageIds auto-selects it.
+    // Dev is the only mine-owned stage — computeInitialStageNames auto-selects it.
     // StageMultiSelect renders "Applied automatically" (non-interactive) for
     // a single stage, so there is no checkbox to click.
 
@@ -488,7 +488,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       id: "r-dev",
       productId: "crm",
       productName: "CRM Platform",
-      stageIds: ["Dev"],
+      stageNames: ["Dev"],
       severity: "blocked",
       text: "Dev environment down",
       impact: "Cannot ship",
@@ -513,8 +513,8 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     ).toBeInTheDocument();
   });
 
-  it("a covers-all (stageIds: []) risk does NOT tick the pill (root-cause guard)", () => {
-    // A covers-all risk (empty stageIds) must never count an untouched stage.
+  it("a covers-all (stageNames: []) risk does NOT tick the pill (root-cause guard)", () => {
+    // A covers-all risk (empty stageNames) must never count an untouched stage.
     // Dev stays uncounted → 1/2.
     const product = buildProduct({
       stages: [
@@ -536,7 +536,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       id: "r-all",
       productId: "crm",
       productName: "CRM Platform",
-      stageIds: [],
+      stageNames: [],
       severity: "blocked",
       text: "Product-wide blocker",
       impact: "Broad",
@@ -556,7 +556,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     id: "r-dev",
     productId: "crm",
     productName: "CRM Platform",
-    stageIds: ["Dev"],
+    stageNames: ["Dev"],
     severity: "at-risk",
     text: "OAuth regression",
     impact: "Delay",

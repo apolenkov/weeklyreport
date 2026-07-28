@@ -51,7 +51,7 @@ const section: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
     {
       id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
@@ -62,7 +62,7 @@ const section: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -71,7 +71,7 @@ const section: ReportSectionReadModel = {
 };
 
 function writeItemsFrom(source: ReportSectionReadModel) {
-  return source.items.map((item) => ({ ...item, stageIds: ["Development"] }));
+  return source.items.map((item) => ({ ...item, stageNames: ["Development"] }));
 }
 
 function createRepository(

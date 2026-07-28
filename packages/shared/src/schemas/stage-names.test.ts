@@ -11,21 +11,21 @@ describe("splitStageNames", () => {
 });
 
 describe("riskCoversStage", () => {
-  it("matches Dev and Development through populated stageIds", () => {
-    expect(riskCoversStage({ stageIds: ["Dev"] }, "Development")).toBe(true);
-    expect(riskCoversStage({ stageIds: ["Development"] }, "Dev")).toBe(true);
+  it("matches Dev and Development through populated stageNames", () => {
+    expect(riskCoversStage({ stageNames: ["Dev"] }, "Development")).toBe(true);
+    expect(riskCoversStage({ stageNames: ["Development"] }, "Dev")).toBe(true);
   });
 
-  it("keeps populated stageIds scoped to their named stages", () => {
-    expect(riskCoversStage({ stageIds: ["Testing"] }, "Testing")).toBe(true);
-    expect(riskCoversStage({ stageIds: ["Testing"] }, "Development")).toBe(
+  it("keeps populated stageNames scoped to their named stages", () => {
+    expect(riskCoversStage({ stageNames: ["Testing"] }, "Testing")).toBe(true);
+    expect(riskCoversStage({ stageNames: ["Testing"] }, "Development")).toBe(
       false,
     );
   });
 
-  it("treats empty stageIds as covering every owned stage", () => {
-    expect(riskCoversStage({ stageIds: [] }, "Development")).toBe(true);
-    expect(riskCoversStage({ stageIds: [] }, "Testing")).toBe(true);
+  it("treats empty stageNames as covering every owned stage", () => {
+    expect(riskCoversStage({ stageNames: [] }, "Development")).toBe(true);
+    expect(riskCoversStage({ stageNames: [] }, "Testing")).toBe(true);
   });
 
   it("falls back to comma- or semicolon-separated legacy stage names", () => {

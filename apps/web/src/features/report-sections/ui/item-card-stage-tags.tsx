@@ -18,7 +18,7 @@ export type ItemCardStageTags =
 const MAX_VISIBLE_STAGE_TAGS = 2;
 
 export function deriveItemCardStageTags(
-  item: Pick<KanbanItem, "stageIds" | "stageName" | "activityId">,
+  item: Pick<KanbanItem, "stageNames" | "stageName" | "activityId">,
 ): ItemCardStageTags {
   // Activities carry no SDLC stage by design — never the "No stage set" warning.
   if (item.activityId != null) {
@@ -27,8 +27,8 @@ export function deriveItemCardStageTags(
     };
   }
   const rawStageTags =
-    item.stageIds && item.stageIds.length > 0
-      ? item.stageIds
+    item.stageNames && item.stageNames.length > 0
+      ? item.stageNames
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(item.stageName);
   // Heal legacy short "Dev" at render so the card matches seeded canonical names.

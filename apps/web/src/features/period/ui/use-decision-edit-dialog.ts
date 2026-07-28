@@ -31,7 +31,11 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
 
   const seed = resolveDecisionFormSeed(decision, args.defaultOwner);
   const fields = useDecisionFormState(seed, () => initialDecisionParent(args));
-  const model = deriveDecisionDialogModel(args, fields.parent, fields.stageIds);
+  const model = deriveDecisionDialogModel(
+    args,
+    fields.parent,
+    fields.stageNames,
+  );
 
   function handleSave() {
     runDecisionSave({

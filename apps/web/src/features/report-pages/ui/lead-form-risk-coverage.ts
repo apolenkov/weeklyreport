@@ -54,8 +54,8 @@ export function annotateOwnRiskCoverage(
         (r) =>
           r.productId === product.id &&
           r.text.trim().length > 0 &&
-          Array.isArray(r.stageIds) &&
-          r.stageIds.length > 0 &&
+          Array.isArray(r.stageNames) &&
+          r.stageNames.length > 0 &&
           riskCoversStage(r, stage.stageName),
       );
       return stage.coveredByOwnRisk === covered

@@ -26,8 +26,8 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validRisk = () => ({
@@ -37,8 +37,8 @@ const validRisk = () => ({
   mitigation: "Hire contractor",
   // severity is required (no default) on the write contract.
   severity: "at-risk" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validDecision = () => ({
@@ -48,8 +48,8 @@ const validDecision = () => ({
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validDraft = () => ({
@@ -205,7 +205,7 @@ describe("record write schema — XOR parent + conditional stage", () => {
     text: "Rotate on-call",
     tag: "ops",
     workflowStatus: "in_progress" as const,
-    stageIds: [] as string[],
+    stageNames: [] as string[],
   });
 
   it("accepts a product-parented item (product + >=1 stage)", () => {
@@ -227,7 +227,7 @@ describe("record write schema — XOR parent + conditional stage", () => {
   });
 
   it("rejects an activity-parented item that carries a stage", () => {
-    const withStage = { ...activityItem(), stageIds: ["Development"] };
+    const withStage = { ...activityItem(), stageNames: ["Development"] };
     expect(itemWriteSchema.safeParse(withStage).success).toBe(false);
   });
 
@@ -238,11 +238,12 @@ describe("record write schema — XOR parent + conditional stage", () => {
       impact: "Slower response",
       mitigation: "Rotate weekly",
       severity: "at-risk" as const,
-      stageIds: [] as string[],
+      stageNames: [] as string[],
     };
     expect(riskWriteSchema.safeParse(activityRisk).success).toBe(true);
     expect(
-      riskWriteSchema.safeParse({ ...activityRisk, stageIds: ["Dev"] }).success,
+      riskWriteSchema.safeParse({ ...activityRisk, stageNames: ["Dev"] })
+        .success,
     ).toBe(false);
   });
 
@@ -252,7 +253,7 @@ describe("record write schema — XOR parent + conditional stage", () => {
       text: "Adopt weekly rotation",
       owner: "Alice",
       impact: "Fairer load",
-      stageIds: [] as string[],
+      stageNames: [] as string[],
     };
     expect(decisionWriteSchema.safeParse(activityDecision).success).toBe(true);
     expect(
@@ -289,7 +290,7 @@ describe("validateRecordActivityIds", () => {
           ...validItem(),
           projectId: undefined,
           activityId,
-          stageIds: [],
+          stageNames: [],
         },
       ],
     }) as unknown as DraftSaveInput;

@@ -10,7 +10,7 @@ export type ItemAlarm = "at-risk" | "blocked" | null;
 
 export interface AlarmItem {
   readonly productId: string;
-  readonly stageIds?: readonly string[];
+  readonly stageNames?: readonly string[];
   /** @deprecated legacy single-stage label; read only to heal old rows. */
   readonly stageName?: string;
   readonly status:
@@ -24,7 +24,7 @@ export interface AlarmItem {
 
 export interface AlarmRisk {
   readonly productId: string;
-  readonly stageIds?: readonly string[];
+  readonly stageNames?: readonly string[];
   readonly stageName?: string;
   readonly severity: "at-risk" | "blocked";
   // Empty (placeholder) risk text covers nothing.
@@ -32,7 +32,7 @@ export interface AlarmRisk {
 }
 
 function itemStageNames(item: AlarmItem): readonly string[] {
-  if (item.stageIds && item.stageIds.length > 0) return item.stageIds;
+  if (item.stageNames && item.stageNames.length > 0) return item.stageNames;
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
   return splitStageNames(item.stageName);
 }

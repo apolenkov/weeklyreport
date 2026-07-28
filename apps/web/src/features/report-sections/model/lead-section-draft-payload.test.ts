@@ -44,7 +44,7 @@ function makeRisk(impact: string) {
     impact,
     mitigation: "Mitigate it",
     severity: "at-risk" as const,
-    stageIds: [],
+    stageNames: [],
   };
 }
 
@@ -59,7 +59,7 @@ function makeDecision(overrides: Record<string, string>) {
     impact: "Delivery impact",
     deadline: null,
     resolvedAt: null,
-    stageIds: [],
+    stageNames: [],
     ...overrides,
   };
 }
@@ -77,7 +77,7 @@ function makeItem(
     tag: "delivery",
     workflowStatus: "in_progress",
     carriedOver: false,
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     priorityRank: 1,
     pausedReason: null,
     ...overrides,

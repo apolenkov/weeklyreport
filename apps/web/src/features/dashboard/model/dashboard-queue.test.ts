@@ -130,7 +130,7 @@ describe("dashboard lead queue", () => {
                 workflowStatus: "done",
                 carriedOver: false,
                 projectId: null,
-                stageIds: [],
+                stageNames: [],
               },
             ],
           },

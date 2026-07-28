@@ -75,13 +75,13 @@ export function deriveItemStatus(item: {
 // lead card. Only in-progress is eligible; at-risk amber stays deferred on head.
 export function applyBlockedRiskOverlay(
   base: ItemStatus,
-  parent: { projectId: string; stageIds?: readonly string[] | null },
+  parent: { projectId: string; stageNames?: readonly string[] | null },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {
   const covered = deriveItemAlarmFromRisks(
     {
       productId: parent.projectId,
-      stageIds: parent.stageIds ?? undefined,
+      stageNames: parent.stageNames ?? undefined,
       status: base,
     },
     alarmRisks,
@@ -95,7 +95,7 @@ export function deriveHeadItemStatus(
     workflowStatus: ItemWorkflowStatus | null;
     type: ItemType;
     projectId: string;
-    stageIds?: readonly string[] | null;
+    stageNames?: readonly string[] | null;
   },
   alarmRisks: readonly AlarmRisk[],
 ): ItemStatus {

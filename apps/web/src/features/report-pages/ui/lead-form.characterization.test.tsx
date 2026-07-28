@@ -354,7 +354,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
           impact: "The date will slip",
           mitigation: "Reduce scope",
           severity: "blocked" as const,
-          stageIds: [],
+          stageNames: [],
         },
       ],
     };

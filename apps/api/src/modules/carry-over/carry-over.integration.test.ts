@@ -308,7 +308,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(persisted.stableId).not.toBe(persisted.id);
   });
 
-  it("carries an unresolved decision with product + stageIds without aborting", async () => {
+  it("carries an unresolved decision with product + stageNames without aborting", async () => {
     const targetReport = await prisma.report.create({
       data: {
         id: TEST_IDS.targetReport,
@@ -370,7 +370,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           deadline: null,
           impact: "Needs escalation",
           resolvedAt: null,
-          stageIds: ["Development", "Design"],
+          stageNames: ["Development", "Design"],
           productId: testData.project.id,
         },
       ],
@@ -462,7 +462,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           workflowStatus: "in_progress" as const,
           carriedOver: true,
           priorityRank: 2,
-          stageIds: ["Design", "Build"],
+          stageNames: ["Design", "Build"],
         },
       ],
       risks: [],

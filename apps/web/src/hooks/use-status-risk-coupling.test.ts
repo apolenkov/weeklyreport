@@ -20,7 +20,7 @@ function makeProduct(
 function makeRisk(
   id: string,
   productId: string,
-  stageIds?: string[],
+  stageNames?: string[],
 ): RiskEntry {
   return {
     id,
@@ -30,7 +30,7 @@ function makeRisk(
     text: "risk",
     impact: "impact",
     mitigation: "mitigation",
-    stageIds,
+    stageNames,
   };
 }
 
@@ -52,14 +52,14 @@ describe("computeCoupling", () => {
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
 
-  it("includes blocked product with undefined stageIds", () => {
+  it("includes blocked product with undefined stageNames", () => {
     const products = [makeProduct("p1", "blocked")];
-    const risks = [makeRisk("r1", "p1")]; // no stageIds
+    const risks = [makeRisk("r1", "p1")]; // no stageNames
     const result = computeCoupling(products, risks);
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual(["r1"]);
   });
 
-  it("does not flag risk row that has stageIds", () => {
+  it("does not flag risk row that has stageNames", () => {
     const products = [makeProduct("p1", "at-risk")];
     const risks = [makeRisk("r1", "p1", ["planning"])];
     const result = computeCoupling(products, risks);
@@ -100,7 +100,7 @@ describe("computeCoupling", () => {
       { ...makeRisk("r2", "p1"), text: "", mitigation: "" }, // empty, not committed
     ];
     const result = computeCoupling(products, committedRisks(allRisks));
-    // Only r1 remains after filter; r1 has stageIds → no coupling violation
+    // Only r1 remains after filter; r1 has stageNames → no coupling violation
     expect(expectDefined(result[0]).riskRowsWithoutStages).toEqual([]);
     expect(validateCoupling(result).missing).toEqual([]);
   });

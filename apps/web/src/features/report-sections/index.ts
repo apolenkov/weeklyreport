@@ -51,12 +51,12 @@ export {
   STATUS_CONFIG,
 } from "./model/stage-chip-config";
 export {
-  computeEffectiveStageIds,
+  computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
 } from "./model/stage-ownership";
 export {
-  canonicalStageIds,
   canonicalStageName,
+  canonicalStageNames,
   riskCoversStage,
   splitStageNames,
 } from "./model/stage-tags";

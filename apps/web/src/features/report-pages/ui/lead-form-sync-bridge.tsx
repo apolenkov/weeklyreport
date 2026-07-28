@@ -41,7 +41,7 @@ const COVERED_STAGE_HINT_MESSAGE =
 export interface RiskPrefillRequest {
   signal: number;
   productId: string;
-  stageIds: string[];
+  stageNames: string[];
   severity: "at-risk" | "blocked";
   // Activity-pill raise — XOR with the product fields, which are "" and [] here.
   activityId?: string;

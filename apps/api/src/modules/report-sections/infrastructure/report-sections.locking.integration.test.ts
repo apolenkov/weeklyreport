@@ -159,7 +159,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
             tag: "feature",
             workflowStatus: "in_progress" as const,
             carriedOver: false,
-            stageIds: ["Development"],
+            stageNames: ["Development"],
           },
         ],
       };
@@ -206,7 +206,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: false,
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         })),
       };
       const saved = await repo.saveSection(twoItems, twoItems.version);
@@ -243,7 +243,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         tag: "feature",
         workflowStatus: "in_progress" as const,
         carriedOver: false,
-        stageIds: ["Development"],
+        stageNames: ["Development"],
       });
 
       const created = await service.saveDraft({

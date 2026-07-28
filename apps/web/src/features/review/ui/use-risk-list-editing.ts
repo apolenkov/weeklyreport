@@ -16,14 +16,14 @@ type SavedRisk = RiskEntry & { impact: string; mitigation: string };
 export interface RiskAddPrefill {
   signal: number;
   productId: string;
-  stageIds: string[];
+  stageNames: string[];
   severity: "at-risk" | "blocked";
   // Pill raise — preselects the activity parent.
   activityId?: string;
 }
 
 interface RiskCreatePrefill {
-  readonly stageIds?: string[];
+  readonly stageNames?: string[];
   readonly severity?: "at-risk" | "blocked";
 }
 
@@ -83,7 +83,7 @@ function useRiskRaisePrefill(
     if (!addPrefill || addPrefill.signal === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addPrefill SIGNAL prop (an event delivered via props); state updates are the event's handler
     setCreatePrefill({
-      stageIds: addPrefill.stageIds,
+      stageNames: addPrefill.stageNames,
       severity: addPrefill.severity,
     });
     openCreate({

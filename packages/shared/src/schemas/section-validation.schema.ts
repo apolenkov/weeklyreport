@@ -173,14 +173,14 @@ export function validateActivityStatuses(
 interface StageOwnershipRow {
   readonly stableId?: string;
   readonly projectId: string | undefined;
-  readonly stageIds: readonly string[];
+  readonly stageNames: readonly string[];
 }
 
 const toRow = (
   stableId: string | undefined,
   projectId: string | undefined,
-  stageIds: readonly string[] | undefined,
-): StageOwnershipRow => ({ stableId, projectId, stageIds: stageIds ?? [] });
+  stageNames: readonly string[] | undefined,
+): StageOwnershipRow => ({ stableId, projectId, stageNames: stageNames ?? [] });
 
 // The stage names the SECTION AUTHOR owns on a row's product. `ownedStages` is
 // server-authoritative (StageAssignment-derived); an undefined projectId (a
@@ -200,8 +200,8 @@ function authorOwnedStages(
 
 // Order-independent canonical key for a row's stage set (Dev↔Development folded),
 // so a grandfather match compares stage CONTENT, not element order.
-const canonicalStageKey = (stageIds: readonly string[]): string =>
-  [...stageIds]
+const canonicalStageKey = (stageNames: readonly string[]): string =>
+  [...stageNames]
     .map(normalizeStageName)
     .sort((a, b) => a.localeCompare(b))
     .join("|");
@@ -216,7 +216,8 @@ function isGrandfathered(
   return (
     serverRow !== undefined &&
     serverRow.projectId === row.projectId &&
-    canonicalStageKey(serverRow.stageIds) === canonicalStageKey(row.stageIds)
+    canonicalStageKey(serverRow.stageNames) ===
+      canonicalStageKey(row.stageNames)
   );
 }
 
@@ -248,7 +249,7 @@ function validateStageRows(
   return payloadRows.flatMap((row) => {
     if (isGrandfathered(row, serverByStableId)) return [];
     const owned = authorOwnedStages(section, row.projectId);
-    const offending = row.stageIds.find(
+    const offending = row.stageNames.find(
       (stage) => !owned.some((own) => stageNamesMatch(own, stage)),
     );
     return offending === undefined
@@ -276,28 +277,28 @@ export function validateStageOwnership(
   return [
     ...validateStageRows(
       input.items.map((r) =>
-        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.projectId ?? undefined, r.stageNames),
       ),
       section.items.map((r) =>
-        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.projectId ?? undefined, r.stageNames),
       ),
       section,
     ),
     ...validateStageRows(
       input.risks.map((r) =>
-        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.projectId ?? undefined, r.stageNames),
       ),
       section.risks.map((r) =>
-        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.projectId ?? undefined, r.stageNames),
       ),
       section,
     ),
     ...validateStageRows(
       input.decisions.map((r) =>
-        toRow(r.stableId, r.productId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.productId ?? undefined, r.stageNames),
       ),
       section.decisions.map((r) =>
-        toRow(r.stableId, r.productId ?? undefined, r.stageIds),
+        toRow(r.stableId, r.productId ?? undefined, r.stageNames),
       ),
       section,
     ),

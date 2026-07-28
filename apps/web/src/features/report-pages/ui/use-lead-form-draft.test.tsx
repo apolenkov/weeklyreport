@@ -97,21 +97,21 @@ describe("useLeadFormDraft merge routing", () => {
     act(() => {
       result.current.routeToBlocker({
         productId: PROJECT_ID,
-        stageIds: [],
+        stageNames: [],
         severity: "blocked",
       });
     });
     expect(result.current.pendingRiskPrefill).toEqual({
       signal: 1,
       productId: PROJECT_ID,
-      stageIds: [],
+      stageNames: [],
       severity: "blocked",
     });
 
     act(() => {
       result.current.routeToBlocker({
         productId: "",
-        stageIds: [],
+        stageNames: [],
         severity: "at-risk",
         activityId: ACTIVITY_ID,
       });
@@ -119,7 +119,7 @@ describe("useLeadFormDraft merge routing", () => {
     expect(result.current.pendingRiskPrefill).toEqual({
       signal: 2,
       productId: "",
-      stageIds: [],
+      stageNames: [],
       severity: "at-risk",
       activityId: ACTIVITY_ID,
     });

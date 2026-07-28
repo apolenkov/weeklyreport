@@ -165,7 +165,7 @@ describe("mapLeadProducts", () => {
           impact: "blocks release",
           mitigation: "restore infra",
           severity: "blocked",
-          stageIds: ["Testing"],
+          stageNames: ["Testing"],
         },
       ],
     });
@@ -283,7 +283,7 @@ describe("mapLeadProducts", () => {
           impact: "Delays release",
           mitigation: "Escalate to PM",
           severity: "at-risk",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -319,7 +319,7 @@ describe("mapLeadProducts", () => {
           impact: "Schedule",
           mitigation: "Replan",
           severity: "at-risk",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
         {
           projectId: PROJECT_A,
@@ -327,7 +327,7 @@ describe("mapLeadProducts", () => {
           impact: "Work stopped",
           mitigation: "Escalate",
           severity: "blocked",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -338,8 +338,8 @@ describe("mapLeadProducts", () => {
     expect(devStage?.status).toBe("blocked");
   });
 
-  it("a stage-less (empty stageIds) risk floors every owned chip", () => {
-    // Empty/undefined stageIds means "covers all stages" — the same rule the
+  it("a stage-less (empty stageNames) risk floors every owned chip", () => {
+    // Empty/undefined stageNames means "covers all stages" — the same rule the
     // live form applies. The read model must not floor nothing on `[]` and
     // diverge silently from the form.
     const section = baseSection({
@@ -371,7 +371,7 @@ describe("mapLeadProducts", () => {
           impact: "Everything stalls",
           mitigation: "Escalate",
           severity: "blocked",
-          stageIds: [],
+          stageNames: [],
         },
       ],
     });
@@ -417,7 +417,7 @@ describe("mapLeadProducts", () => {
           impact: "Everything stalls",
           mitigation: "Escalate",
           severity: "blocked",
-          stageIds: [],
+          stageNames: [],
         },
       ],
     });
@@ -426,7 +426,7 @@ describe("mapLeadProducts", () => {
       (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("empty");
-    // A covers-all (stageIds: []) legacy risk does NOT explicitly name the
+    // A covers-all (stageNames: []) legacy risk does NOT explicitly name the
     // stage, so it must NOT mark it covered-by-own-risk (else the counter would
     // inflate for every empty stage).
     expect(devStage?.coveredByOwnRisk ?? false).toBe(false);
@@ -466,7 +466,7 @@ describe("mapLeadProducts", () => {
           impact: "Cannot ship",
           mitigation: "Escalate to ops",
           severity: "blocked",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -506,7 +506,7 @@ describe("mapLeadProducts", () => {
           impact: "tbd",
           mitigation: "tbd",
           severity: "blocked",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -543,7 +543,7 @@ describe("mapLeadProducts", () => {
           tag: "tag",
           workflowStatus: "in_progress",
           carriedOver: false,
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });
@@ -593,7 +593,7 @@ describe("mapLeadProducts", () => {
           impact: "Blocks delivery",
           mitigation: "Rescheduling",
           severity: "blocked",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
     });

@@ -47,8 +47,8 @@ function makePayload(text = "first"): DraftSavePayload {
         tag: "tag",
         workflowStatus: "in_progress",
         carriedOver: false,
-        // stageIds required on write.
-        stageIds: ["Development"],
+        // stageNames required on write.
+        stageNames: ["Development"],
       },
     ],
     risks: [],

@@ -31,7 +31,7 @@ function makeRisk(
     id: "r1",
     productId: "crm",
     productName: "CRM Platform",
-    stageIds: ["Dev"],
+    stageNames: ["Dev"],
     text: "risk",
     impact: "",
     mitigation: "",
@@ -81,7 +81,7 @@ describe("applyRiskSeverityFloor — characterization grid", () => {
   it("a non-covering risk (different stage) does not floor the chip", () => {
     const result = applyRiskSeverityFloor(
       [makeProduct("on-track")],
-      [makeRisk({ severity: "blocked", stageIds: ["Testing"] })],
+      [makeRisk({ severity: "blocked", stageNames: ["Testing"] })],
     );
     expect(result[0]?.stages[0]?.status).toBe("on-track");
   });

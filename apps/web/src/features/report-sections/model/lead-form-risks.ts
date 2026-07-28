@@ -29,7 +29,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
           ? { activityId: r.activityId, activityName }
           : {}),
         // Stage array from DB; legacy rows fall back to undefined.
-        stageIds: r.stageIds,
+        stageNames: r.stageNames,
         severity: r.severity,
         text: r.risk,
         impact: r.impact,

@@ -8,9 +8,9 @@ import {
   reportSectionStatusSchema,
   riskSeveritySchema,
   safeText,
-  stageIdsField,
+  stageNamesField,
   trafficLightStatusSchema,
-  writeStageIdsField,
+  writeStageNamesField,
 } from "./report-primitives.schema";
 import {
   recordCommentViewSchema,
@@ -84,12 +84,12 @@ export const itemInputSchema = z.object({
   // Optional so legacy paused rows and non-paused items still round-trip; UI requires when pausing.
   pausedReason: safeText().nullable().optional(),
   // Length-tolerant; write superRefine requires stages for product parents only.
-  stageIds: writeStageIdsField,
+  stageNames: writeStageNamesField,
 });
 
 // Read path tolerates stage-less legacy rows; write path rejects them.
 export const itemReadModelSchema = itemInputSchema.extend({
-  stageIds: stageIdsField,
+  stageNames: stageNamesField,
   // Read-only: optional so the write path and legacy fixtures never carry it,
   // and mergeSection drops it on parse rather than round-tripping it back.
   comments: z.array(recordCommentViewSchema).optional(),
@@ -108,14 +108,14 @@ export const riskInputSchema = z.object({
   severity: riskSeveritySchema,
   // Length-tolerant; the riskWriteSchema superRefine enforces the conditional
   // stage rule (≥1 for a product parent, none for an activity parent).
-  stageIds: writeStageIdsField,
+  stageNames: writeStageNamesField,
 });
 
 // The read model stays tolerant of stage-less legacy rows so the card can render
 // "No stage set" warning instead of crashing the page. Only the write
 // path (draft-save/submit via `riskInputSchema`) rejects them.
 const riskReadModelSchema = riskInputSchema.extend({
-  stageIds: stageIdsField,
+  stageNames: stageNamesField,
   // Reviewer comments anchored to this risk follow the same read-only path as
   // the item read model.
   comments: z.array(recordCommentViewSchema).optional(),
@@ -132,7 +132,7 @@ export const decisionInputSchema = z.object({
   resolvedAt: z.coerce.date().nullable().optional(),
   // Length-tolerant; the decisionWriteSchema superRefine enforces the conditional
   // stage rule (≥1 for a product parent, none for an activity parent).
-  stageIds: writeStageIdsField,
+  stageNames: writeStageNamesField,
   // XOR parent (full parity — an activity owns decisions too). The
   // decisionWriteSchema superRefine enforces exactly-one-parent.
   productId: z.uuid().nullable().optional(),
@@ -142,7 +142,7 @@ export const decisionInputSchema = z.object({
 // The read model tolerates stage-less legacy decision rows so they load and render
 // the loud "No stage set" marker; only the write path rejects them.
 export const decisionReadModelSchema = decisionInputSchema.extend({
-  stageIds: stageIdsField,
+  stageNames: stageNamesField,
   // Reviewer comments anchored to this decision follow the same read-only path as
   // the item read model.
   comments: z.array(recordCommentViewSchema).optional(),
@@ -152,13 +152,13 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
 const addParentXorIssues = (
   value: {
     readonly activityId?: string | null;
-    readonly stageIds?: readonly string[];
+    readonly stageNames?: readonly string[];
   },
   productId: string | null | undefined,
   productPath: "projectId" | "productId",
   ctx: z.RefinementCtx,
 ): void => {
-  const { activityId, stageIds } = value;
+  const { activityId, stageNames } = value;
   const hasProduct = productId != null;
   const hasActivity = activityId != null;
   if (hasProduct === hasActivity) {
@@ -169,18 +169,18 @@ const addParentXorIssues = (
         "A record must have exactly one parent — a product or an activity.",
     });
   }
-  const stageCount = stageIds?.length ?? 0;
+  const stageCount = stageNames?.length ?? 0;
   if (hasProduct && stageCount === 0) {
     ctx.addIssue({
       code: "custom",
-      path: ["stageIds"],
+      path: ["stageNames"],
       message: "A product-parented record requires at least one stage.",
     });
   }
   if (hasActivity && stageCount > 0) {
     ctx.addIssue({
       code: "custom",
-      path: ["stageIds"],
+      path: ["stageNames"],
       message: "An activity-parented record must not carry a stage.",
     });
   }

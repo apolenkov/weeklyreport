@@ -259,11 +259,11 @@ describe("mergeForeignSlideContent", () => {
             impact: "x",
             mitigation: "y",
             severity: "blocked",
-            // A stage OUTSIDE the fixture's grid: empty stageIds is the
+            // A stage OUTSIDE the fixture's grid: empty stageNames is the
             // covers-everything wildcard and a covering risk would floor a
             // stage red, adding a derived-project count and breaking the
             // 1:1 parity this test pins.
-            stageIds: ["Deploy"],
+            stageNames: ["Deploy"],
           },
         ],
       }),

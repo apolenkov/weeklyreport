@@ -22,7 +22,7 @@ const BASE_DECISION: DecisionEntry = {
   owner: "Vasily Lead",
   impact: "Faster delivery",
   deadline: null,
-  stageIds: ["Analysis"],
+  stageNames: ["Analysis"],
 };
 
 const noop = () => undefined;

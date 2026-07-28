@@ -49,7 +49,7 @@ async function insertCarriedItems(
       workflowStatus: i.workflowStatus,
       carriedOver: true,
       priorityRank: i.priorityRank ?? null,
-      stageNames: i.stageIds ?? [],
+      stageNames: i.stageNames ?? [],
     })),
     skipDuplicates: true,
   });
@@ -94,7 +94,7 @@ async function insertCarriedDecisions(
       deadline: d.deadline ?? null,
       impact: d.impact,
       resolvedAt: d.resolvedAt ?? null,
-      stageNames: d.stageIds ?? [],
+      stageNames: d.stageNames ?? [],
       // XOR parent preserved (product FK null for the activity case).
       productId: d.productId ?? null,
       activityId: d.activityId ?? null,

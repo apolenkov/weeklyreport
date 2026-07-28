@@ -40,7 +40,7 @@ export function deriveEffectiveProductStatus(project: {
     // health.
     projectId?: string | null;
     severity: RiskSeverity;
-    stageIds?: readonly string[];
+    stageNames?: readonly string[];
   }[];
 }): TrafficLight | null {
   const scopedRisks = (project.risks ?? []).filter(

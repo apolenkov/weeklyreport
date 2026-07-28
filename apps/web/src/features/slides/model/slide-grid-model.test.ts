@@ -29,7 +29,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   workflowStatus: "in_progress",
   carriedOver: false,
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -39,7 +39,7 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   mitigation: "",
   severity: "at-risk",
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -48,7 +48,7 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
   owner: "",
   impact: "",
   productId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -138,8 +138,8 @@ describe("buildSlideGridModel — status marks and columns", () => {
     const model = buildSlideGridModel({
       section: section({
         items: [
-          item({ text: "test work", stageIds: ["Testing"] }),
-          item({ text: "plan work", stageIds: ["Planning", "Testing"] }),
+          item({ text: "test work", stageNames: ["Testing"] }),
+          item({ text: "plan work", stageNames: ["Planning", "Testing"] }),
         ],
       }),
     });
@@ -200,10 +200,10 @@ describe("buildSlideGridModel — sorting and author series", () => {
     const model = buildSlideGridModel({
       section: section({
         items: [
-          item({ text: "support", stageIds: ["Support"] }),
+          item({ text: "support", stageNames: ["Support"] }),
           item({ text: "no stage" }),
-          item({ text: "planning", stageIds: ["Planning"] }),
-          item({ text: "dev alias", stageIds: ["Dev"] }),
+          item({ text: "planning", stageNames: ["Planning"] }),
+          item({ text: "dev alias", stageNames: ["Dev"] }),
         ],
       }),
     });
@@ -235,7 +235,7 @@ describe("buildSlideGridModel — sorting and author series", () => {
       ],
     });
     const model = buildSlideGridModel({
-      section: section({ items: [item({ stageIds: ["Support"] })] }),
+      section: section({ items: [item({ stageNames: ["Support"] })] }),
       foreign: [foreign],
     });
     const rows = productLevelOf(cardOf(model, "p1")).columns.current;

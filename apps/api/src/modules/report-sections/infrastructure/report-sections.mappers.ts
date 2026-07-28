@@ -151,7 +151,7 @@ function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
       risks: ctx.sectionRisks.map((r) => ({
         projectId: r.projectId,
         severity: r.severity as RiskSeverity,
-        stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
+        stageNames: r.stageNames.length > 0 ? r.stageNames : undefined,
       })),
     }),
     ownedStages,
@@ -196,7 +196,7 @@ function toItemViews(items: SectionRow["items"]) {
     carriedOver: i.carriedOver,
     priorityRank: i.priorityRank ?? null,
     pausedReason: i.pausedReason ?? null,
-    stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
+    stageNames: i.stageNames.length > 0 ? i.stageNames : undefined,
     comments: toCommentViews(i.recordComments),
   }));
 }
@@ -214,7 +214,7 @@ function toRiskViews(risks: SectionRisks) {
     // Validated by reportSectionReadModelSchema.parse below (Zod enforces the
     // two-value vocabulary at runtime; the DB CHECK is the write-side backstop).
     severity: r.severity,
-    stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
+    stageNames: r.stageNames.length > 0 ? r.stageNames : undefined,
     comments: toCommentViews(r.recordComments),
   }));
 }
@@ -228,7 +228,7 @@ function toDecisionViews(decisions: SectionRow["decisions"]) {
     deadline: d.deadline,
     impact: d.impact,
     resolvedAt: d.resolvedAt,
-    stageIds: d.stageNames.length > 0 ? d.stageNames : undefined,
+    stageNames: d.stageNames.length > 0 ? d.stageNames : undefined,
     // XOR parent (full parity — an activity owns decisions too).
     productId: d.productId ?? undefined,
     activityId: d.activityId ?? undefined,

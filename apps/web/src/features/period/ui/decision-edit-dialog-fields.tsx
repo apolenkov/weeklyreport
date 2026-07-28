@@ -26,7 +26,7 @@ interface DecisionEditDialogFieldsProps {
   readonly activities: readonly ParentActivityOption[];
   readonly onParentChange: (next: RecordParent) => void;
   readonly isActivityParent: boolean;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
   readonly availableStages: readonly string[];
   readonly isDeadEnd: boolean;
   readonly stageError: string | undefined;
@@ -55,7 +55,7 @@ type DecisionClassificationColumnProps = Pick<
   | "activities"
   | "onParentChange"
   | "isActivityParent"
-  | "stageIds"
+  | "stageNames"
   | "availableStages"
   | "isDeadEnd"
   | "stageError"
@@ -166,7 +166,7 @@ function DecisionClassificationColumn({
   activities,
   onParentChange,
   isActivityParent,
-  stageIds,
+  stageNames,
   availableStages,
   isDeadEnd,
   stageError,
@@ -191,7 +191,7 @@ function DecisionClassificationColumn({
       {!isActivityParent && (
         <StageStep
           id="dec-stage"
-          stageIds={stageIds}
+          stageNames={stageNames}
           availableStages={availableStages}
           isDeadEnd={isDeadEnd}
           error={stageError}

@@ -92,7 +92,7 @@ describe("mapWeeklyReport", () => {
               workflowStatus: "in_progress",
               carriedOver: false,
               priorityRank: 2,
-              stageIds: ["Build"],
+              stageNames: ["Build"],
             },
             {
               id: "next-1",
@@ -112,7 +112,7 @@ describe("mapWeeklyReport", () => {
               impact: "Release slips",
               mitigation: "Escalate",
               severity: "blocked",
-              stageIds: ["Build"],
+              stageNames: ["Build"],
             },
           ],
           decisions: [

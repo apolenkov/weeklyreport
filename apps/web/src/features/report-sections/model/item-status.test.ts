@@ -11,7 +11,7 @@ import {
 
 const BLOCKING_RISK = {
   productId: "product-1",
-  stageIds: ["Development"],
+  stageNames: ["Development"],
   severity: "blocked" as const,
   text: "Release is blocked",
 };
@@ -115,7 +115,7 @@ describe("risk overlay", () => {
     expect(
       applyBlockedRiskOverlay(
         "in-progress",
-        { projectId: "product-1", stageIds: ["Development"] },
+        { projectId: "product-1", stageNames: ["Development"] },
         [BLOCKING_RISK],
       ),
     ).toBe("blocked");
@@ -125,7 +125,7 @@ describe("risk overlay", () => {
     expect(
       applyBlockedRiskOverlay(
         "in-progress",
-        { projectId: "product-1", stageIds: ["Development"] },
+        { projectId: "product-1", stageNames: ["Development"] },
         [{ ...BLOCKING_RISK, severity: "at-risk" }],
       ),
     ).toBe("in-progress");
@@ -138,7 +138,7 @@ describe("risk overlay", () => {
           workflowStatus: "in_progress",
           type: "current",
           projectId: "product-1",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
         [BLOCKING_RISK],
       ),

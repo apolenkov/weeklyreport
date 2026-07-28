@@ -100,8 +100,7 @@ const MAX_SELECTED_STAGES = 20;
 
 // Stage NAMES, one per element, persisted as the Postgres text[] `stageNames`
 // column on Item / Risk / Decision. Comma-joined rendering is display-only.
-// TODO(STAGE-NAMING-01): rename stageIds→stageNames.
-export const stageIdsField = z
+export const stageNamesField = z
   .array(z.string())
   .max(MAX_SELECTED_STAGES)
   .optional();
@@ -115,18 +114,18 @@ const stageNameElement = z
   });
 
 // Strict write variant: every written row must carry at least one concrete
-// SDLC stage. Read models re-loosen to `stageIdsField` so stage-less legacy
+// SDLC stage. Read models re-loosen to `stageNamesField` so stage-less legacy
 // rows still load and render the loud "No stage set" marker.
-export const requiredStageIdsField = z
+export const requiredStageNamesField = z
   .array(stageNameElement)
   .min(1)
   .max(MAX_SELECTED_STAGES);
 
-// Element-quality-validated like requiredStageIdsField but length-tolerant, for
+// Element-quality-validated like requiredStageNamesField but length-tolerant, for
 // the XOR-parented record write field. The conditional rule (≥1 stage for a
 // product parent, none for an activity parent) is enforced by the record
 // superRefine in section.schema.ts, since it depends on the parent kind.
-export const writeStageIdsField = z
+export const writeStageNamesField = z
   .array(stageNameElement)
   .max(MAX_SELECTED_STAGES)
   .optional();

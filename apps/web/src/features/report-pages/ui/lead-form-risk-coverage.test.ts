@@ -25,7 +25,7 @@ function makeRisk(overrides: Partial<RiskEntry> = {}): RiskEntry {
     id: "r1",
     productId: "crm",
     productName: "CRM Platform",
-    stageIds: ["Dev"],
+    stageNames: ["Dev"],
     text: "risk",
     impact: "",
     mitigation: "",
@@ -47,7 +47,7 @@ describe("coveringRisksForStage", () => {
   it("excludes a risk that does not cover the stage", () => {
     expect(
       coveringRisksForStage(
-        [makeRisk({ stageIds: ["Testing"] })],
+        [makeRisk({ stageNames: ["Testing"] })],
         "crm",
         "Dev",
       ),
@@ -68,7 +68,7 @@ describe("annotateOwnRiskCoverage", () => {
   it("does NOT set the flag for a covers-all ([]) risk", () => {
     const result = annotateOwnRiskCoverage(
       [makeProduct()],
-      [makeRisk({ stageIds: [] })],
+      [makeRisk({ stageNames: [] })],
     );
     expect(result[0]?.stages[0]?.coveredByOwnRisk).toBe(false);
   });

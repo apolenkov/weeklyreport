@@ -15,7 +15,7 @@ function makeItem(overrides: Partial<KanbanItem> & { id: string }): KanbanItem {
     status: "in-progress",
     text: `Item ${overrides.id}`,
     author: "Lead 1",
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     ...overrides,
   };
 }

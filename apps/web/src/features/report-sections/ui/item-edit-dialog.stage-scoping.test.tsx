@@ -121,7 +121,7 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
       productName: "Payments Gateway",
       // A cross-stage row already carries a stage, so it remains saveable even
       // when the lead owns nothing on p-foreign.
-      stageIds: ["Integration"],
+      stageNames: ["Integration"],
       text: "Integrate payment provider",
       status: "in-progress",
       author: "Test Lead",
@@ -315,7 +315,7 @@ describe("ItemEditDialog — require a stage", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     // The auto-applied "Dev" stage is persisted as canonical "Development".
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     });
   });
 
@@ -340,7 +340,9 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Testing"] });
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageNames: ["Testing"],
+    });
   });
 });
 
@@ -384,7 +386,7 @@ describe("ItemEditDialog — activity parenting", () => {
     const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
     expect(saved.activityId).toBe("act1");
     expect(saved.productId).toBe("");
-    expect(saved.stageIds).toBeUndefined();
+    expect(saved.stageNames).toBeUndefined();
     expect(saved.text).toBe("Triaged 12 tickets");
   });
 });
@@ -394,7 +396,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
     id: "i1",
     productId: "p1",
     productName: "DevOps Tools",
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     status: "in-progress",
     text: "wip",
     author: "You",
@@ -403,7 +405,7 @@ describe("ItemEditDialog — status lock and blocker routing", () => {
     id: "r1",
     productId: "p1",
     productName: "DevOps Tools",
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     severity: "blocked",
     text: "A real covering blocker",
     impact: "impact",

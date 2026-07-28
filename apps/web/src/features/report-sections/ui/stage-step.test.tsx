@@ -10,7 +10,7 @@ import { StageStep } from "./stage-step";
 
 const BASE_PROPS = {
   id: "record-stage",
-  stageIds: ["Testing"],
+  stageNames: ["Testing"],
   availableStages: ["Development", "Testing"] as const,
   isDeadEnd: false,
   error: undefined,

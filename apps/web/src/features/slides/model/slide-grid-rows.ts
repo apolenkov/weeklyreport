@@ -142,7 +142,7 @@ export function buildOwnItemRow(
     showAuthorBadge: true,
     tone,
     hoverLabel,
-    stageNames: sortStageNames(item.stageIds ?? []),
+    stageNames: sortStageNames(item.stageNames ?? []),
     ...editableRef("item", item.stableId),
   };
 }
@@ -160,7 +160,7 @@ export function buildOwnRiskRow(
     showAuthorBadge: true,
     tone: blocked ? "blocked" : "at-risk",
     hoverLabel: blocked ? "Blocked" : "At risk",
-    stageNames: sortStageNames(risk.stageIds ?? []),
+    stageNames: sortStageNames(risk.stageNames ?? []),
     ...editableRef("risk", risk.stableId),
   };
 }
@@ -178,7 +178,7 @@ export function buildOwnDecisionRow(
     // Decisions are facts, not work in flight — solid quiet frame.
     tone: "note",
     hoverLabel: "Decision",
-    stageNames: sortStageNames(decision.stageIds ?? []),
+    stageNames: sortStageNames(decision.stageNames ?? []),
     ...editableRef("decision", decision.stableId),
   };
 }

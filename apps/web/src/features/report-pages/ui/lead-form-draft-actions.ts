@@ -75,7 +75,7 @@ function buildActivityActions(draft: LeadFormDraftHandle) {
     ) =>
       draft.routeToBlocker({
         productId: "",
-        stageIds: [],
+        stageNames: [],
         severity,
         activityId,
       }),
@@ -93,7 +93,7 @@ function buildQuickAddHandler(
     blocker: () =>
       draft.routeToBlocker({
         productId: products[0]?.id ?? "",
-        stageIds: [],
+        stageNames: [],
         severity: "blocked",
       }),
     risk: addSignals.addRisk,

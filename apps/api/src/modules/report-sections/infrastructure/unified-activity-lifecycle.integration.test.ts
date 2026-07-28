@@ -64,7 +64,7 @@ describe("unified-activity lifecycle (integration)", () => {
       tag: "feature",
       workflowStatus: "in_progress" as const,
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     };
   }
 

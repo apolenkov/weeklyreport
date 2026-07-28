@@ -35,7 +35,7 @@ const baseSection: ReportSectionReadModel = {
       projectName: "Project Alpha",
       trafficLight: null,
       // the author owns the Development stage
-      // on this project, so the write payloads (stageIds: ["Development"]) pass
+      // on this project, so the write payloads (stageNames: ["Development"]) pass
       // the stage-ownership guard.
       ownedStages: [
         {
@@ -55,7 +55,7 @@ const baseSection: ReportSectionReadModel = {
       workflowStatus: "in_progress",
       carriedOver: false,
       // items carry ≥1 stage on write.
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -63,11 +63,11 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
 };
 
-// read-model item types stageIds optional;
+// read-model item types stageNames optional;
 // the write payloads below require it. Expose a stage-guaranteed copy.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
-  stageIds: it.stageIds ?? [],
+  stageNames: it.stageNames ?? [],
 }));
 
 function createRepository(
@@ -163,7 +163,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
             tag: "feature",
             workflowStatus: "done",
             carriedOver: false,
-            stageIds: ["Development"],
+            stageNames: ["Development"],
           },
         ],
         risks: [
@@ -173,8 +173,8 @@ describe("ReportSectionsService — submitSection happy path", () => {
             impact: "Impact",
             mitigation: "Mitigation",
             severity: "at-risk",
-            // stageIds is required (min 1) on writes.
-            stageIds: ["Development"],
+            // stageNames is required (min 1) on writes.
+            stageNames: ["Development"],
           },
         ],
       }),
@@ -242,7 +242,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
               tag: "planning",
               workflowStatus: "planned",
               carriedOver: false,
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -342,7 +342,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
                 tag,
                 workflowStatus: ws,
                 carriedOver: false,
-                stageIds: ["Development"],
+                stageNames: ["Development"],
               },
             ],
           }),
@@ -401,9 +401,9 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               impact: "Some impact",
               mitigation: "Some mitigation",
               severity: "at-risk",
-              // keep stageIds valid so the rejection
+              // keep stageNames valid so the rejection
               // stays attributable to the empty text under test.
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -427,9 +427,9 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               impact: "",
               mitigation: "Some mitigation",
               severity: "at-risk",
-              // keep stageIds valid so the rejection
+              // keep stageNames valid so the rejection
               // stays attributable to the empty impact under test.
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -437,7 +437,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects risk without stageIds", async () => {
+  it("rejects risk without stageNames", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
       testGraceSettings,
@@ -475,7 +475,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               text: "",
               owner: "Owner",
               impact: "Impact",
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -498,7 +498,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               text: "Valid decision",
               owner: "",
               impact: "Impact",
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),

@@ -42,7 +42,7 @@ export function mapLeadDecisions(
     owner: d.owner,
     impact: d.impact,
     deadline: d.deadline ? toIsoDateString(new Date(d.deadline)) : null,
-    stageIds: d.stageIds,
+    stageNames: d.stageNames,
   }));
 }
 
@@ -64,7 +64,7 @@ export function mapLeadPriorities(
     .map((i) => ({
       rank: clampRank(i.priorityRank ?? 0),
       text: i.text,
-      stageIds: i.stageIds,
+      stageNames: i.stageNames,
       productId: i.projectId,
       productName: projectIndex.get(i.projectId)?.name ?? undefined,
     }));

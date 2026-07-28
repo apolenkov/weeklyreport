@@ -89,7 +89,7 @@ export function mapForeignItems(
     // Blocked derives from the author's own covering risks (same lead-card rule).
     const alarmRisks = ca.risks.map((r) => ({
       productId: r.projectId,
-      stageIds: r.stageNames,
+      stageNames: r.stageNames,
       severity: r.severity,
       text: r.risk,
     }));
@@ -99,10 +99,10 @@ export function mapForeignItems(
         id: `foreign:${ca.authorId}:${i.id}`,
         productId: i.projectId,
         productName: requireProductName(productNameById, i.projectId),
-        stageIds: i.stageNames,
+        stageNames: i.stageNames,
         status: applyBlockedRiskOverlay(
           workflowToItemStatus(i.workflowStatus),
-          { projectId: i.projectId, stageIds: i.stageNames },
+          { projectId: i.projectId, stageNames: i.stageNames },
           alarmRisks,
         ),
         text: i.text,
@@ -126,7 +126,7 @@ export function mapForeignRisks(
       id: `foreign:${ca.authorId}:${r.id}`,
       productId: r.projectId,
       productName: requireProductName(productNameById, r.projectId),
-      stageIds: r.stageNames,
+      stageNames: r.stageNames,
       severity: r.severity,
       text: r.risk,
       impact: r.impact,
@@ -152,7 +152,7 @@ export function mapForeignDecisions(
       owner: d.owner,
       impact: d.impact,
       deadline: d.deadline ? toIsoDateString(d.deadline) : null,
-      stageIds: d.stageNames,
+      stageNames: d.stageNames,
       authorId: ca.authorId,
       foreign: true,
     })),

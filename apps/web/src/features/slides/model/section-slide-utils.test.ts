@@ -185,7 +185,7 @@ describe("section slide utilities", () => {
             impact: "Build stopped",
             mitigation: "Escalate",
             severity: "blocked",
-            stageIds: ["Build"],
+            stageNames: ["Build"],
           },
           {
             id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
@@ -194,7 +194,7 @@ describe("section slide utilities", () => {
             impact: "Rework",
             mitigation: "Clarify",
             severity: "at-risk",
-            stageIds: ["Discovery"],
+            stageNames: ["Discovery"],
           },
         ],
       }),
@@ -245,7 +245,7 @@ describe("section slide utilities", () => {
             impact: "Rework",
             mitigation: "Stabilize",
             severity: "at-risk",
-            stageIds: ["Build"],
+            stageNames: ["Build"],
           },
         ],
       }),
@@ -324,7 +324,7 @@ describe("section slide utilities", () => {
             impact: "Build stopped",
             mitigation: "Escalate",
             severity: "blocked",
-            stageIds: ["Build"],
+            stageNames: ["Build"],
           },
         ],
       }),
@@ -332,8 +332,8 @@ describe("section slide utilities", () => {
     expect(floored.productSlides[0]?.status).toBe("red");
   });
 
-  it("a stage-less (empty stageIds) legacy risk floors every owned stage", () => {
-    // Empty/undefined stageIds means "covers all stages" in the live form;
+  it("a stage-less (empty stageNames) legacy risk floors every owned stage", () => {
+    // Empty/undefined stageNames means "covers all stages" in the live form;
     // the slide export must agree so a legacy stage-less risk does not floor
     // every chip in the form yet nothing on the deck. Routing through
     // `riskCoversStage` kills that divergence.
@@ -347,7 +347,7 @@ describe("section slide utilities", () => {
             impact: "Everything stalls",
             mitigation: "Escalate",
             severity: "blocked",
-            stageIds: [],
+            stageNames: [],
           },
         ],
       }),

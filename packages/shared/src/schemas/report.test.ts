@@ -31,8 +31,8 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validRisk = () => ({
@@ -42,8 +42,8 @@ const validRisk = () => ({
   mitigation: "Hire contractor",
   // severity is required (no default) on the write contract.
   severity: "at-risk" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validDecision = () => ({
@@ -53,8 +53,8 @@ const validDecision = () => ({
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validDraft = () => ({
@@ -250,28 +250,31 @@ describe("itemWriteSchema — per-type progress vocabulary", () => {
 // itemInputSchema — safeText boundaries
 // ---------------------------------------------------------------------------
 
-describe("record write schemas — required stageIds", () => {
-  it("rejects a risk with missing stageIds", () => {
-    const { stageIds: _stageIds, ...riskWithoutStages } = validRisk();
+describe("record write schemas — required stageNames", () => {
+  it("rejects a risk with missing stageNames", () => {
+    const { stageNames: _stageNames, ...riskWithoutStages } = validRisk();
     const result = riskWriteSchema.safeParse(riskWithoutStages);
     expect(result.success).toBe(false);
   });
 
-  it("rejects a risk with empty stageIds", () => {
-    const result = riskWriteSchema.safeParse({ ...validRisk(), stageIds: [] });
+  it("rejects a risk with empty stageNames", () => {
+    const result = riskWriteSchema.safeParse({
+      ...validRisk(),
+      stageNames: [],
+    });
     expect(result.success).toBe(false);
   });
 
   it("accepts a risk with one concrete stage", () => {
     const result = riskInputSchema.safeParse({
       ...validRisk(),
-      stageIds: ["Testing"],
+      stageNames: ["Testing"],
     });
     expect(result.success).toBe(true);
   });
 
   it("rejects a draft-save payload containing a stage-less risk", () => {
-    const { stageIds: _stageIds, ...riskWithoutStages } = validRisk();
+    const { stageNames: _stageNames, ...riskWithoutStages } = validRisk();
     const result = draftSaveSchema.safeParse({
       ...validDraft(),
       risks: [riskWithoutStages],
@@ -281,34 +284,38 @@ describe("record write schemas — required stageIds", () => {
 
   // Items + decisions match risks: a stage-less write is rejected; only the
   // read model stays tolerant.
-  it("rejects an item with missing stageIds", () => {
-    const { stageIds: _stageIds, ...itemWithoutStages } = validItem();
+  it("rejects an item with missing stageNames", () => {
+    const { stageNames: _stageNames, ...itemWithoutStages } = validItem();
     const result = itemWriteSchema.safeParse(itemWithoutStages);
     expect(result.success).toBe(false);
   });
 
-  it("rejects an item with empty stageIds", () => {
-    const result = itemWriteSchema.safeParse({ ...validItem(), stageIds: [] });
+  it("rejects an item with empty stageNames", () => {
+    const result = itemWriteSchema.safeParse({
+      ...validItem(),
+      stageNames: [],
+    });
     expect(result.success).toBe(false);
   });
 
-  it("rejects a decision with missing stageIds", () => {
-    const { stageIds: _stageIds, ...decisionWithoutStages } = validDecision();
+  it("rejects a decision with missing stageNames", () => {
+    const { stageNames: _stageNames, ...decisionWithoutStages } =
+      validDecision();
     const result = decisionWriteSchema.safeParse(decisionWithoutStages);
     expect(result.success).toBe(false);
   });
 
-  it("rejects a decision with empty stageIds", () => {
+  it("rejects a decision with empty stageNames", () => {
     const result = decisionWriteSchema.safeParse({
       ...validDecision(),
-      stageIds: [],
+      stageNames: [],
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects a draft-save payload containing a stage-less item or decision", () => {
-    const { stageIds: _i, ...itemWithoutStages } = validItem();
-    const { stageIds: _d, ...decisionWithoutStages } = validDecision();
+    const { stageNames: _i, ...itemWithoutStages } = validItem();
+    const { stageNames: _d, ...decisionWithoutStages } = validDecision();
     expect(
       draftSaveSchema.safeParse({
         ...validDraft(),
@@ -324,7 +331,7 @@ describe("record write schemas — required stageIds", () => {
   });
 
   it("read model still parses a stage-less legacy risk row", () => {
-    const { stageIds: _stageIds, ...legacyRisk } = validRisk();
+    const { stageNames: _stageNames, ...legacyRisk } = validRisk();
     const result = reportSectionReadModelSchema.safeParse({
       reportSectionId: uuid(),
       reportId: uuid(),
@@ -342,11 +349,11 @@ describe("record write schemas — required stageIds", () => {
   });
 
   it("read model still parses stage-less legacy item and decision rows (tolerance)", () => {
-    const { stageIds: _i, ...legacyItem } = {
+    const { stageNames: _i, ...legacyItem } = {
       ...validItem(),
       projectId: PROJECT_UUID,
     };
-    const { stageIds: _d, ...legacyDecision } = validDecision();
+    const { stageNames: _d, ...legacyDecision } = validDecision();
     const result = reportSectionReadModelSchema.safeParse({
       reportSectionId: uuid(),
       reportId: uuid(),

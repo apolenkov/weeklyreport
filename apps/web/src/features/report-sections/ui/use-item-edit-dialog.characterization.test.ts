@@ -41,7 +41,7 @@ function setup(
 }
 
 describe("useItemEditDialog — characterization", () => {
-  it("create-mode defaults: empty text, in-progress status for current week, no priority rank, empty stageIds", () => {
+  it("create-mode defaults: empty text, in-progress status for current week, no priority rank, empty stageNames", () => {
     const { result } = setup({
       defaultProductId: "p1",
       stagesForProduct: () => ["Testing"],
@@ -50,13 +50,13 @@ describe("useItemEditDialog — characterization", () => {
     expect(result.current.text).toBe("");
     expect(result.current.status).toBe("in-progress");
     expect(result.current.priorityRank).toBeNull();
-    expect(result.current.stageIds).toEqual([]);
+    expect(result.current.stageNames).toEqual([]);
     expect(result.current.parent).toEqual({ kind: "product", id: "p1" });
     expect(result.current.headerVerb).toBe("Add Item");
     expect(result.current.isDeadEnd).toBe(false);
   });
 
-  it("edit-mode seeding: seeds text/status/stageIds/priorityRank from the bound item", () => {
+  it("edit-mode seeding: seeds text/status/stageNames/priorityRank from the bound item", () => {
     const item: KanbanItem = {
       id: "item-1",
       productId: "p1",
@@ -64,7 +64,7 @@ describe("useItemEditDialog — characterization", () => {
       text: "Existing text",
       status: "completed",
       author: "Someone",
-      stageIds: ["Testing"],
+      stageNames: ["Testing"],
       priorityRank: 3,
     };
     const { result } = setup({
@@ -74,13 +74,13 @@ describe("useItemEditDialog — characterization", () => {
 
     expect(result.current.text).toBe("Existing text");
     expect(result.current.status).toBe("completed");
-    expect(result.current.stageIds).toEqual(["Testing"]);
+    expect(result.current.stageNames).toEqual(["Testing"]);
     expect(result.current.priorityRank).toBe(3);
     expect(result.current.headerVerb).toBe("Edit Item");
     expect(result.current.parentName).toBe("DevOps Tools");
   });
 
-  it("clears stageIds on a parent switch", () => {
+  it("clears stageNames on a parent switch", () => {
     const item: KanbanItem = {
       id: "item-1",
       productId: "p1",
@@ -88,7 +88,7 @@ describe("useItemEditDialog — characterization", () => {
       text: "Existing text",
       status: "in-progress",
       author: "Someone",
-      stageIds: ["Testing"],
+      stageNames: ["Testing"],
     };
     const { result } = setup({
       item,
@@ -96,14 +96,14 @@ describe("useItemEditDialog — characterization", () => {
       stagesForProduct: () => ["Testing"],
     });
 
-    expect(result.current.stageIds).toEqual(["Testing"]);
+    expect(result.current.stageNames).toEqual(["Testing"]);
 
     act(() => {
       result.current.onParentChange({ kind: "activity", id: "a1" });
     });
 
     expect(result.current.parent).toEqual({ kind: "activity", id: "a1" });
-    expect(result.current.stageIds).toEqual([]);
+    expect(result.current.stageNames).toEqual([]);
   });
 
   it("isDeadEnd is true for a zero-owned-stage product with no stage of its own", () => {
@@ -150,7 +150,7 @@ describe("useItemEditDialog — characterization", () => {
     const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
     expect(saved.productId).toBe("p1");
     expect(saved.text).toBe("Ship the thing");
-    expect(saved.stageIds).toEqual(["Testing"]);
+    expect(saved.stageNames).toEqual(["Testing"]);
     expect(saved.activityId).toBeNull();
   });
 

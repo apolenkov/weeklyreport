@@ -39,9 +39,9 @@ function reportRiskErrors(args: RiskSaveArgs, errors: RiskFieldErrors): void {
     impact: errors.impact,
     mitigation: errors.mitigation,
   });
-  args.parentStage.setStageError(errors.stageIds);
+  args.parentStage.setStageError(errors.stageNames);
   if (args.fields.focusFirstInvalid(errors)) return;
-  if (errors.stageIds) {
+  if (errors.stageNames) {
     args.dialogSurfaceRef.current
       ?.querySelector<HTMLInputElement>("fieldset input")
       ?.focus();
@@ -77,7 +77,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
     buildProductRiskEntry({
       existingId: risk?.id,
       product,
-      stageIds: parentStage.effectiveStageIds,
+      stageNames: parentStage.effectiveStageNames,
       severity: parentStage.severity,
       ...prose,
     }),
@@ -85,7 +85,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
 }
 
 // Validate the trimmed fields and emit, or route the errors back to the form.
-// The dead-end early return keeps onSave from firing with an empty stageIds
+// The dead-end early return keeps onSave from firing with an empty stageNames
 // array, whose "Select at least one stage." error would be unsatisfiable.
 export function saveRisk(args: RiskSaveArgs): void {
   const { fields, parentStage } = args;
@@ -98,7 +98,7 @@ export function saveRisk(args: RiskSaveArgs): void {
   const errors = collectRiskErrors({
     ...prose,
     isActivityParent: parentStage.isActivityParent,
-    effectiveStageIds: parentStage.effectiveStageIds,
+    effectiveStageNames: parentStage.effectiveStageNames,
   });
   if (Object.keys(errors).length > 0) {
     reportRiskErrors(args, errors);

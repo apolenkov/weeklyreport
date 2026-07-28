@@ -50,6 +50,8 @@
       period-lifecycle invalidation sets at every measured holdout.
 - [x] Single-home the duplicated domain-error wrapper and classify weekly
       report domain failures by constructor rather than mutable error name.
+- [x] Rename the name-valued `stageIds` wire/read/write/UI vocabulary to
+      `stageNames` atomically while retaining genuine singular `stageId` UUIDs.
 - [ ] Correct false documentation/control claims and demo-data defects.
 - [x] Make telemetry fallback comments describe the real zero payload.
 - [x] Enforce the documented `ai.*` audit exclusion with a regression test.

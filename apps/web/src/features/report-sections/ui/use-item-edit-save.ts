@@ -26,9 +26,9 @@ interface UseItemEditSaveArgs {
   readonly isActivityParent: boolean;
   readonly isDeadEnd: boolean;
   readonly availableStages: readonly string[];
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
   readonly setParent: Dispatch<SetStateAction<RecordParent>>;
-  readonly setStageIds: Dispatch<SetStateAction<string[]>>;
+  readonly setStageNames: Dispatch<SetStateAction<string[]>>;
   readonly setErrors: Dispatch<SetStateAction<ItemEditErrors>>;
   readonly onSave: (next: KanbanItem) => void;
 }
@@ -46,7 +46,7 @@ function collectSaveErrors(
     trimmed: text.trimmed,
     isActivityParent: args.isActivityParent,
     availableStages: args.availableStages,
-    effectiveStageIds: args.effectiveStageIds,
+    effectiveStageNames: args.effectiveStageNames,
   });
   return args.status === "paused" && text.trimmedPausedReason.length === 0
     ? { ...errors, pausedReason: "A reason is required to pause an item." }
@@ -81,7 +81,7 @@ function buildSavePayload(
     ? buildProductItemSave({
         ...common,
         product,
-        effectiveStageIds: args.effectiveStageIds,
+        effectiveStageNames: args.effectiveStageNames,
       })
     : null;
 }
@@ -90,11 +90,11 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
   function setParentAndStages(nextParent: RecordParent) {
     args.setParent(nextParent);
     // Clear stages on parent switch — never default to all owned stages.
-    args.setStageIds([]);
+    args.setStageNames([]);
   }
 
   function handleSave() {
-    // Dead-end: never save empty stageIds or show the unsatisfiable stage error.
+    // Dead-end: never save empty stageNames or show the unsatisfiable stage error.
     if (args.isDeadEnd) return;
     const text: TrimmedSaveText = {
       trimmed: args.text.trim(),

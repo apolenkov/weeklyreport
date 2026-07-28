@@ -55,7 +55,7 @@ function makeSection(
         tag: "general",
         workflowStatus: "in_progress",
         carriedOver: false,
-        stageIds: [],
+        stageNames: [],
       },
     ],
   });
@@ -74,7 +74,7 @@ function makeDecision(
     owner: "Alice",
     impact: "impact",
     resolvedAt: null,
-    stageIds: [],
+    stageNames: [],
     ...overrides,
   };
 }
@@ -90,7 +90,7 @@ function makeRisk(
     impact: "impact",
     mitigation: "mitigation",
     severity: "at-risk",
-    stageIds: [],
+    stageNames: [],
     ...overrides,
   };
 }
@@ -107,7 +107,7 @@ function makeItem(
     tag: "general",
     workflowStatus: "in_progress",
     carriedOver: false,
-    stageIds: [],
+    stageNames: [],
     ...overrides,
   };
 }

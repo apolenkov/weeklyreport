@@ -3,26 +3,26 @@ import type {
   ParentActivityOption,
   Product,
 } from "../../report-sections";
-import { canonicalStageIds } from "../../report-sections";
+import { canonicalStageNames } from "../../report-sections";
 
 export interface DecisionFieldErrors {
   text?: string;
   impact?: string;
-  stageIds?: string;
+  stageNames?: string;
 }
 
 export function collectDecisionErrors(args: {
   readonly text: string;
   readonly impact: string;
   readonly availableStages: readonly string[];
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
 }): DecisionFieldErrors {
   const stageRequired =
-    args.availableStages.length > 0 && args.effectiveStageIds.length === 0;
+    args.availableStages.length > 0 && args.effectiveStageNames.length === 0;
   return {
     ...(args.text.length === 0 ? { text: "Decision text is required" } : {}),
     ...(args.impact.length === 0 ? { impact: "Impact is required" } : {}),
-    ...(stageRequired ? { stageIds: "Select at least one stage." } : {}),
+    ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
 }
 
@@ -31,7 +31,7 @@ export interface DecisionFormSeed {
   readonly owner: string;
   readonly impact: string;
   readonly deadline: string;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
 }
 
 export function resolveDecisionFormSeed(
@@ -45,7 +45,7 @@ export function resolveDecisionFormSeed(
     owner: decision?.owner ?? defaultOwner ?? "",
     impact: decision?.impact ?? "",
     deadline: decision?.deadline ?? "",
-    stageIds: decision?.stageIds ? [...decision.stageIds] : [],
+    stageNames: decision?.stageNames ? [...decision.stageNames] : [],
   };
 }
 
@@ -93,7 +93,7 @@ export function buildActivityDecisionSave(args: {
     productName: name,
     activityId: args.activityId,
     activityName: name,
-    stageIds: undefined,
+    stageNames: undefined,
   };
 }
 
@@ -105,7 +105,7 @@ export function buildProductDecisionSave(args: {
   readonly decision: DecisionEntry | null;
   readonly selectedProduct: Product | undefined;
   readonly parentId: string;
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
 }): DecisionEntry {
   return {
     ...args.base,
@@ -115,9 +115,9 @@ export function buildProductDecisionSave(args: {
       args.decision?.productName ??
       LEGACY_GROUP_PRODUCT_NAME,
     activityId: null,
-    stageIds:
-      args.effectiveStageIds.length > 0
-        ? canonicalStageIds(args.effectiveStageIds)
+    stageNames:
+      args.effectiveStageNames.length > 0
+        ? canonicalStageNames(args.effectiveStageNames)
         : undefined,
   };
 }

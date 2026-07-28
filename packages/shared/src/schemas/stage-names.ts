@@ -82,20 +82,20 @@ export function splitStageNames(
 // Whether a risk applies to a stage: prefers the structured stage-id list
 // (empty means "covers everything"), falling back to the legacy CSV
 // stageName field (absent/blank/"—" also means "covers everything") when
-// stageIds itself is absent.
+// stageNames itself is absent.
 /**
- * Whether a risk applies to a stage (stageIds preferred; empty = all stages).
- * @param risk - Carries stageIds when structured, else the legacy stageName CSV.
+ * Whether a risk applies to a stage (stageNames preferred; empty = all stages).
+ * @param risk - Carries stageNames when structured, else the legacy stageName CSV.
  * @param stageName - The stage being tested for coverage.
  */
 export function riskCoversStage(
-  risk: { stageName?: string | null; stageIds?: readonly string[] },
+  risk: { stageName?: string | null; stageNames?: readonly string[] },
   stageName: string,
 ): boolean {
-  if (risk.stageIds !== undefined) {
+  if (risk.stageNames !== undefined) {
     return (
-      risk.stageIds.length === 0 ||
-      risk.stageIds.some((id) => stageNamesMatch(id, stageName))
+      risk.stageNames.length === 0 ||
+      risk.stageNames.some((id) => stageNamesMatch(id, stageName))
     );
   }
 

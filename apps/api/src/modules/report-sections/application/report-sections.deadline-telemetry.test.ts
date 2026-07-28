@@ -33,7 +33,7 @@ const baseSection: ReportSectionReadModel = {
       projectName: "Project 1",
       trafficLight: null,
       // the author owns the Development stage
-      // on this project, so the seeded write payloads (stageIds: ["Development"])
+      // on this project, so the seeded write payloads (stageNames: ["Development"])
       // pass the ownership guard.
       ownedStages: [
         {
@@ -54,7 +54,7 @@ const baseSection: ReportSectionReadModel = {
       carriedOver: false,
       // items carry ≥1 stage on write;
       // validSubmitPayload() reuses these items as a submit payload.
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -62,12 +62,12 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
 };
 
-// the read-model item types stageIds as
+// the read-model item types stageNames as
 // optional, but draft-save/submit payloads require it. Expose a stage-guaranteed
 // copy of the seeded items for the write-path test payloads below.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
-  stageIds: it.stageIds ?? [],
+  stageNames: it.stageNames ?? [],
 }));
 
 describe("ReportSectionsService — deadline gate", () => {
@@ -327,7 +327,7 @@ describe("ReportSectionsService — product telemetry", () => {
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
           // items carry ≥1 stage on write.
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -376,7 +376,7 @@ describe("ReportSectionsService — product telemetry", () => {
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
           // items carry ≥1 stage on write.
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
       risks: [],
