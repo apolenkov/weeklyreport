@@ -27,7 +27,8 @@
 - [x] Single-home the duplicated reopen-response form and its note cap.
 - [ ] Land the remaining 4 confirmed findings after the user decides the
       family-wide split-harness convention.
-- [ ] Plan and land shared-schema/cross-feature changes in isolated slices.
+- [x] Plan and land shared-schema/cross-feature changes in isolated slices
+      (shared ownership, `stageNames`, and complete AppSettings reads).
 
 ## Verification
 

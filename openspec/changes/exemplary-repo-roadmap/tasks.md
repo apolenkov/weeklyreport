@@ -21,9 +21,9 @@
       (1590 file rows, 6 roadmap areas), keyed by normalized file path, with
       the verifier severity-downgrade flag computed directly from the raw
       data rather than copied from the report's prose count.
-- [ ] `openspec archive exemplary-repo-roadmap` once the head has reviewed
-      the recorded open decisions (not part of this change; a human ruling
-      is the trigger).
+- [x] Record the head's 2026-07-28 review and rulings for R1-R6.
+- [ ] `openspec archive exemplary-repo-roadmap` after the accepted decisions
+      validate and their durable-spec synchronization is reviewed.
 
 ## Verification
 
