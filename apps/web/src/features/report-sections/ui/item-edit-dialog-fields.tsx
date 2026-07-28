@@ -27,7 +27,7 @@ export interface ItemEditDialogFieldsProps {
   readonly activities: readonly ParentActivityOption[];
   readonly onParentChange: (next: RecordParent) => void;
   readonly isActivityParent: boolean;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
   readonly availableStages: readonly string[];
   readonly isDeadEnd: boolean;
   readonly stageError: string | undefined;
@@ -128,7 +128,7 @@ type ItemParentStageProps = Pick<
   | "activities"
   | "onParentChange"
   | "isActivityParent"
-  | "stageIds"
+  | "stageNames"
   | "availableStages"
   | "isDeadEnd"
   | "stageError"
@@ -153,7 +153,7 @@ function ItemParentStageFields({
   activities,
   onParentChange,
   isActivityParent,
-  stageIds,
+  stageNames,
   availableStages,
   isDeadEnd,
   stageError,
@@ -174,7 +174,7 @@ function ItemParentStageFields({
       {!isActivityParent && (
         <StageStep
           id="item-stage"
-          stageIds={stageIds}
+          stageNames={stageNames}
           availableStages={availableStages}
           isDeadEnd={isDeadEnd}
           error={stageError}

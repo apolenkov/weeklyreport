@@ -1,5 +1,5 @@
 import {
-  computeEffectiveStageIds,
+  computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
 } from "../model/stage-ownership";
 import type {
@@ -23,7 +23,7 @@ interface DeriveItemEditFieldsArgs {
   readonly parent: RecordParent;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
-  readonly stageIds: readonly string[];
+  readonly stageNames: readonly string[];
   readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly ownPeriodRanks?: readonly number[];
   readonly status: ItemStatus;
@@ -36,7 +36,7 @@ interface ItemEditDerivedFields {
   readonly parentName: string;
   readonly headerVerb: string;
   readonly availableStages: readonly string[];
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
   readonly isDeadEnd: boolean;
   readonly statusSlot: StatusSlot;
   readonly takenRanks: ReadonlySet<number>;
@@ -62,18 +62,18 @@ export function deriveItemEditFields(
   const availableStages = isActivityParent
     ? []
     : (args.stagesForProduct?.(args.parent.id) ?? []);
-  const effectiveStageIds = computeEffectiveStageIds(
-    args.stageIds,
+  const effectiveStageNames = computeEffectiveStageNames(
+    args.stageNames,
     availableStages,
   );
   const isDeadEnd =
     !isActivityParent &&
-    isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+    isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames);
 
   const statusSlot = resolveStatusSlot({
     isActivityParent,
     productId: args.parent.id,
-    stageIds: effectiveStageIds,
+    stageNames: effectiveStageNames,
     status: args.status,
     risks: args.risks,
   });
@@ -95,7 +95,7 @@ export function deriveItemEditFields(
     parentName,
     headerVerb,
     availableStages,
-    effectiveStageIds,
+    effectiveStageNames,
     isDeadEnd,
     statusSlot,
     takenRanks,

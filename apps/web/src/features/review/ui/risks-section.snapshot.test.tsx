@@ -26,7 +26,7 @@ describe("RisksSection meta-row", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders the No-stage-set warning pill when stageIds is absent", () => {
+  it("renders the No-stage-set warning pill when stageNames is absent", () => {
     const { container } = render(
       <RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />,
     );
@@ -41,7 +41,7 @@ describe("RisksSection meta-row", () => {
   it("renders specific stage chips and author together in the meta-row", () => {
     const { container } = render(
       <RisksSection
-        risks={[{ ...BASE_RISK, stageIds: ["Dev", "Testing"] }]}
+        risks={[{ ...BASE_RISK, stageNames: ["Dev", "Testing"] }]}
         stagesForProduct={() => ["Dev", "Testing"]}
         sectionAuthorName="Vasily Lead"
       />,

@@ -171,7 +171,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress",
           carriedOver: false,
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
       risks: [],
@@ -250,7 +250,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: false,
-          stageIds: ["Development"],
+          stageNames: ["Development"],
         },
       ],
       risks: [
@@ -260,7 +260,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           impact: "Impact",
           mitigation: "Mitigation",
           severity: "blocked" as const,
-          stageIds: ["Testing"],
+          stageNames: ["Testing"],
         },
       ],
       decisions: [
@@ -270,17 +270,17 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           deadline: null,
           impact: "Impact",
           resolvedAt: null,
-          stageIds: ["Design"],
+          stageNames: ["Design"],
           productId: testData.project.id,
         },
       ],
     };
 
     const saved = await repo.saveSection(modified, modified.version);
-    expect(expectDefined(saved.items[0]).stageIds).toEqual(["Development"]);
-    expect(expectDefined(saved.risks[0]).stageIds).toEqual(["Testing"]);
+    expect(expectDefined(saved.items[0]).stageNames).toEqual(["Development"]);
+    expect(expectDefined(saved.risks[0]).stageNames).toEqual(["Testing"]);
     expect(expectDefined(saved.risks[0]).severity).toBe("blocked");
-    expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
+    expect(expectDefined(saved.decisions[0]).stageNames).toEqual(["Design"]);
   });
 
   // Own covers-all blocked risk floors empty owned stage to red; raw status stays null.

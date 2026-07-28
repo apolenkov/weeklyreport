@@ -46,8 +46,8 @@ function makePayload(text = "first"): DraftSavePayload {
         tag: "tag",
         workflowStatus: "in_progress",
         carriedOver: false,
-        // stageIds required on write.
-        stageIds: ["Development"],
+        // stageNames required on write.
+        stageNames: ["Development"],
       },
     ],
     risks: [],
@@ -534,7 +534,7 @@ describe("stableStringify", () => {
       owner: "Alice",
       impact: "impact",
       deadline: new Date("2026-01-01T00:00:00.000Z"),
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     };
     const early = { ...makePayload(), decisions: [decision] };
     const late = {

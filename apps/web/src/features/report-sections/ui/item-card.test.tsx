@@ -37,7 +37,7 @@ describe("ItemCard — priority rank badge accessibility", () => {
 
 describe("ItemCard — stage tags container accessibility", () => {
   it("stage tags container has role='img'", () => {
-    render(<ItemCard item={{ ...BASE_ITEM, stageIds: ["S1", "S2"] }} />);
+    render(<ItemCard item={{ ...BASE_ITEM, stageNames: ["S1", "S2"] }} />);
     const container = screen.getByRole("img", {
       name: /^Item stages:/,
     });
@@ -45,15 +45,15 @@ describe("ItemCard — stage tags container accessibility", () => {
   });
 
   it("stage tags container has aria-label 'Item stages: <stage-list>'", () => {
-    render(<ItemCard item={{ ...BASE_ITEM, stageIds: ["S1", "S2"] }} />);
+    render(<ItemCard item={{ ...BASE_ITEM, stageNames: ["S1", "S2"] }} />);
     const container = screen.getByRole("img", {
       name: "Item stages: S1, S2",
     });
     expect(container).toHaveAttribute("aria-label", "Item stages: S1, S2");
   });
 
-  it("stage tags container shows the 'No stage set' warning when no stageIds", () => {
-    render(<ItemCard item={{ ...BASE_ITEM, stageIds: [] }} />);
+  it("stage tags container shows the 'No stage set' warning when no stageNames", () => {
+    render(<ItemCard item={{ ...BASE_ITEM, stageNames: [] }} />);
     const container = screen.getByRole("img", {
       name: "Item stages: No stage set",
     });
@@ -66,7 +66,7 @@ describe("ItemCard — stage tags container accessibility", () => {
 
   it("deduplicates legacy stage aliases after canonicalization", () => {
     render(
-      <ItemCard item={{ ...BASE_ITEM, stageIds: ["Dev", "Development"] }} />,
+      <ItemCard item={{ ...BASE_ITEM, stageNames: ["Dev", "Development"] }} />,
     );
 
     const container = screen.getByRole("img", {
@@ -142,7 +142,7 @@ describe("ItemCard — card DOM structure (snapshot)", () => {
   it("renders card with aria-hidden icons and accessible button labels", () => {
     const { container } = render(
       <ItemCard
-        item={{ ...BASE_ITEM, priorityRank: 1, stageIds: ["Dev"] }}
+        item={{ ...BASE_ITEM, priorityRank: 1, stageNames: ["Dev"] }}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />,
@@ -184,7 +184,7 @@ describe("ItemCard — uniform height", () => {
   it("the fixed chrome (status pill row, author, stage tags) is never clipped by the reference height", () => {
     const { container } = render(
       <ItemCard
-        item={{ ...BASE_ITEM, priorityRank: 1, stageIds: ["S1", "S2"] }}
+        item={{ ...BASE_ITEM, priorityRank: 1, stageNames: ["S1", "S2"] }}
       />,
     );
     const card = within(container).getByTestId("item-card");
@@ -221,14 +221,14 @@ describe("ItemCard — body text truncation + tooltip", () => {
 describe("ItemCard — risk-derived alarm status", () => {
   const inProgress: KanbanItem = {
     ...BASE_ITEM,
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     status: "in-progress",
   };
   const risk = (severity: "at-risk" | "blocked"): RiskEntry => ({
     id: `risk-${severity}`,
     productId: "p1",
     productName: "DevOps Tools",
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     severity,
     text: "A real covering risk",
     impact: "impact",
@@ -309,7 +309,7 @@ describe("ItemCard — risk-derived alarm status", () => {
 describe("ItemCard — foreign covering-risk attribution", () => {
   const inProgress: KanbanItem = {
     ...BASE_ITEM,
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     status: "in-progress",
   };
   const risk = (
@@ -318,7 +318,7 @@ describe("ItemCard — foreign covering-risk attribution", () => {
     id: `risk-${overrides.severity}`,
     productId: "p1",
     productName: "DevOps Tools",
-    stageIds: ["Development"],
+    stageNames: ["Development"],
     text: "A real covering risk",
     impact: "impact",
     mitigation: "mitigation",

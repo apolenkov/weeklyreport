@@ -61,7 +61,7 @@ export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
     carriedOver: i.carriedOver,
     priorityRank: i.priorityRank ?? null,
     pausedReason: i.pausedReason ?? null,
-    stageNames: i.stageIds ?? [],
+    stageNames: i.stageNames ?? [],
   }));
 }
 
@@ -77,7 +77,7 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
     impact: r.impact,
     mitigation: r.mitigation,
     severity: r.severity,
-    stageNames: r.stageIds ?? [],
+    stageNames: r.stageNames ?? [],
   }));
 }
 
@@ -100,7 +100,7 @@ export function toDecisionRows(
     deadline: d.deadline ?? null,
     impact: d.impact,
     resolvedAt: d.resolvedAt ?? null,
-    stageNames: d.stageIds ?? [],
+    stageNames: d.stageNames ?? [],
     // XOR parent (product FK null for the activity case).
     productId: d.productId ?? null,
     activityId: d.activityId ?? null,

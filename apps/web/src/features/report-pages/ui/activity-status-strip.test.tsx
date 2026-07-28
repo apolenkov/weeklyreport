@@ -137,7 +137,7 @@ describe("ActivityStatusStrip", () => {
             impact: "Delivery delay",
             mitigation: "Escalate",
             severity: "blocked",
-            stageIds: [],
+            stageNames: [],
           },
         ],
         decisions: [
@@ -147,7 +147,7 @@ describe("ActivityStatusStrip", () => {
             text: "Lead A decision",
             owner: "Lead A",
             impact: "Unblocks delivery",
-            stageIds: [],
+            stageNames: [],
           },
         ],
       }),

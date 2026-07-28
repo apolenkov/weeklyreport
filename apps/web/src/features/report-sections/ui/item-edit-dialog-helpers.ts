@@ -1,5 +1,5 @@
 import { deriveItemAlarmFromRisks } from "../../../lib/item-alarm";
-import { canonicalStageIds } from "../model/stage-tags";
+import { canonicalStageNames } from "../model/stage-tags";
 import type {
   ItemStatus,
   KanbanItem,
@@ -14,25 +14,25 @@ export function collectItemErrors(args: {
   readonly trimmed: string;
   readonly isActivityParent: boolean;
   readonly availableStages: readonly string[];
-  readonly effectiveStageIds: readonly string[];
-}): { text?: string; stageIds?: string } {
+  readonly effectiveStageNames: readonly string[];
+}): { text?: string; stageNames?: string } {
   const stageRequired =
     !args.isActivityParent &&
     args.availableStages.length > 0 &&
-    args.effectiveStageIds.length === 0;
+    args.effectiveStageNames.length === 0;
   return {
     ...(args.trimmed.length === 0 ? { text: "Description is required" } : {}),
-    ...(stageRequired ? { stageIds: "Select at least one stage." } : {}),
+    ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
 }
 
 // Focus order: text → stage → pausedReason; later errors never jump past earlier.
 export function firstInvalidControl(
-  next: { text?: string; stageIds?: string; pausedReason?: string },
+  next: { text?: string; stageNames?: string; pausedReason?: string },
   surface: HTMLElement | null,
 ): HTMLElement | null {
   if (next.text) return document.getElementById("item-text");
-  if (next.stageIds) {
+  if (next.stageNames) {
     return (
       surface?.querySelector<HTMLElement>('fieldset input[type="checkbox"]') ??
       null
@@ -45,7 +45,7 @@ export function firstInvalidControl(
 export interface CoverageArgs {
   readonly isActivityParent: boolean;
   readonly productId: string;
-  readonly stageIds: readonly string[];
+  readonly stageNames: readonly string[];
   readonly status: ItemStatus;
   readonly risks: readonly RiskEntry[] | undefined;
 }
@@ -54,12 +54,12 @@ export interface CoverageArgs {
 // Stage-less creates are never pre-locked by the wildcard.
 function isItemCovered(args: CoverageArgs): boolean {
   if (args.isActivityParent || args.productId === "") return false;
-  if (args.stageIds.length === 0) return false;
+  if (args.stageNames.length === 0) return false;
   return (
     deriveItemAlarmFromRisks(
       {
         productId: args.productId,
-        stageIds: args.stageIds,
+        stageNames: args.stageNames,
         status: args.status,
       },
       args.risks ?? [],
@@ -166,7 +166,7 @@ export function buildActivityItemSave(
 export function buildProductItemSave(
   args: ItemSaveCommonArgs & {
     readonly product: { id: string; name: string };
-    readonly effectiveStageIds: readonly string[];
+    readonly effectiveStageNames: readonly string[];
   },
 ): KanbanItem {
   return {
@@ -174,9 +174,9 @@ export function buildProductItemSave(
     productId: args.product.id,
     productName: args.product.name,
     activityId: null,
-    stageIds:
-      args.effectiveStageIds.length > 0
-        ? canonicalStageIds(args.effectiveStageIds)
+    stageNames:
+      args.effectiveStageNames.length > 0
+        ? canonicalStageNames(args.effectiveStageNames)
         : undefined,
     text: args.trimmed,
     status: args.status,

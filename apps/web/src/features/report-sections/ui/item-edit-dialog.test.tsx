@@ -95,7 +95,7 @@ describe("ItemEditDialog — compact touch floor", () => {
 });
 
 describe("ItemEditDialog — reopen reset", () => {
-  it("resets draft text, status, stageIds and errors when reopened", () => {
+  it("resets draft text, status, stageNames and errors when reopened", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
     const item: KanbanItem = {
@@ -105,7 +105,7 @@ describe("ItemEditDialog — reopen reset", () => {
       text: "Persisted item text",
       status: "completed",
       author: "Test Lead",
-      stageIds: ["Dev"],
+      stageNames: ["Dev"],
     };
 
     const { rerender } = render(
@@ -181,7 +181,7 @@ describe("ItemEditDialog — canonical stage labels", () => {
       text: "Legacy item stored with the short stage alias",
       status: "in-progress",
       author: "Test Lead",
-      stageIds: ["Dev"],
+      stageNames: ["Dev"],
     };
 
     render(
@@ -202,7 +202,7 @@ describe("ItemEditDialog — canonical stage labels", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     });
   });
 });
@@ -366,8 +366,8 @@ describe("ItemEditDialog — unique rank picker", () => {
   });
 });
 
-describe("ItemEditDialog — stageIds", () => {
-  it("saves selected stageIds from the create dialog", () => {
+describe("ItemEditDialog — stageNames", () => {
+  it("saves selected stageNames from the create dialog", () => {
     const onSave = vi.fn();
     render(
       <ItemEditDialog
@@ -392,7 +392,7 @@ describe("ItemEditDialog — stageIds", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       text: "Implement OAuth callback",
-      stageIds: ["Testing"],
+      stageNames: ["Testing"],
     });
   });
 });

@@ -47,13 +47,13 @@ function buildItemEditHandle(
     parent: formState.parent,
     onParentChange: save.setParentAndStages,
     isActivityParent: derived.isActivityParent,
-    stageIds: formState.stageIds,
+    stageNames: formState.stageNames,
     availableStages: derived.availableStages,
     isDeadEnd: derived.isDeadEnd,
-    stageError: formState.errors.stageIds,
+    stageError: formState.errors.stageNames,
     onStageChange: (nextStages: string[]) => {
-      formState.setStageIds(nextStages);
-      formState.setErrors((prev) => ({ ...prev, stageIds: undefined }));
+      formState.setStageNames(nextStages);
+      formState.setErrors((prev) => ({ ...prev, stageNames: undefined }));
     },
     statusSlot: derived.statusSlot,
     status: formState.status,
@@ -88,7 +88,7 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     parent: formState.parent,
     products: args.products,
     activities: args.activities,
-    stageIds: formState.stageIds,
+    stageNames: formState.stageNames,
     stagesForProduct: args.stagesForProduct,
     ownPeriodRanks: args.ownPeriodRanks,
     status: formState.status,
@@ -110,9 +110,9 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     isActivityParent: derived.isActivityParent,
     isDeadEnd: derived.isDeadEnd,
     availableStages: derived.availableStages,
-    effectiveStageIds: derived.effectiveStageIds,
+    effectiveStageNames: derived.effectiveStageNames,
     setParent: formState.setParent,
-    setStageIds: formState.setStageIds,
+    setStageNames: formState.setStageNames,
     setErrors: formState.setErrors,
     onSave: args.onSave,
   });

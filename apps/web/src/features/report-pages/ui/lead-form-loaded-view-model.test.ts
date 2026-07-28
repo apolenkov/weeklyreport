@@ -41,7 +41,7 @@ function makeSection(): ReportSectionReadModel {
         tag: "general",
         workflowStatus: "postponed",
         carriedOver: false,
-        stageIds: [],
+        stageNames: [],
         priorityRank: NEXT_ITEM_RANK,
         pausedReason: null,
       },
@@ -425,7 +425,7 @@ describe("unified activity and activity alarm derivations", () => {
             impact: "Impact",
             mitigation: "Mitigation",
             severity,
-            stageIds: [],
+            stageNames: [],
           },
         ],
       };

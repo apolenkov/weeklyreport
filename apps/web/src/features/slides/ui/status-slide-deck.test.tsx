@@ -28,7 +28,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   workflowStatus: "in_progress",
   carriedOver: false,
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -39,7 +39,7 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   mitigation: "",
   severity: "at-risk",
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -195,7 +195,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
   });
 
   it("renders the stage legend for stages present on the slide", () => {
-    renderDeck(makeSection({ items: [item({ stageIds: ["Testing"] })] }));
+    renderDeck(makeSection({ items: [item({ stageNames: ["Testing"] })] }));
     expect(screen.getByTestId("slide-stage-legend")).toHaveTextContent(
       "Testing",
     );

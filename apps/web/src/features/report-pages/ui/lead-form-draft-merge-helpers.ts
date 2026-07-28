@@ -93,12 +93,12 @@ export function mergeDecisionDraft(
       ? {
           productId: null,
           activityId: decision.activityId,
-          stageIds: [] as string[],
+          stageNames: [] as string[],
         }
       : {
           productId: decision.productId || null,
           activityId: null,
-          stageIds: decision.stageIds,
+          stageNames: decision.stageNames,
         };
     if (existing) {
       return {
@@ -141,12 +141,12 @@ export function mergeRiskDraft(
       ? {
           projectId: null,
           activityId: risk.activityId,
-          stageIds: [] as string[],
+          stageNames: [] as string[],
         }
       : {
           projectId: risk.productId,
           activityId: null,
-          stageIds: risk.stageIds,
+          stageNames: risk.stageNames,
         };
     if (existing) {
       return {
@@ -182,12 +182,12 @@ function mergeItemRow(
     ? {
         projectId: null,
         activityId: item.activityId,
-        stageIds: [] as string[],
+        stageNames: [] as string[],
       }
     : {
         projectId: item.productId,
         activityId: null,
-        stageIds: item.stageIds,
+        stageNames: item.stageNames,
       };
   const pausedReason =
     workflowStatus === "paused" ? (item.pausedReason ?? null) : null;

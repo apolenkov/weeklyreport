@@ -78,7 +78,7 @@ describe("deriveLeadSubmitReadiness", () => {
       text: "Release risk",
       impact: "Date slips",
       mitigation: "Reduce scope",
-      stageIds: [],
+      stageNames: [],
     };
     const readiness = deriveLeadSubmitReadiness({
       ...baseInput,

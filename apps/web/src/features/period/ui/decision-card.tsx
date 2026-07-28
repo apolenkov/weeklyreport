@@ -113,8 +113,8 @@ function DecisionCardHeader({
 export function DecisionCard(props: DecisionCardProps) {
   const { decision } = props;
   const stageTags = (
-    decision.stageIds && decision.stageIds.length > 0
-      ? decision.stageIds
+    decision.stageNames && decision.stageNames.length > 0
+      ? decision.stageNames
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(decision.stageName)
   )

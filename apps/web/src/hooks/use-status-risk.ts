@@ -19,7 +19,7 @@ interface ProductCoupling {
 
 export type CouplingState = ProductCoupling[];
 
-// Empty stageIds is valid for green products (legacy "all stages"); enforced only for red/yellow.
+// Empty stageNames is valid for green products (legacy "all stages"); enforced only for red/yellow.
 export function computeCoupling(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -41,7 +41,7 @@ export function computeCoupling(
           .filter(
             (risk) =>
               risk.productId === product.id &&
-              (!risk.stageIds || risk.stageIds.length === 0),
+              (!risk.stageNames || risk.stageNames.length === 0),
           )
           .map((risk) => risk.id),
       },

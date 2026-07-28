@@ -5,7 +5,7 @@ import type {
   RecordParent,
 } from "../../report-sections";
 import {
-  computeEffectiveStageIds,
+  computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
   resolveRecordParent,
 } from "../../report-sections";
@@ -25,7 +25,7 @@ export interface UseDecisionEditDialogArgs {
 export interface DecisionDialogModel {
   readonly isActivityParent: boolean;
   readonly availableStages: readonly string[];
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
   readonly isDeadEnd: boolean;
   readonly selectedActivity: ParentActivityOption | undefined;
   readonly selectedProduct: Product | undefined;
@@ -47,7 +47,7 @@ export function initialDecisionParent(
 export function deriveDecisionDialogModel(
   args: UseDecisionEditDialogArgs,
   parent: RecordParent,
-  stageIds: readonly string[],
+  stageNames: readonly string[],
 ): DecisionDialogModel {
   const isActivityParent = parent.kind === "activity";
   // Product parents need a concrete stage when the lead owns any; one owned
@@ -55,15 +55,18 @@ export function deriveDecisionDialogModel(
   const availableStages = isActivityParent
     ? []
     : (args.stagesForProduct?.(parent.id) ?? []);
-  const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
+  const effectiveStageNames = computeEffectiveStageNames(
+    stageNames,
+    availableStages,
+  );
   const selectedProduct = args.products?.find((p) => p.id === parent.id);
   return {
     isActivityParent,
     availableStages,
-    effectiveStageIds,
+    effectiveStageNames,
     isDeadEnd:
       !isActivityParent &&
-      isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds),
+      isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
     selectedActivity: args.activities.find((a) => a.id === parent.id),
     selectedProduct,
     headerProductName: resolveDecisionProductName(

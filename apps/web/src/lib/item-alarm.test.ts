@@ -4,19 +4,19 @@ import { deriveItemAlarmFromRisks } from "./item-alarm";
 
 const inProgress = {
   productId: "p1",
-  stageIds: ["Development"],
+  stageNames: ["Development"],
   status: "in-progress" as const,
 };
 
 function risk(overrides: {
   productId?: string;
-  stageIds?: string[];
+  stageNames?: string[];
   severity: "at-risk" | "blocked";
   text?: string;
 }) {
   return {
     productId: overrides.productId ?? "p1",
-    stageIds: overrides.stageIds,
+    stageNames: overrides.stageNames,
     severity: overrides.severity,
     text: overrides.text ?? "A real risk",
   };
@@ -26,7 +26,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("floors an in-progress item to a covering blocked risk", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: ["Development"], severity: "blocked" }),
+        risk({ stageNames: ["Development"], severity: "blocked" }),
       ]),
     ).toBe("blocked");
   });
@@ -34,7 +34,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("floors an in-progress item to a covering at-risk risk", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: ["Development"], severity: "at-risk" }),
+        risk({ stageNames: ["Development"], severity: "at-risk" }),
       ]),
     ).toBe("at-risk");
   });
@@ -42,8 +42,8 @@ describe("deriveItemAlarmFromRisks", () => {
   it("takes the highest covering severity (blocked beats at-risk)", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: ["Development"], severity: "at-risk" }),
-        risk({ stageIds: ["Development"], severity: "blocked" }),
+        risk({ stageNames: ["Development"], severity: "at-risk" }),
+        risk({ stageNames: ["Development"], severity: "blocked" }),
       ]),
     ).toBe("blocked");
   });
@@ -51,7 +51,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("returns null when no risk covers the item's stage", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: ["Testing"], severity: "blocked" }),
+        risk({ stageNames: ["Testing"], severity: "blocked" }),
       ]),
     ).toBeNull();
   });
@@ -63,7 +63,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("treats an empty-stage (wildcard) risk as covering any stage", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: [], severity: "at-risk" }),
+        risk({ stageNames: [], severity: "at-risk" }),
       ]),
     ).toBe("at-risk");
   });
@@ -72,7 +72,7 @@ describe("deriveItemAlarmFromRisks", () => {
     const stageless = { productId: "p1", status: "in-progress" as const };
     expect(
       deriveItemAlarmFromRisks(stageless, [
-        risk({ stageIds: ["Testing"], severity: "blocked" }),
+        risk({ stageNames: ["Testing"], severity: "blocked" }),
       ]),
     ).toBe("blocked");
   });
@@ -82,7 +82,7 @@ describe("deriveItemAlarmFromRisks", () => {
       deriveItemAlarmFromRisks(inProgress, [
         risk({
           productId: "p2",
-          stageIds: ["Development"],
+          stageNames: ["Development"],
           severity: "blocked",
         }),
       ]),
@@ -92,7 +92,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("ignores an empty (placeholder) risk", () => {
     expect(
       deriveItemAlarmFromRisks(inProgress, [
-        risk({ stageIds: ["Development"], severity: "blocked", text: "  " }),
+        risk({ stageNames: ["Development"], severity: "blocked", text: "  " }),
       ]),
     ).toBeNull();
   });
@@ -100,7 +100,7 @@ describe("deriveItemAlarmFromRisks", () => {
   it("never floors a completed item (finished work is not in-flight)", () => {
     expect(
       deriveItemAlarmFromRisks({ ...inProgress, status: "completed" }, [
-        risk({ stageIds: ["Development"], severity: "blocked" }),
+        risk({ stageNames: ["Development"], severity: "blocked" }),
       ]),
     ).toBeNull();
   });
@@ -108,12 +108,12 @@ describe("deriveItemAlarmFromRisks", () => {
   it("never floors a planned (next-week) item", () => {
     expect(
       deriveItemAlarmFromRisks({ ...inProgress, status: "planned" }, [
-        risk({ stageIds: [], severity: "blocked" }),
+        risk({ stageNames: [], severity: "blocked" }),
       ]),
     ).toBeNull();
   });
 
-  it("heals a legacy single-stage label (stageName) when stageIds is absent", () => {
+  it("heals a legacy single-stage label (stageName) when stageNames is absent", () => {
     const legacy = {
       productId: "p1",
       stageName: "Development",
@@ -121,7 +121,7 @@ describe("deriveItemAlarmFromRisks", () => {
     };
     expect(
       deriveItemAlarmFromRisks(legacy, [
-        risk({ stageIds: ["Development"], severity: "at-risk" }),
+        risk({ stageNames: ["Development"], severity: "at-risk" }),
       ]),
     ).toBe("at-risk");
   });

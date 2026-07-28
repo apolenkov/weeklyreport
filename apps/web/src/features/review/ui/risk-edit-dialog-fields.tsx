@@ -31,7 +31,7 @@ interface RiskEditDialogFieldsProps {
   readonly activities: readonly ParentActivityOption[];
   readonly onParentChange: (next: RecordParent) => void;
   readonly isActivityParent: boolean;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
   readonly availableStages: readonly string[];
   readonly severity: RiskSeverity;
   readonly isZeroOwnedStageDeadEnd: boolean;
@@ -111,7 +111,7 @@ type RiskClassificationPanelProps = Pick<
   | "activities"
   | "onParentChange"
   | "isActivityParent"
-  | "stageIds"
+  | "stageNames"
   | "availableStages"
   | "severity"
   | "isZeroOwnedStageDeadEnd"
@@ -139,7 +139,7 @@ function RiskClassificationPanel(props: RiskClassificationPanelProps) {
       {!props.isActivityParent && (
         <StageStep
           id="risk-stage"
-          stageIds={props.stageIds}
+          stageNames={props.stageNames}
           availableStages={props.availableStages}
           previewSeverity={props.severity}
           isDeadEnd={props.isZeroOwnedStageDeadEnd}

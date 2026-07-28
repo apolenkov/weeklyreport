@@ -75,7 +75,7 @@ function deriveWeeklyReportItem(
   alarmRisks: readonly AlarmRisk[],
   index: number,
 ): WeeklyReportItem {
-  const stagePart = (item.stageIds ?? []).join("+");
+  const stagePart = (item.stageNames ?? []).join("+");
   const stageLead = stagePart ? `${stagePart} · ${initials}` : initials;
   return {
     id: item.id ?? `${item.projectId}-${item.type}-${index}`,
@@ -90,7 +90,7 @@ function deriveWeeklyReportItem(
         workflowStatus: item.workflowStatus,
         type: item.type,
         projectId: item.projectId,
-        stageIds: item.stageIds,
+        stageNames: item.stageNames,
       },
       alarmRisks,
     ),
@@ -108,7 +108,7 @@ export function groupItemsByProject(
     const initials = initialsFromName(section.authorName);
     const alarmRisks: AlarmRisk[] = section.risks.map((risk) => ({
       productId: risk.projectId ?? "",
-      stageIds: risk.stageIds ?? undefined,
+      stageNames: risk.stageNames ?? undefined,
       severity: risk.severity,
       text: risk.risk,
     }));
@@ -149,7 +149,7 @@ function deriveWeeklyReportRisk(
 ): WeeklyReportRisk {
   const productName = projectNames.get(risk.projectId) ?? "Unknown";
   const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
-  const riskStages = (risk.stageIds ?? []).join("+");
+  const riskStages = (risk.stageNames ?? []).join("+");
   return {
     id: risk.id ?? `risk-${section.reportSectionId}-${index}`,
     badge: riskStages ? `${productName} · ${riskStages}` : productName,

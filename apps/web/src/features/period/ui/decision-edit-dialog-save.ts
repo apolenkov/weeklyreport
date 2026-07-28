@@ -38,7 +38,7 @@ function emitDecisionSave(args: {
   readonly selectedActivity: ParentActivityOption | undefined;
   readonly selectedProduct: Product | undefined;
   readonly parentId: string;
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
   readonly onSave: (next: DecisionEntry) => void;
 }): void {
   const base = buildDecisionSaveBase({
@@ -65,7 +65,7 @@ function emitDecisionSave(args: {
       decision: args.decision,
       selectedProduct: args.selectedProduct,
       parentId: args.parentId,
-      effectiveStageIds: args.effectiveStageIds,
+      effectiveStageNames: args.effectiveStageNames,
     }),
   );
 }
@@ -80,7 +80,7 @@ function focusFirstInvalidField(
     targets.textRef.current?.focus();
   } else if (fieldErrors.impact) {
     targets.impactRef.current?.focus();
-  } else if (fieldErrors.stageIds) {
+  } else if (fieldErrors.stageNames) {
     targets.dialogSurfaceRef.current
       ?.querySelector<HTMLInputElement>(
         '[data-testid="stage-checkbox-group"] input[type="checkbox"]',
@@ -96,7 +96,7 @@ export function runDecisionSave(args: {
   readonly model: DecisionDialogModel;
   readonly focusTargets: DecisionFocusTargets;
 }): void {
-  // Dead-end no-op: never call onSave with an empty stageIds array, and never
+  // Dead-end no-op: never call onSave with an empty stageNames array, and never
   // surface the unsatisfiable "Select at least one stage." error. The
   // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
   if (args.model.isDeadEnd) return;
@@ -106,7 +106,7 @@ export function runDecisionSave(args: {
     text,
     impact,
     availableStages: args.model.availableStages,
-    effectiveStageIds: args.model.effectiveStageIds,
+    effectiveStageNames: args.model.effectiveStageNames,
   });
   if (Object.keys(errors).length > 0) {
     args.fields.setErrors(errors);
@@ -123,7 +123,7 @@ export function runDecisionSave(args: {
     selectedActivity: args.model.selectedActivity,
     selectedProduct: args.model.selectedProduct,
     parentId: args.fields.parent.id,
-    effectiveStageIds: args.model.effectiveStageIds,
+    effectiveStageNames: args.model.effectiveStageNames,
     onSave: args.input.onSave,
   });
 }

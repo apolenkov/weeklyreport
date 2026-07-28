@@ -15,7 +15,7 @@ describe("deriveEffectiveProductStatus", () => {
         {
           projectId: PROJECT_ID,
           severity: "blocked",
-          stageIds: ["Dev"],
+          stageNames: ["Dev"],
         },
       ],
     });
@@ -32,7 +32,7 @@ describe("deriveEffectiveProductStatus", () => {
         {
           projectId: PROJECT_ID,
           severity: "blocked",
-          stageIds: ["Testing"],
+          stageNames: ["Testing"],
         },
       ],
     });
@@ -49,7 +49,7 @@ describe("deriveEffectiveProductStatus", () => {
         {
           projectId: OTHER_PROJECT_ID,
           severity: "blocked",
-          stageIds: ["Dev"],
+          stageNames: ["Dev"],
         },
       ],
     });

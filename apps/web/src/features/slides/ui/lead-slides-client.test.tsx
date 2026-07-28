@@ -182,7 +182,7 @@ function makeSection(
         tag: "general",
         workflowStatus: "in_progress",
         carriedOver: false,
-        stageIds: ["Development"],
+        stageNames: ["Development"],
       },
     ],
     risks: [],

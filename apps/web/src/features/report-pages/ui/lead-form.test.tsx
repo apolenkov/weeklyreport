@@ -482,7 +482,7 @@ describe("LeadForm mutation wiring", () => {
           impact: "The date will slip",
           mitigation: "Reduce scope",
           severity: "blocked" as const,
-          stageIds: [],
+          stageNames: [],
         },
       ],
     };

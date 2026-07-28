@@ -27,7 +27,7 @@ interface UseRiskEditDialogArgs {
   readonly defaultActivityId?: string;
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
-  readonly initialStageIds?: string[];
+  readonly initialStageNames?: string[];
   readonly initialSeverity?: RiskSeverity;
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
@@ -49,7 +49,7 @@ function toParentStageView({
   setSeverity,
   handleStageChange,
   setStageError,
-  effectiveStageIds,
+  effectiveStageNames,
   selectedActivity,
   ...view
 }: RiskEditParentStage) {

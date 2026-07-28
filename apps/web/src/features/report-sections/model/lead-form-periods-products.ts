@@ -53,7 +53,7 @@ interface OwnedStageInput {
   status?: TrafficLightStatus | null;
 }
 interface StageRisk {
-  stageIds?: readonly string[];
+  stageNames?: readonly string[];
   severity: RiskSeverity;
 }
 
@@ -92,8 +92,8 @@ function deriveOwnedStageRow(
     // covers-all or legacy stage-less risk must not make every stage complete.
     coveredByOwnRisk: risks.some(
       (r) =>
-        Array.isArray(r.stageIds) &&
-        r.stageIds.length > 0 &&
+        Array.isArray(r.stageNames) &&
+        r.stageNames.length > 0 &&
         riskCoversStage(r, stageName),
     ),
   };

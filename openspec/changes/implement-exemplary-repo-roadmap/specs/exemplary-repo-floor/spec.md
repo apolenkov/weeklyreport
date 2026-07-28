@@ -1,3 +1,20 @@
+## ADDED Requirements
+
+### Requirement: Stage-selection fields describe their values truthfully
+
+Report record read models, write payloads, UI state, and validation errors SHALL
+name arrays of SDLC stage labels `stageNames`. The `stageIds` spelling MUST NOT
+remain in `apps/*` or `packages/*`. Fields that carry real stage UUIDs, including
+the singular assignment `stageId`, SHALL retain their identifier spelling.
+
+#### Scenario: A record crosses the full write/read boundary
+
+- **WHEN** a client writes a record with `stageNames: ["Development"]`
+- **THEN** the API persists the value in the existing `stageNames` database column
+- **AND** the read model returns the same `stageNames` value
+- **AND** no mapper translates between a name-valued `stageIds` field and
+  `stageNames`
+
 ## MODIFIED Requirements
 
 ### Requirement: Three ratchet counters move in one direction only

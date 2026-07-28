@@ -162,7 +162,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     // stage-label-canonicalization 1.2: the selected "Dev" option persists as
     // the canonical "Development".
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Development"],
+      stageNames: ["Development"],
       text: "Vendor delay",
       impact: "Slips Q3",
       mitigation: "Escalate",
@@ -418,7 +418,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
           id: "r1",
           productId: "p1",
           productName: "CRM",
-          stageIds: ["Dev"],
+          stageNames: ["Dev"],
           severity: "at-risk",
           text: "Old risk",
           impact: "",

@@ -24,7 +24,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   workflowStatus: "in_progress",
   carriedOver: false,
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -34,7 +34,7 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   mitigation: "",
   severity: "at-risk",
   projectId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 
@@ -43,7 +43,7 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
   owner: "",
   impact: "",
   productId: "p1",
-  stageIds: [],
+  stageNames: [],
   ...over,
 });
 

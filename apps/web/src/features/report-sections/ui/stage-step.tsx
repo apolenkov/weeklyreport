@@ -6,7 +6,7 @@ import { StageMultiSelect } from "./stage-multi-select";
 
 interface StageStepProps {
   readonly id: string;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
   readonly availableStages: readonly string[];
   readonly isDeadEnd: boolean;
   readonly error: string | undefined;
@@ -17,7 +17,7 @@ interface StageStepProps {
 
 export function StageStep({
   id,
-  stageIds,
+  stageNames,
   availableStages,
   isDeadEnd,
   error,
@@ -29,7 +29,7 @@ export function StageStep({
     <>
       <StageMultiSelect
         id={id}
-        value={stageIds}
+        value={stageNames}
         stages={availableStages}
         error={isDeadEnd ? undefined : error}
         onChange={onChange}

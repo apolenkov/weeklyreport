@@ -15,11 +15,15 @@ export function applySlideInlineItemEdit(
 ): ReportSectionReadModel {
   const workflowStatus = persistableItemStatusToWorkflow(item.status);
   const parentFields = item.activityId
-    ? { projectId: null, activityId: item.activityId, stageIds: [] as string[] }
+    ? {
+        projectId: null,
+        activityId: item.activityId,
+        stageNames: [] as string[],
+      }
     : {
         projectId: item.productId || null,
         activityId: null,
-        stageIds: item.stageIds,
+        stageNames: item.stageNames,
       };
   return {
     ...section,
@@ -45,11 +49,15 @@ export function applySlideInlineRiskEdit(
   risk: RiskEntry,
 ): ReportSectionReadModel {
   const parentFields = risk.activityId
-    ? { projectId: null, activityId: risk.activityId, stageIds: [] as string[] }
+    ? {
+        projectId: null,
+        activityId: risk.activityId,
+        stageNames: [] as string[],
+      }
     : {
         projectId: risk.productId || null,
         activityId: null,
-        stageIds: risk.stageIds,
+        stageNames: risk.stageNames,
       };
   return {
     ...section,
@@ -77,12 +85,12 @@ export function applySlideInlineDecisionEdit(
     ? {
         productId: null,
         activityId: decision.activityId,
-        stageIds: [] as string[],
+        stageNames: [] as string[],
       }
     : {
         productId: decision.productId || null,
         activityId: null,
-        stageIds: decision.stageIds,
+        stageNames: decision.stageNames,
       };
   return {
     ...section,

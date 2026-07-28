@@ -53,8 +53,8 @@ function activityLanes(
 
 function groupKeyFor(item: KanbanItem): string {
   const tags =
-    item.stageIds && item.stageIds.length > 0
-      ? item.stageIds
+    item.stageNames && item.stageNames.length > 0
+      ? item.stageNames
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(item.stageName);
   return tags.length > 0

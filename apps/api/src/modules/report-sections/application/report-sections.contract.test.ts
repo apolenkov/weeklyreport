@@ -38,7 +38,7 @@ const baseSection: ReportSectionReadModel = {
       projectName: "Project Alpha",
       trafficLight: null,
       // the author owns the Development stage
-      // on this project, so the write payloads (stageIds: ["Development"]) pass
+      // on this project, so the write payloads (stageNames: ["Development"]) pass
       // the stage-ownership guard.
       ownedStages: [
         {
@@ -58,7 +58,7 @@ const baseSection: ReportSectionReadModel = {
       workflowStatus: "in_progress",
       carriedOver: false,
       // items carry ≥1 stage on write.
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -66,11 +66,11 @@ const baseSection: ReportSectionReadModel = {
   activities: [],
 };
 
-// read-model item types stageIds optional;
+// read-model item types stageNames optional;
 // the write payloads below require it. Expose a stage-guaranteed copy.
 const writeItems = baseSection.items.map((it) => ({
   ...it,
-  stageIds: it.stageIds ?? [],
+  stageNames: it.stageNames ?? [],
 }));
 
 function createRepository(
@@ -202,7 +202,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         tag: "planning",
         workflowStatus: "planned" as const,
         carriedOver: false,
-        stageIds: ["Development"],
+        stageNames: ["Development"],
       },
     ];
     const saved = await service.saveDraft(validDraft({ items: newItems }));
@@ -224,8 +224,8 @@ describe("ReportSectionsService — saveDraft happy path", () => {
             impact: "Revenue",
             mitigation: "Hire contractor",
             severity: "at-risk",
-            // stageIds is required (min 1) on writes.
-            stageIds: ["Development"],
+            // stageNames is required (min 1) on writes.
+            stageNames: ["Development"],
           },
         ],
       }),
@@ -245,12 +245,12 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         decisions: [
           {
             // a decision now needs exactly one parent;
-            // product-parent it (stageIds is then required, as here).
+            // product-parent it (stageNames is then required, as here).
             productId: PROJECT_ID_1,
             text: "Upgrade DB",
             owner: "Alice",
             impact: "Better performance",
-            stageIds: ["Development"],
+            stageNames: ["Development"],
           },
         ],
       }),
@@ -374,7 +374,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
       tag: "tag",
       workflowStatus: "in_progress" as const,
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     }));
 
     await expect(
@@ -399,7 +399,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
               tag: "bug",
               workflowStatus: "in_progress",
               carriedOver: false,
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -424,7 +424,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
               tag: "bug",
               workflowStatus: "in_progress",
               carriedOver: false,
-              stageIds: ["Development"],
+              stageNames: ["Development"],
             },
           ],
         }),
@@ -483,7 +483,7 @@ describe("ReportSectionsService — multi-project", () => {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
-        stageIds: ["Development"],
+        stageNames: ["Development"],
       },
       {
         projectId: PROJECT_ID_2,
@@ -492,7 +492,7 @@ describe("ReportSectionsService — multi-project", () => {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
-        stageIds: ["Development"],
+        stageNames: ["Development"],
       },
     ],
   };
@@ -500,7 +500,7 @@ describe("ReportSectionsService — multi-project", () => {
   // stage-guaranteed copy for write payloads.
   const multiWriteItems = multiProjectSection.items.map((it) => ({
     ...it,
-    stageIds: it.stageIds ?? [],
+    stageNames: it.stageNames ?? [],
   }));
 
   it("saveDraft updates traffic lights for multiple projects", async () => {
@@ -569,7 +569,7 @@ describe("ReportSectionsService — multi-project", () => {
             tag: "feature",
             workflowStatus: "in_progress",
             carriedOver: false,
-            stageIds: ["Development"],
+            stageNames: ["Development"],
           },
         ],
         risks: [],
@@ -648,7 +648,7 @@ describe("ReportSectionsService — edge cases", () => {
       tag: "feature",
       workflowStatus: "in_progress" as const,
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     }));
     const saved = await service.saveDraft(validDraft({ items: maxItems }));
 

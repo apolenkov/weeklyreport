@@ -94,7 +94,7 @@ describe("DecisionEditDialog — form-race regression", () => {
     });
   });
 
-  it("saves selected stageIds with the decision payload", () => {
+  it("saves selected stageNames with the decision payload", () => {
     const onSave = vi.fn();
     render(
       <DecisionEditDialog
@@ -122,11 +122,11 @@ describe("DecisionEditDialog — form-race regression", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       text: "Approve Q3 hiring plan",
-      stageIds: ["Planning"],
+      stageNames: ["Planning"],
     });
   });
 
-  it("restores existing stageIds when editing a decision", () => {
+  it("restores existing stageNames when editing a decision", () => {
     render(
       <DecisionEditDialog
         open={true}
@@ -138,7 +138,7 @@ describe("DecisionEditDialog — form-race regression", () => {
           owner: "Test Lead",
           impact: "Unblocks production rollout",
           deadline: null,
-          stageIds: ["Dev"],
+          stageNames: ["Dev"],
         }}
         defaultOwner="Test Lead"
         stagesForProduct={() => ["Planning", "Dev"]}
@@ -168,7 +168,7 @@ describe("DecisionEditDialog — form-race regression", () => {
           owner: "Original Owner",
           impact: "Unblocks production rollout",
           deadline: null,
-          stageIds: ["Dev"],
+          stageNames: ["Dev"],
         }}
         defaultOwner="Different Lead"
         stagesForProduct={() => ["Planning", "Dev"]}
@@ -396,7 +396,7 @@ describe("DecisionEditDialog — require a stage", () => {
     // stage-label-canonicalization 1.2: the auto-applied "Dev" owned stage is
     // persisted as the canonical "Development", never the short alias.
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     });
   });
 });
@@ -566,7 +566,7 @@ describe("DecisionEditDialog — activity parenting", () => {
     const saved = onSave.mock.calls[0]?.[0] as DecisionEntry;
     expect(saved.activityId).toBe("act1");
     expect(saved.productId).toBe("");
-    expect(saved.stageIds).toBeUndefined();
+    expect(saved.stageNames).toBeUndefined();
     expect(saved.activityName).toBe("Jira triage duty");
     expect(saved.text).toBe("Escalate triage backlog");
   });

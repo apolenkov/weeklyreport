@@ -7,12 +7,12 @@ import type {
   RiskEntry,
 } from "../../report-sections";
 import {
-  computeEffectiveStageIds,
+  computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
   resolveRecordParent,
 } from "../../report-sections";
 import {
-  computeInitialStageIds,
+  computeInitialStageNames,
   computePreCheckedStages,
   deriveFromPreChecked,
   resolveRiskParentName,
@@ -26,7 +26,7 @@ interface UseRiskEditParentStageArgs {
   readonly activities: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
   readonly defaultActivityId?: string;
-  readonly initialStageIds?: string[];
+  readonly initialStageNames?: string[];
   readonly initialSeverity?: RiskSeverity;
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
@@ -61,9 +61,9 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
   );
 
   // Empty on create — user marks stages; preCheckedStages is info only.
-  // Chip-raise initialStageIds pre-checks the clicked stage.
-  const [stageIds, setStageIds] = useState<string[]>(() =>
-    computeInitialStageIds(risk, args.initialStageIds),
+  // Chip-raise initialStageNames pre-checks the clicked stage.
+  const [stageNames, setStageNames] = useState<string[]>(() =>
+    computeInitialStageNames(risk, args.initialStageNames),
   );
   const [stageError, setStageError] = useState<string | undefined>(undefined);
 
@@ -72,8 +72,8 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
     setSeverity,
     parent,
     setParent,
-    stageIds,
-    setStageIds,
+    stageNames,
+    setStageNames,
     stageError,
     setStageError,
   };
@@ -84,7 +84,7 @@ interface RiskParentDerivationArgs {
   readonly isActivityParent: boolean;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
-  readonly stageIds: readonly string[];
+  readonly stageNames: readonly string[];
   readonly risk: RiskEntry | null;
   readonly stagesForProduct?: (productId: string) => readonly string[];
 }
@@ -96,7 +96,7 @@ function useRiskParentDerivations({
   isActivityParent,
   products,
   activities,
-  stageIds,
+  stageNames,
   risk,
   stagesForProduct,
 }: RiskParentDerivationArgs) {
@@ -116,16 +116,19 @@ function useRiskParentDerivations({
   const availableStages = isActivityParent
     ? []
     : (stagesForProduct?.(parent.id) ?? []);
-  const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
+  const effectiveStageNames = computeEffectiveStageNames(
+    stageNames,
+    availableStages,
+  );
   const selectedActivity = activities.find((a) => a.id === parent.id);
 
   return {
     preCheckedStages,
     availableStages,
-    effectiveStageIds,
+    effectiveStageNames,
     isDeadEnd:
       !isActivityParent &&
-      isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds),
+      isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
     selectedActivity,
     parentName: resolveRiskParentName({
       isActivityParent,
@@ -146,27 +149,27 @@ export function useRiskEditParentStage(args: UseRiskEditParentStageArgs) {
     isActivityParent,
     products,
     activities,
-    stageIds: state.stageIds,
+    stageNames: state.stageNames,
     risk,
     stagesForProduct,
   });
 
-  const handleStageChange = (nextStageIds: string[]) => {
-    state.setStageIds(nextStageIds);
-    if (nextStageIds.length > 0) state.setStageError(undefined);
+  const handleStageChange = (nextStageNames: string[]) => {
+    state.setStageNames(nextStageNames);
+    if (nextStageNames.length > 0) state.setStageError(undefined);
   };
 
   const setParentAndStages = (nextParent: RecordParent) => {
     state.setParent(nextParent);
     // Never default to all owned stages — that caused inflated completeness.
-    state.setStageIds([]);
+    state.setStageNames([]);
   };
 
   return {
     severity: state.severity,
     setSeverity: state.setSeverity,
     parent: state.parent,
-    stageIds: state.stageIds,
+    stageNames: state.stageNames,
     stageError: state.stageError,
     setStageError: state.setStageError,
     isActivityParent,

@@ -59,7 +59,7 @@ export function mapLeadItems(
         // Stage array from DB — surfaces on the kanban card and groups items
         // by product+stage. Undefined for legacy rows seeded before the
         // column existed.
-        ...(item.stageIds ? { stageIds: item.stageIds } : {}),
+        ...(item.stageNames ? { stageNames: item.stageNames } : {}),
         status,
         text: item.text,
         author: section.authorName,

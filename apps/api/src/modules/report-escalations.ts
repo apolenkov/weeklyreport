@@ -7,12 +7,12 @@ import { effectiveProjectStatus } from "./published-report-snapshot.js";
 const UNKNOWN_PRODUCT_NAME = "Unknown";
 const STAGE_NAME_SEPARATOR = ", ";
 
-// stageIds holds stage NAMES, not UUIDs — hence a plain join, no lookup.
+// stageNames holds stage NAMES, not UUIDs — hence a plain join, no lookup.
 function resolveStageName(
-  stageIds: readonly string[] | undefined,
+  stageNames: readonly string[] | undefined,
 ): string | null {
-  if (!stageIds || stageIds.length === 0) return null;
-  return stageIds.join(STAGE_NAME_SEPARATOR);
+  if (!stageNames || stageNames.length === 0) return null;
+  return stageNames.join(STAGE_NAME_SEPARATOR);
 }
 
 interface FlaggedRedRollUp {
@@ -60,7 +60,7 @@ function blockedRiskEscalations(
       {
         type: "blocked" as const,
         productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageIds),
+        stageName: resolveStageName(risk.stageNames),
         leadName: section.authorName,
         description: risk.risk,
       },
@@ -81,7 +81,7 @@ function unresolvedRiskEscalations(
       {
         type: "unresolved_risk" as const,
         productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageIds),
+        stageName: resolveStageName(risk.stageNames),
         leadName: section.authorName,
         description: risk.risk,
       },

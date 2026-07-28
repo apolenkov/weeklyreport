@@ -11,7 +11,7 @@ import type { ParentActivityOption, RecordParent } from "./parent-picker";
 
 export interface ItemEditErrors {
   text?: string;
-  stageIds?: string;
+  stageNames?: string;
   pausedReason?: string;
 }
 
@@ -67,8 +67,8 @@ function useItemEditFields({
   );
   // Create starts with no stage (explicit choice); edit restores saved stages.
   // Single-owned-stage auto-apply still runs at save.
-  const [stageIds, setStageIds] = useState<string[]>(
-    item?.stageIds ? [...item.stageIds] : [],
+  const [stageNames, setStageNames] = useState<string[]>(
+    item?.stageNames ? [...item.stageNames] : [],
   );
   const [errors, setErrors] = useState<ItemEditErrors>({});
 
@@ -83,8 +83,8 @@ function useItemEditFields({
     setParent,
     priorityRank,
     setPriorityRank,
-    stageIds,
-    setStageIds,
+    stageNames,
+    setStageNames,
     errors,
     setErrors,
   };

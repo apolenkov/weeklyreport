@@ -27,7 +27,7 @@ const baseSection: ReportSectionReadModel = {
       projectName: "Project 1",
       trafficLight: null,
       // the author owns the Development stage
-      // on this project, so the seeded write payloads (stageIds: ["Development"])
+      // on this project, so the seeded write payloads (stageNames: ["Development"])
       // pass the ownership guard.
       ownedStages: [
         {
@@ -48,7 +48,7 @@ const baseSection: ReportSectionReadModel = {
       carriedOver: false,
       // items carry ≥1 stage on write;
       // validSubmitPayload() reuses these items as a submit payload.
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ],
   risks: [],
@@ -119,7 +119,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     impact: "Blocks release",
     mitigation: "Escalate to platform",
     severity: "at-risk" as const,
-    stageIds: ["DevOps"],
+    stageNames: ["DevOps"],
   };
 
   it("rejects saveDraft when a new risk carries a stage the author does not own", async () => {
@@ -173,7 +173,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
       status: "draft",
       projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
       items: [],
-      risks: [{ ...devOpsRisk, stageIds: ["Testing"] }],
+      risks: [{ ...devOpsRisk, stageNames: ["Testing"] }],
       decisions: [],
     });
 
@@ -231,7 +231,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
             owner: "Lead 1",
             impact: "Faster releases",
             productId: PROJECT_P,
-            stageIds: ["DevOps"],
+            stageNames: ["DevOps"],
           },
         ],
       }),
@@ -253,7 +253,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
         impact: "Payments blocked",
         mitigation: "Escalate to vendor",
         severity: "at-risk",
-        stageIds: ["Integration"],
+        stageNames: ["Integration"],
       },
     ],
   };
@@ -278,7 +278,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           impact: "Payments blocked",
           mitigation: "Escalate to vendor",
           severity: "at-risk",
-          stageIds: ["Integration"],
+          stageNames: ["Integration"],
         },
       ],
       decisions: [],
@@ -311,7 +311,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
             impact: "Payments blocked",
             mitigation: "Escalate to vendor",
             severity: "at-risk",
-            stageIds: ["DevOps"],
+            stageNames: ["DevOps"],
           },
         ],
         decisions: [],
@@ -334,7 +334,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           impact: "Slows release",
           mitigation: "Stabilize",
           severity: "at-risk",
-          stageIds: ["Testing"],
+          stageNames: ["Testing"],
         },
       ],
     };
@@ -360,7 +360,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
             impact: "Slows release",
             mitigation: "Stabilize",
             severity: "at-risk",
-            stageIds: ["Testing"],
+            stageNames: ["Testing"],
           },
         ],
         decisions: [],

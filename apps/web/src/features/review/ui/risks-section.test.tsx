@@ -228,7 +228,7 @@ describe("RisksSection stage scope", () => {
   it("renders explicit all-stage selection as stage chips, not All stages", () => {
     render(
       <RisksSection
-        risks={[{ ...baseRisk, stageIds: ["Dev", "Testing"] }]}
+        risks={[{ ...baseRisk, stageNames: ["Dev", "Testing"] }]}
         stagesForProduct={() => ["Dev", "Testing"]}
       />,
     );
@@ -264,7 +264,7 @@ describe("RisksSection stage scope", () => {
         risks={[
           {
             ...baseRisk,
-            stageIds: ["Planning", "Analysis", "Design", "Dev"],
+            stageNames: ["Planning", "Analysis", "Design", "Dev"],
           },
         ]}
       />,

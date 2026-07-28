@@ -32,7 +32,7 @@ interface RiskEditDialogProps {
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
   // Chip-raise create prefill; ignored in edit mode (risk values win).
-  readonly initialStageIds?: string[];
+  readonly initialStageNames?: string[];
   readonly initialSeverity?: RiskSeverity;
   // Owned stages for the stage select; [] disables Save with a dead-end notice.
   readonly stagesForProduct?: (productId: string) => readonly string[];
@@ -128,7 +128,7 @@ function RiskDialogBody({
         activities={activities}
         onParentChange={dialog.onParentChange}
         isActivityParent={dialog.isActivityParent}
-        stageIds={dialog.stageIds}
+        stageNames={dialog.stageNames}
         availableStages={dialog.availableStages}
         severity={dialog.severity}
         isZeroOwnedStageDeadEnd={dialog.isDeadEnd}
@@ -200,7 +200,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       defaultActivityId: props.defaultActivityId,
       initialImpact: props.initialImpact,
       initialMitigation: props.initialMitigation,
-      initialStageIds: props.initialStageIds,
+      initialStageNames: props.initialStageNames,
       initialSeverity: props.initialSeverity,
       stagesForProduct: props.stagesForProduct,
     });

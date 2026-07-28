@@ -27,7 +27,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
     readonly label: string;
     readonly risks: readonly {
       severity: RiskSeverity;
-      stageIds?: readonly string[];
+      stageNames?: readonly string[];
     }[];
     // Rows follow trafficLights; columns follow stageStatuses.
     readonly expected: readonly (readonly (TrafficLightStatus | null)[])[];
@@ -44,7 +44,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
     },
     {
       label: "covering at-risk",
-      risks: [{ severity: "at-risk", stageIds: ["Development"] }],
+      risks: [{ severity: "at-risk", stageNames: ["Development"] }],
       expected: [
         ["yellow", "yellow", "red", "yellow"],
         ["yellow", "yellow", "red", "yellow"],
@@ -54,7 +54,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
     },
     {
       label: "covering blocked",
-      risks: [{ severity: "blocked", stageIds: ["Development"] }],
+      risks: [{ severity: "blocked", stageNames: ["Development"] }],
       expected: [
         ["red", "red", "red", "red"],
         ["red", "red", "red", "red"],
@@ -64,7 +64,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
     },
     {
       label: "non-covering risk",
-      risks: [{ severity: "blocked", stageIds: ["Testing"] }],
+      risks: [{ severity: "blocked", stageNames: ["Testing"] }],
       expected: [
         ["green", "yellow", "red", "green"],
         ["yellow", "yellow", "red", "yellow"],
@@ -120,7 +120,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
           {
             projectId: "other-project",
             severity: "blocked",
-            stageIds: ["Development"],
+            stageNames: ["Development"],
           },
         ],
       }),

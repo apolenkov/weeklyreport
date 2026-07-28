@@ -134,7 +134,7 @@ describe("product name resolution", () => {
               impact: "Impact",
               mitigation: "Mitigation",
               severity: "at-risk",
-              stageIds: ["Analysis"],
+              stageNames: ["Analysis"],
             },
           ],
           decisions: [

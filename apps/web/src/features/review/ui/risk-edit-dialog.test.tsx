@@ -225,7 +225,7 @@ describe("RiskEditDialog — cross-stage product preservation", () => {
     id: "r-cross",
     productId: "p-foreign",
     productName: "Payments Gateway",
-    stageIds: ["Integration"],
+    stageNames: ["Integration"],
     severity: "at-risk",
     text: "Gateway certification slips",
     impact: "Payments blocked",
@@ -329,7 +329,7 @@ describe("RiskEditDialog — reopen renders fresh state", () => {
 
 // Zero owned stages plus no stage on the row is a dead end: nothing is
 // pickable, so Save is disabled and contact-admin replaces the unsatisfiable
-// required-stage error. A row that already carries stageIds stays saveable.
+// required-stage error. A row that already carries stageNames stays saveable.
 describe("RiskEditDialog — zero-owned-stage guard", () => {
   it("disables Save and shows contact-admin (never the required-stage error) on a stage-less product", () => {
     render(
@@ -385,7 +385,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
 
     // The keyboard shortcut routes through handleSave, which early-returns on
-    // the dead-end guard — no empty stageIds payload escapes.
+    // the dead-end guard — no empty stageNames payload escapes.
     expect(onSave).not.toHaveBeenCalled();
     expect(
       screen.getByText(/no stages assigned — contact admin/i),
@@ -424,13 +424,13 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps Save enabled for a cross-stage edit that already carries stageIds (product returns [])", () => {
+  it("keeps Save enabled for a cross-stage edit that already carries stageNames (product returns [])", () => {
     const onSave = vi.fn();
     const crossStageRisk: RiskEntry = {
       id: "r-cross",
       productId: "p-foreign",
       productName: "Payments Gateway",
-      stageIds: ["Integration"],
+      stageNames: ["Integration"],
       severity: "at-risk",
       text: "Gateway certification slips",
       impact: "Payments blocked",
@@ -484,7 +484,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     );
 
     // Trigger the required-stage error on the multi-stage product: empty
-    // selection + Save sets errors.stageIds = "Select at least one stage.".
+    // selection + Save sets errors.stageNames = "Select at least one stage.".
     fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
       target: { value: "Vendor delay" },
     });
@@ -586,13 +586,13 @@ describe("RiskEditDialog — activity parenting", () => {
       activityId?: string | null;
       productId: string;
       text: string;
-      stageIds?: string[];
+      stageNames?: string[];
     };
     expect(saved).toMatchObject({
       activityId: "act1",
       productId: "",
       text: "Vendor delay",
     });
-    expect(saved.stageIds).toEqual([]);
+    expect(saved.stageNames).toEqual([]);
   });
 });

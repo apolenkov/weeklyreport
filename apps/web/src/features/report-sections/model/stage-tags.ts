@@ -9,7 +9,7 @@ export function canonicalStageName(name: string): string {
 // Aliasing can collapse a legacy `["Dev", "Development"]` to one entry; record
 // dialogs run saved selections through this so only canonical names persist
 // (openspec/specs/stage-label-canonicalization 1.2).
-export function canonicalStageIds(ids: readonly string[]): string[] {
+export function canonicalStageNames(ids: readonly string[]): string[] {
   return [...new Set(ids.map(canonicalStageName))];
 }
 

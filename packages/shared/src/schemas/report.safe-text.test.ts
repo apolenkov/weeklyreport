@@ -21,8 +21,8 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validRisk = () => ({
@@ -32,8 +32,8 @@ const validRisk = () => ({
   mitigation: "Hire contractor",
   // severity is required (no default) on the write contract.
   severity: "at-risk" as const,
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 const validDecision = () => ({
@@ -43,8 +43,8 @@ const validDecision = () => ({
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
-  // stageIds is required (min 1) on the write contract.
-  stageIds: ["Development"],
+  // stageNames is required (min 1) on the write contract.
+  stageNames: ["Development"],
 });
 
 describe("itemInputSchema — safeText", () => {

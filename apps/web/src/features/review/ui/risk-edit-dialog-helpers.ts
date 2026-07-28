@@ -3,7 +3,7 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
-import { canonicalStageIds, canonicalStageName } from "../../report-sections";
+import { canonicalStageName, canonicalStageNames } from "../../report-sections";
 
 export type RiskSeverity = "at-risk" | "blocked";
 
@@ -11,7 +11,7 @@ export interface RiskFieldErrors {
   text?: string;
   impact?: string;
   mitigation?: string;
-  stageIds?: string;
+  stageNames?: string;
 }
 
 // Called once in useState initializer; never re-run on stage toggles so the
@@ -29,12 +29,12 @@ export function deriveFromPreChecked(
   return "at-risk";
 }
 
-export function computeInitialStageIds(
+export function computeInitialStageNames(
   risk: RiskEntry | null,
-  initialStageIds: string[] | undefined,
+  initialStageNames: string[] | undefined,
 ): string[] {
-  if (risk?.stageIds) return [...risk.stageIds];
-  return initialStageIds ? [...initialStageIds] : [];
+  if (risk?.stageNames) return [...risk.stageNames];
+  return initialStageNames ? [...initialStageNames] : [];
 }
 
 // Pre-flagged owned stages for a product parent (info strip only). Empty for
@@ -65,7 +65,7 @@ export function collectRiskErrors(args: {
   readonly impact: string;
   readonly mitigation: string;
   readonly isActivityParent: boolean;
-  readonly effectiveStageIds: readonly string[];
+  readonly effectiveStageNames: readonly string[];
 }): RiskFieldErrors {
   // Only the failing fields get a key, so `Object.keys(...).length === 0`
   // still reads as "valid".
@@ -75,8 +75,8 @@ export function collectRiskErrors(args: {
     ...(args.mitigation.length === 0
       ? { mitigation: "Mitigation is required" }
       : {}),
-    ...(!args.isActivityParent && args.effectiveStageIds.length === 0
-      ? { stageIds: "Select at least one stage." }
+    ...(!args.isActivityParent && args.effectiveStageNames.length === 0
+      ? { stageNames: "Select at least one stage." }
       : {}),
   };
 }
@@ -112,7 +112,7 @@ export function buildActivityRiskEntry(args: {
     productName: args.activityName ?? "",
     activityId: args.activityId,
     activityName: args.activityName,
-    stageIds: [],
+    stageNames: [],
     severity: args.severity,
     text: args.text,
     impact: args.impact,
@@ -123,7 +123,7 @@ export function buildActivityRiskEntry(args: {
 export function buildProductRiskEntry(args: {
   readonly existingId: string | undefined;
   readonly product: { id: string; name: string };
-  readonly stageIds: readonly string[];
+  readonly stageNames: readonly string[];
   readonly severity: RiskSeverity;
   readonly text: string;
   readonly impact: string;
@@ -134,7 +134,7 @@ export function buildProductRiskEntry(args: {
     productId: args.product.id,
     productName: args.product.name,
     activityId: null,
-    stageIds: canonicalStageIds(args.stageIds),
+    stageNames: canonicalStageNames(args.stageNames),
     severity: args.severity,
     text: args.text,
     impact: args.impact,
@@ -155,7 +155,7 @@ export function deriveRiskDialogSeedProps(
       }
     | { open: true; mode: "edit"; entity: RiskSaveEntry },
   createPrefill: {
-    stageIds?: string[];
+    stageNames?: string[];
     severity?: RiskSeverity;
   } | null,
 ) {
@@ -165,7 +165,7 @@ export function deriveRiskDialogSeedProps(
     risk: editing ? dialogState.entity : null,
     defaultProductId: creating ? dialogState.seedProductId : undefined,
     defaultActivityId: creating ? dialogState.seedActivityId : undefined,
-    initialStageIds: creating ? createPrefill?.stageIds : undefined,
+    initialStageNames: creating ? createPrefill?.stageNames : undefined,
     initialSeverity: creating ? createPrefill?.severity : undefined,
     initialImpact: editing ? dialogState.entity.impact : "",
     initialMitigation: editing ? dialogState.entity.mitigation : "",

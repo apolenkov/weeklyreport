@@ -18,7 +18,7 @@ export interface StageAssignment {
   assignee: string | null;
   tooltip?: string;
   // True when the lead's own non-empty risk explicitly names this stage
-  // (empty/legacy "covers all" stageIds does NOT set it). Additive to raw
+  // (empty/legacy "covers all" stageNames does NOT set it). Additive to raw
   // status for completeness; foreign risks never set it.
   coveredByOwnRisk?: boolean;
 }
@@ -40,9 +40,9 @@ export interface KanbanItem {
   // productId is empty for these rows.
   activityId?: string | null;
   activityName?: string;
-  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  /** @deprecated Use stageNames. Kept for reading legacy data. */
   stageName?: string;
-  stageIds?: string[];
+  stageNames?: string[];
   status: ItemStatus;
   text: string;
   author: string;
@@ -59,9 +59,9 @@ export interface RiskEntry {
   productName: string;
   activityId?: string | null;
   activityName?: string;
-  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  /** @deprecated Use stageNames. Kept for reading legacy data. */
   stageName?: string;
-  stageIds?: string[];
+  stageNames?: string[];
   severity: "at-risk" | "blocked";
   text: string;
   impact: string;
@@ -81,9 +81,9 @@ export interface DecisionEntry {
   owner: string;
   impact: string;
   deadline: string | null;
-  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  /** @deprecated Use stageNames. Kept for reading legacy data. */
   stageName?: string;
-  stageIds?: string[];
+  stageNames?: string[];
   foreign?: boolean;
   authorId?: string;
 }
@@ -91,9 +91,9 @@ export interface DecisionEntry {
 export interface PriorityEntry {
   rank: number;
   text: string;
-  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  /** @deprecated Use stageNames. Kept for reading legacy data. */
   stageName?: string;
-  stageIds?: string[];
+  stageNames?: string[];
   productId?: string;
   productName?: string;
   foreign?: boolean;

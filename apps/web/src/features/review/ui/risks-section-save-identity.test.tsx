@@ -22,7 +22,7 @@ const existingRisk: RiskEntry = {
   productId: "p1",
   productName: "CRM",
   severity: "at-risk",
-  stageIds: ["Dev"],
+  stageNames: ["Dev"],
   text: "Vendor delay",
   impact: "Delivery slips",
   mitigation: "Escalate",

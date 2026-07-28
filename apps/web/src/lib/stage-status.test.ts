@@ -44,7 +44,7 @@ describe("deriveEffectiveStageStatus", () => {
   });
 
   it("empty risk and item arrays leave the manual status unchanged", () => {
-    // Cross-stage filtering (e.g. stageIds:["Testing"] not bleeding into the
+    // Cross-stage filtering (e.g. stageNames:["Testing"] not bleeding into the
     // Development chip) is the caller's job (mapLeadProducts); this only pins
     // that an empty risks/items array is a no-op on the manual status.
     expect(deriveEffectiveStageStatus("empty", [], [])).toBe("empty");

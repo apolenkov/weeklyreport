@@ -17,8 +17,8 @@ export interface DecisionFormState {
   readonly setDeadline: Dispatch<SetStateAction<string>>;
   readonly parent: RecordParent;
   readonly setParent: Dispatch<SetStateAction<RecordParent>>;
-  readonly stageIds: string[];
-  readonly setStageIds: Dispatch<SetStateAction<string[]>>;
+  readonly stageNames: string[];
+  readonly setStageNames: Dispatch<SetStateAction<string[]>>;
   readonly errors: DecisionFieldErrors;
   readonly setErrors: Dispatch<SetStateAction<DecisionFieldErrors>>;
 }
@@ -34,7 +34,7 @@ export interface DecisionFormFieldsView {
   readonly impactError: string | undefined;
   readonly parent: RecordParent;
   readonly onParentChange: (next: RecordParent) => void;
-  readonly stageIds: string[];
+  readonly stageNames: string[];
   readonly onStageChange: (next: string[]) => void;
   readonly stageError: string | undefined;
 }
@@ -53,7 +53,7 @@ export function useDecisionFormState(
   // Create mode begins without a selected stage, while edit mode restores the
   // saved stages. Required-stage validation and single-stage auto-selection
   // live on the save path.
-  const [stageIds, setStageIds] = useState<string[]>(seed.stageIds);
+  const [stageNames, setStageNames] = useState<string[]>(seed.stageNames);
   const [errors, setErrors] = useState<DecisionFieldErrors>({});
   return {
     text,
@@ -64,8 +64,8 @@ export function useDecisionFormState(
     setDeadline,
     parent,
     setParent,
-    stageIds,
-    setStageIds,
+    stageNames,
+    setStageNames,
     errors,
     setErrors,
   };
@@ -97,13 +97,13 @@ export function decisionFieldsView(
     // stage step; switching back to a product re-shows it empty.
     onParentChange: (next) => {
       state.setParent(next);
-      state.setStageIds([]);
+      state.setStageNames([]);
     },
-    stageIds: state.stageIds,
+    stageNames: state.stageNames,
     onStageChange: (next) => {
-      state.setStageIds(next);
-      clearError("stageIds");
+      state.setStageNames(next);
+      clearError("stageNames");
     },
-    stageError: state.errors.stageIds,
+    stageError: state.errors.stageNames,
   };
 }

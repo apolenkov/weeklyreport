@@ -65,7 +65,7 @@ describe("RisksSection — addSignal snapshot regression", () => {
     const prefill = {
       signal: 1,
       productId: firstProductId,
-      stageIds: ["Dev"],
+      stageNames: ["Dev"],
       severity: "blocked" as const,
     };
 

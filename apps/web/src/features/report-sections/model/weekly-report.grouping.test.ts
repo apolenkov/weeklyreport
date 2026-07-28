@@ -80,7 +80,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
               tag: "auth",
               workflowStatus: "in_progress",
               carriedOver: false,
-              stageIds: ["Dev", "Testing"],
+              stageNames: ["Dev", "Testing"],
             },
             {
               id: "i2",
@@ -250,7 +250,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
               impact: "Work is stopped",
               mitigation: "Escalate",
               severity: "blocked",
-              stageIds: ["Dev"],
+              stageNames: ["Dev"],
             },
           ],
           decisions: [],

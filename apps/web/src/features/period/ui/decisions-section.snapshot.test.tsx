@@ -26,7 +26,7 @@ describe("DecisionsSection meta-row", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders the 'No stage set' warning pill when stageIds is absent", () => {
+  it("renders the 'No stage set' warning pill when stageNames is absent", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} readOnly />);
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
@@ -35,7 +35,7 @@ describe("DecisionsSection meta-row", () => {
   it("renders specific stage chips alongside the owner in the meta-row", () => {
     render(
       <DecisionsSection
-        decisions={[{ ...BASE_DECISION, stageIds: ["Analysis", "Dev"] }]}
+        decisions={[{ ...BASE_DECISION, stageNames: ["Analysis", "Dev"] }]}
         stagesForProduct={() => ["Analysis", "Development"]}
         readOnly
       />,

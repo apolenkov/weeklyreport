@@ -49,7 +49,7 @@ function makeItems(): ReportSectionReadModel["items"] {
       tag: "general",
       workflowStatus: "paused",
       carriedOver: false,
-      stageIds: ["Development"],
+      stageNames: ["Development"],
       priorityRank: 2,
       pausedReason: "Waiting on vendor",
     },
@@ -63,7 +63,7 @@ function makeItems(): ReportSectionReadModel["items"] {
       tag: "general",
       workflowStatus: "in_progress",
       carriedOver: false,
-      stageIds: [],
+      stageNames: [],
       priorityRank: null,
       pausedReason: null,
     },
@@ -81,7 +81,7 @@ function makeRisks(): ReportSectionReadModel["risks"] {
       impact: "Existing impact",
       mitigation: "Existing mitigation",
       severity: "at-risk",
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ];
 }
@@ -98,7 +98,7 @@ function makeDecisions(): ReportSectionReadModel["decisions"] {
       impact: "Impact",
       deadline: null,
       resolvedAt: new Date("2026-06-01T00:00:00Z"),
-      stageIds: ["Development"],
+      stageNames: ["Development"],
     },
   ];
 }

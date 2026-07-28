@@ -7,15 +7,15 @@ import {
 } from "../../report-sections";
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
-// Prefer stageIds, fall back to legacy CSV; canonicalize so stored "Dev"
+// Prefer stageNames, fall back to legacy CSV; canonicalize so stored "Dev"
 // always displays as "Development".
 export function canonicalRiskStageTags(risk: {
-  stageIds?: readonly string[] | null;
+  stageNames?: readonly string[] | null;
   stageName?: string | null;
 }): string[] {
   const raw =
-    risk.stageIds && risk.stageIds.length > 0
-      ? risk.stageIds
+    risk.stageNames && risk.stageNames.length > 0
+      ? risk.stageNames
       : splitStageNames(risk.stageName);
   return raw.map(canonicalStageName);
 }
