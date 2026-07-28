@@ -93,10 +93,6 @@ const makeStageStatuses = (count: number) =>
     status: "green" as const,
   }));
 
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("draftSaveSchema", () => {
   it("accepts a valid minimal draft input", () => {
     const result = draftSaveSchema.safeParse(validDraft());
@@ -254,7 +250,7 @@ describe("itemWriteSchema — per-type progress vocabulary", () => {
 // itemInputSchema — safeText boundaries
 // ---------------------------------------------------------------------------
 
-describe("riskInputSchema — required stageIds", () => {
+describe("record write schemas — required stageIds", () => {
   it("rejects a risk with missing stageIds", () => {
     const { stageIds: _stageIds, ...riskWithoutStages } = validRisk();
     const result = riskWriteSchema.safeParse(riskWithoutStages);
@@ -327,7 +323,7 @@ describe("riskInputSchema — required stageIds", () => {
     ).toBe(false);
   });
 
-  it("read model still parses a stage-less legacy risk row (D2 tolerance)", () => {
+  it("read model still parses a stage-less legacy risk row", () => {
     const { stageIds: _stageIds, ...legacyRisk } = validRisk();
     const result = reportSectionReadModelSchema.safeParse({
       reportSectionId: uuid(),
@@ -552,7 +548,3 @@ describe("enum schemas", () => {
     expect(reportStatusSchema.safeParse("published").success).toBe(true);
   });
 });
-
-// ---------------------------------------------------------------------------
-// carryOverStatusSchema
-// ---------------------------------------------------------------------------

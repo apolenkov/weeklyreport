@@ -24,6 +24,11 @@
 ## 3. Six-area roadmap
 
 - [ ] Close non-blocked code-style items.
+- [x] Remove the measured e2e phase/ticket archaeology and repair durable spec
+      pointers.
+- [x] Remove the measured split-test banner residue.
+- [x] Retitle the measured tests whose names described a different subject.
+- [x] Compress the named apps-only JSDoc outliers to current WHY comments.
 - [ ] Close non-blocked architecture and ownership items.
 - [x] Move `ComingSoonTooltip` out of the vendored tooltip primitive.
 - [x] Delete the unconsumed sidebar bundle and its dedicated exemptions.

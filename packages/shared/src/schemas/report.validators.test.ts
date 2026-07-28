@@ -66,10 +66,6 @@ const validSubmit = () => ({
   confirmed: true as const,
 });
 
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("validateSubmitInput", () => {
   const makeSection = (
     overrides: Partial<ReportSectionReadModel> = {},
@@ -319,7 +315,3 @@ describe("validateRecordActivityIds", () => {
     expect(errors).toHaveLength(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// periodStatusSchema
-// ---------------------------------------------------------------------------

@@ -57,7 +57,7 @@ export type EmailReminderJobData = JobTraceContext &
 // null means "use the SMTP_FROM env default".
 type FromOverride = string | null;
 
-/** BullMQ worker for the email-reminder queue. */
+// BullMQ discovers this worker through Nest injection, not a direct call.
 @Injectable()
 export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobData> {
   protected readonly queueName = "email-reminder";

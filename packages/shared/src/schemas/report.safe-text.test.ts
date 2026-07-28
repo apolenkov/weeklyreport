@@ -47,10 +47,6 @@ const validDecision = () => ({
   stageIds: ["Development"],
 });
 
-// ---------------------------------------------------------------------------
-// draftSaveSchema boundaries
-// ---------------------------------------------------------------------------
-
 describe("itemInputSchema — safeText", () => {
   it.each([
     {

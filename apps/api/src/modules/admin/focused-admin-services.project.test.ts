@@ -187,7 +187,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
     expect(row.createdAt).toBeInstanceOf(Date);
   });
 
-  it("attachProductToGroup is idempotent when same group is re-attached (B1)", async () => {
+  it("attachProductToGroup is idempotent when the same group is re-attached", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
     );
@@ -202,7 +202,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
     expect(second.id).toBe(first.id);
   });
 
-  it("attachProductToGroup rejects attaching a product owned by another group (B1 invariant)", async () => {
+  it("attachProductToGroup rejects a product owned by another group", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
     );
@@ -254,7 +254,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
     ).resolves.toEqual({ success: true });
   });
 
-  it("listGroupProducts and listProductGroups reflect attached edge (B1: one group per product)", async () => {
+  it("listGroupProducts and listProductGroups reflect the single owning group", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
     );

@@ -1,5 +1,5 @@
 /**
- * Revoke downstream effects — integration tests (SC-162 / SC-163 / SC-164 / SC-166).
+ * Revoke downstream effects.
  *
  * All four scenarios require a live API + E2E_DATABASE_URL (integration suite
  * only). The head's Revoke control lives on the /head/dashboard Period Summary
@@ -19,10 +19,6 @@
  *   LEAD_1 / Vasily (index 1) — status: submitted in ACTIVE_REPORT
  *   Seed baseline: 4 submitted / 6 total
  *
- * Section ID formula: a0000000-0000-4000-8000-0000000040{reportSuffix}{leadIndex}
- *   MARIA in active report  → a0000000-0000-4000-8000-000000004012
- *   VASILY in active report → a0000000-0000-4000-8000-000000004011
- *   MARIA in published report → a0000000-0000-4000-8000-000000004022
  */
 
 import type { APIResponse, Page } from "@playwright/test";
@@ -102,7 +98,7 @@ async function revokeLeadViaDashboard(
 /**
  * Direct tRPC call to `leadForm.revoke`, bypassing the UI entirely.
  *
- * SC-166 targets PUBLISHED_REPORT, a past (closed) period. The dashboard
+ * PUBLISHED_REPORT is a past, closed period. The dashboard
  * queue — the only surface exposing the Revoke control — always loads
  * `weeklyReport.get({})` (no reportId), which resolves to the CURRENT period
  * only; there is no UI path that can ever render a Revoke control scoped to a
@@ -133,11 +129,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     await resetMutations();
   });
 
-  // -------------------------------------------------------------------------
-  // SC-162: After revoke, KPI submissions count decreases
-  // -------------------------------------------------------------------------
-
-  test("SC-162: after revoke, submissionCount drops from 4 to 3", async ({
+  test("after revoke, submissionCount drops from 4 to 3", async ({
     headPage,
   }) => {
     // Verify seed precondition.
@@ -175,11 +167,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // -------------------------------------------------------------------------
-  // SC-163: After revoke, Weekly Report omits the revoked lead's section
-  // -------------------------------------------------------------------------
-
-  test("SC-163: after revoke, Maria's section absent from weekly report query", async ({
+  test("after revoke, Maria's section is absent from the weekly report query", async ({
     headPage,
   }) => {
     // Seed baseline: 4 sections with status submitted for the active report.
@@ -210,11 +198,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // SC-164: Revoke + lead re-edits + re-submits → section reappears
-  // -------------------------------------------------------------------------
-
-  test("SC-164: after revoke, lead re-submits and section reappears in aggregation", async ({
+  test("after revoke, resubmission restores the section to aggregation", async ({
     headPage,
   }) => {
     // Step 1: Revoke Maria's section via the head dashboard.
@@ -262,8 +246,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // SC-166: Revoke on a published-period section is rejected
+  // Revoke on a published-period section is rejected.
   //
   // The dashboard's UI-level `canRevoke` (dashboard-leads.ts) gates on
   // `periodStatus === "open" || "reopened"`, but only for the CURRENT
@@ -273,9 +256,7 @@ test.describe("Revoke downstream effects (integration)", () => {
   // tRPC wire call to pin that the service-layer gate rejects the mutation
   // and the section's submitted state (backing the frozen viewer snapshot)
   // survives.
-  // -------------------------------------------------------------------------
-
-  test("SC-166: revoke on published-period section is rejected by the periodStatus gate", async ({
+  test("revoke on a published-period section is rejected by the periodStatus gate", async ({
     headPage,
   }) => {
     // Verify seed precondition: published report exists with Maria's section

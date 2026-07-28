@@ -550,7 +550,7 @@ describe("report-wide name resolution (referencedProjects)", () => {
     expect(mapLeadDecisions(section).at(0)?.productName).toBe("Group");
   });
 
-  it("prefers the stage-owned entry when the same id is also referenced (Decision 3)", () => {
+  it("prefers the stage-owned entry when the same id is also referenced", () => {
     const section = crossStageSection({
       referencedProjects: [{ projectId: PROJECT_A, projectName: "Stale Copy" }],
       risks: [

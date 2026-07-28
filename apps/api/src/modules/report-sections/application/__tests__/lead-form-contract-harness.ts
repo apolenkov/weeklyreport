@@ -84,10 +84,6 @@ export function createMockRepository(
   };
 }
 
-// ---------------------------------------------------------------------------
-// revokeSubmission
-// ---------------------------------------------------------------------------
-
 // Helpers: build the repo return shapes that carry the period-lifecycle facts.
 export function forPeriod(
   section: ReportSectionReadModel,

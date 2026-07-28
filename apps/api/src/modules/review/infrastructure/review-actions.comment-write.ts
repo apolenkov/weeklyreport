@@ -8,7 +8,7 @@ import type { RecordAnchor } from "../application/review-actions.service.js";
 
 type RecordKind = "item" | "risk" | "decision";
 
-/** Every anchor-resolution failure in this module reports the same not-found shape. */
+// Every anchor-resolution failure reports the same not-found shape.
 function throwAnchorNotFound(): never {
   throw new ReviewNotFoundError("Record not found.");
 }
