@@ -26,6 +26,7 @@ import {
   seedArchivedHistory,
   seedPublishedWeekSections,
 } from "./seed-simple.history.js";
+import { REPORT_ACTIVE } from "./seed-simple.ids.js";
 import {
   seedOrganizationSettings,
   seedReportingGroups,
@@ -66,7 +67,7 @@ async function main() {
   await seedReminderPolicies(prisma);
 
   await logSeedSummary(prisma);
-  await assertSeedCoverage(prisma, "seed-simple");
+  await assertSeedCoverage(prisma, "seed-simple", REPORT_ACTIVE);
 }
 
 main()

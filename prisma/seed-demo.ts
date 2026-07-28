@@ -126,7 +126,7 @@ async function seedDemo(tier: Tier): Promise<void> {
   await seedPeriodSections(dataset, tier);
 
   await logSeedCounts(prisma, tier);
-  await assertSeedCoverage(prisma, `seed-demo:${tier}`);
+  await assertSeedCoverage(prisma, `seed-demo:${tier}`, SEED_REPORTS.active.id);
 }
 
 function parseTier(): Tier {

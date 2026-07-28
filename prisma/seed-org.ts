@@ -25,6 +25,14 @@ const ADVANCED_FINANCE_GROUP = {
   archived: false,
 };
 
+export interface SeedOrganizationCounts {
+  readonly groups: number;
+  readonly users: number;
+  readonly products: number;
+  readonly stages: number;
+  readonly viewerGroupAccesses: number;
+}
+
 // Map seed user role string to Prisma Role enum. Typed from SeedUser so the
 // seed tree keeps a single literal mirror (see SeedUser.role in seed-constants).
 function toRole(role: SeedUser["role"]): Role {
@@ -150,10 +158,17 @@ async function seedStages(prisma: PrismaClient): Promise<void> {
 // group membership, products with their owning group, and the SDLC stages.
 export async function seedOrganizationBaseline(
   prisma: PrismaClient,
-): Promise<void> {
+): Promise<SeedOrganizationCounts> {
   await seedReportingGroups(prisma);
   await seedUsers(prisma);
   await seedGroupMembership(prisma);
   await seedProducts(prisma);
   await seedStages(prisma);
+  return {
+    groups: SEED_REPORTING_GROUPS.length + 1,
+    users: SEED_USERS.length,
+    products: SEED_PRODUCTS.length,
+    stages: SEED_STAGES.length,
+    viewerGroupAccesses: 2,
+  };
 }

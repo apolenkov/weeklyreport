@@ -39,18 +39,22 @@ const PUBLISHED_FIELDS = {
   publishedSnapshot: Prisma.DbNull,
 };
 
-export async function seedActiveReport(prisma: PrismaClient): Promise<void> {
+export async function seedActiveReport(prisma: PrismaClient): Promise<number> {
   await prisma.report.upsert({
     where: { id: activeReport.id },
     update: ACTIVE_FIELDS,
     create: { id: activeReport.id, ...ACTIVE_FIELDS },
   });
+  return 1;
 }
 
-export async function seedPublishedReport(prisma: PrismaClient): Promise<void> {
+export async function seedPublishedReport(
+  prisma: PrismaClient,
+): Promise<number> {
   await prisma.report.upsert({
     where: { id: publishedReport.id },
     update: PUBLISHED_FIELDS,
     create: { id: publishedReport.id, ...PUBLISHED_FIELDS },
   });
+  return 1;
 }

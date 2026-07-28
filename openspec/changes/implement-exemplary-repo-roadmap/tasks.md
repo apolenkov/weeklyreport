@@ -46,7 +46,9 @@
 - [x] Replace the slide-editor fixture's double assertion with direct type checking.
 - [x] Single-home reminder policy timing and validity calculations for runtime
       and backfill consumers.
-- [ ] Land the remaining 13 confirmed fixes in risk-isolated slices.
+- [x] Drive advanced-seed summary counts from writer results.
+- [x] Scope seed coverage queries to the report created by that seed.
+- [ ] Land the remaining 11 confirmed fixes in risk-isolated slices.
 
 ## 5. Human decisions
 

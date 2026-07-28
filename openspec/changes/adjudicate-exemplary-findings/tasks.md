@@ -13,7 +13,9 @@
 - [x] Replace the slide-editor fixture's double assertion with direct type checking.
 - [x] Single-home reminder policy timing and validity calculations for runtime
       and backfill consumers.
-- [ ] Land the remaining 13 confirmed findings in isolated slices.
+- [x] Drive advanced-seed summary counts from writer results.
+- [x] Scope seed coverage queries to the report created by that seed.
+- [ ] Land the remaining 11 confirmed findings in isolated slices.
 - [ ] Plan and land shared-schema/cross-feature changes in isolated slices.
 
 ## Verification

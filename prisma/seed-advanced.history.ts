@@ -51,6 +51,11 @@ const HISTORY_PERIODS = SEED_HISTORY_REPORTS.map((report, index) => {
   return { report, suffix };
 });
 
+export interface HistorySeedResult {
+  readonly reports: number;
+  readonly sections: SectionCounts;
+}
+
 async function upsertHistoryReport(
   prisma: PrismaClient,
   report: SeedHistoryReport,
@@ -140,8 +145,8 @@ async function seedHistoryPeriod(
 /** Seeds the N-2, N-3 and N-4 published periods behind the Fill From flow. */
 export async function seedHistoryPeriods(
   prisma: PrismaClient,
-): Promise<SectionCounts> {
-  return HISTORY_PERIODS.reduce<Promise<SectionCounts>>(
+): Promise<HistorySeedResult> {
+  const sections = await HISTORY_PERIODS.reduce<Promise<SectionCounts>>(
     async (total, { report, suffix }) =>
       addSectionCounts(
         await total,
@@ -149,4 +154,5 @@ export async function seedHistoryPeriods(
       ),
     Promise.resolve(NO_SECTION_COUNTS),
   );
+  return { reports: HISTORY_PERIODS.length, sections };
 }
