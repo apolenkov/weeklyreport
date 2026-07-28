@@ -51,44 +51,37 @@ function createMockRepository(
 ): LeadFormRepository & {
   fillFromSection: ReturnType<typeof vi.fn>;
 } {
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async fillFromSection repository contract (no awaitable work in the stub)
-  const fillFromFn = vi.fn(async (_target: string, _source: string) => 5);
+  const fillFromFn = vi.fn((_target: string, _source: string) =>
+    Promise.resolve(5),
+  );
 
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSectionById(id: string) {
-      return sections.get(id) ?? null;
+    getSectionById(id: string) {
+      return Promise.resolve(sections.get(id) ?? null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSectionByIdScoped(id: string) {
-      return sections.get(id) ?? null;
+    getSectionByIdScoped(id: string) {
+      return Promise.resolve(sections.get(id) ?? null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getReportPeriodStatusForSection() {
-      return periodStatus;
+    getReportPeriodStatusForSection() {
+      return Promise.resolve(periodStatus);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getPublishedLineage() {
-      return { itemStableIds: [], decisionStableIds: [] };
+    getPublishedLineage() {
+      return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getUserReportingGroupId() {
-      return null;
+    getUserReportingGroupId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSectionForPeriod() {
-      return null;
+    getSectionForPeriod() {
+      return Promise.resolve(null);
     },
     // getByPeriod's head cross-read is untested here (fill-from never calls
     // it) — mirror getSectionForPeriod's unused shape so the port is honestly
     // implemented rather than a stub that always returns the unscoped value.
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSectionForPeriodAsGroupPeer() {
-      return null;
+    getSectionForPeriodAsGroupPeer() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSectionReopenContext() {
-      return null;
+    getSectionReopenContext() {
+      return Promise.resolve(null);
     },
     async revokeSectionSubmission() {
       /* intentionally empty: mock stub fulfils the LeadFormRepository contract; no awaitable work needed in this test */
@@ -97,21 +90,17 @@ function createMockRepository(
     async createReopenRequest() {
       /* intentionally empty: mock stub fulfils the LeadFormRepository contract; no awaitable work needed in this test */
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getSharedNonArchivedProductIds() {
-      return [];
+    getSharedNonArchivedProductIds() {
+      return Promise.resolve([]);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getCrossAuthors() {
-      return [];
+    getCrossAuthors() {
+      return Promise.resolve([]);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getCrossAuthorContent() {
-      return { coOwnsShared: false, rows: [] };
+    getCrossAuthorContent() {
+      return Promise.resolve({ coOwnsShared: false, rows: [] });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async revokeAllSubmitted() {
-      return 0;
+    revokeAllSubmitted() {
+      return Promise.resolve(0);
     },
   };
 }

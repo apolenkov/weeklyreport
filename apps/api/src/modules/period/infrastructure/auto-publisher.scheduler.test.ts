@@ -146,16 +146,16 @@ describe("AutoPublisherScheduler", () => {
     const publication = {
       publishAuto: vi
         .fn()
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async publishAuto contract (throws synchronously to simulate error)
-        .mockImplementationOnce(async () => {
-          throw new Error("db transient");
+        .mockImplementationOnce(() => {
+          return Promise.reject(new Error("db transient"));
         })
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async publishAuto contract (no awaitable work in the stub)
-        .mockImplementationOnce(async () => ({
-          published: true,
-          wasAlreadyPublished: false,
-          report: {},
-        })),
+        .mockImplementationOnce(() =>
+          Promise.resolve({
+            published: true,
+            wasAlreadyPublished: false,
+            report: {},
+          }),
+        ),
     };
     const audit = {
       ...createNullAuditLogger(),

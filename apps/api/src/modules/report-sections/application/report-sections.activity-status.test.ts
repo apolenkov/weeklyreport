@@ -63,32 +63,26 @@ function createRepository(
   );
 
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getSectionById(reportSectionId) {
+    getSectionById(reportSectionId) {
       const section = store.get(reportSectionId);
-      return section ? structuredClone(section) : null;
+      return Promise.resolve(section ? structuredClone(section) : null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getReportPeriodStatusForSection() {
-      return "open";
+    getReportPeriodStatusForSection() {
+      return Promise.resolve("open");
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getReportMeta() {
-      return null;
+    getReportMeta() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getPublishedLineage() {
-      return { itemStableIds: [], decisionStableIds: [] };
+    getPublishedLineage() {
+      return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async saveSection(nextSection) {
+    saveSection(nextSection) {
       const saved = structuredClone(nextSection);
       store.set(saved.reportSectionId, saved);
-      return structuredClone(saved);
+      return Promise.resolve(structuredClone(saved));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getMyHistoryRows() {
-      return [];
+    getMyHistoryRows() {
+      return Promise.resolve([]);
     },
   };
 }

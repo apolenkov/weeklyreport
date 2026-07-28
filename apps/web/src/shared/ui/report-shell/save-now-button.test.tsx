@@ -240,9 +240,9 @@ describe("SaveNowButton", () => {
 
     const btn = screen.getByRole("button") as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/require-await -- callback passed to act() must be async to match the overload signature; no awaitable work inside
-    await act(async () => {
+    await act(() => {
       btn.click();
+      return Promise.resolve();
     });
     expect(forceSave).toHaveBeenCalledOnce();
   });

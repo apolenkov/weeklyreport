@@ -120,30 +120,31 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
     upsertCalls,
     prisma: {
       reminderPolicy: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findMany (returns synchronously in test)
-        findMany: vi.fn(async () => policies.filter((p) => p.active)),
+        findMany: vi.fn(() =>
+          Promise.resolve(policies.filter((p) => p.active)),
+        ),
       },
       reminderRule: {
         findUnique: vi.fn(
-          async (args: {
+          (args: {
             where: {
               reportId_policyId: { reportId: string; policyId: string };
             };
-            // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findUnique method (no awaitable work in the stub)
           }) => {
             const key = `${args.where.reportId_policyId.reportId}:${args.where.reportId_policyId.policyId}`;
-            return existingRules.has(key) ? { id: "existing" } : null;
+            return Promise.resolve(
+              existingRules.has(key) ? { id: "existing" } : null,
+            );
           },
         ),
         upsert: vi.fn(
-          async (args: {
+          (args: {
             where: unknown;
             create: Record<string, unknown>;
             update: Record<string, unknown>;
-            // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma upsert method (no awaitable work in the stub)
           }) => {
             upsertCalls.push(args);
-            return { id: "rule-id" };
+            return Promise.resolve({ id: "rule-id" });
           },
         ),
       },
@@ -295,24 +296,21 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     let firstCall = true;
     const prisma = {
       reminderPolicy: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findMany (returns synchronously in test)
-        findMany: vi.fn(async () => [policyA, policyC]),
+        findMany: vi.fn(() => Promise.resolve([policyA, policyC])),
       },
       reminderRule: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findUnique (returns synchronously in test)
-        findUnique: vi.fn(async () => null),
-        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements the async prisma upsert method (throws or returns synchronously, no awaitable work)
-        upsert: vi.fn(async (args: unknown) => {
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        upsert: vi.fn((args: unknown) => {
           if (firstCall) {
             firstCall = false;
             const err = new Error("Unique constraint violation") as Error & {
               code?: string;
             };
             err.code = "P2002";
-            throw err;
+            return Promise.reject(err);
           }
           upsertCalls.push(args);
-          return { id: "rule-id" };
+          return Promise.resolve({ id: "rule-id" });
         }),
       },
     } as never;

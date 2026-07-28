@@ -119,14 +119,16 @@ function createInMemoryRepository(
     // The service treats the cursor as opaque, so this stub keys off reportId
     // for convenience; the real keyset-cursor semantics are covered by the
     // repo's real-DB integration test.
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ArchiveRepository contract (no awaitable work in the stub)
-    async listArchiveReports(pagination) {
+    listArchiveReports(pagination) {
       const sorted = [...summaries].sort(
         (left, right) =>
           right.publishedAt.getTime() - left.publishedAt.getTime(),
       );
       if (!pagination) {
-        return { items: structuredClone(sorted), nextCursor: null };
+        return Promise.resolve({
+          items: structuredClone(sorted),
+          nextCursor: null,
+        });
       }
       const start = pagination.cursor
         ? sorted.findIndex((r) => r.reportId === pagination.cursor) + 1
@@ -136,14 +138,11 @@ function createInMemoryRepository(
         start + pagination.limit < sorted.length
           ? (page.at(-1)?.reportId ?? null)
           : null;
-      return { items: structuredClone(page), nextCursor };
+      return Promise.resolve({ items: structuredClone(page), nextCursor });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ArchiveRepository contract (no awaitable work in the stub)
-    async getArchiveReport(
-      reportId: string,
-    ): Promise<ArchiveReportDetail | null> {
+    getArchiveReport(reportId: string): Promise<ArchiveReportDetail | null> {
       const detail = details.get(reportId);
-      return detail ? structuredClone(detail) : null;
+      return Promise.resolve(detail ? structuredClone(detail) : null);
     },
   };
 }

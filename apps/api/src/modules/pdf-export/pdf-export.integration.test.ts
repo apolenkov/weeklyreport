@@ -157,9 +157,9 @@ describe("cookie seam — service against real Prisma repo", () => {
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async enqueue port (no awaitable work in the stub)
-      enqueue: async (data: EnqueuedJob) => {
+      enqueue: (data: EnqueuedJob) => {
         enqueued.push(data);
+        return Promise.resolve();
       },
     } as never;
 

@@ -30,12 +30,11 @@ function makeRepo(
   overrides: Partial<AnalyticsRepository> = {},
 ): AnalyticsRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    trafficLightHistory: vi.fn(async () => ({ periods: [], rows: [] })),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    leadVelocity: vi.fn(async () => []),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    periodComparison: vi.fn(async () => ({ rows: [] })),
+    trafficLightHistory: vi.fn(() =>
+      Promise.resolve({ periods: [], rows: [] }),
+    ),
+    leadVelocity: vi.fn(() => Promise.resolve([])),
+    periodComparison: vi.fn(() => Promise.resolve({ rows: [] })),
     ...overrides,
   };
 }
@@ -72,22 +71,23 @@ describe("AnalyticsService.trafficLightHistory", () => {
 
   it("returns multi-project, multi-period grid", async () => {
     const repo = makeRepo({
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-      trafficLightHistory: vi.fn(async () => ({
-        periods: ["2026-04-21", "2026-04-28"],
-        rows: [
-          {
-            projectId: "11111111-1111-4111-8111-111111111111",
-            projectName: "A",
-            statuses: ["green" as const, "red" as const],
-          },
-          {
-            projectId: "22222222-2222-4222-8222-222222222222",
-            projectName: "B",
-            statuses: ["yellow" as const, null],
-          },
-        ],
-      })),
+      trafficLightHistory: vi.fn(() =>
+        Promise.resolve({
+          periods: ["2026-04-21", "2026-04-28"],
+          rows: [
+            {
+              projectId: "11111111-1111-4111-8111-111111111111",
+              projectName: "A",
+              statuses: ["green" as const, "red" as const],
+            },
+            {
+              projectId: "22222222-2222-4222-8222-222222222222",
+              projectName: "B",
+              statuses: ["yellow" as const, null],
+            },
+          ],
+        }),
+      ),
     });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
@@ -104,11 +104,12 @@ describe("AnalyticsService.trafficLightHistory", () => {
   });
 
   it("cache hit short-circuits the repository on second call (same scope)", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const trafficLightHistory = vi.fn(async () => ({
-      periods: ["2026-04-28"],
-      rows: [],
-    }));
+    const trafficLightHistory = vi.fn(() =>
+      Promise.resolve({
+        periods: ["2026-04-28"],
+        rows: [],
+      }),
+    );
     const repo = makeRepo({ trafficLightHistory });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
@@ -124,8 +125,9 @@ describe("AnalyticsService.trafficLightHistory", () => {
   });
 
   it("uses stable cache keys regardless of input property order", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const trafficLightHistory = vi.fn(async () => ({ periods: [], rows: [] }));
+    const trafficLightHistory = vi.fn(() =>
+      Promise.resolve({ periods: [], rows: [] }),
+    );
     const repo = makeRepo({ trafficLightHistory });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
@@ -151,8 +153,9 @@ describe("AnalyticsService cache scope partitioning", () => {
   };
 
   it("two heads in different groups do not share a cache entry", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const trafficLightHistory = vi.fn(async () => ({ periods: [], rows: [] }));
+    const trafficLightHistory = vi.fn(() =>
+      Promise.resolve({ periods: [], rows: [] }),
+    );
     const svc = new AnalyticsService(
       makeRepo({ trafficLightHistory }),
       makeCache().cache,
@@ -166,8 +169,7 @@ describe("AnalyticsService cache scope partitioning", () => {
   });
 
   it("admin and non-admin do not share a cache entry", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const leadVelocity = vi.fn(async () => []);
+    const leadVelocity = vi.fn(() => Promise.resolve([]));
     const svc = new AnalyticsService(
       makeRepo({ leadVelocity }),
       makeCache().cache,
@@ -180,8 +182,7 @@ describe("AnalyticsService cache scope partitioning", () => {
   });
 
   it("identical scope and input is a cache hit", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const periodComparison = vi.fn(async () => ({ rows: [] }));
+    const periodComparison = vi.fn(() => Promise.resolve({ rows: [] }));
     const svc = new AnalyticsService(
       makeRepo({ periodComparison }),
       makeCache().cache,
@@ -218,8 +219,7 @@ describe("AnalyticsService.leadVelocity", () => {
   });
 
   it("cache hit short-circuits the repository", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const leadVelocity = vi.fn(async () => []);
+    const leadVelocity = vi.fn(() => Promise.resolve([]));
     const repo = makeRepo({ leadVelocity });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
@@ -250,8 +250,7 @@ describe("AnalyticsService.periodComparison", () => {
   });
 
   it("cache hit short-circuits the repository", async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
-    const periodComparison = vi.fn(async () => ({ rows: [] }));
+    const periodComparison = vi.fn(() => Promise.resolve({ rows: [] }));
     const repo = makeRepo({ periodComparison });
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);

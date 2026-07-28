@@ -21,8 +21,7 @@ interface MockNestApp {
 function makePrismaStub() {
   return {
     reportSection: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Prisma findFirst contract (no awaitable work in the stub)
-      findFirst: vi.fn(async () => null),
+      findFirst: vi.fn(() => Promise.resolve(null)),
     },
     // The dev-session path hydrates `session.organization` from the singleton
     // Organization row.
@@ -33,11 +32,12 @@ function makePrismaStub() {
           fullName: "Example Software Department",
         }),
       ),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Prisma upsert contract (no awaitable work in the stub)
-      upsert: vi.fn(async () => ({
-        shortName: "Demo",
-        fullName: "Example Software Department",
-      })),
+      upsert: vi.fn(() =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+      ),
     },
   };
 }

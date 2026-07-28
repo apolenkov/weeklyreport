@@ -175,50 +175,48 @@ function createInMemoryRepository(opts: {
   };
 
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async findExecutionByDedupeKey(
+    findExecutionByDedupeKey(
       dedupeKey: string,
     ): Promise<CarryOverExecution | null> {
       for (const execution of executions.values()) {
         if (execution.dedupeKey === dedupeKey) {
-          return structuredClone(execution);
+          return Promise.resolve(structuredClone(execution));
         }
       }
-      return null;
+      return Promise.resolve(null);
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async getSourceSections(): Promise<ReportSectionReadModel[]> {
-      return opts.sourceSections.map((s) => structuredClone(s));
+    getSourceSections(): Promise<ReportSectionReadModel[]> {
+      return Promise.resolve(
+        opts.sourceSections.map((s) => structuredClone(s)),
+      );
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async getTargetSections(): Promise<ReportSectionReadModel[]> {
-      return opts.targetSections.map((s) => structuredClone(s));
+    getTargetSections(): Promise<ReportSectionReadModel[]> {
+      return Promise.resolve(
+        opts.targetSections.map((s) => structuredClone(s)),
+      );
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async findPreviousReportId(): Promise<string | null> {
-      return null;
+    findPreviousReportId(): Promise<string | null> {
+      return Promise.resolve(null);
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async getTargetReportState(): Promise<TargetReportState | null> {
-      return { ...targetReportState };
+    getTargetReportState(): Promise<TargetReportState | null> {
+      return Promise.resolve({ ...targetReportState });
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-    async saveCarryOver(
+    saveCarryOver(
       execution: CarryOverExecution,
       records: CarryOverRecord[],
       targetSections: ReportSectionReadModel[],
     ): Promise<CarryOverResult> {
       executions.set(execution.id, structuredClone(execution));
-      return {
+      return Promise.resolve({
         execution: structuredClone(execution),
         records: structuredClone(records),
         targetSection: structuredClone(expectDefined(targetSections[0])),
-      };
+      });
     },
   };
 }

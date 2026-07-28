@@ -46,8 +46,7 @@ describe("getOrgPublic", () => {
   it("returns the decoded identity and reports nothing when org.getPublic resolves", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [{ result: { data: { json: ORG } } }],
+      json: () => Promise.resolve([{ result: { data: { json: ORG } } }]),
     });
 
     await expect(getOrgPublic()).resolves.toEqual(ORG);
@@ -59,8 +58,7 @@ describe("getOrgPublic", () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 503,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [],
+      json: () => Promise.resolve([]),
     });
 
     await expect(getOrgPublic()).resolves.toEqual(
@@ -73,8 +71,8 @@ describe("getOrgPublic", () => {
   it("degrades and reports the decode branch on a malformed payload", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [{ result: { data: { json: { shortName: 42 } } } }],
+      json: () =>
+        Promise.resolve([{ result: { data: { json: { shortName: 42 } } } }]),
     });
 
     await expect(getOrgPublic()).resolves.toEqual(

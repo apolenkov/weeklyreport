@@ -51,10 +51,9 @@ describe("trpcMetricsMiddleware", () => {
     return trpcMetricsMiddleware({
       path,
       type,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async next middleware contract (no awaitable work in the stub)
-      next: async () => {
-        if ("throws" in nextResult) throw nextResult.throws;
-        return nextResult;
+      next: () => {
+        if ("throws" in nextResult) return Promise.reject(nextResult.throws);
+        return Promise.resolve(nextResult);
       },
     });
   }

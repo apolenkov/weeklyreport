@@ -54,8 +54,7 @@ export function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<PublishPeriodOutcome>)
-  const publishFn = vi.fn(async (id: string) => {
+  const publishFn = vi.fn((id: string) => {
     const r = reports.get(id);
     // Mirror the guarded compare-and-set: only a not-yet-published,
     // non-archived row transitions. A zero-row match splits into "raced" (an
@@ -64,22 +63,22 @@ export function createSpyRepository(
     if (!r || r.periodStatus === "published" || r.archived) {
       const reason: "raced" | "archived" =
         r?.periodStatus === "published" ? "raced" : "archived";
-      return { transitioned: false as const, reason };
+      return Promise.resolve({ transitioned: false as const, reason });
     }
     reports.set(id, {
       ...r,
       periodStatus: "published",
       publishedAt: new Date(),
     });
-    return { transitioned: true as const };
+    return Promise.resolve({ transitioned: true as const });
   });
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.reopenPeriod typed slot (must return Promise<void>)
-  const reopenFn = vi.fn(async (id: string) => {
+  const reopenFn = vi.fn((id: string) => {
     const r = reports.get(id);
     if (r) {
       reports.set(id, { ...r, periodStatus: "reopened" });
     }
+    return Promise.resolve();
   });
 
   // Resolve the lifecycle targets from the LIVE map on every call (like the real
@@ -89,12 +88,11 @@ export function createSpyRepository(
 
   return {
     listSectionIds: () => Promise.resolve([]),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async getReportById(id: string) {
+    getReportById(id: string) {
       const r = reports.get(id);
-      return r
-        ? { ...structuredClone(r), archived: r.archived ?? false }
-        : null;
+      return Promise.resolve(
+        r ? { ...structuredClone(r), archived: r.archived ?? false } : null,
+      );
     },
     getCurrentEditableId: () =>
       Promise.resolve(

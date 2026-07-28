@@ -27,13 +27,11 @@ interface MockNestApp {
 function makePrismaStub() {
   return {
     reportSection: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
-      findFirst: vi.fn(async () => null),
+      findFirst: vi.fn(() => Promise.resolve(null)),
     },
     // isActive check on createContextFactory.
     user: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
-      findUnique: vi.fn(async () => ({ isActive: true })),
+      findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
     },
     // PDF-token paths short-circuit before this stub; the regular-JWT
     // regression test below does hydrate `session.organization` from it.
@@ -44,11 +42,12 @@ function makePrismaStub() {
           fullName: "Example Software Department",
         }),
       ),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
-      upsert: vi.fn(async () => ({
-        shortName: "Demo",
-        fullName: "Example Software Department",
-      })),
+      upsert: vi.fn(() =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+      ),
     },
   };
 }
@@ -266,20 +265,16 @@ interface RequesterUser {
 function makeRequesterPrisma(user: RequesterUser | null) {
   return {
     reportSection: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
-      findFirst: vi.fn(async () => null),
+      findFirst: vi.fn(() => Promise.resolve(null)),
     },
     user: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
-      findUnique: vi.fn(async () => user),
+      findUnique: vi.fn(() => Promise.resolve(user)),
     },
     viewerGroupAccess: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
-      findMany: vi.fn(async () => [{ groupId: GRANTED_GROUP_ID }]),
+      findMany: vi.fn(() => Promise.resolve([{ groupId: GRANTED_GROUP_ID }])),
     },
     reportingGroup: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
-      findUnique: vi.fn(async () => ({ name: "Software Development" })),
+      findUnique: vi.fn(() => Promise.resolve({ name: "Software Development" })),
     },
     organization: {
       findUnique: vi.fn(() =>
@@ -288,11 +283,12 @@ function makeRequesterPrisma(user: RequesterUser | null) {
           fullName: "Example Software Department",
         }),
       ),
-      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
-      upsert: vi.fn(async () => ({
-        shortName: "Demo",
-        fullName: "Example Software Department",
-      })),
+      upsert: vi.fn(() =>
+        Promise.resolve({
+          shortName: "Demo",
+          fullName: "Example Software Department",
+        }),
+      ),
     },
   };
 }

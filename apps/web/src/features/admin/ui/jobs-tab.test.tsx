@@ -41,8 +41,7 @@ function makeMockTRPC(jobs: FailedJob[]) {
   return createMockTRPC([
     {
       path: ["admin", "jobs", "listFailed"],
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-      query: async () => ({ jobs, nextCursor: null }),
+      query: () => Promise.resolve({ jobs, nextCursor: null }),
     },
     ...BASE_DESCRIPTORS,
   ]);

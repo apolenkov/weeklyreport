@@ -50,8 +50,7 @@ function buildCaller(serviceResult: WeeklyReportServiceResult, role: Role) {
   const auditLogger = { ...createNullAuditLogger(), scopeAccessed };
   const deps = {
     weeklyReportService: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async service contract
-      getWeeklyReport: vi.fn(async () => serviceResult),
+      getWeeklyReport: vi.fn(() => Promise.resolve(serviceResult)),
     },
   } as unknown as Parameters<typeof createAppRouter>[0];
   const caller = createAppRouter(deps).createCaller({

@@ -122,26 +122,21 @@ export function createRepository(
 
   return {
     ...unusedAdminRepositoryStubs(),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async getSnapshot() {
-      return structuredClone(currentSnapshot);
+    getSnapshot() {
+      return Promise.resolve(structuredClone(currentSnapshot));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async saveSnapshot(nextSnapshot) {
+    saveSnapshot(nextSnapshot) {
       currentSnapshot = structuredClone(nextSnapshot);
-      return structuredClone(currentSnapshot);
+      return Promise.resolve(structuredClone(currentSnapshot));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async getSettings() {
-      return structuredClone(currentSettings);
+    getSettings() {
+      return Promise.resolve(structuredClone(currentSettings));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async updateSettings(data) {
+    updateSettings(data) {
       currentSettings = { ...currentSettings, ...data };
-      return structuredClone(currentSettings);
+      return Promise.resolve(structuredClone(currentSettings));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async saveReportingGroup(group) {
+    saveReportingGroup(group) {
       const existingIndex = currentSnapshot.groups.findIndex(
         (row) => row.id === group.id,
       );
@@ -150,17 +145,18 @@ export function createRepository(
       } else {
         currentSnapshot.groups.push(structuredClone(group));
       }
-      return structuredClone(group);
+      return Promise.resolve(structuredClone(group));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async archiveReportingGroup(groupId) {
+    archiveReportingGroup(groupId) {
       const group = currentSnapshot.groups.find((row) => row.id === groupId);
-      if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
+      if (!group)
+        return Promise.reject(
+          new Error(`ReportingGroup ${groupId} not found.`),
+        );
       group.archived = true;
-      return structuredClone(group);
+      return Promise.resolve(structuredClone(group));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async saveStageAssignment(data) {
+    saveStageAssignment(data) {
       const existing = [...assignments.values()].find(
         (a) => a.stageId === data.stageId && a.projectId === data.projectId,
       );
@@ -170,7 +166,7 @@ export function createRepository(
           userId: data.userId,
         };
         assignments.set(existing.id, updated);
-        return structuredClone(updated);
+        return Promise.resolve(structuredClone(updated));
       }
       const assignment: StageAssignment = {
         id: crypto.randomUUID(),
@@ -181,26 +177,26 @@ export function createRepository(
         userName: "Test User",
       };
       assignments.set(assignment.id, assignment);
-      return structuredClone(assignment);
+      return Promise.resolve(structuredClone(assignment));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async deleteStageAssignment(id) {
+    deleteStageAssignment(id) {
       if (!assignments.has(id)) {
-        throw new Error(`StageAssignment ${id} not found.`);
+        return Promise.reject(new Error(`StageAssignment ${id} not found.`));
       }
       assignments.delete(id);
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async listStageAssignments(projectId) {
-      return [...assignments.values()]
-        .filter((a) => a.projectId === projectId)
-        .map((a) => structuredClone(a));
+    listStageAssignments(projectId) {
+      return Promise.resolve(
+        [...assignments.values()]
+          .filter((a) => a.projectId === projectId)
+          .map((a) => structuredClone(a)),
+      );
     },
     // Targeted single-entity writes — each touches only the named row, mirroring
     // the prisma repository. Users/projects stay name-sorted so the read shape
     // matches getSnapshot's `orderBy name asc`.
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async upsertUser(user) {
+    upsertUser(user) {
       const exists = currentSnapshot.users.some((row) => row.id === user.id);
       const nextUsers = exists
         ? currentSnapshot.users.map((row) =>
@@ -210,15 +206,15 @@ export function createRepository(
       currentSnapshot.users = [...nextUsers].sort((left, right) =>
         left.name.localeCompare(right.name, "ru"),
       );
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async removeUser(userId) {
+    removeUser(userId) {
       currentSnapshot.users = currentSnapshot.users.filter(
         (row) => row.id !== userId,
       );
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async upsertProject(project) {
+    upsertProject(project) {
       const exists = currentSnapshot.projects.some(
         (row) => row.id === project.id,
       );
@@ -230,15 +226,15 @@ export function createRepository(
       currentSnapshot.projects = [...nextProjects].sort((left, right) =>
         left.name.localeCompare(right.name, "ru"),
       );
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async removeProject(projectId) {
+    removeProject(projectId) {
       currentSnapshot.projects = currentSnapshot.projects.map((row) =>
         row.id === projectId ? { ...row, archived: true } : row,
       );
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async upsertReminderRule(rule) {
+    upsertReminderRule(rule) {
       const exists = currentSnapshot.reminderRules.some(
         (row) => row.id === rule.id,
       );
@@ -247,16 +243,18 @@ export function createRepository(
             row.id === rule.id ? structuredClone(rule) : row,
           )
         : [...currentSnapshot.reminderRules, structuredClone(rule)];
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async removeReminderRule(ruleId) {
+    removeReminderRule(ruleId) {
       currentSnapshot.reminderRules = currentSnapshot.reminderRules.filter(
         (row) => row.id !== ruleId,
       );
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async reminderPolicyExists(policyId) {
-      return currentSnapshot.policies.some((policy) => policy.id === policyId);
+    reminderPolicyExists(policyId) {
+      return Promise.resolve(
+        currentSnapshot.policies.some((policy) => policy.id === policyId),
+      );
     },
   };
 }

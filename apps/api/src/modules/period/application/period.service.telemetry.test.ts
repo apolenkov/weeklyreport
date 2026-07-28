@@ -121,28 +121,25 @@ describe("PeriodService — manual-publish telemetry", () => {
     const repo: PeriodRepository & {
       publishPeriod: ReturnType<typeof vi.fn>;
     } = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract
-      async getReportById(id: string) {
+      getReportById(id: string) {
         if (id === reportId) {
-          return {
+          return Promise.resolve({
             id: reportId,
             status: "draft",
             periodStatus: "open",
             publishedAt: null,
             archived: false,
-          };
+          });
         }
-        return null;
+        return Promise.resolve(null);
       },
       getCurrentEditableId: () => Promise.resolve(reportId),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),
       getReopenedNonArchivedId: () => Promise.resolve(null),
-      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the PeriodRepository typed slot; throw is synchronous
-      publishPeriod: vi.fn(async () => {
-        throw new Error("DB write failed");
+      publishPeriod: vi.fn(() => {
+        return Promise.reject(new Error("DB write failed"));
       }),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract
-      reopenPeriod: vi.fn(async () => undefined),
+      reopenPeriod: vi.fn(() => Promise.resolve(undefined)),
       listSectionIds: () => Promise.resolve([]),
     };
     const service = new PeriodService(

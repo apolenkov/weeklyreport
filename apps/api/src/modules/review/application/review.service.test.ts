@@ -55,13 +55,12 @@ const unsortedRows: SubmissionDashboardRow[] = [
 
 function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
-    async getSubmissionDashboard(activeReportId: string, _session) {
+    getSubmissionDashboard(activeReportId: string, _session) {
       if (activeReportId !== reportId) {
-        return [];
+        return Promise.resolve([]);
       }
 
-      return structuredClone(rows);
+      return Promise.resolve(structuredClone(rows));
     },
   };
 }
@@ -130,10 +129,9 @@ describe("ReviewService", () => {
   it("passes the session through to the repository so scope filter applies", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
-      async getSubmissionDashboard(_id, session) {
+      getSubmissionDashboard(_id, session) {
         capturedSession = session;
-        return [];
+        return Promise.resolve([]);
       },
     };
     const service = new ReviewService(spyRepo);
@@ -147,10 +145,9 @@ describe("ReviewService", () => {
   it("viewer with empty viewerGroupAccess gets zero rows back (caller responsibility, repo still gets session)", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
-      async getSubmissionDashboard(_id, session) {
+      getSubmissionDashboard(_id, session) {
         capturedSession = session;
-        return [];
+        return Promise.resolve([]);
       },
     };
     const service = new ReviewService(spyRepo);

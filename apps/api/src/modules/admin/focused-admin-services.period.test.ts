@@ -54,32 +54,35 @@ function makePeriodAwareRepository(
   const store = rows.map((r) => ({ ...r }));
   return {
     ...base,
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async listPeriodsByState(filter) {
-      return store
-        .filter((r) => filter.states.includes(r.periodState))
-        .slice(0, filter.limit)
-        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime());
+    listPeriodsByState(filter) {
+      return Promise.resolve(
+        store
+          .filter((r) => filter.states.includes(r.periodState))
+          .slice(0, filter.limit)
+          .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime()),
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async archivePeriod(periodId) {
+    archivePeriod(periodId) {
       const row = store.find((r) => r.id === periodId);
-      if (!row) throw new Error("not found");
+      if (!row) return Promise.reject(new Error("not found"));
       row.archived = true;
       row.periodState = "archived";
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async unarchivePeriod(periodId): Promise<{
+    unarchivePeriod(periodId): Promise<{
       nextPeriodState: PeriodState;
       nextPeriodStatus: PeriodStatus;
     }> {
       const row = store.find((r) => r.id === periodId);
-      if (!row) throw new Error("not found");
+      if (!row) return Promise.reject(new Error("not found"));
       const next: PeriodState =
         row.periodStatus === "open" ? "open" : "published";
       row.archived = false;
       row.periodState = next;
-      return { nextPeriodState: next, nextPeriodStatus: row.periodStatus };
+      return Promise.resolve({
+        nextPeriodState: next,
+        nextPeriodStatus: row.periodStatus,
+      });
     },
   };
 }
@@ -252,8 +255,7 @@ function makeCreatePeriodRepository(opts: {
   let counter = 0;
   return {
     ...base,
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async findOverlappingPeriod(input) {
+    findOverlappingPeriod(input) {
       // Half-open intersect: existingStart <= newEnd && existingEnd >= newStart.
       const hit = seed
         .filter(
@@ -263,16 +265,17 @@ function makeCreatePeriodRepository(opts: {
         )
         .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
         .at(0);
-      return hit
-        ? {
-            id: hit.id,
-            periodStart: hit.periodStart,
-            periodEnd: hit.periodEnd,
-          }
-        : null;
+      return Promise.resolve(
+        hit
+          ? {
+              id: hit.id,
+              periodStart: hit.periodStart,
+              periodEnd: hit.periodEnd,
+            }
+          : null,
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async createPeriodManual(input) {
+    createPeriodManual(input) {
       counter += 1;
       const id = `11111111-1111-4111-8111-1111111110${String(counter).padStart(
         2,
@@ -290,13 +293,13 @@ function makeCreatePeriodRepository(opts: {
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
       });
-      return {
+      return Promise.resolve({
         id,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         deadline: input.deadline,
         periodState: input.periodState,
-      };
+      });
     },
     readLastCreated() {
       return lastCreated;
@@ -463,8 +466,7 @@ function makeUpdatePeriodRepository(opts: {
   > = null;
   return {
     ...base,
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async findOverlappingPeriod(input) {
+    findOverlappingPeriod(input) {
       // Half-open intersect + optional self-exclusion.
       const hit = [...rows.values()]
         .filter((row) => (input.excludeId ? row.id !== input.excludeId : true))
@@ -475,24 +477,24 @@ function makeUpdatePeriodRepository(opts: {
         )
         .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
         .at(0);
-      return hit
-        ? {
-            id: hit.id,
-            periodStart: hit.periodStart,
-            periodEnd: hit.periodEnd,
-          }
-        : null;
+      return Promise.resolve(
+        hit
+          ? {
+              id: hit.id,
+              periodStart: hit.periodStart,
+              periodEnd: hit.periodEnd,
+            }
+          : null,
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async readPeriodById(periodId) {
+    readPeriodById(periodId) {
       const row = rows.get(periodId);
-      return row ? { ...row } : null;
+      return Promise.resolve(row ? { ...row } : null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-    async updatePeriodManual(input) {
+    updatePeriodManual(input) {
       const row = rows.get(input.reportId);
       if (!row) {
-        throw new Error("test repo: row not found");
+        return Promise.reject(new Error("test repo: row not found"));
       }
       const next: EditableRow = {
         ...row,
@@ -511,7 +513,7 @@ function makeUpdatePeriodRepository(opts: {
       };
       rows.set(input.reportId, next);
       lastUpdated = { reportId: input.reportId, data: input.data };
-      return { ...next };
+      return Promise.resolve({ ...next });
     },
     readLastUpdated() {
       return lastUpdated;

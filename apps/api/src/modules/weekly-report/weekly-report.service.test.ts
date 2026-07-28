@@ -97,15 +97,14 @@ function createSpyRepository(
   getLatestPublishedNonArchivedId: ReturnType<typeof vi.fn>;
 } {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
-    getWeeklyReport: vi.fn(async (id: string) => {
+    getWeeklyReport: vi.fn((id: string) => {
       const model = reports.get(id);
-      return model ? makeRepoResult(structuredClone(model)) : null;
+      return Promise.resolve(
+        model ? makeRepoResult(structuredClone(model)) : null,
+      );
     }),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
-    getActiveReportId: vi.fn(async () => activeId),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
-    getCurrentEditableId: vi.fn(async () => currentEditableId),
+    getActiveReportId: vi.fn(() => Promise.resolve(activeId)),
+    getCurrentEditableId: vi.fn(() => Promise.resolve(currentEditableId)),
     getLatestPublishedNonArchivedId: vi.fn(() =>
       Promise.resolve(latestPublishedNonArchivedId),
     ),
@@ -460,33 +459,28 @@ function createCrossGroupRepository(
   crossGroup: WeeklyReportRepositoryResult["crossGroup"],
 ): WeeklyReportRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getWeeklyReport(_id: string) {
-      return makeRepoResult(structuredClone(readModel), crossGroup);
+    getWeeklyReport(_id: string) {
+      return Promise.resolve(
+        makeRepoResult(structuredClone(readModel), crossGroup),
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getActiveReportId() {
-      return null;
+    getActiveReportId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getCurrentEditableId() {
-      return null;
+    getCurrentEditableId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getLatestPublishedNonArchivedId() {
-      return null;
+    getLatestPublishedNonArchivedId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getCompiledHistory() {
-      return { reports: [], archiveCount: 0 };
+    getCompiledHistory() {
+      return Promise.resolve({ reports: [], archiveCount: 0 });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getVisibleReportId() {
-      return null;
+    getVisibleReportId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
-    async getLatestPublishedVisibleId() {
-      return null;
+    getLatestPublishedVisibleId() {
+      return Promise.resolve(null);
     },
   };
 }
