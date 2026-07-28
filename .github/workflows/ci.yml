@@ -43,6 +43,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The exemplary-floor ratchet verifies that its committed baseline
+          # did not weaken relative to the first parent.
+          fetch-depth: 2
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -58,7 +62,7 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
-      # scripts/lint-gate.ts runs all 10 static-analysis checks (ESLint,
+      # scripts/lint-gate.ts runs all static-analysis checks (ESLint,
       # stylelint, three tsc projects, SSOT test + sweep, runtime-node drift,
       # depcruise, knip) and reports every failure. No `--fail-fast` on
       # purpose: one CI run must show every broken check, not only the first.
