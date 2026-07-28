@@ -1,6 +1,6 @@
 {
-  "filesOnFloor": 843,
-  "productTotal": 930,
+  "filesOnFloor": 842,
+  "productTotal": 929,
   "overrideBlocks": 26,
   "liveSuppressions": 126,
   "justifiedRegressions": [
@@ -9,6 +9,12 @@
       "from": 829,
       "to": 828,
       "reason": "Moved an A-class product-only fixture into test utilities."
+    },
+    {
+      "counter": "filesOnFloor",
+      "from": 843,
+      "to": 842,
+      "reason": "Merged the A-class reopen-request-card-parts product module into its A-class card owner."
     }
   ]
 }
