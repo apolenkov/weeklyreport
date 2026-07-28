@@ -5,7 +5,7 @@ import {
   formatPeriodRangeWithYear,
   joinPeriodLabel,
 } from "../../../lib/format-date";
-import { ReopenRequestRespondForm } from "./reopen-request-respond-form";
+import { ReopenRespondForm } from "../../../shared/ui/reopen-respond-form";
 
 interface DashboardReopenRequest {
   readonly id: string;
@@ -102,7 +102,7 @@ export function ReopenRequestRow({
       )}
 
       {isResponding && (
-        <ReopenRequestRespondForm
+        <ReopenRespondForm
           requestId={r.id}
           note={note}
           onNoteChange={onNoteChange}

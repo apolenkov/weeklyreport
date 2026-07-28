@@ -105,6 +105,7 @@ export function useReopenTabState() {
     note: draft.note,
     onNoteChange: draft.setNote,
     isSaving: respondMut.isPending,
+    pendingDecision: respondMut.variables?.decision,
     startRespond: draft.start,
     cancelRespond: draft.reset,
     respond: (id: string, decision: "approved" | "rejected") => {

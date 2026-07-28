@@ -1,13 +1,12 @@
 "use client";
 
+import type { ReopenDecision } from "../../../shared/ui/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import { type ReopenRequest, ReopenRequestCard } from "./reopen-request-card";
 import {
   type ReopenFilterStatus,
   useReopenTabState,
 } from "./use-reopen-tab-state";
-
-type ReopenDecision = "approved" | "rejected";
 
 const FILTERS: readonly { value: ReopenFilterStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
@@ -51,6 +50,7 @@ interface ReopenRequestListProps {
   readonly respondingId: string | null;
   readonly note: string;
   readonly isSaving: boolean;
+  readonly pendingDecision: ReopenDecision | undefined;
   readonly onNoteChange: (next: string) => void;
   readonly startRespond: (id: string) => void;
   readonly cancelRespond: () => void;
@@ -63,6 +63,7 @@ function ReopenRequestList({
   note,
   onNoteChange,
   isSaving,
+  pendingDecision,
   startRespond,
   cancelRespond,
   respond,
@@ -76,6 +77,7 @@ function ReopenRequestList({
           isResponding={respondingId === r.id}
           note={note}
           isSaving={isSaving}
+          pendingDecision={pendingDecision}
           onStartRespond={() => startRespond(r.id)}
           onCancelRespond={cancelRespond}
           onNoteChange={onNoteChange}
@@ -130,6 +132,7 @@ export function ReopenTab() {
     respondingId,
     note,
     isSaving,
+    pendingDecision,
     onNoteChange,
     startRespond,
     cancelRespond,
@@ -159,6 +162,7 @@ export function ReopenTab() {
         respondingId={respondingId}
         note={note}
         isSaving={isSaving}
+        pendingDecision={pendingDecision}
         onNoteChange={onNoteChange}
         startRespond={startRespond}
         cancelRespond={cancelRespond}

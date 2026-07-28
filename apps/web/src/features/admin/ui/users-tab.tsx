@@ -1,6 +1,7 @@
 "use client";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import type { MockGroup, MockUser } from "../model/admin-types";
 import { userGroupFilterOptions } from "../model/user-table-filters";
 import { useUsersTabState } from "./use-users-tab-state";
@@ -63,7 +64,27 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         onCancel={state.cancelDelete}
         triggerRef={state.deleteTriggerRef}
       />
+
+      <GroupChangeDialog state={state} />
     </>
+  );
+}
+
+function GroupChangeDialog({
+  state,
+}: {
+  readonly state: ReturnType<typeof useUsersTabState>;
+}) {
+  return (
+    <ConfirmationDialog
+      open={state.showGroupChangeConfirm}
+      title="Change this user's group?"
+      description="The change applies to future work only; archived report snapshots stay unchanged."
+      confirmLabel="Change Group"
+      isPending={state.isSaving}
+      onConfirm={state.confirmGroupChange}
+      onClose={state.cancelGroupChange}
+    />
   );
 }
 

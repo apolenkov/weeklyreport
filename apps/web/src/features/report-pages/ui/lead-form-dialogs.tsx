@@ -4,6 +4,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { ComponentProps } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 import { RequestReopenDialog } from "../../period";
 import {
   ItemEditDialog,
@@ -33,6 +34,10 @@ export interface LeadFormDialogsWriteActions {
   readonly showRevokeDialog: boolean;
   readonly confirmRevoke: () => void;
   readonly setShowRevokeDialog: (open: boolean) => void;
+  readonly pendingFillFrom: boolean;
+  readonly fillFromMut: { readonly isPending: boolean };
+  readonly confirmPendingFillFrom: () => void;
+  readonly cancelPendingFillFrom: () => void;
 }
 
 type StagesForProduct = ComponentProps<
@@ -148,6 +153,17 @@ export function LeadFormDialogs({
         reversible
         onConfirm={writeActions.confirmRevoke}
         onCancel={() => writeActions.setShowRevokeDialog(false)}
+      />
+
+      <ConfirmationDialog
+        open={writeActions.pendingFillFrom}
+        title="Overwrite unsaved changes?"
+        description="Fill from previous replaces the whole draft, including unsaved local edits."
+        confirmLabel="Overwrite & Fill"
+        variant="destructive"
+        isPending={writeActions.fillFromMut.isPending}
+        onConfirm={writeActions.confirmPendingFillFrom}
+        onClose={writeActions.cancelPendingFillFrom}
       />
     </>
   );

@@ -11,16 +11,11 @@ import {
 } from "../model/user-table-filters";
 import { useUserMutations } from "../model/users-tab-mutations";
 
-// A group move applies to future work only; archived report snapshots keep the
-// old group, so the move is confirmed once rather than silently applied.
-function confirmGroupChange(
+function changesUserGroup(
   editingUser: MockUser | null,
   form: UserFormData,
 ): boolean {
-  if (!editingUser || form.groupId === editingUser.groupId) return true;
-  return window.confirm(
-    "Change this user's group? The change applies to future work only; archived report snapshots stay unchanged.",
-  );
+  return editingUser !== null && form.groupId !== editingUser.groupId;
 }
 
 function canSaveUser(form: UserFormData, isSaving: boolean): boolean {
@@ -153,6 +148,9 @@ export function useUsersTabState(users: MockUser[], groups: MockGroup[]) {
   const filters = useUsersFilterState(users);
   const { saveUserMut, deleteUserMut, deactivateUserMut, activateUserMut } =
     useUserMutations(dialog.closeDialog);
+  const [pendingGroupChange, setPendingGroupChange] = useState<ReturnType<
+    typeof toAdminUserInput
+  > | null>(null);
   const deletion = useUserDeletion((userId) =>
     deleteUserMut.mutate({ userId }),
   );
@@ -162,14 +160,26 @@ export function useUsersTabState(users: MockUser[], groups: MockGroup[]) {
     ...dialog,
     ...deletion,
     filters,
+    showGroupChangeConfirm: pendingGroupChange !== null,
     isSaving,
     canSave: canSaveUser(dialog.form, isSaving),
     deactivatePending: deactivateUserMut.isPending,
     activatePending: activateUserMut.isPending,
     handleSave: () => {
-      if (!confirmGroupChange(dialog.editingUser, dialog.form)) return;
-      saveUserMut.mutate(toAdminUserInput(dialog.form, dialog.editingUser?.id));
+      const input = toAdminUserInput(dialog.form, dialog.editingUser?.id);
+      if (changesUserGroup(dialog.editingUser, dialog.form)) {
+        setPendingGroupChange(input);
+        return;
+      }
+      saveUserMut.mutate(input);
     },
+    confirmGroupChange: () => {
+      if (pendingGroupChange === null) return;
+      const input = pendingGroupChange;
+      setPendingGroupChange(null);
+      saveUserMut.mutate(input);
+    },
+    cancelGroupChange: () => setPendingGroupChange(null),
     deactivateUser: (user: MockUser) =>
       deactivateUserMut.mutate({ userId: user.id }),
     activateUser: (user: MockUser) =>
