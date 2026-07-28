@@ -107,7 +107,6 @@ describe("LeadFormService — requestReopen", () => {
     );
 
     expect(result).toEqual({ success: true });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createReopenRequest).toHaveBeenCalledWith(
       SECTION_ID,
       AUTHOR_ID,
@@ -139,7 +138,6 @@ describe("LeadFormService — requestReopen", () => {
     await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       ReopenRequestError,
     );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createReopenRequest).not.toHaveBeenCalled();
   });
 

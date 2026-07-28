@@ -39,9 +39,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
 
     await service.publishPeriod(reportId, headSession);
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledWith(
       reportId,
       headSession.userId,
@@ -113,7 +111,6 @@ describe("PeriodService — publishPeriod (unit)", () => {
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
     );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).not.toHaveBeenCalled();
   });
 
@@ -154,7 +151,6 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ).resolves.toEqual({ success: true, reportId: otherReportId });
 
     expect(getCurrentEditableId).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(base.publishPeriod).not.toHaveBeenCalled();
   });
 
@@ -183,7 +179,6 @@ describe("PeriodService — publishPeriod (unit)", () => {
     await expect(
       service.publishPeriod(archivedReportId, headSession),
     ).rejects.toBeInstanceOf(PeriodScopeError);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).not.toHaveBeenCalled();
   });
 
@@ -207,16 +202,13 @@ describe("PeriodService — publishPeriod (unit)", () => {
     );
 
     await service.publishPeriod(reportId, headSession);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledOnce();
 
     await service.reopenPeriod(reportId, headSession);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
 
     // A reopened period is publishable again, so this second publish writes.
     await service.publishPeriod(reportId, headSession);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.publishPeriod).toHaveBeenCalledTimes(2);
   });
 
@@ -360,9 +352,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
 
     await service.reopenPeriod(reportId, headSession);
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
   });
 
@@ -386,7 +376,6 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     );
 
     await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -469,7 +458,6 @@ describe("PeriodService — reopen policy gate", () => {
     await expect(
       service.reopenPeriod(reportId, headSession),
     ).rejects.toBeInstanceOf(PeriodAccessError);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -500,7 +488,6 @@ describe("PeriodService — reopen policy gate", () => {
     await expect(
       service.reopenPeriod(reportId, headSession),
     ).rejects.toBeInstanceOf(PeriodAccessError);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -531,7 +518,6 @@ describe("PeriodService — reopen policy gate", () => {
       message:
         "Published period is missing publishedAt; reopen window cannot be enforced.",
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -560,7 +546,6 @@ describe("PeriodService — reopen policy gate", () => {
     );
 
     await service.reopenPeriod(reportId, headSession);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 
@@ -584,7 +569,6 @@ describe("PeriodService — reopen policy gate", () => {
     );
 
     await service.reopenPeriod(reportId, headSession);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 });

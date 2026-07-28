@@ -36,7 +36,6 @@ describe("LeadFormService — revokeSubmission", () => {
     );
 
     expect(result).toEqual({ success: true });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeSectionSubmission).toHaveBeenCalledWith(
       SECTION_ID,
       OTHER_USER_ID,
@@ -90,7 +89,6 @@ describe("LeadFormService — revokeSubmission", () => {
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow("Cannot revoke a submission in a published report.");
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeSectionSubmission).not.toHaveBeenCalled();
   });
 
@@ -177,7 +175,6 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
     // The reject happens before the delete-recreate — no copy is attempted.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 
@@ -200,7 +197,6 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
       1,
     );
     expect(result).toEqual({ success: true, copiedItems: 5 });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).toHaveBeenCalled();
   });
 });
@@ -230,7 +226,6 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
 
     expect(rows).toEqual([]);
     // The guard short-circuits BEFORE the repository read — no foreign context fetched.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthors).not.toHaveBeenCalled();
   });
 
@@ -246,7 +241,6 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
 
     expect(rows).toEqual([crossAuthorRow]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
   });
 
@@ -260,9 +254,7 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "head");
 
     expect(rows).toEqual([crossAuthorRow]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
   });
 });
@@ -313,7 +305,6 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
 
     expect(rows).toEqual([]);
     // The report-access gate short-circuits before the content read.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
     expect(await readResultCount("denied")).toBe(before + 1);
   });
@@ -397,7 +388,6 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
 
     expect(rows).toEqual([]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
   });
 
@@ -430,7 +420,6 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     // No role argument exists on the signature, so the result cannot vary by
     // role — the same rows return for any caller that clears both gates.
     expect(rows).toEqual([contentRow]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthorContent).toHaveBeenCalledWith(
       REPORT_ID,
       AUTHOR_ID,
@@ -454,7 +443,6 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     });
 
     expect(result).toEqual({ success: true, revokedCount: 3 });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeAllSubmitted).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -500,7 +488,6 @@ describe("LeadFormService — fillFrom", () => {
     );
 
     expect(result).toEqual({ success: true, copiedItems: 7 });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       SECTION_ID,
       SOURCE_SECTION_ID,
@@ -534,7 +521,6 @@ describe("LeadFormService — fillFrom", () => {
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toThrow("Cannot fill a section of a published report.");
     // The mutating repo call must never be reached.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 

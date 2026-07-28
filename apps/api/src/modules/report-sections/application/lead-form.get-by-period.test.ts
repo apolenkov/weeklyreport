@@ -121,7 +121,6 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriodAsGroupPeer).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -161,7 +160,6 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -186,7 +184,6 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
     expect(result.section.authorId).toBe(AUTHOR_ID);
     expect(result.readOnly).toBe(false);

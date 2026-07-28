@@ -19,7 +19,6 @@ describe("createSamlUnavailableHandler", () => {
 
     handler({} as Request, res, vi.fn());
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.status).toHaveBeenCalledWith(503);
     expect(res.json).toHaveBeenCalledWith({
       error: "SAML is not configured on this deployment",

@@ -37,7 +37,7 @@ describe("resolveDevLoginIdentity", () => {
       samlId: "lead-1",
     });
     // The looked-up email is the role default, not a fabricated value.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion on the mock method reference
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const findFirst = prisma.user.findFirst as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -58,7 +58,7 @@ describe("resolveDevLoginIdentity", () => {
       displayName: "Maria",
       samlId: "lead-maria",
     });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion on the mock method reference
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const findFirst = prisma.user.findFirst as unknown as ReturnType<
       typeof vi.fn
     >;

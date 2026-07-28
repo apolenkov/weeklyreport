@@ -107,7 +107,7 @@ describe("buildUserSession — admin SAML login", () => {
     expect(session.role).toBe("admin");
     expect(session.email).toBe("admin@customreport.local");
     expect(session.reportingGroupName).toBe("Software Development");
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -129,7 +129,7 @@ describe("buildUserSession — admin SAML login", () => {
 
     await buildUserSession(prisma, profile, failIfProvisioned);
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -176,17 +176,17 @@ describe("buildUserSession — admin SAML login", () => {
 
     expect(session.role).toBe("admin");
     expect(session.name).toBe("Old Name");
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const updateMock = prisma.user.update as unknown as ReturnType<
       typeof vi.fn
     >;
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn
     >;
     expect(updateMock).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const createSection = prisma.reportSection.create as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -217,7 +217,7 @@ describe("buildUserSession — admin SAML login", () => {
       resyncExisting: true,
     });
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
     const updateMock = prisma.user.update as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -398,9 +398,7 @@ describe("buildUserSession — samlId identity cross-check", () => {
 
     // Refusal, not reconciliation: neither the re-link (update) nor the
     // auto-create (writeProvisionedUser's create path) may run.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(prisma.user.update).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(prisma.user.create).not.toHaveBeenCalled();
   });
 
@@ -416,7 +414,6 @@ describe("buildUserSession — samlId identity cross-check", () => {
     const session = await buildUserSession(prisma, profile, failIfProvisioned);
 
     expect(session.userId).toBe(EXISTING_USER.id);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 

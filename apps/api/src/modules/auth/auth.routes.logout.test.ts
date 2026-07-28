@@ -59,9 +59,7 @@ describe("createLogoutHandler origin gate", () => {
     const res = makeRes();
     handler(makeReq("https://app.example.com"), res, vi.fn());
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.status).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith("/");
   });
 
@@ -69,7 +67,6 @@ describe("createLogoutHandler origin gate", () => {
     const res = makeRes();
     handler(makeReq("https://www.example.com"), res, vi.fn());
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith("/");
   });
 
@@ -77,11 +74,8 @@ describe("createLogoutHandler origin gate", () => {
     const res = makeRes();
     handler(makeReq("https://evil.example.net"), res, vi.fn());
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.status).toHaveBeenCalledWith(403);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.setHeader).not.toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).not.toHaveBeenCalled();
   });
 
@@ -89,7 +83,6 @@ describe("createLogoutHandler origin gate", () => {
     const res = makeRes();
     handler(makeReq(), res, vi.fn());
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.redirect).toHaveBeenCalledWith("/");
   });
 
@@ -99,7 +92,6 @@ describe("createLogoutHandler origin gate", () => {
 
     // The handler must emit the cleared cookie (empty value, Max-Age=0) —
     // the redirect alone would leave the browser logged in.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest asserts on the mock reference for a call check, not an unbound invocation
     expect(res.setHeader).toHaveBeenCalledWith(
       "Set-Cookie",
       expect.stringMatching(/^customreport_session=;.*Max-Age=0/),
