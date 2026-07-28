@@ -18,7 +18,9 @@
 - [x] Require an explicit reminder-policy `validFrom` at the wire boundary.
 - [x] Reject unknown cross-author workflow states and missing product names
       instead of presenting silent semantic fallbacks.
-- [ ] Land the remaining 9 confirmed findings in isolated slices.
+- [x] Require a PDF export queue in the service constructor so a queued job
+      cannot be returned without an enqueue attempt.
+- [ ] Land the remaining 8 confirmed findings in isolated slices.
 - [ ] Plan and land shared-schema/cross-feature changes in isolated slices.
 
 ## Verification

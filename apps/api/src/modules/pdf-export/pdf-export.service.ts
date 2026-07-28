@@ -45,16 +45,14 @@ export interface PdfExportRepository {
 
 export class PdfExportService {
   private readonly logger: AppLogger;
-  private readonly pdfQueue: PdfExportEnqueuer | null;
 
   constructor(
     private readonly repository: PdfExportRepository,
-    logger?: AppLogger,
-    pdfQueue?: PdfExportEnqueuer,
+    logger: AppLogger | undefined,
+    private readonly pdfQueue: PdfExportEnqueuer,
     private readonly telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
   ) {
     this.logger = logger ?? createNullLogger();
-    this.pdfQueue = pdfQueue ?? null;
   }
 
   // Throws PdfExportDomainError (tRPC → 500) if the secret is missing/too short —
@@ -108,19 +106,16 @@ export class PdfExportService {
       session.userId,
     );
 
-    if (this.pdfQueue) {
-      // Sign lazily so queue-less tests never need the JWT secret.
-      const cookieToken =
-        authToken ?? this.signPdfExportToken(reportId, session.userId);
-      await this.pdfQueue.enqueue(
-        { reportId, jobId: job.jobId, authToken: cookieToken },
-        this.telemetry.captureJobContext(),
-      );
-      this.logger.info("enqueued pdf-export job", {
-        jobId: job.jobId,
-        reportId,
-      });
-    }
+    const cookieToken =
+      authToken ?? this.signPdfExportToken(reportId, session.userId);
+    await this.pdfQueue.enqueue(
+      { reportId, jobId: job.jobId, authToken: cookieToken },
+      this.telemetry.captureJobContext(),
+    );
+    this.logger.info("enqueued pdf-export job", {
+      jobId: job.jobId,
+      reportId,
+    });
 
     this.telemetry.recordRequest(requestedByRole ?? SYSTEM_ROLE_LABEL);
 
