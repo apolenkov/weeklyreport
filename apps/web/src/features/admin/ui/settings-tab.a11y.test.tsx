@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
-
 import type { AppSettings } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -163,9 +161,8 @@ describe("SettingsTab — accessibility regression", () => {
     renderSettings(proxy);
 
     // Wait for the org query to populate the form, then save.
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
     fireEvent.change(shortNameInput, { target: { value: "NEW" } });
@@ -189,14 +186,11 @@ describe("SettingsTab — accessibility regression", () => {
     ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
-    const fullNameInput = screen.getByLabelText(
-      /full name/i,
-    ) as HTMLInputElement;
+    const fullNameInput = screen.getByLabelText<HTMLInputElement>(/full name/i);
     fireEvent.change(shortNameInput, { target: { value: "ACME" } });
     fireEvent.change(fullNameInput, { target: { value: "Acme Corp" } });
 
@@ -248,7 +242,7 @@ describe("SettingsTab — accessibility regression", () => {
     await user.click(screen.getByRole("tab", { name: /reminders/i }));
 
     fireEvent.change(
-      screen.getByLabelText(/default timezone/i) as HTMLSelectElement,
+      screen.getByLabelText<HTMLSelectElement>(/default timezone/i),
       { target: { value: "Asia/Yekaterinburg" } },
     );
 
@@ -274,7 +268,7 @@ describe("SettingsTab — accessibility regression", () => {
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
 
     fireEvent.change(
-      screen.getByLabelText(/notification from-email/i) as HTMLInputElement,
+      screen.getByLabelText<HTMLInputElement>(/notification from-email/i),
       { target: { value: "reports@example.com" } },
     );
 
@@ -296,9 +290,8 @@ describe("SettingsTab — accessibility regression", () => {
     ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
     fireEvent.change(shortNameInput, { target: { value: "SNAP" } });
@@ -323,9 +316,8 @@ describe("SettingsTab — accessibility regression", () => {
     ).mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
     fireEvent.change(shortNameInput, { target: { value: "SNAP2" } });

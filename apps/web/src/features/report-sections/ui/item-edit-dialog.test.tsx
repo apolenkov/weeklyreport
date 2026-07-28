@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required by the app tsconfig for value, checked, and options access. */
 /**
  * Typed text must survive parent re-renders that pass a new
  * stagesForProduct function reference (autosave → React Query invalidate cycle).
@@ -302,7 +301,7 @@ describe("ItemEditDialog — unique rank picker", () => {
       />,
     );
 
-    const select = screen.getByLabelText(/Priority rank/i) as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>(/Priority rank/i);
     const opt2 = Array.from(select.options).find((o) => o.value === "2");
     const opt3 = Array.from(select.options).find((o) => o.value === "3");
     const opt1 = Array.from(select.options).find((o) => o.value === "1");
@@ -357,7 +356,7 @@ describe("ItemEditDialog — unique rank picker", () => {
       />,
     );
 
-    const select = screen.getByLabelText(/Priority rank/i) as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>(/Priority rank/i);
     // rank 1 is taken (even with duplicates), rank 3 is free
     const opt1 = Array.from(select.options).find((o) => o.value === "1");
     const opt3 = Array.from(select.options).find((o) => o.value === "3");

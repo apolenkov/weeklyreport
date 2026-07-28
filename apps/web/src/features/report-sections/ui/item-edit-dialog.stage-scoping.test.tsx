@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required by the app tsconfig for value, checked, and options access. */
 /**
  * Typed text must survive parent re-renders that pass a new
  * stagesForProduct function reference (autosave → React Query invalidate cycle).
@@ -500,7 +499,7 @@ describe("ItemEditDialog — activity-lane + Add preselects the activity", () =>
     );
 
     // The seed activity beats the baked-in default product.
-    const parentSelect = screen.getByLabelText("Parent") as HTMLSelectElement;
+    const parentSelect = screen.getByLabelText<HTMLSelectElement>("Parent");
     expect(parentSelect.value).toBe("activity:act-1");
     // An activity parent owns no SDLC stage — the stage step is hidden.
     expect(screen.queryByText(/SDLC Stages/i)).not.toBeInTheDocument();

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
-
 import type { AppSettings } from "@customreport/shared";
 import { MAX_FULL_NAME_LENGTH } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -143,14 +141,11 @@ describe("SettingsTab — Identity sub-tab", () => {
     renderSettings(proxy);
 
     // Wait for the org query to populate the form.
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
-    const fullNameInput = screen.getByLabelText(
-      /full name/i,
-    ) as HTMLInputElement;
+    const fullNameInput = screen.getByLabelText<HTMLInputElement>(/full name/i);
     expect(fullNameInput.value).toBe("Example Software Department");
     expect(fullNameInput.maxLength).toBe(MAX_FULL_NAME_LENGTH);
     expect(
@@ -162,26 +157,21 @@ describe("SettingsTab — Identity sub-tab", () => {
 
     // Save button is enabled with valid data — proves the form is wired
     // (the click→mutate path is exercised in admin.integration.test.ts).
-    const saveButton = screen.getByRole("button", {
+    const saveButton = screen.getByRole<HTMLButtonElement>("button", {
       name: /save organization identity/i,
     });
-    await waitFor(() =>
-      expect((saveButton as HTMLButtonElement).disabled).toBe(false),
-    );
+    await waitFor(() => expect(saveButton.disabled).toBe(false));
   });
 
   it("edits the Identity form and submits via the mutation hook", async () => {
     const { proxy, captured } = buildProxy();
     renderSettings(proxy);
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
-    const fullNameInput = screen.getByLabelText(
-      /full name/i,
-    ) as HTMLInputElement;
+    const fullNameInput = screen.getByLabelText<HTMLInputElement>(/full name/i);
 
     fireEvent.change(shortNameInput, { target: { value: "PLAT" } });
     fireEvent.change(fullNameInput, {
@@ -209,14 +199,13 @@ describe("SettingsTab — Identity sub-tab", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
-    const shortNameInput = (await screen.findByLabelText(
-      /short name/i,
-    )) as HTMLInputElement;
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
     await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
 
-    const saveButton = screen.getByRole("button", {
+    const saveButton = screen.getByRole<HTMLButtonElement>("button", {
       name: /save organization identity/i,
-    }) as HTMLButtonElement;
+    });
 
     // fireEvent.change bypasses the input's maxLength DOM attribute (which
     // only clamps real typed/pasted input), so this is the only way to
@@ -254,9 +243,8 @@ describe("SettingsTab — Identity sub-tab", () => {
       const { qc } = renderSettings(proxy);
       const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
 
-      const shortNameInput = (await screen.findByLabelText(
-        /short name/i,
-      )) as HTMLInputElement;
+      const shortNameInput =
+        await screen.findByLabelText<HTMLInputElement>(/short name/i);
       await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
       fireEvent.change(shortNameInput, { target: { value: "NEWN" } });
 
@@ -296,14 +284,13 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
     await user.click(screen.getByRole("tab", { name: /periods/i }));
 
     // periodLengthDays input is present.
-    const periodLength = screen.getByLabelText(
-      /period length/i,
-    ) as HTMLInputElement;
+    const periodLength =
+      screen.getByLabelText<HTMLInputElement>(/period length/i);
     expect(periodLength.value).toBe("7");
     fireEvent.change(periodLength, { target: { value: "14" } });
 
     // gracePeriodHours present and editable.
-    const grace = screen.getByLabelText(/grace period/i) as HTMLInputElement;
+    const grace = screen.getByLabelText<HTMLInputElement>(/grace period/i);
     fireEvent.change(grace, { target: { value: "48" } });
 
     await user.click(
@@ -333,9 +320,9 @@ describe("SettingsTab — Periods sub-tab (new fields)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
 
-    const checkbox = screen.getByRole("checkbox", {
+    const checkbox = screen.getByRole<HTMLInputElement>("checkbox", {
       name: /auto-publish after deadline/i,
-    }) as HTMLInputElement;
+    });
     expect(checkbox.disabled).toBe(false);
   });
 });
@@ -354,9 +341,8 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     await user.click(screen.getByRole("tab", { name: /periods/i }));
 
     // deadlineTime — 18:00 default.
-    const deadlineTime = screen.getByLabelText(
-      /deadline time/i,
-    ) as HTMLInputElement;
+    const deadlineTime =
+      screen.getByLabelText<HTMLInputElement>(/deadline time/i);
     expect(deadlineTime.value).toBe("18:00");
 
     expect(screen.queryByLabelText(/monday \(iso\)/i)).toBeNull();
@@ -369,15 +355,15 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     ).toBeNull();
 
     // allowReopenAfterPublish — checked by default.
-    const allowReopen = screen.getByRole("checkbox", {
+    const allowReopen = screen.getByRole<HTMLInputElement>("checkbox", {
       name: /allow reopen after publish/i,
-    }) as HTMLInputElement;
+    });
     expect(allowReopen.checked).toBe(true);
 
     // reopenWindowHours — 72 default, enabled (since allowReopen is on).
-    const reopenWindow = screen.getByLabelText(
+    const reopenWindow = screen.getByLabelText<HTMLInputElement>(
       /reopen window \(hours\)/i,
-    ) as HTMLInputElement;
+    );
     expect(reopenWindow.value).toBe("72");
     expect(reopenWindow.disabled).toBe(false);
   });
@@ -423,9 +409,9 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
 
-    const reopenWindow = screen.getByLabelText(
+    const reopenWindow = screen.getByLabelText<HTMLInputElement>(
       /reopen window \(hours\)/i,
-    ) as HTMLInputElement;
+    );
     expect(reopenWindow.disabled).toBe(true);
   });
 });
@@ -443,9 +429,8 @@ describe("SettingsTab — Reminders sub-tab", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /reminders/i }));
 
-    const tzSelect = screen.getByLabelText(
-      /default timezone/i,
-    ) as HTMLSelectElement;
+    const tzSelect =
+      screen.getByLabelText<HTMLSelectElement>(/default timezone/i);
     expect(tzSelect.value).toBe("Europe/Moscow");
     fireEvent.change(tzSelect, { target: { value: "Asia/Yekaterinburg" } });
 
@@ -484,9 +469,9 @@ describe("SettingsTab — Notifications sub-tab", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
 
-    const input = screen.getByLabelText(
+    const input = screen.getByLabelText<HTMLInputElement>(
       /notification from-email/i,
-    ) as HTMLInputElement;
+    );
     fireEvent.change(input, { target: { value: "reports@example.com" } });
 
     await user.click(
@@ -511,14 +496,14 @@ describe("SettingsTab — Notifications sub-tab", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
 
-    const input = screen.getByLabelText(
+    const input = screen.getByLabelText<HTMLInputElement>(
       /notification from-email/i,
-    ) as HTMLInputElement;
+    );
     fireEvent.change(input, { target: { value: "not-an-email" } });
 
-    const saveBtn = screen.getByRole("button", {
+    const saveBtn = screen.getByRole<HTMLButtonElement>("button", {
       name: /save notification settings/i,
-    }) as HTMLButtonElement;
+    });
     await waitFor(() => expect(saveBtn.disabled).toBe(true));
   });
 });

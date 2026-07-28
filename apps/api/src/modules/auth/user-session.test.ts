@@ -107,10 +107,7 @@ describe("buildUserSession — admin SAML login", () => {
     expect(session.role).toBe("admin");
     expect(session.email).toBe("admin@customreport.local");
     expect(session.reportingGroupName).toBe("Software Development");
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const createMock = prisma.user.create as unknown as ReturnType<
-      typeof vi.fn
-    >;
+    const createMock = vi.mocked(prisma.user.create);
     expect(createMock).toHaveBeenCalledTimes(1);
     const createArg = createMock.mock.calls[0]?.[0] as
       { data: { role: string } } | undefined;
@@ -129,10 +126,7 @@ describe("buildUserSession — admin SAML login", () => {
 
     await buildUserSession(prisma, profile, failIfProvisioned);
 
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const createMock = prisma.user.create as unknown as ReturnType<
-      typeof vi.fn
-    >;
+    const createMock = vi.mocked(prisma.user.create);
     const data = createMock.mock.calls[0]?.[0] as
       | {
           data: {
@@ -176,20 +170,11 @@ describe("buildUserSession — admin SAML login", () => {
 
     expect(session.role).toBe("admin");
     expect(session.name).toBe("Old Name");
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const updateMock = prisma.user.update as unknown as ReturnType<
-      typeof vi.fn
-    >;
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const createMock = prisma.user.create as unknown as ReturnType<
-      typeof vi.fn
-    >;
+    const updateMock = vi.mocked(prisma.user.update);
+    const createMock = vi.mocked(prisma.user.create);
     expect(updateMock).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const createSection = prisma.reportSection.create as unknown as ReturnType<
-      typeof vi.fn
-    >;
+    const createSection = vi.mocked(prisma.reportSection.create);
     expect(createSection).not.toHaveBeenCalled();
   });
 
@@ -217,10 +202,7 @@ describe("buildUserSession — admin SAML login", () => {
       resyncExisting: true,
     });
 
-    // eslint-disable-next-line vitest/unbound-method -- vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose
-    const updateMock = prisma.user.update as unknown as ReturnType<
-      typeof vi.fn
-    >;
+    const updateMock = vi.mocked(prisma.user.update);
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(session.role).toBe("head");
   });

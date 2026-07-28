@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -353,9 +352,8 @@ describe("RemindersTab — add / edit form", () => {
     renderTab();
 
     await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
-    const typeSelect = screen.getByLabelText(
-      /Reminder type/i,
-    ) as HTMLSelectElement;
+    const typeSelect =
+      screen.getByLabelText<HTMLSelectElement>(/Reminder type/i);
     expect(typeSelect.value).toBe("escalation-head");
   });
 
@@ -425,7 +423,7 @@ describe("RemindersTab — add / edit form", () => {
       derivedRulesByPolicyId: {},
       defaultTimezone: "Asia/Yekaterinburg",
     });
-    const tzSelect = screen.getByLabelText(/Timezone/i) as HTMLSelectElement;
+    const tzSelect = screen.getByLabelText<HTMLSelectElement>(/Timezone/i);
     expect(tzSelect.value).toBe("Asia/Yekaterinburg");
   });
 
@@ -447,10 +445,10 @@ describe("RemindersTab — add / edit form", () => {
     await user.click(
       screen.getByRole("checkbox", { name: /forever \(no end date\)/i }),
     );
-    const validFrom = screen.getByLabelText(/Valid from/i) as HTMLInputElement;
-    const validUntil = screen.getByLabelText(
+    const validFrom = screen.getByLabelText<HTMLInputElement>(/Valid from/i);
+    const validUntil = screen.getByLabelText<HTMLInputElement>(
       /^policy-valid-until$|^Valid until$/i,
-    ) as HTMLInputElement;
+    );
 
     const fromIso = validFrom.value;
     const before = new Date(fromIso);

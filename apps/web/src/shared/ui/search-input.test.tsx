@@ -234,8 +234,7 @@ describe("SearchInput", () => {
     });
 
     render(<SearchInput scope="mine" />);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- the app tsconfig needs the element narrowed for .value access (TS2339)
-    const input = screen.getByRole("combobox") as HTMLInputElement;
+    const input = screen.getByRole<HTMLInputElement>("combobox");
 
     act(() => {
       fireEvent.focus(input);

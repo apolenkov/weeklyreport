@@ -64,26 +64,26 @@
       "line": 122,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-non-null-assertion",
-      "reason": "non-null asserted right after an explicit not-null check",
+      "reason": "Runtime expectDefined narrowing expresses the asserted precondition without a non-null escape.",
       "target": "const msg = message!;",
       "fingerprint": "24af553d01e742a0",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: api email dispatch compile seam; web slide skeleton 4/4",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/email/email-dispatch.integration.test.ts",
       "line": 181,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-non-null-assertion",
-      "reason": "non-null asserted right after an explicit not-null check",
+      "reason": "Runtime expectDefined narrowing expresses the asserted precondition without a non-null escape.",
       "target": "const msg = message!;",
       "fingerprint": "24af553d01e742a0",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: api email dispatch compile seam; web slide skeleton 4/4",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/email/email.service.ts",
@@ -298,26 +298,26 @@
       "line": 40,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const findFirst = prisma.user.findFirst as unknown as ReturnType<",
       "fingerprint": "bd7c05d80e215286",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/dev-login.routes.test.ts",
       "line": 61,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const findFirst = prisma.user.findFirst as unknown as ReturnType<",
       "fingerprint": "bd7c05d80e215286",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/saml.strategy.ts",
@@ -337,78 +337,78 @@
       "line": 110,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const createMock = prisma.user.create as unknown as ReturnType<",
       "fingerprint": "adce130f49924b63",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
       "line": 132,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const createMock = prisma.user.create as unknown as ReturnType<",
       "fingerprint": "adce130f49924b63",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
       "line": 179,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const updateMock = prisma.user.update as unknown as ReturnType<",
       "fingerprint": "8b61379e5f6e5642",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
       "line": 183,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const createMock = prisma.user.create as unknown as ReturnType<",
       "fingerprint": "adce130f49924b63",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
       "line": 189,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const createSection = prisma.reportSection.create as unknown as ReturnType<",
       "fingerprint": "f8d290bcb6086023",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
       "line": 220,
       "scope": "next-line",
       "rule": "vitest/unbound-method",
-      "reason": "vi.fn() mock reference: the double cast erases the spy type, so the rule cannot see there is no `this` to lose",
+      "reason": "vi.mocked preserves the spy identity without detaching through a double cast.",
       "target": "const updateMock = prisma.user.update as unknown as ReturnType<",
       "fingerprint": "8b61379e5f6e5642",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: auth dev-login and user-session 22/22",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts",
@@ -753,39 +753,39 @@
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339)",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */",
       "fingerprint": "6ef5839a9c6b2c4b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/admin/ui/settings-tab.a11y.test.tsx",
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts are required for value, checked, and options access under the app tsconfig.",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */",
       "fingerprint": "b1f255dabe1ba91b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/admin/ui/settings-tab.test.tsx",
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts are required for value, checked, and options access under the app tsconfig.",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */",
       "fingerprint": "b1f255dabe1ba91b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/admin/ui/user-edit-dialog-fields.tsx",
@@ -961,26 +961,26 @@
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339)",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */",
       "fingerprint": "6ef5839a9c6b2c4b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/period/ui/periods-tab.test.tsx",
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339)",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */",
       "fingerprint": "6ef5839a9c6b2c4b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/lead-form.tsx",
@@ -1078,26 +1078,26 @@
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts are required by the app tsconfig for value, checked, and options access.",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required by the app tsconfig for value, checked, and options access. */",
       "fingerprint": "a9bcebac6bd9d426",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-edit-dialog.test.tsx",
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts are required by the app tsconfig for value, checked, and options access.",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required by the app tsconfig for value, checked, and options access. */",
       "fingerprint": "a9bcebac6bd9d426",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/review/ui/risk-edit-dialog-fields.tsx",
@@ -1156,13 +1156,13 @@
       "line": 33,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-non-null-assertion",
-      "reason": "asserted above",
+      "reason": "Runtime expectDefined narrowing expresses the asserted precondition without a non-null escape.",
       "target": "listContainer!.querySelectorAll(\".h-24.animate-pulse\");",
       "fingerprint": "6de8602d93c4ae18",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "focused-tests: api email dispatch compile seam; web slide skeleton 4/4",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/slides/ui/slide-status-badge.tsx",
@@ -1390,13 +1390,13 @@
       "line": 1,
       "scope": "file",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339)",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */",
       "fingerprint": "6ef5839a9c6b2c4b",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/shared/ui/report-shell/save-now-button.tsx",
@@ -1429,13 +1429,13 @@
       "line": 237,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",
-      "reason": "the app tsconfig needs the element narrowed for .value access (TS2339)",
+      "reason": "Typed Testing Library query generics preserve the concrete DOM element type without a cast or file-wide suppression.",
       "target": "const input = screen.getByRole(\"combobox\") as HTMLInputElement;",
       "fingerprint": "a9e695cf01daf939",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "web typecheck; focused DOM suites 146/146",
+      "implementationCommit": "pending"
     },
     {
       "path": "e2e/integration/global-setup.ts",
@@ -1511,7 +1511,7 @@
       "fingerprint": "d56dad9e1ebc49a1",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "eslint.config.ts",
@@ -1520,7 +1520,7 @@
       "fingerprint": "77e12d6fd6207fb8",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "eslint.config.ts",
@@ -1529,7 +1529,7 @@
       "fingerprint": "7a7ca14d2a70aec8",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "eslint.config.ts",
@@ -1538,7 +1538,7 @@
       "fingerprint": "dc520f3a56df32ab",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "eslint.config.ts",
@@ -1547,7 +1547,7 @@
       "fingerprint": "4fd2ba3323b4ba19",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "eslint.config.ts",
@@ -1556,7 +1556,7 @@
       "fingerprint": "9e9dd87c3a5a6e0b",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "scripts/exemplary-catalogue.ts",
@@ -1565,7 +1565,7 @@
       "fingerprint": "4722c07e2e51faf2",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "scripts/status-ssot-gate.test.ts",
@@ -1574,7 +1574,7 @@
       "fingerprint": "663d0c3c80317c84",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "scripts/status-ssot-gate.test.ts",
@@ -1583,7 +1583,7 @@
       "fingerprint": "2bf1360066007b7c",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "scripts/status-ssot-gate.test.ts",
@@ -1592,7 +1592,7 @@
       "fingerprint": "a07a4784ee4e7fd1",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     },
     {
       "path": "scripts/status-ssot-gate.ts",
@@ -1601,7 +1601,7 @@
       "fingerprint": "81535ba44de9efa6",
       "verdict": "replace",
       "reason": "Raw substring was not an ESLint directive; the catalogue now parses directive comments.",
-      "implementationCommit": "pending-ledger-commit"
+      "implementationCommit": "17474f93"
     }
   ]
 }

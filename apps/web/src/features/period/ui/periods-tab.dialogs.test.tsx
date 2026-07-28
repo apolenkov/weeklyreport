@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import type { PeriodListItem } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -221,14 +220,12 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     // Header should read «Edit period».
     expect(dialog).toHaveTextContent(/edit period/i);
     // Start input prefilled from the row's periodStart (2026-05-04 UTC).
-    const startInput = screen.getByTestId(
+    const startInput = screen.getByTestId<HTMLInputElement>(
       "periods-create-start",
-    ) as HTMLInputElement;
+    );
     expect(startInput.value).toBe("2026-05-04");
     // End input prefilled from the row's periodEnd (2026-05-10 UTC).
-    const endInput = screen.getByTestId(
-      "periods-create-end",
-    ) as HTMLInputElement;
+    const endInput = screen.getByTestId<HTMLInputElement>("periods-create-end");
     expect(endInput.value).toBe("2026-05-10");
   });
 
@@ -595,9 +592,9 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     );
 
     // Confirm the field prefilled with the UTC wall-clock display.
-    const deadlineInput = screen.getByTestId(
+    const deadlineInput = screen.getByTestId<HTMLInputElement>(
       "periods-create-deadline",
-    ) as HTMLInputElement;
+    );
     expect(deadlineInput.value).toBe("2026-05-09T18:00");
 
     await user.click(screen.getByTestId("periods-create-submit"));

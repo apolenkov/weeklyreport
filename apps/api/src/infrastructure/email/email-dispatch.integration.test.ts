@@ -23,6 +23,7 @@ vi.mock("bullmq", () => ({
   },
 }));
 
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   clearMessages,
   isMailpitUp,
@@ -118,9 +119,7 @@ describe("email-dispatch integration", () => {
 
       const message = await pollForMessage(recipient);
 
-      expect(message).not.toBeNull();
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
-      const msg = message!;
+      const msg = expectDefined(message);
 
       expect(msg.To.some((a) => a.Address === recipient)).toBe(true);
 
@@ -177,9 +176,7 @@ describe("email-dispatch integration", () => {
       } as Job<unknown>);
 
       const message = await pollForMessage(headRecipient);
-      expect(message).not.toBeNull();
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- non-null asserted right after an explicit not-null check
-      const msg = message!;
+      const msg = expectDefined(message);
 
       expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);
       expect(msg.Subject).toContain("[TEST]");

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -85,32 +84,24 @@ describe("SaveNowButton", () => {
         autosave={makeSnapshot({ state: "pending", dirty: true })}
       />,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(screen.getByRole<HTMLButtonElement>("button").disabled).toBe(false);
 
     rerender(
       <SaveNowButton
         autosave={makeSnapshot({ state: "error", dirty: true })}
       />,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(screen.getByRole<HTMLButtonElement>("button").disabled).toBe(false);
 
     rerender(<SaveNowButton autosave={makeSnapshot({ state: "idle" })} />);
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(screen.getByRole<HTMLButtonElement>("button").disabled).toBe(true);
 
     rerender(
       <SaveNowButton
         autosave={makeSnapshot({ state: "saving", isInFlight: true })}
       />,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(screen.getByRole<HTMLButtonElement>("button").disabled).toBe(true);
   });
 
   it("shows spinner icon and aria-label 'Saving draft' while in flight", () => {
@@ -148,7 +139,7 @@ describe("SaveNowButton", () => {
       vi.advanceTimersByTime(1500);
     });
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.getAttribute("aria-label")).toBe("Save draft now");
     expect(screen.getByTestId("save-now-disc")).toBeDefined();
   });
@@ -186,9 +177,7 @@ describe("SaveNowButton", () => {
 
     expect(screen.queryByTestId("save-now-check")).toBeNull();
     expect(
-      (screen.getByRole("button") as HTMLButtonElement).getAttribute(
-        "aria-label",
-      ),
+      screen.getByRole<HTMLButtonElement>("button").getAttribute("aria-label"),
     ).toBe("Save draft now");
   });
 
@@ -238,7 +227,7 @@ describe("SaveNowButton", () => {
       />,
     );
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.disabled).toBe(false);
     await act(() => {
       btn.click();
@@ -253,7 +242,7 @@ describe("SaveNowButton", () => {
       <SaveNowButton autosave={makeSnapshot({ state: "idle", forceSave })} />,
     );
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.disabled).toBe(true);
     btn.click();
     expect(forceSave).not.toHaveBeenCalled();
@@ -268,7 +257,7 @@ describe("SaveNowButton", () => {
 
     expect(screen.getByTestId("save-now-spinner")).toBeDefined();
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.getAttribute("aria-busy")).toBe("true");
     expect(btn.className).toContain("bg-[var(--color-starbucks-accent)]");
     expect(btn.className).toContain("text-white");
@@ -286,7 +275,7 @@ describe("SaveNowButton", () => {
         <SaveNowButton autosave={makeSnapshot({ state, isInFlight, dirty })} />,
       );
 
-      const btn = screen.getByRole("button") as HTMLButtonElement;
+      const btn = screen.getByRole<HTMLButtonElement>("button");
       expect(btn.getAttribute("aria-busy")).toBe("false");
       expect(btn.className).not.toContain("bg-[var(--color-starbucks-accent)]");
     },
@@ -308,7 +297,7 @@ describe("SaveNowButton", () => {
       />,
     );
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.getAttribute("aria-busy")).toBe("false");
     expect(btn.className).not.toContain("bg-[var(--color-starbucks-accent)]");
   });
@@ -325,7 +314,7 @@ describe("SaveNowButton", () => {
       />,
     );
 
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+    const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.disabled).toBe(true);
     btn.click();
     expect(forceSave).not.toHaveBeenCalled();
