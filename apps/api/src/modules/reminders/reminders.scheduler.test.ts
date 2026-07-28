@@ -4,7 +4,14 @@ import type {
 } from "@customreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OrganizationService } from "../organization/organization.service";
+import {
+  activeRule,
+  createServiceRepo,
+  dueRuleFromRecipients,
+  fakeOrganizationService,
+  reportId,
+  ruleId,
+} from "./__tests__/reminders-scheduler-harness.js";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
 import type {
@@ -13,93 +20,6 @@ import type {
   RemindersRepository,
 } from "./reminders.types";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
-
-// Deterministic brand snapshot for payload subject assertions (`[PEO]`).
-const fakeOrganizationService = {
-  // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async OrganizationService contract (no awaitable work in the stub)
-  getPublic: async () => ({
-    shortName: "PEO",
-    fullName: "Product Engineering & Operations",
-  }),
-} as unknown as OrganizationService;
-
-const ruleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const reportId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-
-const activeRule: AdminReminderRule = {
-  id: ruleId,
-  reportId,
-  kind: "deadline",
-  fireAt: new Date("2026-04-19T15:00:00.000Z"),
-  timezone: "UTC",
-  status: "active",
-  version: 1,
-  policyId: null,
-};
-
-function dueRuleFromRecipients(
-  recipients: {
-    userId: string;
-    email: string;
-    name: string;
-    notificationOptOut?: boolean;
-  }[],
-): DueDeadlineRule {
-  return {
-    id: activeRule.id,
-    reportId,
-    fireAt: activeRule.fireAt,
-    reportPeriodLabel: "2026-04-13 → 2026-04-19",
-    recipients: recipients.map((r) => ({
-      ...r,
-      notificationOptOut: r.notificationOptOut ?? false,
-    })),
-  };
-}
-
-function createServiceRepo(): RemindersRepository {
-  const executions = new Map<string, AdminReminderExecution>();
-
-  return {
-    ...unusedRemindersRepositoryStubs(),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async getRule(rid) {
-      return rid === activeRule.id ? structuredClone(activeRule) : null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async findExecutionByDedupeKey(dedupeKey) {
-      for (const exec of executions.values()) {
-        if (exec.dedupeKey === dedupeKey) {
-          return structuredClone(exec);
-        }
-      }
-      return null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async insertExecutionOnConflict(execution) {
-      for (const exec of executions.values()) {
-        if (exec.dedupeKey === execution.dedupeKey) {
-          return { execution: structuredClone(exec), inserted: false };
-        }
-      }
-      executions.set(execution.id, structuredClone(execution));
-      return { execution: structuredClone(execution), inserted: true };
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async saveExecution(execution) {
-      executions.set(execution.id, structuredClone(execution));
-      return structuredClone(execution);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async getExecution(id) {
-      return executions.get(id) ?? null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async listExecutions(rid) {
-      return [...executions.values()].filter((e) => e.ruleId === rid);
-    },
-  };
-}
 
 describe("RemindersScheduler — deadline reminder dispatch", () => {
   let queueAdds: { name: string; data: Record<string, unknown> }[];
@@ -126,12 +46,10 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       { userId: "u1", email: "lead@test.local", name: "Lead Alpha" },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => [
-        dueRuleFromRecipients(recipients),
-      ]),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() =>
+        Promise.resolve([dueRuleFromRecipients(recipients)]),
+      ),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -158,10 +76,8 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
 
   it("no lead with draft section → zero emails", async () => {
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => []),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([])),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -185,12 +101,10 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       { userId: "u2", email: "b@test.local", name: "Beta" },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => [
-        dueRuleFromRecipients(recipients),
-      ]),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() =>
+        Promise.resolve([dueRuleFromRecipients(recipients)]),
+      ),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -216,12 +130,10 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       { userId: "u1", email: "lead@test.local", name: "Lead Alpha" },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => [
-        dueRuleFromRecipients(recipients),
-      ]),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() =>
+        Promise.resolve([dueRuleFromRecipients(recipients)]),
+      ),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -261,12 +173,10 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
 
     let returnNplus1 = false;
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () =>
-        returnNplus1 ? [ruleNplus1] : [ruleN],
+      findDueDeadlineRules: vi.fn(() =>
+        Promise.resolve(returnNplus1 ? [ruleNplus1] : [ruleN]),
       ),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
 
     const serviceRepo = createServiceRepo();
@@ -345,41 +255,46 @@ describe("RemindersScheduler — escalation dispatch", () => {
     const executions = new Map<string, AdminReminderExecution>();
     return {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async getRule(rid) {
-        return rid === escalationRuleId
-          ? structuredClone(escalationActiveRule)
-          : null;
+      getRule(rid) {
+        return Promise.resolve(
+          rid === escalationRuleId
+            ? structuredClone(escalationActiveRule)
+            : null,
+        );
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async findExecutionByDedupeKey(dedupeKey) {
+      findExecutionByDedupeKey(dedupeKey) {
         for (const exec of executions.values()) {
-          if (exec.dedupeKey === dedupeKey) return structuredClone(exec);
+          if (exec.dedupeKey === dedupeKey)
+            return Promise.resolve(structuredClone(exec));
         }
-        return null;
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async insertExecutionOnConflict(execution) {
+      insertExecutionOnConflict(execution) {
         for (const exec of executions.values()) {
           if (exec.dedupeKey === execution.dedupeKey) {
-            return { execution: structuredClone(exec), inserted: false };
+            return Promise.resolve({
+              execution: structuredClone(exec),
+              inserted: false,
+            });
           }
         }
         executions.set(execution.id, structuredClone(execution));
-        return { execution: structuredClone(execution), inserted: true };
+        return Promise.resolve({
+          execution: structuredClone(execution),
+          inserted: true,
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async saveExecution(execution) {
+      saveExecution(execution) {
         executions.set(execution.id, structuredClone(execution));
-        return structuredClone(execution);
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async getExecution(id) {
-        return executions.get(id) ?? null;
+      getExecution(id) {
+        return Promise.resolve(executions.get(id) ?? null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async listExecutions(rid) {
-        return [...executions.values()].filter((e) => e.ruleId === rid);
+      listExecutions(rid) {
+        return Promise.resolve(
+          [...executions.values()].filter((e) => e.ruleId === rid),
+        );
       },
     };
   }
@@ -422,12 +337,10 @@ describe("RemindersScheduler — escalation dispatch", () => {
       },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => []),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => [
-        makeEscalationRule(lateLeads),
-      ]),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([])),
+      findDueEscalationRules: vi.fn(() =>
+        Promise.resolve([makeEscalationRule(lateLeads)]),
+      ),
     };
 
     const service = new RemindersService(
@@ -471,12 +384,10 @@ describe("RemindersScheduler — escalation dispatch", () => {
       },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => []),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => [
-        makeEscalationRule(lateLeads),
-      ]),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([])),
+      findDueEscalationRules: vi.fn(() =>
+        Promise.resolve([makeEscalationRule(lateLeads)]),
+      ),
     };
     const service = new RemindersService(
       makeEscalationServiceRepo(),
@@ -527,10 +438,8 @@ describe("RemindersScheduler — escalation dispatch", () => {
       ],
     };
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => []),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => [twoGroupRule]),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([])),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([twoGroupRule])),
     };
     const service = new RemindersService(
       makeEscalationServiceRepo(),
@@ -603,10 +512,8 @@ describe("RemindersScheduler — opt-out", () => {
       recipients,
     };
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => [due]),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([due])),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -652,10 +559,8 @@ describe("RemindersScheduler — opt-out", () => {
       ],
     };
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => []),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => [due]),
+      findDueDeadlineRules: vi.fn(() => Promise.resolve([])),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([due])),
     };
     const escalationActiveRule: AdminReminderRule = {
       id: due.id,
@@ -669,29 +574,28 @@ describe("RemindersScheduler — opt-out", () => {
     };
     const escalationServiceRepo: RemindersRepository = {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async getRule(rid) {
-        return rid === due.id ? structuredClone(escalationActiveRule) : null;
+      getRule(rid) {
+        return Promise.resolve(
+          rid === due.id ? structuredClone(escalationActiveRule) : null,
+        );
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async findExecutionByDedupeKey() {
-        return null;
+      findExecutionByDedupeKey() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async insertExecutionOnConflict(execution) {
-        return { execution: structuredClone(execution), inserted: true };
+      insertExecutionOnConflict(execution) {
+        return Promise.resolve({
+          execution: structuredClone(execution),
+          inserted: true,
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async saveExecution(execution) {
-        return structuredClone(execution);
+      saveExecution(execution) {
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async getExecution() {
-        return null;
+      getExecution() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-      async listExecutions() {
-        return [];
+      listExecutions() {
+        return Promise.resolve([]);
       },
     };
     const service = new RemindersService(
@@ -720,12 +624,10 @@ describe("RemindersScheduler — per-recipient isolation", () => {
       { userId: "u3", email: "third@test.local", name: "Third" },
     ];
     const fakeRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueDeadlineRules: vi.fn(async () => [
-        dueRuleFromRecipients(recipients),
-      ]),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
-      findDueEscalationRules: vi.fn(async () => []),
+      findDueDeadlineRules: vi.fn(() =>
+        Promise.resolve([dueRuleFromRecipients(recipients)]),
+      ),
+      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
     const attempted: string[] = [];
     const serviceStub = {
