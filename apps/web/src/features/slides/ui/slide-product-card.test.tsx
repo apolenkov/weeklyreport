@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { GridAuthor, GridProductCard } from "../model/slide-grid-model";
+import type { GridAuthor } from "../model/slide-grid-model";
+import type { GridProductCard } from "../model/slide-grid-products";
 import { SlideProductCard } from "./slide-article-grid";
 
 const authorsById = new Map<string, GridAuthor>();

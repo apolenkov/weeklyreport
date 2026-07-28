@@ -5,11 +5,10 @@ import type {
 import type {
   GridColumnKey,
   GridPriorityCard,
-  GridProductCard,
   GridRow,
-  GridSubsection,
   SlideGridModel,
 } from "./slide-grid-model";
+import type { GridProductCard, GridSubsection } from "./slide-grid-products";
 import { COLUMN_ORDER } from "./slide-grid-rows";
 
 export type SlideDensity = "document" | "presentation";

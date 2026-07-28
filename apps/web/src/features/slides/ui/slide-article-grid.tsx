@@ -13,12 +13,11 @@ import {
   statusLabel,
 } from "../../../lib/status-presentation";
 import { columnsRowCount } from "../model/slide-grid-cells";
+import type { GridAuthor, SlideTrafficStatus } from "../model/slide-grid-model";
 import type {
-  GridAuthor,
   GridProductCard,
   GridSubsection,
-  SlideTrafficStatus,
-} from "../model/slide-grid-model";
+} from "../model/slide-grid-products";
 import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
 import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 

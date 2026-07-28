@@ -5,11 +5,10 @@ import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   buildSlideGridModel,
   collectStageNames,
-  type GridProductCard,
-  type GridSubsection,
   SHARED_CARD_ID,
   SHARED_CARD_NAME,
 } from "./slide-grid-model";
+import type { GridProductCard, GridSubsection } from "./slide-grid-products";
 
 type Item = ReportSectionReadModel["items"][number];
 type Risk = ReportSectionReadModel["risks"][number];
