@@ -2,6 +2,7 @@
 export const sharedPackageName = "@customreport/shared";
 
 export * from "./admin/reminder-policy.schema";
+export * from "./admin/reminder-policy-time";
 export * from "./auth";
 export * from "./constants";
 export * from "./name/user-name";
