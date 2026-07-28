@@ -243,11 +243,8 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
     const allSvgs = Array.from(container.querySelectorAll("svg"));
     // At minimum the 6 icon SVGs (Grid, Calendar, NextWeek, Alert, Chat,
     // Collapse) must be present; each must carry aria-hidden="true".
-    const iconSvgs = allSvgs.filter(
-      (svg) => svg.getAttribute("aria-hidden") === "true",
-    );
-    expect(iconSvgs.length).toBeGreaterThanOrEqual(6);
-    for (const svg of iconSvgs) {
+    expect(allSvgs.length).toBeGreaterThanOrEqual(6);
+    for (const svg of allSvgs) {
       expect(svg).toHaveAttribute("aria-hidden", "true");
     }
   });

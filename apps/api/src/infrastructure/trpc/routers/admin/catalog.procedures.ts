@@ -6,22 +6,11 @@ import {
 import { z } from "zod";
 
 import type { ProjectAdminService } from "../../../../modules/admin/index.js";
-import { mapDomainError } from "../../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminCatalogDeps {
   projectAdminService: ProjectAdminService;
-}
-
-// Wraps the resolver body, never the procedure chain — the role-coverage gate
-// matches chains by reference identity. One mapper for every catalog resolver
-// instead of fourteen identical try/catch blocks.
-async function withDomainErrorMapping<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    throw mapDomainError(error);
-  }
 }
 
 function reportingGroupProcedures(deps: AdminCatalogDeps) {

@@ -3,20 +3,9 @@ import { toast } from "sonner";
 
 import {
   invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
+  invalidatePeriodLifecycle,
 } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-
-// Publish and reopen both change what every report surface shows, so they bust
-// the same three caches; archive only affects the dashboard/archive list.
-function invalidateReportViews(
-  ...args: Parameters<typeof invalidateDashboard>
-): void {
-  invalidateDashboard(...args);
-  invalidateLeadForm(...args);
-  invalidateLeadHistory(...args);
-}
 
 function toastMutationError(fallbackMessage: string) {
   return (err: unknown) => {
@@ -70,7 +59,7 @@ export function useWeeklyReportMutations(): WeeklyReportMutations {
   const publishMut = useMutation(
     trpc.period.publish.mutationOptions({
       onSuccess: () => {
-        invalidateReportViews(qc, trpc);
+        invalidatePeriodLifecycle(qc, trpc);
         toast.success("Period published & locked");
       },
       onError: toastMutationError("Failed to publish period"),
@@ -80,7 +69,7 @@ export function useWeeklyReportMutations(): WeeklyReportMutations {
   const reopenMut = useMutation(
     trpc.period.reopen.mutationOptions({
       onSuccess: () => {
-        invalidateReportViews(qc, trpc);
+        invalidatePeriodLifecycle(qc, trpc);
         toast.success("Period reopened");
       },
       onError: toastMutationError("Failed to reopen period"),

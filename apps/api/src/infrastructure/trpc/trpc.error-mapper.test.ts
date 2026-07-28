@@ -50,7 +50,11 @@ import {
   ReviewVersionConflictError,
 } from "../../modules/review/index.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
-import { DOMAIN_ERROR_CODES, mapDomainError } from "./trpc.error-mapper.js";
+import {
+  DOMAIN_ERROR_CODES,
+  mapDomainError,
+  withDomainErrorMapping,
+} from "./trpc.error-mapper.js";
 
 describe("mapDomainError", () => {
   it("returns TRPCError instances unchanged", () => {
@@ -534,5 +538,21 @@ describe("mapDomainError — period lifecycle authz", () => {
     const mapped = mapDomainError(new PeriodAccessError("already published"));
 
     expect(mapped.code).toBe("INTERNAL_SERVER_ERROR");
+  });
+});
+
+describe("withDomainErrorMapping", () => {
+  it("returns a successful resolver result unchanged", async () => {
+    await expect(
+      withDomainErrorMapping(() => Promise.resolve({ ok: true })),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it("maps a rejected domain error through the canonical mapper", async () => {
+    await expect(
+      withDomainErrorMapping(() =>
+        Promise.reject(new WeeklyReportDomainError("missing")),
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND", message: "missing" });
   });
 });

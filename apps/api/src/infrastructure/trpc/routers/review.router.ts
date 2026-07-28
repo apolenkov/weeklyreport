@@ -11,7 +11,7 @@ import type { PublicationService } from "../../../modules/publication/index.js";
 import type { ReviewService } from "../../../modules/review/index.js";
 import type { ReviewActionsService } from "../../../modules/review/index.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
-import { mapDomainError } from "../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import {
   headProcedure,
   leadershipProcedure,
@@ -28,16 +28,6 @@ function requireReviewActions(deps: ReviewRouterDeps): ReviewActionsService {
     });
   }
   return deps.reviewActionsService;
-}
-
-// Every resolver body runs through here so domain errors reach the client as
-// their tRPC equivalents; the service lookup happens inside the try too.
-async function withMappedDomainErrors<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    throw mapDomainError(error);
-  }
 }
 
 export interface ReviewRouterDeps {
@@ -58,7 +48,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     acknowledge: leadershipProcedure
       .input(reviewAcknowledgeInputSchema)
       .mutation(({ input, ctx }) =>
-        withMappedDomainErrors(() =>
+        withDomainErrorMapping(() =>
           requireReviewActions(deps).acknowledge(ctx.session, input),
         ),
       ),
@@ -67,7 +57,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     acknowledgements: leadershipProcedure
       .input(reviewListAcknowledgementsInputSchema)
       .query(({ input, ctx }) =>
-        withMappedDomainErrors(() =>
+        withDomainErrorMapping(() =>
           requireReviewActions(deps).listAcknowledgements(ctx.session, input),
         ),
       ),
@@ -76,7 +66,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     comment: leadershipProcedure
       .input(reviewCommentInputSchema)
       .mutation(({ input, ctx }) =>
-        withMappedDomainErrors(() =>
+        withDomainErrorMapping(() =>
           requireReviewActions(deps).comment(ctx.session, input),
         ),
       ),
@@ -84,7 +74,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     deleteComment: leadershipProcedure
       .input(reviewDeleteCommentInputSchema)
       .mutation(({ input, ctx }) =>
-        withMappedDomainErrors(() =>
+        withDomainErrorMapping(() =>
           requireReviewActions(deps).deleteComment(ctx.session, input),
         ),
       ),
@@ -93,7 +83,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     verdict: leadershipProcedure
       .input(reviewVerdictInputSchema)
       .mutation(({ input, ctx }) =>
-        withMappedDomainErrors(() =>
+        withDomainErrorMapping(() =>
           requireReviewActions(deps).verdict(ctx.session, input),
         ),
       ),
@@ -105,7 +95,7 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
     // review.dashboard is headProcedure — defense-in-depth: only heads (and
     // admins, aliased) see the submission dashboard.
     dashboard: headProcedure.query(({ ctx }) =>
-      withMappedDomainErrors(async () => {
+      withDomainErrorMapping(async () => {
         // Resolve from the DB, not ctx.session.activeReportId (baked into the
         // JWT at login, can be stale); assembledReport and publish use the same
         // resolver so all three agree on the target period.
@@ -120,7 +110,7 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
     ),
 
     assembledReport: headProcedure.query(() =>
-      withMappedDomainErrors(async () => {
+      withDomainErrorMapping(async () => {
         const reportId = await deps.weeklyReportService.getCurrentEditableId();
 
         if (!reportId) {

@@ -9,7 +9,7 @@ import type {
   PeriodAdminService,
   ReopenRequestAdminService,
 } from "../../../../modules/admin/index.js";
-import { mapDomainError } from "../../trpc.error-mapper.js";
+import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
 
@@ -21,16 +21,6 @@ export interface AdminPeriodsDeps {
   // Best-effort carry-over for open-born manual periods; scheduled ones carry
   // at flip. Optional for `{}` fixtures; main.ts always provides it.
   autoCarryOver?: (targetReportId: string) => Promise<void>;
-}
-
-// Wraps a whole procedure body — service call, audit write and carry-over
-// alike — so any of them surfaces as a mapped tRPC error, never a raw throw.
-async function withMappedDomainError<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    throw mapDomainError(error);
-  }
 }
 
 type PeriodPatchDiff = Awaited<
@@ -68,7 +58,7 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
     createPeriodManual: adminProcedure
       .input(adminCreatePeriodManualSchema)
       .mutation(({ ctx, input }) =>
-        withMappedDomainError(async () => {
+        withDomainErrorMapping(async () => {
           const result =
             await deps.periodAdminService.createPeriodManual(input);
           ctx.auditLogger.periodManualCreate({
@@ -94,7 +84,7 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
     updatePeriodManual: adminProcedure
       .input(adminUpdatePeriodManualSchema)
       .mutation(({ ctx, input }) =>
-        withMappedDomainError(async () => {
+        withDomainErrorMapping(async () => {
           const { result, diff } =
             await deps.periodAdminService.updatePeriodManual(input);
           if (Object.keys(diff).length > 0) {
@@ -123,7 +113,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
         }),
       )
       .query(({ input }) =>
-        withMappedDomainError(() =>
+        withDomainErrorMapping(() =>
           deps.periodAdminService.listPeriodsByState(input),
         ),
       ),
@@ -131,7 +121,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     archivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
       .mutation(({ input }) =>
-        withMappedDomainError(() =>
+        withDomainErrorMapping(() =>
           deps.periodAdminService.archivePeriod(input.periodId),
         ),
       ),
@@ -140,7 +130,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     unarchivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
       .mutation(({ input }) =>
-        withMappedDomainError(() =>
+        withDomainErrorMapping(() =>
           deps.periodAdminService.unarchivePeriod(input.periodId),
         ),
       ),
@@ -148,7 +138,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     deleteReport: adminProcedure
       .input(z.object({ reportId: z.uuid() }))
       .mutation(({ input }) =>
-        withMappedDomainError(() =>
+        withDomainErrorMapping(() =>
           deps.periodAdminService.deleteReport(input.reportId),
         ),
       ),

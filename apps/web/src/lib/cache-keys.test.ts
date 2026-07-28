@@ -9,7 +9,9 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
+  invalidatePeriodLifecycle,
   invalidateReview,
+  invalidateSubmissionDashboard,
 } from "./cache-keys";
 import type { TRPCProxy } from "./trpc";
 
@@ -32,6 +34,9 @@ function makeStubTrpc(): TRPCProxy {
     },
     leadForm: {
       byPeriod: { pathFilter: () => ({ tag: "leadForm.byPeriod" }) },
+    },
+    activity: {
+      live: { pathFilter: () => ({ tag: "activity.live" }) },
     },
     admin: {
       snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
@@ -92,6 +97,52 @@ describe("cache-keys helpers", () => {
     invalidateLeadHistory(qc, makeStubTrpc());
 
     expect(spy.mock.calls[0]?.[0]).toEqual({ tag: "reports.myHistory" });
+  });
+
+  it("invalidatePeriodLifecycle covers all report-facing projections", () => {
+    const qc = new QueryClient();
+    const spy = vi
+      .spyOn(qc, "invalidateQueries")
+      .mockReturnValue(Promise.resolve());
+
+    invalidatePeriodLifecycle(qc, makeStubTrpc());
+
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        "review.dashboard",
+        "archive.list",
+        "weeklyReport.get",
+        "reports.getActive",
+        "leadForm.byPeriod",
+        "reports.myHistory",
+      ]),
+    );
+    expect(spy).toHaveBeenCalledTimes(6);
+  });
+
+  it("invalidateSubmissionDashboard also covers the live activity stream", () => {
+    const qc = new QueryClient();
+    const spy = vi
+      .spyOn(qc, "invalidateQueries")
+      .mockReturnValue(Promise.resolve());
+
+    invalidateSubmissionDashboard(qc, makeStubTrpc());
+
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        "review.dashboard",
+        "archive.list",
+        "weeklyReport.get",
+        "activity.live",
+      ]),
+    );
+    expect(spy).toHaveBeenCalledTimes(4);
   });
 
   it("invalidateAdmin targets admin.snapshot + admin.getSettings + org caches", () => {

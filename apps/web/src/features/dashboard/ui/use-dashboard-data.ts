@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
+import { invalidateSubmissionDashboard } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { useDashboardQueryRecovery } from "./use-dashboard-query-recovery";
@@ -115,11 +116,7 @@ function useRevokeAllSubmitted() {
         toast.success(
           `${result.revokedCount} submission${result.revokedCount === 1 ? "" : "s"} revoked.`,
         );
-        void Promise.allSettled([
-          queryClient.invalidateQueries(trpc.weeklyReport.get.queryOptions({})),
-          queryClient.invalidateQueries(trpc.review.dashboard.queryOptions()),
-          queryClient.invalidateQueries(trpc.activity.live.queryOptions()),
-        ]);
+        invalidateSubmissionDashboard(queryClient, trpc);
       },
       onError: (error) => toast.error(`Revoke All failed: ${error.message}`),
     }),

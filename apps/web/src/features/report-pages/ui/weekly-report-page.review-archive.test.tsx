@@ -16,6 +16,7 @@ vi.mock("../../../lib/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
+  invalidatePeriodLifecycle: vi.fn(),
   invalidateReview: vi.fn(),
 }));
 

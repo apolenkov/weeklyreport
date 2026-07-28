@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { invalidateSubmissionDashboard } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
 
@@ -14,7 +15,6 @@ interface RevokeLeadButtonProps {
   readonly onMutated: () => void;
 }
 
-// Invalidates weeklyReport.get so the row shows Draft without a manual refresh.
 function useRevokeMutation(leadName: string, onMutated: () => void) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -23,9 +23,7 @@ function useRevokeMutation(leadName: string, onMutated: () => void) {
     trpc.leadForm.revoke.mutationOptions({
       onSuccess: () => {
         toast.success(`${leadName}'s submission revoked.`);
-        void queryClient.invalidateQueries(
-          trpc.weeklyReport.get.queryOptions({}),
-        );
+        invalidateSubmissionDashboard(queryClient, trpc);
         onMutated();
       },
       onError: (err) => {

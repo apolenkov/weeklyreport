@@ -4,13 +4,19 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useMutationMock, invalidateQueries, invalidateReview, mutate } =
-  vi.hoisted(() => ({
-    useMutationMock: vi.fn(),
-    invalidateQueries: vi.fn(),
-    invalidateReview: vi.fn(),
-    mutate: vi.fn(),
-  }));
+const {
+  useMutationMock,
+  invalidateQueries,
+  invalidateReview,
+  invalidateSubmissionDashboard,
+  mutate,
+} = vi.hoisted(() => ({
+  useMutationMock: vi.fn(),
+  invalidateQueries: vi.fn(),
+  invalidateReview: vi.fn(),
+  invalidateSubmissionDashboard: vi.fn(),
+  mutate: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useMutation: (options: unknown) => useMutationMock(options) as unknown,
@@ -19,7 +25,10 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
-vi.mock("../../../lib/cache-keys", () => ({ invalidateReview }));
+vi.mock("../../../lib/cache-keys", () => ({
+  invalidateReview,
+  invalidateSubmissionDashboard,
+}));
 vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     activity: {
@@ -243,7 +252,7 @@ describe("dashboard queue mutation transitions", () => {
     expect(mutate).toHaveBeenCalledWith({
       reportSectionId: "30000000-0000-4000-8000-000000000001",
     });
-    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(invalidateSubmissionDashboard).toHaveBeenCalledTimes(1);
     expect(onMutated).toHaveBeenCalledTimes(1);
   });
 });
