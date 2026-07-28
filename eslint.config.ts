@@ -1107,15 +1107,14 @@ export default defineConfig([
           "off",
         ]),
       ),
-      // 650 = the outlier fence of the measured test-file distribution, on the
-      // same metric `max-lines` uses (skipBlankLines + skipComments): p95 = 638
-      // and the Tukey far-out fence Q3 + 3·IQR = 209 + 3·146 = 647 land in the
-      // same place. Files above it were not cohesive units — they were
-      // dumping grounds (one held 38 unrelated schema suites) — and were split
+      // 647 = the Tukey far-out fence Q3 + 3·IQR = 209 + 3·146 of the measured
+      // test-file distribution, on the same metric `max-lines` uses
+      // (skipBlankLines + skipComments); p95 = 638 lands beside it. Files above
+      // it were not cohesive units — they were dumping grounds — and were split
       // by subject rather than exempted.
       "max-lines": [
         "error",
-        { max: 650, skipBlankLines: true, skipComments: true },
+        { max: 647, skipBlankLines: true, skipComments: true },
       ],
       // Cyclomatic/cognitive complexity stay off: no defensible
       // arrange-act-assert metric exists, and a number picked at random is
