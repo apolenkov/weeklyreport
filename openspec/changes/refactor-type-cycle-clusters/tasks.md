@@ -16,7 +16,7 @@
       editing, and mutation behavior and decrement its four violations.
 - [x] Refactor the SDLC-pipeline cluster; prove view-model, health, hidden-stage,
       and UI ownership and decrement its five violations.
-- [ ] Refactor the dashboard-model cluster; prove KPI, lead priority,
+- [x] Refactor the dashboard-model cluster; prove KPI, lead priority,
       presentation, and escalation derivation and decrement its five violations.
 - [ ] Refactor the admin/period/organization settings cluster; prove settings
       routes, panel composition, and public feature APIs and decrement its six

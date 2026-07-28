@@ -3,85 +3,22 @@
 
 import type {
   ActivityLiveResponse,
-  DbRole,
-  SectionReviewView,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-import type { LeadStatus } from "../../report-sections";
-import { escalationToBlockedItem } from "./dashboard-escalations";
-import { buildKpiData } from "./dashboard-kpi";
+import {
+  type BlockedAtRiskItem,
+  escalationToBlockedItem,
+} from "./dashboard-escalations";
+import { buildKpiData, type KpiData } from "./dashboard-kpi";
+import type { LeadInfo } from "./dashboard-lead-presentation";
 import { buildLeadInfos } from "./dashboard-leads";
 
+export type { BlockedAtRiskItem } from "./dashboard-escalations";
+export type { KpiData } from "./dashboard-kpi";
 export { formatRelativeDeadline } from "./dashboard-kpi";
-
-// ---- Self-contained re-declarations of presentation types ----
-
-export type ProductStatus = "on-track" | "at-risk" | "blocked";
-
-export interface TrafficLight {
-  status: ProductStatus;
-  icon: string;
-}
-
-export interface LeadInfo {
-  id: string;
-  initials: string;
-  name: string;
-  role: DbRole;
-  status: LeadStatus;
-  trafficLights: TrafficLight[];
-  lastEditAt: Date | null;
-  submittedAt: Date | null;
-  isStale: boolean;
-  isCurrentUser: boolean;
-  productCount?: number;
-  reportContentCount?: number;
-  currentItemCount?: number;
-  nextItemCount?: number;
-  riskCount?: number;
-  decisionCount?: number;
-  priorityCount?: number;
-  /** count of activity-parented records (work units). */
-  activityCount?: number;
-  submittedAtLabel?: string | null;
-  /** The section UUID needed for the per-lead Revoke button. */
-  reportSectionId?: string;
-  version?: number;
-  reviews: readonly SectionReviewView[];
-  reviewState: "changes-requested" | "approved" | "awaiting" | "none";
-  reviewLabel: string;
-  attentionLabel: "Blocked" | "At risk" | "On track" | "No signal";
-  actions: {
-    readonly canOpen: boolean;
-    readonly canRemind: boolean;
-    readonly canReview: boolean;
-    readonly canRequestChanges: boolean;
-    readonly canRevoke: boolean;
-  };
-  priority: "action-needed" | "stale" | "active" | "complete";
-}
-
-export interface KpiData {
-  submitted: number;
-  total: number;
-  pendingCount: number;
-  deadlineLabel: string;
-  deadlineTime: string;
-  blockedCount: number;
-  atRiskCount: number;
-  decisionCount: number;
-}
-
-export interface BlockedAtRiskItem {
-  id: string;
-  severity: "blocked" | "at-risk";
-  product: string;
-  stage: string;
-  assignee: string;
-  description: string;
-}
+export type { LeadInfo } from "./dashboard-lead-presentation";
 
 // ---- Composer ----
 

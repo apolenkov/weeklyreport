@@ -1,7 +1,14 @@
 import type { Escalation } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
-import type { BlockedAtRiskItem } from "./dashboard";
+export interface BlockedAtRiskItem {
+  id: string;
+  severity: "blocked" | "at-risk";
+  product: string;
+  stage: string;
+  assignee: string;
+  description: string;
+}
 
 // Wording for a stage-keyed escalation (blocked item / unresolved risk) that
 // carries no stage. Both the live and snapshot API paths return stageName=null

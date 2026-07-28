@@ -2,7 +2,17 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
 import { toIsoDateString } from "../../../lib/format-date";
-import type { KpiData } from "./dashboard";
+
+export interface KpiData {
+  submitted: number;
+  total: number;
+  pendingCount: number;
+  deadlineLabel: string;
+  deadlineTime: string;
+  blockedCount: number;
+  atRiskCount: number;
+  decisionCount: number;
+}
 
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
