@@ -1,11 +1,10 @@
+import type { AppSettings } from "@customreport/shared";
+
 import { PeriodsTab } from "../../period";
 import { ReopenTab } from "../../review";
 import type { AdminTab } from "../model/admin-tab-dependencies";
 import type { AdminReminderView } from "../model/admin-types";
-import type {
-  AdminSettingsView,
-  MappedAdminSnapshot,
-} from "../model/admin-types";
+import type { MappedAdminSnapshot } from "../model/admin-types";
 import { ActionLogTab } from "./action-log-tab";
 import { ActivitiesTab } from "./activities-tab";
 import { AdminQueryIssue } from "./admin-query-issue";
@@ -21,7 +20,7 @@ interface AdminPanelContentProps {
   readonly activeTab: AdminTab;
   readonly productFilter?: string | null | undefined;
   readonly data?: MappedAdminSnapshot | undefined;
-  readonly settings?: AdminSettingsView | undefined;
+  readonly settings?: AppSettings | undefined;
   readonly snapshotError: boolean;
   readonly settingsError: boolean;
   readonly retrySnapshot: () => void;

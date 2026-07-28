@@ -1,8 +1,8 @@
 "use client";
 
+import type { AppSettings } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import type { AdminSettingsView } from "../../admin";
 import * as fieldLimits from "./settings-periods-fields-base-helpers";
 
 const NUMBER_INPUT_CLASS =
@@ -102,8 +102,8 @@ export function WorkingDaysField({
   value,
   onChange,
 }: {
-  readonly value: AdminSettingsView["workingDays"];
-  readonly onChange: (value: AdminSettingsView["workingDays"]) => void;
+  readonly value: AppSettings["workingDays"];
+  readonly onChange: (value: AppSettings["workingDays"]) => void;
 }) {
   return (
     <fieldset>

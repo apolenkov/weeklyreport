@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { mapAdminSettings, mapAdminSnapshot } from "../model/admin";
+import { mapAdminSnapshot } from "../model/admin";
 import {
   ADMIN_TAB_QUERY_DEPENDENCIES,
   type AdminTab,
@@ -61,17 +61,13 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
   const data = snapshotQuery.data
     ? mapAdminSnapshot(snapshotQuery.data)
     : undefined;
-  const settings = settingsQuery.data
-    ? mapAdminSettings(settingsQuery.data)
-    : undefined;
-
   return (
     <div data-testid="admin-panel">
       <AdminPanelContent
         activeTab={activeTab}
         productFilter={productFilter}
         data={data}
-        settings={settings}
+        settings={settingsQuery.data}
         snapshotError={dependencies.snapshot && snapshotQuery.isError}
         settingsError={dependencies.settings && settingsQuery.isError}
         retrySnapshot={() => void snapshotQuery.refetch()}

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts are required for value, checked, and options access under the app tsconfig. */
 
+import type { AppSettings } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -20,7 +21,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import type { AdminSettingsView } from "../model/admin-types";
 import { SettingsTab } from "./settings-tab";
 
 // Telegram integration status shape returned by
@@ -61,7 +61,7 @@ function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
 
 function renderSettings(
   proxy: ReturnType<typeof buildProxy>["proxy"],
-  settingsOverride?: Partial<AdminSettingsView>,
+  settingsOverride?: Partial<AppSettings>,
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -84,7 +84,7 @@ function renderSettings(
 
 // Defaults mirror SQL defaults so Periods / Reminders / Notifications
 // render with realistic initial state.
-const baseSettings: AdminSettingsView = {
+const baseSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,

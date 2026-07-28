@@ -1,11 +1,11 @@
+import type { AppSettings } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { AdminSettingsView } from "../../admin";
 import { PeriodBaseFields } from "./settings-periods-fields-base";
 
-const SETTINGS: AdminSettingsView = {
+const SETTINGS: AppSettings = {
   autoCreatePeriods: true,
   defaultDeadlineDays: 3,
   periodLengthDays: 7,

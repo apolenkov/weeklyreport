@@ -1,11 +1,12 @@
 "use client";
 
+import type { AppSettings } from "@customreport/shared";
+
 import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings-tab-shared";
 import { useServerSeededDraft } from "../../../shared/ui/use-server-seeded-draft";
-import type { AdminSettingsView } from "../../admin";
 import { PeriodBaseFields } from "./settings-periods-fields-base";
 import { PeriodCycleFields } from "./settings-periods-fields-cycle";
 
@@ -68,7 +69,7 @@ function SavePeriodPolicyRow({
 }
 
 // PATCH shape — only this sub-tab's fields. Brand identity lives on Organization.
-function toPeriodPolicyPatch(draft: AdminSettingsView) {
+function toPeriodPolicyPatch(draft: AppSettings) {
   return {
     autoCreatePeriods: draft.autoCreatePeriods,
     defaultDeadlineDays: draft.defaultDeadlineDays,
@@ -88,10 +89,10 @@ function toPeriodPolicyPatch(draft: AdminSettingsView) {
 export function PeriodsSubTab({
   serverSettings,
 }: {
-  readonly serverSettings: AdminSettingsView;
+  readonly serverSettings: AppSettings;
 }) {
   const { draft, setDraft, markClean } =
-    useServerSeededDraft<AdminSettingsView>(serverSettings);
+    useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
 
   function handleSave() {

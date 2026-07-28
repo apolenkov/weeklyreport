@@ -1,13 +1,8 @@
-import {
-  type AdminSnapshot,
-  adminSnapshotSchema,
-  type AppSettings,
-  appSettingsSchema,
-} from "@customreport/shared";
+import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { __testing, mapAdminSettings, mapAdminSnapshot } from "./admin";
+import { __testing, mapAdminSnapshot } from "./admin";
 
 const { mapReminder } = __testing;
 
@@ -285,107 +280,5 @@ describe("mapAdminSnapshot", () => {
     expect(mapped.users[0]?.id).toBe(UUID_D);
     expect(mapped.users[0]?.email).toBe("preserved@example.com");
     expect(mapped.users[0]?.name).toBe("Stable Lead");
-  });
-});
-
-const COMPLETE_SETTINGS = {
-  autoCreatePeriods: false,
-  defaultDeadlineDays: 5,
-  periodLengthDays: 7,
-  workingDays: "mon-fri",
-  gracePeriodHours: 24,
-  allowLateSubmissions: true,
-  autoPublishAfterDeadline: false,
-  autoArchiveWeeksAfterPublish: 0,
-  defaultTimezone: "Europe/Moscow",
-  defaultReminderAudience: "lead-with-draft",
-  notificationFromEmail: null,
-  deadlineTime: "18:00",
-  allowReopenAfterPublish: true,
-  reopenWindowHours: 72,
-  unifiedActivityView: false,
-} as const;
-
-describe("mapAdminSettings", () => {
-  it("copies all configured fields from appSettingsSchema", () => {
-    const api: AppSettings = appSettingsSchema.parse({
-      ...COMPLETE_SETTINGS,
-      autoCreatePeriods: true,
-      defaultDeadlineDays: 5,
-    });
-    const mapped = mapAdminSettings(api);
-    expect(mapped.autoCreatePeriods).toBe(true);
-    expect(mapped.defaultDeadlineDays).toBe(5);
-  });
-
-  it("round-trips a non-default configuration", () => {
-    const api: AppSettings = appSettingsSchema.parse({
-      ...COMPLETE_SETTINGS,
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 3,
-      // Non-default so the round-trip proves the mapper carries the flag, not
-      // just its default.
-      unifiedActivityView: true,
-    });
-    const mapped = mapAdminSettings(api);
-    expect(mapped).toStrictEqual({
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 3,
-      periodLengthDays: 7,
-      workingDays: "mon-fri",
-      gracePeriodHours: 24,
-      allowLateSubmissions: true,
-      autoPublishAfterDeadline: false,
-      autoArchiveWeeksAfterPublish: 0,
-      deadlineTime: "18:00",
-      allowReopenAfterPublish: true,
-      reopenWindowHours: 72,
-      unifiedActivityView: true,
-      defaultTimezone: "Europe/Moscow",
-      defaultReminderAudience: "lead-with-draft",
-      notificationFromEmail: null,
-    });
-  });
-
-  it("round-trips the 9 new AppSettings fields", () => {
-    const api: AppSettings = appSettingsSchema.parse({
-      ...COMPLETE_SETTINGS,
-      autoCreatePeriods: true,
-      defaultDeadlineDays: 5,
-      periodLengthDays: 14,
-      workingDays: "mon-sat",
-      gracePeriodHours: 12,
-      defaultTimezone: "Asia/Yekaterinburg",
-      defaultReminderAudience: "head-of-late",
-      notificationFromEmail: "reports@example.com",
-      allowLateSubmissions: false,
-      autoPublishAfterDeadline: true,
-      autoArchiveWeeksAfterPublish: 8,
-    });
-    const mapped = mapAdminSettings(api);
-    expect(mapped.periodLengthDays).toBe(14);
-    expect(mapped.workingDays).toBe("mon-sat");
-    expect(mapped.gracePeriodHours).toBe(12);
-    expect(mapped.defaultTimezone).toBe("Asia/Yekaterinburg");
-    expect(mapped.defaultReminderAudience).toBe("head-of-late");
-    expect(mapped.notificationFromEmail).toBe("reports@example.com");
-    expect(mapped.allowLateSubmissions).toBe(false);
-    expect(mapped.autoPublishAfterDeadline).toBe(true);
-    expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
-  });
-
-  it("round-trips the period-cycle fields", () => {
-    const api: AppSettings = appSettingsSchema.parse({
-      ...COMPLETE_SETTINGS,
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-      deadlineTime: "09:30",
-      allowReopenAfterPublish: false,
-      reopenWindowHours: 24,
-    });
-    const mapped = mapAdminSettings(api);
-    expect(mapped.deadlineTime).toBe("09:30");
-    expect(mapped.allowReopenAfterPublish).toBe(false);
-    expect(mapped.reopenWindowHours).toBe(24);
   });
 });

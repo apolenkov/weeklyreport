@@ -6,7 +6,6 @@ import type {
   AdminProject,
   AdminSnapshot,
   AdminUser,
-  AppSettings,
   ReminderPolicy,
   ReportingGroup,
   ReportPeriod,
@@ -20,7 +19,6 @@ import type {
   AdminPeriodView,
   AdminProductView,
   AdminReminderPolicyView,
-  AdminSettingsView,
   AdminUserView,
   MappedAdminSnapshot,
   PeriodStatus,
@@ -34,7 +32,7 @@ export {
   toReminderPolicyInput,
   toReportingGroupInput,
 } from "./admin-form-inputs";
-export type { AdminSettingsView, MappedAdminSnapshot } from "./admin-types";
+export type { MappedAdminSnapshot } from "./admin-types";
 
 // ---- Helpers ----
 
@@ -124,29 +122,6 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     // Policies are emitted by `admin.snapshot`
     // (default `[]` keeps older / in-memory test snapshots compatible).
     policies: api.policies.map(mapReminderPolicy),
-  };
-}
-
-// Wire and presentation settings are intentionally field-for-field.
-export function mapAdminSettings(api: AppSettings): AdminSettingsView {
-  return {
-    autoCreatePeriods: api.autoCreatePeriods,
-    defaultDeadlineDays: api.defaultDeadlineDays,
-    // Pass-through for the added settings fields. The wire schema fills
-    // defaults so older API responses still parse cleanly.
-    periodLengthDays: api.periodLengthDays,
-    workingDays: api.workingDays,
-    gracePeriodHours: api.gracePeriodHours,
-    allowLateSubmissions: api.allowLateSubmissions,
-    autoPublishAfterDeadline: api.autoPublishAfterDeadline,
-    autoArchiveWeeksAfterPublish: api.autoArchiveWeeksAfterPublish,
-    deadlineTime: api.deadlineTime,
-    allowReopenAfterPublish: api.allowReopenAfterPublish,
-    reopenWindowHours: api.reopenWindowHours,
-    unifiedActivityView: api.unifiedActivityView,
-    defaultTimezone: api.defaultTimezone,
-    defaultReminderAudience: api.defaultReminderAudience,
-    notificationFromEmail: api.notificationFromEmail,
   };
 }
 
