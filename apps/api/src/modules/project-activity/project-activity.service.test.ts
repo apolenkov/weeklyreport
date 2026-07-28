@@ -53,66 +53,62 @@ function createRepository(fixture: Fixture = {}) {
   const detached: { activityId: string; leadId: string }[] = [];
 
   const repository: ProjectActivityRepository = {
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async list() {
-      return [...activities.values()];
+    list() {
+      return Promise.resolve([...activities.values()]);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async findById(id) {
-      return activities.get(id) ?? null;
+    findById(id) {
+      return Promise.resolve(activities.get(id) ?? null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async create({ linkedProductIds, ...rest }) {
+    create({ linkedProductIds, ...rest }) {
       const created = makeActivity({
         ...rest,
         linkedProducts: toLinkedProducts(linkedProductIds),
         id: "created-id",
       });
       activities.set(created.id, created);
-      return created;
+      return Promise.resolve(created);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async update({ linkedProductIds, ...rest }) {
+    update({ linkedProductIds, ...rest }) {
       const next = makeActivity({
         ...activities.get(rest.id),
         ...rest,
         linkedProducts: toLinkedProducts(linkedProductIds),
       });
       activities.set(next.id, next);
-      return next;
+      return Promise.resolve(next);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async setArchived(id, archived) {
+    setArchived(id, archived) {
       const next = makeActivity({ ...activities.get(id), id, archived });
       activities.set(id, next);
-      return next;
+      return Promise.resolve(next);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async attachLead(edge) {
+    attachLead(edge) {
       attached.push(edge);
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async detachLead(edge) {
+    detachLead(edge) {
       detached.push(edge);
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async groupExists(groupId) {
-      return (fixture.groups ?? [GROUP_A, GROUP_B]).includes(groupId);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async findExistingProductIds(productIds) {
-      return productIds.filter((productId) =>
-        (fixture.products ?? [PRODUCT_ID]).includes(productId),
+    groupExists(groupId) {
+      return Promise.resolve(
+        (fixture.groups ?? [GROUP_A, GROUP_B]).includes(groupId),
       );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async getLeadContext(leadId) {
+    findExistingProductIds(productIds) {
+      return Promise.resolve(
+        productIds.filter((productId) =>
+          (fixture.products ?? [PRODUCT_ID]).includes(productId),
+        ),
+      );
+    },
+    getLeadContext(leadId) {
       const users = fixture.users ?? {
         [LEAD_IN_A]: { role: "lead", reportingGroupId: GROUP_A },
         [LEAD_IN_B]: { role: "lead", reportingGroupId: GROUP_B },
         [HEAD_IN_A]: { role: "head", reportingGroupId: GROUP_A },
       };
-      return users[leadId] ?? null;
+      return Promise.resolve(users[leadId] ?? null);
     },
   };
 

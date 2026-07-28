@@ -56,14 +56,15 @@ function createRepository(
   }) => SearchHit[],
 ): SearchRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async SearchRepository contract (no awaitable work in the stub)
-    async search(params) {
+    search(params) {
       // Faithfully model the real repository, which omits excluded-type chunks
       // from the query entirely, so service tests exercise the true contract.
       const hits = handler(params);
-      return params.excludeTypes.length > 0
-        ? hits.filter((hit) => !params.excludeTypes.includes(hit.type))
-        : hits;
+      return Promise.resolve(
+        params.excludeTypes.length > 0
+          ? hits.filter((hit) => !params.excludeTypes.includes(hit.type))
+          : hits,
+      );
     },
   };
 }

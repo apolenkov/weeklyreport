@@ -99,26 +99,21 @@ function createRepository(
 
   return {
     ...unusedAdminRepositoryStubs(),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async getSnapshot() {
-      return structuredClone(currentSnapshot);
+    getSnapshot() {
+      return Promise.resolve(structuredClone(currentSnapshot));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async saveSnapshot(nextSnapshot) {
+    saveSnapshot(nextSnapshot) {
       currentSnapshot = structuredClone(nextSnapshot);
-      return structuredClone(currentSnapshot);
+      return Promise.resolve(structuredClone(currentSnapshot));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async getSettings() {
-      return structuredClone(currentSettings);
+    getSettings() {
+      return Promise.resolve(structuredClone(currentSettings));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async updateSettings(data) {
+    updateSettings(data) {
       currentSettings = { ...currentSettings, ...data };
-      return structuredClone(currentSettings);
+      return Promise.resolve(structuredClone(currentSettings));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async saveReportingGroup(group) {
+    saveReportingGroup(group) {
       const exists = currentSnapshot.groups.some((row) => row.id === group.id);
       currentSnapshot = {
         ...currentSnapshot,
@@ -128,12 +123,14 @@ function createRepository(
             )
           : [...currentSnapshot.groups, structuredClone(group)],
       };
-      return structuredClone(group);
+      return Promise.resolve(structuredClone(group));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async archiveReportingGroup(groupId) {
+    archiveReportingGroup(groupId) {
       const group = currentSnapshot.groups.find((row) => row.id === groupId);
-      if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
+      if (!group)
+        return Promise.reject(
+          new Error(`ReportingGroup ${groupId} not found.`),
+        );
       const archived = { ...group, archived: true };
       currentSnapshot = {
         ...currentSnapshot,
@@ -141,16 +138,15 @@ function createRepository(
           row.id === groupId ? archived : row,
         ),
       };
-      return structuredClone(archived);
+      return Promise.resolve(structuredClone(archived));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async saveStageAssignment(data) {
+    saveStageAssignment(data) {
       const key = `${data.userId}:${data.stageId}:${data.projectId}`;
       const existing = assignments.find(
         (a) => `${a.userId}:${a.stageId}:${a.projectId}` === key,
       );
       if (existing) {
-        return structuredClone(existing);
+        return Promise.resolve(structuredClone(existing));
       }
       const assignment: StageAssignment = {
         id: crypto.randomUUID(),
@@ -161,20 +157,21 @@ function createRepository(
         userName: "Test User",
       };
       assignments = [...assignments, assignment];
-      return structuredClone(assignment);
+      return Promise.resolve(structuredClone(assignment));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async deleteStageAssignment(id) {
+    deleteStageAssignment(id) {
       if (!assignments.some((a) => a.id === id)) {
-        throw new Error(`StageAssignment ${id} not found.`);
+        return Promise.reject(new Error(`StageAssignment ${id} not found.`));
       }
       assignments = assignments.filter((a) => a.id !== id);
+      return Promise.resolve();
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
-    async listStageAssignments(projectId) {
-      return assignments
-        .filter((a) => a.projectId === projectId)
-        .map((a) => structuredClone(a));
+    listStageAssignments(projectId) {
+      return Promise.resolve(
+        assignments
+          .filter((a) => a.projectId === projectId)
+          .map((a) => structuredClone(a)),
+      );
     },
     // Targeted entity writes — not exercised by the settings suite.
     upsertUser: notExercised,

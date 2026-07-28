@@ -60,44 +60,39 @@ function createRepository(
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async canReadReport() {
-      return canRead;
+    canReadReport() {
+      return Promise.resolve(canRead);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async getPublishedReport(id: string) {
+    getPublishedReport(id: string) {
       if (id === report?.reportId) {
-        return structuredClone(report);
+        return Promise.resolve(structuredClone(report));
       }
-      return null;
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async createExportJob(job: PdfExportJob, requestedBy?: string) {
+    createExportJob(job: PdfExportJob, requestedBy?: string) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
         requestedBy: requestedBy ?? "system",
       });
-      return structuredClone(job);
+      return Promise.resolve(structuredClone(job));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async getExportJob(jobId: string) {
+    getExportJob(jobId: string) {
       const job = jobs.get(jobId);
-      return job ? structuredClone(job) : null;
+      return Promise.resolve(job ? structuredClone(job) : null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async saveExportJob(job: PdfExportJob) {
+    saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
         requestedBy: jobs.get(job.jobId)?.requestedBy ?? "system",
       });
-      return structuredClone(job);
+      return Promise.resolve(structuredClone(job));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
-    async markExportFailed(jobId: string, _error: string) {
+    markExportFailed(jobId: string, _error: string) {
       const job = jobs.get(jobId);
       if (job) {
         jobs.set(jobId, { ...job, status: "failed" as const });
       }
+      return Promise.resolve();
     },
   };
 }

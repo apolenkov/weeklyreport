@@ -92,24 +92,25 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
     >();
     return {
       ...base,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-      async attachProductToGroup({ groupId, productId }) {
+      attachProductToGroup({ groupId, productId }) {
         const existing = edges.get(productId);
         if (existing) {
           if (existing.groupId === groupId) {
             // Idempotent: same group, return canonical row.
-            return {
+            return Promise.resolve({
               id: existing.id,
               groupId,
               productId,
               createdAt: existing.createdAt,
-            };
+            });
           }
           const currentGroup = snapshot.groups.find(
             (g) => g.id === existing.groupId,
           );
-          throw new Error(
-            `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+          return Promise.reject(
+            new Error(
+              `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+            ),
           );
         }
         const row = {
@@ -119,28 +120,28 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
           createdAt: new Date("2026-05-11T00:00:00.000Z"),
         };
         edges.set(productId, { id: row.id, groupId, createdAt: row.createdAt });
-        return row;
+        return Promise.resolve(row);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-      async detachProductFromGroup({ productId }) {
+      detachProductFromGroup({ productId }) {
         edges.delete(productId);
+        return Promise.resolve();
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-      async listGroupProducts(groupId) {
+      listGroupProducts(groupId) {
         const productIds = [...edges.entries()]
           .filter(([, v]) => v.groupId === groupId)
           .map(([pid]) => pid);
-        return productIds.length > 0
-          ? snapshot.projects.filter((p) => productIds.includes(p.id))
-          : [];
+        return Promise.resolve(
+          productIds.length > 0
+            ? snapshot.projects.filter((p) => productIds.includes(p.id))
+            : [],
+        );
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
-      async listProductGroups(productId) {
+      listProductGroups(productId) {
         const entry = edges.get(productId);
-        if (!entry) return [];
-        return [
+        if (!entry) return Promise.resolve([]);
+        return Promise.resolve([
           expectDefined(snapshot.groups.find((g) => g.id === entry.groupId)),
-        ];
+        ]);
       },
     };
   }

@@ -61,11 +61,10 @@ function buildHarness(
   const calls: unknown[] = [];
   const userMutationFn =
     opts.mutationFn ??
-    // eslint-disable-next-line @typescript-eslint/require-await -- default mock satisfies the async mutationFn contract (no awaitable work in the stub)
-    (async () => {
+    (() => {
       // saveDraft returns the persisted read model; the hook only reads
       // `.version` off it to advance the optimistic lock.
-      return { version: 2 };
+      return Promise.resolve({ version: 2 });
     });
 
   const { proxy, captured } = createMockTRPC([
@@ -300,9 +299,8 @@ describe("useLeadFormAutosave", () => {
 
   it("keeps a rejected save dirty and surfaces the server error", async () => {
     const { wrapper } = buildHarness({
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
-      mutationFn: async () => {
-        throw new Error("Network down");
+      mutationFn: () => {
+        return Promise.reject(new Error("Network down"));
       },
     });
     const { result } = renderHook(
@@ -332,10 +330,9 @@ describe("useLeadFormAutosave", () => {
     // saved; the next edit fires saveDraft again.
     let failNext = true;
     const { wrapper, calls } = buildHarness({
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
-      mutationFn: async () => {
-        if (failNext) throw new Error("Network down");
-        return { ok: true };
+      mutationFn: () => {
+        if (failNext) return Promise.reject(new Error("Network down"));
+        return Promise.resolve({ ok: true });
       },
     });
     const { result, rerender } = renderHook(

@@ -73,16 +73,15 @@ function createRepository(report: MockReport | null): PeriodRepository & {
 
   return {
     listSectionIds: () => Promise.resolve([]),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async getReportById(id: string) {
+    getReportById(id: string) {
       if (id !== current?.id) {
-        return null;
+        return Promise.resolve(null);
       }
 
-      return {
+      return Promise.resolve({
         ...structuredClone(current),
         archived: current.archived ?? false,
-      };
+      });
     },
 
     getCurrentEditableId: () =>
@@ -104,8 +103,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
         matchId((r) => r.periodStatus === "reopened" && !r.archived),
       ),
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async publishPeriod(id: string, userId: string) {
+    publishPeriod(id: string, userId: string) {
       // Mirror the guarded compare-and-set: only a not-yet-published,
       // non-archived row transitions. A zero-row match splits into "raced" (now
       // published) vs "archived" (archived inside the window).
@@ -121,21 +119,21 @@ function createRepository(report: MockReport | null): PeriodRepository & {
           publishedAt: new Date(),
           publishedById: userId,
         };
-        return { transitioned: true as const };
+        return Promise.resolve({ transitioned: true as const });
       }
       const reason: "raced" | "archived" =
         current?.periodStatus === "published" ? "raced" : "archived";
-      return { transitioned: false as const, reason };
+      return Promise.resolve({ transitioned: false as const, reason });
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async reopenPeriod(id: string) {
+    reopenPeriod(id: string) {
       if (id === current?.id) {
         current = {
           ...current,
           periodStatus: "reopened",
         };
       }
+      return Promise.resolve();
     },
 
     getReport() {

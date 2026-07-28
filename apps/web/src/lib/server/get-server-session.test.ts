@@ -100,8 +100,7 @@ describe("getServerSession", () => {
     cookieStore.get.mockReturnValue(undefined);
     fetchMock.mockResolvedValue({
       ok: true,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [{ result: { data: { json: SESSION } } }],
+      json: () => Promise.resolve([{ result: { data: { json: SESSION } } }]),
     });
 
     const result = await getServerSession();
@@ -119,8 +118,7 @@ describe("getServerSession", () => {
     cookieStore.get.mockReturnValue({ value: "a-jwt-cookie-value" });
     fetchMock.mockResolvedValue({
       ok: true,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [{ result: { data: { json: SESSION } } }],
+      json: () => Promise.resolve([{ result: { data: { json: SESSION } } }]),
     });
 
     const result = await getServerSession();
@@ -143,8 +141,7 @@ describe("getServerSession", () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 401,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async Response.json() contract (no awaitable work in the stub)
-      json: async () => [{ error: { message: "UNAUTHORIZED" } }],
+      json: () => Promise.resolve([{ error: { message: "UNAUTHORIZED" } }]),
     });
     const result = await getServerSession();
     expect(result).toBeNull();

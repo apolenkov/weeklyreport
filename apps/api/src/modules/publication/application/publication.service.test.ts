@@ -80,23 +80,21 @@ function createRepository(
   let currentReport = report ? structuredClone(report) : null;
 
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-    async getAssembledReport(activeReportId: string) {
+    getAssembledReport(activeReportId: string) {
       if (activeReportId !== currentReport?.reportId) {
-        return null;
+        return Promise.resolve(null);
       }
 
-      return structuredClone(currentReport);
+      return Promise.resolve(structuredClone(currentReport));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-    async saveAutoPublishedReport(nextReport: AssembledReport) {
+    saveAutoPublishedReport(nextReport: AssembledReport) {
       currentReport = structuredClone(nextReport);
 
-      return {
+      return Promise.resolve({
         published: true as const,
         wasAlreadyPublished: false,
         report: structuredClone(currentReport),
-      };
+      });
     },
   };
 }
@@ -605,9 +603,8 @@ describe("PublicationService", () => {
       const ingestion = vi.fn(() => Promise.resolve());
       const repository: PublicationRepository = {
         ...createRepository(assembledReport),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-        async saveAutoPublishedReport() {
-          return { published: false as const };
+        saveAutoPublishedReport() {
+          return Promise.resolve({ published: false as const });
         },
       };
       const service = new PublicationService(
@@ -650,9 +647,8 @@ describe("PublicationService", () => {
       const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
       const repository: PublicationRepository = {
         ...createRepository(assembledReport),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
-        async saveAutoPublishedReport() {
-          return { published: false as const };
+        saveAutoPublishedReport() {
+          return Promise.resolve({ published: false as const });
         },
       };
       const service = new PublicationService(

@@ -92,8 +92,7 @@ function buildQueryByInput(
 ): void {
   leaf.queryOptions = (input: unknown) => ({
     queryKey: [[...path], input],
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract; no awaitable work in the stub
-    queryFn: async () => queryFnFactory(input),
+    queryFn: () => Promise.resolve(queryFnFactory(input)),
   });
 }
 
@@ -133,10 +132,9 @@ function buildMutation(
     entry.lastOptions = opts;
     return {
       ...opts,
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the React Query mutationFn contract; no awaitable work in the stub
-      mutationFn: async (...args: unknown[]): Promise<unknown> => {
+      mutationFn: (...args: unknown[]): Promise<unknown> => {
         entry.calls.push(args[0]);
-        return mutationFn(...args) as unknown;
+        return Promise.resolve(mutationFn(...args) as unknown);
       },
     };
   };

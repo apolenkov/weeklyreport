@@ -30,49 +30,51 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
 
   return {
     ...unusedRemindersRepositoryStubs(),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async findExecutionByDedupeKey(dedupeKey: string) {
+    findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
         if (execution.dedupeKey === dedupeKey) {
-          return structuredClone(execution);
+          return Promise.resolve(structuredClone(execution));
         }
       }
 
-      return null;
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async getRule(ruleId: string) {
+    getRule(ruleId: string) {
       if (ruleId === initialRule.id) {
-        return structuredClone(initialRule);
+        return Promise.resolve(structuredClone(initialRule));
       }
 
-      return null;
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async insertExecutionOnConflict(execution: AdminReminderExecution) {
+    insertExecutionOnConflict(execution: AdminReminderExecution) {
       for (const existing of executions.values()) {
         if (existing.dedupeKey === execution.dedupeKey) {
-          return { execution: structuredClone(existing), inserted: false };
+          return Promise.resolve({
+            execution: structuredClone(existing),
+            inserted: false,
+          });
         }
       }
       executions.set(execution.id, structuredClone(execution));
-      return { execution: structuredClone(execution), inserted: true };
+      return Promise.resolve({
+        execution: structuredClone(execution),
+        inserted: true,
+      });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async getExecution(executionId: string) {
+    getExecution(executionId: string) {
       const execution = executions.get(executionId);
-      return execution ? structuredClone(execution) : null;
+      return Promise.resolve(execution ? structuredClone(execution) : null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async listExecutions(ruleId: string) {
-      return [...executions.values()]
-        .filter((execution) => execution.ruleId === ruleId)
-        .map((execution) => structuredClone(execution));
+    listExecutions(ruleId: string) {
+      return Promise.resolve(
+        [...executions.values()]
+          .filter((execution) => execution.ruleId === ruleId)
+          .map((execution) => structuredClone(execution)),
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
-    async saveExecution(execution: AdminReminderExecution) {
+    saveExecution(execution: AdminReminderExecution) {
       executions.set(execution.id, structuredClone(execution));
-      return structuredClone(execution);
+      return Promise.resolve(structuredClone(execution));
     },
   };
 }
@@ -328,33 +330,29 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     };
     const repository = {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getRule(ruleId: string) {
-        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      getRule(ruleId: string) {
+        return Promise.resolve(
+          ruleId === activeRule.id ? structuredClone(activeRule) : null,
+        );
       },
       getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async findExecutionByDedupeKey() {
-        return null;
+      findExecutionByDedupeKey() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async insertExecutionOnConflict(candidate: AdminReminderExecution) {
-        return {
+      insertExecutionOnConflict(candidate: AdminReminderExecution) {
+        return Promise.resolve({
           execution: inserted ? candidate : structuredClone(existing),
           inserted,
-        };
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async saveExecution(execution: AdminReminderExecution) {
-        return structuredClone(execution);
+      saveExecution(execution: AdminReminderExecution) {
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getExecution() {
-        return null;
+      getExecution() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async listExecutions() {
-        return [];
+      listExecutions() {
+        return Promise.resolve([]);
       },
     } satisfies RemindersRepository;
     return repository;
@@ -364,9 +362,9 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     const repository = buildRepo(true);
     const addCalls: unknown[] = [];
     const queue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      enqueue: async (...args: unknown[]) => {
+      enqueue: (...args: unknown[]) => {
         addCalls.push(args);
+        return Promise.resolve();
       },
     };
     const service = new RemindersService(repository, undefined, queue);
@@ -380,9 +378,9 @@ describe("requestReminderExecution — enqueue gated on insert", () => {
     const repository = buildRepo(false);
     const addCalls: unknown[] = [];
     const queue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      enqueue: async (...args: unknown[]) => {
+      enqueue: (...args: unknown[]) => {
         addCalls.push(args);
+        return Promise.resolve();
       },
     };
     const service = new RemindersService(repository, undefined, queue);
@@ -434,44 +432,42 @@ describe("requestReminderExecution — failed execution revival", () => {
     };
     return {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getRule(ruleId: string) {
-        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      getRule(ruleId: string) {
+        return Promise.resolve(
+          ruleId === activeRule.id ? structuredClone(activeRule) : null,
+        );
       },
       getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async findExecutionByDedupeKey() {
-        return structuredClone(existing);
+      findExecutionByDedupeKey() {
+        return Promise.resolve(structuredClone(existing));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async insertExecutionOnConflict() {
-        return { execution: structuredClone(existing), inserted: false };
+      insertExecutionOnConflict() {
+        return Promise.resolve({
+          execution: structuredClone(existing),
+          inserted: false,
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async requeueFailedExecution(executionId: string) {
+      requeueFailedExecution(executionId: string) {
         opts.requeueCalls?.push(executionId);
-        return opts.requeueWins ?? true;
+        return Promise.resolve(opts.requeueWins ?? true);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async saveExecution(execution: AdminReminderExecution) {
-        return structuredClone(execution);
+      saveExecution(execution: AdminReminderExecution) {
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getExecution() {
-        return null;
+      getExecution() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async listExecutions() {
-        return [];
+      listExecutions() {
+        return Promise.resolve([]);
       },
     } satisfies RemindersRepository;
   }
 
   function buildQueue(addCalls: unknown[]) {
     return {
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      enqueue: async (...args: unknown[]) => {
+      enqueue: (...args: unknown[]) => {
         addCalls.push(args);
+        return Promise.resolve();
       },
     };
   }
@@ -546,34 +542,30 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
   function buildRepoCapturingFailures(failures: [string, string][]) {
     return {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getRule(ruleId: string) {
-        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      getRule(ruleId: string) {
+        return Promise.resolve(
+          ruleId === activeRule.id ? structuredClone(activeRule) : null,
+        );
       },
       getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async findExecutionByDedupeKey() {
-        return null;
+      findExecutionByDedupeKey() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async insertExecutionOnConflict(candidate: AdminReminderExecution) {
-        return { execution: candidate, inserted: true };
+      insertExecutionOnConflict(candidate: AdminReminderExecution) {
+        return Promise.resolve({ execution: candidate, inserted: true });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async markExecutionFailed(executionId: string, errorMessage: string) {
+      markExecutionFailed(executionId: string, errorMessage: string) {
         failures.push([executionId, errorMessage]);
+        return Promise.resolve();
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async saveExecution(execution: AdminReminderExecution) {
-        return structuredClone(execution);
+      saveExecution(execution: AdminReminderExecution) {
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async getExecution() {
-        return null;
+      getExecution() {
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      async listExecutions() {
-        return [];
+      listExecutions() {
+        return Promise.resolve([]);
       },
     } satisfies RemindersRepository;
   }
@@ -582,9 +574,8 @@ describe("requestReminderExecution — enqueue failure is recorded, not swallowe
     const failures: [string, string][] = [];
     const repository = buildRepoCapturingFailures(failures);
     const queue = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub
-      enqueue: async () => {
-        throw new Error("Redis unavailable");
+      enqueue: () => {
+        return Promise.reject(new Error("Redis unavailable"));
       },
     };
     const service = new RemindersService(repository, undefined, queue);

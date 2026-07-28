@@ -51,8 +51,7 @@ function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async PeriodRepository.publishPeriod contract (no awaitable work in the stub)
-  const publishFn = vi.fn(async (id: string) => {
+  const publishFn = vi.fn((id: string) => {
     const r = reports.get(id);
     // Mirror the guarded compare-and-set: only a not-yet-published,
     // non-archived row transitions. A zero-row match splits into "raced" (now
@@ -60,19 +59,19 @@ function createSpyRepository(
     if (!r || r.periodStatus === "published" || r.archived) {
       const reason: "raced" | "archived" =
         r?.periodStatus === "published" ? "raced" : "archived";
-      return { transitioned: false as const, reason };
+      return Promise.resolve({ transitioned: false as const, reason });
     }
     r.periodStatus = "published";
     r.publishedAt = new Date();
-    return { transitioned: true as const };
+    return Promise.resolve({ transitioned: true as const });
   });
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async PeriodRepository.reopenPeriod contract (no awaitable work in the stub)
-  const reopenFn = vi.fn(async (id: string) => {
+  const reopenFn = vi.fn((id: string) => {
     const r = reports.get(id);
     if (r) {
       r.periodStatus = "reopened";
     }
+    return Promise.resolve();
   });
 
   const resolveFirstId = (match: (r: SpyReport) => boolean): string | null =>
@@ -80,12 +79,11 @@ function createSpyRepository(
 
   return {
     listSectionIds: () => Promise.resolve([]),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
-    async getReportById(id: string) {
+    getReportById(id: string) {
       const r = reports.get(id);
-      return r
-        ? { ...structuredClone(r), archived: r.archived ?? false }
-        : null;
+      return Promise.resolve(
+        r ? { ...structuredClone(r), archived: r.archived ?? false } : null,
+      );
     },
     getCurrentEditableId: () =>
       Promise.resolve(

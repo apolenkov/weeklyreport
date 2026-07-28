@@ -90,37 +90,31 @@ function createRepository(
   currentEditableId: string | null = null,
 ): WeeklyReportRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getWeeklyReport(
-      id: string,
-    ): Promise<WeeklyReportRepositoryResult | null> {
+    getWeeklyReport(id: string): Promise<WeeklyReportRepositoryResult | null> {
       const model = reports.get(id);
-      if (!model) return null;
-      return { readModel: structuredClone(model), crossGroup: null };
+      if (!model) return Promise.resolve(null);
+      return Promise.resolve({
+        readModel: structuredClone(model),
+        crossGroup: null,
+      });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getActiveReportId() {
-      return activeId;
+    getActiveReportId() {
+      return Promise.resolve(activeId);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getCurrentEditableId() {
-      return currentEditableId;
+    getCurrentEditableId() {
+      return Promise.resolve(currentEditableId);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getLatestPublishedNonArchivedId() {
-      return null;
+    getLatestPublishedNonArchivedId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getCompiledHistory() {
-      return { reports: [], archiveCount: 0 };
+    getCompiledHistory() {
+      return Promise.resolve({ reports: [], archiveCount: 0 });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getVisibleReportId() {
-      return null;
+    getVisibleReportId() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getLatestPublishedVisibleId() {
-      return null;
+    getLatestPublishedVisibleId() {
+      return Promise.resolve(null);
     },
   };
 }

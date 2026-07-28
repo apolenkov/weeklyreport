@@ -74,29 +74,26 @@ function createRepository(
   publishedItemLineage: readonly string[],
 ): ReportSectionsRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async getSectionById() {
-      return structuredClone(section);
+    getSectionById() {
+      return Promise.resolve(structuredClone(section));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async getReportPeriodStatusForSection() {
-      return "open";
+    getReportPeriodStatusForSection() {
+      return Promise.resolve("open");
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract; no awaitable work in stub
-    async getReportMeta() {
-      return null;
+    getReportMeta() {
+      return Promise.resolve(null);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async getPublishedLineage() {
-      return { itemStableIds: publishedItemLineage, decisionStableIds: [] };
+    getPublishedLineage() {
+      return Promise.resolve({
+        itemStableIds: publishedItemLineage,
+        decisionStableIds: [],
+      });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async saveSection(nextSection) {
-      return structuredClone(nextSection);
+    saveSection(nextSection) {
+      return Promise.resolve(structuredClone(nextSection));
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- repository-contract stub; no awaitable work
-    async getMyHistoryRows() {
-      return [];
+    getMyHistoryRows() {
+      return Promise.resolve([]);
     },
   };
 }

@@ -34,15 +34,13 @@ function makeQueue(opts: {
   getJob?: (id: string) => FakeJob | undefined;
 }) {
   const queue = {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async BullMQ getFailed contract (no awaitable work in the stub)
-    getFailed: vi.fn(async (start: number, end: number) => {
+    getFailed: vi.fn((start: number, end: number) => {
       // BullMQ getFailed is inclusive on both bounds.
-      return opts.failed.slice(start, end + 1);
+      return Promise.resolve(opts.failed.slice(start, end + 1));
     }),
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async BullMQ getJob contract (no awaitable work in the stub)
-    getJob: vi.fn(async (id: string) => {
-      if (opts.getJob) return opts.getJob(id);
-      return opts.failed.find((j) => j.id === id);
+    getJob: vi.fn((id: string) => {
+      if (opts.getJob) return Promise.resolve(opts.getJob(id));
+      return Promise.resolve(opts.failed.find((j) => j.id === id));
     }),
   } satisfies AdminJobsQueue;
   return queue;

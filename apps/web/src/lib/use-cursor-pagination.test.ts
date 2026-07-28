@@ -32,12 +32,12 @@ function makeFactory<T>(
   return (input: { cursor?: string; limit?: number }) => ({
     queryKey: [...baseQueryKey, { limit: input.limit }] as const,
     initialPageParam: undefined as string | undefined,
-    // eslint-disable-next-line @typescript-eslint/require-await -- async required by queryFn contract; synchronous stub but must satisfy Promise return type
-    queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+    queryFn: ({ pageParam }: { pageParam?: string | null }) => {
       const key = pageParam ?? "__first__";
       const page = pages[key];
-      if (!page) throw new Error(`Unknown page cursor: ${key}`);
-      return page;
+      if (!page)
+        return Promise.reject(new Error(`Unknown page cursor: ${key}`));
+      return Promise.resolve(page);
     },
     getNextPageParam: (last: Page<T>) => last.nextCursor ?? undefined,
   });
@@ -83,9 +83,9 @@ describe("useCursorPagination", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.items).toHaveLength(3);
 
-    // eslint-disable-next-line @typescript-eslint/require-await -- async required by act() signature; body has no awaitable work in this step
-    await act(async () => {
+    await act(() => {
       result.current.fetchNextPage();
+      return Promise.resolve();
     });
 
     await waitFor(() =>
@@ -120,9 +120,8 @@ describe("useCursorPagination", () => {
     const factory = (input: { cursor?: string; limit?: number }) => ({
       queryKey: ["archive", "list", { limit: input.limit }] as const,
       initialPageParam: undefined as string | undefined,
-      // eslint-disable-next-line @typescript-eslint/require-await -- async required by queryFn contract; throws synchronously but must satisfy Promise return type
-      queryFn: async () => {
-        throw new Error("boom");
+      queryFn: () => {
+        return Promise.reject(new Error("boom"));
       },
       getNextPageParam: () => undefined,
     });
@@ -141,8 +140,9 @@ describe("useCursorPagination", () => {
 
   it("does not fetch when enabled=false", async () => {
     const { Wrapper } = makeWrapper();
-    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async queryFn contract (no awaitable work in the stub)
-    const queryFn = vi.fn(async () => ({ items: [], nextCursor: null }));
+    const queryFn = vi.fn(() =>
+      Promise.resolve({ items: [], nextCursor: null }),
+    );
     const factory = (input: { cursor?: string; limit?: number }) => ({
       queryKey: ["archive", "list", { limit: input.limit }] as const,
       initialPageParam: undefined as string | undefined,
@@ -161,8 +161,9 @@ describe("useCursorPagination", () => {
 
   it("preserves a factory-set enabled=false when enabled is omitted", async () => {
     const { Wrapper } = makeWrapper();
-    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async queryFn contract (no awaitable work in the stub)
-    const queryFn = vi.fn(async () => ({ items: [], nextCursor: null }));
+    const queryFn = vi.fn(() =>
+      Promise.resolve({ items: [], nextCursor: null }),
+    );
     const factory = (input: { cursor?: string; limit?: number }) => ({
       queryKey: ["archive", "list", { limit: input.limit }] as const,
       initialPageParam: undefined as string | undefined,
@@ -181,11 +182,12 @@ describe("useCursorPagination", () => {
 
   it("lets an explicit enabled=true override factory-set enabled=false", async () => {
     const { Wrapper } = makeWrapper();
-    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async queryFn contract (no awaitable work in the stub)
-    const queryFn = vi.fn(async () => ({
-      items: ["loaded"],
-      nextCursor: null,
-    }));
+    const queryFn = vi.fn(() =>
+      Promise.resolve({
+        items: ["loaded"],
+        nextCursor: null,
+      }),
+    );
     const factory = (input: { cursor?: string; limit?: number }) => ({
       queryKey: ["archive", "list", { limit: input.limit }] as const,
       initialPageParam: undefined as string | undefined,

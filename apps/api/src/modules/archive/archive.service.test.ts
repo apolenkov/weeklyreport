@@ -82,19 +82,19 @@ const latestDetail: ArchiveReportDetail = {
 
 function createRepository(): ArchiveRepository {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this in-memory stub)
-    async getArchiveReport(reportIdInput: string) {
-      return reportIdInput === reportId ? structuredClone(latestDetail) : null;
+    getArchiveReport(reportIdInput: string) {
+      return Promise.resolve(
+        reportIdInput === reportId ? structuredClone(latestDetail) : null,
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this in-memory stub)
-    async listArchiveReports() {
-      return {
+    listArchiveReports() {
+      return Promise.resolve({
         items: [
           structuredClone(olderSummary),
           structuredClone(latestDetail.summary),
         ],
         nextCursor: null,
-      };
+      });
     },
   };
 }
@@ -142,15 +142,13 @@ describe("viewer scoping", () => {
     listSpy: ReturnType<typeof vi.fn>;
     getSpy: ReturnType<typeof vi.fn>;
   } {
-    const listSpy = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-      async () => ({
+    const listSpy = vi.fn(() =>
+      Promise.resolve({
         items: [structuredClone(latestDetail.summary)],
         nextCursor: null,
       }),
     );
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-    const getSpy = vi.fn(async () => structuredClone(latestDetail));
+    const getSpy = vi.fn(() => Promise.resolve(structuredClone(latestDetail)));
     const repo: ArchiveRepository = {
       listArchiveReports: listSpy,
       getArchiveReport: getSpy,
@@ -188,10 +186,10 @@ describe("viewer scoping", () => {
 
   it("viewer requesting a non-published row through repository null receives ArchiveDomainError", async () => {
     const repo: ArchiveRepository = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-      listArchiveReports: vi.fn(async () => ({ items: [], nextCursor: null })),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-      getArchiveReport: vi.fn(async () => null),
+      listArchiveReports: vi.fn(() =>
+        Promise.resolve({ items: [], nextCursor: null }),
+      ),
+      getArchiveReport: vi.fn(() => Promise.resolve(null)),
     };
     const service = new ArchiveService(repo);
 

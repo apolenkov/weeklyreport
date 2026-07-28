@@ -30,66 +30,64 @@ describe("buildUserSession — admin SAML login", () => {
     const existing = opts.existingUser ?? null;
     const fake = {
       user: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.findFirst contract (no awaitable work in the stub)
-        findFirst: vi.fn(async () => existing),
+        findFirst: vi.fn(() => Promise.resolve(existing)),
         update: vi.fn(
-          async ({
+          ({
             where,
             data,
           }: {
             where: { id: string };
             data: Partial<{ samlId: string; name: string }>;
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.update contract (no awaitable work in the stub)
-          }) => ({
-            ...(existing ?? { email: "unset", role: "lead" as Role }),
-            id: where.id,
-            ...data,
-          }),
+          }) =>
+            Promise.resolve({
+              ...(existing ?? { email: "unset", role: "lead" as Role }),
+              id: where.id,
+              ...data,
+            }),
         ),
         create: vi.fn(
-          async ({
+          ({
             data,
           }: {
             data: { samlId: string; email: string; name: string; role: Role };
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.create contract (no awaitable work in the stub)
-          }) => ({
-            id: "new-user-id",
-            ...data,
-          }),
+          }) =>
+            Promise.resolve({
+              id: "new-user-id",
+              ...data,
+            }),
         ),
       },
       reportSection: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportSection.findFirst contract (no awaitable work in the stub)
-        findFirst: vi.fn(async () => null),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportSection.findUnique contract (no awaitable work in the stub)
-        findUnique: vi.fn(async () => null),
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() => Promise.resolve(null)),
         create: vi.fn(),
       },
       report: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma report.findFirst contract (no awaitable work in the stub)
-        findFirst: vi.fn(async () => null),
+        findFirst: vi.fn(() => Promise.resolve(null)),
         create: vi.fn(),
       },
       project: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma project.findMany contract (no awaitable work in the stub)
-        findMany: vi.fn(async () => []),
+        findMany: vi.fn(() => Promise.resolve([])),
       },
       projectStatus: {
         createMany: vi.fn(),
       },
       reportingGroup: {
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.findFirst contract (no awaitable work in the stub)
-        findFirst: vi.fn(async () => ({
-          id: "a0000000-0000-4000-8000-000000000301",
-        })),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.findUnique contract (no awaitable work in the stub)
-        findUnique: vi.fn(async () => ({
-          name: "Core Development",
-        })),
-        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.upsert contract (no awaitable work in the stub)
-        upsert: vi.fn(async () => ({
-          id: "a0000000-0000-4000-8000-000000000301",
-        })),
+        findFirst: vi.fn(() =>
+          Promise.resolve({
+            id: "a0000000-0000-4000-8000-000000000301",
+          }),
+        ),
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            name: "Core Development",
+          }),
+        ),
+        upsert: vi.fn(() =>
+          Promise.resolve({
+            id: "a0000000-0000-4000-8000-000000000301",
+          }),
+        ),
       },
     };
     return fake as unknown as PrismaClient;

@@ -17,8 +17,7 @@ function fakePrisma(
 ): PrismaClient {
   return {
     user: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements the async prisma findFirst contract (no awaitable work)
-      findFirst: vi.fn(async () => row),
+      findFirst: vi.fn(() => Promise.resolve(row)),
     },
   } as unknown as PrismaClient;
 }

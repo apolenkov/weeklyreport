@@ -120,52 +120,58 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
 
     return {
       ...unusedRemindersRepositoryStubs(),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async getRule(ruleId: string) {
-        return ruleId === rule.id ? structuredClone(rule) : null;
+      getRule(ruleId: string) {
+        return Promise.resolve(
+          ruleId === rule.id ? structuredClone(rule) : null,
+        );
       },
       getRulePeriodLabel: () => Promise.resolve("2026-04-07 → 2026-04-13"),
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async findExecutionByDedupeKey(dedupeKey: string) {
+      findExecutionByDedupeKey(dedupeKey: string) {
         for (const execution of executions.values()) {
           if (execution.dedupeKey === dedupeKey)
-            return structuredClone(execution);
+            return Promise.resolve(structuredClone(execution));
         }
-        return null;
+        return Promise.resolve(null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async insertExecutionOnConflict(candidate: AdminReminderExecution) {
+      insertExecutionOnConflict(candidate: AdminReminderExecution) {
         for (const existing of executions.values()) {
           if (existing.dedupeKey === candidate.dedupeKey) {
-            return { execution: structuredClone(existing), inserted: false };
+            return Promise.resolve({
+              execution: structuredClone(existing),
+              inserted: false,
+            });
           }
         }
         executions.set(candidate.id, structuredClone(candidate));
-        return { execution: structuredClone(candidate), inserted: true };
+        return Promise.resolve({
+          execution: structuredClone(candidate),
+          inserted: true,
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async saveExecution(execution: AdminReminderExecution) {
+      saveExecution(execution: AdminReminderExecution) {
         executions.set(execution.id, structuredClone(execution));
-        return structuredClone(execution);
+        return Promise.resolve(structuredClone(execution));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async getExecution(executionId: string) {
+      getExecution(executionId: string) {
         const execution = executions.get(executionId);
-        return execution ? structuredClone(execution) : null;
+        return Promise.resolve(execution ? structuredClone(execution) : null);
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async listExecutions(ruleId: string) {
-        return [...executions.values()].filter((e) => e.ruleId === ruleId);
+      listExecutions(ruleId: string) {
+        return Promise.resolve(
+          [...executions.values()].filter((e) => e.ruleId === ruleId),
+        );
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async findActiveRuleForDispatch(reportId: string) {
-        return reportId === rule.reportId
-          ? { id: rule.id, fireAt: rule.fireAt }
-          : null;
+      findActiveRuleForDispatch(reportId: string) {
+        return Promise.resolve(
+          reportId === rule.reportId
+            ? { id: rule.id, fireAt: rule.fireAt }
+            : null,
+        );
       },
-      // eslint-disable-next-line @typescript-eslint/require-await -- stub implements the async RemindersRepository contract (no awaitable work here)
-      async findDraftSectionsForDispatch() {
-        return [{ email: recipientEmail, notificationOptOut: false }];
+      findDraftSectionsForDispatch() {
+        return Promise.resolve([
+          { email: recipientEmail, notificationOptOut: false },
+        ]);
       },
     };
   }

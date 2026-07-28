@@ -67,8 +67,6 @@ function createRepository(
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
-  // Stubs return a resolved promise instead of being `async`: same contract,
-  // no per-method require-await suppression.
   return {
     getSectionById(reportSectionId) {
       return Promise.resolve(

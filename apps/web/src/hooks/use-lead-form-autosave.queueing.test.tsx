@@ -68,11 +68,10 @@ function buildHarness(
   const calls: unknown[] = [];
   const userMutationFn =
     opts.mutationFn ??
-    // eslint-disable-next-line @typescript-eslint/require-await -- default mock satisfies the async mutationFn contract (no awaitable work in the stub)
-    (async () => {
+    (() => {
       // saveDraft returns the persisted read model; the hook only reads
       // `.version` off it to advance the optimistic lock.
-      return { version: 2 };
+      return Promise.resolve({ version: 2 });
     });
 
   const { proxy, captured } = createMockTRPC([

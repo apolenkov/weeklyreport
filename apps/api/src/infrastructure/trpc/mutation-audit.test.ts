@@ -141,8 +141,7 @@ describe("mutation-audit middleware", () => {
 
   it("persists a user action log row with the request correlation id", async () => {
     const { audit } = makeAuditSpy();
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
-    const create = vi.fn(async () => ({}));
+    const create = vi.fn(() => Promise.resolve({}));
     const caller = auditTestRouter.createCaller({
       session: leadSession,
       logger: nullLogger,
