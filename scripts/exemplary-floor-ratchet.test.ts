@@ -68,3 +68,40 @@ void test("baseline history accepts improvements", () => {
   });
   assert.deepEqual(ratchetViolations(improved, improved, BASELINE), []);
 });
+
+void test("baseline history accepts an exact, stated regression justification", () => {
+  const reclassified = {
+    ...changed({ filesOnFloor: 827 }),
+    justifiedRegressions: [
+      {
+        counter: "filesOnFloor" as const,
+        from: 828,
+        to: 827,
+        reason: "An A-class fixture moved from product code to test utilities.",
+      },
+    ],
+  };
+  assert.deepEqual(ratchetViolations(reclassified, reclassified, BASELINE), []);
+});
+
+void test("a mismatched justification does not weaken the ratchet", () => {
+  const weakened = {
+    ...changed({ filesOnFloor: 827 }),
+    justifiedRegressions: [
+      {
+        counter: "filesOnFloor" as const,
+        from: 829,
+        to: 827,
+        reason: "Does not describe the actual first-parent transition.",
+      },
+    ],
+  };
+  assert.deepEqual(ratchetViolations(weakened, weakened, BASELINE), [
+    "baseline regressed: filesOnFloor 828 -> 827",
+  ]);
+});
+
+void test("product file count is exact for the tree but not directional in history", () => {
+  const reclassified = changed({ productTotal: 924 });
+  assert.deepEqual(ratchetViolations(reclassified, reclassified, BASELINE), []);
+});

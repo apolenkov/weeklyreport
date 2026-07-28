@@ -15,8 +15,8 @@ import { makeQueryClient } from "../../../lib/query-client";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { KanbanItem } from "../../report-sections";
-import type { mapLeadFormData } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
+import type { LeadSlideFormData } from "./lead-slide-form-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 vi.mock("sonner", () => ({
@@ -196,8 +196,6 @@ function makeSection(
   };
 }
 
-type LeadSlideFormData = NonNullable<ReturnType<typeof mapLeadFormData>>;
-
 function makeFormData(): LeadSlideFormData {
   return {
     products: [
@@ -255,7 +253,7 @@ function makeFormData(): LeadSlideFormData {
     },
     readOnly: false,
     canRequestReopen: false,
-  } as unknown as LeadSlideFormData;
+  };
 }
 
 function Harness({

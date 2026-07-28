@@ -41,7 +41,10 @@
 - [x] Adjudicate all 57 formerly unadjudicated findings: 42 confirmed,
       15 overturned, 0 remaining.
 - [x] Land the first 23 confirmed local fixes.
-- [ ] Land the remaining 19 confirmed fixes in risk-isolated slices.
+- [x] Remove change-history labels from the two lead-form model comment sets.
+- [x] Move product-only mock data into test utilities.
+- [x] Replace the slide-editor fixture's double assertion with direct type checking.
+- [ ] Land the remaining 15 confirmed fixes in risk-isolated slices.
 
 ## 5. Human decisions
 

@@ -23,10 +23,8 @@ type LeadStageAssignment = StageAssignment;
 export type LeadProduct = Product;
 export type LeadReportPeriod = ReportPeriod;
 
-// stage-label-canonicalization: SDLC stage names come from the shared canonical
-// `STAGE_NAMES` (imported above) — no local literal list. Dialogs source their
-// stage options from it, so a record stores the full "Development"; the pipeline
-// chip renders a display-only short label (`stageShortLabel`), never stored.
+// Stage names use the shared canonical list so dialogs, storage, and pipeline
+// rendering cannot drift. Short labels are display-only and are never stored.
 
 /**
  * Stages-the-current-user-owns selector. Returns the list of stage names the
@@ -50,41 +48,6 @@ export function ownedStagesForProject(
   );
 }
 
-/**
- * Build the stage grid for one project from the product's assigned-stage set.
- *
- * unassigned-stage-reporting-exclusion: the grid is sourced from `stageSet`
- * (the union of all leads' assignments on the product), NOT all seven canonical
- * stages. A stage owned by this lead (name in `ownedStages`) is `mine`; a stage
- * in the set but not owned is foreign-owned (`locked`, read-only); a stage with
- * NO assignment is absent from the set and excluded entirely. `ownedStages` is
- * unioned into the membership test defensively so the lead's own stages always
- * render even if `stageSet` is missing (legacy fixtures / frozen snapshots).
- * Order follows the canonical `STAGE_NAMES` pipeline order.
- *
- * rethink-pipeline-state-vs-completeness: an EMPTY owned stage — one the
- * lead never set a status on — keeps its raw `status: "empty"` even when a
- * covering risk exists. The risk-derived severity floor for DISPLAY is
- * re-applied at render by the live form's `applyRiskSeverityFloor` (and the
- * slide export's `floorSlideStageStatus`), so the chip still shows the risk
- * severity. The raw `status` must NOT be floored for an untouched stage:
- * flooring would erase the chip's risk-covered-vs-status-set distinction
- * and would count foreign/covers-all-covered stages toward
- * own-input completeness.
- *
- * fix-report-surface-integrity: own-input completeness no longer reads the
- * raw `status` alone — it counts a stage when `status !== "empty"` OR the lead's
- * OWN risk EXPLICITLY names it (`coveredByOwnRisk`, set below). So an empty stage
- * the lead deliberately staged a risk on DOES count, while its raw `status`
- * stays `empty` for the chip distinction. A covers-all (`stageIds: []`) or legacy
- * stage-less risk is excluded, so it never inflates the counter (the old "all
- * stages checked" Add-Risk footgun).
- *
- * A stage the lead DID touch (explicit on-track/at-risk/blocked) still flows
- * through `deriveEffectiveStageStatus`: it floors up to a worse covering risk
- * and collapses a stale, unbacked at-risk/blocked down to on-track. Either way
- * it stays non-empty, so completeness rightly counts it as filled.
- */
 interface OwnedStageInput {
   stageName: string;
   status?: TrafficLightStatus | null;
@@ -101,9 +64,8 @@ interface StageRisk {
  * An untouched stage keeps raw `status: "empty"` (the chip distinction reads
  * it; completeness counts it via `coveredByOwnRisk` below, not via this
  * status). A touched stage derives floor-up / collapse-down from covering
- * risks (unify-risk-stage-status: empty/undefined stageIds means the risk
- * covers every owned stage — routed through `riskCoversStage` so the read
- * model agrees with the live form on legacy stage-less risks).
+ * risks. Empty or undefined stage IDs mean that a risk covers every owned
+ * stage; routing through `riskCoversStage` keeps read and edit models aligned.
  */
 function deriveOwnedStageRow(
   stageName: string,
@@ -126,11 +88,8 @@ function deriveOwnedStageRow(
     // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
     // is reserved for the top user badge. Avatar chips keep 2-letter initials.
     assignee: shortNameFromName(ownerLabel),
-    // fix-report-surface-integrity: flag a stage the lead's OWN risk
-    // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
-    // legacy stage-less risk is excluded, so it never inflates the counter.
-    // The raw `status` above is left untouched — the chip distinguishes a
-    // risk-covered empty stage from an explicitly-set one.
+    // Completeness counts only risks that explicitly name the stage. A
+    // covers-all or legacy stage-less risk must not make every stage complete.
     coveredByOwnRisk: risks.some(
       (r) =>
         Array.isArray(r.stageIds) &&
@@ -146,10 +105,8 @@ function buildStageGrid(
   stageSet: readonly { stageName: string }[] = [],
   risks: readonly StageRisk[] = [],
 ): LeadStageAssignment[] {
-  // unassigned-stage-reporting-exclusion: membership is assignment-driven —
-  // a stage renders only if it is in the product's `stageSet` (assigned to some
-  // lead) or owned by this lead. Owned is unioned in defensively so the lead's
-  // own stages survive a missing/partial `stageSet`.
+  // Membership is assignment-driven. Unioning the lead's own assignments
+  // keeps them visible when a legacy fixture has an incomplete stageSet.
   const inStageSet = (stageName: string): boolean =>
     stageSet.some((s) => stageNamesMatch(s.stageName, stageName)) ||
     ownedStages.some((s) => stageNamesMatch(s.stageName, stageName));
@@ -159,10 +116,8 @@ function buildStageGrid(
     if (ownedStage) {
       return deriveOwnedStageRow(stageName, ownedStage, ownerLabel, risks);
     }
-    // unassigned-stage-reporting-exclusion: in the product's stage set but not
-    // owned by this lead — foreign-owned, rendered read-only (`locked`). In
-    // Everyone mode `applyCrossAuthorStageOverrides` fills the real assignee +
-    // status; in Mine mode it is hidden by the visibility filter.
+    // A stage assigned to another lead is read-only. Everyone mode resolves
+    // its assignee and status; Mine mode removes it with the visibility filter.
     return {
       stageName,
       status: "empty" as const,
@@ -175,11 +130,9 @@ function buildStageGrid(
 /**
  * Map a section's projects -> presentation Product[].
  *
- * unassigned-stage-reporting-exclusion: each project's `stageSet` (the
- * union of all leads' `StageAssignment` rows on the product) sources the grid;
- * `ownedStages` (scoped to the section author) marks which of those render as
- * "mine" vs foreign-owned "locked". A stage with no assignment is absent from
- * the set and excluded — no vacant chip.
+ * Each project's `stageSet` is the union of all lead assignments and therefore
+ * defines grid membership. `ownedStages` selects editable rows; the rest are
+ * locked. Unassigned stages are absent rather than rendered as vacant chips.
  *
  * The grid must come from `stageSet` rather than be synthesized here: a
  * synthesized one cannot reflect what the Products admin tab assigned, so
@@ -191,11 +144,8 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
-    // rethink-pipeline-state-vs-completeness: pass the covering risks so a
-    // TOUCHED stage floors up / collapses down correctly, while an UNTOUCHED
-    // (empty) stage keeps raw `status: "empty"` (see buildStageGrid).
-    // buildStageGrid also tags it `coveredByOwnRisk` when an own risk names it,
-    // which is how an empty-but-risk-staged stage counts toward completeness.
+    // Touched stages apply the risk floor; untouched stages keep the raw empty
+    // state so display severity and form completeness remain distinct.
     const coveringRisks = section.risks.filter(
       (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
     );
@@ -203,8 +153,6 @@ export function mapLeadProducts(
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      // unassigned-stage-reporting-exclusion: the product's assigned-stage set
-      // sources the grid; a stage with no assignment is excluded entirely.
       stages: buildStageGrid(
         section.authorName,
         ownedStages,

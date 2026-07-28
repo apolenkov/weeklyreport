@@ -8,6 +8,18 @@ export interface FloorSnapshot {
 }
 
 type Counter = keyof FloorSnapshot;
+type RatchetCounter = Exclude<Counter, "productTotal">;
+
+export interface JustifiedRegression {
+  readonly counter: RatchetCounter;
+  readonly from: number;
+  readonly to: number;
+  readonly reason: string;
+}
+
+export interface FloorBaseline extends FloorSnapshot {
+  readonly justifiedRegressions?: readonly JustifiedRegression[];
+}
 
 const COUNTERS: readonly Counter[] = [
   "filesOnFloor",
@@ -15,27 +27,30 @@ const COUNTERS: readonly Counter[] = [
   "overrideBlocks",
   "liveSuppressions",
 ];
+const RATCHET_COUNTERS: readonly RatchetCounter[] = [
+  "filesOnFloor",
+  "overrideBlocks",
+  "liveSuppressions",
+];
 
-const direction = (counter: Counter): "up" | "down" | "exact" => {
+const direction = (counter: RatchetCounter): "up" | "down" => {
   if (counter === "filesOnFloor") return "up";
-  if (counter === "productTotal") return "exact";
   return "down";
 };
 
 const historyRegression = (
-  counter: Counter,
+  counter: RatchetCounter,
   current: number,
   previous: number,
 ): boolean => {
   const expected = direction(counter);
   if (expected === "up") return current < previous;
-  if (expected === "down") return current > previous;
-  return false;
+  return current > previous;
 };
 
 export const ratchetViolations = (
   actual: FloorSnapshot,
-  baseline: FloorSnapshot,
+  baseline: FloorBaseline,
   previousBaseline?: FloorSnapshot,
 ): readonly string[] => [
   ...COUNTERS.filter((counter) => actual[counter] !== baseline[counter]).map(
@@ -44,26 +59,43 @@ export const ratchetViolations = (
   ),
   ...(previousBaseline === undefined
     ? []
-    : COUNTERS.filter((counter) =>
-        historyRegression(
-          counter,
-          baseline[counter],
-          previousBaseline[counter],
-        ),
+    : RATCHET_COUNTERS.filter(
+        (counter) =>
+          historyRegression(
+            counter,
+            baseline[counter],
+            previousBaseline[counter],
+          ) &&
+          !baseline.justifiedRegressions?.some(
+            (entry) =>
+              entry.counter === counter &&
+              entry.from === previousBaseline[counter] &&
+              entry.to === baseline[counter] &&
+              entry.reason.trim().length > 0,
+          ),
       ).map(
         (counter) =>
           `baseline regressed: ${counter} ${previousBaseline[counter]} -> ${baseline[counter]}`,
       )),
 ];
 
-export const parseFloorSnapshot = (raw: string): FloorSnapshot => {
-  const value = JSON.parse(raw) as Partial<FloorSnapshot>;
+export const parseFloorSnapshot = (raw: string): FloorBaseline => {
+  const value = JSON.parse(raw) as Partial<FloorBaseline>;
   for (const counter of COUNTERS) {
     if (!Number.isInteger(value[counter]) || (value[counter] ?? -1) < 0)
       throw new Error(`Invalid exemplary-floor baseline counter: ${counter}`);
   }
-  return value as FloorSnapshot;
+  for (const entry of value.justifiedRegressions ?? []) {
+    if (
+      !RATCHET_COUNTERS.includes(entry.counter) ||
+      !Number.isInteger(entry.from) ||
+      !Number.isInteger(entry.to) ||
+      entry.reason.trim().length === 0
+    )
+      throw new Error("Invalid exemplary-floor justified regression");
+  }
+  return value as FloorBaseline;
 };
 
-export const readFloorBaseline = (path: string): FloorSnapshot =>
+export const readFloorBaseline = (path: string): FloorBaseline =>
   parseFloorSnapshot(readFileSync(path, "utf8"));
