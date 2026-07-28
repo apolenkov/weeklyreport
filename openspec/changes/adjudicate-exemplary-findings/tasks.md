@@ -22,7 +22,11 @@
       cannot be returned without an enqueue attempt.
 - [x] Route manual-publish ingestion failures to the structured error sink
       while preserving post-commit success.
-- [ ] Land the remaining 7 confirmed findings in isolated slices.
+- [x] Replace the native user-group and dirty fill-from prompts with shared
+      confirmation dialogs and regression coverage.
+- [x] Single-home the duplicated reopen-response form and its note cap.
+- [ ] Land the remaining 4 confirmed findings after the user decides the
+      family-wide split-harness convention.
 - [ ] Plan and land shared-schema/cross-feature changes in isolated slices.
 
 ## Verification
@@ -30,4 +34,4 @@
 - [x] `openspec validate adjudicate-exemplary-findings --strict`
 - [x] Relevant targeted tests and typechecks for the first landed slice.
 - [x] `pnpm lint` and `pnpm test` for the first landed slice.
-- [ ] Repeat targeted and full verification for every remaining slice.
+- [x] Repeat targeted and full verification for every autonomous slice.

@@ -1,11 +1,45 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
+
+interface FillFromInput {
+  readonly targetSectionId: string;
+  readonly sourceSectionId: string;
+  readonly version: number;
+}
+
+function useFillFromConfirmation(
+  autosaveDirty: boolean,
+  createInput: (sourceSectionId: string) => FillFromInput | null,
+  fillFrom: (input: FillFromInput) => void,
+) {
+  const [pendingInput, setPendingInput] = useState<FillFromInput | null>(null);
+  return {
+    pendingFillFrom: pendingInput !== null,
+    handleFillFrom: (sourceSectionId: string) => {
+      const input = createInput(sourceSectionId);
+      if (input === null) return;
+      if (autosaveDirty) {
+        setPendingInput(input);
+        return;
+      }
+      fillFrom(input);
+    },
+    confirmPendingFillFrom: () => {
+      if (pendingInput === null) return;
+      const input = pendingInput;
+      setPendingInput(null);
+      fillFrom(input);
+    },
+    cancelPendingFillFrom: () => setPendingInput(null),
+  };
+}
 
 export function useLeadFormFillFrom({
   sectionIdForActions,
@@ -38,23 +72,17 @@ export function useLeadFormFillFrom({
     }),
   );
 
+  const confirmation = useFillFromConfirmation(
+    autosaveDirty,
+    (sourceSectionId) =>
+      sectionIdForActions
+        ? { targetSectionId: sectionIdForActions, sourceSectionId, version }
+        : null,
+    (input) => fillFromMut.mutate(input),
+  );
+
   return {
     fillFromMut,
-    // Fill replaces the whole draft, so unsaved local edits need an explicit
-    // go-ahead before they are overwritten.
-    handleFillFrom: (sourceSectionId: string) => {
-      if (!sectionIdForActions) return;
-      if (
-        autosaveDirty &&
-        !window.confirm("You have unsaved changes. Continue and overwrite?")
-      ) {
-        return;
-      }
-      fillFromMut.mutate({
-        targetSectionId: sectionIdForActions,
-        sourceSectionId,
-        version,
-      });
-    },
+    ...confirmation,
   };
 }

@@ -482,8 +482,6 @@ describe("lead-form draft: submit gating + dialogs", () => {
   });
 
   it("fill-from with unsaved edits prompts before overwriting and aborts on decline", async () => {
-    const confirmSpy = vi.fn(() => false);
-    vi.stubGlobal("confirm", confirmSpy);
     const sourceSectionId = "99999999-9999-4999-8999-999999999990";
     const { Wrapper, captured } = buildHarness({
       myHistory: [
@@ -533,7 +531,12 @@ describe("lead-form draft: submit gating + dialogs", () => {
     act(() =>
       within(dialog).getByRole("button", { name: "Replace & Fill" }).click(),
     );
-    expect(confirmSpy).toHaveBeenCalled();
+    const overwriteDialog = await screen.findByRole("alertdialog", {
+      name: "Overwrite unsaved changes?",
+    });
+    act(() =>
+      within(overwriteDialog).getByRole("button", { name: "Cancel" }).click(),
+    );
     expect(
       expectDefined(captured["leadForm.fillFrom"]).mutationFn,
     ).not.toHaveBeenCalled();

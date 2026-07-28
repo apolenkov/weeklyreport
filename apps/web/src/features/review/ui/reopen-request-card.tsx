@@ -1,7 +1,10 @@
 import {
+  type ReopenDecision,
+  ReopenRespondForm,
+} from "../../../shared/ui/reopen-respond-form";
+import {
   ReopenRequestMeta,
   ReopenRequestNotes,
-  ReopenRespondForm,
 } from "./reopen-request-card-parts";
 
 type ReopenStatus = "pending" | "approved" | "rejected";
@@ -45,6 +48,7 @@ export function ReopenRequestCard({
   isResponding,
   note,
   isSaving,
+  pendingDecision,
   onStartRespond,
   onCancelRespond,
   onNoteChange,
@@ -55,6 +59,7 @@ export function ReopenRequestCard({
   readonly isResponding: boolean;
   readonly note: string;
   readonly isSaving: boolean;
+  readonly pendingDecision: ReopenDecision | undefined;
   readonly onStartRespond: () => void;
   readonly onCancelRespond: () => void;
   readonly onNoteChange: (value: string) => void;
@@ -76,9 +81,10 @@ export function ReopenRequestCard({
         <ReopenRespondForm
           requestId={r.id}
           note={note}
-          isSaving={isSaving}
+          isPending={isSaving}
+          pendingDecision={pendingDecision}
           onNoteChange={onNoteChange}
-          onCancelRespond={onCancelRespond}
+          onCancel={onCancelRespond}
           onReject={onReject}
           onApprove={onApprove}
         />

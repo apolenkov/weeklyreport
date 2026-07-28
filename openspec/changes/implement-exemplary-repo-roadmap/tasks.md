@@ -55,7 +55,14 @@
       cannot be returned without an enqueue attempt.
 - [x] Route manual-publish ingestion failures to the structured error sink
       while preserving post-commit success.
-- [ ] Land the remaining 7 confirmed fixes in risk-isolated slices.
+- [x] Replace the native user-group change prompt with the shared confirmation
+      dialog and cover the deferred mutation.
+- [x] Replace the dirty fill-from prompt with the shared confirmation dialog
+      and cover the deferred overwrite.
+- [x] Single-home both reopen-response forms, including the note cap and
+      decision-specific pending state.
+- [ ] Land the remaining 4 confirmed fixes after the user decides the
+      family-wide split-harness convention.
 
 ## 5. Human decisions
 
@@ -68,8 +75,8 @@
 
 ## 6. Completion verification
 
-- [ ] Validate all three active changes with `openspec validate --strict`.
-- [ ] Recompute the catalogue and prove all ratchets are non-regressing.
-- [ ] Run targeted tests for every slice.
-- [ ] Run `pnpm lint`, forced typecheck, and `pnpm test`.
-- [ ] Audit every PDF/OpenSpec task against current evidence before archive.
+- [x] Validate all three active changes with `openspec validate --strict`.
+- [x] Recompute the catalogue and prove all ratchets are non-regressing.
+- [x] Run targeted tests for every slice.
+- [x] Run `pnpm lint`, forced typecheck, and `pnpm test`.
+- [x] Audit every PDF/OpenSpec task against current evidence before archive.

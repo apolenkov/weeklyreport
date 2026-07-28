@@ -172,6 +172,42 @@ describe("UsersTab — invalidation contract", () => {
   });
 });
 
+describe("UsersTab — group change confirmation", () => {
+  it("defers the save mutation until the shared dialog is confirmed", async () => {
+    const otherGroup: MockGroup = {
+      ...GROUP,
+      id: "g2",
+      name: "Beta",
+    };
+    const { captured } = renderTab([USER], [GROUP, otherGroup]);
+    const saveUser = expectDefined(captured["admin.saveUser"]);
+    saveUser.mutationFn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: /edit ivanova alice/i }),
+    );
+    await user.selectOptions(screen.getByLabelText(/owning group/i), "g2");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    const confirm = screen.getByRole("alertdialog", {
+      name: /change this user's group/i,
+    });
+    expect(saveUser.mutationFn).not.toHaveBeenCalled();
+
+    await user.click(
+      within(confirm).getByRole("button", { name: /change group/i }),
+    );
+
+    await waitFor(() =>
+      expect(saveUser.mutationFn).toHaveBeenCalledWith(
+        expect.objectContaining({ reportingGroupId: "g2", id: USER.id }),
+        expect.anything(),
+      ),
+    );
+  });
+});
+
 describe("UsersTab — focus management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
