@@ -81,23 +81,6 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
   return parseAuthMeRole(payload);
 }
 
-function emailFromRole(
-  role: DbRole,
-  email: string | undefined,
-  attempt: number,
-): string | undefined {
-  if (email) {
-    return email;
-  }
-
-  if (attempt === 1) {
-    return undefined;
-  }
-
-  return `${role}-probe-${Date.now()}-${attempt}@customreport.local`;
-}
-
-
 async function navigateAfterLogin(
   page: Page,
   redirect: string | undefined,
@@ -121,10 +104,9 @@ async function establishSession(
   identity: DevAuthIdentity,
   attempt: number,
 ): Promise<void> {
-  const email = emailFromRole(identity.role, identity.email, attempt);
   const params = new URLSearchParams({
     role: identity.role,
-    ...(email ? { email } : {}),
+    ...(identity.email ? { email: identity.email } : {}),
     ...(identity.redirect ? { redirect: identity.redirect } : {}),
   });
 

@@ -17,6 +17,7 @@ import { useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { webEnv } from "../../lib/web-env";
+import { logoutThenRedirect } from "../lib/logout-then-redirect";
 
 type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
 
@@ -28,27 +29,11 @@ export const ROLE_ORDER = [
   "lead",
   "viewer",
 ] as const satisfies readonly DbRole[];
-const LOGOUT_PATH = "/auth/logout";
 const LOGOUT_FAILED_MESSAGE =
   "Logout failed — still signed in. Check the API and try again.";
 // The seeded dev user list changes only on a reseed, so refetching the dropdown
 // more than once a minute is pure noise.
 const DEV_USERS_STALE_TIME_MS = 60_000;
-
-// Redirect only after the server confirms the logout — a non-ok response or a
-// rejected fetch leaves the visitor signed in, so run `onStay` and hold on the
-// current page instead of navigating as though logout had succeeded.
-function logoutThenRedirect(href: string, onStay: () => void): void {
-  void fetch(LOGOUT_PATH, { method: "POST", credentials: "include" })
-    .then((response) => {
-      if (response.ok) {
-        window.location.href = href;
-      } else {
-        onStay();
-      }
-    })
-    .catch(onStay);
-}
 
 interface RoleSwitcherUser {
   readonly id: string;

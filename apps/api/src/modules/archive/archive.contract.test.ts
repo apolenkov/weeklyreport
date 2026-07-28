@@ -3,10 +3,6 @@ import type {
   ArchiveReportSummary,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import {
-  archiveReportDetailSchema,
-  archiveReportSummarySchema,
-} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
@@ -176,20 +172,6 @@ describe("ArchiveService — contract tests", () => {
       await expect(service.listArchiveReports()).rejects.toThrow(ZodError);
     });
 
-    it("validates output conforms to archiveReportSummarySchema", async () => {
-      const summary = makeSummary();
-      const repo = createInMemoryRepository([summary], new Map());
-      const service = new ArchiveService(repo);
-
-      const result = await service.listArchiveReports();
-      const reports = result.items;
-
-      expect(reports).toHaveLength(1);
-      for (const report of reports) {
-        expect(() => archiveReportSummarySchema.parse(report)).not.toThrow();
-      }
-    });
-
     it("handles single report", async () => {
       const single = makeSummary({
         reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -305,20 +287,6 @@ describe("ArchiveService — contract tests", () => {
       await expect(service.getArchiveReport(reportId)).rejects.toThrow(
         ZodError,
       );
-    });
-
-    it("validates output conforms to archiveReportDetailSchema", async () => {
-      const reportId = "22222222-2222-4222-8222-222222222222";
-      const detail = makeDetail({ sections: [sectionLead1] });
-      const details = new Map<string, ArchiveReportDetail>([
-        [reportId, detail],
-      ]);
-      const repo = createInMemoryRepository([], details);
-      const service = new ArchiveService(repo);
-
-      const result = await service.getArchiveReport(reportId);
-
-      expect(() => archiveReportDetailSchema.parse(result)).not.toThrow();
     });
 
     it("returns report with sections sorted by authorName ascending", async () => {

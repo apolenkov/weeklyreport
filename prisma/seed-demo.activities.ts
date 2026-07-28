@@ -23,8 +23,9 @@ async function createActivities(
   prisma: PrismaClient,
   sectionId: string,
 ): Promise<CreatedActivity[]> {
-  return Promise.all(
-    SMALL_ACTIVITIES.map(async (activity) => {
+  return SMALL_ACTIVITIES.reduce<Promise<CreatedActivity[]>>(
+    async (createdPromise, activity) => {
+      const created = await createdPromise;
       const activityId = makeRowId();
       await prisma.projectActivity.create({
         data: {
@@ -48,8 +49,9 @@ async function createActivities(
           note: activity.note ?? null,
         },
       });
-      return { activityId, content: activity.content };
-    }),
+      return [...created, { activityId, content: activity.content }];
+    },
+    Promise.resolve([]),
   );
 }
 

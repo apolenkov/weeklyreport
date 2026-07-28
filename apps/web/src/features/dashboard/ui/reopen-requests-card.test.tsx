@@ -120,6 +120,21 @@ describe("ReopenRequestsCard", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("renders a retryable error instead of an empty queue", () => {
+    const refetch = vi.fn();
+    mockList(undefined, {
+      isError: true,
+      error: new Error("queue failed"),
+      refetch,
+    });
+    render(<ReopenRequestsCard />);
+    const issue = screen.getByTestId("reopen-requests-error");
+    expect(issue).toHaveTextContent("queue failed");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(document.querySelector("#reopen-requests-card")).not.toBeNull();
+  });
+
   it("renders pending requests with the requester and count", () => {
     mockList([makeRequest()]);
     render(<ReopenRequestsCard />);

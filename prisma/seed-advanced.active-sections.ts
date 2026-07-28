@@ -61,7 +61,10 @@ async function seedStageStatuses(
 ): Promise<void> {
   const reportSectionId = sectionId(ACTIVE_SUFFIX, cfg.leadIndex);
   const globalIdx = SEED_PRODUCTS.findIndex((p) => p.id === projectId);
-  const startStageIdx = globalIdx === -1 ? productIdx : globalIdx;
+  if (globalIdx === -1) {
+    throw new Error(`Advanced seed: product ${projectId} is not in catalogue`);
+  }
+  const startStageIdx = globalIdx;
 
   for (const offset of CONSECUTIVE_STAGE_OFFSETS) {
     const stage = stageAt(startStageIdx + offset);

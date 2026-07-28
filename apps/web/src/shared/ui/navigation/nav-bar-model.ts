@@ -1,11 +1,7 @@
-import {
-  DEFAULT_ORGANIZATION_IDENTITY,
-  initials as deriveInitials,
-  type Role,
-  ROLE_LABEL,
-} from "@customreport/shared";
+import { type Role, ROLE_LABEL } from "@customreport/shared";
 
 import type { SessionState } from "../../../lib/session-provider";
+import { initialsFromParts } from "../../../lib/user-initials";
 import { NAV_LINKS, type NavLink } from "./nav-links";
 
 interface NavBarModel {
@@ -38,11 +34,11 @@ export function buildNavBarModel({
     role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
   const initials = visibleUser
-    ? deriveInitials({
+    ? initialsFromParts({
         lastName: visibleUser.lastName,
         firstName: visibleUser.firstName,
         name: visibleUser.name,
-      }) || "??"
+      })
     : "?";
   const roleLabel = role ? ROLE_LABEL[role] : "";
 
@@ -50,12 +46,8 @@ export function buildNavBarModel({
   // while the session query is in-flight instead of flashing the default
   // 'ORG' identity and popping to the real tenant brand on every cold reload.
   const orgResolved = !visibleSessionLoading && visibleOrganization !== null;
-  const orgShortName = orgResolved
-    ? visibleOrganization.shortName
-    : DEFAULT_ORGANIZATION_IDENTITY.shortName;
-
   const identityMeta = [
-    orgResolved ? orgShortName : null,
+    orgResolved ? visibleOrganization.shortName : null,
     visibleUser?.reportingGroupName,
     roleLabel,
   ]

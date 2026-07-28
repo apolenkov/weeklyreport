@@ -215,7 +215,7 @@ describe("lead-form draft: save-echo + optimistic lock", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
@@ -280,7 +280,7 @@ describe("lead-form draft: save-echo + optimistic lock", () => {
     expect(screen.getByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());
@@ -373,7 +373,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     expect(
-      screen.queryByRole("dialog", { name: "Confirm submission" }),
+      screen.queryByRole("alertdialog", { name: "Confirm submission" }),
     ).toBeNull();
   });
 
@@ -391,7 +391,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     expect(
@@ -423,13 +423,13 @@ describe("lead-form draft: submit gating + dialogs", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Cancel" }).click());
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Confirm submission" }),
+        screen.queryByRole("alertdialog", { name: "Confirm submission" }),
       ).toBeNull(),
     );
     expect(
@@ -451,7 +451,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() => screen.getByRole("button", { name: "Submit" }).click());
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
     act(() => within(dialog).getByRole("button", { name: "Submit" }).click());

@@ -5,6 +5,7 @@ import { type ComponentProps, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
+import { DashboardPanelIssue } from "./dashboard-panel-state";
 import { ReopenRequestRow } from "./reopen-request-row";
 
 // Anchor id for the AlertBar reopen indicator scroll target.
@@ -96,9 +97,43 @@ function ReopenRequestList({
   );
 }
 
-/**
- * Reopen Requests Card.
- */
+function ReopenRequestsIssue({
+  error,
+  onRetry,
+}: {
+  readonly error: unknown;
+  readonly onRetry: () => void;
+}) {
+  return (
+    <div id={REOPEN_REQUESTS_CARD_ID}>
+      <DashboardPanelIssue
+        kind="leads"
+        testId="reopen-requests-error"
+        title="Reopen requests unavailable"
+        description={
+          error instanceof Error
+            ? error.message
+            : "The reopen queue could not be loaded."
+        }
+        onRetry={onRetry}
+      />
+    </div>
+  );
+}
+
+function ReopenRequestsHeader({ count }: { readonly count: number }) {
+  return (
+    <header className="mb-3 flex items-center justify-between">
+      <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]">
+        Reopen Requests
+      </h2>
+      <span className="rounded-[var(--radius-pill)] bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+        {count} pending
+      </span>
+    </header>
+  );
+}
+
 export function ReopenRequestsCard() {
   const trpc = useTRPC();
   const [respondingId, setRespondingId] = useState<string | null>(null);
@@ -114,10 +149,19 @@ export function ReopenRequestsCard() {
   const respondMut = useRespondReopenRequest(closeResponder);
   const requests = listQuery.data ?? [];
 
-  // The card is a queue: render nothing when there is nothing to decide.
-  if (listQuery.isPending || listQuery.isError || requests.length === 0) {
-    return null;
+  if (listQuery.isPending) return null;
+
+  if (listQuery.isError) {
+    return (
+      <ReopenRequestsIssue
+        error={listQuery.error}
+        onRetry={() => void listQuery.refetch()}
+      />
+    );
   }
+
+  // The card is a queue: render nothing when there is nothing to decide.
+  if (requests.length === 0) return null;
 
   return (
     <section
@@ -125,14 +169,7 @@ export function ReopenRequestsCard() {
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
       aria-label="Pending reopen requests"
     >
-      <header className="mb-3 flex items-center justify-between">
-        <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]">
-          Reopen Requests
-        </h2>
-        <span className="rounded-[var(--radius-pill)] bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
-          {requests.length} pending
-        </span>
-      </header>
+      <ReopenRequestsHeader count={requests.length} />
 
       <ReopenRequestList
         requests={requests}

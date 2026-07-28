@@ -609,7 +609,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       within(sticky).getByRole("button", { name: "Submit" }).click();
     });
     expect(
-      await screen.findByRole("dialog", { name: "Confirm submission" }),
+      await screen.findByRole("alertdialog", { name: "Confirm submission" }),
     ).toBeInTheDocument();
   });
 

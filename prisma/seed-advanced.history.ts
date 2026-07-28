@@ -113,12 +113,10 @@ async function seedHistorySection(
     });
   }
 
-  // The history periods have always reported their sections and items but not
-  // their project statuses; the summary line stays comparable across runs.
   return {
     sections: 1,
     items: cfg.products.length,
-    projectStatuses: 0,
+    projectStatuses: cfg.products.length,
     stageStatuses: 0,
   };
 }

@@ -16,7 +16,7 @@ const FLAGGED_STAGE_LABEL = "Flagged";
 export function escalationToBlockedItem(
   escalation: Escalation,
   index: number,
-): BlockedAtRiskItem | null {
+): BlockedAtRiskItem {
   if (escalation.type === "blocked") {
     return {
       id: `esc-${index}`,

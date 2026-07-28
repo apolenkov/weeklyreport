@@ -49,4 +49,4 @@ export const tagFor = (seed: number): string => cyclic(TAG_CYCLE, seed);
 export const stageAt = (seed: number): SeedStage => cyclic(SEED_STAGES, seed);
 
 export const stageNameFor = (seed: number): string =>
-  SEED_STAGES[seed % SEED_STAGES.length]?.name ?? "Development";
+  cyclic(SEED_STAGES, seed).name;

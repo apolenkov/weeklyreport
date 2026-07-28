@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { UserSession } from "@customreport/shared";
+import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
@@ -13,8 +13,6 @@ import {
 
 // /print is outside the proxy auth matcher — this gate handles no-session itself
 // (session: null, isPdfExport: false → redirect to login). Fail-closed on errors.
-const COOKIE_NAME = AUTH_COOKIE_NAME;
-
 export interface PrintRouteContext {
   readonly session: UserSession | null;
   readonly isPdfExport: boolean;
@@ -31,8 +29,9 @@ function decodePrintGateResponse(body: unknown): PrintRouteContext {
   const payload = decodeTrpcBatchPayload(body);
   if (payload === null || typeof payload !== "object") return NO_CONTEXT;
   const p = payload as Record<string, unknown>;
+  const session = userSessionSchema.safeParse(p.session);
   return {
-    session: (p.session as UserSession | null) ?? null,
+    session: session.success ? session.data : null,
     isPdfExport: p.isPdfExport === true,
     pdfReportId: typeof p.pdfReportId === "string" ? p.pdfReportId : null,
   };
@@ -40,7 +39,7 @@ function decodePrintGateResponse(body: unknown): PrintRouteContext {
 
 export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token && !shouldUseDevAuthFallback()) return NO_CONTEXT;
 
   const apiUrl = requireApiUrl();
@@ -49,7 +48,7 @@ export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: token ? { cookie: `${COOKIE_NAME}=${token}` } : undefined,
+      headers: token ? { cookie: `${AUTH_COOKIE_NAME}=${token}` } : undefined,
       cache: "no-store",
     });
     if (!response.ok) return NO_CONTEXT;

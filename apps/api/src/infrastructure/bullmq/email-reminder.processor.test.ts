@@ -1,8 +1,10 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock NestJS common so decorators are no-ops in tests
-vi.mock("@nestjs/common", () => ({
+// Keep the real module surface so adding another Nest import cannot turn it
+// into undefined; only the decorator needs to be inert for this unit.
+vi.mock("@nestjs/common", async (importActual) => ({
+  ...(await importActual<typeof import("@nestjs/common")>()),
   Injectable: () => (target: unknown) => target,
 }));
 

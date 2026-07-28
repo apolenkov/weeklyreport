@@ -58,19 +58,11 @@ function DashboardHeader({
   );
 }
 
-function resolveDependentSource(
-  sources: readonly [DashboardSourceState, ...DashboardSourceState[]],
-): DashboardSourceState {
-  return (
-    sources.find((source) => source.isError || source.stalled) ?? sources[0]
-  );
-}
-
 interface DashboardPanelsProps {
   readonly activitySource: DashboardSourceState;
   readonly queue?: ReturnType<typeof mapReviewDashboardData>;
   readonly queueSource: DashboardSourceState;
-  readonly reviewSource: DashboardSourceState;
+  readonly weeklySource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData>;
   readonly weeklyReport?: WeeklyReportReadModel;
   readonly canSendReminder: boolean;
@@ -82,7 +74,7 @@ function DashboardKpiPanel(props: DashboardPanelsProps) {
     <DashboardSourceSlot
       kind="kpi"
       ready={props.weekly !== undefined}
-      source={props.reviewSource}
+      source={props.weeklySource}
       title="KPI data"
     >
       {props.weekly ? <KpiCards data={props.weekly.kpi} /> : null}
@@ -138,7 +130,7 @@ function DashboardEscalationPanel(props: DashboardPanelsProps) {
     <DashboardSourceSlot
       kind="blocked"
       ready={props.weekly !== undefined}
-      source={props.reviewSource}
+      source={props.weeklySource}
       title="Escalations"
     >
       {props.weekly ? (
@@ -164,13 +156,13 @@ function isPanelLoading(ready: boolean, source: DashboardSourceState): boolean {
   return !ready && !source.isError && !source.stalled;
 }
 
-// kpi and blocked panels share the same (weekly, reviewSource) readiness
+// kpi and blocked panels share the same (weekly, weeklySource) readiness
 // inputs — see DashboardKpiPanel / DashboardEscalationPanel above — so one
 // check covers both; leads has its own (queue, queueSource) pair.
 function dashboardIsLoading(panelModel: DashboardPanelsProps): boolean {
   const kpiOrBlockedLoading = isPanelLoading(
     panelModel.weekly !== undefined,
-    panelModel.reviewSource,
+    panelModel.weeklySource,
   );
   const leadsLoading = isPanelLoading(
     panelModel.queue !== undefined,
@@ -182,7 +174,7 @@ function dashboardIsLoading(panelModel: DashboardPanelsProps): boolean {
 function dashboardPanelModel(
   props: DashboardContentProps,
 ): DashboardPanelsProps {
-  const { activity, review, weeklyReport, weeklyState, reviewState } = props;
+  const { activity, review, weeklyReport, weeklyState } = props;
   const queue = weeklyReport
     ? mapReviewDashboardData({
         weeklyReport,
@@ -190,18 +182,17 @@ function dashboardPanelModel(
         ...(activity ? { activity } : {}),
       })
     : undefined;
-  const weekly =
-    weeklyReport && review
-      ? mapWeeklyDashboardData({
-          weeklyReport,
-          pendingCount: queue?.pendingLeads.length ?? 0,
-        })
-      : undefined;
+  const weekly = weeklyReport
+    ? mapWeeklyDashboardData({
+        weeklyReport,
+        pendingCount: queue?.pendingLeads.length ?? 0,
+      })
+    : undefined;
   return {
     queue,
     activitySource: props.activityState,
     queueSource: weeklyState,
-    reviewSource: resolveDependentSource([weeklyState, reviewState]),
+    weeklySource: weeklyState,
     weekly,
     weeklyReport,
     canSendReminder: Boolean(
