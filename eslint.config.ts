@@ -1113,8 +1113,8 @@ export default defineConfig([
       "vitest/no-done-callback": "error",
       "vitest/no-duplicate-hooks": "error",
       // `.only` fails the run under CI and only reports a skip locally, so this
-      // moves the failure to the editor. Two tests sharing a title both run,
-      // and the report cannot say which of them failed.
+      // moves the failure to the editor. Two tests sharing a title both run and
+      // both print under that title.
       "vitest/no-focused-tests": "error",
       "vitest/no-identical-title": "error",
       "vitest/no-interpolation-in-snapshots": "error",
@@ -1147,7 +1147,7 @@ export default defineConfig([
       ),
       // 647 = the Tukey far-out fence Q3 + 3·IQR of the test-file distribution,
       // on the metric `max-lines` itself counts (skipBlankLines + skipComments);
-      // p95 = 638 lands beside it. A file over it holds more than one subject.
+      // p95 = 638 lands beside it. Crossing it prompts a look, not a verdict.
       "max-lines": [
         "error",
         { max: 647, skipBlankLines: true, skipComments: true },
