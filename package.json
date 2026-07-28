@@ -59,7 +59,8 @@
     "uat:audit": "node apps/web/uat-suite/mutation-audit.mjs",
     "uat:audit:update": "node apps/web/uat-suite/mutation-audit.mjs --update-allowlist",
     "uat:inventory": "node apps/web/uat-suite/inventory.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "catalogue": "tsx scripts/exemplary-catalogue.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
