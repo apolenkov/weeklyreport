@@ -19,7 +19,7 @@ import { useTRPC } from "../../lib/trpc-context";
 import { webEnv } from "../../lib/web-env";
 import { logoutThenRedirect } from "../lib/logout-then-redirect";
 
-type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
+type DataResetVariant = "minimal" | "demo" | "full" | "stress";
 
 // Presentation order, hand-written on purpose (differs from the schema order).
 // Exported only for the completeness pin in its test.
@@ -82,17 +82,25 @@ function RoleUserItems({
 
 // Presentation order and testid suffix for each dev-only data reset.
 const DATA_RESET_ACTIONS = [
-  { variant: "small", label: "Wipe + Reseed (small)", testId: "reseed-small" },
   {
-    variant: "middle",
-    label: "Wipe + Reseed (middle)",
-    testId: "reseed-middle",
+    variant: "minimal",
+    label: "Wipe + Reseed (minimal)",
+    testId: "reseed-minimal",
   },
-  { variant: "huge", label: "Wipe + Reseed (huge)", testId: "reseed-huge" },
   {
-    variant: "manual-uat",
-    label: "Wipe reports (manual UAT)",
-    testId: "wipe-manual-uat",
+    variant: "demo",
+    label: "Wipe + Reseed (demo)",
+    testId: "reseed-demo",
+  },
+  {
+    variant: "full",
+    label: "Wipe + Reseed (full)",
+    testId: "reseed-full",
+  },
+  {
+    variant: "stress",
+    label: "Wipe + Reseed (stress)",
+    testId: "reseed-stress",
   },
 ] as const satisfies readonly {
   variant: DataResetVariant;

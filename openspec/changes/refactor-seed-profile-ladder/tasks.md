@@ -2,33 +2,33 @@
 
 ## 1. Shared profile contract
 
-- [ ] Define typed `minimal`, `demo`, `full`, and `stress` profile names,
+- [x] Define typed `minimal`, `demo`, `full`, and `stress` profile names,
       capability manifests, stable identifiers, and bounded row-count
       invariants.
-- [ ] Add one explicit selector and reject missing or unknown profiles.
-- [ ] Share canonical identity and manifest validation without forcing all
+- [x] Add one explicit selector and reject missing or unknown profiles.
+- [x] Share canonical identity and manifest validation without forcing all
       writers into one module.
 
 ## 2. Prisma writers and reset
 
-- [ ] Map or refactor current `seed-demo.ts`, `seed-simple.ts`, and `seed.ts`
+- [x] Map or refactor current `seed-demo.ts`, `seed-simple.ts`, and `seed.ts`
       content into the monotonic ladder.
-- [ ] Ensure `minimal` is the smallest valid boot/auth/write dataset.
-- [ ] Ensure `demo` contains every minimal capability plus the curated role,
+- [x] Ensure `minimal` is the smallest valid boot/auth/write dataset.
+- [x] Ensure `demo` contains every minimal capability plus the curated role,
       health, ownership, reminder, submission, and published-period scenarios.
-- [ ] Ensure `full` contains every demo capability plus all shipped admin,
+- [x] Ensure `full` contains every demo capability plus all shipped admin,
       activity, history, reopen, policy, archive, and publish families.
-- [ ] Ensure `stress` contains every full capability at deterministic
+- [x] Ensure `stress` contains every full capability at deterministic
       high-volume scale.
-- [ ] Make reset select a profile explicitly and preserve the destructive guard.
+- [x] Make reset select a profile explicitly and preserve the destructive guard.
 - [ ] Scope post-seed checks to profile-owned report/entity IDs.
 
 ## 3. API and web consumers
 
-- [ ] Update developer reseed routes and commands to the named profile contract.
-- [ ] Update visual-regression, integration, UAT, and e2e setup to select the
+- [x] Update developer reseed routes and commands to the named profile contract.
+- [x] Update visual-regression, integration, UAT, and e2e setup to select the
       intended profile explicitly.
-- [ ] Remove obsolete public seed commands after all callers migrate.
+- [x] Remove obsolete public seed commands after all callers migrate.
 
 ## 4. Profile proof
 
