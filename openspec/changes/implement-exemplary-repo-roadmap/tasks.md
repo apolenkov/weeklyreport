@@ -78,6 +78,13 @@
       decision-specific pending state.
 - [x] Make the Telegram activation integration test deterministic, remove its
       secret-dependent skip, and repair the vacuous SVG accessibility loop.
+- [x] Replace the opaque status-derivation snapshot file with readable,
+      exhaustive input/output matrices beside the test.
+- [x] Arm the submit deadline gate in all six repository fakes through one
+      explicit report-meta fixture instead of silently returning `null`.
+- [x] Move blocked-status dialog assertions to their owning component, remove
+      a redundant accessibility assertion, and exercise Telegram procedures
+      through public callers with canonical null loggers.
 - [ ] Land the remaining 4 confirmed fixes after the user decides the
       family-wide split-harness convention.
 

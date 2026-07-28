@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
+  OPEN_REPORT_META,
+  reportMetaReader,
+} from "./__tests__/report-meta-fixture";
+import {
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./report-sections.service";
@@ -83,9 +87,7 @@ function createRepository(
     getReportPeriodStatusForSection() {
       return Promise.resolve(periodStatus);
     },
-    getReportMeta() {
-      return Promise.resolve(null);
-    },
+    getReportMeta: reportMetaReader(OPEN_REPORT_META),
     getPublishedLineage() {
       return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
     },

@@ -1,21 +1,18 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ItemEditDialog } from "../../report-sections";
 import { QuickAddButton } from "./quick-add-button";
 
 describe("QuickAddButton", () => {
   it("the trigger carries no aria-haspopup — a role='group' popup is a disclosure, not a menu", () => {
     render(<QuickAddButton onPick={vi.fn()} />);
     const trigger = screen.getByRole("button", { name: "+ Add" });
-    // The popup is a role="group", so the trigger must not claim "menu" —
-    // "true" advertises a popup without contradicting the group role.
+    // The popup is a disclosure group, not a menu.
     expect(trigger).not.toHaveAttribute("aria-haspopup");
     fireEvent.click(trigger);
     expect(
       screen.getByRole("group", { name: "Quick-add record type" }),
     ).toBeInTheDocument();
-    expect(trigger).not.toHaveAttribute("aria-haspopup", "menu");
   });
 
   it("opens a five-option type picker", () => {
@@ -63,85 +60,5 @@ describe("QuickAddButton", () => {
     expect(trigger.className).not.toContain(
       "bg-[var(--color-starbucks-accent)]",
     );
-  });
-});
-
-describe("item dialog has no free Blocked chip", () => {
-  const products = [
-    {
-      id: "p1",
-      name: "Product 1",
-      overallStatus: "on-track" as const,
-      stages: [],
-    },
-  ];
-
-  it("offers only progress statuses — the blocked/at-risk alarm derives from a covering risk", () => {
-    render(
-      <ItemEditDialog
-        open
-        item={null}
-        products={products}
-        week="current"
-        onSave={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole("button", { name: "! In Progress" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "✓ Completed" }),
-    ).toBeInTheDocument();
-    // "set blocked" now routes through blocker (risk) creation, so the free
-    // Blocked chip is gone from the item dialog entirely.
-    expect(
-      screen.queryByRole("button", { name: "✕ Blocked" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("opens a legacy stored-blocked item as In Progress (blocked is derived only)", () => {
-    render(
-      <ItemEditDialog
-        open
-        item={{
-          id: "i1",
-          productId: "p1",
-          productName: "Product 1",
-          status: "blocked",
-          text: "Legacy blocked row",
-          author: "Lead",
-        }}
-        products={products}
-        week="current"
-        stagesForProduct={() => ["Development"]}
-        onSave={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole("button", { name: "! In Progress" }),
-    ).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("still enforces a stage choice when several stages are owned", () => {
-    const onSave = vi.fn();
-    render(
-      <ItemEditDialog
-        open
-        item={null}
-        products={products}
-        week="current"
-        stagesForProduct={() => ["Development", "Testing"]}
-        onSave={onSave}
-        onCancel={vi.fn()}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Description *"), {
-      target: { value: "Needs a stage" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
-    expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
   });
 });
