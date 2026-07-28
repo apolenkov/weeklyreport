@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { SlideSkeleton } from "./slide-skeleton";
 
 describe("SlideSkeleton — root container ARIA attributes", () => {
@@ -29,9 +30,9 @@ describe("SlideSkeleton — skeleton-list", () => {
 
     const listContainer = container.querySelector(".hidden.space-y-2");
     expect(listContainer).not.toBeNull();
-    const skeletonItems =
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- asserted above
-      listContainer!.querySelectorAll(".h-24.animate-pulse");
+    const skeletonItems = expectDefined(listContainer).querySelectorAll(
+      ".h-24.animate-pulse",
+    );
     expect(skeletonItems).toHaveLength(4);
   });
 });

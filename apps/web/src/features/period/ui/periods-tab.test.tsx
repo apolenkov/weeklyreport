@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339) */
 import type { PeriodListItem } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -447,9 +446,9 @@ describe("PeriodsTab — «New period» dialog", () => {
     // Start input pre-fills with a YYYY-MM-DD value —
     // we don't pin the exact date to keep the test stable across runs;
     // just assert the format is what the server expects.
-    const startInput = screen.getByTestId(
+    const startInput = screen.getByTestId<HTMLInputElement>(
       "periods-create-start",
-    ) as HTMLInputElement;
+    );
     expect(startInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
@@ -460,9 +459,9 @@ describe("PeriodsTab — «New period» dialog", () => {
     await user.click(await screen.findByTestId("periods-new-button"));
 
     // Override the default start so the assertion is precise.
-    const startInput = screen.getByTestId(
+    const startInput = screen.getByTestId<HTMLInputElement>(
       "periods-create-start",
-    ) as HTMLInputElement;
+    );
     await user.clear(startInput);
     await user.type(startInput, "2026-05-20");
 
