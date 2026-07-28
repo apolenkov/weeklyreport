@@ -6,7 +6,7 @@
       decrement the baseline for its one violation.
 - [x] Refactor the reopen-request-card cluster; prove card/parts composition and
       decrement the baseline for its one violation.
-- [ ] Refactor the record-comments cluster; prove comment mutation ownership and
+- [x] Refactor the record-comments cluster; prove comment mutation ownership and
       decrement the baseline for its one violation.
 - [ ] Refactor the periods action/table cluster; prove action rendering and
       decrement the baseline for its one violation.
