@@ -6,8 +6,28 @@ import {
   emptyBuckets,
   finalizeColumns,
 } from "./slide-grid-cells";
-import type { GridProductCard, GridSubsection } from "./slide-grid-model";
-import type { SlideTrafficStatus } from "./slide-grid-rows";
+import type { GridColumns, SlideTrafficStatus } from "./slide-grid-rows";
+
+export interface GridSubsection {
+  // Product-level records and one activity use the same four-column rendering.
+  readonly kind: "product-level" | "project";
+  readonly id: string;
+  readonly name: string;
+  // Activity status; product-level subsections carry none.
+  readonly status: SlideTrafficStatus;
+  // Activity records cannot carry stages by schema rule.
+  readonly showStages: boolean;
+  readonly columns: GridColumns;
+}
+
+export interface GridProductCard {
+  readonly id: string;
+  readonly name: string;
+  readonly status: SlideTrafficStatus;
+  // True when the product has no records or status-only activity this period.
+  readonly noData: boolean;
+  readonly subsections: readonly GridSubsection[];
+}
 
 interface BuildProductSubsectionsInput {
   readonly section: ReportSectionReadModel;

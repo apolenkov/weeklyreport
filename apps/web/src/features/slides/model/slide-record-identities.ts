@@ -1,9 +1,6 @@
 import type { SectionSlideModel } from "./section-slide-contracts";
-import type {
-  GridProductCard,
-  GridSubsection,
-  SlideGridModel,
-} from "./slide-grid-model";
+import type { SlideGridModel } from "./slide-grid-model";
+import type { GridProductCard, GridSubsection } from "./slide-grid-products";
 import { COLUMN_ORDER } from "./slide-grid-rows";
 
 export function slideRecordIdentities(

@@ -10,15 +10,15 @@ import {
   type GridPriorityCard,
 } from "./slide-grid-priority";
 import {
+  buildProductSubsections,
+  deriveProductCards,
+  type GridProductCard,
+} from "./slide-grid-products";
+import {
   type GridAuthor,
-  type GridColumns,
   type SlideTrafficStatus,
   sortStageNames,
 } from "./slide-grid-rows";
-import {
-  buildProductSubsections,
-  deriveProductCards,
-} from "./slide-grid-subsections";
 
 export type { GridPriorityCard } from "./slide-grid-priority";
 export type {
@@ -35,29 +35,6 @@ export type {
  * already excludes it from chips) keeps working unchanged. */
 export const SHARED_CARD_ID = "cross-product";
 export const SHARED_CARD_NAME = "Shared context";
-
-export interface GridSubsection {
-  /** "product-level" = records parented to the product itself; "project" = one
-   * attached Project Activity's records. */
-  readonly kind: "product-level" | "project";
-  readonly id: string;
-  readonly name: string;
-  /** Project (activity) status dot; product-level subsections carry none. */
-  readonly status: SlideTrafficStatus;
-  /** Stage watermarks render only on product-level rows (activity records
-   * cannot carry stages by schema rule). */
-  readonly showStages: boolean;
-  readonly columns: GridColumns;
-}
-
-export interface GridProductCard {
-  readonly id: string;
-  readonly name: string;
-  readonly status: SlideTrafficStatus;
-  /** True when the product has no records this period — renders collapsed. */
-  readonly noData: boolean;
-  readonly subsections: readonly GridSubsection[];
-}
 
 export interface SlideGridModel {
   /** Legend roster: section author first, foreign authors after (name order). */

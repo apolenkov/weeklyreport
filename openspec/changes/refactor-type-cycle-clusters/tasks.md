@@ -2,7 +2,7 @@
 
 ## 1. Web feature clusters
 
-- [ ] Refactor the slide-grid cluster; prove model/subsection ownership and
+- [x] Refactor the slide-grid cluster; prove model/subsection ownership and
       decrement the baseline for its one violation.
 - [ ] Refactor the reopen-request-card cluster; prove card/parts composition and
       decrement the baseline for its one violation.
