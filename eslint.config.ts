@@ -1101,11 +1101,9 @@ export default defineConfig([
       // so this is a stricter check than the 133 blanket suppressions were.
       "@typescript-eslint/unbound-method": "off",
       "vitest/unbound-method": "error",
-      // The rest of the plugin's 82 rules were measured across the suite; these
-      // are the ones already at zero, so each is a guarantee rather than a
-      // burn-down. The four other zero-firing rules are excluded: two are
-      // allowlist rules that cannot fire without options, one is padding
-      // (Prettier's ground), and unbound-method is set above.
+      // Enabled only where the suite already sits at zero, so each is a
+      // guarantee rather than a burn-down. A rule whose zero cannot become
+      // nonzero without configuring a list stays off: it would read as cover.
       "vitest/consistent-each-for": "error",
       "vitest/consistent-test-it": "error",
       "vitest/consistent-vitest-vi": "error",
@@ -1114,13 +1112,15 @@ export default defineConfig([
       "vitest/no-alias-methods": "error",
       "vitest/no-done-callback": "error",
       "vitest/no-duplicate-hooks": "error",
-      // A stray `.only` silently stops every other test in the file from
-      // running, and a duplicated title silently shadows one of the two.
+      // `.only` fails the run under CI and only reports a skip locally, so this
+      // moves the failure to the editor. Two tests sharing a title both run,
+      // and the report cannot say which of them failed.
       "vitest/no-focused-tests": "error",
       "vitest/no-identical-title": "error",
       "vitest/no-interpolation-in-snapshots": "error",
       "vitest/no-mocks-import": "error",
-      // An `expect` outside a test body never runs and never fails.
+      // An expect outside a test body runs at collection time, so a failure
+      // takes the whole file down with no test attributed to it.
       "vitest/no-standalone-expect": "error",
       "vitest/no-test-prefixes": "error",
       "vitest/no-test-return-statement": "error",
@@ -1145,11 +1145,9 @@ export default defineConfig([
           "off",
         ]),
       ),
-      // 647 = the Tukey far-out fence Q3 + 3·IQR = 209 + 3·146 of the measured
-      // test-file distribution, on the same metric `max-lines` uses
-      // (skipBlankLines + skipComments); p95 = 638 lands beside it. Files above
-      // it were not cohesive units — they were dumping grounds — and were split
-      // by subject rather than exempted.
+      // 647 = the Tukey far-out fence Q3 + 3·IQR of the test-file distribution,
+      // on the metric `max-lines` itself counts (skipBlankLines + skipComments);
+      // p95 = 638 lands beside it. A file over it holds more than one subject.
       "max-lines": [
         "error",
         { max: 647, skipBlankLines: true, skipComments: true },
