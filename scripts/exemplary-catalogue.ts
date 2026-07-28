@@ -46,8 +46,20 @@ const git = (args: readonly string[]): string =>
     maxBuffer: UNBOUNDED,
   });
 
+// Test infrastructure is not named *.test.ts, so matching only that filename
+// counts harnesses, fixtures and doubles as product code — and their relaxed
+// budgets then read as product debt, which is the opposite of what they are.
+const TEST_INFRA =
+  /(?:(?:^|\/)(?:test-utils|__tests__|__fixtures__)\/)|(?:(?:-harness|\.fixtures|\.setup|-stubs?)\.tsx?$)/;
+
+// A framework entry has no importer by construction: Next.js loads routes,
+// layouts and instrumentation by convention, and a package barrel is consumed
+// by name. Counting them as unreferenced measures the convention, not the code.
+const FRAMEWORK_ENTRY =
+  /\/app\/.*\/(page|layout|route|error|loading|not-found|template)\.tsx?$|\/app\/(page|layout)\.tsx$|instrumentation(-client)?\.ts$|src\/index\.ts$/;
+
 const classifyKind = (file: string): Kind => {
-  if (/\.(test|spec)\.tsx?$/.test(file)) return "test";
+  if (/\.(test|spec)\.tsx?$/.test(file) || TEST_INFRA.test(file)) return "test";
   if (/^(scripts|tools|prisma|e2e)\//.test(file)) return "tooling";
   if (/\.config\.ts$/.test(file)) return "config";
   return "product";
@@ -64,6 +76,11 @@ const readFanIn = (): ReadonlyMap<string, number> => {
       "apps/web/src",
       "packages/shared/src",
       "packages/ui/src",
+      // Next.js instrumentation lives beside src, not inside it. Leaving it out
+      // hides its edges, and whatever it imports for side effects alone then
+      // reports as unreferenced.
+      "apps/web/instrumentation.ts",
+      "apps/web/instrumentation-client.ts",
       "--config",
       ".dependency-cruiser.cjs",
       "--ts-pre-compilation-deps",
@@ -105,6 +122,7 @@ const relaxedRules = (config: ResolvedConfig): readonly string[] =>
   });
 
 const classify = (
+  file: string,
   linted: boolean,
   suppressions: number,
   relaxed: readonly string[],
@@ -114,7 +132,8 @@ const classify = (
   if (!linted) return "F";
   if (suppressions > 0) return "B";
   if (relaxed.length > 0) return "C";
-  if (fanIn === 0 && kind === "product") return "E";
+  if (fanIn === 0 && kind === "product" && !FRAMEWORK_ENTRY.test(file))
+    return "E";
   return "A";
 };
 
@@ -134,7 +153,14 @@ const buildRow = async (
   return {
     file,
     kind,
-    cls: classify(config !== undefined, suppressions, relaxed, inbound, kind),
+    cls: classify(
+      file,
+      config !== undefined,
+      suppressions,
+      relaxed,
+      inbound,
+      kind,
+    ),
     suppressions,
     relaxed,
     fanIn: inbound,
