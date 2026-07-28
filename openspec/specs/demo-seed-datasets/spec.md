@@ -6,272 +6,110 @@ TBD - created by archiving change demo-seed-datasets. Update Purpose after archi
 
 ## Requirements
 
-### Requirement: Three selectable demo-seed tiers
+### Requirement: Four explicit seed profiles
 
-The system SHALL provide three demo-seed tiers — `small`, `middle`, `huge` —
-each runnable independently (`pnpm db:seed:small`, `db:seed:middle`,
-`db:seed:huge`), with `small` as the default demo seed. The canonical test
-fixture `prisma/seed.ts` SHALL remain unchanged.
+The repository MUST expose exactly four profiles through one public selector:
+`minimal`, `demo`, `full`, and `stress`. Legacy `small`, `middle`, `huge`, and
+`fresh:*` commands MUST NOT remain public aliases after repository callers
+migrate.
 
-#### Scenario: a presenter seeds the small tier
+#### Scenario: A developer selects a profile
 
-- **WHEN** `pnpm db:seed:small` runs against a non-prod database
-- **THEN** the database is reset to the small dataset only
-- **AND** the head, the leads it uses, and `ACTIVE_REPORT_ID` resolve so that
-  dev-login and `/head/report/<ACTIVE_REPORT_ID>` load without error
+- **WHEN** `pnpm db:seed:profile demo` runs against a database accepted by the
+  destructive guard
+- **THEN** only the deterministic demo profile is written
+- **AND** its validator addresses the same stable identities as its manifest
 
-#### Scenario: the test fixture is untouched
+#### Scenario: A profile is omitted or unknown
 
-- **WHEN** any demo tier is seeded
-- **THEN** `prisma/seed.ts` and the IDs/names its E2E assertions pin are not
-  modified by the change
+- **WHEN** the selector receives no profile or a name outside the four
+  canonical values
+- **THEN** it exits nonzero before wiping or writing data
 
-### Requirement: Small tier is minimal and stage-realistic
+### Requirement: Seed profiles form a monotonic capability ladder
 
-The `small` tier SHALL contain 2 products whose items each carry a single SDLC
-stage, plus 1 product carrying an item that spans two stages
-(`Development` + `Testing`), to demonstrate that `Item.stageNames` may hold more
-than one stage. It SHALL use 2–3 canonical leads with explicit
-`(lead × product × stage)` ownership so no product card mixes unrelated authors.
+The profile manifests MUST prove that `minimal` capabilities are a strict subset
+of `demo`, `demo` capabilities are a strict subset of `full`, and `stress`
+contains every `full` capability while increasing deterministic data volume.
+A richer profile MUST NOT remove an already-proved capability.
 
-#### Scenario: a multi-stage item renders
+#### Scenario: Stress is generated
 
-- **WHEN** the small tier is seeded and the head opens the report
-- **THEN** at least one item shows two stage chips (Development, Testing)
-- **AND** the other two products show single-stage items only
+- **WHEN** the stress profile passes validation
+- **THEN** every full-profile capability is present
+- **AND** the configured volume dimensions exceed the full profile's bounded
+  counts
 
-#### Scenario: ownership is partitioned by lead
+### Requirement: Demo preserves the curated product walkthrough
 
-- **WHEN** the head groups the small report by lead
-- **THEN** each lead's products show only that lead's own items and stages
-- **AND** no product appears under a lead who authored nothing on it
+The `demo` profile MUST preserve the curated walkthrough formerly carried by
+the small tier: multiple roles, green/yellow/red product health, multi-stage
+items, split and vacant stage ownership, foreign co-owner content in current
+and next week buckets, draft/submitted contrast, a published period, active
+reminder dispatch, and a blocked item that derives Needs Attention. These rows
+MUST use stable identities and MUST remain non-empty in the public report and
+admin journeys.
 
-### Requirement: Demo periods support the head and switching flows
-
-The `small` tier SHALL seed the active (`open`) period plus one prior
-`published` period for the leads it uses, so the demo can show the head's
-published view and period switching without seeding deep history.
+#### Scenario: A presenter opens the demo profile
 
-#### Scenario: published view is demoable
+- **WHEN** the demo profile is seeded and the primary lead opens the report
+- **THEN** Mine and Everyone expose different ownership-scoped content
+- **AND** the walkthrough contains green, yellow, and red product health
+- **AND** current and published periods, draft and submitted leads, and an
+  active reminder path are addressable
 
-- **WHEN** the small tier is seeded
-- **THEN** the period navigator exposes the active week and one published week
-- **AND** opening the published week renders a non-empty head report
+#### Scenario: Demo enrichment preserves product health
 
-### Requirement: A blocked item demonstrates Needs Attention
+- **WHEN** foreign current-week and next-week content is validated
+- **THEN** the green, yellow, and red product mapping remains unchanged
+- **AND** no unrelated leftover row can satisfy the manifest
 
-The demo SHALL seed at least one blocked item so the derived "Needs Attention"
-banner has content to surface. The banner is DERIVED from blocked items
-(`buildEscalationsFromReadSections`), not a seedable row, so it cannot be authored
-directly. De-duplicating the banner against the item it derives from is owned by
-`report-card-clarity`, not by the seed.
+### Requirement: Every seed profile is deterministic
 
-#### Scenario: a blocked item surfaces the banner
+Every profile MUST use fixed identifiers and textual content. Reseeding the
+same profile MUST reproduce its identifiers, content, capability manifest, and
+bounded row counts. Period dates MAY be computed relative to the run week so the
+active period covers today.
 
-- **WHEN** the small tier is seeded with one blocked item
-- **THEN** that product's card has a Needs-Attention banner to demonstrate
+#### Scenario: A profile is reseeded
 
-### Requirement: Demo seed is deterministic
+- **WHEN** the same profile is applied twice to a disposable database
+- **THEN** its stable identifiers, text, capabilities, and bounded counts match
+- **AND** only explicitly permitted week-relative date fields may differ
 
-Every demo tier SHALL use fixed UUIDs and fixed content (no run-time randomness
-in identifiers), so a reseed reproduces the same dataset and any pinned
-references stay valid. Period dates MAY be computed relative to the run week so
-the active period always covers "today".
+### Requirement: Every profile has executable product proof
 
-#### Scenario: reseeding is stable
+Each profile MUST have a checked-in capability manifest, bounded row-count
+invariants, stable identifiers, post-seed validation scoped to its own rows, and
+at least one end-to-end smoke journey appropriate to its purpose.
 
-- **WHEN** the same tier is seeded twice
-- **THEN** the entity IDs and textual content are identical across runs
+#### Scenario: Leftover rows contain a missing capability
 
-### Requirement: The small tier seeds cross-author co-ownership and foreign content
-
-The small demo tier MUST seed more than one author across the lead's products so that the lead report's Mine/Everyone visibility toggle has a visible effect and the SDLC pipeline shows realistic split ownership, while remaining deterministic.
-
-1. The small tier MUST include at least one co-owner lead besides the primary
-   lead, and MUST assign that co-owner ownership of at least one SDLC stage on a
-   product the primary lead also contributes to.
-2. Stage ownership across the three products MUST be consistent — a given
-   colleague who owns a stage owns that same stage on each product where that
-   role applies (ownership is role-shaped, not randomly scattered).
-3. On at least one product the primary lead MUST own exactly two stages, and at
-   least one stage on that product MUST be left unowned (an unfilled role), so
-   the pipeline shows both partial ownership and a vacant stage.
-4. The small tier MUST seed each co-owner at least one foreign report-section
-   record (a current-week item and/or a risk/decision) on a shared product, so
-   that switching the lead report to Everyone surfaces real read-only foreign
-   rows and foreign locked stage chips, while Mine shows only the primary lead's
-   records.
-5. The enriched small tier MUST remain deterministic and idempotent: fixed ids
-   and dates, no wall-clock or random values, stable across reseed (consistent
-   with `seed-determinism`).
-
-#### Scenario: Everyone reveals foreign content in the small tier
-
-- **WHEN** the primary lead opens their report seeded by the small tier and
-  switches the visibility toggle from Mine to Everyone
-- **THEN** at least one read-only foreign item/risk/decision authored by a
-  co-owner becomes visible, and at least one stage chip shows as locked/owned by
-  another author — so the toggle visibly changes the content
-
-#### Scenario: the internal project shows partial ownership and a vacant stage
-
-- **WHEN** the small tier is seeded and the primary lead's internal
-  ("eBay"-style) product is rendered in the SDLC pipeline
-- **THEN** the primary lead owns exactly two of its stages and at least one
-  stage is unowned (no assignee), reflecting an unfilled role
-
-#### Scenario: reseed is deterministic
-
-- **WHEN** the small tier is reseeded after `prisma migrate reset`
-- **THEN** the same ids, authors, stage assignments, and foreign records are
-  produced, with no wall-clock or random drift
-
-### Requirement: The small tier shows at least one fully-green product
-
-The small tier MUST resolve to THREE distinct product health colors at once — one green (on-track), one at-risk (yellow), and one blocked (red) — so the demo shows the whole spectrum on one screen. The green product is the internal BI product; it is the showcase with broad ownership and a single vacant stage.
-
-1. Exactly one product MUST read green: every owned stage on-track or empty, no
-   covering risk (own or foreign), and no foreign co-owner stage at-risk/blocked.
-   This product is the internal BI product.
-2. On the green product every SDLC stage MUST be owned by some author (the primary
-   lead or a co-owner) EXCEPT exactly one stage — Support — left unowned, so the
-   pipeline reads as broadly staffed with one visible vacant role. The primary lead
-   still owns exactly two of its stages.
-3. Exactly one product MUST read at-risk (yellow): at least one at-risk stage and NO
-   blocked stage (Платформа интеграций).
-4. Exactly one product MUST read blocked (red): at least one blocked stage
-   (Маркетинговый портал). The blocked demonstration MAY be a foreign-owned stage so
-   the "co-owned product red on a stage you do not own" scenario is preserved.
-5. The green product MUST still be non-empty — at least one current-week item and a
-   decision — so the card demonstrates content, not an empty placeholder.
-6. This requirement MUST NOT weaken the existing small-tier requirements: one product
-   still carries a blocked item ("A blocked item demonstrates Needs Attention") and
-   one product still carries a multi-stage item ("Small tier is minimal and
-   stage-realistic").
-
-#### Scenario: three health colors are visible in the small tier
-
-- **WHEN** the small tier is seeded and the primary lead opens their report
-- **THEN** one product card reads green (on-track) with no risk pill, one reads
-  at-risk (yellow), and one reads blocked (red)
-
-#### Scenario: the green showcase is broadly staffed with one vacant stage
-
-- **WHEN** the green BI product renders in the SDLC pipeline
-- **THEN** every stage except Support is owned by some author, and Support is vacant
-- **AND** the primary lead owns exactly two of its stages
-
-#### Scenario: the green product is not empty
-
-- **WHEN** the fully-green product card renders
-- **THEN** it shows at least one current-week item and a decision, so it reads as a
-  healthy-but-active product rather than an empty one
-
-### Requirement: Co-owner foreign content spans both week buckets across multiple shared sections
-
-The small demo tier MUST seed each co-owner foreign report-section content that
-spans BOTH week buckets — a current-week item and a next-week item — across more
-than one shared section, so the lead report's Everyone visibility lens shows a
-fuller cross-author team picture, while resolved product health stays unchanged.
-
-1. Each co-owner (Maria on Testing, Igor on DevOps) MUST seed at least one
-   shared section that carries a `current`-week item AND a `next`-week item, so
-   the Everyone lens shows foreign content in both week buckets, not only the
-   current one.
-2. Foreign co-owner content MUST span at least two shared sections per co-owner
-   where that co-owner's role applies, so the Everyone lens reads as a real
-   shared workload rather than a single token row.
-3. Each co-owner MUST still seed at least one foreign decision on a shared
-   product, preserving the existing cross-author decision coverage.
-4. New foreign rows MUST be on-track items (or decisions, which carry no
-   severity); this requirement MUST NOT add any new risk, so resolved product
-   health is unchanged — Маркетинговый портал stays blocked (red), Платформа
-   интеграций stays at-risk (yellow), and Внутренний BI stays on-track (green,
-   the broadly-staffed showcase with only Support vacant). This three-colour
-   mapping matches "The small tier shows at least one fully-green product".
-5. The enriched content MUST remain deterministic and idempotent: fixed ids and
-   fixed text, no wall-clock or random values, stable across reseed (consistent
-   with `seed-determinism` and the existing small-tier determinism requirement).
-
-#### Scenario: Everyone shows foreign content in both week buckets
-
-- **WHEN** the primary lead opens their small-tier report and switches the
-  visibility toggle from Mine to Everyone
-- **THEN** at least one co-owner's foreign content appears in BOTH the
-  current-week and next-week buckets on a shared product
-- **AND** the foreign content spans more than one shared section, so the
-  Everyone lens reads as a fuller shared workload
-
-#### Scenario: enrichment does not move product health
-
-- **WHEN** the small tier is seeded with the broadened co-owner content
-- **THEN** Маркетинговый портал still reads blocked (red), Платформа
-  интеграций still reads at-risk (yellow), and Внутренний BI still reads
-  on-track (green)
-- **AND** no new risk row was added by this enrichment
-
-#### Scenario: reseed is deterministic
-
-- **WHEN** the small tier is reseeded after `prisma migrate reset`
-- **THEN** the same ids, authors, week-bucket items, and decisions are produced,
-  with no wall-clock or random drift
-
-### Requirement: The small tier seeds at least one submitted lead
-
-The `small` demo tier (`prisma/seed-demo.ts`) MUST seed at least one active-period
-lead section as `submitted` so the head can see and exercise the existing per-lead
-Revoke / Revoke All affordance (the form returns to Draft). This MUST NOT submit
-every lead — at least one lead MUST stay draft so the period remains `open` and
-both Revoke and Remind affordances are visible on one screen.
-
-1. The submitted lead choice MUST be orthogonal to product health: it MUST NOT
-   move the three-color mapping (Маркетинговый портал red, Платформа интеграций
-   yellow, Внутренний BI green) required by "The small tier shows at least one
-   fully-green product".
-2. It MUST NOT remove any foreign co-owner content — the Mine/Everyone toggle
-   scenarios in the existing small-tier requirements stay intact.
-3. The choice MUST remain deterministic and idempotent: fixed ids and statuses,
-   no wall-clock or random values, stable across reseed (consistent with
-   `seed-determinism`).
-
-#### Scenario: the head sees a Revoke affordance
-
-- **WHEN** the small tier is seeded and the head opens the dashboard
-- **THEN** at least one lead row shows status `Submitted` with a Revoke action
-- **AND** at least one other lead row stays in progress, so the period is not
-  fully submitted
-
-#### Scenario: submission does not move product health
-
-- **WHEN** the small tier is seeded with one submitted lead
-- **THEN** Маркетинговый портал still reads blocked (red), Платформа интеграций
-  still reads at-risk (yellow), and Внутренний BI still reads on-track (green)
-
-### Requirement: The small tier seeds one active reminder rule for the active period
-
-The `small` demo tier (`prisma/seed-demo.ts`) MUST seed one active
-`ReminderPolicy` whose validity window covers the active period's deadline AND
-one active `ReminderRule` scoped to `reportId = ACTIVE_REPORT_ID`, so the head's
-per-lead Remind action both renders (the `hasActiveReminderRule` gate is true)
-and actually dispatches a reminder (the `dispatchPending` rule lookup succeeds)
-in the demo.
-
-1. The seeded `ReminderPolicy` MUST be `active: true` with `validFrom` no later
-   than the active report deadline and no `validUntil` before it, so
-   `hasActiveReminderRule` resolves true.
-2. The seeded `ReminderRule` MUST be `status: active`, reference
-   `ACTIVE_REPORT_ID`, and carry a deterministic `fireAt` derived from the
-   active period deadline (no wall-clock or random value).
-3. Both rows MUST use fixed UUIDs and be idempotent across reseed (consistent
-   with `seed-determinism`).
-
-#### Scenario: the Remind action dispatches in the demo
-
-- **WHEN** the small tier is seeded and the head triggers Remind on a draft lead
-- **THEN** the reminder is dispatched (not `reason: "no-active-rule"`)
-
-#### Scenario: reseed is deterministic
-
-- **WHEN** the small tier is reseeded after `prisma migrate reset`
-- **THEN** the same reminder policy and rule ids, statuses, and `fireAt` are
-  produced, with no wall-clock or random drift
+- **WHEN** the selected profile did not create a required row but another
+  dataset left one in the database
+- **THEN** profile validation still fails
+- **AND** the unrelated row cannot satisfy the scoped manifest
+
+### Requirement: Repository seed consumers select profiles explicitly
+
+Hard reset, migration seed, visual regression, UAT, developer reseed, and e2e
+setup MUST select a canonical profile explicitly. No caller may depend on an
+implicit `seed-simple.ts` default or an undocumented command-to-dataset mapping.
+
+#### Scenario: Hard reset completes
+
+- **WHEN** the hard-reset command is invoked with a canonical profile
+- **THEN** it preserves the destructive guard, resets the accepted disposable
+  target, writes that profile, and runs its validator
+
+### Requirement: MVP data cutovers preserve safety, not old rows
+
+Profile and schema changes MAY discard existing non-production MVP rows and MAY
+use breaking reset-based cutovers. They MUST preserve the destructive database
+guard and MUST NOT treat an unnamed external database as an execution target.
+
+#### Scenario: A profile requires a reshaped schema
+
+- **WHEN** the new architecture cannot read prior disposable rows
+- **THEN** the migration/reset path may rebuild the database
+- **AND** all four profile writers and proofs are adapted before completion
