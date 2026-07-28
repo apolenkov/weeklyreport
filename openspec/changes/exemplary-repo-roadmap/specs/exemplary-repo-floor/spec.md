@@ -185,7 +185,10 @@ it. A reference that resolves to a live `openspec/specs/` requirement is
 kept, per the existing `CLAUDE.md` allowance for a `<=2`-line pointer. A
 reference that resolves to nothing is deleted. A sweep that pattern-matches
 the shape of a reference without dereferencing it MUST NOT delete or keep
-references in bulk.
+references in bulk. A reference with more than one live durable match is
+ambiguous and MUST be sent to review with every candidate intact. Durable
+specs take precedence over active change deltas when both contain the same
+marker; active deltas are consulted when no durable spec matches.
 
 #### Scenario: A comment-hygiene sweep encounters a provenance reference
 
@@ -195,6 +198,12 @@ references in bulk.
   changes, `openspec/changes/`) before deciding to keep or delete it
 - **AND** an unresolvable reference is deleted; a reference resolving to a
   live `openspec/specs/` requirement is kept
+
+#### Scenario: A marker has more than one live durable owner
+
+- **WHEN** the resolver finds the same marker in two durable capability specs
+- **THEN** it returns `ambiguous` with both candidates
+- **AND** the caller requires review instead of selecting one automatically
 
 ### Requirement: Declined mechanical rules are not re-proposed without new evidence
 

@@ -50,6 +50,18 @@ const CHECKS: readonly Check[] = [
     script: "lint:exemplary-floor",
     what: "exemplary-floor three-counter ratchet",
   },
+  {
+    script: "lint:type-cycles:test",
+    what: "type-only cycle ratchet unit tests",
+  },
+  {
+    script: "lint:type-cycles",
+    what: "type-only cycle debt ratchet",
+  },
+  {
+    script: "lint:provenance:test",
+    what: "live OpenSpec provenance resolver tests",
+  },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },
 ];
