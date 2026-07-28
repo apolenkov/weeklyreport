@@ -275,15 +275,21 @@ describe("PeriodService — manual-publish telemetry", () => {
         },
       ],
     ]);
+    const onIngestionError = vi.fn();
     const service = new PeriodService(
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
       () => Promise.reject(new Error("queue down")),
+      undefined,
+      onIngestionError,
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
+    );
+    expect(onIngestionError).toHaveBeenCalledExactlyOnceWith(
+      new Error("queue down"),
     );
   });
 
@@ -303,6 +309,7 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const repo = createSpyRepository(reports);
     const ingestion = vi.fn(() => Promise.resolve());
+    const onIngestionError = vi.fn();
     const service = new PeriodService(
       {
         ...repo,
@@ -311,11 +318,16 @@ describe("PeriodService — manual-publish telemetry", () => {
       noopInvalidate,
       noGatingReopenPolicy,
       ingestion,
+      undefined,
+      onIngestionError,
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
     );
     expect(ingestion).not.toHaveBeenCalled();
+    expect(onIngestionError).toHaveBeenCalledExactlyOnceWith(
+      new Error("read blip"),
+    );
   });
 });
