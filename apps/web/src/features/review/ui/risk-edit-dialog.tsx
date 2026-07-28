@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type {
   ParentActivityOption,
@@ -155,42 +156,34 @@ function RiskDialogSurface({
   children,
 }: RiskDialogSurfaceProps) {
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
-      onKeyDown={dialog.handleKeyDown}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onCancel}
+      onBackdropKeyDown={dialog.handleKeyDown}
+      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      surfaceClassName="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-4 md:p-5 shadow-2xl"
+      ariaLabel={`${dialog.headerVerb} dialog`}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
-      <div
-        ref={surfaceRef}
-        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-4 md:p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${dialog.headerVerb} dialog`}
-      >
-        <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {dialog.headerVerb}{" "}
-          {dialog.parentName ? (
-            <span className="text-[var(--color-muted-foreground)]">
-              — {dialog.parentName}
-            </span>
-          ) : null}
-        </h2>
+      <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+        {dialog.headerVerb}{" "}
+        {dialog.parentName ? (
+          <span className="text-[var(--color-muted-foreground)]">
+            — {dialog.parentName}
+          </span>
+        ) : null}
+      </h2>
 
-        {children}
+      {children}
 
-        <RecordDialogFooter
-          sticky
-          saveLabel="Save Risk"
-          onCancel={onCancel}
-          onSave={dialog.handleSave}
-          onDelete={onDelete}
-          saveDisabled={dialog.isDeadEnd}
-        />
-      </div>
-    </div>
+      <RecordDialogFooter
+        sticky
+        saveLabel="Save Risk"
+        onCancel={onCancel}
+        onSave={dialog.handleSave}
+        onDelete={onDelete}
+        saveDisabled={dialog.isDeadEnd}
+      />
+    </DialogSurface>
   );
 }
 

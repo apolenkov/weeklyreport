@@ -4,6 +4,7 @@ import type { ProjectActivity } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import type { ActivityFormData } from "../model/activity-form";
 import type { MockGroup, MockProduct } from "../model/admin-types";
 import { ActivityFormFields } from "./activity-form-fields";
@@ -74,38 +75,29 @@ export function ActivityEditDialog({
   useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onClose}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onClose}
+      surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      ariaLabel={editingActivity ? "Edit activity" : "Add activity"}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
-      <div
-        ref={surfaceRef}
-        className="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={editingActivity ? "Edit activity" : "Add activity"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingActivity ? "Edit Activity" : "Add Activity"}
-        </h3>
-        <ActivityFormFields
-          form={form}
-          onFormChange={onFormChange}
-          groups={groups}
-          products={products}
-          groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
-        />
-        <ActivityDialogFooter
-          isEditing={editingActivity !== null}
-          canSave={canSave}
-          isSaving={isSaving}
-          onSave={onSave}
-          onClose={onClose}
-        />
-      </div>
-    </div>
+      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+        {editingActivity ? "Edit Activity" : "Add Activity"}
+      </h3>
+      <ActivityFormFields
+        form={form}
+        onFormChange={onFormChange}
+        groups={groups}
+        products={products}
+        groupLockedByLeads={(editingActivity?.leadIds.length ?? 0) > 0}
+      />
+      <ActivityDialogFooter
+        isEditing={editingActivity !== null}
+        canSave={canSave}
+        isSaving={isSaving}
+        onSave={onSave}
+        onClose={onClose}
+      />
+    </DialogSurface>
   );
 }

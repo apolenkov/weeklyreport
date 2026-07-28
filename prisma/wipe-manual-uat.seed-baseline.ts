@@ -4,6 +4,7 @@
 
 import { type Prisma, Role } from "@prisma/client";
 
+import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
 import {
   DEFAULT_REPORTING_GROUP_ID,
   HEAD_USER_ID,
@@ -136,7 +137,7 @@ async function seedReportingGroups(
     data: [
       {
         id: DEFAULT_REPORTING_GROUP_ID,
-        name: "Core Development",
+        name: DEFAULT_REPORTING_GROUP.name,
         description: "Default reporting group for CustomReport demo users",
       },
       {

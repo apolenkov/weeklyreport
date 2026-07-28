@@ -1,6 +1,8 @@
 // Deterministic row ids for the simple seed. Fixed UUIDs keep a re-run
 // idempotent and let E2E specs address seeded rows without a lookup.
 
+import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
+
 export const HEAD_ID = "a0000000-0000-4000-8000-000000000099";
 export const VIEWER_ID = "a0000000-0000-4000-8000-000000000098";
 export const ADMIN_ID = "a0000000-0000-4000-8000-000000000097";
@@ -42,8 +44,7 @@ export const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 
 export const REPORT_ACTIVE = "a0000000-0000-4000-8000-000000000001";
 export const REPORT_PUBLISHED = "a0000000-0000-4000-8000-000000000002";
-export const DEFAULT_REPORTING_GROUP_ID =
-  "a0000000-0000-4000-8000-000000000301";
+export const DEFAULT_REPORTING_GROUP_ID = DEFAULT_REPORTING_GROUP.id;
 // Second group so head scoping can be tested (head only sees own group's leads)
 export const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 export const POLICY_DEADLINE = "a0000000-0000-4000-8000-000000000a01";

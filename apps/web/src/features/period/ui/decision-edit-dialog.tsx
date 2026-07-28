@@ -3,6 +3,7 @@
 import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type {
   DecisionEntry,
@@ -45,27 +46,19 @@ function DecisionDialogShell({
   readonly children: ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
-      onKeyDown={onKeyDown}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onCancel}
+      onBackdropKeyDown={onKeyDown}
+      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      surfaceClassName="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+      ariaLabel={`${headerVerb} dialog`}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; Escape is handled by the backdrop's onKeyDown which bubbles up */}
-      <div
-        ref={surfaceRef}
-        className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${headerVerb} dialog`}
-      >
-        <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {headerVerb}
-        </h2>
-        {children}
-      </div>
-    </div>
+      <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+        {headerVerb}
+      </h2>
+      {children}
+    </DialogSurface>
   );
 }
 

@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 
 // Matches the leadForm.requestReopen API max (local copy — do not import from api).
 const MAX_REOPEN_REASON_LENGTH = 500;
@@ -104,24 +105,16 @@ function ReopenDialogShell({
   readonly children: ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={onDismiss}
-      onKeyDown={onKeyDown}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onDismiss}
+      onBackdropKeyDown={onKeyDown}
+      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      surfaceClassName="w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-2xl"
+      ariaLabel="Request Reopen dialog"
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation so inner clicks don't reach the backdrop close handler; there is no keyboard analog and Escape close is handled on the backdrop */}
-      <div
-        ref={surfaceRef}
-        className="w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Request Reopen dialog"
-      >
-        {children}
-      </div>
-    </div>
+      {children}
+    </DialogSurface>
   );
 }
 

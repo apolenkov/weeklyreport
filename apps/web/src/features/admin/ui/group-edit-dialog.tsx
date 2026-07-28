@@ -3,6 +3,7 @@
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import type { MockGroup, MockProduct, MockUser } from "../model/admin-types";
 import type { GroupFormData } from "../model/group-form";
 import { GroupProductsEditor } from "./group-products-editor";
@@ -208,39 +209,30 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
   });
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={closeIfIdle}
-      role="presentation"
-      data-testid="crud-sheet"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={closeIfIdle}
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
+      ariaLabel={editingGroup ? "Edit group" : "Add group"}
+      testId="crud-sheet"
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
-      <div
-        ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={editingGroup ? "Edit group" : "Add group"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingGroup ? "Edit Group" : "Add Group"}
-        </h3>
-        <GroupFormFields
-          form={props.form}
-          onFormChange={props.onFormChange}
-          headCandidates={props.headCandidates}
-          products={props.products}
-          editingGroup={editingGroup}
-        />
-        <GroupDialogFooter
-          editingGroup={editingGroup}
-          canSave={props.canSave}
-          isSaving={isSaving}
-          onSave={props.onSave}
-          onClose={closeIfIdle}
-        />
-      </div>
-    </div>
+      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+        {editingGroup ? "Edit Group" : "Add Group"}
+      </h3>
+      <GroupFormFields
+        form={props.form}
+        onFormChange={props.onFormChange}
+        headCandidates={props.headCandidates}
+        products={props.products}
+        editingGroup={editingGroup}
+      />
+      <GroupDialogFooter
+        editingGroup={editingGroup}
+        canSave={props.canSave}
+        isSaving={isSaving}
+        onSave={props.onSave}
+        onClose={closeIfIdle}
+      />
+    </DialogSurface>
   );
 }

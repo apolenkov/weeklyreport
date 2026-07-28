@@ -6,6 +6,7 @@ export * from "./admin/reminder-policy-time";
 export * from "./auth";
 export * from "./constants";
 export * from "./name/user-name";
+export * from "./organization/default-reporting-group";
 export * from "./period/reopen-window";
 export * from "./schemas/analytics";
 export * from "./schemas/auth";

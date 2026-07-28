@@ -1,8 +1,4 @@
-import { Injectable, type OnModuleDestroy } from "@nestjs/common";
-import { Queue } from "bullmq";
-
-import type { EnvConfig } from "../config/env.schema";
-import { getBullMQOptions } from "./bullmq-options";
+import type { Queue } from "bullmq";
 
 const QUEUE_NAMES = [
   "email-reminder",
@@ -14,19 +10,23 @@ const QUEUE_NAMES = [
 ] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 
-// Owns one raw Queue handle per name for inspectors and producers, avoiding
-// duplicate Redis connections. Handles are cheap to build eagerly and close
-// together on shutdown.
-@Injectable()
-export class QueueRegistry implements OnModuleDestroy {
-  // Built in the constructor (not a field initializer) because an ES2022
-  // class-field initializer cannot read the injected `env` constructor param.
+// Provides named access to the handles BullModule already owns, so inspectors
+// and bootstrap producers reuse Nest's connections and shutdown lifecycle.
+export class QueueRegistry {
   private readonly queues: ReadonlyMap<QueueName, Queue>;
 
-  constructor(env: EnvConfig) {
-    const options = getBullMQOptions(env);
+  constructor(handles: readonly Queue[]) {
+    if (handles.length !== QUEUE_NAMES.length) {
+      throw new Error(
+        `Expected ${QUEUE_NAMES.length} queue handles, received ${handles.length}`,
+      );
+    }
     this.queues = new Map(
-      QUEUE_NAMES.map((name) => [name, new Queue(name, options)] as const),
+      QUEUE_NAMES.map((name, index) => {
+        const queue = handles.at(index);
+        if (!queue) throw new Error(`Missing queue handle for '${name}'`);
+        return [name, queue] as const;
+      }),
     );
   }
 
@@ -36,10 +36,6 @@ export class QueueRegistry implements OnModuleDestroy {
     // the guard narrows Map#get's union without a non-null assertion.
     if (!queue) throw new Error(`No queue handle registered for '${name}'`);
     return queue;
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await Promise.all([...this.queues.values()].map((queue) => queue.close()));
   }
 }
 

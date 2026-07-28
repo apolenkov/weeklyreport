@@ -4,6 +4,7 @@ import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { DialogSurface } from "../../../shared/ui/dialog-surface";
 import type { MockProduct, MockUser } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 
@@ -174,36 +175,27 @@ export function ProductEditDialog({
   useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-      onClick={onClose}
-      role="presentation"
+    <DialogSurface
+      surfaceRef={surfaceRef}
+      onDismiss={onClose}
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      ariaLabel={editingProduct ? "Edit product" : "Add product"}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
-      <div
-        ref={surfaceRef}
-        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={editingProduct ? "Edit product" : "Add product"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingProduct ? "Edit Product" : "Add Product"}
-        </h3>
-        <ProductFormFields
-          form={form}
-          onFormChange={onFormChange}
-          leads={leads}
-          leadProductCount={leadProductCount}
-        />
-        <ProductDialogFooter
-          isEditing={editingProduct !== null}
-          isSaving={isSaving}
-          onSave={onSave}
-          onClose={onClose}
-        />
-      </div>
-    </div>
+      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+        {editingProduct ? "Edit Product" : "Add Product"}
+      </h3>
+      <ProductFormFields
+        form={form}
+        onFormChange={onFormChange}
+        leads={leads}
+        leadProductCount={leadProductCount}
+      />
+      <ProductDialogFooter
+        isEditing={editingProduct !== null}
+        isSaving={isSaving}
+        onSave={onSave}
+        onClose={onClose}
+      />
+    </DialogSurface>
   );
 }
