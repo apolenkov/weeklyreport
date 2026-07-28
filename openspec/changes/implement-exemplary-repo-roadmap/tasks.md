@@ -48,7 +48,8 @@
       and backfill consumers.
 - [x] Drive advanced-seed summary counts from writer results.
 - [x] Scope seed coverage queries to the report created by that seed.
-- [ ] Land the remaining 11 confirmed fixes in risk-isolated slices.
+- [x] Require an explicit reminder-policy `validFrom` at the wire boundary.
+- [ ] Land the remaining 10 confirmed fixes in risk-isolated slices.
 
 ## 5. Human decisions
 
