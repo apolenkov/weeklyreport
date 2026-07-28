@@ -46,8 +46,7 @@ function buildThrowingPort(error: Error): TelemetryGaugesPort {
 
 async function gaugeValue(gauge: {
   get(): Promise<{
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record shape
-    values: { value: number; labels: Record<string, any> }[];
+    values: { value: number; labels: Record<string, unknown> }[];
   }>;
 }): Promise<number | null> {
   const snapshot = await gauge.get();

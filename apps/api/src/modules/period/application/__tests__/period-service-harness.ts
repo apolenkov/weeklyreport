@@ -120,8 +120,7 @@ export function createSpyRepository(
 export async function getCounterValue(
   counter: {
     get(): Promise<{
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record
-      values: { value: number; labels: Record<string, any> }[];
+      values: { value: number; labels: Record<string, unknown> }[];
     }>;
   },
   labels: Record<string, string>,
