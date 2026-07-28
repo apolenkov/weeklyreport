@@ -1112,9 +1112,8 @@ export default defineConfig([
       "vitest/no-alias-methods": "error",
       "vitest/no-done-callback": "error",
       "vitest/no-duplicate-hooks": "error",
-      // `.only` fails the run under CI and only reports a skip locally, so this
-      // moves the failure to the editor. Two tests sharing a title both run and
-      // both print under that title.
+      // `.only` fails the run under CI but only reports a skip locally, so this
+      // moves the failure to the editor.
       "vitest/no-focused-tests": "error",
       "vitest/no-identical-title": "error",
       "vitest/no-interpolation-in-snapshots": "error",
