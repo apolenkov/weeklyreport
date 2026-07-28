@@ -14,7 +14,7 @@
       editing and accordion journeys and decrement its three violations.
 - [x] Refactor the unified-activity cluster; prove bucket rendering, dialog
       editing, and mutation behavior and decrement its four violations.
-- [ ] Refactor the SDLC-pipeline cluster; prove view-model, health, hidden-stage,
+- [x] Refactor the SDLC-pipeline cluster; prove view-model, health, hidden-stage,
       and UI ownership and decrement its five violations.
 - [ ] Refactor the dashboard-model cluster; prove KPI, lead priority,
       presentation, and escalation derivation and decrement its five violations.

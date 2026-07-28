@@ -5,7 +5,7 @@ import type {
   StageAssignment,
   StageStatus,
 } from "../../report-sections";
-import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
+import type { CrossAuthorEntry } from "./sdlc-cross-author";
 import {
   foreignOwnersForProduct,
   hiddenStagesEffectiveStatuses,
