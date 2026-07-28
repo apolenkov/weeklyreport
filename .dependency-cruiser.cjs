@@ -10,6 +10,18 @@
  * Every rule is at severity `error` deliberately: depcruise's exit code counts
  * errors only, so a rule left at its shipped `warn` would be decorative.
  */
+
+// apps/api is hexagonal: domain (pure) <- application (use cases) <- infrastructure
+// (adapters). ESLint's import-boundary zones ban adapter PACKAGE names inside
+// domain/; they cannot see a relative `../infrastructure/x.js`, which is what
+// these three rules close.
+const API_DOMAIN = "^apps/api/src/modules/[^/]+/domain/";
+const API_APPLICATION = "^apps/api/src/modules/[^/]+/application/";
+const API_INFRA =
+  "^apps/api/src/(?:infrastructure/|modules/[^/]+/infrastructure/)";
+const TESTISH =
+  "(?:[.](?:spec|test)[.][cm]?[jt]sx?$|__tests__/|__fixtures__/|/test-utils/|[.]fixtures[.]ts$)";
+
 module.exports = {
   forbidden: [
     {
@@ -74,6 +86,42 @@ module.exports = {
           "^_stream_wrap$",
         ],
       },
+    },
+    {
+      name: "hexagon-domain-not-to-infrastructure",
+      severity: "error",
+      comment:
+        "domain/ is the innermost layer; importing an adapter inverts the dependency. No test exemption: domain logic is pure, so its tests need no adapter either — measured 0 with and without the exemption.",
+      from: { path: API_DOMAIN },
+      to: { path: API_INFRA },
+    },
+    {
+      name: "hexagon-domain-not-to-application",
+      severity: "error",
+      comment:
+        "domain/ must not know its own use cases; the edge runs application -> domain only.",
+      from: { path: API_DOMAIN },
+      to: { path: API_APPLICATION },
+    },
+    {
+      name: "hexagon-application-not-to-infrastructure",
+      severity: "error",
+      comment:
+        "application/ reaches an adapter through a port it owns, never by importing the adapter. Tests are exempt on the FROM side only: the 13 such edges are all *.test.ts wiring a real adapter, which is composition rather than coupling.",
+      from: { path: API_APPLICATION, pathNot: TESTISH },
+      to: { path: API_INFRA },
+    },
+  ],
+  required: [
+    {
+      name: "router-uses-canonical-procedure-chain",
+      severity: "error",
+      comment:
+        "Role-coverage gate, floor only: a tRPC router must take its procedures from trpc.middleware.ts, home of the 8 canonical chain builders. `required` proves an edge exists, not that every procedure uses one — reference identity stays a review concern.",
+      module: {
+        path: "^apps/api/src/infrastructure/trpc/routers/.+[.]router[.]ts$",
+      },
+      to: { path: "^apps/api/src/infrastructure/trpc/trpc[.]middleware[.]ts$" },
     },
   ],
   options: {
