@@ -1,23 +1,13 @@
 "use client";
 
-import type { TrafficLightStatus } from "@customreport/shared";
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 
 import type { Product, StageStatus } from "../../report-sections";
+import type { CrossAuthorEntry } from "../model/sdlc-cross-author";
 import { deriveProductPipelineView } from "../model/sdlc-pipeline-view";
 import { SdlcProductCard } from "./sdlc-product-card";
 
 export { getProductCardStyle } from "../model/sdlc-pipeline-health";
-
-export interface CrossAuthorEntry {
-  projectId: string;
-  projectName: string;
-  authorId: string;
-  authorInitials: string;
-  stageNames: string[];
-  /** Per-stage RISK-DERIVED status from the cross-author query. */
-  stages: { stageName: string; status: TrafficLightStatus | null }[];
-}
 
 interface SdlcPipelineProps {
   readonly products: readonly Product[];

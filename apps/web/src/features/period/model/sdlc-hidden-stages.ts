@@ -3,7 +3,7 @@ import {
   canonicalStageName,
   trafficToStageStatus,
 } from "../../report-sections";
-import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
+import type { CrossAuthorEntry } from "./sdlc-cross-author";
 
 interface ForeignOwner {
   owner: string;

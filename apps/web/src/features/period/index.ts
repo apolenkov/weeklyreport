@@ -1,3 +1,4 @@
+export type { CrossAuthorEntry } from "./model/sdlc-cross-author";
 export { ActivityStatusSection } from "./ui/activity-status-section";
 export { CurrentWeekSection } from "./ui/current-week-section";
 export { DecisionEditDialog } from "./ui/decision-edit-dialog";
@@ -8,6 +9,5 @@ export { PeriodNavigator } from "./ui/period-navigator";
 export { PeriodsTab } from "./ui/periods-tab";
 export { PublishLockButton } from "./ui/publish-lock-button";
 export { RequestReopenDialog } from "./ui/request-reopen-dialog";
-export type { CrossAuthorEntry } from "./ui/sdlc-pipeline";
 export { SdlcPipeline } from "./ui/sdlc-pipeline";
 export { PeriodsSubTab } from "./ui/settings-periods-sub-tab";

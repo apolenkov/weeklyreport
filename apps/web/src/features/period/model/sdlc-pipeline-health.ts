@@ -7,7 +7,7 @@ import type {
   StageStatus,
 } from "../../report-sections";
 import { STATUS_CONFIG, trafficToStageStatus } from "../../report-sections";
-import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
+import type { CrossAuthorEntry } from "./sdlc-cross-author";
 
 // Left 4px stripe = health only; completeness lives on the right (ring + N/M).
 // paddingLeft offsets the wider left border so content padding reads equal.
