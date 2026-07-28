@@ -22,7 +22,7 @@
       the verifier severity-downgrade flag computed directly from the raw
       data rather than copied from the report's prose count.
 - [x] Record the head's 2026-07-28 review and rulings for R1-R6.
-- [ ] `openspec archive exemplary-repo-roadmap` after the accepted decisions
+- [x] `openspec archive exemplary-repo-roadmap` after the accepted decisions
       validate and their durable-spec synchronization is reviewed.
 
 ## Verification
