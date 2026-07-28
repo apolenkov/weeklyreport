@@ -1,18 +1,37 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
+type ReportScope = Record<string, unknown>;
+
+// A reopened period is editable again, so settled metrics fall back to the
+// latest period whose lifecycle flavour is still published.
+export async function querySettledPeriodIds(
+  prisma: PrismaService,
+  take: number,
+  reportScope: ReportScope = {},
+): Promise<string[]> {
+  const reports = await prisma.report.findMany({
+    where: { periodStatus: "published", ...reportScope },
+    orderBy: { periodStart: "desc" },
+    take,
+    select: { id: true },
+  });
+  return reports.map(({ id }) => id);
+}
+
 // Shared by dashboard summary and Prometheus gauge so the two never drift.
 export async function queryActiveLeadsLastPublishedPeriod(
   prisma: PrismaService,
   sectionScope: Record<string, unknown>,
 ): Promise<number> {
-  const report = await prisma.report.findFirst({
-    where: { status: "published" },
-    orderBy: { periodStart: "desc" },
-    select: { id: true },
-  });
-  if (!report) return 0;
+  const scoped = Object.keys(sectionScope).length > 0;
+  const [reportId] = await querySettledPeriodIds(
+    prisma,
+    1,
+    scoped ? { sections: { some: sectionScope } } : {},
+  );
+  if (!reportId) return 0;
   const rows = await prisma.reportSection.findMany({
-    where: { reportId: report.id, status: "submitted", ...sectionScope },
+    where: { reportId, status: "submitted", ...sectionScope },
     distinct: ["authorId"],
     select: { authorId: true },
   });

@@ -11,7 +11,10 @@ import {
   customreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
+import {
+  queryActiveLeadsLastPublishedPeriod,
+  querySettledPeriodIds,
+} from "./telemetry.queries.js";
 
 // Rolling window for the on-time-ratio gauge: last N published periods.
 const ON_TIME_RATIO_WINDOW_PERIODS = 4;
@@ -29,15 +32,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async onTimeRatioLastNPeriods(n: number): Promise<number | null> {
-    const reports = await this.prisma.report.findMany({
-      where: { status: "published" },
-      orderBy: { periodStart: "desc" },
-      take: n,
-      select: { id: true },
-    });
-    if (reports.length === 0) return null;
-
-    const reportIds = reports.map((r) => r.id);
+    const reportIds = await querySettledPeriodIds(this.prisma, n);
+    if (reportIds.length === 0) return null;
     const baseWhere = {
       reportId: { in: reportIds },
       status: "submitted" as const,

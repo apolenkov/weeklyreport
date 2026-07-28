@@ -16,8 +16,8 @@
 - [x] Adopt `functional/prefer-tacit` in the safe API-module scope.
 - [x] Replace blanket test budget exemptions with a measured test `max-lines`
       budget and real nested-function enforcement.
-- [ ] Resolve the remaining structural test-suppression decisions after the
-      user rules on the contested harness convention.
+- [x] Resolve the remaining structural test-suppression decisions under the
+      accepted local-harness convention.
 - [x] Treat `functional/prefer-immutable-types` as its own measured project,
       not a mechanical autofix wave.
 
@@ -44,7 +44,7 @@
       `Mock*` vocabulary to collision-free `Admin*View` types across every
       importer.
 - [x] Burn down live suppressions and override blocks without weakening gates
-      (140 → 127 suppressions; 27 → 26 override blocks).
+      (140 → 126 suppressions; 27 → 26 override blocks).
 - [x] Close non-blocked test-integrity items.
 - [x] Close non-blocked dependency and vocabulary duplication.
 - [x] Replace exact-key cache busting with named submission-dashboard and
@@ -103,8 +103,8 @@
       contract suite and delete the duplicated infrastructure-layer suite.
 - [x] Rename the landing-client suite to its real subject and make
       `page.test.tsx` cover the server organization-fetch wiring it names.
-- [ ] Land the remaining 4 confirmed fixes after the user decides the
-      family-wide split-harness convention.
+- [x] Land the remaining 4 confirmed fixes under the accepted family-wide
+      split-harness convention.
 
 ## 5. Accepted decisions and implementation
 
@@ -113,14 +113,14 @@
       flag, and add a planted regression.
 - [x] R2 ruling: settled telemetry uses `periodStatus = "published"` and
       excludes reopened periods until republish.
-- [ ] R2 implementation: single-home the selector across all three consumers
+- [x] R2 implementation: single-home the selector across all three consumers
       and cover publish, reopen, fallback-to-older, and republish.
 - [x] R3 ruling: baseline the 27 type-only cycles as gated debt with target 0.
 - [ ] R3 implementation: add the ratchet with same-shell exit capture and
       investigate the unrelated unresolved tRPC import.
 - [x] R4 ruling: allow small local harness repetition after budget splits;
       duplicated behavior, divergent fakes, and lying suite names stay banned.
-- [ ] R4 implementation: close the final four confirmed findings and the
+- [x] R4 implementation: close the final four confirmed findings and the
       structural-suppression task under the accepted convention.
 - [x] R5 ruling: adjudicate every firing Vitest rule independently.
 - [ ] R5 implementation: store the per-rule evidence ledger and land every
