@@ -62,6 +62,10 @@ const CHECKS: readonly Check[] = [
     script: "lint:provenance:test",
     what: "live OpenSpec provenance resolver tests",
   },
+  {
+    script: "lint:vitest-rules:test",
+    what: "Vitest rule ledger and planted probes",
+  },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },
 ];

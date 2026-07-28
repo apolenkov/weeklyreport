@@ -4,15 +4,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  type Mock,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
 
@@ -113,8 +105,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.resetModules();
-  (useQueryMock as Mock).mockReset();
-  (useSearchParamsMock as Mock).mockReset();
+  vi.mocked(useQueryMock).mockReset();
+  vi.mocked(useSearchParamsMock).mockReset();
 });
 
 async function loadLoginPageClient() {

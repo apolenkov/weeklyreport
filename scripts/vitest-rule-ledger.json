@@ -1,0 +1,469 @@
+{
+  "measuredAt": "2026-07-28",
+  "pluginVersion": "1.6.24",
+  "eslintVersion": "10.8.0",
+  "files": 549,
+  "productionSettings": true,
+  "alreadyEnabled": 31,
+  "rules": [
+    {
+      "rule": "consistent-test-filename",
+      "count": 12,
+      "ruling": "reject",
+      "reason": "The repository deliberately mixes unit, integration, contract, characterization, and framework-entry naming; a single filename convention would erase useful lane vocabulary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "expect-expect",
+      "count": 46,
+      "ruling": "reject",
+      "reason": "Contract and harness tests assert through invoked helpers; name-based assertion detection reports valid indirect assertions and configurable aliases would become a second maintained vocabulary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "max-expects",
+      "count": 372,
+      "ruling": "reject",
+      "reason": "An assertion ceiling measures matrix breadth rather than test responsibility and would split cohesive contract cases mechanically.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "no-commented-out-tests",
+      "count": 1,
+      "ruling": "reject",
+      "reason": "The only hit is ordinary prose containing the words 'it (server mints)', not a commented test; the production hit is a false positive.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "no-conditional-expect",
+      "count": 71,
+      "ruling": "reject",
+      "reason": "Schema and result-union tests narrow success/failure before inspecting branch-specific evidence; banning the assertion would weaken type-safe failure checks.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "no-conditional-in-test",
+      "count": 126,
+      "ruling": "reject",
+      "reason": "Tests intentionally branch to narrow discriminated results and to verify environment-dependent integration preconditions; the rule conflates narrowing with hidden control flow.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "no-conditional-tests",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Both hits are explicit DOM/schema guards that fail through surrounding assertions; rewriting them would add non-null casts without improving coverage.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "no-disabled-tests",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Both hits are runtime ctx.skip guards in the Mailpit integration lane; converting them to static todo would prevent the tests from running when the service is available.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "no-hooks",
+      "count": 332,
+      "ruling": "reject",
+      "reason": "Shared setup and cleanup are intentional suite lifecycle ownership; duplicating them into each test would increase drift.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "no-import-node-test",
+      "count": 4,
+      "ruling": "reject",
+      "reason": "Scripts and tooling tests intentionally run under node:test while product suites run under Vitest; filename scope spans both runners.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "no-importing-vitest-globals",
+      "count": 2136,
+      "ruling": "reject",
+      "reason": "Explicit imports are the repository convention and make runner dependencies visible; the rule demands the opposite global-injection model.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "no-large-snapshots",
+      "count": 1,
+      "ruling": "reject",
+      "reason": "The single 119-line jobs-table snapshot is the asserted accessibility/render contract; the default 50-line threshold is arbitrary for this component.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "no-restricted-matchers",
+      "count": 0,
+      "ruling": "reject",
+      "reason": "The rule has no default restriction list and cannot fire without a separately designed matcher policy.",
+      "fixes": 0,
+      "probe": "zero with production options",
+      "gate": "vacuous"
+    },
+    {
+      "rule": "no-restricted-vi-methods",
+      "count": 0,
+      "ruling": "reject",
+      "reason": "The rule has no default restriction list and cannot fire without a separately designed vi-method policy.",
+      "fixes": 0,
+      "probe": "zero with production options",
+      "gate": "vacuous"
+    },
+    {
+      "rule": "padding-around-after-all-blocks",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership; linting one padding preference would conflict with the repository's Prettier boundary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-after-each-blocks",
+      "count": 3,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership; linting one padding preference would conflict with the repository's Prettier boundary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-all",
+      "count": 3073,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership and a 3073-site rewrite has no behavioral or navigational benefit.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-before-all-blocks",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership; linting one padding preference would conflict with the repository's Prettier boundary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-before-each-blocks",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership; linting one padding preference would conflict with the repository's Prettier boundary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-describe-blocks",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "The formerly zero rule now fires twice, but remains a formatting preference already owned by Prettier; nonzero does not make it a defect rule.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-expect-groups",
+      "count": 3032,
+      "ruling": "reject",
+      "reason": "The rule imposes visual grouping without understanding arrange/act/assert semantics and duplicates formatter ownership.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "padding-around-test-blocks",
+      "count": 33,
+      "ruling": "reject",
+      "reason": "Blank-line layout is formatter ownership; the rule adds no test-integrity guarantee.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-called-exactly-once-with",
+      "count": 12,
+      "ruling": "reject",
+      "reason": "Call count and argument assertions are intentionally separate where intermediate calls matter; collapsing them can hide ordering evidence.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-called-once",
+      "count": 183,
+      "ruling": "reject",
+      "reason": "The preferred matcher is syntactic sugar and does not strengthen the existing explicit call-count contract.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-called-times",
+      "count": 86,
+      "ruling": "reject",
+      "reason": "The rule rewrites equivalent spy assertions without adding failure coverage or intent.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-called-with",
+      "count": 119,
+      "ruling": "reject",
+      "reason": "The rule rewrites equivalent spy assertions and can obscure deliberate inspection of call arrays and ordering.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-describe-function-title",
+      "count": 310,
+      "ruling": "reject",
+      "reason": "Dynamic table names are data, not function identities; forcing function-title derivation would reduce reporter clarity.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-each",
+      "count": 2,
+      "ruling": "adopt",
+      "reason": "Both manual loops mint tests from static matrices; it.each makes the case table and generated test boundary explicit without changing intent.",
+      "fixes": 2,
+      "probe": "planted manual test loop is reported by production config",
+      "gate": "error"
+    },
+    {
+      "rule": "prefer-expect-assertions",
+      "count": 4262,
+      "ruling": "reject",
+      "reason": "Blanket assertion-count declarations duplicate the test body and do not prove that the intended branch executed.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-expect-resolves",
+      "count": 178,
+      "ruling": "reject",
+      "reason": "Await-then-assert often preserves a value for multiple checks; forcing resolves chains can reduce readability and debugging context.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-expect-type-of",
+      "count": 10,
+      "ruling": "reject",
+      "reason": "Runtime shape assertions and compile-time expectTypeOf serve different contracts; the rule guesses intent from syntax.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-hooks-in-order",
+      "count": 1,
+      "ruling": "adopt",
+      "reason": "Lifecycle hooks have one conventional order; moving the lone beforeEach above afterAll improves scan order without semantic change.",
+      "fixes": 1,
+      "probe": "planted out-of-order hooks are reported by production config",
+      "gate": "error"
+    },
+    {
+      "rule": "prefer-import-in-mock",
+      "count": 288,
+      "ruling": "reject",
+      "reason": "Partial mocks intentionally use async importActual and factory-local imports; the preferred form is not uniformly equivalent across hoisted factories.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-importing-vitest-globals",
+      "count": 159,
+      "ruling": "reject",
+      "reason": "The repository already chose explicit imports; this rule targets the opposite configuration and conflicts with no-importing-vitest-globals.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-lowercase-title",
+      "count": 648,
+      "ruling": "reject",
+      "reason": "Titles intentionally begin with component, service, and domain names; lowercasing them would damage reporter vocabulary.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-mock-promise-shorthand",
+      "count": 10,
+      "ruling": "reject",
+      "reason": "Promise.resolve/reject in fakes is explicit and semantically equivalent; the shorthand is style-only.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-mock-return-shorthand",
+      "count": 21,
+      "ruling": "reject",
+      "reason": "Mock implementation bodies often document arguments or preserve future extension points; the shorthand is not a correctness rule.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-spy-on",
+      "count": 17,
+      "ruling": "reject",
+      "reason": "Module and closure seams are not always safely restorable object properties; forcing spyOn can change isolation semantics.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-strict-boolean-matchers",
+      "count": 24,
+      "ruling": "reject",
+      "reason": "Truthiness assertions sometimes intentionally cover protocol coercion rather than literal booleans; a blanket rewrite changes the asserted contract.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-strict-equal",
+      "count": 953,
+      "ruling": "reject",
+      "reason": "toEqual is the established structural contract; strict prototype/sparse-array semantics are not desired at every site.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-to-be-falsy",
+      "count": 461,
+      "ruling": "reject",
+      "reason": "Explicit false/null/undefined assertions preserve which falsy state is required; the preferred matcher would weaken them.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-to-be-truthy",
+      "count": 451,
+      "ruling": "reject",
+      "reason": "Explicit true/value assertions preserve the required state; the preferred matcher would weaken them.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "prefer-vi-mocked",
+      "count": 2,
+      "ruling": "adopt",
+      "reason": "Both casts exist only to reach mock methods on vi.fn values; vi.mocked states that intent and removes unsafe assertion syntax.",
+      "fixes": 2,
+      "probe": "planted Mock cast is reported by production config",
+      "gate": "error"
+    },
+    {
+      "rule": "require-hook",
+      "count": 46,
+      "ruling": "reject",
+      "reason": "Small pure tests need no lifecycle hook; requiring one manufactures indirection and shared mutable setup.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "require-mock-type-parameters",
+      "count": 1500,
+      "ruling": "reject",
+      "reason": "Vitest and TypeScript already infer most mock signatures from assignments and implementations; 1500 explicit generics would duplicate types and drift.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "require-test-timeout",
+      "count": 4262,
+      "ruling": "reject",
+      "reason": "The runner default is the canonical budget; per-test timeouts are reserved for measured exceptional paths, not repeated on every test.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "require-to-throw-message",
+      "count": 41,
+      "ruling": "reject",
+      "reason": "Many tests assert typed error identity or code and deliberately avoid unstable prose; requiring a message would couple behavior tests to copy.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "require-top-level-describe",
+      "count": 77,
+      "ruling": "reject",
+      "reason": "Single-subject files do not need a wrapper describe; the filename already supplies the missing reporter context.",
+      "fixes": 0,
+      "probe": "production measurement",
+      "gate": "off"
+    },
+    {
+      "rule": "valid-expect",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "Both hits use Vitest 4's supported second expect argument as failure context; plugin 1.6.24 incorrectly applies Jest's one-argument limit.",
+      "fixes": 0,
+      "probe": "site inspection against installed Vitest behavior",
+      "gate": "off"
+    },
+    {
+      "rule": "valid-title",
+      "count": 8,
+      "ruling": "reject",
+      "reason": "Hits are supported dynamic describe names and String.raw titles used to keep control characters legible; the rule rejects valid Vitest forms.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    },
+    {
+      "rule": "warn-todo",
+      "count": 2,
+      "ruling": "reject",
+      "reason": "The two SAML todo cases intentionally remain reporter-visible until certificate behavior is implementable; warning on the sanctioned marker adds no action.",
+      "fixes": 0,
+      "probe": "site inspection",
+      "gate": "off"
+    }
+  ]
+}
