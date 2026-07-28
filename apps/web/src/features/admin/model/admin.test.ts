@@ -288,9 +288,28 @@ describe("mapAdminSnapshot", () => {
   });
 });
 
+const COMPLETE_SETTINGS = {
+  autoCreatePeriods: false,
+  defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  deadlineTime: "18:00",
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
+  unifiedActivityView: false,
+} as const;
+
 describe("mapAdminSettings", () => {
   it("copies all configured fields from appSettingsSchema", () => {
     const api: AppSettings = appSettingsSchema.parse({
+      ...COMPLETE_SETTINGS,
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
     });
@@ -301,6 +320,7 @@ describe("mapAdminSettings", () => {
 
   it("round-trips a non-default configuration", () => {
     const api: AppSettings = appSettingsSchema.parse({
+      ...COMPLETE_SETTINGS,
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
       // Non-default so the round-trip proves the mapper carries the flag, not
@@ -329,6 +349,7 @@ describe("mapAdminSettings", () => {
 
   it("round-trips the 9 new AppSettings fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
+      ...COMPLETE_SETTINGS,
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
       periodLengthDays: 14,
@@ -355,6 +376,7 @@ describe("mapAdminSettings", () => {
 
   it("round-trips the period-cycle fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
+      ...COMPLETE_SETTINGS,
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
       deadlineTime: "09:30",

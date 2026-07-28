@@ -32,3 +32,19 @@ Work lands in independently verifiable slices:
 3. cross-module ownership and shared-contract changes;
 4. broad debt burn-down projects;
 5. human-decision items after explicit rulings.
+
+## `functional/prefer-immutable-types` measurement
+
+The installed `eslint-plugin-functional` 10.0.0 rule was executed through the
+ESLint API so the flat config received the plugin in the same config object as
+the temporary rule. A full `apps/*` + `packages/*` run reported 25,143 findings
+across 1,364 files. Even the intended pure-source candidate
+(`apps/api/src/modules/**/domain/**/*.ts` plus non-test
+`packages/shared/src/**/*.ts`) reported 402 findings across 33 files.
+
+This is not an adoptable local rule slice: its default `Immutable` threshold
+classifies framework values, schema values, returns, parameters, and local
+variables together. Enabling it would be a repository-wide type-contract
+rewrite with its own option/scoping design and compatibility review. The
+roadmap therefore records the measured project boundary and does not disguise
+25k suppressions or autofixes as an exemplary improvement.

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import { appSettingsSchema, appSettingsUpdateSchema } from "./report";
 
@@ -7,9 +6,28 @@ import { appSettingsSchema, appSettingsUpdateSchema } from "./report";
 // Fixtures
 // ---------------------------------------------------------------------------
 
+const validSettings = () => ({
+  autoCreatePeriods: false,
+  defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri" as const,
+  gracePeriodHours: 24,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft" as const,
+  notificationFromEmail: null,
+  deadlineTime: "18:00",
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
+  unifiedActivityView: false,
+});
+
 describe("appSettingsSchema", () => {
   it("accepts valid settings", () => {
     const result = appSettingsSchema.safeParse({
+      ...validSettings(),
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     });
@@ -18,6 +36,7 @@ describe("appSettingsSchema", () => {
 
   it("rejects defaultDeadlineDays below 1", () => {
     const result = appSettingsSchema.safeParse({
+      ...validSettings(),
       autoCreatePeriods: true,
       defaultDeadlineDays: 0,
     });
@@ -26,6 +45,7 @@ describe("appSettingsSchema", () => {
 
   it("rejects defaultDeadlineDays above 30", () => {
     const result = appSettingsSchema.safeParse({
+      ...validSettings(),
       autoCreatePeriods: true,
       defaultDeadlineDays: 31,
     });
@@ -34,6 +54,7 @@ describe("appSettingsSchema", () => {
 
   it("rejects non-boolean autoCreatePeriods", () => {
     const result = appSettingsSchema.safeParse({
+      ...validSettings(),
       autoCreatePeriods: "yes",
       defaultDeadlineDays: 5,
     });
@@ -42,33 +63,26 @@ describe("appSettingsSchema", () => {
 
   it("accepts max boundary values", () => {
     const result = appSettingsSchema.safeParse({
+      ...validSettings(),
       autoCreatePeriods: true,
       defaultDeadlineDays: 30,
     });
     expect(result.success).toBe(true);
   });
 
-  it("applies defaults for the 9 new fields when omitted", () => {
-    const result = appSettingsSchema.safeParse({
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data.periodLengthDays).toBe(7);
-    expect(result.data.workingDays).toBe("mon-fri");
-    expect(result.data.gracePeriodHours).toBe(24);
-    expect(result.data.defaultTimezone).toBe("Europe/Moscow");
-    expect(result.data.defaultReminderAudience).toBe("lead-with-draft");
-    expect(result.data.notificationFromEmail).toBeNull();
-    expect(result.data.allowLateSubmissions).toBe(true);
-    expect(result.data.autoPublishAfterDeadline).toBe(false);
-    expect(result.data.autoArchiveWeeksAfterPublish).toBe(0);
+  it("rejects every omitted persisted setting instead of inventing a default", () => {
+    for (const key of Object.keys(validSettings())) {
+      const missing = Object.fromEntries(
+        Object.entries(validSettings()).filter(([name]) => name !== key),
+      );
+      expect(appSettingsSchema.safeParse(missing).success, key).toBe(false);
+    }
   });
 
   it("rejects periodLengthDays out of [1..31]", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         periodLengthDays: 0,
@@ -76,6 +90,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         periodLengthDays: 32,
@@ -86,6 +101,7 @@ describe("appSettingsSchema", () => {
   it("rejects unknown workingDays enum value", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         workingDays: "mon-thu",
@@ -96,6 +112,7 @@ describe("appSettingsSchema", () => {
   it("rejects gracePeriodHours out of [0..168]", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         gracePeriodHours: -1,
@@ -103,6 +120,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         gracePeriodHours: 169,
@@ -113,6 +131,7 @@ describe("appSettingsSchema", () => {
   it("rejects autoArchiveWeeksAfterPublish > 52", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         autoArchiveWeeksAfterPublish: 53,
@@ -123,6 +142,7 @@ describe("appSettingsSchema", () => {
   it("accepts notificationFromEmail null and a valid address", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: null,
@@ -130,6 +150,7 @@ describe("appSettingsSchema", () => {
     ).toBe(true);
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: "reports@example.com",
@@ -140,6 +161,7 @@ describe("appSettingsSchema", () => {
   it("rejects malformed notificationFromEmail", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: "not-an-email",
@@ -150,6 +172,7 @@ describe("appSettingsSchema", () => {
   it("rejects unknown defaultReminderAudience", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         defaultReminderAudience: "everyone",
@@ -157,22 +180,11 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
   });
 
-  it("applies defaults for the period-cycle fields when omitted", () => {
-    const result = appSettingsSchema.safeParse({
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
-    expect(result.success).toBe(true);
-    if (!result.success) return;
-    expect(result.data.deadlineTime).toBe("18:00");
-    expect(result.data.allowReopenAfterPublish).toBe(true);
-    expect(result.data.reopenWindowHours).toBe(72);
-  });
-
   it("rejects malformed deadlineTime (must be HH:MM 24h)", () => {
     // Hour out of range
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         deadlineTime: "25:00",
@@ -181,6 +193,7 @@ describe("appSettingsSchema", () => {
     // Missing leading zero
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         deadlineTime: "9:30",
@@ -189,6 +202,7 @@ describe("appSettingsSchema", () => {
     // Garbage
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         deadlineTime: "noon",
@@ -197,6 +211,7 @@ describe("appSettingsSchema", () => {
     // Valid corner cases pass
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         deadlineTime: "00:00",
@@ -204,6 +219,7 @@ describe("appSettingsSchema", () => {
     ).toBe(true);
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         deadlineTime: "23:59",
@@ -214,6 +230,7 @@ describe("appSettingsSchema", () => {
   it("rejects reopenWindowHours out of [0..168]", () => {
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         reopenWindowHours: -1,
@@ -221,6 +238,7 @@ describe("appSettingsSchema", () => {
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
+        ...validSettings(),
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         reopenWindowHours: 169,
@@ -273,43 +291,7 @@ describe("appSettingsUpdateSchema", () => {
     ).toBe(true);
   });
 
-  // Every field carrying a Zod `.default()` must be ABSENT from a partial parse
-  // that omits it — otherwise the write path (persists any non-undefined key)
-  // silently resets an unspecified setting. Hardcoded (not derived from
-  // `.shape`) so this guard shares no logic with the schema's strip helper and
-  // stays a real oracle rather than a tautology.
-  const DEFAULTED_FIELDS = [
-    "periodLengthDays",
-    "workingDays",
-    "gracePeriodHours",
-    "allowLateSubmissions",
-    "autoPublishAfterDeadline",
-    "autoArchiveWeeksAfterPublish",
-    "defaultTimezone",
-    "defaultReminderAudience",
-    "notificationFromEmail",
-    "deadlineTime",
-    "allowReopenAfterPublish",
-    "reopenWindowHours",
-    "unifiedActivityView",
-  ] as const;
-
-  it("omits every defaulted field from a partial parse that does not mention it", () => {
-    const parsed = appSettingsUpdateSchema.parse({ defaultDeadlineDays: 7 });
-    for (const field of DEFAULTED_FIELDS) {
-      expect(field in parsed).toBe(false);
-    }
-  });
-
-  it("tripwire: the hardcoded defaulted-field list matches the schema", () => {
-    const actual = Object.entries(appSettingsSchema.shape)
-      .filter(([, field]) => field instanceof z.ZodDefault)
-      .map(([key]) => key)
-      .sort();
-    expect(actual).toEqual([...DEFAULTED_FIELDS].sort());
-  });
-
-  it("keeps explicit values for defaulted fields and still enforces constraints", () => {
+  it("keeps explicit values and still enforces constraints", () => {
     expect(
       appSettingsUpdateSchema.parse({ periodLengthDays: 14 }).periodLengthDays,
     ).toBe(14);
