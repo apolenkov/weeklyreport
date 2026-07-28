@@ -696,13 +696,12 @@ export default defineConfig([
   // Presence: exported fn/class/method/arrow need short /** contract */.
   // Params: @param name - prose required; types OFF (TS owns shapes); returns OFF.
   // enableFixer false — never inject bare @param tags via eslint --fix.
-  // publicOnly — file-private helpers free. Tests excluded.
+  // publicOnly — file-private helpers free.
   // apps/api and apps/web are deliberately OUT until their surfaces are
   // documented: a ratchet has to close behind work already done, and declaring
   // it ahead of 177 undocumented files only turns `pnpm lint` red for everyone.
   {
     files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
-    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { jsdoc },
     rules: {
       ...jsdocRecommendedTs.rules,
@@ -1005,13 +1004,12 @@ export default defineConfig([
     },
   },
   // Functional immutability ratchet: only pure source layers. Infrastructure,
-  // UI, Prisma builders, React refs, and tests keep their local mutation idioms.
+  // UI, Prisma builders and React refs keep their local mutation idioms.
   {
     files: [
       "apps/api/src/modules/**/domain/**/*.ts",
       "packages/shared/src/**/*.ts",
     ],
-    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
     plugins: { functional: functionalPlugin },
     rules: {
       "functional/immutable-data": [
@@ -1030,7 +1028,6 @@ export default defineConfig([
   // hazard of `.map(obj.method)`.
   {
     files: ["apps/api/src/modules/**/*.ts"],
-    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
     plugins: { functional: functionalPlugin },
     rules: { "functional/prefer-tacit": "error" },
   },
@@ -1068,10 +1065,12 @@ export default defineConfig([
       ],
     },
   },
-  // Tooling files are not product source — exempt from size/complexity budgets
-  // (eslint.config.ts itself is 400+ lines; *.config.ts / *.setup.ts likewise).
+  // Config files are not product source — exempt from size/complexity budgets
+  // (eslint.config.ts alone is 1200+ lines of rule declarations). Scoped to
+  // `*.config.ts` only: `*.setup.ts` (34 and 16 lines) and `tools/**` (max 182)
+  // measured inside every budget this block lifts, so they stay gated.
   {
-    files: ["**/*.config.ts", "**/*.setup.ts", "tools/**"],
+    files: ["**/*.config.ts"],
     rules: {
       "max-lines": "off",
       complexity: "off",
@@ -1084,8 +1083,7 @@ export default defineConfig([
   },
   // Test-file override. Tests get their OWN budgets, not a blanket pass —
   // they outnumber product files, so exempting them puts most of the repo
-  // outside the standard. Ordered AFTER the tooling block so a test under
-  // `tools/` keeps the test ceiling instead of inheriting `max-lines: off`.
+  // outside the standard.
   {
     files: [
       "**/*.test.ts",
