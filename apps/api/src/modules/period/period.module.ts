@@ -3,7 +3,8 @@ import { Logger, Module } from "@nestjs/common";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
+import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
@@ -53,6 +54,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         cache: AnalyticsCache,
         admin: SnapshotAdminService,
         telemetry: PeriodTelemetry,
+        logger: AppLogger,
       ) =>
         new PeriodService(
           repo,
@@ -71,12 +73,18 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
           // no-op default for the ingestion hook.
           undefined,
           telemetry,
+          (error) => {
+            logger.warn("ingestion hook failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          },
         ),
       inject: [
         PERIOD_REPOSITORY,
         AnalyticsCache,
         SnapshotAdminService,
         PERIOD_TELEMETRY,
+        APP_LOGGER,
       ],
     },
     // PolicyApplicatorService provided directly (depends only on PrismaService,

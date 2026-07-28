@@ -138,6 +138,8 @@ export class PeriodService {
     private readonly ingestionHook: IngestionPublishHook = () =>
       Promise.resolve(undefined),
     private readonly telemetry: PeriodTelemetry = NOOP_PERIOD_TELEMETRY,
+    private readonly onIngestionError: (error: unknown) => void = () =>
+      undefined,
   ) {}
 
   async publishPeriod(
@@ -189,6 +191,7 @@ export class PeriodService {
         telemetry: this.telemetry,
         ingestionHook: this.ingestionHook,
         invalidateAnalyticsCache: this.invalidateAnalyticsCache,
+        onIngestionError: this.onIngestionError,
       },
       {
         priorStatus,

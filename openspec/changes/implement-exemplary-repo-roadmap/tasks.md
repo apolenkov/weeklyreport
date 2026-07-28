@@ -53,7 +53,9 @@
       instead of presenting silent semantic fallbacks.
 - [x] Require a PDF export queue in the service constructor so a queued job
       cannot be returned without an enqueue attempt.
-- [ ] Land the remaining 8 confirmed fixes in risk-isolated slices.
+- [x] Route manual-publish ingestion failures to the structured error sink
+      while preserving post-commit success.
+- [ ] Land the remaining 7 confirmed fixes in risk-isolated slices.
 
 ## 5. Human decisions
 

@@ -16,7 +16,7 @@ export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
   telemetry: PublishSideEffectsTelemetry<S>;
   ingestionHook: IngestionPublishHook;
   invalidateAnalyticsCache: () => Promise<void>;
-  onIngestionError?: (error: unknown) => void;
+  onIngestionError: (error: unknown) => void;
   skipIngestionWhenEmpty?: boolean;
 }
 
@@ -49,6 +49,6 @@ export async function emitPublishSideEffects<S extends PeriodStatus>(
     }
     await deps.ingestionHook(sectionIds);
   } catch (error) {
-    deps.onIngestionError?.(error);
+    deps.onIngestionError(error);
   }
 }
