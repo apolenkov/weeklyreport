@@ -1,14 +1,20 @@
-# ratcheted-quality-debt
+# ratcheted-quality-debt Specification
 
-## ADDED Requirements
+## Purpose
+
+TBD - created by archiving change add-quality-debt-roadmap. Update Purpose after archive.
+
+## Requirements
 
 ### Requirement: The campaign uses the measured debt inventory
 
 The repository MUST treat 27 pre-compilation `no-circular` violations grouped
-into 9 connected clusters, 126 live ESLint suppressions across 96 files, and 26
-ESLint `files:` blocks as the starting inventory for this campaign. A changed
-starting value MUST be remeasured from the current tree and reconciled before
-implementation continues.
+into 9 connected clusters, 126 raw suppression-text matches, and 26 ESLint
+`files:` blocks as the starting inventory for this campaign. Parser-backed
+remeasurement MUST distinguish the 115 live ESLint directives across 93 files
+from the 11 strings or explanatory mentions that created measurement noise. A
+changed starting value MUST be remeasured from the current tree and reconciled
+before implementation continues.
 
 #### Scenario: A future session resumes the campaign
 
@@ -53,3 +59,17 @@ verification commands and results, commit, push state, and next starting point.
 - **WHEN** another agent reads only the three checkpoint artifacts
 - **THEN** it can identify what is complete, what remains, and the first safe
   command to run without reconstructing conversational context
+
+### Requirement: Completion is adjudication-clean, not raw-count-zero
+
+The campaign MUST complete when cycles are zero, every starting suppression is
+adjudicated with planted proof for each retained directive, every ESLint block
+has an effective-config classification, and all four implementation changes
+are archived into durable capabilities. Necessary retained suppressions and
+policy scopes MUST NOT be represented as unfinished work.
+
+#### Scenario: Evidence-backed debt remains nonzero
+
+- **WHEN** 72 minimal suppressions and 26 distinct policy scopes remain
+- **THEN** the campaign is complete if their ledgers and planted probes pass
+- **AND** future reduction is a new backlog item, not missing implementation
