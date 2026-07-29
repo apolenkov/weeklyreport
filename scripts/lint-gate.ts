@@ -51,6 +51,10 @@ const CHECKS: readonly Check[] = [
     what: "live suppression adjudication ledger",
   },
   {
+    script: "lint:suppressions:retained",
+    what: "retained suppression planted probes",
+  },
+  {
     script: "lint:exemplary-floor:test",
     what: "exemplary-floor ratchet unit tests",
   },
