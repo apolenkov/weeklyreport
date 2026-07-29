@@ -37,9 +37,12 @@ export function statusLabel(value: string): string {
 
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- navigator.clipboard is undefined in non-secure contexts despite the non-null DOM type
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(text);
+    const clipboard =
+      typeof navigator === "undefined"
+        ? undefined
+        : (navigator as Navigator & { clipboard?: Clipboard }).clipboard;
+    if (clipboard) {
+      await clipboard.writeText(text);
       return true;
     }
   } catch {

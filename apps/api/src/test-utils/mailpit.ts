@@ -30,14 +30,13 @@ export interface MailpitMessage {
 
 interface MailpitMessagesResponse {
   total: number;
-  messages: MailpitMessage[];
+  messages?: MailpitMessage[];
 }
 
 async function listMessages(): Promise<MailpitMessage[]> {
   const res = await fetch(`${MAILPIT_BASE}/api/v1/messages`);
   if (!res.ok) throw new Error(`Mailpit GET failed: ${res.status}`);
   const body = (await res.json()) as MailpitMessagesResponse;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- external Mailpit API response; messages may be absent despite the typed shape
   return body.messages ?? [];
 }
 
