@@ -32,6 +32,7 @@ describe("ItemCard — priority rank badge accessibility", () => {
     render(<ItemCard item={{ ...BASE_ITEM, priorityRank: 3 }} />);
     const badge = screen.getByRole("img", { name: "Priority 3" });
     expect(badge).toHaveAttribute("aria-label", "Priority 3");
+    expect(badge).toHaveStyle({ color: "var(--color-foreground)" });
   });
 });
 

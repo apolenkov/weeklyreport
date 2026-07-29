@@ -55,7 +55,7 @@ exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hid
         aria-label="Priority 1"
         class="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
         role="img"
-        style="background: var(--color-starbucks-gold); color: var(--color-primary-foreground);"
+        style="background: var(--color-starbucks-gold); color: var(--color-foreground);"
         title="Priority rank 1"
       >
         P

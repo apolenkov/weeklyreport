@@ -1455,13 +1455,13 @@
       "line": 144,
       "scope": "next-line",
       "rule": "sonarjs/assertions-in-tests",
-      "reason": "this test's product is the non-blocking anomaly report",
+      "reason": "the sweep now asserts a zero-anomaly blocking verdict after preserving its report",
       "target": "test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {",
       "fingerprint": "d943bf241981f2b2",
       "owner": "e2e",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/assertions-in-tests; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "pnpm test:uat fails on live anomalies and passes only after all four role reports reach zero",
+      "implementationCommit": "pending-close-accessibility-backlog"
     },
     {
       "path": "prisma/reset-hard.ts",

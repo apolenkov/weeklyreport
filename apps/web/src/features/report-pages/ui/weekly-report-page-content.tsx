@@ -71,9 +71,9 @@ export function ReportAccordionBody({
             aria-label={group.name}
             className="space-y-3 scroll-mt-4 focus:outline-none"
           >
-            <h3 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
+            <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
               {group.name}
-            </h3>
+            </h2>
             {group.products.map(renderAccordion)}
           </section>
         ))}
