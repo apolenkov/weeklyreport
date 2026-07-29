@@ -25,4 +25,4 @@
 
 - [x] 5.1 Update `roadmap.json`, `REPORT.md`, the downloaded HTML artifact, and `HANDOFF.md` with exact before/after evidence and restart commands.
 - [x] 5.2 Archive `close-accessibility-backlog`, re-run strict OpenSpec validation, and verify no active changes remain.
-- [ ] 5.3 Commit the clean green tree locally. Do not push while the owner's zero-run GitHub Actions requirement is in force, because a push to `main` dispatches CI.
+- [x] 5.3 Commit the clean green tree locally. Do not push while the owner's zero-run GitHub Actions requirement is in force, because a push to `main` dispatches CI.
