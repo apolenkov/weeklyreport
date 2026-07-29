@@ -50,16 +50,17 @@ describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
 
     await repo.saveAutoPublishedReport(autoReport);
 
-    expect(updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        where: expect.objectContaining({
-          id: "rep-1",
-          status: "draft",
-          archived: false,
-        }),
-      }),
-    );
+    expect(updateMany.mock.calls).toMatchObject([
+      [
+        {
+          where: {
+            id: "rep-1",
+            status: "draft",
+            archived: false,
+          },
+        },
+      ],
+    ]);
     // The snapshot rides a SECOND statement (in-transaction re-read), never the
     // guarded updateMany — so its bytes reflect the latest committed state.
     expect(update).toHaveBeenCalledOnce();

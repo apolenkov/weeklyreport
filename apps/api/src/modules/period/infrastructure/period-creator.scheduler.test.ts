@@ -205,12 +205,9 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.create).toHaveBeenCalledTimes(1);
     // The state column is written on create; here periodStart is "this
     // week's Monday" which is <= now, so the period lands as 'open'.
-    expect(prisma.report.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        data: expect.objectContaining({ periodState: "open" }),
-      }),
-    );
+    expect(prisma.report.create.mock.calls).toMatchObject([
+      [{ data: { periodState: "open" } }],
+    ]);
     expect(audit.periodAutoCreate).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -250,8 +247,7 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.findMany).toHaveBeenCalledWith({
       where: {
         periodState: "scheduled",
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.any() returns any; vitest asymmetric matcher has no precise type
-        periodStart: { lte: expect.any(Date) },
+        periodStart: { lte: new Date("2026-05-12T00:05:00Z") },
       },
       orderBy: [{ periodStart: "asc" }, { id: "asc" }],
       select: { id: true, periodStart: true, periodEnd: true },

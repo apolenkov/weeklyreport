@@ -510,11 +510,10 @@ describe("PublicationService", () => {
 
       const result = await service.publishAuto(reportId);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         published: true,
         wasAlreadyPublished: true,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        report: expect.objectContaining({ status: "published" }),
+        report: { status: "published" },
       });
       expect(saveAutoPublishedReport).not.toHaveBeenCalled();
     });
@@ -534,11 +533,10 @@ describe("PublicationService", () => {
 
       const result = await service.publishAuto(reportId);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         published: true,
         wasAlreadyPublished: false,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        report: expect.objectContaining({ status: "published" }),
+        report: { status: "published" },
       });
       expect(saveSpy).toHaveBeenCalledTimes(1);
     });
