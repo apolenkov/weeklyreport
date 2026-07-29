@@ -55,6 +55,10 @@ const CHECKS: readonly Check[] = [
     what: "retained suppression planted probes",
   },
   {
+    script: "lint:eslint-scopes",
+    what: "ESLint scope classification and planted probes",
+  },
+  {
     script: "lint:exemplary-floor:test",
     what: "exemplary-floor ratchet unit tests",
   },
