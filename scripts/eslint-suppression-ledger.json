@@ -619,8 +619,8 @@
       "implementationCommit": "1a6542f2"
     },
     {
-      "path": "apps/web/src/app/api/client-logs/route.ts",
-      "line": 6,
+      "path": "apps/web/src/lib/server/client-logs-policy.ts",
+      "line": 2,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-magic-numbers",
       "reason": "protocol limit expressed in kibibytes",

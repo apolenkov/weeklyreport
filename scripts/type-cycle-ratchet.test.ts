@@ -9,11 +9,11 @@ import {
 const cycles = (count: number) =>
   Array.from({ length: count }, () => ({ rule: { name: "no-circular" } }));
 
-void test("the measured 27-cycle baseline passes", () => {
+void test("a snapshot matching its stored cycle baseline passes", () => {
   assert.deepEqual(cycleRatchetViolations(cycles(27), { cycles: 27 }), []);
 });
 
-void test("a planted 28th cycle fails", () => {
+void test("a cycle above the stored baseline fails", () => {
   assert.deepEqual(cycleRatchetViolations(cycles(28), { cycles: 27 }), [
     "current type-only cycles=28 does not match baseline 27",
   ]);

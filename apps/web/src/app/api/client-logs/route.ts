@@ -1,10 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { requireApiUrl } from "../../../lib/server/api-url";
-
-// Matches the API's express.json limit; the byte form also protects this hop.
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- protocol limit expressed in kibibytes
-export const CLIENT_LOGS_MAX_BODY_BYTES = 128 * 1024;
+import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../lib/server/client-logs-policy";
 
 function declaredBodyIsOversized(req: NextRequest): boolean {
   const contentLength = req.headers.get("content-length");

@@ -101,7 +101,7 @@ test.describe("Lead journey (integration)", () => {
     await submitButton.click();
 
     // Submit always opens a confirmation dialog before firing the mutation.
-    const confirmDialog = page.getByRole("dialog", {
+    const confirmDialog = page.getByRole("alertdialog", {
       name: "Confirm submission",
     });
     await expect(confirmDialog).toBeVisible({ timeout: 15_000 });

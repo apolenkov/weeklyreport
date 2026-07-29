@@ -3,7 +3,7 @@
  * PostgreSQL via real tRPC procedures (no mocks).
  */
 
-import { expect,test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { prisma } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
@@ -111,17 +111,19 @@ test.describe("Admin CRUD (integration)", () => {
   }) => {
     await adminPage.goto("/admin/products");
 
-    const lead1ProductCount = await prisma.project.count({
-      where: { leadId: LEAD_1_ID },
-    });
-    const lead1ProductNames = SEED_PRODUCTS.filter(
+    const firstSeededProduct = SEED_PRODUCTS.find(
       (product) => product.leadId === LEAD_1_ID,
-    ).map((product) => product.name);
-    expect(lead1ProductCount).toBe(lead1ProductNames.length);
-    const firstSeededProduct = lead1ProductNames.at(0);
+    );
     if (!firstSeededProduct) {
       throw new Error("No seed products found for LEAD_1_ID");
     }
+    const persistedProduct = await prisma.project.findUnique({
+      where: { id: firstSeededProduct.id },
+    });
+    expect(persistedProduct).toMatchObject({
+      name: firstSeededProduct.name,
+      leadId: LEAD_1_ID,
+    });
 
     // Page should mention at least one seeded name. The
     // /admin/products route redirects to /admin?tab=products, which mounts
@@ -129,9 +131,11 @@ test.describe("Admin CRUD (integration)", () => {
     // the seeded product name to appear in the rendered DOM before
     // snapshotting HTML — Playwright will retry the locator until it
     // resolves or hits the default expect timeout.
-    await expect(adminPage.getByText(firstSeededProduct).first()).toBeVisible();
+    await expect(
+      adminPage.getByText(firstSeededProduct.name).first(),
+    ).toBeVisible();
 
     const html = await adminPage.content();
-    expect(html).toContain(firstSeededProduct);
+    expect(html).toContain(firstSeededProduct.name);
   });
 });

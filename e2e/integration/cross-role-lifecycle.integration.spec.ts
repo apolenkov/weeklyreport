@@ -8,7 +8,7 @@
  * tests create them inline via `loginAs(context, ...)`.
  */
 
-import { expect, loginAs,test } from "./fixtures";
+import { expect, loginAs, test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
@@ -32,6 +32,19 @@ test.describe("Cross-role lifecycle (integration)", () => {
     const headPage = await headCtx.newPage();
     await loginAs(headCtx, { role: "head" });
 
+    const sectionBefore = await prisma.reportSection.findUnique({
+      where: {
+        reportId_authorId: {
+          reportId: ACTIVE_REPORT_ID,
+          authorId: LEAD_OLGA_ID,
+        },
+      },
+    });
+    expect(sectionBefore?.status).toBe("draft");
+    const submittedBefore = await prisma.reportSection.count({
+      where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
+    });
+
     // 1. Lead submits via DB (UI submit covered by lead-journey spec).
     await prisma.reportSection.update({
       where: {
@@ -48,7 +61,7 @@ test.describe("Cross-role lifecycle (integration)", () => {
     const submittedCount = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
     });
-    expect(submittedCount).toBe(5); // 4 from seed + Olga
+    expect(submittedCount).toBe(submittedBefore + 1);
 
     // 3. Head publishes via DB (UI publish covered by head-journey spec).
     await prisma.report.update({
