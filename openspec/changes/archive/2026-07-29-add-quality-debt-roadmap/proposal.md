@@ -4,9 +4,11 @@
 
 The exemplary-floor campaign closed with three intentionally ratcheted debt
 surfaces still present: 27 type-only cycle violations in 9 connected clusters,
-126 live ESLint suppressions across 96 files, and 26 heterogeneous ESLint
-`files:` blocks. Treating these raw counts as interchangeable cleanup targets
-would weaken useful policy and repeat the mechanical-fix mistakes recorded in
+126 raw suppression-text matches, and 26 heterogeneous ESLint `files:` blocks.
+Parser-backed measurement later resolved the raw suppression count into 115
+real directives across 93 files plus 11 strings or explanatory mentions.
+Treating these raw counts as interchangeable cleanup targets would weaken useful
+policy and repeat the mechanical-fix mistakes recorded in
 `~/work/customreport-archive/2026-07-28-per-file-walk/`.
 
 ## What Changes
