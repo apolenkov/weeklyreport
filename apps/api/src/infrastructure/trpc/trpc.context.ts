@@ -15,6 +15,10 @@ import {
   resolveHumanSession,
 } from "../../lib/human-session.js";
 import type { AppLogger } from "../../lib/logger.js";
+import {
+  readRequestCookie,
+  readRequestHeader,
+} from "../../lib/request-boundary.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { isUserAccessBarred } from "../../modules/auth/index.js";
@@ -122,9 +126,10 @@ export interface TrpcContext {
   pdfReportId: string | null;
 }
 
-function readRequestId(header: string | string[] | undefined): string {
-  if (Array.isArray(header)) return header[0] ?? NO_CORRELATION_ID;
-  return header ?? NO_CORRELATION_ID;
+function readRequestId(header: unknown): string {
+  if (typeof header === "string") return header;
+  if (Array.isArray(header) && typeof header[0] === "string") return header[0];
+  return NO_CORRELATION_ID;
 }
 
 // Everything a context needs that is independent of which session wins.
@@ -205,16 +210,13 @@ export function createContextFactory(
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     const deps: RequestScopedDeps = {
       logger,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
-      correlationId: readRequestId(req.headers?.["x-request-id"]),
+      correlationId: readRequestId(readRequestHeader(req, "x-request-id")),
       prisma,
       auditLogger,
       ip: req.ip ?? UNKNOWN_CLIENT_IP,
     };
     // Same resolved name as set/clear paths (AUTH_JWT_COOKIE_NAME aware).
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
-    const token = req.cookies?.[resolveSessionCookieName(process.env)] as
-      string | undefined;
+    const token = readRequestCookie(req, resolveSessionCookieName(process.env));
 
     if (token) {
       const tokenContext = await resolveTokenContext(token, deps, {

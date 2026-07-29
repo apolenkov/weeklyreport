@@ -80,7 +80,6 @@ function useFilteredJobs(jobs: readonly FailedJob[], search: string) {
     const needle = search.trim().toLowerCase();
     if (!needle) return jobs;
     return jobs.filter((job) =>
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
       [job.id, job.name, job.failedReason ?? "", String(job.attemptsMade)]
         .join(" ")
         .toLowerCase()

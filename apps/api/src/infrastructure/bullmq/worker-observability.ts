@@ -22,8 +22,8 @@ export interface JobTraceContext {
 
 export function resolveCorrelationId(cls?: ClsService): string | undefined {
   if (!cls?.isActive()) return undefined;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cls.get returns undefined when the key is unset despite the generic return type
-  return cls.get<string>(CORRELATION_ID_KEY) ?? undefined;
+  const value: unknown = cls.get(CORRELATION_ID_KEY);
+  return typeof value === "string" ? value : undefined;
 }
 
 // Capture W3C trace at queue.add via the global propagator; correlationId is

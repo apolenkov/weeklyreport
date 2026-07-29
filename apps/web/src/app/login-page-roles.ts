@@ -18,10 +18,8 @@ export function devLoginHref(role: DbRole, email: string): string {
 
 export const FALLBACK_REDIRECT = "/head/dashboard";
 
-export function defaultRedirectFor(role: Role | null | undefined): string {
-  if (!role) return FALLBACK_REDIRECT;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- role may be a persisted/retired value absent from ROLE_HOME_PATH at runtime
-  return ROLE_HOME_PATH[role] ?? FALLBACK_REDIRECT;
+export function defaultRedirectFor(role: unknown): string {
+  return isRole(role) ? ROLE_HOME_PATH[role] : FALLBACK_REDIRECT;
 }
 
 export function isRole(value: unknown): value is Role {

@@ -31,11 +31,7 @@ describe("login navigation helpers", () => {
   it("falls back for absent and retired persisted roles", () => {
     expect(defaultRedirectFor(null)).toBe(FALLBACK_REDIRECT);
     expect(defaultRedirectFor(undefined)).toBe(FALLBACK_REDIRECT);
-    expect(
-      defaultRedirectFor(
-        "retired" as (typeof sessionRoleSchema.options)[number],
-      ),
-    ).toBe(FALLBACK_REDIRECT);
+    expect(defaultRedirectFor("retired")).toBe(FALLBACK_REDIRECT);
   });
 });
 

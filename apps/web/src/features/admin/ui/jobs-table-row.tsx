@@ -16,7 +16,7 @@ function formatTimestamp(ms: number): string {
 interface JobsTableRowJob {
   readonly id: string;
   readonly name: string;
-  readonly failedReason: string;
+  readonly failedReason?: string | null;
   readonly stacktrace: readonly string[];
   readonly attemptsMade: number;
   readonly timestamp: number;
@@ -101,7 +101,7 @@ export function JobsTableRow({
       </td>
       <JobErrorCell
         jobId={job.id}
-        failedReason={job.failedReason}
+        failedReason={job.failedReason ?? ""}
         isExpanded={isExpanded}
         onToggleExpand={onToggleExpand}
       />

@@ -54,6 +54,20 @@ interface EscalationReminderPayload {
 export type EmailReminderJobData = JobTraceContext &
   (LegacyReminderPayload | DeadlineReminderPayload | EscalationReminderPayload);
 
+function hasDeadlineKind(
+  data: EmailReminderJobData,
+): data is JobTraceContext & DeadlineReminderPayload {
+  const kind: unknown = "kind" in data ? data.kind : undefined;
+  return kind === "deadline";
+}
+
+function hasEscalationKind(
+  data: EmailReminderJobData,
+): data is JobTraceContext & EscalationReminderPayload {
+  const kind: unknown = "kind" in data ? data.kind : undefined;
+  return kind === "escalation";
+}
+
 // null means "use the SMTP_FROM env default".
 type FromOverride = string | null;
 
@@ -141,10 +155,9 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     const fromOverride = (await this.snapshotAdminService.getSettings())
       .notificationFromEmail;
 
-    if ("kind" in data && data.kind === "deadline") {
+    if (hasDeadlineKind(data)) {
       await this.sendDeadlineReminder(data, fromOverride);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- job data is an external BullMQ-queue boundary; the kind check guards against unexpected/corrupt payloads though the narrowed union types it as always-escalation
-    } else if ("kind" in data && data.kind === "escalation") {
+    } else if (hasEscalationKind(data)) {
       await this.sendEscalationReminder(data, fromOverride);
     } else {
       await this.sendLegacyReminder(data, fromOverride);

@@ -8,6 +8,7 @@ import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../lib/session-provider";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/lead/report",
@@ -223,8 +224,7 @@ describe("NavBar — role-aware visibility", () => {
     // Icon-only: visible text is the aria-label + amber ComingSoonBadge
     // tooltip. No native title="Coming Soon" so a second tooltip does not
     // stack over the badge.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
-    expect(themeControl?.textContent?.trim()).toBe("");
+    expect(expectDefined(themeControl).textContent.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
       "aria-label",
       "Theme selection is coming soon",
@@ -245,8 +245,7 @@ describe("NavBar — role-aware visibility", () => {
     // Icon-only: visible text is the aria-label + amber ComingSoonBadge
     // tooltip. No native title="Coming Soon" so a second tooltip does not
     // stack over the badge.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
-    expect(languageControl?.textContent?.trim()).toBe("");
+    expect(expectDefined(languageControl).textContent.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
       "aria-label",
       "Language selection is coming soon",

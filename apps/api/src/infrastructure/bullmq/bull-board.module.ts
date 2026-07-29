@@ -11,6 +11,7 @@ import type {
   Response,
 } from "express";
 
+import { readRequestCookie } from "../../lib/request-boundary.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie";
 import { SessionRevocationService } from "../../modules/admin/index.js";
 import { createAuthController } from "../../modules/auth/index.js";
@@ -38,9 +39,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   ): Promise<void> => {
     // Read the cookie under the same resolved name the set/clear/read paths use
     // (honours AUTH_JWT_COOKIE_NAME), finishing the cookie-name dedup.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
-    const token = req.cookies?.[resolveSessionCookieName(process.env)] as
-      string | undefined;
+    const token = readRequestCookie(req, resolveSessionCookieName(process.env));
 
     if (!token) {
       res.status(HTTP_UNAUTHORIZED).json({ error: "Authentication required" });

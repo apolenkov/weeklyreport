@@ -16,9 +16,9 @@
       "target": "const token = req.cookies?.[resolveSessionCookieName(process.env)] as",
       "fingerprint": "c5b59909be96c151",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "shared request-cookie boundary narrows the cookie-parser value from unknown at runtime",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/bullmq/email-reminder.processor.ts",
@@ -29,9 +29,9 @@
       "target": "} else if (\"kind\" in data && data.kind === \"escalation\") {",
       "fingerprint": "894a0dae5b725273",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "a separately derived optional kind keeps legacy, deadline, and escalation dispatch explicit",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/bullmq/pdf-export.processor.test.ts",
@@ -55,9 +55,9 @@
       "target": "return cls.get<string>(CORRELATION_ID_KEY) ?? undefined;",
       "fingerprint": "f941bbdf075e76ed",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "CLS output is treated as unknown and narrowed to string at the runtime boundary",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/email/email-dispatch.integration.test.ts",
@@ -159,9 +159,9 @@
       "target": "correlationId: readRequestId(req.headers?.[\"x-request-id\"]),",
       "fingerprint": "ce53902feb33825a",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the shared request boundary narrows a possibly absent synthetic-request headers object from unknown",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.context.ts",
@@ -172,9 +172,9 @@
       "target": "const token = req.cookies?.[resolveSessionCookieName(process.env)] as",
       "fingerprint": "c5b59909be96c151",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "shared request-cookie boundary narrows the cookie-parser value from unknown at runtime",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.logging.ts",
@@ -263,9 +263,9 @@
       "target": "return cls.get<string>(\"correlationId\") ?? NO_CORRELATION_ID;",
       "fingerprint": "cadc3cbd0b44736b",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "CLS output is treated as unknown and narrowed to string at the runtime boundary",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/main.ts",
@@ -419,9 +419,9 @@
       "target": "if (!name) continue;",
       "fingerprint": "b0a22cfb25f05803",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "all non-spread ObjectLiteralElementLike nodes carry a PropertyName in the TypeScript AST contract",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/period/__tests__/lifecycle-write-gate.test.ts",
@@ -432,9 +432,9 @@
       "target": "while (current) {",
       "fingerprint": "0a5f498122f909bf",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the ancestor walk terminates on the containing statement and no longer models Node.parent as optional",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/period/infrastructure/auto-publisher.scheduler.test.ts",
@@ -614,9 +614,9 @@
       "target": "return body.messages ?? [];",
       "fingerprint": "b9397d321c02fc19",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the external Mailpit response now truthfully types messages as optional",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/app/api/client-logs/route.ts",
@@ -640,9 +640,9 @@
       "target": "return ROLE_HOME_PATH[role] ?? FALLBACK_REDIRECT;",
       "fingerprint": "74219bf418c9eaf5",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the persisted value boundary accepts unknown and validates it with the canonical role schema before indexing",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/app/login-page.client.tsx",
@@ -692,9 +692,9 @@
       "target": "if (typeof navigator !== \"undefined\" && navigator.clipboard) {",
       "fingerprint": "908836fd179ded77",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the secure-context clipboard capability is explicitly typed optional and checked before use",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/admin/ui/activity-form-fields.tsx",
@@ -731,9 +731,9 @@
       "target": "[job.id, job.name, job.failedReason ?? \"\", String(job.attemptsMade)]",
       "fingerprint": "3c93a91bfc5537d0",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the BullMQ-derived row boundary now truthfully accepts an absent or null failedReason",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/admin/ui/product-edit-dialog.tsx",
@@ -1121,9 +1121,9 @@
       "target": "cb.parentElement?.textContent?.trim(),",
       "fingerprint": "05ae6d9cd3d67c0d",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "runtime expectDefined narrowing replaces the nullable DOM assertion chain",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/features/review/ui/use-risk-list-editing.ts",
@@ -1355,9 +1355,9 @@
       "target": "expect(themeControl?.textContent?.trim()).toBe(\"\");",
       "fingerprint": "c4c30b213d20588e",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "runtime expectDefined narrowing replaces the nullable DOM assertion chain",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/shared/ui/navigation/nav-bar.test.tsx",
@@ -1368,9 +1368,9 @@
       "target": "expect(languageControl?.textContent?.trim()).toBe(\"\");",
       "fingerprint": "2d9e6d6d662065af",
       "owner": "web",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "runtime expectDefined narrowing replaces the nullable DOM assertion chain",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/web/src/shared/ui/record-textarea-field.tsx",

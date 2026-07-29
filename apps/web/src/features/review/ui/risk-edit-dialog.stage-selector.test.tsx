@@ -4,6 +4,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { Product } from "../../report-sections";
 import { RiskEditDialog } from "./risk-edit-dialog";
 
@@ -184,8 +185,7 @@ describe("RiskEditDialog - SDLC stage selector", () => {
 
     const checkboxes = screen.getAllByRole("checkbox");
     const labels = checkboxes.map((cb) =>
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- parentElement + textContent are nullable in the DOM assertion
-      cb.parentElement?.textContent?.trim(),
+      expectDefined(cb.parentElement).textContent.trim(),
     );
     expect(labels).toEqual(["Testing", "Support"]);
   });
