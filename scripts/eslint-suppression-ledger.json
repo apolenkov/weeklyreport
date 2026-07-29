@@ -1461,7 +1461,7 @@
       "owner": "e2e",
       "verdict": "remove",
       "proof": "pnpm test:uat fails on live anomalies and passes only after all four role reports reach zero",
-      "implementationCommit": "pending-close-accessibility-backlog"
+      "implementationCommit": "f6bce9702334f56163797c9323532227525de237"
     },
     {
       "path": "prisma/reset-hard.ts",
