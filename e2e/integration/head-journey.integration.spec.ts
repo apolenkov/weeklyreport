@@ -5,38 +5,93 @@
  * verification of report.status and report.publishedAt.
  */
 
-import { expect,test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
-import { ACTIVE_REPORT_ID } from "./helpers/seed-ids";
+import { ACTIVE_REPORT_ID, SEED_EMAILS } from "./helpers/seed-ids";
 
 test.describe("Head journey (integration)", () => {
   test.afterEach(async () => {
     await resetMutations();
   });
 
-  test("head dashboard renders with seeded data (4 submitted / 2 draft)", async ({
+  test("head dashboard renders group-scoped seeded submission truth", async ({
     headPage,
   }) => {
+    const head = await prisma.user.findUnique({
+      where: { email: SEED_EMAILS.head },
+      select: { reportingGroupId: true },
+    });
+    if (!head?.reportingGroupId) {
+      throw new Error("Seed head has no reporting group");
+    }
+    const scope = { reportingGroupId: head.reportingGroupId };
+    const [submitted, totalLeads] = await Promise.all([
+      prisma.reportSection.count({
+        where: {
+          reportId: ACTIVE_REPORT_ID,
+          status: "submitted",
+          author: scope,
+        },
+      }),
+      prisma.user.count({
+        where: { role: "lead", isActive: true, ...scope },
+      }),
+    ]);
+
     await headPage.goto("/head/dashboard");
     await expect(
       headPage.getByRole("heading", { name: "Dashboard" }),
     ).toBeVisible({ timeout: 15_000 });
-    // The Submissions KPI counts the head's GROUP-SCOPED leads (4 in seed —
-    // totalLeads comes from the scoped leadUsers fetch, not all lead users)
-    // and all four have submitted; report sections are the 4/2 counts below.
     await expect(
-      headPage.getByLabel("Submissions: 4 of 4, 0 pending"),
+      headPage.getByRole("region", {
+        name: new RegExp(String.raw`^Submissions: ${submitted} of ${totalLeads}, \d+ pending$`),
+      }),
     ).toBeVisible();
+    expect(submitted).toBeGreaterThan(0);
+    expect(totalLeads).toBeGreaterThanOrEqual(submitted);
+  });
 
-    // DB-level truth: seed creates 6 active-report sections (4 submitted, 2 draft).
-    const submitted = await prisma.reportSection.count({
-      where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
+  test("head reviews a submitted section and the verdict persists", async ({
+    headPage,
+  }) => {
+    const head = await prisma.user.findUniqueOrThrow({
+      where: { email: SEED_EMAILS.head },
+      select: { id: true },
     });
-    const draft = await prisma.reportSection.count({
-      where: { reportId: ACTIVE_REPORT_ID, status: "draft" },
+    const before = new Map(
+      (
+        await prisma.sectionReview.findMany({
+          where: { reviewerId: head.id },
+          select: { reportSectionId: true, updatedAt: true },
+        })
+      ).map((review) => [review.reportSectionId, review.updatedAt.getTime()]),
+    );
+
+    await headPage.goto(`/head/report/${ACTIVE_REPORT_ID}`);
+    await headPage
+      .getByRole("button", { name: "Review", exact: true })
+      .click();
+
+    const approve = headPage.getByRole("button", { name: "Approve" }).first();
+    await expect(approve).toBeVisible({ timeout: 15_000 });
+    const response = headPage.waitForResponse(
+      (candidate) =>
+        candidate.url().includes("/trpc/review.verdict") &&
+        candidate.request().method() === "POST",
+    );
+    await approve.click();
+    await response;
+    await expect(headPage.getByText("Section approved")).toBeVisible();
+
+    const persisted = await prisma.sectionReview.findFirst({
+      where: { reviewerId: head.id, verdict: "approved" },
+      orderBy: { updatedAt: "desc" },
+      select: { reportSectionId: true, updatedAt: true },
     });
-    expect(submitted).toBe(4);
-    expect(draft).toBe(2);
+    expect(persisted).not.toBeNull();
+    expect(persisted?.updatedAt.getTime()).toBeGreaterThan(
+      before.get(persisted?.reportSectionId ?? "") ?? 0,
+    );
   });
 
   test("head can publish active report and report.status flips to published", async ({

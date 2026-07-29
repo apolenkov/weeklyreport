@@ -4,7 +4,8 @@ vi.mock("../../../lib/server/api-url", () => ({
   requireApiUrl: () => "http://api.test:3002",
 }));
 
-import { CLIENT_LOGS_MAX_BODY_BYTES, POST } from "./route";
+import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../lib/server/client-logs-policy";
+import { POST } from "./route";
 
 function makeRequest(
   headers: Record<string, string>,

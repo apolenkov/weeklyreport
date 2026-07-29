@@ -12,18 +12,17 @@
  * old drive-the-lead-form-as-head helper only ever hung waiting for a page
  * that never renders the Revoke button.
  *
- * Seed preconditions (advanced seed):
+ * Seed preconditions (full profile):
  *   ACTIVE_REPORT  = a0000000-0000-4000-8000-000000000001  (periodStatus: open)
  *   PUBLISHED_REPORT = a0000000-0000-4000-8000-000000000002 (periodStatus: published)
  *   LEAD_MARIA (index 2) — status: submitted in ACTIVE_REPORT
  *   LEAD_1 / Vasily (index 1) — status: submitted in ACTIVE_REPORT
- *   Seed baseline: 4 submitted / 6 total
  *
  */
 
 import type { APIResponse, Page } from "@playwright/test";
 
-import { expect,test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
@@ -129,14 +128,16 @@ test.describe("Revoke downstream effects (integration)", () => {
     await resetMutations();
   });
 
-  test("after revoke, submissionCount drops from 4 to 3", async ({
+  test("after revoke, submissionCount drops by one", async ({
     headPage,
   }) => {
-    // Verify seed precondition.
+    const sectionBefore = await prisma.reportSection.findUnique({
+      where: { id: MARIA_ACTIVE_SECTION_ID },
+    });
+    expect(sectionBefore?.status).toBe("submitted");
     const beforeCount = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
     });
-    expect(beforeCount).toBe(4);
 
     await revokeLeadViaDashboard(headPage, MARIA_SURNAME);
 
@@ -153,24 +154,22 @@ test.describe("Revoke downstream effects (integration)", () => {
     const afterCount = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
     });
-    expect(afterCount).toBe(3);
+    expect(afterCount).toBe(beforeCount - 1);
 
     // The dashboard's Submissions KPI card is a <section> exposed as an
     // ARIA "region" landmark, named "Submissions: X of Y, Z pending" — it
     // reflects the drop without a manual reload since its query was
     // invalidated on revoke success.
-    // Denominator = leads with a section in the current period (4 in seed),
-    // not the org-wide lead count — pin only the numerator drop here; the
-    // exact submitted count is already asserted at the DB level above.
     await expect(
-      headPage.getByRole("region", { name: /^Submissions: 3 of \d+,/ }),
+      headPage.getByRole("region", {
+        name: new RegExp(String.raw`^Submissions: ${afterCount} of \d+,`),
+      }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test("after revoke, Maria's section is absent from the weekly report query", async ({
     headPage,
   }) => {
-    // Seed baseline: 4 sections with status submitted for the active report.
     const beforeSections = await prisma.reportSection.findMany({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
       select: { authorId: true },
@@ -186,7 +185,7 @@ test.describe("Revoke downstream effects (integration)", () => {
       select: { authorId: true },
     });
     expect(afterSections.map((s) => s.authorId)).not.toContain(LEAD_MARIA_ID);
-    expect(afterSections).toHaveLength(3);
+    expect(afterSections).toHaveLength(beforeSections.length - 1);
 
     // The queue row itself no longer offers Revoke — canRevoke requires
     // status === "submitted", which the revoked section no longer has.
@@ -201,6 +200,10 @@ test.describe("Revoke downstream effects (integration)", () => {
   test("after revoke, resubmission restores the section to aggregation", async ({
     headPage,
   }) => {
+    const beforeCount = await prisma.reportSection.count({
+      where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
+    });
+
     // Step 1: Revoke Maria's section via the head dashboard.
     await revokeLeadViaDashboard(headPage, MARIA_SURNAME);
 
@@ -225,7 +228,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     const afterResubmit = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
     });
-    expect(afterResubmit).toBe(4);
+    expect(afterResubmit).toBe(beforeCount);
 
     // Step 4: Head reloads the dashboard; Maria's row is submitted again and
     // Revoke is offered once more (canRevoke recomputes from the fresh read).
