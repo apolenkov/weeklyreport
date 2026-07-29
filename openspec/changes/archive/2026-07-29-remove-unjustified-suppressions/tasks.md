@@ -36,6 +36,6 @@
 - [x] Run planted production-config probes for every retained rule/shape family.
 - [x] Re-run `pnpm catalogue`, update the exact `liveSuppressions` baseline, and
       prove zero unadjudicated or unjustified entries.
-- [ ] Run `pnpm lint:eslint`, `pnpm lint:exemplary-floor`, targeted tests,
+- [x] Run `pnpm lint:eslint`, `pnpm lint:exemplary-floor`, targeted tests,
       `pnpm lint`, and `pnpm typecheck`.
 - [x] Run `openspec validate remove-unjustified-suppressions --strict`.
