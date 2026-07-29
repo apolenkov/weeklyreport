@@ -69,13 +69,14 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
 
     const saved = await repo.saveSection(section, 3);
 
-    expect(tx.reportSection.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: section.reportSectionId, version: 3 },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        data: expect.objectContaining({ version: { increment: 1 } }),
-      }),
-    );
+    expect(tx.reportSection.updateMany.mock.calls).toMatchObject([
+      [
+        {
+          where: { id: section.reportSectionId, version: 3 },
+          data: { version: { increment: 1 } },
+        },
+      ],
+    ]);
     // The compare-and-set matched, so the delete-then-recreate ran.
     expect(tx.item.deleteMany).toHaveBeenCalled();
     // The re-read happened on `tx` (inside the transaction), never on a

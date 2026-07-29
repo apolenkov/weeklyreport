@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../lib/logger.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import { silenceStderr } from "../../test-utils/silence-logs";
 
 // Mock factories use vi.fn() inline (no outer variable references) because
@@ -242,7 +243,7 @@ describe("PdfExportProcessor.processJob", () => {
 
   it("emits per-step duration logs for page.goto and page.pdf", async () => {
     setupMocks();
-    const infoSpy = vi.fn();
+    const infoSpy = vi.fn<AppLogger["info"]>();
     const logger: AppLogger = {
       debug: vi.fn(),
       info: infoSpy,
@@ -264,15 +265,18 @@ describe("PdfExportProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
-    expect(infoSpy).toHaveBeenCalledWith(
-      "pdf-export step complete",
-      expect.objectContaining({
-        jobId: "job-1",
-        step: "page.goto",
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.any() returns any; vitest asymmetric matcher has no precise type
-        durationMs: expect.any(Number),
-      }),
+    const gotoContext = expectDefined(
+      infoSpy.mock.calls.find(
+        ([message, context]) =>
+          message === "pdf-export step complete" &&
+          context?.step === "page.goto",
+      )?.[1],
     );
+    expect(gotoContext).toMatchObject({
+      jobId: "job-1",
+      step: "page.goto",
+    });
+    expect(typeof gotoContext.durationMs).toBe("number");
     expect(infoSpy).toHaveBeenCalledWith(
       "pdf-export step complete",
       expect.objectContaining({ step: "page.pdf" }),

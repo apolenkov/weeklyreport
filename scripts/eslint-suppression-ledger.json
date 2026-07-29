@@ -42,9 +42,9 @@
       "target": "durationMs: expect.any(Number),",
       "fingerprint": "dd13e7468e5333fc",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "typed AppLogger mock call inspection asserts the step context and runtime duration type",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/infrastructure/bullmq/worker-observability.ts",
@@ -445,9 +445,9 @@
       "target": "where: expect.objectContaining({ status: \"draft\", archived: false }),",
       "fingerprint": "0c1ea84eb06aeb77",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "mock.calls partial-object assertion preserves the candidate-query contract without an any-valued matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/period/infrastructure/period-creator.scheduler.test.ts",
@@ -458,9 +458,9 @@
       "target": "data: expect.objectContaining({ periodState: \"open\" }),",
       "fingerprint": "807563ef74f60179",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "mock.calls partial-object assertion preserves the created-period state contract without an any-valued matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/period/infrastructure/period-creator.scheduler.test.ts",
@@ -471,9 +471,9 @@
       "target": "periodStart: { lte: expect.any(Date) },",
       "fingerprint": "93c509eaf310f612",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "the scheduler tick is fixed, so the due-period query asserts its exact Date boundary",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/publication/application/publication.service.test.ts",
@@ -484,9 +484,9 @@
       "target": "report: expect.objectContaining({ status: \"published\" }),",
       "fingerprint": "8114ac9950971b85",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "result discriminants and report status are asserted directly without an asymmetric matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/publication/application/publication.service.test.ts",
@@ -497,9 +497,9 @@
       "target": "report: expect.objectContaining({ status: \"published\" }),",
       "fingerprint": "8114ac9950971b85",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "result discriminants and report status are asserted directly without an asymmetric matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/publication/infrastructure/publication.prisma-repository.test.ts",
@@ -510,9 +510,9 @@
       "target": "where: expect.objectContaining({",
       "fingerprint": "b8011b2c05936c29",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "mock.calls partial-object assertion preserves the compare-and-set where contract without an any-valued matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/published-report-snapshot.ts",
@@ -562,9 +562,9 @@
       "target": "data: expect.objectContaining({ version: { increment: 1 } }),",
       "fingerprint": "221e2a89d4363ba6",
       "owner": "api",
-      "verdict": "unadjudicated",
-      "proof": null,
-      "implementationCommit": null
+      "verdict": "replace",
+      "proof": "mock.calls partial-object assertion preserves the version increment contract without an any-valued matcher",
+      "implementationCommit": "pending"
     },
     {
       "path": "apps/api/src/modules/telemetry/telemetry.gauges.test.ts",

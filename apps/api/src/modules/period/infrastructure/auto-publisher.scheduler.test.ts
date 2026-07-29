@@ -207,12 +207,9 @@ describe("AutoPublisherScheduler", () => {
 
     await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(prisma.report.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
-        where: expect.objectContaining({ status: "draft", archived: false }),
-      }),
-    );
+    expect(prisma.report.findMany.mock.calls).toMatchObject([
+      [{ where: { status: "draft", archived: false } }],
+    ]);
     expect(publication.publishAuto).not.toHaveBeenCalled();
   });
 
