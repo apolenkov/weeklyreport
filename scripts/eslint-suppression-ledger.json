@@ -96,7 +96,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-clear-text-protocols; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -109,7 +109,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -122,7 +122,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -135,7 +135,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-invariant-returns; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/routers/dev.router.ts",
@@ -148,7 +148,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/os-command; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.context.ts",
@@ -187,7 +187,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.session-hydration.ts",
@@ -200,7 +200,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -213,7 +213,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -226,7 +226,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -239,7 +239,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/lib/group-scope.ts",
@@ -252,7 +252,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/lib/logger.ts",
@@ -278,7 +278,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits simple-import-sort/imports; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/analytics/analytics.service.ts",
@@ -291,7 +291,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/auth/dev-login.routes.test.ts",
@@ -330,7 +330,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/consistent-type-definitions; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
@@ -525,7 +525,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits functional/prefer-tacit; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/reminders/policy-applicator.test.ts",
@@ -538,7 +538,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-unused-collection; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/reminders/reminders-row-mappers.ts",
@@ -551,7 +551,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.test.ts",
@@ -577,7 +577,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-floating-point-equality; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/telemetry/telemetry.gauges.test.ts",
@@ -590,7 +590,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-floating-point-equality; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/modules/telemetry/telemetry.gauges.test.ts",
@@ -603,7 +603,7 @@
       "owner": "api",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-floating-point-equality; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/api/src/test-utils/mailpit.ts",
@@ -629,7 +629,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-magic-numbers; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/app/login-page-roles.ts",
@@ -655,7 +655,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/app/print/[reportId]/print-lead-records.tsx",
@@ -668,7 +668,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react/no-array-index-key; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/app/print/[reportId]/print-report-styles.tsx",
@@ -681,7 +681,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react/no-danger; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/admin/model/action-log-format.ts",
@@ -707,7 +707,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/admin/ui/group-edit-dialog.tsx",
@@ -720,7 +720,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/admin/ui/jobs-tab.tsx",
@@ -746,7 +746,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/admin/ui/reminders-tab.test.tsx",
@@ -798,7 +798,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/alert-bar.tsx",
@@ -811,7 +811,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/aria-role; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/remind-lead-button.tsx",
@@ -824,7 +824,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/use-dashboard-query-recovery.ts",
@@ -837,7 +837,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/landing/ui/tagline-cycler.tsx",
@@ -850,7 +850,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/pseudo-random; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/organization/ui/settings-notifications-sub-tab.tsx",
@@ -863,7 +863,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/pdf-export/ui/use-pdf-export-job.ts",
@@ -876,7 +876,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/pdf-export/ui/use-pdf-export-job.ts",
@@ -889,7 +889,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/current-week-section.tsx",
@@ -902,7 +902,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/decision-card.tsx",
@@ -915,7 +915,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/decision-edit-dialog-fields.tsx",
@@ -928,7 +928,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/decisions-section.tsx",
@@ -941,7 +941,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/periods-tab-dialog-fields.tsx",
@@ -954,7 +954,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/period/ui/periods-tab.dialogs.test.tsx",
@@ -993,7 +993,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/lead-form.tsx",
@@ -1006,7 +1006,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/next-week-section.tsx",
@@ -1019,7 +1019,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/use-lead-form-quick-add.ts",
@@ -1032,7 +1032,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-sections/model/next-week-columns.ts",
@@ -1045,7 +1045,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-card-stage-tags.tsx",
@@ -1058,7 +1058,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-edit-dialog-fields.tsx",
@@ -1071,7 +1071,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-edit-dialog.stage-scoping.test.tsx",
@@ -1110,7 +1110,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/review/ui/risk-edit-dialog.stage-selector.test.tsx",
@@ -1136,7 +1136,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/slides/ui/deck-fullscreen-overlay.tsx",
@@ -1149,7 +1149,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/slides/ui/slide-skeleton.test.tsx",
@@ -1175,7 +1175,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/static-components; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/slides/ui/status-slide-deck.tsx",
@@ -1188,7 +1188,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/features/slides/ui/use-slide-inline-editor-support.tsx",
@@ -1201,7 +1201,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/autosave-effects.ts",
@@ -1214,7 +1214,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/autosave-stable-stringify.ts",
@@ -1227,7 +1227,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/use-editable-list-dialog.ts",
@@ -1240,7 +1240,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/use-editable-list-dialog.ts",
@@ -1253,7 +1253,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/use-lead-form-autosave-harness.tsx",
@@ -1266,7 +1266,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-misused-promises; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/use-lead-form-autosave.ts",
@@ -1279,7 +1279,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/hooks/use-record-visibility.ts",
@@ -1292,7 +1292,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/lib/client-logger.ts",
@@ -1305,7 +1305,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/lib/item-alarm.ts",
@@ -1318,7 +1318,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/lib/use-query-error-handler.ts",
@@ -1331,7 +1331,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/shared/ui/error-boundary.tsx",
@@ -1344,7 +1344,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/function-return-type; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/shared/ui/navigation/nav-bar.test.tsx",
@@ -1383,7 +1383,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/shared/ui/report-shell/save-now-button.test.tsx",
@@ -1409,7 +1409,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/shared/ui/search-input-utils.tsx",
@@ -1422,7 +1422,7 @@
       "owner": "web",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "apps/web/src/shared/ui/search-input.test.tsx",
@@ -1448,7 +1448,7 @@
       "owner": "e2e",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-os-command-from-path; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "e2e/sweep/catalog-sweep.spec.ts",
@@ -1461,7 +1461,7 @@
       "owner": "e2e",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/assertions-in-tests; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "prisma/reset-hard.ts",
@@ -1474,7 +1474,7 @@
       "owner": "seed",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-os-command-from-path; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "prisma/reset-hard.ts",
@@ -1487,7 +1487,7 @@
       "owner": "seed",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-os-command-from-path; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     },
     {
       "path": "scripts/exemplary-catalogue.ts",
@@ -1500,7 +1500,7 @@
       "owner": "tooling",
       "verdict": "retain",
       "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-os-command-from-path; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "pending"
+      "implementationCommit": "49238ad1"
     }
   ],
   "noiseEntries": [
