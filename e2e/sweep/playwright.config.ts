@@ -6,8 +6,8 @@ import * as path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
-// Drives the durable Scenario Catalog per role and records console/a11y
-// anomalies without blocking CI, as required by the durable sweep spec.
+// Drives the durable Scenario Catalog per role and blocks on console/load/a11y
+// anomalies after preserving the complete per-role report.
 // See openspec/specs/behavioral-ui-regression-gate/spec.md.
 
 const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3100);
@@ -48,7 +48,7 @@ export default defineConfig({
     {
       name: "sweep",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /catalog-sweep\.spec\.ts/,
+      testMatch: /(axe-detector|catalog-sweep)\.spec\.ts/,
     },
   ],
 

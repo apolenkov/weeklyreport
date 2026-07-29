@@ -175,10 +175,10 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
 
   it("groups products under each lead when scope is 'lead' (head split-view parity)", async () => {
     renderPage(makeWeeklyReportData("open"), undefined, "head", "lead");
-    // "By lead" renders the author's name as a group heading (h3) instead of a
+    // "By lead" renders the author's name as a group heading (h2) instead of a
     // flat product accordion list.
     expect(
-      await screen.findByRole("heading", { name: "Alice", level: 3 }),
+      await screen.findByRole("heading", { name: "Alice", level: 2 }),
     ).toBeInTheDocument();
     // The overview band follows scope: the per-lead "Leads Overview" summary,
     // not the product band.
@@ -192,7 +192,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
     // In by-lead scope the viewer's overview groups by lead, matching the head.
     renderPage(makeWeeklyReportData("open"), undefined, "viewer", "lead");
     expect(
-      await screen.findByRole("heading", { name: "Alice", level: 3 }),
+      await screen.findByRole("heading", { name: "Alice", level: 2 }),
     ).toBeInTheDocument();
     expect(screen.getByText("Leads Overview")).toBeInTheDocument();
     // The lead section carries the scroll/focus anchor the overview card targets.

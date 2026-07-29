@@ -1,7 +1,7 @@
 /**
  * Reads the durable Scenario Catalog, walks each role's entry-point routes,
  * and writes console, load, and a11y anomalies to per-role Markdown reports.
- * Findings do not fail CI; that non-blocking contract is deliberate.
+ * Each role report is preserved before any anomaly fails the test.
  *
  * This is the Layer-1 entry-point sweep ("does every role-reachable route load
  * cleanly?"). Within-route exhaustive exploration is the AI Driver's run-time
@@ -15,7 +15,12 @@ import * as path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
 import { type DbRole } from "@customreport/shared";
-import { type ConsoleMessage, type Request,test } from "@playwright/test";
+import {
+  type ConsoleMessage,
+  expect,
+  type Request,
+  test,
+} from "@playwright/test";
 
 // Import the seed ids directly from the source of truth. NOT via
 // e2e/integration/helpers/seed-ids (its `../../../../../` re-export path is
@@ -104,7 +109,7 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
   const lines: string[] = [
     `# UI sweep report — ${role}`,
     "",
-    `Source catalog: \`e2e/catalog/${role}.yaml\` · phase-1 report (non-blocking).`,
+    `Source catalog: \`e2e/catalog/${role}.yaml\` · blocking acceptance report.`,
     "",
     `**${results.length} routes swept, ${totalAnomalies} anomalies.**`,
     "",
@@ -139,9 +144,6 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
 const catalogs = loadCatalogs();
 
 for (const catalog of catalogs) {
-  // Report-only by contract (see the file header): the run must stay green so
-  // every role still gets its report, which an assertion here would defeat.
-  // eslint-disable-next-line sonarjs/assertions-in-tests -- this test's product is the non-blocking anomaly report
   test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
     const results: RouteResult[] = [];
 
@@ -293,10 +295,9 @@ for (const catalog of catalogs) {
       type: "sweep",
       description: `${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes`,
     });
-    // The sweep's product is its report; this is its only intended stdout.
-     
     console.log(
       `[sweep] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes → e2e/sweep/.reports/${catalog.role}.md`,
     );
+    expect(totalAnomalies, report).toBe(0);
   });
 }

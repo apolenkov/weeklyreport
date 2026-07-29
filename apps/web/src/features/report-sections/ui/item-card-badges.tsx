@@ -37,7 +37,7 @@ export function ItemCardBadges({
           className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
           style={{
             background: "var(--color-starbucks-gold)",
-            color: "var(--color-primary-foreground)",
+            color: "var(--color-foreground)",
           }}
           aria-label={`Priority ${priorityRank}`}
           title={`Priority rank ${priorityRank}`}

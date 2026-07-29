@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-07-29
+goal: Eliminate every current UAT axe violation, make zero accessibility
+  anomalies a blocking measurable gate, and preserve justified lint policy
+  without artificial count-zero cleanup.

@@ -40,7 +40,7 @@ function UserActivationButton(
         pending: props.deactivatePending,
         action: props.onDeactivate,
         className:
-          "text-amber-600 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
+          "text-amber-800 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
       }
     : {
         label: "Activate",

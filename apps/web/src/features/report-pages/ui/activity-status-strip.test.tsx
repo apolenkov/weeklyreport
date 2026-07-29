@@ -55,6 +55,9 @@ describe("ActivityStatusStrip", () => {
     expect(screen.getByText("Lead A")).toBeInTheDocument();
     expect(screen.getByText("Lead B")).toBeInTheDocument();
     expect(screen.getByText("Blocked on vendor")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Project Activities" }),
+    ).toBeInTheDocument();
   });
 
   it("renders linked products and records only on their sorted activity-author card", () => {
