@@ -22,11 +22,11 @@
 ## 4. Execute server-side
 
 - [x] 4.1 Inventory and remove the existing GitHub Actions run history.
-- [ ] 4.2 Dispatch fresh CI and dependency-scan workflows.
-- [ ] 4.3 Confirm that fresh jobs receive runners and complete, or record the exact external allocation blocker.
+- [x] 4.2 Dispatch fresh CI (`30452676207`) and dependency-scan (`30452702344`) workflows from commit `dae6a624`.
+- [x] 4.3 Record that both jobs completed with zero steps and GitHub's exact billing/spending runner-allocation annotation.
 
 ## 5. Record and hand off
 
 - [x] 5.1 Update the campaign HTML report with commands, counts, failures, fixes, and remaining blockers.
 - [x] 5.2 Update the durable handoff without duplicating mutable source data.
-- [ ] 5.3 Archive this change only after every non-external task is complete.
+- [x] 5.3 Archive this change only after every non-external task is complete.
