@@ -32,6 +32,7 @@
     "lint:suppressions:test": "node --test scripts/eslint-suppression-inventory.test.ts",
     "lint:suppressions": "tsx scripts/eslint-suppression-ledger.ts --check",
     "lint:suppressions:retained": "tsx scripts/eslint-retained-suppression-probes.ts",
+    "lint:eslint-scopes": "tsx scripts/eslint-policy-scope-probes.ts",
     "lint:exemplary-floor:test": "node --test scripts/exemplary-floor-ratchet.test.ts",
     "lint:exemplary-floor": "tsx scripts/exemplary-catalogue.ts --check",
     "lint:type-cycles:test": "node --test scripts/type-cycle-ratchet.test.ts",

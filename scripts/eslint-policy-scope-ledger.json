@@ -1,0 +1,497 @@
+{
+  "version": 1,
+  "startingSnapshot": {
+    "commit": "0128d686",
+    "overrideBlocks": 26
+  },
+  "entries": [
+    {
+      "configIndex": 2,
+      "id": "typescript",
+      "classification": "specialization",
+      "files": ["**/*.ts", "**/*.tsx"],
+      "ignores": [],
+      "positive": "apps/api/src/main.ts",
+      "negative": "apps/web/src/styles/app.css",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-explicit-any",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Installs the TypeScript parser, project service, TS/React plugins, and the repository-wide typed rule regime."
+    },
+    {
+      "configIndex": 3,
+      "id": "product-function-budget",
+      "classification": "enforcement",
+      "files": ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "apps/*/src/test-utils/**"
+      ],
+      "positive": "apps/api/src/main.ts",
+      "negative": "apps/api/src/app.module.fence.test.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "max-lines-per-function",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Applies the 50-line production-function budget while test files use their own file-size policy."
+    },
+    {
+      "configIndex": 4,
+      "id": "prisma-project",
+      "classification": "specialization",
+      "files": ["prisma/**/*.ts"],
+      "ignores": [],
+      "positive": "prisma/seed.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "parser-project",
+        "positive": "./tsconfig.prisma.json",
+        "negative": "project-service"
+      },
+      "evidence": "Prisma entrypoints have no discoverable local tsconfig and require tsconfig.prisma.json for sound Node typing."
+    },
+    {
+      "configIndex": 5,
+      "id": "product-comment-policy",
+      "classification": "policy",
+      "files": [
+        "apps/**/*.{ts,tsx,js,jsx,mjs}",
+        "packages/**/*.{ts,tsx,js,jsx,mjs}",
+        "prisma/**/*.{ts,tsx,js,jsx,mjs}"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/main.ts",
+      "negative": "scripts/lint-gate.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "local/no-comment-archaeology",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Enforces the product-source comment policy without rejecting plan-shaped labels in repository tooling."
+    },
+    {
+      "configIndex": 6,
+      "id": "tooling-project",
+      "classification": "specialization",
+      "files": ["scripts/**/*.ts", "tools/**/*.ts"],
+      "ignores": [],
+      "positive": "scripts/lint-gate.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "parser-project",
+        "positive": "./tsconfig.scripts.json",
+        "negative": "project-service"
+      },
+      "evidence": "Scripts and tools have no discoverable local tsconfig and require the same project used by their dedicated typecheck."
+    },
+    {
+      "configIndex": 7,
+      "id": "sonar",
+      "classification": "enforcement",
+      "files": ["**/*.{ts,tsx,js,jsx,mjs}"],
+      "ignores": [],
+      "positive": "apps/api/src/main.ts",
+      "negative": "apps/web/src/styles/app.css",
+      "marker": {
+        "kind": "rule",
+        "name": "sonarjs/no-hardcoded-ip",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Activates the measured SonarJS production preset for every lintable JavaScript and TypeScript surface."
+    },
+    {
+      "configIndex": 8,
+      "id": "package-public-jsdoc",
+      "classification": "policy",
+      "files": ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
+      "ignores": [],
+      "positive": "packages/shared/src/index.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "jsdoc/require-jsdoc",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Requires contracts on consumed package exports without imposing public-API documentation semantics on application internals."
+    },
+    {
+      "configIndex": 9,
+      "id": "next",
+      "classification": "enforcement",
+      "files": ["apps/web/**/*.{ts,tsx}"],
+      "ignores": [],
+      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "negative": "packages/ui/src/components/ui/card.tsx",
+      "marker": {
+        "kind": "rule",
+        "name": "@next/next/no-img-element",
+        "positive": "warn",
+        "negative": "absent"
+      },
+      "evidence": "Next 16 no longer wires these rules through next lint, so the web surface must install the plugin explicitly."
+    },
+    {
+      "configIndex": 10,
+      "id": "web-api-runtime-boundary",
+      "classification": "policy",
+      "files": ["apps/web/**/*.{ts,tsx}"],
+      "ignores": [],
+      "positive": "apps/web/src/lib/trpc.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-restricted-imports",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Prevents runtime API graph imports into the browser while allowing the AppRouter type-only seam."
+    },
+    {
+      "configIndex": 12,
+      "id": "api-cross-module",
+      "classification": "policy",
+      "files": ["apps/api/src/**/*.ts"],
+      "ignores": ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+      "positive": "apps/api/src/modules/period/domain/period-transition.ts",
+      "negative": "apps/api/src/modules/period/domain/period-transition.test.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "import-x/no-restricted-paths",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Production API modules may consume sibling modules only through their public entrypoints; test wiring is explicitly outside that boundary."
+    },
+    {
+      "configIndex": 13,
+      "id": "api-infrastructure-entrypoints",
+      "classification": "policy",
+      "files": [
+        "apps/api/src/infrastructure/**/*.ts",
+        "apps/api/src/main.ts",
+        "apps/api/src/app.module.ts"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/main.ts",
+      "negative": "apps/api/src/modules/activity/activity.service.ts",
+      "marker": {
+        "kind": "rule-options",
+        "name": "import-x/no-restricted-paths",
+        "positiveContains": "infrastructure and bootstrap",
+        "negativeExcludes": "infrastructure and bootstrap"
+      },
+      "evidence": "Infrastructure and bootstrap code consume module contracts through explicit module entrypoints."
+    },
+    {
+      "configIndex": 14,
+      "id": "web-cross-slice",
+      "classification": "policy",
+      "files": ["apps/web/src/features/**/*.{ts,tsx}"],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**"
+      ],
+      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "negative": "apps/web/src/features/report-pages/ui/lead-form.test.tsx",
+      "marker": {
+        "kind": "rule",
+        "name": "import-x/no-restricted-paths",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Production feature slices may consume siblings only through their index barrels; test composition remains free to wire fixtures."
+    },
+    {
+      "configIndex": 15,
+      "id": "api-domain-purity",
+      "classification": "policy",
+      "files": [
+        "apps/api/src/modules/period/domain/**/*.ts",
+        "apps/api/src/modules/report-sections/domain/**/*.ts",
+        "apps/api/src/modules/review/domain/**/*.ts",
+        "apps/api/src/modules/publication/domain/**/*.ts",
+        "apps/api/src/modules/admin/admin-shared.ts",
+        "apps/api/src/modules/admin/admin-repository.port.ts",
+        "apps/api/src/modules/admin/admin-shared-types.ts"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/modules/period/domain/period-transition.ts",
+      "negative": "apps/api/src/modules/period/module.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-restricted-imports",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Pure domain and named admin port files cannot depend on Prisma, Nest, queues, mail, or Redis adapters."
+    },
+    {
+      "configIndex": 16,
+      "id": "repository-port-types",
+      "classification": "policy",
+      "files": [
+        "apps/api/src/modules/activity/activity.service.ts",
+        "apps/api/src/modules/admin/action-log.service.ts",
+        "apps/api/src/modules/admin/admin-repository.port.ts",
+        "apps/api/src/modules/analytics/analytics.service.ts",
+        "apps/api/src/modules/archive/archive.service.ts",
+        "apps/api/src/modules/carry-over/carry-over.service.ts",
+        "apps/api/src/modules/organization/organization.service.ts",
+        "apps/api/src/modules/pdf-export/pdf-export.service.ts",
+        "apps/api/src/modules/period/application/period.service.ts",
+        "apps/api/src/modules/project-activity/project-activity.service.ts",
+        "apps/api/src/modules/publication/application/publication.service.ts",
+        "apps/api/src/modules/reminders/reminders.service.ts",
+        "apps/api/src/modules/report-sections/application/report-sections.service.ts",
+        "apps/api/src/modules/review/application/review-actions.service.ts",
+        "apps/api/src/modules/review/application/review.service.ts",
+        "apps/api/src/modules/search/search.service.ts",
+        "apps/api/src/modules/telemetry/telemetry.gauges.ts",
+        "apps/api/src/modules/telemetry/telemetry.service.ts",
+        "apps/api/src/modules/weekly-report/weekly-report.service.ts"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/modules/activity/activity.service.ts",
+      "negative": "apps/api/src/modules/activity/activity.module.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-restricted-imports",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "The explicit port-contract inventory prevents Prisma-generated types from leaking through module interfaces."
+    },
+    {
+      "configIndex": 17,
+      "id": "production-let-ban",
+      "classification": "enforcement",
+      "files": [
+        "apps/api/src/**/*.{ts,tsx}",
+        "apps/web/src/**/*.{ts,tsx}",
+        "packages/shared/src/**/*.{ts,tsx}",
+        "packages/ui/src/**/*.{ts,tsx}"
+      ],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "apps/*/src/test-utils/**"
+      ],
+      "positive": "apps/api/src/main.ts",
+      "negative": "apps/api/src/app.module.fence.test.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "no-restricted-syntax",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Production source uses an immutability ratchet while imperative test and fixture code is outside the regime."
+    },
+    {
+      "configIndex": 18,
+      "id": "report-page-prop-seam",
+      "classification": "policy",
+      "files": ["apps/web/src/features/report-pages/ui/**/*.{ts,tsx}"],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "apps/*/src/test-utils/**"
+      ],
+      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "negative": "apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx",
+      "marker": {
+        "kind": "rule-options",
+        "name": "no-restricted-syntax",
+        "positiveContains": "Prop-seam guard",
+        "negativeExcludes": "Prop-seam guard"
+      },
+      "evidence": "Adds a report-page-only hook ReturnType seam guard while preserving the broader production let ban."
+    },
+    {
+      "configIndex": 19,
+      "id": "session-param-immutability",
+      "classification": "policy",
+      "files": ["apps/api/src/infrastructure/trpc/trpc.session-hydration.ts"],
+      "ignores": [],
+      "positive": "apps/api/src/infrastructure/trpc/trpc.session-hydration.ts",
+      "negative": "apps/api/src/infrastructure/trpc/trpc.context.ts",
+      "marker": {
+        "kind": "rule-options",
+        "name": "no-param-reassign",
+        "positiveContains": "\"props\":true",
+        "negativeExcludes": "\"props\":true"
+      },
+      "evidence": "The auth hydration chokepoint forbids mutation of caller-owned session properties more strictly than ordinary functions."
+    },
+    {
+      "configIndex": 20,
+      "id": "pure-layer-immutability",
+      "classification": "enforcement",
+      "files": [
+        "apps/api/src/modules/**/domain/**/*.ts",
+        "packages/shared/src/**/*.ts"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/modules/period/domain/period-transition.ts",
+      "negative": "apps/api/src/modules/period/module.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "functional/immutable-data",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Deep immutability is enforceable in pure domain/shared layers without outlawing adapter and UI mutation idioms."
+    },
+    {
+      "configIndex": 21,
+      "id": "api-module-tacit-style",
+      "classification": "enforcement",
+      "files": ["apps/api/src/modules/**/*.ts"],
+      "ignores": [],
+      "positive": "apps/api/src/modules/activity/activity.service.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "functional/prefer-tacit",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "The arity-aware point-free rule is safe in API modules but would erase predicate narrowing or create this-binding risk elsewhere."
+    },
+    {
+      "configIndex": 22,
+      "id": "ui-domain-boundary",
+      "classification": "policy",
+      "files": ["packages/ui/**/*.{ts,tsx}"],
+      "ignores": [],
+      "positive": "packages/ui/src/components/ui/card.tsx",
+      "negative": "packages/shared/src/index.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-restricted-imports",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "UI primitives receive shaped data and cannot import product-domain schemas."
+    },
+    {
+      "configIndex": 24,
+      "id": "config-data-budgets",
+      "classification": "specialization",
+      "files": ["**/*.config.ts"],
+      "ignores": [],
+      "positive": "apps/web/next.config.ts",
+      "negative": "apps/web/src/lib/trpc.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "max-lines",
+        "positive": "off",
+        "negative": "error"
+      },
+      "evidence": "Declarative configuration is exempt from product code-size/complexity/literal budgets; setup and tool files remain gated."
+    },
+    {
+      "configIndex": 25,
+      "id": "test-policy",
+      "classification": "specialization",
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/__tests__/**"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/app.module.fence.test.ts",
+      "negative": "apps/api/src/main.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "vitest/no-focused-tests",
+        "positive": "error",
+        "negative": "absent"
+      },
+      "evidence": "Tests replace unsafe generic method handling with Vitest-aware enforcement and use measured test-specific budgets rather than a blanket pass."
+    },
+    {
+      "configIndex": 26,
+      "id": "literal-data",
+      "classification": "policy",
+      "files": [
+        "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
+        "apps/api/src/infrastructure/metrics/metrics.registry.ts",
+        "packages/ui/src/components/ui/**",
+        "apps/api/src/test-utils/**"
+      ],
+      "ignores": [],
+      "positive": "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
+      "negative": "apps/api/src/infrastructure/metrics/metrics.module.ts",
+      "marker": {
+        "kind": "rule",
+        "name": "@typescript-eslint/no-magic-numbers",
+        "positive": "off",
+        "negative": "error"
+      },
+      "evidence": "Histogram boundaries, vendored UI primitives, and test infrastructure are literal data; naming each value would add indirection rather than policy."
+    },
+    {
+      "configIndex": 27,
+      "id": "uat-fixture-vocabulary",
+      "classification": "policy",
+      "files": ["apps/web/uat-suite/**"],
+      "ignores": [],
+      "positive": "apps/web/uat-suite/helpers.mjs",
+      "negative": "scripts/find-status-literal-unions.mjs",
+      "marker": {
+        "kind": "rule",
+        "name": "sonarjs/no-duplicate-string",
+        "positive": "off",
+        "negative": "error"
+      },
+      "evidence": "Repeated strings are UAT fixture vocabulary; ordinary tooling remains under duplicate-string enforcement."
+    },
+    {
+      "configIndex": 28,
+      "id": "uat-inline-inventory",
+      "classification": "policy",
+      "files": ["apps/web/uat-suite/inventory.mjs"],
+      "ignores": [],
+      "positive": "apps/web/uat-suite/inventory.mjs",
+      "negative": "apps/web/uat-suite/helpers.mjs",
+      "marker": {
+        "kind": "rule",
+        "name": "sonarjs/cognitive-complexity",
+        "positive": "off",
+        "negative": "error"
+      },
+      "evidence": "The inventory classifier must remain inline because it executes inside page.evaluate; other UAT scripts retain the complexity ceiling."
+    },
+    {
+      "configIndex": 29,
+      "id": "playwright-fixture-use",
+      "classification": "specialization",
+      "files": ["e2e/**/*.ts"],
+      "ignores": [],
+      "positive": "e2e/integration/fixtures.ts",
+      "negative": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "marker": {
+        "kind": "rule",
+        "name": "react-hooks/rules-of-hooks",
+        "positive": "off",
+        "negative": "error"
+      },
+      "evidence": "Playwright names its provider callback use; React Hooks otherwise mistakes the fixture contract for a hook."
+    }
+  ]
+}
