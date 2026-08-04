@@ -6,6 +6,15 @@ import type {
   RouteDeclaration,
   SeedProfileBinding,
 } from "./contracts.ts";
+import {
+  CONTROL_TRANSITIONS,
+  FAULT_MODES,
+  LIFECYCLE_STATES,
+  OWNERSHIP_DENSITIES,
+  PERMISSION_BOUNDARIES,
+  SEED_CAPABILITIES,
+  SUBMISSION_STATES,
+} from "./contracts.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
@@ -96,7 +105,69 @@ const activeProfile: SeedProfileBinding = {
   },
 };
 
+const fullActiveRoute: RouteDeclaration = {
+  ...activeRoute,
+  bindings: activeRoute.bindings?.map((binding) =>
+    binding.profile === "full"
+      ? {
+          ...binding,
+          status: "assigned" as const,
+          rationale: "full runtime fixture",
+        }
+      : {
+          ...binding,
+          status: "not-applicable" as const,
+          reason: "full runtime fixture",
+        },
+  ),
+};
+
+const fullActiveProfile: SeedProfileBinding = {
+  ...activeProfile,
+  profile: "full",
+  definition: {
+    ...activeProfile.definition,
+    capabilities: SEED_CAPABILITIES,
+  },
+};
+
 describe("campaign runtime matrix", () => {
+  it("retains the canonical nominal state when pairwise selection omits it", () => {
+    const plan = compileCampaignMatrix({
+      sourceSha: SOURCE_SHA,
+      declaration: {
+        generatorSeed: "runtime-sweep-v1",
+        axes: {
+          role: ["lead"],
+          route: ["lead:/lead/report/[reportId]"],
+          profileCapability: SEED_CAPABILITIES,
+          lifecycle: LIFECYCLE_STATES,
+          submission: SUBMISSION_STATES,
+          ownershipDensity: OWNERSHIP_DENSITIES,
+          permission: PERMISSION_BOUNDARIES,
+          fault: FAULT_MODES,
+          controlTransition: CONTROL_TRANSITIONS,
+        },
+        constraints: [],
+      },
+      routes: [fullActiveRoute],
+      seedProfiles: [fullActiveProfile],
+    });
+
+    expect(
+      plan.states.some(
+        ({ profile, axes }) =>
+          profile === "full" &&
+          axes.lifecycle === "open" &&
+          axes.submission === "draft" &&
+          axes.ownershipDensity === "single" &&
+          axes.permission === "allowed" &&
+          axes.fault === "none" &&
+          axes.controlTransition === "none",
+      ),
+    ).toBe(true);
+  });
+
   it("is deterministic and prunes impossible role, lifecycle, and fault rows", () => {
     const input = {
       sourceSha: SOURCE_SHA,

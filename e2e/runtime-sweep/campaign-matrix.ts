@@ -3,6 +3,7 @@ import type {
   MatrixDeclaration,
   PermissionBoundary,
   Role,
+  RouteBindingTarget,
   RouteDeclaration,
   SeedCapability,
   SeedProfile,
@@ -146,6 +147,69 @@ const remapCapabilityWitness = (
   };
 };
 
+const canonicalNominalState = (input: {
+  readonly sourceSha: string;
+  readonly generatorSeed: string;
+  readonly role: Role;
+  readonly route: string;
+  readonly routeCapability: SeedCapability | null;
+  readonly availableCapabilities: readonly SeedCapability[];
+}): PairwiseState => {
+  const candidate: MatrixAxes = {
+    role: input.role,
+    route: input.route,
+    profileCapability: DEFAULT_WITNESS,
+    lifecycle: "open",
+    submission: "draft",
+    ownershipDensity: "single",
+    permission: "allowed",
+    fault: "none",
+    controlTransition: "none",
+  };
+  const axes = {
+    ...candidate,
+    profileCapability: witnessCapability(
+      candidate,
+      input.routeCapability,
+      input.availableCapabilities,
+    ),
+  };
+  return {
+    stateId: makeStateId(input.sourceSha, input.generatorSeed, axes),
+    axes,
+    pairwiseDigest: sha256Hex(axes),
+  };
+};
+
+const withCanonicalNominalState = (
+  states: readonly PairwiseState[],
+  nominal: PairwiseState,
+): readonly PairwiseState[] =>
+  states.some(({ stateId }) => stateId === nominal.stateId)
+    ? states
+    : [...states, nominal];
+
+const stateAxesFor = (
+  input: CampaignMatrixInput,
+  role: Role,
+  routeTarget: RouteBindingTarget,
+) =>
+  routeTarget === "none"
+    ? {
+        lifecycle: ["open" as const],
+        submission: ["draft" as const],
+        ownershipDensity: ["single" as const],
+        permission: [NOMINAL_PERMISSION[role]],
+      }
+    : {
+        lifecycle: input.declaration.axes.lifecycle,
+        submission: input.declaration.axes.submission,
+        ownershipDensity: input.declaration.axes.ownershipDensity,
+        permission: input.declaration.axes.permission.filter((value) =>
+          ROLE_PERMISSIONS[role].has(value),
+        ),
+      };
+
 const compileGroup = (
   input: CampaignMatrixInput,
   route: RouteDeclaration,
@@ -161,22 +225,7 @@ const compileGroup = (
     );
   const routeCapability = binding.requiredCapability;
   const generatorSeed = `${input.declaration.generatorSeed}:${profile}:${route.role}:${route.catalogRoute}`;
-  const stateAxes =
-    binding.target === "none"
-      ? {
-          lifecycle: ["open" as const],
-          submission: ["draft" as const],
-          ownershipDensity: ["single" as const],
-          permission: [NOMINAL_PERMISSION[route.role]],
-        }
-      : {
-          lifecycle: input.declaration.axes.lifecycle,
-          submission: input.declaration.axes.submission,
-          ownershipDensity: input.declaration.axes.ownershipDensity,
-          permission: input.declaration.axes.permission.filter((value) =>
-            ROLE_PERMISSIONS[route.role].has(value),
-          ),
-        };
+  const stateAxes = stateAxesFor(input, route.role, binding.target);
   const witness = definition.capabilities.at(0) ?? DEFAULT_WITNESS;
   const matrix = compilePairwiseMatrix({
     sourceSha: input.sourceSha,
@@ -201,8 +250,21 @@ const compileGroup = (
     routeCapability,
     definition.capabilities,
   );
+  const states = withCanonicalNominalState(
+    remapped.states,
+    canonicalNominalState({
+      sourceSha: input.sourceSha,
+      generatorSeed,
+      role: route.role,
+      route: `${route.role}:${route.catalogRoute}`,
+      routeCapability,
+      availableCapabilities: definition.capabilities,
+    }),
+  );
   return {
     ...remapped,
+    states,
+    digest: sha256Hex({ pairwiseDigest: remapped.digest, states }),
     inapplicable: [
       ...remapped.inapplicable,
       ...excludedStateCombinations(
