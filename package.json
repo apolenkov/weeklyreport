@@ -66,6 +66,7 @@
     "test:e2e:csp": "pnpm build:e2e:prodbuild && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.csp.config.ts",
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
     "test:runtime-sweep": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/playwright.config.ts",
+    "test:runtime-manifest": "tsx e2e/runtime-sweep/create-runtime-manifest.ts",
     "test:runtime-driver": "tsx e2e/runtime-sweep/run-opencode-drives.ts",
     "catalog:check": "node e2e/sweep/catalog-check.ts",
     "db:seed:profile": "tsx prisma/seed-profile.ts",

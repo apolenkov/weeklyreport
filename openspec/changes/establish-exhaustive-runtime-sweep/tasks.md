@@ -23,7 +23,7 @@
 - [x] 2.3 Add deterministic Playwright HTTP/network fault declarations and
       recovery cleanup for auth, timeout, 4xx/5xx, and aborted-request cells without
       adding production-only hooks.
-- [ ] 2.4 Add two-context concurrency cells and reuse existing infrastructure
+- [x] 2.4 Add two-context concurrency cells and reuse existing infrastructure
       failure seams for Redis/mail/PDF only where cleanup and non-mutation can be
       proven.
 - [ ] 2.5 Add tests proving reseed determinism, scoped fault teardown,
@@ -40,7 +40,7 @@
       screenshot, geometry, and overflow evidence at Chromium `1440x900`.
 - [x] 3.4 Add the dedicated runtime-sweep Playwright config/spec and root
       commands without weakening the existing integration and `test:uat` suites.
-- [ ] 3.5 Add planted harness tests proving dynamic-control discovery, missing
+- [x] 3.5 Add planted harness tests proving dynamic-control discovery, missing
       accessible names, visual changes, console/network errors, and unreasoned
       omissions fail the owning cell.
 
@@ -69,7 +69,7 @@
 - [x] 5.2 Document the declared Chromium desktop scope, explicit engine/viewport
       exclusions, matrix/profile mapping, controlled faults, archive layout, and
       exact resume procedure without claiming unbounded coverage.
-- [ ] 5.3 Add archive bootstrap/report builders under the campaign archive,
+- [x] 5.3 Add archive bootstrap/report builders under the campaign archive,
       update its `INDEX.md` entry, and keep all session artifacts outside `docs/`.
 
 ## 6. Immutable baseline and adjudication

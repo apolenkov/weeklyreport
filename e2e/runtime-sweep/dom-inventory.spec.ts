@@ -1,7 +1,36 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { inventoryDom } from "./dom-inventory";
+import { captureRouteEvidence } from "./evidence-capture";
 import { captureKeyboardTrace } from "./keyboard-evidence";
+
+const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
+
+async function captureHarnessEvidence(
+  page: Page,
+  testInfo: TestInfo,
+  input: Readonly<{
+    consoleMessages?: readonly { type: string; text: string }[];
+    requestFailures?: readonly { url: string; failure: string | null }[];
+  }> = {},
+) {
+  return captureRouteEvidence({
+    page,
+    archiveRoot: testInfo.outputPath("evidence"),
+    sourceSha: SOURCE_SHA,
+    profile: "minimal",
+    role: "viewer",
+    catalogRoute: "/harness",
+    resolvedRoute: "/harness",
+    cellId: "harness-cell",
+    inventory: await inventoryDom(page),
+    consoleMessages: input.consoleMessages ?? [],
+    pageErrors: [],
+    requestFailures: input.requestFailures ?? [],
+    responseStatus: 200,
+    capturedAt: "2026-08-04T00:00:00.000Z",
+  });
+}
 
 test("inventories visible semantic controls and their metadata", async ({
   page,
@@ -137,4 +166,46 @@ test("captures a bounded keyboard focus transition", async ({ page }) => {
     after: "button:Continue",
     focusMoved: true,
   });
+});
+
+test("fails the owning observations for console and network errors", async ({
+  page,
+}, testInfo) => {
+  await page.setContent('<main><button type="button">Continue</button></main>');
+
+  const { bundle } = await captureHarnessEvidence(page, testInfo, {
+    consoleMessages: [{ type: "error", text: "planted console failure" }],
+    requestFailures: [
+      { url: "http://example.invalid/trpc/report", failure: "net::ERR_FAILED" },
+    ],
+  });
+  const outcomes = new Map(
+    bundle.observations.map(({ observationId, outcome }) => [
+      observationId,
+      outcome,
+    ]),
+  );
+
+  expect(outcomes.get("console")).toBe("fail");
+  expect(outcomes.get("network")).toBe("fail");
+});
+
+test("binds a visual change to a different screenshot digest", async ({
+  page,
+}, testInfo) => {
+  await page.setContent(
+    '<main style="background:white"><button type="button">Continue</button></main>',
+  );
+  const before = await captureHarnessEvidence(page, testInfo);
+  await page.locator("main").evaluate((element) => {
+    element.style.background = "black";
+  });
+  const after = await captureHarnessEvidence(page, testInfo);
+  const screenshotDigest = (result: typeof before): string => {
+    const ref = result.all.find(({ kind }) => kind === "screenshot");
+    if (!ref) throw new Error("Harness screenshot evidence is missing");
+    return ref.digest;
+  };
+
+  expect(screenshotDigest(after)).not.toBe(screenshotDigest(before));
 });

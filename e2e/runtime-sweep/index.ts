@@ -6,6 +6,7 @@ export * from "./fault-injection.ts";
 export * from "./ids.ts";
 export * from "./keyboard-evidence.ts";
 export * from "./ledger.ts";
+export * from "./manifest.ts";
 export * from "./matrix.ts";
 export * from "./opencode-runner.ts";
 export * from "./state-oracle.ts";

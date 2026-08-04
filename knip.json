@@ -18,7 +18,6 @@
         "e2e/runtime-sweep/index.ts",
         "e2e/runtime-sweep/playwright.config.ts",
         "e2e/runtime-sweep/playwright.harness.config.ts",
-        "e2e/runtime-sweep/run-opencode-drives.ts",
         "e2e/**/*.spec.ts",
         "e2e/integration/global-setup.ts",
         "e2e/integration/global-teardown.ts",

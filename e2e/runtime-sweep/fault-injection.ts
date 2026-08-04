@@ -57,7 +57,10 @@ export type FaultDeclaration = HttpFaultDeclaration | AbortedFaultDeclaration;
 export type FaultRouteHandler = (route: Route) => Promise<void>;
 
 export interface FaultRouteRegistrar {
-  route(urlPattern: string | RegExp, handler: FaultRouteHandler): Promise<void>;
+  route(
+    urlPattern: string | RegExp,
+    handler: FaultRouteHandler,
+  ): Promise<unknown>;
   unroute(
     urlPattern: string | RegExp,
     handler: FaultRouteHandler,
