@@ -8,6 +8,7 @@ const LANDMARK_ROLES: ReadonlySet<string> = new Set([
 ]);
 
 const ORDER_WIDTH = 4;
+const INVENTORY_CONTEXT_ATTEMPTS = 3;
 
 export interface DomControlObservation {
   readonly controlKey: string;
@@ -161,15 +162,22 @@ const issuesFor = (
       message: `Visible ${control.role} is missing an accessible name`,
     }));
 
+const isNavigationContextLoss = (error: unknown): boolean =>
+  error instanceof Error &&
+  /Execution context was destroyed.*navigation/iu.test(error.message);
+
 const inventoryElements = async (
   page: Page,
+  attempts = INVENTORY_CONTEXT_ATTEMPTS,
 ): Promise<readonly RawDomElement[]> => {
-  const handle =
-    await page.waitForFunction<readonly RawDomElement[]>(INVENTORY_SCRIPT);
   try {
-    return await handle.jsonValue();
-  } finally {
-    await handle.dispose();
+    return await page.evaluate<readonly RawDomElement[]>(INVENTORY_SCRIPT);
+  } catch (error: unknown) {
+    if (attempts <= 1 || !isNavigationContextLoss(error)) {
+      throw error;
+    }
+    await page.waitForLoadState("domcontentloaded");
+    return inventoryElements(page, attempts - 1);
   }
 };
 

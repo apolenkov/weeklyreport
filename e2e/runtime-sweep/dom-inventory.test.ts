@@ -1,4 +1,4 @@
-import type { JSHandle, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
 import { inventoryDom } from "./dom-inventory.ts";
@@ -21,22 +21,33 @@ const rawButton = {
 
 describe("runtime DOM inventory", () => {
   it("waits for an execution context that survives navigation", async () => {
-    const handle = {
-      jsonValue: () => Promise.resolve([rawButton]),
-      dispose: () => Promise.resolve(),
-    } as unknown as JSHandle<readonly (typeof rawButton)[]>;
+    const evaluate = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error("Execution context was destroyed because of a navigation"),
+      )
+      .mockResolvedValue([rawButton]);
     const page = {
-      evaluate: vi
-        .fn()
-        .mockRejectedValue(
-          new Error("Execution context was destroyed because of a navigation"),
-        ),
-      waitForFunction: vi.fn().mockResolvedValue(handle),
+      evaluate,
+      waitForLoadState: () => Promise.resolve(),
     } as unknown as Page;
 
     await expect(inventoryDom(page)).resolves.toMatchObject({
       controls: [{ accessibleName: "Submit", role: "button" }],
       issues: [],
     });
+    expect(evaluate).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry unrelated browser failures", async () => {
+    const evaluate = vi
+      .fn()
+      .mockRejectedValue(new Error("Browser disconnected"));
+    const waitForLoadState = vi.fn();
+    const page = { evaluate, waitForLoadState } as unknown as Page;
+
+    await expect(inventoryDom(page)).rejects.toThrow("Browser disconnected");
+    expect(evaluate).toHaveBeenCalledOnce();
+    expect(waitForLoadState).not.toHaveBeenCalled();
   });
 });
