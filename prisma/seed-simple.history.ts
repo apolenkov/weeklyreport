@@ -26,6 +26,13 @@ const UUID_TAIL_WIDTH = 12;
 export const historyRowId = (tail: number): string =>
   `${HISTORY_ID_PREFIX}${tail.toString(HEX_RADIX).padStart(UUID_TAIL_WIDTH, "0")}`;
 
+const PUBLISHED_SECTION_ID_PREFIX = "a0000000-0000-4000-8000-";
+const PUBLISHED_SECTION_BASE_TAIL = 0x4_11;
+export const publishedSectionId = (leadIndex: number): string =>
+  `${PUBLISHED_SECTION_ID_PREFIX}${(PUBLISHED_SECTION_BASE_TAIL + leadIndex)
+    .toString(HEX_RADIX)
+    .padStart(UUID_TAIL_WIDTH, "0")}`;
+
 // Row-kind anchors inside the history id space: the published week's status,
 // current item and next item, then per-period archive rows below.
 const PUBLISHED_STATUS_TAIL = 0x6_00;
@@ -60,7 +67,7 @@ async function seedPublishedSection(
   lead: LeadCfg,
   leadIdx: number,
 ): Promise<void> {
-  const sectionId = `a0000000-0000-4000-8000-00000000041${leadIdx + 1}`;
+  const sectionId = publishedSectionId(leadIdx);
   const statusId = historyRowId(PUBLISHED_STATUS_TAIL + leadIdx);
   const currentItemId = historyRowId(PUBLISHED_CURRENT_ITEM_TAIL + leadIdx);
   const nextItemId = historyRowId(PUBLISHED_NEXT_ITEM_TAIL + leadIdx);

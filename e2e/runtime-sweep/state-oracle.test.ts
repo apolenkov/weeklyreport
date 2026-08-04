@@ -4,6 +4,7 @@ import {
   buildRuntimeDomainOracle,
   lifecycleExpectation,
   observePeriodDualState,
+  observeRuntimeDatabase,
   ownershipExpectation,
   permissionExpectation,
   submissionExpectation,
@@ -74,5 +75,35 @@ describe("runtime state oracle", () => {
 
     expect(oracle.key).toBe("reopened|rejected|multiple|owner");
     expect(Object.isFrozen(oracle)).toBe(true);
+  });
+
+  it("checks the period tuple, section verdict, ownership, and permission together", () => {
+    const expected = buildRuntimeDomainOracle({
+      lifecycle: "reopened",
+      submission: "approved",
+      ownership: "multiple",
+      permission: "owner",
+    });
+    const observation = observeRuntimeDatabase(expected, {
+      report: expected.lifecycle.period,
+      section: {
+        status: "submitted",
+        submittedAt: "present",
+        verdict: "approved",
+      },
+      ownership: {
+        targetOwnerId: "lead-owner",
+        owners: ["lead-owner", "lead-foreign"],
+      },
+      permission: {
+        actorId: "lead-owner",
+        actorRole: "lead",
+        authenticated: true,
+        allowed: true,
+        ownsTarget: true,
+      },
+    });
+
+    expect(observation).toEqual({ matches: true, mismatches: [] });
   });
 });

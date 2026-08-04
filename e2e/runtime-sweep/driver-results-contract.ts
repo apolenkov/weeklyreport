@@ -13,7 +13,7 @@ const driverAssignmentCellSchema = z
     cellId: z.string().min(1),
     catalogRoute: z.string().min(1),
     resolvedRoute: z.string().min(1),
-    controlKeys: z.array(z.string().min(1)).min(1).readonly(),
+    actionKey: z.string().min(1),
   })
   .strict();
 const driverControlResultSchema = z.discriminatedUnion("status", [
@@ -61,9 +61,7 @@ const driverReportSchema = z
     assignedCells: z.array(driverAssignmentCellSchema).min(1).readonly(),
     routesVisited: z.number().int().nonnegative(),
     routesPlanned: z.number().int().nonnegative(),
-    canary: z
-      .object({ injected: z.literal(true), detected: z.literal(true) })
-      .strict(),
+    canary: z.object({ injected: z.boolean(), detected: z.boolean() }).strict(),
     timeline: z
       .object({
         startedAt: z.string().min(1),
@@ -104,9 +102,6 @@ const pair = (cellId: string, controlKey: string): string =>
   `${cellId}\u0000${controlKey}`;
 const duplicateValues = (values: readonly string[]): readonly string[] =>
   unique(values.filter((value, index) => values.indexOf(value) !== index));
-const sortStrings = (left: string, right: string): number =>
-  left.localeCompare(right);
-
 function expectedAssignments(
   input: DriverValidationInput,
 ): readonly DriverAssignmentCell[] {
@@ -132,22 +127,12 @@ function expectedAssignments(
       cellId: cell.cellId,
       catalogRoute: cell.catalogRoute,
       resolvedRoute: cell.resolvedRoute,
-      controlKeys: cell.controls
-        .map((control) => control.controlKey)
-        .toSorted(sortStrings),
+      actionKey: cell.action.controlKey,
     }));
-  const duplicateControls = input.cells.flatMap((cell) =>
-    duplicateValues(cell.controls.map((control) => control.controlKey)).map(
-      (controlKey) => `${cell.cellId}:${controlKey}`,
-    ),
-  );
   const allIssues = [
     ...issues,
     ...(input.cells.length === 0 ? ["no assigned coverage cells"] : []),
     ...duplicateCells.map((cellId) => `duplicate expected cell ${cellId}`),
-    ...duplicateControls.map(
-      (control) => `duplicate expected control ${control}`,
-    ),
     ...metadataIssues,
   ];
   if (allIssues.length > 0) throw new DriverResultValidationError(allIssues);
@@ -191,10 +176,9 @@ function assignmentIssues(
       actual.resolvedRoute !== cell.resolvedRoute
     )
       return [`${cell.cellId} assigned route is stale`];
-    return actual.controlKeys.toSorted(sortStrings).join("\u0000") ===
-      cell.controlKeys.join("\u0000")
+    return actual.actionKey === cell.actionKey
       ? []
-      : [`${cell.cellId} assigned control keys are stale`];
+      : [`${cell.cellId} assigned action key is stale`];
   });
   return [...identityIssues, ...detailIssues];
 }
@@ -203,8 +187,8 @@ function controlIssues(
   report: OpenCodeDriverReport,
   expected: readonly DriverAssignmentCell[],
 ): readonly string[] {
-  const expectedPairs = expected.flatMap((cell) =>
-    cell.controlKeys.map((controlKey) => pair(cell.cellId, controlKey)),
+  const expectedPairs = expected.map((cell) =>
+    pair(cell.cellId, cell.actionKey),
   );
   const actualPairs = report.controlResults.map((result) =>
     pair(result.cellId, result.controlKey),
@@ -246,6 +230,9 @@ export function validateDriverReport(
     ...(report.routesVisited !== report.routesPlanned
       ? ["driver report did not visit every assigned route"]
       : []),
+    ...(report.canary.injected && report.canary.detected
+      ? []
+      : ["driver console canary was not detected"]),
   ];
   const candidateIssues = report.candidates.flatMap((candidate) => {
     const cell = expectedCells.get(candidate.cellId);
@@ -255,8 +242,8 @@ export function validateDriverReport(
         : [`candidate ${candidate.candidateId} references an unknown cell`]),
       ...(cell &&
       candidate.controlKey &&
-      !cell.controlKeys.includes(candidate.controlKey)
-        ? [`candidate ${candidate.candidateId} references an unknown control`]
+      candidate.controlKey !== cell.actionKey
+        ? [`candidate ${candidate.candidateId} references an unknown action`]
         : []),
     ];
   });

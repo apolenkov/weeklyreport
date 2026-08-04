@@ -2,11 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import {
-  ACTIVE_REPORT_ID,
-  PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants.ts";
 import { SEED_PROFILE_MANIFESTS } from "../../prisma/seed-profile-contract.ts";
 import { type Catalog, parseCatalog } from "../sweep/catalog-parser.ts";
 import {
@@ -18,17 +15,18 @@ import {
   LIFECYCLE_STATES,
   OWNERSHIP_DENSITIES,
   PERMISSION_BOUNDARIES,
-  type Role,
   roleSchema,
   SEED_CAPABILITIES,
   SEED_PROFILES,
   STATE_KINDS,
   SUBMISSION_STATES,
 } from "./contracts.ts";
+import { type CampaignManifestInput, writeCampaignSource } from "./manifest.ts";
 import {
-  type CampaignManifestInput,
-  writeCampaignManifest,
-} from "./manifest.ts";
+  DEFAULT_MAX_CASES,
+  DEFAULT_MAX_CONTROLS,
+} from "./matrix-finalizer-contract.ts";
+import { routeDeclarationFromCatalog } from "./route-binding.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const CATALOG_ROOT = path.join(REPO_ROOT, "e2e", "catalog");
@@ -57,18 +55,6 @@ function loadCatalogs(): readonly Catalog[] {
     }
     return catalog;
   });
-}
-
-function resolvedRoute(route: string, role: Role): string {
-  const reportId =
-    role === "viewer" || route.startsWith("/reports/")
-      ? PUBLISHED_REPORT_ID
-      : ACTIVE_REPORT_ID;
-  const resolved = route.replaceAll("[reportId]", reportId);
-  if (resolved.includes("[")) {
-    throw new Error(`Unresolved route placeholder: ${role} ${route}`);
-  }
-  return resolved;
 }
 
 async function markdownFiles(directory: string): Promise<readonly string[]> {
@@ -133,11 +119,9 @@ const seedProfiles = () =>
 const routeDeclarations = (catalogs: readonly Catalog[]) =>
   catalogs.flatMap((catalog) => {
     const role = roleSchema.parse(catalog.role);
-    return catalog.routes.map(({ route }) => ({
-      role,
-      catalogRoute: route,
-      resolvedRoute: resolvedRoute(route, role),
-    }));
+    return catalog.routes.map((route) =>
+      routeDeclarationFromCatalog(route, role),
+    );
   });
 
 const toolVersions = () => ({
@@ -220,14 +204,19 @@ async function domainSpecPaths(): Promise<readonly string[]> {
   return [...durable, ...change];
 }
 
-async function main(): Promise<void> {
+export async function buildRuntimeManifestInput(): Promise<CampaignManifestInput> {
   const catalogs = loadCatalogs();
   const routes = routeDeclarations(catalogs);
-  const input: CampaignManifestInput = {
+  return {
     repoRoot: REPO_ROOT,
     outputPath: path.join(
       requiredEnv("RUNTIME_SWEEP_ARCHIVE"),
       "MANIFEST.json",
+    ),
+    sourcePath: path.join(requiredEnv("RUNTIME_SWEEP_ARCHIVE"), "SOURCE.json"),
+    preflightPath: path.join(
+      requiredEnv("RUNTIME_SWEEP_ARCHIVE"),
+      "PREFLIGHT.json",
     ),
     campaignId: requiredEnv("RUNTIME_SWEEP_CAMPAIGN_ID"),
     sourceSha: requiredEnv("RUNTIME_SWEEP_SOURCE_SHA"),
@@ -245,13 +234,26 @@ async function main(): Promise<void> {
     ),
     domainSpecPaths: await domainSpecPaths(),
     matrixDeclaration: matrixDeclaration(routes),
+    matrixLimits: {
+      maxCases: DEFAULT_MAX_CASES,
+      maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
+    },
     exclusions: exclusions(),
   };
-  await writeCampaignManifest(input);
-  console.log(`runtime-manifest PASS ${input.sourceSha}`);
 }
 
-void main().catch((error: unknown) => {
-  console.error("[runtime-manifest] Failed:", error);
-  process.exitCode = 1;
-});
+async function main(): Promise<void> {
+  const input = await buildRuntimeManifestInput();
+  await writeCampaignSource(input);
+  console.log(`runtime-source PASS ${input.sourceSha}`);
+}
+
+if (
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))
+) {
+  void main().catch((error: unknown) => {
+    console.error("[runtime-source] Failed:", error);
+    process.exitCode = 1;
+  });
+}

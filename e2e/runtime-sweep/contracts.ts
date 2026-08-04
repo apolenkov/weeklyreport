@@ -1,9 +1,7 @@
 import { z } from "zod";
-
 const tuple = <const T extends readonly [string, ...string[]]>(
   ...values: T
 ): Readonly<T> => Object.freeze(values);
-
 export const CANONICAL_ROLES = tuple("lead", "head", "admin", "viewer");
 export const SEED_PROFILES = tuple("minimal", "demo", "full", "stress");
 // prettier-ignore
@@ -24,6 +22,15 @@ export const OWNERSHIP_DENSITIES = tuple("none", "single", "multiple");
 export const PERMISSION_BOUNDARIES = tuple("allowed", "owner", "non-owner", "head", "admin", "viewer", "anonymous", "forbidden");
 // prettier-ignore
 export const FAULT_MODES = tuple("none", "auth-missing", "auth-expired", "auth-forbidden", "network-timeout", "request-aborted", "http-4xx", "http-5xx", "api-error", "concurrency-stale-version", "infrastructure-unavailable");
+export const MATRIX_EXECUTION_KINDS = tuple(
+  "navigation",
+  "idle",
+  "control",
+  "recovery",
+  "fault",
+  "concurrency",
+  "infrastructure",
+);
 // prettier-ignore
 export const CONTROL_TRANSITIONS = tuple("none", "idle", "open", "submit", "publish", "delete", "revoke", "restore", "retry", "cancel");
 // prettier-ignore
@@ -43,7 +50,7 @@ export const EVIDENCE_DIMENSIONS = tuple(
   "runtime",
 );
 // prettier-ignore
-export const EVIDENCE_KINDS = tuple("dom", "url", "console", "page-error", "request", "api", "db", "axe", "keyboard", "screenshot", "geometry", "driver-report");
+export const EVIDENCE_KINDS = tuple("dom", "url", "console", "page-error", "request", "api", "db", "axe", "keyboard", "screenshot", "geometry", "control-action", "driver-report");
 export const CANDIDATE_KINDS = tuple(
   "functional",
   "accessibility",
@@ -51,6 +58,7 @@ export const CANDIDATE_KINDS = tuple(
   "console",
   "network",
   "page",
+  "env",
 );
 export const COVERAGE_VERDICTS = tuple(
   "pending",
@@ -79,12 +87,15 @@ export const NOT_EXERCISED_POLICIES = tuple(
   "unavailable",
 );
 export const EXCLUSION_SCOPES = tuple("browser", "viewport", "matrix");
-
 const DESKTOP_WIDTH = 1440;
 const DESKTOP_HEIGHT = 900;
 const sourceShaPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^[0-9a-f]{64}$/;
-
+const stableIdentifierPattern = /^[a-z0-9][a-z0-9._-]*$/;
+const stableIdentifierSchemaFactory = () =>
+  z
+    .string()
+    .regex(stableIdentifierPattern, "must be a lowercase stable identifier");
 export const sourceShaSchema = z.string().regex(sourceShaPattern);
 export const sha256DigestSchema = z.string().regex(digestPattern);
 export const roleSchema = z.enum(CANONICAL_ROLES);
@@ -95,6 +106,10 @@ export const submissionStateSchema = z.enum(SUBMISSION_STATES);
 export const ownershipDensitySchema = z.enum(OWNERSHIP_DENSITIES);
 export const permissionBoundarySchema = z.enum(PERMISSION_BOUNDARIES);
 export const faultModeSchema = z.enum(FAULT_MODES);
+export const matrixExecutionKindSchema = z.enum(MATRIX_EXECUTION_KINDS);
+export const stableIdentifierSchema = stableIdentifierSchemaFactory();
+export const faultIdSchema = stableIdentifierSchemaFactory();
+export const matrixConstraintIdSchema = stableIdentifierSchemaFactory();
 export const controlTransitionSchema = z.enum(CONTROL_TRANSITIONS);
 export const actionOperationSchema = z.enum(ACTION_OPERATIONS);
 export const actionSafetySchema = z.enum(ACTION_SAFETY);
@@ -103,7 +118,6 @@ export const evidenceDimensionSchema = z.enum(EVIDENCE_DIMENSIONS);
 export const evidenceKindSchema = z.enum(EVIDENCE_KINDS);
 export const candidateKindSchema = z.enum(CANDIDATE_KINDS);
 export const coverageVerdictSchema = z.enum(COVERAGE_VERDICTS);
-
 // prettier-ignore
 export const seedCountBoundSchema = z.object({ min: z.number().int().nonnegative(), max: z.number().int().nonnegative() }).strict().refine(({ min, max }) => min <= max, "seed count minimum cannot exceed maximum");
 // prettier-ignore
@@ -113,10 +127,9 @@ export const seedProfileBindingSchema = z.object({ profile: seedProfileSchema, d
 // prettier-ignore
 export const toolVersionsSchema = z.record(z.string().min(1), z.string().min(1)).refine((versions) => Object.keys(versions).length > 0, "at least one tool version is required");
 // prettier-ignore
-export const matrixConstraintSchema = z.object({ id: z.string().min(1), reason: z.string().min(1) }).strict();
+export const matrixConstraintSchema = z.object({ id: matrixConstraintIdSchema, reason: z.string().trim().min(1) }).strict();
 // prettier-ignore
 export const matrixDeclarationSchema = z.object({ generatorSeed: z.string().min(1), axes: z.object({ role: z.array(roleSchema).min(1).readonly(), route: z.array(z.string().min(1)).min(1).readonly(), profileCapability: z.array(seedCapabilitySchema).min(1).readonly(), lifecycle: z.array(lifecycleStateSchema).min(1).readonly(), submission: z.array(submissionStateSchema).min(1).readonly(), ownershipDensity: z.array(ownershipDensitySchema).min(1).readonly(), permission: z.array(permissionBoundarySchema).min(1).readonly(), fault: z.array(faultModeSchema).min(1).readonly(), controlTransition: z.array(controlTransitionSchema).min(1).readonly() }).strict(), constraints: z.array(matrixConstraintSchema).readonly() }).strict();
-
 // prettier-ignore
 export const viewportSchema = z.object({ browser: z.literal("chromium"), width: z.literal(DESKTOP_WIDTH), height: z.literal(DESKTOP_HEIGHT) }).strict();
 // prettier-ignore
@@ -125,6 +138,85 @@ export const stateAxesSchema = z.object({ profileCapability: seedCapabilitySchem
 export const matrixAxesSchema = z.object({ role: roleSchema, route: z.string().min(1), ...stateAxesSchema.shape }).strict();
 // prettier-ignore
 export const actionSchema = z.object({ intentId: z.string().min(1).optional(), controlKey: z.string().min(1), operation: actionOperationSchema, safety: actionSafetySchema, transition: controlTransitionSchema }).strict();
+export const matrixObservationSchema = z
+  .object({
+    observationId: stableIdentifierSchema,
+    kind: z.enum(OBSERVATION_KINDS),
+  })
+  .strict();
+const navigationActionSchema = actionSchema
+  .extend({
+    operation: z.literal("navigate"),
+    safety: z.literal("read-only"),
+    transition: z.literal("none"),
+  })
+  .strict();
+const recoveryActionSchema = actionSchema
+  .extend({ operation: z.literal("retry"), transition: z.literal("retry") })
+  .strict();
+const faultExecutionBaseSchema = z.object({ faultId: faultIdSchema });
+const navigationExecutionSchema = z
+  .object({ kind: z.literal("navigation"), action: navigationActionSchema })
+  .strict();
+const idleExecutionSchema = z
+  .object({ kind: z.literal("idle"), observation: matrixObservationSchema })
+  .strict();
+const controlExecutionSchema = z
+  .object({ kind: z.literal("control"), action: actionSchema })
+  .strict();
+const recoveryExecutionSchema = z
+  .object({
+    kind: z.literal("recovery"),
+    action: recoveryActionSchema,
+    ...faultExecutionBaseSchema.shape,
+  })
+  .strict();
+const faultExecutionSchema = z
+  .object({
+    kind: z.literal("fault"),
+    action: actionSchema,
+    ...faultExecutionBaseSchema.shape,
+  })
+  .strict();
+const concurrencyExecutionSchema = z
+  .object({
+    kind: z.literal("concurrency"),
+    action: actionSchema,
+    ...faultExecutionBaseSchema.shape,
+  })
+  .strict();
+const infrastructureActionExecutionSchema = z
+  .object({
+    kind: z.literal("infrastructure"),
+    action: actionSchema,
+    ...faultExecutionBaseSchema.shape,
+  })
+  .strict();
+const infrastructureObservationExecutionSchema = z
+  .object({
+    kind: z.literal("infrastructure"),
+    observation: matrixObservationSchema
+      .extend({ kind: z.enum(["api", "db"]) })
+      .strict(),
+    ...faultExecutionBaseSchema.shape,
+  })
+  .strict();
+export const matrixExecutionSchema = z.union([
+  navigationExecutionSchema,
+  idleExecutionSchema,
+  controlExecutionSchema,
+  recoveryExecutionSchema,
+  faultExecutionSchema,
+  concurrencyExecutionSchema,
+  infrastructureActionExecutionSchema,
+  infrastructureObservationExecutionSchema,
+]);
+export const matrixInapplicableSchema = z
+  .object({
+    constraintId: matrixConstraintIdSchema,
+    reason: z.string().trim().min(1),
+  })
+  .strict();
 // prettier-ignore
 export const oracleDimensionSchema = z.object({ required: z.boolean(), expectation: z.string().min(1) }).strict();
 // prettier-ignore
@@ -142,51 +234,67 @@ export const controlActionResultSchema = z.union([z.object({ kind: z.literal("ex
 // prettier-ignore
 export const domControlSchema = z.object({ controlKey: z.string().min(1), cellId: z.string().min(1), ariaRole: z.string().min(1), accessibleName: z.string(), enabled: z.boolean(), order: z.number().int().nonnegative(), actionResult: controlActionResultSchema }).strict();
 // prettier-ignore
-export const routeDeclarationSchema = z.object({ role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1) }).strict();
+export const routeBindingTargetSchema = z.enum(["none", "active", "published"]);
+// prettier-ignore
+export const routeBindingSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("assigned"), profile: seedProfileSchema, target: routeBindingTargetSchema, requiredCapability: seedCapabilitySchema.nullable(), resolvedRoute: z.string().min(1), rationale: z.string().min(1) }).strict(), z.object({ status: z.literal("not-applicable"), profile: seedProfileSchema, target: routeBindingTargetSchema, requiredCapability: seedCapabilitySchema.nullable(), resolvedRoute: z.string().min(1), reason: z.string().min(1) }).strict()]);
+// prettier-ignore
+export const routeDeclarationSchema = z.object({ role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), allowsCurrentLive: z.boolean().optional(), bindings: z.array(routeBindingSchema).length(SEED_PROFILES.length).readonly().optional() }).strict();
 // prettier-ignore
 export const exclusionSchema = z.object({ id: z.string().min(1), scope: z.enum(EXCLUSION_SCOPES), target: z.string().min(1), reason: z.string().min(1) }).strict();
 // prettier-ignore
 export const campaignManifestSchema = z.object({ campaignId: z.string().min(1), sourceSha: sourceShaSchema, treeDigest: sha256DigestSchema, browser: z.literal("chromium"), viewport: viewportSchema, roles: z.array(roleSchema).length(CANONICAL_ROLES.length).readonly(), routes: z.array(routeDeclarationSchema).min(1).readonly(), profiles: z.array(seedProfileSchema).length(SEED_PROFILES.length).readonly(), seedProfiles: z.array(seedProfileBindingSchema).length(SEED_PROFILES.length).readonly(), stateKinds: z.array(stateKindSchema).length(STATE_KINDS.length).readonly(), actions: z.array(actionSchema).min(1).readonly(), toolVersions: toolVersionsSchema, catalogDigest: sha256DigestSchema, domainSpecDigest: sha256DigestSchema, matrixDeclaration: matrixDeclarationSchema, matrixDigest: sha256DigestSchema, exclusions: z.array(exclusionSchema).min(1).readonly() }).strict();
 // prettier-ignore
-export const coverageCellSchema = z.object({ cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), viewport: viewportSchema, state: stateAxesSchema, action: actionSchema, oracle: oracleSchema, controls: z.array(domControlSchema).readonly(), evidence: evidenceBundleSchema, verdict: coverageVerdictSchema }).strict();
+const coverageCellBaseSchema = z.object({ cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), viewport: viewportSchema, state: stateAxesSchema, action: actionSchema, execution: matrixExecutionSchema, faultId: faultIdSchema.nullable(), oracle: oracleSchema, controls: z.array(domControlSchema).readonly(), evidence: evidenceBundleSchema, verdict: coverageVerdictSchema }).strict();
+// prettier-ignore
+export const coverageCellSchema = coverageCellBaseSchema.refine(({ execution, faultId }) => faultId === ("faultId" in execution ? execution.faultId : null), { path: ["faultId"], message: "CoverageCell faultId must match execution faultId" });
 // prettier-ignore
 export const candidateSchema = z.object({ candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), state: stateAxesSchema, action: actionSchema, oracle: oracleSchema, kind: candidateKindSchema, summary: z.string().min(1), evidence: z.array(evidenceRefSchema).min(1).readonly() }).strict();
 // prettier-ignore
 export const dispositionSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("dismissed"), candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, verifierRefs: z.array(z.string().min(1)).min(1).readonly(), evidence: z.array(evidenceRefSchema).min(1).readonly(), rationale: z.string().min(1) }).strict(), z.object({ status: z.literal("fixed"), candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, verifierRefs: z.array(z.string().min(1)).min(1).readonly(), evidence: z.array(evidenceRefSchema).min(1).readonly(), findingRef: z.string().min(1), fixSha: sourceShaSchema, rationale: z.string().min(1) }).strict()]);
-
-export type Role = z.infer<typeof roleSchema>;
-export type SeedProfile = z.infer<typeof seedProfileSchema>;
-export type SeedCapability = z.infer<typeof seedCapabilitySchema>;
-export type SeedCountDimension = (typeof SEED_COUNT_DIMENSIONS)[number];
-export type SeedCountBound = z.infer<typeof seedCountBoundSchema>;
-export type SeedProfileDefinition = z.infer<typeof seedProfileDefinitionSchema>;
-export type SeedProfileBinding = z.infer<typeof seedProfileBindingSchema>;
-export type LifecycleState = z.infer<typeof lifecycleStateSchema>;
-export type SubmissionState = z.infer<typeof submissionStateSchema>;
-export type OwnershipDensity = z.infer<typeof ownershipDensitySchema>;
-export type PermissionBoundary = z.infer<typeof permissionBoundarySchema>;
-export type FaultMode = z.infer<typeof faultModeSchema>;
-export type ControlTransition = z.infer<typeof controlTransitionSchema>;
-export type ActionOperation = z.infer<typeof actionOperationSchema>;
-export type ActionSafety = z.infer<typeof actionSafetySchema>;
-export type StateKind = z.infer<typeof stateKindSchema>;
-export type EvidenceDimension = z.infer<typeof evidenceDimensionSchema>;
-export type EvidenceKind = z.infer<typeof evidenceKindSchema>;
-export type CoverageVerdict = z.infer<typeof coverageVerdictSchema>;
-export type ToolVersions = z.infer<typeof toolVersionsSchema>;
-export type ManifestMatrixConstraint = z.infer<typeof matrixConstraintSchema>;
-export type MatrixDeclaration = z.infer<typeof matrixDeclarationSchema>;
-export type Viewport = z.infer<typeof viewportSchema>;
-export type StateAxes = z.infer<typeof stateAxesSchema>;
-export type MatrixAxes = z.infer<typeof matrixAxesSchema>;
-export type Action = z.infer<typeof actionSchema>;
-export type Oracle = z.infer<typeof oracleSchema>;
-export type EvidenceRef = z.infer<typeof evidenceRefSchema>;
-export type EvidenceBundle = z.infer<typeof evidenceBundleSchema>;
-export type DOMControl = z.infer<typeof domControlSchema>;
-export type RouteDeclaration = z.infer<typeof routeDeclarationSchema>;
-export type Exclusion = z.infer<typeof exclusionSchema>;
-export type CampaignManifest = z.infer<typeof campaignManifestSchema>;
-export type CoverageCell = z.infer<typeof coverageCellSchema>;
-export type Candidate = z.infer<typeof candidateSchema>;
-export type Disposition = z.infer<typeof dispositionSchema>;
+export type {
+  Action,
+  ActionOperation,
+  ActionSafety,
+  CampaignManifest,
+  Candidate,
+  ControlTransition,
+  CoverageCell,
+  CoverageVerdict,
+  Disposition,
+  DOMControl,
+  EvidenceBundle,
+  EvidenceDimension,
+  EvidenceKind,
+  EvidenceRef,
+  Exclusion,
+  FaultId,
+  FaultMode,
+  LifecycleState,
+  ManifestMatrixConstraint,
+  MatrixAxes,
+  MatrixDeclaration,
+  MatrixExecution,
+  MatrixExecutionInapplicable,
+  MatrixExecutionKind,
+  MatrixObservation,
+  Oracle,
+  OwnershipDensity,
+  PermissionBoundary,
+  Role,
+  RouteBinding,
+  RouteBindingTarget,
+  RouteDeclaration,
+  RouteDeclarationInput,
+  SeedCapability,
+  SeedCountBound,
+  SeedCountDimension,
+  SeedProfile,
+  SeedProfileBinding,
+  SeedProfileDefinition,
+  StableIdentifier,
+  StateAxes,
+  StateKind,
+  SubmissionState,
+  ToolVersions,
+  Viewport,
+} from "./contracts-types.ts";

@@ -54,6 +54,8 @@ function makeCell(cellId = "cell-a"): CoverageCell {
     viewport: { browser: "chromium", width: 1440, height: 900 },
     state,
     action,
+    execution: { kind: "control", action },
+    faultId: null,
     oracle,
     controls: [
       {
@@ -102,7 +104,7 @@ function report(
         cellId: "cell-a",
         catalogRoute: "/lead/report",
         resolvedRoute: "/lead/report",
-        controlKeys: ["save", "cancel"],
+        actionKey: "save",
       },
     ],
     routesVisited: 1,
@@ -153,7 +155,7 @@ function options(reportText: string): DriverMergeOptions {
 
 describe("OpenCode driver result contract", () => {
   it("rejects a report from a stale source SHA", () => {
-    const stale = report(["save", "cancel"], OTHER_SOURCE_SHA);
+    const stale = report(["save"], OTHER_SOURCE_SHA);
 
     expect(() =>
       mergeDriverResults([makeCell()], stale, options(stale)),
@@ -161,19 +163,19 @@ describe("OpenCode driver result contract", () => {
   });
 
   it("rejects missing and duplicate control results", () => {
-    const missing = report(["save"]);
+    const missing = report(["cancel"]);
     expect(() =>
       mergeDriverResults([makeCell()], missing, options(missing)),
     ).toThrow(/missing control result/iu);
 
-    const duplicate = report(["save", "cancel", "cancel"]);
+    const duplicate = report(["save", "save"]);
     expect(() =>
       mergeDriverResults([makeCell()], duplicate, options(duplicate)),
     ).toThrow(/duplicate control result/iu);
   });
 
   it("keeps a blocked control and cell blocked", () => {
-    const blockedReport = report(["save", "cancel"], SOURCE_SHA, ["cancel"]);
+    const blockedReport = report(["save"], SOURCE_SHA, ["save"]);
 
     const [merged] = mergeDriverResults(
       [makeCell()],
@@ -181,11 +183,15 @@ describe("OpenCode driver result contract", () => {
       options(blockedReport),
     );
     expect(merged?.verdict).toBe("blocked");
-    expect(merged?.controls[1]?.actionResult.kind).toBe("not-exercised");
+    expect(
+      merged?.controls.every(
+        (control) => control.actionResult.kind === "not-exercised",
+      ),
+    ).toBe(true);
   });
 
-  it("promotes only fully covered controls and binds a driver report artifact", () => {
-    const reportText = report(["save", "cancel"]);
+  it("binds route evidence without claiming observed controls were exercised", () => {
+    const reportText = report(["save"]);
     const [merged] = mergeDriverResults(
       [makeCell()],
       reportText,
@@ -195,7 +201,7 @@ describe("OpenCode driver result contract", () => {
     expect(merged?.verdict).toBe("pass");
     expect(
       merged?.controls.every(
-        (control) => control.actionResult.kind === "exercised",
+        (control) => control.actionResult.kind === "not-exercised",
       ),
     ).toBe(true);
     expect(merged?.evidence.action).toHaveLength(1);

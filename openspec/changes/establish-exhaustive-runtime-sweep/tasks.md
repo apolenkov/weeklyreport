@@ -13,6 +13,9 @@
       incomplete final verdicts.
 - [x] 1.5 Add focused unit tests for schema rejection, reproducible matrix
       ordering, pair coverage, digest drift, and zero-gap stop-gate arithmetic.
+- [x] 1.6 Add the discriminated execution contract and one centralized legal-row
+      policy; reject transition/action mismatch, missing fault ids, fabricated
+      `none` witnesses, and unreasoned specialized-axis omissions.
 
 ## 2. API, database, and deterministic state preparation
 
@@ -26,14 +29,14 @@
 - [x] 2.4 Add two-context concurrency cells and reuse existing infrastructure
       failure seams for Redis/mail/PDF only where cleanup and non-mutation can be
       proven.
-- [ ] 2.5 Add tests proving reseed determinism, scoped fault teardown,
+- [x] 2.5 Add tests proving reseed determinism, scoped fault teardown,
       concurrency isolation, and unchanged persisted state after rejected actions.
 
 ## 3. Web DOM, accessibility, and visual execution
 
 - [x] 3.1 Implement semantic live-DOM inventory for visible interactive
       controls and newly revealed controls, with stable role/name/order identities.
-- [ ] 3.2 Implement bounded control actions, including publish, delete, revoke,
+- [x] 3.2 Implement bounded control actions, including publish, delete, revoke,
       and restore on the disposable E2E database, with reset/reseed after stateful
       or ambiguous outcomes.
 - [x] 3.3 Collect per-cell functional, keyboard/focus/axe, console/page/network,
@@ -43,8 +46,14 @@
 - [x] 3.5 Add planted harness tests proving dynamic-control discovery, missing
       accessible names, visual changes, console/network errors, and unreasoned
       omissions fail the owning cell.
+- [x] 3.6 Implement deterministic two-stage route/state preflight: freeze an
+      immutable `SOURCE.json` plan, use the dedicated Playwright preflight to
+      reset/prepare every nominal segment and inventory controls into
+      `PREFLIGHT.json`, then require that artifact to finalize frozen
+      `MATRIX.json` cases, typed inapplicable records, total-case limits, and
+      digest before immutable baseline execution.
 
-## 4. OpenCode Luna Driver and feedback loop
+## 4. OpenCode DeepSeek V4 Flash Max Driver and feedback loop
 
 - [x] 4.1 Pin and connect Microsoft Playwright MCP `0.0.78` to the installed
       OpenCode `1.18.11` as isolated headless Chromium at `1440x900`; verify the MCP
@@ -53,13 +62,16 @@
       cell protocol that permits declared disposable-DB mutations and returns only
       schema-valid candidates, timelines, canary, and evidence refs.
 - [x] 4.3 Implement the primary-orchestrator command that freezes one SHA,
-      resets profiles, schedules one Luna Max role/profile drive at a time, captures
+      resets profiles, schedules one DeepSeek V4 Flash Max role/profile drive at a time, captures
       OpenCode session ids, and refuses browser/database parallelism.
-- [ ] 4.4 Implement environment-feedback correlation and independent read-only
+- [x] 4.4 Implement environment-feedback correlation and independent read-only
       candidate verification; only verified candidates may enter adjudication.
-- [ ] 4.5 Add preflight and planted tests for missing MCP tools, blind canary,
+- [x] 4.5 Add preflight and planted tests for missing MCP tools, blind canary,
       malformed model output, interrupted sessions, stale SHA, and partial report
       recovery.
+- [x] 4.6 Shard finalized cases into deterministic route-local OpenCode
+      assignments of at most 32 exact cell ids and reject missing, extra,
+      reordered, or out-of-shard results.
 
 ## 5. Documentation and operator surface
 
@@ -79,7 +91,7 @@
 - [ ] 6.2 Run the complete deterministic Playwright matrix sequentially across
       all declared roles, routes, states, controls, transitions, and controlled
       faults, preserving every cell and artifact before verdict aggregation.
-- [ ] 6.3 Run bounded OpenCode Luna Max Driver passes for every assigned cell,
+- [ ] 6.3 Run bounded OpenCode DeepSeek V4 Flash Max Driver passes for every assigned cell,
       collect canary/timeline/environment evidence, and preserve interrupted output.
 - [ ] 6.4 Independently verify every candidate, close every baseline cell, and
       publish an immutable adjudicated finding register before changing product or
@@ -92,7 +104,7 @@
       tests and do not overwrite baseline evidence.
 - [ ] 7.2 After each batch, rerun every affected cell from a clean reset/profile
       at the new SHA and bind its evidence to the baseline finding.
-- [ ] 7.3 Run the entire declared Playwright and Luna matrix again at one final
+- [ ] 7.3 Run the entire declared Playwright and DeepSeek V4 Flash Max matrix again at one final
       SHA; require every final cell to pass with complete function/a11y/visual
       evidence and zero unresolved or confirmed gaps.
 

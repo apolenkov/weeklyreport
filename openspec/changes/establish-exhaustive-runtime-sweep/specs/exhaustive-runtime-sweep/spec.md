@@ -27,6 +27,38 @@ NOT report them as covered.
 - **AND** the manifest contains a finite, serializable matrix digest that
   identifies the exact profile, role, route, state, and action set
 
+### Requirement: Matrix finalization is deterministic and executable
+
+The campaign SHALL first prepare every nominal route/state segment and freeze
+its semantic live-DOM control inventory. It SHALL then persist one ordered
+`MATRIX.json` whose digest is referenced by the campaign manifest. Every row
+SHALL be either one executable navigation, idle, control, recovery, fault,
+concurrency, or infrastructure case, or one typed inapplicable combination with
+a stable constraint id and reason. Pairwise requirements SHALL be derived from
+the legal finalized rows rather than a separate raw Cartesian model.
+
+Each executable row SHALL contain exactly one bounded action or observation.
+Its control-transition value SHALL match its action transition, and every
+non-`none` fault SHALL carry a named fault id and execution declaration in the
+same row. Limits SHALL apply to the total finalized case set and SHALL abort
+before baseline execution rather than trimming cells.
+
+#### Scenario: live applicability is frozen before baseline
+
+- **WHEN** deterministic preflight completes for the declared source, profiles,
+  routes, and states
+- **THEN** the final ordered cells, typed inapplicable records, counts, limits,
+  and digest are written to `MATRIX.json`
+- **AND** the baseline replays that file without adding newly discovered cells
+
+#### Scenario: an invalid specialized witness fails finalization
+
+- **WHEN** a transition disagrees with its action, a non-`none` fault lacks a
+  fault id, an axis value has neither an executable row nor a typed reason, or
+  the total case limit is exceeded
+- **THEN** matrix finalization fails before baseline execution
+- **AND** a `none` value or silently trimmed row cannot satisfy the gap
+
 ### Requirement: Every coverage cell has a typed identity and one source SHA
 
 The canonical evidence ledger owned by the primary orchestrator SHALL represent
@@ -39,6 +71,10 @@ SHALL be one of the checked-in seed profiles (`minimal`, `demo`, `full`, or
 `pass`, `fail`, or `blocked`. Cell identity SHALL include a stable digest of
 the state and action sequence so that two distinct executions cannot silently
 share a cell id.
+
+The typed identity SHALL also include a discriminated execution kind and, for a
+controlled fault, its fault id. One navigation cell that performs several
+controls MUST NOT stand in for distinct control-action cells.
 
 #### Scenario: a cell with missing or malformed identity is rejected
 

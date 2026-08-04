@@ -1,6 +1,14 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 
@@ -9,7 +17,7 @@ import {
   type Exclusion,
   type MatrixDeclaration,
   type Role,
-  type RouteDeclaration,
+  type RouteDeclarationInput,
   type SeedProfile,
   type SeedProfileDefinition,
   type StateKind,
@@ -29,12 +37,14 @@ export interface SeedProfileDefinitionInput {
 export interface CampaignManifestInput {
   readonly repoRoot: string;
   readonly outputPath: string;
+  readonly sourcePath?: string;
+  readonly preflightPath?: string;
   readonly campaignId: string;
   readonly sourceSha: string;
   readonly browser: "chromium";
   readonly viewport: Viewport;
   readonly roles: readonly Role[];
-  readonly routes: readonly RouteDeclaration[];
+  readonly routes: readonly RouteDeclarationInput[];
   readonly profiles: readonly SeedProfile[];
   readonly seedProfiles: readonly SeedProfileDefinitionInput[];
   readonly stateKinds: readonly StateKind[];
@@ -43,6 +53,10 @@ export interface CampaignManifestInput {
   readonly catalogPaths: readonly string[];
   readonly domainSpecPaths: readonly string[];
   readonly matrixDeclaration: MatrixDeclaration;
+  readonly matrixLimits: Readonly<{
+    readonly maxCases: number;
+    readonly maxControlsPerSegment: number;
+  }>;
   readonly exclusions: readonly Exclusion[];
 }
 
@@ -185,5 +199,61 @@ export async function writeManifestFile(
         `Cannot create immutable campaign manifest at ${outputPath}: ${error.message}`,
       );
     throw error;
+  }
+}
+
+export async function writeAtomicManifestPair(
+  input: {
+    readonly matrixPath: string;
+    readonly matrixText: string;
+    readonly manifestPath: string;
+    readonly manifestText: string;
+  },
+  publishFile: (oldPath: string, newPath: string) => Promise<void> = link,
+): Promise<void> {
+  const directory = path.dirname(input.manifestPath);
+  if (path.dirname(input.matrixPath) !== directory) {
+    throw new ManifestWriteError(
+      "Cannot atomically create campaign artifacts in different directories",
+    );
+  }
+  const temporaryDirectory = await mkdtemp(
+    path.join(directory, `.runtime-sweep-${process.pid}-`),
+  );
+  try {
+    await writeFile(
+      path.join(temporaryDirectory, "MATRIX.json"),
+      input.matrixText,
+      {
+        encoding: "utf8",
+        flag: "wx",
+      },
+    );
+    await writeFile(
+      path.join(temporaryDirectory, "MANIFEST.json"),
+      input.manifestText,
+      { encoding: "utf8", flag: "wx" },
+    );
+    await publishFile(
+      path.join(temporaryDirectory, "MATRIX.json"),
+      input.matrixPath,
+    );
+    try {
+      await publishFile(
+        path.join(temporaryDirectory, "MANIFEST.json"),
+        input.manifestPath,
+      );
+    } catch (error: unknown) {
+      await unlink(input.matrixPath);
+      throw error;
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error)
+      throw new ManifestWriteError(
+        `Cannot atomically create campaign artifacts MATRIX.json and MANIFEST.json: ${error.message}`,
+      );
+    throw error;
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
   }
 }

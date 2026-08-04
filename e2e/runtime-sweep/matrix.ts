@@ -14,17 +14,13 @@ export type AxisValues = {
 };
 
 // prettier-ignore
-export interface MatrixConstraint { readonly id: string; readonly reason: string; readonly check: (axes: MatrixAxes) => boolean; }
-
+export interface MatrixConstraint { readonly id: string; readonly reason: string; readonly check: (axes: MatrixAxes) => boolean; readonly checkPartial?: (axes: Readonly<Partial<MatrixAxes>>) => boolean; }
 // prettier-ignore
 export interface PairwiseMatrixInput { readonly sourceSha: string; readonly generatorSeed: string; readonly axes: AxisValues; readonly constraints?: readonly MatrixConstraint[]; }
-
 // prettier-ignore
 export interface MatrixInapplicable { readonly axes: MatrixAxes; readonly constraintId: string; readonly reason: string; }
-
 // prettier-ignore
 export interface PairwiseState { readonly stateId: string; readonly axes: MatrixAxes; readonly pairwiseDigest: string; }
-
 // prettier-ignore
 export interface PairwiseMatrix { readonly states: readonly PairwiseState[]; readonly inapplicable: readonly MatrixInapplicable[]; readonly coveredPairs: readonly string[]; readonly digest: string; }
 
@@ -62,34 +58,108 @@ function pairKeys(
   );
 }
 
-// prettier-ignore
-function uniqueRows(rows: readonly PartialAxes[]): readonly PartialAxes[] { return rows.filter((row, index, all) => all.findIndex((candidate) => stableSerialize(candidate) === stableSerialize(row)) === index); }
+interface Candidate {
+  readonly row: PartialAxes;
+  readonly key: string;
+  readonly pairs: readonly string[];
+}
+
+function uniqueCandidates(
+  rows: readonly PartialAxes[],
+  axes: readonly MatrixAxisName[],
+): readonly Candidate[] {
+  const candidates = new Map<string, Candidate>();
+  rows.forEach((row) => {
+    const key = stableSerialize(row);
+    if (!candidates.has(key)) {
+      candidates.set(key, { row, key, pairs: pairKeys(row, axes) });
+    }
+  });
+  return [...candidates.values()];
+}
+
+function indexCandidates(
+  candidates: readonly Candidate[],
+  selectedKeys: ReadonlySet<string>,
+  selectedIndexes: Set<number>,
+  pairCandidates: Map<string, number[]>,
+): void {
+  candidates.forEach((candidate, index) => {
+    if (selectedKeys.has(candidate.key)) selectedIndexes.add(index);
+    candidate.pairs.forEach((pair) => {
+      const indexes = pairCandidates.get(pair) ?? [];
+      indexes.push(index);
+      pairCandidates.set(pair, indexes);
+    });
+  });
+}
 
 function greedyRows(
-  candidates: readonly PartialAxes[],
-  axes: readonly MatrixAxisName[],
+  candidates: readonly Candidate[],
   selected: readonly PartialAxes[],
   remaining: ReadonlySet<string>,
 ): readonly PartialAxes[] {
   if (remaining.size === 0) return selected;
   const selectedKeys = new Set(selected.map(stableSerialize));
-  const ranked = candidates
-    .filter((row) => !selectedKeys.has(stableSerialize(row)))
-    .map((row) => ({
-      row,
-      score: pairKeys(row, axes).filter((pair) => remaining.has(pair)).length,
-    }))
-    .toSorted(
-      (left, right) =>
-        right.score - left.score ||
-        stableSerialize(left.row).localeCompare(stableSerialize(right.row)),
-    );
-  const best = ranked.at(0);
-  if (best === undefined || best.score === 0) return selected;
-  const nextRemaining = new Set(
-    [...remaining].filter((pair) => !pairKeys(best.row, axes).includes(pair)),
+  const selectedIndexes = new Set<number>();
+  const pairCandidates = new Map<string, number[]>();
+  indexCandidates(candidates, selectedKeys, selectedIndexes, pairCandidates);
+  const scores: number[] = candidates.map((candidate, index) =>
+    selectedIndexes.has(index)
+      ? 0
+      : candidate.pairs.filter((pair) => remaining.has(pair)).length,
   );
-  return greedyRows(candidates, axes, [...selected, best.row], nextRemaining);
+  const buckets = new Map<number, Set<number>>();
+  scores.forEach((score, index) => {
+    if (score === 0) return;
+    const bucket = buckets.get(score) ?? new Set<number>();
+    bucket.add(index);
+    buckets.set(score, bucket);
+  });
+  const nextRemaining = new Set(remaining);
+  const result = [...selected];
+  while (nextRemaining.size > 0) {
+    const bestScore = [...buckets.keys()].reduce(
+      (highest, score) => Math.max(highest, score),
+      0,
+    );
+    const bucket = buckets.get(bestScore);
+    const bestIndex = [...(bucket ?? [])]
+      .toSorted((left, right) => {
+        const leftCandidate = candidates[left];
+        const rightCandidate = candidates[right];
+        return leftCandidate === undefined || rightCandidate === undefined
+          ? 0
+          : leftCandidate.key.localeCompare(rightCandidate.key);
+      })
+      .at(0);
+    if (bestIndex === undefined) return result;
+    bucket?.delete(bestIndex);
+    if (bucket?.size === 0) buckets.delete(bestScore);
+    selectedIndexes.add(bestIndex);
+    const best = candidates[bestIndex];
+    if (best === undefined) return result;
+    selectedKeys.add(best.key);
+    result.push(best.row);
+    best.pairs.forEach((pair) => {
+      if (!nextRemaining.delete(pair)) return;
+      (pairCandidates.get(pair) ?? []).forEach((index) => {
+        if (selectedIndexes.has(index)) return;
+        const score = scores[index];
+        if (score === undefined) return;
+        const previous = buckets.get(score);
+        previous?.delete(index);
+        if (previous?.size === 0) buckets.delete(score);
+        scores[index] = score - 1;
+        if (scores[index] > 0) {
+          const next = buckets.get(scores[index]) ?? new Set<number>();
+          next.add(index);
+          buckets.set(scores[index], next);
+        }
+      });
+    });
+  }
+  return result;
 }
 
 function selectRows(
@@ -98,14 +168,20 @@ function selectRows(
   newAxis: MatrixAxisName,
   values: readonly string[],
 ): readonly PartialAxes[] {
-  const unique = uniqueRows(candidates);
+  const unique = uniqueCandidates(candidates, axes);
   const seeds = values.flatMap((value) =>
-    unique.filter((row) => readAxis(row, newAxis) === value).slice(0, 1),
+    unique
+      .filter((candidate) => readAxis(candidate.row, newAxis) === value)
+      .slice(0, 1),
   );
-  const required = new Set(unique.flatMap((row) => pairKeys(row, axes)));
-  const covered = new Set(seeds.flatMap((row) => pairKeys(row, axes)));
+  const required = new Set(unique.flatMap(({ pairs }) => pairs));
+  const covered = new Set(seeds.flatMap(({ pairs }) => pairs));
   const remaining = new Set([...required].filter((pair) => !covered.has(pair)));
-  return greedyRows(unique, axes, seeds, remaining);
+  return greedyRows(
+    unique,
+    seeds.map(({ row }) => row),
+    remaining,
+  );
 }
 
 function violation(
@@ -119,6 +195,14 @@ function violation(
     ? undefined
     : { axes, constraintId: failed.id, reason: failed.reason };
 }
+
+const violatesPartial = (
+  row: PartialAxes,
+  constraints: readonly MatrixConstraint[],
+): boolean =>
+  constraints.some(
+    ({ checkPartial }) => checkPartial !== undefined && !checkPartial(row),
+  );
 
 function buildStage(
   stage: Stage,
@@ -134,9 +218,11 @@ function buildStage(
   const inapplicable = expanded
     .map((row) => violation(row, constraints))
     .filter((entry): entry is MatrixInapplicable => entry !== undefined);
-  const applicable = final
-    ? expanded.filter((row) => violation(row, constraints) === undefined)
-    : expanded;
+  const applicable = expanded.filter(
+    (row) =>
+      !violatesPartial(row, constraints) &&
+      (!final || violation(row, constraints) === undefined),
+  );
   return {
     rows: selectRows(applicable, activeAxes, axis, values),
     inapplicable: [...stage.inapplicable, ...inapplicable],

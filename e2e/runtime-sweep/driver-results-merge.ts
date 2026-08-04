@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 import {
   type CoverageCell,
-  type DOMControl,
   type EvidenceRef,
   evidenceRefSchema,
 } from "./contracts.ts";
@@ -19,8 +18,6 @@ import { makeArtifactId } from "./ids.ts";
 
 const reportDigest = (text: string): string =>
   createHash("sha256").update(text, "utf8").digest("hex");
-const controlPair = (cellId: string, controlKey: string): string =>
-  `${cellId}\u0000${controlKey}`;
 
 function makeDriverReportEvidenceRef(
   cell: CoverageCell,
@@ -59,46 +56,6 @@ function mergeVerdict(
   return current;
 }
 
-function mergeControl(
-  control: DOMControl,
-  cellId: string,
-  report: OpenCodeDriverReport,
-  reportRef: EvidenceRef,
-): DOMControl {
-  const result = report.controlResults.find(
-    (entry) =>
-      entry.cellId === cellId && entry.controlKey === control.controlKey,
-  );
-  if (!result)
-    throw new DriverResultValidationError([
-      `missing control result ${controlPair(cellId, control.controlKey)}`,
-    ]);
-  switch (result.status) {
-    case "covered":
-      return {
-        ...control,
-        actionResult: {
-          kind: "exercised",
-          result: result.result,
-          evidenceIds: [
-            ...new Set([...result.evidenceRefs, reportRef.artifactId]),
-          ],
-        },
-      };
-    case "blocked":
-      return {
-        ...control,
-        actionResult: {
-          kind: "not-exercised",
-          policy: "unavailable",
-          reason: result.reason,
-        },
-      };
-    default:
-      throw new DriverResultValidationError(["unexpected driver result"]);
-  }
-}
-
 function mergeCell(
   cell: CoverageCell,
   report: OpenCodeDriverReport,
@@ -111,18 +68,17 @@ function mergeCell(
     archivePath,
     report.timeline.endedAt,
   );
-  const controls = cell.controls.map((control) =>
-    mergeControl(control, cell.cellId, report, reportRef),
+  const result = report.controlResults.find(
+    (entry) =>
+      entry.cellId === cell.cellId &&
+      entry.controlKey === cell.action.controlKey,
   );
-  const blocked = report.controlResults.some(
-    (result) => result.cellId === cell.cellId && result.status === "blocked",
-  );
-  const failed = report.controlResults.some(
-    (result) =>
-      result.cellId === cell.cellId &&
-      result.status === "covered" &&
-      result.result === "fail",
-  );
+  if (!result)
+    throw new DriverResultValidationError([
+      `missing action result ${cell.cellId}:${cell.action.controlKey}`,
+    ]);
+  const blocked = result.status === "blocked";
+  const failed = result.status === "covered" && result.result === "fail";
   const candidate = report.candidates.some(
     (entry) => entry.cellId === cell.cellId,
   );
@@ -135,7 +91,7 @@ function mergeCell(
         : "pass";
   return {
     ...cell,
-    controls,
+    controls: cell.controls,
     evidence: {
       ...cell.evidence,
       action: [...cell.evidence.action, reportRef],

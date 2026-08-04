@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import {
@@ -46,6 +46,29 @@ function allEvidence(cell: CoverageCell) {
     ...cell.evidence.after,
   ];
 }
+
+const requiresTargetControl = (cell: CoverageCell): boolean =>
+  cell.execution.kind === "control" || cell.execution.kind === "recovery";
+
+const targetControlIssues = (
+  cell: CoverageCell,
+  requireFinalPass: boolean,
+): readonly string[] => {
+  if (!requireFinalPass || !requiresTargetControl(cell)) return [];
+  const targetKey =
+    "action" in cell.execution ? cell.execution.action.controlKey : null;
+  if (targetKey === null) return [];
+  const target = cell.controls.find(
+    ({ controlKey }) => controlKey === targetKey,
+  );
+  if (target === undefined)
+    return [`${cell.cellId} is missing target control ${targetKey}`];
+  return target.actionResult.kind === "exercised"
+    ? []
+    : [
+        `${cell.cellId} target control ${targetKey} is not exercised in the final ledger`,
+      ];
+};
 
 function cellIssues(
   cell: CoverageCell,
@@ -98,11 +121,6 @@ function cellIssues(
     ...(control.accessibleName.trim() === ""
       ? [`${cell.cellId} control ${control.controlKey} has no accessible name`]
       : []),
-    ...(requireFinalPass && control.actionResult.kind === "not-exercised"
-      ? [
-          `${cell.cellId} control ${control.controlKey} is not exercised in the final ledger`,
-        ]
-      : []),
     ...(control.actionResult.kind === "not-exercised" &&
     control.actionResult.reason.trim() === ""
       ? [
@@ -110,7 +128,13 @@ function cellIssues(
         ]
       : []),
   ]);
-  return [...issues, ...bindingIssues, ...missingEvidence, ...controlIssues];
+  return [
+    ...issues,
+    ...bindingIssues,
+    ...missingEvidence,
+    ...controlIssues,
+    ...targetControlIssues(cell, requireFinalPass),
+  ];
 }
 
 function counts(
@@ -200,4 +224,33 @@ export async function appendCoverageCell(
   });
   await mkdir(dirname(path), { recursive: true });
   await appendFile(path, `${JSON.stringify(cell)}\n`, "utf8");
+}
+
+export async function writeOrderedCoverageLedger(
+  path: string,
+  cells: readonly CoverageCell[],
+  options: LedgerOptions & { readonly expectedCellIds: readonly string[] },
+): Promise<void> {
+  const summary = verifyCoverageLedger(cells, {
+    ...options,
+    requireFinalPass: false,
+  });
+  if (summary.missingCellIds.length > 0 || summary.extraCellIds.length > 0)
+    throw new LedgerValidationError([
+      ...summary.missingCellIds.map((id) => `missing expected cell ${id}`),
+      ...summary.extraCellIds.map((id) => `unexpected cell ${id}`),
+    ]);
+  const byId = new Map(cells.map((cell) => [cell.cellId, cell]));
+  const ordered = options.expectedCellIds.map((id) => {
+    const cell = byId.get(id);
+    if (cell === undefined)
+      throw new LedgerValidationError([`missing expected cell ${id}`]);
+    return cell;
+  });
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(
+    path,
+    `${ordered.map((cell) => JSON.stringify(cell)).join("\n")}\n`,
+    { encoding: "utf8", flag: "wx" },
+  );
 }
