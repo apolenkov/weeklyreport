@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import type { ReactDoctorBaselineEntry } from "./react-doctor-baseline.ts";
@@ -18,6 +19,13 @@ const accepted: ReactDoctorBaselineEntry = {
 void test("accepts an exact terminal baseline", () => {
   const diff = compareReactDoctorBaseline([accepted], [accepted]);
   assert.equal(reactDoctorBaselineIsCurrent(diff), true);
+});
+
+void test("excludes the scenario sweep build from concurrent full scans", () => {
+  const config = JSON.parse(
+    readFileSync("apps/web/doctor.config.json", "utf8"),
+  ) as { readonly ignore?: { readonly files?: readonly string[] } };
+  assert.deepEqual(config.ignore?.files, [".next-sweep/**"]);
 });
 
 void test("rejects added, removed, duplicate, drifted, and unjustified entries", () => {

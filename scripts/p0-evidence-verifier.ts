@@ -186,13 +186,14 @@ export function verifyP0Evidence(
 }
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const CHANGE = "openspec/changes/repair-exhaustive-audit-critical-integrity";
+const EVIDENCE_ROOT =
+  "openspec/changes/archive/2026-08-04-repair-exhaustive-audit-critical-integrity";
 const cliArgs = new Set(process.argv.slice(2));
 const markersOnly = cliArgs.has("--markers-only");
 const printDigests = cliArgs.has("--print-digests");
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const manifestPath = resolve(ROOT, CHANGE, "evidence-manifest.json");
+  const manifestPath = resolve(ROOT, EVIDENCE_ROOT, "evidence-manifest.json");
   if (printDigests) {
     const manifest = parseManifest(
       JSON.parse(readFileSync(manifestPath, "utf8")) as unknown,
@@ -205,7 +206,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const errors = verifyP0Evidence({
       root: ROOT,
       manifestPath,
-      resultsPath: resolve(ROOT, CHANGE, "evidence-results.json"),
+      resultsPath: resolve(ROOT, EVIDENCE_ROOT, "evidence-results.json"),
       markersOnly,
     });
     errors.forEach((error) => console.error(error));
