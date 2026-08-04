@@ -44,6 +44,16 @@ describe("runtime navigation recovery", () => {
     expect(page.url()).toBe("http://127.0.0.1:3105/head/dashboard");
   });
 
+  it("waits for the final URL when Playwright reports an interrupted navigation", async () => {
+    const page = fakePage(
+      new Error(
+        'page.goto: Navigation to "http://127.0.0.1:3105/lead/report/1" is interrupted by another navigation to "http://127.0.0.1:3105/?next=%2Flead%2Freport%2F1"',
+      ),
+    );
+
+    await expect(navigate(page, "/lead/report/1")).resolves.toBeNull();
+  });
+
   it("does not classify arbitrary navigation errors as redirect aborts", async () => {
     const error = new Error("page.goto: ECONNREFUSED");
     const page = fakePage(error);

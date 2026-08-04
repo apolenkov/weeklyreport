@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 const NAVIGATION_ABORT_PATTERNS = [
   /\b(?:net::)?ERR_ABORTED\b/u,
   /\bNS_BINDING_ABORTED\b/u,
+  /\bis interrupted by another navigation to\b/u,
 ] as const;
 
 export function isExpectedNavigationAbort(error: unknown): boolean {
