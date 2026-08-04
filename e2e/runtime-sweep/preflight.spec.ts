@@ -8,6 +8,7 @@ import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import type { CampaignMatrixState } from "./campaign-matrix.ts";
 import {
   type PreflightRoute,
+  preflightSessionGroupKey,
   preflightStateGroupKey,
   runPlaywrightPreflight,
 } from "./playwright-preflight.ts";
@@ -54,6 +55,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
   const source = await readSourceArtifact(sourcePath);
   const database = createPrismaRuntimeStateDatabase(prisma);
   let preparedGroup: string | undefined;
+  let sessionGroup: string | undefined;
   const artifact = await runPlaywrightPreflight({
     source,
     page,
@@ -86,7 +88,11 @@ test("preflight prepares and inventories every nominal source segment", async ({
           `State oracle mismatch before preflight navigation for ${state.stateId}: ${JSON.stringify(prepared.observation.mismatches)}`,
         );
       }
-      await loginForState(page, state, route);
+      const requiredSessionGroup = preflightSessionGroupKey(state, route);
+      if (sessionGroup !== requiredSessionGroup) {
+        await loginForState(page, state, route);
+        sessionGroup = requiredSessionGroup;
+      }
     },
   });
   await writePreflightArtifact(preflightPath, artifact);
