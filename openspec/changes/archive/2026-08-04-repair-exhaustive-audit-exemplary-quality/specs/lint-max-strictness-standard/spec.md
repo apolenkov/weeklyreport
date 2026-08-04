@@ -10,13 +10,22 @@ generated sources, seeds, and configuration MAY use separately measured rule sco
 only when their repository role makes the product rule inapplicable; a maintained
 product file MUST NOT use such a scope as an exemption.
 
-#### Scenario: A long generated file is not flagged for size
+#### Scenario: a long generated file is not flagged for size
 
 - **WHEN** the standard enforces `max-lines`
 - **THEN** a 600-line file under `prisma/generated` is not reported
 - **AND** a 301-line hand-written product file is reported
 - **AND** a 300-line hand-written product file is accepted by `max-lines`
 - **AND** the threshold counts neither blank lines nor comments
+
+#### Scenario: the file threshold accepts its boundary and rejects overflow
+
+- **WHEN** a hand-written source file measures 301 real (non-blank, non-comment)
+  lines
+- **THEN** it is reported under the 300 threshold
+- **AND** a 300-line product file is not reported by `max-lines`
+- **AND** the same file under `*.test.*` / e2e / `prisma/generated` /
+  `prisma/seed*.ts` / `*.config.ts` is still exempt
 
 #### Scenario: A product function exceeds the limit
 
@@ -67,6 +76,14 @@ before its verdict becomes terminal.
 - **THEN** the implementation is redesigned into smaller named units that satisfy the
   rule and remain understandable to a junior maintainer
 - **AND** the rule is not weakened merely to preserve the original structure
+
+#### Scenario: Rejected churn classes stay out
+
+- **WHEN** a rollout wave proposes fixes for review findings
+- **THEN** changes belonging to the ratified reject-list (`&&`-to-ternary
+  rewrites, TODO purges, `.js` import consistency sweeps, empty-catch logging,
+  mass magic-string extraction, blanket explicit return types) are excluded
+  from the wave
 
 ## ADDED Requirements
 

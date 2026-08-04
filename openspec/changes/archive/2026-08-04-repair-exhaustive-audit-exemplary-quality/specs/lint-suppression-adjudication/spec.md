@@ -27,6 +27,13 @@ baseline MUST equal the retained non-product total.
 - **AND** a retained verdict or explanatory comment cannot waive the product-floor
   failure
 
+#### Scenario: Some justified suppressions remain
+
+- **WHEN** all retained non-product entries meet the adjudication and planted-proof
+  contract
+- **THEN** the campaign may complete with a nonzero raw suppression count
+- **AND** that count becomes the new ratcheted non-product baseline
+
 ## ADDED Requirements
 
 ### Requirement: Configuration exemptions are adjudicated like inline directives
