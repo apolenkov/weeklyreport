@@ -161,9 +161,20 @@ const issuesFor = (
       message: `Visible ${control.role} is missing an accessible name`,
     }));
 
+const inventoryElements = async (
+  page: Page,
+): Promise<readonly RawDomElement[]> => {
+  const handle =
+    await page.waitForFunction<readonly RawDomElement[]>(INVENTORY_SCRIPT);
+  try {
+    return await handle.jsonValue();
+  } finally {
+    await handle.dispose();
+  }
+};
+
 export async function inventoryDom(page: Page): Promise<DomInventory> {
-  const rawElements =
-    await page.evaluate<readonly RawDomElement[]>(INVENTORY_SCRIPT);
+  const rawElements = await inventoryElements(page);
   const controls = rawElements.map((element, index) => {
     const occurrence =
       rawElements
