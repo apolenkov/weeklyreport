@@ -1,41 +1,27 @@
 import "server-only";
 
-import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
 import {
-  decodeTrpcBatchPayload,
   requireApiUrl,
   shouldUseDevAuthFallback,
   TRPC_BATCH_EMPTY_INPUT,
 } from "./api-url";
+import {
+  decodePrintGateResponse,
+  type PrintRouteContext,
+} from "./decode-print-gate";
+
+export type { PrintRouteContext };
 
 // /print is outside the proxy auth matcher — this gate handles no-session itself
 // (session: null, isPdfExport: false → redirect to login). Fail-closed on errors.
-export interface PrintRouteContext {
-  readonly session: UserSession | null;
-  readonly isPdfExport: boolean;
-  readonly pdfReportId: string | null;
-}
-
 const NO_CONTEXT: PrintRouteContext = {
   session: null,
   isPdfExport: false,
   pdfReportId: null,
 };
-
-function decodePrintGateResponse(body: unknown): PrintRouteContext {
-  const payload = decodeTrpcBatchPayload(body);
-  if (payload === null || typeof payload !== "object") return NO_CONTEXT;
-  const p = payload as Record<string, unknown>;
-  const session = userSessionSchema.safeParse(p.session);
-  return {
-    session: session.success ? session.data : null,
-    isPdfExport: p.isPdfExport === true,
-    pdfReportId: typeof p.pdfReportId === "string" ? p.pdfReportId : null,
-  };
-}
 
 export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   const cookieStore = await cookies();
@@ -58,6 +44,3 @@ export async function getPrintRouteContext(): Promise<PrintRouteContext> {
     return NO_CONTEXT;
   }
 }
-
-// Exported for unit testing — keeps the decoder pure and observable.
-export { decodePrintGateResponse };

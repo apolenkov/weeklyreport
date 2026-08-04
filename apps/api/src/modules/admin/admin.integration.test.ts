@@ -689,7 +689,12 @@ describe("AdminPrismaRepository (integration)", () => {
       // follow their rule on delete) is actually exercised.
       const executionId = "c3333333-3333-4333-8333-333333333333";
       await prisma.reminderExecution.create({
-        data: { id: executionId, ruleId, dedupeKey: `dk-${ruleId}` },
+        data: {
+          id: executionId,
+          ruleId,
+          recipientEmail: "lead@test.local",
+          dedupeKey: `dk-${ruleId}`,
+        },
       });
 
       await repo.deleteReminderPolicy(policyId);

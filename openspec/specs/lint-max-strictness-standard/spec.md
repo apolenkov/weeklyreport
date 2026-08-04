@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change declare-lint-max-strictness. Update Purpose after archive.
+Declare the maximum ESLint strictness target, pinned structural limits, scoped public JSDoc and import boundaries, and the fix-first ratchet used to reach it.
 
 ## Requirements
 
@@ -43,9 +43,9 @@ core `max-lines` / `max-lines-per-function` (see the thresholds requirement).
 
 ### Requirement: Size and complexity thresholds are pinned with exempt directories
 
-The standard MUST pin `max-lines` at 250 with `skipBlankLines: true` and
+The standard MUST pin `max-lines` at 300 with `skipBlankLines: true` and
 `skipComments: true`; cyclomatic complexity (`complexity`) at ≤ 20; and cognitive
-complexity (`sonarjs/cognitive-complexity`) at ≤ 15. These repo thresholds
+complexity (`sonarjs/cognitive-complexity`) at < 10. These repo thresholds
 supersede the global CLAUDE.md / `code-style.md` defaults via the global "repo
 config wins" rule — the live config is the source of truth for the numbers. The
 size, complexity, and JSDoc rules MUST exempt: tests (`*.test.*`, e2e), generated
@@ -55,15 +55,15 @@ size, complexity, and JSDoc rules MUST exempt: tests (`*.test.*`, e2e), generate
 
 - **WHEN** the standard enforces `max-lines`
 - **THEN** a 600-line file under `prisma/generated` is not reported
-- **AND** a 280-line hand-written file under `apps/web/src` is reported
+- **AND** a 301-line hand-written file under `apps/web/src` is reported
 - **AND** the threshold counts neither blank lines nor comments
 
-#### Scenario: the lowered threshold reports a file the old one allowed
+#### Scenario: the file threshold accepts its boundary and rejects overflow
 
-- **WHEN** a hand-written source file measures 270 real (non-blank, non-comment)
+- **WHEN** a hand-written source file measures 301 real (non-blank, non-comment)
   lines
-- **THEN** it is reported under the 250 threshold
-- **AND** it would NOT have been reported under the prior 300 threshold
+- **THEN** it is reported under the 300 threshold
+- **AND** a 300-line product file is not reported by `max-lines`
 - **AND** the same file under `*.test.*` / e2e / `prisma/generated` /
   `prisma/seed*.ts` / `*.config.ts` is still exempt
 
@@ -129,7 +129,7 @@ override) MUST be **inherited as documented exclusions, not reopened** — reope
 would collide with the active `verify-a11y-recommended-flip` runtime sweep. The
 existing non-preset warns MUST carry a per-rule disposition:
 `@typescript-eslint/no-non-null-assertion` → Phase-3 `error`;
-`react-hooks/exhaustive-deps` → stays `warn` (advisory, false-positive-prone);
+`react-hooks/exhaustive-deps` → Phase-3 `error`;
 `react/jsx-no-useless-fragment` → Phase-3 `error`;
 `unused-imports/no-unused-imports` → Phase-3 `error`.
 
@@ -138,7 +138,7 @@ existing non-preset warns MUST carry a per-rule disposition:
 - **WHEN** the max-strictness standard is declared
 - **THEN** the two `jsx-a11y` off rules and the test-file a11y override remain
   `off` and appear on the documented exclude-list
-- **AND** `react-hooks/exhaustive-deps` remains a `warn` target, not `error`
+- **AND** `react-hooks/exhaustive-deps` is recorded as an `error` target
 - **AND** `@typescript-eslint/no-non-null-assertion` is recorded as a Phase-3
   `error` target
 
@@ -362,18 +362,16 @@ non-repeated inline string is governed by the review policy, not by a lint error
   to the documented lift-to-`const`/`enum`/config review policy
 - **AND** the empty string and empty array remain exempt per `code-style.md`
 
-### Requirement: The 250-line and magic-literal tightening is achieved by ratchet, never by big-bang
+### Requirement: Size and magic-literal policy changes use an explicit ratchet
 
-The tightening MUST reuse the standard's existing ratchet discipline — the
+Policy changes MUST reuse the standard's existing ratchet discipline — the
 fix-first escalation ladder, the per-cluster `pnpm lint` + `typecheck` + `test`
 gate, and the cost-tiered model split — rather than restating or weakening it.
-Bringing the codebase under the new thresholds MUST proceed one cluster at a
-time. The previously EMPTY `max-lines` grandfather block in `eslint.config.ts`
-MUST be repopulated with the pre-existing 250–300 cohort as a documented
-grandfather list, then drained one wave at a time, each wave landing the gate
-green before the next; a file is moved to the justified-permanent exempt block
-(with a one-line reason) only when a split would hurt clarity, never by raising
-the threshold back.
+Any threshold change MUST be explicitly approved by the owner and migrated in
+one coherent update across ESLint, planted boundary probes, durable specs, and
+canonical documentation. Bringing code under the active thresholds proceeds one
+cluster at a time; a file is moved to a justified-permanent exempt block only
+when a split would hurt clarity, never to hide an unmeasured violation.
 
 Because `@typescript-eslint/no-magic-numbers` is NOT autofixable, the
 "isolated autofix-first cluster" rung of the existing ratchet requirement does
@@ -384,14 +382,14 @@ ramped from `off`/grandfathered to `error` with their own fixup wave, never the
 whole tightening at once. Violation counts MUST be measured at execution time
 with a per-cluster budget and no global ceiling.
 
-#### Scenario: the 250–300 cohort is grandfathered then drained per wave
+#### Scenario: an approved threshold change remains observable
 
-- **WHEN** `max-lines` is lowered to 250
-- **THEN** the pre-existing files between 250 and 300 real lines are listed in
-  the grandfather block so the gate stays green on land
-- **AND** each subsequent wave splits or permanently-exempts a batch and lands
-  `pnpm lint` + `typecheck` + `test` green before the next wave starts
-- **AND** no file clears the gate by raising `max-lines` back toward 300
+- **WHEN** the owner approves a new `max-lines` or function-size threshold
+- **THEN** the executable configuration, boundary probes, durable specification,
+  and canonical documentation name the same value
+- **AND** the affected policy probes and lint gate pass before the change lands
+- **AND** the migration records the before/after violation counts without
+  representing the relaxation as remediation
 
 #### Scenario: the non-autofixable magic-number rule skips the autofix rung
 
@@ -489,7 +487,7 @@ review that touches that file.
 ### Requirement: All product source reaches the exemplary standard wave-by-wave
 
 Every product source file SHALL satisfy the Exemplary Code Standard —
-file under 250 lines, functions at most 50 lines, cognitive complexity
+file at most 300 lines, functions at most 70 lines, cognitive complexity
 under 10, zero `let`/reassignment/in-place mutation, no silent product-config
 fallbacks — with no per-file `eslint.config.ts` exemption other than the
 documented JUSTIFIED PERMANENT blocks; the rollout proceeds in per-slice

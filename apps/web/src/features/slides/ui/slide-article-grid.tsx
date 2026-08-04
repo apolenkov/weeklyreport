@@ -55,7 +55,6 @@ const COLUMNS = [
   },
 ];
 
-/** Rendered once per slide, above the first product card. */
 export function SlideColumnHeaderRow() {
   return (
     <div className={GRID_TEMPLATE} data-testid="slide-column-headers">
@@ -146,7 +145,7 @@ function SubsectionRow({
   // a 4-column row of em-dashes says nothing the status dot doesn't.
   const empty = columnsRowCount(subsection.columns) === 0;
   return (
-    <div className="border-t border-dashed border-[rgba(0,0,0,0.10)] pt-2 first:border-t-0 first:pt-0">
+    <div className="border-t border-dashed border-[var(--card-surface-border)] pt-2 first:border-t-0 first:pt-0">
       <SubsectionHeader subsection={subsection} />
       {!empty && (
         <div className={`${GRID_TEMPLATE} mt-1.5`}>
@@ -197,7 +196,7 @@ export function SlideProductCard({
     <section
       data-testid="slide-product-card"
       aria-label={card.name}
-      className={`space-y-2.5 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] px-4 py-3 ${stripe}`}
+      className={`space-y-2.5 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-4 py-3 ${stripe}`}
     >
       <h3 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-[var(--color-foreground)]">
         {card.status == null ? null : (

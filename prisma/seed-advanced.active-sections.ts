@@ -166,13 +166,19 @@ async function seedItems(
   return rows.length;
 }
 
-// Priority ranks mark the lead's first N items. The ranked texts are demo copy
-// no column stores, so only their count reaches the database.
-async function applyPriorityRanks(
+// Priority ranks mark the lead's first N items (texts are demo copy, only the
+// count reaches the DB). Ranks are cleared first each run so a shrunk list
+// drops the obsolete ranks instead of leaving them on old rows.
+export async function applyPriorityRanks(
   prisma: PrismaClient,
   cfg: LeadConfig,
 ): Promise<void> {
   const { priorities } = contentFor(cfg.leadId);
+  const reportSectionId = sectionId(ACTIVE_SUFFIX, cfg.leadIndex);
+  await prisma.item.updateMany({
+    where: { reportSectionId, priorityRank: { not: null } },
+    data: { priorityRank: null },
+  });
   for (const [rank] of priorities.entries()) {
     await prisma.item.update({
       where: { id: itemId(ACTIVE_SUFFIX, cfg.leadIndex, rank + 1) },

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import type { WeeklyReportServiceResult } from "../../modules/weekly-report/index.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Pins router-level scopeAccessed emit: one event per non-admin signal
@@ -24,6 +25,7 @@ function makeReadModel() {
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
     periodStatus: "published",
+    archived: false,
     weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 1,
@@ -48,11 +50,11 @@ function makeSession(role: Role) {
 function buildCaller(serviceResult: WeeklyReportServiceResult, role: Role) {
   const scopeAccessed = vi.fn();
   const auditLogger = { ...createNullAuditLogger(), scopeAccessed };
-  const deps = {
+  const deps = createStubAppRouterDeps({
     weeklyReportService: {
       getWeeklyReport: vi.fn(() => Promise.resolve(serviceResult)),
     },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),
     logger: createNullLogger(),

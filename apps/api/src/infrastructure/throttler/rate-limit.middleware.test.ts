@@ -2,15 +2,23 @@ import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import express from "express";
-import { describe, expect, it } from "vitest";
+import type Redis from "ioredis";
+import { describe, expect, it, vi } from "vitest";
 
-import type { AppLogger } from "../../lib/logger";
-import { rateLimitHitsTotal } from "../metrics/metrics.registry";
-import { createRateLimits } from "./rate-limit.middleware";
+import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { createFakeRedisCall } from "../../test-utils/fake-redis-call";
+import {
+  rateLimitHitsTotal,
+  rateLimitStoreErrorsTotal,
+} from "../metrics/metrics.registry";
+import {
+  createRateLimits,
+  isRateLimitRedisReply,
+} from "./rate-limit.middleware";
 
 // The limiter only logs on a 429; isTest raises every bucket to 1000/min, so
 // these single-shot requests never reach the handler and a no-op warn is enough.
-const silentLogger = { warn: () => undefined } as unknown as AppLogger;
+const silentLogger = createNullLogger();
 
 // Boot a minimal Express app configured exactly like main.ts (`trust proxy: 1`),
 // mount the real authLimiter, and echo req.ip — the value the limiter's
@@ -105,14 +113,16 @@ function postStatus(port: number, path: string): Promise<number> {
 
 describe("rate-limit middleware — vitals limiter budget", () => {
   it("returns 429 over budget and increments the vitals bucket", async () => {
-    // Production budget (isTest=false) is 60/min; fire one past it from a single
-    // loopback client so the whole burst shares one keyGenerator bucket.
+    // Production budget (isTest=false) is 60/min; one past it from a single
+    // loopback client shares one keyGenerator bucket. The fake redis backs the
+    // real RedisStore so the production budget runs without a live Redis.
     const app = express();
     app.disable("x-powered-by");
     app.set("trust proxy", 1);
     const { vitalsLimiter } = createRateLimits({
       logger: silentLogger,
       isTest: false,
+      redis: createFakeRedisCall() as unknown as Redis,
     });
     app.use("/api/web-vitals", vitalsLimiter);
     app.post("/api/web-vitals", (_req, res) => {
@@ -149,14 +159,16 @@ describe("rate-limit middleware — vitals limiter budget", () => {
 
 describe("rate-limit middleware — client-logs limiter budget", () => {
   it("returns 429 over budget and increments the client-logs bucket", async () => {
-    // Production budget (isTest=false) is 60/min; fire one past it from a single
-    // loopback client so the whole burst shares one keyGenerator bucket.
+    // Production budget (isTest=false) is 60/min; one past it from a single
+    // loopback client shares one keyGenerator bucket. The fake redis backs the
+    // real RedisStore so the production budget runs without a live Redis.
     const app = express();
     app.disable("x-powered-by");
     app.set("trust proxy", 1);
     const { clientLogsLimiter } = createRateLimits({
       logger: silentLogger,
       isTest: false,
+      redis: createFakeRedisCall() as unknown as Redis,
     });
     app.use("/api/client-logs", clientLogsLimiter);
     app.post("/api/client-logs", (_req, res) => {
@@ -188,5 +200,109 @@ describe("rate-limit middleware — client-logs limiter budget", () => {
     }
 
     expect(await bucketHits("client-logs")).toBeGreaterThan(before);
+  });
+});
+
+describe("rate-limit middleware — fail-loud store policy", () => {
+  it("throws at creation when a non-test limiter has no Redis store", () => {
+    // An absent env (or injected client) in production must fail boot loud
+    // instead of silently degrading to the per-process MemoryStore
+    // express-rate-limit would otherwise default to.
+    expect(() =>
+      createRateLimits({ logger: silentLogger, isTest: false }),
+    ).toThrow(/Redis store is required outside test mode/);
+  });
+
+  it("keeps MemoryStore in test mode without a Redis store", () => {
+    // Test mode is the sanctioned MemoryStore exception (E2E/unit suites run
+    // without Redis); it must not trip the production fail-loud fence.
+    expect(() =>
+      createRateLimits({ logger: silentLogger, isTest: true }),
+    ).not.toThrow();
+  });
+
+  it("enforces the auth budget locally while Redis is unavailable", async () => {
+    const fake = createFakeRedisCall();
+    const redis = {
+      ...fake,
+      call: vi
+        .fn<typeof fake.call>()
+        .mockRejectedValue(new Error("redis unavailable")),
+    };
+    const app = express();
+    app.disable("x-powered-by");
+    app.set("trust proxy", 1);
+    const { authLimiter } = createRateLimits({
+      logger: silentLogger,
+      isTest: false,
+      redis: redis as unknown as Redis,
+    });
+    app.use(authLimiter);
+    app.post("/", (_req, res) => {
+      res.sendStatus(204);
+    });
+
+    const server = app.listen(0);
+    await new Promise<void>((resolve) => {
+      server.once("listening", resolve);
+    });
+    const { port } = server.address() as AddressInfo;
+
+    try {
+      const statuses = await Promise.all(
+        Array.from({ length: 6 }, () => postStatus(port, "/")),
+      );
+      expect(statuses.filter((status) => status === 204)).toHaveLength(5);
+      expect(statuses.filter((status) => status === 429)).toHaveLength(1);
+    } finally {
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          resolve();
+        });
+      });
+    }
+  });
+
+  it("logs at error level and increments a counter when the store client errors", async () => {
+    // Local enforcement keeps ingress bounded, while the outage remains
+    // observable through an error log and metric.
+    const errorSpy = vi.fn<AppLogger["error"]>();
+    const logger: AppLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: errorSpy,
+      child: () => logger,
+    };
+    const fake = createFakeRedisCall();
+    rateLimitStoreErrorsTotal.reset();
+    createRateLimits({
+      logger,
+      isTest: false,
+      redis: fake as unknown as Redis,
+    });
+
+    fake.emit("error", new Error("redis unreachable"));
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "rate-limit Redis store error; using local enforcement",
+      expect.objectContaining({ phase: "rate-limit" }),
+    );
+    const snapshot = await rateLimitStoreErrorsTotal.get();
+    const incremented = snapshot.values.reduce(
+      (sum, entry) => sum + entry.value,
+      0,
+    );
+    expect(incremented).toBe(1);
+  });
+
+  it("rejects a malformed Redis reply instead of asserting its shape", () => {
+    // The store previously cast the raw reply to RedisReply; an unexpected
+    // shape must now fail the guard, not pass through.
+    expect(isRateLimitRedisReply(42)).toBe(true);
+    expect(isRateLimitRedisReply("PONG")).toBe(true);
+    expect(isRateLimitRedisReply([1, "two", true])).toBe(true);
+    expect(isRateLimitRedisReply({ unexpected: true })).toBe(false);
+    expect(isRateLimitRedisReply([{ unexpected: true }])).toBe(false);
   });
 });

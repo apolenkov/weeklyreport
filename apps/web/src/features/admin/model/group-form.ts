@@ -1,10 +1,10 @@
 import type { AdminGroupView } from "./admin-types";
 
 export interface GroupFormData {
-  name: string;
-  description: string;
-  headUserId: string; // empty string = no leader
-  archived: boolean;
+  readonly name: string;
+  readonly description: string;
+  readonly headUserId: string; // empty string = no leader
+  readonly archived: boolean;
 }
 
 export const EMPTY_GROUP_FORM: GroupFormData = {

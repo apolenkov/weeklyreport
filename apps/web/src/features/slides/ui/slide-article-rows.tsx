@@ -18,8 +18,7 @@ export { authorSlotBackground, StageLegend } from "./slide-row-marks";
 
 export type SlideRowActivateHandler = (ref: GridRowEditableRef) => void;
 
-/** Wires a row's double-click/keyboard activation, inert whenever the row
- * carries no editable lineage or the caller passed no activation handler. */
+// Activation is inert without editable lineage or a caller handler.
 function useRowActivation({
   editableRef,
   onRowActivate,
@@ -32,9 +31,9 @@ function useRowActivation({
     if (editableRef === undefined) return;
     onRowActivate?.(editableRef);
   };
-  const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
-    // Space's default on a non-native button element is page scroll, so the
-    // guard runs for both activation keys per the role="button" contract.
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    // Mouse editing stays deliberate (double-click), while native activation
+    // keys remain a single-step accessible path.
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     activate();
@@ -42,8 +41,7 @@ function useRowActivation({
   return { activatable, activate, handleKeyDown };
 }
 
-/** The clamped two-line row text. Only a row with editable lineage becomes a
- * role="button" target; an inert row keeps the identical box. */
+// Keep the two-line box identical; only editable rows gain button semantics.
 function RowBody({
   activatable,
   ariaLabel,
@@ -54,7 +52,7 @@ function RowBody({
   readonly activatable: boolean;
   readonly ariaLabel: string;
   readonly onActivate: () => void;
-  readonly onKeyDown: (event: KeyboardEvent<HTMLSpanElement>) => void;
+  readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   readonly children: ReactNode;
 }) {
   if (!activatable) {
@@ -65,16 +63,15 @@ function RowBody({
     );
   }
   return (
-    <span
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-label={ariaLabel}
       onDoubleClick={onActivate}
       onKeyDown={onKeyDown}
       className="line-clamp-2 min-h-[34px] cursor-pointer whitespace-normal break-words rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
     >
       {children}
-    </span>
+    </button>
   );
 }
 

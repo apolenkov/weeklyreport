@@ -3,7 +3,7 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { publicProcedure, router } from "../trpc.middleware.js";
 
 export interface OrganizationRouterDeps {
-  organizationService: OrganizationService;
+  readonly organizationService: OrganizationService;
 }
 
 // Public surface returns only shortName/fullName so future schema fields

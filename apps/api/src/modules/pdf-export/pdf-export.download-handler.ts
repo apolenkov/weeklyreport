@@ -1,4 +1,4 @@
-import { createReadStream, existsSync } from "node:fs";
+import { constants, createReadStream, open as openFile } from "node:fs";
 import { resolve, sep } from "node:path";
 
 import type { UserSession } from "@customreport/shared";
@@ -9,8 +9,8 @@ import {
   type HumanSessionDeps,
   resolveHumanSession,
 } from "../../lib/human-session.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { canReadReport } from "../../lib/report-read-access.js";
-import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
 export { canReadReport } from "../../lib/report-read-access.js";
 
@@ -26,10 +26,13 @@ const HTTP = {
 
 export interface PdfDownloadDeps {
   prisma: PrismaService;
-  /** Absolute directory the BullMQ worker writes `{jobId}.pdf` into. */
+  // Absolute directory the BullMQ worker writes `{jobId}.pdf` into.
   pdfDir: string;
+  // Session-cookie name resolved once at boot from the validated env.
+  sessionCookieName: string;
   verifySessionToken: HumanSessionDeps["verifySessionToken"];
   sessionRevocation: HumanSessionDeps["sessionRevocation"];
+  logger: AppLogger;
 }
 
 // Same-origin URL (`/pdfs/{jobId}.pdf`) so window.open carries the session
@@ -40,16 +43,24 @@ export function createPdfDownloadHandler(
   return (req: Request, res: Response) => handlePdfDownload(req, res, deps);
 }
 
+// cookie-parser types req.cookies as always-present, but the container is
+// still untrusted input; validate the value at the boundary instead of casting.
+function sessionTokenFromCookies(
+  cookies: Record<string, unknown> | undefined,
+  cookieName: string,
+): string | undefined {
+  const value = cookies?.[cookieName];
+  return typeof value === "string" ? value : undefined;
+}
+
 // Single human-session chokepoint: rejects a missing/invalid/revoked/deactivated
-// token AND the PDF-worker / dev-mode fallbacks the full context chain honors.
-// The cookie-less short-circuit stays ahead of `resolveHumanSession` so an
-// anonymous request never reaches token verification.
+// token AND the PDF-worker / dev-mode fallbacks the full chain honors. The
+// cookie-less short-circuit stays ahead of resolveHumanSession.
 function resolveDownloadSession(
   req: Request,
   deps: PdfDownloadDeps,
 ): Promise<UserSession | null> {
-  const cookies = req.cookies as Record<string, string> | undefined;
-  const token = cookies?.[resolveSessionCookieName(process.env)];
+  const token = sessionTokenFromCookies(req.cookies, deps.sessionCookieName);
   if (!token) {
     return Promise.resolve(null);
   }
@@ -71,23 +82,54 @@ function parseJobId(req: Request): string | null {
 }
 
 // Containment check against the resolved pdfDir; `null` means "do not serve".
-function resolveArtifactPath(pdfDir: string, jobId: string): string | null {
+// The open with O_NOFOLLOW is the atomic enforcement: a symlink planted at the
+// artifact path is rejected (ELOOP) instead of followed outside pdfDir.
+async function resolveArtifactPath(
+  pdfDir: string,
+  jobId: string,
+): Promise<{ filePath: string; fd: number } | null> {
   const baseDir = resolve(pdfDir);
   const filePath = resolve(baseDir, `${jobId}.pdf`);
-  if (!filePath.startsWith(baseDir + sep) || !existsSync(filePath)) {
+  if (!filePath.startsWith(baseDir + sep)) {
     return null;
   }
-  return filePath;
+  const fd = await openReadOnlyNoFollow(filePath);
+  return fd === null ? null : { filePath, fd };
 }
 
-function streamArtifact(res: Response, filePath: string): void {
+function openReadOnlyNoFollow(filePath: string): Promise<number | null> {
+  return new Promise((resolveOpen) => {
+    openFile(
+      filePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+      (error: unknown, fd: number) => {
+        resolveOpen(error ? null : fd);
+      },
+    );
+  });
+}
+
+function streamArtifact(
+  res: Response,
+  artifact: { filePath: string; fd: number },
+  deps: PdfDownloadDeps,
+  jobId: string,
+): void {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment");
-  const stream = createReadStream(filePath);
-  stream.on("error", () => {
-    // A mid-stream read failure after `existsSync` passed is rare, but an
+  const stream = createReadStream(artifact.filePath, {
+    fd: artifact.fd,
+    autoClose: true,
+  });
+  stream.on("error", (error: unknown) => {
+    // A mid-stream read failure after the no-follow open is rare, but an
     // unhandled stream 'error' would crash the process: 500 if nothing was
     // sent yet, otherwise tear down the half-written response.
+    deps.logger.error("pdf stream read failed", {
+      phase: "pdf.download",
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     if (res.headersSent) {
       res.destroy();
     } else {
@@ -131,11 +173,11 @@ export async function handlePdfDownload(
     return;
   }
 
-  const filePath = resolveArtifactPath(deps.pdfDir, jobId);
-  if (!filePath) {
+  const artifact = await resolveArtifactPath(deps.pdfDir, jobId);
+  if (artifact === null) {
     res.status(HTTP.notFound).end();
     return;
   }
 
-  streamArtifact(res, filePath);
+  streamArtifact(res, artifact, deps, jobId);
 }

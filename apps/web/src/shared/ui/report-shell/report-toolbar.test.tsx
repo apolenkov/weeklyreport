@@ -24,12 +24,13 @@ describe("ReportToolbar", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("keeps the bordered frame and stays horizontally reachable at narrow widths", () => {
+  it("keeps the bordered frame and wraps controls at narrow widths", () => {
     render(<ReportToolbar contextControls={<span>Ctx</span>} />);
     const contextBar = screen.getByRole("group", { name: "Context controls" });
     expect(contextBar.dataset.testid).toBe("report-toolbar");
     expect(contextBar.className).toContain("rounded-");
-    expect(contextBar.className).toContain("overflow-x-auto");
+    expect(contextBar.className).toContain("flex-wrap");
+    expect(contextBar.className).not.toContain("overflow-x-auto");
   });
 
   it("default render is non-sticky (no sticky positioning class)", () => {

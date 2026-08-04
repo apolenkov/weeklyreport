@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   adminUpdatePeriodManualSchema,
+  MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
 } from "./period.schema";
 
 const REPORT_ID = "123e4567-e89b-42d3-a456-426614174000";
 const PUBLISHER_ID = "123e4567-e89b-42d3-a456-426614174001";
+
+describe("MAX_WEEK_LABEL_LENGTH — single source of truth", () => {
+  it("exports the week-label cap as the one shared constant", () => {
+    expect(MAX_WEEK_LABEL_LENGTH).toBe(64);
+  });
+});
 
 const validPeriod = {
   id: REPORT_ID,
@@ -14,6 +21,14 @@ const validPeriod = {
   periodEnd: new Date("2026-07-12T23:59:59.999Z"),
   deadline: new Date("2026-07-13T12:00:00.000Z"),
   status: "draft" as const,
+  periodState: "open" as const,
+  periodStatus: "open" as const,
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
 };
 
 describe("reportPeriodSchema — publishedById", () => {
@@ -29,6 +44,10 @@ describe("reportPeriodSchema — publishedById", () => {
   it("accepts a UUID publisher id", () => {
     const parsed = reportPeriodSchema.parse({
       ...validPeriod,
+      status: "published",
+      periodState: "published",
+      periodStatus: "published",
+      publishedAt: new Date("2026-07-13T18:00:00.000Z"),
       publishedById: PUBLISHER_ID,
     });
 
@@ -44,14 +63,13 @@ describe("reportPeriodSchema — publishedById", () => {
     expect(parsed.publishedById).toBeNull();
   });
 
-  it("accepts an absent publisher id", () => {
-    const parsed = reportPeriodSchema.parse(validPeriod);
-
-    expect(parsed.publishedById).toBeUndefined();
+  it("rejects an absent publisher id", () => {
+    const { publishedById: _publishedById, ...withoutPublisher } = validPeriod;
+    expect(() => reportPeriodSchema.parse(withoutPublisher)).toThrow();
   });
 });
 
-describe("adminUpdatePeriodManualSchema — three-state deadline (ruling F16)", () => {
+describe("adminUpdatePeriodManualSchema — three-state deadline", () => {
   const base = { reportId: REPORT_ID };
 
   it("omitting deadline leaves it undefined (untouched)", () => {
@@ -77,7 +95,7 @@ describe("adminUpdatePeriodManualSchema — three-state deadline (ruling F16)", 
   });
 });
 
-describe("reportPeriodSchema — nullable deadline (ruling F16)", () => {
+describe("reportPeriodSchema — nullable deadline", () => {
   it("accepts a null deadline on the read model", () => {
     const parsed = reportPeriodSchema.parse({
       ...validPeriod,

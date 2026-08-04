@@ -68,4 +68,30 @@ describe("ActionLogPrismaRepository composite keyset (integration)", () => {
     expect(traversed).toEqual(IDS);
     expect(new Set(traversed).size).toBe(IDS.length);
   });
+
+  it("excludes manual-UAT proof rows from the log so they never consume page budget", async () => {
+    await prisma.userActionLog.createMany({
+      data: [
+        {
+          id: "f0000000-0000-4000-8000-000000000099",
+          userId: "uat-driver",
+          role: "admin" as const,
+          procedure: "manual.uat",
+          status: "success" as const,
+          correlationId: "manual-action-log-proof-1",
+          durationMs: 0,
+          createdAt: new Date("2026-07-22T13:00:00.000Z"),
+        },
+      ],
+    });
+
+    const rows = await repository.listActionLog({ limit: 20 });
+
+    expect(rows.map((row) => row.correlationId)).not.toContain(
+      "manual-action-log-proof-1",
+    );
+    // Proof row must not hide the real rows behind it either: newest real
+    // row still appears at the top of the page.
+    expect(rows[0]?.correlationId).toBe("correlation-0");
+  });
 });

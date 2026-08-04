@@ -3,7 +3,7 @@ import {
   type AdminReminderRule,
   type UserSession,
 } from "@customreport/shared";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type {
@@ -19,6 +19,7 @@ import {
   insertExecutionOnConflict,
   listStuckQueuedExecutions,
   markExecutionFailed,
+  markStuckSendingSent,
   queryExecutionByDedupeKey,
   queryExecutionById,
   queryExecutionsPage,
@@ -45,120 +46,130 @@ import {
 export class RemindersPrismaRepository implements RemindersRepository {
   private readonly logger = new Logger(RemindersPrismaRepository.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  findDueDeadlineRules(now: Date): Promise<DueDeadlineRule[]> {
+  readonly findDueDeadlineRules = (now: Date): Promise<DueDeadlineRule[]> => {
     return queryDueDeadlineRules(this.prisma, now);
-  }
+  };
 
-  findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
+  readonly findDueEscalationRules = (
+    now: Date,
+  ): Promise<DueEscalationRule[]> => {
     return queryDueEscalationRules(this.prisma, now, this.logger);
-  }
+  };
 
-  getRuleReportId(ruleId: string): Promise<string | null> {
+  readonly getRuleReportId = (ruleId: string): Promise<string | null> => {
     return queryRuleReportId(this.prisma, ruleId);
-  }
+  };
 
-  findInScopeSectionId(
+  readonly findInScopeSectionId = (
     session: UserSession,
     reportId: string,
-  ): Promise<string | null> {
+  ): Promise<string | null> => {
     return queryInScopeSectionId(this.prisma, session, reportId);
-  }
+  };
 
-  listInScopeSectionAuthorEmails(
+  readonly listInScopeSectionAuthorEmails = (
     session: UserSession,
     reportId: string,
-  ): Promise<string[]> {
+  ): Promise<string[]> => {
     return queryInScopeSectionAuthorEmails(this.prisma, session, reportId);
-  }
+  };
 
-  findInScopeLeadId(
+  readonly findInScopeLeadId = (
     session: UserSession,
     leadId: string,
-  ): Promise<string | null> {
+  ): Promise<string | null> => {
     return queryInScopeLeadId(this.prisma, session, leadId);
-  }
+  };
 
-  findActiveRuleForDispatch(
+  readonly findActiveRuleForDispatch = (
     reportId: string,
     ruleId?: string,
-  ): Promise<{ id: string; fireAt: Date } | null> {
+  ): Promise<{ id: string; fireAt: Date } | null> => {
     return queryActiveRuleForDispatch(this.prisma, reportId, ruleId);
-  }
+  };
 
-  findDraftSectionsForDispatch(
+  readonly findDraftSectionsForDispatch = (
     session: UserSession,
     reportId: string,
     leadId?: string,
-  ): Promise<{ email: string; notificationOptOut: boolean }[]> {
+  ): Promise<{ email: string; notificationOptOut: boolean }[]> => {
     return queryDraftSectionsForDispatch(
       this.prisma,
       session,
       reportId,
       leadId,
     );
-  }
+  };
 
-  getRule(ruleId: string): Promise<AdminReminderRule | null> {
+  readonly getRule = (ruleId: string): Promise<AdminReminderRule | null> => {
     return queryReminderRule(this.prisma, ruleId);
-  }
+  };
 
-  getRulePeriodLabel(ruleId: string): Promise<string | null> {
+  readonly getRulePeriodLabel = (ruleId: string): Promise<string | null> => {
     return queryRulePeriodLabel(this.prisma, ruleId);
-  }
+  };
 
-  findExecutionByDedupeKey(
+  readonly findExecutionByDedupeKey = (
     dedupeKey: string,
-  ): Promise<AdminReminderExecution | null> {
+  ): Promise<AdminReminderExecution | null> => {
     return queryExecutionByDedupeKey(this.prisma, dedupeKey);
-  }
+  };
 
-  saveExecution(
+  readonly saveExecution = (
     execution: AdminReminderExecution,
-  ): Promise<AdminReminderExecution> {
+  ): Promise<AdminReminderExecution> => {
     return upsertExecution(this.prisma, execution);
-  }
+  };
 
-  insertExecutionOnConflict(
+  readonly insertExecutionOnConflict = (
     execution: AdminReminderExecution,
-  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
+  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> => {
     return insertExecutionOnConflict(this.prisma, execution);
-  }
+  };
 
-  transitionExecutionToSending(executionId: string): Promise<boolean> {
+  readonly transitionExecutionToSending = (
+    executionId: string,
+  ): Promise<boolean> => {
     return transitionExecutionToSending(this.prisma, executionId);
-  }
+  };
 
-  releaseExecutionClaim(executionId: string): Promise<void> {
+  readonly releaseExecutionClaim = (executionId: string): Promise<void> => {
     return releaseExecutionClaim(this.prisma, executionId);
-  }
+  };
 
-  markExecutionFailed(
+  readonly markExecutionFailed = (
     executionId: string,
     errorMessage: string,
-  ): Promise<void> {
+  ): Promise<void> => {
     return markExecutionFailed(this.prisma, executionId, errorMessage);
-  }
+  };
 
-  requeueFailedExecution(executionId: string): Promise<boolean> {
+  readonly requeueFailedExecution = (executionId: string): Promise<boolean> => {
     return requeueFailedExecution(this.prisma, executionId);
-  }
+  };
 
-  listStuckQueuedExecutions(
+  readonly listStuckQueuedExecutions = (
     olderThan: Date,
-  ): Promise<AdminReminderExecution[]> {
+  ): Promise<AdminReminderExecution[]> => {
     return listStuckQueuedExecutions(this.prisma, olderThan);
-  }
+  };
 
-  getExecution(executionId: string): Promise<AdminReminderExecution | null> {
+  readonly markStuckSendingSent = (olderThan: Date): Promise<number> => {
+    return markStuckSendingSent(this.prisma, olderThan);
+  };
+
+  readonly getExecution = (
+    executionId: string,
+  ): Promise<AdminReminderExecution | null> => {
     return queryExecutionById(this.prisma, executionId);
-  }
+  };
 
-  listExecutions(
+  readonly listExecutions = (
     ruleId: string,
     page: ExecutionPageRequest,
-  ): Promise<AdminReminderExecution[]> {
+  ): Promise<AdminReminderExecution[]> => {
     return queryExecutionsPage(this.prisma, ruleId, page);
-  }
+  };
 }

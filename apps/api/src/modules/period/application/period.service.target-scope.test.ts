@@ -139,10 +139,9 @@ describe("PeriodService — publish target scope", () => {
   });
 
   it("rejects a head publish when no active editable period exists (no write, no telemetry)", async () => {
-    // Fail-closed: the target clears the not-found/archived/already-published
-    // gates but the server resolves NO active editable period (e.g. a future
-    // scheduled target excluded by periodStart<=now). The mock decouples
-    // getReportById from the resolver to model that state directly.
+    // Fail-closed: the target clears the gates but the server resolves NO
+    // active editable period (e.g. a future scheduled target excluded by
+    // periodStart<=now). The mock decouples getReportById from the resolver.
     const target = openReport(reportId);
     const publishPeriod = vi.fn(() =>
       Promise.resolve({ transitioned: true as const }),
@@ -271,11 +270,9 @@ describe("PeriodService — reopen target scope", () => {
   });
 
   it("resolves the latest published NON-archived id when the newest published row is archived", async () => {
-    // The newest published row (reportId) is archived; an older published row
-    // (otherReportId) is non-archived. The reopen resolver must skip the
-    // archived newest and return the older non-archived id, and a head reopening
-    // THAT id succeeds — the archived guard does not block the older
-    // non-archived period.
+    // The newest published row is archived; an older one is non-archived. The
+    // reopen resolver must skip the archived newest and return the older id,
+    // and a head reopening that id succeeds.
     const repo = createSpyRepository(
       new Map<string, SpyReport>([
         [reportId, publishedReport(reportId, true)],
@@ -340,10 +337,9 @@ describe("PeriodService — reopen target scope", () => {
 
 describe("PeriodService — reopen → republish & single-active-reopen guard", () => {
   it("lets a head republish a reopened period even when a newer open period is the current editable", async () => {
-    // Steady state: week N (reportId) is published; week N+1 (otherReportId) is
-    // open and — inserted first — is what getCurrentEditableId resolves. A head
-    // reopens N and must be able to republish it; a strict equality check against
-    // the current editable (N+1) would brick this legitimate reopen→republish flow.
+    // Steady state: week N is published, week N+1 is open and resolves as the
+    // current editable. A head reopens N and must republish it; strict equality
+    // against the current editable would brick this legitimate flow.
     const reports = new Map<string, SpyReport>([
       [otherReportId, openReport(otherReportId)],
       [reportId, publishedReport(reportId)],
@@ -431,10 +427,9 @@ describe("PeriodService — publish reopened-target scope", () => {
   });
 
   it("rejects a head publishing a reopened target that is not the single active reopened period", async () => {
-    // reportId (inserted first) is the single active reopened period
-    // getReopenedNonArchivedId resolves; otherReportId is a SECOND reopened row
-    // — only reachable via an admin reopen of a historical period. A head must
-    // not be able to publish it (the closed bypass).
+    // reportId is the single active reopened period the resolver returns;
+    // otherReportId is a SECOND reopened row, reachable only via an admin
+    // reopen. A head must not be able to publish it (the closed bypass).
     const repo = createSpyRepository(
       new Map<string, SpyReport>([
         [reportId, reopenedReport(reportId)],
@@ -477,10 +472,9 @@ describe("PeriodService — publish reopened-target scope", () => {
 });
 
 describe("PeriodService — archive-in-window publish outcome", () => {
-  // The pre-write read sees a non-archived open period (it raced ahead of the
+  // The pre-write read sees a non-archived open period (raced ahead of the
   // archive's commit), so the service clears its archived gate and calls the
-  // repo; the guarded compare-and-set then reports the archive that landed in
-  // the window. The mock returns the repo outcome directly to model that state.
+  // repo; the CAS then reports the archive that landed in the window.
   function repoWithOutcome(
     publish: ReturnType<typeof vi.fn>,
   ): PeriodRepository {

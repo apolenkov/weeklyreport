@@ -11,6 +11,8 @@ import {
   type CarryOverRepository,
   CarryOverService,
 } from "./carry-over.service";
+import { cloneCarriedItem, cloneUnresolvedDecision } from "./carry-over-clones";
+import { buildCarryOverExecution, planCarriedEntries } from "./carry-over-plan";
 
 const sourceReportId = "22222222-2222-4222-8222-222222222222";
 const targetReportId = "55555555-5555-4555-8555-555555555555";
@@ -20,16 +22,22 @@ const sourceSection: ReportSectionReadModel = {
   reportId: sourceReportId,
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "submitted",
   submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
       projectName: "Project 1",
       trafficLight: "yellow",
+      ownedStages: [],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -73,6 +81,7 @@ const sourceSection: ReportSectionReadModel = {
     },
   ],
   activities: [],
+  reviews: [],
 };
 
 function createRepository(
@@ -81,6 +90,9 @@ function createRepository(
   // to the source's set (the common case); a test passes `[]` to model an
   // activity archived/detached between periods (decision 0.3).
   targetActivities: ReportSectionReadModel["activities"] = section.activities,
+  // Which side holds no sections; defaults to neither so both sides carry the
+  // source section. Empty-source and empty-target are the two failure modes.
+  emptySide: "source" | "target" | "neither" = "neither",
 ): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
   let targetSection: ReportSectionReadModel = {
@@ -108,10 +120,14 @@ function createRepository(
       return Promise.resolve(null);
     },
     getSourceSections() {
-      return Promise.resolve([structuredClone(section)]);
+      return Promise.resolve(
+        emptySide === "source" ? [] : [structuredClone(section)],
+      );
     },
     getTargetSections() {
-      return Promise.resolve([structuredClone(targetSection)]);
+      return Promise.resolve(
+        emptySide === "target" ? [] : [structuredClone(targetSection)],
+      );
     },
     getTargetReportState() {
       return Promise.resolve({
@@ -177,10 +193,9 @@ describe("CarryOverService", () => {
     ).rejects.toBeInstanceOf(CarryOverDomainError);
   });
 
-  // introduce-durable-record-identity: a lineage the target section already
-  // holds must NOT be carried again — the new (reportSectionId, stableId)
-  // uniqueness would otherwise skip the item insert (orphaning its
-  // CarryOverRecord) or trip P2002 on the decision insert.
+  // A lineage the target section already holds must NOT be carried again — the
+  // (reportSectionId, stableId) uniqueness would otherwise skip the item insert
+  // (orphaning its CarryOverRecord) or trip P2002 on the decision insert.
   it("skips carrying a lineage the target section already holds", async () => {
     const LINEAGE = "a0000000-0000-4000-8000-0000000000ab";
     const projectId = "44444444-4444-4444-8444-444444444444";
@@ -355,10 +370,9 @@ describe("CarryOverService", () => {
         targetReportId,
       );
 
-      // sourceSection has 1 next item + 1 unresolved decision = 2 records
-      // secondSourceSection has 1 next item = 1 record
-      // thirdSourceSection has 1 next item = 1 record
-      // Total: 4 records
+      // sourceSection: 1 next item + 1 unresolved decision = 2 records;
+      // secondSourceSection: 1 next item; thirdSourceSection: 1 next item
+      // → 4 total.
       expect(result.records).toHaveLength(4);
       expect(result.execution.carriedItemCount).toBe(3);
       expect(result.execution.carriedDecisionCount).toBe(1);
@@ -398,34 +412,7 @@ describe("CarryOverService", () => {
     });
 
     it("throws when source sections are empty", async () => {
-      const repo: CarryOverRepository = {
-        findExecutionByDedupeKey() {
-          return Promise.resolve(null);
-        },
-        findPreviousReportId() {
-          return Promise.resolve(null);
-        },
-        getSourceSections() {
-          return Promise.resolve([]);
-        },
-        getTargetSections() {
-          return Promise.resolve([structuredClone(sourceSection)]);
-        },
-        getTargetReportState() {
-          return Promise.resolve({
-            periodStatus: "open" as const,
-            archived: false,
-          });
-        },
-        saveCarryOver(execution, records, sections) {
-          return Promise.resolve({
-            execution,
-            records,
-            targetSection: expectDefined(sections[0]),
-          });
-        },
-      };
-
+      const repo = createRepository(sourceSection, undefined, "source");
       const service = new CarryOverService(repo);
 
       await expect(
@@ -434,34 +421,7 @@ describe("CarryOverService", () => {
     });
 
     it("throws when target sections are empty", async () => {
-      const repo: CarryOverRepository = {
-        findExecutionByDedupeKey() {
-          return Promise.resolve(null);
-        },
-        findPreviousReportId() {
-          return Promise.resolve(null);
-        },
-        getSourceSections() {
-          return Promise.resolve([structuredClone(sourceSection)]);
-        },
-        getTargetSections() {
-          return Promise.resolve([]);
-        },
-        getTargetReportState() {
-          return Promise.resolve({
-            periodStatus: "open" as const,
-            archived: false,
-          });
-        },
-        saveCarryOver(execution, records, sections) {
-          return Promise.resolve({
-            execution,
-            records,
-            targetSection: expectDefined(sections[0]),
-          });
-        },
-      };
-
+      const repo = createRepository(sourceSection, undefined, "target");
       const service = new CarryOverService(repo);
 
       await expect(
@@ -507,6 +467,7 @@ describe("CarryOverService — activity-parented carry-over", () => {
         status: "green",
         linkedProducts: [],
         derivedStatus: "green",
+        alarmFloor: null,
       },
     ],
   };
@@ -538,5 +499,75 @@ describe("CarryOverService — activity-parented carry-over", () => {
     expect(result.targetSection.items).toHaveLength(0);
     expect(result.targetSection.decisions).toHaveLength(0);
     expect(result.records).toHaveLength(0);
+  });
+});
+
+// Lifecycle timestamps arrive from the boundary, not the transaction builder:
+// one run shares a single provided instant across the execution and records.
+describe("carry-over plan — boundary-provided lifecycle timestamps", () => {
+  const NOW = new Date("2026-05-04T09:30:00.000Z");
+
+  it("builds the execution from the boundary-provided instant", () => {
+    const execution = buildCarryOverExecution({
+      sourceReportId,
+      targetReportId,
+      dedupeKey: `${sourceReportId}:${targetReportId}`,
+      carriedItemCount: 2,
+      carriedDecisionCount: 1,
+      now: NOW,
+    });
+
+    expect(execution.startedAt).toEqual(NOW);
+    expect(execution.completedAt).toEqual(NOW);
+  });
+
+  it("stamps every carried record with the same boundary-provided instant", () => {
+    const item = expectDefined(sourceSection.items[0]);
+    const decision = expectDefined(sourceSection.decisions[0]);
+    const itemClone = cloneCarriedItem(
+      sourceReportId,
+      targetReportId,
+      item,
+      NOW,
+    );
+    const decisionClone = cloneUnresolvedDecision(
+      sourceReportId,
+      targetReportId,
+      decision,
+      NOW,
+    );
+
+    expect(itemClone.record.carriedAt).toEqual(NOW);
+    expect(decisionClone.record.carriedAt).toEqual(NOW);
+  });
+
+  it("plans one run with one shared instant across clones", () => {
+    const entries = planCarriedEntries(
+      [sourceSection],
+      [
+        {
+          ...sourceSection,
+          reportSectionId: "22222222-2222-4222-8222-222222222223",
+          reportId: targetReportId,
+          status: "draft",
+          submittedAt: null,
+          items: [],
+          decisions: [],
+        },
+      ],
+      sourceReportId,
+      targetReportId,
+      NOW,
+    );
+
+    const timestamps = entries.flatMap((entry) =>
+      [...entry.items, ...entry.decisions].map(
+        (carried) => carried.record.carriedAt,
+      ),
+    );
+    expect(timestamps).toHaveLength(2);
+    expect(timestamps.every((stamp) => stamp.getTime() === NOW.getTime())).toBe(
+      true,
+    );
   });
 });

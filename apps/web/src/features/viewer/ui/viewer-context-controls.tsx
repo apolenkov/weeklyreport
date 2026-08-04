@@ -7,7 +7,7 @@ import { PeriodNavigator } from "../../period";
 import type { ReportPeriod } from "../../report-sections";
 
 interface ViewerContextControlsProps {
-  readonly periods: ReportPeriod[];
+  readonly periods: readonly ReportPeriod[];
   readonly reportId: string;
   readonly urlBuilder: (periodId: string) => string;
   readonly includeArchive: boolean;
@@ -17,6 +17,7 @@ interface ViewerContextControlsProps {
   readonly editHref: string;
   readonly slidesHref: string;
   readonly mode: "form" | "slides";
+  readonly historyError: boolean;
 }
 
 // Shared by both viewer render paths (page and slides).
@@ -31,10 +32,19 @@ export function ViewerContextControls({
   editHref,
   slidesHref,
   mode,
+  historyError,
 }: ViewerContextControlsProps) {
   return (
     <>
-      {periods.length > 0 ? (
+      {historyError ? (
+        <span
+          className="text-xs font-medium text-[var(--color-destructive)]"
+          role="alert"
+          data-testid="viewer-history-error"
+        >
+          Period history unavailable
+        </span>
+      ) : periods.length > 0 ? (
         <PeriodNavigator
           periods={periods}
           currentPeriodId={reportId}

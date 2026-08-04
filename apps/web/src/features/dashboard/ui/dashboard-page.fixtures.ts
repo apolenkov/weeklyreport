@@ -1,12 +1,16 @@
-import { vi } from "vitest";
+import type { QueryObserverResult } from "@tanstack/react-query";
+
+import {
+  makeQueryState,
+  type QueryStateInput,
+} from "../../../test-utils/query-state";
 
 export interface QueryState {
   readonly data?: unknown;
   readonly error?: Error | null;
-  readonly isError?: boolean;
   readonly status?: "pending" | "error" | "success";
   readonly fetchStatus?: "fetching" | "paused" | "idle";
-  readonly refetch?: ReturnType<typeof vi.fn>;
+  readonly refetch?: () => Promise<unknown>;
 }
 
 export const ACTIVE_WEEKLY = {
@@ -25,16 +29,15 @@ export const ACTIVE_ACTIVITY = {
   rows: [],
 };
 
-export const queryStates = new Map<string, Required<QueryState>>();
+export const queryStates = new Map<string, QueryObserverResult>();
 
 export function setQueryState(key: string, overrides: QueryState) {
-  queryStates.set(key, {
-    data: undefined,
-    error: null,
-    isError: false,
-    status: "success",
-    fetchStatus: "idle",
-    refetch: vi.fn().mockResolvedValue({ data: overrides.data }),
-    ...overrides,
-  });
+  const input = {
+    data: overrides.data,
+    ...(overrides.error ? { error: overrides.error } : {}),
+    ...(overrides.status ? { status: overrides.status } : {}),
+    ...(overrides.fetchStatus ? { fetchStatus: overrides.fetchStatus } : {}),
+    ...(overrides.refetch ? { refetch: overrides.refetch } : {}),
+  } satisfies QueryStateInput<unknown>;
+  queryStates.set(key, makeQueryState(input));
 }

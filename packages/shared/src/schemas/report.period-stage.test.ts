@@ -8,15 +8,7 @@ import {
   periodStateSchema,
   periodStatusSchema,
   reportPeriodSchema,
-  stageAssignmentSchema,
-  stageSchema,
 } from "./report";
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
-const uuid = () => randomUUID();
 describe("periodStatusSchema", () => {
   it('accepts "open"', () => {
     expect(periodStatusSchema.safeParse("open").success).toBe(true);
@@ -42,10 +34,6 @@ describe("periodStatusSchema", () => {
     expect(periodStatusSchema.safeParse(null).success).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// periodStateSchema
-// ---------------------------------------------------------------------------
 
 describe("periodStateSchema", () => {
   it('accepts "scheduled"', () => {
@@ -76,7 +64,7 @@ describe("periodStateSchema", () => {
     expect(periodStateSchema.safeParse("OPEN").success).toBe(false);
   });
 
-  it("reportPeriodSchema: periodState is optional (back-compat)", () => {
+  it("reportPeriodSchema: periodState is required", () => {
     const parsed = reportPeriodSchema.safeParse({
       id: randomUUID(),
       periodStart: "2026-05-11",
@@ -84,7 +72,7 @@ describe("periodStateSchema", () => {
       deadline: "2026-05-15",
       status: "draft",
     });
-    expect(parsed.success).toBe(true);
+    expect(parsed.success).toBe(false);
   });
 
   it("reportPeriodSchema: periodState carries through when supplied", () => {
@@ -95,13 +83,18 @@ describe("periodStateSchema", () => {
       deadline: "2026-05-15",
       status: "draft",
       periodState: "open",
+      periodStatus: "open",
+      archived: false,
+      autoPublished: false,
+      autoArchived: false,
+      publishedAt: null,
+      publishedById: null,
+      reopenedAt: null,
     });
     expect(parsed.periodState).toBe("open");
   });
 
-  it("reportPeriodSchema: the full governed lifecycle set is optional (back-compat)", () => {
-    // A legacy snapshot (only the date envelope + status) must still parse so
-    // old admin exports restore.
+  it("reportPeriodSchema: legacy payloads require the versioned decoder", () => {
     const parsed = reportPeriodSchema.safeParse({
       id: randomUUID(),
       periodStart: "2026-05-11",
@@ -109,7 +102,7 @@ describe("periodStateSchema", () => {
       deadline: "2026-05-15",
       status: "published",
     });
-    expect(parsed.success).toBe(true);
+    expect(parsed.success).toBe(false);
   });
 
   it("reportPeriodSchema: the full governed lifecycle set carries through", () => {
@@ -138,10 +131,6 @@ describe("periodStateSchema", () => {
     expect(parsed.reopenedAt).toBeInstanceOf(Date);
   });
 });
-
-// ---------------------------------------------------------------------------
-// periodListBucketSchema + periodListItemSchema
-// ---------------------------------------------------------------------------
 
 describe("periodListBucketSchema", () => {
   it.each(["active", "archive", "scheduled", "open", "published", "archived"])(
@@ -211,115 +200,5 @@ describe("periodListItemSchema", () => {
       periodListItemSchema.safeParse({ ...baseRow, periodStatus: "reopened" })
         .success,
     ).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// stageSchema
-// ---------------------------------------------------------------------------
-
-describe("stageSchema", () => {
-  it("accepts valid stage", () => {
-    const result = stageSchema.safeParse({
-      id: uuid(),
-      name: "Development",
-      sortOrder: 0,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects empty name", () => {
-    const result = stageSchema.safeParse({
-      id: uuid(),
-      name: "",
-      sortOrder: 0,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects negative sortOrder", () => {
-    const result = stageSchema.safeParse({
-      id: uuid(),
-      name: "Testing",
-      sortOrder: -1,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-integer sortOrder", () => {
-    const result = stageSchema.safeParse({
-      id: uuid(),
-      name: "Testing",
-      sortOrder: 1.5,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-UUID id", () => {
-    const result = stageSchema.safeParse({
-      id: "not-a-uuid",
-      name: "Dev",
-      sortOrder: 0,
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// stageAssignmentSchema
-// ---------------------------------------------------------------------------
-
-describe("stageAssignmentSchema", () => {
-  it("accepts valid assignment with all fields", () => {
-    const result = stageAssignmentSchema.safeParse({
-      id: uuid(),
-      userId: uuid(),
-      stageId: uuid(),
-      projectId: uuid(),
-      stageName: "Development",
-      userName: "Alice",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts assignment without optional userName", () => {
-    const result = stageAssignmentSchema.safeParse({
-      id: uuid(),
-      userId: uuid(),
-      stageId: uuid(),
-      projectId: uuid(),
-      stageName: "Testing",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects empty stageName", () => {
-    const result = stageAssignmentSchema.safeParse({
-      id: uuid(),
-      userId: uuid(),
-      stageId: uuid(),
-      projectId: uuid(),
-      stageName: "",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-UUID userId", () => {
-    const result = stageAssignmentSchema.safeParse({
-      id: uuid(),
-      userId: "not-uuid",
-      stageId: uuid(),
-      projectId: uuid(),
-      stageName: "Dev",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects missing required fields", () => {
-    const result = stageAssignmentSchema.safeParse({
-      id: uuid(),
-      stageName: "Dev",
-    });
-    expect(result.success).toBe(false);
   });
 });

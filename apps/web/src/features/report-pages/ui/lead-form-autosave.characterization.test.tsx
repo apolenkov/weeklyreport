@@ -1,7 +1,5 @@
-/**
- * Autosave cadence pins on the public `<LeadForm>` surface. Separate file
- * because fake timers + RTL `waitFor` in one suite deadlock.
- */
+// Keep fake-timer cadence pins separate: RTL `waitFor` can deadlock in this
+// suite when it shares the same timer lifecycle.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
@@ -46,6 +44,7 @@ function makeSection() {
     version: 1,
     status: "draft" as const,
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -83,6 +82,7 @@ function buildHarness() {
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     { path: ["reports", "myHistory"], query: [] },

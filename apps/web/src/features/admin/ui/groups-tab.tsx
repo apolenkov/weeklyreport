@@ -33,10 +33,10 @@ type ArchiveFilterValue = (typeof ARCHIVE_OPTIONS)[number]["value"];
 interface GroupsTabProps {
   readonly groups: AdminGroupView[];
   readonly users: AdminUserView[];
-  // product roster for the «Products attached» section inside the edit
-  // dialog. Optional so callers that don't thread products through (e.g.
-  // unit tests) keep compiling — the section short-circuits to an empty list.
-  readonly products?: AdminProductView[];
+  // Product roster for the «Products attached» section inside the edit
+  // dialog. Required: a missing roster must fail the build, never render as
+  // a valid-looking "no products" state.
+  readonly products: AdminProductView[];
 }
 
 // only head/admin users may lead a group. Filter the candidate
@@ -218,7 +218,7 @@ function GroupsTabHeader({
         <button
           type="button"
           onClick={() => tab.dialog.openDialog(null)}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
           aria-label="Add group"
         >
           <PlusIcon />
@@ -229,7 +229,7 @@ function GroupsTabHeader({
   );
 }
 
-export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
+export function GroupsTab({ groups, users, products }: GroupsTabProps) {
   const tab = useGroupsTab(groups, users);
   const { dialog, commands, filters } = tab;
 

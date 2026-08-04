@@ -73,15 +73,44 @@ describe("ReviewActionsPrismaRepository.insertComment", () => {
     expect(tx.recordComment.create).not.toHaveBeenCalled();
   });
 
-  it("converts a pg-adapter P2003 insert failure to ReviewNotFoundError", async () => {
+  it("converts an anchor-FK pg-adapter P2003 insert failure to ReviewNotFoundError", async () => {
     const p2003 = {
       code: PRISMA_FOREIGN_KEY_CONSTRAINT_ERROR_CODE,
+      message: "Foreign key constraint violated",
+      meta: {
+        driverAdapterError: {
+          cause: {
+            originalMessage:
+              'insert or update violates foreign key constraint "RecordComment_itemId_fkey"',
+          },
+        },
+      },
     };
     const { repo } = buildRepository({ createError: p2003 });
 
     await expect(
       repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
     ).rejects.toBeInstanceOf(ReviewNotFoundError);
+  });
+
+  it("re-throws a P2003 on the reviewer FK — an integrity failure, not a missing record", async () => {
+    const reviewerFkError = {
+      code: PRISMA_FOREIGN_KEY_CONSTRAINT_ERROR_CODE,
+      message: "Foreign key constraint violated",
+      meta: {
+        driverAdapterError: {
+          cause: {
+            originalMessage:
+              'insert or update violates foreign key constraint "RecordComment_reviewerId_fkey"',
+          },
+        },
+      },
+    };
+    const { repo } = buildRepository({ createError: reviewerFkError });
+
+    await expect(
+      repo.insertComment(REVIEWER_ID, { itemId: RAW_ITEM_ID }, "Please revise"),
+    ).rejects.toBe(reviewerFkError);
   });
 
   it("locks the report and writes the stableId-resolved PK, not the raw PK", async () => {

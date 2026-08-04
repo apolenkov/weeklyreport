@@ -16,7 +16,7 @@ export interface CursorPaginationInput {
 }
 
 interface CursorPage<T> {
-  items: T[];
+  items: readonly T[];
   nextCursor: string | null;
 }
 
@@ -25,7 +25,7 @@ export interface CursorPaginationOptions {
 }
 
 export interface CursorPaginationResult<T> {
-  items: T[];
+  items: readonly T[];
   hasNextPage: boolean;
   isLoading: boolean;
   isFetchingNextPage: boolean;
@@ -71,10 +71,7 @@ function mergeQueryOptions<TItem>(
   };
 }
 
-/**
- * Infinite query helper over a cursor-paginated tRPC procedure.
- * @param factory - Builds the infinite query options for the procedure.
- */
+// Wrap a cursor-paginated tRPC procedure while flattening its infinite pages.
 export function useCursorPagination<
   TItem,
   TInput extends CursorPaginationInput = CursorPaginationInput,
@@ -97,7 +94,7 @@ export function useCursorPagination<
 
   const query = useInfiniteQuery(queryOptions);
 
-  const items = useMemo<TItem[]>(() => {
+  const items = useMemo<readonly TItem[]>(() => {
     const data = query.data as InfiniteData<CursorPage<TItem>> | undefined;
     const pages = data?.pages;
     if (!pages) return [];

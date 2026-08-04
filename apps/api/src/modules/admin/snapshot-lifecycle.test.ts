@@ -3,17 +3,20 @@ import { describe, expect, it } from "vitest";
 
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
-// `resolveLifecycle` is the pure core of the admin snapshot restore.
-// These tests pin the two paths that matter — verbatim
-// reinstatement when the snapshot is full-fidelity (the reopened round-trip
-// MUST NOT be flattened), and the legacy-tuple backfill when fields are absent.
-
 const base = (): ReportPeriod => ({
   id: "11111111-1111-1111-1111-111111111111",
   periodStart: new Date("2026-05-11T00:00:00.000Z"),
   periodEnd: new Date("2026-05-17T00:00:00.000Z"),
   deadline: new Date("2026-05-15T00:00:00.000Z"),
   status: "draft",
+  periodState: "open",
+  periodStatus: "open",
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
 });
 
 describe("resolveLifecycle — full-fidelity (present values are verbatim)", () => {
@@ -52,6 +55,7 @@ describe("resolveLifecycle — full-fidelity (present values are verbatim)", () 
       periodState: "open",
       periodStatus: "reopened",
       archived: false,
+      publishedAt: new Date("2026-05-16T10:00:00.000Z"),
       reopenedAt: new Date("2026-05-18T09:00:00.000Z"),
     });
 
@@ -70,45 +74,11 @@ describe("resolveLifecycle — full-fidelity (present values are verbatim)", () 
       periodStatus: "published",
       archived: true,
       autoArchived: true,
+      publishedAt: new Date("2026-05-16T10:00:00.000Z"),
     });
 
     expect(resolved.archived).toBe(true);
     expect(resolved.periodState).toBe("archived");
     expect(resolved.autoArchived).toBe(true);
-  });
-});
-
-describe("resolveLifecycle — legacy fallback (absent fields backfill)", () => {
-  it("derives a coherent published row from status alone", () => {
-    const resolved = resolveLifecycle({ ...base(), status: "published" });
-
-    // Never status="published" with a stale default periodState="open".
-    expect(resolved.periodState).toBe("published");
-    expect(resolved.periodStatus).toBe("published");
-    expect(resolved.archived).toBe(false);
-    expect(resolved.autoPublished).toBe(false);
-    expect(resolved.autoArchived).toBe(false);
-    expect(resolved.publishedAt).toBeNull();
-    expect(resolved.publishedById).toBeNull();
-    expect(resolved.reopenedAt).toBeNull();
-  });
-
-  it("derives a coherent draft/open row from status alone", () => {
-    const resolved = resolveLifecycle({ ...base(), status: "draft" });
-
-    expect(resolved.periodState).toBe("open");
-    expect(resolved.periodStatus).toBe("open");
-    expect(resolved.archived).toBe(false);
-  });
-
-  it("derives periodState='archived' when only the archived flag is present", () => {
-    const resolved = resolveLifecycle({
-      ...base(),
-      status: "published",
-      archived: true,
-    });
-
-    expect(resolved.archived).toBe(true);
-    expect(resolved.periodState).toBe("archived");
   });
 });

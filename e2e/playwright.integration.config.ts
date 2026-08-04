@@ -29,9 +29,7 @@ if (!process.env.E2E_API_PORT) {
 if (!process.env.E2E_WEB_PORT) {
   process.env.E2E_WEB_PORT = String(WEB_PORT);
 }
-if (!process.env.NEXT_PUBLIC_API_URL) {
-  process.env.NEXT_PUBLIC_API_URL = API_URL;
-}
+process.env.NEXT_PUBLIC_API_URL = API_URL;
 
 if (!process.env.E2E_DATABASE_URL) {
   throw new Error(
@@ -49,7 +47,10 @@ export default defineConfig({
   testIgnore: "**/*.test.ts",
   outputDir: path.join(import.meta.dirname, "integration/.results"),
   globalSetup: path.join(import.meta.dirname, "integration/global-setup.ts"),
-  globalTeardown: path.join(import.meta.dirname, "integration/global-teardown.ts"),
+  globalTeardown: path.join(
+    import.meta.dirname,
+    "integration/global-teardown.ts",
+  ),
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false, // shared DB state
@@ -72,7 +73,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       grepInvert: /@MOB-/,
     },
-    // MOB-01/MOB-AUDIT: mobile projects run only specs tagged @MOB-.
+    // Mobile projects run only specs tagged @MOB-.
     {
       name: "mobile-ios",
       use: { ...devices["iPhone 14"], browserName: "chromium" },
@@ -101,7 +102,10 @@ export default defineConfig({
         FRONTEND_URL: WEB_URL,
         APP_BASE_URL: WEB_URL,
         PDF_BASE_URL: WEB_URL,
-        PDF_OUTPUT_DIR: path.join(import.meta.dirname, "integration/.results/pdfs"),
+        PDF_OUTPUT_DIR: path.join(
+          import.meta.dirname,
+          "integration/.results/pdfs",
+        ),
         PDF_EXPORT_JWT_SECRET:
           process.env.PDF_EXPORT_JWT_SECRET ??
           "e2e-pdf-export-secret-32-chars-minimum!!",
@@ -129,12 +133,12 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,
-        // FORCE-OVERRIDE NEXT_PUBLIC_AUTH_STUB — `.env` at repo root sets it
-        // to 'true' for local dev convenience, and Next.js's turbopack.root
-        // points at the monorepo root so that file is loaded automatically.
-        // The integration suite must exercise the real proxy.ts auth guard
-        // via /auth/dev-login JWT cookies; AUTH_STUB=true would short-circuit
-        // the redirect logic and break auth-guards.integration.spec.ts.
+        // `.env` at repo root sets NEXT_PUBLIC_AUTH_STUB to 'true' for local
+        // dev convenience, and Next.js's turbopack.root points at the monorepo
+        // root so that file is loaded automatically. The integration suite must
+        // exercise the real proxy.ts auth guard via /auth/dev-login JWT
+        // cookies; AUTH_STUB=true would short-circuit the redirect logic and
+        // break auth-guards.integration.spec.ts.
         NEXT_PUBLIC_AUTH_STUB: "false",
         // Keep the Agentation widget out of headless runs (mirrors
         // e2e/sweep/playwright.config.ts): its persistent EventSource makes

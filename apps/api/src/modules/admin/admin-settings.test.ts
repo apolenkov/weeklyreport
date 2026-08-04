@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import {
   buildAdminCaller,
   createRepository,
@@ -7,7 +8,15 @@ import {
   initialSnapshot,
   leadSession,
 } from "./__tests__/focused-admin-harness.js";
-import { SnapshotAdminService } from "./snapshot-admin.service.js";
+import { SnapshotAdminService as ProductionSnapshotAdminService } from "./snapshot-admin.service.js";
+
+class SnapshotAdminService extends ProductionSnapshotAdminService {
+  constructor(
+    repository: ConstructorParameters<typeof ProductionSnapshotAdminService>[0],
+  ) {
+    super(repository, createNullLogger());
+  }
+}
 
 describe("SnapshotAdminService — settings", () => {
   it("returns default settings when nothing has been configured", async () => {

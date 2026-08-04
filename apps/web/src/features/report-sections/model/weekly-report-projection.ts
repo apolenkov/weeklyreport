@@ -19,6 +19,7 @@ import {
   groupPrioritiesByProject,
 } from "./weekly-report-groupers-decisions";
 import type {
+  ProductAttention,
   WeeklyPortfolioProduct,
   WeeklyProductReport,
   WeeklyReportDecision,
@@ -69,16 +70,15 @@ export function buildWeeklyReportProjectionContext(
 function attentionProperties(
   report: WeeklyReportReadModel,
   productName: string,
-): Pick<WeeklyProductReport, "needsAttention" | "needsAttentionSeverity"> {
+): ProductAttention {
   const attention = findNeedsAttention(report, productName);
-  return {
-    ...(attention.needsAttention === undefined
-      ? {}
-      : { needsAttention: attention.needsAttention }),
-    ...(attention.needsAttentionSeverity === undefined
-      ? {}
-      : { needsAttentionSeverity: attention.needsAttentionSeverity }),
-  };
+  const needsAttention = attention.needsAttention;
+  const needsAttentionSeverity = attention.needsAttentionSeverity;
+  // The pair travels together: text without a severity would be an invented
+  // callout, so an incomplete find resolves to the absent branch instead.
+  return needsAttention === undefined || needsAttentionSeverity === undefined
+    ? {}
+    : { needsAttention, needsAttentionSeverity };
 }
 
 export function projectWeeklyProduct(
@@ -104,6 +104,27 @@ export function projectWeeklyProduct(
     status,
     leads,
   } as const;
+  const attention = attentionProperties(context.report, overview.productName);
+  const productBase = {
+    ...identity,
+    authorIds: context.authorsByProject.get(overview.productId) ?? [],
+    statusLabel: statusLabel(status, "print"),
+    currentWeek: items.current,
+    nextWeek: items.next,
+    risks,
+    decisions,
+    priorities,
+  };
+  // Spread of a union-typed pair loses the discrimination, so the attention
+  // fields are appended branch-by-branch to keep the pair atomic.
+  const product: WeeklyProductReport =
+    attention.needsAttention === undefined
+      ? { ...productBase }
+      : {
+          ...productBase,
+          needsAttention: attention.needsAttention,
+          needsAttentionSeverity: attention.needsAttentionSeverity,
+        };
   return {
     portfolio: {
       ...identity,
@@ -112,16 +133,6 @@ export function projectWeeklyProduct(
       nextWeekCount: items.next.length,
       riskCount: risks.length,
     },
-    product: {
-      ...identity,
-      authorIds: context.authorsByProject.get(overview.productId) ?? [],
-      statusLabel: statusLabel(status, "print"),
-      ...attentionProperties(context.report, overview.productName),
-      currentWeek: items.current,
-      nextWeek: items.next,
-      risks,
-      decisions,
-      priorities,
-    },
+    product,
   };
 }

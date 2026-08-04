@@ -1,5 +1,4 @@
 import {
-  type ArchiveReportDetail,
   archiveReportDetailSchema,
   type ArchiveReportSummary,
   archiveReportSummarySchema,
@@ -7,7 +6,7 @@ import {
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -19,6 +18,7 @@ import {
 } from "../published-report-snapshot.js";
 import { reportSectionFullInclude } from "../report-sections/index.js";
 import type {
+  ArchiveDetailRead,
   ArchiveReadFilter,
   ArchiveRepository,
   ArchiveScopeSession,
@@ -30,6 +30,7 @@ const PUBLISHED_FLOOR = { status: "published" as const, archived: true };
 
 // Display sentinel when snapshot and publisher name are both missing.
 const UNKNOWN_PUBLISHER_NAME = "Unknown";
+const DEFAULT_ARCHIVE_PAGE_SIZE = 20;
 
 // The paginated list query loads section ids only (enough to scope the
 // snapshot filter); the full nested graph is fetched lazily for fallback rows.
@@ -49,21 +50,22 @@ type ArchiveFullRow = Prisma.ReportGetPayload<{
 
 @Injectable()
 export class ArchivePrismaRepository implements ArchiveRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async listArchiveReports(
-    pagination?: PaginationInput,
-    filter?: ArchiveReadFilter,
-    session?: ArchiveScopeSession,
-  ): Promise<PaginatedResult<ArchiveReportSummary>> {
+  readonly listArchiveReports = async (
+    pagination: PaginationInput | undefined,
+    filter: ArchiveReadFilter | undefined,
+    session: ArchiveScopeSession,
+  ): Promise<PaginatedResult<ArchiveReportSummary>> => {
     const sectionScope = sectionScopeWhere(session);
     const where = { ...filter, ...PUBLISHED_FLOOR };
+    const page = pagination ?? { limit: DEFAULT_ARCHIVE_PAGE_SIZE };
 
     // Page + one probe; full graph loads only for snapshot-less fallback rows.
-    const rows = await this.fetchArchivePage(where, sectionScope, pagination);
+    const rows = await this.fetchArchivePage(where, sectionScope, page);
 
-    const limit = pagination?.limit;
-    const hasNextPage = limit !== undefined && rows.length > limit;
+    const { limit } = page;
+    const hasNextPage = rows.length > limit;
     const pageRows = hasNextPage ? rows.slice(0, limit) : rows;
 
     const items = await this.buildSummaries(pageRows, sectionScope);
@@ -76,12 +78,12 @@ export class ArchivePrismaRepository implements ArchiveRepository {
         : null;
 
     return { items, nextCursor };
-  }
+  };
 
   private fetchArchivePage(
     where: Prisma.ReportWhereInput,
     sectionScope: Record<string, unknown> | undefined,
-    pagination: PaginationInput | undefined,
+    pagination: PaginationInput,
   ): Promise<ArchiveListRow[]> {
     const orderBy: Prisma.ReportOrderByWithRelationInput[] = [
       { publishedAt: "desc" },
@@ -94,10 +96,6 @@ export class ArchivePrismaRepository implements ArchiveRepository {
         select: { id: true },
       },
     } satisfies Prisma.ReportInclude;
-
-    if (!pagination) {
-      return this.prisma.report.findMany({ where, include, orderBy });
-    }
 
     const { cursor, limit } = pagination;
     return this.prisma.report.findMany({
@@ -145,17 +143,20 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     return new Map(fullRows.map((row) => [row.id, row]));
   }
 
-  async getArchiveReport(
+  readonly getArchiveReport = async (
     reportId: string,
-    filter?: ArchiveReadFilter,
-    session?: ArchiveScopeSession,
-  ): Promise<ArchiveReportDetail | null> {
+    filter: ArchiveReadFilter | undefined,
+    session: ArchiveScopeSession,
+  ): Promise<ArchiveDetailRead> => {
     // findFirst: status is non-unique so WhereUniqueInput cannot take it.
     const sectionScope = sectionScopeWhere(session);
     const report = await this.prisma.report.findFirst({
       where: { id: reportId, ...filter, ...PUBLISHED_FLOOR },
       include: {
         publishedBy: true,
+        // Total (unscoped) section count lets the caller tell a genuinely
+        // empty report apart from one the caller is scoped out of.
+        _count: { select: { sections: true } },
         sections: {
           ...(sectionScope ? { where: sectionScope } : {}),
           include: reportSectionFullInclude,
@@ -164,7 +165,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     });
 
     if (!report) {
-      return null;
+      return { detail: null, totalSectionCount: 0 };
     }
 
     const snapshot = readScopedSnapshot(report, sectionScope);
@@ -173,8 +174,11 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     // portfolio total can never disagree with the detail (both risk-floored).
     const summary = toArchiveSummaryFromSnapshot(assembled, report);
 
-    return archiveReportDetailSchema.parse({ summary, report: assembled });
-  }
+    return {
+      detail: archiveReportDetailSchema.parse({ summary, report: assembled }),
+      totalSectionCount: report._count.sections,
+    };
+  };
 }
 
 // Keyset after cursor on publishedAt desc, id desc; bad cursor → 400, not page 1.
@@ -198,11 +202,10 @@ function withArchiveKeyset(
   };
 }
 
-// undefined when no scope applies (admin / no session).
+// undefined when no scope applies (admin / no granted groups).
 function sectionScopeWhere(
-  session: ArchiveScopeSession | undefined,
+  session: ArchiveScopeSession,
 ): Record<string, unknown> | undefined {
-  if (!session) return undefined;
   const scope = groupScopeFilter(session, "reportSection");
   if (Object.keys(scope).length === 0) return undefined;
   return scope;

@@ -43,9 +43,8 @@ const readQueryParam = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
 // ONE WHATWG `new URL` parse against the app origin is the gate — it normalizes
-// backslash bypasses that a string-prefix check misses. Returns only
-// pathname+search+hash so the caller rebuilds the absolute URL from that SAME
-// parse; the leading `//` / `\` rejections are defence-in-depth, not the gate.
+// backslash bypasses a string-prefix check misses. It returns only pathname+
+// search+hash so the caller rebuilds from that SAME parse.
 export function safeRedirectPath(
   candidate: string | undefined,
   frontendUrl: string,

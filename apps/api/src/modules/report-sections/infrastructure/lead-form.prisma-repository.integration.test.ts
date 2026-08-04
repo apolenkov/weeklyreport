@@ -1,6 +1,7 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -17,7 +18,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
-    repo = new LeadFormPrismaRepository(prisma as never);
+    repo = new LeadFormPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {
@@ -156,11 +157,9 @@ describe("LeadFormPrismaRepository (integration)", () => {
   });
 
   it("fillFromSection throws LeadFormDomainError when the source section is absent on the copy re-read (TOCTOU)", async () => {
-    // The service prechecks source existence, but the repository re-reads the
-    // source inside the copy; if it vanished between the two, the re-read must
-    // surface NOT_FOUND (LeadFormDomainError), not a bare Error (→ 500). A valid
-    // target with its current version passes the compare-and-set, then the
-    // missing source trips the typed throw.
+    // The repository re-reads the source inside the copy; if it vanished since
+    // the service precheck, the re-read surfaces NOT_FOUND (LeadFormDomainError),
+    // not a bare Error (→ 500).
     const missingSourceId = "99999999-9999-4999-8999-999999999999";
 
     await expect(
@@ -312,11 +311,9 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
-  // The caller-access GUARD (own-section-in-report OR head/admin)
-  // lives in LeadFormService.getCrossAuthors, not the repository — see the
-  // "getCrossAuthors authorization" block in lead-form.contract.test.ts. These
-  // repo-level cases pin the complementary guarantee: even reached directly, the
-  // repository never leaks foreign CONTENT, and an unrelated/empty context is [].
+  // The caller-access guard lives in LeadFormService.getCrossAuthors, not the
+  // repository. These repo-level cases pin the complement: even reached
+  // directly, the repository never leaks foreign content; unrelated/empty → [].
   describe("getCrossAuthors — no foreign content; empty context is []", () => {
     it("no section in the given reportId still returns rows scoped by shared stageAssignment, never foreign content", async () => {
       // Create a second report the caller (testData.lead) has NO section in.
@@ -476,9 +473,8 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
 
     it("an item's own workflowStatus (no risk) does NOT colour the stage red", async () => {
-      // An item on the co-lead's section with no covering risk. The item's own
-      // workflowStatus is never consulted for stage colouring — only a risk
-      // does that — so the stage must stay on the persisted-traffic base (no
+      // An item with no covering risk: workflowStatus never colours a stage
+      // (only risks do), so the stage stays on the persisted-traffic base (no
       // traffic seeded → null).
       const { coSection } = await seedCoLead(testData.report.id);
       await prisma.item.create({
@@ -598,13 +594,9 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
 
     it("co-ownership scope: a co-owner's content on a NON-shared product is filtered out", async () => {
-      // The co-lead authors content on BOTH the shared product and a separate
-      // product the CALLER is not assigned to but the co-lead IS. Only the
-      // shared product's records may cross. The co-lead's assignment on the
-      // unshared product is what makes `projectId: { in: myProjectIds }`
-      // load-bearing here: dropping that clause pulls the unshared product into
-      // the co-lead's `sharedProjectIds`, and the per-row `sharedIds.has(...)`
-      // filter then leaks its records.
+      // The co-lead authors content on BOTH the shared product and one the
+      // CALLER is not assigned to. Only shared-product records may cross; the
+      // unshared assignment makes `projectId: { in: myProjectIds }` load-bearing.
       const OTHER_STAGE_ID = "b0000000-0000-4000-b000-000000000009";
       const { coLead, coSection } = await seedCoLead(testData.report.id);
       await prisma.project.create({
@@ -649,10 +641,9 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
 
     it("archived guard: an archived shared product denies the read (coOwnsShared:false, [])", async () => {
-      // The only shared product is archived. The `project: { archived: false }`
+      // The only shared product is archived: the `project: { archived: false }`
       // clause must drop it from the co-ownership scope, so the caller co-owns
-      // nothing shared and the read is denied. Dropping the clause would expose
-      // the archived product's foreign content.
+      // nothing shared and the read is denied (else archived content leaks).
       const { coSection } = await seedCoLead(testData.report.id);
       await seedContent(coSection.id, testData.project.id, "shared");
       await prisma.project.update({

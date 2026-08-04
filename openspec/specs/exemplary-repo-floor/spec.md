@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change exemplary-repo-roadmap. Update Purpose after archive.
+Define the mechanically proved exemplary floor, one-directional quality ratchets, single ownership for domain decisions, and truthful budgeted documentation.
 
 ## Requirements
 
@@ -121,28 +121,15 @@ rather than reimplement it. This is distinct from per-file test-fixture
 duplication, which `lint-max-strictness-standard` and the sibling
 `architecture-refactor-backlog` already govern.
 
-Known instances recorded 2026-07-28, pending a fix change each:
-
-- The default reporting-group fallback is implemented independently in
-  `apps/api/src/modules/auth/user-session.ts`
-  (`resolveNextReportingGroupId`) and
-  `apps/api/src/modules/admin/admin-group.queries.ts`
-  (`ensureFallbackReportingGroup`), with the id/name/description literals
-  copied verbatim into the former.
-- Period-lifecycle gating (`status` vs `periodStatus` under a reopen) is
-  decided independently in three files:
-  `apps/api/src/modules/telemetry/telemetry.gauges.ts`,
-  `apps/api/src/modules/telemetry/telemetry.queries.ts`, and
-  `apps/api/src/modules/telemetry/telemetry.prisma-repository.ts`.
-  A one-sided fix desyncs the other two; see the accepted decision below.
-- Domain-error mapping is spelled three ways with identical bodies
-  (`withDomainErrorMapping` / `withMappedDomainError` /
-  `withMappedDomainErrors`), plus 8 routers inlining the same try/catch.
-- Failure classification disagrees on mechanism: `instanceof` in the
-  lead-form family vs `error.name` string comparison in
-  `apps/api/src/infrastructure/trpc/routers/weekly-report.router.ts`, which
-  silently promotes a renamed or subclassed domain error to `error` level
-  logging.
+The current tree has closed the previously recorded instances. Auth now fails
+loud when a non-viewer has no reporting group, while snapshot restore uses the
+single `ensureFallbackReportingGroup` helper for its own foreign-key safety.
+Settled-period telemetry uses the shared `querySettledPeriodIds` predicate from
+`apps/api/src/modules/telemetry/telemetry.queries.ts` across gauges and the
+Prisma repository. Domain-error mapping is centralized in
+`trpc.error-mapper.ts` (`mapDomainError` and `withDomainErrorMapping`), and
+weekly-report failure severity uses `instanceof` consistently; `error.name` is
+serialized only as diagnostic metadata.
 
 #### Scenario: A second implementation of an existing domain decision is proposed
 
@@ -185,25 +172,13 @@ claim and builds on it is the harm this requirement exists to prevent — the
 functional bugs, because a functional bug is discoverable by using the
 feature and a false doc is not.
 
-Known instances recorded 2026-07-28, pending a fix change each:
-
-- `apps/api/src/infrastructure/trpc/routers/telemetry.router.ts`: the
-  fallback comment and `trpc.router.ts:90` both claim an undefined
-  dependency hides the procedure; the resolver instead returns a
-  hand-written all-zero KPI payload.
-- `apps/api/src/lib/audit-logger-types.ts`: `MutationInput`'s JSDoc promises
-  an `ai.*` mutation exclusion the middleware does not implement (it only
-  checks `auth.*`), and no `ai` router exists yet to have exercised the gap.
-- `apps/api/src/infrastructure/bullmq/queue-registry.ts`: claims to be the
-  "single owner of the raw Queue handles for this process"; `bullmq.module.ts`
-  also registers a `Queue` instance per queue name.
-- `apps/api/src/modules/auth/auth.routes.ts`: a comment claims `FRONTEND_URL`
-  has a localhost default in dev; `env.schema` declares it with no default.
-- `apps/web/README.md`: documents an "AppShell — SidebarProvider +
-  role-based navigation + header" that does not exist; the only primitive
-  matching that description
-  (`packages/ui/src/components/ui/sidebar.tsx`) has zero consumers
-  repo-wide.
+The current tree has corrected the previously recorded claims: the telemetry
+router requires its service and fails loudly; `MutationInput`'s `ai.*` privacy
+exclusion is enforced by mutation middleware; `QueueRegistry` is the single
+access owner for handles constructed by `BullModule`; auth reads required
+`FRONTEND_URL` through validated configuration with no localhost fallback; and
+`apps/web/README.md` documents live `NavBar`, report form, admin panel, and data
+table without a nonexistent sidebar primitive.
 
 #### Scenario: A doc claim is reviewed
 
@@ -221,10 +196,11 @@ ambiguous by shape alone: some resolve to durable, MUST-level requirements in
 `openspec/specs/web-polish-lows/spec.md` and
 `openspec/specs/reliable-reminder-delivery/spec.md`, both live, both cited
 across 9 files including production source) and deleting them destroys
-greppability; others are dead (`e2e/sweep/playwright.config.ts` and
-`e2e/catalog-sweep.spec.ts` both cite
-`openspec/changes/behavioral-ui-regression-gate`, which no longer exists —
-`openspec/changes/` holds only `archive/`).
+greppability.
+
+The sweep config and catalog test now point to this durable spec. Two maintained
+README files still contain unresolvable historical-change references and must be
+updated to point at the durable spec before a hygiene sweep can pass.
 
 A mechanical or LLM sweep MUST dereference each reference before acting on
 it. A reference that resolves to a live `openspec/specs/` requirement is
@@ -299,10 +275,10 @@ owner according to the criteria below.
    late-section "last published" metrics until it is republished. The selection
    predicate has one owner used by `telemetry.gauges.ts`,
    `telemetry.queries.ts`, and `telemetry.prisma-repository.ts`.
-3. **Type-only cycles are ratcheted debt.** The measured baseline is 27
-   `no-circular` violations under `--ts-pre-compilation-deps`; no new cycle is
-   allowed and the target is zero. The command captures its own exit status
-   without a pipeline. The unrelated unresolved import from
+3. **Type-only cycles are ratcheted debt.** The measured baseline is now zero
+   `no-circular` violations under `--ts-pre-compilation-deps`; the target remains
+   zero. The command captures its own exit status without a pipeline. The
+   unrelated unresolved import from
    `apps/web/src/lib/trpc.ts` is fixed or separately recorded, never counted as
    a cycle.
 4. **Local test-harness repetition after a `max-lines` split is allowed.** It

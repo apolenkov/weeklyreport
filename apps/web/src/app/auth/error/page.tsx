@@ -1,17 +1,20 @@
+import Link from "next/link";
+
 interface Props {
   searchParams: Promise<{ reason?: string }>;
 }
 
+const AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  invalid_assertion: "The SSO response was invalid. Please try again.",
+  session_expired: "Your session has expired. Please sign in again.",
+  unauthorized: "You do not have access to this resource.",
+};
+
 export default async function AuthErrorPage({ searchParams }: Props) {
   const { reason } = await searchParams;
 
-  const messages: Record<string, string> = {
-    invalid_assertion: "The SSO response was invalid. Please try again.",
-    session_expired: "Your session has expired. Please sign in again.",
-    unauthorized: "You do not have access to this resource.",
-  };
-
-  const message = messages[reason ?? ""] ?? "An authentication error occurred.";
+  const message =
+    AUTH_ERROR_MESSAGES[reason ?? ""] ?? "An authentication error occurred.";
 
   return (
     <main
@@ -23,7 +26,9 @@ export default async function AuthErrorPage({ searchParams }: Props) {
           className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-destructive)]"
           aria-hidden="true"
         >
-          <span className="text-2xl text-white">!</span>
+          <span className="text-2xl text-[var(--color-destructive-foreground)]">
+            !
+          </span>
         </div>
         <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
           Authentication Error
@@ -31,14 +36,14 @@ export default async function AuthErrorPage({ searchParams }: Props) {
         <p className="text-sm text-[var(--color-muted-foreground)]">
           {message}
         </p>
-        <a
+        <Link
           href="/"
-          className="btn-press inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 font-[family-name:var(--font-sans)] text-sm font-medium text-white shadow-sm transition-shadow hover:shadow-md"
+          className="btn-press inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 font-[family-name:var(--font-sans)] text-sm font-medium text-[var(--color-primary-foreground)] shadow-sm transition-shadow hover:shadow-md"
           style={{ minHeight: "var(--touch-target-min)" }}
           aria-label="Return to login page"
         >
           Return to Login
-        </a>
+        </Link>
       </div>
     </main>
   );

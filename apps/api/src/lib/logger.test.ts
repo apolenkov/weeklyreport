@@ -17,10 +17,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { createAppLogger, createNullLogger } from "./logger.js";
 
-// Allow fire-and-forget file writes to drain. The sink chains writes onto a
-// promise, so a few microtask flushes are enough. We poll the in-flight queue
-// via setImmediate to give pipeline streams (gzip/createReadStream) time to
-// finish their async work.
+// Allow fire-and-forget file writes to drain: the sink chains writes onto a
+// promise, so we poll the in-flight queue via setImmediate to give pipeline
+// streams (gzip/createReadStream) time to finish their async work.
 async function flush(times = 30): Promise<void> {
   for (let i = 0; i < times; i++) {
     await new Promise((r) => setImmediate(r));
@@ -146,6 +145,96 @@ describe("createAppLogger", () => {
     ) as Record<string, unknown>;
     expect(parsed.ruleId).toBe("rule-2");
     expect(parsed.executionId).toBe("exec-9");
+  });
+
+  it("redacts person-name and generic-email context keys at every sink", async () => {
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger({ logDir });
+
+    logger.info("nudge", {
+      leadName: "Иван Иванов",
+      email: "ivan@example.com",
+      ruleId: "rule-1",
+    });
+
+    const parsed = JSON.parse(
+      expectDefined(stdoutSpy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed.leadName).toBe("[redacted]");
+    expect(parsed.email).toBe("[redacted]");
+    expect(parsed.ruleId).toBe("rule-1");
+
+    await flush();
+
+    const fileParsed = JSON.parse(
+      readFileSync(join(logDir, "app.log"), "utf-8").trim(),
+    ) as Record<string, unknown>;
+    expect(fileParsed.leadName).toBe("[redacted]");
+    expect(fileParsed.email).toBe("[redacted]");
+  });
+
+  it("does not redact organization identity keys (no over-redaction)", () => {
+    const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger();
+
+    logger.info("org update", {
+      fullName: "CustomReport Department",
+      shortName: "CR",
+    });
+
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed.fullName).toBe("CustomReport Department");
+    expect(parsed.shortName).toBe("CR");
+  });
+
+  it("protects canonical event fields from caller-supplied context", () => {
+    const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger();
+
+    logger.info("the real message", {
+      timestamp: "1970-01-01T00:00:00.000Z",
+      level: "debug",
+      message: "spoofed message",
+      correlationId: "spoofed-correlation",
+    });
+
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
+    expect(parsed.message).toBe("the real message");
+    expect(parsed.level).toBe("info");
+    expect(parsed.correlationId).toBe("no-context");
+    expect(parsed.timestamp).not.toBe("1970-01-01T00:00:00.000Z");
+  });
+
+  it("flush drains pending file writes before resolving", async () => {
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const logger = createAppLogger({ logDir, service: "flush-test" });
+
+    logger.info("before-flush");
+    await expectDefined(logger.flush)();
+
+    const lines = readFileSync(join(logDir, "app.log"), "utf-8")
+      .trim()
+      .split("\n");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("before-flush");
+  });
+
+  it("flush rejects when a pending file write failed", async () => {
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const logger = createAppLogger({ logDir });
+    const appendSpy = vi
+      .spyOn(fsp, "appendFile")
+      .mockRejectedValueOnce(new Error("disk full"));
+
+    logger.info("doomed");
+    await expect(expectDefined(logger.flush)()).rejects.toThrow(/lost 1 write/);
+
+    appendSpy.mockRestore();
   });
 
   it("writes log entries asynchronously to <logDir>/app.log", async () => {

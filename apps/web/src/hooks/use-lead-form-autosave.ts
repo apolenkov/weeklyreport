@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { useBeforeUnloadGuard, useDebouncedSave } from "./autosave-effects";
 import { useSaveDraftMutation } from "./autosave-mutation";
@@ -11,14 +11,14 @@ import {
   useSyncAutosaveRefs,
 } from "./autosave-refs";
 import { runForceSave } from "./autosave-save-runner";
-import { stableStringify } from "./autosave-stable-stringify";
+import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type {
   AutosaveSnapshot,
   AutosaveState,
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 
-export { stableStringify } from "./autosave-stable-stringify";
+export { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 export type {
   AutosaveSnapshot,
   AutosaveState,
@@ -32,29 +32,33 @@ export function useLeadFormAutosave(
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [queuedRetryRevision, setQueuedRetryRevision] = useState(0);
+  // Mirrors refs.current.lastSaved so render computes `dirty` from state, never
+  // by touching the ref during render. Both are written together on save/baseline.
+  const [lastSavedKey, setLastSavedKey] = useState("");
 
-  const refs = useRef<AutosaveRefs>(seedAutosaveRefs(args));
+  const [refs] = useState<AutosaveRefs>(() => seedAutosaveRefs(args));
   // Stable accessor: effects can list it as a dep without restarting, and a
   // callee can only resolve the bundle at event or effect time, never at render.
-  const getRefs = useCallback(() => refs.current, []);
+  const getRefs = useCallback(() => refs, [refs]);
 
   const saveDraft = useSaveDraftMutation({
     getRefs,
     setState,
     setLastSavedAt,
+    setLastSavedKey,
     setQueuedRetryRevision,
     args,
   });
   useSyncAutosaveRefs(getRefs, args, saveDraft);
-  usePrimedBaseline(getRefs, args.initialSavedKey ?? null);
+  usePrimedBaseline(getRefs, args.initialSavedKey ?? null, setLastSavedKey);
 
-  const payloadKey = args.payload === null ? "" : stableStringify(args.payload);
+  const payloadKey =
+    args.payload === null ? "" : encodeAutosaveComparisonKey(args.payload);
   const dirty =
     args.enabled &&
     args.payload !== null &&
     payloadKey !== "" &&
-    // eslint-disable-next-line react-hooks/refs -- dirty is deliberately computed from the last-saved ref at render; making it state would re-arm the debounce on every save
-    payloadKey !== refs.current.lastSaved;
+    payloadKey !== lastSavedKey;
 
   useDebouncedSave({
     getRefs,

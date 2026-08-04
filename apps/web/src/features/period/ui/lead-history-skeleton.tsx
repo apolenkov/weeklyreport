@@ -35,7 +35,7 @@ export function LeadHistorySkeleton({
 
           <Skeleton className="mt-3 h-5 w-full rounded-full" />
 
-          <div className="mt-4 space-y-2 border-t border-[rgba(0,0,0,0.07)] pt-3">
+          <div className="mt-4 space-y-2 border-t border-[var(--color-border-subtle)] pt-3">
             <Skeleton className="h-3 w-32" />
             <Skeleton className="h-3 w-36" />
             <Skeleton className="h-3 w-28" />

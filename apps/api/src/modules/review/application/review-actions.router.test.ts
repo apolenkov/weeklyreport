@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000000";
 
@@ -34,9 +35,9 @@ function trapService() {
 }
 
 function leadCaller() {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     reviewActionsService: trapService(),
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session: leadSession(),
     logger: createNullLogger(),

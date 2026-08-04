@@ -2,14 +2,30 @@
 // Larger probe-helpers from apps/web/.tmp/uat-suite/ are NOT mirrored here —
 // the tracked scripts are intentionally lightweight so CI can run them.
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+// The UAT suite probes a specific running app. A silent localhost default can
+// point CI or an operator at the wrong local process; require an explicit base
+// URL and validate it before the first navigation.
+function requireUatBaseUrl() {
+  const raw = process.env.UAT_BASE_URL;
+  if (!raw) {
+    throw new Error(
+      "UAT_BASE_URL is required: set it to the running web origin " +
+        "(e.g. http://localhost:3000 for `pnpm dev`, or the CI target).",
+    );
+  }
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(`UAT_BASE_URL is not a valid URL: ${raw}`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`UAT_BASE_URL must be an http(s) URL: ${raw}`);
+  }
+  return parsed.origin;
+}
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-export const REPO_ROOT = path.resolve(__dirname, "../../..");
-
-export const BASE = process.env.UAT_BASE_URL ?? "http://localhost:3000";
+export const BASE = requireUatBaseUrl();
 
 export function emit(id, status, msg, detail = "") {
   const icon =
@@ -32,13 +48,20 @@ export async function loginAs(page, role, email) {
     ? `${BASE}/auth/dev-login?role=${role}&email=${encodeURIComponent(email)}`
     : `${BASE}/auth/dev-login?role=${role}`;
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-  await waitForAppReady(page);
+  await waitForAppReady(page, undefined, undefined, role);
 }
 
-export async function waitForAppReady(page, timeoutOrKind = 12000, kindArg) {
+export async function waitForAppReady(
+  page,
+  timeoutOrKind = 12000,
+  kindArg,
+  roleLabel,
+) {
   const kind =
     typeof timeoutOrKind === "string" ? timeoutOrKind : (kindArg ?? "auto");
   const timeout = typeof timeoutOrKind === "number" ? timeoutOrKind : 12000;
+  // networkidle is a soft drain: some routes stay chatty, so its timeout is
+  // allowed. The route-ready predicate below is the real readiness gate.
   await page.waitForLoadState("networkidle", { timeout }).catch(() => {});
   // Per-route ready signal — Next.js dev mode lazy-compiles each route on
   // first hit, so networkidle alone races first paint of tRPC data.
@@ -83,7 +106,18 @@ export async function waitForAppReady(page, timeoutOrKind = 12000, kindArg) {
           /Page unavailable/.test(document.body.innerText);
     }
   })();
-  await page
-    .waitForFunction(checker, undefined, { timeout, polling: 200 })
-    .catch(() => {});
+  try {
+    await page.waitForFunction(checker, undefined, { timeout, polling: 200 });
+  } catch {
+    // A route that never signals readiness must fail the scenario, not sail
+    // through as though startup succeeded.
+    const route = page.url();
+    const lastState = await page.evaluate(() =>
+      (document.body.innerText || "").slice(0, 300),
+    );
+    const rolePart = roleLabel ? `, role=${roleLabel}` : "";
+    throw new Error(
+      `Route readiness timed out (${kind}${rolePart}) at ${route}. Last visible state: ${lastState}`,
+    );
+  }
 }

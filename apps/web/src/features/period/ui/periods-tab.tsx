@@ -116,8 +116,18 @@ function usePeriodRows(showArchive: boolean, search: string) {
     () => filterPeriodRows(allActiveRows, search),
     [allActiveRows, search],
   );
+  const filteredArchiveRows = useMemo(
+    () => filterPeriodRows(archiveRows, search),
+    [archiveRows, search],
+  );
 
-  return { activeQuery, archiveQuery, allActiveRows, activeRows, archiveRows };
+  return {
+    activeQuery,
+    archiveQuery,
+    allActiveRows,
+    activeRows,
+    filteredArchiveRows,
+  };
 }
 
 function buildRowActions(
@@ -167,7 +177,7 @@ function PeriodsTabHeader({
         <button
           type="button"
           onClick={onNewPeriod}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
           aria-label="New period"
           data-testid="periods-new-button"
         >
@@ -225,8 +235,13 @@ export function PeriodsTab() {
   const [search, setSearch] = useState("");
   const dialogs = usePeriodDialogState();
 
-  const { activeQuery, archiveQuery, allActiveRows, activeRows, archiveRows } =
-    usePeriodRows(showArchive, search);
+  const {
+    activeQuery,
+    archiveQuery,
+    allActiveRows,
+    activeRows,
+    filteredArchiveRows,
+  } = usePeriodRows(showArchive, search);
 
   const mutations = usePeriodMutations({
     onCreateSuccess: dialogs.closeCreate,
@@ -247,6 +262,7 @@ export function PeriodsTab() {
 
       <PeriodsActiveSection
         isLoading={activeQuery.isLoading}
+        isError={activeQuery.isError}
         rows={activeRows}
         {...rowActions}
       />
@@ -255,7 +271,8 @@ export function PeriodsTab() {
         expanded={showArchive}
         onToggle={() => setShowArchive((prev) => !prev)}
         isLoading={archiveQuery.isLoading}
-        rows={archiveRows}
+        isError={archiveQuery.isError}
+        rows={filteredArchiveRows}
         {...rowActions}
       />
 

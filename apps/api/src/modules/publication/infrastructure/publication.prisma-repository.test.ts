@@ -15,12 +15,12 @@ vi.mock("../../published-report-snapshot", () => ({
   })),
 }));
 
-const asAny = <T>(x: unknown): T => x as T;
+const asAny = (value: unknown): never => value as never;
 
 // Minimal published report — only reportId/publishedAt/publishedById are read
 // (by publishLifecycle); the snapshot helpers are mocked, so the rest of the
 // AssembledReport shape is irrelevant to the compare-and-set under test.
-const autoReport = asAny<AssembledReport>({
+const autoReport: AssembledReport = asAny({
   reportId: "rep-1",
   status: "published",
   publishedAt: new Date("2026-05-01T00:00:00.000Z"),

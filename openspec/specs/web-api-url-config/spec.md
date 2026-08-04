@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change centralize-web-api-url. Update Purpose after archive.
+Resolve the web API base URL and tRPC batch decoding through fail-loud shared seams while gating dev-auth fallback through one predicate.
 
 ## Requirements
 

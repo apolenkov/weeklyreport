@@ -58,9 +58,9 @@ services:
       DB_PORT: 5432
       DB_NAME: customreport
       POOL_MODE: transaction
-      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
-      DEFAULT_POOL_SIZE: ${PGBOUNCER_POOL_SIZE:-20}
-      RESERVE_POOL_SIZE: ${PGBOUNCER_RESERVE_POOL_SIZE:-5}
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:?set pgbouncer max client connections (e.g. 100)}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_POOL_SIZE:?set pgbouncer pool size (e.g. 20)}
+      RESERVE_POOL_SIZE: ${PGBOUNCER_RESERVE_POOL_SIZE:?set pgbouncer reserve pool size (e.g. 5)}
       AUTH_TYPE: scram-sha-256
       # Prisma (and most ORMs) disable prepared statements when
       # ?pgbouncer=true is set in the URL; keep this aligned.
@@ -114,9 +114,11 @@ services:
       # Direct to postgres, NOT pgbouncer — pg_dump needs one session for the
       # whole dump, which transaction-mode pooling cannot hold.
       PGHOST: postgres
+      PGPORT: 5432
       PGUSER: customreport
       PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       PGDATABASE: customreport
+      RESTORE_ENVIRONMENT: production
       BACKUP_DIR: /backups
       # Required with no default, both of them: together they ARE the
       # recovery-point objective. A default would invent an RPO nobody agreed
@@ -211,7 +213,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      # 39-01: api connects through pgbouncer (transaction-mode) instead of
+      # api connects through pgbouncer (transaction-mode) instead of
       # postgres directly. The PrismaPg pg-pool adapter (prisma.service.ts)
       # opens its own per-process pool against pgbouncer; pgbouncer multiplies
       # those connections into a smaller pool against postgres. The query-string
@@ -234,7 +236,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}
       # APP_BASE_URL backs reminder email links; required (no localhost fallback).
       APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL must be set}
-      # 36-04: optional CSV of additional CORS origins.
+      # Optional CSV of additional CORS origins.
       FRONTEND_URLS: ${FRONTEND_URLS:-}
       AUTH_DEV_MODE: "false"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET must be set (min 32 chars)}
@@ -243,9 +245,9 @@ services:
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 32 chars, NOT the dev value)}
       PDF_BASE_URL: ${PDF_BASE_URL:?PDF_BASE_URL must be set}
       PDF_OUTPUT_DIR: /app/data/pdfs
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_LEVEL: ${LOG_LEVEL:?set the API log level (e.g. info)}
       LOG_DIR: /app/logs
-      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:?set telemetry posture (true disables the SDK, false enables it when an endpoint is set)}
       # NO default endpoint on purpose (repo rule: no silent defaults for
       # product config): tracing is ON only when the operator supplies the
       # collector explicitly — compose the observability overlay (which sets
@@ -259,11 +261,11 @@ services:
       # at boot instead of publishing traces under a stale build label.
       OTEL_SERVICE_NAME: customreport-api
       OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-}
-      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:?set the trace sample rate (e.g. 0.1)}
       # /health/ready heap threshold (bytes) — required, no schema default.
       # Set to ~75% of the api container memory limit.
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:?set to ~75% of api container memory}
-      # 38-01 SMTP — real provider required in prod.
+      # SMTP — real provider required in prod.
       SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set in production}
       SMTP_PORT: ${SMTP_PORT:?SMTP_PORT must be set in production}
       SMTP_USER: ${SMTP_USER:-}
@@ -360,7 +362,7 @@ services:
       retries: 3
       start_period: 20s
     restart: unless-stopped
-    # 38-02: web is no longer published to the host directly — caddy fronts it.
+    # web is no longer published to the host directly — caddy fronts it.
     # Uncomment WEB_PORT mapping below if you bypass caddy in a dev-prod run.
     # ports:
     #   - "${WEB_PORT:-3000}:3000"
@@ -376,7 +378,7 @@ services:
         max-size: "20m"
         max-file: "5"
 
-  # 38-02: Caddy edge — TLS termination + reverse-proxy + security headers.
+  # Caddy edge — TLS termination + reverse-proxy + security headers.
   # Routes /trpc, /auth, /health, /metrics, /admin/queues -> api; everything
   # else -> web. WebSocket upgrade is automatic. Auto-HTTPS via Let's Encrypt
   # when CADDY_SITE_ADDRESS resolves publicly; swap deploy/caddy/Caddyfile
@@ -410,9 +412,9 @@ services:
       start_period: 10s
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-      - "${HTTPS_PORT_QUIC:-443}:443/udp"
+      - "${HTTP_PORT:?set the host HTTP port (e.g. 80)}:80"
+      - "${HTTPS_PORT:?set the host HTTPS port (e.g. 443)}:443"
+      - "${HTTPS_PORT_QUIC:?set the host HTTPS/QUIC UDP port (e.g. 443)}:443/udp"
     deploy:
       resources:
         limits:

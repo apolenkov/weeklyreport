@@ -15,7 +15,7 @@ import { seedBaseline } from "./wipe-manual-uat.seed-baseline.js";
 import { seedActivePeriod } from "./wipe-manual-uat.seed-period.js";
 import { wipeAll } from "./wipe-manual-uat.wipe.js";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -138,6 +138,20 @@ async function wipeAndReseed(tx: Prisma.TransactionClient) {
   };
 }
 
+// A failed flush leaves cache and database inconsistent; only an explicit
+// opt-out (MANUAL_UAT_WIPE_FLUSH_REDIS=false) is an acceptable non-flush.
+// Exported so the entrypoint boundary is testable without a database.
+export function assertRedisFlushOutcome(
+  redis: { flushed: true } | { flushed: false; reason: string },
+): void {
+  if (!redis.flushed && redis.reason !== "disabled-by-env") {
+    throw new Error(
+      `Redis FLUSHDB failed after reseed (${redis.reason}) — ` +
+        "cache and database may disagree; refusing to report Done.",
+    );
+  }
+}
+
 async function main() {
   assertNonProdDestructive("wipe-manual-uat");
 
@@ -147,6 +161,7 @@ async function main() {
   });
 
   const redis = await flushRedisDb();
+  assertRedisFlushOutcome(redis);
 
   console.log(
     `[wipe-manual-uat] Done: ${JSON.stringify({ ...result, redis })}`,

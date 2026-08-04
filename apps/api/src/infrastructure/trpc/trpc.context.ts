@@ -153,6 +153,19 @@ function pdfExportContext(
   return { ...deps, session, isPdfExport: true, pdfReportId };
 }
 
+// Only a token that fails PDF verification falls through; a rejected session
+// rebuild (isUserAccessBarred / hydration) is a server fault and must
+// propagate to the 500 path, not degrade an authenticated requester to null.
+function parsePdfExportClaims(
+  token: string,
+): ReturnType<typeof verifyPdfExportToken> | null {
+  try {
+    return verifyPdfExportToken(token);
+  } catch {
+    return null;
+  }
+}
+
 // Cookie-bearing request: real human session first, then the PDF-export JWT.
 // Null means "this token proves nothing" — caller falls through to dev / anon.
 async function resolveTokenContext(
@@ -171,21 +184,19 @@ async function resolveTokenContext(
 
   // PDF worker: JWT signed with PDF_EXPORT_JWT_SECRET (≠ session secret).
   // Rebuilds requester session; pdfExportGuard still enforces allowlist.
-  try {
-    const pdfClaims = verifyPdfExportToken(token);
-    const pdfSession = await buildPdfExportSession(
-      pdfClaims.reportId,
-      pdfClaims.requestedBy,
-      deps.prisma,
-      sessionDeps.sessionRevocation,
-    );
-    return pdfSession
-      ? pdfExportContext(deps, pdfSession, pdfClaims.reportId)
-      : null;
-  } catch {
-    // Not a PDF token either — fall through to dev-mode / null.
+  const pdfClaims = parsePdfExportClaims(token);
+  if (!pdfClaims) {
     return null;
   }
+  const pdfSession = await buildPdfExportSession(
+    pdfClaims.reportId,
+    pdfClaims.requestedBy,
+    deps.prisma,
+    sessionDeps.sessionRevocation,
+  );
+  return pdfSession
+    ? pdfExportContext(deps, pdfSession, pdfClaims.reportId)
+    : null;
 }
 
 // Dev fallback only when non-prod AND a dev-auth flag is set.
@@ -216,7 +227,10 @@ export function createContextFactory(
       ip: req.ip ?? UNKNOWN_CLIENT_IP,
     };
     // Same resolved name as set/clear paths (AUTH_JWT_COOKIE_NAME aware).
-    const token = readRequestCookie(req, resolveSessionCookieName(process.env));
+    const token = readRequestCookie(
+      req,
+      resolveSessionCookieName(process.env.AUTH_JWT_COOKIE_NAME),
+    );
 
     if (token) {
       const tokenContext = await resolveTokenContext(token, deps, {

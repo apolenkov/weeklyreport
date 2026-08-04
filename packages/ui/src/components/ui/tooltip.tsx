@@ -4,11 +4,11 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 import type * as React from "react";
 
-/** Radix tooltip provider (delay/shared config). */
+/** Supplies shared delay configuration to descendant tooltips. */
 function TooltipProvider({
   delayDuration = 0,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+}: Readonly<React.ComponentProps<typeof TooltipPrimitive.Provider>>) {
   return (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
@@ -18,17 +18,17 @@ function TooltipProvider({
   );
 }
 
-/** Radix tooltip root for a trigger+content pair. */
+/** Coordinates one tooltip trigger with its content panel. */
 function Tooltip({
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+}: Readonly<React.ComponentProps<typeof TooltipPrimitive.Root>>) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
 /** Element that shows the tooltip on hover/focus. */
 function TooltipTrigger({
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+}: Readonly<React.ComponentProps<typeof TooltipPrimitive.Trigger>>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
@@ -39,10 +39,12 @@ function TooltipContent({
   hideArrow = false,
   children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content> & {
-  /** Omit the Radix arrow when a consumer supplies its own visual surface. */
-  readonly hideArrow?: boolean;
-}) {
+}: Readonly<
+  React.ComponentProps<typeof TooltipPrimitive.Content> & {
+    /** Hides the default arrow for a consumer-provided tooltip surface. */
+    readonly hideArrow?: boolean;
+  }
+>) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content

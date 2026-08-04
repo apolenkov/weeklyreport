@@ -1,121 +1,22 @@
-import type {
-  PeriodStatus,
-  ReportSectionReadModel,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
-  OPEN_REPORT_META,
-  reportMetaReader,
-} from "./__tests__/report-meta-fixture";
+  AUTHOR_ID,
+  baseSection,
+  createRepository,
+  PROJECT_ID_1,
+  PROJECT_ID_2,
+  SECTION_ID,
+  testGraceSettings,
+  validDraft,
+} from "./report-sections.contract.fixtures";
 import {
   ReportSectionDomainError,
-  type ReportSectionsRepository,
+  ReportSectionNotFoundError,
   ReportSectionsService,
 } from "./report-sections.service";
-
-const testGraceSettings = () =>
-  Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
-
-const SECTION_ID = "11111111-1111-4111-8111-111111111111";
-const REPORT_ID = "22222222-2222-4222-8222-222222222222";
-const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
-const PROJECT_ID_1 = "44444444-4444-4444-8444-444444444444";
-const PROJECT_ID_2 = "55555555-5555-4555-8555-555555555555";
-
-const baseSection: ReportSectionReadModel = {
-  reportSectionId: SECTION_ID,
-  reportId: REPORT_ID,
-  authorId: AUTHOR_ID,
-  authorName: "Lead 1",
-  version: 1,
-  status: "draft",
-  submittedAt: null,
-  projects: [
-    {
-      projectId: PROJECT_ID_1,
-      projectName: "Project Alpha",
-      trafficLight: null,
-      // the author owns the Development stage
-      // on this project, so the write payloads (stageNames: ["Development"]) pass
-      // the stage-ownership guard.
-      ownedStages: [
-        {
-          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          stageName: "Development",
-          sortOrder: 0,
-        },
-      ],
-    },
-  ],
-  items: [
-    {
-      projectId: PROJECT_ID_1,
-      type: "current",
-      text: "Deliver feature X",
-      tag: "feature",
-      workflowStatus: "in_progress",
-      carriedOver: false,
-      // items carry ≥1 stage on write.
-      stageNames: ["Development"],
-    },
-  ],
-  risks: [],
-  decisions: [],
-  activities: [],
-};
-
-// read-model item types stageNames optional;
-// the write payloads below require it. Expose a stage-guaranteed copy.
-const writeItems = baseSection.items.map((it) => ({
-  ...it,
-  stageNames: it.stageNames ?? [],
-}));
-
-function createRepository(
-  section: ReportSectionReadModel,
-  periodStatus: PeriodStatus = "open",
-): ReportSectionsRepository {
-  let currentSection = structuredClone(section);
-
-  return {
-    getSectionById(reportSectionId) {
-      return Promise.resolve(
-        reportSectionId === currentSection.reportSectionId
-          ? structuredClone(currentSection)
-          : null,
-      );
-    },
-    getReportPeriodStatusForSection() {
-      return Promise.resolve(periodStatus);
-    },
-    getReportMeta: reportMetaReader(OPEN_REPORT_META),
-    getPublishedLineage() {
-      return Promise.resolve({ itemStableIds: [], decisionStableIds: [] });
-    },
-    saveSection(nextSection) {
-      currentSection = structuredClone(nextSection);
-      return Promise.resolve(structuredClone(currentSection));
-    },
-    getMyHistoryRows() {
-      return Promise.resolve([]);
-    },
-  };
-}
-
-function validDraft(overrides: Record<string, unknown> = {}) {
-  return {
-    reportSectionId: SECTION_ID,
-    version: 1,
-    status: "draft" as const,
-    projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
-    items: writeItems,
-    risks: [],
-    decisions: [],
-    ...overrides,
-  };
-}
 
 describe("ReportSectionsService — getActiveSection", () => {
   it("returns section when found", async () => {
@@ -183,6 +84,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
       }),
+      AUTHOR_ID,
     );
 
     expect(saved.projects[0]?.trafficLight).toBe("yellow");
@@ -205,7 +107,10 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         stageNames: ["Development"],
       },
     ];
-    const saved = await service.saveDraft(validDraft({ items: newItems }));
+    const saved = await service.saveDraft(
+      validDraft({ items: newItems }),
+      AUTHOR_ID,
+    );
 
     expect(saved.items).toHaveLength(2);
   });
@@ -229,6 +134,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
           },
         ],
       }),
+      AUTHOR_ID,
     );
 
     expect(saved.risks).toHaveLength(1);
@@ -254,6 +160,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
           },
         ],
       }),
+      AUTHOR_ID,
     );
 
     expect(saved.decisions).toHaveLength(1);
@@ -265,7 +172,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       createRepository(baseSection),
       testGraceSettings,
     );
-    const saved = await service.saveDraft(validDraft());
+    const saved = await service.saveDraft(validDraft(), AUTHOR_ID);
 
     expect(saved.status).toBe("draft");
     expect(saved.submittedAt).toBeNull();
@@ -286,6 +193,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1 }],
       }),
+      AUTHOR_ID,
     );
 
     expect(saved.projects[0]?.trafficLight).toBeNull();
@@ -307,7 +215,9 @@ describe("ReportSectionsService — saveDraft error paths", () => {
       testGraceSettings,
     );
 
-    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+    await expect(
+      service.saveDraft(validDraft(), AUTHOR_ID),
+    ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
       message: "Submitted sections are read-only.",
     });
@@ -319,10 +229,21 @@ describe("ReportSectionsService — saveDraft error paths", () => {
       testGraceSettings,
     );
 
-    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+    await expect(
+      service.saveDraft(validDraft(), AUTHOR_ID),
+    ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
       message: "Cannot edit sections of a published report.",
     });
+  });
+
+  it("rejects when the period lookup returns null", async () => {
+    const repository = createRepository(baseSection, null);
+    const service = new ReportSectionsService(repository, testGraceSettings);
+
+    await expect(
+      service.saveDraft(validDraft(), AUTHOR_ID),
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
   });
 
   it("rejects when section ID does not exist", async () => {
@@ -336,6 +257,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
         validDraft({
           reportSectionId: "99999999-9999-4999-8999-999999999999",
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow("was not found");
   });
@@ -355,7 +277,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
     );
 
     try {
-      await service.saveDraft(validDraft());
+      await service.saveDraft(validDraft(), AUTHOR_ID);
       expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(ReportSectionDomainError);
@@ -378,7 +300,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
     }));
 
     await expect(
-      service.saveDraft(validDraft({ items: tooManyItems })),
+      service.saveDraft(validDraft({ items: tooManyItems }), AUTHOR_ID),
     ).rejects.toThrow();
   });
 
@@ -403,6 +325,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -428,6 +351,7 @@ describe("ReportSectionsService — saveDraft error paths", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -439,7 +363,10 @@ describe("ReportSectionsService — saveDraft error paths", () => {
     );
 
     await expect(
-      service.saveDraft(validDraft({ reportSectionId: "not-a-uuid" })),
+      service.saveDraft(
+        validDraft({ reportSectionId: "not-a-uuid" }),
+        AUTHOR_ID,
+      ),
     ).rejects.toThrow();
   });
 });
@@ -461,6 +388,8 @@ describe("ReportSectionsService — multi-project", () => {
             sortOrder: 0,
           },
         ],
+        stageSet: [],
+        ownerGroupId: null,
       },
       {
         projectId: PROJECT_ID_2,
@@ -473,6 +402,8 @@ describe("ReportSectionsService — multi-project", () => {
             sortOrder: 0,
           },
         ],
+        stageSet: [],
+        ownerGroupId: null,
       },
     ],
     items: [
@@ -508,18 +439,23 @@ describe("ReportSectionsService — multi-project", () => {
       createRepository(multiProjectSection),
       testGraceSettings,
     );
-    const saved = await service.saveDraft({
-      reportSectionId: SECTION_ID,
-      version: 1,
-      status: "draft",
-      projectStatuses: [
-        { projectId: PROJECT_ID_1, status: "green" },
-        { projectId: PROJECT_ID_2, status: "yellow" },
-      ],
-      items: multiWriteItems,
-      risks: [],
-      decisions: [],
-    });
+    const saved = await service.saveDraft(
+      {
+        reportSectionId: SECTION_ID,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [
+          { projectId: PROJECT_ID_1, status: "green" },
+          { projectId: PROJECT_ID_2, status: "yellow" },
+        ],
+        items: multiWriteItems,
+        risks: [],
+        decisions: [],
+      },
+      AUTHOR_ID,
+    );
 
     expect(saved.projects[0]?.trafficLight).toBe("green");
     expect(saved.projects[1]?.trafficLight).toBe("yellow");
@@ -532,16 +468,21 @@ describe("ReportSectionsService — multi-project", () => {
     );
 
     await expect(
-      service.submitSection({
-        reportSectionId: SECTION_ID,
-        version: 1,
-        status: "draft",
-        confirmed: true,
-        projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
-        items: multiWriteItems,
-        risks: [],
-        decisions: [],
-      }),
+      service.submitSection(
+        {
+          reportSectionId: SECTION_ID,
+          version: 1,
+          status: "draft",
+          confirmed: true,
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
+          items: multiWriteItems,
+          risks: [],
+          decisions: [],
+        },
+        AUTHOR_ID,
+      ),
     ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
   });
 
@@ -552,29 +493,34 @@ describe("ReportSectionsService — multi-project", () => {
     );
 
     await expect(
-      service.submitSection({
-        reportSectionId: SECTION_ID,
-        version: 1,
-        status: "draft",
-        confirmed: true,
-        projectStatuses: [
-          { projectId: PROJECT_ID_1, status: "green" },
-          { projectId: PROJECT_ID_2, status: "yellow" },
-        ],
-        items: [
-          {
-            projectId: PROJECT_ID_1,
-            type: "current",
-            text: "Only for Alpha",
-            tag: "feature",
-            workflowStatus: "in_progress",
-            carriedOver: false,
-            stageNames: ["Development"],
-          },
-        ],
-        risks: [],
-        decisions: [],
-      }),
+      service.submitSection(
+        {
+          reportSectionId: SECTION_ID,
+          version: 1,
+          status: "draft",
+          confirmed: true,
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            { projectId: PROJECT_ID_1, status: "green" },
+            { projectId: PROJECT_ID_2, status: "yellow" },
+          ],
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "current",
+              text: "Only for Alpha",
+              tag: "feature",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              stageNames: ["Development"],
+            },
+          ],
+          risks: [],
+          decisions: [],
+        },
+        AUTHOR_ID,
+      ),
     ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
 
@@ -583,19 +529,24 @@ describe("ReportSectionsService — multi-project", () => {
       createRepository(multiProjectSection),
       testGraceSettings,
     );
-    const result = await service.submitSection({
-      reportSectionId: SECTION_ID,
-      version: 1,
-      status: "draft",
-      confirmed: true,
-      projectStatuses: [
-        { projectId: PROJECT_ID_1, status: "green" },
-        { projectId: PROJECT_ID_2, status: "red" },
-      ],
-      items: multiWriteItems,
-      risks: [],
-      decisions: [],
-    });
+    const result = await service.submitSection(
+      {
+        reportSectionId: SECTION_ID,
+        version: 1,
+        status: "draft",
+        confirmed: true,
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [
+          { projectId: PROJECT_ID_1, status: "green" },
+          { projectId: PROJECT_ID_2, status: "red" },
+        ],
+        items: multiWriteItems,
+        risks: [],
+        decisions: [],
+      },
+      AUTHOR_ID,
+    );
 
     expect(result.status).toBe("submitted");
     expect(result.projects[0]?.trafficLight).toBe("green");
@@ -615,6 +566,7 @@ describe("ReportSectionsService — edge cases", () => {
         risks: [],
         decisions: [],
       }),
+      AUTHOR_ID,
     );
 
     expect(saved.items).toHaveLength(0);
@@ -627,8 +579,8 @@ describe("ReportSectionsService — edge cases", () => {
       createRepository(baseSection),
       testGraceSettings,
     );
-    const first = await service.saveDraft(validDraft());
-    const second = await service.saveDraft(validDraft());
+    const first = await service.saveDraft(validDraft(), AUTHOR_ID);
+    const second = await service.saveDraft(validDraft(), AUTHOR_ID);
 
     expect(first.projects[0]?.trafficLight).toBe(
       second.projects[0]?.trafficLight,
@@ -650,7 +602,10 @@ describe("ReportSectionsService — edge cases", () => {
       carriedOver: false,
       stageNames: ["Development"],
     }));
-    const saved = await service.saveDraft(validDraft({ items: maxItems }));
+    const saved = await service.saveDraft(
+      validDraft({ items: maxItems }),
+      AUTHOR_ID,
+    );
 
     expect(saved.items).toHaveLength(100);
   });
@@ -664,6 +619,7 @@ describe("ReportSectionsService — edge cases", () => {
       validDraft({
         projectStatuses: [],
       }),
+      AUTHOR_ID,
     );
 
     // Projects come from the section, not input

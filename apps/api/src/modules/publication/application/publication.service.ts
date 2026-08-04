@@ -52,10 +52,26 @@ export interface PublicationIngestionQueue {
   enqueue: IngestionPublishHook;
 }
 
+// Explicit dev-only no-op: publication-time ingestion is deferred, so this seam
+// must never be silent. Every enqueue logs a loud warning, and production
+// composition refuses to wire it until a real queue consumer is supplied.
 export class NoopIngestionQueue implements PublicationIngestionQueue {
-  // Ingestion is deferred; replace this module provider with a queue-backed
-  // implementation when publication-time ingestion is activated.
-  enqueue(_sectionIds: readonly string[]): Promise<void> {
+  constructor(
+    private readonly logger: AppLogger,
+    nodeEnv: string,
+  ) {
+    if (nodeEnv === "production") {
+      throw new Error(
+        "Publication-time ingestion is not wired; a real ingestion consumer is required in production (see TODO(ingestion-consumer)).",
+      );
+    }
+  }
+
+  enqueue(sectionIds: readonly string[]): Promise<void> {
+    this.logger.warn(
+      "ingestion is a no-op: no queue consumer wired; publication-time ingestion skipped",
+      { sectionIds: sectionIds.length },
+    );
     return Promise.resolve();
   }
 }
@@ -103,11 +119,14 @@ function buildPortfolioOverview(
 // with no human head to attribute it to.
 const SYSTEM_PUBLISHER_NAME = "system";
 
-function deriveAutoPublishedReport(report: AssembledReport): AssembledReport {
+function deriveAutoPublishedReport(
+  report: AssembledReport,
+  publishAt: Date,
+): AssembledReport {
   return assembledReportSchema.parse({
     ...report,
     status: "published",
-    publishedAt: new Date(),
+    publishedAt: publishAt,
     publishedById: null,
     publishedByName: SYSTEM_PUBLISHER_NAME,
   });
@@ -142,8 +161,11 @@ export class PublicationService {
 
   // Scheduler-driven: no human actor, so `publishedById=null`. A head who
   // published the same report between candidate selection and this call lands
-  // on `wasAlreadyPublished: true` — audit trails must not count it as auto.
-  async publishAuto(activeReportId: string): Promise<AutoPublishResult> {
+  // on `wasAlreadyPublished: true` — never counted as auto in audit trails.
+  async publishAuto(
+    activeReportId: string,
+    publishAt: Date,
+  ): Promise<AutoPublishResult> {
     const report = await this.getAssembledReport(activeReportId);
 
     if (report.status === "published") {
@@ -152,7 +174,7 @@ export class PublicationService {
 
     this.logger.info("auto-publishing report", { activeReportId });
     const result = await this.repository.saveAutoPublishedReport(
-      deriveAutoPublishedReport(report),
+      deriveAutoPublishedReport(report, publishAt),
     );
 
     if (!result.published) {
@@ -165,15 +187,19 @@ export class PublicationService {
       return { published: false };
     }
 
-    // `state='published'`, `from='open'` — a scheduler candidate is always
-    // `status='draft'` with `periodStatus='open'`, never a reopened period.
-    // Emit only after the write succeeds so a failed save never inflates the
-    // counter.
+    // A scheduler candidate is always `status='draft'` with `periodStatus='open'`
+    // (never reopened) — `state='published'`, `from='open'`. Emit only after the
+    // write succeeds so a failed save never inflates the counter.
     await emitPublishSideEffects(
       {
         telemetry: this.telemetry,
         ingestionHook: (sectionIds) => this.ingestionQueue.enqueue(sectionIds),
         invalidateAnalyticsCache: this.invalidateAnalyticsCache,
+        onSideEffectError: (error) => {
+          this.logger.warn("publish side-effect failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
         onIngestionError: (error) => {
           this.logger.warn("ingestion hook failed", {
             error: error instanceof Error ? error.message : String(error),

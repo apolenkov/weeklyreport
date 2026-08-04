@@ -4,16 +4,6 @@ import { describe, expect, it } from "vitest";
 import type { UserSession } from "../../schemas/auth";
 import { assertRole } from "./role";
 
-// ---------------------------------------------------------------------------
-// Unit tests target `assertRole` — the pure role-check contract.
-// The tRPC middleware adapter (buildRoleMiddleware, api) is exercised at
-// integration level via apps/api/src/infrastructure/trpc/trpc.middleware.test.ts
-// (existing headProcedure scenarios) plus the default-deny coverage
-// test. assertRole is what enforces the actual UNAUTHORIZED / FORBIDDEN
-// semantics — testing it directly keeps coverage tight and decoupled from
-// tRPC internals.
-// ---------------------------------------------------------------------------
-
 const baseSession: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000001",
   email: "user@test.local",
@@ -28,7 +18,17 @@ const headSession: UserSession = { ...baseSession, role: "head" };
 const adminSession: UserSession = { ...baseSession, role: "admin" };
 const viewerSession: UserSession = { ...baseSession, role: "viewer" };
 
-describe("assertRole", () => {
+const captureTrpcError = (action: () => unknown): TRPCError => {
+  try {
+    action();
+  } catch (error) {
+    if (error instanceof TRPCError) return error;
+    throw error;
+  }
+  throw new Error("Expected action to throw a TRPCError");
+};
+
+describe("assertRole authentication failures", () => {
   it("throws UNAUTHORIZED when session is null", () => {
     expect(() => assertRole(null, "head")).toThrow(
       expect.objectContaining({ code: "UNAUTHORIZED" }),
@@ -42,20 +42,16 @@ describe("assertRole", () => {
   });
 
   it("thrown errors are TRPCError instances", () => {
-    try {
-      assertRole(null, "head");
-      expect.fail("Should have thrown");
-    } catch (error) {
-      expect(error).toBeInstanceOf(TRPCError);
-    }
-    try {
-      assertRole(leadSession, "head");
-      expect.fail("Should have thrown");
-    } catch (error) {
-      expect(error).toBeInstanceOf(TRPCError);
-    }
+    expect(captureTrpcError(() => assertRole(null, "head"))).toBeInstanceOf(
+      TRPCError,
+    );
+    expect(
+      captureTrpcError(() => assertRole(leadSession, "head")),
+    ).toBeInstanceOf(TRPCError);
   });
+});
 
+describe("assertRole allowed roles", () => {
   it("returns the narrowed session when single-role matches", () => {
     const result = assertRole(headSession, "head");
     expect(result).toBe(headSession);
@@ -86,22 +82,18 @@ describe("assertRole", () => {
       expect.objectContaining({ code: "FORBIDDEN" }),
     );
   });
+});
 
+describe("assertRole error contract", () => {
   it("FORBIDDEN message lists the required role(s)", () => {
-    try {
-      assertRole(leadSession, ["head", "admin"]);
-      expect.fail("Should have thrown");
-    } catch (error) {
-      expect(error).toBeInstanceOf(TRPCError);
-      expect((error as TRPCError).message).toContain("head");
-      expect((error as TRPCError).message).toContain("admin");
-    }
+    const error = captureTrpcError(() =>
+      assertRole(leadSession, ["head", "admin"]),
+    );
+    expect(error.message).toContain("head");
+    expect(error.message).toContain("admin");
   });
 
   it("UNAUTHORIZED is checked before FORBIDDEN (null session never sees role check)", () => {
-    // Even with a wide allowed-set that would accept any role, null session
-    // must trip UNAUTHORIZED, not FORBIDDEN — this is the security ordering
-    // contract: missing session is "who are you" before "what can you do".
     expect(() => assertRole(null, ["lead", "head", "admin", "viewer"])).toThrow(
       expect.objectContaining({ code: "UNAUTHORIZED" }),
     );

@@ -72,6 +72,8 @@ export function describeRecipient(
 
 export type OffsetUnit = "minutes" | "hours" | "days";
 
+export const OFFSET_UNITS: readonly OffsetUnit[] = ["minutes", "hours", "days"];
+
 export function offsetUnitFactor(unit: OffsetUnit): number {
   switch (unit) {
     case "minutes":

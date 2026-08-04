@@ -7,6 +7,10 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  makeProjectReadModel,
+  makeReportSectionReadModel,
+} from "../../test-utils/report-section-fixtures.js";
+import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
   type WeeklyReportRepositoryResult,
@@ -28,6 +32,7 @@ function makeWeeklyReport(
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
     periodStatus: "open",
+    archived: false,
     weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 3,
@@ -39,23 +44,26 @@ function makeWeeklyReport(
         worstStatus: "green",
         stageCount: 2,
         leadNames: ["Lead A"],
+        leadIds: ["492e3762-5859-556b-a696-a97143cfad26"],
       },
     ],
     leadSections: [
-      {
+      makeReportSectionReadModel({
         reportSectionId: sectionId,
         reportId,
         authorId,
         authorName: "Lead A",
+        authorRole: "lead",
         version: 1,
         status: "submitted",
         submittedAt: new Date("2026-04-16T10:00:00.000Z"),
+        late: false,
         projects: [
-          {
+          makeProjectReadModel({
             projectId,
             projectName: "Project Alpha",
             trafficLight: "green",
-          },
+          }),
         ],
         items: [
           {
@@ -70,14 +78,7 @@ function makeWeeklyReport(
         ],
         risks: [],
         decisions: [],
-        priorities: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            rank: 1,
-            text: "Finish feature X",
-          },
-        ],
-      },
+      }),
     ],
     escalations: [],
     ...overrides,
@@ -242,6 +243,7 @@ describe("WeeklyReportService — contract tests", () => {
           worstStatus: "red",
           stageCount: 2,
           leadNames: ["Lead A"],
+          leadIds: ["492e3762-5859-556b-a696-a97143cfad26"],
         },
         {
           productId: secondProjectId,
@@ -249,6 +251,7 @@ describe("WeeklyReportService — contract tests", () => {
           worstStatus: "yellow",
           stageCount: 1,
           leadNames: ["Lead B"],
+          leadIds: ["e47c2b37-829f-5f29-870b-c9fe668493db"],
         },
       ],
     });

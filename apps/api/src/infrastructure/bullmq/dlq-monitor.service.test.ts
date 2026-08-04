@@ -9,17 +9,20 @@ import {
   queueDepth,
   redisMemoryUsedBytes,
 } from "../metrics/metrics.registry.js";
-import { DLQMonitorService } from "./dlq-monitor.service.js";
 import {
-  QUEUE_NAMES,
-  type QueueName,
-  type QueueRegistry,
-} from "./queue-registry.js";
+  DLQMonitorService,
+  type QueueRegistryLike,
+} from "./dlq-monitor.service.js";
+import { QUEUE_NAMES, type QueueName } from "./queue-registry.js";
 
 // The service touches the registry/env only in onModuleInit (not exercised by
 // these Redis-free seam tests); minimal stubs satisfy the constructor.
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
-const STUB_REGISTRY = {} as QueueRegistry;
+const STUB_REGISTRY: QueueRegistryLike = {
+  get: () => {
+    throw new Error("registry never read by these seam tests");
+  },
+};
 
 // Seam onto the private, Redis-free logic so it can be tested without a live
 // queue connection.
@@ -116,7 +119,7 @@ interface PollSeam {
   pollQueueMetrics(threshold: number): Promise<void>;
 }
 
-function pollSeam(registry: QueueRegistry): PollSeam {
+function pollSeam(registry: QueueRegistryLike): PollSeam {
   return new DLQMonitorService(registry, STUB_ENV) as unknown as PollSeam;
 }
 
@@ -126,25 +129,27 @@ describe("DLQMonitorService.pollQueueMetrics", () => {
   });
 
   it("publishes queue depths and authoritative failed counts in one cycle", async () => {
-    const queues = Object.fromEntries(
-      QUEUE_NAMES.map((name, index) => [
-        name,
-        {
-          getJobCounts: vi.fn().mockResolvedValue({
-            waiting: index + 1,
-            active: index + 2,
-            delayed: index + 3,
-          }),
-          getFailedCount: vi.fn().mockResolvedValue(index + 4),
-        },
-      ]),
-    ) as unknown as Record<
-      QueueName,
-      Pick<Queue, "getFailedCount" | "getJobCounts">
-    >;
-    const registry = {
-      get: vi.fn((name: QueueName) => queues[name]),
-    } as unknown as QueueRegistry;
+    const queues = QUEUE_NAMES.reduce<
+      Record<QueueName, Pick<Queue, "getFailedCount" | "getJobCounts">>
+    >(
+      (acc, name, index) => {
+        acc[name] = {
+          getJobCounts: vi.fn(() =>
+            Promise.resolve({
+              waiting: index + 1,
+              active: index + 2,
+              delayed: index + 3,
+            }),
+          ),
+          getFailedCount: vi.fn(() => Promise.resolve(index + 4)),
+        };
+        return acc;
+      },
+      {} as Record<QueueName, Pick<Queue, "getFailedCount" | "getJobCounts">>,
+    );
+    const registry: QueueRegistryLike = {
+      get: (name) => queues[name] as unknown as Queue,
+    };
     const depthSet = vi.spyOn(queueDepth, "set");
     const failedSet = vi.spyOn(dlqFailedCurrent, "set");
 
@@ -184,18 +189,18 @@ interface MemSeam {
 
 // Fake QueueRegistry whose shared connection reports the given used_memory via
 // an INFO reply shaped like the real Redis memory section.
-function registryReporting(usedMemory: number): QueueRegistry {
+function registryReporting(usedMemory: number): QueueRegistryLike {
   const info = vi
     .fn()
     .mockResolvedValue(
       `# Memory\r\nused_memory:${usedMemory}\r\nused_memory_rss:${usedMemory + 1}\r\n`,
     );
   return {
-    get: vi.fn().mockReturnValue({ client: Promise.resolve({ info }) }),
-  } as unknown as QueueRegistry;
+    get: () => ({ client: Promise.resolve({ info }) }) as unknown as Queue,
+  };
 }
 
-function memSeam(registry: QueueRegistry): MemSeam {
+function memSeam(registry: QueueRegistryLike): MemSeam {
   return new DLQMonitorService(registry, MEM_ENV) as unknown as MemSeam;
 }
 

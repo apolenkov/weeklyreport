@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change demo-seed-datasets. Update Purpose after archive.
+Provide four explicit deterministic seed profiles as a monotonic capability ladder with stable identities, bounded data volume, and executable product proof.
 
 ## Requirements
 

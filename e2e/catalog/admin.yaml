@@ -52,7 +52,7 @@ routes:
         given: "The admin is on the Groups tab."
         when: "the admin adds a new group, edits a group's name/description/head assignment/product roster, archives or unarchives a group"
         then: "A toast appears with 'Group saved' or a state-change message; the groups table updates, filtered by archive status (active shown by default)."
-        note: "Head candidates are filtered to head/admin roles only (UFB-039). Products are editable via the GroupProductsEditor inside the edit dialog (UFB-054)."
+        note: "Head candidates are filtered to head/admin roles only. Products are editable via the GroupProductsEditor inside the edit dialog."
       - id: admin-products-manage
         intent: "Manage products: create, edit, and archive products; assign lead owners and stage assignments."
         given: "The admin is on the Products tab."
@@ -70,13 +70,13 @@ routes:
         given: "The admin is on the Periods tab."
         when: "the admin creates a new period, edits a period's date envelope/label, publishes an open period, reopens a published period (if allowed), archives or unarchives a period, or deletes a period"
         then: "A toast appears with 'Period created', 'Period updated', 'Period published', 'Period reopened', 'Period archived', 'Period unarchived', or 'Period deleted'; the periods table updates (active and archive sections shown by state)."
-        note: "Active and archive sections are separate; archive is collapsed by default with opt-in query gating. Edit dialog handles both create/edit modes. Reopen is gated by server window math (UFB-067)."
+        note: "Active and archive sections are separate; archive is collapsed by default with opt-in query gating. Edit dialog handles both create/edit modes. Reopen is gated by server window math."
       - id: admin-reminders-manage
         intent: "Manage reminder policies: create, edit, delete reminder policies (deadline, follow-up, escalation); view derived rules per policy."
         given: "The admin is on the Reminders tab."
         when: "the admin creates a new policy, edits an existing policy's kind/timing/audience/timezone/validity window, or deletes a policy"
         then: "A toast appears with 'Policy created', 'Policy updated', or 'Policy removed'; the policies list updates and derived rules (grouped by policyId) refresh."
-        note: "Policies are the top-level editable rows (UFB-036); rules are read-only under each policy. Form prefills from org-wide defaults (timezone, audience) on first load (UFB-048)."
+        note: "Policies are the top-level editable rows; rules are read-only under each policy. Form prefills from org-wide defaults (timezone, audience) on first load."
       - id: admin-reopen-respond
         intent: "Review and respond to lead reopen requests: approve to reopen sections for editing, or reject with a note."
         given: "The admin is on the Reopen Requests tab."
@@ -88,19 +88,19 @@ routes:
         given: "The admin is on the BullMQ Jobs tab."
         when: "the admin retries a failed job from the email-reminder queue"
         then: "A toast appears with 'Job <id> queued for retry.' or 'Job <id> removed from failed jobs.'; the job is removed from the failed list (or moved back to the queue), and the DLQ count updates."
-        note: "Phase 35-06: surfaces BullMQ's email-reminder queue (the only prior DLQ entry was raw Bull Board). Rows show job id, name, failure reason, and timestamps."
+        note: "Surfaces BullMQ's email-reminder queue. Rows show job id, name, failure reason, and timestamps."
       - id: admin-actions-view
         intent: "Audit and search action logs: view procedure calls, results, and actor details; cursor-paginate and search for correlation."
         given: "The admin is on the Action Log tab."
         when: "the admin searches or paginates through the action log to find procedure calls by user, procedure type, status, or timestamp"
         then: "The log table updates with matching rows (procedure name humanized, actor, target id, status, reason); rows can be expanded to copy full details (correlation id, raw payload)."
-        note: "Read-only tab. Logs manual-action-log-proof entries are filtered out (internal only). Cursor pagination with 20 rows per page. UFB-019: procedure names humanized (e.g. 'Admin: Save User')."
+        note: "Read-only tab. Logs manual-action-log-proof entries are filtered out (internal only). Cursor pagination with 20 rows per page. Procedure names are humanized (e.g. 'Admin: Save User')."
       - id: admin-settings-configure
         intent: "Configure organization identity, period defaults, reminder defaults, notification settings, and external integrations."
         given: "The admin is on the Settings tab."
         when: "the admin edits organization short/full name (Identity), period cycle parameters (Periods sub-tab), reminder timezone/audience defaults (Reminders sub-tab), notification from-email (Notifications sub-tab), or views integration status (Integrations sub-tab, seeds-only in v1)"
         then: "A toast appears with 'Organization identity saved', 'Period policy saved', 'Reminders saved', or 'Notifications saved'; the landing page cache is revalidated (A9); form state reflects saved values on next invalidate."
-        note: "UFB-047/Phase 48-B: tabbed layout (Identity, Periods, Reminders, Notifications, Integrations, Holidays). Holidays is coming-soon and read-only (styled like the other sub-tabs). Period policy knobs and org identity are saved via PATCH semantics."
+        note: "Tabbed layout (Identity, Periods, Reminders, Notifications, Integrations, Holidays). Holidays is coming-soon and read-only (styled like the other sub-tabs). Period policy knobs and org identity are saved via PATCH semantics."
   - route: /admin/products
     access: [admin]
     intents:
@@ -198,63 +198,63 @@ routes:
         intent: "Save organization branding identity"
         given: "the admin is on the Identity sub-tab"
         when: "the admin enters short name and full name, then clicks the Save Identity button"
-        then: "a success toast displays \"Identity saved\" with a green checkmark; the inputs reflect the persisted values"
+        then: 'a success toast displays "Identity saved" with a green checkmark; the inputs reflect the persisted values'
         note: "Short name max 16 chars, full name max 200 chars. Save button disabled if fields empty or over limits. tRPC mutation: admin.updateOrganization."
       - id: admin-save-period-settings
         intent: "Configure reporting period cycle and automation rules"
         given: "the admin is on the Periods sub-tab"
         when: "the admin modifies period policy (length, working days, auto-create, deadlines, grace window, auto-publish, auto-archive, deadline time, reopen rules) then clicks Save Period Policy"
-        then: "a success toast displays \"Period policy saved\" with a green checkmark; all draft values persist"
+        then: 'a success toast displays "Period policy saved" with a green checkmark; all draft values persist'
         note: "Reopen window disabled when allow-reopen is off. Auto-publish has NO auto-create dependency (the scheduler reads it independently). admin-settings-surface-cleanup removed firstDayOfWeek/deadlineDayOfWeek/maxOpenPeriods/requireAllSectionsToPublish. tRPC mutation: admin.updateSettings with PATCH semantics (only period fields)."
       - id: admin-save-reminder-defaults
         intent: "Set default timezone and audience for new reminder policies"
         given: "the admin is on the Reminders sub-tab"
         when: "the admin selects default timezone and default reminder audience, then clicks Save Reminder Defaults"
-        then: "a success toast displays \"Reminder defaults saved\" with a green checkmark; selections persist and seed the New Policy form on Reminders tab"
+        then: 'a success toast displays "Reminder defaults saved" with a green checkmark; selections persist and seed the New Policy form on Reminders tab'
         note: "Audience options: 'lead-with-draft', 'head-of-late'. Defaults apply only to newly created policies. tRPC mutation: admin.updateSettings with {defaultTimezone, defaultReminderAudience}."
       - id: admin-save-notification-email
         intent: "Set the From: address for outgoing notification emails"
         given: "the admin is on the Notifications sub-tab"
         when: "the admin enters a notification from-email (or leaves blank), then clicks Save Notification Settings"
-        then: "a success toast displays \"Notification settings saved\" with a green checkmark; the email persists (or clears if blank) for use in reminder + escalation emails"
+        then: 'a success toast displays "Notification settings saved" with a green checkmark; the email persists (or clears if blank) for use in reminder + escalation emails'
         note: "Save button disabled if the input is non-empty but not a valid email shape (basic validation: ^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$). Empty field means fall back to per-mailer default. tRPC mutation: admin.updateSettings with {notificationFromEmail: string|null}."
       - id: admin-view-integrations-status
         intent: "View external integration configuration status"
         given: "the admin is on the Integrations sub-tab"
         when: "the integrations status query completes"
         then: "the page displays status cards for Telegram (bot configured yes/no, active bindings count, coming-soon) and AI (provider + RAG corpus, coming-soon); all cards are read-only. No Slack or CI card (removed in admin-settings-surface-cleanup)."
-        note: "Read-only tab. Phase 55 seeds-only: Telegram user binding + bot outbound not yet active. tRPC query: admin.integrationsStatus. Failures show error message."
+        note: "Read-only tab. Seeds-only: Telegram user binding + bot outbound not yet active. tRPC query: admin.integrationsStatus. Failures show error message."
   - route: /head/dashboard
     access: [admin]
     intents:
       - id: admin-revoke-all-submissions
         intent: "Revoke all submitted forms in one action"
         given: "The admin is on the head dashboard and there are one or more submitted lead forms"
-        when: "the admin clicks the \"Revoke All\" button and confirms the action in the dialog"
+        when: 'the admin clicks the "Revoke All" button and confirms the action in the dialog'
         then: "all submitted lead forms are revoked to Draft status, a toast shows the count of revoked submissions, and the lead summary table refreshes to reflect the new status"
         note: "Only visible when periodStatus is not 'published' and submittedCount > 0. Calls `leadForm.revokeAllSubmitted` mutation."
       - id: admin-send-bulk-reminder
         intent: "Send a reminder email to all pending leads at once"
         given: "The admin is on the head dashboard and there are pending leads who have not submitted"
-        when: "the admin clicks the \"Send Reminder\" button in the alert bar"
+        when: 'the admin clicks the "Send Reminder" button in the alert bar'
         then: "reminder emails are dispatched to pending leads (unless already sent this cycle or opted out), and a toast confirms the dispatch with counts of sent, already-sent, and opted-out leads"
-        note: "Button is disabled if no active reminder rule is configured (shows tooltip \"Active reminder policy required\"). Calls `reminders.dispatchPending` mutation. Only shown when periodStatus is not 'published' and hasActiveReminderRule is true."
+        note: 'Button is disabled if no active reminder rule is configured (shows tooltip "Active reminder policy required"). Calls `reminders.dispatchPending` mutation. Only shown when periodStatus is not ''published'' and hasActiveReminderRule is true.'
       - id: admin-send-individual-reminder
         intent: "Send a reminder email to a specific lead"
         given: "A lead's form is in Draft status in the Period Summary table"
-        when: "the admin clicks the \"Remind\" button in the Action column for that lead"
-        then: "a reminder email is dispatched to the lead, the button shows \"Sent\" or \"Already sent\" (depending on result), and returns to normal after a brief hold period"
+        when: 'the admin clicks the "Remind" button in the Action column for that lead'
+        then: 'a reminder email is dispatched to the lead, the button shows "Sent" or "Already sent" (depending on result), and returns to normal after a brief hold period'
         note: "Calls `reminders.dispatchPending` with leadId filter. Button shows transient state (Sent / Already sent / No sections matched / Retry) for ~2.4 seconds."
       - id: admin-revoke-individual-submission
         intent: "Revoke a single lead's submitted form"
         given: "A lead's form is in Submitted status in the Period Summary table"
-        when: "the admin clicks the \"Revoke\" button in the Action column for that lead and confirms in the dialog"
+        when: 'the admin clicks the "Revoke" button in the Action column for that lead and confirms in the dialog'
         then: "the lead's submission is revoked to Draft status, a toast confirms the action, and the table row refreshes to show the new status"
         note: "Calls `leadForm.revoke` mutation with the reportSectionId. Invalidates the `weeklyReport.get` query on success."
       - id: admin-view-status-report
         intent: "Navigate to the full status report for review and publication"
         given: "The admin is on the head dashboard"
-        when: "the admin clicks the \"View Status Report\" button"
+        when: 'the admin clicks the "View Status Report" button'
         then: "the page navigates to the report detail page at `/head/report/{reportId}`"
         note: "Simple navigation link, no mutation."
   - route: /head/history
@@ -265,7 +265,7 @@ routes:
         given: "Admin user navigates to /head/history"
         when: "the page loads"
         then: "a 307 redirect is issued to /reports?tab=published, showing the admin the compiled (published and archived) report history alongside other admin users and viewers"
-        note: "This is a read-only stub with no interactive actions. The route intentionally collapses admin history into the shared /reports surface (tab=published) per UX-17 / Phase 35-08, matching the pattern where /lead/history redirects to /reports?tab=drafts. No form submissions, mutations, or user-driven state changes occur on this route."
+        note: "This is a read-only stub with no interactive actions. The route intentionally collapses admin history into the shared /reports surface (tab=published), matching the pattern where /lead/history redirects to /reports?tab=drafts. No form submissions, mutations, or user-driven state changes occur on this route."
   - route: /head/report
     access: [admin]
     intents:
@@ -298,7 +298,7 @@ routes:
         given: "The admin navigates to /head/report or /head/report/[reportId]"
         when: "the page loads with an active reporting period"
         then: "the portfolio overview table and product accordions display all lead submissions grouped by product (or by lead when scope=lead), with submission counts and period metadata visible"
-        note: "If no active period exists, an empty state message appears asking an admin to open a new period. Legacy bare /head/report redirects to /head/report/[reportId] once the active reportId is known (unless redirectToCanonical=false; a stale ?period= is ignored — legacy branch retired, see this change's tasks.md §3.5)."
+        note: "If no active period exists, an empty state message appears asking an admin to open a new period. Legacy bare /head/report redirects to /head/report/[reportId] once the active reportId is known (unless redirectToCanonical=false; a stale ?period= is ignored)."
   - route: /head/report/[reportId]
     access: [admin]
     intents:
@@ -337,7 +337,7 @@ routes:
         given: "The admin is viewing the head report"
         when: "The admin clicks the Export PDF button and waits for generation"
         then: "A PDF export job starts (via tRPC pdfExport.request), polling occurs, and the completed PDF opens in a new tab"
-        note: "fix-report-surface-integrity W2: the standalone Presentation icon link and the browser-Print link to /print/[reportId] are removed. Presentation lives inline via the Edit/Slides view-mode toggle (admin-toggle-view-mode); the single labeled Export PDF is the async pdfExport.request job. The print route now 308-redirects humans away — it is the PDF worker's render template only."
+        note: "The standalone Presentation icon link and the browser-Print link to /print/[reportId] are removed. Presentation lives inline via the Edit/Slides view-mode toggle (admin-toggle-view-mode); the single labeled Export PDF is the async pdfExport.request job. The print route 308-redirects humans away because it is the PDF worker's render template only."
       - id: admin-toggle-archive-filter
         intent: "Show or hide archived reports in the period navigator"
         given: "The admin is viewing the head report"
@@ -352,7 +352,7 @@ routes:
         given: "the admin opens a legacy /head/report/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /head/report/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section nav, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /head/slides
     access: [admin]
     intents:
@@ -361,7 +361,7 @@ routes:
         given: "The admin user accesses /head/slides"
         when: "The admin visits the /head/slides route"
         then: "The browser redirects (307) to /head/history?mode=slides, which then redirects to /reports?tab=published, showing the published reports list"
-        note: "This is a pure redirect alias for backward compatibility (HEAD-CONSOLIDATE-01). No user actions occur on this route; the admin is redirected to the canonical published reports view."
+        note: "This is a pure redirect alias for backward compatibility. No user actions occur on this route; the admin is redirected to the canonical published reports view."
   - route: /lead/history
     access: [admin]
     intents:
@@ -378,7 +378,7 @@ routes:
         intent: "Route redirect for admin users"
         given: "An admin user accesses the `/lead/report` page"
         when: "The admin user opens the bare lead report route"
-        then: "The page navigates to `/head/dashboard` and the lead form (\"My Report\" heading) is never displayed"
+        then: 'The page navigates to `/head/dashboard` and the lead form ("My Report" heading) is never displayed'
         note: "Admin users cannot access the lead form interface on this route. The redirect occurs before form rendering completes. Admin users' report interaction happens exclusively on the head-facing routes (`/head/report/...` and `/head/dashboard`)."
   - route: /lead/report/[reportId]
     access: [admin]
@@ -424,7 +424,7 @@ routes:
         given: "Admin user navigates to /reports/[reportId] with a valid report ID"
         when: "The page loads with a published report available"
         then: "The published report displays with portfolio overview table, product accordions grouped by product, submission counts (X/Y Submitted), and a period header. The Status Report heading and Report ID subtitle are visible. The header shows 'Back to Archive' (link to /reports?tab=published) and the single labeled 'Export PDF' (the async pdfExport.request job)"
-        note: "Read-only viewer interface; all authenticated roles can access this route to view published reports. fix-report-surface-integrity W2: the standalone Presentation and browser-Print links are removed — presentation is inline via ?mode=slides; the print route 308-redirects humans away."
+        note: "Read-only viewer interface; all authenticated roles can access this route to view published reports. The standalone Presentation and browser-Print links are removed — presentation is inline via ?mode=slides; the print route 308-redirects humans away."
       - id: admin-viewer-report-publish
         intent: "Publish and lock the reporting period from the published report viewer"
         given: "Admin is viewing a published report with an open or reopened period and at least one lead submission"
@@ -448,7 +448,7 @@ routes:
         given: "Admin is viewing a published or reopened report"
         when: "Admin clicks 'Export PDF' in the header and the PDF generation job completes"
         then: "A PDF export job starts (via tRPC pdfExport.request), polling occurs, and once complete the PDF opens in a new tab with a 'PDF ready' toast; on failure a 'PDF export failed. Please try again.' toast appears"
-        note: "Handled via ExportPdfButton passing reportId and periodStatus. Shows 'Generating…' during BullMQ job processing (polled every 2 seconds). fix-report-surface-integrity W2: this is the single labeled Export PDF — there is no standalone browser-Print link to /print/[reportId] (that route 308-redirects humans away)."
+        note: "Handled via ExportPdfButton passing reportId and periodStatus. Shows 'Generating…' during BullMQ job processing (polled every 2 seconds). This is the single labeled Export PDF — there is no standalone browser-Print link to /print/[reportId] because that route 308-redirects humans away."
   - route: /reports/[reportId]/present
     access: [admin]
     intents:
@@ -457,7 +457,7 @@ routes:
         given: "the admin opens a legacy /reports/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section nav, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [admin]
     intents:
@@ -466,7 +466,7 @@ routes:
         given: "Admin accesses /reports/history"
         when: "page loads"
         then: "Browser redirects (307) to /reports?tab=published, landing on the main Reports page with archive=true"
-        note: "UX-17 Phase 35-08: legacy archive page merged into Reports page. The redirect is immediate (server-side); no interactive surface on /reports/history itself."
+        note: "Legacy archive page merged into Reports page. The redirect is immediate (server-side); no interactive surface on /reports/history itself."
       - id: admin-view-compiled-history
         intent: "View compiled report history across all leads"
         given: "Admin is on /reports?tab=published"

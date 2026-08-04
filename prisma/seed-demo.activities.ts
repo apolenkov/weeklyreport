@@ -9,12 +9,21 @@ import {
   DEFAULT_REPORTING_GROUP_ID,
   LEAD_1_ID,
 } from "./seed-constants.js";
-import { makeRowId } from "./seed-demo.ids.js";
+import {
+  activityDecisionId,
+  activityId,
+  activityItemId,
+  activityLeadLinkId,
+  activityProductLinkId,
+  activityRiskId,
+  activityStatusId,
+} from "./seed-demo.ids.js";
 import type { ActivityContent } from "./seed-demo.small-activities.js";
 import { SMALL_ACTIVITIES } from "./seed-demo.small-activities.js";
 import { VASILY_LABEL } from "./seed-demo.small-cast.js";
 
 interface CreatedActivity {
+  activityIdx: number;
   activityId: string;
   content: ActivityContent;
 }
@@ -24,32 +33,43 @@ async function createActivities(
   sectionId: string,
 ): Promise<CreatedActivity[]> {
   return SMALL_ACTIVITIES.reduce<Promise<CreatedActivity[]>>(
-    async (createdPromise, activity) => {
+    async (createdPromise, activity, activityIdx) => {
       const created = await createdPromise;
-      const activityId = makeRowId();
+      const createdId = activityId(activityIdx);
       await prisma.projectActivity.create({
         data: {
-          id: activityId,
+          id: createdId,
           name: activity.name,
           groupId: DEFAULT_REPORTING_GROUP_ID,
         },
       });
       await prisma.projectActivityProduct.create({
-        data: { id: makeRowId(), activityId, productId: activity.productId },
+        data: {
+          id: activityProductLinkId(activityIdx),
+          activityId: createdId,
+          productId: activity.productId,
+        },
       });
       await prisma.projectActivityLead.create({
-        data: { id: makeRowId(), activityId, leadId: LEAD_1_ID },
+        data: {
+          id: activityLeadLinkId(activityIdx),
+          activityId: createdId,
+          leadId: LEAD_1_ID,
+        },
       });
       await prisma.activityStatus.create({
         data: {
-          id: makeRowId(),
+          id: activityStatusId(activityIdx),
           reportSectionId: sectionId,
-          activityId,
+          activityId: createdId,
           status: activity.status,
           note: activity.note ?? null,
         },
       });
-      return [...created, { activityId, content: activity.content }];
+      return [
+        ...created,
+        { activityIdx, activityId: createdId, content: activity.content },
+      ];
     },
     Promise.resolve([]),
   );
@@ -60,13 +80,13 @@ async function writeActivityContent(
   sectionId: string,
   created: CreatedActivity,
 ): Promise<void> {
-  const { activityId, content } = created;
+  const { activityIdx, activityId: createdId, content } = created;
   await prisma.item.createMany({
-    data: content.items.map((item) => ({
-      id: makeRowId(),
+    data: content.items.map((item, itemIdx) => ({
+      id: activityItemId(activityIdx, itemIdx),
       reportSectionId: sectionId,
       type: item.type,
-      activityId,
+      activityId: createdId,
       text: item.text,
       tag: item.tag,
       workflowStatus: item.status,
@@ -77,9 +97,9 @@ async function writeActivityContent(
   if (content.risk) {
     await prisma.risk.create({
       data: {
-        id: makeRowId(),
+        id: activityRiskId(activityIdx),
         reportSectionId: sectionId,
-        activityId,
+        activityId: createdId,
         ...content.risk,
         stageNames: [],
       },
@@ -88,9 +108,9 @@ async function writeActivityContent(
   if (content.decision) {
     await prisma.decision.create({
       data: {
-        id: makeRowId(),
+        id: activityDecisionId(activityIdx),
         reportSectionId: sectionId,
-        activityId,
+        activityId: createdId,
         ...content.decision,
         owner: VASILY_LABEL,
         stageNames: [],

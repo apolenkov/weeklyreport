@@ -71,27 +71,32 @@ const ALLOWLIST = [
   "packages/shared/src/schemas/canonical-status.ts",
   // The role vocabulary's single declaration, both axes (role-type spec).
   "packages/shared/src/schemas/auth.ts",
+  // Presentation order intentionally differs from the role schema order.
+  "apps/web/src/shared/ui/role-switcher.tsx",
+  // Plain-Node catalog parsing cannot resolve the workspace package at runtime.
+  "e2e/sweep/catalog-parser.ts",
 ];
 
-// A vocabulary is re-declared as a TS union type or as a zod literal list.
-// Array `as const` value lists are not type re-declarations and stay in
-// neither shape, so they are out of scope by construction.
-const DECLARATION =
+// A vocabulary is re-declared as a TS union type, zod literal list, or a
+// readonly runtime value list. All three duplicate the canonical values.
+const TYPE_DECLARATION =
   ':matches(TSUnionType, CallExpression[callee.object.name="z"][callee.property.name=/^(enum|union)$/])';
+const VALUE_DECLARATION =
+  'TSAsExpression[expression.type="ArrayExpression"][typeAnnotation.typeName.name="const"]:not(:has(ObjectExpression)):not(:has(ArrayExpression ArrayExpression))';
 
 // Backtick members parse as TemplateElement, which `Literal[value=…]` misses.
 const ANY_LITERAL = ":matches(Literal, TemplateElement)";
 const contains = (member: string) =>
   `:has(:matches(Literal[value="${member}"], TemplateElement[value.cooked="${member}"]))`;
+const containsValue = (member: string) =>
+  `:has(ArrayExpression > :matches(Literal[value="${member}"], TemplateElement[value.cooked="${member}"]))`;
 const isNot = (member: string) =>
   `:not([value="${member}"]):not([value.cooked="${member}"])`;
 const nothingBut = (members: readonly string[]) =>
   `:not(:has(${ANY_LITERAL}${members.map(isNot).join("")}))`;
 
 const selectorOf = (vocabulary: Vocabulary) =>
-  DECLARATION +
-  vocabulary.members.map(contains).join("") +
-  (vocabulary.exact ? nothingBut(vocabulary.members) : "");
+  `:matches(${TYPE_DECLARATION}${vocabulary.members.map(contains).join("")}${vocabulary.exact ? nothingBut(vocabulary.members) : ""}, ${VALUE_DECLARATION}${vocabulary.members.map(containsValue).join("")}${vocabulary.exact ? nothingBut(vocabulary.members) : ""})`;
 
 const linter = new Linter();
 
@@ -117,7 +122,7 @@ const IGNORE =
 // Tests ARE covered (the gate is hollow otherwise) — only generated and
 // vendored trees are skipped.
 const isScannable = (file: string) =>
-  /\.(ts|tsx)$/.test(file) && !/\.d\.ts$/.test(file) && !IGNORE.test(file);
+  /\.(ts|tsx)$/.test(file) && !file.endsWith(".d.ts") && !IGNORE.test(file);
 
 // realpath both sides so symlinked segments (macOS /var -> /private/var, or a
 // symlinked repo checkout) cannot make the same file compare unequal.

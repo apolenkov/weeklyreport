@@ -25,15 +25,12 @@ function session(
 describe("groupScopeFilter", () => {
   describe("admin", () => {
     const s = session("admin");
-    it("returns {} for user", () => {
-      expect(groupScopeFilter(s, "user")).toEqual({});
-    });
-    it("returns {} for reportSection", () => {
-      expect(groupScopeFilter(s, "reportSection")).toEqual({});
-    });
-    it("returns {} for project", () => {
-      expect(groupScopeFilter(s, "project")).toEqual({});
-    });
+    it.each(["user", "reportSection", "project"] as const)(
+      "returns {} for %s",
+      (target) => {
+        expect(groupScopeFilter(s, target)).toEqual({});
+      },
+    );
   });
 
   describe("head", () => {

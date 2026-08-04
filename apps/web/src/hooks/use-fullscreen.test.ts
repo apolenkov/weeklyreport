@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { createRef } from "react";
 import {
@@ -155,6 +153,83 @@ describe("useFullscreen — behaviour", () => {
 
     expect(exitFullscreen).toHaveBeenCalledTimes(1);
     expect(requestFullscreen).not.toHaveBeenCalled();
+  });
+
+  describe("useFullscreen — rejection observability", () => {
+    afterEach(() => {
+      setFullscreenElement(null);
+    });
+
+    function rejectingTarget() {
+      const el = document.createElement("div");
+      const requestFullscreen = vi.fn(() =>
+        Promise.reject(new Error("denied")),
+      );
+      Object.defineProperty(el, "requestFullscreen", {
+        configurable: true,
+        value: requestFullscreen,
+      });
+      return { ref: { current: el }, requestFullscreen };
+    }
+
+    it("reports a rejected requestFullscreen through the typed failure callback", async () => {
+      setFullscreenElement(null);
+      const onError = vi.fn();
+      const { ref, requestFullscreen } = rejectingTarget();
+      renderHook(() => useFullscreen(ref, undefined, true, onError));
+
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "f" }));
+      });
+      expect(requestFullscreen).toHaveBeenCalledTimes(1);
+
+      // Flush the microtask so the .catch runs.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(onError).toHaveBeenCalledWith("request", new Error("denied"));
+    });
+
+    it("reports a rejected exitFullscreen through the typed failure callback", async () => {
+      setFullscreenElement(document.createElement("div"));
+      const onError = vi.fn();
+      const exitFullscreen = vi.fn(() =>
+        Promise.reject(new Error("exit-failed")),
+      );
+      Object.defineProperty(document, "exitFullscreen", {
+        configurable: true,
+        value: exitFullscreen,
+      });
+      const { ref } = rejectingTarget();
+      const { result } = renderHook(() =>
+        useFullscreen(ref, undefined, true, onError),
+      );
+
+      act(() => {
+        result.current.toggle();
+      });
+      expect(exitFullscreen).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(onError).toHaveBeenCalledWith("exit", new Error("exit-failed"));
+    });
+
+    it("still swallows the rejection (no unhandled promise rejection) when no callback is given", async () => {
+      setFullscreenElement(null);
+      const { ref, requestFullscreen } = rejectingTarget();
+      renderHook(() => useFullscreen(ref));
+
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "f" }));
+      });
+      expect(requestFullscreen).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+    });
   });
 
   it("returns focus to the stable control ONLY on the transition out of fullscreen", () => {

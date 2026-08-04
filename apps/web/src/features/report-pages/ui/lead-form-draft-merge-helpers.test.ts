@@ -30,8 +30,10 @@ describe("lead form draft merge helpers", () => {
     const next: KanbanItem[] = [
       {
         id: CURRENT_ITEM_ID,
+        parent: { kind: "product", id: PROJECT_ID },
         productId: PROJECT_ID,
         productName: "Test Product",
+        activityId: null,
         stageNames: ["Testing"],
         status: "completed",
         text: "Updated product item",
@@ -41,8 +43,9 @@ describe("lead form draft merge helpers", () => {
       },
       {
         id: ACTIVITY_ITEM_ID,
-        productId: "",
-        productName: "",
+        parent: { kind: "activity", id: ACTIVITY_ID },
+        productId: null,
+        productName: "Ops rotation",
         activityId: ACTIVITY_ID,
         activityName: "Ops rotation",
         stageNames: ["Ignored"],
@@ -53,8 +56,10 @@ describe("lead form draft merge helpers", () => {
       },
       {
         id: "foreign-item",
+        parent: { kind: "product", id: PROJECT_ID },
         productId: PROJECT_ID,
         productName: "Test Product",
+        activityId: null,
         status: "planned",
         text: "Foreign item",
         author: "Other Lead",

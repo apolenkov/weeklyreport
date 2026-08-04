@@ -9,6 +9,10 @@ import {
   customreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../../lib/logger";
+import {
+  makeProjectReadModel,
+  makeReportSectionReadModel,
+} from "../../../test-utils/report-section-fixtures.js";
 import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
@@ -22,32 +26,38 @@ import {
 /* ------------------------------------------------------------------ */
 
 const reportId = "22222222-2222-4222-8222-222222222222";
-const noopIngestionQueue = new NoopIngestionQueue();
+const noopIngestionQueue = new NoopIngestionQueue(createNullLogger(), "test");
 const noopInvalidateAnalyticsCache = () => Promise.resolve();
+// Explicit publishAt from the domain boundary (the scheduler tick) — the
+// mapper must persist exactly this timestamp, never a freshly-minted Date.
+const publishAt = new Date("2026-04-10T18:00:00.000Z");
 
 /* ------------------------------------------------------------------ */
 /*  Section / report factories                                         */
 /* ------------------------------------------------------------------ */
 
+type ProjectFixture = Partial<ReportSectionReadModel["projects"][number]> &
+  Pick<
+    ReportSectionReadModel["projects"][number],
+    "projectId" | "projectName" | "trafficLight"
+  >;
+
 function makeSection(
-  overrides: Partial<ReportSectionReadModel> & {
+  overrides: Omit<Partial<ReportSectionReadModel>, "projects"> & {
     reportSectionId: string;
     authorId: string;
     authorName: string;
+    projects?: ProjectFixture[];
   },
 ): ReportSectionReadModel {
-  return {
+  const { projects = [], ...sectionOverrides } = overrides;
+  return makeReportSectionReadModel({
     reportId,
-    version: 1,
     status: "submitted",
     submittedAt: new Date("2026-04-09T10:00:00.000Z"),
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    activities: [],
-    ...overrides,
-  };
+    projects: projects.map(makeProjectReadModel),
+    ...sectionOverrides,
+  });
 }
 
 function makeReport(
@@ -99,10 +109,8 @@ function createRepository(
   };
 }
 
-/**
- * Narrow an auto-publish outcome to its report, failing the test loudly if the
- * write was skipped — keeps the published-path assertions free of `if` guards.
- */
+// Narrow an auto-publish outcome to its report, failing loudly if the write
+// was skipped — keeps the published-path assertions free of `if` guards.
 function expectPublished(result: AutoPublishResult): AssembledReport {
   if (!result.published) {
     throw new Error("expected a published auto-publish outcome, got a skip");
@@ -110,11 +118,9 @@ function expectPublished(result: AutoPublishResult): AssembledReport {
   return result.report;
 }
 
-/**
- * Helper for prom-client Counter introspection in unit tests. Avoids
- * leaking prom-client internals into every test file: the registry tracks
- * (labels → value) pairs and we just find the matching tuple.
- */
+// Helper for prom-client Counter introspection: the registry tracks
+// (labels → value) pairs and we find the matching tuple, avoiding prom-client
+// internals leaking into every test file.
 async function getCounterValue(
   counter: {
     get(): Promise<{
@@ -459,12 +465,14 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const published = expectPublished(await service.publishAuto(reportId));
+      const published = expectPublished(
+        await service.publishAuto(reportId, publishAt),
+      );
 
       expect(published.status).toBe("published");
       expect(published.publishedById).toBeNull();
       expect(published.publishedByName).toBe("system");
-      expect(published.publishedAt).toBeInstanceOf(Date);
+      expect(published.publishedAt).toEqual(publishAt);
     });
 
     it("publishAuto is idempotent on already-published reports (no throw, returns current)", async () => {
@@ -475,8 +483,12 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const first = expectPublished(await service.publishAuto(reportId));
-      const second = expectPublished(await service.publishAuto(reportId));
+      const first = expectPublished(
+        await service.publishAuto(reportId, publishAt),
+      );
+      const second = expectPublished(
+        await service.publishAuto(reportId, publishAt),
+      );
 
       expect(first.status).toBe("published");
       expect(second.status).toBe("published");
@@ -508,7 +520,7 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const result = await service.publishAuto(reportId);
+      const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toMatchObject({
         published: true,
@@ -518,9 +530,9 @@ describe("PublicationService", () => {
       expect(saveAutoPublishedReport).not.toHaveBeenCalled();
     });
 
-    // Regression: the real write branch (report was draft, compare-and-set
-    // succeeds) must still report wasAlreadyPublished=false, distinguishing
-    // it from the idempotent short-circuit above.
+    // The real write branch (report was draft, CAS succeeds) must still
+    // report wasAlreadyPublished=false, distinguishing it from the idempotent
+    // short-circuit above.
     it("publishAuto real write reports wasAlreadyPublished=false and writes exactly once", async () => {
       const repository = createRepository(assembledReport);
       const saveSpy = vi.spyOn(repository, "saveAutoPublishedReport");
@@ -531,7 +543,7 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const result = await service.publishAuto(reportId);
+      const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toMatchObject({
         published: true,
@@ -552,7 +564,7 @@ describe("PublicationService", () => {
         invalidateAnalyticsCache,
       );
 
-      await service.publishAuto(reportId);
+      await service.publishAuto(reportId, publishAt);
 
       expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(1);
       expect(saveSpy.mock.invocationCallOrder[0]).toBeLessThan(
@@ -577,7 +589,7 @@ describe("PublicationService", () => {
         { from: "open", to: "published" },
       );
 
-      await service.publishAuto(reportId);
+      await service.publishAuto(reportId, publishAt);
 
       expect(
         await getCounterValue(customreportReportsSubmittedTotal, {
@@ -592,10 +604,9 @@ describe("PublicationService", () => {
       ).toBe(transitionsBefore + 1);
     });
 
-    // period-dual-state: when the repository's compare-and-set matches zero rows
-    // (the period was archived after candidate selection), publishAuto returns a
-    // skipped outcome and fires NONE of the publish success side-effects — no KPI
-    // counter bump, no ingestion enqueue.
+    // When the repo's CAS matches zero rows (period archived after selection),
+    // publishAuto returns a skipped outcome and fires NONE of the publish
+    // success side-effects — no counter bump, no ingestion enqueue.
     it("publishAuto skip: zero-row compare-and-set → no metrics, no ingestion", async () => {
       const ingestion = vi.fn(() => Promise.resolve());
       const repository: PublicationRepository = {
@@ -621,7 +632,7 @@ describe("PublicationService", () => {
         { from: "open", to: "published" },
       );
 
-      const result = await service.publishAuto(reportId);
+      const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toEqual({ published: false });
       expect(ingestion).not.toHaveBeenCalled();
@@ -655,7 +666,7 @@ describe("PublicationService", () => {
         invalidateAnalyticsCache,
       );
 
-      const result = await service.publishAuto(reportId);
+      const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toEqual({ published: false });
       expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(0);
@@ -672,7 +683,9 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const published = expectPublished(await service.publishAuto(reportId));
+      const published = expectPublished(
+        await service.publishAuto(reportId, publishAt),
+      );
 
       expect(ingestion).toHaveBeenCalledTimes(1);
       expect(ingestion).toHaveBeenCalledWith(
@@ -692,7 +705,7 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      await service.publishAuto(reportId);
+      await service.publishAuto(reportId, publishAt);
 
       expect(ingestion).not.toHaveBeenCalled();
     });
@@ -716,7 +729,7 @@ describe("PublicationService", () => {
         noopInvalidateAnalyticsCache,
       );
 
-      const result = await service.publishAuto(reportId);
+      const result = await service.publishAuto(reportId, publishAt);
 
       expect(result.published).toBe(true);
       expect(warn).toHaveBeenCalledWith(

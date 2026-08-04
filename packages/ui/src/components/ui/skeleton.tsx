@@ -3,7 +3,10 @@ import { cn } from "@customreport/ui/lib/utils";
 /**
  * Placeholder shimmer block for loading states.
  */
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="skeleton"

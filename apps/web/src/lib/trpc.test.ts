@@ -116,7 +116,7 @@ describe("createAuthRedirectHandler — 401 interceptor logic", () => {
 // Subscribe with vi.fn() next/error/complete spies.
 // ---------------------------------------------------------------------------
 
-/** Minimal Operation stub — only the fields the link reads (path for stubbing). */
+// Minimal operation stub; the link only reads path for stubbing.
 function makeOperation() {
   return {
     id: 1,
@@ -134,11 +134,8 @@ interface SpySet {
   complete: ReturnType<typeof vi.fn<() => void>>;
 }
 
-/**
- * Drives the auth-redirect link against an upstream observable and subscribes
- * with the given spy set. TRPCClientRuntime is `{}` in v11 — an empty object
- * satisfies it exactly, no cast needed.
- */
+// Exercise the auth-redirect link against a real upstream observable; v11's
+// empty runtime object satisfies TRPCClientRuntime without a cast.
 function runLink(upstream: ReturnType<typeof observable>, spies: SpySet): void {
   const runtime: TRPCClientRuntime = {};
   const opLink = createAuthRedirectLink()(runtime);

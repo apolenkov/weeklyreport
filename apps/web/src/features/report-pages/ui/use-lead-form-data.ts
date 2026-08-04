@@ -46,8 +46,8 @@ function useLeadFormEffects({
   errorSources,
 }: {
   readonly route: LeadFormRoute;
-  readonly activeReportId: string;
-  readonly targetReportId: string;
+  readonly activeReportId: string | null;
+  readonly targetReportId: string | null;
   readonly currentUserId: string | null;
   readonly sessionRole: SessionUser["role"] | null;
   readonly isEveryone: boolean;
@@ -130,6 +130,6 @@ export function useLeadFormData({
     foreignContent,
     awaitingRoleRedirect: shouldRouteHeadLikeAwayFromLeadForm,
     awaitingCanonicalRedirect:
-      !!redirectToCanonical && !pinnedReportId && view.activeReportId !== "",
+      !!redirectToCanonical && !pinnedReportId && view.activeReportId !== null,
   };
 }

@@ -33,13 +33,13 @@ export function SlideGridHeader({
 }: {
   readonly ownerName: string;
   readonly grid: SlideGridModel;
-  /** Deck-owned controls (fullscreen, period picker) rendered at the end. */
+  // Deck-owned controls (fullscreen, period picker) render at the end.
   readonly heroControls?: ReactNode | undefined;
   readonly pageLabel?: string | undefined;
 }) {
   const short = grid.onTrack.on < grid.onTrack.total;
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(0,0,0,0.08)] pb-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border-subtle)] pb-3">
       <SlideStatusBadge
         status={trafficLightToCanonical(grid.worstStatus)}
         labelVariant="worstPill"
@@ -107,7 +107,7 @@ function PriorityCard({
         <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
           {card.productName}
         </span>
-        {author !== undefined && (
+        {author !== undefined ? (
           <span
             title={author.name}
             className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
@@ -115,6 +115,15 @@ function PriorityCard({
           >
             <span aria-hidden="true">{author.initials}</span>
             <span className="sr-only">{author.name}</span>
+          </span>
+        ) : (
+          <span
+            title="Unknown author"
+            className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+            style={{ background: "var(--color-muted)" }}
+          >
+            <span aria-hidden="true">?</span>
+            <span className="sr-only">Unknown author</span>
           </span>
         )}
       </div>
@@ -133,9 +142,9 @@ export function SlidePriorityStrip({
   if (grid.priorityStrip.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2" data-testid="slide-priority-strip">
-      {grid.priorityStrip.map((card) => (
+      {grid.priorityStrip.map((card, index) => (
         <PriorityCard
-          key={card.id}
+          key={card.id ?? index}
           card={card}
           author={authorsById.get(card.authorId)}
         />
@@ -154,7 +163,7 @@ export function SlideLegend({
   return (
     <div
       data-testid="slide-legend"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[rgba(0,0,0,0.08)] pt-2 text-[10px] text-[var(--color-muted-foreground)]"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--color-border-subtle)] pt-2 text-[10px] text-[var(--color-muted-foreground)]"
     >
       {authors.map((author) => (
         <span key={author.id} className="inline-flex items-center gap-1.5">

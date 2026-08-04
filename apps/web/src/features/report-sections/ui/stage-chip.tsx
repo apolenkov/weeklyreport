@@ -22,9 +22,9 @@ const ASSIGNEE_FONT_WEIGHT_OTHER = 400;
 const CHIP_BASE_CLASSES =
   "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150";
 const CHIP_EDITABLE_CLASSES =
-  "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]";
+  "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_var(--card-surface-border)]";
 const CHIP_EMPTY_CLASSES =
-  "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]";
+  "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[var(--shadow-stage-empty-hover)]";
 const CHIP_LOCKED_CLASSES = "cursor-not-allowed";
 
 interface StageChipProps {
@@ -124,7 +124,7 @@ function StageIconGlyph({ stageName }: { readonly stageName: string }) {
 function LockBadge() {
   return (
     <span
-      className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
+      className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)]"
       aria-hidden="true"
     >
       <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />

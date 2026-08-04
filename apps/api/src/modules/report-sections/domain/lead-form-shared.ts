@@ -109,29 +109,29 @@ export interface LeadFormRepository {
 }
 
 export interface CrossAuthorStatusRow {
-  projectId: string;
-  projectName: string;
-  authorId: string;
-  authorInitials: string;
-  authorShortName: string;
-  stageNames: string[];
-  stages: {
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly authorId: string;
+  readonly authorInitials: string;
+  readonly authorShortName: string;
+  readonly stageNames: string[];
+  readonly stages: readonly {
     stageName: string;
     status: TrafficLightStatus | null;
   }[];
 }
 
 export interface CrossAuthorSectionRow {
-  authorId: string;
-  authorName: string;
-  authorRole: DbRole;
-  sharedProductIds: string[];
-  stages: {
+  readonly authorId: string;
+  readonly authorName: string;
+  readonly authorRole: DbRole;
+  readonly sharedProductIds: string[];
+  readonly stages: readonly {
     projectId: string;
     stageName: string;
     status: TrafficLightStatus | null;
   }[];
-  items: {
+  readonly items: readonly {
     id: string;
     projectId: string;
     type: string;
@@ -142,7 +142,7 @@ export interface CrossAuthorSectionRow {
     priorityRank: number | null;
     stageNames: string[];
   }[];
-  risks: {
+  readonly risks: readonly {
     id: string;
     projectId: string;
     risk: string;
@@ -151,7 +151,7 @@ export interface CrossAuthorSectionRow {
     severity: RiskSeverity;
     stageNames: string[];
   }[];
-  decisions: {
+  readonly decisions: readonly {
     id: string;
     productId: string;
     text: string;
@@ -164,10 +164,10 @@ export interface CrossAuthorSectionRow {
 }
 
 export interface ReopenEligibilityFacts {
-  sectionStatus: string;
-  periodStatus: string;
-  archived: boolean;
-  hasPendingReopen: boolean;
+  readonly sectionStatus: string;
+  readonly periodStatus: string;
+  readonly archived: boolean;
+  readonly hasPendingReopen: boolean;
 }
 
 export type ReopenBlockedReason =

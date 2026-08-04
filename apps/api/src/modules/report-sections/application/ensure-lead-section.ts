@@ -2,22 +2,10 @@ import type { PrismaClient } from "@prisma/client";
 
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 
-/**
- * Provision a lead's `ReportSection` (and its seeded `ProjectStatus` rows) for a
- * given period. This is report-section domain logic, which `period-dual-state`
- * classifies as a non-period (child-row) writer, so it is exempt from the period
- * transition boundary. `buildUserSession` reaches it through an injected seam at
- * login.
- *
- * Concurrency: two concurrent first-logins of the SAME lead could both miss the
- * fast-path find and both create, hitting the `ReportSection_reportId_authorId_key`
- * unique index. The fast path stays a cheap `findUnique`; the create is guarded
- * by a catch-on-unique-violation + re-read so the loser resolves to the winner's
- * section instead of throwing. `ProjectStatus` rows are seeded only on a fresh
- * create (the winner does it; `createMany({ skipDuplicates })` is itself safe).
- */
-
-const DEFAULT_PROJECT_STATUS = "green" as const;
+// Provision a lead's `ReportSection` + seeded `ProjectStatus` rows at login.
+// Concurrent first-logins of the SAME lead can both miss the fast-path find;
+// the create is guarded by catch-on-unique-violation + re-read (loser wins).
+const INITIAL_STATUS = null;
 const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId_key";
 
 function isSectionUniqueViolation(error: unknown): boolean {
@@ -44,18 +32,12 @@ async function seedProjectStatuses(
     data: projects.map((p) => ({
       reportSectionId,
       projectId: p.id,
-      status: DEFAULT_PROJECT_STATUS,
+      status: INITIAL_STATUS,
     })),
     skipDuplicates: true,
   });
 }
 
-// Mirrors seedProjectStatuses for Project Activities: one ActivityStatus row
-// (default green, never null) per non-archived activity the lead is attached
-// to. The seeded set is the server-authoritative reference the save path
-// validates written activityIds against.
-// Seed-once-at-provisioning, same as seedProjectStatuses above: a mid-period
-// attach surfaces at the next period's provisioning, not retroactively.
 async function seedActivityStatuses(
   prisma: {
     projectActivityLead: PrismaClient["projectActivityLead"];
@@ -73,7 +55,7 @@ async function seedActivityStatuses(
     data: attachments.map((attachment) => ({
       reportSectionId,
       activityId: attachment.activityId,
-      status: DEFAULT_PROJECT_STATUS,
+      status: INITIAL_STATUS,
     })),
     skipDuplicates: true,
   });

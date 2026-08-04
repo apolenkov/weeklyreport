@@ -181,4 +181,26 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
+
+  it("blocks confirm, Enter, and dismissal while pending", () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    renderDialog({
+      isPending: true,
+      onConfirm,
+      onCancel,
+      confirmLabel: "Delete",
+    });
+
+    expect(screen.getByRole("button", { name: /delete/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    const backdrop = document.querySelector('[role="presentation"]');
+    if (backdrop) fireEvent.click(backdrop);
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 });

@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { useQuery } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -113,6 +111,7 @@ vi.mock("../../../features/report-sections/model/weekly-report", () => ({
       periodStatus: "open",
       period: {
         id: "p1",
+        periodStart: new Date("2026-06-01T00:00:00.000Z"),
         reportId: "r1",
         periodStatus: "open" as const,
         archived: false,
@@ -129,7 +128,7 @@ function renderPage(reportId: string) {
   return render(<PrintReportTemplate reportId={reportId} />);
 }
 
-describe("PrintReportTemplate — <style dangerouslySetInnerHTML> static CSS safety", () => {
+describe("PrintReportTemplate — static CSS safety", () => {
   it("style textContent contains only static CSS keywords — no user-supplied interpolations", () => {
     const { container } = renderPage("report-123");
     const styleEl = container.querySelector("style");

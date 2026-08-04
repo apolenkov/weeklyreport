@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-web-env-schema. Update Purpose after archive.
+Declare every consumed public web variable in one no-default schema, fail builds on invalid values, and route reads through a typed inlining-safe accessor.
 
 ## Requirements
 
@@ -97,7 +97,8 @@ getters — the five boolean toggles resolved to `boolean` (so the scattered
 `=== "true"` comparisons live in one place), plus `appVersion` and `sentryDsn`.
 Two toggle getters MUST fold the existing `NODE_ENV !== "production"` guard to
 match current code: `NEXT_PUBLIC_AUTH_STUB` (as `login-page.client.tsx` does) AND
-`NEXT_PUBLIC_DEV_ROLE_SWITCHER` (as BOTH `nav-bar.tsx` and `role-switcher.tsx`
+`NEXT_PUBLIC_DEV_ROLE_SWITCHER` (as BOTH `nav-right-rail.tsx` and
+`role-switcher.tsx`
 do) — dropping the latter's guard would render the dev role switcher in a
 production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`.
 
@@ -126,7 +127,8 @@ production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`.
 #### Scenario: The dev-role-switcher getter folds the production guard
 
 - **GIVEN** `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` and `NODE_ENV=production`
-- **WHEN** `nav-bar.tsx` or `role-switcher.tsx` reads the dev-role-switcher getter
+- **WHEN** `nav-right-rail.tsx` or `role-switcher.tsx` reads the dev-role-switcher
+  getter
 - **THEN** it observes `false`, because the getter folds the same
   `NODE_ENV !== "production"` guard both sites apply today, so the dev role
   switcher never renders in a production build
@@ -136,11 +138,11 @@ production build where `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`.
 The web app MUST replace every current raw `process.env.NEXT_PUBLIC_*` read of
 an in-scope var with a call to the typed accessor, at each named consumer site:
 `apps/web/src/app/login-page.client.tsx` (`NEXT_PUBLIC_AUTH_STUB`,
-`NEXT_PUBLIC_APP_VERSION`), `apps/web/src/components/navigation/nav-bar.tsx` and
-`apps/web/src/components/dev/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
+`NEXT_PUBLIC_APP_VERSION`), `apps/web/src/shared/ui/navigation/nav-right-rail.tsx`
+and `apps/web/src/shared/ui/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
 `apps/web/src/lib/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
 `apps/web/src/lib/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
-`apps/web/src/components/agentation-devtools.tsx`
+`apps/web/src/shared/ui/agentation-devtools.tsx`
 (`NEXT_PUBLIC_DISABLE_DEVTOOLS`), and
 `apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). After the
 change a grep of `apps/web/src` and the web root for a literal

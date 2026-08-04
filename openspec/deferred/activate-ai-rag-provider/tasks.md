@@ -20,7 +20,8 @@ NOT STARTED — captured 2026-06-10.
 - **AI-T5** Implement the summary / extract-risk read procedure over the corpus
 - **AI-T6** Replace the inert "AI Summary" placeholder
   (`apps/web/src/components/admin/settings-integrations-sub-tab.tsx:150`)
-  with a real provider/corpus status; remove `TODO(Phase-54-activation)` and
+  with a real provider/corpus status; remove the to-be-planted
+  `TODO(activate-ai-rag-provider)` marker (to-be-planted, not live) and
   the `ComingSoonBadge` per deferred-feature-pattern
 - **AI-T7** Add integration test for ingestion-on-publish and the summary read
   path (mock provider HTTP)
@@ -32,7 +33,8 @@ NOT STARTED — captured 2026-06-10.
   `integration-ai-rag` = "empty" at `settings-tab.test.tsx:761`)
 - **AI-T9** Run all gates: `pnpm typecheck && pnpm lint && pnpm test &&
 pnpm build`
-- **AI-T10** Verify no `TODO(Phase-54-activation)` markers remain and the
+- **AI-T10** Verify no to-be-planted `TODO(activate-ai-rag-provider)` markers
+  remain and the
   loud-stub error is gone from any activated entry point
 - **AI-T11** User acceptance: head/admin opens the integrations sub-tab, sees
   the AI Summary card show a configured provider and a non-empty corpus, and a

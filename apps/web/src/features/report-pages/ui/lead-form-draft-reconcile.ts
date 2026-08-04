@@ -2,7 +2,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 import {
   type DraftSaveContent,
-  stableStringify,
+  encodeAutosaveComparisonKey,
 } from "../../../hooks/use-lead-form-autosave";
 import { sectionToDraftPayload } from "../../report-sections";
 
@@ -21,7 +21,7 @@ export interface PendingSaveEcho {
 }
 
 function recordContentKey(record: DraftRecord): string {
-  return stableStringify(
+  return encodeAutosaveComparisonKey(
     Object.fromEntries(
       Object.entries(record).filter(
         ([key]) => key !== "id" && key !== "stableId",

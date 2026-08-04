@@ -7,7 +7,7 @@ interface UseLeadFormRedirectsInput {
   readonly pinnedReportId: string | undefined;
   readonly redirectToCanonical: boolean | undefined;
   readonly isSlidesMode: boolean;
-  readonly activeReportId: string;
+  readonly activeReportId: string | null;
   readonly shouldRouteHeadLikeAwayFromLeadForm: boolean;
 }
 

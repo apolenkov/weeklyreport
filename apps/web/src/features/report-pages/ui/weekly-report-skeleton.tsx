@@ -2,12 +2,14 @@
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-/** Placeholder card count — matches the seeded product count (6 products). */
-const SEEDED_PRODUCT_COUNT = 6;
+// Fixed placeholder row count for the skeleton's grid/accordion shapes; a
+// loading placeholder cannot know the real row count, so it is deliberately
+// independent of any seed or report data.
+const PLACEHOLDER_CARD_COUNT = 6;
 
 function PortfolioCardSkeleton() {
   return (
-    <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[rgba(0,0,0,0.04)] p-2.5">
+    <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[var(--color-surface-skeleton)] p-2.5">
       <Skeleton className="h-7 w-7 rounded-full" />
       <div className="min-w-0 flex-1 space-y-1">
         <Skeleton className="h-4 w-32" />
@@ -33,7 +35,7 @@ function PortfolioSkeleton() {
         </div>
       </div>
       <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
-        {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
+        {Array.from({ length: PLACEHOLDER_CARD_COUNT }, (_, i) => (
           <PortfolioCardSkeleton key={i} />
         ))}
       </div>
@@ -56,9 +58,6 @@ function AccordionSkeleton() {
   );
 }
 
-/**
- * Weekly Report Skeleton.
- */
 export function WeeklyReportSkeleton() {
   return (
     <div
@@ -81,7 +80,7 @@ export function WeeklyReportSkeleton() {
       </div>
 
       {/* Period nav shell with dept · Live portfolio review right slot. */}
-      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
+      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--toolbar-band-gradient)] px-4 py-3.5 shadow-[0_0_0.5px_0_var(--color-border-subtle),0_10px_24px_-20px_var(--card-surface-shadow)]">
         <Skeleton className="h-11 w-60 rounded-lg" />
         <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
           <Skeleton className="h-4 w-24" />
@@ -93,7 +92,7 @@ export function WeeklyReportSkeleton() {
       <PortfolioSkeleton />
 
       <div className="space-y-3">
-        {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
+        {Array.from({ length: PLACEHOLDER_CARD_COUNT }, (_, i) => (
           <AccordionSkeleton key={i} />
         ))}
       </div>

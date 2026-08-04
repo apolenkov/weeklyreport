@@ -48,7 +48,7 @@ export function buildLeadSlidePeriodOptions(
     });
 }
 
-/** Empty id when history has no report — query hooks disable on this sentinel. */
+// Empty sentinel disables slide queries when history has no report.
 const NO_LEAD_SLIDE_REPORT_ID = "";
 
 export function resolveLeadSlideReportId({

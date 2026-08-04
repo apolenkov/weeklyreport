@@ -8,6 +8,7 @@ interface ProductsTableProps {
   readonly archivedProducts: readonly AdminProductView[];
   readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly stageCountByProject: ReadonlyMap<string, number>;
+  readonly countsError: boolean;
   readonly leads: readonly AdminUserView[];
   readonly expandedId: string | null;
   readonly onToggleExpand: (id: string) => void;
@@ -23,6 +24,7 @@ export function ProductsTable({
   archivedProducts,
   getUserById,
   stageCountByProject,
+  countsError,
   leads,
   expandedId,
   onToggleExpand,
@@ -35,12 +37,18 @@ export function ProductsTable({
   return (
     <>
       <div className="space-y-3" data-testid="products-table">
+        {countsError && (
+          <p className="text-xs text-[var(--color-destructive)]" role="alert">
+            Could not load stage assignment counts
+          </p>
+        )}
         {activeProducts.map((product) => (
           <ActiveProductRow
             key={product.id}
             product={product}
             owner={getUserById(product.leadOwnerId)}
             assignedCount={stageCountByProject.get(product.id) ?? 0}
+            countsError={countsError}
             isExpanded={expandedId === product.id}
             leads={leads}
             onToggleExpand={onToggleExpand}
@@ -87,7 +95,7 @@ function ArchivedProductList({
             type="button"
             onClick={() => onRestore(product)}
             disabled={isSaving}
-            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={`Restore ${product.name}`}
           >
             Restore

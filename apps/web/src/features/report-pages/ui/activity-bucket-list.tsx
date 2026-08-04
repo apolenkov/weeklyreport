@@ -20,7 +20,7 @@ interface BucketCardProps {
 
 export function EmptyActivityPlaceholder() {
   return (
-    <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+    <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
       No items yet — use the + Add button to create one.
     </div>
   );

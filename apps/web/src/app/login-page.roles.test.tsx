@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -17,12 +15,13 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
+    useQuery: (opts: { queryKey?: readonly unknown[] }) =>
+      useQueryMock(opts) as ReturnType<typeof actual.useQuery>,
   };
 });
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => useSearchParamsMock() as unknown,
+  useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
 vi.mock("../lib/trpc-context", () => ({
@@ -98,9 +97,7 @@ beforeEach(() => {
     return { data: null, isLoading: false };
   });
 
-  useSearchParamsMock.mockReturnValue({
-    get: (_k: string) => null,
-  });
+  useSearchParamsMock.mockReturnValue(new URLSearchParams());
 });
 
 afterEach(() => {

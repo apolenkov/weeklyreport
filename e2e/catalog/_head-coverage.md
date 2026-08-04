@@ -13,22 +13,22 @@ Discovered routes (15):
 ## Coverage matrix
 
 | Route                             | Intent count | Covered? |
-|-----------------------------------|:------------:|:--------:|
-| `/`                               | 1            | yes      |
-| `/head/dashboard`                 | 6            | yes      |
-| `/head/history`                   | 1            | yes      |
-| `/head/slides`                    | 1            | yes      |
-| `/head/report`                    | 1            | yes      |
-| `/head/report/[reportId]`         | 8            | yes      |
-| `/head/report/[reportId]/present` | 4            | yes      |
-| `/lead/history`                   | 1            | yes      |
-| `/lead/report`                    | 1            | yes*     |
-| `/lead/report/[reportId]`         | 1            | yes      |
-| `/reports`                        | 5            | yes      |
-| `/reports/[reportId]`             | 4            | yes      |
-| `/reports/[reportId]/present`     | 5            | yes      |
-| `/reports/history`                | 1            | yes      |
-| `/reports/trends`                 | 1            | yes      |
+| --------------------------------- | :----------: | :------: |
+| `/`                               |      1       |   yes    |
+| `/head/dashboard`                 |      6       |   yes    |
+| `/head/history`                   |      1       |   yes    |
+| `/head/slides`                    |      1       |   yes    |
+| `/head/report`                    |      1       |   yes    |
+| `/head/report/[reportId]`         |      8       |   yes    |
+| `/head/report/[reportId]/present` |      4       |   yes    |
+| `/lead/history`                   |      1       |   yes    |
+| `/lead/report`                    |      1       |   yes*   |
+| `/lead/report/[reportId]`         |      1       |   yes    |
+| `/reports`                        |      5       |   yes    |
+| `/reports/[reportId]`             |      4       |   yes    |
+| `/reports/[reportId]/present`     |      5       |   yes    |
+| `/reports/history`                |      1       |   yes    |
+| `/reports/trends`                 |      1       |   yes    |
 
 \* Route key in the YAML is malformed: written as `route: /lead/report (access: head)`
 with `access: []` instead of a clean `route: /lead/report` + `access: [head]`.
@@ -116,5 +116,6 @@ No structural leaks found.
 No vacuous `then` clauses found.
 
 Two non-blocking observations for next regeneration:
+
 1. Fix malformed route key `/lead/report (access: head)` → `/lead/report` + `access: [head]`.
 2. Sharpen `head-present-toggle-fullscreen` then clause to name both button label states.

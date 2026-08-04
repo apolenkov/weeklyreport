@@ -6,7 +6,7 @@ export const IN_PROGRESS_STATUS = "in-progress";
 // Shared quiet-chip palette for the not-in-flight states.
 const CSS_MUTED = "var(--color-muted)";
 const CSS_MUTED_FG = "var(--color-muted-foreground)";
-const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
+const CHIP_IDLE_BORDER = "var(--color-border-strong)";
 
 // No free Blocked chip — alarm is derived from a covering risk (Risks & Blockers).
 export const CURRENT_WEEK_CHOICES: readonly ChipChoice<ItemStatus>[] = [
@@ -28,7 +28,7 @@ export const CURRENT_WEEK_CHOICES: readonly ChipChoice<ItemStatus>[] = [
     value: "completed",
     label: "✓ Completed",
     bg: CSS_PRIMARY,
-    color: "#fff",
+    color: "var(--color-primary-foreground)",
     border: CSS_PRIMARY,
   },
 ];

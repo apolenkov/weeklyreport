@@ -11,7 +11,7 @@ import type { ProductFormData } from "../model/product-form";
 const FIELD_LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
 const FIELD_CONTROL_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
 
 interface ProductEditDialogProps {
   readonly editingProduct: AdminProductView | null;
@@ -19,6 +19,7 @@ interface ProductEditDialogProps {
   readonly onFormChange: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
+  readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;
   readonly onClose: () => void;
@@ -41,8 +42,6 @@ function ProductNameField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus
         className={FIELD_CONTROL_CLASS}
       />
     </div>
@@ -71,6 +70,11 @@ function LeadOwnerField({
         onChange={(e) => onChange(e.target.value)}
         className={FIELD_CONTROL_CLASS}
       >
+        {value === "" && (
+          <option value="" disabled>
+            Select lead…
+          </option>
+        )}
         {leads.map((lead) => (
           <option key={lead.id} value={lead.id}>
             {lead.name}
@@ -127,11 +131,13 @@ function ProductFormFields({
 function ProductDialogFooter({
   isEditing,
   isSaving,
+  canSave,
   onSave,
   onClose,
 }: {
   readonly isEditing: boolean;
   readonly isSaving: boolean;
+  readonly canSave: boolean;
   readonly onSave: () => void;
   readonly onClose: () => void;
 }) {
@@ -141,15 +147,15 @@ function ProductDialogFooter({
         type="button"
         onClick={onClose}
         disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         Cancel
       </button>
       <button
         type="button"
         onClick={onSave}
-        disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={isSaving || !canSave}
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Product"}
       </button>
@@ -163,6 +169,7 @@ export function ProductEditDialog({
   onFormChange,
   leads,
   leadProductCount,
+  canSave,
   isSaving,
   onSave,
   onClose,
@@ -178,7 +185,7 @@ export function ProductEditDialog({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onClose}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingProduct ? "Edit product" : "Add product"}
     >
       <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
@@ -193,6 +200,7 @@ export function ProductEditDialog({
       <ProductDialogFooter
         isEditing={editingProduct !== null}
         isSaving={isSaving}
+        canSave={canSave}
         onSave={onSave}
         onClose={onClose}
       />

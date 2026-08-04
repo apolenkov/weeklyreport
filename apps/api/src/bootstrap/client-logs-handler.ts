@@ -1,4 +1,5 @@
 import type { Request, RequestHandler, Response } from "express";
+import { z } from "zod";
 
 import type { AppLogger } from "../lib/logger";
 
@@ -8,24 +9,26 @@ const NO_CONTENT = 204;
 // not be able to grow one log line, or the batch, without limit.
 const MAX_CLIENT_LOG_BATCH_SIZE = 100;
 const MAX_CLIENT_LOG_MESSAGE_LENGTH = 2000;
-const MAX_CLIENT_LOG_SOURCE_LENGTH = 64;
 const MAX_CLIENT_LOG_URL_LENGTH = 500;
 const MAX_CLIENT_LOG_STACK_LENGTH = 4000;
 const MAX_CLIENT_LOG_USER_AGENT_LENGTH = 200;
+const MAX_JAVASCRIPT_TIMESTAMP_MS = 8_640_000_000_000_000;
 
-type ClientLogLevel = "debug" | "info" | "warn" | "error";
+const clientLogEntrySchema = z
+  .object({
+    level: z.enum(["debug", "info", "warn", "error"]),
+    message: z.string().max(MAX_CLIENT_LOG_MESSAGE_LENGTH),
+    source: z.enum(["console", "window-error", "unhandled-rejection"]),
+    url: z.string().max(MAX_CLIENT_LOG_URL_LENGTH).optional(),
+    stack: z.string().max(MAX_CLIENT_LOG_STACK_LENGTH).optional(),
+    ts: z.number().int().nonnegative().max(MAX_JAVASCRIPT_TIMESTAMP_MS),
+  })
+  .strict();
+type ClientLogEntry = z.infer<typeof clientLogEntrySchema>;
 
-function coerceLevel(value: unknown): ClientLogLevel {
-  return value === "debug" ||
-    value === "info" ||
-    value === "warn" ||
-    value === "error"
-    ? value
-    : "info";
-}
-
-function clampString(value: unknown, max: number): string | undefined {
-  return typeof value === "string" ? value.slice(0, max) : undefined;
+export function parseClientLogEntry(value: unknown): ClientLogEntry | null {
+  const result = clientLogEntrySchema.safeParse(value);
+  return result.success ? result.data : null;
 }
 
 // Browser → server log forwarder. Captures console.error/warn, window.onerror
@@ -42,25 +45,23 @@ export function createClientLogsHandler(deps: {
       return;
     }
     const body = req.body as { entries?: unknown };
-    const entries = Array.isArray(body.entries) ? body.entries : [];
-    for (const raw of entries.slice(0, MAX_CLIENT_LOG_BATCH_SIZE)) {
-      if (!raw || typeof raw !== "object") continue;
-      const e = raw as Record<string, unknown>;
-      const level = coerceLevel(e.level);
-      const message =
-        typeof e.message === "string"
-          ? e.message.slice(0, MAX_CLIENT_LOG_MESSAGE_LENGTH)
-          : "<non-string>";
-      logger[level](`client: ${message}`, {
+    const rawEntries = Array.isArray(body.entries) ? body.entries : [];
+    const entries = rawEntries
+      .slice(0, MAX_CLIENT_LOG_BATCH_SIZE)
+      .map(parseClientLogEntry)
+      .filter((entry) => entry !== null);
+
+    entries.forEach((entry) => {
+      logger[entry.level](`client: ${entry.message}`, {
         phase: "web.client",
-        source: clampString(e.source, MAX_CLIENT_LOG_SOURCE_LENGTH),
-        url: clampString(e.url, MAX_CLIENT_LOG_URL_LENGTH),
-        stack: clampString(e.stack, MAX_CLIENT_LOG_STACK_LENGTH),
-        ts: e.ts,
+        source: entry.source,
+        url: entry.url,
+        stack: entry.stack,
+        ts: entry.ts,
         ua: req.get("user-agent")?.slice(0, MAX_CLIENT_LOG_USER_AGENT_LENGTH),
         ip: req.ip,
       });
-    }
+    });
     res.sendStatus(NO_CONTENT);
   };
 }

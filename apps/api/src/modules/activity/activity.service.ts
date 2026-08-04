@@ -6,10 +6,10 @@ import {
 
 export interface ActivityRepository {
   // Synthetic draft row when a lead has no section yet.
-  getLiveActivity(
+  readonly getLiveActivity: (
     reportId: string | null,
     session: UserSession,
-  ): Promise<ActivityLiveResponse>;
+  ) => Promise<ActivityLiveResponse>;
 }
 
 export type LeadershipReportResolver = () => Promise<string | null>;

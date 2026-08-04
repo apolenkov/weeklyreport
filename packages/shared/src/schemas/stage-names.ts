@@ -1,3 +1,4 @@
+/** Canonical SDLC stage label stored on report records. */
 export type StageName =
   | "Planning"
   | "Analysis"
@@ -12,7 +13,7 @@ export type StageName =
  * Reference these (e.g. `STAGE.DEVELOPMENT`) instead of bare string literals in
  * logic so the names live in exactly one place. This file is that one place.
  */
-export const STAGE = {
+export const STAGE = Object.freeze({
   PLANNING: "Planning",
   ANALYSIS: "Analysis",
   DESIGN: "Design",
@@ -20,9 +21,10 @@ export const STAGE = {
   TESTING: "Testing",
   DEVOPS: "DevOps",
   SUPPORT: "Support",
-} as const satisfies Record<string, StageName>;
+} as const satisfies Record<string, StageName>);
 
-export const STAGE_NAMES: readonly StageName[] = [
+/** Ordered canonical stage labels used to render an SDLC pipeline. */
+export const STAGE_NAMES: readonly StageName[] = Object.freeze([
   STAGE.PLANNING,
   STAGE.ANALYSIS,
   STAGE.DESIGN,
@@ -30,68 +32,47 @@ export const STAGE_NAMES: readonly StageName[] = [
   STAGE.TESTING,
   STAGE.DEVOPS,
   STAGE.SUPPORT,
-] as const;
+] as const);
 
-// Folds a stage name to a comparison key: lower-cased, with the historical
-// "Development" ↔ "Dev" alias collapsed onto a single slot. The single source of
-// the alias rule — the server ownership guard and the client dialog scoping both
-// canonicalize through here so they never disagree on whether two names refer to
-// the same pipeline stage.
 /**
- * Canonical stage-name key: lower-case with Development→Dev alias.
- * @param stageName - Stage label as stored or typed; case is irrelevant.
+ * Canonical lower-case stage key with Development and Dev collapsed to one slot.
  */
 export function normalizeStageName(stageName: string): string {
   const lower = stageName.toLowerCase();
   return lower === "development" ? "dev" : lower;
 }
 
-// True when two stage names refer to the same pipeline slot (handles the
-// "Development" ↔ "Dev" alias).
-/**
- * True when two stage labels refer to the same pipeline slot.
- * @param a - Either stage label; comparison is symmetric.
- * @param b - The other stage label.
- */
+/** True when two stage labels refer to the same pipeline slot. */
 export function stageNamesMatch(a: string, b: string): boolean {
   return normalizeStageName(a) === normalizeStageName(b);
 }
 
 const STAGE_NAME_SEPARATOR = /[,;]+/;
 
-/**
- * Split a CSV/semicolon stage field into unique trimmed names (or []).
- * @param stageName - Raw field; blank, absent or the em-dash placeholder yield [].
- */
+/** Splits a stage field into unique names; blank and em-dash values yield none. */
 export function splitStageNames(
   stageName: string | null | undefined,
-): string[] {
+): readonly string[] {
   const trimmedStageName = stageName?.trim();
   if (!trimmedStageName || trimmedStageName === "—") return [];
 
-  return [
+  return Object.freeze([
     ...new Set(
       trimmedStageName
         .split(STAGE_NAME_SEPARATOR)
         .map((name) => name.trim())
         .filter((name) => name.length > 0),
     ),
-  ];
+  ]);
 }
 
-// Whether a risk applies to a stage: prefers the structured stage-id list
-// (empty means "covers everything"), falling back to the legacy CSV
-// stageName field (absent/blank/"—" also means "covers everything") when
-// stageNames itself is absent.
 /**
- * Whether a risk applies to a stage (stageNames preferred; empty = all stages).
- * @param risk - Carries stageNames when structured, else the legacy stageName CSV.
- * @param stageName - The stage being tested for coverage.
+ * Whether a risk covers a stage; structured names win and an empty set covers all.
  */
 export function riskCoversStage(
   risk: {
-    stageName?: string | null | undefined;
-    stageNames?: readonly string[] | undefined;
+    readonly stageName?: string | null | undefined;
+    readonly stageNames?: readonly string[] | undefined;
   },
   stageName: string,
 ): boolean {

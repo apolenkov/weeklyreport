@@ -25,12 +25,9 @@ function buildPort(opts: {
   };
 }
 
-/**
- * Port whose every query rejects with `error`. Drives the DB-outage
- * fault-isolation path: each method genuinely awaits before throwing so
- * the rejection is a real async rejection (mirrors a Prisma failure) and
- * the stub satisfies the require-await lint rule without a suppression.
- */
+// Port whose every query rejects with `error`, driving the DB-outage fault-
+// isolation path. Each method genuinely awaits before throwing so the rejection
+// is real (mirrors a Prisma failure) and satisfies require-await without a suppression.
 function buildThrowingPort(error: Error): TelemetryGaugesPort {
   return {
     async onTimeRatioLastNPeriods() {
@@ -122,19 +119,20 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
     vi.restoreAllMocks();
   });
 
-  it("on-time ratio collect swallows a query rejection, logs it, and leaves the gauge unset", async () => {
+  it("on-time ratio collect clears the gauge to NaN on a query rejection (stale value is never exported as current)", async () => {
     const errorSpy = vi
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
-    // Pre-set a sentinel so we can prove the failing collect callback did
-    // NOT overwrite it — the gauge keeps its last good value for this cycle.
+    // Pre-set a sentinel so we can prove the failing collect callback cleared
+    // it — the gauge must not keep publishing 0.42 during a DB outage.
     customreportReportsOnTimeRatio.set(0.42);
     const gauges = new TelemetryGauges(buildThrowingPort(new Error("db down")));
     gauges.onModuleInit();
 
     // gaugeValue triggers the collect callback; it must resolve, not reject.
-    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the pre-set sentinel (0.42) is preserved when the query throws; exact equality is intended
-    expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.42);
+    expect(Number.isNaN(await gaugeValue(customreportReportsOnTimeRatio))).toBe(
+      true,
+    );
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("customreportReportsOnTimeRatio"),
       expect.anything(),
@@ -143,7 +141,7 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
     gauges.onModuleDestroy();
   });
 
-  it("active-leads collect swallows a query rejection, logs it, and keeps the last value", async () => {
+  it("active-leads collect clears the gauge to NaN on a query rejection", async () => {
     const errorSpy = vi
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
@@ -151,7 +149,9 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
     const gauges = new TelemetryGauges(buildThrowingPort(new Error("db down")));
     gauges.onModuleInit();
 
-    expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(7);
+    expect(Number.isNaN(await gaugeValue(customreportActiveLeadsTotal))).toBe(
+      true,
+    );
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("customreportActiveLeadsTotal"),
       expect.anything(),

@@ -38,7 +38,6 @@ interface BuildProductSubsectionsInput {
   readonly sharedCardId: string;
 }
 
-/** A subsection plus the id of the product card it belongs under. */
 interface HomedSubsection {
   readonly home: string;
   readonly subsection: GridSubsection;
@@ -129,10 +128,9 @@ interface DeriveProductCardsInput {
 }
 
 interface ProductCards {
-  /** Real products only — feeds worstStatus/onTrack, which never count the
-   * pseudo Shared card. */
+  // Real products feed worstStatus/onTrack; Shared is excluded.
   readonly realCards: readonly GridProductCard[];
-  /** realCards plus the Shared card, unless it collected no content. */
+  // Full display list, optionally including Shared when it has content.
   readonly products: readonly GridProductCard[];
 }
 

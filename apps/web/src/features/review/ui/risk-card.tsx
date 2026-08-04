@@ -1,30 +1,18 @@
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
-import {
-  canonicalStageName,
-  FOREIGN_ENTRY_OPACITY,
-  splitStageNames,
-} from "../../report-sections";
+import { FOREIGN_ENTRY_OPACITY } from "../../report-sections";
+import { canonicalRiskStageTags } from "../model/risk-stage-tags";
 import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
 
-// Prefer stageNames, fall back to legacy CSV; canonicalize so stored "Dev"
-// always displays as "Development".
-export function canonicalRiskStageTags(risk: {
-  stageNames?: readonly string[] | null | undefined;
-  stageName?: string | null | undefined;
-}): string[] {
-  const raw =
-    risk.stageNames && risk.stageNames.length > 0
-      ? risk.stageNames
-      : splitStageNames(risk.stageName);
-  return raw.map(canonicalStageName);
-}
-
-// Soft card washes — token vars only cover the severity chip, not the card.
-const BLOCKED_CARD_BG = "#fdf8f8";
-const AT_RISK_CARD_BG = "#fffcf5";
-const BLOCKED_CARD_BORDER = "rgba(200,32,20,0.15)";
-const AT_RISK_CARD_BORDER = "rgba(212,160,23,0.15)";
+// Keep the card wash softer than its chip while deriving every hue from the
+// canonical alarm tokens.
+const BLOCKED_CARD_BG =
+  "color-mix(in srgb, var(--color-status-blocked-bg) 35%, var(--color-card))";
+const AT_RISK_CARD_BG = "var(--color-status-at-risk-bg)";
+const BLOCKED_CARD_BORDER =
+  "color-mix(in srgb, var(--color-destructive) 15%, transparent)";
+const AT_RISK_CARD_BORDER =
+  "color-mix(in srgb, var(--color-status-dot-at-risk) 15%, transparent)";
 
 interface RiskCardProps {
   readonly risk: RiskEntry;
@@ -180,7 +168,7 @@ export function RiskCard({
         authorName={risk.authorName ?? sectionAuthorName}
         stageTags={state.stageTags}
         ariaLabel={`Risk stages: ${state.stageTagsLabel}`}
-        foreign={false}
+        foreign={risk.foreign === true}
         emptyStageChip={state.isActivityRisk ? "none" : "no-stage-warning"}
       />
     </div>

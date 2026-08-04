@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import { sectionToDraftPayload } from "../../report-sections";
 import {
   classifyReseed,
@@ -17,25 +18,16 @@ type SectionOverrides = Partial<
 >;
 
 function baseSection(overrides: SectionOverrides = {}): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
     projects: [
       { projectId: PROJECT_ID, projectName: "Project", trafficLight: "green" },
     ],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
     ...overrides,
-  } as ReportSectionReadModel;
+  });
 }
 
 function makeSection(

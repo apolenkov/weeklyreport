@@ -1,4 +1,4 @@
-import type { PeriodState, UserSession } from "@customreport/shared";
+import type { UserSession } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,7 @@ import {
   AdminPeriodOverlapError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserReportingGroupRequiredError,
 } from "./admin-shared";
 
 // Manual create must reach PolicyApplicatorService like saveSnapshot does.
@@ -19,7 +20,7 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
     periodStart: new Date("2026-07-06T00:00:00.000Z"),
     periodEnd: new Date("2026-07-12T23:59:59.999Z"),
     deadline: new Date("2026-07-10T15:00:00.000Z"),
-    periodState: "open" as PeriodState,
+    periodState: "open" as const,
   };
 
   const INPUT = {
@@ -27,7 +28,7 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
     periodEnd: CREATED.periodEnd,
     deadline: CREATED.deadline,
     weekLabel: null,
-    periodState: "open" as PeriodState,
+    periodState: "open" as const,
   };
 
   function fakePrisma() {
@@ -47,10 +48,9 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
   it("applies reminder policies to the freshly-created period, forwarding now", async () => {
     const applicator = fakeApplicator();
     const repo = new AdminPrismaRepository(fakePrisma(), applicator);
-    // A backfill: the new period's deadline is already in the past relative to
-    // `now`. The repository MUST forward `now` so the applicator drops elapsed
-    // reminders (the elapsed-skip logic itself is covered by the applicator's
-    // own tests); dropping `now` would arm them to fire stale on the next tick.
+    // A backfill: the new period's deadline is already past relative to `now`.
+    // The repository must forward `now` so the applicator drops elapsed
+    // reminders; dropping it would arm them to fire stale on the next tick.
     const now = new Date("2026-07-20T12:00:00.000Z");
 
     const result = await repo.createPeriodManual(INPUT, now);
@@ -80,6 +80,21 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
       "reminders DB down",
     );
   });
+
+  it.each(["published", "archived", "widened-state"])(
+    "rejects direct repository state %s before persistence",
+    async (periodState) => {
+      const prisma = fakePrisma();
+      const repo = new AdminPrismaRepository(prisma);
+      const widenedInput = { ...INPUT, periodState };
+
+      await expect(
+        // @ts-expect-error Runtime guard is planted against widened callers.
+        repo.createPeriodManual(widenedInput),
+      ).rejects.toMatchObject({ name: "ZodError" });
+      expect(prisma.report.create).not.toHaveBeenCalled();
+    },
+  );
 });
 
 // Open-boundary P2002 → AdminPeriodOverlapError (BAD_REQUEST), never a raw 500.
@@ -100,7 +115,7 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
     periodEnd: new Date("2026-07-12T23:59:59.999Z"),
     deadline: new Date("2026-07-10T15:00:00.000Z"),
     weekLabel: null,
-    periodState: "open" as PeriodState,
+    periodState: "open" as const,
   };
 
   it("createPeriodManual: P2002 → AdminPeriodOverlapError", async () => {
@@ -129,15 +144,24 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
   });
 
   it("unarchivePeriod: P2002 when unarchiving into a held boundary → AdminPeriodOverlapError", async () => {
+    const findUnique = vi.fn(() =>
+      Promise.resolve({
+        status: "draft",
+        periodState: "archived",
+        periodStatus: "open",
+        archived: true,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      }),
+    );
+    const updateMany = vi.fn(() => Promise.reject(openBoundaryP2002()));
     const prisma = {
-      report: {
-        // The unarchive reads the surviving legacy tuple, then updates into
-        // periodState='open' — which is the write that can collide.
-        findUnique: vi.fn(() =>
-          Promise.resolve({ status: "draft", periodStatus: "open" }),
-        ),
-        update: vi.fn(() => Promise.reject(openBoundaryP2002())),
-      },
+      $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+        run({ report: { findUnique, updateMany } }),
+      ),
     } as unknown as PrismaService;
     const repo = new AdminPrismaRepository(prisma);
 
@@ -250,6 +274,27 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
       );
     },
   );
+
+  it("upsertUser fails loud for a non-viewer with no reporting group, never manufacturing one", async () => {
+    const upsert = vi.fn(() =>
+      Promise.reject(new Error("must not be reached")),
+    );
+    const prisma = {
+      user: { upsert },
+      reportingGroup: { findFirst: vi.fn() },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(
+      repo.upsertUser({
+        ...USER_INPUT,
+        role: "lead",
+        reportingGroupId: null,
+      }),
+    ).rejects.toBeInstanceOf(AdminUserReportingGroupRequiredError);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(prisma.reportingGroup.findFirst).not.toHaveBeenCalled();
+  });
 
   it("attachProductToGroup re-throws a non-P2002 error unchanged", async () => {
     const original = new Error("connection reset");
@@ -421,9 +466,24 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
     });
   });
 
-  it("decideReopenRequest throws NotFound when the scoped re-load finds nothing", async () => {
+  it("decideReopenRequest re-checks group scope INSIDE the decision transaction", async () => {
+    // A scope change between a pre-transaction read and the write must be
+    // caught: the scoped re-load lives in the same transaction as the
+    // decision, so an out-of-scope request is rejected and nothing is written.
+    const tx = {
+      reopenRequest: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
+      },
+    };
+    const $transaction = vi.fn((cb: (t: typeof tx) => unknown) =>
+      Promise.resolve(cb(tx)),
+    );
     const repo = new AdminPrismaRepository({
-      reopenRequest: { findFirst: vi.fn(() => Promise.resolve(null)) },
+      $transaction,
     } as unknown as PrismaService);
 
     await expect(
@@ -435,20 +495,31 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
         session: headSession,
       }),
     ).rejects.toBeInstanceOf(AdminReopenRequestNotFoundError);
+
+    expect($transaction).toHaveBeenCalledOnce();
+    expect(tx.reopenRequest.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "req-1",
+        reportSection: {
+          author: { reportingGroupId: { in: ["group-1"] } },
+        },
+      },
+      select: { id: true, reportSectionId: true },
+    });
+    expect(tx.reopenRequest.updateMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
   });
 
   it("decideReopenRequest: a loser of a concurrent decision reports already-processed", async () => {
     const tx = {
       reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
         updateMany: vi.fn(() => Promise.resolve({ count: 0 })),
       },
     };
     const repo = new AdminPrismaRepository({
-      reopenRequest: {
-        findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
-        ),
-      },
       $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
         Promise.resolve(cb(tx)),
       ),
@@ -468,6 +539,9 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
   it("decideReopenRequest: a winning approve flips the section", async () => {
     const tx = {
       reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
       },
       reportSection: {
@@ -475,11 +549,6 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       },
     };
     const repo = new AdminPrismaRepository({
-      reopenRequest: {
-        findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
-        ),
-      },
       $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
         Promise.resolve(cb(tx)),
       ),
@@ -503,6 +572,9 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
   it("decideReopenRequest: a stale approve auto-closes to rejected", async () => {
     const tx = {
       reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
         update: vi.fn(() => Promise.resolve({})),
       },
@@ -511,11 +583,6 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       },
     };
     const repo = new AdminPrismaRepository({
-      reopenRequest: {
-        findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
-        ),
-      },
       $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
         Promise.resolve(cb(tx)),
       ),
@@ -536,6 +603,9 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
   it("decideReopenRequest: a reject skips the section flip entirely", async () => {
     const tx = {
       reopenRequest: {
+        findFirst: vi.fn(() =>
+          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
+        ),
         updateMany: vi.fn(() => Promise.resolve({ count: 1 })),
       },
       reportSection: {
@@ -543,11 +613,6 @@ describe("AdminPrismaRepository — reopen-request lifecycle", () => {
       },
     };
     const repo = new AdminPrismaRepository({
-      reopenRequest: {
-        findFirst: vi.fn(() =>
-          Promise.resolve({ id: "req-1", reportSectionId: "sec-1" }),
-        ),
-      },
       $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
         Promise.resolve(cb(tx)),
       ),

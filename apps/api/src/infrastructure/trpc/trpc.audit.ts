@@ -4,10 +4,13 @@ import {
   ANONYMOUS_USER_ID,
   NO_CORRELATION_ID,
 } from "../../lib/actor-sentinels.js";
+import { auditPersistFailuresTotal } from "../metrics/metrics.registry.js";
 import type { TrpcContext } from "./trpc.context.js";
+import { deriveCauseInfo } from "./trpc.logging.js";
 
-// Best-effort target from common id keys; productId precedes groupId
-// (product is the attached/detached entity).
+// Best-effort target from common id keys; productId precedes groupId (product
+// is the attached/detached entity). The recursive walk collects every identity
+// present; the first key found in this order is the primary target.
 const TARGET_ID_KEYS = [
   "sectionId",
   "reportId",
@@ -18,22 +21,83 @@ const TARGET_ID_KEYS = [
   "userId",
   "productId",
   "groupId",
+  // Keys appended (not inserted) so the precedence of the original set is
+  // unchanged: review anchors, section verdicts, and activity edges name
+  // their subject by keys the generic set never covered.
+  "reportSectionId",
+  "itemId",
+  "riskId",
+  "decisionId",
+  "commentId",
+  "activityId",
 ] as const;
 
 const MAX_AUDIT_REASON_LENGTH = 500;
+const REDACTION_MARKER = "[redacted]";
 
 function truncateReason(reason: string): string {
   if (reason.length <= MAX_AUDIT_REASON_LENGTH) return reason;
   return reason.slice(0, MAX_AUDIT_REASON_LENGTH).trimEnd();
 }
 
-function extractAuditTarget(raw: unknown): string | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const record = raw as Record<string, unknown>;
-  const targetKey = TARGET_ID_KEYS.find(
-    (key) => typeof record[key] === "string",
-  );
-  return targetKey ? (record[targetKey] as string) : undefined;
+function redactEmailTokens(reason: string): string {
+  return reason
+    .split(" ")
+    .map((token) => (token.includes("@") ? REDACTION_MARKER : token))
+    .join(" ");
+}
+
+// Failure reasons may carry raw input values and DB metadata (Prisma dumps the
+// whole invocation multi-line). Collapse whitespace, redact embedded emails,
+// and bound the length before the reason reaches any audit sink.
+function sanitizeAuditReason(reason: string): string {
+  const collapsed = reason.replaceAll(/\s+/g, " ").trim();
+  return truncateReason(redactEmailTokens(collapsed));
+}
+
+// Exact-key membership for the recursion's skip set, derived from the ordered
+// TARGET_ID_KEYS so the two can never drift.
+const TARGET_ID_KEY_SET = new Set<string>(TARGET_ID_KEYS);
+
+// Collects every id-key value on one object, then recurses into the non-id
+// children (nested objects and array elements).
+function collectFromRecord(
+  record: Record<string, unknown>,
+  targets: string[],
+): void {
+  for (const key of TARGET_ID_KEYS) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.length > 0) {
+      targets.push(candidate);
+    }
+  }
+  for (const [key, child] of Object.entries(record)) {
+    if (!TARGET_ID_KEY_SET.has(key)) {
+      collectAuditTargets(child, targets);
+    }
+  }
+}
+
+// Depth-first walk collecting every value stored under a target id key, at any
+// depth and in every array element. Order follows TARGET_ID_KEYS precedence at
+// each object, so the first element is the primary target.
+function collectAuditTargets(value: unknown, targets: string[]): void {
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const element of value) {
+      collectAuditTargets(element, targets);
+    }
+    return;
+  }
+  collectFromRecord(value as Record<string, unknown>, targets);
+}
+
+// All identities named by the mutation input, deduplicated in discovery order.
+// An empty result means the input named no known identity key.
+function extractAuditTargets(raw: unknown): readonly string[] {
+  const targets: string[] = [];
+  collectAuditTargets(raw, targets);
+  return [...new Set(targets)];
 }
 
 interface UserActionLogEntry {
@@ -50,9 +114,9 @@ interface UserActionLogEntry {
   readonly durationMs: number;
 }
 
-// Durable half of the audit trail. Best-effort: a persist failure is warned
-// about, never propagated, so audit bookkeeping cannot fail the mutation that
-// already succeeded. No-op for callers without a Prisma client (unit callers).
+// Durable half of the audit trail. Best-effort: a persist failure is reported
+// as an error AND a metric, never propagated, so audit bookkeeping cannot fail
+// the mutation that already succeeded. No-op without a Prisma client (unit).
 async function persistUserActionLog(
   ctx: TrpcContext,
   entry: UserActionLogEntry,
@@ -67,14 +131,14 @@ async function persistUserActionLog(
       },
     });
   } catch (error) {
-    ctx.logger.warn("user action log persist failed", {
+    // Audit rows are security-relevant: a dropped record surfaces as an error
+    // log and a rising metric, never silently.
+    auditPersistFailuresTotal.inc();
+    ctx.logger.error("user action log persist failed", {
       phase: "audit.persist",
       procedure: entry.procedure,
       status: entry.status,
-      error:
-        error instanceof Error
-          ? { name: error.name, message: error.message }
-          : { name: typeof error, message: String(error) },
+      error: deriveCauseInfo(error) ?? { name: typeof error },
     });
   }
 }
@@ -83,22 +147,27 @@ interface MutationAuditRecord {
   readonly procedure: string;
   readonly rawInput: unknown;
   readonly status: "success" | "fail";
-  // The untruncated failure message, or null on success. Only the durable row
-  // is truncated — the log stream keeps the full text.
+  // The untruncated failure message, or null on success. Both sinks get the
+  // sanitized form (whitespace-collapsed, emails redacted, length-bounded).
   readonly failureReason: string | null;
   readonly durationMs: number;
 }
 
-// Emits both halves of the mutation audit trail: the log-stream event and the
-// durable row. No before/after diff — outcome is success|fail with the failure
-// reason only.
+// Emits both halves of the mutation audit trail: log-stream event + durable
+// row. The envelope carries the primary target plus every resolved identity and
+// no before/after diff — outcome is success|fail with the failure reason only.
 export async function recordMutationAudit(
   ctx: TrpcContext,
   record: MutationAuditRecord,
 ): Promise<void> {
-  const target = extractAuditTarget(record.rawInput);
+  const targets = extractAuditTargets(record.rawInput);
+  const target = targets[0];
   const userId = ctx.session?.userId ?? ANONYMOUS_USER_ID;
   const role = ctx.session?.role ?? null;
+  const reason =
+    record.failureReason === null
+      ? null
+      : sanitizeAuditReason(record.failureReason);
 
   ctx.auditLogger.mutation({
     userId,
@@ -106,9 +175,10 @@ export async function recordMutationAudit(
     ip: ctx.ip,
     procedure: record.procedure,
     ...(target === undefined ? {} : { target }),
+    ...(targets.length > 0 ? { targets } : {}),
     status: record.status,
     duration: record.durationMs,
-    ...(record.failureReason === null ? {} : { reason: record.failureReason }),
+    ...(reason === null ? {} : { reason }),
   });
 
   await persistUserActionLog(ctx, {
@@ -117,10 +187,7 @@ export async function recordMutationAudit(
     procedure: record.procedure,
     targetId: target ?? null,
     status: record.status,
-    reason:
-      record.failureReason === null
-        ? null
-        : truncateReason(record.failureReason),
+    reason,
     durationMs: record.durationMs,
   });
 }

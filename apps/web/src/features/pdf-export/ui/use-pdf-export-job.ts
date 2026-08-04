@@ -1,6 +1,6 @@
 import { MS_PER_SECOND, type PeriodStatus } from "@customreport/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
@@ -36,7 +36,10 @@ export function usePdfExportJob({
   periodStatus,
 }: UsePdfExportJobArgs): UsePdfExportJobResult {
   const trpc = useTRPC();
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobId, setJobId] = useReducer(
+    (_current: string | null, next: string | null) => next,
+    null,
+  );
   // Held so the fallback link stays visible after jobId is cleared.
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   // One-shot guard: delivery fires exactly once per completed jobId regardless
@@ -47,12 +50,7 @@ export function usePdfExportJob({
   const openedTabRef = useRef<Window | null>(null);
   const deliveryModeRef = useRef<DeliveryMode | null>(null);
 
-  const requestMut = useMutation(
-    trpc.pdfExport.request.mutationOptions(
-      // eslint-disable-next-line react-hooks/refs -- the factory only closes over the refs; they are dereferenced inside the mutation callbacks (event time)
-      exportRequestHandlers(deliveryModeRef, openedTabRef, setJobId),
-    ),
-  );
+  const requestMut = useMutation(trpc.pdfExport.request.mutationOptions());
 
   const statusQ = useJobStatusPoll(jobId);
 
@@ -63,7 +61,6 @@ export function usePdfExportJob({
 
     if (outcome.kind === "failed") {
       settleFailedJob(outcome.message, deliveryModeRef, openedTabRef);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- polling pipeline reacting to the export job's server status — external-system sync owns this state
       setJobId(null);
       return;
     }
@@ -82,7 +79,10 @@ export function usePdfExportJob({
     if (disabled) return;
     setFallbackUrl(null);
     openDeliveryTab(deliveryModeRef, openedTabRef);
-    requestMut.mutate({ reportId });
+    requestMut.mutate(
+      { reportId },
+      exportRequestHandlers(deliveryModeRef, openedTabRef, setJobId),
+    );
   }
 
   return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };

@@ -1,14 +1,9 @@
-import type {
-  HealthCheckService,
-  HealthIndicatorResult,
-  MemoryHealthIndicator,
-} from "@nestjs/terminus";
+import { Logger } from "@nestjs/common";
+import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
-import type { Queue } from "bullmq";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema.js";
-import type { PrismaService } from "../prisma/prisma.service.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
@@ -17,6 +12,30 @@ import { RedisHealthIndicator } from "./redis.health.js";
 // lazyConnect keeps the constructed client from opening a socket; the tests
 // override the client anyway, so only the host/port shape is needed.
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+
+const explicitInjectionToken = (
+  target: abstract new (...args: never[]) => unknown,
+  index: number,
+): unknown => {
+  const metadata = Reflect.getMetadata("self:paramtypes", target) as
+    readonly { readonly index: number; readonly param: unknown }[] | undefined;
+  return metadata?.find((entry) => entry.index === index)?.param;
+};
+
+describe("health provider composition", () => {
+  it.each([
+    [RedisHealthIndicator, 0],
+    [PrismaHealthIndicator, 1],
+    [BullMQHealthIndicator, 2],
+  ] as const)(
+    "%s declares its HealthIndicatorService injection token for the tsx runtime",
+    (provider, index) => {
+      expect(explicitInjectionToken(provider, index)).toBe(
+        HealthIndicatorService,
+      );
+    },
+  );
+});
 
 describe("HealthController", () => {
   const threshold = 1_610_612_736;
@@ -31,23 +50,29 @@ describe("HealthController", () => {
         );
       },
     );
-    const health = { check } as unknown as HealthCheckService;
+    const health = { check };
     const memory = {
       checkHeap: vi.fn().mockResolvedValue({ memory_heap: { status: "up" } }),
     };
     const up = (key: string): HealthIndicatorResult => ({
       [key]: { status: "up" },
     });
-    const prismaHealth = { isHealthy: vi.fn((key: string) => up(key)) };
-    const redisHealth = { isHealthy: vi.fn((key: string) => up(key)) };
-    const bullmqHealth = { isHealthy: vi.fn((key: string) => up(key)) };
+    const prismaHealth = {
+      isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
+    };
+    const redisHealth = {
+      isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
+    };
+    const bullmqHealth = {
+      isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
+    };
     const env = { HEAP_HEALTH_THRESHOLD_BYTES: threshold } as EnvConfig;
     const controller = new HealthController(
       health,
-      memory as unknown as MemoryHealthIndicator,
-      prismaHealth as unknown as PrismaHealthIndicator,
-      redisHealth as unknown as RedisHealthIndicator,
-      bullmqHealth as unknown as BullMQHealthIndicator,
+      memory,
+      prismaHealth,
+      redisHealth,
+      bullmqHealth,
       env,
     );
     return { controller, memory, prismaHealth, redisHealth, bullmqHealth };
@@ -80,7 +105,7 @@ describe("PrismaHealthIndicator", () => {
   function makeIndicator() {
     const prisma = { $queryRaw: vi.fn() };
     const indicator = new PrismaHealthIndicator(
-      prisma as unknown as PrismaService,
+      prisma,
       new HealthIndicatorService(),
     );
     return { indicator, prisma };
@@ -102,6 +127,27 @@ describe("PrismaHealthIndicator", () => {
     const result = await indicator.isHealthy("database");
 
     expect(result).toMatchObject({ database: { status: "down" } });
+  });
+
+  it("does not leak the raw database error into the readiness body (logs it internally instead)", async () => {
+    const { indicator, prisma } = makeIndicator();
+    const errorSpy = vi
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => undefined);
+    prisma.$queryRaw.mockRejectedValue(
+      new Error('password authentication failed for user "app_user"'),
+    );
+
+    const result = await indicator.isHealthy("database");
+
+    expect(JSON.stringify(result)).not.toContain("app_user");
+    expect(JSON.stringify(result)).not.toContain("authentication");
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("database readiness check failed"),
+      expect.objectContaining({
+        error: 'password authentication failed for user "app_user"',
+      }),
+    );
   });
 });
 
@@ -164,7 +210,7 @@ describe("BullMQHealthIndicator", () => {
   function makeQueue(counts: { waiting: number; active: number }) {
     return {
       getJobCounts: vi.fn().mockResolvedValue(counts),
-    } as unknown as Queue;
+    };
   }
 
   function makeIndicator(
@@ -198,27 +244,31 @@ describe("BullMQHealthIndicator", () => {
     });
   });
 
-  it("returns down result keyed `bullmq` with message detail when a queue throws (does NOT throw)", async () => {
+  it("returns down result keyed `bullmq` without echoing the raw queue error, and logs it internally", async () => {
     const pdfQueue = {
       getJobCounts: vi.fn().mockRejectedValue(new Error("Queue unavailable")),
     };
     const emailQueue = {
       getJobCounts: vi.fn().mockResolvedValue({ waiting: 0, active: 0 }),
     };
+    const errorSpy = vi
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => undefined);
     const indicator = new BullMQHealthIndicator(
-      pdfQueue as unknown as Queue,
-      emailQueue as unknown as Queue,
+      pdfQueue,
+      emailQueue,
       new HealthIndicatorService(),
     );
 
     const result = await indicator.isHealthy("bullmq");
 
-    expect(result).toMatchObject({
-      bullmq: {
-        status: "down",
-        message: "Queue unavailable",
-      },
-    });
+    expect(result.bullmq).toMatchObject({ status: "down" });
+    expect(result.bullmq?.message).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("Queue unavailable");
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("bullmq readiness probe failed"),
+      expect.objectContaining({ error: "Queue unavailable" }),
+    );
   });
 
   it("returns down on timeout and safely absorbs a later queue rejection", async () => {
@@ -229,7 +279,7 @@ describe("BullMQHealthIndicator", () => {
     }>();
     const queue = {
       getJobCounts: vi.fn(() => pending.promise),
-    } as unknown as Queue;
+    };
     const indicator = new BullMQHealthIndicator(
       queue,
       queue,

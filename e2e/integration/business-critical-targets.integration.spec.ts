@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
+import { performAndWaitForTrpcMutation } from "./helpers/trpc-response";
 
 async function saveUnifiedActivityView(
   adminPage: Page,
@@ -12,15 +13,11 @@ async function saveUnifiedActivityView(
   await adminPage
     .getByRole("checkbox", { name: /Unified activity view/i })
     .setChecked(value);
-  await Promise.all([
-    adminPage.waitForResponse(
-      (response) =>
-        response.url().includes("/trpc/admin.updateSettings") &&
-        response.request().method() === "POST",
-      { timeout: 15_000 },
-    ),
-    adminPage.getByRole("button", { name: "Save period policy" }).click(),
-  ]);
+  await performAndWaitForTrpcMutation(
+    adminPage,
+    () => adminPage.getByRole("button", { name: "Save period policy" }).click(),
+    { procedure: "admin.updateSettings" },
+  );
   await expect(adminPage.getByText("Period policy saved")).toBeVisible();
 }
 
@@ -48,7 +45,9 @@ test.describe("Business-critical targeted journeys (integration)", () => {
       expect(persisted?.unifiedActivityView).toBe(expectedValue);
 
       await adminPage.reload();
-      await adminPage.getByRole("tab", { name: "Periods", exact: true }).click();
+      await adminPage
+        .getByRole("tab", { name: "Periods", exact: true })
+        .click();
       await expect(
         adminPage.getByRole("checkbox", { name: /Unified activity view/i }),
       ).toBeChecked({ checked: expectedValue });
@@ -87,7 +86,7 @@ test.describe("Business-critical targeted journeys (integration)", () => {
       timeout: 15_000,
     });
     await expect(
-      leadPage.getByRole("region", {
+      leadPage.getByRole("group", {
         name: "Status slide deck (use arrow keys to navigate slides)",
       }),
     ).toBeVisible();

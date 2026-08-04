@@ -66,7 +66,9 @@ export function queueSection(
     status,
     submittedAt:
       status === "submitted" ? new Date("2026-07-16T10:00:00.000Z") : null,
+    late: false,
     projects: [],
+    referencedProjects: [],
     items: [],
     risks: [],
     decisions: [],

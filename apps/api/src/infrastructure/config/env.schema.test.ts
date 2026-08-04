@@ -78,6 +78,16 @@ describe("envSchema — no defaults, every product var required", () => {
     ).toBe(false);
   });
 
+  it.each(["", " ".repeat(3)] as const)(
+    "rejects a blank OTEL_TRACES_SAMPLER_ARG (%j)",
+    (value) => {
+      expect(
+        envSchema.safeParse({ ...COMPLETE, OTEL_TRACES_SAMPLER_ARG: value })
+          .success,
+      ).toBe(false);
+    },
+  );
+
   it.each(["0", "-1", "1.5", "not-a-number"] as const)(
     "rejects a non-positive-integer HEAP_HEALTH_THRESHOLD_BYTES (%s)",
     (value) => {
@@ -98,6 +108,20 @@ describe("envSchema — no defaults, every product var required", () => {
           ...COMPLETE,
           REDIS_MAXMEMORY_BYTES: value,
         }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("accepts an omitted DLQ_ALERT_THRESHOLD", () => {
+    expect(envSchema.safeParse(COMPLETE).success).toBe(true);
+  });
+
+  it.each(["0", "-1", "1.5", "not-a-number"] as const)(
+    "rejects a malformed DLQ_ALERT_THRESHOLD (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({ ...COMPLETE, DLQ_ALERT_THRESHOLD: value })
+          .success,
       ).toBe(false);
     },
   );

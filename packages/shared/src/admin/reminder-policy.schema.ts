@@ -55,7 +55,8 @@ export const reminderPolicySchema = z
       message: "validUntil must be on or after validFrom",
       path: ["validUntil"],
     },
-  );
+  )
+  .readonly();
 
 /** Wire audience token for reminder delivery targeting. */
 export type ReminderAudience = z.infer<typeof reminderAudienceSchema>;

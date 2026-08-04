@@ -3,15 +3,19 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { createDemoSection } from "../../../test-utils/fixtures";
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { ActivityStatusStrip } from "./activity-status-strip";
 
 const ACTIVITY_ID_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ACTIVITY_ID_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function sectionWithActivities(
-  overrides: Partial<ReportSectionReadModel>,
+  overrides: ReportSectionFixture,
 ): ReportSectionReadModel {
-  return { ...createDemoSection(), ...overrides };
+  return makeReportSectionFixture({ ...createDemoSection(), ...overrides });
 }
 
 describe("ActivityStatusStrip", () => {

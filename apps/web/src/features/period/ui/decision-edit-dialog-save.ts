@@ -122,7 +122,8 @@ export function runDecisionSave(args: {
     isActivityParent: args.model.isActivityParent,
     selectedActivity: args.model.selectedActivity,
     selectedProduct: args.model.selectedProduct,
-    parentId: args.fields.parent.id,
+    parentId:
+      args.fields.parent.kind === "unresolved" ? "" : args.fields.parent.id,
     effectiveStageNames: args.model.effectiveStageNames,
     onSave: args.input.onSave,
   });

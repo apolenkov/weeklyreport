@@ -2,7 +2,7 @@ import type {
   RecordCommentView,
   ReviewAcknowledgementView,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import type {
@@ -22,7 +22,7 @@ const sectionGroupSelect = {
 } as const;
 
 interface SectionGroupRow {
-  reportSection: { author: { reportingGroupId: string | null } };
+  readonly reportSection: { author: { reportingGroupId: string | null } };
 }
 
 const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
@@ -30,7 +30,7 @@ const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
 
 @Injectable()
 export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async acknowledge(
     userId: string,

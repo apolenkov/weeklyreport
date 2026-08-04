@@ -18,22 +18,26 @@ import { scopeDiscriminator } from "../../lib/group-scope.js";
 
 // Every read takes session — sections span groups, so queries must bind group scope.
 export interface AnalyticsRepository {
-  trafficLightHistory(
+  readonly trafficLightHistory: (
     input: TrafficLightHistoryInput,
     session: UserSession,
-  ): Promise<TrafficLightHistoryOutput>;
-  leadVelocity(
+  ) => Promise<TrafficLightHistoryOutput>;
+  readonly leadVelocity: (
     input: LeadVelocityInput,
     session: UserSession,
-  ): Promise<LeadVelocityOutput>;
-  periodComparison(
+  ) => Promise<LeadVelocityOutput>;
+  readonly periodComparison: (
     input: PeriodComparisonInput,
     session: UserSession,
-  ): Promise<PeriodComparisonOutput>;
+  ) => Promise<PeriodComparisonOutput>;
 }
 
 export interface AnalyticsCachePort {
-  getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T>;
+  readonly getOrCompute: <T>(
+    key: string,
+    fn: () => Promise<T>,
+    validate?: (value: unknown) => boolean,
+  ) => Promise<T>;
 }
 
 // Under customreport:analytics: so SCAN invalidation reaches all three.
@@ -50,9 +54,10 @@ export function stableHash(value: unknown): string {
 }
 
 function stableHashObject(record: Record<string, unknown>): string {
+  // Default code-unit sort spelled as a comparator — deterministic across
+  // locales (localeCompare is not), which stable cache-key hashing requires.
   const entries = Object.keys(record)
-    // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable cache-key hashing; localeCompare would break determinism across locales
-    .sort()
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .filter((key) => record[key] !== undefined)
     .map((key) => `${JSON.stringify(key)}:${stableHash(record[key])}`);
   return `{${entries.join(",")}}`;
@@ -70,8 +75,10 @@ export class AnalyticsService {
   ): Promise<TrafficLightHistoryOutput> {
     const parsed = trafficLightHistoryInputSchema.parse(input);
     const key = `${PREFIX_HISTORY}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () =>
-      this.repository.trafficLightHistory(parsed, session),
+    const result = await this.cache.getOrCompute(
+      key,
+      () => this.repository.trafficLightHistory(parsed, session),
+      (value) => trafficLightHistoryOutputSchema.safeParse(value).success,
     );
     return trafficLightHistoryOutputSchema.parse(result);
   }
@@ -82,8 +89,10 @@ export class AnalyticsService {
   ): Promise<LeadVelocityOutput> {
     const parsed = leadVelocityInputSchema.parse(input);
     const key = `${PREFIX_VELOCITY}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () =>
-      this.repository.leadVelocity(parsed, session),
+    const result = await this.cache.getOrCompute(
+      key,
+      () => this.repository.leadVelocity(parsed, session),
+      (value) => leadVelocityOutputSchema.safeParse(value).success,
     );
     return leadVelocityOutputSchema.parse(result);
   }
@@ -94,8 +103,10 @@ export class AnalyticsService {
   ): Promise<PeriodComparisonOutput> {
     const parsed = periodComparisonInputSchema.parse(input);
     const key = `${PREFIX_COMPARISON}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () =>
-      this.repository.periodComparison(parsed, session),
+    const result = await this.cache.getOrCompute(
+      key,
+      () => this.repository.periodComparison(parsed, session),
+      (value) => periodComparisonOutputSchema.safeParse(value).success,
     );
     return periodComparisonOutputSchema.parse(result);
   }

@@ -1,6 +1,10 @@
 import { Logger, Module } from "@nestjs/common";
 
-import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
@@ -8,6 +12,7 @@ import type { AppLogger } from "../../lib/logger.js";
 import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
+  type AutoCarryOver,
   buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
   CarryOverModule,
@@ -29,7 +34,10 @@ import {
 import { AutoArchiverScheduler } from "./infrastructure/auto-archiver.scheduler.js";
 import { AutoPublisherScheduler } from "./infrastructure/auto-publisher.scheduler.js";
 import { PeriodPrismaRepository } from "./infrastructure/period.prisma-repository.js";
-import { PeriodCreatorScheduler } from "./infrastructure/period-creator.scheduler.js";
+import {
+  PERIOD_AUTO_CARRY_OVER,
+  PeriodCreatorScheduler,
+} from "./infrastructure/period-creator.scheduler.js";
 import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-telemetry.adapter.js";
 
 // Schedulers need ScheduleModule.forRoot() in AppModule and a real AuditLogger
@@ -55,8 +63,17 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         admin: SnapshotAdminService,
         telemetry: PeriodTelemetry,
         logger: AppLogger,
-      ) =>
-        new PeriodService(
+        env: EnvConfig,
+      ) => {
+        // No AI ingestion collaborator is wired; production must not silently
+        // run on the loud-stub hook, so the manual publish path fails loud at
+        // composition until a real ingestion consumer is provided.
+        if (env.NODE_ENV === "production") {
+          throw new Error(
+            "Period publish-time ingestion is not wired; a real ingestion consumer is required in production (see TODO(ingestion-consumer)).",
+          );
+        }
+        return new PeriodService(
           repo,
           () => cache.invalidateAll(),
           // Reopen-policy reader resolves the two AppSettings knobs;
@@ -69,8 +86,6 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
-          // No AI ingestion collaborator is wired; PeriodService uses its
-          // no-op default for the ingestion hook.
           undefined,
           telemetry,
           (error) => {
@@ -78,13 +93,20 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
               error: error instanceof Error ? error.message : String(error),
             });
           },
-        ),
+          (error) => {
+            logger.warn("publish side-effect failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          },
+        );
+      },
       inject: [
         PERIOD_REPOSITORY,
         AnalyticsCache,
         SnapshotAdminService,
         PERIOD_TELEMETRY,
         APP_LOGGER,
+        ENV_CONFIG,
       ],
     },
     // PolicyApplicatorService provided directly (depends only on PrismaService,
@@ -92,15 +114,12 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
     // materialise reminder rules like admin-created ones.
     PolicyApplicatorService,
     {
-      provide: PeriodCreatorScheduler,
+      provide: PERIOD_AUTO_CARRY_OVER,
       useFactory: (
         prisma: PrismaService,
-        admin: SnapshotAdminService,
-        auditLogger: AuditLogger,
-        policyApplicator: PolicyApplicatorService,
         carryOverService: CarryOverService,
         carryOverRepository: CarryOverPrismaRepository,
-      ) => {
+      ): AutoCarryOver => {
         // The carry-over orchestrator logs through a Nest Logger adapter —
         // its deps contract predates APP_LOGGER and expects the Nest shape.
         const nestLogger = new Logger("AutoCarryOver");
@@ -114,13 +133,26 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
               nestLogger.warn({ message, ...context }),
           },
         });
+        return (targetReportId) =>
+          carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId);
+      },
+      inject: [PrismaService, CarryOverService, CarryOverPrismaRepository],
+    },
+    {
+      provide: PeriodCreatorScheduler,
+      useFactory: (
+        prisma: PrismaService,
+        admin: SnapshotAdminService,
+        auditLogger: AuditLogger,
+        policyApplicator: PolicyApplicatorService,
+        autoCarryOver: AutoCarryOver,
+      ) => {
         return new PeriodCreatorScheduler(
           prisma,
           admin,
           auditLogger,
           policyApplicator,
-          (targetReportId) =>
-            carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId),
+          autoCarryOver,
         );
       },
       inject: [
@@ -128,8 +160,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         SnapshotAdminService,
         AUDIT_LOGGER,
         PolicyApplicatorService,
-        CarryOverService,
-        CarryOverPrismaRepository,
+        PERIOD_AUTO_CARRY_OVER,
       ],
     },
     {

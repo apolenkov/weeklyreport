@@ -51,7 +51,10 @@ type ScopeDeniedInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
 // failures retain the thrown reason for operational diagnosis.
 type MutationInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly procedure: string;
+  // The primary identity (first by TARGET_ID_KEYS precedence).
   readonly target?: string;
+  // Every identity the input names, nested or multiple, in discovery order.
+  readonly targets?: readonly string[];
   readonly status: "success" | "fail";
   readonly duration: number;
   readonly reason?: string;
@@ -98,14 +101,12 @@ interface PeriodAutoCreateInput {
 interface PeriodAutoPublishInput {
   readonly periodId: string;
   readonly missingSectionsCount: number;
-  /** State transition (typically open → published). */
   readonly from: PeriodState;
   readonly to: PeriodState;
 }
 
 interface PeriodAutoArchiveInput {
   readonly periodId: string;
-  /** State transition (typically published → archived). */
   readonly from: PeriodState;
   readonly to: PeriodState;
 }

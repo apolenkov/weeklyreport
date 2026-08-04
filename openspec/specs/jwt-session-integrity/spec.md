@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change harden-jwt-verify-algorithms. Update Purpose after archive.
+Protect session identity with pinned JWT algorithms, strong secrets, explicit stateless logout, SAML identity cross-checks, and one revocation-policy gate.
 
 ## Requirements
 
@@ -90,3 +90,40 @@ existing email-only match remains the accepted path.
 - **GIVEN** a stored user with email `lead1@example.com` and `samlId` `A`
 - **WHEN** a SAML profile presents email `lead1@example.com` and `samlId` `A`
 - **THEN** the session build accepts the existing user as the same identity
+
+### Requirement: The revocation check is a single fail-open/fail-closed two-tier gate
+
+Every JWT-admitting entry path carrying a human requester identity (regular
+tRPC session, requester-bound PDF-export rebuild, Bull Board admin guard) MUST
+consult the same revocation decision so a stale JWT cannot outlive a
+deactivation. The legacy PDF-export token without `requestedBy` is a narrow
+synthetic viewer session, not a human identity, and is intentionally outside
+this gate. The gate has two tiers, in order:
+
+1. Redis revoked-set fast path, **fail-OPEN**: a thrown/failed lookup must NOT
+   bar the user, otherwise a Redis outage would lock everyone out; the
+   authoritative Prisma read below is the safety net.
+2. Prisma `isActive` read, **fail-CLOSED**: a missing/`null` row OR
+   `isActive === false` bars the user. Barring the missing row closes the
+   hard-deleted-user gap — admin snapshot-restore deletes unreferenced users
+   without touching the revoked set, so the fast path never fires for them.
+
+#### Scenario: A revoked user is barred before any Prisma read
+
+- **GIVEN** a user whose id sits in the Redis revoked set
+- **WHEN** any JWT-admitting entry path runs the revocation gate
+- **THEN** access is barred without consulting the user row
+
+#### Scenario: A Redis outage does not lock users out
+
+- **GIVEN** the Redis revoked-set lookup throws
+- **WHEN** the revocation gate runs
+- **THEN** the user is NOT barred by the fast path and the Prisma `isActive`
+  read remains the deciding authority
+
+#### Scenario: A hard-deleted or deactivated user is barred
+
+- **GIVEN** a user row that is missing (hard-deleted) or carries
+  `isActive=false`
+- **WHEN** the revocation gate reaches the Prisma read
+- **THEN** access is barred

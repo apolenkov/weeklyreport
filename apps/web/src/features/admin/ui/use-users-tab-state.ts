@@ -7,6 +7,8 @@ import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { emptyForm, formFromUser, type UserFormData } from "../model/user-form";
 import {
   filterAdminUsers,
+  type UserGroupFilter,
+  type UserRoleFilter,
   type UserStatusFilter,
 } from "../model/user-table-filters";
 import { useUserMutations } from "../model/users-tab-mutations";
@@ -22,14 +24,17 @@ function canSaveUser(form: UserFormData, isSaving: boolean): boolean {
   return (
     form.lastName.trim().length > 0 &&
     form.firstName.trim().length > 0 &&
-    (form.role === "viewer" || form.groupId.length > 0) &&
+    (form.role === "viewer" || form.groupId !== null) &&
     !isSaving
   );
 }
 
 // The picker lists active groups plus — only while editing a user who still
 // sits in an archived one — that archived group, so the form never drops it.
-function useUserFormGroups(groups: AdminGroupView[], selectedGroupId: string) {
+function useUserFormGroups(
+  groups: AdminGroupView[],
+  selectedGroupId: string | null,
+) {
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
     [groups],
@@ -54,19 +59,19 @@ function useUserFormGroups(groups: AdminGroupView[], selectedGroupId: string) {
 export interface UsersFilterState {
   readonly search: string;
   readonly setSearch: (next: string) => void;
-  readonly roleFilter: string;
-  readonly setRoleFilter: (next: string) => void;
-  readonly groupFilter: string;
-  readonly setGroupFilter: (next: string) => void;
+  readonly roleFilter: UserRoleFilter;
+  readonly setRoleFilter: (next: UserRoleFilter) => void;
+  readonly groupFilter: UserGroupFilter;
+  readonly setGroupFilter: (next: UserGroupFilter) => void;
   readonly statusFilter: UserStatusFilter;
   readonly setStatusFilter: (next: UserStatusFilter) => void;
-  readonly filteredUsers: AdminUserView[];
+  readonly filteredUsers: readonly AdminUserView[];
 }
 
 function useUsersFilterState(users: AdminUserView[]): UsersFilterState {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [groupFilter, setGroupFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<UserRoleFilter>("all");
+  const [groupFilter, setGroupFilter] = useState<UserGroupFilter>(null);
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("active");
   const filteredUsers = useMemo(
     () =>

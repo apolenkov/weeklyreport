@@ -28,8 +28,8 @@ export const emptyBuckets = (): CellBuckets => ({
   decisions: [],
 });
 
-/** An activity subsection lives under its single linked product; zero or
- * multiple links place it on the Shared context card (no duplication). */
+// An activity with zero or multiple product links uses the Shared card; one
+// known link gives it a single product home.
 export function activityHomeProduct(
   linkedProducts: readonly { readonly productId: string }[],
   knownProductIds: ReadonlySet<string>,
@@ -45,9 +45,8 @@ export interface CollectedCells {
   readonly activityCells: ReadonlyMap<string, CellBuckets>;
 }
 
-/** Where a single row lands: the product-level map keyed by product id (or the
- * shared card), or the per-activity map keyed by activity id. An activity
- * parent always wins over a product parent. */
+// Activity parents win over product parents; otherwise rows use the product or
+// Shared-card key.
 interface RowPlacement {
   readonly scope: "product" | "activity";
   readonly key: string;
@@ -66,8 +65,7 @@ function placeAt(
     : { scope: "activity", key: activityId, column, row };
 }
 
-/** Group placements into per-key {@link CellBuckets}: keys in first-appearance
- * order, each column's rows in encounter order. */
+// Preserve first-seen keys and encounter order inside each column bucket.
 function bucketsByKey(
   placements: readonly RowPlacement[],
 ): ReadonlyMap<string, CellBuckets> {
@@ -143,9 +141,8 @@ function ownDecisionPlacements(
     );
 }
 
-/** Foreign rows never carry an activity parent and only land on products the
- * deck already shows — unknown-product rows are dropped, never folded to the
- * shared card. */
+// Foreign rows stay on known product cards; unknown products are dropped rather
+// than folded into Shared.
 function foreignPlacements(
   foreignRows: readonly ForeignGridRow[],
   knownProductIds: ReadonlySet<string>,
@@ -160,9 +157,8 @@ function foreignPlacements(
     }));
 }
 
-/** Distribute own + foreign rows into per-product product-level buckets and
- * per-activity buckets. Rows on unknown products fold into the shared card;
- * foreign rows land only on products the deck already shows. */
+// Own unknown-product rows fold into Shared; foreign rows remain limited to
+// products already present in the deck.
 export function collectCells(input: {
   readonly section: ReportSectionReadModel;
   readonly owner: GridAuthor;

@@ -32,7 +32,7 @@ function ReadinessHeader({
       <button
         type="button"
         aria-label="Submit report"
-        className="btn-press inline-flex min-h-10 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-5 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-10 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-5 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onSubmit}
         disabled={!readiness.canOpenConfirmation}
         title={readiness.blockingIssues[0]?.label}
@@ -78,7 +78,7 @@ export function LeadSubmitReadinessSummary({
   return (
     <section
       aria-labelledby="lead-submit-readiness-title"
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-5 shadow-sm"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm"
       data-testid="lead-submit-readiness"
     >
       <ReadinessHeader readiness={readiness} onSubmit={onSubmit} />

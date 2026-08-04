@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
@@ -14,7 +12,8 @@ import { ActivityLanesBlock } from "./activity-lanes-block";
 function laneItem(id: string): KanbanItem {
   return {
     id,
-    productId: "",
+    parent: { kind: "activity", id: "act-a" },
+    productId: null,
     productName: "Jira triage duty",
     activityId: "act-a",
     activityName: "Jira triage duty",
@@ -26,7 +25,8 @@ function laneItem(id: string): KanbanItem {
 
 const LANE: ItemColumn = {
   key: "activity:act-a",
-  productId: "",
+  parent: { kind: "activity", id: "act-a" },
+  productId: null,
   productName: "Jira triage duty",
   activityId: "act-a",
   items: [laneItem("a1"), laneItem("a2")],
@@ -61,7 +61,8 @@ describe("ActivityLanesBlock", () => {
     const user = userEvent.setup();
     const emptyLane: ItemColumn = {
       key: "activity:act-b",
-      productId: "",
+      parent: { kind: "activity", id: "act-b" },
+      productId: null,
       productName: "Ops rotation",
       activityId: "act-b",
       items: [],

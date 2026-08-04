@@ -135,16 +135,28 @@ function PeriodRow({
   );
 }
 
-// Admin-table chip tones for the states the design tokens do not cover yet
-// (only success/primary have tokens). Background + foreground are paired so a
-// tone is picked as one unit and contrast never drifts.
 const CHIP_TONE = {
-  neutral: { bg: "#e5e7eb", text: "#374151" },
+  neutral: {
+    bg: "var(--color-period-scheduled-bg)",
+    text: "var(--color-period-scheduled-fg)",
+  },
   brand: { bg: "var(--color-success)", text: "var(--color-primary)" },
-  violet: { bg: "#e8e0f0", text: "#6b21a8" },
-  muted: { bg: "#f3f4f6", text: "#6b7280" },
-  amber: { bg: "#fef3c7", text: "#92400e" },
-  red: { bg: "#fee2e2", text: "#991b1b" },
+  violet: {
+    bg: "var(--color-period-published-bg)",
+    text: "var(--color-period-published-fg)",
+  },
+  muted: {
+    bg: "var(--color-period-archived-bg)",
+    text: "var(--color-period-archived-fg)",
+  },
+  amber: {
+    bg: "var(--color-status-at-risk-bg)",
+    text: "var(--color-status-at-risk-fg)",
+  },
+  red: {
+    bg: "var(--color-status-blocked-bg)",
+    text: "var(--color-destructive-emphasis)",
+  },
 } as const;
 
 const STATE_BADGE_STYLES: Record<

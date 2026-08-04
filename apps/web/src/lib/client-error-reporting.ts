@@ -9,34 +9,18 @@ export type ClientErrorDetails = Readonly<{
   httpStatus: number | null;
   trpcCode: string | null;
   isInternal: boolean;
-  /**
-   * Any deterministic client-side error (HTTP 4xx). Retrying it cannot succeed,
-   * so the query client skips retries for it. Broader than
-   * {@link ClientErrorDetails.isInvalidLink}: covers 401/403/429 too.
-   */
+  // Any 4xx is deterministic for retry policy, including 401/403/429.
   isDeterministicClientError: boolean;
-  /**
-   * A malformed-input (`BAD_REQUEST` / Zod / HTTP 400) or not-found
-   * (`NOT_FOUND` / HTTP 404) error. Its `error.message` (often a serialized Zod
-   * issues array with the UUID `pattern` regex) MUST be replaced by a clean
-   * "invalid link / not found" message and MUST NOT be echoed to the user.
-   * Narrower than {@link ClientErrorDetails.isDeterministicClientError}: a
-   * 401/403/429 keeps its own message.
-   */
+  // Invalid-link errors must replace raw Zod/UUID messages before user display;
+  // other 4xx messages remain specific to their auth/rate-limit failure.
   isInvalidLink: boolean;
 }>;
 
-/** Lowest HTTP status treated as a deterministic client error. */
 const CLIENT_ERROR_STATUS_MIN = 400;
-/** HTTP status for a malformed request (Zod validation failure). */
 const HTTP_BAD_REQUEST = 400;
-/** HTTP status for a missing resource. */
 const HTTP_NOT_FOUND = 404;
-/** Lowest HTTP status treated as a transient/internal server error. */
 const SERVER_ERROR_STATUS_MIN = 500;
-/** tRPC error codes that map to the clean invalid-link / not-found message. */
 const INVALID_LINK_TRPC_CODES = new Set(["BAD_REQUEST", "NOT_FOUND"]);
-/** HTTP statuses that map to the clean invalid-link / not-found message. */
 const INVALID_LINK_HTTP_STATUSES = new Set([HTTP_BAD_REQUEST, HTTP_NOT_FOUND]);
 
 function computeIsDeterministicClientError(

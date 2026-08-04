@@ -122,6 +122,7 @@ function buildFallbackPeriodNav(
   return [
     {
       id: period.id,
+      periodStart: period.periodStart,
       sourceSectionId: "",
       weekLabel: period.weekLabel,
       dateRange: period.dateRange,

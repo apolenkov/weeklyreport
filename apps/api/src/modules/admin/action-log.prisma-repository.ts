@@ -1,21 +1,27 @@
-import { Injectable } from "@nestjs/common";
+import { ACTION_LOG_PROOF_CORRELATION_PREFIX } from "@customreport/shared";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { ActionLogRepository, ActionLogRow } from "./action-log.service";
-
 @Injectable()
 export class ActionLogPrismaRepository implements ActionLogRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  listActionLog(pagination: {
-    limit: number;
-    cursor?: string;
-  }): Promise<ActionLogRow[]> {
+  readonly listActionLog = (pagination: {
+    readonly limit: number;
+    readonly cursor?: string;
+  }): Promise<ActionLogRow[]> => {
     return this.prisma.userActionLog.findMany({
+      // Internal proof rows must not consume page budget or pollute the log.
+      where: {
+        correlationId: {
+          not: { startsWith: ACTION_LOG_PROOF_CORRELATION_PREFIX },
+        },
+      },
       take: pagination.limit,
       skip: pagination.cursor ? 1 : 0,
       ...(pagination.cursor ? { cursor: { id: pagination.cursor } } : {}),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
-  }
+  };
 }

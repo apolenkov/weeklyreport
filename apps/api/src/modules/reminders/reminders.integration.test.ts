@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -16,7 +17,7 @@ describe("RemindersPrismaRepository (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
-    repo = new RemindersPrismaRepository(prisma as never);
+    repo = new RemindersPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {
@@ -81,6 +82,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       data: {
         id: TEST_IDS.reminderExec1,
         ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead-a@test.local",
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-04`,
         status: "sent",
         sentAt: new Date("2026-04-04T09:00:00.000Z"),
@@ -91,6 +93,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       data: {
         id: TEST_IDS.reminderExec2,
         ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead-b@test.local",
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
         status: "pending",
       },
@@ -273,6 +276,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       data: {
         id: TEST_IDS.reminderExec1,
         ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead@test.local",
         dedupeKey: "stuck-queued",
         status: "pending",
         createdAt: old,
@@ -283,6 +287,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       data: {
         id: TEST_IDS.reminderExec2,
         ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead@test.local",
         dedupeKey: "stuck-sending",
         status: "sending",
         createdAt: old,
@@ -293,6 +298,7 @@ describe("RemindersPrismaRepository (integration)", () => {
       data: {
         id: "a0000000-0000-4000-a000-0000000000f5",
         ruleId: TEST_IDS.reminderRule,
+        recipientEmail: "lead@test.local",
         dedupeKey: "fresh-queued",
         status: "pending",
         createdAt: fresh,

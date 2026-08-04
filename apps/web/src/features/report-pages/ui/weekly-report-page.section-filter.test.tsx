@@ -203,6 +203,7 @@ const TWO_PRODUCT_OVERVIEW = [
     worstStatus: "green" as const,
     stageCount: 1,
     leadNames: ["Alice"],
+    leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
   },
   {
     productId: PRODUCT_ID_B,
@@ -210,6 +211,7 @@ const TWO_PRODUCT_OVERVIEW = [
     worstStatus: "yellow" as const,
     stageCount: 1,
     leadNames: ["Bob"],
+    leadIds: ["d4b211c1-c97a-5853-b0e3-68e82c3c1bd7"],
   },
 ];
 

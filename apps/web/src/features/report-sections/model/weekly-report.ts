@@ -1,18 +1,12 @@
 // Maps weeklyReport.get into page slices; re-slices leadSections by projectId
 // and re-exports types/groupers so existing importers stay stable.
-import type {
-  TrafficLightStatus,
-  WeeklyReportReadModel,
-} from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
 } from "../../../lib/format-date";
-import {
-  statusLabel,
-  worstTrafficStatus,
-} from "../../../lib/status-presentation";
+import { statusLabel } from "../../../lib/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
   buildProjectNameMap,
@@ -46,6 +40,7 @@ function buildWeeklyReportPeriod(
 ): WeeklyReportPeriod {
   return {
     id: api.reportId,
+    periodStart: api.periodStart,
     reportId: api.reportId,
     periodStatus: api.periodStatus,
     archived: api.archived,
@@ -174,24 +169,35 @@ export function mapWeeklyReportLeadGroups(
     .filter((group) => group.products.length > 0);
 }
 
-function productStatusToTraffic(
-  status: WeeklyProductStatus,
-): TrafficLightStatus {
-  if (status === "blocked") return "red";
-  if (status === "at-risk") return "yellow";
-  return "green";
-}
+const PRODUCT_STATUS_PRECEDENCE: Readonly<Record<WeeklyProductStatus, number>> =
+  Object.freeze({
+    empty: 0,
+    "on-track": 1,
+    "at-risk": 2,
+    blocked: 3,
+  });
 
 function compareProductStatus(
   left: WeeklyProductStatus,
   right: WeeklyProductStatus,
 ): number {
-  if (left === right) return 0;
-  const leftTraffic = productStatusToTraffic(left);
-  return worstTrafficStatus([leftTraffic, productStatusToTraffic(right)]) ===
-    leftTraffic
-    ? -1
-    : 1;
+  return PRODUCT_STATUS_PRECEDENCE[right] - PRODUCT_STATUS_PRECEDENCE[left];
+}
+
+function worstProductStatus(
+  products: readonly WeeklyProductReport[],
+): WeeklyProductStatus {
+  const first = products[0];
+  if (!first) return "empty";
+  return products
+    .slice(1)
+    .reduce(
+      (worst, product) =>
+        compareProductStatus(product.status, worst) < 0
+          ? product.status
+          : worst,
+      first.status,
+    );
 }
 
 // Overview rows inherit the groups' content filter (decisions-only leads keep a
@@ -212,13 +218,7 @@ export function mapWeeklyReportLeadOverview(
     .map((group) => ({
       id: group.id,
       name: group.name,
-      worstStatus: trafficToProductStatus(
-        worstTrafficStatus(
-          group.products.map((product) =>
-            productStatusToTraffic(product.status),
-          ),
-        ),
-      ),
+      worstStatus: worstProductStatus(group.products),
       currentCount: sumOver(group.products, (p) => p.currentWeek.length),
       nextCount: sumOver(group.products, (p) => p.nextWeek.length),
       riskCount: sumOver(group.products, (p) => p.risks.length),

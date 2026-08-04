@@ -69,7 +69,7 @@ export function createSessionCookie({
   maxAgeSeconds?: number;
 }): string {
   return stringifySetCookie({
-    name: resolveSessionCookieName(env),
+    name: resolveSessionCookieName(env.AUTH_JWT_COOKIE_NAME),
     value: token,
     httpOnly: true,
     secure: env.NODE_ENV === "production",

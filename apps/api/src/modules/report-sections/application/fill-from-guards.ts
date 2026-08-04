@@ -30,14 +30,9 @@ export async function assertFillableTarget(
   return target;
 }
 
-/**
- * Resolve-not-delete also binds Fill From: it delete-recreates the target's
- * items/decisions with fresh identity, which would silently destroy any
- * published-lineage record on a REOPENED period (the caller's periodStatus gate
- * only blocks a still-published one). Fail closed — reject the whole fill if the
- * target holds any published-lineage record; a never-published draft has none
- * and is unaffected. The same lineage query the save guard uses.
- */
+// Resolve-not-delete binds Fill From: delete-recreating items/decisions would
+// silently destroy published-lineage records on a REOPENED period. Fail closed
+// when the target holds any lineage; a never-published draft has none.
 export async function assertNoPublishedLineage(
   repository: LeadFormRepository,
   target: Parameters<LeadFormRepository["getPublishedLineage"]>[0],
@@ -54,14 +49,9 @@ export async function assertNoPublishedLineage(
   }
 }
 
-/**
- * Authorize the SOURCE section. The fill-from picker only ever offers the lead's
- * OWN past sections (`LeadReportPeriod.sourceSectionId` is sourced from
- * `MyHistoryEntry.sectionId`), so any sourceSectionId authored by someone else
- * is a forged request — without this guard a lead could copy another group's
- * Item/Risk/Decision content into their own draft on an open report. fillFrom
- * copies your own history; it is never cross-author.
- */
+// Authorize the SOURCE section: the picker only offers the lead's OWN past
+// sections, so a foreign sourceSectionId is a forged request — without this a
+// lead could copy another group's content into their own draft. Never cross-author.
 export async function assertFillableSource(
   repository: LeadFormRepository,
   sourceSectionId: string,

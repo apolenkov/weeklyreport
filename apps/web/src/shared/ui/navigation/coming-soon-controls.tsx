@@ -1,9 +1,6 @@
 import { ComingSoonIconButton } from "@customreport/ui/components/coming-soon-control";
 import { Globe2, Moon } from "lucide-react";
 
-/**
- * Language Coming Soon Control.
- */
 export function LanguageComingSoonControl() {
   // TODO(i18n-future): replace this inert control with a real locale switch
   // when the dedicated i18n phase introduces dictionaries and routing.
@@ -17,9 +14,6 @@ export function LanguageComingSoonControl() {
   );
 }
 
-/**
- * Theme Coming Soon Control.
- */
 export function ThemeComingSoonControl() {
   // TODO(theme-future): replace this inert control with a real theme switch
   // once theming is promoted into a milestone.

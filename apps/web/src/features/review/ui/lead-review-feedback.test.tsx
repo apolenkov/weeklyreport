@@ -25,7 +25,12 @@ function sectionWith(
   overrides: Partial<
     Pick<
       ReportSectionReadModel,
-      "projects" | "items" | "risks" | "decisions" | "activities"
+      | "projects"
+      | "referencedProjects"
+      | "items"
+      | "risks"
+      | "decisions"
+      | "activities"
     >
   >,
 ): ReportSectionReadModel {
@@ -33,6 +38,7 @@ function sectionWith(
     projects: [
       { projectId: "p1", projectName: "Product Alpha", trafficLight: null },
     ],
+    referencedProjects: [],
     items: [],
     risks: [],
     decisions: [],

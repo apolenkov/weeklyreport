@@ -4,7 +4,6 @@ import type {
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-/** One rendered section's review state for a per-section verdict surface. */
 export interface SectionReviewRow {
   readonly reportSectionId: string;
   readonly version: number;
@@ -15,11 +14,7 @@ export interface SectionReviewRow {
   readonly groupId: string | null;
 }
 
-/**
- * Project the live read model's lead sections onto the per-section review rows.
- * Shared by the head dashboard roll-up strip and the in-report review-mode
- * verdict band so both read the same shape from one place.
- */
+// One projection feeds both the head roll-up strip and in-report verdict band.
 export function toSectionReviewRows(
   leadSections: WeeklyReportReadModel["leadSections"],
 ): SectionReviewRow[] {
@@ -28,7 +23,7 @@ export function toSectionReviewRows(
     version: section.version,
     authorName: section.authorName,
     status: section.status,
-    reviews: section.reviews ?? [],
+    reviews: section.reviews,
     canReview: section.canReview ?? false,
     groupId: section.groupId ?? null,
   }));

@@ -1,7 +1,10 @@
+import { useState } from "react";
+
 import type { PolicyFormState } from "../model/reminders-form-state";
 import {
   getOffsetAmount,
   getOffsetUnit,
+  OFFSET_UNITS,
   type OffsetUnit,
   offsetUnitFactor,
 } from "../model/reminders-tab-format";
@@ -10,11 +13,15 @@ import {
   POLICY_FORM_LABEL_CLASS,
 } from "./policy-form-styles";
 
-// Blank / negative / non-numeric input reads as 0 so the stored offset can
-// never become NaN minutes.
-function parseOffsetMagnitude(raw: string): number {
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+// Strict parse: blank, negative, or non-numeric text yields null so the caller
+// keeps the raw draft text and surfaces a validation error instead of silently
+// storing a 0 offset (no-fallback policy).
+function parseOffsetMagnitude(raw: string): number | null {
+  const text = raw.trim();
+  if (text === "") return null;
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 // Stored offset is signed minutes; "before deadline" is the negative side.
@@ -38,26 +45,60 @@ interface OffsetControlProps {
     unit: OffsetUnit,
     beforeDeadline: boolean,
   ) => void;
+  readonly onValidityChange?: ((valid: boolean) => void) | undefined;
 }
 
+// Keeps the raw draft text and commits only a parsed non-negative magnitude;
+// invalid input surfaces an inline error instead of silently becoming 0.
 function OffsetAmountInput({
   magnitude,
   unit,
   beforeDeadline,
   applyOffset,
+  onValidityChange,
 }: OffsetControlProps) {
+  const [raw, setRaw] = useState(() => String(magnitude));
+  const [error, setError] = useState<string | null>(null);
+  // Render-phase adjust: reseed raw text when the committed magnitude changes
+  // externally (e.g. unit switch) without an effect.
+  const [committedValue, setCommittedValue] = useState(magnitude);
+  if (committedValue !== magnitude) {
+    setCommittedValue(magnitude);
+    setRaw(String(magnitude));
+    setError(null);
+  }
+
+  function handleChange(text: string) {
+    setRaw(text);
+    const parsed = parseOffsetMagnitude(text);
+    if (parsed === null) {
+      setError("Enter a non-negative number");
+      onValidityChange?.(false);
+      return;
+    }
+    setError(null);
+    onValidityChange?.(true);
+    applyOffset(parsed, unit, beforeDeadline);
+  }
+
   return (
-    <input
-      id="policy-offset-minutes"
-      type="number"
-      min={0}
-      value={magnitude}
-      onChange={(e) =>
-        applyOffset(parseOffsetMagnitude(e.target.value), unit, beforeDeadline)
-      }
-      aria-label="reminder offset amount"
-      className={POLICY_FORM_INPUT_CLASS}
-    />
+    <div>
+      <input
+        id="policy-offset-minutes"
+        type="number"
+        min={0}
+        aria-invalid={error !== null}
+        value={raw}
+        onChange={(e) => handleChange(e.target.value)}
+        aria-label="reminder offset amount"
+        className={POLICY_FORM_INPUT_CLASS}
+      />
+      {error !== null && (
+        <p className="text-xs text-[var(--color-destructive)]" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -66,19 +107,30 @@ function OffsetUnitSelect({
   unit,
   beforeDeadline,
   applyOffset,
+  onValidityChange,
 }: OffsetControlProps) {
   return (
     <select
       aria-label="reminder offset unit"
       value={unit}
-      onChange={(e) =>
-        applyOffset(magnitude, e.target.value as OffsetUnit, beforeDeadline)
-      }
+      onChange={(e) => {
+        onValidityChange?.(true);
+        // The option list and the union stay in lockstep via OFFSET_UNITS;
+        // a value outside it is rejected rather than asserted.
+        const nextUnit = (OFFSET_UNITS as readonly string[]).includes(
+          e.target.value,
+        )
+          ? (e.target.value as OffsetUnit)
+          : unit;
+        applyOffset(magnitude, nextUnit, beforeDeadline);
+      }}
       className={POLICY_FORM_INPUT_CLASS}
     >
-      <option value="minutes">minutes</option>
-      <option value="hours">hours</option>
-      <option value="days">days</option>
+      {OFFSET_UNITS.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
     </select>
   );
 }
@@ -88,14 +140,16 @@ function OffsetDirectionSelect({
   unit,
   beforeDeadline,
   applyOffset,
+  onValidityChange,
 }: OffsetControlProps) {
   return (
     <select
       aria-label="before or after deadline"
       value={beforeDeadline ? "before" : "after"}
-      onChange={(e) =>
-        applyOffset(magnitude, unit, e.target.value === "before")
-      }
+      onChange={(e) => {
+        onValidityChange?.(true);
+        applyOffset(magnitude, unit, e.target.value === "before");
+      }}
       className={POLICY_FORM_INPUT_CLASS}
     >
       <option value="before">before deadline</option>
@@ -107,11 +161,13 @@ function OffsetDirectionSelect({
 export function ReminderOffsetRow({
   form,
   onChange,
+  onValidityChange,
 }: {
   readonly form: PolicyFormState;
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
+  readonly onValidityChange?: (valid: boolean) => void;
 }) {
   // Offset shown to admins as a positive number + before/after toggle.
   const beforeDeadline = form.offsetMinutes <= 0;
@@ -123,7 +179,13 @@ export function ReminderOffsetRow({
       ...prev,
       offsetMinutes: signedOffsetMinutes(amount, toUnit, before),
     }));
-  const controls = { magnitude, unit, beforeDeadline, applyOffset };
+  const controls = {
+    magnitude,
+    unit,
+    beforeDeadline,
+    applyOffset,
+    onValidityChange,
+  };
 
   return (
     <div className="min-w-0 md:col-span-2">

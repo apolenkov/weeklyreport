@@ -102,25 +102,27 @@ function useRemindLead({
   );
 
   const mutation = useMutation(
-    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
-    trpc.reminders.dispatchPending.mutationOptions({
-      onSuccess: (result) => {
-        setConfirm(confirmStateFromDispatch(result));
-        onMutated();
-        scheduleReset();
-      },
-      onError: () => {
-        setConfirm("error");
-        scheduleReset();
-      },
-    }),
+    trpc.reminders.dispatchPending.mutationOptions(),
   );
 
   return {
     confirm,
     busy: mutation.isPending,
     send: () => {
-      mutation.mutate({ reportId, leadId });
+      mutation.mutate(
+        { reportId, leadId },
+        {
+          onSuccess: (result) => {
+            setConfirm(confirmStateFromDispatch(result));
+            onMutated();
+            scheduleReset();
+          },
+          onError: () => {
+            setConfirm("error");
+            scheduleReset();
+          },
+        },
+      );
     },
   };
 }
@@ -166,7 +168,7 @@ export function RemindLeadButton({
         aria-label={`Send reminder to ${leadName}`}
         title={`Send reminder to ${leadName}`}
         data-testid="remind-lead-button"
-        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
+        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >
         <ConfirmIcon confirm={confirm} busy={busy} />
         <span>{label}</span>

@@ -3,7 +3,9 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { hasText } from "./slide-grid-rows";
 
 export interface GridPriorityCard {
-  readonly id: string;
+  // null when the item carries neither id nor stableId — the render key falls
+  // back to array position locally; no positional identity is fabricated.
+  readonly id: string | null;
   readonly productId: string;
   readonly rank: number;
   readonly text: string;
@@ -22,7 +24,7 @@ export function buildPriorityStrip(input: {
   readonly sharedCardName: string;
 }): readonly GridPriorityCard[] {
   const { section, knownProductIds, productNameById, activityHomeById } = input;
-  const cards = section.items.flatMap((item, index) => {
+  const cards = section.items.flatMap((item) => {
     const rank = item.priorityRank;
     if (rank == null || !hasText(item.text)) return [];
     const homeProductId =
@@ -33,7 +35,7 @@ export function buildPriorityStrip(input: {
           : input.sharedCardId;
     return [
       {
-        id: item.id ?? item.stableId ?? `priority-${String(index)}`,
+        id: item.id ?? item.stableId ?? null,
         productId: homeProductId,
         rank,
         text: item.text.trim(),

@@ -19,10 +19,8 @@ import {
   useReminderPolicyMutations,
 } from "../model/reminders-tab-mutations";
 
-/**
- * The inline editor is mutually exclusive: a new reminder renders at the top
- * of the list ("add"), and editing replaces a single card in place ("edit").
- */
+// The inline editor is mutually exclusive: add renders above the list, while
+// edit replaces one card in place.
 export type RemindersEditor =
   | { readonly mode: "closed" }
   | { readonly mode: "add" }
@@ -70,27 +68,35 @@ function useReminderEditor(
   const [form, setForm] = useState<PolicyFormState>(() =>
     emptyPolicyForm(defaultTimezone),
   );
+  // Offset magnitude validity reported up from the form; an empty/malformed
+  // keystroke keeps the raw text and blocks Save until a valid value is entered.
+  const [offsetValid, setOffsetValid] = useState(true);
   const validityValid = useMemo(() => {
+    if (!offsetValid) return false;
     if (form.foreverChecked) return true;
     if (form.validUntilIso === null) return true;
     return form.validUntilIso >= form.validFromIso;
-  }, [form.foreverChecked, form.validFromIso, form.validUntilIso]);
+  }, [form.foreverChecked, form.validFromIso, form.validUntilIso, offsetValid]);
 
   return {
     editor,
     form,
     setForm,
     validityValid,
+    setOffsetValid,
     closeEditor: () => {
       setEditor({ mode: "closed" });
       setForm(emptyPolicyForm(defaultTimezone));
+      setOffsetValid(true);
     },
     handleNewReminder: () => {
       setForm(emptyPolicyForm(defaultTimezone));
+      setOffsetValid(true);
       setEditor({ mode: "add" });
     },
     handleEditReminder: (policy: AdminReminderPolicyView) => {
       setForm(policyToForm(policy));
+      setOffsetValid(true);
       setEditor({ mode: "edit", id: policy.id });
     },
   };

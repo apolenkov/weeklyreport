@@ -183,7 +183,7 @@ export function ActivityStatusStrip({
     <section
       aria-label="Project activities"
       data-testid="activity-status-strip"
-      className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+      className="rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--card-surface-gradient)] p-4 shadow-[0_1px_2px_var(--color-border-subtle)]"
     >
       <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
         Project Activities

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   type FloorSnapshot,
+  parseFloorSnapshot,
   ratchetViolations,
 } from "./exemplary-floor-ratchet.ts";
 
@@ -104,4 +105,14 @@ void test("a mismatched justification does not weaken the ratchet", () => {
 void test("product file count is exact for the tree but not directional in history", () => {
   const reclassified = changed({ productTotal: 924 });
   assert.deepEqual(ratchetViolations(reclassified, reclassified, BASELINE), []);
+});
+
+void test("baseline parsing rejects a non-array regression list", () => {
+  assert.throws(
+    () =>
+      parseFloorSnapshot(
+        JSON.stringify({ ...BASELINE, justifiedRegressions: "approved" }),
+      ),
+    /justified regressions list/,
+  );
 });

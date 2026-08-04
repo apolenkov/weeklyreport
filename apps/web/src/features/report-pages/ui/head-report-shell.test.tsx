@@ -1,9 +1,7 @@
-/**
- * @vitest-environment jsdom
- *
- * Head shell routes document actions and context controls into the two-row
- * ReportToolbar, plus a header context label beside the title.
- */
+// @vitest-environment jsdom
+//
+// Head shell routes document actions and context controls into the two-row
+// ReportToolbar, plus a header context label beside the title.
 
 import "@testing-library/jest-dom/vitest";
 
@@ -11,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { makeQueryState } from "../../../test-utils/query-state";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
@@ -95,19 +95,9 @@ vi.mock("@tanstack/react-query", async () => {
     useQuery: vi.fn((opts: { queryKey?: unknown[] }) => {
       const key = opts.queryKey?.[0];
       if (key === "weeklyReport.get") {
-        return {
-          data: { status: "no-period" },
-          isLoading: false,
-          isError: false,
-          error: null,
-        };
+        return makeQueryState({ data: { status: "no-period" } });
       }
-      return {
-        data: { entries: [] },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
+      return makeQueryState({ data: { entries: [] } });
     }),
     // ExportPdfButton (rendered in the shell toolbar trailing group) calls
     // useMutation for pdfExport.request. Stub it so the shell mounts without a
@@ -190,10 +180,10 @@ describe("HeadReportShell — context control cluster", () => {
   // Wire an ACTIVE displayed period so the shell's Export-PDF renders (it is
   // gated on an active, resolvable period). compiledHistory stays empty.
   function wireActivePeriod() {
-    const impl = (opts: { queryKey?: unknown[] }) => {
-      const key = opts.queryKey?.[0];
+    const impl = (opts: Parameters<typeof useQuery>[0]) => {
+      const key = opts.queryKey[0];
       if (key === "weeklyReport.get") {
-        return {
+        return makeQueryState({
           data: {
             status: "active",
             reportId: TEST_REPORT_ID,
@@ -201,19 +191,11 @@ describe("HeadReportShell — context control cluster", () => {
             periodEnd: "2026-06-14T00:00:00.000Z",
             periodStatus: "published",
           },
-          isLoading: false,
-          isError: false,
-          error: null,
-        };
+        });
       }
-      return {
-        data: { entries: [] },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
+      return makeQueryState({ data: { entries: [] } });
     };
-    vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
+    vi.mocked(useQuery).mockImplementation(impl);
   }
 
   it("renders the toggles and agent-review in the context controls, with NO Present/Print links", () => {
@@ -290,6 +272,32 @@ describe("HeadReportShell — context control cluster", () => {
       screen.queryByRole("link", { name: /print/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("surfaces a history-query failure instead of silently truncating period navigation", () => {
+    const impl = (opts: Parameters<typeof useQuery>[0]) => {
+      const key = opts.queryKey[0];
+      if (key === "weeklyReport.get") {
+        return makeQueryState({
+          data: {
+            status: "active",
+            reportId: TEST_REPORT_ID,
+            periodStart: "2026-06-08T00:00:00.000Z",
+            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStatus: "published",
+          },
+        });
+      }
+      return makeQueryState({ data: undefined, error: new Error("boom") });
+    };
+    vi.mocked(useQuery).mockImplementation(impl);
+
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+
+    expect(screen.getByTestId("head-history-error")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Select reporting period" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 // Navigator must show the addressed active week, not fall back to periods[0].
@@ -310,10 +318,10 @@ describe("HeadReportShell — period navigator shows addressed week", () => {
   // Wire useQuery so compiledHistory carries two published weeks and
   // weeklyReport.get returns the active (open) period for the displayed id.
   function wireQueries() {
-    const impl = (opts: { queryKey?: unknown[] }) => {
-      const key = opts.queryKey?.[0];
+    const impl = (opts: Parameters<typeof useQuery>[0]) => {
+      const key = opts.queryKey[0];
       if (key === "weeklyReport.get") {
-        return {
+        return makeQueryState({
           data: {
             status: "active",
             reportId: ACTIVE_ID,
@@ -321,12 +329,9 @@ describe("HeadReportShell — period navigator shows addressed week", () => {
             periodEnd: ACTIVE_END,
             periodStatus: "open",
           },
-          isLoading: false,
-          isError: false,
-          error: null,
-        };
+        });
       }
-      return {
+      return makeQueryState({
         data: {
           entries: [
             {
@@ -343,12 +348,9 @@ describe("HeadReportShell — period navigator shows addressed week", () => {
             },
           ],
         },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
+      });
     };
-    vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
+    vi.mocked(useQuery).mockImplementation(impl);
   }
 
   it("trigger shows the active week (not the latest published) on /head/report/<activeId>", () => {
@@ -410,12 +412,12 @@ describe("HeadReportShell — active week reachable from a published week", () =
   // the DISPLAYED query (reportId=PUBLISHED_ID) returns the published week, the
   // ACTIVE query (reportId=null, i.e. `{}`) returns the current open week.
   function wirePublishedView() {
-    const impl = (opts: { queryKey?: unknown[] }) => {
-      const key = opts.queryKey?.[0];
+    const impl = (opts: Parameters<typeof useQuery>[0]) => {
+      const key = opts.queryKey[0];
       if (key === "weeklyReport.get") {
-        const requestedReportId = opts.queryKey?.[1];
+        const requestedReportId = opts.queryKey[1];
         if (requestedReportId === null) {
-          return {
+          return makeQueryState({
             data: {
               status: "active",
               reportId: ACTIVE_ID,
@@ -423,12 +425,9 @@ describe("HeadReportShell — active week reachable from a published week", () =
               periodEnd: "2026-06-14T00:00:00.000Z",
               periodStatus: "open",
             },
-            isLoading: false,
-            isError: false,
-            error: null,
-          };
+          });
         }
-        return {
+        return makeQueryState({
           data: {
             status: "active",
             reportId: PUBLISHED_ID,
@@ -436,12 +435,9 @@ describe("HeadReportShell — active week reachable from a published week", () =
             periodEnd: "2026-05-24T00:00:00.000Z",
             periodStatus: "published",
           },
-          isLoading: false,
-          isError: false,
-          error: null,
-        };
+        });
       }
-      return {
+      return makeQueryState({
         data: {
           entries: [
             {
@@ -452,12 +448,9 @@ describe("HeadReportShell — active week reachable from a published week", () =
             },
           ],
         },
-        isLoading: false,
-        isError: false,
-        error: null,
-      };
+      });
     };
-    vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
+    vi.mocked(useQuery).mockImplementation(impl);
   }
 
   it("offers the current week as an option while viewing a published week", async () => {

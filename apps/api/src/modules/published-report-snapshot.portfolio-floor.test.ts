@@ -5,6 +5,11 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  makeProjectReadModel,
+  makeReportSectionReadModel,
+  makeSectionActivity,
+} from "../test-utils/report-section-fixtures.js";
+import {
   buildAssembledReportFromPrismaRow,
   buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
@@ -19,31 +24,47 @@ const SECOND_PRODUCT = "65064b76-3bec-428d-b2f6-7bf30476909a";
 const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
 const SECOND_STAGE_ID = "71e9d6a6-7455-4864-8de9-a48b2f25b13f";
 const OWNED_STAGE_NAME = "Development";
-function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel {
-  return reportSectionReadModelSchema.parse({
-    reportSectionId: SECTION_ID,
-    reportId: REPORT_ID,
-    authorId: AUTHOR_ID,
-    authorName: "Alice Lead",
-    version: 1,
-    status: "submitted",
-    submittedAt: null,
-    projects: [
-      {
-        projectId: OWNED_PRODUCT,
-        projectName: "CRM Portal",
-        trafficLight: "green",
-        ownedStages: [],
-      },
-    ],
-    referencedProjects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    ...overrides,
-  });
+type ProjectFixture = Partial<ReportSectionReadModel["projects"][number]> &
+  Pick<
+    ReportSectionReadModel["projects"][number],
+    "projectId" | "projectName" | "trafficLight"
+  >;
+type ActivityFixture = Partial<ReportSectionReadModel["activities"][number]> &
+  Pick<
+    ReportSectionReadModel["activities"][number],
+    "activityId" | "activityName" | "status"
+  >;
+type SectionFixture = Omit<
+  Partial<ReportSectionReadModel>,
+  "activities" | "projects"
+> & {
+  activities?: ActivityFixture[];
+  projects?: ProjectFixture[];
+};
+
+function makeSection(overrides: SectionFixture = {}): ReportSectionReadModel {
+  const { activities = [], projects, ...sectionOverrides } = overrides;
+  return reportSectionReadModelSchema.parse(
+    makeReportSectionReadModel({
+      reportSectionId: SECTION_ID,
+      reportId: REPORT_ID,
+      authorId: AUTHOR_ID,
+      authorName: "Alice Lead",
+      status: "submitted",
+      submittedAt: null,
+      projects: (
+        projects ?? [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+          },
+        ]
+      ).map(makeProjectReadModel),
+      activities: activities.map(makeSectionActivity),
+      ...sectionOverrides,
+    }),
+  );
 }
 
 // OWNED empty stage covered by the author's own at-risk/blocked risk must
@@ -342,13 +363,9 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
   });
 });
 
-// Published top-line portfolio totals (Shape B) are computed from the floored
-// `trafficLight` of the mapped sections, NOT raw `projectStatuses`. An owned
-// stage with no submitted status covered by a covers-all own risk floors the
-// portfolio status AND the per-product count, so the top-line totals agree with
-// the per-product cards inside the same snapshot. The PDF top-line re-route
-// lives in a separate `toAssembledReport` and is pinned by its own test in
-// pdf-export.prisma-repository.test.ts.
+// Published top-line portfolio totals (Shape B) come from the floored
+// `trafficLight` of the mapped sections, NOT raw `projectStatuses`, so the
+// top-line totals agree with the per-product cards in the same snapshot.
 describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)", () => {
   const STAGE_NAME = "Development";
   const FIXED_TIMESTAMP = new Date("2026-01-01T00:00:00.000Z");

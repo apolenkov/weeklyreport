@@ -14,16 +14,16 @@ function throwAnchorNotFound(): never {
 }
 
 interface AnchorLineageRow {
-  stableId: string;
-  reportSectionId: string;
-  reportSection: { reportId: string };
+  readonly stableId: string;
+  readonly reportSectionId: string;
+  readonly reportSection: { reportId: string };
 }
 
 interface AnchorLineage {
-  kind: RecordKind;
-  stableId: string;
-  reportSectionId: string;
-  reportId: string;
+  readonly kind: RecordKind;
+  readonly stableId: string;
+  readonly reportSectionId: string;
+  readonly reportId: string;
 }
 
 const anchorLineageSelect = {
@@ -101,6 +101,16 @@ async function loadCurrentAnchorId(
   return row.id;
 }
 
+// The anchor FK a P2003 can trip — only a violation on THIS constraint means
+// the record vanished between the lineage re-read and the insert. A P2003 on
+// the reviewer FK (reviewer deleted mid-transaction) is a different integrity
+// failure and must NOT be reported as a missing record.
+const ANCHOR_FK_CONSTRAINT: Record<RecordKind, string> = {
+  item: "RecordComment_itemId_fkey",
+  risk: "RecordComment_riskId_fkey",
+  decision: "RecordComment_decisionId_fkey",
+};
+
 async function createComment(
   tx: Prisma.TransactionClient,
   reviewerId: string,
@@ -127,7 +137,11 @@ async function createComment(
       createdAt: created.createdAt,
     };
   } catch (error) {
-    if (isForeignKeyViolation(error)) {
+    if (
+      isForeignKeyViolation(error, {
+        index: ANCHOR_FK_CONSTRAINT[lineage.kind],
+      })
+    ) {
       throwAnchorNotFound();
     }
     throw error;

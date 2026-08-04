@@ -29,7 +29,7 @@ interface LeadFormToolbarControlsProps {
   readonly onVisibilityChange: (next: RecordVisibility) => void;
   readonly isForeignSlidesDeck: boolean;
   readonly isSlidesMode: boolean;
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
   readonly slidesFullscreen: SlidesFullscreen;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
   readonly groupExpanded: boolean;
@@ -128,7 +128,7 @@ interface ToolbarViewClusterProps {
   readonly onVisibilityChange: (next: RecordVisibility) => void;
   readonly isForeignSlidesDeck: boolean;
   readonly isSlidesMode: boolean;
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
 }
 
 function ToolbarViewCluster({

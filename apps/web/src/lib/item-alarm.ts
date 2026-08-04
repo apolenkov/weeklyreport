@@ -1,6 +1,6 @@
 import {
   riskCoversStage,
-  splitStageNames,
+  stageNamesFromLegacyField,
 } from "../features/report-sections/model/stage-tags";
 
 // Item-card alarm is the roll-up of covering risk/blocker rows — never a free
@@ -11,7 +11,7 @@ export type ItemAlarm = "at-risk" | "blocked" | null;
 export interface AlarmItem {
   readonly productId: string;
   readonly stageNames?: readonly string[] | undefined;
-  /** @deprecated legacy single-stage label; read only to heal old rows. */
+  // Legacy single-stage label; read-only compatibility for old rows.
   readonly stageName?: string | undefined;
   readonly status:
     | "in-progress"
@@ -32,9 +32,7 @@ export interface AlarmRisk {
 }
 
 function itemStageNames(item: AlarmItem): readonly string[] {
-  if (item.stageNames && item.stageNames.length > 0) return item.stageNames;
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-  return splitStageNames(item.stageName);
+  return stageNamesFromLegacyField(item);
 }
 
 // Coverage: same product + stage overlap (or empty risk stages = wildcard);

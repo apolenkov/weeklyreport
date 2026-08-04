@@ -12,17 +12,9 @@ import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.
 import { PeriodScopeError } from "../application/period.service";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
-/**
- * Real-Postgres coverage for the reopen-versus-archive race. A head reopen and
- * an admin manual archive both mutate the same published `Report`; their
- * service-level state pre-checks are TOCTOU reads a concurrent writer can
- * stale. The guarded compare-and-sets on both legs — reopen keyed on
- * `{ archived: false, periodStatus: "published" }`, archive on the same shared
- * discriminator — are the only thing that bounds the row to a single writer.
- * Proves the ground truth the mock-based service tests cannot: exactly one
- * writer transitions the row under a real race, the loser fails closed, and no
- * editable-archived or sections-reset-behind-archived row is ever committed.
- */
+// Real-Postgres coverage for the reopen-versus-archive race: both writers'
+// pre-checks are TOCTOU reads, so the guarded CAS on both legs (keyed on the
+// same discriminator) bounds the row to a single writer; the loser fails closed.
 describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   const prisma = createTestPrisma();
   const repository = new PeriodPrismaRepository(
@@ -159,11 +151,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   });
 
   it("fails the archive closed when a reopen already won the row", async () => {
-    // Reopen first (commits, flips periodStatus→reopened), then archive: the
-    // archive compare-and-set's `periodStatus: { not: "reopened" }` clause
-    // drops it to zero rows, so it fails closed rather than archiving a
-    // reopened period and stranding its already-reset sections behind an
-    // archived row.
+    // Reopen first (flips periodStatus→reopened), then archive: the archive
+    // CAS's `periodStatus: { not: "reopened" }` clause drops to zero rows, so
+    // it fails closed rather than stranding reset sections behind an archived row.
     await repository.reopenPeriod(REPORT);
 
     await expect(

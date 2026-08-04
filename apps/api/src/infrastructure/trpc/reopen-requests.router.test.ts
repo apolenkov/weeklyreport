@@ -7,12 +7,12 @@ import { createNullLogger } from "../../lib/logger.js";
 import type { AdminTelemetry } from "../../modules/admin/index.js";
 import { AdminPrismaRepository } from "../../modules/admin/index.js";
 import { ReopenRequestAdminService } from "../../modules/admin/index.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
 
-// Reopen list/respond/count: headProcedure (ADR 0008), group-scoped, race-safe
-// decision. Router→service→repo against mock Prisma; DB guarantees in the
-// integration suite.
+// Reopen list/respond/count: headProcedure, group-scoped, race-safe decision.
+// Router→service→repo against mock Prisma; DB guarantees in the integration suite.
 
 const GROUP_ID = "99999999-9999-4999-8999-999999999999";
 const REQUEST_ID = "11111111-1111-4111-8111-111111111111";
@@ -40,11 +40,21 @@ function makeSession(role: Role) {
 interface TxCounts {
   reopenUpdateCount?: number;
   sectionUpdateCount?: number;
+  findFirstResult?: unknown;
 }
 
 function makeTx(counts: TxCounts) {
   return {
     reopenRequest: {
+      // The scoped re-load inside the decision transaction returns the row
+      // under decision; `updateMany` below models the state transition.
+      findFirst: vi
+        .fn()
+        .mockResolvedValue(
+          counts.findFirstResult === undefined
+            ? { id: REQUEST_ID, reportSectionId: SECTION_ID }
+            : counts.findFirstResult,
+        ),
       updateMany: vi
         .fn()
         .mockResolvedValue({ count: counts.reopenUpdateCount ?? 1 }),
@@ -81,13 +91,13 @@ function buildCaller(
   // same where clauses, transaction branches, and metrics as production.
   const reopenRequestAdminService = new ReopenRequestAdminService(
     new AdminPrismaRepository(prisma as never),
-    undefined,
+    createNullLogger(),
     prometheusTelemetry,
   );
-  const deps = {
+  const deps = createStubAppRouterDeps({
     prisma,
     reopenRequestAdminService,
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   const caller = createAppRouter(deps).createCaller({
     session: makeSession(role),
     logger: createNullLogger(),
@@ -105,7 +115,7 @@ async function counterValue(state: string): Promise<number> {
   return match?.value ?? 0;
 }
 
-describe("reopen procedures — gate (ADR 0008)", () => {
+describe("reopen procedures — group-scoped gate", () => {
   it("a head may list and count", async () => {
     const { caller } = buildCaller("head");
     await expect(caller.admin.listReopenRequests({})).resolves.toEqual([]);
@@ -176,10 +186,13 @@ describe("reopen procedures — group scope (D8)", () => {
   });
 
   it("a head deciding an out-of-group request by id is rejected", async () => {
-    const { caller } = buildCaller("head", {
-      // scoped findFirst finds nothing → out of group.
-      findFirst: vi.fn().mockResolvedValue(null),
-    });
+    const { caller } = buildCaller(
+      "head",
+      {},
+      // The scoped findFirst inside the decision transaction finds nothing →
+      // out of group.
+      { findFirstResult: null },
+    );
     await expect(
       caller.admin.respondReopenRequest({
         id: REQUEST_ID,

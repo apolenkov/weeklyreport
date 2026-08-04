@@ -1,8 +1,3 @@
-/**
- * Characterization pins for the lead-form draft flow. Assertions drive the
- * public `<LeadForm>` surface only (DOM + mocked tRPC + invalidation spies).
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
@@ -54,6 +49,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     version: 1,
     status: overrides.status ?? ("draft" as const),
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -106,6 +102,7 @@ function buildHarness(
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     { path: ["reports", "myHistory"], query: opts.myHistory ?? [] },
@@ -416,8 +413,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
     ).mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
-    expect(sent.stageStatuses?.length).toBeGreaterThan(0);
-    expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+    expect(sent.stageStatuses?.map((stage) => stage.status)).toEqual(["green"]);
   });
 
   it("submit-confirm cancel closes the dialog without submitting", async () => {

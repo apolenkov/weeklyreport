@@ -13,7 +13,7 @@ import {
 } from "../../report-sections";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { SubmitConfirmDialog } from "./submit-confirm-dialog";
-import type { QuickAddItem } from "./use-lead-form-draft";
+import type { QuickAddItem } from "./use-lead-form-quick-add";
 
 export interface LeadFormDialogsQuickAdd {
   readonly quickAddItem: QuickAddItem | null;

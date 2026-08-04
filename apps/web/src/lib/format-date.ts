@@ -1,8 +1,5 @@
-/**
- * Locale is per-formatter: `formatDateTime` uses `ru-RU`; relative/period
- * helpers use English. Period ranges use UTC so periodStart/periodEnd do not
- * shift by a day in UTC+N.
- */
+// Keep formatter locale choices explicit; period ranges use UTC so dates do not
+// shift across local UTC offsets.
 
 import {
   DAYS_PER_WEEK,

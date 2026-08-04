@@ -18,25 +18,13 @@ import {
   router,
 } from "../trpc.middleware.js";
 
-// Optional only for role-coverage fixtures with `{}` deps; undefined at
-// runtime is a config bug, not a user-reachable state.
-function requireReviewActions(deps: ReviewRouterDeps): ReviewActionsService {
-  if (!deps.reviewActionsService) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Review actions service is not configured.",
-    });
-  }
-  return deps.reviewActionsService;
-}
-
 export interface ReviewRouterDeps {
   weeklyReportService: WeeklyReportService;
   reviewService: ReviewService;
   publicationService: PublicationService;
-  // Optional so role-coverage fixtures with `{}` deps compile; per-group
-  // scope + reviewer designation are enforced inside the service.
-  reviewActionsService?: ReviewActionsService;
+  // Required: missing wiring must fail loud, never surface empty success.
+  // Per-group scope + reviewer designation are enforced inside the service.
+  reviewActionsService: ReviewActionsService;
 }
 
 // All on `leadershipProcedure` (head + admin + viewer; lead excluded) so
@@ -49,7 +37,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
       .input(reviewAcknowledgeInputSchema)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          requireReviewActions(deps).acknowledge(ctx.session, input),
+          deps.reviewActionsService.acknowledge(ctx.session, input),
         ),
       ),
 
@@ -58,7 +46,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
       .input(reviewListAcknowledgementsInputSchema)
       .query(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          requireReviewActions(deps).listAcknowledgements(ctx.session, input),
+          deps.reviewActionsService.listAcknowledgements(ctx.session, input),
         ),
       ),
 
@@ -67,7 +55,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
       .input(reviewCommentInputSchema)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          requireReviewActions(deps).comment(ctx.session, input),
+          deps.reviewActionsService.comment(ctx.session, input),
         ),
       ),
 
@@ -75,7 +63,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
       .input(reviewDeleteCommentInputSchema)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          requireReviewActions(deps).deleteComment(ctx.session, input),
+          deps.reviewActionsService.deleteComment(ctx.session, input),
         ),
       ),
 
@@ -84,7 +72,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
       .input(reviewVerdictInputSchema)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          requireReviewActions(deps).verdict(ctx.session, input),
+          deps.reviewActionsService.verdict(ctx.session, input),
         ),
       ),
   };

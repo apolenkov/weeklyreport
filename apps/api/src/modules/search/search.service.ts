@@ -12,21 +12,21 @@ import { createServiceLogger } from "../../lib/logger-service.js";
 // Prisma-free port so unit tests supply an in-memory fake; Prisma impl uses
 // $queryRaw + plainto_tsquery against GIN-indexed searchTsv columns.
 export interface SearchRepository {
-  search(params: {
-    q: string;
+  readonly search: (params: {
+    readonly q: string;
     // 'all' is unfiltered — the service layer enforces the role gate before
     // calling. 'published' INNER JOINs `Report.periodStatus = 'published'`:
     // the viewer's read-parity surface (openspec/specs/viewer-published-search).
-    scope: "mine" | "all" | "published";
-    userId: string;
+    readonly scope: "mine" | "all" | "published";
+    readonly userId: string;
     // null → no group filter (admin). An empty array never reaches here: the
     // service short-circuits it to a zero-row result.
-    groupIds: string[] | null;
+    readonly groupIds: readonly string[] | null;
     // Excluded types' UNION ALL chunk is omitted from the query entirely, so
     // they never consume a slot in the `limit` budget.
-    excludeTypes: SearchHit["type"][];
-    limit: number;
-  }): Promise<SearchHit[]>;
+    readonly excludeTypes: readonly SearchHit["type"][];
+    readonly limit: number;
+  }) => Promise<readonly SearchHit[]>;
 }
 
 export class SearchAuthorizationError extends Error {
@@ -38,7 +38,7 @@ export class SearchAuthorizationError extends Error {
 
 // Mirrors groupScopeFilter semantics. A non-null empty array means "no group
 // access" — the caller short-circuits to zero rows rather than querying.
-function resolveSearchGroupIds(session: UserSession): string[] | null {
+function resolveSearchGroupIds(session: UserSession): readonly string[] | null {
   if (session.role === "admin") return null;
   if (session.role === "viewer") return session.viewerGroupAccess ?? [];
   return session.reportingGroupId ? [session.reportingGroupId] : [];
@@ -46,7 +46,9 @@ function resolveSearchGroupIds(session: UserSession): string[] | null {
 
 // lead + viewer exclude `project`: the only Project destination is /admin,
 // unreachable for both roles, so a project hit would dead-end the search.
-function resolveSearchExcludeTypes(session: UserSession): SearchHit["type"][] {
+function resolveSearchExcludeTypes(
+  session: UserSession,
+): readonly SearchHit["type"][] {
   return session.role === "lead" || session.role === "viewer"
     ? ["project"]
     : [];

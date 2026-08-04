@@ -11,6 +11,7 @@ import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { createContextFactory } from "../infrastructure/trpc/trpc.context";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
 import type { AppLogger } from "../lib/logger";
+import { resolveSessionCookieName } from "../lib/session-cookie.js";
 import { SessionRevocationService } from "../modules/admin/index.js";
 import { createAuthController } from "../modules/auth/index.js";
 import { createPdfDownloadHandler } from "../modules/pdf-export/index.js";
@@ -41,15 +42,19 @@ export function mountApiIngress(deps: {
   // against the bound report — no unauthenticated path to the bytes.
   const pdfDir = resolve(env.PDF_OUTPUT_DIR);
   mkdirSync(pdfDir, { recursive: true });
+  // Resolve the cookie name once here from the validated env — the handler
+  // must not re-read process.env per request.
   const pdfAuthController = createAuthController(process.env);
   expressApp.get(
     PDF_DOWNLOAD_ROUTE,
     createPdfDownloadHandler({
       prisma,
       pdfDir,
+      sessionCookieName: resolveSessionCookieName(env.AUTH_JWT_COOKIE_NAME),
       verifySessionToken: (token) =>
         pdfAuthController.verifySessionToken(token),
       sessionRevocation: app.get(SessionRevocationService),
+      logger,
     }),
   );
   logger.info("mounted authenticated PDF download handler", {

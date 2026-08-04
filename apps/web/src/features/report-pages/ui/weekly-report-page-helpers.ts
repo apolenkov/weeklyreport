@@ -22,8 +22,9 @@ export interface TerminalNotice {
   readonly body: string;
 }
 
-// Terminal display after loading: invalid-link (400/404) vs no active period.
-// Transient 5xx / network errors fall through to no-period.
+// Terminal display after loading: invalid-link (400/404), transient failure
+// (5xx/network), or no active period — each is its own notice, so a failed
+// fetch is never rendered as "no active period".
 export function resolveTerminalNotice(query: {
   readonly isError: boolean;
   readonly error: unknown;
@@ -33,6 +34,12 @@ export function resolveTerminalNotice(query: {
     return {
       title: "Report not found",
       body: "This link is invalid or the report no longer exists.",
+    };
+  }
+  if (query.isError) {
+    return {
+      title: "Report could not be loaded",
+      body: "A temporary problem prevented loading this report. Refresh the page to try again.",
     };
   }
   if (!query.data || query.data.status === "no-period") {

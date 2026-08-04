@@ -18,13 +18,13 @@ import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminSettingsDeps {
-  snapshotAdminService: SnapshotAdminService;
+  readonly snapshotAdminService: SnapshotAdminService;
   // Validated env from main.ts — not raw process.env.
-  env: EnvConfig;
+  readonly env: EnvConfig;
   // Optional for `{}` fixtures; undefined throws INTERNAL_SERVER_ERROR, not 500.
-  telegramOutboundQueue?: Queue;
+  readonly telegramOutboundQueue?: Queue;
   // Optional for role-coverage `{}` deps that never hit org.* paths.
-  organizationService?: OrganizationService;
+  readonly organizationService?: OrganizationService;
 }
 
 // The optional deps are wiring, not request data: an unwired collaborator is a

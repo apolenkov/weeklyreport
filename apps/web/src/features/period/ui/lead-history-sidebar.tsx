@@ -6,7 +6,7 @@ interface LeadHistorySidebarProps {
   readonly entries: readonly HistoryEntry[];
   readonly summaryTitle?: string;
   readonly showStatus?: boolean;
-  /** When true, renders third-person copy (head/viewer looking at someone else's section). */
+  // Head/viewer surfaces use third-person copy for another person's section.
   readonly viewerMode?: boolean;
 }
 
@@ -217,7 +217,7 @@ function SidebarCard({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_4px_10px_-8px_rgba(0,0,0,0.18)]">
+    <div className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-sidebar-card)]">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
           {title}

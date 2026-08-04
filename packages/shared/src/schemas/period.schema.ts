@@ -2,14 +2,15 @@ import { z } from "zod";
 
 import { reminderAudienceSchema } from "../admin/reminder-policy.schema";
 import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../time";
+import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema";
+import { reportDate } from "./report-primitives.schema";
 import {
   periodStateSchema,
   periodStatusSchema,
-  reportDate,
-  reportStatusSchema,
 } from "./report-primitives.schema";
 
-const MAX_WEEK_LABEL_LENGTH = 64;
+/** Max length of a reporting period's week label. */
+export const MAX_WEEK_LABEL_LENGTH = 64;
 const MAX_DEFAULT_DEADLINE_DAYS = 30;
 const MAX_PERIOD_LENGTH_DAYS = 31;
 // Cap shared by gracePeriodHours and reopenWindowHours: one week.
@@ -17,47 +18,19 @@ const ONE_WEEK_HOURS = HOURS_PER_DAY * DAYS_PER_WEEK;
 const MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH = 52;
 const MAX_EMAIL_LENGTH = 254; // RFC 5321 max email length
 
-export const reportPeriodSchema = z.object({
-  id: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  deadline: reportDate().nullable(),
-  status: reportStatusSchema,
-  /**
-   * Explicit lifecycle state. Optional so pre-existing fixtures and
-   * admin-snapshot payloads keep parsing — consumers that don't yet read the
-   * state fall back to the legacy `status`/`archived` tuple. The Admin
-   * Periods tab consumes this field directly.
-   */
-  periodState: periodStateSchema.optional(),
-  /**
-   * The rest of the governed lifecycle field set, so an admin snapshot
-   * round-trips a Report's complete state (periodState + the legacy
-   * status/archived tuple + periodStatus + audit flags + publish/reopen
-   * timestamps) instead of silently re-introducing the divergence the
-   * `period-dual-state` invariant forbids. All optional so snapshots taken
-   * before this field set existed still parse and restore via the
-   * documented legacy-tuple backfill (see `resolveLifecycle`).
-   */
-  periodStatus: periodStatusSchema.optional(),
-  archived: z.boolean().optional(),
-  autoPublished: z.boolean().optional(),
-  autoArchived: z.boolean().optional(),
-  publishedAt: z.coerce.date().nullable().optional(),
-  publishedById: z.uuid().nullable().optional(),
-  reopenedAt: z.coerce.date().nullable().optional(),
-});
+/** Validates a reporting period with the complete dual-state lifecycle. */
+export const reportPeriodSchema = currentPeriodLifecycleSchema
+  .unwrap()
+  .safeExtend({
+    id: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    deadline: reportDate().nullable(),
+  })
+  .readonly();
 
 /**
- * The lifecycle filter accepted by `admin.listPeriodsByState`. The two
- * virtual buckets fan out to:
- *
- *   active  -> { scheduled, open, published-within-reopen-window }
- *   archive -> { archived, published-out-of-reopen-window }
- *
- * The exact state enum (`scheduled | open | published | archived`) is
- * also accepted so callers that already know the precise state can
- * request a single bucket without the virtual-fan-out logic.
+ * Lifecycle filter for exact states plus the policy-derived active and archive buckets.
  */
 export const periodListBucketSchema = z.enum([
   "active",
@@ -69,152 +42,108 @@ export const periodListBucketSchema = z.enum([
 ]);
 
 /**
- * The row shape returned by `admin.listPeriodsByState`. Carries everything
- * the redesigned admin Periods tab renders without a second round-trip:
- *
- *   - `periodState` is the source of truth for the badge color.
- *   - `submittedCount / totalCount` drives the `4/6` progress badge.
- *   - `canReopen` is server-precomputed from `allowReopenAfterPublish`
- *     + `publishedAt + reopenWindowHours` (`AppSettings`), so the
- *     UI doesn't need to know the reopen-policy rules.
- *   - `canArchive` mirrors the publish state (and skips already-archived).
+ * Admin period row with server-derived lifecycle actions and submission counts.
  */
-export const periodListItemSchema = z.object({
-  id: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  deadline: reportDate().nullable(),
-  publishedAt: z.coerce.date().nullable(),
-  weekLabel: z.string().nullable().optional(),
-  periodState: periodStateSchema,
-  /**
-   * Mirror of the legacy `periodStatus` enum
-   * (`open | published | reopened`). The admin tab uses it to surface a
-   * small "(reopened)" badge on top of the periodState pill so audit
-   * fidelity is preserved without collapsing the two state machines.
-   */
-  periodStatus: periodStatusSchema,
-  archived: z.boolean(),
-  autoPublished: z.boolean(),
-  autoArchived: z.boolean(),
-  submittedCount: z.number().int().nonnegative(),
-  totalCount: z.number().int().nonnegative(),
-  canReopen: z.boolean(),
-  canArchive: z.boolean(),
-});
+export const periodListItemSchema = z
+  .object({
+    id: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    deadline: reportDate().nullable(),
+    publishedAt: z.coerce.date().nullable(),
+    weekLabel: z.string().nullable().optional(),
+    periodState: periodStateSchema,
+    // The legacy status remains independent from the explicit lifecycle state.
+    periodStatus: periodStatusSchema,
+    archived: z.boolean(),
+    autoPublished: z.boolean(),
+    autoArchived: z.boolean(),
+    submittedCount: z.number().int().nonnegative(),
+    totalCount: z.number().int().nonnegative(),
+    canReopen: z.boolean(),
+    canArchive: z.boolean(),
+  })
+  .readonly();
 
+/** Validated exact or policy-derived admin period-list bucket. */
 export type PeriodListBucket = z.infer<typeof periodListBucketSchema>;
+/** Validated admin period row with derived action gates. */
 export type PeriodListItem = z.infer<typeof periodListItemSchema>;
 
 /**
- * Input for `admin.createPeriodManual` — admin escape hatch that
- * mints a Report row without waiting for the daily `PeriodCreatorScheduler`
- * (00:05 UTC cron). Targets two scenarios:
- *
- *   1. Fresh dev/staging DBs with zero Reports, where the only other routes
- *      to a first Report are waiting for the cron tick or hand-written SQL.
- *   2. Backfill / one-off cycles (e.g. a missed period, off-cadence ad-hoc).
- *
- * Only `periodStart` is required. `periodEnd` / `deadline` default from
- * `AppSettings` (`periodLengthDays`, `defaultDeadlineDays`,
- * `defaultTimezone`, `workingDays`, `deadlineTime`) so the typical admin
- * flow is single-field. The service computes both defaults from settings
- * — no schema-level defaulting (settings are runtime).
+ * Manual period creation input; omitted dates are derived from current period policy.
  */
-export const adminCreatePeriodManualSchema = z.object({
-  periodStart: z.coerce.date(),
-  periodEnd: z.coerce.date().optional(),
-  deadline: z.coerce.date().optional(),
-  weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).optional(),
-});
+export const adminCreatePeriodManualSchema = z
+  .object({
+    periodStart: z.coerce.date(),
+    periodEnd: z.coerce.date().optional(),
+    deadline: z.coerce.date().optional(),
+    weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).optional(),
+  })
+  .readonly();
 
+/** Dates omitted from manual creation are derived from active organization policy. */
 export type AdminCreatePeriodManualInput = z.infer<
   typeof adminCreatePeriodManualSchema
 >;
 
 /**
- * Return shape of `admin.createPeriodManual`. Mirrors the
- * `PeriodCreatorScheduler.runOnce` outcome — minimal projection of the
- * newly-minted Report. The web layer invalidates `listPeriodsByState`
- * afterwards, so we don't need to return the full `PeriodListItem`.
+ * Minimal identity and lifecycle projection returned after manual creation.
  */
-export const adminCreatePeriodManualResultSchema = z.object({
-  periodId: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  deadline: reportDate(),
-  periodState: periodStateSchema,
-});
+export const adminCreatePeriodManualResultSchema = z
+  .object({
+    periodId: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    deadline: reportDate(),
+    periodState: periodStateSchema,
+  })
+  .readonly();
 
+/** New period identity plus the lifecycle state selected at creation. */
 export type AdminCreatePeriodManualResult = z.infer<
   typeof adminCreatePeriodManualResultSchema
 >;
 
 /**
- * Input for `admin.updatePeriodManual` — admin escape hatch that
- * edits an existing Report's date envelope without re-running the daily
- * `PeriodCreatorScheduler`. Symmetric counterpart to `createPeriodManual`,
- * keyed on `reportId` (matches the `period.publish` / `period.reopen`
- * convention).
- *
- * All payload fields are optional: only those provided are written, so
- * partial PATCH-style edits (e.g. "shift only the deadline") are a single
- * round-trip. When dates change, the service re-runs the overlap gate —
- * excluding `reportId` from the conflict candidates so a no-op rewrite of
- * the same row is allowed.
- *
- * `weekLabel` is nullable to let the admin clear an existing label
- * (`null`) vs leave it untouched (omit the key); `optional()` on top of
- * `nullable()` keeps the distinction explicit at the wire layer.
+ * Partial manual period update; omitted fields stay unchanged and null clears nullable values.
  */
-export const adminUpdatePeriodManualSchema = z.object({
-  reportId: z.uuid(),
-  periodStart: z.coerce.date().optional(),
-  periodEnd: z.coerce.date().optional(),
-  // Same three-state contract as `weekLabel`: omit = untouched, `null` =
-  // explicit clear (ruling F16 — the period then has NO deadline and
-  // deadline-driven automation skips it), value = set.
-  deadline: z.coerce.date().nullable().optional(),
-  weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable().optional(),
-});
+export const adminUpdatePeriodManualSchema = z
+  .object({
+    reportId: z.uuid(),
+    periodStart: z.coerce.date().optional(),
+    periodEnd: z.coerce.date().optional(),
+    // A cleared deadline disables deadline-driven automation for the period.
+    deadline: z.coerce.date().nullable().optional(),
+    weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable().optional(),
+  })
+  .readonly();
 
+/** PATCH-style period update: omission preserves a field and null clears nullable fields. */
 export type AdminUpdatePeriodManualInput = z.infer<
   typeof adminUpdatePeriodManualSchema
 >;
 
 /**
- * Return shape of `admin.updatePeriodManual`. Mirrors the
- * create-counterpart result so the web layer can echo the updated row
- * back into the local cache without a second round-trip (in practice we
- * invalidate `listPeriodsByState` and rely on the refetch, but the shape
- * stays parallel for consistency).
+ * Minimal identity and lifecycle projection returned after manual update.
  */
-export const adminUpdatePeriodManualResultSchema = z.object({
-  periodId: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  deadline: reportDate().nullable(),
-  periodState: periodStateSchema,
-  weekLabel: z.string().nullable(),
-});
+export const adminUpdatePeriodManualResultSchema = z
+  .object({
+    periodId: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    deadline: reportDate().nullable(),
+    periodState: periodStateSchema,
+    weekLabel: z.string().nullable(),
+  })
+  .readonly();
 
+/** Updated period identity, date envelope, lifecycle state, and nullable label/deadline. */
 export type AdminUpdatePeriodManualResult = z.infer<
   typeof adminUpdatePeriodManualResultSchema
 >;
 
-// ---------------------------------------------------------------------------
-// App settings
-// New fields carry `.default()` so older clients (and test fixtures) that
-// pass the original 3-key payload still parse — the partial update schema
-// also keeps working unchanged.
-// ---------------------------------------------------------------------------
-
-/**
- * Working-days enum surfaced for the AppSettings UI hint. v1 is
- * metadata-only — deadline math continues to use Mon-Fri regardless of this
- * value. The wire format is lowercase-hyphen to stay consistent with
- * `reminder-audience`; the API repository owns the wire <-> Prisma mapper.
- */
+/** Supported work-week policies used by deadline calculations. */
 export const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
 
 /**
@@ -225,7 +154,7 @@ export const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
  */
 const deadlineTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export const appSettingsSchema = z.object({
+const appSettingsObjectSchema = z.object({
   // Identity / brand strings are NOT in AppSettings — they live on the
   // `Organization` singleton (`shortName` for compact references,
   // `fullName` for headings).
@@ -249,12 +178,10 @@ export const appSettingsSchema = z.object({
   // Nullable email; `''` is rejected (admins can clear by sending null).
   notificationFromEmail: z.union([z.email().max(MAX_EMAIL_LENGTH), z.null()]),
   // ---- Period-cycle knobs ---------------------------------------------
-  // Publish/reopen gating + manual-creation deadline default. All fields
+  // Publish/reopen gating + period-creation deadline default. All fields
   // below have live consumers.
   // HH:MM in the configured `defaultTimezone`. Regex pins the format so
-  // garbage values cannot reach the deadline-computation path. Manual period
-  // creation applies it at whole-hour precision; the auto-creation scheduler
-  // currently uses a fixed 18:00.
+  // garbage values cannot reach the shared manual/automatic deadline path.
   deadlineTime: z.string().regex(deadlineTimeRegex),
   allowReopenAfterPublish: z.boolean(),
   // Window after `publishedAt` during which a published report can be
@@ -262,37 +189,36 @@ export const appSettingsSchema = z.object({
   // convention. Default `72` (3 days) chosen as a practical floor for
   // "noticed the bug on Monday, reopen Friday's report" use cases.
   reopenWindowHours: z.number().int().min(0).max(ONE_WEEK_HOURS),
-  // Opt-in unified by-state lead-form view (a pure presentation projection —
-  // ADR 0011). Off keeps the classic two-section format. The default mirrors
-  // the DB column default; the DB row is the source of truth (no env knob).
+  // This presentation choice is persisted in the DB; no environment value may
+  // override it.
   unifiedActivityView: z.boolean(),
 });
 
-export const appSettingsUpdateSchema = appSettingsSchema.partial();
+/** Validates organization-wide reporting-period policy and automation settings. */
+export const appSettingsSchema = appSettingsObjectSchema.readonly();
 
-// ---------------------------------------------------------------------------
-// Period read model (extended)
-// ---------------------------------------------------------------------------
+/** Validates a partial reporting-period policy update. */
+export const appSettingsUpdateSchema = appSettingsObjectSchema
+  .partial()
+  .readonly();
 
-export const periodReadModelSchema = z.object({
-  id: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  deadline: reportDate().nullable(),
-  status: reportStatusSchema,
-  periodStatus: periodStatusSchema,
-  weekLabel: z.string().nullable(),
-  publishedAt: z.coerce.date().nullable(),
-  reopenedAt: z.coerce.date().nullable(),
-  /**
-   * Explicit lifecycle state. Optional so pre-existing fixtures still parse;
-   * consumers that don't read it fall back to the legacy tuple. Read paths
-   * switch to this field.
-   */
-  periodState: periodStateSchema.optional(),
-});
+/** Validates the period navigator read model. */
+export const periodReadModelSchema = currentPeriodLifecycleSchema
+  .unwrap()
+  .safeExtend({
+    id: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    deadline: reportDate().nullable(),
+    weekLabel: z.string().nullable(),
+  })
+  .readonly();
 
+/** Validated reporting period with complete lifecycle state. */
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
+/** Complete organization policy consumed by period and reminder automation. */
 export type AppSettings = z.infer<typeof appSettingsSchema>;
+/** Work-week calendar admitted by deadline calculation. */
 export type WorkingDays = z.infer<typeof workingDaysSchema>;
+/** Lifecycle-complete row consumed by period navigation. */
 export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;

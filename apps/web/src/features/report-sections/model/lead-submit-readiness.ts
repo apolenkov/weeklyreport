@@ -24,7 +24,8 @@ export interface LeadSubmitReadinessInput {
   readonly stages: readonly {
     projectId: string;
     stageId: string;
-    name: string;
+    // null = unresolved stage label; rendered as "Unnamed stage", never the raw id.
+    name: string | null;
   }[];
   readonly ownRisks: readonly RiskEntry[];
   readonly autosaveState: AutosaveState;
@@ -74,7 +75,6 @@ function statusLabelMaps(input: LeadSubmitReadinessInput) {
     ),
   };
 }
-
 function projectPromotions(
   input: LeadSubmitReadinessInput,
   labels: ReadonlyMap<string, string>,
@@ -190,7 +190,7 @@ export function buildLeadSubmitPayload(
     })),
     stageStatuses: (draftPayload.stageStatuses ?? []).map((status) => ({
       ...status,
-      status: "green" as const,
+      status: status.status ?? ("green" as const),
     })),
     confirmed: true as const,
   };

@@ -2,7 +2,11 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LANDING_TAGLINES } from "./landing-page.constants";
-import { TaglineCycler } from "./tagline-cycler";
+import {
+  TAGLINE_FADE_MS,
+  TAGLINE_VISIBLE_MS,
+  TaglineCycler,
+} from "./tagline-cycler";
 
 vi.useFakeTimers();
 
@@ -53,7 +57,7 @@ describe("TaglineCycler", () => {
     const first = screen.getByRole("paragraph").textContent;
     // Advance past visible period + fade-out + swap
     act(() => {
-      vi.advanceTimersByTime(3000 + 250 + 1);
+      vi.advanceTimersByTime(TAGLINE_VISIBLE_MS + TAGLINE_FADE_MS + 1);
     });
     const second = screen.getByRole("paragraph").textContent;
     expect(LANDING_TAGLINES).toContain(second);
@@ -65,11 +69,11 @@ describe("TaglineCycler", () => {
     const el = screen.getByRole("paragraph");
     expect(el).toHaveStyle({
       opacity: "1",
-      transitionDuration: "250ms",
+      transitionDuration: `${TAGLINE_FADE_MS}ms`,
     });
     // Advance into fade-out window (visible period elapsed but fade not done)
     act(() => {
-      vi.advanceTimersByTime(3001);
+      vi.advanceTimersByTime(TAGLINE_VISIBLE_MS + 1);
     });
     expect(el).toHaveStyle({ opacity: "0" });
   });

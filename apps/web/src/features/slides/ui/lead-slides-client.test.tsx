@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
@@ -20,6 +18,10 @@ import {
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import type { KanbanItem } from "../../report-sections";
 import { LeadSlidesClient } from "./lead-slides-client";
 
@@ -145,9 +147,9 @@ const session: SessionState = {
 };
 
 function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
@@ -189,7 +191,7 @@ function makeSection(
     decisions: [],
     activities: [],
     ...overrides,
-  };
+  });
 }
 
 function makeHistoryEntry(section: ReportSectionReadModel): MyHistoryEntry {

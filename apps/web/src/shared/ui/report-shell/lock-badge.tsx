@@ -9,7 +9,7 @@ type LockBadgeVariant = "default" | "slim";
 
 interface LockBadgeProps {
   readonly authorName: string | null | undefined;
-  /** Default = 34×34 (matches Edit/Delete buttons); slim = 24×24 for compact cards. */
+  // Default matches action buttons; slim is for compact cards.
   readonly variant?: LockBadgeVariant;
 }
 

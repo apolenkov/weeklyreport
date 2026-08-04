@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Editable-vs-published resolution is covered on getVisibleReportId /
@@ -22,9 +23,9 @@ function buildCaller(
   latestForViewer: ReturnType<typeof vi.fn>,
   session: UserSession,
 ) {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     weeklyReportService: { latestForViewer },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session,
     logger: createNullLogger(),

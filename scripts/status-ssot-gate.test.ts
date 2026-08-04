@@ -78,11 +78,19 @@ scenario("subsets, compositions, and distinct vocabularies pass", () => {
     // distinct vocabulary including draft+published among other literals
     "c.ts": `type H = "submitted" | "draft" | "published" | "archived";`,
     "d.ts": `const s = z.enum(["draft", "published", "archived"]);`,
-    // value list, not a type re-declaration
-    "e.ts": `const COLORS = ["green", "yellow", "red"] as const;`,
+    "e.ts": `const COLORS = ["green", "red"] as const;`,
   });
   assert.equal(result.status, 0, result.stdout);
   assert.match(result.stdout, /0 status literal-union hit\(s\)/);
+});
+
+scenario("complete as-const value lists fire", () => {
+  const result = scan({
+    "a.ts": `const COLORS = ["green", "yellow", "red"] as const;`,
+    "b.ts": `const ROLES = ["lead", "head", "admin", "viewer"] as const;`,
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /2 status literal-union hit\(s\)/);
 });
 
 scenario("comments do not fire", () => {
@@ -167,12 +175,10 @@ scenario("the role vocabulary fires outside its SSOT", () => {
   assert.match(result.stdout, /2 status literal-union hit\(s\)/);
 });
 
-scenario("role subsets and value lists pass", () => {
+scenario("role subsets pass", () => {
   const result = scan({
     // a narrower subset (e.g. a leadership-only check) stays legal
     "a.ts": `type Leadership = "head" | "admin";`,
-    // a value list (as const), not a type re-declaration
-    "b.ts": `const ROLES = ["lead", "head", "admin", "viewer"] as const;`,
   });
   assert.equal(result.status, 0, result.stdout);
 });

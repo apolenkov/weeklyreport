@@ -55,7 +55,7 @@ export const STATUS_BADGE = {
 // body lines. Rules: openspec/specs/lead-item-card-uniformity/spec.md.
 const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
-/** Faded opacity applied to a card/row owned by another lead ("foreign"). */
+// Foreign rows use reduced opacity to distinguish ownership without hiding data.
 export const FOREIGN_ENTRY_OPACITY = 0.7;
 
 export function cardContainerStyle(opts: {

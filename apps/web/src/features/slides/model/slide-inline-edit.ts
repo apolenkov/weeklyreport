@@ -72,7 +72,7 @@ export function ownedStagesForProduct(
   return (
     section.projects
       .find((project) => project.projectId === productId)
-      ?.ownedStages?.map((stage) => stage.stageName) ?? []
+      ?.ownedStages.map((stage) => stage.stageName) ?? []
   );
 }
 

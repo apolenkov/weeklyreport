@@ -34,7 +34,7 @@ interface DevAuthIdentity {
 }
 
 interface AuthMeEntry {
-  result?: { data?: { json?: unknown } | unknown };
+  result?: { data?: unknown };
   error?: unknown;
   message?: unknown;
 }
@@ -42,8 +42,7 @@ type SessionRoleResult = "rate_limited" | Role | null;
 
 function parseAuthMeRole(payload: unknown): SessionRoleResult {
   const entry = (Array.isArray(payload) ? payload[0] : payload) as
-    | AuthMeEntry
-    | undefined;
+    AuthMeEntry | undefined;
   if (!entry) {
     return null;
   }
@@ -137,26 +136,38 @@ async function establishSession(
   }
 }
 
+async function verifySessionRole(
+  page: Page,
+  expectedRole: Role,
+  attempts: number,
+  attempt: number,
+): Promise<Role | null> {
+  const actualRole = await getSessionRole(page);
+  if (actualRole !== "rate_limited") {
+    return actualRole;
+  }
+
+  if (attempt >= attempts) {
+    throw new Error(
+      `dev-login role verification remained rate-limited after ${attempts} attempts; expected ${expectedRole}`,
+    );
+  }
+
+  await page.waitForTimeout(RETRY_BASE_MS + attempt * RETRY_STEP_MS);
+  return verifySessionRole(page, expectedRole, attempts, attempt + 1);
+}
+
 async function attemptLogin(
   page: Page,
   identity: DevAuthIdentity,
-  expectedRole: DbRole | Role,
+  expectedRole: Role,
   attempts: number,
   attempt: number,
 ): Promise<void> {
   await establishSession(page, identity, attempt);
 
-  const actualRole = await getSessionRole(page);
+  const actualRole = await verifySessionRole(page, expectedRole, attempts, 1);
   const isLast = attempt >= attempts;
-
-  if (actualRole === "rate_limited") {
-    // Only the role probe is rate-limited; the cookie is already set. Out of
-    // retries, hand session correctness to the route guards every scenario
-    // exercises anyway rather than failing on an answer we could not get.
-    if (isLast) return navigateAfterLogin(page, identity.redirect);
-    await page.waitForTimeout(RETRY_BASE_MS + attempt * RETRY_STEP_MS);
-    return attemptLogin(page, identity, expectedRole, attempts, attempt + 1);
-  }
 
   if (actualRole === expectedRole) {
     return navigateAfterLogin(page, identity.redirect);

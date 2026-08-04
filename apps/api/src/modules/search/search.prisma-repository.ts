@@ -1,20 +1,20 @@
 import type { SearchHit } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "./search.service.js";
 
 interface RawHit {
-  type: "item" | "risk" | "decision" | "project";
-  id: string;
-  title: string;
-  snippet: string;
-  rank: number;
-  projectId: string | null;
-  reportId: string | null;
-  reportSectionId: string | null;
-  createdAt: Date;
+  readonly type: "item" | "risk" | "decision" | "project";
+  readonly id: string;
+  readonly title: string;
+  readonly snippet: string;
+  readonly rank: number;
+  readonly projectId: string | null;
+  readonly reportId: string | null;
+  readonly reportSectionId: string | null;
+  readonly createdAt: Date;
 }
 
 interface SearchSqlContext {
@@ -49,10 +49,9 @@ function buildSqlContext(params: SearchParams): SearchSqlContext {
     groupIds === null
       ? Prisma.empty
       : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
-  // The `published` scope gates on `periodStatus` — the lifecycle column —
-  // NOT `status` (the list column, which can stay 'published' on a reopened
-  // period whose content is unreadable). Projects join no section, so they
-  // carry no published gate.
+  // The `published` scope gates on `periodStatus` — the lifecycle column — NOT
+  // `status` (the list column, which can stay 'published' on a reopened period
+  // whose content is unreadable). Projects join no section, so no published gate.
   const publishedReportJoin =
     scope === "published"
       ? Prisma.sql`INNER JOIN "Report" rpt ON rpt."id" = rs."reportId" AND rpt."periodStatus" = 'published'::"PeriodStatus"`
@@ -190,9 +189,9 @@ function toSearchHit(row: RawHit): SearchHit {
 
 @Injectable()
 export class SearchPrismaRepository implements SearchRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async search(params: SearchParams): Promise<SearchHit[]> {
+  readonly search = async (params: SearchParams): Promise<SearchHit[]> => {
     const chunks = buildIncludedChunks(
       buildSqlContext(params),
       params.excludeTypes,
@@ -202,5 +201,5 @@ export class SearchPrismaRepository implements SearchRepository {
     const query = buildSearchQuery(chunks, params.limit);
     const rows = await this.prisma.$queryRaw<RawHit[]>(query);
     return rows.map(toSearchHit);
-  }
+  };
 }

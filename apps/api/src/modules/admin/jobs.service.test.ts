@@ -1,31 +1,33 @@
+import type { FailedJob } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AdminJobsQueue } from "./admin-jobs.port.js";
+import type { AdminJobHandle, AdminJobsQueue } from "./admin-jobs.port.js";
 import { JobsService } from "./jobs.service";
 
-interface FakeJob {
-  id: string;
-  name: string;
-  failedReason?: string | null;
-  stacktrace?: string[];
-  attemptsMade?: number;
-  timestamp: number;
-  data: unknown;
-  retry: ReturnType<typeof vi.fn<() => Promise<void>>>;
-  remove: ReturnType<typeof vi.fn<() => Promise<void>>>;
+interface FakeJob extends AdminJobHandle {
+  readonly retry: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  readonly remove: ReturnType<typeof vi.fn<() => Promise<void>>>;
 }
 
-function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
+function makeJob(
+  overrides: Partial<FailedJob> & {
+    id: string;
+    reminderExecutionId?: string | null;
+  },
+): FakeJob {
+  const { reminderExecutionId = null, ...failedJobOverrides } = overrides;
   return {
-    name: "send-reminder-email",
-    failedReason: "SMTP timeout",
-    stacktrace: ["at smtpClient.send (smtp.ts:42)"],
-    attemptsMade: 3,
-    timestamp: 1_700_000_000_000,
-    data: { recipient: "lead@example.com" },
+    failedJob: {
+      name: "send-reminder-email",
+      failedReason: "SMTP timeout",
+      stacktrace: ["at smtpClient.send (smtp.ts:42)"],
+      attemptsMade: 3,
+      timestamp: 1_700_000_000_000,
+      ...failedJobOverrides,
+    },
+    reminderExecutionId,
     retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     remove: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-    ...overrides,
   };
 }
 
@@ -40,7 +42,9 @@ function makeQueue(opts: {
     }),
     getJob: vi.fn((id: string) => {
       if (opts.getJob) return Promise.resolve(opts.getJob(id));
-      return Promise.resolve(opts.failed.find((j) => j.id === id));
+      return Promise.resolve(
+        opts.failed.find((job) => job.failedJob.id === id),
+      );
     }),
   } satisfies AdminJobsQueue;
   return queue;
@@ -132,7 +136,7 @@ describe("JobsService — DLQ admin surface", () => {
   it("retryFailed: removes stale reminder jobs whose execution row no longer exists", async () => {
     const job = makeJob({
       id: "job-stale",
-      data: { executionId: "missing-execution" },
+      reminderExecutionId: "missing-execution",
     });
     const service = new JobsService(makeQueue({ failed: [job] }), undefined, {
       reminderExecutionExists: vi.fn().mockResolvedValue(false),
@@ -156,7 +160,7 @@ describe("JobsService — DLQ admin surface", () => {
   it("retryFailed: retries reminder jobs when the execution row still exists", async () => {
     const job = makeJob({
       id: "job-live",
-      data: { executionId: "existing-execution" },
+      reminderExecutionId: "existing-execution",
     });
     const service = new JobsService(makeQueue({ failed: [job] }), undefined, {
       reminderExecutionExists: vi.fn().mockResolvedValue(true),
@@ -175,18 +179,18 @@ describe("JobsService — DLQ admin surface", () => {
   it("retryFailed: retries an execution job when no existence check is configured", async () => {
     const job = makeJob({
       id: "job-without-existence-check",
-      data: { executionId: "unchecked-execution" },
+      reminderExecutionId: "unchecked-execution",
     });
     const service = new JobsService(makeQueue({ failed: [job] }));
 
     const result = await service.retryFailed({
       queue: "email-reminder",
-      jobId: job.id,
+      jobId: job.failedJob.id,
     });
 
     expect(job.remove).not.toHaveBeenCalled();
     expect(job.retry).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ retried: true, jobId: job.id });
+    expect(result).toEqual({ retried: true, jobId: job.failedJob.id });
   });
 
   it("retryFailed: returns retried=false when the job no longer exists (pruned / parallel retry)", async () => {

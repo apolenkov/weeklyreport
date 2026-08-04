@@ -3,12 +3,10 @@ import { vi } from "vitest";
 
 import type { TRPCProxy } from "../lib/trpc";
 
-type QueryData = unknown | (() => unknown);
-
 export interface ProcedureDescriptor {
   path: string[];
   // value | factory | "pending" (never resolves). Prefer queryByInput for parameterized queries.
-  query?: QueryData | "pending";
+  query?: unknown;
   // Input-aware stub; input lands in queryKey so distinct inputs cache separately. Incompatible with query.
   queryByInput?: (input: unknown) => unknown;
   mutation?: boolean;
@@ -17,7 +15,7 @@ export interface ProcedureDescriptor {
 export interface CapturedMutation {
   calls: unknown[];
   lastOptions: Record<string, unknown>;
-  mutationFn: ReturnType<typeof vi.fn>;
+  mutationFn: ReturnType<typeof vi.fn<(args: unknown) => Promise<unknown>>>;
 }
 
 function toDotted(path: string[]): string {
@@ -98,10 +96,14 @@ function buildQueryByInput(
 
 // "pending" never settles (loading-state fixtures); a factory is called per
 // fetch so a stub can vary between calls; anything else resolves as-is.
-function resolveQueryFn(query: QueryData | "pending"): () => Promise<unknown> {
+function isQueryFactory(value: unknown): value is () => unknown {
+  return typeof value === "function";
+}
+
+function resolveQueryFn(query: unknown): () => Promise<unknown> {
   if (query === "pending") return () => new Promise<never>(() => undefined);
-  if (typeof query === "function") {
-    return () => Promise.resolve((query as () => unknown)());
+  if (isQueryFactory(query)) {
+    return () => Promise.resolve(query());
   }
   return () => Promise.resolve(query);
 }
@@ -109,10 +111,37 @@ function resolveQueryFn(query: QueryData | "pending"): () => Promise<unknown> {
 function buildQuery(
   leaf: Record<string, unknown>,
   qk: [[...string[]]],
-  query: QueryData | "pending",
+  query: unknown,
 ): void {
   const queryFn = resolveQueryFn(query);
   leaf.queryOptions = () => ({ queryKey: qk, queryFn });
+  // Cursor-paginated procedures read the merged `{...input, cursor: pageParam}`
+  // (tRPC's infiniteQueryOptions injects the page param as `cursor`); the stub
+  // factory receives that merged input so tests can page.
+  leaf.infiniteQueryOptions = (
+    input: unknown,
+    opts: {
+      readonly initialPageParam?: unknown;
+      readonly getNextPageParam?: (lastPage: unknown) => unknown;
+    } = {},
+  ) => ({
+    queryKey: qk,
+    queryFn: ({ pageParam }: { pageParam: unknown }) => {
+      if (query === "pending") return new Promise<never>(() => undefined);
+      const merged = {
+        ...(input as Record<string, unknown>),
+        cursor: pageParam,
+      };
+      return typeof query === "function"
+        ? Promise.resolve((query as (i: unknown) => unknown)(merged))
+        : Promise.resolve(query);
+    },
+    // Mirrors tRPC: the first page param defaults to the input's own `cursor`
+    // (undefined here), not a forced null.
+    initialPageParam:
+      opts.initialPageParam ?? (input as Record<string, unknown>).cursor,
+    getNextPageParam: opts.getNextPageParam,
+  });
 }
 
 function buildMutation(

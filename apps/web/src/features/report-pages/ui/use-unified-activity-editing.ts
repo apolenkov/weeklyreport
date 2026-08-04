@@ -70,19 +70,19 @@ export function useUnifiedActivityEditing({
   }
 
   function requestDelete(entry: UnifiedActivityEntry) {
-    if (entry.item.foreign === true) return;
+    if (readOnly || entry.item.foreign === true) return;
     setPendingDelete(entry);
   }
 
   function saveEdited(next: KanbanItem) {
-    if (!editState) return;
+    if (readOnly || !editState) return;
     const week = editState.entry.week;
     onWeekItemsChange?.(week, replaceWeekItem(entries, week, next));
     setEditState(null);
   }
 
   function confirmDelete() {
-    if (!pendingDelete) return;
+    if (readOnly || !pendingDelete) return;
     const week = pendingDelete.week;
     onWeekItemsChange?.(
       week,

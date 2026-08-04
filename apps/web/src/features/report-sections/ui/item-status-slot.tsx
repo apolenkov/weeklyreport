@@ -38,7 +38,7 @@ function ItemStatusChips({
 function CoveredStatusLock() {
   return (
     <StatusField>
-      <p className="rounded-xl border border-[rgba(200,32,20,0.15)] bg-[var(--color-status-blocked-bg)] px-3 py-2 text-xs text-[var(--color-foreground)]">
+      <p className="rounded-xl border border-[color-mix(in_srgb,var(--color-destructive)_15%,transparent)] bg-[var(--color-status-blocked-bg)] px-3 py-2 text-xs text-[var(--color-foreground)]">
         Status is set by the covering risk/blocker — resolve it in Risks &amp;
         Blockers to change.
       </p>

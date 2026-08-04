@@ -6,11 +6,12 @@ import { useTRPC } from "../../../lib/trpc-context";
 
 // Each mutation wires its own cache invalidation and toast feedback so the
 // Users tab component only has to call `.mutate`.
+const onError = (err: { message: string }) => toast.error(err.message);
+
 export function useUserMutations(onSaved: () => void) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  const onError = (err: { message: string }) => toast.error(err.message);
   const onSuccess = (message: string, after?: () => void) => () => {
     invalidateAdmin(qc, trpc);
     toast.success(message);

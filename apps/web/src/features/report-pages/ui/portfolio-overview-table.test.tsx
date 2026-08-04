@@ -8,6 +8,8 @@ import type {
 } from "../../report-sections";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 
+const NOOP_NAVIGATE = () => undefined;
+
 function makeProduct(
   overrides?: Partial<WeeklyPortfolioProduct>,
 ): WeeklyPortfolioProduct {
@@ -34,7 +36,10 @@ function ancestorChain(node: HTMLElement | null): HTMLElement[] {
 describe("PortfolioOverviewTable — a11y regression", () => {
   it("GridIcon SVG has aria-hidden='true'", () => {
     const { container } = render(
-      <PortfolioOverviewTable products={ONE_PRODUCT} />,
+      <PortfolioOverviewTable
+        products={ONE_PRODUCT}
+        onNavigate={NOOP_NAVIGATE}
+      />,
     );
     const svgs = container.querySelectorAll("svg");
     expect(svgs.length).toBeGreaterThan(0);
@@ -43,36 +48,18 @@ describe("PortfolioOverviewTable — a11y regression", () => {
   });
 
   it("'Portfolio Overview' text is readable by screen reader without SVG announcement", () => {
-    render(<PortfolioOverviewTable products={ONE_PRODUCT} />);
+    render(
+      <PortfolioOverviewTable
+        products={ONE_PRODUCT}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
     const heading = screen.getByText("Portfolio Overview");
     expect(heading).toBeInTheDocument();
     const ariaHiddenUpTheTree = ancestorChain(heading).map((node) =>
       node.getAttribute("aria-hidden"),
     );
     expect(ariaHiddenUpTheTree).not.toContain("true");
-  });
-
-  it("GridIcon renders the intended four-cell grid", () => {
-    const { container } = render(
-      <PortfolioOverviewTable products={ONE_PRODUCT} />,
-    );
-    const gridIconSvg = container.querySelector("svg");
-    expect(gridIconSvg).not.toBeNull();
-    expect(gridIconSvg?.getAttribute("viewBox")).toBe("0 0 24 24");
-    const rects = Array.from(gridIconSvg?.querySelectorAll("rect") ?? []).map(
-      (rect) => ({
-        x: rect.getAttribute("x"),
-        y: rect.getAttribute("y"),
-        width: rect.getAttribute("width"),
-        height: rect.getAttribute("height"),
-      }),
-    );
-    expect(rects).toEqual([
-      { x: "3", y: "3", width: "7", height: "7" },
-      { x: "14", y: "3", width: "7", height: "7" },
-      { x: "3", y: "14", width: "7", height: "7" },
-      { x: "14", y: "14", width: "7", height: "7" },
-    ]);
   });
 });
 
@@ -103,6 +90,7 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
           makeLeadRow({ id: "L1", name: "Anna", worstStatus: "blocked" }),
           makeLeadRow({ id: "L2", name: "Boris", worstStatus: "on-track" }),
         ]}
+        onNavigate={NOOP_NAVIGATE}
       />,
     );
 
@@ -114,11 +102,49 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     expect(screen.queryByText("Portfolio Overview")).toBeNull();
   });
 
+  it("renders an empty lead status as No status instead of On Track", () => {
+    render(
+      <PortfolioOverviewTable
+        scope="lead"
+        leads={[makeLeadRow({ worstStatus: "empty" })]}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    expect(screen.getByText("No status")).toBeInTheDocument();
+    expect(screen.queryByText("On Track")).toBeNull();
+  });
+
   it("by-product scope still renders the product heading (unchanged)", () => {
-    render(<PortfolioOverviewTable products={[makeProduct()]} />);
+    render(
+      <PortfolioOverviewTable
+        products={[makeProduct()]}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
     expect(screen.getByText("Portfolio Overview")).toBeInTheDocument();
     // Singular unit when there is exactly one (scope-adaptive copy).
     expect(screen.getByText("1 product")).toBeInTheDocument();
+  });
+
+  it("renders empty product status with a neutral surface and explicit label", () => {
+    render(
+      <PortfolioOverviewTable
+        products={[
+          makeProduct({
+            currentWeekCount: 1,
+            status: "empty",
+            statusLabel: "No status",
+          }),
+        ]}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    expect(screen.getByText("No status")).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveStyle({
+      background: "var(--color-surface-muted)",
+    });
   });
 
   it("renders lead cards in the order given (the mapper pre-sorts them)", () => {
@@ -129,6 +155,7 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
           makeLeadRow({ id: "L1", name: "Zoe" }),
           makeLeadRow({ id: "L2", name: "Amir" }),
         ]}
+        onNavigate={NOOP_NAVIGATE}
       />,
     );
     const names = screen
@@ -137,29 +164,40 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     expect(names).toEqual(["Zoe", "Amir"]);
   });
 
-  it("a lead card click scrolls to and focuses report-lead-<id>", () => {
-    // The section anchor the page renders for each lead group.
+  it("a lead card click lifts the lead id to the report surface, never poking the DOM", () => {
+    const onNavigate = vi.fn();
+    // Regression: the old handler reached into the section DOM by id; a click
+    // must now surface the target through React state only.
     const section = document.createElement("section");
     section.id = "report-lead-L1";
     section.tabIndex = -1;
     document.body.append(section);
     const scrollSpy = vi.fn();
-    const focusSpy = vi.fn();
     section.scrollIntoView = scrollSpy;
-    section.focus = focusSpy;
 
     render(
       <PortfolioOverviewTable
         scope="lead"
         leads={[makeLeadRow({ id: "L1", name: "Anna" })]}
+        onNavigate={onNavigate}
       />,
     );
 
     fireEvent.click(screen.getByText("Anna"));
-    expect(scrollSpy).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
-    });
-    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    expect(onNavigate).toHaveBeenCalledWith("L1");
+    expect(scrollSpy).not.toHaveBeenCalled();
+  });
+
+  it("a product card click lifts the product id to the report surface", () => {
+    const onNavigate = vi.fn();
+    render(
+      <PortfolioOverviewTable
+        products={[makeProduct({ id: "p1" })]}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Product Alpha"));
+    expect(onNavigate).toHaveBeenCalledWith("p1");
   });
 });

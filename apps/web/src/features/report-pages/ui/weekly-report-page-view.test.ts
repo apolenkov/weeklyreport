@@ -1,11 +1,11 @@
-/**
- * Pure view-model derivation tests for `buildWeeklyReportPageView`: the
- * authorId deep-link scroll target must always resolve to the same product
- * as the highlighted accordion panel.
- */
+// The deep-link scroll target must stay aligned with the highlighted product.
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { buildWeeklyReportPageView } from "./weekly-report-page-view";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -15,24 +15,14 @@ const PRODUCT_WITH_CONTENT = "44444444-4444-4444-8444-444444444444";
 const SECTION_A = "55555555-5555-4555-8555-555555555555";
 
 function baseReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
+  overrides: WeeklyReportFixture = {},
 ): WeeklyReportReadModel {
-  return {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open",
-    archived: false,
-    weekLabel: "Week 16",
     submissionCount: 1,
     totalLeads: 1,
-    hasActiveReminderRule: true,
-    portfolioOverview: [],
-    leadSections: [],
-    escalations: [],
     ...overrides,
-  };
+  });
 }
 
 describe("buildWeeklyReportPageView — authorId scroll target", () => {
@@ -45,6 +35,7 @@ describe("buildWeeklyReportPageView — authorId scroll target", () => {
           worstStatus: "green",
           stageCount: 1,
           leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
         },
         {
           productId: PRODUCT_WITH_CONTENT,
@@ -52,6 +43,7 @@ describe("buildWeeklyReportPageView — authorId scroll target", () => {
           worstStatus: "green",
           stageCount: 1,
           leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
         },
       ],
       leadSections: [

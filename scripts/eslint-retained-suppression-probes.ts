@@ -3,26 +3,18 @@ import { readFileSync } from "node:fs";
 import { ESLint } from "eslint";
 
 import { readSuppressionInventory } from "./eslint-suppression-inventory.ts";
+import { parseSuppressionLedger } from "./eslint-suppression-ledger-schema.ts";
 
-interface LedgerEntry {
-  readonly path: string;
-  readonly fingerprint: string;
-  readonly rule: string;
-  readonly verdict: "unadjudicated" | "remove" | "replace" | "retain";
-}
-
-interface Ledger {
-  readonly entries: readonly LedgerEntry[];
-}
-
-const ledger = JSON.parse(
+const ledger = parseSuppressionLedger(
   readFileSync("scripts/eslint-suppression-ledger.json", "utf8"),
-) as Ledger;
-const retainedKeys = new Set(
-  ledger.entries
-    .filter((entry) => entry.verdict === "retain")
-    .map((entry) => `${entry.path}\0${entry.fingerprint}\0${entry.rule}`),
 );
+const retainedKeys = ledger.entries
+  .filter((entry) => entry.verdict === "retain")
+  .reduce<Map<string, number>>((counts, entry) => {
+    const key = `${entry.path}\0${entry.fingerprint}\0${entry.rule}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map());
 const retained = readSuppressionInventory().directives.filter((directive) =>
   retainedKeys.has(
     `${directive.path}\0${directive.fingerprint}\0${directive.rule}`,
@@ -66,9 +58,13 @@ for (const [path, directives] of byPath) {
   }
 }
 
-if (retained.length !== retainedKeys.size) {
+const retainedLedgerCount = [...retainedKeys.values()].reduce(
+  (total, count) => total + count,
+  0,
+);
+if (retained.length !== retainedLedgerCount) {
   failures.push(
-    `retained ledger/live mismatch ledger=${retainedKeys.size} live=${retained.length}`,
+    `retained ledger/live mismatch ledger=${retainedLedgerCount} live=${retained.length}`,
   );
 }
 

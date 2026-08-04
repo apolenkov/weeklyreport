@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import type { NestMiddleware } from "@nestjs/common";
+import { Inject, type NestMiddleware } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
-import type { NextFunction, Request, Response } from "express";
+import type { Request } from "express";
 import { ClsService } from "nestjs-cls";
 
 // A correlation id we are willing to echo back must be a bounded run of
@@ -10,12 +10,34 @@ import { ClsService } from "nestjs-cls";
 // is attacker-controlled noise that could poison logs or response headers.
 const VALID_REQUEST_ID = /^[\x20-\x7E]{1,128}$/;
 
+// The CLS surface the middleware writes; ClsService is nominal (private `als`),
+// so declaring the single consumed member lets tests inject `{ set }` without
+// an erasing cast.
+export interface CorrelationIdStore {
+  set(key: string, value: unknown): void;
+}
+
+export interface CorrelationRequest {
+  readonly headers: Request["headers"];
+}
+
+export interface CorrelationResponse {
+  setHeader(name: string, value: string): unknown;
+}
+
+export type CorrelationNext = () => void;
+
 @Injectable()
 export class CorrelationIdMiddleware implements NestMiddleware {
-  constructor(private readonly cls: ClsService) {}
+  constructor(@Inject(ClsService) private readonly cls: CorrelationIdStore) {}
 
-  use(req: Request, res: Response, next: NextFunction): void {
-    const inbound = req.headers["x-request-id"] as string | undefined;
+  use(
+    req: CorrelationRequest,
+    res: CorrelationResponse,
+    next: CorrelationNext,
+  ): void {
+    const header = req.headers["x-request-id"];
+    const inbound = typeof header === "string" ? header : undefined;
     const correlationId =
       inbound !== undefined && VALID_REQUEST_ID.test(inbound)
         ? inbound

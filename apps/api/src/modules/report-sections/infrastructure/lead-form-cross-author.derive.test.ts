@@ -1,9 +1,6 @@
 // Characterization pins for the cross-author derive helpers behind
-// LeadFormPrismaRepository.getCrossAuthors / getCrossAuthorContent. These pin
-// the CURRENT outputs (grouping + insertion order, display forms, risk-derived
-// stage precedence, shared-product scoping incl. activity-parented null-FK
-// drops, severity narrowing) — substituting for the DB-only integration
-// coverage the two methods carry.
+// getCrossAuthors / getCrossAuthorContent: grouping, display forms, risk-derived
+// stage precedence, shared-product scoping, and severity narrowing.
 import { describe, expect, it } from "vitest";
 
 import {
@@ -107,6 +104,17 @@ describe("deriveForeignStageStatus", () => {
 
   it("stays null when persisted is null and no risk covers", () => {
     expect(deriveForeignStageStatus(dev, PROJECT_1, [], null)).toBeNull();
+  });
+
+  it("rejects an unknown covering severity instead of classifying it as at-risk", () => {
+    expect(() =>
+      deriveForeignStageStatus(
+        dev,
+        PROJECT_1,
+        [{ projectId: PROJECT_1, severity: "unknown", stageNames: [] }],
+        null,
+      ),
+    ).toThrow();
   });
 });
 

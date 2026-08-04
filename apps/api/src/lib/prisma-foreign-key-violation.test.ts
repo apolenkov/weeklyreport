@@ -35,4 +35,38 @@ describe("isForeignKeyViolation", () => {
     expect(isForeignKeyViolation(null)).toBe(false);
     expect(isForeignKeyViolation("P2003")).toBe(false);
   });
+
+  it("matches a scoped constraint name from the pg-adapter message", () => {
+    expect(
+      isForeignKeyViolation(pgAdapterP2003(), {
+        index: "RecordComment_itemId_fkey",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a P2003 on a different FK constraint under a scope (re-throws)", () => {
+    const reviewerFkError = {
+      code: PRISMA_FOREIGN_KEY_CONSTRAINT_ERROR_CODE,
+      message: "Foreign key constraint violated",
+      meta: {
+        driverAdapterError: {
+          cause: {
+            originalMessage:
+              'insert or update violates foreign key constraint "RecordComment_reviewerId_fkey"',
+          },
+        },
+      },
+    };
+
+    expect(
+      isForeignKeyViolation(reviewerFkError, {
+        index: "RecordComment_itemId_fkey",
+      }),
+    ).toBe(false);
+    expect(
+      isForeignKeyViolation(reviewerFkError, {
+        index: "RecordComment_reviewerId_fkey",
+      }),
+    ).toBe(true);
+  });
 });

@@ -7,14 +7,13 @@ import {
   getCurrentWeekBounds,
   isBusinessDay,
   nextBusinessDay,
+  parseDeadlineTime,
   workingDaySet,
 } from "./business-date";
 
-/**
- * Helper: build a UTC `Date` from an ISO wall-clock string interpreted in
- * the given IANA zone. Keeps the tests readable — every assertion can be
- * stated in local-time intent instead of pre-shifted UTC strings.
- */
+// Helper: build a UTC `Date` from an ISO wall-clock string interpreted in the
+// given IANA zone, so assertions read in local-time intent rather than
+// pre-shifted UTC strings.
 function inZone(iso: string, tz: string): Date {
   const dt = DateTime.fromISO(iso, { zone: tz });
   if (!dt.isValid) {
@@ -23,9 +22,7 @@ function inZone(iso: string, tz: string): Date {
   return dt.toJSDate();
 }
 
-/**
- * Helper: assert a `Date` corresponds to the given wall-clock string in `tz`.
- */
+// Helper: assert a `Date` corresponds to the given wall-clock string in `tz`.
 function expectWallClock(date: Date, isoNoZone: string, tz: string): void {
   const got = DateTime.fromJSDate(date)
     .setZone(tz)
@@ -193,10 +190,9 @@ describe("business-date: addBusinessDays — boundaries", () => {
   });
 
   it("DST spring-forward (Europe/Berlin 2026-03-29): wall-clock hour preserved across the +1h jump", () => {
-    // 2026-03-27 is Friday in CET. Adding 1 business day crosses DST start
-    // overnight Sat→Sun (clocks jump from 02:00 to 03:00). The next business
-    // day in mon-fri after Fri 27 March is Mon 30 March — the assertion is
-    // that we still get 09:00 wall-clock on Mon, not a +1h drift to 10:00.
+    // 2026-03-27 is Friday in CET; adding 1 business day crosses the DST start
+    // overnight (02:00 → 03:00). The next mon-fri day is Mon 30 March, and the
+    // assertion is that it still reads 09:00 wall-clock, not +1h drifted to 10:00.
     const start = inZone("2026-03-27T09:00:00", TZ_BER); // Fri
     const got = addBusinessDays(start, 1, "mon-fri", TZ_BER);
     expectWallClock(got, "2026-03-30T09:00:00", TZ_BER);
@@ -229,50 +225,67 @@ describe("business-date: nextBusinessDay", () => {
 });
 
 describe("business-date: computeDeadline", () => {
-  it("defaults to 18:00 wall-clock in tz", () => {
+  it("applies the explicit 18:00 wall-clock in tz", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK); // Mon 09:00
-    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK);
+    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK, {
+      hour: 18,
+      minute: 0,
+    });
     expectWallClock(got, "2026-05-08T18:00:00", TZ_MSK); // Fri 18:00 MSK
   });
 
   it("discards the hour of periodStart (lands cleanly on HH:00:00.000)", () => {
     const start = inZone("2026-05-04T23:59:59", TZ_MSK);
-    const got = computeDeadline(start, 1, "mon-fri", TZ_MSK, 9);
+    const got = computeDeadline(start, 1, "mon-fri", TZ_MSK, {
+      hour: 9,
+      minute: 0,
+    });
     expectWallClock(got, "2026-05-05T09:00:00", TZ_MSK);
   });
 
   it("mon-sun with deadlineDays=4 from Monday lands on Friday (calendar +4)", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK);
-    const got = computeDeadline(start, 4, "mon-sun", TZ_MSK, 18);
+    const got = computeDeadline(start, 4, "mon-sun", TZ_MSK, {
+      hour: 18,
+      minute: 0,
+    });
     expectWallClock(got, "2026-05-08T18:00:00", TZ_MSK);
   });
 
   it("mon-fri vs mon-sun diverge when deadlineDays crosses a weekend", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK); // Mon
-    const friMonFri = computeDeadline(start, 5, "mon-fri", TZ_MSK);
-    const satMonSun = computeDeadline(start, 5, "mon-sun", TZ_MSK);
+    const friMonFri = computeDeadline(start, 5, "mon-fri", TZ_MSK, {
+      hour: 18,
+      minute: 0,
+    });
+    const satMonSun = computeDeadline(start, 5, "mon-sun", TZ_MSK, {
+      hour: 18,
+      minute: 0,
+    });
     expectWallClock(friMonFri, "2026-05-11T18:00:00", TZ_MSK); // next Mon
     expectWallClock(satMonSun, "2026-05-09T18:00:00", TZ_MSK); // Sat
   });
 
-  it("rejects out-of-range deadlineHour", () => {
-    const start = new Date();
-    expect(() => computeDeadline(start, 1, "mon-fri", TZ_MSK, 24)).toThrow(
-      /deadlineHour/,
-    );
-    expect(() => computeDeadline(start, 1, "mon-fri", TZ_MSK, -1)).toThrow(
-      /deadlineHour/,
-    );
-    expect(() => computeDeadline(start, 1, "mon-fri", TZ_MSK, 9.5)).toThrow(
-      /deadlineHour/,
-    );
-  });
-
   it("produces UTC-stable Date (instant equality across zone observers)", () => {
     const start = inZone("2026-05-04T09:00:00", TZ_MSK);
-    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK, 18);
+    const got = computeDeadline(start, 4, "mon-fri", TZ_MSK, {
+      hour: 18,
+      minute: 0,
+    });
     // Fri 2026-05-08 18:00 MSK = 15:00 UTC.
     expect(got.toISOString()).toBe("2026-05-08T15:00:00.000Z");
+  });
+});
+
+describe("business-date: parseDeadlineTime", () => {
+  it("parses a valid HH:MM string", () => {
+    expect(parseDeadlineTime("09:30")).toEqual({ hour: 9, minute: 30 });
+  });
+
+  it("rejects a malformed string loudly instead of coercing to a default", () => {
+    expect(() => parseDeadlineTime("18")).toThrow(/HH:MM/);
+    expect(() => parseDeadlineTime("25:00")).toThrow(/HH:MM/);
+    expect(() => parseDeadlineTime("")).toThrow(/HH:MM/);
   });
 });
 
@@ -304,10 +317,9 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
   });
 
   it("is stable across European DST spring-forward (last Sunday of March 2026)", () => {
-    // CET → CEST DST transition: 2026-03-29 01:00 UTC (03:00 CET → 03:00 CEST → wait, 02:00 → 03:00 local).
-    // The naive setHours/setDate path drifts here in a non-UTC TZ container.
-    // Pre-DST sample: Saturday 2026-03-28 22:00 UTC
-    // Post-DST sample: Sunday 2026-03-29 02:00 UTC (just after spring-forward)
+    // CET → CEST spring-forward 2026-03-29: the naive setHours/setDate path
+    // drifts here in a non-UTC TZ container. Pre-DST: Sat 03-28 22:00 UTC;
+    // post-DST: Sun 03-29 02:00 UTC (just after spring-forward).
     const preDst = new Date("2026-03-28T22:00:00.000Z");
     const postDst = new Date("2026-03-29T02:00:00.000Z");
 
@@ -338,10 +350,9 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
   });
 
   it("produces identical bounds regardless of host TZ snapshot (canonical UTC ISO)", () => {
-    // Canonical-ISO lock: the expectation is derived from UTC, so any
-    // reintroduction of local-time math fails it under a non-UTC host.
-    // Run the suite under TZ=Pacific/Kiritimati and TZ=America/Anchorage
-    // to exercise that — a UTC-only run cannot prove zone independence.
+    // Canonical-ISO lock: expectations derive from UTC, so any reintroduction of
+    // local-time math fails under a non-UTC host. Run under
+    // TZ=Pacific/Kiritimati and TZ=America/Anchorage to prove zone independence.
     const fixed = new Date("2026-04-30T09:00:00.000Z");
     const { periodStart, periodEnd } = getCurrentWeekBounds(fixed);
 
@@ -410,13 +421,10 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries", () => {
     );
   });
 
-  it("yields Invalid Date bounds for an invalid input Date", () => {
-    const { periodStart, periodEnd } = getCurrentWeekBounds(
-      new Date("not-a-date"),
+  it("rejects an invalid input Date loudly instead of propagating Invalid Date", () => {
+    expect(() => getCurrentWeekBounds(new Date("not-a-date"))).toThrow(
+      /business-date: input date must be valid/,
     );
-
-    expect(Number.isNaN(periodStart.getTime())).toBe(true);
-    expect(Number.isNaN(periodEnd.getTime())).toBe(true);
   });
 });
 

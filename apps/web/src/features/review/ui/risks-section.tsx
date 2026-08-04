@@ -6,16 +6,17 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
-import { canonicalRiskStageTags, RiskCard } from "./risk-card";
+import { canonicalRiskStageTags } from "../model/risk-stage-tags";
+import { RiskCard } from "./risk-card";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import { deriveRiskDialogSeedProps } from "./risk-edit-dialog-helpers";
 import type { RiskAddPrefill, RiskListEditing } from "./use-risk-list-editing";
 import { useRiskListEditing } from "./use-risk-list-editing";
 
 interface RisksSectionProps {
-  readonly risks: RiskEntry[];
+  readonly risks: readonly RiskEntry[];
   readonly readOnly?: boolean | undefined;
-  readonly onChange?: ((next: RiskEntry[]) => void) | undefined;
+  readonly onChange?: ((next: readonly RiskEntry[]) => void) | undefined;
   readonly addPrefill?: RiskAddPrefill | undefined;
   // Absent/empty disables +Add Risk (dialog needs a project picker seed).
   readonly products?: readonly Product[] | undefined;
@@ -28,7 +29,7 @@ interface RisksSectionProps {
 }
 
 interface RiskListProps {
-  readonly risks: RiskEntry[];
+  readonly risks: readonly RiskEntry[];
   readonly readOnly: boolean;
   readonly products?: readonly Product[] | undefined;
   readonly sectionAuthorName?: string | undefined;
@@ -48,7 +49,7 @@ function RiskList({
 }: RiskListProps) {
   if (risks.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+      <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
         {readOnly
           ? "No risks reported."
           : "No risks reported. Use “+ Add Risk” when you spot one."}

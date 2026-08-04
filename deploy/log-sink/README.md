@@ -1,4 +1,4 @@
-# Log Sink Configs (Phase 37-04)
+# Log Sink Configs
 
 Templates for shipping CustomReport API logs to a remote observability backend.
 Choose one of the two sidecar options below depending on your stack.

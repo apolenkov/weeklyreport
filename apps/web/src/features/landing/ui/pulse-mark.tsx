@@ -1,7 +1,4 @@
 // File/component keep the pulse- prefix; the mark itself reads «Weekly Report».
-/**
- * Pulse Mark.
- */
 export function PulseMark() {
   return (
     <div className="pulse-mark" role="img" aria-label="Weekly Report">

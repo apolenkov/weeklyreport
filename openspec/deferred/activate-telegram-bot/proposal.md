@@ -26,4 +26,4 @@ item. Activate only when Phase 55 is unlocked.
 
 ## Status
 
-Deferred — TODO(Phase-55-activation) in `apps/api/src/modules/telegram/telegram.module.ts:28`.
+Deferred — TODO(activate-telegram-bot) in `apps/api/src/modules/telegram/telegram.module.ts:28`.

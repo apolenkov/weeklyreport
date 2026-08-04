@@ -260,7 +260,7 @@ describe("SaveNowButton", () => {
     const btn = screen.getByRole<HTMLButtonElement>("button");
     expect(btn.getAttribute("aria-busy")).toBe("true");
     expect(btn.className).toContain("bg-[var(--color-starbucks-accent)]");
-    expect(btn.className).toContain("text-white");
+    expect(btn.className).toContain("text-[var(--color-primary-foreground)]");
     expect(btn.disabled).toBe(true);
   });
 

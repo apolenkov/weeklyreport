@@ -1,7 +1,5 @@
-/**
- * Typed text must survive parent re-renders that pass a new
- * stagesForProduct function reference (autosave → React Query invalidate cycle).
- */
+// Typed text must survive parent re-renders that replace the stage-selector
+// callback during the autosave/invalidation cycle.
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
@@ -110,14 +108,16 @@ describe("ItemEditDialog — backdrop keyboard and click behavior", () => {
   });
 });
 
-/** An item may reference a product outside the lead's stage-owned products. */
+// A cross-stage item may reference a product outside the lead's owned list.
 describe("ItemEditDialog — cross-stage product preservation", () => {
   it("keeps the original product on save when its id is outside the stage-owned list", () => {
     const onSave = vi.fn();
     const crossStageItem: KanbanItem = {
       id: "item-cross",
+      parent: { kind: "product", id: "p-foreign" },
       productId: "p-foreign",
       productName: "Payments Gateway",
+      activityId: null,
       // A cross-stage row already carries a stage, so it remains saveable even
       // when the lead owns nothing on p-foreign.
       stageNames: ["Integration"],
@@ -211,8 +211,10 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
 
   const foreignItem: KanbanItem = {
     id: "i-foreign",
+    parent: { kind: "product", id: "p-foreign" },
     productId: "p-foreign",
     productName: "Payments Gateway",
+    activityId: null,
     text: "Legacy cross item",
     status: "in-progress",
     author: "Test Lead",
@@ -384,7 +386,8 @@ describe("ItemEditDialog — activity parenting", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
     expect(saved.activityId).toBe("act1");
-    expect(saved.productId).toBe("");
+    expect(saved.parent).toEqual({ kind: "activity", id: "act1" });
+    expect(saved.productId).toBeNull();
     expect(saved.stageNames).toBeUndefined();
     expect(saved.text).toBe("Triaged 12 tickets");
   });
@@ -393,8 +396,10 @@ describe("ItemEditDialog — activity parenting", () => {
 describe("ItemEditDialog — status lock and blocker routing", () => {
   const coveredItem: KanbanItem = {
     id: "i1",
+    parent: { kind: "product", id: "p1" },
     productId: "p1",
     productName: "DevOps Tools",
+    activityId: null,
     stageNames: ["Development"],
     status: "in-progress",
     text: "wip",

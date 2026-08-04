@@ -1,6 +1,6 @@
 apiVersion: 1
 
-# Phase 52 (UFB-054) — Product / business-KPI dashboards.
+# Product / business-KPI dashboards.
 # Separate provider entry from `customreport.yml` so the dashboard lands
 # in its own Grafana folder ("Product KPIs"), making it discoverable for
 # the leadership audience (head + admin + viewer) without burying it

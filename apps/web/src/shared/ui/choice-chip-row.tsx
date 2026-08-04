@@ -14,7 +14,7 @@ interface ChoiceChipRowProps<T extends string> {
   readonly onSelect: (value: T) => void;
 }
 
-const CHIP_IDLE_BORDER = "rgba(0,0,0,0.15)";
+const CHIP_IDLE_BORDER = "var(--color-border-strong)";
 
 export function ChoiceChipRow<T extends string>({
   choices,

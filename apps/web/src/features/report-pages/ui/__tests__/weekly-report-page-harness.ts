@@ -16,6 +16,7 @@ export function makeWeeklyReportData(
       readonly productName: string;
       readonly worstStatus: TrafficLightStatus | "empty";
       readonly stageCount: number;
+      readonly leadIds: string[];
       readonly leadNames: string[];
     }[];
     readonly leadSections?: {
@@ -65,6 +66,7 @@ export function makeWeeklyReportData(
         worstStatus: "green",
         stageCount: 1,
         leadNames: ["Alice"],
+        leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
       },
     ],
     leadSections: overrides?.leadSections ?? [

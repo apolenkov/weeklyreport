@@ -1,8 +1,8 @@
 {
-  "filesOnFloor": 852,
-  "productTotal": 931,
-  "overrideBlocks": 26,
-  "liveSuppressions": 71,
+  "filesOnFloor": 952,
+  "productTotal": 952,
+  "overrideBlocks": 23,
+  "liveSuppressions": 6,
   "justifiedRegressions": [
     {
       "counter": "filesOnFloor",

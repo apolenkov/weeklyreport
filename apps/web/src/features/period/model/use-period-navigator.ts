@@ -27,6 +27,13 @@ interface PeriodListboxOption {
   readonly submitted: boolean;
 }
 
+export function periodLabel(period: {
+  readonly dateRange: string;
+  readonly isCurrent: boolean;
+}): string {
+  return period.isCurrent ? `${period.dateRange} (Current)` : period.dateRange;
+}
+
 export interface PeriodNavigatorSelection {
   readonly selectedPeriod: ReportPeriod | undefined;
   readonly options: readonly PeriodListboxOption[];

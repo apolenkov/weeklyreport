@@ -126,10 +126,18 @@ describe("Telemetry group scoping (integration)", () => {
         },
       }),
       prisma.pdfExportJob.create({
-        data: { reportId: TEST_IDS.report, requestedBy: TEST_IDS.head },
+        data: {
+          reportId: TEST_IDS.report,
+          requestedBy: TEST_IDS.head,
+          templateVersion: "phase-2-pdf-v1",
+        },
       }),
       prisma.pdfExportJob.create({
-        data: { reportId: REPORT_B, requestedBy: LEAD_B },
+        data: {
+          reportId: REPORT_B,
+          requestedBy: LEAD_B,
+          templateVersion: "phase-2-pdf-v1",
+        },
       }),
     ]);
   }

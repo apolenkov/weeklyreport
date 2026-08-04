@@ -3,7 +3,7 @@
 This directory holds the **Scenario Catalog**: a durable, behavior-anchored map
 of what each role can do in the app, used to drive the per-role UI sweep.
 
-Read the design first — this README only pins the *format*:
+Read the design first — this README only pins the _format_:
 
 - ADR: `docs/adr/0001-live-exploratory-ui-sweep.md`
 - Terms (Behavioral Scenario, Scenario Catalog, Driver, Role sweep): `CONTEXT.md`
@@ -15,14 +15,14 @@ Read the design first — this README only pins the *format*:
 - **Anchored to behavior, not structure.** Each entry is `role · route · intent`
   plus Given/When/Then prose. **No `file:line`, no selectors, no test names.**
   Structural anchors rot on an MVP; intents survive refactors.
-- **Durable and high-level, NOT exhaustive.** The catalog lists *what intents
-  exist per route*, not every element, state, or transition. Exhaustive
+- **Durable and high-level, NOT exhaustive.** The catalog lists _what intents
+  exist per route_, not every element, state, or transition. Exhaustive
   within-route exploration is the **Driver's** job at run time — it is not
   frozen here.
 - **Generated, then human-reviewed.** The catalog is produced by the catalog
   generator (Haiku fan-out, sliced by entry point) and reviewed as a diff. It is
   cheap to regenerate; do not hand-maintain it as a permanent artifact. The one
-  worked example below is the *format contract* the generator must emit, not the
+  worked example below is the _format contract_ the generator must emit, not the
   catalog itself.
 - **Not a BDD runner.** Given/When/Then is plain prose a Driver (human or AI
   agent) reads. The repo adds no `cucumber` / `playwright-bdd` dependency.
@@ -30,15 +30,15 @@ Read the design first — this README only pins the *format*:
   reach, so it never enumerates negative-authz ("role X is denied route Y"). The
   access boundary is a backend concern (tRPC `role-coverage-gate` + SSR guards);
   duplicating it here would be a second, rotting copy of the truth. The Driver
-  still reports an *unexpected* denial on a reachable route as an anomaly
+  still reports an _unexpected_ denial on a reachable route as an anomaly
   ("expected the editor, got Forbidden") — but the catalog builds no denial grid.
 
 ## Two levels of completeness
 
-| Level | Question | Measured by | When |
-| ----- | -------- | ----------- | ---- |
-| **Entry-point** (this catalog) | Does every role-reachable route have ≥ 1 intent? | generation-time critic + coverage matrix | at generation |
-| **Within-route** (the Driver) | Is every interactive element / reachable transition exercised? | the live Driver exploring the route | at run time |
+| Level                          | Question                                                       | Measured by                              | When          |
+| ------------------------------ | -------------------------------------------------------------- | ---------------------------------------- | ------------- |
+| **Entry-point** (this catalog) | Does every role-reachable route have ≥ 1 intent?               | generation-time critic + coverage matrix | at generation |
+| **Within-route** (the Driver)  | Is every interactive element / reachable transition exercised? | the live Driver exploring the route      | at run time   |
 
 The generation-time critic guards **entry points only**. It must NOT chase
 per-element completeness — that would re-introduce the rotting structural list
@@ -72,7 +72,7 @@ Rules that keep the catalog trustworthy:
   run-time exploration, not here.
 - **`id` is stable.** Reword `intent`/prose freely on regeneration, but keep `id`
   fixed so historical sweep reports stay comparable. Treat a new behavior as a
-  new `id`. Stability is *enforced on regeneration*: the generator reads the
+  new `id`. Stability is _enforced on regeneration_: the generator reads the
   existing `<role>.yaml` and reuses the matching `id` for an intent that is the
   same in meaning, minting a new `id` only for genuinely new behavior — it does
   not re-roll ids from scratch each run.
@@ -80,7 +80,7 @@ Rules that keep the catalog trustworthy:
 ## Worked example — the format contract
 
 This is the canonical shape the generator emits and the fan-out copies. It is an
-*example*, not the `lead` catalog (that file is generated).
+_example_, not the `lead` catalog (that file is generated).
 
 ```yaml
 role: lead
@@ -98,8 +98,9 @@ routes:
         intent: Submit the completed section for head review
         given: A period is open and the lead's section is filled
         when: The lead confirms submission from the report editor
-        then: The section moves to a submitted state and the editor reflects it as
-              read-only / awaiting review, with no broken load
+        then:
+          The section moves to a submitted state and the editor reflects it as
+          read-only / awaiting review, with no broken load
 ```
 
 ## Lead route denominator (entry-point completeness target)
@@ -108,18 +109,18 @@ The `lead` role reaches these routes (derived from the per-route SSR layout
 guards, not guessed). Every one must have ≥ 1 intent for entry-point
 completeness:
 
-| Route | Guard (`access`) |
-| ----- | ---------------- |
-| `/` | redirects to the role home (`/lead/report`) |
-| `/lead/report` | lead, head, admin |
-| `/lead/report/[reportId]` | lead, head, admin |
-| `/lead/report/[reportId]/preview` | lead, head, admin |
-| `/lead/history` | lead, head, admin |
-| `/reports` | lead, head, admin, viewer (rows scoped server-side) |
-| `/reports/[reportId]` | lead, head, admin, viewer |
-| `/reports/[reportId]/present` | lead, head, admin, viewer |
-| `/reports/history` | lead, head, admin, viewer |
-| `/reports/trends` | lead, head, admin, viewer |
+| Route                             | Guard (`access`)                                    |
+| --------------------------------- | --------------------------------------------------- |
+| `/`                               | redirects to the role home (`/lead/report`)         |
+| `/lead/report`                    | lead, head, admin                                   |
+| `/lead/report/[reportId]`         | lead, head, admin                                   |
+| `/lead/report/[reportId]/preview` | lead, head, admin                                   |
+| `/lead/history`                   | lead, head, admin                                   |
+| `/reports`                        | lead, head, admin, viewer (rows scoped server-side) |
+| `/reports/[reportId]`             | lead, head, admin, viewer                           |
+| `/reports/[reportId]/present`     | lead, head, admin, viewer                           |
+| `/reports/history`                | lead, head, admin, viewer                           |
+| `/reports/trends`                 | lead, head, admin, viewer                           |
 
 Out of the lead surface (guarded away): `/head/*` (head, admin), `/admin/*`
 (admin only). `/print/[reportId]` is a system/export view, swept separately if
@@ -142,6 +143,6 @@ Manual-UAT findings feed the catalog over time, on this loop:
 4. **Regenerate** the catalog; the generator reuses stable `id`s and only the
    genuinely new behavior is added.
 
-Phase 2 (freezing critical, stabilized intents into deterministic Playwright
-specs; and a formal Model-Based Testing state model) is deferred until the
-product stabilizes — see ADR 0001.
+Freezing critical, stabilized intents into deterministic Playwright specs and a
+formal Model-Based Testing state model is deferred until the product stabilizes
+— see ADR 0001.

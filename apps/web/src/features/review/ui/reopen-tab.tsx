@@ -31,7 +31,7 @@ function ReopenFilterBar({
           onClick={() => onChange(f.value)}
           className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
             filter === f.value
-              ? "bg-[var(--color-starbucks-accent)] text-white"
+              ? "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)]"
               : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]"
           }`}
           aria-pressed={filter === f.value}
@@ -198,7 +198,7 @@ function ReopenListStatus({
     return (
       <div
         role="alert"
-        className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
+        className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] p-4 text-sm text-[var(--color-destructive)]"
       >
         Failed to load requests: {errorMessage}
       </div>

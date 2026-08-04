@@ -14,6 +14,7 @@ export interface SaveDraftMutationDeps {
   readonly getRefs: GetAutosaveRefs;
   readonly setState: Dispatch<SetStateAction<AutosaveState>>;
   readonly setLastSavedAt: Dispatch<SetStateAction<Date | null>>;
+  readonly setLastSavedKey: (next: string) => void;
   readonly setQueuedRetryRevision: Dispatch<SetStateAction<number>>;
   readonly args: UseLeadFormAutosaveArgs;
 }
@@ -32,6 +33,7 @@ export function useSaveDraftMutation(
         getRefs: deps.getRefs,
         setState: deps.setState,
         setLastSavedAt: deps.setLastSavedAt,
+        setLastSavedKey: deps.setLastSavedKey,
         setQueuedRetryRevision: deps.setQueuedRetryRevision,
         onVersionChange: deps.args.onVersionChange,
         onSaved: deps.args.onSaved,

@@ -6,14 +6,9 @@ import { AdminPeriodOverlapError } from "../../admin/admin-shared.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
 
-/**
- * period-uniqueness (D5): reopen moves a Report into periodState='open'. If
- * another open period already holds that boundary, the partial unique index
- * `Report_one_open_per_boundary` rejects the transaction with a P2002. The
- * repository translates it into `AdminPeriodOverlapError` (→ BAD_REQUEST),
- * never a raw 500. Teeth: drop the catch and the raw P2002 surfaces, failing
- * the first assertion.
- */
+// Reopen moves a Report into periodState='open'. If another open period holds
+// that boundary, the partial unique index rejects the transaction with P2002;
+// the repository translates it to AdminPeriodOverlapError (→ BAD_REQUEST).
 describe("PeriodPrismaRepository.reopenPeriod — open-boundary P2002 translation", () => {
   function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(

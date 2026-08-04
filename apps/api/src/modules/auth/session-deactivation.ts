@@ -1,20 +1,9 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { SessionRevocationService } from "../admin/index.js";
 
-/**
- * The single source of truth for the revoked/deactivated decision across every
- * JWT-admitting entry path (regular tRPC session, PDF-export rebuild, Bull
- * Board admin guard), so a stale JWT cannot outlive a deactivation.
- *
- * Two tiers, in order:
- *  - Redis revoked-set fast path, fail-OPEN: a thrown/failed lookup must NOT
- *    bar the user, otherwise a Redis outage would lock everyone out. The
- *    authoritative Prisma read below is the safety net.
- *  - Prisma `isActive` read, fail-CLOSED: a missing/`null` row OR
- *    `isActive === false` bars the user. Barring the missing row closes the
- *    hard-deleted-user gap — admin snapshot-restore deletes unreferenced users
- *    without touching the revoked set, so the fast path never fires for them.
- */
+// Single source of truth for the revoked/deactivated decision across every
+// JWT-admitting entry path. Fail-open Redis fast path + fail-closed Prisma
+// isActive read — see openspec/specs/jwt-session-integrity (two-tier gate).
 export async function isUserAccessBarred(
   userId: string,
   prisma: PrismaService,

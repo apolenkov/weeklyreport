@@ -3,7 +3,10 @@ import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { stableStringify, useLeadFormAutosave } from "./use-lead-form-autosave";
+import {
+  encodeAutosaveComparisonKey,
+  useLeadFormAutosave,
+} from "./use-lead-form-autosave";
 import {
   AUTOSAVE_SECTION_ID as SECTION_ID,
   buildAutosaveHarness as buildHarness,
@@ -440,7 +443,30 @@ describe("useLeadFormAutosave", () => {
   });
 });
 
-describe("stableStringify", () => {
+describe("encodeAutosaveComparisonKey", () => {
+  it("assigns explicit comparison keys to top-level and nested undefined", () => {
+    expect(encodeAutosaveComparisonKey(undefined)).toBe("undefined");
+    expect(encodeAutosaveComparisonKey({ value: undefined })).toBe(
+      '{"value":undefined}',
+    );
+  });
+
+  it("distinguishes sparse array holes from explicit undefined entries", () => {
+    const sparse = [undefined, "value"];
+    expect(Reflect.deleteProperty(sparse, "0")).toBe(true);
+
+    expect(encodeAutosaveComparisonKey(sparse)).toBe('[<hole>,"value"]');
+    expect(encodeAutosaveComparisonKey(sparse)).not.toBe(
+      encodeAutosaveComparisonKey([undefined, "value"]),
+    );
+  });
+
+  it("produces the same key regardless of object insertion order", () => {
+    expect(encodeAutosaveComparisonKey({ beta: 2, alpha: 1 })).toBe(
+      encodeAutosaveComparisonKey({ alpha: 1, beta: 2 }),
+    );
+  });
+
   it("produces different keys for payloads that differ only by a Date-typed field", () => {
     const decision = {
       text: "Ship v2",
@@ -457,12 +483,14 @@ describe("stableStringify", () => {
       ],
     };
 
-    expect(stableStringify(early)).not.toBe(stableStringify(late));
+    expect(encodeAutosaveComparisonKey(early)).not.toBe(
+      encodeAutosaveComparisonKey(late),
+    );
   });
 
   it("serializes a Date as its ISO string rather than collapsing it to {}", () => {
     const deadline = new Date("2026-01-01T00:00:00.000Z");
-    expect(stableStringify({ deadline })).toBe(
+    expect(encodeAutosaveComparisonKey({ deadline })).toBe(
       `{"deadline":${JSON.stringify(deadline.toISOString())}}`,
     );
   });

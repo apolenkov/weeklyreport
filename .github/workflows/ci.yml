@@ -306,6 +306,17 @@ jobs:
       # compose cannot render the model without them — even for `build`.
       BACKUP_INTERVAL_SECONDS: "3600"
       BACKUP_RETENTION_DAYS: "14"
+      # Operational policy inputs are :?-guarded in docker-compose.prod.yml
+      # (no silent defaults); CI supplies the build-time values.
+      PGBOUNCER_MAX_CLIENT_CONN: "100"
+      PGBOUNCER_POOL_SIZE: "20"
+      PGBOUNCER_RESERVE_POOL_SIZE: "5"
+      LOG_LEVEL: info
+      OTEL_SDK_DISABLED: "true"
+      OTEL_TRACES_SAMPLER_ARG: "0"
+      HTTP_PORT: "80"
+      HTTPS_PORT: "443"
+      HTTPS_PORT_QUIC: "443"
 
     steps:
       - name: Checkout

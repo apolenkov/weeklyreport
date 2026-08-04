@@ -8,8 +8,8 @@ export type IngestionPublishHook = (
 
 // S is the telemetry port's label-union width so priorStatus stays in bounds.
 interface PublishSideEffectsTelemetry<S extends PeriodStatus> {
-  recordPublishedReport(): void;
-  recordPeriodPublished(from: S): void;
+  readonly recordPublishedReport: () => void;
+  readonly recordPeriodPublished: (from: S) => void;
 }
 
 export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
@@ -17,6 +17,10 @@ export interface PublishSideEffectsDeps<S extends PeriodStatus = PeriodStatus> {
   ingestionHook: IngestionPublishHook;
   invalidateAnalyticsCache: () => Promise<void>;
   onIngestionError: (error: unknown) => void;
+  // Handles post-commit telemetry/cache failures: a committed write must not
+  // fail the API response because a side-effect blipped; the failure is
+  // observable (logged/metric) but never reverses the committed write.
+  onSideEffectError: (error: unknown) => void;
   skipIngestionWhenEmpty?: boolean;
 }
 
@@ -34,10 +38,21 @@ export async function emitPublishSideEffects<S extends PeriodStatus>(
   deps: PublishSideEffectsDeps<S>,
   params: PublishSideEffectsParams<NoInfer<S>>,
 ): Promise<void> {
-  deps.telemetry.recordPublishedReport();
-  deps.telemetry.recordPeriodPublished(params.priorStatus);
-
-  await deps.invalidateAnalyticsCache();
+  // Telemetry and cache run AFTER the publish transaction has already
+  // committed, so a failure here must degrade observability, never fail the
+  // successful write — the side-effect failure is routed to onSideEffectError.
+  // Each is guarded independently so one blip cannot skip the other.
+  try {
+    deps.telemetry.recordPublishedReport();
+    deps.telemetry.recordPeriodPublished(params.priorStatus);
+  } catch (error) {
+    deps.onSideEffectError(error);
+  }
+  try {
+    await deps.invalidateAnalyticsCache();
+  } catch (error) {
+    deps.onSideEffectError(error);
+  }
 
   // The section-id read shares the ingestion swallow: it runs after the
   // publish transaction has already committed, so a transient read failure

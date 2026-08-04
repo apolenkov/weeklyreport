@@ -9,14 +9,9 @@ import {
 } from "../../../test-utils/prisma-test-helper";
 import { isOpenBoundaryConflict } from "../application/period-factory.js";
 
-/**
- * period-uniqueness: proves the hand-written partial unique index
- * `Report_one_open_per_boundary` (init migration) actually has teeth against a
- * real database — at most one scheduled or open Report per `(periodStart,
- * periodEnd)`, while closed periods on the same boundary are exempt. Excluded
- * from the unit run (`*.integration.test.ts`); needs the `_test` DB that carries
- * the index.
- */
+// Proves the hand-written partial unique index `Report_one_open_per_boundary`
+// has teeth against a real DB: at most one scheduled/open Report per boundary,
+// closed periods exempt. Integration-only — needs the `_test` DB with the index.
 describe("Report_one_open_per_boundary partial unique index (integration)", () => {
   const prisma = createTestPrisma();
 
@@ -61,7 +56,7 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     });
   }
 
-  /** Resolve to the thrown error (or undefined if the promise resolves). */
+  // Resolve to the thrown error (or undefined if the promise resolves).
   async function captureError(run: () => Promise<unknown>): Promise<unknown> {
     return run().then(
       () => undefined,
@@ -77,12 +72,9 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     const known = error as Prisma.PrismaClientKnownRequestError;
     expect(known.code).toBe("P2002");
-    // Load-bearing: assert the REAL Postgres P2002 is recognised by the actual
-    // production predicate, not a hand-shaped synthetic one. The unit
-    // translation tests fabricate `meta.target`; this is the only place a
-    // real raw-partial-index violation proves `isOpenBoundaryConflict` matches
-    // it — so every admin/reopen/scheduler translation path actually fires
-    // instead of silently 500ing if Prisma surfaces `meta.target` unexpectedly.
+    // The REAL Postgres P2002 must be recognised by the production predicate —
+    // unit tests fabricate `meta.target`, so this proves the raw-partial-index
+    // violation matches `isOpenBoundaryConflict` on the actual driver shape.
     expect(isOpenBoundaryConflict(known)).toBe(true);
 
     // The shared guard must fire on the SAME live error, scoped to the boundary
@@ -94,9 +86,9 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
       }),
     ).toBe(true);
 
-    // Load-bearing: under the pg driver adapter `meta.target` is UNSET on a real
-    // P2002, so a guard reading `meta.target` alone would miss this race. Pin it
-    // — a regression to `meta.target`-only matching fails here.
+    // Under the pg driver adapter `meta.target` is UNSET on a real P2002, so a
+    // guard reading `meta.target` alone would miss this race — a switch to
+    // meta.target-only matching fails here.
     expect(known.meta?.target).toBeUndefined();
   });
 

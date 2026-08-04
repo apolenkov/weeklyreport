@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
@@ -27,19 +25,16 @@ describe("RisksSection meta-row", () => {
   });
 
   it("renders the No-stage-set warning pill when stageNames is absent", () => {
-    const { container } = render(
-      <RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />,
-    );
+    render(<RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />);
     expect(screen.getByText("No stage set")).toBeInTheDocument();
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
-    const stageDiv = container.querySelector(
-      '[aria-label="Risk stages: No stage set"]',
-    );
-    expect(stageDiv).toMatchSnapshot();
+    expect(
+      screen.getByRole("group", { name: "Risk stages: No stage set" }),
+    ).toBeInTheDocument();
   });
 
   it("renders specific stage chips and author together in the meta-row", () => {
-    const { container } = render(
+    render(
       <RisksSection
         risks={[{ ...BASE_RISK, stageNames: ["Dev", "Testing"] }]}
         stagesForProduct={() => ["Dev", "Testing"]}
@@ -50,7 +45,8 @@ describe("RisksSection meta-row", () => {
     // "Dev" is canonicalized to "Development" before rendering.
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
-    const stageDiv = container.querySelector('[aria-label^="Risk stages:"]');
-    expect(stageDiv).toMatchSnapshot();
+    expect(
+      screen.getByRole("group", { name: "Risk stages: Development, Testing" }),
+    ).toBeInTheDocument();
   });
 });

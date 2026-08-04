@@ -11,11 +11,8 @@ import { getClientErrorDetails } from "./client-error-reporting";
 const STALE_TIME_SECONDS = 30;
 const STALE_TIME_MS = STALE_TIME_SECONDS * MS_PER_SECOND;
 
-/**
- * TanStack default retry count for transient failures (5xx / network). Kept
- * explicit so the 4xx-skip predicate only short-circuits deterministic client
- * errors and preserves the default count for everything else.
- */
+// Preserve three transient retries; the 4xx predicate only short-circuits
+// deterministic client errors.
 const DEFAULT_QUERY_RETRY_COUNT = 3;
 
 // Deterministic client errors (4xx / BAD_REQUEST / NOT_FOUND) cannot succeed on retry.

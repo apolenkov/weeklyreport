@@ -5,10 +5,12 @@ import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 // Always rendered (unlike the collapsed-by-default archive section).
 export function PeriodsActiveSection({
   isLoading,
+  isError,
   rows,
   ...rowActions
 }: {
   readonly isLoading: boolean;
+  readonly isError: boolean;
   readonly rows: readonly PeriodListItem[];
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
@@ -31,6 +33,14 @@ export function PeriodsActiveSection({
           data-testid="periods-active-loading"
         >
           Loading…
+        </div>
+      ) : isError ? (
+        <div
+          className="rounded-[var(--radius)] border border-[var(--color-destructive)] p-6 text-center text-sm text-[var(--color-destructive)]"
+          role="alert"
+          data-testid="periods-active-error"
+        >
+          Active periods could not be loaded.
         </div>
       ) : rows.length === 0 ? (
         <div

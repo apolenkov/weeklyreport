@@ -28,7 +28,8 @@ export interface AdminUserFormInput {
   position: string;
   email: string;
   role: DbRole;
-  groupId: string;
+  // null = no owning group (viewer, or none selectable).
+  groupId: string | null;
 }
 
 // existingId omitted → client mints UUID; name recomputed from ФИО parts.

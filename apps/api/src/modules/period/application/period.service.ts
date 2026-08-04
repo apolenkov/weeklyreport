@@ -21,13 +21,9 @@ export class PeriodAccessError extends Error {
   }
 }
 
-/**
- * A period-lifecycle target is out of scope for the caller: a head acting on a
- * report that is not the server-derived active period, or any role acting on an
- * archived period. Mapped to FORBIDDEN. Distinct from `PeriodAccessError`, which
- * keeps carrying the (unmapped) state/policy failures — already-published,
- * non-published reopen, and the reopen-window gates.
- */
+// Lifecycle target out of scope for the caller (not the server-derived active
+// period, or an archived period) → FORBIDDEN. PeriodAccessError, by contrast,
+// carries state/policy failures → BAD_REQUEST.
 export class PeriodScopeError extends Error {
   constructor(message: string) {
     super(message);
@@ -35,10 +31,8 @@ export class PeriodScopeError extends Error {
   }
 }
 
-/**
- * The target `reportId` does not resolve to a report. Mapped to NOT_FOUND; a
- * bare `Error` would otherwise surface as INTERNAL_SERVER_ERROR.
- */
+// The target `reportId` does not resolve → NOT_FOUND (a bare Error would
+// surface as INTERNAL_SERVER_ERROR).
 export class PeriodNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,26 +63,17 @@ export interface PeriodRepository {
     userId: string,
   ): Promise<PublishPeriodOutcome>;
   reopenPeriod(reportId: string): Promise<void>;
-  /**
-   * The current active editable period id (the `period.publish` target) and the
-   * latest non-archived published period id (the `period.reopen` target). Both
-   * delegate to the weekly-report repository's resolver queries so the head's
-   * lifecycle target matches the `reportId` its weekly-report page resolves —
-   * one query definition, no second copy.
-   */
+  // Active editable id (publish target) + latest non-archived published id
+  // (reopen target), delegated to the weekly-report resolvers so the head's
+  // lifecycle target matches its page — one query definition, no second copy.
   getCurrentEditableId(): Promise<string | null>;
   getLatestPublishedNonArchivedId(): Promise<string | null>;
-  /**
-   * The id of an existing reopened, non-archived period, or null. Read by the
-   * single-active-reopen guard so a non-admin head cannot hold two reopened
-   * periods at once (which would let them walk back through history).
-   */
+  // Id of an existing reopened, non-archived period, or null. The single-
+  // active-reopen guard reads it so a head cannot hold two reopened periods
+  // at once (which would let them walk back through history).
   getReopenedNonArchivedId(): Promise<string | null>;
-  /**
-   * List of section ids tied to a report — read by the post-publish
-   * ingestion seam (see {@link IngestionPublishHook}) so a future async
-   * consumer can enqueue per-section work after a period publishes.
-   */
+  // Section ids tied to a report, read by the post-publish ingestion seam so
+  // a future async consumer can enqueue per-section work after publishing.
   listSectionIds(reportId: string): Promise<string[]>;
 }
 
@@ -96,19 +81,13 @@ export interface PeriodRepository {
 // boundary — the service depends on the port, not the concrete prisma class.
 export const PERIOD_REPOSITORY = Symbol("PeriodRepository");
 
-/**
- * The cache invalidation port. PeriodService stays Redis-free; the
- * AnalyticsCache is wired through this lambda by period.module.ts.
- */
+// Cache invalidation port — PeriodService stays Redis-free; the AnalyticsCache
+// is wired through this lambda by period.module.ts.
 export type AnalyticsCacheInvalidator = () => Promise<void>;
 
-/**
- * A lazy reader for the two reopen-policy knobs in `AppSettings`.
- * PeriodService stays decoupled from the settings service by reading them through
- * this lambda; the production wiring resolves to `appSettings.get`. The
- * return is non-null: a reopen-policy gate is always wired, so no code path
- * can construct the service without one.
- */
+// Lazy reader for the two reopen-policy knobs in AppSettings, keeping the
+// service decoupled from the settings service. Always wired (non-null) — no
+// path can construct the service without a reopen-policy gate.
 export type ReopenPolicyReader = () => Promise<{
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
@@ -130,15 +109,16 @@ export class PeriodService {
     // Reopen-policy gate reader. Required — production wiring is done in
     // period.module.ts; the gate is always enforced.
     private readonly readReopenPolicy: ReopenPolicyReader,
-    /**
-     * On every successful publishPeriod, called with the section ids of
-     * the just-published period. No-op by default; production may wire a
-     * real ingestion consumer here (see {@link IngestionPublishHook}).
-     */
-    private readonly ingestionHook: IngestionPublishHook = () =>
-      Promise.resolve(undefined),
+    // Called with the just-published period's section ids on every successful
+    // publish. The loud stub keeps a missing consumer observable instead of
+    // silently skipping ingestion (see TODO(ingestion-consumer)).
+    private readonly ingestionHook: IngestionPublishHook = () => {
+      throw new Error("Not implemented — see TODO(ingestion-consumer)");
+    },
     private readonly telemetry: PeriodTelemetry = NOOP_PERIOD_TELEMETRY,
     private readonly onIngestionError: (error: unknown) => void = () =>
+      undefined,
+    private readonly onSideEffectError: (error: unknown) => void = () =>
       undefined,
   ) {}
 
@@ -156,10 +136,9 @@ export class PeriodService {
       throw new PeriodScopeError("Archived periods cannot be published.");
     }
 
-    // Idempotent success, mirroring the CAS-loser branch below: a retry that
-    // lands after the winner committed (double-click, second tab) already has
-    // the desired state — publish-compare-and-set forbids surfacing it as an
-    // error, and no counters or side-effects may run for a redundant publish.
+    // Idempotent success, mirroring the CAS-loser branch: a retry landing
+    // after the winner committed already has the desired state — no error, and
+    // no counters or side-effects may run for a redundant publish.
     if (report.periodStatus === "published") {
       return { success: true, reportId };
     }
@@ -192,6 +171,7 @@ export class PeriodService {
         ingestionHook: this.ingestionHook,
         invalidateAnalyticsCache: this.invalidateAnalyticsCache,
         onIngestionError: this.onIngestionError,
+        onSideEffectError: this.onSideEffectError,
       },
       {
         priorStatus,

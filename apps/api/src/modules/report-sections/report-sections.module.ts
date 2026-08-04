@@ -20,10 +20,9 @@ import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections
 import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-sections-prometheus-telemetry.adapter.js";
 
 @Module({
-  // AdminModule is imported so ReportSectionsService can read
-  // `gracePeriodHours` + `allowLateSubmissions` from the AppSettings singleton
-  // on every submitSection call. The callback shape (rather than direct service
-  // injection) keeps the service test seam narrow — tests pass a tiny stub.
+  // AdminModule is imported so ReportSectionsService reads gracePeriodHours +
+  // allowLateSubmissions from the AppSettings singleton per submitSection. The
+  // callback shape keeps the service test seam narrow.
   imports: [AdminModule],
   providers: [
     ReportSectionsPrometheusTelemetry,

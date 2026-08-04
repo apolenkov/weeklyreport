@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
+import { TELEGRAM_ADAPTER } from "./telegram.adapter";
 import { selectTelegramAdapter } from "./telegram.module";
 
 const envWithToken = (TG_BOT_TOKEN?: string): EnvConfig =>
@@ -27,5 +28,11 @@ describe("selectTelegramAdapter", () => {
     expect(() =>
       selectTelegramAdapter(envWithToken("1234:fake-token")),
     ).toThrow(/telegram bot not configured/i);
+  });
+});
+
+describe("TELEGRAM_ADAPTER token", () => {
+  it("is a symbol so Nest binds the interface without string collisions", () => {
+    expect(typeof TELEGRAM_ADAPTER).toBe("symbol");
   });
 });

@@ -86,13 +86,22 @@ export async function writeCarryOver(
   });
 
   const primaryTargetSection = requirePrimaryTargetSection(targetSections);
-  const result = existing
-    ? await resolveExistingExecution(tx, existing, primaryTargetSection)
-    : await createNewExecution(tx, execution, records, primaryTargetSection);
 
-  // Persist carried rows for EVERY target section on both branches — the
-  // inserts are idempotent (skipDuplicates + upstream lineage filtering), so
-  // re-running them for an already-recorded execution duplicates nothing.
+  // A committed winner already persisted its rows; replaying it must stay a
+  // read-only resolution, never re-execute the carried-row writes.
+  if (existing) {
+    return resolveExistingExecution(tx, existing, primaryTargetSection);
+  }
+
+  const result = await createNewExecution(
+    tx,
+    execution,
+    records,
+    primaryTargetSection,
+  );
+
+  // Persist carried rows for EVERY target section on the create path — the
+  // inserts are idempotent (skipDuplicates + upstream lineage filtering).
   for (const targetSection of targetSections) {
     await persistCarriedRowsForSection(tx, targetSection);
   }

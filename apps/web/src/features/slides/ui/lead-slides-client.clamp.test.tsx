@@ -1,8 +1,5 @@
-/**
- * @vitest-environment jsdom
- *
- * selectedIndex must clamp when the slide list shrinks under a non-zero index.
- */
+// @vitest-environment jsdom
+// selectedIndex must clamp when the slide list shrinks below a non-zero index.
 
 import "@testing-library/jest-dom/vitest";
 

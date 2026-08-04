@@ -100,26 +100,24 @@ describe("hydrateSession", () => {
     });
   });
 
-  it("falls back to an upsert-create only when the singleton row is absent", async () => {
+  it("fails loud when the singleton organization row is absent (no code-default upsert)", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
-    const upsert = vi
-      .fn()
-      .mockResolvedValue({ shortName: "Org", fullName: "Organization" });
+    const upsert = vi.fn();
 
-    const result = await hydrateSession(
-      viewerSession(),
-      makePrisma({
-        organizationFindUnique: findUnique,
-        organizationUpsert: upsert,
-      }),
-    );
+    await expect(
+      hydrateSession(
+        viewerSession(),
+        makePrisma({
+          organizationFindUnique: findUnique,
+          organizationUpsert: upsert,
+        }),
+      ),
+    ).rejects.toThrow(/Organization singleton row 'singleton' is missing/);
 
     expect(findUnique).toHaveBeenCalledOnce();
-    expect(upsert).toHaveBeenCalledOnce();
-    expect(result.organization).toEqual({
-      shortName: "Org",
-      fullName: "Organization",
-    });
+    // The old fallback created the row from DEFAULT_ORGANIZATION_IDENTITY;
+    // the fix must never write a code default on a read path.
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it("reuses the organization value within the cache TTL", async () => {

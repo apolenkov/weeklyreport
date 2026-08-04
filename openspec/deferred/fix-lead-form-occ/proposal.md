@@ -13,7 +13,10 @@ race:
    with outdated content).
 3. Lead A: retries `DELETE`, now returns 404; inconsistent state.
 
-TODO(v8.5-A-occ) at `lead-form.prisma-repository.ts:287` flags this risk.
+The OCC risk now lives in the section write transactions
+(`save-section.transaction.ts` / `fill-from.transaction.ts`); the old
+`lead-form.prisma-repository.ts` marker no longer exists — re-establish a
+`TODO(<ref>)` at the current write-lock seam when this is activated.
 
 ## Solution
 
@@ -32,7 +35,8 @@ Strengthen OCC handling:
 
 ## Source
 
-- TODO(v8.5-A-occ) marker at `lead-form.prisma-repository.ts:287`.
+- OCC write-lock seams: `save-section.transaction.ts` and
+  `fill-from.transaction.ts` (no `TODO(<ref>)` marker there today).
 - Regression identified in Phase 50 concurrency audit.
 
 ## Activation trigger

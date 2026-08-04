@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { createNullLogger } from "../../lib/logger.js";
 import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import {
@@ -20,6 +21,8 @@ const headSession: UserSession = {
   activeReportId: null,
   activeReportSectionId: null,
 };
+const logger = createNullLogger();
+const telemetry = new AdminPrometheusTelemetry();
 
 function createRepository(
   decideResult: Awaited<ReturnType<AdminRepository["decideReopenRequest"]>>,
@@ -61,8 +64,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "decided", decision: "approved" }),
-      undefined,
-      new AdminPrometheusTelemetry(),
+      logger,
+      telemetry,
     );
 
     const result = await service.respondReopenRequest({
@@ -84,8 +87,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "already-processed" }),
-      undefined,
-      new AdminPrometheusTelemetry(),
+      logger,
+      telemetry,
     );
 
     await expect(
@@ -103,8 +106,8 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
     const before = await counterValue("approved");
     const service = new ReopenRequestAdminService(
       createRepository({ kind: "stale" }),
-      undefined,
-      new AdminPrometheusTelemetry(),
+      logger,
+      telemetry,
     );
 
     const result = await service.respondReopenRequest({
@@ -124,7 +127,7 @@ describe("ReopenRequestAdminService.respondReopenRequest", () => {
 
   it("trims a blank note to null before forwarding to the repository", async () => {
     const repo = createRepository({ kind: "decided", decision: "rejected" });
-    const service = new ReopenRequestAdminService(repo);
+    const service = new ReopenRequestAdminService(repo, logger, telemetry);
 
     await service.respondReopenRequest({
       id: "req-1",

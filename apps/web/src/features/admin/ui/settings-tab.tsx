@@ -41,7 +41,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="holidays">
+          <TabsTrigger value="holidays" disabled>
             <HolidaysComingSoonControl />
           </TabsTrigger>
         </TabsList>
@@ -65,10 +65,6 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         <TabsContent value="integrations" className="pt-6">
           <IntegrationsSubTab />
         </TabsContent>
-
-        <TabsContent value="holidays" className="pt-6">
-          <HolidaysComingSoonPanel />
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -76,25 +72,12 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
 // ─── Holidays Coming Soon Control ────────────────────────────────────────
 
-function HolidaysComingSoonPanel() {
-  return (
-    <div className="max-w-lg space-y-5">
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        Holiday calendar management coming soon. Schedule organization-wide
-        closures to exclude from deadline calculations and report period
-        boundaries.
-      </p>
-    </div>
-  );
-}
-
 function HolidaysComingSoonControl() {
-  // Nested label is a <span> (not <button>): TabsTrigger is already a button;
-  // nesting would be invalid HTML / hydration error.
+  // The trigger itself is disabled (inert tab); the label span must not
+  // duplicate the disabled state on a different element than the control.
   return (
     <ComingSoonTooltip>
       <span
-        aria-disabled="true"
         data-testid="holidays-coming-soon"
         className="inline-flex cursor-default items-center"
       >

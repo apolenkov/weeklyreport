@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -12,7 +13,9 @@ import type { WeeklyReportScopeSession } from "./weekly-report.service";
 // Portfolio ownership comes from GroupProduct (one group per product), not lead.reportingGroupId.
 describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integration)", () => {
   const prisma = createTestPrisma();
-  const repo = new WeeklyReportPrismaRepository(prisma as never);
+  const repo = new WeeklyReportPrismaRepository(
+    prisma as unknown as PrismaService,
+  );
 
   // Fixed UUIDs — version digit [1-8] in pos 13, variant [89ab] in pos 17.
   const GROUP_A_ID = "a0000000-0000-4000-a000-0000000000a1";

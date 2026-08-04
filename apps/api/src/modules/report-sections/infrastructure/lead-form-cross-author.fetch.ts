@@ -1,9 +1,7 @@
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 
-/**
- * The caller's distinct assigned productIds (report-wide; assignments are not
- * report-scoped). Both cross-author reads start from this same join.
- */
+// The caller's distinct assigned productIds (report-wide; assignments are not
+// report-scoped). Both cross-author reads start from this same join.
 export async function fetchViewerProjectIds(
   prisma: PrismaService,
   userId: string,
@@ -15,7 +13,7 @@ export async function fetchViewerProjectIds(
   return [...new Set(assignments.map((r) => r.projectId))];
 }
 
-/** Other users' stage assignments on the caller's products (status-only read). */
+// Other users' stage assignments on the caller's products (status-only read).
 export function fetchForeignStatusAssignments(
   prisma: PrismaService,
   myProjectIds: string[],
@@ -33,13 +31,9 @@ export function fetchForeignStatusAssignments(
   });
 }
 
-/**
- * Persisted stage traffic + covering risks for each foreign author in this
- * report. Only `severity` + `stageNames` of the risk are needed: the stage
- * status is RISK-DERIVED (covering risks that name the stage), never the
- * foreign item text. The persisted traffic is consulted only as the
- * empty/non-empty base when no risk covers the stage.
- */
+// Persisted stage traffic + covering risks per foreign author. Stage status is
+// RISK-DERIVED (covering risks that name the stage), never the foreign item
+// text; persisted traffic is the empty/non-empty base when no risk covers it.
 export function fetchForeignStatusSections(
   prisma: PrismaService,
   reportId: string,
@@ -59,10 +53,8 @@ export function fetchForeignStatusSections(
   });
 }
 
-/**
- * Co-owners on shared, NON-ARCHIVED products, with the author's role (the
- * full-content read scopes to non-archived products only).
- */
+// Co-owners on shared, NON-ARCHIVED products, with the author's role (the
+// full-content read scopes to non-archived products only).
 export function fetchForeignContentAssignments(
   prisma: PrismaService,
   myProjectIds: string[],
@@ -83,7 +75,7 @@ export function fetchForeignContentAssignments(
   });
 }
 
-/** Foreign sections with full item/risk/decision text + covering risks. */
+// Foreign sections with full item/risk/decision text + covering risks.
 // The select shape is data, not logic — hoisted so the fetch function itself
 // stays inside the 50-line function budget.
 const foreignContentSectionSelect = {

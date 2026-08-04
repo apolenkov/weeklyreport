@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { AdminReminderRule, UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { RemindersService } from "./reminders.service.js";
@@ -62,5 +62,43 @@ describe("RemindersScopeService.dispatchPendingReminders — no-matching-section
       skipped: 0,
       reason: "no-matching-section",
     });
+  });
+
+  it("classifies a deep recipient set in one flat pass — no recursion, no per-recipient acc copies", async () => {
+    const COUNT = 100_000;
+    const sections = Array.from({ length: COUNT }, (_, index) => ({
+      email: `lead-${index}@test.local`,
+      notificationOptOut: false,
+    }));
+    const activeRule: AdminReminderRule = {
+      id: RULE_ID,
+      reportId: REPORT_ID,
+      kind: "deadline",
+      fireAt: new Date("2026-04-12T09:00:00.000Z"),
+      timezone: "Europe/Moscow",
+      status: "active",
+      version: 1,
+      policyId: null,
+    };
+    const repository = {
+      ...unusedRemindersRepositoryStubs(),
+      getRule: () => Promise.resolve(activeRule),
+      findInScopeSectionId: () => Promise.resolve(SECTION_ID),
+      findActiveRuleForDispatch: () =>
+        Promise.resolve({ id: RULE_ID, fireAt: activeRule.fireAt }),
+      findDraftSectionsForDispatch: () => Promise.resolve(sections),
+    } satisfies RemindersRepository;
+    const service = new RemindersService(repository);
+
+    // The old per-recipient `rest`/`acc` copies are O(n²) — 100k recipients
+    // takes ~20s there (over vitest's 5s default) and ~0.25s with the loop.
+    const result = await service.scope.dispatchPendingReminders(
+      headSession,
+      REPORT_ID,
+    );
+
+    expect(result.dispatched).toBe(COUNT);
+    expect(result.alreadySent).toBe(0);
+    expect(result.skipped).toBe(0);
   });
 });

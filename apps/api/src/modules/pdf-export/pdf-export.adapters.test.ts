@@ -14,9 +14,10 @@ describe("PDF export infrastructure adapters", () => {
   it("preserves the queue payload, trace context, and retry options", async () => {
     const queue = { add: vi.fn().mockResolvedValue({ id: "job-1" }) };
     const enqueuer = new PdfExportBullmqEnqueuer(queue);
+    const { enqueue } = enqueuer;
 
-    await enqueuer.enqueue(
-      { reportId: "report-1", jobId: "job-1", authToken: "token" },
+    await enqueue(
+      { reportId: "report-1", jobId: "job-1", requestedBy: "user-1" },
       { traceparent: "trace", correlationId: "correlation" },
     );
 
@@ -25,12 +26,29 @@ describe("PDF export infrastructure adapters", () => {
       {
         reportId: "report-1",
         jobId: "job-1",
-        authToken: "token",
+        requestedBy: "user-1",
         traceparent: "trace",
         correlationId: "correlation",
       },
       { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
     );
+  });
+
+  it("serializes the job payload without any bearer credential", async () => {
+    // The durable BullMQ job data must never contain a JWT-shaped credential
+    // string — the worker mints the render token at execution time.
+    const queue = { add: vi.fn().mockResolvedValue({ id: "job-1" }) };
+    const enqueuer = new PdfExportBullmqEnqueuer(queue);
+    const { enqueue } = enqueuer;
+
+    await enqueue(
+      { reportId: "report-1", jobId: "job-1", requestedBy: "user-1" },
+      {},
+    );
+
+    const payload = JSON.stringify(queue.add.mock.calls[0]?.[1]);
+    expect(payload).not.toContain("authToken");
+    expect(payload).not.toMatch(/eyJ/);
   });
 
   it("captures the active correlation id through the telemetry port", () => {
@@ -39,8 +57,9 @@ describe("PDF export infrastructure adapters", () => {
       get: () => "correlation",
     } as unknown as ClsService;
     const telemetry = new PdfExportInfrastructureTelemetry(cls);
+    const { captureJobContext } = telemetry;
 
-    expect(telemetry.captureJobContext()).toEqual({
+    expect(captureJobContext()).toEqual({
       correlationId: "correlation",
     });
   });
@@ -56,9 +75,8 @@ describe("PDF export infrastructure adapters", () => {
       get: () => "correlation",
     } as unknown as ClsService;
 
-    const context = new PdfExportInfrastructureTelemetry(
-      cls,
-    ).captureJobContext();
+    const { captureJobContext } = new PdfExportInfrastructureTelemetry(cls);
+    const context = captureJobContext();
 
     expect(context).toEqual({
       traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
@@ -71,7 +89,8 @@ describe("PDF export infrastructure adapters", () => {
       .spyOn(customreportPdfExportRequestsTotal, "inc")
       .mockImplementation(() => undefined);
 
-    new PdfExportInfrastructureTelemetry(undefined).recordRequest("viewer");
+    const { recordRequest } = new PdfExportInfrastructureTelemetry(null);
+    recordRequest("viewer");
 
     expect(inc).toHaveBeenCalledExactlyOnceWith({ role: "viewer" });
   });

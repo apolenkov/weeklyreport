@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change deepen-lead-form-draft-module. Update Purpose after archive.
+Own lead-form draft state, reconciliation, serialization, save classification, optimistic locking, submit readiness, and merge behavior behind one deep module.
 
 ## Requirements
 
@@ -65,6 +65,6 @@ never collapse two distinct dates into the same key.
 
 #### Scenario: No hook return type in any props interface
 
-- **WHEN** props interfaces under `features/report-sections/ui/` are inspected
+- **WHEN** props interfaces under `features/report-pages/ui/` are inspected
 - **THEN** none references `ReturnType<typeof use…>`
 - **AND** `LeadFormLoaded`'s data prop is the declared slice

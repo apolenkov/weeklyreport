@@ -2,13 +2,6 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import * as path from "node:path";
 
-/**
- * Walks up from `startDir` looking for the nearest ancestor containing a
- * `package.json`. Scoped to this file only — not a general workspace-root
- * finder — because the hardcoded `../../../..` this replaces went stale
- * silently when the e2e suite moved and its distance to the repo root
- * changed; a walk-up survives future moves without a matching edit here.
- */
 export function findRepoRoot(startDir: string): string {
   if (existsSync(path.join(startDir, "package.json"))) return startDir;
 

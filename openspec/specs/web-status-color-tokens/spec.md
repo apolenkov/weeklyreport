@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change unify-web-status-color-tokens. Update Purpose after archive.
+Define complete semantic tokens for report-workflow status colors so every status surface resolves through named tokens without inline or fallback colors.
 
 ## Requirements
 

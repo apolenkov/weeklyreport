@@ -35,11 +35,8 @@ describe("login navigation helpers", () => {
   });
 });
 
-/**
- * Guard-parity pins for the role-type spec: `isRole` derives its accepted
- * set from `sessionRoleSchema` directly, so these tests mainly pin the
- * derivation's behavior for non-role inputs.
- */
+// Guard-parity tests pin the schema-derived role set and rejection of
+// non-role inputs.
 describe("isRole", () => {
   it("accepts every session role (role-type guard parity)", () => {
     for (const role of sessionRoleSchema.options) {

@@ -2,17 +2,39 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined";
 import { splitItemBoard } from "./next-week-columns";
-import type { KanbanItem, Product } from "./types";
+import type { ActivityKanbanItem, Product, ProductKanbanItem } from "./types";
 
 const PRODUCTS: Product[] = [
   { id: "p1", name: "Portal", overallStatus: "on-track", stages: [] },
 ];
 
-function item(overrides: Partial<KanbanItem>): KanbanItem {
+function productItem(
+  overrides: Partial<ProductKanbanItem> = {},
+): ProductKanbanItem {
   return {
     id: "i1",
+    parent: { kind: "product", id: "p1" },
     productId: "p1",
     productName: "Portal",
+    activityId: null,
+    status: "in-progress",
+    text: "row",
+    author: "Тимлид 1",
+    priorityRank: null,
+    ...overrides,
+  };
+}
+
+function activityItem(
+  overrides: Partial<ActivityKanbanItem> = {},
+): ActivityKanbanItem {
+  return {
+    id: "i1",
+    parent: { kind: "activity", id: "act-a" },
+    productId: null,
+    productName: "Jira triage duty",
+    activityId: "act-a",
+    activityName: "Jira triage duty",
     status: "in-progress",
     text: "row",
     author: "Тимлид 1",
@@ -24,18 +46,15 @@ function item(overrides: Partial<KanbanItem>): KanbanItem {
 describe("splitItemBoard — two-level split", () => {
   it("routes product rows to productColumns and activity rows to activityLanes", () => {
     const rows = [
-      item({ id: "prod-1" }),
-      item({
+      productItem({ id: "prod-1" }),
+      activityItem({
         id: "act-1",
-        productId: "",
-        productName: "Jira triage duty",
         activityId: "act-a",
-        activityName: "Jira triage duty",
       }),
     ];
 
     const board = splitItemBoard(PRODUCTS, rows);
-    expect(board.productColumns.map((c) => c.key)).toEqual(["Portal"]);
+    expect(board.productColumns.map((c) => c.key)).toEqual(["p1"]);
     expect(
       expectDefined(board.productColumns[0]).items.map((i) => i.id),
     ).toEqual(["prod-1"]);
@@ -46,7 +65,7 @@ describe("splitItemBoard — two-level split", () => {
   });
 
   it("returns empty activityLanes when no activity owns rows AND none attached", () => {
-    const board = splitItemBoard(PRODUCTS, [item({ id: "prod-only" })]);
+    const board = splitItemBoard(PRODUCTS, [productItem({ id: "prod-only" })]);
     expect(board.activityLanes).toEqual([]);
     expect(board.productColumns).toHaveLength(1);
   });
@@ -75,12 +94,9 @@ describe("splitItemBoard — two-level split", () => {
 
   it("fills an attached lane with its rows and keeps empty lanes for the rest", () => {
     const rows = [
-      item({
+      activityItem({
         id: "act-row",
-        productId: "",
-        productName: "Jira triage duty",
         activityId: "act-a",
-        activityName: "Jira triage duty",
       }),
     ];
     const board = splitItemBoard(PRODUCTS, rows, [
@@ -94,12 +110,12 @@ describe("splitItemBoard — two-level split", () => {
 
   it("never drops a row whose activity is not in the attached list", () => {
     const rows = [
-      item({
+      activityItem({
         id: "orphan",
-        productId: "",
         productName: "Legacy activity",
         activityId: "act-x",
         activityName: "Legacy activity",
+        parent: { kind: "activity", id: "act-x" },
       }),
     ];
     const board = splitItemBoard(PRODUCTS, rows, [
@@ -107,5 +123,30 @@ describe("splitItemBoard — two-level split", () => {
     ]);
     const orphan = board.activityLanes.find((c) => c.activityId === "act-x");
     expect(orphan?.items.map((i) => i.id)).toEqual(["orphan"]);
+  });
+
+  it("keeps two distinct products with the same display name as separate columns", () => {
+    const rows = [
+      productItem({ id: "a", productId: "p1", productName: "Portal" }),
+      productItem({
+        id: "b",
+        parent: { kind: "product", id: "p2" },
+        productId: "p2",
+        productName: "Portal",
+      }),
+    ];
+    const board = splitItemBoard(
+      [
+        { id: "p1", name: "Portal", overallStatus: "on-track", stages: [] },
+        { id: "p2", name: "Portal", overallStatus: "on-track", stages: [] },
+      ],
+      rows,
+    );
+
+    expect(board.productColumns.map((c) => c.productId)).toEqual(["p1", "p2"]);
+    expect(board.productColumns.map((c) => c.items.map((i) => i.id))).toEqual([
+      ["a"],
+      ["b"],
+    ]);
   });
 });

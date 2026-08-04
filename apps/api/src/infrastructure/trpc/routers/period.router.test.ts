@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "../trpc.router.js";
 
 // Router-wiring pin: client supplies reportId; router only forwards
@@ -19,9 +20,9 @@ function buildHeadCaller() {
     Promise.resolve({ success: true as const, reportId: REPORT_ID }),
   );
 
-  const deps = {
+  const deps = createStubAppRouterDeps({
     periodService: { publishPeriod, reopenPeriod },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
 
   const session = {
     userId: HEAD_USER_ID,

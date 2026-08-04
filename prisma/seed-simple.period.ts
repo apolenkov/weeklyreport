@@ -1,5 +1,7 @@
 import { PeriodStatus, ReportStatus } from "@prisma/client";
 
+import { seedReferenceDate } from "./seed-reference-date.js";
+
 const DAYS_PER_WEEK = 7;
 // Shifts JS's Sunday=0 week onto the ISO Monday=0 week.
 const MONDAY_FIRST_SHIFT = 6;
@@ -20,7 +22,9 @@ const ESCALATION_HOURS_AFTER_DEADLINE = 2;
 // The active period is anchored to the *current* UTC week so weeklyReport.get
 // always finds an open report covering today; a static window would drift into
 // the past and every page load would fail with 'No active report period found'.
-// Mirrors the derivation in prisma/seed-periods.ts so both seeds agree.
+// Mirrors the derivation in prisma/seed-periods.ts so both seeds agree, and
+// reads the same explicit SEED_REFERENCE_DATE (defaulting to today) so a pinned
+// run is reproducible.
 function mondayOfWeekUTC(d: Date): Date {
   const monday = new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
@@ -78,7 +82,7 @@ export function fridayDeadlineFor(monday: Date): Date {
   );
 }
 
-export const ACTIVE_MONDAY = mondayOfWeekUTC(new Date());
+export const ACTIVE_MONDAY = mondayOfWeekUTC(seedReferenceDate());
 export const ACTIVE_SUNDAY = endOfDayUTC(
   plusDaysUTC(ACTIVE_MONDAY, LAST_DAY_OF_WEEK_OFFSET),
 );

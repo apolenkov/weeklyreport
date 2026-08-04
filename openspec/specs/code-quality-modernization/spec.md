@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change code-quality-modernization. Update Purpose after archive.
+Require characterization evidence for behavior-preserving hot-zone refactors, remove unsafe web type escapes, and reuse canonical presentation helpers across print and admin surfaces.
 
 ## Requirements
 
@@ -58,7 +58,7 @@ migrations, and production UI strings MUST be unchanged. No symbol is renamed
 
 The repository MUST remove the single `eslint-disable
 @typescript-eslint/no-explicit-any` in
-`apps/web/src/components/admin/action-log-tab.tsx` by typing the underlying tRPC
+`apps/web/src/features/admin/ui/action-log-tab.tsx` by typing the underlying tRPC
 infinite-query call, leaving no remaining `any` cast in that file.
 
 #### Scenario: Linting the action log component
@@ -68,15 +68,16 @@ infinite-query call, leaving no remaining `any` cast in that file.
   the file
 - **AND** the action-log list still loads and paginates identically
 
-### Requirement: This Change MUST Be Sequenced After The Biome Migration
+### Requirement: This Change MUST Use The Current Lint Toolchain
 
-The code-quality refactors MUST NOT begin until `migrate-to-biome` has landed,
-so the decomposed files are linted and formatted by the final single toolchain.
+The code-quality refactors MUST be linted and formatted by the repository's
+current ESLint, Prettier, and stylelint toolchain. Biome is not installed or
+invoked, so no migration prerequisite or Biome-specific gate may be required.
 
 #### Scenario: Starting the refactor
 
 - **WHEN** work on this change begins
-- **THEN** `pnpm lint` already runs the post-migration Biome toolchain
+- **THEN** `pnpm lint` runs the current ESLint, Prettier, and stylelint gates
 - **AND** no file in this change is edited before that prerequisite is met
 
 ### Requirement: Print and admin surfaces reuse canonical presentation helpers instead of reimplementing them

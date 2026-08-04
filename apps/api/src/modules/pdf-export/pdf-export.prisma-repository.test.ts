@@ -8,6 +8,7 @@ import {
   toAssembledReport,
   UnsupportedPdfExportStatusError,
 } from "./pdf-export.prisma-repository";
+import { PdfExportDomainError } from "./pdf-export.service";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
@@ -138,6 +139,7 @@ describe("PdfExportPrismaRepository published floor", () => {
       id: "759b2767-0f86-41e2-b025-49730ca010e4",
       reportId: REPORT_ID,
       status: "paused",
+      templateVersion: "phase-2-pdf-v1",
       filePath: null,
       checksum: null,
       error: null,
@@ -156,5 +158,103 @@ describe("PdfExportPrismaRepository published floor", () => {
         message: "Unsupported PDF export database status: paused",
       }),
     );
+  });
+});
+
+describe("PdfExportPrismaRepository template provenance", () => {
+  it("persists the template version at creation instead of stamping it at read time", async () => {
+    const create = vi.fn().mockResolvedValue({
+      id: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId: REPORT_ID,
+      status: "pending",
+      templateVersion: "phase-2-pdf-v1",
+      filePath: null,
+      checksum: null,
+      error: null,
+      requestedBy: AUTHOR_ID,
+      createdAt: new Date("2026-06-09T00:00:00Z"),
+      updatedAt: new Date("2026-06-09T00:00:00Z"),
+    });
+    const prisma = {
+      pdfExportJob: { create },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await repo.createExportJob(
+      {
+        jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
+        reportId: REPORT_ID,
+        status: "queued",
+        requestedAt: new Date("2026-06-09T00:00:00Z"),
+        completedAt: null,
+        checksum: null,
+        templateVersion: "phase-2-pdf-v1",
+        artifactUrl: null,
+      },
+      AUTHOR_ID,
+    );
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          id: "759b2767-0f86-41e2-b025-49730ca010e4",
+          reportId: REPORT_ID,
+          status: "pending",
+          requestedBy: AUTHOR_ID,
+          templateVersion: "phase-2-pdf-v1",
+          filePath: null,
+          checksum: null,
+          error: null,
+        },
+      }),
+    );
+  });
+
+  it("reads back the persisted template version instead of relabelling with the running template", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      id: "759b2767-0f86-41e2-b025-49730ca010e4",
+      reportId: REPORT_ID,
+      status: "completed",
+      templateVersion: "phase-2-legacy-v0",
+      filePath: `/pdfs/759b2767-0f86-41e2-b025-49730ca010e4.pdf`,
+      checksum: "abc123",
+      error: null,
+      requestedBy: AUTHOR_ID,
+      createdAt: new Date("2026-06-09T00:00:00Z"),
+      updatedAt: new Date("2026-06-09T00:00:00Z"),
+    });
+    const prisma = {
+      pdfExportJob: { findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    const job = await repo.getExportJob("759b2767-0f86-41e2-b025-49730ca010e4");
+
+    expect(job?.templateVersion).toBe("phase-2-legacy-v0");
+  });
+
+  it("fails loud when job creation omits the requester (no system fallback)", async () => {
+    const create = vi.fn();
+    const prisma = {
+      pdfExportJob: { create },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(
+      repo.createExportJob(
+        {
+          jobId: "759b2767-0f86-41e2-b025-49730ca010e4",
+          reportId: REPORT_ID,
+          status: "queued",
+          requestedAt: new Date("2026-06-09T00:00:00Z"),
+          completedAt: null,
+          checksum: null,
+          templateVersion: "phase-2-pdf-v1",
+          artifactUrl: null,
+        },
+        "",
+      ),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    expect(create).not.toHaveBeenCalled();
   });
 });

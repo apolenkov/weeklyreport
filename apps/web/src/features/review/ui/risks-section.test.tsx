@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -54,6 +52,24 @@ describe("RisksSection LockBadge", () => {
     expect(
       screen.queryByRole("button", { name: /Delete risk/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("foreign risk attribution line carries the read-only lock in the meta row", () => {
+    render(
+      <SdlcTooltipProvider>
+        <RisksSection
+          risks={[foreignRisk]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    // The author-attribution meta row must mark a foreign risk as read-only
+    // (previously hardcoded foreign={false} hid the indicator).
+    const lockImgs = screen.getAllByRole("img", { name: /Read-only/i });
+    expect(lockImgs.length).toBeGreaterThanOrEqual(1);
   });
 
   it("own risk card does not render LockBadge", () => {
@@ -177,7 +193,7 @@ describe("RisksSection — aria-hidden decorative icons", () => {
     expect(editBtn).toMatchInlineSnapshot(`
       <button
         aria-label="Edit risk for CRM"
-        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
         type="button"
       >
         <svg
@@ -202,7 +218,7 @@ describe("RisksSection — aria-hidden decorative icons", () => {
     expect(deleteBtn).toMatchInlineSnapshot(`
       <button
         aria-label="Delete risk for CRM"
-        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+        class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] hover:text-[var(--color-destructive)]"
         type="button"
       >
         <svg
@@ -281,7 +297,7 @@ describe("RisksSection stage scope", () => {
 
 describe("RisksSection — severity toggle", () => {
   it("flips a blocked risk to at-risk in one click and calls onChange", () => {
-    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     render(
       <RisksSection
         risks={[{ ...baseRisk, severity: "blocked" }]}
@@ -300,7 +316,7 @@ describe("RisksSection — severity toggle", () => {
   });
 
   it("escalates an at-risk risk to blocked in one click", () => {
-    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     render(
       <RisksSection
         risks={[{ ...baseRisk, severity: "at-risk" }]}

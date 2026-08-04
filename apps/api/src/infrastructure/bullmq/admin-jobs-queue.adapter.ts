@@ -1,3 +1,4 @@
+import { failedJobSchema } from "@customreport/shared";
 import type { Job, Queue } from "bullmq";
 
 import type {
@@ -5,15 +6,46 @@ import type {
   AdminJobsQueue,
 } from "../../modules/admin/index.js";
 
-function toAdminJobHandle(job: Job): AdminJobHandle {
+type AdminQueueJob = Pick<
+  Job,
+  | "id"
+  | "name"
+  | "failedReason"
+  | "stacktrace"
+  | "attemptsMade"
+  | "timestamp"
+  | "data"
+  | "retry"
+  | "remove"
+>;
+
+// Reads the reminder-execution id out of the raw job payload; the port needs
+// it to prune stale jobs whose execution row was already deleted.
+function getReminderExecutionId(data: unknown): string | null {
+  if (
+    data &&
+    typeof data === "object" &&
+    "executionId" in data &&
+    typeof data.executionId === "string" &&
+    data.executionId.trim().length > 0
+  ) {
+    return data.executionId;
+  }
+
+  return null;
+}
+
+export function createAdminJobHandle(job: AdminQueueJob): AdminJobHandle {
   return {
-    ...(job.id === undefined ? {} : { id: job.id }),
-    name: job.name,
-    failedReason: job.failedReason,
-    stacktrace: job.stacktrace ? [...job.stacktrace] : [],
-    attemptsMade: job.attemptsMade,
-    timestamp: job.timestamp,
-    data: job.data as unknown,
+    failedJob: failedJobSchema.parse({
+      id: job.id,
+      name: job.name,
+      failedReason: job.failedReason,
+      stacktrace: job.stacktrace,
+      attemptsMade: job.attemptsMade,
+      timestamp: job.timestamp,
+    }),
+    reminderExecutionId: getReminderExecutionId(job.data),
     retry: () => job.retry(),
     remove: () => job.remove(),
   };
@@ -22,15 +54,15 @@ function toAdminJobHandle(job: Job): AdminJobHandle {
 export class AdminBullmqJobsQueue implements AdminJobsQueue {
   constructor(private readonly queue: Queue) {}
 
-  async getFailed(
+  readonly getFailed = async (
     start: number,
     end: number,
-  ): Promise<readonly AdminJobHandle[]> {
-    return (await this.queue.getFailed(start, end)).map(toAdminJobHandle);
-  }
+  ): Promise<readonly AdminJobHandle[]> => {
+    return (await this.queue.getFailed(start, end)).map(createAdminJobHandle);
+  };
 
-  async getJob(id: string): Promise<AdminJobHandle | undefined> {
+  readonly getJob = async (id: string): Promise<AdminJobHandle | undefined> => {
     const job = await this.queue.getJob(id);
-    return job ? toAdminJobHandle(job) : undefined;
-  }
+    return job ? createAdminJobHandle(job) : undefined;
+  };
 }

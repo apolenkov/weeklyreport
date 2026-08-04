@@ -43,9 +43,12 @@ describe("admin ops dependency wiring", () => {
     });
   });
 
-  it("jobs.listFailed keeps its deliberate fail-soft empty result", async () => {
+  it("jobs.listFailed fails loud when the jobs service is unwired", async () => {
     await expect(
       buildAdminCaller().admin.jobs.listFailed({ queue: "email-reminder" }),
-    ).resolves.toEqual({ jobs: [], nextCursor: null });
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Jobs service is not configured.",
+    });
   });
 });

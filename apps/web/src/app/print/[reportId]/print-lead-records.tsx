@@ -3,6 +3,8 @@ import type { CSSProperties } from "react";
 import { STATUS_BADGE } from "../../../features/report-sections/model/item-card-style";
 import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
 import {
+  ATTENTION_BG,
+  DECISION_ACCENT,
   printStatusColor,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
@@ -31,11 +33,11 @@ const BADGE_BG = {
   completed: "#d4e9e2",
   blocked: "#fde8e8",
   default: "#f0f0f0",
-  atRisk: "#fef9e7",
+  atRisk: ATTENTION_BG,
   decision: "#e0e7ff",
 } as const;
 const BADGE_TEXT_AT_RISK = "#b45309";
-const BADGE_TEXT_DECISION = "#3730a3";
+const BADGE_TEXT_DECISION = DECISION_ACCENT;
 
 const BADGE_BASE: CSSProperties = {
   fontSize: "9px",
@@ -160,9 +162,8 @@ export function PriorityRecords({ report }: RecordListProps) {
     <div style={RECORD_GROUP_STYLE}>
       <h4 style={RECORD_TITLE_STYLE}>Priorities</h4>
       <ol style={RECORD_LIST_STYLE}>
-        {report.priorities.map((priority, index) => (
-          // eslint-disable-next-line react/no-array-index-key -- ranks can repeat; index disambiguates this stable render-only list
-          <li key={`${priority.rank}-${index}`} value={priority.rank}>
+        {report.priorities.map((priority) => (
+          <li key={priority.id} value={priority.rank}>
             {priority.text}
           </li>
         ))}

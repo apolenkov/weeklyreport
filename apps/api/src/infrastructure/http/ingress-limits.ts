@@ -1,9 +1,5 @@
-/**
- * Explicit body-size bounds for the public HTTP ingress surfaces on the api
- * bootstrap. Kept as named constants so each cap is auditable at its mount site
- * rather than resolving to an implicit framework default.
- */
-
+// Explicit body-size bounds for the public HTTP ingress surfaces. Named
+// constants keep each cap auditable at its mount site, not an implicit default.
 const BYTES_PER_KIB = 1024;
 
 // tRPC mutation bodies (e.g. a full section save with items, risks, decisions)

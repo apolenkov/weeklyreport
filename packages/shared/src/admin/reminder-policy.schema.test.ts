@@ -13,7 +13,7 @@ const validPolicy = {
   validUntil: new Date("2026-07-31T00:00:00.000Z"),
 } as const;
 
-describe("reminderPolicySchema", () => {
+describe("reminderPolicySchema time zones", () => {
   it.each(["Europe/Moscow", "UTC", "Etc/UTC"])(
     "accepts the resolvable time zone %s",
     (timezone) => {
@@ -45,7 +45,9 @@ describe("reminderPolicySchema", () => {
       }
     },
   );
+});
 
+describe("reminderPolicySchema validity window", () => {
   it("preserves validUntil validation for a valid time zone", () => {
     const result = reminderPolicySchema.safeParse({
       ...validPolicy,

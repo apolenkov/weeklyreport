@@ -40,7 +40,7 @@ routes:
         given: "Lead visits /lead/report without a reportId path segment"
         when: "the form resolves the active reportId from the session"
         then: "the page performs a client-side redirect (router.replace) to /lead/report/<reportId> so the URL reflects the specific week being edited"
-        note: "A stale ?period= query is ignored and does NOT suppress the redirect — the legacy read-only-bookmark branch was retired (see this change's tasks.md §3.5); the redirect is gated only by the redirectToCanonical prop. Verified by lead-form-addressable.test.tsx."
+        note: "A stale ?period= query is ignored and does NOT suppress the redirect; the redirect is gated only by the redirectToCanonical prop. Verified by lead-form-addressable.test.tsx."
   - route: /lead/report/[reportId]
     access: [lead, head, admin]
     intents:
@@ -187,7 +187,7 @@ routes:
         given: "lead user navigates to /lead/history"
         when: "the page loads"
         then: "a 307 temporary redirect to /reports?tab=drafts occurs; the lead lands on the merged reports page with the My Drafts tab pre-selected"
-        note: "UX-17 (Phase 35-08): legacy /lead/history and /reports/history collapsed into single /reports page with role-default tabs. No standalone UI, no actions on this route."
+        note: "Legacy /lead/history and /reports/history collapsed into single /reports page with role-default tabs. No standalone UI, no actions on this route."
   - route: /reports
     access: [lead, head, admin, viewer]
     intents:
@@ -195,7 +195,7 @@ routes:
         intent: "Show or hide archived reports"
         given: "the lead is on the /reports page viewing their report history"
         when: "the lead clicks the Archive toggle"
-        then: "the page updates to show archived reports alongside current ones, and the URL param ?tab changes to \"published\" (or \"drafts\" when unchecked); the archive badge shows the count of archived reports"
+        then: 'the page updates to show archived reports alongside current ones, and the URL param ?tab changes to "published" (or "drafts" when unchecked); the archive badge shows the count of archived reports'
         note: "Archive checkbox in the sidebar; toggleArchive() updates includeArchive state and URL params. Observable via URL change and report list update."
       - id: lead-search-own-reports
         intent: "Find reports by searching their content or metadata"
@@ -206,7 +206,7 @@ routes:
       - id: lead-expand-report-pagination
         intent: "View all submitted reports at once instead of paginated view"
         given: "the lead is on /reports and more than 10 reports exist in the current view"
-        when: "the lead clicks the \"Show all (N)\" button"
+        when: 'the lead clicks the "Show all (N)" button'
         then: "the page expands to display all reports in the list; the button disappears; the new entries appear with no full-page reload"
         note: "HistoryPanel shows pagination control when hasMore=true and showAll=false. Observable via button disappearance and complete list visibility."
       - id: lead-navigate-to-report-detail
@@ -250,7 +250,7 @@ routes:
         given: "the lead opens a legacy /reports/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen, 'Status Presentation' title, HeadPresentClient wrapper) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section nav, fullscreen, 'Status Presentation' title, HeadPresentClient wrapper) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [lead, head, admin, viewer]
     intents:
@@ -259,7 +259,7 @@ routes:
         given: "A lead user navigates to /reports/history"
         when: "The page loads"
         then: "A 307 redirect to /reports?tab=published executes; the browser navigates to the merged reports page with the Published tab active"
-        note: "Redirect-only stub (UX-17 / Phase 35-08). No standalone UI or user interactions. Stable intent — behavior unchanged."
+        note: "Redirect-only stub. No standalone UI or user interactions. Stable intent — behavior unchanged."
   - route: /reports/trends
     access: [lead, head, admin, viewer]
     intents:

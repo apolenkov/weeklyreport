@@ -7,7 +7,7 @@ type TestData = Awaited<ReturnType<typeof seedTestData>>;
 
 const publishedAt = new Date("2026-07-22T12:00:00.000Z");
 
-/** Moves the target report through both governed lifecycle representations. */
+// Moves the target report through both governed lifecycle representations.
 export async function publishTarget(
   prisma: PrismaClient,
   testData: TestData,
@@ -20,7 +20,6 @@ export async function publishTarget(
   });
 }
 
-/** Creates the published source section used by Fill From lock tests. */
 async function createSourceSection(
   prisma: PrismaClient,
   testData: TestData,
@@ -43,7 +42,6 @@ async function createSourceSection(
   return source.id;
 }
 
-/** Seeds one source and one target item. */
 function seedItems(
   prisma: PrismaClient,
   testData: TestData,
@@ -71,7 +69,6 @@ function seedItems(
   });
 }
 
-/** Seeds one source and one target risk. */
 function seedRisks(
   prisma: PrismaClient,
   testData: TestData,
@@ -99,7 +96,6 @@ function seedRisks(
   });
 }
 
-/** Seeds one source and one target decision. */
 function seedDecisions(
   prisma: PrismaClient,
   testData: TestData,
@@ -125,7 +121,6 @@ function seedDecisions(
   });
 }
 
-/** Seeds stale target rows and the carryable published source rows. */
 export async function seedFillRows(
   prisma: PrismaClient,
   testData: TestData,
@@ -139,7 +134,6 @@ export async function seedFillRows(
   return sourceSectionId;
 }
 
-/** Reads the three target child collections for zero-write assertions. */
 export function targetRows(prisma: PrismaClient, testData: TestData) {
   const where = { reportSectionId: testData.section.id };
   return Promise.all([

@@ -2,6 +2,12 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
 import { worstTrafficStatus } from "../../../lib/status-presentation";
+import {
+  buildActivityHomeById,
+  CROSS_PRODUCT_LABEL,
+  makeIdentityResolver,
+  SHARED_PRODUCT_ID,
+} from "./product-scoped-activity-home";
 import type {
   SectionSlideModel,
   SlideStageStatus,
@@ -11,6 +17,7 @@ import { buildSectionSlideModel } from "./section-slide-model";
 type SectionItem = ReportSectionReadModel["items"][number];
 type SectionRisk = ReportSectionReadModel["risks"][number];
 type SectionDecision = ReportSectionReadModel["decisions"][number];
+type SectionActivity = ReportSectionReadModel["activities"][number];
 type OwnedStage = NonNullable<
   ReportSectionReadModel["projects"][number]["ownedStages"]
 >[number];
@@ -25,16 +32,14 @@ interface ProductAccumulator {
   readonly items: readonly SectionItem[];
   readonly risks: readonly SectionRisk[];
   readonly decisions: readonly SectionDecision[];
+  readonly activities: readonly SectionActivity[];
   readonly contributors: readonly string[];
-  readonly contributorNames: ReadonlySet<string>;
+  readonly contributorIds: ReadonlySet<string>;
   readonly sectionIds: ReadonlySet<string>;
   readonly anySubmitted: boolean;
   readonly allSubmitted: boolean;
   readonly latestSubmittedAt: Date | null;
 }
-
-const CROSS_PRODUCT_LABEL = "Shared context";
-const SHARED_PRODUCT_ID = "shared-context";
 
 function createAccumulator(
   projectId: string,
@@ -48,8 +53,9 @@ function createAccumulator(
     items: [],
     risks: [],
     decisions: [],
+    activities: [],
     contributors: [],
-    contributorNames: new Set(),
+    contributorIds: new Set(),
     sectionIds: new Set(),
     anySubmitted: false,
     allSubmitted: true,
@@ -63,7 +69,9 @@ function registerContribution(
 ): ProductAccumulator {
   if (accumulator.sectionIds.has(section.reportSectionId)) return accumulator;
   const submitted = section.status === "submitted";
-  const addContributor = !accumulator.contributorNames.has(section.authorName);
+  // Identity is the author id, not the display name — two distinct users
+  // sharing a display name stay two contributors.
+  const addContributor = !accumulator.contributorIds.has(section.authorId);
   const latestSubmittedAt =
     submitted &&
     section.submittedAt &&
@@ -76,9 +84,9 @@ function registerContribution(
     contributors: addContributor
       ? [...accumulator.contributors, shortNameFromName(section.authorName)]
       : accumulator.contributors,
-    contributorNames: addContributor
-      ? new Set([...accumulator.contributorNames, section.authorName])
-      : accumulator.contributorNames,
+    contributorIds: addContributor
+      ? new Set([...accumulator.contributorIds, section.authorId])
+      : accumulator.contributorIds,
     sectionIds: new Set([...accumulator.sectionIds, section.reportSectionId]),
     anySubmitted: accumulator.anySubmitted || submitted,
     allSubmitted: accumulator.allSubmitted && submitted,
@@ -132,7 +140,7 @@ function addProject(
           ]),
           ownedStages: mergeOwnedStages(
             accumulator.ownedStages,
-            project.ownedStages ?? [],
+            project.ownedStages,
           ),
         },
         section,
@@ -140,12 +148,14 @@ function addProject(
   );
 }
 
-function appendRecord<Row>(
+type SectionRecord = SectionItem | SectionRisk | SectionDecision;
+
+function appendRecord(
   products: ProductMap,
   identity: { readonly id: string; readonly name: string },
   section: ReportSectionReadModel,
   field: "items" | "risks" | "decisions",
-  row: Row,
+  row: SectionRecord,
 ): ProductMap {
   return updateProduct(products, identity.id, identity.name, (accumulator) =>
     registerContribution(
@@ -155,38 +165,77 @@ function appendRecord<Row>(
   );
 }
 
+// Rows home to their own product, an activity's linked product, or the
+// shared card when neither resolves — see product-scoped-activity-home.
+function accumulateActivities(
+  products: ProductMap,
+  section: ReportSectionReadModel,
+  activityHomeById: ReadonlyMap<string, string>,
+  ownedProducts: ReadonlyMap<string, string>,
+): ProductMap {
+  return [...section.activities].reduce((result, activity) => {
+    const home = activityHomeById.get(activity.activityId) ?? SHARED_PRODUCT_ID;
+    return updateProduct(
+      result,
+      home,
+      ownedProducts.get(home) ?? CROSS_PRODUCT_LABEL,
+      (accumulator) => ({
+        ...accumulator,
+        activities: [...accumulator.activities, activity],
+      }),
+    );
+  }, products);
+}
+
 function addSection(products: ProductMap, section: ReportSectionReadModel) {
   const ownedProducts = new Map(
     section.projects.map((project) => [project.projectId, project.projectName]),
   );
-  const identityFor = (productId: string | null | undefined) =>
-    productId && ownedProducts.has(productId)
-      ? { id: productId, name: ownedProducts.get(productId) ?? productId }
-      : { id: SHARED_PRODUCT_ID, name: CROSS_PRODUCT_LABEL };
+  const knownProductIds = new Set(ownedProducts.keys());
+  const activityHomeById = buildActivityHomeById(section, knownProductIds);
+  const identityFor = makeIdentityResolver(ownedProducts, activityHomeById);
   const withProjects = section.projects.reduce(
     (result, project) => addProject(result, project, section),
     products,
   );
   const withItems = section.items.reduce(
     (result, item) =>
-      appendRecord(result, identityFor(item.projectId), section, "items", item),
+      appendRecord(
+        result,
+        identityFor(item.projectId, item.activityId),
+        section,
+        "items",
+        item,
+      ),
     withProjects,
   );
   const withRisks = section.risks.reduce(
     (result, risk) =>
-      appendRecord(result, identityFor(risk.projectId), section, "risks", risk),
+      appendRecord(
+        result,
+        identityFor(risk.projectId, risk.activityId),
+        section,
+        "risks",
+        risk,
+      ),
     withItems,
+  );
+  const withActivities = accumulateActivities(
+    withRisks,
+    section,
+    activityHomeById,
+    ownedProducts,
   );
   return section.decisions.reduce(
     (result, decision) =>
       appendRecord(
         result,
-        identityFor(decision.productId),
+        identityFor(decision.productId, decision.activityId),
         section,
         "decisions",
         decision,
       ),
-    withRisks,
+    withActivities,
   );
 }
 
@@ -199,24 +248,30 @@ function toProductSlide(
     reportId,
     authorId: accumulator.projectId,
     authorName: accumulator.projectName,
+    authorRole: "lead",
     version: 1,
     status:
       accumulator.anySubmitted && accumulator.allSubmitted
         ? "submitted"
         : "draft",
     submittedAt: accumulator.latestSubmittedAt,
+    late: false,
     projects: [
       {
         projectId: accumulator.projectId,
         projectName: accumulator.projectName,
         trafficLight: accumulator.trafficLight,
         ownedStages: [...accumulator.ownedStages.values()],
+        stageSet: [...accumulator.ownedStages.values()],
+        ownerGroupId: null,
       },
     ],
+    referencedProjects: [],
     items: [...accumulator.items],
     risks: [...accumulator.risks],
     decisions: [...accumulator.decisions],
-    activities: [],
+    activities: [...accumulator.activities],
+    reviews: [],
   };
   const model = buildSectionSlideModel(section);
   return {

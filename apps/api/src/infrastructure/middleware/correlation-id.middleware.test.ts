@@ -1,28 +1,40 @@
-import type { NextFunction, Request, Response } from "express";
-import type { ClsService } from "nestjs-cls";
 import { describe, expect, it, vi } from "vitest";
 
+import type {
+  CorrelationIdStore,
+  CorrelationNext,
+  CorrelationRequest,
+  CorrelationResponse,
+} from "./correlation-id.middleware.js";
 import { CorrelationIdMiddleware } from "./correlation-id.middleware.js";
 
 function buildMocks(headerId?: string): {
-  req: Request;
-  res: Response;
-  next: NextFunction;
+  req: CorrelationRequest;
+  res: CorrelationResponse;
+  next: CorrelationNext;
   setHeader: ReturnType<typeof vi.fn>;
 } {
   const headers: Record<string, string> = {};
   if (headerId) headers["x-request-id"] = headerId;
   const setHeader = vi.fn();
-  const req = { headers } as unknown as Request;
-  const res = { setHeader } as unknown as Response;
-  const next = vi.fn() as unknown as NextFunction;
+  const req = { headers };
+  const res = { setHeader };
+  const next = vi.fn<CorrelationNext>();
   return { req, res, next, setHeader };
 }
 
-function buildClsMock(): { cls: ClsService; set: ReturnType<typeof vi.fn> } {
+function requestId(req: CorrelationRequest): string {
+  const value = req.headers["x-request-id"];
+  if (typeof value !== "string") throw new Error("Request id is not a string");
+  return value;
+}
+
+function buildClsMock(): {
+  cls: CorrelationIdStore;
+  set: ReturnType<typeof vi.fn>;
+} {
   const set = vi.fn();
-  const cls = { set } as unknown as ClsService;
-  return { cls, set };
+  return { cls: { set }, set };
 }
 
 describe("CorrelationIdMiddleware", () => {
@@ -33,7 +45,7 @@ describe("CorrelationIdMiddleware", () => {
 
     middleware.use(req, res, next);
 
-    const generated = req.headers["x-request-id"] as string;
+    const generated = requestId(req);
     expect(generated).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
@@ -55,6 +67,18 @@ describe("CorrelationIdMiddleware", () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
+  it("rejects a repeated x-request-id header instead of coercing the array", () => {
+    const { cls, set } = buildClsMock();
+    const middleware = new CorrelationIdMiddleware(cls);
+    const { req, res, next } = buildMocks();
+    req.headers["x-request-id"] = ["first", "second"];
+
+    middleware.use(req, res, next);
+
+    expect(requestId(req)).toMatch(UUID_RE);
+    expect(set).toHaveBeenCalledWith("correlationId", requestId(req));
+  });
+
   const UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -66,7 +90,7 @@ describe("CorrelationIdMiddleware", () => {
 
     middleware.use(req, res, next);
 
-    const adopted = req.headers["x-request-id"] as string;
+    const adopted = requestId(req);
     expect(adopted).not.toBe(oversized);
     expect(adopted).toMatch(UUID_RE);
     expect(setHeader).toHaveBeenCalledWith("x-request-id", adopted);
@@ -81,7 +105,7 @@ describe("CorrelationIdMiddleware", () => {
 
     middleware.use(req, res, next);
 
-    const adopted = req.headers["x-request-id"] as string;
+    const adopted = requestId(req);
     expect(adopted).not.toBe(withControl);
     expect(adopted).toMatch(UUID_RE);
     expect(set).toHaveBeenCalledWith("correlationId", adopted);

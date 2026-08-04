@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-sweep-ui-findings. Update Purpose after archive.
+Require role-reachable routes and shared-shell controls to render without targeted runtime or accessibility defects and require tests to fail for the behavior they name.
 
 ## Requirements
 

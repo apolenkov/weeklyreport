@@ -42,13 +42,9 @@ async function assertPeriodEditable(
   }
 }
 
-// Version lock for the verdict, taken as a guarded WRITE rather than a plain
-// read: the no-op update row-locks the section for the rest of the transaction,
-// so a concurrent lead re-submit either committed first (this predicate then
-// matches zero rows) or blocks until this tx commits — a plain findUnique under
-// READ COMMITTED would leave a window where a re-submit lands between the check
-// and the upsert. A zero-row match rejects the verdict, so no stale-version
-// SectionReview row is ever written (the tx rolls back).
+// Version lock as a guarded WRITE, not a plain read: the no-op update row-locks
+// the section, so a concurrent re-submit either committed first (zero rows) or
+// blocks; a zero-row match rejects the verdict and the tx rolls back.
 async function lockSectionVersion(
   tx: Prisma.TransactionClient,
   sectionId: string,
@@ -90,9 +86,8 @@ async function upsertVerdict(
 }
 
 // changes_requested un-submits a still-submitted section by REUSING the head's
-// revoke transition (same field-set + status guard). The version guard adds the
-// optimistic lock; the transition is atomic with the verdict upsert, so a
-// concurrent verdict / head-revoke transitions once.
+// revoke transition; the version guard adds the optimistic lock, and the
+// transition is atomic with the verdict upsert (transitions once).
 async function unsubmitOnChangesRequested(
   tx: Prisma.TransactionClient,
   params: PostVerdictParams,

@@ -13,18 +13,12 @@ const DEFAULT_OFFSET_DAYS_BEFORE = 1;
 const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 
 export type PolicyFormState = AdminReminderPolicyFormInput & {
-  /**
-   * The selected Reminder type. `kind`/`audience` are derived from it on
-   * save for a real preset, and preserved verbatim for a "custom" row so a
-   * legacy pairing is never silently coerced into a preset.
-   */
+  // Preset kind/audience are derived on save; custom rows preserve legacy
+  // pairings instead of silently coercing them into a preset.
   preset: ReminderPresetChoice;
-  /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
+  // ISO `YYYY-MM-DD` captured when this form was first opened.
   todayIso: string;
-  /**
-   * Mirrors the "forever" checkbox. When `true`, `validUntilIso` is forced to
-   * `null` and the upper-bound input is hidden.
-   */
+  // The forever toggle forces `validUntilIso` to null and hides its input.
   foreverChecked: boolean;
 };
 

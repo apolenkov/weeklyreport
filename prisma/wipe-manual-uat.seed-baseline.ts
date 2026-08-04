@@ -5,6 +5,7 @@
 import { type Prisma, Role } from "@prisma/client";
 
 import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
+import { appSettingsSchema } from "../packages/shared/src/schemas/period.schema.js";
 import {
   DEFAULT_REPORTING_GROUP_ID,
   HEAD_USER_ID,
@@ -227,6 +228,32 @@ async function seedStageAssignments(
   });
 }
 
+// Complete settings fixture for the manual-UAT baseline, shaped exactly like
+// the shared schema (lowercase enum values). Parsed before write: the baseline
+// documents its policy instead of delegating knobs to DB defaults, so a schema
+// addition fails parsing instead of silently drifting. Prisma stores the enum
+// columns uppercase, so they are mapped after the parse.
+export const MANUAL_UAT_SETTINGS = {
+  autoCreatePeriods: false,
+  defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  deadlineTime: "18:00",
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
+  unifiedActivityView: false,
+} as const;
+
+const UPPER_CASE_WORKING_DAYS = "MON_FRI" as const;
+const UPPER_CASE_REMINDER_AUDIENCE = "LEAD_WITH_DRAFT" as const;
+
 async function seedOrganizationAndSettings(
   tx: Prisma.TransactionClient,
 ): Promise<void> {
@@ -238,9 +265,15 @@ async function seedOrganizationAndSettings(
     },
   });
 
-  // Empty `data` hydrates every column from its @default(...) so future
-  // schema additions don't silently drift.
-  await tx.appSettings.create({ data: { id: "singleton" } });
+  const parsed = appSettingsSchema.parse(MANUAL_UAT_SETTINGS);
+  await tx.appSettings.create({
+    data: {
+      id: "singleton",
+      ...parsed,
+      workingDays: UPPER_CASE_WORKING_DAYS,
+      defaultReminderAudience: UPPER_CASE_REMINDER_AUDIENCE,
+    },
+  });
 }
 
 // FK-safe order: groups before users, users before the leadership back-links,

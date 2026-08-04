@@ -11,6 +11,7 @@ import {
   hasSamlEnv,
   mountAuthRoutes,
 } from "../modules/auth/index.js";
+import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
 import { createProvisionLeadWorkspace } from "./lead-workspace-provisioner";
 
 // Auth limiter before mountAuthRoutes so every /auth/* route is covered.
@@ -45,7 +46,7 @@ export function mountAuthIngress(deps: {
   expressApp: Express;
   logger: AppLogger;
   prisma: PrismaService;
-  autoCarryOver: (targetReportId: string) => Promise<void>;
+  autoCarryOver: (targetReportId: string) => Promise<AutoCarryOverOutcome>;
   authLimiter: RequestHandler;
 }): void {
   const { app, expressApp, logger, prisma, autoCarryOver, authLimiter } = deps;

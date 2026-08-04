@@ -1,5 +1,5 @@
 import type { PeriodStatus, ReportStatus } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { publishCompareAndSet } from "../../../lib/publish-compare-and-set.js";
@@ -22,10 +22,11 @@ import { buildTransition } from "../domain/period-transition.js";
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     // The lifecycle resolvers live once in the weekly-report repository (the
     // canonical home of getCurrentEditableId). Delegating to it keeps the head's
     // authz target and the weekly-report default in lock-step — no second copy.
+    @Inject(WeeklyReportPrismaRepository)
     private readonly weeklyReportRepository: WeeklyReportPrismaRepository,
   ) {}
 

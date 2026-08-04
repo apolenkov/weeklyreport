@@ -7,7 +7,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { AdminGroupView, AdminUserView } from "../model/admin-types";
+import type {
+  AdminGroupView,
+  AdminProductView,
+  AdminUserView,
+} from "../model/admin-types";
 import { GroupsTab } from "./groups-tab";
 
 vi.mock("sonner", () => ({
@@ -17,6 +21,16 @@ vi.mock("sonner", () => ({
     info: vi.fn(),
   },
 }));
+
+const PRODUCTS: AdminProductView[] = [
+  {
+    id: "p-1",
+    name: "Checkout",
+    leadOwnerId: "u-head-1",
+    stages: [],
+    status: "active",
+  },
+];
 
 const USERS: AdminUserView[] = [
   {
@@ -54,6 +68,7 @@ const GROUPS: AdminGroupView[] = [
 function renderTab(opts?: {
   groups?: AdminGroupView[];
   users?: AdminUserView[];
+  products?: AdminProductView[];
 }) {
   const { proxy, captured } = createMockTRPC([
     { path: ["admin", "snapshot"] },
@@ -87,7 +102,11 @@ function renderTab(opts?: {
   }
 
   const result = render(
-    <GroupsTab groups={opts?.groups ?? GROUPS} users={opts?.users ?? USERS} />,
+    <GroupsTab
+      groups={opts?.groups ?? GROUPS}
+      users={opts?.users ?? USERS}
+      products={opts?.products ?? PRODUCTS}
+    />,
     { wrapper: Wrapper },
   );
 

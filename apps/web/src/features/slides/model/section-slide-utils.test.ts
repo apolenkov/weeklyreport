@@ -1,6 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { buildSectionSlideModel } from "./section-slide-model";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -10,17 +14,13 @@ const PRODUCT_ID = "44444444-4444-4444-8444-444444444444";
 const PRODUCT_TWO_ID = "88888888-8888-4888-8888-888888888888";
 
 function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Alex Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
     projects: [
       {
         projectId: PRODUCT_ID,
@@ -63,11 +63,8 @@ function makeSection(
         carriedOver: false,
       },
     ],
-    risks: [],
-    decisions: [],
-    activities: [],
     ...overrides,
-  };
+  });
 }
 
 describe("section slide utilities", () => {

@@ -533,6 +533,25 @@ describe("requestReminderExecution — failed execution revival", () => {
     expect(addCalls).toHaveLength(0);
     expect(result.status).toBe("sent");
   });
+
+  it("fails loud when no queue is wired: a failed row is never flipped to queued-with-no-job", async () => {
+    const requeueCalls: string[] = [];
+    // No third argument → this.emailQueue is null, so there is no way to
+    // enqueue a real job for a revived execution.
+    const service = new RemindersService(
+      buildFailedRepo({ status: "failed", requeueCalls }),
+    );
+
+    await expect(
+      service.requestReminderExecution(activeRule.id, "lead@test.local"),
+    ).rejects.toMatchObject({
+      name: "ReminderDomainError",
+      message:
+        "Cannot revive a failed reminder execution: no email queue is wired.",
+    });
+    // The failed→queued CAS must not have run: no queue job could follow it.
+    expect(requeueCalls).toHaveLength(0);
+  });
 });
 
 // A synchronous enqueue throw must NOT leave a committed `queued` row with no

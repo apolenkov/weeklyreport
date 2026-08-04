@@ -8,9 +8,11 @@ export {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserReportingGroupRequiredError,
 } from "./admin-shared.js";
 export type { AdminTelemetry } from "./admin-telemetry.port.js";
 export { JobsService } from "./jobs.service.js";

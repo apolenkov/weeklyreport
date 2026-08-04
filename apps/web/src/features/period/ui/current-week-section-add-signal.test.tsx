@@ -1,7 +1,5 @@
-/**
- * Snapshot transitions must not reopen Add Item: readOnly is deliberately
- * not an addSignal effect dependency, so false→true→false must not re-fire.
- */
+// Snapshot transitions must not reopen Add Item: readOnly is deliberately not
+// an addSignal effect dependency, so false→true→false must not re-fire.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

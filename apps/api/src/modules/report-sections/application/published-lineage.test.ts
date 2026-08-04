@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PublishedSnapshotIntegrityError,
   resolvePublishedLineage,
   snapshotLineageAllSections,
   snapshotLineageForSection,
@@ -71,14 +72,19 @@ describe("published snapshot lineage", () => {
     expect(lineage.decisionStableIds.size).toBe(0);
   });
 
-  it("degrades to empty on a shape drift instead of throwing", () => {
-    expect(
-      snapshotLineageForSection({ sections: "garbage" }, SECTION_ID)
-        .itemStableIds.size,
-    ).toBe(0);
-    expect(
-      snapshotLineageForSection([1, 2, 3], SECTION_ID).itemStableIds.size,
-    ).toBe(0);
+  it("fails closed on a structural shape drift instead of returning empty", () => {
+    // Malformed frozen JSON must not silently read as "nothing was ever
+    // published" — the delete-lock would fail open and let a published record
+    // be dropped. Both malformed shapes raise the typed integrity error.
+    expect(() =>
+      snapshotLineageForSection({ sections: "garbage" }, SECTION_ID),
+    ).toThrow(PublishedSnapshotIntegrityError);
+    expect(() => snapshotLineageForSection([1, 2, 3], SECTION_ID)).toThrow(
+      PublishedSnapshotIntegrityError,
+    );
+    expect(() => snapshotLineageAllSections("not-a-snapshot")).toThrow(
+      PublishedSnapshotIntegrityError,
+    );
   });
 });
 

@@ -80,7 +80,7 @@ function AccordionActionsToggle({
   return (
     <button
       type="button"
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-white"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-[var(--color-card)]"
       onClick={onToggle}
       aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
       aria-expanded={expanded}

@@ -1,20 +1,24 @@
 import type { TrafficLightStatus } from "@customreport/shared";
-import { shortNameFromName, stageNamesMatch } from "@customreport/shared";
+import {
+  riskSeveritySchema,
+  shortNameFromName,
+  stageNamesMatch,
+} from "@customreport/shared";
 
 import type { CrossAuthorStatusRow } from "../domain/lead-form-shared";
 import { initialsFromName } from "../domain/lead-form-shared";
 import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";
 
-/** API traffic-light enum; null = no data / untouched stage. */
+// API traffic-light enum; null = no data / untouched stage.
 export type StageTrafficStatus = TrafficLightStatus | null;
 
-/** A covering-risk projection: only severity + stageNames colour a stage. */
+// A covering-risk projection: only severity + stageNames colour a stage.
 interface ForeignRisk {
   // Nullable: an activity-parented risk carries no product FK and never matches
   // a `projectId`, so it colours no product stage.
-  projectId: string | null;
-  severity: string;
-  stageNames: string[];
+  readonly projectId: string | null;
+  readonly severity: string;
+  readonly stageNames: string[];
 }
 
 // Mirrors `deriveEffectiveStageStatus` (apps/web/src/lib/stage-status.ts) with
@@ -26,13 +30,18 @@ export function deriveForeignStageStatus(
   risks: readonly ForeignRisk[],
   persisted: StageTrafficStatus,
 ): StageTrafficStatus {
-  const covering = risks.filter(
-    (r) =>
-      r.projectId === projectId &&
-      // Empty stageNames = covers-all; without this covers-all risks colour nothing.
-      (r.stageNames.length === 0 ||
-        r.stageNames.some((name) => stageNamesMatch(name, stageName))),
-  );
+  // The DB column is a plain String (Risk_severity_check CHECK backs the
+  // two-value vocabulary); reject an unknown severity instead of silently
+  // classifying it as at-risk.
+  const covering = risks
+    .map((r) => ({ ...r, severity: riskSeveritySchema.parse(r.severity) }))
+    .filter(
+      (r) =>
+        r.projectId === projectId &&
+        // Empty stageNames = covers-all; without this covers-all risks colour nothing.
+        (r.stageNames.length === 0 ||
+          r.stageNames.some((name) => stageNamesMatch(name, stageName))),
+    );
   if (covering.some((r) => r.severity === "blocked")) return "red";
   if (covering.length > 0) return "yellow";
   // No covering risk: the stage is on-track if it was touched at all,
@@ -41,9 +50,9 @@ export function deriveForeignStageStatus(
 }
 
 interface ForeignStatusSection {
-  authorId: string;
-  risks: ForeignRisk[];
-  stageStatuses: {
+  readonly authorId: string;
+  readonly risks: readonly ForeignRisk[];
+  readonly stageStatuses: readonly {
     projectId: string;
     stageId: string;
     status: StageTrafficStatus;
@@ -54,7 +63,7 @@ export function indexForeignSections(
   sections: readonly ForeignStatusSection[],
 ): {
   statusMap: Map<string, TrafficLightStatus>;
-  risksByAuthor: Map<string, ForeignRisk[]>;
+  risksByAuthor: ReadonlyMap<string, readonly ForeignRisk[]>;
 } {
   const statusMap = indexNonNullStageStatuses(
     sections.flatMap((section) =>
@@ -65,25 +74,25 @@ export function indexForeignSections(
     ),
     (status) => `${status.authorId}::${status.projectId}::${status.stageId}`,
   );
-  const risksByAuthor = new Map<string, ForeignRisk[]>(
+  const risksByAuthor = new Map<string, readonly ForeignRisk[]>(
     sections.map((s) => [s.authorId, s.risks] as const),
   );
   return { statusMap, risksByAuthor };
 }
 
-/** Row of foreign stage assignments the status read groups over. */
+// Row of foreign stage assignments the status read groups over.
 interface ForeignAssignmentRow {
-  projectId: string;
-  stageId: string;
-  project: { id: string; name: string; archived: boolean };
-  stage: { name: string };
-  user: { id: string; name: string };
+  readonly projectId: string;
+  readonly stageId: string;
+  readonly project: { id: string; name: string; archived: boolean };
+  readonly stage: { name: string };
+  readonly user: { id: string; name: string };
 }
 
 export function buildCrossAuthorStatusRows(
   others: readonly ForeignAssignmentRow[],
   statusMap: ReadonlyMap<string, TrafficLightStatus>,
-  risksByAuthor: ReadonlyMap<string, ForeignRisk[]>,
+  risksByAuthor: ReadonlyMap<string, readonly ForeignRisk[]>,
 ): CrossAuthorStatusRow[] {
   const withStatus = others
     .filter((row) => !row.project.archived)

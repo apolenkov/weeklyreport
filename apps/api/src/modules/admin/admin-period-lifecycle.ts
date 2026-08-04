@@ -1,28 +1,31 @@
-import type { PeriodState, PeriodStatus } from "@customreport/shared";
+import {
+  currentPeriodLifecycleSchema,
+  type DraftPeriodState,
+  draftPeriodStateSchema,
+  type PeriodState,
+  type PeriodStatus,
+} from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { buildTransition, isOpenBoundaryConflict } from "../period/index.js";
+import {
+  buildTransition,
+  isOpenBoundaryConflict,
+  PeriodLifecycleIntegrityError,
+} from "../period/index.js";
 import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminPeriodStaleStateError,
 } from "./admin-shared.js";
 
-/**
- * Period (Report) lifecycle-transition writes for the Admin Periods tab:
- * create, update, archive, unarchive — every mutation that runs through
- * `buildTransition` and can race the `Report_one_open_per_boundary`
- * partial-unique index.
- */
+// Period (Report) lifecycle-transition writes for the Admin Periods tab:
+// create, update, archive, unarchive — every mutation through `buildTransition`
+// that can race the `Report_one_open_per_boundary` partial-unique index.
 
-/**
- * Run a period write that moves/keeps a row at `periodState = 'open'`,
- * translating the `Report_one_open_per_boundary` P2002 into the same friendly
- * overlap error the `findOverlappingPeriod` pre-check raises (→ BAD_REQUEST),
- * instead of a raw 500. A race that defeats the pre-check on create, a date
- * edit onto a contested boundary, or an unarchive into one all land here. Any
- * other error (including an unrelated unique violation) re-throws unchanged.
- */
+// Run a period write that keeps a row at `periodState = 'open'`, translating
+// the boundary P2002 into the same friendly overlap error the pre-check raises
+// (→ BAD_REQUEST) instead of a raw 500; other errors re-throw unchanged.
 async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
   try {
     return await write();
@@ -36,15 +39,9 @@ async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
   }
 }
 
-/**
- * Mint a Report row with the supplied dates + initial state.
- * Mirrors `PeriodCreatorScheduler.runOnce`'s bare `report.create` —
- * `status` defaults to 'draft' and `periodStatus` defaults to 'open'
- * at the DB layer (see schema.prisma defaults). This function only
- * writes the row; the reminder rules are materialized by the caller —
- * `AdminPrismaRepository.createPeriodManual` invokes `applyToPeriod`
- * after this create commits.
- */
+// Mint a Report row with the supplied dates + initial state, mirroring
+// `PeriodCreatorScheduler.runOnce`'s bare create (`status`/`periodStatus` come
+// from DB defaults). Only writes the row; the caller applies reminder rules after.
 export async function createPeriodManual(
   prisma: PrismaService,
   input: {
@@ -52,15 +49,16 @@ export async function createPeriodManual(
     periodEnd: Date;
     deadline: Date;
     weekLabel: string | null;
-    periodState: PeriodState;
+    periodState: DraftPeriodState;
   },
 ): Promise<{
   id: string;
   periodStart: Date;
   periodEnd: Date;
   deadline: Date;
-  periodState: PeriodState;
+  periodState: DraftPeriodState;
 }> {
+  const periodState = draftPeriodStateSchema.parse(input.periodState);
   const created = await openBoundaryGuarded(() =>
     prisma.report.create({
       data: {
@@ -68,13 +66,11 @@ export async function createPeriodManual(
         periodEnd: input.periodEnd,
         deadline: input.deadline,
         weekLabel: input.weekLabel,
-        // Lifecycle fields (periodState +
-        // legacy status/archived tuple) come from the transition builder, not
-        // hand-assembled. The service resolves the initial state to
-        // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
-        // the schedule/open transitions produce.
+        // Lifecycle fields (periodState + legacy status/archived tuple) come
+        // from the transition builder, never hand-assembled: both draft states
+        // map to a draft/false legacy tuple the schedule/open transitions produce.
         ...buildTransition(
-          input.periodState === "scheduled" ? "schedule" : "open",
+          periodState === "scheduled" ? "schedule" : "open",
           {},
         ),
       },
@@ -98,21 +94,13 @@ export async function createPeriodManual(
     periodStart: created.periodStart,
     periodEnd: created.periodEnd,
     deadline: created.deadline,
-    periodState: created.periodState,
+    periodState: draftPeriodStateSchema.parse(created.periodState),
   };
 }
 
-/**
- * Patch an existing Report's date envelope + weekLabel. The
- * service has already filtered `data` down to actually-changed fields,
- * so Prisma's partial-update semantics are exactly what we want — only
- * supplied keys are written, the rest of the row stays untouched.
- *
- * `periodState` is NOT touched here. State transitions belong to the
- * lifecycle actions (`publish`, `reopen`, `archive`, scheduler). The
- * Edit dialog only moves dates / label; if a date shift implies a
- * state transition, that's a follow-up plan.
- */
+// Patch an existing Report's date envelope + weekLabel. The service has already
+// filtered `data` down to actually-changed fields, so Prisma's partial-update
+// semantics are exactly right. `periodState` is never touched here.
 export async function updatePeriodManual(
   prisma: PrismaService,
   input: {
@@ -156,26 +144,9 @@ export async function updatePeriodManual(
   };
 }
 
-/**
- * Manual archive. A guarded `updateMany` makes the write mutually exclusive
- * with a concurrent head reopen from the archive side of the race: only a
- * still-published, not-yet-archived row transitions, and a zero-row match fails
- * closed rather than re-writing the row unconditionally. Writes both the legacy
- * `archived` boolean and the new `periodState='archived'` from the transition
- * builder in that single statement, so the two-state-machine invariant holds
- * even when the auto-archiver scheduler hasn't run yet.
- *
- * The predicate excludes `periodStatus: "reopened"` alongside `archived: false`
- * so it shares the reopen compare-and-set's discriminator column: a reopen that
- * wins the row first flips `periodStatus` to `reopened`, which drops this
- * archive to zero rows — without it, a reopen-then-archive interleaving would
- * leave an archived period whose sections the reopen had already reset to draft.
- * It deliberately does NOT require `periodStatus: "published"`: head/admin
- * archive is unbounded by period status (product decision — the head is
- * trusted), so scheduled/open periods stay archivable; only the reopened state
- * — whose archive would freeze just-reset draft sections either way — is
- * refused.
- */
+// Manual archive: a guarded `updateMany` is mutually exclusive with a concurrent
+// reopen (not-yet-archived, not-reopened rows only; zero-row match fails closed)
+// and writes both legacy `archived` + new `periodState` in one statement.
 export async function archivePeriod(
   prisma: PrismaService,
   periodId: string,
@@ -195,49 +166,56 @@ export async function archivePeriod(
   }
 }
 
-/**
- * Un-archive — flips `archived=false` and
- * derives the next `periodState` from the legacy tuple. The legacy
- * `(status, periodStatus)` pair is the only ground truth left after
- * a row was set to `'archived'`, so we read it on the same row and
- * project back:
- *
- *   status='published' OR periodStatus IN ('published','reopened')
- *     → periodState='published'
- *   else
- *     → periodState='open'
- *
- * The scheduled→open distinction is lost across an archive round-trip;
- * that is acceptable because admin archive of a SCHEDULED period is
- * a tiny edge case (the PeriodCreator scheduler would just re-mint
- * the row anyway).
- */
+// Un-archive: flips `archived=false` and derives the next `periodState` from
+// the legacy `(status, periodStatus)` tuple — the only ground truth left after
+// a row was set to `archived` (scheduled→open is lost; a rare edge).
 export async function unarchivePeriod(
   prisma: PrismaService,
   periodId: string,
 ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }> {
-  const row = await prisma.report.findUnique({
-    where: { id: periodId },
-    select: { status: true, periodStatus: true },
-  });
-  if (!row) {
-    throw new AdminPeriodNotFoundError(`Report ${periodId} not found.`);
-  }
-  const nextPeriodState: PeriodState =
-    row.status === "published" || row.periodStatus !== "open"
-      ? "published"
-      : "open";
-  const nextPeriodStatus = row.periodStatus;
-  // Unarchiving back to 'open' can collide with an open period that took the
-  // boundary while this one was archived; that update hits the partial index.
-  await openBoundaryGuarded(() =>
-    prisma.report.update({
-      where: { id: periodId },
-      // The caller-derived next state (read
-      // from the surviving legacy tuple above) flows into the unarchive
-      // transition, which clears `archived` and sets `periodState`.
-      data: buildTransition("unarchive", { nextPeriodState }),
+  return openBoundaryGuarded(() =>
+    prisma.$transaction(async (tx) => {
+      const row = await tx.report.findUnique({
+        where: { id: periodId },
+        select: {
+          status: true,
+          periodState: true,
+          periodStatus: true,
+          archived: true,
+          autoPublished: true,
+          autoArchived: true,
+          publishedAt: true,
+          publishedById: true,
+          reopenedAt: true,
+        },
+      });
+      if (!row) {
+        throw new AdminPeriodNotFoundError(`Report ${periodId} not found.`);
+      }
+
+      const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
+      if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
+      if (lifecycle.data.periodState !== "archived") {
+        throw new AdminPeriodStaleStateError(
+          "The period is no longer archived. Reload and retry.",
+        );
+      }
+
+      const nextPeriodState: Extract<PeriodState, "open" | "published"> =
+        lifecycle.data.status === "published" ? "published" : "open";
+      const { count } = await tx.report.updateMany({
+        where: { id: periodId, ...lifecycle.data },
+        data: buildTransition("unarchive", { nextPeriodState }),
+      });
+      if (count !== 1) {
+        throw new AdminPeriodStaleStateError(
+          "The period changed while it was being unarchived. Reload and retry.",
+        );
+      }
+      return {
+        nextPeriodState,
+        nextPeriodStatus: lifecycle.data.periodStatus,
+      };
     }),
   );
-  return { nextPeriodState, nextPeriodStatus };
 }

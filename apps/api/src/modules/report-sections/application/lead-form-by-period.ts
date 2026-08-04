@@ -8,6 +8,7 @@ import {
 } from "../domain/lead-form-cross-author-scope";
 import {
   computeReopenEligibility,
+  LeadFormAccessError,
   type LeadFormRepository,
 } from "../domain/lead-form-shared";
 
@@ -16,11 +17,9 @@ export interface GetByPeriodResult {
   readOnly: boolean;
   canRequestReopen: boolean;
   reopenBlockedReason: string | null;
-  /**
-   * Resolve-not-delete: the section's published item/decision lineages, so
-   * the form can mark locked records and hide Delete. Advisory for the UI
-   * only — the save-path guard enforces the lock.
-   */
+  // Resolve-not-delete: the section's published item/decision lineages, so the
+  // form can mark locked records and hide Delete. Advisory for the UI only —
+  // the save-path guard enforces the lock.
   publishedLineage: {
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
@@ -42,10 +41,9 @@ export async function readByPeriod(
       role,
       requestedAuthorId,
     );
-  // The `assertHeadTargetInGroup` pre-check in `resolveSectionAuthor` is only
-  // the fast defense-in-depth guard; `readSectionForByPeriod` is the actual
-  // enforcement — its head-cross branch re-evaluates group membership in the
-  // SAME query as the section load, closing the race the pre-check leaves open.
+  // `assertHeadTargetInGroup` is only the fast defense-in-depth pre-check;
+  // `readSectionForByPeriod` is the actual enforcement — its head-cross branch
+  // re-evaluates group membership in the SAME query as the section load.
   const result = await readSectionForByPeriod(
     repository,
     reportId,
@@ -75,9 +73,8 @@ async function resolveSectionAuthor(
 }> {
   const isHeadLike = role === "head" || role === "admin";
   // One shared non-archived set gates AND scopes the lead cross-author read
-  // (null = not a granted cross-author read, including archived-only sharing
-  // or no report access). The head branch is group-scoped just below; admin
-  // is global by design.
+  // (null = not granted, incl. archived-only sharing or no report access). The
+  // head branch is group-scoped below; admin is global by design.
   const sharedScope = await resolveCrossAuthorScope(
     repository,
     reportId,
@@ -86,16 +83,31 @@ async function resolveSectionAuthor(
     requestedAuthorId,
   );
   // A head is a single-group role: it may read another author's section only
-  // inside its own reporting group. `requestedAuthorId` reaches here from a
-  // client URL param, so bound it before the target section is loaded. admin
-  // is exempt (global). A head's own read and a lead's genuine cross-author
-  // shared read never enter this branch.
+  // inside its own reporting group. `requestedAuthorId` is a client URL param,
+  // so bound it before the target section is loaded. admin is exempt (global).
   const isHeadCrossRead =
     role === "head" &&
     requestedAuthorId !== undefined &&
     requestedAuthorId !== userId;
   if (isHeadCrossRead) {
     await assertHeadTargetInGroup(repository, userId, requestedAuthorId);
+  }
+  // A lead reading another author's section needs a shared non-archived
+  // product. Without one the request is DENIED — never a silent fallback to
+  // the caller's own section, which would mislabel the form as the target's.
+  // Report access (own section) is checked first: a caller with no section in
+  // the report stays on the NOT_FOUND path (no existence oracle).
+  const isForeignLeadRead =
+    !isHeadLike &&
+    requestedAuthorId !== undefined &&
+    requestedAuthorId !== userId;
+  if (isForeignLeadRead && sharedScope === null) {
+    const ownSection = await repository.getSectionForPeriod(reportId, userId);
+    if (ownSection) {
+      throw new LeadFormAccessError(
+        "Cannot read another lead's section without a shared product.",
+      );
+    }
   }
   const sectionAuthorId =
     requestedAuthorId !== undefined && (isHeadLike || sharedScope !== null)
@@ -118,11 +130,9 @@ async function buildByPeriodResult(
       ? filterSectionToSharedProducts(result.section, sharedScope)
       : result.section;
 
-  // The lead-only Request-Reopen affordance uses the SAME
-  // `computeReopenEligibility` as the write guard, so the button shows exactly
-  // when `requestReopen` would succeed. A head/admin or cross-author viewer
-  // never files a reopen request — it is false when the section is not the
-  // caller's own. `reopenFacts` never leaves the API.
+  // The lead-only Request-Reopen affordance uses the same `computeReopenEligibility`
+  // as the write guard, so the button shows exactly when `requestReopen` would
+  // succeed; `reopenFacts` never leaves the API.
   const isOwnSection = sectionAuthorId === userId;
   const { canRequestReopen, reason } = computeReopenEligibility(
     result.reopenFacts,

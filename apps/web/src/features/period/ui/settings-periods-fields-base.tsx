@@ -13,22 +13,43 @@ import * as fieldLimits from "./settings-periods-fields-base-helpers";
 interface FieldGroupProps {
   readonly draft: AppSettings;
   readonly setDraft: Dispatch<SetStateAction<AppSettings>>;
+  readonly onValidityChange?: (id: string, valid: boolean) => void;
 }
 
 // Shell owns draft/Save; this component only renders the field group.
-export function PeriodBaseFields({ draft, setDraft }: FieldGroupProps) {
+export function PeriodBaseFields({
+  draft,
+  setDraft,
+  onValidityChange,
+}: FieldGroupProps) {
   return (
     <>
-      <PeriodShapeFields draft={draft} setDraft={setDraft} />
-      <SubmissionWindowFields draft={draft} setDraft={setDraft} />
-      <PublicationFields draft={draft} setDraft={setDraft} />
+      <PeriodShapeFields
+        draft={draft}
+        setDraft={setDraft}
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
+      />
+      <SubmissionWindowFields
+        draft={draft}
+        setDraft={setDraft}
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
+      />
+      <PublicationFields
+        draft={draft}
+        setDraft={setDraft}
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
+      />
     </>
   );
 }
 
 // When a period starts, how long it runs, and whether the next one is created
 // automatically.
-function PeriodShapeFields({ draft, setDraft }: FieldGroupProps) {
+function PeriodShapeFields({
+  draft,
+  setDraft,
+  onValidityChange,
+}: FieldGroupProps) {
   return (
     <>
       <NumberField
@@ -39,6 +60,7 @@ function PeriodShapeFields({ draft, setDraft }: FieldGroupProps) {
         onChange={(periodLengthDays) =>
           setDraft({ ...draft, periodLengthDays })
         }
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="How many days each reporting period spans (default 7 = weekly)."
       />
 
@@ -62,7 +84,11 @@ function PeriodShapeFields({ draft, setDraft }: FieldGroupProps) {
 
 // How late a submission is still accepted: the deadline itself, the always-on
 // grace window, and what happens after it.
-function SubmissionWindowFields({ draft, setDraft }: FieldGroupProps) {
+function SubmissionWindowFields({
+  draft,
+  setDraft,
+  onValidityChange,
+}: FieldGroupProps) {
   return (
     <>
       <NumberField
@@ -73,6 +99,7 @@ function SubmissionWindowFields({ draft, setDraft }: FieldGroupProps) {
         onChange={(defaultDeadlineDays) =>
           setDraft({ ...draft, defaultDeadlineDays })
         }
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="Number of days after period start before reports are due."
       />
 
@@ -84,6 +111,7 @@ function SubmissionWindowFields({ draft, setDraft }: FieldGroupProps) {
         onChange={(gracePeriodHours) =>
           setDraft({ ...draft, gracePeriodHours })
         }
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="Submissions within this many hours past the deadline are always accepted, regardless of «allow late submissions». Must be 0..168 (one week)."
       />
 
@@ -102,7 +130,11 @@ function SubmissionWindowFields({ draft, setDraft }: FieldGroupProps) {
 
 // What publishes automatically once the window closes, and when a published
 // period drops out of the default views.
-function PublicationFields({ draft, setDraft }: FieldGroupProps) {
+function PublicationFields({
+  draft,
+  setDraft,
+  onValidityChange,
+}: FieldGroupProps) {
   return (
     <>
       <ToggleField
@@ -130,6 +162,7 @@ function PublicationFields({ draft, setDraft }: FieldGroupProps) {
         onChange={(autoArchiveWeeksAfterPublish) =>
           setDraft({ ...draft, autoArchiveWeeksAfterPublish })
         }
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="0 = never archive. Otherwise: a published period drops out of the default «active» views after N weeks."
       />
     </>

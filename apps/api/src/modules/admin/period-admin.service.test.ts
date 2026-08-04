@@ -2,6 +2,8 @@ import type { PeriodState } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { mapDomainError } from "../../infrastructure/trpc/trpc.error-mapper.js";
+import type { AppLogger } from "../../lib/logger.js";
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 import { AdminAccessError, type AdminRepository } from "./admin-shared.js";
@@ -9,11 +11,25 @@ import { PeriodAdminService } from "./period-admin.service.js";
 
 const REPORT_ID = "77777777-7777-4777-8777-777777777701";
 
+// A logger spy that records every info message so tests can assert whether a
+// success log was emitted at all — not just that the write resolved.
+function createLoggerSpy(): AppLogger & { info: ReturnType<typeof vi.fn> } {
+  const info = vi.fn();
+  const logger: AppLogger = {
+    debug: vi.fn(),
+    info: info as AppLogger["info"],
+    warn: vi.fn(),
+    error: vi.fn(),
+    child: createNullLogger,
+  };
+  return { ...logger, info };
+}
+
 interface SeedRow {
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
+  deadline: Date | null;
   weekLabel: string | null;
   periodState: PeriodState;
 }
@@ -29,12 +45,9 @@ function seedRow(periodState: PeriodState): SeedRow {
   };
 }
 
-/**
- * Minimal AdminRepository: only the three methods `updatePeriodManual` touches
- * are functional (readPeriodById, findOverlappingPeriod, updatePeriodManual);
- * the rest of the contract throws because this suite never exercises it. The
- * updatePeriodManual spy lets each test assert whether a write was attempted.
- */
+// Minimal AdminRepository: only the three methods `updatePeriodManual` touches
+// are functional; the rest throws because this suite never exercises it. The
+// updatePeriodManual spy lets each test assert whether a write was attempted.
 function createRepository(row: SeedRow): AdminRepository & {
   updatePeriodManual: ReturnType<typeof vi.fn>;
 } {
@@ -52,7 +65,10 @@ function createRepository(row: SeedRow): AdminRepository & {
         id: row.id,
         periodStart: input.data.periodStart ?? row.periodStart,
         periodEnd: input.data.periodEnd ?? row.periodEnd,
-        deadline: input.data.deadline ?? row.deadline,
+        deadline:
+          input.data.deadline === undefined
+            ? row.deadline
+            : input.data.deadline,
         weekLabel:
           input.data.weekLabel === undefined
             ? row.weekLabel
@@ -143,6 +159,22 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     expect(repo.updatePeriodManual).toHaveBeenCalledOnce();
   });
 
+  it("preserves an explicit deadline clear through the repository seam", async () => {
+    const repo = createRepository(seedRow("open"));
+    const service = new PeriodAdminService(repo);
+
+    const { result } = await service.updatePeriodManual({
+      reportId: REPORT_ID,
+      deadline: null,
+    });
+
+    expect(result.deadline).toBeNull();
+    expect(repo.updatePeriodManual).toHaveBeenCalledWith({
+      reportId: REPORT_ID,
+      data: { deadline: null },
+    });
+  });
+
   it("allows an envelope edit on a reopened (now open) period", async () => {
     // Reopen reverts periodState to "open"; the guard keys on the live state,
     // so a once-published-now-reopened period is editable again.
@@ -169,5 +201,87 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
       .catch((error_: unknown) => error_);
 
     expect(mapDomainError(error).code).toBe("FORBIDDEN");
+  });
+});
+
+describe("PeriodAdminService — success logs settle only after the write", () => {
+  it("archivePeriod emits NO success log when the write fails", async () => {
+    const logger = createLoggerSpy();
+    const repo = {
+      ...createRepository(seedRow("open")),
+      archivePeriod: vi.fn(() => Promise.reject(new Error("archive failed"))),
+    };
+    const service = new PeriodAdminService(repo, logger);
+
+    await expect(service.archivePeriod(REPORT_ID)).rejects.toThrow(
+      "archive failed",
+    );
+
+    expect(logger.info).not.toHaveBeenCalledWith(
+      "archived period",
+      expect.objectContaining({ periodId: REPORT_ID }),
+    );
+  });
+
+  it("archivePeriod emits the success log only after the write settles", async () => {
+    const logger = createLoggerSpy();
+    const repo = {
+      ...createRepository(seedRow("open")),
+      archivePeriod: vi.fn(() => Promise.resolve()),
+    };
+    const service = new PeriodAdminService(repo, logger);
+
+    await service.archivePeriod(REPORT_ID);
+
+    expect(repo.archivePeriod).toHaveBeenCalledOnce();
+    expect(logger.info).toHaveBeenCalledWith(
+      "archived period",
+      expect.objectContaining({ periodId: REPORT_ID }),
+    );
+  });
+
+  it("deleteReport emits NO success log when the write fails", async () => {
+    const logger = createLoggerSpy();
+    const repo = {
+      ...createRepository(seedRow("open")),
+      readReportForDelete: vi.fn(() =>
+        Promise.resolve({
+          id: REPORT_ID,
+          status: "draft" as const,
+          periodStatus: "open" as const,
+        }),
+      ),
+      deleteReport: vi.fn(() => Promise.reject(new Error("delete failed"))),
+    };
+    const service = new PeriodAdminService(repo, logger);
+
+    await expect(service.deleteReport(REPORT_ID)).rejects.toThrow(
+      "delete failed",
+    );
+
+    expect(logger.info).not.toHaveBeenCalledWith(
+      "deleted report",
+      expect.objectContaining({ reportId: REPORT_ID }),
+    );
+  });
+
+  it("unarchivePeriod emits NO success log when the write fails", async () => {
+    const logger = createLoggerSpy();
+    const repo = {
+      ...createRepository(seedRow("open")),
+      unarchivePeriod: vi.fn(() =>
+        Promise.reject(new Error("unarchive failed")),
+      ),
+    };
+    const service = new PeriodAdminService(repo, logger);
+
+    await expect(service.unarchivePeriod(REPORT_ID)).rejects.toThrow(
+      "unarchive failed",
+    );
+
+    expect(logger.info).not.toHaveBeenCalledWith(
+      "unarchived period",
+      expect.objectContaining({ periodId: REPORT_ID }),
+    );
   });
 });

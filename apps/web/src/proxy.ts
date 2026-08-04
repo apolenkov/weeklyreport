@@ -7,28 +7,8 @@ import { type NextRequest, NextResponse } from "next/server";
 // A file at apps/web/proxy.ts (the project root) is silently ignored when
 // src/app exists.
 
-/**
- * Next.js 16 proxy.ts — replaces middleware.ts as of Next 16.
- *
- * Auth boundary:
- *   - Requests to (app)/ routes without the `customreport_session` cookie
- *     are redirected to '/' (the login page) with the original path
- *     preserved as ?next=<encoded path>.
- *   - Dev stub mode still uses the same route gate. The login page exposes
- *     dev-login user cards; protected pages must not render from the API's
- *     DEV_SESSION fallback without an explicit browser cookie, because that
- *     produced skeleton hangs during manual UAT.
- *
- * The matcher excludes routes that must never trigger a redirect:
- *   - '/'              the login page itself (would cause a loop)
- *   - '/auth/*'        SAML callback + error pages
- *   - '/trpc/*'        tRPC API (proxied to the API service)
- *   - '/api/*'         any remaining REST endpoints
- *   - '/_next/*'       Next.js internals (assets, RSC, HMR)
- *   - '/favicon.ico'   static asset
- *
- * Role separation lives elsewhere — this file only checks session existence.
- */
+// Proxy only gates session-cookie presence; API middleware remains the role and
+// signature boundary. Protected prefixes redirect unauthenticated requests.
 
 const COOKIE_NAME = "customreport_session";
 
@@ -86,15 +66,7 @@ export default function proxy(request: NextRequest): NextResponse {
   return NextResponse.redirect(loginUrl, HTTP_TEMPORARY_REDIRECT);
 }
 
-/**
- * Matcher: explicit allowlist of protected route prefixes.
- *
- * Negative-lookahead exclusion with `|` alternation does not work in
- * Next.js 16's matcher — the lookahead matcher fires on every path
- * (including `/`, `/auth/*`, `/_next/*`, `/favicon.ico`). The allowlist is
- * unambiguous and matches the plain reading of PROTECTED_PATH_PREFIXES in
- * the proxy body above.
- */
+// Explicit allowlist avoids Next.js 16 negative-lookahead matcher quirks.
 export const config = {
   matcher: ["/lead/:path*", "/head/:path*", "/reports/:path*", "/admin/:path*"],
 };

@@ -5,9 +5,9 @@
 
 /** Surname-first ФИО parts: lastName, firstName, optional middleName (patronymic). */
 export interface UserNameParts {
-  lastName: string;
-  firstName: string;
-  middleName?: string | null;
+  readonly lastName: string;
+  readonly firstName: string;
+  readonly middleName?: string | null;
 }
 
 function firstLetter(part?: string | null): string {
@@ -18,7 +18,6 @@ function firstLetter(part?: string | null): string {
 /**
  * Canonical display name: surname-first, single-spaced; omit absent patronymic.
  * e.g. "Петров Алексей Иванович" / "Петров Алексей".
- * @param parts - Surname-first parts; a blank or absent patronymic is dropped.
  */
 export function composeName(parts: UserNameParts): string {
   return [parts.lastName, parts.firstName, parts.middleName]
@@ -30,7 +29,6 @@ export function composeName(parts: UserNameParts): string {
 /**
  * Short form: surname + given/patronymic initials, e.g. "Баленков А.В."
  * or "Баленков А." when there is no patronymic.
- * @param parts - Surname-first parts; each present given name contributes one initial.
  */
 export function shortName(parts: UserNameParts): string {
   const surname = parts.lastName.trim();
@@ -45,7 +43,6 @@ export function shortName(parts: UserNameParts): string {
 /**
  * Avatar initials from a plain name: first + second token (surname-first),
  * not first+last. Single token → first two letters. Fallback for SAML stubs.
- * @param name - Plain surname-first name string, whitespace-separated.
  */
 export function initialsFromName(name: string): string {
   const [first, second] = name.trim().split(/\s+/).filter(Boolean);
@@ -57,7 +54,6 @@ export function initialsFromName(name: string): string {
 /**
  * Short "Surname I.O." from a plain surname-first name string.
  * Surface usage: see `user-name-display`.
- * @param name - Plain surname-first name string; every token after the surname becomes an initial.
  */
 export function shortNameFromName(name: string): string {
   const [surname, ...rest] = name.trim().split(/\s+/).filter(Boolean);
@@ -74,9 +70,9 @@ export function shortNameFromName(name: string): string {
  * heuristic when parts are absent (SAML-stub case).
  */
 export function initials(input: {
-  lastName?: string | null | undefined;
-  firstName?: string | null | undefined;
-  name?: string | null | undefined;
+  readonly lastName?: string | null | undefined;
+  readonly firstName?: string | null | undefined;
+  readonly name?: string | null | undefined;
 }): string {
   const fromParts =
     `${firstLetter(input.lastName)}${firstLetter(input.firstName)}`.toUpperCase();

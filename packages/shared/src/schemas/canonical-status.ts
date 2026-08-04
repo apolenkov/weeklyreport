@@ -4,26 +4,24 @@ import type {
 } from "./report-primitives.schema";
 
 /**
- * The single severity vocabulary every surface's status ladder is an adapter
- * over: web's stage/product presentation status and the API's TrafficLight
- * fold both reduce to this ladder instead of each keeping its own precedence
- * table.
+ * Canonical severity ladder shared by web presentation and API traffic-light folds.
  */
 export type CanonicalStatus = "blocked" | "at-risk" | "on-track" | "empty";
 
-export const CANONICAL_STATUS_PRECEDENCE: Record<CanonicalStatus, number> = {
+/** Numeric severity order used to fold canonical statuses to their worst value. */
+export const CANONICAL_STATUS_PRECEDENCE: Readonly<
+  Record<CanonicalStatus, number>
+> = Object.freeze({
   blocked: 3,
   "at-risk": 2,
   "on-track": 1,
   empty: 0,
-};
+});
 
 /**
  * The worst (highest-precedence) status across a set of values. `"empty"` —
  * the ladder's lowest rung — is the fold identity, so an empty input (or an
  * input of only `"empty"` values) resolves to `"empty"`.
- * @param values the statuses to fold over
- * @returns the highest-precedence status present, or `"empty"` if none
  */
 export function worstCanonicalStatus(
   values: readonly CanonicalStatus[],
@@ -38,12 +36,7 @@ export function worstCanonicalStatus(
 }
 
 /**
- * Floors a covering risk's severity to the status it forces on the
- * stage/product/activity it covers: `"blocked"` floors to blocked,
- * `"at-risk"` floors to at-risk. Severity is mandatory — there is no third
- * state to default.
- * @param severity the risk's stored severity
- * @returns the status floor this risk forces
+ * Converts a mandatory risk severity to the floor it forces on covered records.
  */
 export function riskSeverityToCanonicalFloor(
   severity: RiskSeverity,
@@ -51,19 +44,16 @@ export function riskSeverityToCanonicalFloor(
   return severity === "blocked" ? "blocked" : "at-risk";
 }
 
-const CANONICAL_TO_TRAFFIC: Record<CanonicalStatus, TrafficLightStatus | null> =
-  {
-    blocked: "red",
-    "at-risk": "yellow",
-    "on-track": "green",
-    empty: null,
-  };
+const CANONICAL_TO_TRAFFIC: Readonly<
+  Record<CanonicalStatus, TrafficLightStatus | null>
+> = Object.freeze({
+  blocked: "red",
+  "at-risk": "yellow",
+  "on-track": "green",
+  empty: null,
+});
 
-/**
- * Adapts a canonical status to the API's traffic-light vocabulary.
- * @param status the canonical status to adapt
- * @returns the equivalent traffic light, or `null` for `"empty"`
- */
+/** Adapts a canonical status to a traffic light; `"empty"` becomes `null`. */
 export function canonicalToTrafficLight(
   status: CanonicalStatus,
 ): TrafficLightStatus | null {
@@ -71,13 +61,7 @@ export function canonicalToTrafficLight(
 }
 
 /**
- * Adapts a traffic-light status to the canonical vocabulary. `null`/absent
- * maps to `"empty"` — the traffic-light side has no direct equivalent of
- * "touched but no severity", so the caller's "no data" and "known on-track"
- * distinction is asymmetric with the reverse adapter (empty ⇏ null; only
- * `null` ⇒ empty).
- * @param status the traffic light to adapt
- * @returns the equivalent canonical status
+ * Adapts a traffic light to canonical severity; null and absent map to `"empty"`.
  */
 export function trafficLightToCanonical(
   status: TrafficLightStatus | null | undefined,

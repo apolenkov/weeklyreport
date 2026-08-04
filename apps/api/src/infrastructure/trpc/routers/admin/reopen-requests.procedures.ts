@@ -7,7 +7,7 @@ import { headProcedure } from "../../trpc.middleware.js";
 const MAX_REOPEN_NOTE_LENGTH = 500;
 
 interface ReopenRequestsDeps {
-  reopenRequestAdminService: ReopenRequestAdminService;
+  readonly reopenRequestAdminService: ReopenRequestAdminService;
 }
 
 const listReopenRequestsInput = z

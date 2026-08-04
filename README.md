@@ -40,8 +40,8 @@ customreport
 
 ## Требования
 
-- Node.js **>= 24**
-- pnpm **10.11** (`corepack enable` подтянет нужную версию)
+- Node.js **>= 26**
+- pnpm **11.17.0** (`npm install -g pnpm@11.17.0`; Node 26 не поставляет Corepack)
 - Docker (для Postgres, Redis, почты и наблюдаемости)
 
 ## Быстрый старт
@@ -84,7 +84,7 @@ pnpm dev
 ```bash
 pnpm dev            # web + api в dev-режиме (turbo --parallel)
 pnpm typecheck      # проверка типов во всех пакетах
-pnpm lint           # все 10 проверок статического анализа, отчёт по каждой
+pnpm lint           # все 35 проверок качества, отчёт по каждой
 pnpm test           # unit-тесты (Vitest)
 pnpm build          # production-сборка
 pnpm format         # Prettier по всему дереву

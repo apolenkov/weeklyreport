@@ -11,6 +11,7 @@ import {
   LEAD_OLGA_ID,
   SEED_PRODUCTS,
 } from "./helpers/seed-ids";
+import { performAndWaitForTrpcMutation } from "./helpers/trpc-response";
 
 function escapeRegExp(value: string): string {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
@@ -35,14 +36,12 @@ test.describe("Admin CRUD (integration)", () => {
     const nameField = dialog.getByLabel("Product Name");
     const uniqueName = `IntegrationTest Product ${Date.now()}`;
     await nameField.fill(uniqueName);
+    await dialog.getByLabel("Lead Owner").selectOption(LEAD_1_ID);
 
     const saveBtn = dialog.getByRole("button", { name: "Add Product" });
+    await expect(saveBtn).toBeEnabled();
     try {
-      await saveBtn.click();
-      await adminPage.waitForResponse(
-        (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
-        { timeout: 15_000 },
-      );
+      await performAndWaitForTrpcMutation(adminPage, () => saveBtn.click());
 
       const product = await prisma.project.findFirst({
         where: { name: uniqueName },
@@ -76,11 +75,8 @@ test.describe("Admin CRUD (integration)", () => {
     const saveBtn = adminPage.getByRole("button", {
       name: /save organization identity/i,
     });
-    await saveBtn.last().click();
-
-    await adminPage.waitForResponse(
-      (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
-      { timeout: 15_000 },
+    await performAndWaitForTrpcMutation(adminPage, () =>
+      saveBtn.last().click(),
     );
 
     try {

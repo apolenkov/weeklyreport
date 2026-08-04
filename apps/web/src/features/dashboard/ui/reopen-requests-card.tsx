@@ -42,12 +42,16 @@ function useRespondReopenRequest(onResolved: () => void) {
       // Invalidate on settled (success OR error) so a stale/race outcome still
       // drops the now-terminal row from the queue and refreshes the count.
       onSettled: () => {
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.listReopenRequests.queryKey(),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.pendingReopenCount.queryKey(),
-        });
+        void queryClient
+          .invalidateQueries({
+            queryKey: trpc.admin.listReopenRequests.queryKey(),
+          })
+          .catch(() => undefined);
+        void queryClient
+          .invalidateQueries({
+            queryKey: trpc.admin.pendingReopenCount.queryKey(),
+          })
+          .catch(() => undefined);
       },
     }),
   );
@@ -127,7 +131,7 @@ function ReopenRequestsHeader({ count }: { readonly count: number }) {
       <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]">
         Reopen Requests
       </h2>
-      <span className="rounded-[var(--radius-pill)] bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+      <span className="rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[11px] font-bold text-[var(--color-status-at-risk-fg)]">
         {count} pending
       </span>
     </header>
@@ -155,7 +159,9 @@ export function ReopenRequestsCard() {
     return (
       <ReopenRequestsIssue
         error={listQuery.error}
-        onRetry={() => void listQuery.refetch()}
+        onRetry={() => {
+          void listQuery.refetch().catch(() => undefined);
+        }}
       />
     );
   }
@@ -166,7 +172,7 @@ export function ReopenRequestsCard() {
   return (
     <section
       id={REOPEN_REQUESTS_CARD_ID}
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-elevated)]"
       aria-label="Pending reopen requests"
     >
       <ReopenRequestsHeader count={requests.length} />

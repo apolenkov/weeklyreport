@@ -1,4 +1,4 @@
-import { trace } from "@opentelemetry/api";
+import { type Span, trace } from "@opentelemetry/api";
 import type { TRPCError } from "@trpc/server";
 
 import {
@@ -17,34 +17,44 @@ interface TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> {
   next: () => Promise<R>;
 }
 
+// The tracer surface this middleware consumes; narrow so tests inject a
+// double without erasing OTel's Span/Tracer types.
+export interface SpanStarter {
+  startActiveSpan<F extends (span: Span) => unknown>(
+    name: string,
+    fn: F,
+  ): ReturnType<F>;
+}
+
+const DEFAULT_TRACER = trace.getTracer("customreport-api");
+
 // Wired before logging/audit so timings exclude logger overhead. Labels stay
 // low-cardinality (path/type/outcome only) — correlationId/userId/IP would
 // explode Prometheus series. try/catch is defense-in-depth for rare raw throws.
 export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
   opts: TrpcMiddlewareArgs<R>,
+  tracer: SpanStarter = DEFAULT_TRACER,
 ): Promise<R> {
   const { path, type, next } = opts;
   const labels = { procedure: path, type };
   const endTimer = trpcRequestDurationSeconds.startTimer(labels);
 
-  return trace
-    .getTracer("customreport-api")
-    .startActiveSpan(path, async (span) => {
-      span.setAttribute("type", type);
-      try {
-        const result = await next();
-        const status = result.ok ? "success" : "error";
-        span.setAttribute("status", status);
-        endTimer({ ...labels, status });
-        trpcRequestTotal.inc({ ...labels, status });
-        span.end();
-        return result;
-      } catch (error) {
-        span.setAttribute("status", "error");
-        endTimer({ ...labels, status: "error" });
-        trpcRequestTotal.inc({ ...labels, status: "error" });
-        span.end();
-        throw error;
-      }
-    });
+  return tracer.startActiveSpan(path, async (span) => {
+    span.setAttribute("type", type);
+    try {
+      const result = await next();
+      const status = result.ok ? "success" : "error";
+      span.setAttribute("status", status);
+      endTimer({ ...labels, status });
+      trpcRequestTotal.inc({ ...labels, status });
+      span.end();
+      return result;
+    } catch (error) {
+      span.setAttribute("status", "error");
+      endTimer({ ...labels, status: "error" });
+      trpcRequestTotal.inc({ ...labels, status: "error" });
+      span.end();
+      throw error;
+    }
+  });
 }

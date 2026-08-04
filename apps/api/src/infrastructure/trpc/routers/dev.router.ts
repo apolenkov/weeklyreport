@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
@@ -48,11 +48,19 @@ const assertDevMode = (env: EnvConfig): void => {
   }
 };
 
-// Reset applies migrations, then the sole public seed-profile selector.
-const buildReseedScript = (variant: ReseedVariant): string => {
-  const reset = "pnpm exec prisma migrate reset --force";
-  const seed = `pnpm db:seed:profile ${variant}`;
-  return `${reset} && ${seed}`;
+const resolveExecutable = (command: string): string => {
+  const searchPath = process.env.PATH;
+  if (searchPath === undefined) {
+    throw new Error(`PATH is required to resolve ${command}`);
+  }
+  const executable = searchPath
+    .split(path.delimiter)
+    .map((directory) => path.join(directory, command))
+    .find(fs.existsSync);
+  if (executable === undefined) {
+    throw new Error(`${command} is required for dev reseeding`);
+  }
+  return executable;
 };
 
 const reseedTimeoutMs = (variant: ReseedVariant): number => {
@@ -113,15 +121,13 @@ export function createDevRouter(deps: DevRouterDeps) {
       return users;
     }),
 
-    // Any authenticated role may reset demo data — this is a dev-only test
-    // affordance (double-gated: dev router mount + the AUTH_DEV_MODE check),
-    // not a production admin capability.
+    // Dev-only test affordance (double-gated: dev router mount + AUTH_DEV_MODE
+    // check), not a production capability. Variant is required: a wipe is too
+    // destructive to run on an implicit default an operator did not choose.
     wipeAndReseed: protectedProcedure
       .input(
         z.object({
-          variant: z
-            .enum(["minimal", "demo", "full", "stress"])
-            .default("minimal"),
+          variant: z.enum(["minimal", "demo", "full", "stress"]),
         }),
       )
       .mutation(({ input }) => {
@@ -130,8 +136,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         // real clean-slate operation in Docker too.
         const repoRoot = resolveRepoRoot(deps.env.CUSTOMREPORT_REPO_ROOT);
         try {
-          // eslint-disable-next-line sonarjs/os-command -- dev-only reseed, double-gated by router mount + assertDevMode; the command string is assembled solely from z.enum-validated literals, no user text
-          const stdout = execSync(buildReseedScript(input.variant), {
+          const options = {
             cwd: repoRoot,
             encoding: "utf8",
             env: {
@@ -140,11 +145,21 @@ export function createDevRouter(deps: DevRouterDeps) {
                 PRISMA_AI_DANGEROUS_ACTION_CONSENT,
             },
             timeout: reseedTimeoutMs(input.variant),
-          });
+          } as const;
+          const resetOutput = execFileSync(
+            resolveExecutable("pnpm"),
+            ["exec", "prisma", "migrate", "reset", "--force"],
+            options,
+          );
+          const seedOutput = execFileSync(
+            resolveExecutable("pnpm"),
+            ["db:seed:profile", input.variant],
+            options,
+          );
           return {
             ok: true,
             variant: input.variant,
-            output: stdout
+            output: `${resetOutput}\n${seedOutput}`
               .split("\n")
               .slice(-RESEED_OUTPUT_TAIL_LINES)
               .join("\n"),

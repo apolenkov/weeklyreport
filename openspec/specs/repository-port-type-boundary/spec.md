@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-status-ssot-lint-gate. Update Purpose after archive.
+Keep port-declaring files independent of Prisma types through an explicit, mechanically enforced restricted-import inventory.
 
 ## Requirements
 
@@ -11,8 +11,8 @@ TBD - created by archiving change add-status-ssot-lint-gate. Update Purpose afte
 Port-contract files MUST NOT import `@prisma/client` — value or type; this
 covers every file that declares a repository or persistence port contract
 (the interfaces domain code and routers consume). Enforcement is the ESLint
-Zone 4 restricted-import ban
-(`eslint.config.ts`), extended from the four hexagon `domain/**` trees and
+Zone 4 restricted-import ban (configured in `eslint-config/boundaries.ts` and
+loaded by the root `eslint.config.ts`), extended from the four hexagon `domain/**` trees and
 `admin-shared.ts` to the explicit inventory of port-declaring files across
 modules. Sanctioned Prisma users are exempt by wording and stay outside the
 inventory: `infrastructure/**` internals, `*.prisma-repository.ts` adapters,
@@ -36,7 +36,7 @@ helpers.
 #### Scenario: the inventory is explicit
 
 - **WHEN** a maintainer asks which files the boundary protects
-- **THEN** the Zone 4b `files` list in `eslint.config.ts` names every
+- **THEN** the Zone 4b `files` list in `eslint-config/boundaries.ts` names every
   port-declaring file explicitly (no vague glob), except port files already
   inside a Zone 4 `domain/**` glob (e.g. `lead-form-shared.ts`), which the
   stricter domain ban covers; a new port file is added to the list in the

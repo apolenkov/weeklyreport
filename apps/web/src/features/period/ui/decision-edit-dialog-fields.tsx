@@ -82,8 +82,7 @@ function DecisionTextField({
       error={textError}
       placeholder="e.g. Approve hiring of 2 SDETs in Q3"
       minHeightPx={60}
-      // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
-      autoFocus
+      focusOnMount
       textareaRef={textRef}
       fill={false}
       hint={
@@ -111,7 +110,7 @@ function DecisionDeadlineField({
       <input
         id="dec-deadline"
         type="date"
-        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={deadline}
         onChange={(e) => onDeadlineChange(e.target.value)}
       />
@@ -196,7 +195,7 @@ function DecisionClassificationColumn({
           isDeadEnd={isDeadEnd}
           error={stageError}
           deadEndNotice={`No stages assigned on ${headerProductName} — contact admin.`}
-          onChange={onStageChange}
+          onChange={(next) => onStageChange([...next])}
         />
       )}
     </div>

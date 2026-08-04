@@ -7,34 +7,49 @@ import { describe, expect, it, vi } from "vitest";
 import type { ReportPeriod } from "../../report-sections";
 import { FillFromButton } from "./fill-from-button";
 
-const pastPeriod: ReportPeriod = {
+// Typed builder: ReportPeriod requires a machine-readable periodStart; the
+// sort-under-test reads periodStart, so the builder defaults the rest.
+function makePeriod(
+  overrides: Partial<ReportPeriod> & { readonly id: string },
+): ReportPeriod {
+  const { id, ...rest } = overrides;
+  return {
+    id,
+    periodStart: new Date("2026-04-01T00:00:00.000Z"),
+    weekLabel: "Week",
+    dateRange: "—",
+    isCurrent: false,
+    ...rest,
+  };
+}
+
+const pastPeriod: ReportPeriod = makePeriod({
   id: "2026-W16",
+  dateRange: "Apr 14–20, 2026",
   sourceSectionId: "sec-W16",
   weekLabel: "Week 16",
-  dateRange: "Apr 14–20, 2026",
-  isCurrent: false,
   isSubmitted: true,
-};
+});
 
 describe("FillFromButton", () => {
   it("renders period list when past submitted periods exist", () => {
     const periods: ReportPeriod[] = [
-      {
+      makePeriod({
         id: "2026-W17",
+        dateRange: "Apr 21–27, 2026",
         sourceSectionId: "sec-W17",
         weekLabel: "Week 17",
-        dateRange: "Apr 21–27, 2026",
         isCurrent: true,
         isSubmitted: false,
-      },
-      {
+      }),
+      makePeriod({
         id: "2026-W16",
+        dateRange: "Apr 14–20, 2026",
         sourceSectionId: "sec-W16",
         weekLabel: "Week 16",
-        dateRange: "Apr 14–20, 2026",
         isCurrent: false,
         isSubmitted: true,
-      },
+      }),
     ];
 
     render(<FillFromButton periods={periods} />);
@@ -49,14 +64,14 @@ describe("FillFromButton", () => {
 
   it("shows empty-state when no submitted past periods", () => {
     const periods: ReportPeriod[] = [
-      {
+      makePeriod({
         id: "2026-W17",
+        dateRange: "Apr 21–27, 2026",
         sourceSectionId: "sec-W17",
         weekLabel: "Week 17",
-        dateRange: "Apr 21–27, 2026",
         isCurrent: true,
         isSubmitted: false,
-      },
+      }),
     ];
 
     render(<FillFromButton periods={periods} />);
@@ -83,6 +98,7 @@ describe("FillFromButton", () => {
       sourceSectionId: "sec-older",
       weekLabel: "Week 15",
       dateRange: "Apr 7–13, 2026",
+      periodStart: new Date("2026-04-07T00:00:00.000Z"),
     };
     const newer = {
       ...pastPeriod,
@@ -90,6 +106,7 @@ describe("FillFromButton", () => {
       sourceSectionId: "sec-newer",
       weekLabel: "Week 16",
       dateRange: "Apr 14–20, 2026",
+      periodStart: new Date("2026-04-14T00:00:00.000Z"),
     };
 
     render(<FillFromButton periods={[older, newer]} />);
@@ -106,23 +123,23 @@ describe("FillFromButton", () => {
 
   it("renders an Archived badge on archived rows and not on non-archived rows", () => {
     const periods: ReportPeriod[] = [
-      {
+      makePeriod({
         id: "2026-W16",
+        dateRange: "Apr 14–20, 2026",
         sourceSectionId: "sec-W16",
         weekLabel: "Week 16",
-        dateRange: "Apr 14–20, 2026",
         isCurrent: false,
         isSubmitted: true,
         archived: true,
-      },
-      {
+      }),
+      makePeriod({
         id: "2026-W15",
+        dateRange: "Apr 7–13, 2026",
         sourceSectionId: "sec-W15",
         weekLabel: "Week 15",
-        dateRange: "Apr 7–13, 2026",
         isCurrent: false,
         isSubmitted: true,
-      },
+      }),
     ];
 
     render(<FillFromButton periods={periods} />);
@@ -144,14 +161,14 @@ describe("FillFromButton", () => {
 
   it("shows no-match message when search yields no results", () => {
     const periods: ReportPeriod[] = [
-      {
+      makePeriod({
         id: "2026-W05",
+        dateRange: "May 4–10",
         sourceSectionId: "sec-W05",
         weekLabel: "Week 5",
-        dateRange: "May 4–10",
         isCurrent: false,
         isSubmitted: true,
-      },
+      }),
     ];
 
     render(<FillFromButton periods={periods} />);
@@ -313,22 +330,20 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
 });
 
 describe("FillFromButton — 'Previous' badge keyed by identity, not filtered index", () => {
-  const week16: ReportPeriod = {
+  const week16: ReportPeriod = makePeriod({
     id: "2026-W16",
+    dateRange: "Apr 14–20, 2026",
     sourceSectionId: "sec-W16",
     weekLabel: "Week 16",
-    dateRange: "Apr 14–20, 2026",
-    isCurrent: false,
     isSubmitted: true,
-  };
-  const week15: ReportPeriod = {
+  });
+  const week15: ReportPeriod = makePeriod({
     id: "2026-W15",
+    dateRange: "Apr 7–13, 2026",
     sourceSectionId: "sec-W15",
     weekLabel: "Week 15",
-    dateRange: "Apr 7–13, 2026",
-    isCurrent: false,
     isSubmitted: true,
-  };
+  });
 
   function openDropdown() {
     fireEvent.click(
@@ -375,22 +390,20 @@ describe("FillFromButton — 'Previous' badge keyed by identity, not filtered in
 });
 
 describe("FillFromButton — dropdown search resets on every close path", () => {
-  const week16: ReportPeriod = {
+  const week16: ReportPeriod = makePeriod({
     id: "2026-W16",
+    dateRange: "Apr 14–20, 2026",
     sourceSectionId: "sec-W16",
     weekLabel: "Week 16",
-    dateRange: "Apr 14–20, 2026",
-    isCurrent: false,
     isSubmitted: true,
-  };
-  const week15: ReportPeriod = {
+  });
+  const week15: ReportPeriod = makePeriod({
     id: "2026-W15",
+    dateRange: "Apr 7–13, 2026",
     sourceSectionId: "sec-W15",
     weekLabel: "Week 15",
-    dateRange: "Apr 7–13, 2026",
-    isCurrent: false,
     isSubmitted: true,
-  };
+  });
 
   function openDropdown() {
     fireEvent.click(
@@ -456,20 +469,18 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
   });
 });
 
-describe("sortMostRecentFirst — total order with unparseable ranges", () => {
-  const period = (id: string, dateRange: string): ReportPeriod =>
-    ({ id, dateRange }) as ReportPeriod;
+describe("sortMostRecentFirst — newest-first from the machine-readable period start", () => {
+  const period = (id: string, periodStart: Date): ReportPeriod =>
+    makePeriod({ id, periodStart });
 
-  it("keeps newest first when a no-end-date period sits between parseable ones", async () => {
+  it("sorts by periodStart descending regardless of display-dateRange formatting", async () => {
     const { sortMostRecentFirst } = await import("./fill-from-button-helpers");
-    const older = period("older", "Apr 7 – Apr 13, 2026");
-    const noEnd = period("no-end", "—");
-    const newer = period("newer", "Apr 14 – Apr 20, 2026");
+    const older = period("older", new Date("2026-04-07T00:00:00.000Z"));
+    const newer = period("newer", new Date("2026-04-14T00:00:00.000Z"));
+    const noLabel = period("no-label", new Date("2026-04-21T00:00:00.000Z"));
 
-    // A null-vs-date comparison returning 0 would be non-transitive and let
-    // insertion order win; unparseable ranges must sort last instead.
-    expect(sortMostRecentFirst([older, noEnd, newer]).map((p) => p.id)).toEqual(
-      ["newer", "older", "no-end"],
-    );
+    expect(
+      sortMostRecentFirst([older, noLabel, newer]).map((p) => p.id),
+    ).toEqual(["no-label", "newer", "older"]);
   });
 });

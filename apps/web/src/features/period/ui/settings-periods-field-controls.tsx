@@ -2,25 +2,26 @@
 
 import type { AppSettings } from "@customreport/shared";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
-import * as fieldLimits from "./settings-periods-fields-base-helpers";
+import {
+  type IntegerBounds,
+  parseIntegerInBounds,
+} from "./settings-periods-fields-base-helpers";
 
 const NUMBER_INPUT_CLASS =
-  "w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+const NUMBER_INPUT_ERROR_CLASS = `${NUMBER_INPUT_CLASS} border-[var(--color-destructive)]`;
 const FIELD_LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
 const FIELD_HINT_CLASS = "mt-1 text-xs text-[var(--color-muted-foreground)]";
+const FIELD_ERROR_CLASS = "mt-1 text-xs text-[var(--color-destructive)]";
 const TOGGLE_CARD_CLASS =
-  "flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]";
+  "flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)]";
 
-interface NumberFieldBounds {
-  readonly min: number;
-  readonly max: number;
-  readonly fallback: number;
-}
-
-// Integer field clamped to its declared bounds on every keystroke, so the draft
-// never holds a value the API would reject.
+// Keeps the raw draft text and commits only a parsed in-bounds integer; invalid
+// input surfaces an inline error instead of silently becoming a fallback value
+// (no-fallback policy). onValidityChange lets the parent gate Save on validity.
 export function NumberField({
   id,
   label,
@@ -28,14 +29,40 @@ export function NumberField({
   value,
   onChange,
   hint,
+  onValidityChange,
 }: {
   readonly id: string;
   readonly label: string;
-  readonly bounds: NumberFieldBounds;
+  readonly bounds: IntegerBounds;
   readonly value: number;
   readonly onChange: (value: number) => void;
   readonly hint: ReactNode;
+  readonly onValidityChange?: (id: string, valid: boolean) => void;
 }) {
+  const [raw, setRaw] = useState(() => String(value));
+  const [error, setError] = useState<string | null>(null);
+  // Render-phase adjust: reseed raw text when the committed value changes
+  // externally (e.g. after Save) without an effect.
+  const [committedValue, setCommittedValue] = useState(value);
+  if (committedValue !== value) {
+    setCommittedValue(value);
+    setRaw(String(value));
+    setError(null);
+  }
+
+  const handleChange = (text: string) => {
+    setRaw(text);
+    const parsed = parseIntegerInBounds(text, bounds);
+    if (parsed === null) {
+      setError(`Whole number between ${bounds.min} and ${bounds.max} required`);
+      onValidityChange?.(id, false);
+      return;
+    }
+    setError(null);
+    onValidityChange?.(id, true);
+    onChange(parsed);
+  };
+
   return (
     <div>
       <label htmlFor={id} className={FIELD_LABEL_CLASS}>
@@ -48,13 +75,20 @@ export function NumberField({
         inputMode="numeric"
         min={bounds.min}
         max={bounds.max}
-        value={value}
-        onChange={(e) =>
-          onChange(fieldLimits.boundedInteger(e.target.value, bounds))
+        aria-invalid={error !== null}
+        value={raw}
+        onChange={(e) => handleChange(e.target.value)}
+        className={
+          error === null ? NUMBER_INPUT_CLASS : NUMBER_INPUT_ERROR_CLASS
         }
-        className={NUMBER_INPUT_CLASS}
       />
-      <p className={FIELD_HINT_CLASS}>{hint}</p>
+      {error === null ? (
+        <p className={FIELD_HINT_CLASS}>{hint}</p>
+      ) : (
+        <p className={FIELD_ERROR_CLASS} role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

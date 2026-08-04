@@ -14,10 +14,12 @@ export function useStageAssignmentMutations() {
   const qc = useQueryClient();
 
   function invalidateAssignments() {
-    void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
-    void qc.invalidateQueries(
-      trpc.admin.listStageAssignmentCounts.pathFilter(),
-    );
+    void qc
+      .invalidateQueries(trpc.admin.listStageAssignments.pathFilter())
+      .catch(() => undefined);
+    void qc
+      .invalidateQueries(trpc.admin.listStageAssignmentCounts.pathFilter())
+      .catch(() => undefined);
   }
 
   const saveMut = useMutation(
@@ -66,17 +68,31 @@ export function useStageAssignmentData(
 
   const filteredLeads = useMemo(() => {
     const groups = productGroupsQuery.data ?? [];
-    // Product not yet assigned to a group; show all leads (graceful degradation).
-    if (groups.length === 0) return leads;
+    // Unknown ownership must not widen the picker to every lead: while the
+    // group query is unsettled, or when the product has no owning group, no
+    // lead is a provable assignee, so fail closed with an empty list.
+    if (productGroupsQuery.isLoading || productGroupsQuery.isError) return [];
+    if (groups.length === 0) return [];
     const groupIds = new Set(groups.map((g) => g.id));
     return leads.filter((lead) => groupIds.has(lead.groupId));
-  }, [leads, productGroupsQuery.data]);
+  }, [
+    leads,
+    productGroupsQuery.data,
+    productGroupsQuery.isLoading,
+    productGroupsQuery.isError,
+  ]);
 
   return {
     stages: stagesQuery.data ?? [],
     assignments: assignmentsQuery.data ?? [],
     filteredLeads,
-    isLoading: stagesQuery.isLoading || assignmentsQuery.isLoading,
-    isError: stagesQuery.isError || assignmentsQuery.isError,
+    isLoading:
+      stagesQuery.isLoading ||
+      assignmentsQuery.isLoading ||
+      productGroupsQuery.isLoading,
+    isError:
+      stagesQuery.isError ||
+      assignmentsQuery.isError ||
+      productGroupsQuery.isError,
   };
 }

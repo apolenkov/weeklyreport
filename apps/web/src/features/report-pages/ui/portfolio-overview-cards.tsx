@@ -14,30 +14,34 @@ const STATUS_BG: Record<WeeklyProductStatus, string> = {
   "on-track": "var(--color-success)",
   "at-risk": "var(--color-status-at-risk-bg)",
   blocked: "var(--color-status-blocked-bg)",
+  empty: "var(--color-surface-muted)",
 };
 
 const STATUS_TEXT: Record<WeeklyProductStatus, string> = {
   "on-track": CSS_PRIMARY,
   "at-risk": "var(--color-status-at-risk-fg)",
   blocked: "var(--color-destructive)",
+  empty: "var(--color-muted-foreground)",
 };
 
 const STATUS_ICON: Record<WeeklyProductStatus, string> = {
   "on-track": "✓",
   "at-risk": "!",
   blocked: "✕",
+  empty: "–",
 };
 
 const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
   "on-track": "On Track",
   "at-risk": "At Risk",
   blocked: "Blocked",
+  empty: "No status",
 };
 
-const EMPTY_CARD_BG = "rgba(0,0,0,0.045)";
+const EMPTY_CARD_BG = "var(--color-surface-empty-card)";
 const EMPTY_CARD_TEXT = "var(--color-muted-foreground)";
-const EMPTY_BADGE_BG = "rgba(255,255,255,0.35)";
-const EMPTY_BADGE_BORDER = "rgba(0,0,0,0.18)";
+const EMPTY_BADGE_BG = "var(--color-surface-empty-badge)";
+const EMPTY_BADGE_BORDER = "var(--color-border-strong)";
 
 // Class strings are const-lifted verbatim so the emitted `class` attribute
 // stays byte-identical to the inline templates they replaced.
@@ -46,9 +50,9 @@ const PRODUCT_CARD_BASE =
 const PRODUCT_CARD_EMPTY =
   "cursor-default text-[var(--color-muted-foreground)]";
 const PRODUCT_CARD_INTERACTIVE =
-  "cursor-pointer hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)]";
+  "cursor-pointer hover:shadow-[var(--shadow-portfolio-card-hover)]";
 const PRODUCT_CHEVRON_BASE =
-  "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] shadow-sm transition-opacity";
+  "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] shadow-sm transition-opacity";
 const PRODUCT_CHEVRON_REVEAL =
   "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100";
 const STATUS_BADGE_CLASS =
@@ -74,32 +78,23 @@ const EMPTY_BADGE_STYLE: CSSProperties = {
   border: `1.5px solid ${EMPTY_BADGE_BORDER}`,
 };
 
-// Opening a product means scrolling its accordion into view and expanding it;
-// an already-expanded accordion has no collapsed toggle, so nothing is clicked.
-function openProductDetails(productId: string): void {
-  const el = document.getElementById(`report-product-${productId}`);
-  if (!el) return;
-  el.scrollIntoView({ behavior: "smooth", block: "start" });
-  el.querySelector<HTMLButtonElement>('[aria-expanded="false"]')?.click();
-}
-
-// Lead cards never empty (only leads with content); click jumps to the lead
-// section, not a product accordion.
-export function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
+// Opening a product means scrolling its accordion into view and expanding it.
+// The report surface drives this through React state (focusedProductId /
+// scrollTargetProductId), never by reaching into the accordion's DOM.
+export function LeadOverviewCard({
+  lead,
+  onNavigate,
+}: {
+  readonly lead: LeadOverviewRow;
+  readonly onNavigate: (leadId: string) => void;
+}) {
   return (
     <button
       type="button"
-      className="group grid min-h-[76px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+      className="group grid min-h-[76px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[var(--shadow-portfolio-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
       style={{ background: STATUS_BG[lead.worstStatus] }}
       title={`Jump to ${lead.name}'s section`}
-      onClick={() => {
-        const el = document.getElementById(`report-lead-${lead.id}`);
-        if (!el) return;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        // a11y parity with the product path: move focus to the section so a
-        // keyboard/SR user lands there, without re-scrolling.
-        if (el instanceof HTMLElement) el.focus({ preventScroll: true });
-      }}
+      onClick={() => onNavigate(lead.id)}
     >
       <div
         className={STATUS_BADGE_CLASS}
@@ -117,7 +112,7 @@ export function LeadOverviewCard({ lead }: { readonly lead: LeadOverviewRow }) {
         </span>
       </div>
       <span
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
         aria-hidden="true"
       >
         ↓
@@ -152,8 +147,10 @@ function ProductCardBody({
 
 export function ProductOverviewCard({
   product,
+  onNavigate,
 }: {
   readonly product: WeeklyPortfolioProduct;
+  readonly onNavigate: (productId: string) => void;
 }) {
   const isEmpty =
     product.currentWeekCount === 0 &&
@@ -170,7 +167,7 @@ export function ProductOverviewCard({
       disabled={isEmpty}
       aria-disabled={isEmpty}
       onClick={() => {
-        if (!isEmpty) openProductDetails(product.id);
+        if (!isEmpty) onNavigate(product.id);
       }}
     >
       <div

@@ -9,7 +9,7 @@ import { useTRPC } from "../../../lib/trpc-context";
 interface UseLeadFormForeignContentPurgeInput {
   readonly isEveryone: boolean;
   readonly visibilityHydrated: boolean;
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
   readonly currentUserId: string | null;
   readonly sessionRole: SessionUser["role"] | null;
 }

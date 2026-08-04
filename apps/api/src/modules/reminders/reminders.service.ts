@@ -35,8 +35,8 @@ import { RemindersScopeService } from "./reminders-scope.service.js";
 export { ReminderDomainError, ReminderScopeError };
 
 interface ReminderExecutionResult {
-  execution: AdminReminderExecution;
-  outcome: "created" | "revived" | "deduplicated";
+  readonly execution: AdminReminderExecution;
+  readonly outcome: "created" | "revived" | "deduplicated";
 }
 
 // Fresh id + queued status per attempt; the dedupe key is what the unique
@@ -164,14 +164,23 @@ export class RemindersService {
     recipientEmail: string,
     queuePayload: () => Promise<ReminderQueuePayload>,
   ): Promise<ReminderExecutionResult> {
-    const revived = await reviveFailedExecution(
-      this.emailQueue ? this.enqueueContext(this.emailQueue) : null,
-      this.repository.requeueFailedExecution.bind(this.repository),
-      execution,
-      recipientEmail,
-      queuePayload,
-    );
-    if (revived) return { execution: revived, outcome: "revived" };
+    const queue = this.emailQueue;
+    if (queue) {
+      const revived = await reviveFailedExecution(
+        this.enqueueContext(queue),
+        this.repository.requeueFailedExecution.bind(this.repository),
+        execution,
+        recipientEmail,
+        queuePayload,
+      );
+      if (revived) return { execution: revived, outcome: "revived" };
+    } else if (execution.status === "failed") {
+      // Without a queue there is no job to enqueue — reviving would leave a
+      // queued row with no worker. Fail loud instead of a silent dead state.
+      throw new ReminderDomainError(
+        "Cannot revive a failed reminder execution: no email queue is wired.",
+      );
+    }
     // dedupeKey embeds recipientEmail for uniqueness; logging it would
     // leak that address, so ruleId is the identifier we surface here.
     this.logger.debug("deduplicated reminder execution", { ruleId });
@@ -228,6 +237,18 @@ export class RemindersService {
       execution,
       reportPeriod,
     );
+  }
+
+  // Reaper: resolve `sending` rows presumed delivered after a worker crashed
+  // mid-write, so no delivery can stay in-flight forever.
+  async reconcileStuckSendingExecutions(olderThan: Date): Promise<number> {
+    const reconciled = await this.repository.markStuckSendingSent(olderThan);
+    if (reconciled > 0) {
+      this.logger.info("reconciled stuck sending executions as sent", {
+        reconciled,
+      });
+    }
+    return reconciled;
   }
 
   async markReminderSent(executionId: string): Promise<AdminReminderExecution> {

@@ -1,4 +1,8 @@
-import type { ReportStatus } from "@customreport/shared";
+import type {
+  PeriodState,
+  PeriodStatus,
+  ReportStatus,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -16,6 +20,7 @@ const SETTINGS: PeriodFactorySettings = {
   defaultDeadlineDays: 4,
   workingDays: "mon-fri",
   defaultTimezone: "Europe/Moscow",
+  deadlineTime: "18:00",
 };
 
 // A Monday — getCurrentWeekBounds anchors the week to it, so the period is
@@ -25,28 +30,53 @@ const EXPECTED_PERIOD_START = "2026-05-11T00:00:00.000Z";
 const EXPECTED_PERIOD_END = "2026-05-17T23:59:59.999Z";
 // Fri 2026-05-15 18:00 Europe/Moscow = 15:00 UTC.
 const EXPECTED_DEADLINE = "2026-05-15T15:00:00.000Z";
+const PUBLISHER_ID = "11111111-1111-4111-8111-111111111111";
 
 interface PeriodRow {
   id: string;
   periodStart: Date;
   periodEnd: Date;
-  deadline: Date;
-  periodState: "scheduled" | "open";
+  deadline: Date | null;
+  status: ReportStatus;
+  periodState: PeriodState | null;
+  periodStatus: PeriodStatus;
+  archived: boolean;
+  autoPublished: boolean;
+  autoArchived: boolean;
+  publishedAt: Date | null;
+  publishedById: string | null;
+  reopenedAt: Date | null;
 }
 
-interface ReportCreateData {
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  periodState: "scheduled" | "open";
-  status: ReportStatus;
-  archived: boolean;
+function makePeriodRow(overrides: Partial<PeriodRow> = {}): PeriodRow {
+  return {
+    id: "period-existing",
+    periodStart: new Date(EXPECTED_PERIOD_START),
+    periodEnd: new Date(EXPECTED_PERIOD_END),
+    deadline: new Date(EXPECTED_DEADLINE),
+    status: "draft",
+    periodState: "open",
+    periodStatus: "open",
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt: null,
+    publishedById: null,
+    reopenedAt: null,
+    ...overrides,
+  };
 }
 
 // The factory types its `prisma` arg on the precise Prisma `report` delegate;
 // tests pass a minimal stub through this seam (mirrors the scheduler test's
 // `asAny`). The mocks are returned alongside so assertions stay typed.
 type FactoryPrisma = Parameters<typeof ensureCurrentPeriod>[0];
+
+// The real `create` payload type, kept in lock-step with the delegate so a
+// Prisma-schema change breaks the test at compile time.
+type ReportCreateData = Parameters<
+  FactoryPrisma["report"]["create"]
+>[0]["data"];
 
 function makePrisma(opts: {
   existing?: PeriodRow | null;
@@ -67,18 +97,13 @@ function makePrisma(opts: {
       };
     });
 
-  const findFirst = vi
+  const findMany = vi
     .fn()
-    .mockImplementation((args: { where: { status?: string } }) =>
-      // The by-bounds find filters on status:"draft"; the race re-read filters
-      // on the live period states (no status key).
-      args.where.status === "draft"
-        ? (opts.existing ?? null)
-        : (opts.raced ?? null),
-    );
+    .mockResolvedValueOnce(opts.existing ? [opts.existing] : [])
+    .mockResolvedValue(opts.raced ? [opts.raced] : []);
 
-  const client = { report: { findFirst, create } } as unknown as FactoryPrisma;
-  return { client, create, findFirst };
+  const client = { report: { findMany, create } } as unknown as FactoryPrisma;
+  return { client, create, findMany };
 }
 
 const P2002_OPEN_BOUNDARY = {
@@ -131,15 +156,29 @@ describe("ensureCurrentPeriod", () => {
     });
   });
 
+  it("uses the configured wall-clock deadline in the configured timezone", async () => {
+    const { client } = makePrisma({ createdId: "period-custom-deadline" });
+
+    const result = await ensureCurrentPeriod(
+      client,
+      ANCHOR_MONDAY,
+      ANCHOR_MONDAY,
+      {
+        ...SETTINGS,
+        defaultTimezone: "Asia/Tokyo",
+        deadlineTime: "09:30",
+      },
+    );
+
+    expect(expectDefined(result.deadline).toISOString()).toBe(
+      "2026-05-15T00:30:00.000Z",
+    );
+  });
+
   it("is idempotent: returns the existing draft without creating", async () => {
-    const existing: PeriodRow = {
-      id: "period-existing",
-      periodStart: new Date(EXPECTED_PERIOD_START),
-      periodEnd: new Date(EXPECTED_PERIOD_END),
-      deadline: new Date(EXPECTED_DEADLINE),
-      periodState: "open",
-    };
-    const { client, create } = makePrisma({ existing });
+    const { client, create, findMany } = makePrisma({
+      existing: makePeriodRow(),
+    });
 
     const result = await ensureCurrentPeriod(
       client,
@@ -153,16 +192,84 @@ describe("ensureCurrentPeriod", () => {
       reportId: "period-existing",
     });
     expect(create).not.toHaveBeenCalled();
+    expect(findMany.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        periodStart: new Date(EXPECTED_PERIOD_START),
+        periodEnd: new Date(EXPECTED_PERIOD_END),
+      },
+      select: {
+        status: true,
+        periodState: true,
+        periodStatus: true,
+        archived: true,
+      },
+    });
+  });
+
+  it("returns a valid scheduled row without coercion", async () => {
+    const { client } = makePrisma({
+      existing: makePeriodRow({ periodState: "scheduled" }),
+    });
+
+    await expect(
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+    ).resolves.toMatchObject({ created: false, periodState: "scheduled" });
+  });
+
+  it.each([
+    {
+      label: "published",
+      row: makePeriodRow({
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        publishedAt: ANCHOR_MONDAY,
+        publishedById: PUBLISHER_ID,
+      }),
+    },
+    {
+      label: "archived",
+      row: makePeriodRow({ periodState: "archived", archived: true }),
+    },
+  ])(
+    "excludes a valid $label row and creates the live period",
+    async ({ row }) => {
+      const { client, create } = makePrisma({ existing: row });
+
+      await expect(
+        ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+      ).resolves.toMatchObject({ created: true, reportId: "period-new" });
+      expect(create).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each([
+    {
+      label: "null canonical state",
+      row: makePeriodRow({ periodState: null }),
+    },
+    {
+      label: "contradictory tuple",
+      row: makePeriodRow({
+        status: "published",
+        periodState: "open",
+        periodStatus: "published",
+      }),
+    },
+  ])("rejects a contradictory $label row", async ({ row }) => {
+    const { client, create } = makePrisma({ existing: row });
+
+    await expect(
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+    ).rejects.toMatchObject({
+      name: "PeriodLifecycleIntegrityError",
+      message: "Stored period lifecycle is inconsistent.",
+    });
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("concurrent create (P2002 on the open-boundary index) re-reads and returns the winner", async () => {
-    const raced: PeriodRow = {
-      id: "period-winner",
-      periodStart: new Date(EXPECTED_PERIOD_START),
-      periodEnd: new Date(EXPECTED_PERIOD_END),
-      deadline: new Date(EXPECTED_DEADLINE),
-      periodState: "open",
-    };
+    const raced = makePeriodRow({ id: "period-winner" });
     const { client, create } = makePrisma({
       createThrows: P2002_OPEN_BOUNDARY,
       raced,
@@ -180,14 +287,11 @@ describe("ensureCurrentPeriod", () => {
   });
 
   it("concurrent scheduled create re-reads and returns the scheduled winner", async () => {
-    const raced: PeriodRow = {
+    const raced = makePeriodRow({
       id: "period-scheduled-winner",
-      periodStart: new Date(EXPECTED_PERIOD_START),
-      periodEnd: new Date(EXPECTED_PERIOD_END),
-      deadline: new Date(EXPECTED_DEADLINE),
       periodState: "scheduled",
-    };
-    const { client, findFirst } = makePrisma({
+    });
+    const { client, findMany } = makePrisma({
       createThrows: P2002_OPEN_BOUNDARY,
       raced,
     });
@@ -204,12 +308,11 @@ describe("ensureCurrentPeriod", () => {
       reportId: "period-scheduled-winner",
       periodState: "scheduled",
     });
-    expect(findFirst).toHaveBeenLastCalledWith(
+    expect(findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {
           periodStart: new Date(EXPECTED_PERIOD_START),
           periodEnd: new Date(EXPECTED_PERIOD_END),
-          periodState: { in: ["scheduled", "open"] },
         },
       }),
     );
@@ -239,9 +342,8 @@ describe("ensureCurrentPeriod", () => {
 
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
     // The factory delegates the elapsed-fireAt decision to the applicator by
-    // handing it `now` — it no longer blunt-skips the whole call when the
-    // deadline has passed (that would drop still-future instants like a T+2h
-    // escalation). Per-rule elapsed-skip is covered in the applicator's tests.
+    // handing it `now` — it does not blunt-skip the whole call when the deadline
+    // has passed (that would drop still-future instants like a T+2h escalation).
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
       expect.objectContaining({ id: "period-fut" }),
       now,
@@ -295,14 +397,7 @@ describe("ensureCurrentPeriod", () => {
   });
 
   it("does NOT apply reminder policy on the found (idempotent) branch", async () => {
-    const existing: PeriodRow = {
-      id: "period-existing",
-      periodStart: new Date(EXPECTED_PERIOD_START),
-      periodEnd: new Date(EXPECTED_PERIOD_END),
-      deadline: new Date(EXPECTED_DEADLINE),
-      periodState: "open",
-    };
-    const { client } = makePrisma({ existing });
+    const { client } = makePrisma({ existing: makePeriodRow() });
     const policyApplicator = makeApplicator();
 
     await ensureCurrentPeriod(

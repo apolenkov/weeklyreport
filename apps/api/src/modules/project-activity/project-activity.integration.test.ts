@@ -1,10 +1,9 @@
-// Real-DB integration coverage for Project Activities: admin CRUD + M:M lead
-// attachment, ActivityStatus seeding at section provisioning, independent
-// per-lead statuses through the section save, the period-dual-state
-// exemption (a lead save writes child rows only — never the Report period),
-// the detach cascade on editable periods, and the group-move guard.
+// Real-DB integration coverage for Project Activities: admin CRUD, M:M lead
+// attachment, ActivityStatus seeding at provisioning, per-lead statuses through
+// the section save, the detach cascade, and the group-move guard.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -31,8 +30,12 @@ describe("ProjectActivity (integration)", () => {
   const activityId = "b0000000-0000-4000-a000-000000000006";
 
   beforeAll(() => {
-    repo = new ProjectActivityPrismaRepository(prisma as never);
-    sectionsRepo = new ReportSectionsPrismaRepository(prisma as never);
+    repo = new ProjectActivityPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+    sectionsRepo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
   });
 
   beforeEach(async () => {
@@ -123,14 +126,14 @@ describe("ProjectActivity (integration)", () => {
     expect(activity?.leadIds).toEqual([leadA]);
   });
 
-  it("seeds one default-green ActivityStatus per attached activity at section provisioning", async () => {
+  it("seeds one unassessed ActivityStatus per attached activity", async () => {
     const { sectionId } = await ensureLeadSection(prisma, reportId, leadA);
 
     const seeded = await prisma.activityStatus.findMany({
       where: { reportSectionId: sectionId },
     });
     expect(seeded).toHaveLength(1);
-    expect(seeded[0]).toMatchObject({ activityId, status: "green" });
+    expect(seeded[0]).toMatchObject({ activityId, status: null });
   });
 
   it("does not seed archived activities", async () => {
@@ -226,13 +229,10 @@ describe("ProjectActivity (integration)", () => {
       {
         activityId,
         activityName: "Jira triage duty",
-        status: "green",
+        status: null,
         note: null,
-        // activity-first-class: the read model now joins the label-only linked
-        // products and the risk/blocker-derived floor (no records here -> stored;
-        // alarmFloor null because no covering risk/blocker).
         linkedProducts: [{ productId, productName: "CRM Portal" }],
-        derivedStatus: "green",
+        derivedStatus: null,
         alarmFloor: null,
       },
     ]);
@@ -251,8 +251,8 @@ describe("ProjectActivity (integration)", () => {
       reportId,
       leadB,
     );
-    // A prior published period carrying leadB's frozen status for the same
-    // activity — detach must never rewrite that history.
+    // A prior published period carries leadB's frozen status for the activity —
+    // detach must never rewrite that history.
     await prisma.report.create({
       data: {
         id: publishedReportId,

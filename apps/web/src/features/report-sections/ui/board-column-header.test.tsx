@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
@@ -12,14 +10,17 @@ import { BoardColumnHeader } from "./board-column-header";
 
 const PRODUCT_COLUMN: ItemColumn = {
   key: "CRM",
+  parent: { kind: "product", id: "p1" },
   productId: "p1",
   productName: "CRM",
+  activityId: null,
   items: [],
 };
 
 const ACTIVITY_LANE: ItemColumn = {
   key: "activity:act-1",
-  productId: "",
+  parent: { kind: "activity", id: "act-1" },
+  productId: null,
   productName: "Jira triage duty",
   activityId: "act-1",
   items: [],

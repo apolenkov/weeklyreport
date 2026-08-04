@@ -9,9 +9,10 @@ import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminUsersDeps {
-  snapshotAdminService: SnapshotAdminService;
-  // Optional for `{}` fixtures: isActive still flips; JWT TTL expires sessions.
-  sessionRevocationService?: SessionRevocationService;
+  readonly snapshotAdminService: SnapshotAdminService;
+  // Required: a deactivation without the revoked-set fast path silently leaves
+  // in-flight JWTs valid until TTL. Wiring is enforced at the composition root.
+  readonly sessionRevocationService: SessionRevocationService;
 }
 
 export function createAdminUsersProcedures(deps: AdminUsersDeps) {
@@ -44,7 +45,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
           const result = await deps.snapshotAdminService.deactivateUser(
             input.userId,
           );
-          await deps.sessionRevocationService?.revokeSession(input.userId);
+          await deps.sessionRevocationService.revokeSession(input.userId);
           return result;
         } catch (error) {
           throw mapDomainError(error);
@@ -59,7 +60,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
           const result = await deps.snapshotAdminService.activateUser(
             input.userId,
           );
-          await deps.sessionRevocationService?.restoreSession(input.userId);
+          await deps.sessionRevocationService.restoreSession(input.userId);
           return result;
         } catch (error) {
           throw mapDomainError(error);

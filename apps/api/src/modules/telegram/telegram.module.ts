@@ -18,7 +18,7 @@ export function selectTelegramAdapter(env: EnvConfig): TelegramAdapter {
     return new MockTelegramAdapter();
   }
   throw new Error(
-    "Not implemented — see TODO(Phase-55-activation). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.",
+    "Not implemented — see TODO(activate-telegram-bot). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.",
   );
 }
 

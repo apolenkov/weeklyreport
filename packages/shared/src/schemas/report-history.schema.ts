@@ -9,131 +9,163 @@ import {
 } from "./report-primitives.schema";
 
 const MAX_PAGE_SIZE = 100;
-const DEFAULT_PAGE_SIZE = 20;
 
+/** Carry-over execution states exposed by history APIs. */
 export const carryOverStatusSchema = z.enum(["completed"]);
 
-export const carryOverRecordSchema = z.object({
-  id: z.uuid(),
-  sourceReportId: z.uuid(),
-  targetReportId: z.uuid(),
-  sourceItemId: z.uuid().nullable(),
-  targetItemId: z.uuid().nullable(),
-  sourceDecisionId: z.uuid().nullable(),
-  targetDecisionId: z.uuid().nullable(),
-  status: carryOverStatusSchema,
-  carriedAt: z.coerce.date(),
-});
+/** Validates lineage for one carried item or decision. */
+export const carryOverRecordSchema = z
+  .object({
+    id: z.uuid(),
+    sourceReportId: z.uuid(),
+    targetReportId: z.uuid(),
+    sourceItemId: z.uuid().nullable(),
+    targetItemId: z.uuid().nullable(),
+    sourceDecisionId: z.uuid().nullable(),
+    targetDecisionId: z.uuid().nullable(),
+    status: carryOverStatusSchema,
+    carriedAt: z.coerce.date(),
+  })
+  .readonly();
 
-export const carryOverExecutionSchema = z.object({
-  id: z.uuid(),
-  sourceReportId: z.uuid(),
-  targetReportId: z.uuid(),
-  dedupeKey: z.string().min(1),
-  status: carryOverStatusSchema,
-  startedAt: z.coerce.date(),
-  completedAt: z.coerce.date(),
-  carriedItemCount: z.number().int().min(0),
-  carriedDecisionCount: z.number().int().min(0),
-});
+/** Validates aggregate counts for one idempotent carry-over execution. */
+export const carryOverExecutionSchema = z
+  .object({
+    id: z.uuid(),
+    sourceReportId: z.uuid(),
+    targetReportId: z.uuid(),
+    dedupeKey: z.string().min(1),
+    status: carryOverStatusSchema,
+    startedAt: z.coerce.date(),
+    completedAt: z.coerce.date(),
+    carriedItemCount: z.number().int().min(0),
+    carriedDecisionCount: z.number().int().min(0),
+  })
+  .readonly();
 
-export const archiveReportSummarySchema = z.object({
-  reportId: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  publishedAt: reportDate(),
-  publishedByName: z.string().min(1),
-  portfolioStatus: trafficLightStatusSchema,
-});
+/** Validates the compact metadata shown in archive lists. */
+export const archiveReportSummarySchema = z
+  .object({
+    reportId: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    publishedAt: reportDate(),
+    publishedByName: z.string().min(1),
+    portfolioStatus: trafficLightStatusSchema,
+  })
+  .readonly();
 
-export const archiveReportDetailSchema = z.object({
-  summary: archiveReportSummarySchema,
-  report: assembledReportSchema,
-});
+/** Validates an archived report together with its list summary. */
+export const archiveReportDetailSchema = z
+  .object({
+    summary: archiveReportSummarySchema,
+    report: assembledReportSchema.readonly(),
+  })
+  .readonly();
 
-export const compiledHistoryInputSchema = z.object({
-  includeArchive: z.boolean().optional(),
-});
+/** Validates whether compiled history includes archived periods. */
+export const compiledHistoryInputSchema = z
+  .object({
+    includeArchive: z.boolean().optional(),
+  })
+  .readonly();
 
-export const compiledHistoryEntrySchema = z.object({
-  reportId: z.uuid(),
-  periodStart: reportDate(),
-  periodEnd: reportDate(),
-  publishedAt: z.coerce.date().nullable(),
-  archived: z.boolean(),
-  publishedByName: z.string().min(1),
-  trafficLights: z.object({
-    green: z.number().int().min(0),
-    yellow: z.number().int().min(0),
-    red: z.number().int().min(0),
-  }),
-  itemCount: z.number().int().min(0),
-  riskCount: z.number().int().min(0),
-  decisionCount: z.number().int().min(0),
-  priorityCount: z.number().int().min(0),
-  sectionCount: z.number().int().min(0),
-  productCount: z.number().int().min(0),
-});
+/** Validates aggregate counts for one completed reporting period. */
+export const compiledHistoryEntrySchema = z
+  .object({
+    reportId: z.uuid(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
+    publishedAt: z.coerce.date().nullable(),
+    archived: z.boolean(),
+    publishedByName: z.string().min(1),
+    trafficLights: z
+      .object({
+        green: z.number().int().min(0),
+        yellow: z.number().int().min(0),
+        red: z.number().int().min(0),
+      })
+      .readonly(),
+    itemCount: z.number().int().min(0),
+    riskCount: z.number().int().min(0),
+    decisionCount: z.number().int().min(0),
+    priorityCount: z.number().int().min(0),
+    sectionCount: z.number().int().min(0),
+    productCount: z.number().int().min(0),
+  })
+  .readonly();
 
-export const compiledHistoryResultSchema = z.object({
-  entries: z.array(compiledHistoryEntrySchema),
-  archiveCount: z.number().int().min(0),
-});
+/** Validates compiled history entries and the separate archive count. */
+export const compiledHistoryResultSchema = z
+  .object({
+    entries: z.array(compiledHistoryEntrySchema).readonly(),
+    archiveCount: z.number().int().min(0),
+  })
+  .readonly();
 
-export const myHistoryEntrySchema = z.object({
-  sectionId: z.uuid(),
-  reportId: z.uuid(),
-  periodStart: z.coerce.date(),
-  periodEnd: z.coerce.date(),
-  reportStatus: reportStatusSchema,
-  sectionStatus: reportSectionStatusSchema,
-  archived: z.boolean().optional(),
-  submittedAt: z.coerce.date().nullable(),
-  publishedAt: z.coerce.date().nullable(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  lastEditAt: z.coerce.date().nullable().optional(),
-  itemCount: z.number().int().min(0).optional(),
-  riskCount: z.number().int().min(0).optional(),
-  decisionCount: z.number().int().min(0).optional(),
-  priorityCount: z.number().int().min(0).optional(),
-  productCount: z.number().int().min(0).optional(),
-  trafficLights: z
-    .object({
-      green: z.number().int().min(0),
-      yellow: z.number().int().min(0),
-      red: z.number().int().min(0),
-    })
-    .optional(),
-});
+/** Validates one lead's period history entry and optional aggregate details. */
+export const myHistoryEntrySchema = z
+  .object({
+    sectionId: z.uuid(),
+    reportId: z.uuid(),
+    periodStart: z.coerce.date(),
+    periodEnd: z.coerce.date(),
+    reportStatus: reportStatusSchema,
+    sectionStatus: reportSectionStatusSchema,
+    archived: z.boolean().optional(),
+    submittedAt: z.coerce.date().nullable(),
+    publishedAt: z.coerce.date().nullable(),
+    createdAt: z.coerce.date().optional(),
+    updatedAt: z.coerce.date().optional(),
+    lastEditAt: z.coerce.date().nullable().optional(),
+    itemCount: z.number().int().min(0).optional(),
+    riskCount: z.number().int().min(0).optional(),
+    decisionCount: z.number().int().min(0).optional(),
+    priorityCount: z.number().int().min(0).optional(),
+    productCount: z.number().int().min(0).optional(),
+    trafficLights: z
+      .object({
+        green: z.number().int().min(0),
+        yellow: z.number().int().min(0),
+        red: z.number().int().min(0),
+      })
+      .readonly()
+      .optional(),
+  })
+  .readonly();
 
-// ---------------------------------------------------------------------------
-// Pagination
-// ---------------------------------------------------------------------------
+/** Validates a bounded page request with an opaque cursor. */
+export const paginationInputSchema = z
+  .object({
+    // Opaque pagination token: a row id for the log / reminder lists, an encoded
+    // keyset coordinate for the archive. Validated only as a non-empty string so
+    // no single consumer's cursor shape is baked into the shared contract.
+    cursor: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(MAX_PAGE_SIZE),
+  })
+  .readonly();
 
-export const paginationInputSchema = z.object({
-  // Opaque pagination token: a row id for the log / reminder lists, an encoded
-  // keyset coordinate for the archive. Validated only as a non-empty string so
-  // no single consumer's cursor shape is baked into the shared contract.
-  cursor: z.string().min(1).optional(),
-  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
-});
-
+/** Page of results with an opaque continuation cursor. */
 export interface PaginatedResult<T> {
-  items: T[];
-  nextCursor: string | null;
+  readonly items: readonly T[];
+  readonly nextCursor: string | null;
 }
 
-// ---------------------------------------------------------------------------
-// Type exports
-// ---------------------------------------------------------------------------
-
+/** Source-to-target lineage for one carried item or decision. */
 export type CarryOverRecord = z.infer<typeof carryOverRecordSchema>;
+/** Idempotent carry-over outcome with aggregate copy counts. */
 export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
+/** Report identity, period, publication, archive state, and list counts. */
 export type ArchiveReportSummary = z.infer<typeof archiveReportSummarySchema>;
+/** Archived assembled report paired with its list summary. */
 export type ArchiveReportDetail = z.infer<typeof archiveReportDetailSchema>;
+/** Optional archive-inclusion filter for compiled history. */
 export type CompiledHistoryInput = z.infer<typeof compiledHistoryInputSchema>;
+/** Completed-period aggregates and per-status traffic-light totals. */
 export type CompiledHistoryEntry = z.infer<typeof compiledHistoryEntrySchema>;
+/** Ordered compiled-history entries plus the independent archive count. */
 export type CompiledHistoryResult = z.infer<typeof compiledHistoryResultSchema>;
+/** Lead-specific period result with optional aggregate details. */
 export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
+/** Bounded cursor-page request. */
 export type PaginationInput = z.infer<typeof paginationInputSchema>;

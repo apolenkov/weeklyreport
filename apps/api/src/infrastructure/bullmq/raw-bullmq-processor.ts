@@ -1,8 +1,9 @@
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import * as Sentry from "@sentry/nestjs";
 import { type Job, Worker, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
 import type { QueueName } from "./queue-registry";
@@ -13,56 +14,70 @@ import {
 
 // Raw `Worker` (not @Processor/WorkerHost) avoids the DiscoveryService DI bug
 // in @nestjs/bullmq 11 with NestJS 11. Subclass supplies queue/span/handler.
+class WorkerLifecycle<TData> {
+  private worker: Worker<TData> | null = null;
+
+  readonly start = (worker: Worker<TData>): void => {
+    if (this.worker) throw new Error("BullMQ worker is already running");
+    this.worker = worker;
+  };
+
+  readonly close = async (): Promise<void> => {
+    const worker = this.worker;
+    this.worker = null;
+    await worker?.close();
+  };
+}
+
 export abstract class RawBullMqProcessor<TData extends JobTraceContext>
   implements OnModuleInit, OnModuleDestroy
 {
-  private worker: Worker<TData> | undefined;
-  protected readonly logger: AppLogger;
+  private readonly lifecycle = new WorkerLifecycle<TData>();
 
   constructor(
     protected readonly env: EnvConfig,
-    logger: AppLogger | undefined,
-    protected readonly cls: ClsService | undefined,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+    protected readonly logger: AppLogger,
+    protected readonly cls: ClsService | null,
+  ) {}
 
   // QueueName (not string): a subclass typo cannot spin up a worker on a
   // queue the registry does not own.
   protected abstract readonly queueName: QueueName;
   protected abstract readonly spanName: string;
-  protected abstract processJob(job: Job<TData>): Promise<void>;
-  protected abstract onJobFailed(
+  protected abstract readonly processJob: (job: Job<TData>) => Promise<void>;
+  protected abstract readonly onJobFailed: (
     job: Job<TData> | undefined,
     error: Error,
-  ): void;
+  ) => void;
 
-  protected extraWorkerOptions(): Partial<WorkerOptions> {
-    return {};
-  }
+  protected readonly extraWorkerOptions = (): Partial<WorkerOptions> => ({});
 
-  onModuleInit(): void {
-    this.worker = new Worker<TData>(
+  readonly onModuleInit = (): void => {
+    const worker = new Worker<TData>(
       this.queueName,
       (job: Job<TData>) =>
-        runInJobTraceContext(job.data, this.spanName, this.cls, () =>
-          this.processJob(job),
-        ),
+        runInJobTraceContext(job.data, this.spanName, this.cls, async () => {
+          try {
+            await this.processJob(job);
+          } catch (error) {
+            Sentry.captureException(error);
+            throw error;
+          }
+        }),
       { ...getBullMQOptions(this.env), ...this.extraWorkerOptions() },
     );
 
-    this.worker.on("failed", (job, error) => {
+    worker.on("failed", (job, error) => {
       this.onJobFailed(job, error);
     });
-    this.worker.on("error", (error) => {
+    worker.on("error", (error) => {
       this.logger.error("BullMQ worker connection error", {
         queueName: this.queueName,
         message: error.message,
       });
     });
-  }
+    this.lifecycle.start(worker);
+  };
 
-  async onModuleDestroy(): Promise<void> {
-    await this.worker?.close();
-  }
+  readonly onModuleDestroy = async (): Promise<void> => this.lifecycle.close();
 }

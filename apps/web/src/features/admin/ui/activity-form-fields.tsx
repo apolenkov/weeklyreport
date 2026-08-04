@@ -9,7 +9,7 @@ import type { AdminGroupView, AdminProductView } from "../model/admin-types";
 const FIELD_LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
 const FIELD_CONTROL_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
 const HINT_CLASS = "mt-1.5 text-xs text-[var(--color-muted-foreground)]";
 
 function ActivityNameField({
@@ -29,8 +29,6 @@ function ActivityNameField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus
         className={FIELD_CONTROL_CLASS}
       />
     </div>
@@ -45,7 +43,7 @@ function ReportingGroupField({
   groups,
   lockedByLeads,
 }: {
-  readonly value: string;
+  readonly value: string | null;
   readonly onChange: (value: string) => void;
   readonly groups: readonly AdminGroupView[];
   readonly lockedByLeads: boolean;
@@ -57,12 +55,17 @@ function ReportingGroupField({
       </label>
       <select
         id="activity-group"
-        value={value}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={lockedByLeads}
         aria-describedby={lockedByLeads ? "activity-group-locked" : undefined}
         className={`${FIELD_CONTROL_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
       >
+        {value === null && (
+          <option value="" disabled>
+            Select group…
+          </option>
+        )}
         {groups.map((group) => (
           <option key={group.id} value={group.id}>
             {group.name}
@@ -87,6 +90,8 @@ function LinkedProductsField({
   readonly onFormChange: (form: ActivityFormData) => void;
   readonly products: readonly AdminProductView[];
 }) {
+  const linkedProductIds: ReadonlySet<string> = new Set(form.linkedProductIds);
+
   return (
     <fieldset>
       <legend className={FIELD_LABEL_CLASS}>Linked Products</legend>
@@ -107,7 +112,7 @@ function LinkedProductsField({
               <label className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)]">
                 <input
                   type="checkbox"
-                  checked={form.linkedProductIds.includes(product.id)}
+                  checked={linkedProductIds.has(product.id)}
                   onChange={(e) =>
                     onFormChange(
                       toggleLinkedProduct(form, product.id, e.target.checked),

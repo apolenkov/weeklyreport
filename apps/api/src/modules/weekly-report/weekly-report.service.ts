@@ -101,10 +101,10 @@ export class WeeklyReportService {
   }
 
   // Leadership resolves through the SAME lifecycle resolvers publish/reopen
-  // authz uses, so a head's submitted `reportId` always equals the server-
-  // derived target. Leads are ungated, so they keep the plain active id.
+  // authz uses, so a head's `reportId` always equals the server-derived target;
+  // admin tracks the same target, not the lead resolver. Leads stay ungated.
   private async resolveDefaultReportId(role?: Role): Promise<string | null> {
-    if (role === "viewer" || role === "head") {
+    if (role === "viewer" || role === "head" || role === "admin") {
       return this.getCurrentLeadershipReportId();
     }
     return this.repository.getActiveReportId();

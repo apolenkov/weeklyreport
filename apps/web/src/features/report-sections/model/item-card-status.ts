@@ -2,7 +2,16 @@ import {
   coveringRisksForItem,
   highestAlarmSeverity,
 } from "../../../lib/item-alarm";
-import type { ItemStatus, KanbanItem, RiskEntry } from "./types";
+import type {
+  ItemStatus,
+  KanbanItem,
+  ProductKanbanItem,
+  RiskEntry,
+} from "./types";
+
+function isProductItem(item: KanbanItem): item is ProductKanbanItem {
+  return item.parent.kind === "product";
+}
 
 interface DerivedCardStatus {
   displayStatus: ItemStatus | "at-risk";
@@ -41,12 +50,17 @@ export function deriveCardStatus(
       alarmLocked: false,
     };
   }
+  if (!isProductItem(item)) {
+    return {
+      displayStatus: item.status,
+      isBlocked: item.status === "blocked",
+      isPlanned: item.status === "planned",
+      alarmLocked: false,
+    };
+  }
   // Stored `blocked` is unrepresentable (DB/Zod reject it); own items arrive as
   // pure Progress. `blocked` appears only as the risk-derived alarm below.
-  const covering =
-    item.activityId == null && item.productId !== ""
-      ? coveringRisksForItem(item, risks)
-      : [];
+  const covering = coveringRisksForItem(item, risks);
   const derivedAlarm = highestAlarmSeverity(covering);
   const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? item.status;
   const lockAuthorName = foreignLockAuthor(covering, derivedAlarm);

@@ -3,20 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { ReportSectionDomainError } from "../../modules/report-sections/index.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * `reports.myHistory` delegates to `ReportSectionsService.myHistory`,
- * threading the caller's userId through. The `report.periodStart desc`
- * ordering guarantee lives where the query is issued — see
- * `ReportSectionsPrismaRepository.getMyHistoryRows`'s coverage in
- * `report-sections.prisma-repository.test.ts`.
- */
+// `reports.myHistory` delegates to ReportSectionsService.myHistory, threading
+// the caller's userId through. The ordering guarantee lives where the query is
+// issued (report-sections.prisma-repository.test.ts).
 
 function buildLeadCaller(myHistory: ReturnType<typeof vi.fn>) {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     reportSectionsService: { myHistory },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session: {
       userId: "44444444-4444-4444-8444-444444444444",

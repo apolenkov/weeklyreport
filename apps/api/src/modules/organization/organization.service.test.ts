@@ -1,10 +1,13 @@
 import { type OrganizationUpdate } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import {
   type OrganizationRepository,
   OrganizationService,
 } from "./organization.service";
+
+const logger = createNullLogger();
 
 function makeRepo(): OrganizationRepository {
   const baseRow = {
@@ -29,7 +32,7 @@ function makeRepo(): OrganizationRepository {
 
 describe("OrganizationService", () => {
   it("getOrganization returns the validated singleton row", async () => {
-    const svc = new OrganizationService(makeRepo());
+    const svc = new OrganizationService(makeRepo(), logger);
     const row = await svc.getOrganization();
     expect(row.id).toBe("singleton");
     expect(row.shortName).toBe("PEO");
@@ -37,7 +40,7 @@ describe("OrganizationService", () => {
   });
 
   it("getPublic returns only shortName + fullName (no timestamps, no id)", async () => {
-    const svc = new OrganizationService(makeRepo());
+    const svc = new OrganizationService(makeRepo(), logger);
     const pub = await svc.getPublic();
     expect(pub).toEqual({
       shortName: "PEO",
@@ -48,7 +51,7 @@ describe("OrganizationService", () => {
 
   it("updateOrganization persists new values", async () => {
     const repo = makeRepo();
-    const svc = new OrganizationService(repo);
+    const svc = new OrganizationService(repo, logger);
     const next = await svc.updateOrganization({
       shortName: "PLAT",
       fullName: "Platform Engineering",
@@ -75,7 +78,7 @@ describe("OrganizationService", () => {
         updatedAt: new Date(),
       },
     );
-    const svc = new OrganizationService(repo);
+    const svc = new OrganizationService(repo, logger);
     await expect(
       svc.updateOrganization({ shortName: "OK", fullName: "OK" }),
     ).rejects.toThrow();
@@ -90,7 +93,7 @@ describe("OrganizationService", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    const svc = new OrganizationService(repo);
+    const svc = new OrganizationService(repo, logger);
     await expect(svc.getOrganization()).rejects.toThrow();
   });
 });

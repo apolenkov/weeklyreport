@@ -84,6 +84,7 @@ const archivedRow = makeRow({
 function renderTab(args?: {
   active?: PeriodListItem[];
   archive?: PeriodListItem[];
+  activeError?: boolean;
 }) {
   const activeRows = args?.active ?? [openRow, publishedFresh, publishedStale];
   const archiveRows = args?.archive ?? [archivedRow];
@@ -97,6 +98,9 @@ function renderTab(args?: {
       // Input-parameterized: active vs archive caches stay independent.
       queryByInput: (input: unknown) => {
         const { bucket } = input as { bucket: string };
+        if (bucket === "active" && args?.activeError) {
+          throw new Error("boom");
+        }
         return bucket === "archive" ? archiveRows : activeRows;
       },
     },
@@ -237,6 +241,52 @@ describe("PeriodsTab", () => {
         screen.getByTestId(`periods-archive-row-${archivedRow.id}`),
       ).toBeInTheDocument();
     });
+  });
+
+  it("filters archive rows by the search query", async () => {
+    const user = userEvent.setup();
+    const archiveOnly = makeRow({
+      id: "11111111-1111-4111-8111-111111111188",
+      periodStart: new Date("2026-01-05T00:00:00Z"),
+      periodEnd: new Date("2026-01-11T23:59:59Z"),
+      periodState: "archived",
+      periodStatus: "published",
+      archived: true,
+      weekLabel: "Q1 kickoff",
+    });
+    renderTab({ archive: [archivedRow, archiveOnly] });
+
+    await user.click(screen.getByTestId("periods-archive-toggle"));
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`periods-archive-row-${archiveOnly.id}`),
+      ).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByTestId("periods-search"), "Q1 kickoff");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId(`periods-archive-row-${archivedRow.id}`),
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByTestId(`periods-archive-row-${archiveOnly.id}`),
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces an active-periods query failure instead of rendering an empty list", async () => {
+    renderTab({ activeError: true });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("periods-active-error")).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByTestId("periods-active-empty"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`periods-active-row-${openRow.id}`),
+    ).not.toBeInTheDocument();
   });
 
   // Row actions render as inline icons, not a kebab dropdown. Tests assert

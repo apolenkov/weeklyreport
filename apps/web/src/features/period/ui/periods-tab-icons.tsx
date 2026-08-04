@@ -1,9 +1,7 @@
-export { PlusIcon } from "../../../shared/ui/icons";
+export { DeleteIcon, EditIcon, PlusIcon } from "../../../shared/ui/icons";
 
-// Tailwind red-800 → red-900 on hover: no theme token covers the destructive
-// icon tone (--color-destructive is the brighter #c82014 alert red). Kept as a
-// literal class string so Tailwind's source scanner still emits the CSS.
-const DANGER_ICON_CLASSES = "text-[#991b1b] hover:text-[#7f1d1d]";
+const DANGER_ICON_CLASSES =
+  "text-[var(--color-destructive-emphasis)] hover:text-[var(--color-destructive-emphasis-hover)]";
 const NEUTRAL_ICON_CLASSES =
   "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]";
 
@@ -56,24 +54,6 @@ export function Chevron({ expanded }: { readonly expanded: boolean }) {
       aria-hidden="true"
     >
       <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-export function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   );
 }
@@ -149,26 +129,6 @@ export function UnarchiveIcon() {
       <rect x="1" y="3" width="22" height="5" />
       <polyline points="9 14 12 11 15 14" />
       <line x1="12" y1="11" x2="12" y2="18" />
-    </svg>
-  );
-}
-
-export function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   );
 }

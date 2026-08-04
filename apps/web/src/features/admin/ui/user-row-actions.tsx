@@ -22,7 +22,7 @@ interface UserRowActionsProps {
 }
 
 const ROUTINE_ACTION_CLASS =
-  "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 function UserActivationButton(
   props: Pick<
@@ -40,14 +40,14 @@ function UserActivationButton(
         pending: props.deactivatePending,
         action: props.onDeactivate,
         className:
-          "text-amber-800 hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50",
+          "text-[var(--color-status-at-risk-fg)] hover:border-[var(--color-status-at-risk-border)] hover:bg-[var(--color-status-at-risk-bg)]",
       }
     : {
         label: "Activate",
         pending: props.activatePending,
         action: props.onActivate,
         className:
-          "text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]",
+          "text-[var(--color-starbucks-accent)] hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]",
       };
   return (
     <button
@@ -73,7 +73,7 @@ function UserOverflowMenu({
         <button
           ref={triggerRef}
           type="button"
-          className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[rgba(0,117,74,0.3)] hover:text-[var(--color-foreground)]`}
+          className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[var(--color-border-accent-hover)] hover:text-[var(--color-foreground)]`}
           aria-label={`More actions for ${user.name}`}
         >
           <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function UserRowActions({
       <button
         type="button"
         onClick={() => onEdit(user)}
-        className={`${ROUTINE_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]`}
+        className={`${ROUTINE_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]`}
         aria-label={`Edit ${user.name}`}
       >
         Edit

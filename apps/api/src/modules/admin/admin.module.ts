@@ -20,7 +20,10 @@ import { PeriodAdminService } from "./period-admin.service.js";
 import { ProjectAdminService } from "./project-admin.service.js";
 import { ReminderAdminService } from "./reminder-admin.service.js";
 import { ReopenRequestAdminService } from "./reopen-request-admin.service.js";
-import { SessionRevocationService } from "./session-revocation.service";
+import {
+  SESSION_REVOCATION_DEPS,
+  SessionRevocationService,
+} from "./session-revocation.service";
 import { SnapshotAdminService } from "./snapshot-admin.service.js";
 
 const focusedAdminProvider = <T>(
@@ -58,11 +61,11 @@ const focusedAdminProvider = <T>(
     // no test client is injected; the factory passes only env so the redis
     // param stays undefined on the production path.
     {
-      provide: SessionRevocationService,
-      useFactory: (env: EnvConfig) =>
-        new SessionRevocationService(undefined, env),
-      inject: [ENV_CONFIG],
+      provide: SESSION_REVOCATION_DEPS,
+      useFactory: (env: EnvConfig, logger: AppLogger) => ({ env, logger }),
+      inject: [ENV_CONFIG, APP_LOGGER],
     },
+    SessionRevocationService,
     ActionLogPrismaRepository,
     {
       provide: ActionLogService,

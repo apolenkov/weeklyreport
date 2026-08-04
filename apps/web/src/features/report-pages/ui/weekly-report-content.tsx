@@ -47,6 +47,8 @@ export interface ReportContentProps {
   readonly onFilterChange: (next: SubmissionFilter) => void;
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
+  readonly focusedLeadId: string | undefined;
+  readonly onNavigateOverview: (targetId: string) => void;
 }
 
 function NoSubmissionsEmptyState({
@@ -84,6 +86,7 @@ type ReportTopSurfacesProps = Pick<
   | "leadOverviewRows"
   | "activitySections"
   | "submittedOnly"
+  | "onNavigateOverview"
 >;
 
 function ReportTopSurfaces({
@@ -94,6 +97,7 @@ function ReportTopSurfaces({
   leadOverviewRows,
   activitySections,
   submittedOnly,
+  onNavigateOverview,
 }: ReportTopSurfacesProps) {
   return (
     <>
@@ -111,6 +115,7 @@ function ReportTopSurfaces({
         scope={scope}
         portfolio={portfolio}
         leadOverviewRows={leadOverviewRows}
+        onNavigate={onNavigateOverview}
       />
 
       {/* Display-only; same submitted-only filter as the accordion body. */}
@@ -143,11 +148,11 @@ function SectionsToolbar({
   onFilterChange,
 }: SectionsToolbarProps) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
         Sections
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex max-w-full flex-wrap items-center gap-2">
         {canReviewAny ? (
           <ReviewModeToggle value={reviewMode} onChange={onReviewModeChange} />
         ) : null}
@@ -167,7 +172,8 @@ type SectionsSurfaceKeys =
   | "accordion"
   | "scope"
   | "focusedProductId"
-  | "scrollTargetProductId";
+  | "scrollTargetProductId"
+  | "focusedLeadId";
 
 function ReportSectionsSurface({
   reviewEnabled,
@@ -177,6 +183,7 @@ function ReportSectionsSurface({
   scope,
   focusedProductId,
   scrollTargetProductId,
+  focusedLeadId,
   ...toolbar
 }: SectionsToolbarProps & Pick<ReportContentProps, SectionsSurfaceKeys>) {
   return (
@@ -202,6 +209,7 @@ function ReportSectionsSurface({
         leadGroups={accordion.leadGroups}
         focusedProductId={focusedProductId}
         scrollTargetProductId={scrollTargetProductId}
+        focusedLeadId={focusedLeadId}
         review={
           toolbar.reviewMode === "review" ? reviewModel.context : undefined
         }
@@ -227,6 +235,7 @@ export function ReportContent(props: ReportContentProps) {
         leadOverviewRows={props.leadOverviewRows}
         activitySections={props.activitySections}
         submittedOnly={props.submittedOnly}
+        onNavigateOverview={props.onNavigateOverview}
       />
 
       <ReportSectionsSurface
@@ -237,6 +246,7 @@ export function ReportContent(props: ReportContentProps) {
         scope={props.scope}
         focusedProductId={props.focusedProductId}
         scrollTargetProductId={props.scrollTargetProductId}
+        focusedLeadId={props.focusedLeadId}
         canReviewAny={props.canReviewAny}
         reviewMode={props.reviewMode}
         onReviewModeChange={props.onReviewModeChange}

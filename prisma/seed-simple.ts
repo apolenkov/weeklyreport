@@ -9,6 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { requireEnv } from "./_require-env.js";
 import { assertSeedCoverage } from "./seed-coverage-check.js";
 import {
   seedActionLog,
@@ -39,7 +40,7 @@ import { logSeedSummary } from "./seed-simple.summary.js";
 import { seedUsers } from "./seed-simple.users.js";
 import { wipeExistingData } from "./seed-simple.wipe.js";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

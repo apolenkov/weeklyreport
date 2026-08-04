@@ -1,49 +1,42 @@
 import type { UserSession } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import {
   AdminReopenRequestAlreadyProcessedError,
   type AdminRepository,
   type ReopenRequestStatusFilter,
 } from "./admin-shared";
-import {
-  type AdminTelemetry,
-  NOOP_ADMIN_TELEMETRY,
-} from "./admin-telemetry.port.js";
+import type { AdminTelemetry } from "./admin-telemetry.port.js";
 import {
   type ReopenRequestListItem,
   toReopenRequestListItem,
 } from "./period-admin.envelope.js";
 
 export interface ListReopenRequestsArgs {
-  status?: ReopenRequestStatusFilter;
-  session: UserSession;
+  readonly status?: ReopenRequestStatusFilter;
+  readonly session: UserSession;
 }
 
 export interface RespondReopenRequestArgs {
-  id: string;
-  decision: "approved" | "rejected";
-  note?: string;
-  decidedBy: string;
-  session: UserSession;
+  readonly id: string;
+  readonly decision: "approved" | "rejected";
+  readonly note?: string;
+  readonly decidedBy: string;
+  readonly session: UserSession;
 }
 
 export interface RespondReopenRequestResult {
-  success: true;
-  decision: "approved" | "rejected";
-  staleAutoClosed: boolean;
+  readonly success: true;
+  readonly decision: "approved" | "rejected";
+  readonly staleAutoClosed: boolean;
 }
 
 export class ReopenRequestAdminService {
-  private readonly logger: AppLogger;
-
   constructor(
     private readonly repository: AdminRepository,
-    logger?: AppLogger,
-    private readonly telemetry: AdminTelemetry = NOOP_ADMIN_TELEMETRY,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+    private readonly logger: AppLogger,
+    private readonly telemetry: AdminTelemetry,
+  ) {}
 
   // Head sees own group only; admin scope is global.
   async listReopenRequests(

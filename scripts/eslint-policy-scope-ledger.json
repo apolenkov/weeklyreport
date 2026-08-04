@@ -19,13 +19,17 @@
         "positive": "error",
         "negative": "absent"
       },
-      "evidence": "Installs the TypeScript parser, project service, TS/React plugins, and the repository-wide typed rule regime."
+      "evidence": "Installs the TypeScript parser, project service, TS/React plugins, and the repository-wide typed rule regime. The universal JSX rule path is exercised by the positive tabindex probe and the group/region allowlist negative probe."
     },
     {
       "configIndex": 3,
       "id": "product-function-budget",
       "classification": "enforcement",
-      "files": ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+      "files": [
+        "apps/*/src/**/*.{ts,tsx}",
+        "packages/*/src/**/*.{ts,tsx}",
+        "e2e/**/*.{ts,tsx}"
+      ],
       "ignores": [
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
@@ -40,7 +44,7 @@
         "positive": "error",
         "negative": "absent"
       },
-      "evidence": "Applies the 50-line production-function budget while test files use their own file-size policy."
+      "evidence": "Applies the 70-line production-function budget while test files use their own file-size policy."
     },
     {
       "configIndex": 4,
@@ -64,7 +68,8 @@
       "files": [
         "apps/**/*.{ts,tsx,js,jsx,mjs}",
         "packages/**/*.{ts,tsx,js,jsx,mjs}",
-        "prisma/**/*.{ts,tsx,js,jsx,mjs}"
+        "prisma/**/*.{ts,tsx,js,jsx,mjs}",
+        "e2e/**/*.{ts,tsx,js,jsx,mjs}"
       ],
       "ignores": [],
       "positive": "apps/api/src/main.ts",
@@ -280,7 +285,8 @@
         "apps/api/src/**/*.{ts,tsx}",
         "apps/web/src/**/*.{ts,tsx}",
         "packages/shared/src/**/*.{ts,tsx}",
-        "packages/ui/src/**/*.{ts,tsx}"
+        "packages/ui/src/**/*.{ts,tsx}",
+        "e2e/**/*.{ts,tsx}"
       ],
       "ignores": [
         "**/*.test.{ts,tsx}",
@@ -390,7 +396,7 @@
       "configIndex": 24,
       "id": "config-data-budgets",
       "classification": "specialization",
-      "files": ["**/*.config.ts"],
+      "files": ["**/*.config.ts", "eslint-config/*.ts"],
       "ignores": [],
       "positive": "apps/web/next.config.ts",
       "negative": "apps/web/src/lib/trpc.ts",
@@ -400,7 +406,7 @@
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "Declarative configuration is exempt from product code-size/complexity/literal budgets; setup and tool files remain gated."
+      "evidence": "Declarative root and eslint-config policy modules are exempt from product code-size/complexity/literal budgets; setup and tool files remain gated."
     },
     {
       "configIndex": 25,
@@ -428,14 +434,9 @@
       "configIndex": 26,
       "id": "literal-data",
       "classification": "policy",
-      "files": [
-        "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
-        "apps/api/src/infrastructure/metrics/metrics.registry.ts",
-        "packages/ui/src/components/ui/**",
-        "apps/api/src/test-utils/**"
-      ],
+      "files": ["apps/api/src/test-utils/**"],
       "ignores": [],
-      "positive": "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
+      "positive": "apps/api/src/test-utils/report-section-fixtures.ts",
       "negative": "apps/api/src/infrastructure/metrics/metrics.module.ts",
       "marker": {
         "kind": "rule",
@@ -443,23 +444,23 @@
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "Histogram boundaries, vendored UI primitives, and test infrastructure are literal data; naming each value would add indirection rather than policy."
+      "evidence": "Test infrastructure contains fixture literals whose names would add indirection; production metrics and UI primitives remain under ordinary numeric-literal enforcement."
     },
     {
       "configIndex": 27,
       "id": "uat-fixture-vocabulary",
       "classification": "policy",
-      "files": ["apps/web/uat-suite/**"],
+      "files": ["apps/web/uat-suite/inventory.mjs"],
       "ignores": [],
-      "positive": "apps/web/uat-suite/helpers.mjs",
-      "negative": "scripts/find-status-literal-unions.mjs",
+      "positive": "apps/web/uat-suite/inventory.mjs",
+      "negative": "apps/web/uat-suite/helpers.mjs",
       "marker": {
         "kind": "rule",
         "name": "sonarjs/no-duplicate-string",
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "Repeated strings are UAT fixture vocabulary; ordinary tooling remains under duplicate-string enforcement."
+      "evidence": "Repeated strings are UAT fixture vocabulary (inventory.mjs only); helpers.mjs is the adjacent negative outside that override, while ordinary tooling remains under duplicate-string enforcement."
     },
     {
       "configIndex": 28,

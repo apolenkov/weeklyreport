@@ -54,6 +54,8 @@ describe("PeriodCreatorScheduler scheduled-to-open wiring (integration)", () => 
       prisma as never,
       { getSettings: () => Promise.resolve(SETTINGS) } as never,
       createNullAuditLogger(),
+      { applyToPeriod: () => Promise.resolve() } as never,
+      (() => Promise.resolve({ status: "no-source" })) as never,
     );
 
     const result = await scheduler.runOnce(

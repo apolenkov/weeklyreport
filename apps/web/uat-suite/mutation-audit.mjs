@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { auditReadBack } from "./read-back-analysis.mjs";
+import { parseMutationAllowlist } from "./mutation-allowlist.mjs";
 import { extractProcedures } from "./trpc-procedures.mjs";
 import { webSourceTexts } from "./web-module-graph.mjs";
 
@@ -60,11 +61,7 @@ const verified = withStatus("VERIFIED");
 
 function readAllowlist() {
   if (!existsSync(ALLOWLIST_PATH)) return {};
-  try {
-    return JSON.parse(readFileSync(ALLOWLIST_PATH, "utf8"));
-  } catch {
-    return {};
-  }
+  return parseMutationAllowlist(readFileSync(ALLOWLIST_PATH, "utf8"));
 }
 
 const updateMode = process.argv.includes("--update-allowlist");
@@ -77,17 +74,9 @@ const allowlist = readAllowlist();
 const unexpectedBlackHoles = blackHoles.filter((a) => !allowlist[a.procedure]);
 
 if (updateMode) {
-  const stubbed = {
-    ...allowlist,
-    ...Object.fromEntries(
-      unexpectedBlackHoles.map((a) => [
-        a.procedure,
-        "⚠ TODO: justify or wire a consumer",
-      ]),
-    ),
-  };
-  writeFileSync(ALLOWLIST_PATH, JSON.stringify(stubbed, null, 2) + "\n");
-  console.log(`[mutation-audit] allowlist updated: ${ALLOWLIST_PATH}`);
+  console.error(
+    "[mutation-audit] --update-allowlist cannot generate reviewed justifications; edit mutation-audit.allowlist.json explicitly",
+  );
 }
 
 const table = (headers, alignment, rows) => [
@@ -184,7 +173,7 @@ console.log(
   `VERIFIED: ${verified.length}, PARTIAL: ${partial.length}, UNRESOLVED: ${unresolved.length}, BLACK HOLE: ${blackHoles.length} (${unexpectedBlackHoles.length} unexpected)`,
 );
 
-if (unexpectedBlackHoles.length > 0 && !updateMode) {
+if (unexpectedBlackHoles.length > 0 || updateMode) {
   console.error(
     `\n[mutation-audit] FAIL: ${unexpectedBlackHoles.length} unexpected black hole(s):`,
   );

@@ -3,7 +3,7 @@ import type {
   ActivityLiveRow,
   UserSession,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
@@ -101,13 +101,13 @@ const sortActivityRows = (rows: readonly ActivityLiveRow[]) =>
 
 @Injectable()
 export class ActivityPrismaRepository implements ActivityRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // Single join of sections+children avoids N round-trips for counts and last-edit.
-  async getLiveActivity(
+  readonly getLiveActivity = async (
     reportId: string | null,
     session: UserSession,
-  ): Promise<ActivityLiveResponse> {
+  ): Promise<ActivityLiveResponse> => {
     if (!reportId) return emptyActivity();
     const report: ActivityReport | null = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -158,5 +158,5 @@ export class ActivityPrismaRepository implements ActivityRepository {
       periodStatus: report.periodStatus,
       rows,
     };
-  }
+  };
 }

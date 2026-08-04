@@ -30,14 +30,13 @@ export type {
   SlideTrafficStatus,
 } from "./slide-grid-rows";
 
-/** Pseudo-card id for content that belongs to no single product. Matches the
- * deck's existing cross-product pseudo-entry id so product scoping (which
- * already excludes it from chips) keeps working unchanged. */
+// Shared is a pseudo-card for cross-product content; product scoping excludes
+// this id from product chips.
 export const SHARED_CARD_ID = "cross-product";
 export const SHARED_CARD_NAME = "Shared context";
 
 export interface SlideGridModel {
-  /** Legend roster: section author first, foreign authors after (name order). */
+  // Legend order is owner first, then foreign authors by name.
   readonly authors: readonly GridAuthor[];
   readonly worstStatus: SlideTrafficStatus;
   readonly counters: {
@@ -45,7 +44,7 @@ export interface SlideGridModel {
     readonly risks: number;
     readonly priorities: number;
   };
-  /** "N of M products on track" — real product cards with data and a status. */
+  // On-track counts only real product cards with data and a status.
   readonly onTrack: { readonly on: number; readonly total: number };
   readonly priorityStrip: readonly GridPriorityCard[];
   readonly products: readonly GridProductCard[];
@@ -53,9 +52,9 @@ export interface SlideGridModel {
 
 export interface SlideGridInput {
   readonly section: ReportSectionReadModel;
-  /** Risk-floored product statuses computed by `buildSectionSlideModel`. */
+  // Optional server/model-computed risk floors for product statuses.
   readonly productStatuses?: ReadonlyMap<string, SlideTrafficStatus>;
-  /** Everyone-mode co-owner rows (with author identity — never anonymized). */
+  // Everyone-mode rows retain co-owner identity; they are never anonymized.
   readonly foreign?: readonly CrossAuthorContentRow[];
 }
 
@@ -86,7 +85,7 @@ function deriveProductLookup(section: ReportSectionReadModel): ProductLookup {
       (p) => [p.projectId, p.projectName] as readonly [string, string],
     ),
     [SHARED_CARD_ID, SHARED_CARD_NAME],
-    ...(section.referencedProjects ?? []).map(
+    ...section.referencedProjects.map(
       (p) => [p.projectId, p.projectName] as readonly [string, string],
     ),
   ]);
@@ -114,8 +113,7 @@ type HeaderSummary = Pick<
   "counters" | "onTrack" | "worstStatus"
 >;
 
-/** "N of M products on track" and the header counters/worst-status chip —
- * always derived from real product cards, never the pseudo Shared card. */
+// Header counts and worst status use real product cards, never the Shared card.
 function buildHeaderSummary(
   realCards: readonly GridProductCard[],
   products: readonly GridProductCard[],

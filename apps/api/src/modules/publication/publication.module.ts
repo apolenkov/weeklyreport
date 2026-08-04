@@ -1,5 +1,12 @@
 import { Module } from "@nestjs/common";
 
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { createServiceLogger } from "../../lib/logger-service.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
@@ -16,7 +23,7 @@ import { PublicationPrismaRepository } from "./infrastructure/publication.prisma
 import { PublicationPrometheusTelemetry } from "./infrastructure/publication-prometheus-telemetry.adapter.js";
 
 @Module({
-  imports: [AnalyticsModule],
+  imports: [AnalyticsModule, ConfigModule],
   providers: [
     { provide: PUBLICATION_REPOSITORY, useClass: PublicationPrismaRepository },
     PublicationPrometheusTelemetry,
@@ -24,7 +31,12 @@ import { PublicationPrometheusTelemetry } from "./infrastructure/publication-pro
       provide: PUBLICATION_TELEMETRY,
       useExisting: PublicationPrometheusTelemetry,
     },
-    NoopIngestionQueue,
+    {
+      provide: NoopIngestionQueue,
+      useFactory: (env: EnvConfig, logger: AppLogger) =>
+        new NoopIngestionQueue(logger, env.NODE_ENV),
+      inject: [ENV_CONFIG, APP_LOGGER],
+    },
     {
       provide: PublicationService,
       useFactory: (

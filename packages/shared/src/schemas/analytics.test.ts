@@ -124,3 +124,36 @@ describe("ISO date rule diagnostic surface", () => {
     });
   });
 });
+
+describe("trafficLightHistoryOutputSchema", () => {
+  const row = {
+    projectId: "6af1931e-bb02-4a16-b4f5-bd03208bf729",
+    projectName: "Payments",
+  };
+
+  it("accepts a rectangular period-by-project matrix", () => {
+    expect(
+      trafficLightHistoryOutputSchema.safeParse({
+        periods: ["2026-06-19", "2026-06-26"],
+        rows: [{ ...row, statuses: ["green", null] }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    { label: "missing", statuses: ["green"] },
+    { label: "excess", statuses: ["green", null, "red"] },
+  ])("rejects a row with $label status cells", ({ statuses }) => {
+    const result = trafficLightHistoryOutputSchema.safeParse({
+      periods: ["2026-06-19", "2026-06-26"],
+      rows: [{ ...row, statuses }],
+    });
+
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["rows", 0, "statuses"],
+        message: "Status count must match period count.",
+      }),
+    ]);
+  });
+});

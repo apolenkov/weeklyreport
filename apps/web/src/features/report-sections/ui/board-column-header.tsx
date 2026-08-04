@@ -18,7 +18,8 @@ export function BoardColumnHeader({
   showProductAdd,
   onAdd,
 }: BoardColumnHeaderProps) {
-  const showAdd = !readOnly && (col.activityId != null || showProductAdd);
+  const showAdd =
+    !readOnly && (col.parent.kind === "activity" || showProductAdd);
   return (
     <div className="mb-3 flex min-w-0 items-center gap-2">
       {/* gap-2 (not justify-between) keeps the `+ Add` button glued next to
@@ -31,12 +32,12 @@ export function BoardColumnHeader({
         <button
           type="button"
           // Mobile keeps the 44px tap-target for a11y; md+ compacts to 28px.
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-starbucks-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-starbucks-accent)_8%,transparent)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] hover:bg-[var(--color-success)]"
           onClick={() =>
             onAdd(
-              col.activityId != null
-                ? { activityId: col.activityId }
-                : { productId: col.productId },
+              col.parent.kind === "activity"
+                ? { activityId: col.parent.id }
+                : { productId: col.parent.id },
             )
           }
           aria-label={`Add item to ${col.productName}`}

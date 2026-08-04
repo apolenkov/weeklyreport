@@ -5,9 +5,10 @@ import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types.js";
 import { buildEscalationGroups } from "./reminders-escalation-grouping.js";
 import { formatPeriodLabel } from "./reminders-row-mappers.js";
 
-/** Minimal logging surface `queryDueEscalationRules` needs — matches both NestJS `Logger` and `AppLogger`. */
+// Minimal logging surface `queryDueEscalationRules` needs — matches both NestJS
+// `Logger` and `AppLogger`.
 export interface UnresolvedGroupLogger {
-  warn(message: string): void;
+  readonly warn: (message: string) => void;
 }
 
 // Period identity plus the still-draft sections' authors — the leads a deadline
@@ -73,12 +74,6 @@ const escalationRoutingInclude = {
   },
 } as const satisfies Prisma.ReminderRuleInclude;
 
-/**
- * Returns active deadline rules whose fireAt is in the past,
- * pre-resolved with the recipient leads (those whose ReportSection for
- * the rule's reportId is still 'draft' status). Rules without a reportId
- * are skipped — they have no concrete deadline to remind about.
- */
 export async function queryDueDeadlineRules(
   prisma: PrismaService,
   now: Date,
@@ -89,10 +84,9 @@ export async function queryDueDeadlineRules(
       kind: "deadline",
       fireAt: { lte: now },
       reportId: { not: null },
-      // An admin can clear a period's deadline AFTER rules materialized; such
-      // rules must never dispatch — reminders are deadline-relative and the
-      // reference point is gone.
-      report: { deadline: { not: null } },
+      // Cleared deadlines remove the reminder reference point; archived periods
+      // are out of scope even though their rules remain active, so exclude both.
+      report: { deadline: { not: null }, archived: false },
     },
     include: deadlineRecipientsInclude,
   });
@@ -123,14 +117,6 @@ export async function queryDueDeadlineRules(
   });
 }
 
-/**
- * Active escalation rules whose fireAt has passed, fanned out per reporting-
- * group head. Each late lead (a section still in `draft` for the rule's
- * report at T+2h) is routed to its group's active head (role head/admin,
- * `isActive`); leads whose group has no resolvable active head are logged and
- * dropped. Resolution is independent of `Report.publishedBy` — escalation
- * fires while leads are still in `draft`, before any publish.
- */
 export async function queryDueEscalationRules(
   prisma: PrismaService,
   now: Date,
@@ -143,8 +129,9 @@ export async function queryDueEscalationRules(
       fireAt: { lte: now },
       reportId: { not: null },
       // Same guard as the deadline query: a cleared deadline silences the
-      // period's rules at dispatch time.
-      report: { deadline: { not: null } },
+      // period's rules at dispatch time, and an archived period is out of
+      // scope — its rules stay `active` but must never dispatch again.
+      report: { deadline: { not: null }, archived: false },
     },
     include: escalationRoutingInclude,
   });

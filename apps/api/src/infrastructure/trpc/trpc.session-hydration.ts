@@ -1,7 +1,4 @@
-import {
-  DEFAULT_ORGANIZATION_IDENTITY,
-  type UserSession,
-} from "@customreport/shared";
+import { type UserSession } from "@customreport/shared";
 
 import { PrismaService } from "../prisma/prisma.service.js";
 
@@ -10,15 +7,37 @@ const ORG_CACHE_TTL_MS = 5000;
 // One Organization row per deployment; the fixed id is the schema-level
 // singleton invariant (`organizationSchema.id` is `z.literal("singleton")`).
 const ORGANIZATION_SINGLETON_ID = "singleton";
-// eslint-disable-next-line no-restricted-syntax -- Module-level TTL singleton cache must be assignable for refresh and explicit clearOrgCache invalidation.
-let orgCache: {
-  value: { shortName: string; fullName: string };
-  expiresAt: number;
-} | null = null;
+interface OrganizationValue {
+  readonly shortName: string;
+  readonly fullName: string;
+}
+
+class OrganizationCache {
+  private entry: {
+    readonly value: OrganizationValue;
+    readonly expiresAt: number;
+  } | null = null;
+
+  clear(): void {
+    this.entry = null;
+  }
+
+  get(now: number): OrganizationValue | null {
+    return this.entry !== null && this.entry.expiresAt >= now
+      ? this.entry.value
+      : null;
+  }
+
+  set(value: OrganizationValue, expiresAt: number): void {
+    this.entry = { value, expiresAt };
+  }
+}
+
+const organizationCache = new OrganizationCache();
 
 // Immediate invalidation after updateOrganization.
 export function clearOrgCache(): void {
-  orgCache = null;
+  organizationCache.clear();
 }
 
 // Per-request hydrate: admin grant/revoke mid-JWT-lifetime would leak or
@@ -54,31 +73,25 @@ async function hydrateOrganization(
   prisma: PrismaService,
 ): Promise<UserSession> {
   const now = Date.now();
-  if (!orgCache || orgCache.expiresAt < now) {
-    // Upsert (not create) on missing row so concurrent cold reads collapse
-    // instead of racing into P2002. Seed/admin hold the real brand, not code.
-    const existing = await prisma.organization.findUnique({
-      where: { id: ORGANIZATION_SINGLETON_ID },
-      select: { shortName: true, fullName: true },
-    });
-    const row =
-      existing ??
-      (await prisma.organization.upsert({
-        where: { id: ORGANIZATION_SINGLETON_ID },
-        create: {
-          id: ORGANIZATION_SINGLETON_ID,
-          shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
-          fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
-        },
-        update: {},
-        select: { shortName: true, fullName: true },
-      }));
-    orgCache = {
-      value: { shortName: row.shortName, fullName: row.fullName },
-      expiresAt: now + ORG_CACHE_TTL_MS,
-    };
+  const cached = organizationCache.get(now);
+  if (cached !== null) {
+    return { ...session, organization: cached };
   }
-  return { ...session, organization: orgCache.value };
+  // A missing singleton row is an unseeded/truncated deployment, not a gap
+  // to paper over with a code default — fail loud so the real brand must
+  // come from seed/admin, never from shared constants.
+  const row = await prisma.organization.findUnique({
+    where: { id: ORGANIZATION_SINGLETON_ID },
+    select: { shortName: true, fullName: true },
+  });
+  if (row === null) {
+    throw new Error(
+      `Organization singleton row '${ORGANIZATION_SINGLETON_ID}' is missing; seed it before serving requests`,
+    );
+  }
+  const value = { shortName: row.shortName, fullName: row.fullName };
+  organizationCache.set(value, now + ORG_CACHE_TTL_MS);
+  return { ...session, organization: value };
 }
 
 async function resolveSectionId(

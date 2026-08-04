@@ -11,7 +11,7 @@ import {
   type ReopenRequestRow,
 } from "./admin-shared.js";
 
-// reopen-request-lifecycle / ADR 0008 — group-scoped list/count + race-safe decide.
+// Group-scoped list/count + race-safe decide for reopen requests.
 
 // Soft cap: list is newest-first; UI shows a page, not the full history.
 const REOPEN_REQUEST_LIST_CAP = 100;
@@ -142,20 +142,22 @@ async function applyDecision(
   return applyApproval(tx, req, input);
 }
 
-// Scoped findFirst blocks out-of-group decide; the decision itself runs in one
-// transaction.
+// Re-loading the scoped request row INSIDE the same transaction as the decision
+// closes the TOCTOU window: a group-scope change between read and write cannot
+// let an out-of-scope decision through.
 export async function decideReopenRequest(
   prisma: PrismaService,
   input: DecideReopenRequestInput,
 ): Promise<ReopenDecisionOutcome> {
   const scope = groupScopeFilter(input.session, "reportSection");
-  const req = await prisma.reopenRequest.findFirst({
-    where: { id: input.id, reportSection: scope },
-    select: { id: true, reportSectionId: true },
+  return prisma.$transaction(async (tx) => {
+    const req = await tx.reopenRequest.findFirst({
+      where: { id: input.id, reportSection: scope },
+      select: { id: true, reportSectionId: true },
+    });
+    if (!req) {
+      throw new AdminReopenRequestNotFoundError("Reopen request not found.");
+    }
+    return applyDecision(tx, req, input);
   });
-  if (!req) {
-    throw new AdminReopenRequestNotFoundError("Reopen request not found.");
-  }
-
-  return prisma.$transaction((tx) => applyDecision(tx, req, input));
 }

@@ -2,17 +2,16 @@ import type { ReactNode } from "react";
 
 // Shared period-toolbar frame tokens (border / hover surface / radius / padding).
 const REPORT_TOOLBAR_FRAME_CLASS =
-  "rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5";
+  "rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5";
 
 // Sticky opt-in: opaque surface (no /70), shadow, z-20 under NavBar dropdowns
 // (z-30). Resting frame above stays byte-identical for non-sticky usages.
 const REPORT_TOOLBAR_FRAME_STICKY_CLASS =
-  "rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)] px-2 py-1.5 sticky top-0 z-20 shadow-md";
+  "rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 sticky top-0 z-20 shadow-md";
 
-// overflow-x-auto (not -clip) keeps every control reachable at narrow widths —
-// the one surface allowed horizontal scroll below md (ui-control-density).
-const REPORT_TOOLBAR_ROW_CLASS =
-  "flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap";
+// Context controls wrap at narrow widths so every action remains visible and
+// keyboard-reachable without creating a second horizontal scroll surface.
+const REPORT_TOOLBAR_ROW_CLASS = "flex min-w-0 flex-wrap items-center gap-1.5";
 
 interface ReportToolbarProps {
   // Context-control row only. Document actions render on the page header via
@@ -35,8 +34,6 @@ export function ReportToolbar({
       data-testid="report-toolbar"
       role="group"
       aria-label="Context controls"
-      // Start-aligned: justify-end would push overflow past the left edge where
-      // overflow-x-auto cannot scroll it back (report-toolbar-layout).
       className={`${frameClass} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
     >
       {contextControls}

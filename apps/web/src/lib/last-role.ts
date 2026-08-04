@@ -1,24 +1,5 @@
-/**
- * «Last role memory» on the landing page.
- *
- * Stores the most recently authenticated user's role + email + name in
- * `localStorage` so that on the next visit to the AUTH_STUB landing
- * page we can offer «You were here as {Name} · {Role} — use this role
- * or change?» as a 1-click resume affordance.
- *
- * Why localStorage and not a cookie:
- *   - Client-only — no SSR / proxy / cookie-parsing surface area
- *   - Lives across browser sessions on the same device
- *   - Easy to clear (devtools or per-app reset)
- *   - Never sent to the server, so it can't be used for auth decisions
- *
- * The stored value is purely a UI hint. Authentication still goes
- * through the regular `/auth/dev-login` (stub) or SAML (real) routes.
- *
- * SSR safety: every read/write checks `typeof window !== 'undefined'`
- * and wraps JSON.parse in try/catch so a corrupted/legacy value can
- * never crash the landing render.
- */
+// This localStorage value is a UI-only resume hint, never an auth decision;
+// SSR/parse guards keep corrupted or unavailable storage from breaking render.
 
 import { type Role, sessionRoleSchema } from "@customreport/shared";
 import { z } from "zod";
@@ -42,10 +23,6 @@ function parseLastRole(value: unknown): LastRoleRecord | null {
   return result.success ? result.data : null;
 }
 
-/**
- * Read the persisted last-role hint. Returns null when storage is
- * unavailable (SSR, private mode), empty, or malformed.
- */
 export function readLastRole(): LastRoleRecord | null {
   if (typeof window === "undefined") return null;
   try {
@@ -59,11 +36,6 @@ export function readLastRole(): LastRoleRecord | null {
   }
 }
 
-/**
- * Persist the current session's role + email + name. Idempotent — safe
- * to call on every render where the session is known. Storage failure
- * is silent (private mode, quota exceeded).
- */
 export function writeLastRole(record: LastRoleRecord): void {
   if (typeof window === "undefined") return;
   if (parseLastRole(record) === null) return;
@@ -74,11 +46,6 @@ export function writeLastRole(record: LastRoleRecord): void {
   }
 }
 
-/**
- * Clear the hint. Intended for explicit «Sign out forever» flows; the
- * regular logout path leaves the hint in place on purpose so the next
- * sign-in is one click.
- */
 export function clearLastRole(): void {
   if (typeof window === "undefined") return;
   try {

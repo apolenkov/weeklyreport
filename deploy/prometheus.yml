@@ -1,4 +1,4 @@
-# Phase 37-03: Prometheus scrape config for CustomReport prod stack.
+# Prometheus scrape config for CustomReport prod stack.
 #
 # Brings up alongside docker-compose.observability.yml. The api service
 # exposes /metrics on its container bind port (3001); Prometheus scrapes it

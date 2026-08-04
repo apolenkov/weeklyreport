@@ -3,6 +3,10 @@ import type { INestApplication } from "@nestjs/common";
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { SnapshotAdminService } from "../modules/admin/index.js";
 import type { ProvisionLeadWorkspace } from "../modules/auth/index.js";
+import {
+  type AutoCarryOver,
+  runAutoCarryOverWithRetry,
+} from "../modules/carry-over/index.js";
 import { ensureCurrentPeriod } from "../modules/period/index.js";
 import { PolicyApplicatorService } from "../modules/reminders/index.js";
 import { ensureLeadSection } from "../modules/report-sections/index.js";
@@ -13,7 +17,7 @@ import { ensureLeadSection } from "../modules/report-sections/index.js";
 export function createProvisionLeadWorkspace(deps: {
   app: INestApplication;
   prisma: PrismaService;
-  autoCarryOver: (targetReportId: string) => Promise<void>;
+  autoCarryOver: AutoCarryOver;
 }): ProvisionLeadWorkspace {
   const { app, prisma, autoCarryOver } = deps;
   const policyApplicator = app.get(PolicyApplicatorService);
@@ -32,7 +36,7 @@ export function createProvisionLeadWorkspace(deps: {
     // Unconditional (not "just created"): dedupe short-circuits an already-
     // carried period to one indexed read, so every login is a free retry.
     // Never rejects — a carry problem must not block login.
-    await autoCarryOver(reportId);
+    await runAutoCarryOverWithRetry(autoCarryOver, reportId);
     return { reportId, sectionId };
   };
 }

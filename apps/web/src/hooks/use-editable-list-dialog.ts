@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 // Shared open/create/edit/close + add-signal guard for lead list sections.
 // Section-specific prefill/seed stays at the call site (lead-dialog-lifecycle).
@@ -71,14 +71,14 @@ function buildDialogKey<TEntity extends { id: string }>(
   return `${openSeq}-${target}`;
 }
 
-function usePendingDelete<TEntity>(readOnlyRef: { readonly current: boolean }) {
+function usePendingDelete<TEntity>(readOnly: boolean) {
   const [pendingDelete, setPendingDelete] = useState<TEntity | null>(null);
   const requestDelete = useCallback(
     (entity: TEntity) => {
-      if (readOnlyRef.current) return;
+      if (readOnly) return;
       setPendingDelete(entity);
     },
-    [readOnlyRef],
+    [readOnly],
   );
   const clearPendingDelete = useCallback(() => setPendingDelete(null), []);
   return { pendingDelete, requestDelete, clearPendingDelete };
@@ -91,16 +91,13 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   requireSeed = false,
 }: UseEditableListDialogOptions): UseEditableListDialogResult<TEntity> {
   type DialogState = EditableListDialogState<TEntity>;
-  const [dialogState, setDialogState] = useState<DialogState>({ open: false });
+  const [dialogState, setDialogState] = useReducer(
+    (_current: DialogState, next: DialogState) => next,
+    { open: false },
+  );
   // Monotonic counter so repeated opens of the same entity get a fresh key
   // even when entity.id is unchanged (prevents stale state in the dialog).
-  const [openSeq, setOpenSeq] = useState(0);
-
-  // Read via ref so addSignal effect omits readOnly from deps (snapshot enter
-  // would re-open from a stale counter). Do not move this write into an effect.
-  const readOnlyRef = useRef(readOnly);
-  // eslint-disable-next-line react-hooks/refs -- deliberate render-time ref stamp (see comment above): an effect-sync would re-open the dialog from a stale addSignal
-  readOnlyRef.current = readOnly;
+  const [openSeq, advanceOpenSeq] = useReducer((value: number) => value + 1, 0);
 
   // Seed from mount-time addSignal, not 0: slides/edit remounts while LeadForm
   // keeps a stale non-zero counter; only a later increment should open create.
@@ -108,36 +105,41 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   const lastHandledSignal = useRef(addSignal);
 
   // Identity-stable across readOnly so chip-raise can list it without reopening on snapshot.
-  const openCreate = useCallback((seed?: CreateSeed) => {
-    if (readOnlyRef.current) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState(createModeState<TEntity>(seed));
-  }, []);
+  const openCreate = useCallback(
+    (seed?: CreateSeed) => {
+      if (readOnly) return;
+      advanceOpenSeq();
+      setDialogState(createModeState<TEntity>(seed));
+    },
+    [readOnly],
+  );
 
-  const openEdit = useCallback((entity: TEntity) => {
-    if (readOnlyRef.current) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "edit", entity });
-  }, []);
+  const openEdit = useCallback(
+    (entity: TEntity) => {
+      if (readOnly) return;
+      advanceOpenSeq();
+      setDialogState({ open: true, mode: "edit", entity });
+    },
+    [readOnly],
+  );
 
   const close = useCallback(() => setDialogState({ open: false }), []);
   const { pendingDelete, requestDelete, clearPendingDelete } =
-    usePendingDelete<TEntity>(readOnlyRef);
+    usePendingDelete<TEntity>(readOnly);
 
   useEffect(() => {
     if (addSignal === NO_SIGNAL_HANDLED) return;
     if (addSignal <= lastHandledSignal.current) return;
-    if (readOnlyRef.current) return;
+    if (readOnly) return;
     if (requireSeed && !seedProductId) return;
     lastHandledSignal.current = addSignal;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addSignal SIGNAL prop (an event delivered via props) with ref-based once-guards; state updates are the event's handler
-    setOpenSeq((n) => n + 1);
+    advanceOpenSeq();
     setDialogState({
       open: true,
       mode: "create",
       ...(seedProductId === undefined ? {} : { seedProductId }),
     });
-  }, [addSignal, seedProductId, requireSeed]);
+  }, [addSignal, readOnly, seedProductId, requireSeed]);
 
   const dialogKey = buildDialogKey(openSeq, dialogState);
 

@@ -2,20 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppModule } from "./app.module";
 
-/**
- * Dev-auth fence on AppModule lifecycle.
- *
- * Pre-fix the fence was called only inside `bootstrap()` in main.ts, which
- * meant any other consumer of `NestFactory.create(AppModule)` (e2e suite,
- * CLI, test harness) skipped the production safety check.
- *
- * Post-fix `AppModule.onApplicationBootstrap()` calls the fence, so every
- * code path that lifts the module sees the same fail-closed behaviour.
- *
- * These tests bypass the NestJS DI container entirely — instantiating
- * AppModule directly is enough to verify the lifecycle method routes to
- * `assertNoDevAuthInProduction(process.env)`.
- */
+// The dev-auth fence runs from `AppModule.onApplicationBootstrap` so every
+// `NestFactory.create(AppModule)` consumer sees the same fail-closed behaviour.
+// These tests instantiate AppModule directly, bypassing the NestJS DI container.
 describe("AppModule.onApplicationBootstrap", () => {
   const originalEnv = { ...process.env };
 

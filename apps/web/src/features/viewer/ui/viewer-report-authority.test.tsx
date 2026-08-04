@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import type { PeriodStatus } from "@customreport/shared";
@@ -12,21 +10,30 @@ const queryState = vi.hoisted<{ periodStatus: PeriodStatus }>(() => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: vi.fn((options: { queryKey?: readonly unknown[] }) =>
-    options.queryKey?.[0] === "weeklyReport.get"
-      ? {
-          data: {
-            status: "active",
-            reportId: "report-001",
-            periodStart: "2026-06-08T00:00:00.000Z",
-            periodEnd: "2026-06-14T00:00:00.000Z",
-            periodStatus: queryState.periodStatus,
-          },
-          isError: false,
-          error: null,
-        }
-      : { data: { entries: [] }, isError: false },
-  ),
+  useQuery: vi.fn((options: { queryKey?: readonly unknown[] }) => {
+    const key = options.queryKey?.[0];
+    if (key === "weeklyReport.get") {
+      return {
+        data: {
+          status: "active",
+          reportId: "report-001",
+          periodStart: "2026-06-08T00:00:00.000Z",
+          periodEnd: "2026-06-14T00:00:00.000Z",
+          periodStatus: queryState.periodStatus,
+        },
+        isError: false,
+        error: null,
+      };
+    }
+    if (key === "reports.compiledHistory") {
+      return { data: { entries: [] }, isError: false, error: null };
+    }
+    // An unintended query or changed key must fail loudly, not be absorbed
+    // as an empty successful payload.
+    throw new Error(
+      `Unexpected query key in viewer authority mock: ${String(key)}`,
+    );
+  }),
 }));
 
 vi.mock("next/navigation", () => ({

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -34,7 +35,9 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
   beforeAll(() => {
     // PrismaClient structurally satisfies PrismaService (both extend PrismaClient)
-    repo = new ReportSectionsPrismaRepository(prisma as never);
+    repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
   });
 
   beforeEach(async () => {
@@ -157,33 +160,37 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     });
 
     const service = new ReportSectionsService(repo, testGraceSettings);
-    const result = await service.submitSection({
-      reportSectionId: testData.section.id,
-      version: 1,
-      status: "draft",
-      confirmed: true,
-      projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-      items: [
-        {
-          projectId: testData.project.id,
-          type: "current",
-          text: "Current work for assigned stage only",
-          tag: "feature",
-          workflowStatus: "in_progress",
-          carriedOver: false,
-          stageNames: ["Development"],
-        },
-      ],
-      risks: [],
-      decisions: [],
-      stageStatuses: [
-        {
-          projectId: testData.project.id,
-          stageId,
-          status: "green",
-        },
-      ],
-    });
+    const result = await service.submitSection(
+      {
+        reportSectionId: testData.section.id,
+        version: 1,
+        status: "draft",
+        confirmed: true,
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        items: [
+          {
+            projectId: testData.project.id,
+            type: "current",
+            text: "Current work for assigned stage only",
+            tag: "feature",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            stageNames: ["Development"],
+          },
+        ],
+        risks: [],
+        decisions: [],
+        stageStatuses: [
+          {
+            projectId: testData.project.id,
+            stageId,
+            status: "green",
+          },
+        ],
+        activityStatuses: [],
+      },
+      testData.lead.id,
+    );
 
     expect(result.status).toBe("submitted");
     expect(result.projects).toHaveLength(1);
@@ -315,7 +322,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(project.trafficLight).toBe("red");
     // The raw per-stage status is untouched (no submitted status).
     expect(
-      project.ownedStages?.find((s) => s.stageName === "Development")?.status ??
+      project.ownedStages.find((s) => s.stageName === "Development")?.status ??
         null,
     ).toBeNull();
   });
@@ -338,6 +345,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       status: "draft" as const,
       projects: [
         {
+          ...expectDefined(expectDefined(original).projects[0]),
           projectId: testData.project.id,
           projectName: "Test Project 1",
           trafficLight: "yellow" as const,

@@ -39,3 +39,22 @@ describe("PrintLeadSection — status label/color pins", () => {
     },
   );
 });
+
+describe("PrintLeadSection — needs-attention severity is not invented", () => {
+  it("colors the attention callout by the projection's own severity, never defaulting", () => {
+    const report: WeeklyProductReport = {
+      ...makeReport("on-track"),
+      needsAttention: "SLA breach risk",
+      needsAttentionSeverity: "blocked",
+    };
+    render(<PrintLeadSection report={report} />);
+    const callout = screen.getByText("SLA breach risk");
+    // Blocked severity must render blocked ink, not the milder at-risk color.
+    expect(callout).toHaveStyle({ borderLeft: "3px solid #c82014" });
+  });
+
+  it("renders no attention callout when the projection carries no attention", () => {
+    render(<PrintLeadSection report={makeReport("on-track")} />);
+    expect(screen.queryByText(/breach|attention/i)).not.toBeInTheDocument();
+  });
+});

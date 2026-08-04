@@ -30,5 +30,7 @@ when Phase 59 is unlocked and schema migration is approved.
 
 ## Status
 
-Deferred — TODO(Phase-59-multi-org) in multiple files: `organization.service.ts:36`,
-`login-page.client.tsx:161`, `group-scope.ts:4`.
+Deferred — TODO(multi-org) in
+`apps/api/src/modules/organization/organization.service.ts` (singleton
+identity), plus the organization singletons read by the login page and group
+scope.

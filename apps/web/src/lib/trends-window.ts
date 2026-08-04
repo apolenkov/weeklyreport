@@ -1,12 +1,7 @@
 import { toIsoDateString } from "./format-date";
 
-/**
- * Rolling 12-month window (UTC, YYYY-MM-DD) anchored on `now` — a pinned
- * calendar window drifts behind the ever-advancing report set and silently
- * empties the charts. The day-of-month is clamped to the target month's
- * length so a Feb 29 anchor maps to the prior year's Feb 28 instead of
- * JS-date-overflowing into Mar 1 and dropping the window's oldest report.
- */
+// Anchor the rolling UTC window to now and clamp month length so Feb 29 does
+// not overflow into March and drop the oldest report.
 export function deriveTrendsWindow(now: Date): {
   periodFrom: string;
   periodTo: string;

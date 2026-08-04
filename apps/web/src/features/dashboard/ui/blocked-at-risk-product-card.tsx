@@ -1,12 +1,10 @@
 import { statusLabel } from "../../../lib/status-presentation";
-import type { BlockedAtRiskItem } from "../model/dashboard";
+import type {
+  BlockedAtRiskItem,
+  ProductGroup,
+} from "../model/dashboard-escalations";
 
 type Severity = BlockedAtRiskItem["severity"];
-
-export interface ProductGroup {
-  readonly product: string;
-  readonly items: readonly BlockedAtRiskItem[];
-}
 
 const CSS_DESTRUCTIVE = "var(--color-destructive)";
 
@@ -42,16 +40,6 @@ const SEVERITY_BADGE = {
 // Columns: status rail | gutter (stage + assignee) | description | badge.
 const ROW_GRID =
   "grid grid-cols-[3px_minmax(0,116px)_minmax(0,1fr)_auto] items-start gap-x-3.5";
-
-// One card per product. Map.groupBy keys in first-insertion order and keeps
-// within-group order, which is the escalation order the cards must preserve.
-export function groupByProduct(
-  items: readonly BlockedAtRiskItem[],
-): readonly ProductGroup[] {
-  return [...Map.groupBy(items, (item) => item.product)].map(
-    ([product, group]) => ({ product, items: group }),
-  );
-}
 
 // A product's worst severity drives its avatar + header dot: blocked if any of
 // its issues is blocked, otherwise at-risk.
@@ -122,7 +110,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
   const tone = SEVERITY_TONE[severity];
   const avatar = AVATAR_CONFIG[severity];
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[rgba(0,0,0,0.02)]">
+    <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-inset)]">
       <div className="flex items-center gap-3 px-4 py-3">
         <div
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
@@ -153,9 +141,12 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
           </span>
         </div>
       </div>
-      <div className="space-y-1 border-t border-[rgba(0,0,0,0.06)] px-4 py-3">
+      <div className="space-y-1 border-t border-[var(--color-border-subtle)] px-4 py-3">
         {group.items.map((item) => (
-          <IssueRow key={item.id} item={item} />
+          <IssueRow
+            key={`${item.product}|${item.stage}|${item.assignee}|${item.description}`}
+            item={item}
+          />
         ))}
       </div>
     </div>

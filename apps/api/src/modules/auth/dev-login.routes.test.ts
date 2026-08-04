@@ -7,11 +7,9 @@ import {
   safeRedirectPath,
 } from "./dev-login.routes";
 
-// resolveDevLoginIdentity is the dev-login (UAT role switcher) identity resolver.
-// Contract under test: it switches among EXISTING seeded users and NEVER
-// fabricates a phantom user from hardcoded role defaults — an unknown email
-// resolves to null so the handler can fail clearly (404).
-
+// Contract under test: resolveDevLoginIdentity switches among EXISTING seeded
+// users and NEVER fabricates a phantom user — an unknown email resolves to null
+// so the handler can fail clearly (404).
 function fakePrisma(
   row: { name: string; samlId: string } | null,
 ): PrismaClient {

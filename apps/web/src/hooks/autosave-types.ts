@@ -3,13 +3,8 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
-/**
- * The autosave payload WITHOUT the optimistic-lock version. The version is lock
- * metadata, not user content: keeping it out of the payload the hook hashes
- * means a version bump never marks the form dirty, never re-seeds, and never
- * appears in the dirty/queue key. The hook injects the live version at mutate
- * time instead (so a queued drain rebases onto the freshly-bumped value).
- */
+// Keep optimistic-lock metadata out of the hashed content; the hook injects
+// the live version at mutate time so version bumps never dirty or re-seed.
 export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
@@ -19,7 +14,7 @@ export interface AutosaveSnapshot {
   readonly lastSavedAt: Date | null;
   readonly dirty: boolean;
   readonly isInFlight: boolean;
-  /** Cancels the debounce timer and triggers an immediate save. */
+  // Cancel the debounce timer and trigger an immediate save.
   readonly forceSave: () => Promise<void>;
 }
 
@@ -28,36 +23,18 @@ export interface UseLeadFormAutosaveArgs {
   readonly payload: DraftSaveContent | null;
   readonly enabled: boolean;
   readonly debounceMs?: number;
-  /**
-   * Optional baseline-payload key. When provided, the hook treats this exact
-   * key as the last-saved snapshot — so a fresh load from the server is not
-   * considered dirty until the user actually edits a field. The caller is
-   * responsible for stable serialization (e.g. via the same stringify the
-   * hook would produce). When omitted, dirty starts true on first non-null
-   * payload (legacy behavior).
-   */
+  // An exact baseline key keeps a fresh server load clean until the user edits;
+  // callers own stable serialization.
   readonly initialSavedKey?: string | null;
-  /**
-   * Row revision the next save must compare-and-set against (optimistic lock).
-   * The hook seeds its live version from this and re-syncs whenever it changes
-   * (e.g. a post-fillFrom or post-conflict refetch).
-   */
+  // Next save compares against this revision; refetches re-sync the live value.
   readonly version: number;
-  /**
-   * Called with the server-confirmed NEW version after every successful save.
-   * The owning component is the single source of truth for the version; this
-   * pushes each bump back so submit/fillFrom carry the current value.
-   */
+  // Propagate each server-confirmed version so submit/fillFrom use the current lock.
   readonly onVersionChange: (version: number) => void;
-  /** Reports the server-confirmed section together with the payload it persisted. */
+  // Reports the server-confirmed section and persisted payload.
   readonly onSaved?: (
     section: ReportSectionReadModel,
     payload: DraftSaveContent,
   ) => void;
-  /**
-   * Called when a save is rejected as a stale-version CONFLICT (409). The
-   * caller refetches this section and surfaces it; when provided, the hook
-   * suppresses its own generic error toast for that case.
-   */
+  // Conflict handler lets the caller refetch and suppress the generic toast.
   readonly onConflict?: () => void;
 }

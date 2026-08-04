@@ -111,6 +111,21 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.submittedAt).toBe("2 min ago");
   });
 
+  it("carries publishedAt for a submitted entry that was later published", () => {
+    const published = new Date(now.getTime() - 60 * 1000);
+    const result = mapHistoryEntries(
+      [
+        baseEntry({
+          sectionStatus: "submitted",
+          submittedAt: new Date(now.getTime() - 2 * 60 * 1000),
+          publishedAt: published,
+        }),
+      ],
+      now,
+    );
+    expect(result[0]?.publishedAt).toBe("1 min ago");
+  });
+
   it("computes dateRange 'Apr 14–20, 2026' for a same-month period", () => {
     const result = mapHistoryEntries(
       [

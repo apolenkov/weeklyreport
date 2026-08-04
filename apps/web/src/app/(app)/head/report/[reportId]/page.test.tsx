@@ -1,8 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * head-toolbar-semantics: URL→mode restore half (?mode=slides).
- */
+// @vitest-environment jsdom
+//
+// head-toolbar-semantics: URL→mode restore half (?mode=slides).
 
 import "@testing-library/jest-dom/vitest";
 

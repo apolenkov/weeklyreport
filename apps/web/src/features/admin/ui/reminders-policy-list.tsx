@@ -19,6 +19,7 @@ interface PolicyEditorProps {
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
+  readonly onOffsetValidityChange: (valid: boolean) => void;
   readonly onCancel: () => void;
   readonly onSave: () => void;
 }

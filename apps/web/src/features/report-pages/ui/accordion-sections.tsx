@@ -119,7 +119,7 @@ export function AccordionSections({
   readonly showNeedsAttention: boolean;
 }) {
   return (
-    <div className="space-y-5 border-t border-[rgba(0,0,0,0.06)] px-5 pb-5 pt-4">
+    <div className="space-y-5 border-t border-[var(--color-border-subtle)] px-5 pb-5 pt-4">
       {report.currentWeek.length > 0 && (
         <ItemsSection
           title="Current Week"

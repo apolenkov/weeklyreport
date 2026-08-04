@@ -17,7 +17,7 @@ export function LeadStickyCompletionActions({
   return (
     <aside
       aria-label="Report completion"
-      className="fixed inset-x-3 bottom-0 z-50 mx-auto max-w-3xl rounded-t-[var(--radius)] border border-b-0 border-[var(--color-border)] bg-white/95 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xl backdrop-blur-sm"
+      className="fixed inset-x-3 bottom-0 z-[var(--layer-popover)] mx-auto max-w-3xl rounded-t-[var(--radius)] border border-b-0 border-[var(--color-border)] bg-[var(--toolbar-band-gradient)] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xl backdrop-blur-sm"
       data-testid="lead-sticky-completion-actions"
     >
       <span className="sr-only" role="status">

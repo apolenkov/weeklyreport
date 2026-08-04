@@ -23,7 +23,7 @@ export function ExportPdfButton({
   // Unpublished reason goes on aria-describedby/sr-only — disabled controls
   // cannot reveal a tooltip on hover/focus.
   const buttonClassName = isGenerating
-    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100"
+    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] disabled:opacity-100"
     : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
   return (

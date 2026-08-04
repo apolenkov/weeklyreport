@@ -1,11 +1,9 @@
-/**
- * @vitest-environment jsdom
- *
- * Pins the rendered "Due …" deadline chip across timezone boundaries: a
- * deadline is a UTC date-only value, so the day must not shift for viewers
- * east or west of UTC, and the label stays English regardless of the runtime
- * locale.
- */
+// @vitest-environment jsdom
+//
+// Pins the rendered "Due …" deadline chip across timezone boundaries: a
+// deadline is a UTC date-only value, so the day must not shift for viewers
+// east or west of UTC, and the label stays English regardless of the runtime
+// locale.
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
@@ -79,10 +77,11 @@ describe("DecisionCard deadline chip", () => {
     expect(chipText()).toBeNull();
   });
 
-  // The superseded local-zone formatter answered "Invalid Date" here; its own
-  // catch branch meant to echo the raw value but could never run.
-  it("echoes an unparseable deadline instead of formatting it", () => {
+  // An unparseable deadline is data we cannot format — surface an explicit
+  // error state instead of echoing the raw value verbatim.
+  it("surfaces an error state for an unparseable deadline", () => {
     renderInTimeZone("UTC", "not-a-date");
-    expect(chipText()).toBe("Due not-a-date");
+    expect(screen.getByText("Due date unavailable")).toBeInTheDocument();
+    expect(screen.queryByText(/Due not-a-date/)).toBeNull();
   });
 });

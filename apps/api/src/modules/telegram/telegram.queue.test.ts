@@ -3,21 +3,29 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { dlqFailedTotal } from "../../infrastructure/metrics/metrics.registry.js";
-import type { AppLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
 import type { TelegramAdapter, TelegramSendResult } from "./telegram.adapter";
 import {
   TELEGRAM_OUTBOUND_JOB_OPTS,
   TELEGRAM_OUTBOUND_QUEUE_NAME,
   type TelegramOutboundJobData,
-  TelegramProcessor,
+  TelegramProcessor as ProductionTelegramProcessor,
 } from "./telegram.queue";
 
 // Invoke private processJob via shim so the redis-less unit test stays hermetic.
 // Env is only read in onModuleInit (not exercised here).
 const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
-class TestProcessor extends TelegramProcessor {
+class TestProcessor extends ProductionTelegramProcessor {
+  constructor(
+    adapter: TelegramAdapter,
+    env: EnvConfig,
+    logger: AppLogger = createNullLogger(),
+  ) {
+    super(adapter, env, logger, null);
+  }
+
   public async invoke(data: TelegramOutboundJobData): Promise<void> {
     await (
       this as unknown as {

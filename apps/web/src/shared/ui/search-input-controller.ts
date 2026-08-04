@@ -95,7 +95,9 @@ function keyDownHandler(args: KeyDownArgs) {
       const hit = args.hits.at(args.activeIndex);
       if (hit) {
         e.preventDefault();
-        args.navigateTo(targetUrlFor(hit, args.isViewer));
+        const target = targetUrlFor(hit, args.isViewer);
+        // An unavailable hit must not navigate anywhere (no "#" jump).
+        if (target.kind === "navigable") args.navigateTo(target.url);
       }
     }
   };

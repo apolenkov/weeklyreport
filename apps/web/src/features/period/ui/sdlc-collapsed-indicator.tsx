@@ -19,17 +19,11 @@ function collapsedStagesIndicatorLabel(count: number): string {
 }
 
 interface CollapsedStagesIndicatorProps {
-  /** One honest reveal line per hidden stage (name + owner + status). */
   readonly reveal: readonly string[];
-  /**
-   * The effective status of each hidden stage, aligned 1:1 with `reveal`, so a
-   * blocked/at-risk row stands out in the popover. Falls back to neutral when a
-   * row has no matching status.
-   */
+  // Align statuses with reveal so blocked/at-risk rows stand out; missing rows
+  // fall back to neutral.
   readonly statuses: readonly StageStatus[];
-  /** Border + text colour derived from the worst hidden status. */
   readonly colors: { readonly border: string; readonly text: string };
-  /** Number of stages the Mine filter collapsed. */
   readonly count: number;
 }
 

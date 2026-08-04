@@ -28,6 +28,21 @@ const COLUMNS: readonly {
   { label: "Actions", alignRight: true },
 ];
 
+const ROLE_STYLES: Readonly<
+  Record<DbRole, { readonly bg: string; readonly text: string }>
+> = {
+  lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
+  head: {
+    bg: "var(--color-status-in-progress-bg)",
+    text: "var(--color-status-in-progress-fg)",
+  },
+  admin: {
+    bg: "var(--color-status-at-risk-bg)",
+    text: "var(--color-status-at-risk-fg)",
+  },
+  viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
+};
+
 export function UsersTable({
   users,
   deactivatePending,
@@ -92,7 +107,7 @@ function UserRow({
         <span className="flex items-center gap-2">
           {shortName(user)}
           {!user.isActive && (
-            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500">
+            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
               inactive
             </span>
           )}
@@ -126,19 +141,7 @@ function UserRow({
 }
 
 function RoleBadge({ role }: { readonly role: DbRole }) {
-  const styles: Record<DbRole, { bg: string; text: string }> = {
-    lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
-    head: {
-      bg: "var(--color-status-in-progress-bg)",
-      text: "var(--color-status-in-progress-fg)",
-    },
-    admin: {
-      bg: "var(--color-status-at-risk-bg)",
-      text: "var(--color-status-at-risk-fg)",
-    },
-    viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
-  };
-  const s = styles[role];
+  const s = ROLE_STYLES[role];
 
   return (
     <span

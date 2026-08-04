@@ -43,7 +43,7 @@ function formatHistoryTimestamp(
 export function mapHistoryEntries(
   api: readonly MyHistoryEntry[],
   now: Date = new Date(),
-): HistoryEntry[] {
+): readonly HistoryEntry[] {
   return api.map((e) => ({
     id: e.sectionId,
     // API has no separate periodId; report id routes the read-only history page.
@@ -53,6 +53,7 @@ export function mapHistoryEntries(
     status: e.sectionStatus,
     archived: e.archived ?? false,
     submittedAt: formatHistoryTimestamp(e.submittedAt, now),
+    publishedAt: formatHistoryTimestamp(e.publishedAt, now),
     createdAt: formatHistoryTimestamp(e.createdAt, now),
     lastEditAt: formatHistoryTimestamp(e.lastEditAt ?? e.updatedAt, now),
     trafficLights: e.trafficLights ?? { green: 0, yellow: 0, red: 0 },
@@ -67,7 +68,7 @@ export function mapHistoryEntries(
 export function mapCompiledHistoryEntries(
   api: readonly CompiledHistoryEntry[],
   now: Date = new Date(),
-): HistoryEntry[] {
+): readonly HistoryEntry[] {
   return api.map((e) => ({
     id: e.reportId,
     periodId: e.reportId,

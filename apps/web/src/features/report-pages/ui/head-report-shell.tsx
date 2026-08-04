@@ -61,17 +61,21 @@ function HeadDepartmentLabel() {
   );
 }
 
+const HEAD_DEPARTMENT_LABEL = <HeadDepartmentLabel />;
+
 // Toolbar hosts the single Agent-review placeholder in both modes.
 function HeadContextControls({
   periods,
   reportId,
   mode,
   urlState,
+  historyError,
 }: {
-  readonly periods: ReportPeriod[];
+  readonly periods: readonly ReportPeriod[];
   readonly reportId: string;
   readonly mode: HeadReportShellProps["mode"];
   readonly urlState: ReportShellUrlState;
+  readonly historyError: boolean;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     urlState;
@@ -83,7 +87,15 @@ function HeadContextControls({
 
   return (
     <>
-      {periods.length > 0 ? (
+      {historyError ? (
+        <span
+          className="text-xs font-medium text-[var(--color-destructive)]"
+          role="alert"
+          data-testid="head-history-error"
+        >
+          Period history unavailable
+        </span>
+      ) : periods.length > 0 ? (
         <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
@@ -133,8 +145,9 @@ function SlidesModeHeader({
 
 // Declared data-loading seam — not the hook's raw return type.
 interface HeadPeriodData {
-  readonly periods: ReportPeriod[];
+  readonly periods: readonly ReportPeriod[];
   readonly displayed: WeeklyReportGetResponse | undefined;
+  readonly historyError: boolean;
 }
 
 // History omits the active week, so the displayed and active periods are fetched
@@ -151,7 +164,7 @@ function useHeadPeriodData(
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
   const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
 
-  const periods: ReportPeriod[] = useMemo(
+  const periods: readonly ReportPeriod[] = useMemo(
     () =>
       deriveHeadPeriods(
         historyQ.data?.entries ?? [],
@@ -162,7 +175,11 @@ function useHeadPeriodData(
     [historyQ.data, activeQ.data, displayedQ.data, reportId],
   );
 
-  return { periods, displayed: displayedQ.data };
+  return {
+    periods,
+    displayed: displayedQ.data,
+    historyError: historyQ.isError,
+  };
 }
 
 // `undefined` (not a null-rendering element) when there is no period, so the
@@ -185,12 +202,12 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   // Scope + archive filter in the URL so refresh/shared links restore them.
   const urlState = useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
-  const { periods, displayed } = useHeadPeriodData(
+  const { periods, displayed, historyError } = useHeadPeriodData(
     reportId,
     urlState.includeArchive,
   );
 
-  const headerContextLabel = <HeadDepartmentLabel />;
+  const headerContextLabel = HEAD_DEPARTMENT_LABEL;
   const exportPdf = renderExportPdf(displayed);
   const contextControls = (
     <HeadContextControls
@@ -198,6 +215,7 @@ export function HeadReportShell({
       reportId={reportId}
       mode={mode}
       urlState={urlState}
+      historyError={historyError}
     />
   );
 

@@ -7,6 +7,7 @@ import {
   SessionRevocationService,
   SnapshotAdminService,
 } from "../../modules/admin/index.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAdminUsersProcedures } from "./routers/admin/users.procedures.js";
 import { router } from "./trpc.middleware.js";
 import { createAppRouter } from "./trpc.router.js";
@@ -89,6 +90,36 @@ describe("admin.deactivateUser — session revocation wiring", () => {
     const revokeOrder = revokeSession.mock.invocationCallOrder[0] ?? 0;
     expect(dbOrder).toBeLessThan(revokeOrder);
   });
+
+  it("fails loud when revocation is unwired — revocation is never skipped silently", async () => {
+    const deactivateUser = vi.fn().mockResolvedValue({ success: true });
+    const snapshotAdminService = Object.assign(
+      Object.create(SnapshotAdminService.prototype) as SnapshotAdminService,
+      {
+        deactivateUser,
+      } satisfies Pick<SnapshotAdminService, "deactivateUser">,
+    );
+    const caller = router(
+      createAdminUsersProcedures({
+        snapshotAdminService,
+        sessionRevocationService:
+          undefined as unknown as SessionRevocationService,
+      }),
+    ).createCaller({
+      session: makeSession("admin"),
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+
+    await expect(
+      caller.deactivateUser({ userId: TARGET_ID }),
+    ).rejects.toThrow();
+    // The DB deactivation ran; only the mandatory revocation failed loud.
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+  });
 });
 
 describe("admin.activateUser — session restoration wiring", () => {
@@ -105,6 +136,34 @@ describe("admin.activateUser — session restoration wiring", () => {
     const restoreOrder = restoreSession.mock.invocationCallOrder[0] ?? 0;
     expect(dbOrder).toBeLessThan(restoreOrder);
   });
+
+  it("fails loud when restoration is unwired — restoration is never skipped silently", async () => {
+    const activateUser = vi.fn().mockResolvedValue({ success: true });
+    const snapshotAdminService = Object.assign(
+      Object.create(SnapshotAdminService.prototype) as SnapshotAdminService,
+      {
+        activateUser,
+      } satisfies Pick<SnapshotAdminService, "activateUser">,
+    );
+    const caller = router(
+      createAdminUsersProcedures({
+        snapshotAdminService,
+        sessionRevocationService:
+          undefined as unknown as SessionRevocationService,
+      }),
+    ).createCaller({
+      session: makeSession("admin"),
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+
+    await expect(caller.activateUser({ userId: TARGET_ID })).rejects.toThrow();
+    // The DB activation ran; only the mandatory restoration failed loud.
+    expect(activateUser).toHaveBeenCalledWith(TARGET_ID);
+  });
 });
 
 describe("admin user activation — app-router composition", () => {
@@ -113,10 +172,10 @@ describe("admin user activation — app-router composition", () => {
   it("createAppRouter wires snapshot + revocation services into deactivateUser", async () => {
     const deactivateUser = vi.fn().mockResolvedValue({ success: true });
     const revokeSession = vi.fn().mockResolvedValue(undefined);
-    const deps = {
+    const deps = createStubAppRouterDeps({
       snapshotAdminService: { deactivateUser },
       sessionRevocationService: { revokeSession },
-    } as unknown as Parameters<typeof createAppRouter>[0];
+    });
 
     const caller = createAppRouter(deps).createCaller({
       session: makeSession("admin"),

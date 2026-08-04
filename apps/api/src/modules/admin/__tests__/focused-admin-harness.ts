@@ -137,14 +137,13 @@ export function createRepository(
       return Promise.resolve(structuredClone(currentSettings));
     },
     saveReportingGroup(group) {
-      const existingIndex = currentSnapshot.groups.findIndex(
-        (row) => row.id === group.id,
-      );
-      if (existingIndex !== -1) {
-        currentSnapshot.groups[existingIndex] = structuredClone(group);
-      } else {
-        currentSnapshot.groups.push(structuredClone(group));
-      }
+      const exists = currentSnapshot.groups.some((row) => row.id === group.id);
+      const groups = exists
+        ? currentSnapshot.groups.map((row) =>
+            row.id === group.id ? structuredClone(group) : row,
+          )
+        : [...currentSnapshot.groups, structuredClone(group)];
+      currentSnapshot = { ...currentSnapshot, groups };
       return Promise.resolve(structuredClone(group));
     },
     archiveReportingGroup(groupId) {
@@ -153,8 +152,14 @@ export function createRepository(
         return Promise.reject(
           new Error(`ReportingGroup ${groupId} not found.`),
         );
-      group.archived = true;
-      return Promise.resolve(structuredClone(group));
+      const archivedGroup = { ...group, archived: true };
+      currentSnapshot = {
+        ...currentSnapshot,
+        groups: currentSnapshot.groups.map((row) =>
+          row.id === groupId ? archivedGroup : row,
+        ),
+      };
+      return Promise.resolve(structuredClone(archivedGroup));
     },
     saveStageAssignment(data) {
       const existing = [...assignments.values()].find(
@@ -203,15 +208,19 @@ export function createRepository(
             row.id === user.id ? structuredClone(user) : row,
           )
         : [...currentSnapshot.users, structuredClone(user)];
-      currentSnapshot.users = [...nextUsers].sort((left, right) =>
-        left.name.localeCompare(right.name, "ru"),
-      );
+      currentSnapshot = {
+        ...currentSnapshot,
+        users: [...nextUsers].sort((left, right) =>
+          left.name.localeCompare(right.name, "ru"),
+        ),
+      };
       return Promise.resolve();
     },
     removeUser(userId) {
-      currentSnapshot.users = currentSnapshot.users.filter(
-        (row) => row.id !== userId,
-      );
+      currentSnapshot = {
+        ...currentSnapshot,
+        users: currentSnapshot.users.filter((row) => row.id !== userId),
+      };
       return Promise.resolve();
     },
     upsertProject(project) {
@@ -223,32 +232,44 @@ export function createRepository(
             row.id === project.id ? structuredClone(project) : row,
           )
         : [...currentSnapshot.projects, structuredClone(project)];
-      currentSnapshot.projects = [...nextProjects].sort((left, right) =>
-        left.name.localeCompare(right.name, "ru"),
-      );
+      currentSnapshot = {
+        ...currentSnapshot,
+        projects: [...nextProjects].sort((left, right) =>
+          left.name.localeCompare(right.name, "ru"),
+        ),
+      };
       return Promise.resolve();
     },
     removeProject(projectId) {
-      currentSnapshot.projects = currentSnapshot.projects.map((row) =>
-        row.id === projectId ? { ...row, archived: true } : row,
-      );
+      currentSnapshot = {
+        ...currentSnapshot,
+        projects: currentSnapshot.projects.map((row) =>
+          row.id === projectId ? { ...row, archived: true } : row,
+        ),
+      };
       return Promise.resolve();
     },
     upsertReminderRule(rule) {
       const exists = currentSnapshot.reminderRules.some(
         (row) => row.id === rule.id,
       );
-      currentSnapshot.reminderRules = exists
-        ? currentSnapshot.reminderRules.map((row) =>
-            row.id === rule.id ? structuredClone(rule) : row,
-          )
-        : [...currentSnapshot.reminderRules, structuredClone(rule)];
+      currentSnapshot = {
+        ...currentSnapshot,
+        reminderRules: exists
+          ? currentSnapshot.reminderRules.map((row) =>
+              row.id === rule.id ? structuredClone(rule) : row,
+            )
+          : [...currentSnapshot.reminderRules, structuredClone(rule)],
+      };
       return Promise.resolve();
     },
     removeReminderRule(ruleId) {
-      currentSnapshot.reminderRules = currentSnapshot.reminderRules.filter(
-        (row) => row.id !== ruleId,
-      );
+      currentSnapshot = {
+        ...currentSnapshot,
+        reminderRules: currentSnapshot.reminderRules.filter(
+          (row) => row.id !== ruleId,
+        ),
+      };
       return Promise.resolve();
     },
     reminderPolicyExists(policyId) {

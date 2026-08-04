@@ -9,14 +9,9 @@ import {
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
-/**
- * Real-Postgres coverage for the publish compare-and-set. Two concurrent
- * publishes both clear the service-level already-published check, so the
- * guarded `updateMany({ periodStatus: { not: "published" } })` is the only
- * thing that bounds the period to a single transition. Proves the ground truth
- * the mock-based service tests cannot: exactly one call transitions the row and
- * rebuilds the snapshot under a real race.
- */
+// Real-Postgres coverage for the publish compare-and-set: two concurrent
+// publishes both clear the service-level check, so the guarded updateMany is
+// the only thing bounding the period to a single transition.
 describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   const prisma = createTestPrisma();
   const repository = new PeriodPrismaRepository(
@@ -78,10 +73,8 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
 
   it("transitions a reopened period back to published", async () => {
     // A reopened period keeps the legacy tuple (status="published") but flips
-    // periodStatus to "reopened". The shared guard keys on periodStatus (not
-    // legacy status), so it must still transition here — the open-period test
-    // above cannot catch a regression to legacy-status keying, since an open
-    // period is unpublished under both predicates.
+    // periodStatus to "reopened". The shared guard keys on periodStatus, not
+    // legacy status, so it must still transition here.
     await prisma.report.update({
       where: { id: REPORT },
       data: { status: "published", periodStatus: "reopened" },
@@ -105,13 +98,9 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   });
 
   it("fails closed (reason archived) for a period archived inside the window", async () => {
-    // The archive transition leaves periodStatus open and only flips
-    // archived/periodState, so the pre-write archived check the service runs
-    // cannot catch an archive that lands AFTER it. The `archived: false`
-    // predicate is the only point that closes the race: a zero-row match whose
-    // re-read shows a still-unpublished row means the period was archived in the
-    // window, so the repo reports reason "archived" and writes nothing. Before
-    // the fix the predicate matched and the archived row was published.
+    // The archive transition leaves periodStatus open, so the pre-write
+    // archived check cannot catch an archive landing after it. The `archived:
+    // false` predicate closes the race — a zero-row match writes nothing.
     await prisma.report.update({
       where: { id: REPORT },
       data: { archived: true, periodState: "archived" },

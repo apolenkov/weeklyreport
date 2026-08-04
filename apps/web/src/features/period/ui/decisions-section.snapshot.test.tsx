@@ -1,8 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * Regression coverage for decision metadata and hidden decorative icons.
- */
+// @vitest-environment jsdom
+//
+// Regression coverage for decision metadata and hidden decorative icons.
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";

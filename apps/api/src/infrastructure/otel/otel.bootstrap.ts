@@ -1,6 +1,5 @@
-// MUST be the first runtime import in main.ts so the SDK monkey-patches http
-// before Nest/Express/Prisma load it. Unset OTEL_EXPORTER_OTLP_ENDPOINT leaves
-// the SDK off; start errors are non-fatal so a down collector never blocks boot.
+// Loaded after Sentry but before API composition so the SDK patches HTTP before
+// Nest/Express/Prisma. Collector absence or start failure never blocks boot.
 
 import { propagation } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
@@ -39,7 +38,8 @@ export type OtelBootstrapResult =
       endpoint: string;
     }
   | { started: false; reason: "disabled-flag" }
-  | { started: false; reason: "no-endpoint" };
+  | { started: false; reason: "no-endpoint" }
+  | { started: false; reason: "start-failed" };
 
 const DEFAULT_TRACES_SAMPLING_RATIO = 1.0;
 
@@ -59,6 +59,9 @@ export function decideOtelBootstrap(
     return { started: false, reason: "no-endpoint" };
   }
   const rawRatio = env.OTEL_TRACES_SAMPLER_ARG;
+  if (rawRatio?.trim().length === 0) {
+    throw new Error("OTEL_TRACES_SAMPLER_ARG must not be blank");
+  }
   const samplingRatio =
     rawRatio === undefined ? DEFAULT_TRACES_SAMPLING_RATIO : Number(rawRatio);
   if (
@@ -81,17 +84,30 @@ export function createTraceContextPropagator(): CompositePropagator {
   });
 }
 
-// eslint-disable-next-line no-restricted-syntax -- OTel SDK handle is assigned during bootstrap and read during shutdown; module-level lifecycle state is intentional.
-let sdk: NodeSDK | null = null;
-// eslint-disable-next-line no-restricted-syntax -- OTel logger provider handle is assigned during bootstrap and read during shutdown; module-level lifecycle state is intentional.
-let loggerProvider: LoggerProvider | null = null;
+class OtelLifecycle {
+  private handles: {
+    readonly sdk: NodeSDK | null;
+    readonly loggerProvider: LoggerProvider | null;
+  } = { sdk: null, loggerProvider: null };
+
+  install(sdk: NodeSDK, loggerProvider: LoggerProvider): void {
+    this.handles = { sdk, loggerProvider };
+  }
+
+  shutdown(): Promise<unknown[]> {
+    return Promise.all([
+      this.handles.sdk?.shutdown(),
+      this.handles.loggerProvider?.shutdown(),
+    ]);
+  }
+}
+
+const otelLifecycle = new OtelLifecycle();
 
 function shutdownOtel(): void {
-  void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
-    (error: unknown) => {
-      process.stderr.write(`[otel] shutdown error: ${errorMessage(error)}\n`);
-    },
-  );
+  void otelLifecycle.shutdown().catch((error: unknown) => {
+    process.stderr.write(`[otel] shutdown error: ${errorMessage(error)}\n`);
+  });
 }
 
 function registerShutdownHandler(signal: NodeJS.Signals): void {
@@ -101,7 +117,6 @@ function registerShutdownHandler(signal: NodeJS.Signals): void {
 }
 
 // Starts the OpenTelemetry SDK, or records why it stayed off.
-// eslint-disable-next-line sonarjs/no-invariant-returns -- returns the bootstrap decision object from every path by design (disabled vs started); one semantic return value, not an accidental invariant
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
@@ -121,7 +136,7 @@ export function startOtel(
     [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? DEFAULT_SERVICE_VERSION,
   });
 
-  sdk = new NodeSDK({
+  const sdk = new NodeSDK({
     resource,
     // ParentBased keeps a sampled-in parent; a bare ratio re-dices every span
     // and can drop the api hop from a browser-kept trace.
@@ -141,12 +156,15 @@ export function startOtel(
   try {
     sdk.start();
   } catch (error) {
-    // Non-fatal: api should still boot if the collector is unreachable.
+    // Non-fatal: api should still boot if the collector is unreachable. The
+    // SDK failed to start, so the reported result must not claim "started",
+    // and no log provider / shutdown handler may be registered for it.
     process.stderr.write(`[otel] start failed: ${errorMessage(error)}\n`);
+    return { started: false, reason: "start-failed" };
   }
 
   // Register global log provider so AppLogger can forward logs to Loki via OTLP.
-  loggerProvider = new LoggerProvider({
+  const loggerProvider = new LoggerProvider({
     resource,
     processors: [
       new BatchLogRecordProcessor({
@@ -155,6 +173,7 @@ export function startOtel(
     ],
   });
   logs.setGlobalLoggerProvider(loggerProvider);
+  otelLifecycle.install(sdk, loggerProvider);
 
   // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
   registerShutdownHandler("SIGTERM");

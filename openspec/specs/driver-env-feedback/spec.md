@@ -2,29 +2,32 @@
 
 ## Purpose
 
-TBD - created by archiving change driver-env-feedback-stage. Update Purpose after archive.
+Correlate post-drive environment-channel evidence with the drive timeline and report unreachable or stream-less channels as blind rather than clean.
 
 ## Requirements
 
-### Requirement: Post-run environment sweep correlated with the drive timeline
+### Requirement: Post-run environment sweep is a deferred collector contract
 
-After the drive phases of an ai-ui-driver run, the run MUST sweep the four
-environment channels (Playwright-MCP console logs on disk, the driver API
-structured log, Bugsink, Loki) for the run's time window and correlate hits
-to driven routes via per-route timestamps recorded during the drive.
+The shipped `e2e/sweep/` harness does not yet include a post-run environment
+collector. When that collector is introduced, it MUST sweep the four channels
+(Playwright-MCP console logs on disk, the driver API structured log, Bugsink,
+Loki) for the run's time window and correlate hits to driven routes via
+per-route timestamps recorded during the drive. Until then, the driver MUST
+preserve its timeline and MUST NOT present an uncollected channel as clean.
 
 #### Scenario: Server-side error during a drive reaches the report
 
 - **GIVEN** a driver run whose timeline records route enter/exit timestamps
 - **WHEN** the API writes a `"level":"error"` line to
   `apps/api/.logs/driver/app.log` while a route is being driven
-- **THEN** the per-role report's "Environment feedback" section lists the
-  hit with its channel, timestamp, and the matched route, and the hit
-  enters Phase 3 verify as a candidate with `kind: "env"`
+- **THEN** the future collector's report lists the hit with its channel,
+  timestamp, and matched route, and the hit enters the verify stage as a
+  candidate with `kind: "env"`
 
 ### Requirement: Channel liveness — blind is never clean
 
-Each environment channel MUST carry a liveness check; a channel that is
+When the collector is shipped, each environment channel MUST carry a liveness
+check; a channel that is
 unreachable or has no shipped streams MUST be reported as "blind", and its
 empty result MUST NOT be presented as a clean finding.
 

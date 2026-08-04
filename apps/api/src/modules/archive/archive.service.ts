@@ -6,9 +6,10 @@ import {
   archiveReportSummarySchema,
   type PaginatedResult,
   type PaginationInput,
-  type Role,
   type UserSession,
 } from "@customreport/shared";
+
+import { guardGroupScope } from "../../lib/group-scope.js";
 
 export class ArchiveDomainError extends Error {
   constructor(message: string) {
@@ -17,13 +18,10 @@ export class ArchiveDomainError extends Error {
   }
 }
 
-/**
- * Role-aware filter expressed as a plain object the repository merges into
- * its Prisma `where`, so domain code stays free of `@prisma/client`.
- * `status` is optional: omit it for no status predicate.
- */
+// Role-aware filter as a plain object the repository merges into its Prisma
+// `where`, so domain code stays free of `@prisma/client`. `status` optional.
 export interface ArchiveReadFilter {
-  status?: ReportStatus;
+  readonly status?: ReportStatus;
 }
 
 // Session pick for section-level group scope; Report rows stay floor-gated.
@@ -32,22 +30,36 @@ export type ArchiveScopeSession = Pick<
   "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
+// Detail read carries the total (unscoped) section count so callers can
+// distinguish a genuinely empty report from one the caller is scoped out of.
+export interface ArchiveDetailRead {
+  readonly detail: ArchiveReportDetail | null;
+  readonly totalSectionCount: number;
+}
+
 export interface ArchiveRepository {
-  listArchiveReports(
-    pagination?: PaginationInput,
-    filter?: ArchiveReadFilter,
-    session?: ArchiveScopeSession,
-  ): Promise<PaginatedResult<ArchiveReportSummary>>;
-  getArchiveReport(
+  readonly listArchiveReports: (
+    pagination: PaginationInput | undefined,
+    filter: ArchiveReadFilter | undefined,
+    session: ArchiveScopeSession,
+  ) => Promise<{
+    readonly items: readonly ArchiveReportSummary[];
+    readonly nextCursor: string | null;
+  }>;
+  readonly getArchiveReport: (
     reportId: string,
-    filter?: ArchiveReadFilter,
-    session?: ArchiveScopeSession,
-  ): Promise<ArchiveReportDetail | null>;
+    filter: ArchiveReadFilter | undefined,
+    session: ArchiveScopeSession,
+  ) => Promise<ArchiveDetailRead>;
 }
 
 // Viewer-only status filter; other roles rely on the repository floor.
-function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
-  if (role === "viewer") {
+// The scope session is mandatory — an absent session must be a hard error
+// (fail closed), never a permissive no-scope read.
+function buildArchiveReadFilter(
+  session: ArchiveScopeSession,
+): ArchiveReadFilter {
+  if (session.role === "viewer") {
     return { status: "published" };
   }
   return {};
@@ -71,11 +83,11 @@ export class ArchiveService {
   constructor(private readonly repository: ArchiveRepository) {}
 
   async listArchiveReports(
-    pagination?: PaginationInput,
-    role?: Role,
-    session?: ArchiveScopeSession,
+    pagination: PaginationInput | undefined,
+    session: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
-    const filter = buildArchiveReadFilter(role);
+    guardGroupScope(session);
+    const filter = buildArchiveReadFilter(session);
     const page = await this.repository.listArchiveReports(
       pagination,
       filter,
@@ -89,20 +101,25 @@ export class ArchiveService {
 
   async getArchiveReport(
     reportId: string,
-    role?: Role,
-    session?: ArchiveScopeSession,
-  ): Promise<ArchiveReportDetail> {
-    const filter = buildArchiveReadFilter(role);
-    const detail = await this.repository.getArchiveReport(
+    session: ArchiveScopeSession,
+  ): Promise<{ detail: ArchiveReportDetail; totalSectionCount: number }> {
+    guardGroupScope(session);
+    const filter = buildArchiveReadFilter(session);
+    const result = await this.repository.getArchiveReport(
       reportId,
       filter,
       session,
     );
 
-    if (!detail) {
+    if (!result.detail) {
       throw new ArchiveDomainError(`Archive report ${reportId} was not found.`);
     }
 
-    return archiveReportDetailSchema.parse(sortSectionsByAuthorName(detail));
+    return {
+      detail: archiveReportDetailSchema.parse(
+        sortSectionsByAuthorName(result.detail),
+      ),
+      totalSectionCount: result.totalSectionCount,
+    };
   }
 }

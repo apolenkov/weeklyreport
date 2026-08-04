@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 
 // Empty list is a broken caller invariant — fail loud (service pre-validates).
 export function requirePrimaryTargetSection(
-  targetSections: ReportSectionReadModel[],
+  targetSections: readonly ReportSectionReadModel[],
 ): ReportSectionReadModel {
   const [primary] = targetSections;
   if (primary === undefined) {
@@ -49,7 +49,7 @@ async function insertCarriedItems(
       workflowStatus: i.workflowStatus,
       carriedOver: true,
       priorityRank: i.priorityRank ?? null,
-      stageNames: i.stageNames ?? [],
+      stageNames: [...(i.stageNames ?? [])],
     })),
     skipDuplicates: true,
   });
@@ -72,17 +72,21 @@ async function insertCarriedDecisions(
   const newDecisions = carriedDecisions.filter(
     (d) => d.id && !existingDecisionIds.has(d.id),
   );
+  if (newDecisions.length === 0) return;
 
-  // A carried decision persists when parented by EITHER a product OR an
-  // activity (the XOR guarantees exactly one). A record with neither is
-  // malformed and filtered out here (defense-in-depth against the CHECK).
-  const decisionsWithParent = newDecisions.filter(
-    (d) => d.productId != null || d.activityId != null,
+  // The DB CHECK guarantees exactly one parent (product XOR activity); a
+  // decision with neither cannot persist — fail loud, never drop it silently.
+  const malformedDecision = newDecisions.find(
+    (d) => d.productId == null && d.activityId == null,
   );
-  if (decisionsWithParent.length === 0) return;
+  if (malformedDecision !== undefined) {
+    throw new Error(
+      "Cannot persist a carried decision without a product or activity parent.",
+    );
+  }
 
   await tx.decision.createMany({
-    data: decisionsWithParent.map((d) => ({
+    data: newDecisions.map((d) => ({
       ...(d.id === undefined ? {} : { id: d.id }),
       // Carry the source decision's durable lineage key onto the
       // clone (rides the `...decision` spread in
@@ -94,7 +98,7 @@ async function insertCarriedDecisions(
       deadline: d.deadline ?? null,
       impact: d.impact,
       resolvedAt: d.resolvedAt ?? null,
-      stageNames: d.stageNames ?? [],
+      stageNames: [...(d.stageNames ?? [])],
       // XOR parent preserved (product FK null for the activity case).
       productId: d.productId ?? null,
       activityId: d.activityId ?? null,

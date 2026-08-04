@@ -4,9 +4,6 @@ import { vi } from "vitest";
 import type { RemindersRepository } from "./reminders.types.js";
 
 // Inert full repository; tests spread and override only the methods under test.
-/**
- * Unused Reminders Repository Stubs.
- */
 export function unusedRemindersRepositoryStubs(): RemindersRepository {
   return {
     getRule: vi.fn().mockResolvedValue(null),
@@ -22,6 +19,7 @@ export function unusedRemindersRepositoryStubs(): RemindersRepository {
     markExecutionFailed: vi.fn().mockResolvedValue(undefined),
     releaseExecutionClaim: vi.fn().mockResolvedValue(undefined),
     requeueFailedExecution: vi.fn().mockResolvedValue(false),
+    markStuckSendingSent: vi.fn().mockResolvedValue(0),
     getExecution: vi.fn().mockResolvedValue(null),
     listExecutions: vi.fn().mockResolvedValue([]),
     getRuleReportId: vi.fn().mockResolvedValue(null),

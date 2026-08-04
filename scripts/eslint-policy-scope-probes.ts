@@ -3,50 +3,7 @@ import { readFileSync } from "node:fs";
 import { ESLint, type Linter } from "eslint";
 
 import { plantedScopeProbes } from "./eslint-policy-scope-cases.ts";
-
-type Classification =
-  "enforcement" | "policy" | "specialization" | "duplicate" | "relaxation debt";
-
-interface RuleMarker {
-  readonly kind: "rule";
-  readonly name: string;
-  readonly positive: "error" | "warn" | "off";
-  readonly negative: "error" | "warn" | "off" | "absent";
-}
-
-interface RuleOptionsMarker {
-  readonly kind: "rule-options";
-  readonly name: string;
-  readonly positiveContains: string;
-  readonly negativeExcludes: string;
-}
-
-interface ParserProjectMarker {
-  readonly kind: "parser-project";
-  readonly positive: string;
-  readonly negative: "project-service";
-}
-
-interface LedgerEntry {
-  readonly configIndex: number;
-  readonly id: string;
-  readonly classification: Classification;
-  readonly files: readonly string[];
-  readonly ignores: readonly string[];
-  readonly positive: string;
-  readonly negative: string;
-  readonly marker: RuleMarker | RuleOptionsMarker | ParserProjectMarker;
-  readonly evidence: string;
-}
-
-interface Ledger {
-  readonly version: 1;
-  readonly startingSnapshot: {
-    readonly commit: string;
-    readonly overrideBlocks: number;
-  };
-  readonly entries: readonly LedgerEntry[];
-}
+import { parseScopeLedger } from "./eslint-policy-scope-ledger-schema.ts";
 
 interface EffectiveConfig {
   readonly languageOptions?: {
@@ -55,9 +12,9 @@ interface EffectiveConfig {
   readonly rules?: Partial<Record<string, Linter.RuleEntry>>;
 }
 
-const ledger = JSON.parse(
+const ledger = parseScopeLedger(
   readFileSync("scripts/eslint-policy-scope-ledger.json", "utf8"),
-) as Ledger;
+);
 // Keep the config out of tsconfig.scripts' compilation graph: it deliberately
 // carries plugin-local type shims that are checked by its own ESLint program.
 const configModulePath = "../eslint.config.ts";
@@ -95,6 +52,9 @@ const scopedConfigs = config.filter(
   (item): item is Linter.Config & { files: string[] } =>
     Array.isArray(item.files),
 );
+const scopedConfigIndexes = config.flatMap((item, index) =>
+  Array.isArray(item.files) ? [index] : [],
+);
 
 if (ledger.entries.length !== ledger.startingSnapshot.overrideBlocks) {
   failures.push(
@@ -104,6 +64,18 @@ if (ledger.entries.length !== ledger.startingSnapshot.overrideBlocks) {
 if (scopedConfigs.length !== ledger.entries.length) {
   failures.push(
     `live scoped config count ${scopedConfigs.length} != ledger count ${ledger.entries.length}`,
+  );
+}
+if (
+  stable(scopedConfigIndexes) !==
+  stable(
+    ledger.entries
+      .map((entry) => entry.configIndex)
+      .toSorted((left, right) => left - right),
+  )
+) {
+  failures.push(
+    "scope ledger does not map every live scoped config exactly once",
   );
 }
 

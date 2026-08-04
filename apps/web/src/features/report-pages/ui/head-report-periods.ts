@@ -42,7 +42,7 @@ export function deriveHeadPeriods(
   active: WeeklyReportGetResponse | undefined,
   displayed: WeeklyReportGetResponse | undefined,
   reportId: string,
-): ReportPeriod[] {
+): readonly ReportPeriod[] {
   const historyPeriods = historyEntries.map(historyEntryToPeriod);
 
   const activeCandidate: PrependCandidate | null =

@@ -1,6 +1,7 @@
 import type { UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
-import type { Request } from "express";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Request, Response } from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
@@ -21,7 +22,9 @@ interface MockNestApp {
 function makePrismaStub() {
   return {
     reportSection: {
-      findFirst: vi.fn(() => Promise.resolve(null)),
+      findFirst: vi.fn<() => Promise<{ id: string } | null>>(() =>
+        Promise.resolve(null),
+      ),
     },
     // The dev-session path hydrates `session.organization` from the singleton
     // Organization row.
@@ -49,20 +52,46 @@ function makeApp(prisma: ReturnType<typeof makePrismaStub>): INestApplication {
   return app as unknown as INestApplication;
 }
 
-function makeReq(cookieToken?: string): { req: Request } {
+function makeReq(cookieToken?: string): CreateExpressContextOptions {
   const req = {
     headers: {},
     cookies: cookieToken ? { customreport_session: cookieToken } : {},
   } as unknown as Request;
-  return { req };
+  const res = {} as Response;
+  return {
+    req,
+    res,
+    info: {
+      accept: null,
+      type: "query",
+      isBatchCall: false,
+      calls: [],
+      connectionParams: null,
+      signal: new AbortController().signal,
+      url: null,
+    },
+  };
 }
 
-function makeReqWithRequestId(requestId: string): { req: Request } {
+function makeReqWithRequestId(requestId: string): CreateExpressContextOptions {
   const req = {
     headers: { "x-request-id": requestId },
     cookies: {},
   } as unknown as Request;
-  return { req };
+  const res = {} as Response;
+  return {
+    req,
+    res,
+    info: {
+      accept: null,
+      type: "query",
+      isBatchCall: false,
+      calls: [],
+      connectionParams: null,
+      signal: new AbortController().signal,
+      url: null,
+    },
+  };
 }
 
 const HUMAN_SESSION: UserSession = {
@@ -155,7 +184,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session).toBeNull();
   });
@@ -168,7 +197,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
@@ -183,7 +212,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
@@ -197,7 +226,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session).not.toBeNull();
   });
@@ -210,7 +239,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReqWithRequestId("req-context-1") as never);
+    const ctx = await factory(makeReqWithRequestId("req-context-1"));
 
     expect(ctx.correlationId).toBe("req-context-1");
   });
@@ -224,7 +253,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq("not-a-real-jwt") as never);
+    const ctx = await factory(makeReq("not-a-real-jwt"));
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
@@ -238,7 +267,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session?.organization).toEqual({
       shortName: "PEO",
@@ -254,7 +283,7 @@ describe("createContextFactory — dev-mode flag matrix", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session?.organization).toEqual({
       shortName: "PEO",
@@ -269,10 +298,10 @@ describe("createContextFactory — dev-mode flag matrix", () => {
     const prisma = makePrismaStub();
     prisma.reportSection.findFirst.mockResolvedValueOnce({
       id: "section-stub-id",
-    } as never);
+    });
 
     const factory = createContextFactory(makeApp(prisma), createNullLogger());
-    const ctx = await factory(makeReq() as never);
+    const ctx = await factory(makeReq());
 
     expect(ctx.session?.activeReportSectionId).toBe("section-stub-id");
   });

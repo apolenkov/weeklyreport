@@ -7,9 +7,11 @@ import { useDialogFocus } from "./use-dialog-focus";
 function Dialog({
   onClose,
   autoFocusField,
+  label = "field",
 }: {
   onClose: () => void;
   autoFocusField: boolean;
+  label?: string;
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   useDialogFocus({ open: true, onClose, containerRef: surfaceRef });
@@ -19,7 +21,7 @@ function Dialog({
           effect runs — reproducing the ordering a real inner `autoFocus`
           produces (jsdom does not apply the autoFocus attribute itself). */}
       <input
-        aria-label="field"
+        aria-label={label}
         ref={
           autoFocusField
             ? (el) => {
@@ -76,6 +78,43 @@ describe("useDialogFocus focus restore", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(document.activeElement).toBe(trigger);
   });
+
+  it("keeps focus inside without restoring the opener during an open rerender", () => {
+    function RerenderHarness() {
+      const [label, setLabel] = useState("first field");
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          {open ? (
+            <>
+              <Dialog
+                onClose={() => setOpen(false)}
+                autoFocusField={true}
+                label={label}
+              />
+              <button type="button" onClick={() => setLabel("renamed field")}>
+                Rerender
+              </button>
+            </>
+          ) : null}
+        </>
+      );
+    }
+
+    render(<RerenderHarness />);
+    const trigger = screen.getByRole("button", { name: "Open" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const field = screen.getByLabelText("first field");
+    expect(field).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Rerender" }));
+
+    expect(screen.getByLabelText("renamed field")).toHaveFocus();
+  });
 });
 
 describe("useDialogFocus keyboard handling", () => {
@@ -92,6 +131,52 @@ describe("useDialogFocus keyboard handling", () => {
 
     fireEvent.keyDown(document, { key: "Tab" });
     expect(document.activeElement).toBe(first);
+  });
+
+  it("pulls focus back inside after a content swap unmounts the focused element", () => {
+    function SwapHarness() {
+      const [showPanel, setShowPanel] = useState(false);
+      const [open, setOpen] = useState(true);
+      const surfaceRef = useRef<HTMLDivElement>(null);
+      useDialogFocus({
+        open,
+        onClose: () => setOpen(false),
+        containerRef: surfaceRef,
+      });
+      return (
+        <div ref={surfaceRef}>
+          {showPanel ? (
+            <button type="button" onClick={() => setShowPanel(false)}>
+              Back
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-testid="panel-one"
+              onClick={() => setShowPanel(true)}
+            >
+              Next panel
+            </button>
+          )}
+        </div>
+      );
+    }
+    render(<SwapHarness />);
+
+    // Focus the first-panel control, then swap panels so it unmounts. The
+    // unmounted element is no longer inside the container, so Tab must pull
+    // focus back to the new first focusable instead of escaping the dialog.
+    const panelOne = screen.getByTestId("panel-one");
+    panelOne.focus();
+    expect(document.activeElement).toBe(panelOne);
+    fireEvent.click(panelOne);
+
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(screen.getByRole("button", { name: "Back" })).toHaveFocus();
+
+    // Tab must pull focus back into the container instead of escaping it.
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(screen.getByRole("button", { name: "Back" })).toHaveFocus();
   });
 
   it("calls onClose when Escape is pressed", () => {

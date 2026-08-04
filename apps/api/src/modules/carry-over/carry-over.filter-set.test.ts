@@ -19,16 +19,22 @@ const sourceSection: ReportSectionReadModel = {
   reportId: sourceReportId,
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "submitted",
   submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
       projectName: "Project 1",
       trafficLight: "yellow",
+      ownedStages: [],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -72,6 +78,7 @@ const sourceSection: ReportSectionReadModel = {
     },
   ],
   activities: [],
+  reviews: [],
 };
 
 function createRepository(
@@ -135,11 +142,9 @@ function createRepository(
   };
 }
 
-// Characterization pin for the exact carry filter set enforced by
-// executeCarryOver. Locks every exclusion branch — including the previously
-// untested `workflowStatus: "postponed"` drop — so any reshuffle of the four
-// item filters or the decision filters is caught before it changes which rows
-// carry forward.
+// Pin of the exact carry filter set enforced by executeCarryOver: locks every
+// exclusion branch (incl. the `workflowStatus: "postponed"` drop) so a reshuffle
+// of the item/decision filters is caught before it changes which rows carry.
 describe("CarryOverService — carry filter set (pin)", () => {
   const AUTHOR = "33333333-3333-4333-8333-333333333333";
   const PROJECT = "44444444-4444-4444-8444-444444444444";
@@ -152,6 +157,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",
+      alarmFloor: null,
     },
   ];
 

@@ -1,25 +1,16 @@
 import "server-only";
 
-import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
 import {
-  decodeTrpcBatchPayload,
   requireApiUrl,
   shouldUseDevAuthFallback,
   TRPC_BATCH_EMPTY_INPUT,
 } from "./api-url";
+import { decodeAuthMeResponse } from "./decode-auth-me";
 
-// Layout UX gate only — API role middleware is the security boundary.
-// no-store is mandatory so role downgrades are not hidden by the data cache.
-function decodeAuthMeResponse(body: unknown): UserSession | null {
-  const payload = decodeTrpcBatchPayload(body);
-  const result = userSessionSchema.safeParse(payload);
-  return result.success ? result.data : null;
-}
-
-export async function getServerSession(): Promise<UserSession | null> {
+export async function getServerSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token && !shouldUseDevAuthFallback()) return null;
@@ -41,6 +32,3 @@ export async function getServerSession(): Promise<UserSession | null> {
     return null;
   }
 }
-
-// Exported for unit testing — keeps the decoder pure and observable.
-export { decodeAuthMeResponse };

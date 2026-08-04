@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
@@ -9,6 +7,7 @@ import { render, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { makeQueryState } from "../../../test-utils/query-state";
 import type { AdminTab } from "../model/admin-tab-dependencies";
 import { AdminPanel } from "./admin-panel";
 
@@ -47,12 +46,7 @@ function queryEnabled(key: string): boolean | undefined {
 describe("AdminPanel query gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue({
-      data: undefined,
-      error: null,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(makeQueryState({ data: undefined }));
   });
 
   it.each([
@@ -75,12 +69,12 @@ describe("AdminPanel query gating", () => {
   );
 
   it("does not report disabled parent query errors", async () => {
-    vi.mocked(useQuery).mockReturnValue({
-      data: undefined,
-      error: new Error("must stay silent"),
-      isError: true,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useQuery).mockReturnValue(
+      makeQueryState({
+        data: undefined,
+        error: new Error("must stay silent"),
+      }),
+    );
 
     render(<AdminPanel activeTab={"periods" satisfies AdminTab} />);
 
@@ -90,13 +84,11 @@ describe("AdminPanel query gating", () => {
   it("reports enabled parent query errors", async () => {
     vi.mocked(useQuery).mockImplementation((options) => {
       const key = (options as QueryOptions).queryKey[0];
-      return {
+      return makeQueryState({
         data: undefined,
         error:
           key === "admin.snapshot" ? new Error("snapshot unavailable") : null,
-        isError: key === "admin.snapshot",
-        refetch: vi.fn(),
-      } as unknown as ReturnType<typeof useQuery>;
+      });
     });
 
     render(<AdminPanel activeTab={"users" satisfies AdminTab} />);

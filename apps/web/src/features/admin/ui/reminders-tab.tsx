@@ -12,15 +12,12 @@ import { useRemindersTabState } from "./use-reminders-tab-state";
 
 interface RemindersTabProps {
   readonly policies: readonly AdminReminderPolicyView[];
-  /**
-   * Read-only derived rules grouped by `policyId`, used only to compute each
-   * card's next-send line. Rules whose `policyId` is `null` (legacy) are not
-   * surfaced here.
-   */
+  // Derived rules feed each card's next-send line; legacy null-policy rules
+  // remain hidden from this grouped view.
   readonly derivedRulesByPolicyId: Readonly<
     Record<string, readonly AdminReminderView[]>
   >;
-  /** Organisation-wide timezone required to seed a new reminder. */
+  // New reminders are seeded with this organisation-wide timezone.
   readonly defaultTimezone: string;
 }
 
@@ -35,6 +32,7 @@ export function RemindersTab({
     isSaving: state.isSaving,
     validityValid: state.validityValid,
     onChange: state.setForm,
+    onOffsetValidityChange: state.setOffsetValid,
     onCancel: state.closeEditor,
     onSave: state.handleSave,
   };

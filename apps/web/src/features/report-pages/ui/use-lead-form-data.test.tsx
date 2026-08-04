@@ -1,13 +1,11 @@
-/**
- * @vitest-environment jsdom
- *
- * Data-loading hook: query enablement, Everyone/Mine gating, purge, redirects.
- * End-to-end pins stay in lead-form*.test.tsx.
- */
+// @vitest-environment jsdom
+// Data-loading hook pins cover query enablement, visibility gating, purge, and
+// redirects; end-to-end coverage stays in the LeadForm suites.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../lib/session-provider";
@@ -109,6 +107,7 @@ function buildTRPC(
     reportSectionId: SECTION_ID,
     authorName: "Test Lead",
   },
+  failures: { viewSettings?: boolean; crossAuthors?: boolean } = {},
 ) {
   const byPeriodSpy = vi.fn();
   const contentSpy = vi.fn();
@@ -117,7 +116,9 @@ function buildTRPC(
     { path: ["reports", "myHistory"], query: [] },
     {
       path: ["leadForm", "viewSettings"],
-      query: { unifiedActivityView: false },
+      query: failures.viewSettings
+        ? Promise.reject(new Error("view settings failed"))
+        : { unifiedActivityView: false },
     },
     {
       path: ["leadForm", "byPeriod"],
@@ -131,7 +132,13 @@ function buildTRPC(
         };
       },
     },
-    { path: ["leadForm", "crossAuthors"], queryByInput: () => [] },
+    {
+      path: ["leadForm", "crossAuthors"],
+      queryByInput: () =>
+        failures.crossAuthors
+          ? Promise.reject(new Error("cross authors failed"))
+          : [],
+    },
     {
       path: ["leadForm", "crossAuthorContent"],
       queryByInput: (input) => {
@@ -149,10 +156,11 @@ interface HarnessOptions {
   pinnedReportId?: string;
   redirectToCanonical?: boolean;
   isSlidesMode?: boolean;
+  queryFailures?: { viewSettings?: boolean; crossAuthors?: boolean };
 }
 
 function renderData(options: HarnessOptions = {}) {
-  const trpc = buildTRPC(options.active);
+  const trpc = buildTRPC(options.active, options.queryFailures);
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -230,7 +238,7 @@ describe("useLeadFormData — query enablement", () => {
     const { result, byPeriodSpy } = renderData({ active: null });
 
     await waitFor(() => expect(result.current.activeData).toBeNull());
-    expect(result.current.targetReportId).toBe("");
+    expect(result.current.targetReportId).toBeNull();
     expect(byPeriodSpy).not.toHaveBeenCalled();
   });
 
@@ -391,6 +399,28 @@ describe("useLeadFormData — redirects", () => {
     await waitFor(() =>
       expect(navState.replace).toHaveBeenCalledWith(
         `/head/report/${encodeURIComponent(PINNED_REPORT_ID)}`,
+      ),
+    );
+  });
+});
+
+describe("useLeadFormData — auxiliary query failure surfacing", () => {
+  it("toasts when the view-settings query fails instead of silently degrading", async () => {
+    renderData({ queryFailures: { viewSettings: true } });
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load form settings"),
+      ),
+    );
+  });
+
+  it("toasts when the cross-authors query fails instead of silently returning an empty roster", async () => {
+    renderData({ queryFailures: { crossAuthors: true } });
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load cross-author data"),
       ),
     );
   });

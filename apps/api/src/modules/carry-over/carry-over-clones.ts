@@ -8,6 +8,7 @@ export function cloneCarriedItem(
   sourceReportId: string,
   targetReportId: string,
   item: ReportSectionReadModel["items"][number],
+  carriedAt: Date,
 ): {
   item: ReportSectionReadModel["items"][number];
   record: CarryOverRecord;
@@ -34,7 +35,7 @@ export function cloneCarriedItem(
       sourceDecisionId: null,
       targetDecisionId: null,
       status: "completed",
-      carriedAt: new Date(),
+      carriedAt,
     }),
   };
 }
@@ -43,6 +44,7 @@ export function cloneUnresolvedDecision(
   sourceReportId: string,
   targetReportId: string,
   decision: ReportSectionReadModel["decisions"][number],
+  carriedAt: Date,
 ): {
   decision: ReportSectionReadModel["decisions"][number];
   record: CarryOverRecord;
@@ -64,7 +66,7 @@ export function cloneUnresolvedDecision(
       sourceDecisionId: decision.id ?? null,
       targetDecisionId,
       status: "completed",
-      carriedAt: new Date(),
+      carriedAt,
     }),
   };
 }

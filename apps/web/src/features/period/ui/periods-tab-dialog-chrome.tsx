@@ -23,7 +23,7 @@ export function PeriodDialogSurface({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={title}
       testId="periods-create-dialog"
       mode={mode}
@@ -59,7 +59,7 @@ export function PeriodDialogActions({
         onClick={onCancel}
         disabled={isPending}
         data-testid="periods-create-cancel"
-        className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         Cancel
       </button>
@@ -68,7 +68,7 @@ export function PeriodDialogActions({
         onClick={onSubmit}
         disabled={!canSubmit}
         data-testid="periods-create-submit"
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {submitLabel}
       </button>

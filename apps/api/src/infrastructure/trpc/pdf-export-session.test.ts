@@ -6,11 +6,9 @@ import { SessionRevocationService } from "../../modules/admin/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { buildPdfExportSession, createContextFactory } from "./trpc.context";
 
-/**
- * The PDF worker rebuilds the requester's session from the `requestedBy` claim.
- * A deactivated/revoked requester must yield `null` (the auth middleware then
- * rejects) so a stale 5-min PDF token cannot outlive the deactivation.
- */
+// The PDF worker rebuilds the requester's session from the `requestedBy` claim.
+// A deactivated/revoked requester must yield `null` (the auth middleware then
+// rejects) so a stale 5-min PDF token cannot outlive the deactivation.
 
 const REPORT_ID = "11111111-2222-4333-8444-555555555555";
 const REQUESTER_ID = "a0000000-0000-4000-8000-0000000000c1";
@@ -18,7 +16,7 @@ const REQUESTER_ID = "a0000000-0000-4000-8000-0000000000c1";
 interface PrismaStubOptions {
   isActive?: boolean;
   reportingGroupId?: string;
-  /** When true the user row is gone (hard-deleted) — findUnique returns null. */
+  // When true the user row is gone (hard-deleted) — findUnique returns null.
   missingUser?: boolean;
 }
 

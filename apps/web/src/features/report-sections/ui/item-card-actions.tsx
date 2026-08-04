@@ -15,7 +15,7 @@ import {
 
 // Shared square icon-button shell; the two variants differ only in hover state.
 const ACTION_BUTTON_BASE =
-  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors";
+  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] transition-colors";
 const NEUTRAL_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
 const DESTRUCTIVE_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]`;
 
@@ -186,7 +186,7 @@ export function ItemCardActions(props: ItemCardActionsProps) {
 export function PublishedRecordMarker() {
   return (
     <span
-      className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-white px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+      className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-card)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
       title="In the published report — mark it done or carry it forward; it cannot be deleted."
     >
       In published report

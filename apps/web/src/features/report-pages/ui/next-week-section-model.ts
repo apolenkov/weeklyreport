@@ -2,12 +2,12 @@ import type { UseEditableListDialogResult } from "../../../hooks/use-editable-li
 import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 
 export interface NextWeekSectionProps {
-  readonly items: KanbanItem[];
+  readonly items: readonly KanbanItem[];
   // Own risks for ItemCard alarm derivation (in-progress only; planned never floors).
   readonly risks?: readonly RiskEntry[] | undefined;
   readonly readOnly?: boolean | undefined;
   // Parent merges into draftSection.items by id, preserving non-presentation fields.
-  readonly onItemsChange?: ((items: KanbanItem[]) => void) | undefined;
+  readonly onItemsChange?: ((items: readonly KanbanItem[]) => void) | undefined;
   readonly currentUserName?: string | undefined;
   readonly products?: readonly Product[] | undefined;
   readonly activities?: readonly { id: string; name: string }[] | undefined;
@@ -64,6 +64,9 @@ export function createItemHandlers({
       if (item) dialog.requestDelete(item);
     },
     confirmDelete: () => {
+      // Re-check the lock at confirm time — a period published while the
+      // dialog is open must not let the delete through.
+      if (readOnly) return;
       const target = dialog.pendingDelete;
       if (!target) return;
       onItemsChange?.(items.filter((item) => item.id !== target.id));

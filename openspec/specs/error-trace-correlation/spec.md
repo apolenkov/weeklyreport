@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change correlate-errors-to-traces. Update Purpose after archive.
+Correlate errors and worker logs with OTel traces across browser, API, and BullMQ boundaries while redacting PII-shaped logger context centrally.
 
 ## Requirements
 
@@ -45,8 +45,9 @@ are present.
 
 - **GIVEN** the browser calls same-origin `/trpc` with browser tracing enabled
 - **WHEN** Next rewrites the request to the api
-- **THEN** the inbound Nest request carries the `sentry-trace` header and the
-  resulting Tempo trace id equals the browser-originated id
+- **THEN** the inbound Nest request carries the browser's `traceparent` header
+  (and `sentry-trace` when the browser provides it), and the resulting Tempo
+  trace id equals the browser-originated id
 
 #### Scenario: W3C precedence when both headers are present
 
@@ -79,7 +80,8 @@ the existing no-active-span requirement.
 
 - **GIVEN** an instrumented worker is processing a job seeded with the enqueue
   trace context
-- **WHEN** the job throws and the error is captured
+- **WHEN** the job throws and an error reporter captures it inside the linked
+  worker span
 - **THEN** the captured error carries the trace id of the job's linked span, so
   it resolves to the same trace as the request that enqueued it
 

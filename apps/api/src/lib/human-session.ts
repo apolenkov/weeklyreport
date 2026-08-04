@@ -6,9 +6,9 @@ import { SessionRevocationService } from "../modules/admin/index.js";
 import { isUserAccessBarred } from "../modules/auth/index.js";
 
 export interface HumanSessionDeps {
-  verifySessionToken: (token: string) => UserSession;
-  sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
-  prisma: PrismaService;
+  readonly verifySessionToken: (token: string) => UserSession;
+  readonly sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
+  readonly prisma: PrismaService;
 }
 
 // Human-only chokepoint (no PDF worker / dev synthetic). Redis revoke fails

@@ -7,18 +7,13 @@
 // Run:
 //   pnpm uat:inventory     (needs dev servers up: pnpm dev)
 //
-// Outputs (alongside the script):
-//   apps/web/uat-suite/inventory.json — machine-readable
-//   apps/web/uat-suite/inventory.md   — readable summary
+// Outputs under ~/work/customreport-archive/uat-inventory by default.
 
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { emit, loginAs, note, waitForAppReady } from "./helpers.mjs";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // (route, role) tuples — we only walk routes a role can actually reach.
 // State variants beyond the default seed (draft / published) are intentionally
@@ -180,7 +175,12 @@ async function dumpRoute(page, target) {
   }
   await browser.close();
 
-  const outJson = path.join(__dirname, "inventory.json");
+  const archiveRoot =
+    process.env.CUSTOMREPORT_ARCHIVE_DIR ??
+    path.join(homedir(), "work", "customreport-archive");
+  const outputDirectory = path.join(archiveRoot, "uat-inventory");
+  const outJson = path.join(outputDirectory, "inventory.json");
+  mkdirSync(outputDirectory, { recursive: true });
   writeFileSync(outJson, JSON.stringify(inventory, null, 2));
 
   // Aggregate stats per (role, route) and a flat human-readable summary.
@@ -246,7 +246,7 @@ async function dumpRoute(page, target) {
     lines.push("");
   }
 
-  const outMd = path.join(__dirname, "inventory.md");
+  const outMd = path.join(outputDirectory, "inventory.md");
   writeFileSync(outMd, lines.join("\n"));
 
   note(`wrote ${outJson}`);

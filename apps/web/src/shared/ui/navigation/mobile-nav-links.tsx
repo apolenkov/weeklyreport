@@ -26,7 +26,7 @@ export function MobileNavLinks({
             onClick={onNavigate}
             className={`flex h-11 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${
               active
-                ? "bg-[var(--color-success)] text-[var(--color-starbucks-accent)]"
+                ? "bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]"
                 : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
             }`}
             aria-current={active ? "page" : undefined}

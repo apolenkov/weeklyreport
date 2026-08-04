@@ -67,8 +67,7 @@ function buildSavePayload(
     priorityRank: args.priorityRank,
     trimmedPausedReason: text.trimmedPausedReason,
   };
-  // Activity parent → empty productId, no stage.
-  if (args.isActivityParent) {
+  if (args.parent.kind === "activity") {
     return buildActivityItemSave({
       ...common,
       selectedActivity: args.selectedActivity,
@@ -76,6 +75,7 @@ function buildSavePayload(
       activityId: args.parent.id,
     });
   }
+  if (args.parent.kind === "unresolved") return null;
   const product = resolveSaveProduct(args.products, args.item, args.parent.id);
   return product
     ? buildProductItemSave({

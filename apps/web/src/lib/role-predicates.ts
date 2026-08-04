@@ -1,16 +1,7 @@
 import type { Role } from "@customreport/shared";
 
-/**
- * Client role-identity predicates — the single place the web client spells
- * out "is this role X?" (client-role-predicates spec).
- *
- * UX-affordance layer ONLY, not a security boundary: enforcement lives in
- * the API's role-coverage gate (the 8 canonical middleware chains) and the
- * server-side route gates. Do not add `can*` enforcement helpers here, do
- * not absorb server-computed capability flags, and keep these pure — no
- * React, no session access; callers pass their own role operand and keep
- * their own null guards.
- */
+// Pure UX predicates only; API middleware and server route gates remain the
+// security boundary, so these helpers do not encode capabilities.
 
 export function isHead(role: Role | null): boolean {
   return role === "head";

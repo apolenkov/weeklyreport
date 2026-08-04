@@ -19,14 +19,9 @@ import {
   groupCrossAuthorAuthors,
 } from "./lead-form-cross-author-content.derive.js";
 
-/**
- * The product ids the viewer and author BOTH hold a stage assignment on,
- * restricted to non-archived products. Mirrors step 1 of
- * {@link getCrossAuthorContent}: the viewer's assigned products intersected
- * with the author's assignments on those products, filtered by
- * `project.archived=false`. Report-independent (assignments are report-wide);
- * report access is proven separately by the caller's own-section read.
- */
+// Product ids the viewer and author BOTH hold a stage assignment on, restricted
+// to non-archived products. Report-independent (assignments are report-wide);
+// report access is proven separately by the caller's own-section read.
 export async function getSharedNonArchivedProductIds(
   prisma: PrismaService,
   viewerId: string,

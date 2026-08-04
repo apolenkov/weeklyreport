@@ -9,11 +9,31 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatRelativePast,
+  MONTHS_SHORT,
   type RelativePastVariant,
   toIsoDateString,
 } from "./format-date";
 
 const NOW = new Date("2026-04-20T12:00:00.000Z");
+
+describe("MONTHS_SHORT", () => {
+  it("exports the canonical short-month sequence", () => {
+    expect(MONTHS_SHORT).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
+  });
+});
 
 const ago = (seconds: number): Date =>
   new Date(NOW.getTime() - seconds * MS_PER_SECOND);

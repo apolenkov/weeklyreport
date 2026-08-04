@@ -355,4 +355,24 @@ describe("UsersTab — role label rendering", () => {
     const badge = within(row as HTMLElement).getByText(/^Head$/);
     expect(badge.textContent).toBe("Head");
   });
+
+  it("uses semantic muted tokens for the inactive badge", () => {
+    const inactiveUser: AdminUserView = {
+      ...USER,
+      id: "u3",
+      isActive: false,
+    };
+    renderTab([inactiveUser]);
+    fireEvent.change(screen.getByLabelText("Filter by status"), {
+      target: { value: "inactive" },
+    });
+
+    const row = screen.getByText(inactiveUser.email).closest("tr");
+    expect(row).not.toBeNull();
+    const badge = within(row as HTMLElement).getByText("inactive");
+    expect(badge).toHaveClass(
+      "bg-[var(--color-muted)]",
+      "text-[var(--color-muted-foreground)]",
+    );
+  });
 });

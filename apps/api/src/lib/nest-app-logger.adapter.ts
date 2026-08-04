@@ -2,45 +2,60 @@ import type { LoggerService } from "@nestjs/common";
 
 import type { AppLogger } from "./logger.js";
 
-export class NestAppLoggerAdapter implements LoggerService {
+class LoggerSinkOwner {
   constructor(private logger: AppLogger) {}
 
-  setLogger(logger: AppLogger): void {
+  readonly current = (): AppLogger => this.logger;
+
+  readonly replace = (logger: AppLogger): void => {
     this.logger = logger;
+  };
+}
+
+export class NestAppLoggerAdapter implements LoggerService {
+  private readonly sink: LoggerSinkOwner;
+
+  constructor(logger: AppLogger) {
+    this.sink = new LoggerSinkOwner(logger);
   }
 
-  log(message: unknown, context?: string): void {
-    this.logger.info(
-      String(message),
-      context ? { nestContext: context } : undefined,
-    );
-  }
+  readonly setLogger = (logger: AppLogger): void => {
+    this.sink.replace(logger);
+  };
 
-  error(message: unknown, stackOrContext?: string, context?: string): void {
-    this.logger.error(String(message), {
+  readonly log = (message: unknown, context?: string): void => {
+    this.sink
+      .current()
+      .info(String(message), context ? { nestContext: context } : undefined);
+  };
+
+  readonly error = (
+    message: unknown,
+    stackOrContext?: string,
+    context?: string,
+  ): void => {
+    this.sink.current().error(String(message), {
       nestContext: context ?? stackOrContext,
       ...(context ? { stack: stackOrContext } : {}),
     });
-  }
+  };
 
-  warn(message: unknown, context?: string): void {
-    this.logger.warn(
-      String(message),
-      context ? { nestContext: context } : undefined,
-    );
-  }
+  readonly warn = (message: unknown, context?: string): void => {
+    this.sink
+      .current()
+      .warn(String(message), context ? { nestContext: context } : undefined);
+  };
 
-  debug(message: unknown, context?: string): void {
-    this.logger.debug(
-      String(message),
-      context ? { nestContext: context } : undefined,
-    );
-  }
+  readonly debug = (message: unknown, context?: string): void => {
+    this.sink
+      .current()
+      .debug(String(message), context ? { nestContext: context } : undefined);
+  };
 
-  verbose(message: unknown, context?: string): void {
-    this.logger.debug(String(message), {
+  readonly verbose = (message: unknown, context?: string): void => {
+    this.sink.current().debug(String(message), {
       nestContext: context,
       verbose: true,
     });
-  }
+  };
 }

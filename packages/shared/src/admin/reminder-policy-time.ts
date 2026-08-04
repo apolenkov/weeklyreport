@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 
+/** Active interval in which a reminder policy applies to period deadlines. */
 export interface ReminderPolicyValidity {
   readonly active: boolean;
   readonly validFrom: Date;
@@ -9,9 +10,6 @@ export interface ReminderPolicyValidity {
 /**
  * Apply an elapsed-minute offset to a deadline and return the resulting UTC
  * instant. Crossing a DST boundary preserves elapsed time, not wall time.
- * @param deadline - Absolute deadline used as the offset origin.
- * @param offsetMinutes - Signed elapsed-minute offset.
- * @param timezone - IANA zone used while applying the offset.
  */
 export function computeReminderFireAt(
   deadline: Date,
@@ -26,9 +24,7 @@ export function computeReminderFireAt(
 }
 
 /**
- * Whether a period deadline falls inside an active policy's validity window.
- * @param policy - Activation flag and inclusive validity bounds.
- * @param deadline - Period deadline to test.
+ * Whether a period deadline falls inside an active policy's inclusive validity window.
  */
 export function reminderPolicyAppliesTo(
   policy: ReminderPolicyValidity,

@@ -1,14 +1,15 @@
 "use client";
 
-import { createPortal } from "react-dom";
-
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { ItemEditDialogFields } from "./item-edit-dialog-fields";
 import { CURRENT_WEEK_CHOICES, NEXT_WEEK_CHOICES } from "./item-status-choices";
 import type { ParentActivityOption } from "./parent-picker";
 import { useItemEditDialog } from "./use-item-edit-dialog";
+
+const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
 interface ItemEditDialogProps {
   readonly open: boolean;
@@ -65,42 +66,48 @@ function ItemEditDialogHeading({
 }
 
 function ItemEditDialogContent(props: ItemEditDialogContentProps) {
-  const { activities = [], products, week, onCancel, onDelete } = props;
+  const {
+    activities = EMPTY_ACTIVITIES,
+    products,
+    week,
+    onCancel,
+    onDelete,
+  } = props;
   const { dialogSurfaceRef, handleKeyDown, handleSave, headerVerb, ...fields } =
     useItemEditDialog({ ...props, activities });
 
   const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
 
-  return createPortal(
-    <DialogSurface
-      surfaceRef={dialogSurfaceRef}
-      onDismiss={onCancel}
-      onBackdropKeyDown={handleKeyDown}
-      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      surfaceClassName="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
-      ariaLabel={`${headerVerb} dialog`}
-    >
-      <ItemEditDialogHeading
-        headerVerb={headerVerb}
-        parentName={fields.parentName}
-      />
+  return (
+    <DocumentBodyPortal>
+      <DialogSurface
+        surfaceRef={dialogSurfaceRef}
+        onDismiss={onCancel}
+        onBackdropKeyDown={handleKeyDown}
+        surfaceClassName="mx-4 w-full max-w-3xl rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+        ariaLabel={`${headerVerb} dialog`}
+      >
+        <ItemEditDialogHeading
+          headerVerb={headerVerb}
+          parentName={fields.parentName}
+        />
 
-      <ItemEditDialogFields
-        {...fields}
-        week={week}
-        products={products}
-        activities={activities}
-        choices={choices}
-      />
+        <ItemEditDialogFields
+          {...fields}
+          week={week}
+          products={products}
+          activities={activities}
+          choices={choices}
+        />
 
-      <RecordDialogFooter
-        saveLabel="Save Item"
-        onCancel={onCancel}
-        onSave={handleSave}
-        onDelete={onDelete}
-        saveDisabled={fields.isDeadEnd}
-      />
-    </DialogSurface>,
-    document.body,
+        <RecordDialogFooter
+          saveLabel="Save Item"
+          onCancel={onCancel}
+          onSave={handleSave}
+          onDelete={onDelete}
+          saveDisabled={fields.isDeadEnd}
+        />
+      </DialogSurface>
+    </DocumentBodyPortal>
   );
 }

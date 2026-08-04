@@ -36,15 +36,15 @@ export interface LeadFormDraftHandle {
 
 function buildCollectionActions(draft: LeadFormDraftHandle) {
   return {
-    onProductsChange: (next: Product[]) =>
+    onProductsChange: (next: readonly Product[]) =>
       draft.apply({ kind: "products", products: next }),
-    onRisksChange: (next: RiskEntry[]) =>
+    onRisksChange: (next: readonly RiskEntry[]) =>
       draft.apply({ kind: "risks", risks: next }),
-    onDecisionsChange: (next: DecisionEntry[]) =>
+    onDecisionsChange: (next: readonly DecisionEntry[]) =>
       draft.apply({ kind: "decisions", decisions: next }),
-    onCurrentWeekItemsChange: (items: KanbanItem[]) =>
+    onCurrentWeekItemsChange: (items: readonly KanbanItem[]) =>
       draft.apply({ kind: "week-items", week: "current", items }),
-    onNextWeekItemsChange: (items: KanbanItem[]) =>
+    onNextWeekItemsChange: (items: readonly KanbanItem[]) =>
       draft.apply({ kind: "week-items", week: "next", items }),
   };
 }
@@ -90,12 +90,17 @@ function buildQuickAddHandler(
   const byKind: Record<QuickAddKind, () => void> = {
     "current-item": () => draft.quickAdd("current"),
     "next-item": () => draft.quickAdd("next"),
-    blocker: () =>
+    blocker: () => {
+      const productId = products[0]?.id;
+      // A blocker is a product-scoped risk; without a product there is no
+      // valid parent, so the quick-add stays inert (menu disables it).
+      if (!productId) return;
       draft.routeToBlocker({
-        productId: products[0]?.id ?? "",
+        productId,
         stageNames: [],
         severity: "blocked",
-      }),
+      });
+    },
     risk: addSignals.addRisk,
     decision: addSignals.addDecision,
   };

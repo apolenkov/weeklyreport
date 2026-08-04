@@ -8,6 +8,15 @@ import {
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
 
+const RECORD_VISIBILITY_OPTIONS = [
+  { key: "mine", label: "Mine only", Icon: User },
+  { key: "everyone", label: "Everyone", Icon: Users },
+] as const satisfies readonly {
+  readonly key: RecordVisibility;
+  readonly label: string;
+  readonly Icon: typeof User;
+}[];
+
 // View-only: changes what the lead sees, never what is submitted/published.
 export function RecordVisibilityToggle({
   value,
@@ -22,17 +31,9 @@ export function RecordVisibilityToggle({
   // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
   // does not crowd the period navigator; each keeps an accessible name via
   // aria-label + tooltip.
-  const options: {
-    key: RecordVisibility;
-    label: string;
-    Icon: typeof User;
-  }[] = [
-    { key: "mine", label: "Mine only", Icon: User },
-    { key: "everyone", label: "Everyone", Icon: Users },
-  ];
   return (
     <SegmentedToggle ariaLabel="Record visibility">
-      {options.map((option) => (
+      {RECORD_VISIBILITY_OPTIONS.map((option) => (
         <button
           key={option.key}
           type="button"

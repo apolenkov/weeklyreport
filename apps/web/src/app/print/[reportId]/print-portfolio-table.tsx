@@ -2,30 +2,49 @@ import type { WeeklyPortfolioProduct } from "../../../features/report-sections/m
 import { statusLabel } from "../../../lib/status-presentation";
 import {
   BORDER_LIGHT,
+  BRAND_DARK_SURFACE,
+  ON_BRAND_TEXT,
   printStatusColor,
   TEXT_SECONDARY,
+  TEXT_TERTIARY,
 } from "./print-report-theme";
 
 interface PrintPortfolioTableProps {
   readonly products: readonly WeeklyPortfolioProduct[];
 }
 
-// Brand dark for table header bar.
-const PORTFOLIO_HEADER_BG = "#1E3932";
-// Tertiary text for zero-count cells (muted vs TEXT_SECONDARY).
-const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
+const PORTFOLIO_HEAD_CENTERED_STYLE = {
+  padding: "6px 8px",
+  textAlign: "center",
+} as const;
+const PORTFOLIO_ROW_CENTERED_STYLE = {
+  padding: "5px 8px",
+  textAlign: "center",
+} as const;
 
 function PrintPortfolioHead() {
-  const centered = { padding: "6px 8px", textAlign: "center" } as const;
   return (
     <thead>
-      <tr style={{ backgroundColor: PORTFOLIO_HEADER_BG, color: "#ffffff" }}>
+      <tr
+        style={{
+          backgroundColor: BRAND_DARK_SURFACE,
+          color: ON_BRAND_TEXT,
+        }}
+      >
         <th style={{ padding: "6px 8px", textAlign: "left" }}>Product</th>
-        <th style={{ ...centered, width: "80px" }}>Status</th>
+        <th style={{ ...PORTFOLIO_HEAD_CENTERED_STYLE, width: "80px" }}>
+          Status
+        </th>
         <th style={{ padding: "6px 8px", textAlign: "left" }}>Leads</th>
-        <th style={{ ...centered, width: "60px" }}>This Week</th>
-        <th style={{ ...centered, width: "60px" }}>Next Week</th>
-        <th style={{ ...centered, width: "50px" }}>Risks</th>
+        <th style={{ ...PORTFOLIO_HEAD_CENTERED_STYLE, width: "60px" }}>
+          This Week
+        </th>
+        <th style={{ ...PORTFOLIO_HEAD_CENTERED_STYLE, width: "60px" }}>
+          Next Week
+        </th>
+        <th style={{ ...PORTFOLIO_HEAD_CENTERED_STYLE, width: "50px" }}>
+          Risks
+        </th>
       </tr>
     </thead>
   );
@@ -36,11 +55,10 @@ function PrintPortfolioRow({
 }: {
   readonly product: WeeklyPortfolioProduct;
 }) {
-  const centered = { padding: "5px 8px", textAlign: "center" } as const;
   return (
     <tr style={{ borderBottom: BORDER_LIGHT }}>
       <td style={{ padding: "5px 8px", fontWeight: 600 }}>{product.name}</td>
-      <td style={centered}>
+      <td style={PORTFOLIO_ROW_CENTERED_STYLE}>
         <span
           style={{
             display: "inline-block",
@@ -48,7 +66,7 @@ function PrintPortfolioRow({
             borderRadius: "50px",
             fontSize: "10px",
             fontWeight: 600,
-            color: "#ffffff",
+            color: ON_BRAND_TEXT,
             backgroundColor: printStatusColor(product.status),
           }}
         >
@@ -58,9 +76,9 @@ function PrintPortfolioRow({
       <td style={{ padding: "5px 8px", color: TEXT_SECONDARY }}>
         {product.leads}
       </td>
-      <td style={centered}>{product.currentWeekCount}</td>
-      <td style={centered}>{product.nextWeekCount}</td>
-      <td style={centered}>
+      <td style={PORTFOLIO_ROW_CENTERED_STYLE}>{product.currentWeekCount}</td>
+      <td style={PORTFOLIO_ROW_CENTERED_STYLE}>{product.nextWeekCount}</td>
+      <td style={PORTFOLIO_ROW_CENTERED_STYLE}>
         <span
           style={
             product.riskCount > 0

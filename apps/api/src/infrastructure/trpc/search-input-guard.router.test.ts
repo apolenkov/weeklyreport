@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Null-byte q must be rejected as BAD_REQUEST at the router boundary
@@ -10,9 +11,9 @@ import { createAppRouter } from "./trpc.router.js";
 const NULL_BYTE = String.fromCharCode(0);
 
 function buildCaller(query: ReturnType<typeof vi.fn>) {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     searchService: { query },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session: {
       userId: "44444444-4444-4444-8444-444444444444",

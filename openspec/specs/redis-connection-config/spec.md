@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change centralize-redis-connection-config. Update Purpose after archive.
+Derive every Redis connection from one fail-loud validated configuration builder and keep Redis-backed service instances under dependency injection.
 
 ## Requirements
 

@@ -97,9 +97,7 @@ export function buildActivityDecisionSave(args: {
   };
 }
 
-// Legacy parentless product label — matches mapLeadDecisions / DecisionsSection.
-const LEGACY_GROUP_PRODUCT_NAME = "Group";
-
+// An absent product name stays empty — never a fabricated catch-all label.
 export function buildProductDecisionSave(args: {
   readonly base: DecisionSaveBase;
   readonly decision: DecisionEntry | null;
@@ -110,10 +108,7 @@ export function buildProductDecisionSave(args: {
   return {
     ...args.base,
     productId: args.parentId || "",
-    productName:
-      args.selectedProduct?.name ??
-      args.decision?.productName ??
-      LEGACY_GROUP_PRODUCT_NAME,
+    productName: args.selectedProduct?.name ?? args.decision?.productName ?? "",
     activityId: null,
     stageNames:
       args.effectiveStageNames.length > 0

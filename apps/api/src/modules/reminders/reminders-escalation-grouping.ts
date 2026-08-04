@@ -1,14 +1,14 @@
 interface EscalationHead {
-  id: string;
-  email: string;
-  name: string;
-  isActive: boolean;
-  role: string;
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly isActive: boolean;
+  readonly role: string;
 }
 
 export interface EscalationGroupDigest {
-  head: { userId: string; email: string; name: string };
-  lateLeads: {
+  readonly head: { userId: string; email: string; name: string };
+  readonly lateLeads: readonly {
     leadName: string;
     sectionTitle: string;
     deadlineIso: string;
@@ -16,12 +16,15 @@ export interface EscalationGroupDigest {
 }
 
 export interface EscalationReport {
-  id: string;
-  deadline: Date;
-  sections: {
-    author: {
-      name: string;
-      reportingGroup: { name: string; head: EscalationHead | null } | null;
+  readonly id: string;
+  readonly deadline: Date;
+  readonly sections: readonly {
+    readonly author: {
+      readonly name: string;
+      readonly reportingGroup: {
+        name: string;
+        head: EscalationHead | null;
+      } | null;
     };
   }[];
 }
@@ -47,8 +50,12 @@ function requireReportingGroupName(
 }
 
 interface ResolvedSection {
-  head: { userId: string; email: string; name: string };
-  lateLead: { leadName: string; sectionTitle: string; deadlineIso: string };
+  readonly head: { userId: string; email: string; name: string };
+  readonly lateLead: {
+    leadName: string;
+    sectionTitle: string;
+    deadlineIso: string;
+  };
 }
 
 // One digest per active head (multi-group heads still get one). Unresolved

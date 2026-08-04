@@ -14,7 +14,17 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   // activity name, beside product risks.
   return section.risks
     .filter((r) => r.projectId != null || r.activityId != null)
-    .map((r, idx) => {
+    .map((r) => {
+      const id = r.id ?? r.stableId;
+      if (id == null) {
+        // The API always emits the DB primary key as id; a row with neither id
+        // nor stableId is corrupt lineage that must not be dressed as identity.
+        throw new Error(
+          `Risk is missing both id and stableId (project ${
+            r.projectId ?? "none"
+          }) — cannot map corrupt legacy lineage`,
+        );
+      }
       const activityName =
         r.activityId != null
           ? (activityNameById.get(r.activityId) ?? "Unknown")
@@ -22,7 +32,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
       const project =
         r.projectId != null ? projectIndex.get(r.projectId) : undefined;
       return {
-        id: r.id ?? `risk-${idx}`,
+        id,
         productId: r.projectId ?? "",
         productName: project?.name ?? activityName ?? "Unknown",
         ...(r.activityId != null

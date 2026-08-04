@@ -15,18 +15,18 @@ export function deriveSessionActors(sessionState: SessionState | null): {
 
 export function deriveActiveIds(
   active: { reportId: string; reportSectionId: string } | null | undefined,
-): { activeReportId: string; activeSectionId: string } {
+): { activeReportId: string | null; activeSectionId: string | null } {
   return {
-    activeReportId: active?.reportId ?? "",
-    activeSectionId: active?.reportSectionId ?? "",
+    activeReportId: active?.reportId ?? null,
+    activeSectionId: active?.reportSectionId ?? null,
   };
 }
 
 // Prefer path-segment reportId so a lead can view/bookmark past weeks.
 export function deriveTargetReportId(
   pinnedReportId: string | undefined,
-  activeReportId: string,
-): string {
+  activeReportId: string | null,
+): string | null {
   return pinnedReportId && pinnedReportId !== ""
     ? pinnedReportId
     : activeReportId;

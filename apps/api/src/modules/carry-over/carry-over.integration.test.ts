@@ -100,10 +100,13 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: TEST_IDS.carryTargetItem,
@@ -120,6 +123,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       decisions: [],
       priorities: [],
       activities: [],
+      reviews: [],
     };
 
     const result = await repo.saveCarryOver(execution, records, [
@@ -192,10 +196,13 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: TEST_IDS.carryTargetItem,
@@ -212,6 +219,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       decisions: [],
       priorities: [],
       activities: [],
+      reviews: [],
     };
 
     await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
@@ -270,10 +278,13 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: TEST_IDS.carryTargetItem, // fresh PK minted by the clone
@@ -290,6 +301,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       decisions: [],
       priorities: [],
       activities: [],
+      reviews: [],
     };
 
     await repo.saveCarryOver(execution, [], [targetSectionReadModel]);
@@ -356,10 +368,13 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [],
       risks: [],
       decisions: [
@@ -375,6 +390,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
         },
       ],
       activities: [],
+      reviews: [],
     };
 
     // The old write used a non-existent `stageName` field, aborting the whole
@@ -447,10 +463,13 @@ describe("CarryOverPrismaRepository (integration)", () => {
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: itemId,
@@ -468,6 +487,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       risks: [],
       decisions: [],
       activities: [],
+      reviews: [],
     };
 
     await repo.saveCarryOver(execution, records, [targetSectionReadModel]);

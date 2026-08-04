@@ -48,6 +48,7 @@ describe("verifySamlProfile", () => {
       const result = verifySamlProfile(devOptions, {
         nameID: "u-2",
         email: "h@example.com",
+        displayName: "Head",
         role: "head",
       });
       expect(result.ok).toBe(true);
@@ -109,6 +110,29 @@ describe("verifySamlProfile", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.message).toContain("SAML profile is missing");
+      }
+    });
+
+    it("rejects a profile without a displayName instead of provisioning a placeholder", () => {
+      const result = verifySamlProfile(prodOptions, {
+        nameID: "u-3",
+        email: "nameless@example.com",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.message).toContain("missing displayName attribute");
+      }
+    });
+
+    it("rejects a blank/whitespace displayName the same way", () => {
+      const result = verifySamlProfile(prodOptions, {
+        nameID: "u-4",
+        email: "blank@example.com",
+        displayName: " ".repeat(3),
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.message).toContain("missing displayName attribute");
       }
     });
   });

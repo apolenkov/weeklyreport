@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change ui-ux-vercel-audit-research. Update Purpose after archive.
+Require a grounded UI, Next.js, Vercel, and Core Web Vitals audit memo before frontend implementation or performance claims proceed.
 
 ## Requirements
 
@@ -41,7 +41,7 @@ under the planning-only scope.
 - **WHEN** the Core Web Vitals section of the memo is read
 - **THEN** it references the existing instrumentation
   (`apps/web/src/lib/web-vitals.ts`,
-  `apps/web/src/components/web-vitals-reporter.tsx`,
+  `apps/web/src/features/telemetry/ui/web-vitals-reporter.tsx`,
   `apps/web/src/app/layout.tsx`)
 - **AND** it presents a "what to measure later" plan rather than fabricated LCP,
   INP, or CLS scores

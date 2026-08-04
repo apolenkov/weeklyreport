@@ -37,11 +37,12 @@ export type SubmitOutcome =
   "submitted" | "conflict" | "error" | "not-ready" | "no-draft";
 
 // Locked stages never appear in the draft payload — exclude them from the
-// positional label lookup so owned-stage names stay aligned.
+// positional label lookup so owned-stage names stay aligned. A stage whose
+// label cannot be resolved is null (never the raw stage id dressed as copy).
 export function buildSubmitStages(
   draftPayload: DraftSaveContent | null,
   products: readonly Product[],
-): { projectId: string; stageId: string; name: string }[] {
+): { projectId: string; stageId: string; name: string | null }[] {
   return (draftPayload?.stageStatuses ?? []).map((status, index, statuses) => {
     const product = products.find(
       (candidate) => candidate.id === status.projectId,
@@ -55,7 +56,7 @@ export function buildSubmitStages(
     return {
       projectId: status.projectId,
       stageId: status.stageId,
-      name: ownedStages?.[stageIndex]?.stageName ?? status.stageId,
+      name: ownedStages?.[stageIndex]?.stageName ?? null,
     };
   });
 }

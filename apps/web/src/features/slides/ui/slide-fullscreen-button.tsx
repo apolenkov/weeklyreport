@@ -25,7 +25,7 @@ export function SlideFullscreenButton({
   // controls (the label survives as aria-label + tooltip).
   const className =
     variant === "floating"
-      ? "btn-press fixed top-4 right-4 z-50 inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-[var(--color-card)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] shadow-lg transition-colors hover:bg-[var(--color-surface-hover)]"
+      ? "btn-press fixed top-4 right-4 z-[var(--layer-popover)] inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] shadow-lg transition-colors hover:bg-[var(--color-surface-hover)]"
       : "btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]";
 
   const label = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";

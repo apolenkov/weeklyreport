@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import {
   createRepository,
   initialSnapshot,
@@ -14,7 +15,10 @@ const PROJECT_ID = "55555555-5555-4555-8555-555555555555";
 const PROJECT_ID_2 = "66666666-6666-4666-8666-666666666666";
 
 function createService(): ProjectAdminService {
-  return new ProjectAdminService(createRepository(initialSnapshot));
+  return new ProjectAdminService(
+    createRepository(initialSnapshot),
+    createNullLogger(),
+  );
 }
 
 describe("ProjectAdminService — stage assignments", () => {

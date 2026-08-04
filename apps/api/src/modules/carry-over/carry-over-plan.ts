@@ -77,6 +77,7 @@ function carryEntryForAuthor(
   targetSection: ReportSectionReadModel,
   sourceReportId: string,
   targetReportId: string,
+  carriedAt: Date,
 ): CarriedAuthorEntry {
   // Activities re-attached to this author's target section — an
   // activity-parented source record carries only when its parent is here.
@@ -92,13 +93,20 @@ function carryEntryForAuthor(
       .filter((item) =>
         isCarryableItem(item, targetActivityIds, targetItemLineage),
       )
-      .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item)),
+      .map((item) =>
+        cloneCarriedItem(sourceReportId, targetReportId, item, carriedAt),
+      ),
     decisions: sourceSection.decisions
       .filter((decision) =>
         isCarryableDecision(decision, targetActivityIds, targetDecisionLineage),
       )
       .map((decision) =>
-        cloneUnresolvedDecision(sourceReportId, targetReportId, decision),
+        cloneUnresolvedDecision(
+          sourceReportId,
+          targetReportId,
+          decision,
+          carriedAt,
+        ),
       ),
   };
 }
@@ -109,6 +117,7 @@ export function planCarriedEntries(
   targetSections: readonly ReportSectionReadModel[],
   sourceReportId: string,
   targetReportId: string,
+  carriedAt: Date,
 ): CarriedAuthorEntry[] {
   const targetByAuthor = new Map(
     targetSections.map((target) => [target.authorId, target] as const),
@@ -122,6 +131,7 @@ export function planCarriedEntries(
             targetSection,
             sourceReportId,
             targetReportId,
+            carriedAt,
           ),
         ]
       : [];
@@ -179,18 +189,22 @@ export function collectCarryOverRecords(
   ];
 }
 
+// Deterministic — timestamps arrive via the boundary-provided `now`, never
+// minted here (mirrors the period transition module's no-new-Date contract).
 export function buildCarryOverExecution(input: {
   sourceReportId: string;
   targetReportId: string;
   dedupeKey: string;
   carriedItemCount: number;
   carriedDecisionCount: number;
+  now: Date;
 }): CarryOverExecution {
+  const { now, ...executionInput } = input;
   return carryOverExecutionSchema.parse({
     id: crypto.randomUUID(),
-    ...input,
+    ...executionInput,
     status: "completed",
-    startedAt: new Date(),
-    completedAt: new Date(),
+    startedAt: now,
+    completedAt: now,
   });
 }

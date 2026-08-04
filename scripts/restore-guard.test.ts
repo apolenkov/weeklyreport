@@ -1,0 +1,138 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import test from "node:test";
+
+const restoreScript = resolve("deploy/postgres/restore.sh");
+
+void test("compose-mounted restore entrypoint is executable", () => {
+  assert.notEqual(statSync(restoreScript).mode & 0o111, 0);
+});
+
+function runRestore(overrides: NodeJS.ProcessEnv = {}) {
+  const directory = mkdtempSync(join(tmpdir(), "restore-guard-"));
+  const log = join(directory, "pg-restore.log");
+  const fakeRestore = join(directory, "pg_restore");
+  const dump = join(directory, "backup.dump");
+  writeFileSync(dump, "test archive placeholder");
+  writeFileSync(
+    fakeRestore,
+    '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$PG_RESTORE_LOG"\n' +
+      'if [ "$1" = "--list" ] && [ "$FAIL_ARCHIVE_LIST" = "yes" ]; then exit 1; fi\n',
+  );
+  chmodSync(fakeRestore, 0o755);
+  const passwordVariable = ["PG", "PASSWORD"].join("");
+  const fixtureSecret = randomUUID();
+  const env = {
+    PG_RESTORE_LOG: log,
+    PG_RESTORE_BIN: fakeRestore,
+    RESTORE_ENVIRONMENT: "test",
+    PGHOST: "db.internal",
+    PGPORT: "5432",
+    PGUSER: "restore-user",
+    [passwordVariable]: fixtureSecret,
+    PGDATABASE: "customreport_test",
+    CONFIRM_RESTORE_TARGET: "test|db.internal|5432|customreport_test",
+    ...overrides,
+  };
+  const result = spawnSync("/bin/sh", [restoreScript, dump], {
+    env,
+    encoding: "utf8",
+  });
+  const calls = (() => {
+    try {
+      return readFileSync(log, "utf8").trim().split("\n").filter(Boolean);
+    } catch {
+      return [];
+    }
+  })();
+  return { calls, fixtureSecret, result };
+}
+
+void test("wrong host, port, or database confirmation executes nothing", () => {
+  for (const confirmation of [
+    "test|other.internal|5432|customreport_test",
+    "test|db.internal|6432|customreport_test",
+    "test|db.internal|5432|other_test",
+  ]) {
+    const { calls, result } = runRestore({
+      CONFIRM_RESTORE_TARGET: confirmation,
+    });
+    assert.equal(result.status, 3);
+    assert.deepEqual(calls, []);
+  }
+});
+
+void test("invalid host, port, or database executes nothing", () => {
+  for (const overrides of [
+    { PGHOST: "db.internal user" },
+    { PGPORT: "70000" },
+    { PGDATABASE: "customreport/test" },
+  ]) {
+    const { calls, result } = runRestore(overrides);
+    assert.equal(result.status, 2);
+    assert.deepEqual(calls, []);
+  }
+});
+
+void test("missing environment and malformed confirmation execute nothing", () => {
+  const missing = runRestore({ RESTORE_ENVIRONMENT: "" });
+  assert.equal(missing.result.status, 2);
+  assert.deepEqual(missing.calls, []);
+
+  const malformed = runRestore({ CONFIRM_RESTORE_TARGET: "yes" });
+  assert.equal(malformed.result.status, 3);
+  assert.deepEqual(malformed.calls, []);
+});
+
+void test("production requires the existing destructive consent", () => {
+  const { calls, result } = runRestore({
+    RESTORE_ENVIRONMENT: "production",
+    CONFIRM_RESTORE_TARGET: "production|db.internal|5432|customreport_test",
+  });
+  assert.equal(result.status, 3);
+  assert.match(result.stderr, /ALLOW_PROD_DESTRUCTIVE=yes/);
+  assert.deepEqual(calls, []);
+});
+
+void test("archive validation precedes one non-production restore", () => {
+  const { calls, fixtureSecret, result } = runRestore();
+  assert.equal(result.status, 0);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0] ?? "", /^--list /);
+  assert.match(calls[1] ?? "", /--host=db\.internal/);
+  assert.match(calls[1] ?? "", /--port=5432/);
+  assert.match(calls[1] ?? "", /--dbname=customreport_test/);
+  assert.match(calls[1] ?? "", /--single-transaction/);
+  assert.ok(!(result.stdout + result.stderr).includes(fixtureSecret));
+});
+
+void test("fully consented production restore runs once after validation", () => {
+  const { calls, result } = runRestore({
+    RESTORE_ENVIRONMENT: "Production",
+    PGHOST: "DB.INTERNAL.",
+    PGDATABASE: "CUSTOMREPORT_TEST",
+    CONFIRM_RESTORE_TARGET: "production|db.internal|5432|customreport_test",
+    ALLOW_PROD_DESTRUCTIVE: "yes",
+  });
+  assert.equal(result.status, 0);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0] ?? "", /^--list /);
+  assert.match(calls[1] ?? "", /--clean/);
+});
+
+void test("an unreadable archive never reaches the destructive command", () => {
+  const { calls, result } = runRestore({ FAIL_ARCHIVE_LIST: "yes" });
+  assert.equal(result.status, 4);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0] ?? "", /^--list /);
+});

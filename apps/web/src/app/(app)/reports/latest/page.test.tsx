@@ -1,11 +1,9 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockReplace = vi.fn();
@@ -100,6 +98,22 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
     expect(
       screen.getByText(/could not load the status report/i),
     ).toBeInTheDocument();
+  });
+
+  it("offers a real retry that refetches on the error state", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch,
+    } as unknown as ReturnType<typeof useQuery>);
+
+    render(<ReportsLatestPage />);
+
+    const retry = screen.getByRole("button", { name: "Try again" });
+    fireEvent.click(retry);
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it("shows the resolving copy while the query is loading", () => {

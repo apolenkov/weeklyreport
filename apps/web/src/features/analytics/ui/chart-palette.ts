@@ -1,11 +1,11 @@
-export const COLORS = [
-  "#15803d",
-  "#2563eb",
-  "#9333ea",
-  "#0891b2",
-  "#c2410c",
-  "#a21caf",
-];
+export const SERIES_PALETTE = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+  "var(--color-chart-6)",
+] as const;
 
 export interface ChartSeries {
   readonly dataKey: string;
@@ -14,4 +14,4 @@ export interface ChartSeries {
 
 // null = genuine gap (no published status); recharts breaks the line instead
 // of collapsing to zero.
-export type ChartData = Record<string, number | string | null>;
+export type ChartData = Readonly<Record<string, number | string | null>>;

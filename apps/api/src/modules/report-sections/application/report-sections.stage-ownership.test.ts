@@ -18,9 +18,11 @@ const baseSection: ReportSectionReadModel = {
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -36,8 +38,11 @@ const baseSection: ReportSectionReadModel = {
           sortOrder: 0,
         },
       ],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -54,6 +59,7 @@ const baseSection: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 function createRepository(
@@ -109,6 +115,8 @@ describe("ReportSectionsService — stage-ownership guard", () => {
             sortOrder: 0,
           },
         ],
+        stageSet: [],
+        ownerGroupId: null,
       },
     ],
   };
@@ -129,15 +137,20 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     );
 
     await expect(
-      service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-        items: [],
-        risks: [devOpsRisk],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+          items: [],
+          risks: [devOpsRisk],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
@@ -148,16 +161,21 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     );
 
     await expect(
-      service.submitSection({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        confirmed: true,
-        projectStatuses: [{ projectId: PROJECT_P, status: "green" }],
-        items: [],
-        risks: [devOpsRisk],
-        decisions: [],
-      }),
+      service.submitSection(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          confirmed: true,
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "green" }],
+          items: [],
+          risks: [devOpsRisk],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
@@ -167,26 +185,29 @@ describe("ReportSectionsService — stage-ownership guard", () => {
       testGraceSettings,
     );
 
-    const saved = await service.saveDraft({
-      reportSectionId: baseSection.reportSectionId,
-      version: 1,
-      status: "draft",
-      projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-      items: [],
-      risks: [{ ...devOpsRisk, stageNames: ["Testing"] }],
-      decisions: [],
-    });
+    const saved = await service.saveDraft(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+        items: [],
+        risks: [{ ...devOpsRisk, stageNames: ["Testing"] }],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("draft");
     expect(saved.risks).toHaveLength(1);
   });
 
   it("scopes to the section author's owned stages even on an on-behalf edit", async () => {
-    // The guard never reads actorUserId; it references the SECTION AUTHOR's
-    // ownedStages (Testing only). Passing the author's own id exercises the
-    // self-check path and still reaches the guard — so a head/admin on-behalf
-    // edit (which bypasses the self-check) likewise cannot inject an unowned
-    // stage: the DevOps stage is rejected because the AUTHOR does not own it.
+    // The guard references the SECTION AUTHOR's ownedStages, never actorUserId,
+    // so a head/admin on-behalf edit (which bypasses the self-check) also cannot
+    // inject an unowned stage — the author does not own it.
     const service = new ReportSectionsService(
       createRepository(testingOwner),
       testGraceSettings,
@@ -198,6 +219,8 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           reportSectionId: baseSection.reportSectionId,
           version: 1,
           status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
           projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
           items: [],
           risks: [devOpsRisk],
@@ -218,23 +241,28 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     );
 
     await expect(
-      service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-        items: [],
-        risks: [],
-        decisions: [
-          {
-            text: "Adopt new deploy tooling",
-            owner: "Lead 1",
-            impact: "Faster releases",
-            productId: PROJECT_P,
-            stageNames: ["DevOps"],
-          },
-        ],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+          items: [],
+          risks: [],
+          decisions: [
+            {
+              text: "Adopt new deploy tooling",
+              owner: "Lead 1",
+              impact: "Faster releases",
+              productId: PROJECT_P,
+              stageNames: ["DevOps"],
+            },
+          ],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
@@ -264,25 +292,30 @@ describe("ReportSectionsService — stage-ownership guard", () => {
       testGraceSettings,
     );
 
-    const saved = await service.saveDraft({
-      reportSectionId: baseSection.reportSectionId,
-      version: 1,
-      status: "draft",
-      projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-      items: [],
-      risks: [
-        {
-          stableId: STABLE_ID,
-          projectId: CROSS_PROJECT,
-          risk: "Gateway certification slips",
-          impact: "Payments blocked",
-          mitigation: "Escalate to vendor",
-          severity: "at-risk",
-          stageNames: ["Integration"],
-        },
-      ],
-      decisions: [],
-    });
+    const saved = await service.saveDraft(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+        items: [],
+        risks: [
+          {
+            stableId: STABLE_ID,
+            projectId: CROSS_PROJECT,
+            risk: "Gateway certification slips",
+            impact: "Payments blocked",
+            mitigation: "Escalate to vendor",
+            severity: "at-risk",
+            stageNames: ["Integration"],
+          },
+        ],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("draft");
     expect(saved.risks).toHaveLength(1);
@@ -295,27 +328,32 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     );
 
     await expect(
-      service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-        items: [],
-        risks: [
-          {
-            // Same lineage key as the grandfathered row, but the stage set
-            // changed to one the author does not own → re-validated, rejected.
-            stableId: STABLE_ID,
-            projectId: CROSS_PROJECT,
-            risk: "Gateway certification slips",
-            impact: "Payments blocked",
-            mitigation: "Escalate to vendor",
-            severity: "at-risk",
-            stageNames: ["DevOps"],
-          },
-        ],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+          items: [],
+          risks: [
+            {
+              // Same lineage key as the grandfathered row, but the stage set
+              // changed to one the author does not own → re-validated, rejected.
+              stableId: STABLE_ID,
+              projectId: CROSS_PROJECT,
+              risk: "Gateway certification slips",
+              impact: "Payments blocked",
+              mitigation: "Escalate to vendor",
+              severity: "at-risk",
+              stageNames: ["DevOps"],
+            },
+          ],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
@@ -344,27 +382,32 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     );
 
     await expect(
-      service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
-        items: [],
-        risks: [
-          {
-            // Identical stage set, but the product changed to one the author
-            // owns no stage on → not grandfathered, Testing is not owned there.
-            stableId: STABLE_ID,
-            projectId: CROSS_PROJECT,
-            risk: "Flaky suite",
-            impact: "Slows release",
-            mitigation: "Stabilize",
-            severity: "at-risk",
-            stageNames: ["Testing"],
-          },
-        ],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+          items: [],
+          risks: [
+            {
+              // Identical stage set, but the product changed to one the author
+              // owns no stage on → not grandfathered, Testing is not owned there.
+              stableId: STABLE_ID,
+              projectId: CROSS_PROJECT,
+              risk: "Flaky suite",
+              impact: "Slows release",
+              mitigation: "Stabilize",
+              severity: "at-risk",
+              stageNames: ["Testing"],
+            },
+          ],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 });

@@ -69,8 +69,21 @@ function createRepository(fixture: Fixture = {}) {
       return Promise.resolve(created);
     },
     update({ linkedProductIds, ...rest }) {
+      const existing = activities.get(rest.id);
+      if (!existing) {
+        return Promise.reject(
+          new ProjectActivityNotFoundError("Activity not found."),
+        );
+      }
+      if (existing.groupId !== rest.groupId && existing.leadIds.length > 0) {
+        return Promise.reject(
+          new ProjectActivityDomainError(
+            "Detach all leads before moving the activity to another group.",
+          ),
+        );
+      }
       const next = makeActivity({
-        ...activities.get(rest.id),
+        ...existing,
         ...rest,
         linkedProducts: toLinkedProducts(linkedProductIds),
       });
@@ -83,6 +96,24 @@ function createRepository(fixture: Fixture = {}) {
       return Promise.resolve(next);
     },
     attachLead(edge) {
+      const activity = activities.get(edge.activityId);
+      const users = fixture.users ?? {
+        [LEAD_IN_A]: { role: "lead" as const, reportingGroupId: GROUP_A },
+        [LEAD_IN_B]: { role: "lead" as const, reportingGroupId: GROUP_B },
+        [HEAD_IN_A]: { role: "head" as const, reportingGroupId: GROUP_A },
+      };
+      const lead = users[edge.leadId];
+      if (!activity || !lead) {
+        return Promise.reject(new ProjectActivityNotFoundError("Not found."));
+      }
+      if (activity.archived || lead.role !== "lead") {
+        return Promise.reject(new ProjectActivityDomainError("Not allowed."));
+      }
+      if (lead.reportingGroupId !== activity.groupId) {
+        return Promise.reject(
+          new ProjectActivityDomainError("Groups do not match."),
+        );
+      }
       attached.push(edge);
       return Promise.resolve();
     },
@@ -101,14 +132,6 @@ function createRepository(fixture: Fixture = {}) {
           (fixture.products ?? [PRODUCT_ID]).includes(productId),
         ),
       );
-    },
-    getLeadContext(leadId) {
-      const users = fixture.users ?? {
-        [LEAD_IN_A]: { role: "lead", reportingGroupId: GROUP_A },
-        [LEAD_IN_B]: { role: "lead", reportingGroupId: GROUP_B },
-        [HEAD_IN_A]: { role: "head", reportingGroupId: GROUP_A },
-      };
-      return Promise.resolve(users[leadId] ?? null);
     },
   };
 

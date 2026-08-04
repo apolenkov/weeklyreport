@@ -6,10 +6,10 @@ const ISO_DATE_LENGTH = 10;
 export type ReminderDedupeKeyKind = "deadline" | "escalation";
 
 export interface ReminderDedupeKeyParts {
-  ruleId: string;
-  kind: ReminderDedupeKeyKind;
-  cycleDate: string;
-  recipientEmail: string;
+  readonly ruleId: string;
+  readonly kind: ReminderDedupeKeyKind;
+  readonly cycleDate: string;
+  readonly recipientEmail: string;
 }
 
 export function buildReminderDedupeKey(parts: ReminderDedupeKeyParts): string {

@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
@@ -48,7 +46,7 @@ describe("IfRole — role-guard wrapper", () => {
     useQueryMock.mockReturnValue({ data: undefined });
 
     render(
-      <IfRole role="admin">
+      <IfRole forRole="admin">
         <span data-testid="gated">visible</span>
       </IfRole>,
     );
@@ -60,7 +58,7 @@ describe("IfRole — role-guard wrapper", () => {
     mockMe(null);
 
     render(
-      <IfRole role="admin">
+      <IfRole forRole="admin">
         <span data-testid="gated">visible</span>
       </IfRole>,
     );
@@ -72,7 +70,7 @@ describe("IfRole — role-guard wrapper", () => {
     mockMe("admin");
 
     render(
-      <IfRole role="admin">
+      <IfRole forRole="admin">
         <span data-testid="gated">visible</span>
       </IfRole>,
     );
@@ -84,7 +82,7 @@ describe("IfRole — role-guard wrapper", () => {
     mockMe("head");
 
     render(
-      <IfRole role="admin">
+      <IfRole forRole="admin">
         <span data-testid="gated">visible</span>
       </IfRole>,
     );
@@ -96,7 +94,7 @@ describe("IfRole — role-guard wrapper", () => {
     mockMe("head");
 
     render(
-      <IfRole role={["admin", "head"]}>
+      <IfRole forRole={["admin", "head"]}>
         <span data-testid="gated">visible</span>
       </IfRole>,
     );
@@ -108,7 +106,7 @@ describe("IfRole — role-guard wrapper", () => {
     mockMe("lead");
 
     render(
-      <IfRole role={["admin", "head"]}>
+      <IfRole forRole={["admin", "head"]}>
         <span data-testid="gated">visible</span>
       </IfRole>,
     );

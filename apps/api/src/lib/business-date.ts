@@ -19,9 +19,25 @@ const FRIDAY = 5;
 const SATURDAY = 6;
 const SUNDAY = 7;
 
-// Default wall-clock deadline hour (legacy product convention).
-const DEFAULT_DEADLINE_HOUR = 18;
-const MAX_HOUR_OF_DAY = 23;
+const DEADLINE_TIME_PATTERN = /^(?<hour>[01]\d|2[0-3]):(?<minute>[0-5]\d)$/;
+
+export interface DeadlineTime {
+  readonly hour: number;
+  readonly minute: number;
+}
+
+export function parseDeadlineTime(value: string): DeadlineTime {
+  const match = DEADLINE_TIME_PATTERN.exec(value);
+  if (!match?.groups) {
+    throw new Error(
+      `business-date: deadlineTime must use HH:MM (got ${JSON.stringify(value)})`,
+    );
+  }
+  return {
+    hour: Number(match.groups.hour),
+    minute: Number(match.groups.minute),
+  };
+}
 
 // Exported for tests only.
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
@@ -68,8 +84,7 @@ export function addBusinessDays(
   wd: WorkingDays,
   tz: string,
 ): Date {
-  // eslint-disable-next-line no-restricted-syntax -- loop-carried running date; reassigned each step (dt = dt.plus) as the business-day walk advances.
-  let dt = DateTime.fromJSDate(date).setZone(tz);
+  const dt = DateTime.fromJSDate(date).setZone(tz);
   if (!dt.isValid) {
     throw new Error(`business-date: invalid timezone "${tz}"`);
   }
@@ -77,48 +92,33 @@ export function addBusinessDays(
 
   const set = workingDaySet(wd);
   const step = n > 0 ? 1 : -1;
-  // eslint-disable-next-line no-restricted-syntax -- business-day counter, decremented as working days are consumed by the walk below.
-  let remaining = Math.abs(n);
-  // eslint-disable-next-line no-restricted-syntax -- iteration-budget guard, incremented per step to bound the variable-length walk (throws past MAX_ITER).
-  let iter = 0;
-
-  while (remaining > 0) {
-    if (++iter > MAX_ITER) {
-      throw new Error(
-        `business-date: addBusinessDays exceeded iteration budget (n=${n}, wd=${wd})`,
-      );
-    }
-    dt = dt.plus({ days: step });
-    if (set.has(dt.weekday)) remaining--;
+  const result = Array.from({ length: MAX_ITER }, (_, index) =>
+    dt.plus({ days: step * (index + 1) }),
+  ).filter((candidate) => set.has(candidate.weekday))[Math.abs(n) - 1];
+  if (result === undefined) {
+    throw new Error(
+      `business-date: addBusinessDays exceeded iteration budget (n=${n}, wd=${wd})`,
+    );
   }
-  return dt.toJSDate();
+  return result.toJSDate();
 }
 
-// Discards periodStart clock time — deadline always lands on HH:00:00 in tz.
+// Discards periodStart clock time and applies an explicit wall-clock time in tz.
+// deadlineTime is required: the 18:00 product default lives in period settings
+// (AppSettings.deadlineTime), not here — a generic helper must not embed it.
 export function computeDeadline(
   periodStart: Date,
   deadlineDays: number,
   wd: WorkingDays,
   tz: string,
-  deadlineHour = DEFAULT_DEADLINE_HOUR,
+  deadlineTime: DeadlineTime,
 ): Date {
-  if (
-    !Number.isInteger(deadlineHour) ||
-    deadlineHour < 0 ||
-    deadlineHour > MAX_HOUR_OF_DAY
-  ) {
-    throw new Error(
-      `business-date: deadlineHour must be integer 0..23 (got ${deadlineHour})`,
-    );
-  }
   const shifted = addBusinessDays(periodStart, deadlineDays, wd, tz);
   const dt = DateTime.fromJSDate(shifted).setZone(tz);
   if (!dt.isValid) {
     throw new Error(`business-date: invalid timezone "${tz}"`);
   }
-  return dt
-    .set({ hour: deadlineHour, minute: 0, second: 0, millisecond: 0 })
-    .toJSDate();
+  return dt.set({ ...deadlineTime, second: 0, millisecond: 0 }).toJSDate();
 }
 
 // The explicit utc zone — not the host clock — anchors the Monday
@@ -131,6 +131,11 @@ export function getCurrentWeekBounds(
   periodStart: Date;
   periodEnd: Date;
 } {
+  if (Number.isNaN(date.getTime())) {
+    throw new TypeError(
+      `business-date: input date must be valid (got ${String(date)})`,
+    );
+  }
   if (!Number.isInteger(periodLengthDays) || periodLengthDays <= 0) {
     throw new Error(
       `business-date: periodLengthDays must be a positive integer (got ${periodLengthDays})`,

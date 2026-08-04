@@ -12,13 +12,8 @@ import {
   formFromActivity,
   parseJiraAccounts,
 } from "../model/activity-form";
-import type { AdminGroupView } from "../model/admin-types";
 
-interface UseActivitiesTabStateArgs {
-  readonly groups: readonly AdminGroupView[];
-}
-
-function useActivityDialog(groups: readonly AdminGroupView[]) {
+function useActivityDialog() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingActivity, setEditingActivity] =
     useState<ProjectActivity | null>(null);
@@ -32,7 +27,9 @@ function useActivityDialog(groups: readonly AdminGroupView[]) {
     closeDialog: () => setShowDialog(false),
     openAdd: () => {
       setEditingActivity(null);
-      setForm({ ...EMPTY_ACTIVITY_FORM, groupId: groups[0]?.id ?? "" });
+      // No silent group preselection: the admin picks the group explicitly,
+      // and canSave blocks an empty picker from submitting.
+      setForm({ ...EMPTY_ACTIVITY_FORM });
       setShowDialog(true);
     },
     openEdit: (activity: ProjectActivity) => {
@@ -89,12 +86,12 @@ function useActivityArchive(
   };
 }
 
-export function useActivitiesTabState({ groups }: UseActivitiesTabStateArgs) {
+export function useActivitiesTabState() {
   const trpc = useTRPC();
   const activitiesQuery = useQuery(trpc.projectActivity.list.queryOptions());
   const activities = activitiesQuery.data ?? [];
 
-  const dialog = useActivityDialog(groups);
+  const dialog = useActivityDialog();
   const filters = useActivityFilters(activities);
   const expansion = useActivityExpansion();
   const { createMut, updateMut, archiveMut } = useActivityMutations(
@@ -104,9 +101,10 @@ export function useActivitiesTabState({ groups }: UseActivitiesTabStateArgs) {
 
   // groupId is a required uuid on the wire — an empty picker must not submit.
   const canSave =
-    dialog.form.name.trim().length > 0 && dialog.form.groupId.length > 0;
+    dialog.form.name.trim().length > 0 && dialog.form.groupId !== null;
 
   const handleSave = () => {
+    if (dialog.form.groupId === null) return;
     const payload = {
       name: dialog.form.name.trim(),
       groupId: dialog.form.groupId,
@@ -130,7 +128,9 @@ export function useActivitiesTabState({ groups }: UseActivitiesTabStateArgs) {
     canSave,
     isLoading: activitiesQuery.isLoading,
     isError: activitiesQuery.isError,
-    retry: () => void activitiesQuery.refetch(),
+    retry: () => {
+      void activitiesQuery.refetch().catch(() => undefined);
+    },
     isSaving: createMut.isPending || updateMut.isPending,
     isArchiving: archiveMut.isPending,
   };

@@ -14,8 +14,8 @@ import {
 } from "../trpc.middleware.js";
 
 export interface ReportsRouterDeps {
-  reportSectionsService: ReportSectionsService;
-  weeklyReportService: WeeklyReportService;
+  readonly reportSectionsService: ReportSectionsService;
+  readonly weeklyReportService: WeeklyReportService;
 }
 
 function createSectionProcedures(deps: ReportsRouterDeps) {

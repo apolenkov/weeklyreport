@@ -1,4 +1,5 @@
 import { formatTimestampShort } from "../../../lib/format-date";
+import { DeleteIcon, EditIcon } from "../../../shared/ui/icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";
@@ -9,47 +10,10 @@ import {
   splitStageNames,
 } from "../../report-sections";
 
-function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-    </svg>
-  );
-}
-
-// Deadlines are stored as UTC date-only values, so the chip formats in UTC —
-// a local-zone render shows the previous day for viewers west of UTC.
-function formatDeadline(iso: string | null): string {
-  if (!iso) return "—";
+function formatDeadline(iso: string | null): string | null {
+  if (!iso) return null;
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : formatTimestampShort(date);
+  return Number.isNaN(date.getTime()) ? null : formatTimestampShort(date);
 }
 
 interface DecisionCardProps {
@@ -75,14 +39,24 @@ function stagesAriaLabel(
 // The amber deadline chip and the icon-button hairline/destructive-hover ramp
 // have no design token yet; naming them keeps the raw values to one site each.
 const DUE_CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]";
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]";
+const INVALID_DUE_CHIP_CLASS =
+  "inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]";
 const ICON_BUTTON_CLASS =
-  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5";
+  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5";
 const EDIT_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
-const DELETE_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]`;
+const DELETE_BUTTON_CLASS = `${ICON_BUTTON_CLASS} text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] hover:text-[var(--color-destructive)]`;
 
 function DueChip({ deadline }: { readonly deadline: string }) {
-  return <span className={DUE_CHIP_CLASS}>Due {formatDeadline(deadline)}</span>;
+  const formatted = formatDeadline(deadline);
+  if (formatted === null) {
+    return (
+      <span className={INVALID_DUE_CHIP_CLASS} role="alert">
+        Due date unavailable
+      </span>
+    );
+  }
+  return <span className={DUE_CHIP_CLASS}>Due {formatted}</span>;
 }
 
 function DecisionCardHeader({
@@ -115,8 +89,7 @@ export function DecisionCard(props: DecisionCardProps) {
   const stageTags = (
     decision.stageNames && decision.stageNames.length > 0
       ? decision.stageNames
-      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(decision.stageName)
+      : splitStageNames(decision.stageName)
   )
     // Heal legacy short "Dev" at render, mirroring the risk row and item card.
     .map(canonicalStageName);

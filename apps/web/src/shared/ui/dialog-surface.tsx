@@ -18,7 +18,7 @@ interface DialogSurfaceProps {
 }
 
 const DEFAULT_BACKDROP_CLASS =
-  "fixed inset-0 z-[100] flex items-center justify-center bg-black/40";
+  "fixed inset-0 z-[var(--layer-dialog)] flex items-center justify-center bg-[var(--color-overlay)]";
 
 // Owns modal backdrop dismissal and the target/currentTarget guard. Callers
 // provide layout and labelling while clicks inside never need propagation

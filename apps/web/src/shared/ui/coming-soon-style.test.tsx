@@ -1,9 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * ComingSoon tooltips use a Radix portal (escape overflow clipping). Guards pin
- * the canonical amber badge, shared Radix wrapper, and no-bespoke-pill invariant.
- */
+// @vitest-environment jsdom
+// Portal-based tooltip coverage keeps the canonical badge and shared wrapper
+// while guarding against bespoke pill markup.
 
 import "@testing-library/jest-dom/vitest";
 
@@ -24,11 +21,8 @@ import { VersionComingSoonControl } from "../../features/admin/ui/version-coming
 import { PdfExportComingSoonControl } from "../../features/pdf-export/ui/pdf-export-coming-soon";
 import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
 
-// The canonical amber tokens baked into the shared primitive. `cn` uses
-// tailwind-merge, so a control passing a conflicting `bg-*`/`text-*color*`
-// className would STRIP these — asserting their presence has teeth.
-const CANONICAL_BG = "bg-amber-100";
-const CANONICAL_FG = "text-amber-700";
+const CANONICAL_BG = "bg-coming-soon";
+const CANONICAL_FG = "text-coming-soon-foreground";
 
 describe("ComingSoonBadge — single canonical style", () => {
   it("the primitive renders the canonical amber tokens + data-state", () => {

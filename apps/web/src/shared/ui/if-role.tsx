@@ -8,10 +8,10 @@ import { useTRPC } from "../../lib/trpc-context";
 
 // Uses auth.me (same query as SessionProvider) so React Query dedupes the fetch.
 export function IfRole({
-  role,
+  forRole,
   children,
 }: {
-  readonly role: Role | readonly Role[];
+  readonly forRole: Role | readonly Role[];
   readonly children: ReactNode;
 }) {
   const trpc = useTRPC();
@@ -19,9 +19,9 @@ export function IfRole({
 
   if (!me.data) return null;
 
-  const allowed = Array.isArray(role)
-    ? role.includes(me.data.role)
-    : me.data.role === role;
+  const allowed = Array.isArray(forRole)
+    ? forRole.includes(me.data.role)
+    : me.data.role === forRole;
 
   return allowed ? children : null;
 }

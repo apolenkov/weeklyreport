@@ -5,13 +5,8 @@ export class AdminAccessError extends Error {
   }
 }
 
-/**
- * Thrown by `createPeriodManual` when the requested
- * [periodStart, periodEnd] range overlaps any existing Report. Mapped to
- * `BAD_REQUEST` by `mapDomainError` so the web layer can pipe the message
- * straight to a toast and the admin sees which existing period is in the
- * way.
- */
+// Overlapping [periodStart, periodEnd] range → BAD_REQUEST so the toast shows
+// which existing period is in the way.
 export class AdminPeriodOverlapError extends Error {
   constructor(message: string) {
     super(message);
@@ -19,12 +14,7 @@ export class AdminPeriodOverlapError extends Error {
   }
 }
 
-/**
- * Thrown by `updatePeriodManual` when the supplied `reportId`
- * does not resolve to an existing Report. Maps to `NOT_FOUND` via the
- * trpc error-mapper so the web layer's toast can copy the message
- * verbatim ("Period <id> not found").
- */
+// Unknown reportId → NOT_FOUND so the toast copies the message verbatim.
 export class AdminPeriodNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -32,15 +22,8 @@ export class AdminPeriodNotFoundError extends Error {
   }
 }
 
-/**
- * Thrown by the guarded manual `archivePeriod` when its
- * `{ id, archived: false, periodStatus: "published" }` compare-and-set matches
- * zero rows — a concurrent writer archived or reopened the period inside the
- * read→write window. A state conflict on an existing resource (the row moved
- * off archivable-published, not missing), so the tRPC error-mapper renders it
- * CONFLICT. Fail-closed: the manual archive write is no longer unconditional,
- * so a reopen racing an archive is mutually exclusive from the archive side too.
- */
+// The guarded archive CAS matched zero rows — a concurrent writer archived or
+// reopened the period in the window. State conflict → CONFLICT, fail-closed.
 export class AdminPeriodAlreadyArchivedError extends Error {
   constructor(message: string) {
     super(message);
@@ -48,12 +31,15 @@ export class AdminPeriodAlreadyArchivedError extends Error {
   }
 }
 
-/**
- * Thrown by `attachProductToGroup` when the product already belongs to a
- * DIFFERENT reporting group. A state conflict (the product exists and is owned
- * elsewhere), so the tRPC error-mapper renders it CONFLICT; the message names
- * the current owner group so the admin can detach before re-attaching.
- */
+export class AdminPeriodStaleStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminPeriodStaleStateError";
+  }
+}
+
+// Product already belongs to a different reporting group → CONFLICT; the
+// message names the current owner so the admin can detach first.
 export class AdminGroupProductConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -61,11 +47,7 @@ export class AdminGroupProductConflictError extends Error {
   }
 }
 
-/**
- * Thrown when user creation collides with an existing email or SAML identity.
- * The identity already exists, so the tRPC error-mapper renders the collision
- * as CONFLICT rather than treating it as a validation failure.
- */
+// Existing email/SAML identity → CONFLICT (exists, not invalid).
 export class AdminUserConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -73,13 +55,17 @@ export class AdminUserConflictError extends Error {
   }
 }
 
-/**
- * Thrown by `respondReopenRequest` when the scoped re-load finds no row —
- * unknown id, or a group outside the deciding head's scope (admin scope is
- * global, so this path is head-only in practice). Status is not filtered
- * here: an already-decided in-scope row continues into the CAS update and
- * yields already-processed instead. Maps to NOT_FOUND.
- */
+// Non-viewer without a reportingGroupId → BAD_REQUEST; never manufacture a
+// group silently.
+export class AdminUserReportingGroupRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminUserReportingGroupRequiredError";
+  }
+}
+
+// Scoped re-load found no row (unknown id or out of the deciding head's
+// scope) → NOT_FOUND. An already-decided row continues into the CAS update.
 export class AdminReopenRequestNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -87,12 +73,8 @@ export class AdminReopenRequestNotFoundError extends Error {
   }
 }
 
-/**
- * Thrown by `respondReopenRequest` when the race-safe conditional update
- * matches zero rows — a concurrent decider (head + admin can both act) already
- * resolved the request. A state conflict on an existing resource, so the
- * tRPC error-mapper renders it CONFLICT.
- */
+// The race-safe conditional update matched zero rows — a concurrent decider
+// already resolved the request → CONFLICT.
 export class AdminReopenRequestAlreadyProcessedError extends Error {
   constructor(message: string) {
     super(message);

@@ -16,10 +16,9 @@ const ensureLoopbackBypassesProxy = (): void => {
   // Union BOTH casings — some tools write `NO_PROXY`, others `no_proxy`, and a
   // host may set them to different values. Reading only one would drop entries
   // present only in the other when we write the merged value back to both.
-  const current = [
-    process.env.NO_PROXY ?? "",
-    process.env.no_proxy ?? "",
-  ].join(",");
+  const current = [process.env.NO_PROXY ?? "", process.env.no_proxy ?? ""].join(
+    ",",
+  );
   const entries = [
     ...new Set(
       current

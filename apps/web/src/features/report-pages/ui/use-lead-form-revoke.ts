@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -10,17 +9,24 @@ import {
   invalidateLeadHistory,
 } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
+import type { LeadFormGeneration } from "./lead-form-generation";
+import { useGenerationState } from "./use-generation-state";
 
 export function useLeadFormRevoke({
+  generation,
   sectionIdForActions,
   setIsSubmitted,
 }: {
-  readonly sectionIdForActions: string;
+  readonly generation: LeadFormGeneration | null;
+  readonly sectionIdForActions: string | null;
   readonly setIsSubmitted: (next: boolean) => void;
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [showRevokeDialog, setShowRevokeDialog] = useGenerationState(
+    generation,
+    false,
+  );
 
   const revokeMut = useMutation(
     trpc.leadForm.revoke.mutationOptions({

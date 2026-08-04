@@ -4,13 +4,11 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Label as LabelPrimitive } from "radix-ui";
 import type * as React from "react";
 
-/**
- * Accessible form label (Radix Label) for control association.
- */
+/** Accessible label associated with a form control. */
 function Label({
   className,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: Readonly<React.ComponentProps<typeof LabelPrimitive.Root>>) {
   return (
     <LabelPrimitive.Root
       data-slot="label"

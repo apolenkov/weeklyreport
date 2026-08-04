@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../../../lib/cache-keys";
@@ -26,38 +26,12 @@ export function useSlideDraftSaveMutation({
   refetchSection,
   onSaved,
 }: {
-  readonly refetchSection: () => void;
+  readonly refetchSection: () => Promise<unknown>;
   readonly onSaved: () => void;
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
-  const saveOperationRef = useRef<SaveOperation>("saved");
-
-  const saveDraftMut = useMutation(
-    // eslint-disable-next-line react-hooks/refs -- refs are touched inside mutation callbacks (event time); the options factory just runs during render
-    trpc.reports.saveDraft.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        refetchSection();
-        onSaved();
-        toast.success(
-          saveOperationRef.current === "deleted"
-            ? "Slide record deleted"
-            : "Slide record saved",
-        );
-      },
-      onError: (err: unknown) => {
-        if (isConflictError(err)) {
-          refetchSection();
-          toast.error(
-            "This section was changed elsewhere. Reloaded the latest version — re-apply your slide edit and save again.",
-          );
-          return;
-        }
-        toast.error(err instanceof Error ? err.message : "Slide save failed");
-      },
-    }),
-  );
+  const saveDraftMut = useMutation(trpc.reports.saveDraft.mutationOptions());
 
   function saveDraftSection(
     section: ReportSectionReadModel,
@@ -65,11 +39,43 @@ export function useSlideDraftSaveMutation({
     operation: SaveOperation,
   ) {
     if (saveDraftMut.isPending) return;
-    saveOperationRef.current = operation;
-    saveDraftMut.mutate({
-      ...sectionToDraftPayload(nextSection),
-      version: section.version,
-    });
+    saveDraftMut.mutate(
+      {
+        ...sectionToDraftPayload(nextSection),
+        version: section.version,
+      },
+      {
+        onSuccess: () => {
+          invalidateLeadForm(qc, trpc);
+          void refetchSection().catch(() => undefined);
+          onSaved();
+          toast.success(
+            operation === "deleted"
+              ? "Slide record deleted"
+              : "Slide record saved",
+          );
+        },
+        onError: (err: unknown) => {
+          if (!isConflictError(err)) {
+            toast.error(
+              err instanceof Error ? err.message : "Slide save failed",
+            );
+            return;
+          }
+          void refetchSection()
+            .then(() => {
+              toast.error(
+                "This section was changed elsewhere. Reloaded the latest version — re-apply your slide edit and save again.",
+              );
+            })
+            .catch(() => {
+              toast.error(
+                "This section was changed elsewhere. Reload failed — refresh the page and re-apply your slide edit.",
+              );
+            });
+        },
+      },
+    );
   }
 
   return { saveDraftSection, isPending: saveDraftMut.isPending };

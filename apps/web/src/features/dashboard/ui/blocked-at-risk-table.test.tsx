@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
@@ -20,37 +18,27 @@ const oneItem = [
 ];
 
 describe("BlockedAtRiskTable — aria-hidden on decorative SVG icons", () => {
-  it("AlertIcon svg has aria-hidden=true so screen readers skip the decorative icon", () => {
+  it("every decorative SVG inside the header button is hidden from the a11y tree", () => {
     render(<BlockedAtRiskTable items={oneItem} />);
 
-    // AlertIcon is the first svg inside the button header
-    const button = screen.getByRole("button", { name: /blocked & at risk/i });
-    const alertSvg = button.querySelector("svg");
-
-    expect(alertSvg).not.toBeNull();
-    expect(alertSvg).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("ChevronDown svg has aria-hidden=true so screen readers skip the collapse indicator", () => {
-    render(<BlockedAtRiskTable items={oneItem} />);
-
-    // ChevronDown is the last svg inside the button header (after AlertIcon)
+    // Accessible ownership: the button's name comes from its text, never from
+    // the icons. Any exposed decorative svg (missing aria-hidden) fails here.
     const button = screen.getByRole("button", { name: /blocked & at risk/i });
     const svgs = button.querySelectorAll("svg");
+    expect(svgs.length).toBeGreaterThan(0);
+    for (const svg of svgs) {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    }
+  });
 
-    // There are exactly two svgs in the button: AlertIcon + ChevronDown
-    expect(svgs).toHaveLength(2);
-    const chevronSvg = svgs[1];
-    expect(chevronSvg).toHaveAttribute("aria-hidden", "true");
-
-    // Also verify with empty items — ChevronDown still renders (with opacity)
-    const { container: emptyContainer } = render(
-      <BlockedAtRiskTable items={[]} />,
-    );
-    const emptyButton = emptyContainer.querySelector("button");
-    const emptySvgs = emptyButton?.querySelectorAll("svg");
-    expect(emptySvgs?.length).toBe(2);
-    expect(emptySvgs?.[1]).toHaveAttribute("aria-hidden", "true");
+  it("keeps the collapse indicator hidden when the list is empty", () => {
+    const { container } = render(<BlockedAtRiskTable items={[]} />);
+    const button = container.querySelector("button");
+    const svgs = button?.querySelectorAll("svg") ?? [];
+    expect(svgs.length).toBeGreaterThan(0);
+    for (const svg of svgs) {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    }
   });
 });
 
@@ -136,7 +124,6 @@ describe("BlockedAtRiskTable", () => {
       <BlockedAtRiskTable
         items={[
           {
-            id: "risk-1",
             severity: "blocked",
             product: "Billing",
             stage: "Testing",

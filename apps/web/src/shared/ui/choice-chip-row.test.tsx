@@ -70,6 +70,6 @@ describe("ChoiceChipRow", () => {
     );
     const idleBtn = screen.getByRole("button", { name: "✕ Blocked" });
     expect(idleBtn.style.background).toBe("transparent");
-    expect(idleBtn.style.border).toBe("1.5px solid rgba(0, 0, 0, 0.15)");
+    expect(idleBtn.style.border).toBe("1.5px solid var(--color-border-strong)");
   });
 });

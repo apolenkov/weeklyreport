@@ -1,8 +1,3 @@
-/**
- * Record visibility (Mine only / Everyone) on the lead form — see
- * lead-form-cross-author-scope.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -80,6 +75,7 @@ function makeSection() {
     authorRole: "lead" as const,
     status: "draft" as const,
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -186,7 +182,6 @@ const FULL_CONTENT_ROW = {
 };
 
 interface BuildOpts {
-  /** Seed the persisted toggle to "everyone" for {AUTHOR_ID, REPORT_ID}. */
   seedEveryone?: boolean;
 }
 
@@ -203,6 +198,7 @@ function buildHarness(opts: BuildOpts = {}) {
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     { path: ["reports", "myHistory"], query: [] },
@@ -509,6 +505,7 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
           reportId: REPORT_ID,
           reportSectionId: SECTION_ID,
           authorName: "Test Lead",
+          authorRole: "lead" as const,
         },
       },
       { path: ["reports", "myHistory"], query: [] },

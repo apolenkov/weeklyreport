@@ -1,10 +1,8 @@
-/**
- * @vitest-environment jsdom
- *
- * The head-dashboard reopen queue. Renders pending requests, decides them
- * inline via respondReopenRequest, and on a decision invalidates BOTH the
- * list and the pending count.
- */
+// @vitest-environment jsdom
+//
+// The head-dashboard reopen queue. Renders pending requests, decides them
+// inline via respondReopenRequest, and on a decision invalidates BOTH the
+// list and the pending count.
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -13,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
-const invalidateQueries = vi.fn();
+const invalidateQueries = vi.fn().mockResolvedValue(undefined);
 const mutate = vi.fn();
 
 interface RespondResult {
@@ -121,7 +119,7 @@ describe("ReopenRequestsCard", () => {
   });
 
   it("renders a retryable error instead of an empty queue", () => {
-    const refetch = vi.fn();
+    const refetch = vi.fn().mockResolvedValue({});
     mockList(undefined, {
       isError: true,
       error: new Error("queue failed"),

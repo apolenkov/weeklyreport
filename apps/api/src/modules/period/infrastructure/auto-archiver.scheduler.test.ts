@@ -26,7 +26,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-const asAny = <T>(x: unknown): T => x as T;
+const asAny = (value: unknown): never => value as never;
 
 describe("AutoArchiverScheduler", () => {
   it("skip-when-disabled: autoArchiveWeeksAfterPublish=0 → no DB scan, no audit", async () => {
@@ -87,6 +87,7 @@ describe("AutoArchiverScheduler", () => {
     expect(result).toEqual({
       archived: true,
       periodIds: ["rep-old-1", "rep-old-2"],
+      failures: [],
     });
     expect(prisma.report.updateMany).toHaveBeenCalledTimes(2);
     // The writer flips legacy `archived` + new `periodState` + the
@@ -136,7 +137,11 @@ describe("AutoArchiverScheduler", () => {
 
     const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
 
-    expect(result).toEqual({ archived: true, periodIds: ["rep-old"] });
+    expect(result).toEqual({
+      archived: true,
+      periodIds: ["rep-old"],
+      failures: [],
+    });
     expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoArchive).toHaveBeenCalledWith({
       periodId: "rep-old",
@@ -170,8 +175,7 @@ describe("AutoArchiverScheduler", () => {
 
     // A reopened period keeps status='published' + archived=false + an old
     // publishedAt, so the legacy predicates alone would archive it. The
-    // periodState exclusion prevents that. cutoff = now (2026-06-15T00:15Z) −
-    // 4 weeks = 2026-05-18T00:15Z.
+    // periodState exclusion prevents that.
     expect(prisma.report.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.report.findMany).toHaveBeenCalledWith({
       where: {
@@ -207,8 +211,51 @@ describe("AutoArchiverScheduler", () => {
 
     const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
 
-    expect(result).toEqual({ archived: true, periodIds: [] });
+    expect(result).toEqual({ archived: true, periodIds: [], failures: [] });
     expect(prisma.report.updateMany).not.toHaveBeenCalled();
     expect(audit.periodAutoArchive).not.toHaveBeenCalled();
+  });
+
+  it("reports per-row failures: a throwing write is surfaced, the remaining rows still archive", async () => {
+    const prisma = {
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-boom" }, { id: "rep-ok" }]),
+        updateMany: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("db transient"))
+          .mockResolvedValueOnce({ count: 1 }),
+      },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(),
+    };
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    // A real write error must be visible on the tick result, not folded into
+    // a bare `{ archived: true }` with no signal that a row was lost.
+    expect(result).toEqual({
+      archived: true,
+      periodIds: ["rep-ok"],
+      failures: [{ periodId: "rep-boom", error: "db transient" }],
+    });
+    expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+    expect(audit.periodAutoArchive).toHaveBeenCalledWith({
+      periodId: "rep-ok",
+      from: "published",
+      to: "archived",
+    });
   });
 });

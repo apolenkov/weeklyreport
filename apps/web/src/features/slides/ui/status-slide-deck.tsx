@@ -37,7 +37,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-// Arrow keys page the deck, except while a form control has focus.
+// Arrow keys page the deck, except while a form control has focus. On an empty
+// deck navigation is a no-op: no index (including -1) is emitted.
 function makeArrowKeyHandler(
   selectedIndex: number,
   count: number,
@@ -45,6 +46,7 @@ function makeArrowKeyHandler(
 ) {
   return (e: React.KeyboardEvent) => {
     if (isEditableTarget(e.target)) return;
+    if (count === 0) return;
     if (e.key === "ArrowRight") {
       e.preventDefault();
       onSelect(Math.min(selectedIndex + 1, count - 1));
@@ -230,7 +232,7 @@ export function StatusSlideDeck(props: StatusSlideDeckProps) {
       className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
       data-testid={`${props.mode}-slides-deck`}
       aria-label="Status slide deck (use arrow keys to navigate slides)"
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable keyboard-navigation region for arrow-key slide control
+      role="group"
       tabIndex={0}
       onKeyDown={makeArrowKeyHandler(
         props.selectedIndex,

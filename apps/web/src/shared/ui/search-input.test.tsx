@@ -1,17 +1,27 @@
+import type { QueryObserverResult } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeQueryState } from "../../test-utils/query-state";
+
+type QueryResult = QueryObserverResult;
 
 // Mock tRPC + useQuery to drive search without a network; next/navigation so
 // router.push does not need the app shell.
 
-const useQueryMock = vi.fn();
+interface UseQueryOptions {
+  queryKey?: readonly unknown[];
+  enabled?: boolean;
+}
+const useQueryMock = vi.fn<(opts: UseQueryOptions) => QueryResult>();
 const queryOptionsMock = vi.fn((args: unknown) => ({
   queryKey: ["search", "query", args],
 }));
 const pushMock = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts) as unknown,
+  useQuery: (opts: { queryKey?: readonly unknown[]; enabled?: boolean }) =>
+    useQueryMock(opts),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -50,7 +60,7 @@ describe("SearchInput", () => {
     pushMock.mockClear();
     useSessionMock.mockReset();
     useSessionMock.mockReturnValue({ user: { role: "head" } });
-    useQueryMock.mockReturnValue({ data: [], isFetching: false });
+    useQueryMock.mockReturnValue(makeQueryState({ data: [] }));
   });
 
   afterEach(() => {
@@ -76,9 +86,9 @@ describe("SearchInput", () => {
     });
 
     // `enabled` flag in useQuery options should be false until q.length >= 2.
-    const lastCall = useQueryMock.mock.calls.at(-1) as
-      [{ enabled?: boolean }, ...unknown[]] | undefined;
-    expect(lastCall?.[0]?.enabled).toBe(false);
+    const lastCall = useQueryMock.mock.calls.at(-1);
+    const opts = lastCall?.[0] as { enabled?: boolean } | undefined;
+    expect(opts?.enabled).toBe(false);
   });
 
   it("fires the query when q has 2+ chars after the debounce window elapses", () => {
@@ -101,28 +111,30 @@ describe("SearchInput", () => {
     expect(lastQueryOptionsArg?.q).toBe("PR");
     expect(lastQueryOptionsArg?.scope).toBe("mine");
 
-    const lastUseQueryArg = useQueryMock.mock.calls.at(-1)?.[0] as
+    const lastUseQueryArg = useQueryMock.mock.calls.at(-1);
+    const useQueryOpts = lastUseQueryArg?.[0] as
       { enabled?: boolean } | undefined;
-    expect(lastUseQueryArg?.enabled).toBe(true);
+    expect(useQueryOpts?.enabled).toBe(true);
   });
 
   it("renders results returned by useQuery and converts <<…>> markers to <mark>", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "item",
-          id: ITEM_ID,
-          title: "Релиз заблокирован",
-          snippet: "Релиз <<заблокирован>> security-сканером",
-          rank: 0.5,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Релиз заблокирован",
+            snippet: "Релиз <<заблокирован>> security-сканером",
+            rank: 0.5,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");
@@ -141,7 +153,7 @@ describe("SearchInput", () => {
   });
 
   it("renders the empty state when the data array is empty", () => {
-    useQueryMock.mockReturnValue({ data: [], isFetching: false });
+    useQueryMock.mockReturnValue(makeQueryState({ data: [] }));
     render(<SearchInput scope="mine" />);
 
     const input = screen.getByRole("combobox");
@@ -157,11 +169,9 @@ describe("SearchInput", () => {
   });
 
   it("renders an error state when search fails", () => {
-    useQueryMock.mockReturnValue({
-      data: undefined,
-      isError: true,
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({ data: undefined, error: new Error("search failed") }),
+    );
     render(<SearchInput scope="all" />);
 
     const input = screen.getByRole("combobox");
@@ -177,22 +187,23 @@ describe("SearchInput", () => {
   });
 
   it("navigates via router.push on Enter when a hit is highlighted", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "item",
-          id: ITEM_ID,
-          title: "Test item",
-          snippet: "Test <<item>>",
-          rank: 0.9,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Test item",
+            snippet: "Test <<item>>",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");
@@ -216,22 +227,23 @@ describe("SearchInput", () => {
   });
 
   it("clears the input and closes the dropdown on Escape", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "item",
-          id: ITEM_ID,
-          title: "Release blocked",
-          snippet: "Release <<blocked>>",
-          rank: 0.9,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Release blocked",
+            snippet: "Release <<blocked>>",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole<HTMLInputElement>("combobox");
@@ -272,20 +284,21 @@ describe("SearchInput", () => {
   });
 
   it("routes a project hit to /admin?tab=products", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "project",
-          id: PROJECT_ID,
-          title: "E-Commerce Platform",
-          snippet: "<<E-Commerce>> Platform",
-          rank: 0.7,
-          projectId: PROJECT_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "project",
+            id: PROJECT_ID,
+            title: "E-Commerce Platform",
+            snippet: "<<E-Commerce>> Platform",
+            rank: 0.7,
+            projectId: PROJECT_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="all" />);
     const input = screen.getByRole("combobox");
@@ -309,22 +322,23 @@ describe("SearchInput", () => {
   // Viewer item/risk/decision hits route to the read-only published report.
   it("routes a viewer's item hit to /reports/[reportId], not /lead/report", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "item",
-          id: ITEM_ID,
-          title: "Published task",
-          snippet: "Published <<task>>",
-          rank: 0.9,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Published task",
+            snippet: "Published <<task>>",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="published" />);
     const input = screen.getByRole("combobox");
@@ -348,20 +362,21 @@ describe("SearchInput", () => {
   // Even if the server leaks a project hit, the viewer never sees it.
   it("suppresses a project hit for a viewer", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "project",
-          id: PROJECT_ID,
-          title: "E-Commerce Platform",
-          snippet: "<<E-Commerce>> Platform",
-          rank: 0.7,
-          projectId: PROJECT_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "project",
+            id: PROJECT_ID,
+            title: "E-Commerce Platform",
+            snippet: "<<E-Commerce>> Platform",
+            rank: 0.7,
+            projectId: PROJECT_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="published" />);
     const input = screen.getByRole("combobox");
@@ -394,22 +409,23 @@ describe("SearchInput", () => {
   });
 
   it("badge span has no aria-label attribute", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "item",
-          id: ITEM_ID,
-          title: "Test item",
-          snippet: "Test <<item>>",
-          rank: 0.9,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Test item",
+            snippet: "Test <<item>>",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");
@@ -443,22 +459,23 @@ describe("SearchInput", () => {
     ] as const;
 
     for (const { type, expectedLabel, id } of hitTypes) {
-      useQueryMock.mockReturnValue({
-        data: [
-          {
-            type,
-            id,
-            title: `${expectedLabel} title`,
-            snippet: `${expectedLabel} <<snippet>>`,
-            rank: 0.8,
-            projectId: PROJECT_ID,
-            reportId: type !== "project" ? REPORT_ID : undefined,
-            reportSectionId: type !== "project" ? SECTION_ID : undefined,
-            createdAt: "2026-05-06T08:00:00.000Z",
-          },
-        ],
-        isFetching: false,
-      });
+      useQueryMock.mockReturnValue(
+        makeQueryState({
+          data: [
+            {
+              type,
+              id,
+              title: `${expectedLabel} title`,
+              snippet: `${expectedLabel} <<snippet>>`,
+              rank: 0.8,
+              projectId: PROJECT_ID,
+              reportId: type !== "project" ? REPORT_ID : undefined,
+              reportSectionId: type !== "project" ? SECTION_ID : undefined,
+              createdAt: "2026-05-06T08:00:00.000Z",
+            },
+          ],
+        }),
+      );
 
       const { unmount } = render(<SearchInput scope="mine" />);
       const input = screen.getByRole("combobox");
@@ -483,22 +500,23 @@ describe("SearchInput", () => {
   });
 
   it("badge span is first child of its flex container", () => {
-    useQueryMock.mockReturnValue({
-      data: [
-        {
-          type: "risk",
-          id: ITEM_ID,
-          title: "Risk title",
-          snippet: "Risk <<snippet>>",
-          rank: 0.8,
-          projectId: PROJECT_ID,
-          reportId: REPORT_ID,
-          reportSectionId: SECTION_ID,
-          createdAt: "2026-05-06T08:00:00.000Z",
-        },
-      ],
-      isFetching: false,
-    });
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "risk",
+            id: ITEM_ID,
+            title: "Risk title",
+            snippet: "Risk <<snippet>>",
+            rank: 0.8,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
 
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");

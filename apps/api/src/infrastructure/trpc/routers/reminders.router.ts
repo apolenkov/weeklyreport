@@ -19,7 +19,7 @@ function createListExecutionsProcedure(deps: RemindersRouterDeps) {
     .input(
       z
         .object({ ruleId: z.uuid() })
-        .extend(paginationInputSchema.partial().shape),
+        .extend(paginationInputSchema.unwrap().partial().shape),
     )
     .query(async ({ input, ctx }) => {
       try {

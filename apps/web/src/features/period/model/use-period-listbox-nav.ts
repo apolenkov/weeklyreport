@@ -95,6 +95,8 @@ function createListboxKeyHandlers({
   function handleListKeyDown(
     e: ReactKeyboardEvent<HTMLButtonElement | HTMLDivElement>,
   ) {
+    // An empty list has nothing to navigate to — keep the anchor index valid.
+    if (periodOptionIds.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIdx((i) => Math.min(i + 1, periodOptionIds.length - 1));
@@ -199,6 +201,7 @@ export function usePeriodListboxNav({
   return {
     listboxId,
     optionIdPrefix,
+    hasOptions: periodOptionIds.length > 0,
     triggerRef,
     panelRef,
     panelPos,

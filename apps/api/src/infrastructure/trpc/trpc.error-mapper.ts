@@ -6,9 +6,11 @@ import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
@@ -17,10 +19,13 @@ import {
 } from "../../modules/carry-over/index.js";
 import { PdfExportDomainError } from "../../modules/pdf-export/index.js";
 import {
+  PeriodAccessError,
+  PeriodLifecycleIntegrityError,
   PeriodNotFoundError,
   PeriodScopeError,
 } from "../../modules/period/index.js";
 import {
+  ProjectActivityConflictError,
   ProjectActivityDomainError,
   ProjectActivityNotFoundError,
 } from "../../modules/project-activity/index.js";
@@ -49,7 +54,7 @@ import {
 } from "../../modules/review/index.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/index.js";
 
-/** A domain error class, matched against the thrown error via `instanceof`. */
+// A domain error class, matched against the thrown error via `instanceof`.
 type DomainErrorCtor = abstract new (...args: never[]) => Error;
 
 // Table (not if-chain) for the complexity lint ceiling. Order is irrelevant:
@@ -107,27 +112,38 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // is a state conflict on an existing (already-archived) row → CONFLICT, not a
   // silent success.
   [AdminPeriodAlreadyArchivedError, "CONFLICT"],
+  [AdminPeriodStaleStateError, "CONFLICT"],
   // A scoped re-load that finds no matching pending reopen request → NOT_FOUND.
   [AdminReopenRequestNotFoundError, "NOT_FOUND"],
   // The race-safe decide transaction's loser (zero rows matched the
   // compare-and-set) — a state conflict on an existing resource → CONFLICT.
   [AdminReopenRequestAlreadyProcessedError, "CONFLICT"],
   // Scope/archived denial → FORBIDDEN; missing report → NOT_FOUND. Two
-  // classes because they map to different codes. PeriodAccessError stays
-  // unmapped on purpose (state/policy 500s are a separate concern).
+  // classes because they map to different codes.
   [PeriodScopeError, "FORBIDDEN"],
   [PeriodNotFoundError, "NOT_FOUND"],
+  // State/policy rejections on a lifecycle write are predictable, client-
+  // recoverable failures on an existing resource — BAD_REQUEST, never internal.
+  // The messages are fixed and safe to surface verbatim.
+  [PeriodAccessError, "BAD_REQUEST"],
+  // Corrupt persistence is an internal invariant failure. The error owns one
+  // fixed safe message, so no stored tuple value reaches the client.
+  [PeriodLifecycleIntegrityError, "INTERNAL_SERVER_ERROR"],
   [PublicationNotFoundError, "NOT_FOUND"],
   // Product owned by another group, terminal until the admin detaches it →
   // CONFLICT.
   [AdminGroupProductConflictError, "CONFLICT"],
   // An email or SAML identity collision is an existing-resource conflict.
   [AdminUserConflictError, "CONFLICT"],
+  // A non-viewer write without a reporting group is a validation failure on
+  // the admin input — BAD_REQUEST, never a silently manufactured group.
+  [AdminUserReportingGroupRequiredError, "BAD_REQUEST"],
   // Project Activity admin writes: a missing activity/group/product/lead is
   // NOT_FOUND; a business-rule violation (group mismatch, non-lead attach,
   // archived target) is BAD_REQUEST.
   [ProjectActivityNotFoundError, "NOT_FOUND"],
   [ProjectActivityDomainError, "BAD_REQUEST"],
+  [ProjectActivityConflictError, "CONFLICT"],
 ];
 
 export function mapDomainError(error: unknown): TRPCError {

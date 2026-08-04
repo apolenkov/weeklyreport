@@ -14,8 +14,8 @@ What exists today (all inert, no working path):
 1. Inert admin placeholder card: the "AI Summary" row in the integrations
    sub-tab is an `opacity-70` dashed `ComingSoonBadge` placeholder, with
    `Provider` shown as "not configured" and `RAG corpus` as "empty"
-   (`apps/web/src/components/admin/settings-integrations-sub-tab.tsx:150`).
-   The live activation marker is `TODO(Phase-54-activation)` at line 151.
+   (`apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx`).
+   No live activation marker exists there today.
 2. Publish-time ingestion seam: `IngestionPublishHook` is wired into both
    `publishReport` and the scheduler auto-publish path, defaulting to a no-op
    so the AI consumer can re-attach without touching publish
@@ -65,6 +65,9 @@ that direction is chosen and Phase 54 is unlocked.
 
 ## Status
 
-Deferred — TODO(Phase-54-activation) in
-`apps/web/src/components/admin/settings-integrations-sub-tab.tsx:151`;
-publish-time ingestion seam at `publication.service.ts:23` (Phase 54 / UFB-055).
+Deferred — no live `TODO(<ref>)` marker exists for the AI RAG activation yet;
+the integrations surface is at
+`apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx` and
+the publish-time ingestion seam at `publication.service.ts`. Re-establish a
+`TODO(activate-ai-rag-provider)` marker (to-be-planted, not live) at the
+activation point when this is picked up.

@@ -16,7 +16,7 @@ import { useFillFromDropdown } from "./use-fill-from-dropdown";
 // period) joined to a narrow chevron segment (open the past-report picker).
 // Distinct <button> elements keep the accessible split-button pattern.
 const SPLIT_BUTTON_CONTAINER_CLASS =
-  "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)]";
+  "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] text-[var(--color-foreground)]";
 const SPLIT_BUTTON_SEGMENT_CLASS =
   "btn-press inline-flex h-full items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
 // Below `md` both segments floor their WIDTH at the touch target; the shared
@@ -26,19 +26,11 @@ const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l borde
 
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
-  /**
-   * Called with the SECTION id of the chosen period (NOT the report id) so the
-   * parent can wire `leadForm.fillFrom({ targetSectionId, sourceSectionId })`.
-   */
+  // Uses section ids so the parent can wire fillFrom's target/source contract.
   readonly onFillFrom?: ((sourceSectionId: string) => void) | undefined;
   readonly disabled?: boolean | undefined;
-  /**
-   * Set when the target section carries published-lineage records (a reopened
-   * period): the server's fillFrom guard rejects every source
-   * (PUBLISHED_RECORD_LOCKED), so both segments are disabled and this string
-   * is surfaced as the tooltip. UI-only — the server guard stays the
-   * enforcement point.
-   */
+  // Published-lineage records disable both segments; the server guard remains
+  // the enforcement point and this string is surfaced as the tooltip.
   readonly lockedReason?: string | undefined;
 }
 

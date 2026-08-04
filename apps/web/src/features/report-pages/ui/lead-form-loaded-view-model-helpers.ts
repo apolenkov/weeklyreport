@@ -21,11 +21,11 @@ type SectionItem = ReportSectionReadModel["items"][number];
 
 export interface ForeignMergeInput {
   readonly products: readonly Product[];
-  readonly ownCurrentWeekItems: KanbanItem[];
-  readonly ownNextWeekItems: KanbanItem[];
-  readonly ownRisks: RiskEntry[];
-  readonly ownDecisions: DecisionEntry[];
-  /** Gated Everyone full-content read; undefined while not fetched. */
+  readonly ownCurrentWeekItems: readonly KanbanItem[];
+  readonly ownNextWeekItems: readonly KanbanItem[];
+  readonly ownRisks: readonly RiskEntry[];
+  readonly ownDecisions: readonly DecisionEntry[];
+  // Full foreign content is gated and remains undefined until requested.
   readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
   readonly isEveryone: boolean;
   readonly visibilityHydrated: boolean;
@@ -33,10 +33,10 @@ export interface ForeignMergeInput {
 }
 
 export interface ForeignMergeResult {
-  readonly currentWeekItems: KanbanItem[];
-  readonly nextWeekItems: KanbanItem[];
-  readonly risks: RiskEntry[];
-  readonly decisions: DecisionEntry[];
+  readonly currentWeekItems: readonly KanbanItem[];
+  readonly nextWeekItems: readonly KanbanItem[];
+  readonly risks: readonly RiskEntry[];
+  readonly decisions: readonly DecisionEntry[];
 }
 
 // Everyone merges co-owners' records read-only after hydration on own deck;
@@ -89,13 +89,18 @@ export function publishedLockedIds(
 }
 
 // Foreign rows have no raw draft row; bucket from presentation status.
-const PRESENTATION_STATUS_BUCKETS: Partial<
-  Record<KanbanItem["status"], ActivityBucket>
+// The map covers the full ItemStatus vocabulary, so an unknown status is a
+// compile error instead of a silent in-progress fallback.
+const PRESENTATION_STATUS_BUCKETS: Record<
+  KanbanItem["status"],
+  ActivityBucket
 > = {
+  "in-progress": "in-progress",
   completed: "done",
   paused: "paused",
   postponed: "deferred",
   planned: "planned-next",
+  blocked: "in-progress",
 };
 
 // Pure projection over raw fields; foreign rows fall back to presentation status.
@@ -126,7 +131,7 @@ export function buildUnifiedEntries(
     return {
       item,
       week,
-      bucket: PRESENTATION_STATUS_BUCKETS[item.status] ?? "in-progress",
+      bucket: PRESENTATION_STATUS_BUCKETS[item.status],
     };
   };
   return [
@@ -143,12 +148,12 @@ export interface VisiblePeriodsResult {
 // Keep selected archived period visible; never empty the list if all archived.
 export function filterVisiblePeriods(
   periods: readonly ReportPeriod[],
-  selectedPeriodId: string,
+  selectedPeriodId: string | null,
   showArchivePeriods: boolean,
 ): VisiblePeriodsResult {
-  const selectedPeriod = periods.find(
-    (period) => period.id === selectedPeriodId && period.id !== "",
-  );
+  const selectedPeriod = selectedPeriodId
+    ? periods.find((period) => period.id === selectedPeriodId)
+    : undefined;
   const hasArchivedPeriods = periods.some((period) => period.archived);
   const visibleNonArchivedPeriods = periods.filter(
     (period) => !period.archived,

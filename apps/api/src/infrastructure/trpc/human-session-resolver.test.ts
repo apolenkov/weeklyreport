@@ -6,11 +6,9 @@ import { createAuthController } from "../../modules/auth/index.js";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveHumanSession } from "./trpc.context";
 
-/**
- * The /pdfs download handler authenticates through `resolveHumanSession`, which
- * must accept ONLY a real human session — never the PDF-worker token or the
- * dev-mode synthetic session the full createContext chain also honors.
- */
+// The /pdfs download handler authenticates through `resolveHumanSession`, which
+// must accept ONLY a real human session — never the PDF-worker token or the
+// dev-mode synthetic session the full createContext chain also honors.
 
 const SESSION_SECRET = "human-session-resolver-secret-32-chars-min";
 const PDF_SECRET = "human-session-resolver-pdf-secret-32-chars";
@@ -28,7 +26,7 @@ const viewerSession: UserSession = {
 interface PrismaStubOptions {
   isActive?: boolean;
   viewerGroups?: string[];
-  /** When true the user row is gone (hard-deleted) — findUnique returns null. */
+  // When true the user row is gone (hard-deleted) — findUnique returns null.
   missingUser?: boolean;
 }
 

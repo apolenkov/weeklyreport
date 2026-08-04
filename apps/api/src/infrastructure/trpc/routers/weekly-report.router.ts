@@ -16,7 +16,7 @@ const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
 // else is a defect and must surface at error level.
 
 export interface WeeklyReportRouterDeps {
-  weeklyReportService: WeeklyReportService;
+  readonly weeklyReportService: WeeklyReportService;
 }
 
 // The request identity every weeklyReport.get log line is keyed by.

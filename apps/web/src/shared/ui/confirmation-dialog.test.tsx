@@ -134,6 +134,27 @@ describe("ConfirmationDialog", () => {
     expect(dialog).toHaveAttribute("aria-label", "Publish Report");
   });
 
+  it("connects the alertdialog to its visible description", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Publish Report"
+        description="This will lock all edits."
+      />,
+    );
+
+    const dialog = screen.getByRole("alertdialog");
+    const description = screen.getByText("This will lock all edits.");
+
+    expect(description).toHaveAttribute("id");
+    expect(dialog).toHaveAttribute(
+      "aria-describedby",
+      description.getAttribute("id"),
+    );
+  });
+
   it("Escape listener is removed when open transitions from true to false", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
@@ -231,5 +252,27 @@ describe("ConfirmationDialog", () => {
     expect(screen.getByText("Week 16").tagName).toBe("STRONG");
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
+  });
+
+  it("blocks Escape and backdrop dismissal while pending", () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={onClose}
+        onConfirm={onConfirm}
+        title="Delete period?"
+        description="Are you sure?"
+        isPending={true}
+      />,
+    );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    const backdrop = document.querySelector('[role="presentation"]');
+    if (backdrop) fireEvent.click(backdrop);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });

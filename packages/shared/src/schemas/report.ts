@@ -1,5 +1,6 @@
 // Stable re-export path for report/section/period/stage schemas.
 export * from "./period.schema";
+export * from "./period-lifecycle.schema";
 export * from "./report.schema";
 export * from "./report-admin.schema";
 export * from "./report-history.schema";

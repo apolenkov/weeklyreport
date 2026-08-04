@@ -8,51 +8,26 @@ afterEach(() => {
 });
 
 describe("PulseMark", () => {
-  it("root container has role='img'", () => {
+  it("exposes the composite wordmark as a single image named by its aria-label", () => {
     render(<PulseMark />);
-    const img = screen.getByRole("img");
-    expect(img).toBeInTheDocument();
-  });
 
-  it("root container has aria-label='Weekly Report'", () => {
-    render(<PulseMark />);
     const img = screen.getByRole("img", { name: "Weekly Report" });
-    expect(img).toBeInTheDocument();
+    expect(img.getAttribute("aria-label")).toBe("Weekly Report");
+    expect(screen.getAllByRole("img")).toHaveLength(1);
   });
 
-  it("renders the two-tier wordmark text WEEKLY / REPORT", () => {
+  it("hides the text layers from the a11y tree while rendering the two-tier wordmark", () => {
     const { container } = render(<PulseMark />);
+
     expect(container.querySelector(".pulse-word")?.textContent).toBe("WEEKLY");
     expect(container.querySelector(".pulse-strong")?.textContent).toBe(
       "REPORT",
     );
-  });
-
-  it("span.pulse-word has aria-hidden='true'", () => {
-    const { container } = render(<PulseMark />);
     const wordSpan = container.querySelector(".pulse-word");
     expect(wordSpan).not.toBeNull();
     expect(wordSpan).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("span.pulse-strong has aria-hidden='true'", () => {
-    const { container } = render(<PulseMark />);
     const strongSpan = container.querySelector(".pulse-strong");
     expect(strongSpan).not.toBeNull();
     expect(strongSpan).toHaveAttribute("aria-hidden", "true");
-  });
-
-  it("role=img with aria-label exposes a single composite image — accessible name comes from aria-label only", () => {
-    render(<PulseMark />);
-    const imgs = screen.getAllByRole("img");
-    expect(imgs).toHaveLength(1);
-    expect(imgs[0]).toHaveAccessibleName("Weekly Report");
-    const img = screen.getByRole("img");
-    expect(img.getAttribute("aria-label")).toBe("Weekly Report");
-  });
-
-  it("component render tree matches snapshot", () => {
-    const { container } = render(<PulseMark />);
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

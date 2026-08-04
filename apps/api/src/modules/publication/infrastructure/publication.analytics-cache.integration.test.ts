@@ -66,7 +66,7 @@ describe("PublicationService analytics invalidation (integration)", () => {
     const publication = new PublicationService(
       new PublicationPrismaRepository(prisma as never),
       createNullLogger(),
-      new NoopIngestionQueue(),
+      new NoopIngestionQueue(createNullLogger(), "test"),
       () => cache.invalidateAll(),
     );
     const session: UserSession = {
@@ -82,7 +82,10 @@ describe("PublicationService analytics invalidation (integration)", () => {
 
     const beforePublish = await analytics.trafficLightHistory(input, session);
     await analytics.trafficLightHistory(input, session);
-    await publication.publishAuto(data.report.id);
+    await publication.publishAuto(
+      data.report.id,
+      new Date("2026-04-13T12:00:00.000Z"),
+    );
     const afterPublish = await analytics.trafficLightHistory(input, session);
 
     expect(beforePublish).toEqual({ periods: [], rows: [] });

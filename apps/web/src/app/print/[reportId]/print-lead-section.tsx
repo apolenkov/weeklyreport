@@ -9,7 +9,13 @@ import {
   PriorityRecords,
   RiskRecords,
 } from "./print-lead-records";
-import { printStatusColor, TEXT_SECONDARY } from "./print-report-theme";
+import {
+  ATTENTION_BG,
+  BRAND_DARK_SURFACE,
+  ON_BRAND_TEXT,
+  printStatusColor,
+  TEXT_SECONDARY,
+} from "./print-report-theme";
 
 interface PrintLeadSectionProps {
   readonly report: WeeklyProductReport;
@@ -17,13 +23,6 @@ interface PrintLeadSectionProps {
 
 // Brand green for lead chrome (same as printStatusColor("on-track")).
 const LEAD_BRAND_GREEN = printStatusColor("on-track");
-// Brand dark for avatar chip fill.
-const LEAD_INITIALS_BG = "#1E3932";
-// Soft at-risk wash for needs-attention callout.
-const NEEDS_ATTENTION_BG = "#fef9e7";
-// Severity is optional on the projection; print falls back to the milder of the
-// two, matching the on-screen accordion (accordion-sections.tsx).
-const DEFAULT_ATTENTION_SEVERITY = "at-risk";
 
 const LEAD_HEADER_STYLE: CSSProperties = {
   display: "flex",
@@ -40,8 +39,8 @@ const LEAD_INITIALS_STYLE: CSSProperties = {
   width: "28px",
   height: "28px",
   borderRadius: "50%",
-  backgroundColor: LEAD_INITIALS_BG,
-  color: "#ffffff",
+  backgroundColor: BRAND_DARK_SURFACE,
+  color: ON_BRAND_TEXT,
   fontSize: "11px",
   fontWeight: 600,
 };
@@ -67,7 +66,7 @@ function PrintLeadHeader({ report }: PrintLeadSectionProps) {
           borderRadius: "50px",
           fontSize: "10px",
           fontWeight: 600,
-          color: "#ffffff",
+          color: ON_BRAND_TEXT,
           backgroundColor: printStatusColor(report.status),
         }}
       >
@@ -84,13 +83,15 @@ function PrintLeadHeader({ report }: PrintLeadSectionProps) {
 
 function PrintNeedsAttention({ report }: PrintLeadSectionProps) {
   if (!report.needsAttention) return null;
+  // The projection guarantees severity alongside the text (ProductAttention);
+  // a missing severity here is a projection bug the type system now rejects.
   return (
     <div
       style={{
         padding: "6px 10px",
         marginBottom: "8px",
-        borderLeft: `3px solid ${printStatusColor(report.needsAttentionSeverity ?? DEFAULT_ATTENTION_SEVERITY)}`,
-        backgroundColor: NEEDS_ATTENTION_BG,
+        borderLeft: `3px solid ${printStatusColor(report.needsAttentionSeverity)}`,
+        backgroundColor: ATTENTION_BG,
         fontSize: "11px",
       }}
     >

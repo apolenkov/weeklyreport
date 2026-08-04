@@ -47,9 +47,13 @@ export interface AutosaveRefs {
 // during render; a closure can only resolve at event or effect time.
 export type GetAutosaveRefs = () => AutosaveRefs;
 
-// Initial bundle. The owning hook holds the useRef itself, so the linter still
-// sees — and the author must still justify — any render-time read of it.
+// Initial bundle. The owning hook keeps this stable object in lazy state and
+// exposes it only through an event/effect-time accessor.
 export function seedAutosaveRefs(args: UseLeadFormAutosaveArgs): AutosaveRefs {
+  // Pre-bind invocation must fail loud: the sync effect replaces these handles
+  // before any timer or event fires, so a hit here is a wiring/ordering bug.
+  const unboundMessage =
+    "Autosave mutation invoked before the sync effect bound the live handle";
   return {
     version: args.version,
     lastSaved: "",
@@ -61,9 +65,10 @@ export function seedAutosaveRefs(args: UseLeadFormAutosaveArgs): AutosaveRefs {
     debounceTimer: null,
     payload: args.payload,
     sectionId: args.reportSectionId,
-    // Replaced by the sync effect before any timer or event can fire.
-    mutate: () => undefined,
-    mutateAsync: () => Promise.resolve(),
+    mutate: () => {
+      throw new Error(unboundMessage);
+    },
+    mutateAsync: () => Promise.reject(new Error(unboundMessage)),
     isPending: false,
     enabled: args.enabled,
   };
@@ -100,14 +105,17 @@ export function useSyncAutosaveRefs(
 }
 
 // Lets the LeadForm say "this freshly-loaded server payload is already saved",
-// so the user does not see a dirty state on initial render.
+// so the user does not see a dirty state on initial render. Mirrors the ref
+// write into state so render can read the baseline key without touching the ref.
 export function usePrimedBaseline(
   getRefs: GetAutosaveRefs,
   initialSavedKey: string | null,
+  setLastSavedKey: (next: string) => void,
 ): void {
   useEffect(() => {
     if (initialSavedKey !== null) {
       getRefs().lastSaved = initialSavedKey;
+      setLastSavedKey(initialSavedKey);
     }
-  }, [getRefs, initialSavedKey]);
+  }, [getRefs, initialSavedKey, setLastSavedKey]);
 }

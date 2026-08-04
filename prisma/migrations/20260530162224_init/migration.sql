@@ -263,6 +263,7 @@ CREATE TABLE "PdfExportJob" (
     "id" TEXT NOT NULL,
     "reportId" TEXT NOT NULL,
     "status" "PdfExportStatus" NOT NULL DEFAULT 'pending',
+    "templateVersion" TEXT NOT NULL,
     "filePath" TEXT,
     "checksum" TEXT,
     "error" TEXT,
@@ -309,6 +310,7 @@ CREATE TABLE "ReminderPolicy" (
 CREATE TABLE "ReminderExecution" (
     "id" TEXT NOT NULL,
     "ruleId" TEXT NOT NULL,
+    "recipientEmail" TEXT NOT NULL,
     "dedupeKey" TEXT NOT NULL,
     "status" "ReminderExecutionStatus" NOT NULL DEFAULT 'pending',
     "sentAt" TIMESTAMP(3),

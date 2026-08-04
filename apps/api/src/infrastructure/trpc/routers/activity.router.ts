@@ -3,7 +3,7 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { headProcedure, router } from "../trpc.middleware.js";
 
 export interface ActivityRouterDeps {
-  activityService: ActivityService;
+  readonly activityService: ActivityService;
 }
 
 export function createActivityRouter(deps: ActivityRouterDeps) {

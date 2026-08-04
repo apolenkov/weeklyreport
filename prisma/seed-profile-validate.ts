@@ -5,13 +5,13 @@ import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import { isEntrypoint } from "./_entrypoint.js";
+import { requireEnv } from "./_require-env.js";
 import { parseSeedProfile } from "./seed-profile-contract.js";
 import { validateSeedProfile } from "./seed-profile-validator.js";
 
 async function main(): Promise<void> {
   const profile = parseSeedProfile(process.argv[2]);
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL must be set");
+  const databaseUrl = requireEnv("DATABASE_URL");
   const pool = new pg.Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {

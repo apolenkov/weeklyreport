@@ -1,5 +1,4 @@
-import type { Span, Tracer } from "@opentelemetry/api";
-import { trace } from "@opentelemetry/api";
+import type { Span } from "@opentelemetry/api";
 import { TRPCError } from "@trpc/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,24 +7,28 @@ import {
   trpcRequestDurationSeconds,
   trpcRequestTotal,
 } from "./metrics.registry.js";
-import { trpcMetricsMiddleware } from "./trpc-metrics.middleware.js";
+import {
+  type SpanStarter,
+  trpcMetricsMiddleware,
+} from "./trpc-metrics.middleware.js";
 
 function installSpanSpy(): {
   span: Pick<Span, "end" | "setAttribute">;
   startActiveSpan: ReturnType<typeof vi.fn>;
+  tracer: SpanStarter;
 } {
   const span = {
     setAttribute: vi.fn().mockReturnThis(),
     end: vi.fn(),
   };
   const startActiveSpan = vi.fn(
-    (_name: string, callback: (activeSpan: Span) => unknown) =>
-      callback(span as unknown as Span),
+    (_name: string, fn: (activeSpan: Span) => unknown) =>
+      fn(span as unknown as Span),
   );
-  vi.spyOn(trace, "getTracer").mockReturnValue({
-    startActiveSpan,
-  } as unknown as Tracer);
-  return { span, startActiveSpan };
+  const tracer: SpanStarter = {
+    startActiveSpan: startActiveSpan as SpanStarter["startActiveSpan"],
+  };
+  return { span, startActiveSpan, tracer };
 }
 
 describe("trpcMetricsMiddleware", () => {
@@ -47,21 +50,35 @@ describe("trpcMetricsMiddleware", () => {
       | { ok: true; data: unknown }
       | { ok: false; error: TRPCError }
       | { throws: Error },
+    tracer: SpanStarter,
   ) {
-    return trpcMetricsMiddleware({
-      path,
-      type,
-      next: () => {
-        if ("throws" in nextResult) return Promise.reject(nextResult.throws);
-        return Promise.resolve(nextResult);
+    return trpcMetricsMiddleware(
+      {
+        path,
+        type,
+        next: () => {
+          if ("throws" in nextResult) return Promise.reject(nextResult.throws);
+          return Promise.resolve(nextResult);
+        },
       },
-    });
+      tracer,
+    );
   }
 
   it("records a success label set for a passing query", async () => {
-    const { span, startActiveSpan } = installSpanSpy();
-    await invoke("admin.snapshot", "query", { ok: true, data: { rows: 0 } });
-    await invoke("admin.snapshot", "query", { ok: true, data: { rows: 0 } });
+    const { span, startActiveSpan, tracer } = installSpanSpy();
+    await invoke(
+      "admin.snapshot",
+      "query",
+      { ok: true, data: { rows: 0 } },
+      tracer,
+    );
+    await invoke(
+      "admin.snapshot",
+      "query",
+      { ok: true, data: { rows: 0 } },
+      tracer,
+    );
 
     const counter = metricsRegistry.getSingleMetric("trpc_request_total");
     expect(counter).toBeDefined();
@@ -81,11 +98,16 @@ describe("trpcMetricsMiddleware", () => {
   });
 
   it("records an error label when the inner middleware returns ok=false", async () => {
-    const { span, startActiveSpan } = installSpanSpy();
-    await invoke("admin.snapshot", "mutation", {
-      ok: false,
-      error: new TRPCError({ code: "FORBIDDEN", message: "denied" }),
-    });
+    const { span, startActiveSpan, tracer } = installSpanSpy();
+    await invoke(
+      "admin.snapshot",
+      "mutation",
+      {
+        ok: false,
+        error: new TRPCError({ code: "FORBIDDEN", message: "denied" }),
+      },
+      tracer,
+    );
 
     const text = await metricsRegistry.metrics();
     expect(text).toContain(
@@ -105,8 +127,9 @@ describe("trpcMetricsMiddleware", () => {
 
   it("records an error label and rethrows when inner next() throws", async () => {
     const thrown = new Error("boom");
+    const { tracer } = installSpanSpy();
     await expect(
-      invoke("weeklyReport.get", "query", { throws: thrown }),
+      invoke("weeklyReport.get", "query", { throws: thrown }, tracer),
     ).rejects.toBe(thrown);
 
     const text = await metricsRegistry.metrics();
@@ -118,10 +141,13 @@ describe("trpcMetricsMiddleware", () => {
   it("starts a histogram timer that records a duration observation", async () => {
     // Presence of the labelled sum series proves the timer fired; observed
     // duration is always >= 0 so a numeric floor assert would be vacuous.
-    await invoke("analytics.leadVelocity", "query", {
-      ok: true,
-      data: { rows: [] },
-    });
+    const { tracer } = installSpanSpy();
+    await invoke(
+      "analytics.leadVelocity",
+      "query",
+      { ok: true, data: { rows: [] } },
+      tracer,
+    );
     const histogram = metricsRegistry.getSingleMetric(
       "trpc_request_duration_seconds",
     );

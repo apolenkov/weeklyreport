@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 export interface ProvenanceCandidate {
@@ -40,25 +40,15 @@ const liveSpecFiles = (root: string): readonly LiveSpec[] => {
   const changesRoot = path.join(root, "openspec", "changes");
   const durable = readdirSync(durableRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(durableRoot, entry.name, SPEC_FILE))
-    .filter((file) => {
-      try {
-        return readFileSync(file, "utf8").length >= 0;
-      } catch {
-        return false;
-      }
-    });
+    .map((entry) => path.join(durableRoot, entry.name, SPEC_FILE));
   const active = readdirSync(changesRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name !== "archive")
     .flatMap((change) => {
       const specsRoot = path.join(changesRoot, change.name, "specs");
-      try {
-        return readdirSync(specsRoot, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => path.join(specsRoot, entry.name, SPEC_FILE));
-      } catch {
-        return [];
-      }
+      if (!existsSync(specsRoot)) return [];
+      return readdirSync(specsRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => path.join(specsRoot, entry.name, SPEC_FILE));
     });
   return [
     ...durable.map((file) => ({ file, tier: "durable" as const })),

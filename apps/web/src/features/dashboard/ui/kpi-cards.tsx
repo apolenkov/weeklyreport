@@ -11,7 +11,7 @@ interface KpiCardsProps {
 const PERCENT_MAX = 100;
 
 const KPI_CARD_CLASS =
-  "flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]";
+  "flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[var(--shadow-card-elevated)]";
 const KPI_CAPTION_CLASS =
   "text-xs font-medium text-[var(--color-muted-foreground)]";
 

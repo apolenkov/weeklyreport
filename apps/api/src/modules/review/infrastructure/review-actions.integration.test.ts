@@ -1,6 +1,7 @@
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -29,8 +30,12 @@ describe("review-actions (integration)", () => {
   let admin: { id: string };
 
   beforeAll(() => {
-    repo = new ReviewActionsPrismaRepository(prisma as never);
-    sectionsRepo = new ReportSectionsPrismaRepository(prisma as never);
+    repo = new ReviewActionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+    sectionsRepo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
     service = new ReviewActionsService(repo);
   });
 
@@ -327,7 +332,7 @@ describe("review-actions (integration)", () => {
         await sectionsRepo.getSectionById(testData.section.id),
       );
       expect(returned.version).toBe(1);
-      expect(expectDefined(returned.reviews?.[0]).isCurrent).toBe(true);
+      expect(expectDefined(returned.reviews[0]).isCurrent).toBe(true);
 
       // A save bumps the version → the prior verdict auto-stales.
       await sectionsRepo.saveSection(returned, returned.version);
@@ -335,7 +340,7 @@ describe("review-actions (integration)", () => {
         await sectionsRepo.getSectionById(testData.section.id),
       );
       expect(afterEdit.version).toBe(2);
-      expect(expectDefined(afterEdit.reviews?.[0]).isCurrent).toBe(false);
+      expect(expectDefined(afterEdit.reviews[0]).isCurrent).toBe(false);
     });
   });
 
@@ -492,7 +497,7 @@ describe("review-actions (integration)", () => {
       });
 
       const carryService = new CarryOverService(
-        new CarryOverPrismaRepository(prisma as never),
+        new CarryOverPrismaRepository(prisma as unknown as PrismaService),
       );
       await carryService.executeCarryOver(testData.report.id, targetReport.id);
 

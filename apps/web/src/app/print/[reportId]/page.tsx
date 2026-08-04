@@ -22,8 +22,10 @@ function humanRedirectPath(role: Role, reportId: string): string {
 }
 
 export default async function PrintReportPage({ params }: Props) {
-  const { reportId } = await params;
-  const ctx = await getPrintRouteContext();
+  const [{ reportId }, ctx] = await Promise.all([
+    params,
+    getPrintRouteContext(),
+  ]);
 
   // Worker check must come first: a worker token otherwise looks like a human
   // session. These redirects are UX only; pdfExportGuard is the data boundary.

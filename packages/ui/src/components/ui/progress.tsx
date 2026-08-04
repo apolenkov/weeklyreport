@@ -15,7 +15,12 @@ function Progress({
   className,
   value,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+}: Readonly<
+  React.ComponentProps<typeof ProgressPrimitive.Root> & {
+    /** Determinate fill 0-100; absent value is a compile error. */
+    value: number;
+  }
+>) {
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
@@ -24,12 +29,13 @@ function Progress({
         className,
       )}
       {...props}
+      value={value}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         className="h-full w-full flex-1 bg-primary transition-all"
         style={{
-          transform: `translateX(-${PROGRESS_COMPLETE_PERCENT - (value ?? 0)}%)`,
+          transform: `translateX(-${PROGRESS_COMPLETE_PERCENT - value}%)`,
         }}
       />
     </ProgressPrimitive.Root>

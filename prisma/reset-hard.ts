@@ -20,24 +20,23 @@ import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { isEntrypoint } from "./_entrypoint.js";
+import { requireEnv } from "./_require-env.js";
 import { parseSeedProfile } from "./seed-profile-contract.js";
 
-const DATABASE_URL: string = (() => {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL must be set in .env");
-  return url;
-})();
+const DATABASE_URL = requireEnv("DATABASE_URL");
 interface RedisEndpoint {
   readonly host: string;
   readonly port: number;
   readonly source: "REDIS_URL" | "REDIS_HOST/REDIS_PORT";
 }
 
-// Redis' own default listening port — used when neither REDIS_URL nor
-// REDIS_PORT pins one (dev/compose convenience, not product config).
-const DEFAULT_REDIS_PORT = 6379;
 // A local FLUSHALL answers in milliseconds; this only bounds a hung socket.
 const REDIS_FLUSHALL_TIMEOUT_MS = 5000;
+
+// FLUSHALL wipes EVERY database on the server, including other applications'
+// keys. Refuse unless the operator explicitly authorises this endpoint as
+// disposable; a shared dev Redis must not lose unrelated data.
+const REDIS_DISPOSABLE_AUTHORISATION = "RESET_HARD_REDIS_DISPOSABLE";
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -47,7 +46,10 @@ function getRedisEndpoint(): RedisEndpoint {
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
     const url = new URL(redisUrl);
-    const port = Number(url.port || DEFAULT_REDIS_PORT);
+    if (!url.port) {
+      throw new Error(`REDIS_URL must include an explicit port: ${redisUrl}`);
+    }
+    const port = Number(url.port);
     if (!Number.isInteger(port) || port <= 0) {
       throw new Error(`Invalid Redis port in REDIS_URL: ${url.port}`);
     }
@@ -61,9 +63,15 @@ function getRedisEndpoint(): RedisEndpoint {
     };
   }
 
-  const port = Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT);
+  const rawPort = process.env.REDIS_PORT;
+  if (!rawPort) {
+    throw new Error(
+      "REDIS_PORT must be set in .env (or provide REDIS_URL with a port)",
+    );
+  }
+  const port = Number(rawPort);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT ?? "unset"}`);
+    throw new Error(`Invalid REDIS_PORT: ${rawPort}`);
   }
   const host = process.env.REDIS_HOST;
   if (!host) {
@@ -87,6 +95,15 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
 }
 
 export async function flushRedis(): Promise<void> {
+  const env = (process as { env: Record<string, string | undefined> }).env;
+  if (env[REDIS_DISPOSABLE_AUTHORISATION] !== "yes") {
+    throw new Error(
+      `Refusing FLUSHALL: ${REDIS_DISPOSABLE_AUTHORISATION} is not 'yes'. ` +
+        "FLUSHALL wipes every database on the server; set the variable only " +
+        "for a disposable CustomReport-exclusive Redis endpoint.",
+    );
+  }
+
   const { host, port, source } = getRedisEndpoint();
   console.log(`[reset-hard] Redis target: ${host}:${port} (${source})`);
 
@@ -134,6 +151,12 @@ export async function flushRedis(): Promise<void> {
   console.log("[reset-hard] Redis FLUSHALL: OK");
 }
 
+// PostgreSQL identifiers are quoted by doubling embedded quotes (the dialect's
+// escape rule); without it a legal quoted table name breaks the statement.
+export function quotePgIdentifier(identifier: string): string {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
 async function truncateAll(): Promise<void> {
   // Discover every table in the public schema except prisma's bookkeeping
   // table — schema drift between repo and DB doesn't break the wipe this way.
@@ -148,7 +171,7 @@ async function truncateAll(): Promise<void> {
     console.warn("[reset-hard] No app tables found in public schema");
     return;
   }
-  const quoted = rows.map((r) => `"${r.tablename}"`).join(", ");
+  const quoted = rows.map((r) => quotePgIdentifier(r.tablename)).join(", ");
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE;`,
   );

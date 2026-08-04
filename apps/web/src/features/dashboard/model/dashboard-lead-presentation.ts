@@ -5,13 +5,13 @@ import type { LeadStatus } from "../../report-sections";
 export type ProductStatus = "on-track" | "at-risk" | "blocked";
 
 export interface TrafficLight {
-  status: ProductStatus;
-  icon: string;
+  readonly status: ProductStatus;
+  readonly icon: string;
 }
 
 export interface ReviewPresentation {
-  reviewState: "changes-requested" | "approved" | "awaiting" | "none";
-  reviewLabel: string;
+  readonly reviewState: "changes-requested" | "approved" | "awaiting" | "none";
+  readonly reviewLabel: string;
 }
 
 export type AttentionLabel = "Blocked" | "At risk" | "On track" | "No signal";
@@ -19,39 +19,38 @@ export type AttentionLabel = "Blocked" | "At risk" | "On track" | "No signal";
 export type LeadPriority = "action-needed" | "stale" | "active" | "complete";
 
 export interface LeadInfo extends ReviewPresentation {
-  id: string;
-  initials: string;
-  name: string;
-  role: DbRole;
-  status: LeadStatus;
-  trafficLights: TrafficLight[];
-  lastEditAt: Date | null;
-  submittedAt: Date | null;
-  isStale: boolean;
-  isCurrentUser: boolean;
-  productCount?: number;
-  reportContentCount?: number;
-  currentItemCount?: number;
-  nextItemCount?: number;
-  riskCount?: number;
-  decisionCount?: number;
-  priorityCount?: number;
-  /** Count of activity-parented records (work units). */
-  activityCount?: number;
-  submittedAtLabel?: string | null;
-  /** The section UUID needed for the per-lead Revoke button. */
-  reportSectionId?: string;
-  version?: number;
-  reviews: readonly SectionReviewView[];
-  attentionLabel: AttentionLabel;
-  actions: {
+  readonly id: string;
+  readonly initials: string;
+  readonly name: string;
+  readonly role: DbRole;
+  readonly status: LeadStatus;
+  readonly trafficLights: readonly TrafficLight[];
+  readonly lastEditAt: Date | null;
+  readonly submittedAt: Date | null;
+  readonly isStale: boolean;
+  readonly isCurrentUser: boolean;
+  readonly productCount?: number;
+  readonly reportContentCount?: number;
+  readonly currentItemCount?: number;
+  readonly nextItemCount?: number;
+  readonly riskCount?: number;
+  readonly decisionCount?: number;
+  readonly priorityCount?: number;
+  readonly activityCount?: number;
+  readonly submittedAtLabel?: string | null;
+  // Needed by the per-lead Revoke button.
+  readonly reportSectionId?: string;
+  readonly version?: number;
+  readonly reviews: readonly SectionReviewView[];
+  readonly attentionLabel: AttentionLabel;
+  readonly actions: {
     readonly canOpen: boolean;
     readonly canRemind: boolean;
     readonly canReview: boolean;
     readonly canRequestChanges: boolean;
     readonly canRevoke: boolean;
   };
-  priority: LeadPriority;
+  readonly priority: LeadPriority;
 }
 
 export function reviewPresentation(

@@ -32,7 +32,7 @@ function AddItemButton({
     <div className="flex justify-end">
       <button
         type="button"
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() =>
           defaultProduct && onAdd({ productId: defaultProduct.id })
         }
@@ -60,13 +60,13 @@ function NextWeekEmptyState({
 }) {
   if (readOnly) {
     return (
-      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+      <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
         No next-week items.
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-8 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-8 text-center">
       <p className="text-sm text-[var(--color-muted-foreground)]">
         No next-week items yet.
       </p>
@@ -134,7 +134,6 @@ export function NextWeekSection(props: NextWeekSectionProps) {
 
   return (
     <div
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be keyboard-focusable (axe scrollable-region-focusable); the static rule does not model that WCAG exception
       tabIndex={0}
       role="group"
       aria-label="Next week items"

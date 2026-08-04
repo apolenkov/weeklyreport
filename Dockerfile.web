@@ -23,12 +23,14 @@ COPY tsconfig.base.json ./tsconfig.base.json
 # Stage 4: Build for production
 FROM installer AS builder
 # API_URL is the server-side origin (compose network); NEXT_PUBLIC_API_URL is
-# inlined into the client bundle at build. Both defaults are edge-safe — no
-# ':3002' host-port path, which the prod compose closes. Prod build.args
-# override NEXT_PUBLIC_API_URL with the real edge address; this same-origin
-# default is only the local build fallback.
-ARG API_URL=http://api:3001
-ARG NEXT_PUBLIC_API_URL=http://localhost:3000
+# inlined into the client bundle at build. Both are REQUIRED build args — a
+# production-labelled build that omits them must fail loud instead of baking a
+# localhost/internal fallback origin into the bundle.
+ARG API_URL
+ARG NEXT_PUBLIC_API_URL
+RUN test -n "$API_URL" || (echo "API_URL build arg is required" && exit 1) \
+  && test -n "$NEXT_PUBLIC_API_URL" \
+  || (echo "NEXT_PUBLIC_API_URL build arg is required" && exit 1)
 # Dev-auth flags default OFF so an un-argumented build (a direct `docker build`,
 # a CI job, or a compose file that omits build.args) never inlines the auth stub
 # or dev role switcher into a production-labeled bundle. Dev opts back in via

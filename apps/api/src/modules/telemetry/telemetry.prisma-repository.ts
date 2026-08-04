@@ -1,19 +1,21 @@
 import { MS_PER_WEEK, type UserSession } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
+import type { TelemetryRepository } from "./telemetry.ports.js";
 import {
   queryActiveLeadsLastPublishedPeriod,
   querySettledPeriodIds,
 } from "./telemetry.queries.js";
-import type { TelemetryRepository } from "./telemetry.service.js";
 
 @Injectable()
 export class TelemetryPrismaRepository implements TelemetryRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async reportsThisPeriodCount(session: UserSession): Promise<number> {
+  readonly reportsThisPeriodCount = async (
+    session: UserSession,
+  ): Promise<number> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -31,15 +33,19 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
         ...(scoped ? { sections: { some: scope } } : {}),
       },
     });
-  }
+  };
 
-  activeLeadsLastPublishedPeriod(session: UserSession): Promise<number> {
+  readonly activeLeadsLastPublishedPeriod = (
+    session: UserSession,
+  ): Promise<number> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     return queryActiveLeadsLastPublishedPeriod(this.prisma, scope);
-  }
+  };
 
-  async lateSectionsLastPublishedPeriod(session: UserSession): Promise<number> {
+  readonly lateSectionsLastPublishedPeriod = async (
+    session: UserSession,
+  ): Promise<number> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -57,9 +63,11 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
         ...scope,
       },
     });
-  }
+  };
 
-  async pendingReopenCount(session: UserSession): Promise<number> {
+  readonly pendingReopenCount = async (
+    session: UserSession,
+  ): Promise<number> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -69,9 +77,9 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
         ...(scoped ? { reportSection: { is: scope } } : {}),
       },
     });
-  }
+  };
 
-  async pdfExportsLast7d(session: UserSession): Promise<number> {
+  readonly pdfExportsLast7d = async (session: UserSession): Promise<number> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -83,12 +91,12 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
         ...(scoped ? { report: { is: { sections: { some: scope } } } } : {}),
       },
     });
-  }
+  };
 
-  async onTimeRatioPerPeriod(
+  readonly onTimeRatioPerPeriod = async (
     n: number,
     session: UserSession,
-  ): Promise<number[]> {
+  ): Promise<readonly number[]> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -120,5 +128,5 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
         ]);
         return total > 0 ? [...ratios, onTime / total] : ratios;
       }, Promise.resolve([]));
-  }
+  };
 }

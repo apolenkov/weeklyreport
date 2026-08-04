@@ -3,6 +3,8 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { ReportSectionDomainError } from "../application/report-sections.service";
+
 export function toProjectStatusRows(
   section: ReportSectionReadModel,
   sectionId: string,
@@ -19,7 +21,7 @@ export function toStageStatusRows(
   sectionId: string,
 ) {
   return section.projects.flatMap((project) =>
-    (project.ownedStages ?? []).map((stage) => ({
+    project.ownedStages.map((stage) => ({
       reportSectionId: sectionId,
       projectId: project.projectId,
       stageId: stage.stageId,
@@ -61,7 +63,7 @@ export function toItemRows(section: ReportSectionReadModel, sectionId: string) {
     carriedOver: i.carriedOver,
     priorityRank: i.priorityRank ?? null,
     pausedReason: i.pausedReason ?? null,
-    stageNames: i.stageNames ?? [],
+    stageNames: [...(i.stageNames ?? [])],
   }));
 }
 
@@ -77,14 +79,23 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
     impact: r.impact,
     mitigation: r.mitigation,
     severity: r.severity,
-    stageNames: r.stageNames ?? [],
+    stageNames: [...(r.stageNames ?? [])],
   }));
 }
 
-export function isPersistableDecision(
-  decision: ReportSectionReadModel["decisions"][number],
-): boolean {
-  return decision.productId != null || decision.activityId != null;
+export function assertPersistableDecisionParents(
+  decisions: readonly ReportSectionReadModel["decisions"][number][],
+): void {
+  for (const decision of decisions) {
+    const hasProduct = decision.productId != null;
+    const hasActivity = decision.activityId != null;
+    if (hasProduct === hasActivity) {
+      throw new ReportSectionDomainError(
+        "INVALID_DECISION_PARENT",
+        "A decision must have exactly one parent — a product or an activity.",
+      );
+    }
+  }
 }
 
 export function toDecisionRows(
@@ -100,7 +111,7 @@ export function toDecisionRows(
     deadline: d.deadline ?? null,
     impact: d.impact,
     resolvedAt: d.resolvedAt ?? null,
-    stageNames: d.stageNames ?? [],
+    stageNames: [...(d.stageNames ?? [])],
     // XOR parent (product FK null for the activity case).
     productId: d.productId ?? null,
     activityId: d.activityId ?? null,

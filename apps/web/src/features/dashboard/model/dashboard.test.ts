@@ -26,7 +26,14 @@ const ITEM_A = "11111111-1111-4111-8111-aa0000000001";
 const ITEM_B = "11111111-1111-4111-8111-aa0000000002";
 const DECISION_A = "11111111-1111-4111-8111-ee0000000001";
 
-function makeReview(): SubmissionDashboardRow[] {
+function makeReview(
+  override?: readonly Parameters<
+    typeof submissionDashboardRowSchema.parse
+  >[0][],
+): SubmissionDashboardRow[] {
+  if (override) {
+    return override.map((row) => submissionDashboardRowSchema.parse(row));
+  }
   return [
     submissionDashboardRowSchema.parse({
       leadId: LEAD_A,
@@ -64,6 +71,7 @@ function makeWeeklyReport(
     periodEnd: "2026-04-19T23:59:59.000Z",
     deadline: "2026-04-17T15:00:00.000Z",
     periodStatus: "open",
+    archived: false,
     weekLabel: "Week 16",
     submissionCount: overrides.submissionCount ?? 4,
     totalLeads: overrides.totalLeads ?? 6,
@@ -75,6 +83,7 @@ function makeWeeklyReport(
         worstStatus: "green",
         stageCount: 3,
         leadNames: ["Alice Lead"],
+        leadIds: [LEAD_A],
       },
       {
         productId: PROJECT_B,
@@ -82,6 +91,7 @@ function makeWeeklyReport(
         worstStatus: "red",
         stageCount: 2,
         leadNames: ["Bob Lead"],
+        leadIds: [LEAD_B],
       },
     ],
     leadSections: overrides.leadSections ?? [
@@ -90,10 +100,13 @@ function makeWeeklyReport(
         reportId: REPORT_ID,
         authorId: LEAD_A,
         authorName: "Alice Lead",
+        authorRole: "lead",
         version: 1,
         status: "submitted",
         submittedAt: "2026-04-20T10:00:00.000Z",
+        late: false,
         projects: [],
+        referencedProjects: [],
         items: [
           {
             id: ITEM_A,
@@ -118,16 +131,21 @@ function makeWeeklyReport(
             resolvedAt: null,
           },
         ],
+        activities: [],
+        reviews: [],
       },
       {
         reportSectionId: SECTION_B,
         reportId: REPORT_ID,
         authorId: LEAD_B,
         authorName: "Bob Lead",
+        authorRole: "lead",
         version: 1,
         status: "draft",
         submittedAt: null,
+        late: false,
         projects: [],
+        referencedProjects: [],
         items: [
           {
             id: ITEM_B,
@@ -142,6 +160,8 @@ function makeWeeklyReport(
         ],
         risks: [],
         decisions: [],
+        activities: [],
+        reviews: [],
       },
       // Cara has NO section -> 'pending'.
     ],
@@ -294,6 +314,45 @@ describe("mapDashboardData", () => {
     expect(result.pendingLeads).toEqual(["Cara L."]);
   });
 
+  // Product health is attributed by lead id, never by display name: a lead
+  // whose name collides with the product's leadNames but whose id is not in
+  // leadIds must not inherit that product's traffic light.
+  it("attributes traffic lights by lead id, not display name", () => {
+    const IMPOSTOR_LEAD = "11111111-1111-4111-8111-cc0000000009";
+    const weeklyReport = makeWeeklyReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM Portal",
+          worstStatus: "red",
+          stageCount: 3,
+          leadNames: ["Alice Lead"],
+          // Same display name as the lead below, different id.
+          leadIds: ["11111111-1111-4111-8111-cc0000000000"],
+        },
+      ],
+    });
+    const review = makeReview([
+      {
+        leadId: IMPOSTOR_LEAD,
+        leadName: "Alice Lead",
+        role: "lead",
+        projectNames: ["CRM Portal"],
+        status: "submitted",
+        submittedAt: "2026-04-20T10:00:00.000Z",
+      },
+    ]);
+
+    const result = mapDashboardData({
+      review,
+      weeklyReport,
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    const impostor = result.leads.find((l) => l.id === IMPOSTOR_LEAD);
+    expect(impostor).toBeDefined();
+    expect(impostor?.trafficLights).toEqual([]);
+  });
+
   // pendingLeads draws from leads ∪ leadSections ∪ activity ∪ review — not
   // review alone; a lead with section/activity still surfaces when scoped
   // review rows omit them (see dashboard-queue "Nora No Section").
@@ -307,14 +366,18 @@ describe("mapDashboardData", () => {
           reportId: REPORT_ID,
           authorId: LEAD_D,
           authorName: "Denise Draft",
+          authorRole: "lead",
           version: 1,
           status: "draft",
           submittedAt: null,
+          late: false,
           projects: [],
+          referencedProjects: [],
           items: [],
           risks: [],
           decisions: [],
           activities: [],
+          reviews: [],
         },
       ],
     });

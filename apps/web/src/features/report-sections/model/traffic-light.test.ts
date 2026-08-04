@@ -1,3 +1,4 @@
+import { trafficLightStatusSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { stageStatusToTraffic, trafficToStageStatus } from "./traffic-light";
@@ -40,7 +41,7 @@ describe("stageStatusToTraffic", () => {
 
 describe("traffic-light mapper roundtrip", () => {
   it("roundtrips every TrafficLightStatus value (green/yellow/red/null)", () => {
-    const values = ["green", "yellow", "red", null] as const;
+    const values = [...trafficLightStatusSchema.options, null];
     for (const v of values) {
       expect(stageStatusToTraffic(trafficToStageStatus(v))).toBe(v);
     }

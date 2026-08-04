@@ -1,9 +1,3 @@
-/**
- * Addressed-URL pins for <LeadForm/>: bare route redirects to the active
- * reportId; addressed route scopes the load, shows the past-period banner
- * when needed, and never redirects. tRPC mocked at the boundary.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -50,6 +44,7 @@ function makeSection(
     authorRole: "lead" as const,
     status: opts.status ?? ("draft" as const),
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -84,6 +79,7 @@ function buildHarness(opts: {
         reportId: ACTIVE_REPORT_ID,
         reportSectionId: ACTIVE_SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     {
@@ -279,9 +275,48 @@ describe("LeadForm — addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15.
+    // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15. No
+    // session provider → organization falls back to the neutral placeholder.
     await waitFor(() => expect(document.title).toContain("Week 15"));
     expect(document.title).toContain("Apr 7–13, 2026");
-    expect(document.title).toContain("CustomReport");
+    expect(document.title).toContain("Organization");
+  });
+
+  it("document title brand comes from the session organization, not a hard-coded product brand", async () => {
+    const proxy = buildHarness({
+      byPeriodSection: makeSection({
+        reportSectionId: PAST_SECTION_ID,
+        reportId: PAST_REPORT_ID,
+        status: "submitted",
+      }),
+      byPeriodReadOnly: true,
+    });
+    render(
+      <Wrapper>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "lead-id",
+              name: "Lead User",
+              email: "lead@example.test",
+              role: "lead",
+            },
+            organization: {
+              shortName: "PEO",
+              fullName: "Product Engineering",
+            },
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={proxy}>
+            <LeadForm reportId={PAST_REPORT_ID} />
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
+      </Wrapper>,
+    );
+    await waitFor(() => expect(document.title).toContain("Week 15"));
+    expect(document.title).toContain("· Product Engineering");
+    expect(document.title).not.toContain("CustomReport");
   });
 });

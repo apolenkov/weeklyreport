@@ -35,6 +35,7 @@ import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { requireEnv } from "./_require-env.js";
 import {
   PUBLISHED_REPORT_ID,
   SEED_HISTORY_REPORTS,
@@ -54,7 +55,7 @@ import { logSeedCounts } from "./seed-demo.summary.js";
 import type { Tier, TierDataset } from "./seed-demo.types.js";
 import { wipe } from "./seed-demo.wipe.js";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -85,32 +86,36 @@ async function seedPeriodSections(
   tier: Tier,
 ): Promise<void> {
   console.log(`[seed-demo:${tier}] Seeding active + published sections...`);
-  const byLead = groupByLead(dataset.sections);
+  const byLead = [...groupByLead(dataset.sections).entries()];
   const productNames = new Map(dataset.products.map((p) => [p.id, p.name]));
-  for (const [leadId, contributions] of byLead) {
-    await seedActiveLeadSection(prisma, leadId, contributions);
+  for (const [leadIdx, [leadId, contributions]] of byLead.entries()) {
+    await seedActiveLeadSection(prisma, leadId, contributions, leadIdx);
   }
   if (tier === "small") {
     console.log(`[seed-demo:${tier}] Seeding project activities...`);
     await seedSmallActivities(prisma);
   }
-  for (const [leadId, contributions] of byLead) {
+  for (const [leadIdx, [leadId, contributions]] of byLead.entries()) {
     await seedPriorLeadSection(prisma, {
+      reportIdx: 0,
       reportId: PUBLISHED_REPORT_ID,
       submittedAt: new Date(SEED_REPORTS.published.publishedAt),
       leadId,
+      leadIdx,
       contributions,
       productNames,
     });
   }
   // History periods give the lead archived periods to surface the show-archived
   // toggle, and keep the head/period-switch views non-empty.
-  for (const h of SEED_HISTORY_REPORTS) {
-    for (const [leadId, contributions] of byLead) {
+  for (const [reportOffset, h] of SEED_HISTORY_REPORTS.entries()) {
+    for (const [leadIdx, [leadId, contributions]] of byLead.entries()) {
       await seedPriorLeadSection(prisma, {
+        reportIdx: reportOffset + 1,
         reportId: h.id,
         submittedAt: new Date(h.periodEnd),
         leadId,
+        leadIdx,
         contributions,
         productNames,
       });

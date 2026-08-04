@@ -3,12 +3,12 @@
 Spawn one agent (model: sonnet — mechanical browser-driving + observation) with
 the prompt below. Substitute the four `<...>` placeholders per role:
 
-| placeholder        | lead                          | head                  | admin                 | viewer                      |
-| ------------------ | ----------------------------- | --------------------- | --------------------- | --------------------------- |
-| `<ROLE>`           | lead                          | head                  | admin                 | viewer                      |
-| `<EMAIL>`          | lead1@customreport.local      | head@customreport.local | admin@customreport.local | viewer@customreport.local |
-| `<LANDING>` (enc.) | %2Flead%2Freport              | %2Fhead%2Fdashboard   | %2Fadmin              | %2Freports%3Ftab%3Dpublished |
-| `<CATALOG>`        | e2e/catalog/lead.yaml         | e2e/catalog/head.yaml | e2e/catalog/admin.yaml | e2e/catalog/viewer.yaml     |
+| placeholder        | lead                     | head                    | admin                    | viewer                       |
+| ------------------ | ------------------------ | ----------------------- | ------------------------ | ---------------------------- |
+| `<ROLE>`           | lead                     | head                    | admin                    | viewer                       |
+| `<EMAIL>`          | lead1@customreport.local | head@customreport.local | admin@customreport.local | viewer@customreport.local    |
+| `<LANDING>` (enc.) | %2Flead%2Freport         | %2Fhead%2Fdashboard     | %2Fadmin                 | %2Freports%3Ftab%3Dpublished |
+| `<CATALOG>`        | e2e/catalog/lead.yaml    | e2e/catalog/head.yaml   | e2e/catalog/admin.yaml   | e2e/catalog/viewer.yaml      |
 
 ---
 
@@ -21,6 +21,7 @@ destructive actions (no publishing, no permanent deletes you can't undo); if an
 intent requires one, record it under `coverageNotes` as "not-exercised".
 
 Setup:
+
 - Base URL: http://127.0.0.1:3100
 - Establish the session: navigate to
   `http://127.0.0.1:3100/auth/dev-login?role=<ROLE>&email=<EMAIL>&redirect=<LANDING>`
@@ -69,14 +70,25 @@ Return ONLY this JSON (no prose):
     "startedAt": "2026-01-01T00:00:00.000Z",
     "endedAt": "2026-01-01T00:10:00.000Z",
     "routes": [
-      { "route": "/example/path", "enteredAt": "2026-01-01T00:01:00.000Z", "leftAt": "2026-01-01T00:02:00.000Z" }
+      {
+        "route": "/example/path",
+        "enteredAt": "2026-01-01T00:01:00.000Z",
+        "leftAt": "2026-01-01T00:02:00.000Z"
+      }
     ]
   },
   "candidates": [
-    { "route": "", "intentId": "", "kind": "console|flow|nav|render|layout|axe",
-      "observed": "", "expected": "", "evidence": "", "severity": "high|medium|low" }
+    {
+      "route": "",
+      "intentId": "",
+      "kind": "console|flow|nav|render|layout|axe",
+      "observed": "",
+      "expected": "",
+      "evidence": "",
+      "severity": "high|medium|low"
+    }
   ],
-  "coverageNotes": [ "" ]
+  "coverageNotes": [""]
 }
 ```
 

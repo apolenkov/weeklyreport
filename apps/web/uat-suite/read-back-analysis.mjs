@@ -30,13 +30,7 @@ const INVALIDATORS = new Set([
 // onSettled counts: reopen-requests-card refreshes there so a race still drops
 // the stale row, and that is a read-back on the success path too.
 const SUCCESS_HANDLERS = ["onSuccess", "onSettled"];
-const NAVIGATIONS = [
-  "location.href",
-  "location.reload",
-  "location.assign",
-  "location.replace",
-  "router.refresh",
-];
+const LOCATION_OPERATIONS = new Set(["reload", "assign", "replace"]);
 // Helper calls followed out of a handler body: invalidateReportViews →
 // invalidateDashboard is already two, so a couple of spare levels.
 const MAX_DELEGATION = 4;
@@ -44,17 +38,60 @@ const MAX_DELEGATION = 4;
 const evidence = (detail) => ({ kind: "evidence", detail });
 const opaque = (detail) => ({ kind: "opaque", detail });
 
-function navigationEvidence(node) {
+const isLocationHref = ([root, second, third]) =>
+  (root === "location" && second === "href" && third === undefined) ||
+  (root === "window" && second === "location" && third === "href");
+
+const locationOperation = ([root, second, third]) => {
+  if (root === "location" && third === undefined) return second;
+  return root === "window" && second === "location" ? third : undefined;
+};
+
+export function navigationKind(chain, rootKind, assignment) {
+  const isGlobal = rootKind === "global";
+  if (isGlobal && assignment && isLocationHref(chain)) {
+    return "location.href";
+  }
+  const operation = locationOperation(chain);
+  if (isGlobal && !assignment && LOCATION_OPERATIONS.has(operation))
+    return `location.${operation}`;
+  const [, second] = chain;
+  return rootKind === "next-router" &&
+    !assignment &&
+    chain.length === 2 &&
+    second === "refresh"
+    ? "router.refresh"
+    : null;
+}
+
+const navigationTarget = (node) => {
   const isAssignment =
     ts.isBinaryExpression(node) &&
     node.operatorToken.kind === ts.SyntaxKind.EqualsToken;
-  const chain = isAssignment
-    ? propertyChain(node.left)
+  const target = isAssignment
+    ? node.left
     : ts.isCallExpression(node)
-      ? propertyChain(node.expression)
+      ? node.expression
       : null;
-  const text = chain?.join(".");
-  const hit = text && NAVIGATIONS.find((suffix) => text.endsWith(suffix));
+  return { assignment: isAssignment, target };
+};
+
+const navigationRootKind = (target, ctx) => {
+  const root = rootIdentifier(target);
+  const resolved = root === null ? null : resolveExpr(root, ctx.module, 0);
+  if (resolved === null) return "global";
+  if (!ts.isCallExpression(resolved.node)) return "local";
+  return propertyChain(resolved.node.expression)?.at(-1) === "useRouter"
+    ? "next-router"
+    : "local";
+};
+
+function navigationEvidence(node, ctx) {
+  const { assignment, target } = navigationTarget(node);
+  if (target === null) return null;
+  const chain = propertyChain(target);
+  const hit =
+    chain && navigationKind(chain, navigationRootKind(target, ctx), assignment);
   return hit ? evidence(`full page navigation (${hit})`) : null;
 }
 
@@ -107,7 +144,7 @@ function delegationFindings(call, ctx) {
 }
 
 function nodeFindings(node, ctx) {
-  const navigation = navigationEvidence(node);
+  const navigation = navigationEvidence(node, ctx);
   if (navigation) return [navigation];
   if (!ts.isCallExpression(node)) return [];
   return invalidationFindings(node, ctx) ?? delegationFindings(node, ctx);

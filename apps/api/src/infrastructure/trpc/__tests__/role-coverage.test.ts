@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import type { TrpcContext } from "../trpc.context.js";
 import {
   adminProcedure,
@@ -109,7 +110,7 @@ describe("default-deny coverage gate", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied
     // by `{}` casts because nothing reads them at construction time.
-    const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+    const stubDeps = createStubAppRouterDeps();
     const appRouter = createAppRouter(stubDeps);
 
     const offending = findUncoveredProcedures(appRouter);
@@ -209,7 +210,7 @@ function leadContext(): TrpcContext {
 }
 
 describe("pdfExport authz: leadership chain, lead excluded", () => {
-  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const stubDeps = createStubAppRouterDeps();
   const appRouter = createAppRouter(stubDeps);
   const procedures = appRouter._def.procedures as unknown as Record<
     string,

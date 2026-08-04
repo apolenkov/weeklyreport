@@ -1,0 +1,204 @@
+@theme {
+  --font-display: var(--font-fraunces), "Times New Roman", serif;
+  --font-sans:
+    var(--font-lexend), var(--font-source-sans-3), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-body:
+    var(--font-source-sans-3), var(--font-lexend), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --color-background: #eef1ec;
+  --color-foreground: rgba(0, 0, 0, 0.87);
+
+  --color-muted: #e2e6df;
+  --color-muted-foreground: rgba(0, 0, 0, 0.62);
+
+  --color-accent: #dbe2d8;
+  --color-accent-foreground: rgba(0, 0, 0, 0.87);
+  --color-surface-muted: #f7f8f4;
+
+  --color-surface-hover: #f8f6f2;
+  --color-surface-empty: #fafaf7;
+
+  /* Neutral selection avoids conflating selected state with brand-green actions. */
+  --color-toggle-active: #3f4a44;
+
+  --toolbar-control-h: 2rem;
+
+  --color-skeleton: #d8ddd4;
+
+  --color-success: #d8ece4;
+  --color-success-foreground: #006241;
+  --color-warning: #fbbc05;
+  --color-warning-foreground: #1a1a1a;
+  --color-destructive: #c82014;
+  --color-destructive-emphasis: #991b1b;
+  --color-destructive-emphasis-hover: #7f1d1d;
+  --color-destructive-foreground: #ffffff;
+  --color-coming-soon: #fef3c7;
+  --color-coming-soon-foreground: #b45309;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Identity chips avoid the red, amber, and gold semantic status hues. */
+  --color-chip-on-track-bg: #d8ece4;
+  --color-chip-on-track-text: #1e4a36;
+  --color-chip-on-track-border: #4a9470;
+  --color-chip-at-risk-bg: #ede8d8;
+  --color-chip-at-risk-text: #504020;
+  --color-chip-at-risk-border: #987040;
+  --color-chip-blocked-bg: #ecdcda;
+  --color-chip-blocked-text: #6a1e1a;
+  --color-chip-blocked-border: #a84040;
+  --color-status-blocked-bg: #fee2e2;
+  --color-status-at-risk-bg: #fef3c7;
+  --color-status-at-risk-fg: #78350f;
+  --color-status-at-risk-border: #a07c30;
+  /* Steel-blue keeps progress distinct from alarm and priority hues. */
+  --color-status-in-progress-bg: #e9eff3;
+  --color-status-in-progress-fg: #436079;
+  --color-period-scheduled-bg: #e5e7eb;
+  --color-period-scheduled-fg: #374151;
+  --color-period-published-bg: #e8e0f0;
+  --color-period-published-fg: #6b21a8;
+  --color-period-archived-bg: #f3f4f6;
+  --color-period-archived-fg: #6b7280;
+  --color-priority-row-bg: #faf6ee;
+  --color-highlight-shadow: rgba(0, 117, 74, 0.16);
+
+  --color-border: #ccd4c8;
+  --color-border-warm: #ece8e2;
+  --color-ring: rgba(0, 98, 65, 0.3);
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.2);
+  --color-border-accent-hover: rgba(0, 117, 74, 0.3);
+
+  --color-surface-inset: rgba(0, 0, 0, 0.02);
+  --color-surface-empty-tint: rgba(0, 0, 0, 0.035);
+  --color-surface-skeleton: rgba(0, 0, 0, 0.04);
+  --color-surface-empty-card: rgba(0, 0, 0, 0.045);
+  --color-surface-empty-badge: rgba(255, 255, 255, 0.35);
+  --color-destructive-surface-subtle: rgba(200, 32, 20, 0.08);
+  --color-approval-surface: rgba(0, 117, 74, 0.04);
+
+  --color-card: #fffefb;
+  --color-card-foreground: rgba(0, 0, 0, 0.87);
+  --color-popover: #ffffff;
+  --color-popover-foreground: rgba(0, 0, 0, 0.87);
+
+  --color-primary: #006241;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #e2e6df;
+  --color-secondary-foreground: #1e3932;
+
+  --color-input: #d6d1c9;
+
+  --color-starbucks-green: #006241;
+  --color-starbucks-accent: #00754a;
+  --color-starbucks-house: #1e3932;
+  --color-starbucks-gold: #cba258;
+  --color-starbucks-cream: #f2f0eb;
+
+  --color-chart-1: #15803d;
+  --color-chart-2: #2563eb;
+  --color-chart-3: #9333ea;
+  --color-chart-4: #0891b2;
+  --color-chart-5: #c2410c;
+  --color-chart-6: #a21caf;
+
+  --color-sidebar: #1e3932;
+  --color-sidebar-foreground: #f2f0eb;
+  --color-sidebar-primary: #00754a;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #2d4f47;
+  --color-sidebar-accent-foreground: #f2f0eb;
+  --color-sidebar-border: #3a6359;
+  --color-sidebar-ring: #00754a;
+
+  --card-surface-border: rgba(0, 0, 0, 0.1);
+  --card-surface-gradient: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.97) 0%,
+    rgba(255, 255, 255, 0.94) 100%
+  );
+  --card-surface-shadow:
+    0 0 0.5px 0 rgba(0, 0, 0, 0.08), 0 8px 18px -14px rgba(0, 0, 0, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  --card-surface-shadow-hover:
+    0 0 0.5px 0 rgba(0, 0, 0, 0.12), 0 12px 26px -18px rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.06);
+
+  --shadow-primary-cta: 0 2px 12px rgba(0, 98, 65, 0.2);
+  --shadow-card-resting: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-compact: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-elevated:
+    0 0 0.5px 0 rgba(0, 0, 0, 0.14), 0 1px 1px 0 rgba(0, 0, 0, 0.24);
+  --shadow-sidebar-card:
+    0 0 0.5px 0 rgba(0, 0, 0, 0.06), 0 4px 10px -8px rgba(0, 0, 0, 0.18);
+  --shadow-portfolio-card-hover:
+    0 8px 18px -14px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(0, 117, 74, 0.18);
+  --shadow-stage-empty-hover: 0 0 0 2px rgba(0, 117, 74, 0.2);
+  --shadow-slide-card-selected: 0 0 0 2px rgba(0, 117, 74, 0.13);
+  --shadow-brand-mark: 0 0 0 1px rgba(0, 98, 65, 0.08);
+  --shadow-focus-destructive: 0 0 0 3px rgba(200, 32, 20, 0.15);
+
+  /* The toolbar band stays translucent so it reads as chrome, not a card. */
+  --toolbar-band-gradient: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(255, 255, 255, 0.78) 100%
+  );
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-pill: 3.125rem;
+
+  --font-size-coming-soon: 0.625rem;
+  --font-size-chart-tooltip: 0.75rem;
+  --radius-chart-tooltip: 0.375rem;
+  --layer-overlay: 50;
+  --layer-popover: 50;
+  /* Modal dialogs stack above popovers and the slide deck's sticky chrome. */
+  --layer-dialog: 100;
+  --dropdown-menu-min-width: 8rem;
+
+  --touch-target-min: 44px;
+
+  --color-status-dot-at-risk: #d4a017;
+
+  /* Decisions use blue so they cannot be mistaken for green success state. */
+  --color-decisions-accent: #4a7494;
+
+  --slide-canvas-max-w: 1088px;
+  --slide-canvas-min-w: 900px;
+  --slide-canvas-min-h: 680px;
+}
+
+.dark {
+  --color-coming-soon: #78350f;
+  --color-coming-soon-foreground: #fef3c7;
+  --color-overlay: rgba(0, 0, 0, 0.7);
+}
+
+/* Pastel author colors avoid semantic status hues. Plain :root preserves
+   JS-only variable references that Tailwind cannot discover statically. */
+:root {
+  --slide-author-0: #d6e5dc;
+  --slide-author-1: #d8e4f0;
+  --slide-author-2: #e4dcee;
+  --slide-author-3: #d5eae8;
+  --slide-author-4: #e8e3d9;
+  --slide-author-5: #f0dee3;
+
+  /* Plain :root preserves this JS-only variable from Tailwind tree-shaking. */
+  --color-stage-devops: #6366f1;
+}
+
+@media (width < 48rem) {
+  :root {
+    --toolbar-control-h: var(--touch-target-min);
+  }
+}

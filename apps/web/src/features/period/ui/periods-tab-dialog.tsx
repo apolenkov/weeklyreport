@@ -184,9 +184,13 @@ export function CreatePeriodDialog({
   // Edit semantics need the row itself; without it the dialog stays in create mode.
   const editedPeriod = mode === "edit" ? initialValues : undefined;
   const isEdit = editedPeriod !== undefined;
+  // While the mutation is in flight the dialog must stay put: Escape, backdrop
+  // click, and the Cancel button are all suppressed so a submit can't be
+  // abandoned mid-flight.
+  const guardedCancel = isPending ? () => undefined : onCancel;
   const { values, setters, surfaceRef } = usePeriodDialogForm(
     editedPeriod,
-    onCancel,
+    guardedCancel,
   );
   const validation = derivePeriodDialogValidation(values, isEdit, isPending);
   const copy = DIALOG_COPY[isEdit ? "edit" : "create"];
@@ -201,7 +205,7 @@ export function CreatePeriodDialog({
       mode={mode}
       title={copy.title}
       description={copy.description}
-      onCancel={onCancel}
+      onCancel={guardedCancel}
       surfaceRef={surfaceRef}
     >
       <CreatePeriodFields

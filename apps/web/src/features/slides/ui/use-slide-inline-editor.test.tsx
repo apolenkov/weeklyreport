@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
@@ -14,13 +12,23 @@ import { describe, expect, it, vi } from "vitest";
 import { makeQueryClient } from "../../../lib/query-client";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import type { KanbanItem } from "../../report-sections";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
 import type { LeadSlideFormData } from "./lead-slide-form-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
+const toastError = vi.fn();
 vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+  toast: {
+    error: (...args: unknown[]) => {
+      toastError(...args);
+    },
+    success: vi.fn(),
+  },
 }));
 
 vi.mock("../../report-sections/ui/item-edit-dialog", () => ({
@@ -137,10 +145,8 @@ const DECISION_REF: GridRowEditableRef = {
   stableId: DECISION_STABLE_ID,
 };
 
-function makeSection(
-  over: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel {
-  return {
+function makeSection(over: ReportSectionFixture = {}): ReportSectionReadModel {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
@@ -193,7 +199,7 @@ function makeSection(
     ],
     activities: [],
     ...over,
-  };
+  });
 }
 
 function makeFormData(): LeadSlideFormData {
@@ -204,6 +210,7 @@ function makeFormData(): LeadSlideFormData {
     currentWeekItems: [
       {
         id: ITEM_ID,
+        parent: { kind: "product", id: PRODUCT_ID },
         productId: PRODUCT_ID,
         productName: "Alpha",
         activityId: null,
@@ -266,7 +273,7 @@ function Harness({
   readonly section: ReportSectionReadModel | null;
   readonly formData: LeadSlideFormData | null;
   readonly canInlineEdit: boolean;
-  readonly refetchSection: () => void;
+  readonly refetchSection: () => Promise<unknown>;
   readonly activateRef: GridRowEditableRef;
 }) {
   const editor = useSlideInlineEditor({
@@ -309,7 +316,7 @@ function renderHarness({
     { path: ["reports", "saveDraft"], mutation: true },
   ]);
   const queryClient = makeQueryClient();
-  const refetchSection = vi.fn();
+  const refetchSection = vi.fn().mockResolvedValue(undefined);
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
@@ -443,6 +450,17 @@ describe("useSlideInlineEditor — save payloads", () => {
     await waitFor(() => expect(saveDraft?.calls).toHaveLength(1));
     expect(saveDraft?.calls[0]).toEqual(expect.objectContaining({ items: [] }));
   });
+
+  it("unmounts the edit dialog when the delete confirmation opens", () => {
+    renderHarness();
+    fireEvent.click(screen.getByTestId("activate"));
+    expect(screen.getByTestId("item-dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("delete-item"));
+
+    expect(screen.queryByTestId("item-dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("confirm-delete")).toBeInTheDocument();
+  });
 });
 
 describe("useSlideInlineEditor — conflict path", () => {
@@ -460,7 +478,7 @@ describe("useSlideInlineEditor — conflict path", () => {
     });
     saveDraft?.mutationFn.mockRejectedValueOnce(conflictError);
     const queryClient = makeQueryClient();
-    const refetchSection = vi.fn();
+    const refetchSection = vi.fn().mockResolvedValue(undefined);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -481,6 +499,13 @@ describe("useSlideInlineEditor — conflict path", () => {
 
     await waitFor(() => expect(saveDraft?.calls).toHaveLength(1));
     await waitFor(() => expect(refetchSection).toHaveBeenCalled());
+    // The reload announcement waits for the refetch to settle: the toast is
+    // only emitted once the refetch promise has resolved.
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringContaining("Reloaded the latest version"),
+      ),
+    );
     // A conflict reloads the section instead of silently closing the editor —
     // the caller re-applies the edit against the fresh data.
     expect(screen.getByTestId("item-dialog")).toBeInTheDocument();

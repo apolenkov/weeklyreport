@@ -10,6 +10,10 @@ import type {
   PeriodAdminService,
   ReopenRequestAdminService,
 } from "../../../../modules/admin/index.js";
+import {
+  type AutoCarryOver,
+  runAutoCarryOverWithRetry,
+} from "../../../../modules/carry-over/index.js";
 import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
@@ -17,11 +21,11 @@ import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js"
 const MAX_PERIOD_LIST_LIMIT = 200;
 
 export interface AdminPeriodsDeps {
-  periodAdminService: PeriodAdminService;
-  reopenRequestAdminService: ReopenRequestAdminService;
+  readonly periodAdminService: PeriodAdminService;
+  readonly reopenRequestAdminService: ReopenRequestAdminService;
   // Best-effort carry-over for open-born manual periods; scheduled ones carry
   // at flip. Optional for `{}` fixtures; main.ts always provides it.
-  autoCarryOver?: (targetReportId: string) => Promise<void>;
+  readonly autoCarryOver?: AutoCarryOver;
 }
 
 type PeriodPatchDiff = Awaited<
@@ -75,8 +79,11 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
           });
           // Only an open-born period carries now; a future-dated one is
           // minted `scheduled` and the scheduler carries it at flip time.
-          if (result.periodState === "open") {
-            await deps.autoCarryOver?.(result.periodId);
+          if (result.periodState === "open" && deps.autoCarryOver) {
+            await runAutoCarryOverWithRetry(
+              deps.autoCarryOver,
+              result.periodId,
+            );
           }
           return result;
         }),

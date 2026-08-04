@@ -14,11 +14,13 @@ const DEFAULT_DEBOUNCE_MS = 5000;
 export function useBeforeUnloadGuard(dirty: boolean): void {
   useEffect(() => {
     if (!dirty) return;
-    function handler(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-browser compat; returnValue needed for Chrome <119 / Firefox <109; preventDefault() alone is insufficient there
-      e.returnValue = "";
-    }
+    // The structural shape sidesteps the DOM lib's deprecated returnValue
+    // declaration while still covering the legacy-browser contract.
+    const handler: EventListener = (event: Event) => {
+      event.preventDefault();
+      const beforeUnload = event as unknown as { returnValue: string };
+      beforeUnload.returnValue = "";
+    };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);

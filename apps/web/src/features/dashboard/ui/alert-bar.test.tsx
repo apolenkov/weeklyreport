@@ -1,9 +1,7 @@
-/**
- * @vitest-environment jsdom
- *
- * Regression coverage for the dashboard alert-bar. The "Configure reminders"
- * link is admin-only; non-admin sessions never see it when reminders are off.
- */
+// @vitest-environment jsdom
+//
+// Regression coverage for the dashboard alert-bar. The "Configure reminders"
+// link is admin-only; non-admin sessions never see it when reminders are off.
 import "@testing-library/jest-dom/vitest";
 
 import type { Role } from "@customreport/shared";

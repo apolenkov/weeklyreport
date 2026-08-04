@@ -7,12 +7,12 @@ import Redis from "ioredis";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { requireEnv } from "../../lib/env";
-import type { AppLogger } from "../../lib/logger";
+import { createNullLogger } from "../../lib/logger";
 import type { EnvConfig } from "../config/env.schema";
 import { createRateLimits } from "./rate-limit.middleware";
 
 // The limiter only logs on a 429; a no-op warn sink is all these servers need.
-const silentLogger = { warn: () => undefined } as unknown as AppLogger;
+const silentLogger = createNullLogger();
 
 // A partial EnvConfig carrying only the fields the rate-limit store reads.
 const REDIS_ENV: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> = {

@@ -1,8 +1,8 @@
 import type { AdminProductView } from "./admin-types";
 
 export interface ProductFormData {
-  name: string;
-  leadId: string;
+  readonly name: string;
+  readonly leadId: string;
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormData = {

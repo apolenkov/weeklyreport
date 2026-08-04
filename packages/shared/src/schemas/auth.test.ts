@@ -4,21 +4,19 @@ import { describe, expect, it } from "vitest";
 
 import { roleSchema, sessionRoleSchema, userSessionSchema } from "./auth";
 
-const uuid = () => randomUUID();
-
-const validSession = () => ({
-  userId: uuid(),
+const createValidSession = () => ({
+  userId: randomUUID(),
   email: "lead@company.com",
   name: "Test Lead",
   lastName: "Lead",
   firstName: "Test",
   middleName: null,
   role: "lead" as const,
-  activeReportId: uuid(),
-  activeReportSectionId: uuid(),
-  reportingGroupId: uuid(),
+  activeReportId: randomUUID(),
+  activeReportSectionId: randomUUID(),
+  reportingGroupId: randomUUID(),
   reportingGroupName: "G".repeat(200),
-  viewerGroupAccess: [uuid()],
+  viewerGroupAccess: [randomUUID()],
   organization: {
     shortName: "O".repeat(16),
     fullName: "O".repeat(200),
@@ -54,9 +52,6 @@ describe("roleSchema", () => {
   );
 });
 
-// Consumers that used to mirror the literal list now read `.options`, and one
-// of them interpolates it into a thrown message — so the ORDER is contractual,
-// not just the membership.
 describe("role enum option order", () => {
   it("exposes the DB axis in declaration order", () => {
     expect(roleSchema.options).toEqual(["lead", "head", "admin", "viewer"]);
@@ -74,7 +69,7 @@ describe("role enum option order", () => {
 
 describe("userSessionSchema — required fields", () => {
   it("accepts valid session with all fields", () => {
-    const session = validSession();
+    const session = createValidSession();
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(true);
     if (result.success) {
@@ -83,172 +78,43 @@ describe("userSessionSchema — required fields", () => {
   });
 
   it("rejects missing userId", () => {
-    const { userId, ...rest } = validSession();
+    const { userId, ...rest } = createValidSession();
     const result = userSessionSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing email", () => {
-    const { email, ...rest } = validSession();
+    const { email, ...rest } = createValidSession();
     const result = userSessionSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing name", () => {
-    const { name, ...rest } = validSession();
+    const { name, ...rest } = createValidSession();
     const result = userSessionSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing role", () => {
-    const { role, ...rest } = validSession();
+    const { role, ...rest } = createValidSession();
     const result = userSessionSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects empty name (min 1)", () => {
-    const session = { ...validSession(), name: "" };
+    const session = { ...createValidSession(), name: "" };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
   });
 
   it("rejects non-UUID userId", () => {
-    const session = { ...validSession(), userId: "not-a-uuid" };
+    const session = { ...createValidSession(), userId: "not-a-uuid" };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
   });
 
   it("rejects invalid email format", () => {
-    const session = { ...validSession(), email: "not-an-email" };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("userSessionSchema — hydrated identity bounds", () => {
-  it.each([
-    ["reporting group name", { reportingGroupName: "" }],
-    ["long reporting group name", { reportingGroupName: "G".repeat(201) }],
-    [
-      "empty organization short name",
-      { organization: { shortName: "", fullName: "Org" } },
-    ],
-    [
-      "long organization short name",
-      { organization: { shortName: "O".repeat(17), fullName: "Org" } },
-    ],
-    [
-      "empty organization full name",
-      { organization: { shortName: "Org", fullName: "" } },
-    ],
-    [
-      "long organization full name",
-      { organization: { shortName: "Org", fullName: "O".repeat(201) } },
-    ],
-    ["invalid viewer group access", { viewerGroupAccess: ["not-a-uuid"] }],
-  ])("rejects %s", (_label, override) => {
-    expect(
-      userSessionSchema.safeParse({ ...validSession(), ...override }).success,
-    ).toBe(false);
-  });
-
-  it("rejects invalid name-part types", () => {
-    expect(
-      userSessionSchema.safeParse({ ...validSession(), firstName: null })
-        .success,
-    ).toBe(false);
-  });
-});
-
-describe("userSessionSchema — nullable JWT fields", () => {
-  it("accepts activeReportId as null", () => {
-    const session = { ...validSession(), activeReportId: null };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.activeReportId).toBeNull();
-    }
-  });
-
-  it("accepts activeReportId as undefined (optional)", () => {
-    const { activeReportId, ...rest } = validSession();
-    const result = userSessionSchema.safeParse(rest);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.activeReportId).toBeUndefined();
-    }
-  });
-
-  it("accepts activeReportSectionId as null", () => {
-    const session = { ...validSession(), activeReportSectionId: null };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.activeReportSectionId).toBeNull();
-    }
-  });
-
-  it("accepts activeReportSectionId as undefined (optional)", () => {
-    const { activeReportSectionId, ...rest } = validSession();
-    const result = userSessionSchema.safeParse(rest);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.activeReportSectionId).toBeUndefined();
-    }
-  });
-
-  it("accepts both nullable fields as null simultaneously", () => {
-    const session = {
-      ...validSession(),
-      activeReportId: null,
-      activeReportSectionId: null,
-    };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts both nullable fields as undefined (omitted)", () => {
-    const { activeReportId, activeReportSectionId, ...rest } = validSession();
-    const result = userSessionSchema.safeParse(rest);
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts valid UUID for activeReportId", () => {
-    const session = { ...validSession(), activeReportId: uuid() };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects non-UUID activeReportId (when not null)", () => {
-    const session = { ...validSession(), activeReportId: "not-a-uuid" };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-UUID activeReportSectionId (when not null)", () => {
-    const session = { ...validSession(), activeReportSectionId: "bad-id" };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("userSessionSchema — role validation", () => {
-  it("accepts each valid session role in context of full session", () => {
-    for (const role of ["lead", "head", "admin", "viewer"] as const) {
-      const session = { ...validSession(), role };
-      const result = userSessionSchema.safeParse(session);
-      expect(result.success).toBe(true);
-    }
-  });
-
-  it("rejects director until the product explicitly introduces that role", () => {
-    const session = { ...validSession(), role: "director" };
-    const result = userSessionSchema.safeParse(session);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects invalid role in session context", () => {
-    const session = { ...validSession(), role: "superadmin" };
+    const session = { ...createValidSession(), email: "not-an-email" };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
   });

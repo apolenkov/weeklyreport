@@ -39,7 +39,7 @@ function BulkRevokeSection({
             onClick={onOpen}
             disabled={pending}
             data-testid="revoke-all-button"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-red-300 px-4 text-sm font-semibold text-red-600 disabled:opacity-60"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-destructive)_40%,transparent)] px-4 text-sm font-semibold text-[var(--color-destructive)] disabled:opacity-60"
           >
             Revoke All ({submittedCount})
           </button>

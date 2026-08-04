@@ -1,12 +1,14 @@
 "use client";
 
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
 } from "../../../lib/format-date";
+import { SessionContext } from "../../../lib/session-provider";
 
 interface CanonicalRedirectArgs {
   readonly enabled: boolean | undefined;
@@ -63,14 +65,19 @@ export function useReportDocumentTitle(
       range: formatPeriodRangeWithYear(start, end),
     };
   }, [period]);
+  // Mirrors the root metadata template (`%s · ${orgName}`); absent organization
+  // resolves to the canonical tenant-neutral placeholder, never a product brand.
+  const titleBrand =
+    useContext(SessionContext)?.organization?.fullName ??
+    DEFAULT_ORGANIZATION_IDENTITY.fullName;
 
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (!titleParts) return;
     const previous = document.title;
-    document.title = `Week ${titleParts.week}, ${titleParts.range} - CustomReport`;
+    document.title = `Week ${titleParts.week}, ${titleParts.range} · ${titleBrand}`;
     return () => {
       document.title = previous;
     };
-  }, [titleParts]);
+  }, [titleParts, titleBrand]);
 }

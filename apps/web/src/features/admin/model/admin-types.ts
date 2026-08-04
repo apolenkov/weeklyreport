@@ -88,7 +88,7 @@ export interface AdminReminderPolicyView {
   audience: ReminderAudience;
   active: boolean;
   validFrom: Date;
-  /** `null` means "forever" (no upper bound). */
+  // null means "forever" (no upper bound).
   validUntil: Date | null;
 }
 
@@ -98,6 +98,5 @@ export interface MappedAdminSnapshot {
   products: AdminProductView[];
   periods: AdminPeriodView[];
   reminders: AdminReminderView[];
-  /** Policies surfaced for the Reminders Tab editor. */
   policies: AdminReminderPolicyView[];
 }

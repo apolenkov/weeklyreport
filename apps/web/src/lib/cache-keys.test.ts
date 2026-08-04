@@ -189,4 +189,27 @@ describe("cache-keys helpers", () => {
     );
     expect(spy).toHaveBeenCalledTimes(3);
   });
+
+  it("handles a rejecting invalidateQueries instead of leaking an unhandled rejection", async () => {
+    const qc = new QueryClient();
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(qc, "invalidateQueries").mockReturnValue(
+      Promise.reject(new Error("invalidate failed")),
+    );
+    const unhandledRejection = vi.fn();
+    window.addEventListener("unhandledrejection", unhandledRejection);
+
+    invalidateDashboard(qc, makeStubTrpc());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(unhandledRejection).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[cache-keys] invalidateQueries failed",
+      expect.any(Error),
+    );
+
+    window.removeEventListener("unhandledrejection", unhandledRejection);
+  });
 });

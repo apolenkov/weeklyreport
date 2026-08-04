@@ -5,8 +5,9 @@ import {
 import type { ReportPeriod } from "./types";
 
 // Navigation-only shape: these lists offer no fill-from and no submission
-// marker, so sourceSectionId carries no section identity and isSubmitted is
-// constant (period-navigator's `leadSubmittedAt` is the marker's only source).
+// marker, so sourceSectionId and isSubmitted stay ABSENT rather than being
+// fabricated as "" / true (the ReportPeriod type marks both optional; the
+// period-navigator's `leadSubmittedAt` is the only submission source).
 export function toNavigationPeriod(args: {
   readonly id: string;
   readonly periodStart: Date | string;
@@ -16,11 +17,13 @@ export function toNavigationPeriod(args: {
 }): ReportPeriod {
   return {
     id: args.id,
+    periodStart:
+      args.periodStart instanceof Date
+        ? args.periodStart
+        : new Date(args.periodStart),
     weekLabel: formatWeekLabel(args.periodStart),
     dateRange: formatPeriodRangeWithYear(args.periodStart, args.periodEnd),
     archived: args.archived,
-    sourceSectionId: "",
     isCurrent: args.isCurrent,
-    isSubmitted: true,
   };
 }

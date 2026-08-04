@@ -20,6 +20,11 @@ describe("ArchivePrismaRepository (integration)", () => {
   let periodRepo: PeriodPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
+  const adminSession: ArchiveScopeSession = {
+    role: "admin",
+    viewerGroupAccess: [],
+  };
+
   beforeAll(() => {
     repo = new ArchivePrismaRepository(prisma as never);
     periodRepo = new PeriodPrismaRepository(
@@ -40,7 +45,11 @@ describe("ArchivePrismaRepository (integration)", () => {
 
   it("listArchiveReports returns only published reports", async () => {
     // The seeded report is draft, so archive should be empty
-    const emptyList = await repo.listArchiveReports();
+    const emptyList = await repo.listArchiveReports(
+      undefined,
+      undefined,
+      adminSession,
+    );
     expect(emptyList.items).toHaveLength(0);
 
     // Archive visibility requires both published state and explicit archival.
@@ -63,7 +72,9 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const list = (await repo.listArchiveReports()).items;
+    const list = (
+      await repo.listArchiveReports(undefined, undefined, adminSession)
+    ).items;
     expect(list).toHaveLength(1);
     expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
     expect(expectDefined(list[0]).publishedByName).toBe("Test Head");
@@ -77,11 +88,16 @@ describe("ArchivePrismaRepository (integration)", () => {
     });
     const filter = { status: "draft" } as const;
 
-    const list = await repo.listArchiveReports(undefined, filter);
-    const detail = await repo.getArchiveReport(testData.report.id, filter);
+    const list = await repo.listArchiveReports(undefined, filter, adminSession);
+    const detail = await repo.getArchiveReport(
+      testData.report.id,
+      filter,
+      adminSession,
+    );
 
     expect(list.items).toEqual([]);
-    expect(detail).toBeNull();
+    expect(detail.detail).toBeNull();
+    expect(detail.totalSectionCount).toBe(0);
   });
 
   it("excludes published reports that were not archived", async () => {
@@ -105,7 +121,9 @@ describe("ArchivePrismaRepository (integration)", () => {
     });
 
     // Published alone is insufficient; archival is an explicit transition.
-    const list = (await repo.listArchiveReports()).items;
+    const list = (
+      await repo.listArchiveReports(undefined, undefined, adminSession)
+    ).items;
     expect(list).toHaveLength(0);
   });
 
@@ -129,7 +147,9 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const list = (await repo.listArchiveReports()).items;
+    const list = (
+      await repo.listArchiveReports(undefined, undefined, adminSession)
+    ).items;
     expect(list).toHaveLength(1);
     expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
   });
@@ -183,28 +203,32 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const detail = await repo.getArchiveReport(testData.report.id);
+    const detail = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      adminSession,
+    );
 
-    expect(detail).not.toBeNull();
-    expect(expectDefined(detail).summary.reportId).toBe(testData.report.id);
-    expect(expectDefined(detail).summary.portfolioStatus).toBe("yellow");
-    expect(expectDefined(detail).report.sections).toHaveLength(1);
+    expect(detail.detail).not.toBeNull();
+    expect(expectDefined(detail.detail).summary.reportId).toBe(
+      testData.report.id,
+    );
+    expect(expectDefined(detail.detail).summary.portfolioStatus).toBe("yellow");
+    expect(expectDefined(detail.detail).report.sections).toHaveLength(1);
     expect(
-      expectDefined(expectDefined(detail).report.sections[0]).items,
+      expectDefined(expectDefined(detail.detail).report.sections[0]).items,
     ).toHaveLength(1);
     expect(
       expectDefined(
-        expectDefined(expectDefined(detail).report.sections[0]).items[0],
+        expectDefined(expectDefined(detail.detail).report.sections[0]).items[0],
       ).text,
     ).toBe("Archive item");
   });
 
   it("floors a no-snapshot archive summary by an own covering risk", async () => {
-    // Published + archived WITHOUT a stored snapshot (seed / legacy shape), so
-    // the summary takes the read-model fallback. The lead owns a stage with NO
-    // submitted status; a stale green ProjectStatus would read green — but the
-    // lead's own covers-all blocked risk must floor the archive total to red,
-    // and the summary must agree with the detail.
+    // Published + archived WITHOUT a stored snapshot (seed/legacy shape), so
+    // the summary takes the read-model fallback. A stale green ProjectStatus
+    // must not win: the lead's covers-all blocked risk floors the total to red.
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
@@ -248,13 +272,19 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const detail = await repo.getArchiveReport(testData.report.id);
+    const detail = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      adminSession,
+    );
 
-    expect(detail).not.toBeNull();
+    expect(detail.detail).not.toBeNull();
     // Floored to red by the own covering risk, not the stale green ProjectStatus.
-    expect(expectDefined(detail).summary.portfolioStatus).toBe("red");
+    expect(expectDefined(detail.detail).summary.portfolioStatus).toBe("red");
     // Summary and detail agree (same floored, assignment-scoped read model).
-    expect(expectDefined(detail).report.portfolioOverview.status).toBe("red");
+    expect(expectDefined(detail.detail).report.portfolioOverview.status).toBe(
+      "red",
+    );
   });
 
   it("reads the publish-time snapshot after later draft edits", async () => {
@@ -301,13 +331,17 @@ describe("ArchivePrismaRepository (integration)", () => {
       data: { text: "Draft edit after publish" },
     });
 
-    const detail = await repo.getArchiveReport(testData.report.id);
+    const detail = await repo.getArchiveReport(
+      testData.report.id,
+      undefined,
+      adminSession,
+    );
 
-    expect(detail).not.toBeNull();
-    expect(expectDefined(detail).summary.portfolioStatus).toBe("yellow");
+    expect(detail.detail).not.toBeNull();
+    expect(expectDefined(detail.detail).summary.portfolioStatus).toBe("yellow");
     expect(
       expectDefined(
-        expectDefined(expectDefined(detail).report.sections[0]).items[0],
+        expectDefined(expectDefined(detail.detail).report.sections[0]).items[0],
       ).text,
     ).toBe("Published snapshot item");
   });
@@ -358,7 +392,11 @@ describe("ArchivePrismaRepository (integration)", () => {
       new Date("2026-04-15T10:00:00.000Z"),
     );
 
-    const page1 = await repo.listArchiveReports({ limit: 2 });
+    const page1 = await repo.listArchiveReports(
+      { limit: 2 },
+      undefined,
+      adminSession,
+    );
     expect(page1.items.map((r) => r.reportId)).toEqual([newest.id, middle.id]);
     // A probe row (older) exists beyond the page, so nextCursor is the last
     // kept row's encoded (publishedAt, id) keyset coordinate.
@@ -366,16 +404,24 @@ describe("ArchivePrismaRepository (integration)", () => {
       encodeArchiveCursor(middle.publishedAt, middle.id),
     );
 
-    const page2 = await repo.listArchiveReports({
-      limit: 2,
-      cursor: expectDefined(page1.nextCursor),
-    });
+    const page2 = await repo.listArchiveReports(
+      {
+        limit: 2,
+        cursor: expectDefined(page1.nextCursor),
+      },
+      undefined,
+      adminSession,
+    );
     expect(page2.items.map((r) => r.reportId)).toEqual([older.id]);
     // Last page: no probe row, so nextCursor is null.
     expect(page2.nextCursor).toBeNull();
 
     // A page that covers everything also returns a null cursor.
-    const whole = await repo.listArchiveReports({ limit: 10 });
+    const whole = await repo.listArchiveReports(
+      { limit: 10 },
+      undefined,
+      adminSession,
+    );
     expect(whole.items).toHaveLength(3);
     expect(whole.nextCursor).toBeNull();
   });
@@ -394,14 +440,22 @@ describe("ArchivePrismaRepository (integration)", () => {
       new Date("2026-05-08T00:00:00.000Z"),
     );
 
-    const page1 = await repo.listArchiveReports({ limit: 1 });
+    const page1 = await repo.listArchiveReports(
+      { limit: 1 },
+      undefined,
+      adminSession,
+    );
     const firstPageId = expectDefined(page1.items[0]).reportId;
     expect([first.id, second.id]).toContain(firstPageId);
 
-    const page2 = await repo.listArchiveReports({
-      limit: 1,
-      cursor: expectDefined(page1.nextCursor),
-    });
+    const page2 = await repo.listArchiveReports(
+      {
+        limit: 1,
+        cursor: expectDefined(page1.nextCursor),
+      },
+      undefined,
+      adminSession,
+    );
     const secondPageId = expectDefined(page2.items[0]).reportId;
 
     // Both tie rows come back exactly once across the two pages: a wrong or
@@ -419,7 +473,11 @@ describe("ArchivePrismaRepository (integration)", () => {
       "base64",
     );
     await expect(
-      repo.listArchiveReports({ limit: 2, cursor: malformed }),
+      repo.listArchiveReports(
+        { limit: 2, cursor: malformed },
+        undefined,
+        adminSession,
+      ),
     ).rejects.toThrow("Malformed archive pagination cursor");
   });
 
@@ -522,15 +580,16 @@ describe("ArchivePrismaRepository (integration)", () => {
       undefined,
       sessionA,
     );
-    expect(detailA).not.toBeNull();
-    expect(expectDefined(detailA).report.sections).toHaveLength(1);
+    expect(detailA.detail).not.toBeNull();
+    expect(expectDefined(detailA.detail).report.sections).toHaveLength(1);
     expect(
-      expectDefined(expectDefined(detailA).report.sections[0]).reportSectionId,
+      expectDefined(expectDefined(detailA.detail).report.sections[0])
+        .reportSectionId,
     ).toBe(testData.section.id);
-    expect(expectDefined(detailA).report.portfolioOverview.status).toBe(
+    expect(expectDefined(detailA.detail).report.portfolioOverview.status).toBe(
       "green",
     );
-    expect(expectDefined(detailA).summary.portfolioStatus).toBe("green");
+    expect(expectDefined(detailA.detail).summary.portfolioStatus).toBe("green");
 
     // The list path recomputes the summary from the same scoped snapshot.
     const listA = await repo.listArchiveReports(undefined, undefined, sessionA);
@@ -545,11 +604,14 @@ describe("ArchivePrismaRepository (integration)", () => {
       undefined,
       sessionB,
     );
-    expect(expectDefined(detailB).report.sections).toHaveLength(1);
+    expect(expectDefined(detailB.detail).report.sections).toHaveLength(1);
     expect(
-      expectDefined(expectDefined(detailB).report.sections[0]).reportSectionId,
+      expectDefined(expectDefined(detailB.detail).report.sections[0])
+        .reportSectionId,
     ).toBe(sectionBId);
-    expect(expectDefined(detailB).report.portfolioOverview.status).toBe("red");
+    expect(expectDefined(detailB.detail).report.portfolioOverview.status).toBe(
+      "red",
+    );
   });
 
   it("fallback path: a group-scoped session reads only its own group's sections and portfolio", async () => {
@@ -571,12 +633,13 @@ describe("ArchivePrismaRepository (integration)", () => {
       undefined,
       sessionA,
     );
-    expect(detailA).not.toBeNull();
-    expect(expectDefined(detailA).report.sections).toHaveLength(1);
+    expect(detailA.detail).not.toBeNull();
+    expect(expectDefined(detailA.detail).report.sections).toHaveLength(1);
     expect(
-      expectDefined(expectDefined(detailA).report.sections[0]).reportSectionId,
+      expectDefined(expectDefined(detailA.detail).report.sections[0])
+        .reportSectionId,
     ).toBe(testData.section.id);
-    expect(expectDefined(detailA).report.portfolioOverview.status).toBe(
+    expect(expectDefined(detailA.detail).report.portfolioOverview.status).toBe(
       "green",
     );
 
@@ -594,10 +657,13 @@ describe("ArchivePrismaRepository (integration)", () => {
       undefined,
       sessionB,
     );
-    expect(expectDefined(detailB).report.sections).toHaveLength(1);
+    expect(expectDefined(detailB.detail).report.sections).toHaveLength(1);
     expect(
-      expectDefined(expectDefined(detailB).report.sections[0]).reportSectionId,
+      expectDefined(expectDefined(detailB.detail).report.sections[0])
+        .reportSectionId,
     ).toBe(sectionBId);
-    expect(expectDefined(detailB).report.portfolioOverview.status).toBe("red");
+    expect(expectDefined(detailB.detail).report.portfolioOverview.status).toBe(
+      "red",
+    );
   });
 });

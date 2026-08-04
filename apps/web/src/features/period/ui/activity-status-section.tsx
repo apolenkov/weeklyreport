@@ -111,7 +111,7 @@ function StatusPill({
         "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
         isActive
           ? "border-[var(--color-primary)] bg-[var(--color-success)] text-[var(--color-primary)]"
-          : "border-[rgba(0,0,0,0.10)] bg-white/70 text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-white",
+          : "border-[var(--card-surface-border)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-[var(--color-card)]",
       ].join(" ")}
     >
       <span
@@ -194,7 +194,7 @@ function ActivityCard({
 }: ActivityCardProps) {
   const linkedNames = card.linkedProducts.map((p) => p.productName).join(", ");
   return (
-    <li className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 px-4 py-3">
+    <li className="rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[color-mix(in_srgb,var(--color-card)_80%,transparent)] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="block truncate text-sm font-medium text-[var(--color-foreground)]">

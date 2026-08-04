@@ -11,14 +11,12 @@ export type SamlStrategyOptions = PassportSamlConfig & {
   devMode: boolean;
 };
 
-/** Verified profile shape downstream consumers (auth.routes) expect. */
-// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- must stay a type alias: passed where a Record index signature is required (done(null, result.profile)), which an interface does not satisfy.
-export type VerifiedSamlProfile = {
-  samlId: string;
-  email: string;
-  displayName: string;
-  role: Role;
-};
+export interface VerifiedSamlProfile extends Record<string, unknown> {
+  readonly samlId: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly role: Role;
+}
 
 const SAML_ENV_KEYS = [
   "KEYCLOAK_SAML_CALLBACK_URL",
@@ -70,12 +68,9 @@ export function createSamlStrategyOptions(
   };
 }
 
-// `displayName` is optional in SamlProfileSchema but required downstream, so a
-// nameless assertion provisions under this placeholder for an admin to correct.
-const UNKNOWN_DISPLAY_NAME = "Unknown User";
-
-// Parse every assertion through the shared schema. devMode relaxes only replay
-// checking; it must never provision a synthetic identity.
+// `displayName` is optional in SamlProfileSchema but required downstream; a
+// nameless assertion is a misconfigured IdP mapping and must fail provisioning,
+// not persist a placeholder identity the admin has to hunt down.
 export function verifySamlProfile(
   _options: SamlStrategyOptions,
   rawProfile: Record<string, unknown> | null | undefined,
@@ -97,13 +92,21 @@ export function verifySamlProfile(
     };
   }
 
+  const displayName = parsed.data.displayName;
+  if (!displayName || displayName.trim() === "") {
+    return {
+      ok: false,
+      error: new Error("SAML profile missing displayName attribute"),
+    };
+  }
+
   // Assertions do not assign application roles; admins do that after provision.
   return {
     ok: true,
     profile: {
       samlId: parsed.data.nameID,
       email: parsed.data.email,
-      displayName: parsed.data.displayName ?? UNKNOWN_DISPLAY_NAME,
+      displayName,
       role: "viewer",
     },
   };

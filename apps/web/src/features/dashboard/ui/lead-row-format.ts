@@ -1,13 +1,13 @@
 import { formatRelativePast } from "../../../lib/format-date";
 import type { LeadInfo } from "../model/dashboard";
 
-export const STATUS_LABELS: Record<LeadInfo["status"], string> = {
+export const STATUS_LABELS: Readonly<Record<LeadInfo["status"], string>> = {
   submitted: "Submitted",
   draft: "In progress",
   pending: "Not started",
 };
 
-export const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
+export const STATUS_CLASSES: Readonly<Record<LeadInfo["status"], string>> = {
   submitted:
     "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]",
   draft:

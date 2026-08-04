@@ -13,7 +13,7 @@ export function buildProjectIndex(
   // on; the stage-owned spread comes last so it wins on key conflict. Lookup
   // only — `mapLeadProducts` ignores this index, so no stray product card appears.
   return new Map([
-    ...(section.referencedProjects ?? []).map(
+    ...section.referencedProjects.map(
       (referenced): [string, ProjectIndexEntry] => [
         referenced.projectId,
         { name: referenced.projectName, trafficLight: null },

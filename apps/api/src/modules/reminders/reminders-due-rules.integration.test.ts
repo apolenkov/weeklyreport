@@ -12,9 +12,9 @@ import {
   queryDueEscalationRules,
 } from "./reminders-due-rules.prisma-query.js";
 
-// Ruling F16: an admin can clear a period's deadline AFTER reminder rules
-// materialized. The dispatch queries are the enforcing mechanism — such
-// rules must never come back as due.
+// An admin can clear a period's deadline AFTER reminder rules materialized.
+// The dispatch queries are the enforcing mechanism — such rules must never
+// come back as due.
 describe("due-rule queries vs a cleared deadline (integration)", () => {
   const prisma = createTestPrisma();
   // The query functions declare the Nest wrapper type but touch only the
@@ -66,6 +66,30 @@ describe("due-rule queries vs a cleared deadline (integration)", () => {
     await prisma.report.update({
       where: { id: testData.report.id },
       data: { deadline: null },
+    });
+
+    const due = await queryDueEscalationRules(queryClient, now, {
+      warn: () => undefined,
+    });
+    expect(due).toEqual([]);
+  });
+
+  it("returns nothing for a deadline rule once its period is archived", async () => {
+    const testData = await seedRule("deadline");
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true },
+    });
+
+    const due = await queryDueDeadlineRules(queryClient, now);
+    expect(due).toEqual([]);
+  });
+
+  it("returns nothing for an escalation rule once its period is archived", async () => {
+    const testData = await seedRule("escalation");
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true },
     });
 
     const due = await queryDueEscalationRules(queryClient, now, {

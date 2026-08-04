@@ -56,10 +56,9 @@ export function createSpyRepository(
 } {
   const publishFn = vi.fn((id: string) => {
     const r = reports.get(id);
-    // Mirror the guarded compare-and-set: only a not-yet-published,
-    // non-archived row transitions. A zero-row match splits into "raced" (an
-    // already-published row — idempotent no-op) vs "archived" (archived inside
-    // the window — a domain error).
+    // Mirror the guarded compare-and-set: only a not-yet-published, non-archived
+    // row transitions. A zero-row match is "raced" (already published — no-op)
+    // vs "archived" (archived inside the window — a domain error).
     if (!r || r.periodStatus === "published" || r.archived) {
       const reason: "raced" | "archived" =
         r?.periodStatus === "published" ? "raced" : "archived";

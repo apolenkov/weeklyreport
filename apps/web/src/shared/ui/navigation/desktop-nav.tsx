@@ -1,4 +1,5 @@
 import type { Role } from "@customreport/shared";
+import Link from "next/link";
 
 import { isActiveLink } from "./nav-active";
 import { NavIcon } from "./nav-icon";
@@ -23,7 +24,7 @@ export function DesktopNav({
       {links.map((link) => {
         const active = isActiveLink(pathname, link.href, role);
         return (
-          <a
+          <Link
             key={link.href}
             href={link.href}
             title={link.title}
@@ -36,7 +37,7 @@ export function DesktopNav({
           >
             <NavIcon href={link.href} />
             {link.label}
-          </a>
+          </Link>
         );
       })}
     </nav>

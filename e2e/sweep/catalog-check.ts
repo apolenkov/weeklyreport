@@ -1,5 +1,5 @@
 // ============================================================================
-// Catalog drift gate (establish-scenario-catalog SC-6).
+// Catalog drift gate for the durable per-role scenario catalog.
 //
 // Re-derives the app's ROUTE surface from the Next.js App Router on disk and
 // fails when code exposes a route that no role catalog covers — naming the
@@ -16,12 +16,10 @@
 //   3. hygiene  — every catalog `route:` value is a clean URL path and every
 //                 parsed route declares a non-empty `access:` list (the
 //                 silent-skip defects hardened in _generation-notes.md).
-//
-// NOT checked here (deliberate; see the change's tasks.md): per-role
-// exhaustiveness ("every role that can reach a route must list it") — that is a
-// stronger invariant than SC-6 asks for and the catalog is intentionally
-// inconsistent about impersonation-only routes; and access-vs-guard consistency
-// (would need to model the unguarded root). Both are left as follow-ups.
+//   4. role     — every route's `access:` list agrees with the catalogs in
+//                 both directions: a role named in access has the route in its
+//                 own catalog, and a route catalogued for a role names that
+//                 role in access.
 //
 // Pure Node, NO dependencies. Run from the repo root:
 //   node e2e/sweep/catalog-check.ts   (aliased as `pnpm catalog:check`)
@@ -29,7 +27,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { type Catalog, parseCatalog } from "./catalog-parser.ts";
+import {
+  CANONICAL_ROLES,
+  type Catalog,
+  parseCatalog,
+} from "./catalog-parser.ts";
 import { byName } from "./ordering.ts";
 
 const HERE = import.meta.dirname;
@@ -107,6 +109,15 @@ function loadCatalogs(): readonly LoadedCatalog[] {
     });
 }
 
+const roleCatalogFindings = (
+  catalogs: readonly LoadedCatalog[],
+): readonly string[] => {
+  const present = new Set(catalogs.map(({ parsed }) => parsed.role));
+  return CANONICAL_ROLES.filter((role) => !present.has(role)).map(
+    (role) => `missing required role catalog: e2e/catalog/${role}.yaml`,
+  );
+};
+
 // 1. forward: code route with no catalog scenario.
 const uncoveredRoutes = (
   codeRoutes: ReadonlySet<string>,
@@ -137,12 +148,106 @@ const hygieneFindings = (
 ): readonly string[] =>
   catalogs.flatMap(({ file, parsed, dirtyRoutes }) => [
     ...dirtyRoutes.map(
-      (value) => `malformed route value (not a clean URL): "${value}" (${file})`,
+      (value) =>
+        `malformed route value (not a clean URL): "${value}" (${file})`,
     ),
     ...parsed.routes
       .filter(({ access }) => access.length === 0)
       .map(({ route }) => `empty access list on route: ${route} (${file})`),
   ]);
+
+// 4. role consistency: a route that names role X in its `access:` list must
+// appear in X's catalog, and a route present in X's catalog must name X in its
+// access. This is the matrix the catalogs themselves declare — deriving it
+// from the guarded surface would require modelling every route's guard, which
+// the catalogs already encode per role.
+const roleConsistencyFindings = (
+  catalogs: readonly LoadedCatalog[],
+): readonly string[] => {
+  const routeRoles = new Map<string, Set<string>>();
+  for (const { parsed } of catalogs) {
+    for (const { route } of parsed.routes) {
+      const roles = routeRoles.get(route) ?? new Set<string>();
+      roles.add(parsed.role);
+      routeRoles.set(route, roles);
+    }
+  }
+
+  return catalogs.flatMap(({ file, parsed }) => {
+    const findings: string[] = [];
+    for (const { route, access } of parsed.routes) {
+      for (const accessRole of access) {
+        if (!(routeRoles.get(route) ?? new Set()).has(accessRole)) {
+          findings.push(
+            `route ${route} declares access [${accessRole}] but is absent from ${accessRole}.yaml (${file})`,
+          );
+        }
+      }
+      if (!access.includes(parsed.role)) {
+        findings.push(
+          `route ${route} is catalogued for ${parsed.role} but its access list omits ${parsed.role} (${file})`,
+        );
+      }
+    }
+    return findings;
+  });
+};
+
+const guardConsistencyFindings = (
+  catalogs: readonly LoadedCatalog[],
+): readonly string[] => {
+  const policySource = fs.readFileSync(
+    path.resolve(REPO_ROOT, "apps/web/src/shared/model/route-role-policy.ts"),
+    "utf8",
+  );
+  const policyRoles = (name: string): readonly string[] => {
+    const match = new RegExp(
+      String.raw`export const ${name}:[^=]+=[\s\S]*?\[([\s\S]*?)\];`,
+      "u",
+    ).exec(policySource);
+    if (match?.[1] === undefined)
+      throw new Error(`Cannot read guarded-role policy ${name}`);
+    return [...match[1].matchAll(/["'](lead|head|admin|viewer)["']/gu)].flatMap(
+      (role) => (role[1] === undefined ? [] : [role[1]]),
+    );
+  };
+  const rolesForRoute = (route: string): readonly string[] | null => {
+    if (route === "/lead/report/[reportId]/preview")
+      return policyRoles("LEAD_PREVIEW_ROUTE_ROLES");
+    if (route === "/reports/latest")
+      return policyRoles("VIEWER_STATUS_ROUTE_ROLES");
+    if (route === "/admin" || route.startsWith("/admin/"))
+      return policyRoles("ADMIN_ROUTE_ROLES");
+    if (route === "/head" || route.startsWith("/head/"))
+      return policyRoles("HEAD_ROUTE_ROLES");
+    if (route === "/lead" || route.startsWith("/lead/"))
+      return policyRoles("LEAD_ROUTE_ROLES");
+    if (route === "/reports" || route.startsWith("/reports/"))
+      return policyRoles("REPORTS_ROUTE_ROLES");
+    return null;
+  };
+  const routeRoles = Map.groupBy(
+    catalogs.flatMap(({ parsed }) =>
+      parsed.routes.map(({ route }) => ({ role: parsed.role, route })),
+    ),
+    ({ route }) => route,
+  );
+  return [...routeRoles.entries()].flatMap(([route, entries]) => {
+    const guardedRoles = rolesForRoute(route);
+    if (guardedRoles === null) return [];
+    const expected = guardedRoles.toSorted((left, right) =>
+      left.localeCompare(right),
+    );
+    const actual = [...new Set(entries.map(({ role }) => role))].toSorted(
+      (left, right) => left.localeCompare(right),
+    );
+    return expected.join("\0") === actual.join("\0")
+      ? []
+      : [
+          `route ${route} catalog roles [${actual.join(", ")}] disagree with its layout guard [${expected.join(", ")}]`,
+        ];
+  });
+};
 
 function main(): void {
   if (!fs.existsSync(APP_DIR)) {
@@ -166,9 +271,12 @@ function main(): void {
   );
 
   const findings = [
+    ...roleCatalogFindings(catalogs),
     ...uncoveredRoutes(codeRoutes, catalogRoutes),
     ...staleRoutes(catalogs, codeRoutes),
     ...hygieneFindings(catalogs),
+    ...roleConsistencyFindings(catalogs),
+    ...guardConsistencyFindings(catalogs),
   ];
 
   if (findings.length > 0) {

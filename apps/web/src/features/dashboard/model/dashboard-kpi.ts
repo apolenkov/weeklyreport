@@ -4,14 +4,14 @@ import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 import { toIsoDateString } from "../../../lib/format-date";
 
 export interface KpiData {
-  submitted: number;
-  total: number;
-  pendingCount: number;
-  deadlineLabel: string;
-  deadlineTime: string;
-  blockedCount: number;
-  atRiskCount: number;
-  decisionCount: number;
+  readonly submitted: number;
+  readonly total: number;
+  readonly pendingCount: number;
+  readonly deadlineLabel: string;
+  readonly deadlineTime: string;
+  readonly blockedCount: number;
+  readonly atRiskCount: number;
+  readonly decisionCount: number;
 }
 
 export function formatRelativeDeadline(deadline: Date, now: Date): string {

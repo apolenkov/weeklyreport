@@ -6,28 +6,26 @@ import {
   type OrganizationUpdate,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 
 export interface OrganizationRepository {
   // Implementations MUST return a row even on fresh DBs (upsert with seed
   // defaults) so the public landing page always has a brand to render.
-  getOrganization(): Promise<Organization>;
+  readonly getOrganization: () => Promise<Organization>;
   // Implementations MUST keep id='singleton' — no new id is accepted on the wire.
-  updateOrganization(input: OrganizationUpdate): Promise<Organization>;
+  readonly updateOrganization: (
+    input: OrganizationUpdate,
+  ) => Promise<Organization>;
 }
 
 // Singleton Organization identity. TODO(multi-org): drop id='singleton',
 // take organizationId from session on every read. Audit on write lives in
 // the router (session/IP/correlation-id), not here.
 export class OrganizationService {
-  private readonly logger: AppLogger;
-
   constructor(
     private readonly repository: OrganizationRepository,
-    logger?: AppLogger,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+    private readonly logger: AppLogger,
+  ) {}
 
   async getOrganization(): Promise<Organization> {
     return organizationSchema.parse(await this.repository.getOrganization());

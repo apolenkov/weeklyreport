@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { requireEnv } from "./_require-env.js";
 import { seedActiveSections } from "./seed-advanced.active-sections.js";
 import { seedAdminExamples } from "./seed-advanced.admin-examples.js";
 import { seedCrossAuthorOverlay } from "./seed-advanced.cross-author.js";
@@ -19,15 +20,12 @@ import {
 import { seedRisks } from "./seed-advanced.risks.js";
 import { seedSingletons } from "./seed-advanced.settings.js";
 import { seedStageAssignments } from "./seed-advanced.stage-assignments.js";
-import {
-  logSeedSummary,
-  sumSectionCounts,
-} from "./seed-advanced.summary.js";
+import { logSeedSummary, sumSectionCounts } from "./seed-advanced.summary.js";
 import { SEED_REPORTS } from "./seed-constants.js";
 import { assertSeedCoverage } from "./seed-coverage-check.js";
 import { seedOrganizationBaseline } from "./seed-org.js";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

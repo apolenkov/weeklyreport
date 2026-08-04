@@ -7,6 +7,17 @@ import { buildTransition } from "./period-transition.js";
 
 const NOW = new Date("2026-05-29T12:00:00.000Z");
 
+const DRAFT_LIFECYCLE = {
+  status: "draft",
+  archived: false,
+  periodStatus: "open",
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+} as const;
+
 describe("buildTransition — create", () => {
   it("periodStart in the past → open (legacy tuple draft/false)", () => {
     expect(
@@ -14,7 +25,7 @@ describe("buildTransition — create", () => {
         periodStart: new Date("2026-05-01T00:00:00.000Z"),
         now: NOW,
       }),
-    ).toEqual({ periodState: "open", status: "draft", archived: false });
+    ).toEqual({ ...DRAFT_LIFECYCLE, periodState: "open" });
   });
 
   it("periodStart in the future → scheduled (legacy tuple draft/false)", () => {
@@ -23,14 +34,13 @@ describe("buildTransition — create", () => {
         periodStart: new Date("2026-06-15T00:00:00.000Z"),
         now: NOW,
       }),
-    ).toEqual({ periodState: "scheduled", status: "draft", archived: false });
+    ).toEqual({ ...DRAFT_LIFECYCLE, periodState: "scheduled" });
   });
 
   it("periodStart === now → open (boundary)", () => {
     expect(buildTransition("create", { periodStart: NOW, now: NOW })).toEqual({
       periodState: "open",
-      status: "draft",
-      archived: false,
+      ...DRAFT_LIFECYCLE,
     });
   });
 });
@@ -39,16 +49,14 @@ describe("buildTransition — schedule / open", () => {
   it("schedule writes the scheduled state with the draft/false tuple", () => {
     expect(buildTransition("schedule", {})).toEqual({
       periodState: "scheduled",
-      status: "draft",
-      archived: false,
+      ...DRAFT_LIFECYCLE,
     });
   });
 
   it("open writes the open state with the draft/false tuple", () => {
     expect(buildTransition("open", {})).toEqual({
       periodState: "open",
-      status: "draft",
-      archived: false,
+      ...DRAFT_LIFECYCLE,
     });
   });
 });
@@ -67,9 +75,8 @@ describe("buildTransition — publish", () => {
 
 describe("buildTransition — autoPublish", () => {
   it("matches publish but flags autoPublished and a null publisher", () => {
-    // Regression guard for the corrected motivating bug: the auto path used
-    // to leave periodStatus at the default 'open' forever. autoPublish MUST
-    // write periodStatus='published' just like the manual path.
+    // autoPublish MUST write periodStatus='published' just like the manual path,
+    // not leave it at the default 'open'.
     expect(buildTransition("autoPublish", { now: NOW })).toEqual({
       status: "published",
       periodStatus: "published",
@@ -83,10 +90,9 @@ describe("buildTransition — autoPublish", () => {
 
 describe("buildTransition — reopen (intentional asymmetry)", () => {
   it("periodState reverts to open while periodStatus carries 'reopened'", () => {
-    // The reopen flavour machine and the canonical state machine deliberately
-    // disagree: periodState='open' (editable again) but periodStatus='reopened'
-    // so consumers can still discriminate a reopen from a fresh open. The
-    // legacy (status, archived) tuple is left untouched on reopen.
+    // The reopen transition deliberately diverges: periodState='open' (editable
+    // again) but periodStatus='reopened' so consumers can discriminate a reopen
+    // from a fresh open. The legacy (status, archived) tuple is untouched.
     expect(buildTransition("reopen", { now: NOW })).toEqual({
       periodStatus: "reopened",
       periodState: "open",
@@ -124,5 +130,23 @@ describe("buildTransition — unarchive", () => {
       archived: false,
       periodState: "open",
     });
+  });
+});
+
+describe("buildTransition — restore", () => {
+  it("preserves one complete schema-validated lifecycle tuple verbatim", () => {
+    const lifecycle = {
+      periodState: "open",
+      status: "published",
+      archived: false,
+      periodStatus: "reopened",
+      autoPublished: false,
+      autoArchived: false,
+      publishedAt: NOW,
+      publishedById: "user-1",
+      reopenedAt: NOW,
+    } as const;
+
+    expect(buildTransition("restore", { lifecycle })).toEqual(lifecycle);
   });
 });

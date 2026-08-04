@@ -29,7 +29,7 @@ interface LeadSlidesData {
   readonly section: ReportSectionReadModel | null;
   readonly formData: LeadSlideFormData | null;
   readonly canInlineEdit: boolean;
-  readonly refetchSection: () => void;
+  readonly refetchSection: () => Promise<unknown>;
 }
 
 function canEditInlineRecord({
@@ -107,8 +107,6 @@ export function useLeadSlidesData({
       isOwnDeck: request.isOwnDeck,
       formData,
     }),
-    refetchSection: () => {
-      void queries.byPeriodQ.refetch();
-    },
+    refetchSection: () => queries.byPeriodQ.refetch(),
   };
 }

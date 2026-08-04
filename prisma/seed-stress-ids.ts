@@ -13,12 +13,16 @@ export const STRESS_ID_KIND = {
   itemStable: 7,
 } as const;
 
-const suffix = (kind: number, index: number): string =>
+// The only kinds the stress seed may address: a literal outside the catalogue
+// would break the deterministic namespace separation the kind nibble provides.
+export type StressIdKind = (typeof STRESS_ID_KIND)[keyof typeof STRESS_ID_KIND];
+
+const suffix = (kind: StressIdKind, index: number): string =>
   `${kind.toString(HEX_RADIX).padStart(2, "0")}${index
     .toString(HEX_RADIX)
     .padStart(UUID_SUFFIX_WIDTH, "0")}`;
 
-export const stressId = (kind: number, index: number): string =>
+export const stressId = (kind: StressIdKind, index: number): string =>
   `${UUID_PREFIX}${suffix(kind, index)}`;
 
 export const STRESS_PROJECT_IDS = Array.from(

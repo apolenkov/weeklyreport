@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change api-shared-guards. Update Purpose after archive.
+Centralize Prisma unique-violation detection in one constraint-aware guard that understands the pg adapter shape and is proved against a real database.
 
 ## Requirements
 

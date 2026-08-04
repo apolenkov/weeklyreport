@@ -4,7 +4,10 @@ import type * as React from "react";
 /**
  * Auto-sizing multiline text field with focus and invalid styles.
  */
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"textarea">>) {
   return (
     <textarea
       data-slot="textarea"

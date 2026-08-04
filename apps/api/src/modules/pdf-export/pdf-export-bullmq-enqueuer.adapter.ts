@@ -13,10 +13,10 @@ const PDF_EXPORT_JOB_BACKOFF_DELAY_MS = 5000;
 export class PdfExportBullmqEnqueuer implements PdfExportEnqueuer {
   constructor(private readonly queue: JobEnqueuer) {}
 
-  async enqueue(
+  readonly enqueue = async (
     input: PdfExportEnqueueInput,
     context: PdfExportJobContext,
-  ): Promise<void> {
+  ): Promise<void> => {
     await this.queue.add(
       "generate",
       { ...input, ...context },
@@ -28,5 +28,5 @@ export class PdfExportBullmqEnqueuer implements PdfExportEnqueuer {
         },
       },
     );
-  }
+  };
 }

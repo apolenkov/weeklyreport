@@ -190,13 +190,23 @@ export const countSuppressionDirectivesByPath = (
 
 export const readSuppressionInventoryAtCommit = (
   commit: string,
+  cwd = process.cwd(),
 ): SuppressionInventory => {
   const prefix = `${commit}:`;
-  const paths = execFileSync(
-    GIT,
-    ["grep", "-l", "eslint-disable", commit, "--", "*.ts", "*.tsx"],
-    { encoding: "utf8" },
-  )
+  const matches = (() => {
+    try {
+      return execFileSync(
+        GIT,
+        ["grep", "-l", "eslint-disable", commit, "--", "*.ts", "*.tsx"],
+        { cwd, encoding: "utf8" },
+      );
+    } catch (error) {
+      if (error instanceof Error && "status" in error && error.status === 1)
+        return "";
+      throw error;
+    }
+  })();
+  const paths = matches
     .trim()
     .split("\n")
     .map((entry) => entry.slice(prefix.length))
@@ -206,6 +216,7 @@ export const readSuppressionInventoryAtCommit = (
       parseSource(
         path,
         execFileSync(GIT, ["show", `${commit}:${path}`], {
+          cwd,
           encoding: "utf8",
         }),
       ),

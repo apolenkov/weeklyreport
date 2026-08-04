@@ -12,17 +12,20 @@ export interface NavLink {
 }
 
 const HISTORY_LINK_TITLE = "Past weeks and closed reports";
+export const LEAD_REPORT_ROUTE = "/lead/report";
+export const REPORTS_ROUTE = "/reports";
+export const ADMIN_ROUTE = "/admin";
 export const REPORTS_LATEST_ROUTE = "/reports/latest";
 export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
 export const HEAD_REPORT_ROUTE = "/head/report";
 
 export const NAV_LINKS: readonly NavLink[] = [
-  { href: "/lead/report", label: "Report", roles: ["lead"] },
+  { href: LEAD_REPORT_ROUTE, label: "Report", roles: ["lead"] },
   // One History page for both active and archived report periods; archived
   // visibility is a local toggle inside the page. The link targets bare
   // `/reports` — the page does not read a `tab` query param.
   {
-    href: "/reports",
+    href: REPORTS_ROUTE,
     label: "History",
     title: HISTORY_LINK_TITLE,
     roles: ["lead"],
@@ -30,7 +33,7 @@ export const NAV_LINKS: readonly NavLink[] = [
   // /head/history 307-redirects to /reports (same surface as viewer). The
   // nav link points directly to the destination.
   {
-    href: "/reports",
+    href: REPORTS_ROUTE,
     label: "History",
     title: HISTORY_LINK_TITLE,
     roles: ["head"],
@@ -46,7 +49,7 @@ export const NAV_LINKS: readonly NavLink[] = [
     roles: ["viewer"],
   },
   {
-    href: "/reports",
+    href: REPORTS_ROUTE,
     label: "History",
     title: HISTORY_LINK_TITLE,
     roles: ["viewer"],
@@ -58,5 +61,5 @@ export const NAV_LINKS: readonly NavLink[] = [
   // (back-compat in head/slides/page.tsx).
   // admin tab is admin-only. heads have a dashboard, not an admin panel.
   // The /admin/layout.tsx role gate enforces the same on the route.
-  { href: "/admin", label: "Admin", roles: ["admin"] },
+  { href: ADMIN_ROUTE, label: "Admin", roles: ["admin"] },
 ];

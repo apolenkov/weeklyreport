@@ -5,10 +5,8 @@ import {
   BORDER_LIGHT,
   printStatusColor,
   TEXT_SECONDARY,
+  TEXT_TERTIARY,
 } from "./print-report-theme";
-
-// Tertiary text for footer (muted vs TEXT_SECONDARY).
-const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
 
 export function PrintReportHeader({
   periodLabel,

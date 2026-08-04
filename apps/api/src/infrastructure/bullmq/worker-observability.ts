@@ -1,11 +1,7 @@
 import { context, propagation, trace } from "@opentelemetry/api";
 import type { ClsService } from "nestjs-cls";
 
-import {
-  type AppLogger,
-  createAppLogger,
-  createNullLogger,
-} from "../../lib/logger.js";
+import { type AppLogger, createAppLogger } from "../../lib/logger.js";
 import { validateEnv } from "../config/env.schema.js";
 
 const CORRELATION_ID_KEY = "correlationId";
@@ -15,12 +11,22 @@ const WORKER_TRACER_NAME = "customreport-bullmq";
 // enqueue trace. Fields omitted (never written as undefined) when no trace is
 // active or the enqueuer is outside a request scope.
 export interface JobTraceContext {
-  traceparent?: string;
-  tracestate?: string;
-  correlationId?: string;
+  readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly correlationId?: string;
 }
 
-export function resolveCorrelationId(cls?: ClsService): string | undefined {
+// The CLS surface workers actually use; ClsService is nominal (private `als`),
+// so declaring the consumed members lets tests inject a real AsyncLocalStorage
+// double without an erasing cast.
+export interface JobCls {
+  isActive(): boolean;
+  get(key: string): unknown;
+  run<T>(fn: () => T): T;
+  set(key: string, value: unknown): void;
+}
+
+export function resolveCorrelationId(cls: JobCls | null): string | undefined {
   if (!cls?.isActive()) return undefined;
   const value: unknown = cls.get(CORRELATION_ID_KEY);
   return typeof value === "string" ? value : undefined;
@@ -45,7 +51,7 @@ export function captureJobTraceContext(
 export async function runInJobTraceContext(
   jobContext: JobTraceContext,
   spanName: string,
-  cls: ClsService | undefined,
+  cls: JobCls | null,
   body: () => Promise<void>,
 ): Promise<void> {
   const parent = propagation.extract(context.active(), {
@@ -76,26 +82,28 @@ export async function runInJobTraceContext(
   await runSpan();
 }
 
-/** A W3C traceparent header has exactly 4 hyphen-separated segments: version-traceId-spanId-flags. */
 const TRACEPARENT_SEGMENT_COUNT = 4;
+// W3C trace ids are exactly 32 hex chars (16 bytes); shorter ids are malformed.
+const TRACE_ID_HEX_RE = /^[0-9a-f]{32}$/i;
 
 // Failure handler runs after the span ends, so ambient OTel no longer has the
-// trace id — read it back from the job carrier. Loose parse (segment count +
-// non-empty only): failure-log linkage, not strict W3C validation.
+// trace id — read it back from the job carrier. Strict on the trace id shape
+// so a truncated or garbage id never surfaces as a real trace reference.
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
   if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
   const traceId = segments[1];
-  return traceId !== undefined && traceId.length > 0 ? traceId : undefined;
+  return traceId !== undefined && TRACE_ID_HEX_RE.test(traceId)
+    ? traceId
+    : undefined;
 }
 
 // Workers sit outside main.ts's request pipeline; seed with the same CLS so
 // job-scoped logs resolve correlationId like in-request logs.
 export function createWorkerLogger(
   service: string,
-  cls?: ClsService,
+  cls: ClsService,
 ): AppLogger {
-  if (!cls) return createNullLogger();
   const env = validateEnv();
   return createAppLogger({
     service,

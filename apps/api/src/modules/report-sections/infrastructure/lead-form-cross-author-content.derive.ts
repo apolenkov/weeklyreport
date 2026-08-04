@@ -1,7 +1,7 @@
 import {
   type DbRole,
   itemWorkflowStatusSchema,
-  type RiskSeverity,
+  riskSeveritySchema,
 } from "@customreport/shared";
 
 import type { CrossAuthorSectionRow } from "../domain/lead-form-shared";
@@ -11,28 +11,28 @@ import {
 } from "./lead-form-cross-author.derive.js";
 import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";
 
-/** A co-owner's stage assignment on a shared, non-archived product. */
+// A co-owner's stage assignment on a shared, non-archived product.
 interface CrossAuthorStageAssignment {
-  projectId: string;
-  stageId: string;
-  stageName: string;
+  readonly projectId: string;
+  readonly stageId: string;
+  readonly stageName: string;
 }
 
-/** Per-author scoping entry for the content read. */
+// Per-author scoping entry for the content read.
 interface CrossAuthorEntry {
-  authorId: string;
-  authorName: string;
-  authorRole: DbRole;
-  sharedProjectIds: Set<string>;
-  stageAssignments: CrossAuthorStageAssignment[];
+  readonly authorId: string;
+  readonly authorName: string;
+  readonly authorRole: DbRole;
+  readonly sharedProjectIds: ReadonlySet<string>;
+  readonly stageAssignments: readonly CrossAuthorStageAssignment[];
 }
 
-/** Row of foreign stage assignments the content read groups over. */
+// Row of foreign stage assignments the content read groups over.
 interface ForeignContentAssignmentRow {
-  projectId: string;
-  stageId: string;
-  stage: { name: string };
-  user: { id: string; name: string; role: DbRole };
+  readonly projectId: string;
+  readonly stageId: string;
+  readonly stage: { name: string };
+  readonly user: { id: string; name: string; role: DbRole };
 }
 
 // `coOwnsShared` is the authorization signal: `others` only ever holds stage
@@ -75,10 +75,10 @@ export function groupCrossAuthorAuthors(
   };
 }
 
-/** Foreign section shape for the full-content cross-author read. */
+// Foreign section shape for the full-content cross-author read.
 interface ForeignContentSection {
-  authorId: string;
-  items: {
+  readonly authorId: string;
+  readonly items: readonly {
     id: string;
     projectId: string | null;
     type: string;
@@ -89,7 +89,7 @@ interface ForeignContentSection {
     priorityRank: number | null;
     stageNames: string[];
   }[];
-  risks: {
+  readonly risks: readonly {
     id: string;
     projectId: string | null;
     risk: string;
@@ -98,7 +98,7 @@ interface ForeignContentSection {
     severity: string;
     stageNames: string[];
   }[];
-  decisions: {
+  readonly decisions: readonly {
     id: string;
     productId: string | null;
     text: string;
@@ -108,7 +108,7 @@ interface ForeignContentSection {
     resolvedAt: Date | null;
     stageNames: string[];
   }[];
-  stageStatuses: {
+  readonly stageStatuses: readonly {
     projectId: string;
     stageId: string;
     status: StageTrafficStatus;
@@ -173,7 +173,10 @@ export function buildCrossAuthorContentRows(
           )
           // The DB column is a plain String (Risk_severity_check CHECK backs
           // the two-value vocabulary); narrow the Prisma-typed string here.
-          .map((r) => ({ ...r, severity: r.severity as RiskSeverity })),
+          .map((r) => ({
+            ...r,
+            severity: riskSeveritySchema.parse(r.severity),
+          })),
         decisions: section.decisions.filter(
           (d): d is typeof d & { productId: string } =>
             d.productId != null && sharedIds.has(d.productId),

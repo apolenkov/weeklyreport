@@ -10,7 +10,7 @@ import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminCatalogDeps {
-  projectAdminService: ProjectAdminService;
+  readonly projectAdminService: ProjectAdminService;
 }
 
 function reportingGroupProcedures(deps: AdminCatalogDeps) {

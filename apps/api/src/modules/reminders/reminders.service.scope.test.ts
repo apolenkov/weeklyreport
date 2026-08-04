@@ -9,14 +9,9 @@ import { RemindersService } from "./reminders.service.js";
 import type { RemindersRepository } from "./reminders.types.js";
 import { unusedRemindersRepositoryStubs } from "./reminders-scope.repository-stub.js";
 
-/**
- * Recipient-level scope on `listExecutions` MUST run over the full slice
- * BEFORE cursor pagination. Filtering the already-paginated page would let
- * out-of-scope rows consume the page size and surface an out-of-scope id as
- * `nextCursor`. These mock-repository tests pin that ordering: a buggy
- * filter-after-pagination implementation fails the page-contents AND the
- * `nextCursor` assertions.
- */
+// Recipient-level scope on `listExecutions` MUST run over the full slice BEFORE
+// cursor pagination: filtering the already-paginated page would let out-of-scope
+// rows consume the page size and surface an out-of-scope id as `nextCursor`.
 
 const RULE_ID = "a0000000-0000-4000-a000-0000000000a1";
 const REPORT_ID = "a0000000-0000-4000-a000-0000000000a2";
@@ -111,5 +106,16 @@ describe("RemindersService.listExecutions — recipient scope before pagination"
 
     expect(result.items).toHaveLength(3);
     expect(expectDefined(result.items[0]).recipientEmail).toBe(OUT_OF_SCOPE);
+  });
+
+  it("fails loud when an unpaginated read exceeds the hard cap", async () => {
+    const tooMany = Array.from({ length: 1001 }, (_, index) =>
+      execution(index.toString(16).padStart(5, "0"), IN_SCOPE),
+    );
+    const service = buildService(tooMany);
+
+    await expect(
+      service.listExecutions(RULE_ID, undefined, new Set([IN_SCOPE])),
+    ).rejects.toThrow(/exceeds the unpaginated cap/);
   });
 });

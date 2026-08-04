@@ -1,4 +1,4 @@
-# Phase 37-04: vector.dev config template for shipping CustomReport logs to
+# vector.dev config template for shipping CustomReport logs to
 # a remote sink. Drop into a sidecar container alongside the api service;
 # adjust the [sinks.*] block for your destination (Loki / Datadog / Elastic).
 #

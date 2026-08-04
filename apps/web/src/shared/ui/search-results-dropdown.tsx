@@ -1,5 +1,6 @@
 import type { SearchHit } from "@customreport/shared";
 
+import { formatDateWithYear } from "../../lib/format-date";
 import { renderSnippet, targetUrlFor, TYPE_BADGE } from "./search-input-utils";
 
 export interface SearchResultsDropdownProps {
@@ -34,7 +35,7 @@ function SearchHitMetaRow({ hit }: { readonly hit: SearchHit }) {
         {TYPE_BADGE[hit.type].label}
       </span>
       <span className="text-[11px] text-[var(--color-muted-foreground)]">
-        {new Date(hit.createdAt).toLocaleDateString()}
+        {formatDateWithYear(new Date(hit.createdAt))}
       </span>
     </div>
   );
@@ -57,7 +58,28 @@ function SearchHitOption({
   readonly onHoverHit: (idx: number) => void;
   readonly onSelectHit: (url: string) => void;
 }) {
-  const url = targetUrlFor(hit, isViewer);
+  const target = targetUrlFor(hit, isViewer);
+  if (target.kind === "unavailable") {
+    return (
+      <button
+        id={optionId}
+        type="button"
+        role="option"
+        aria-selected={false}
+        disabled
+        title="Destination unavailable"
+        className="flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left last:border-b-0 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <SearchHitMetaRow hit={hit} />
+        <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+          {hit.title}
+        </div>
+        <div className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
+          {renderSnippet(hit.snippet)}
+        </div>
+      </button>
+    );
+  }
   return (
     <button
       id={optionId}
@@ -65,11 +87,11 @@ function SearchHitOption({
       role="option"
       aria-selected={isActive}
       onMouseEnter={() => onHoverHit(index)}
-      onClick={() => onSelectHit(url)}
+      onClick={() => onSelectHit(target.url)}
       className={`flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left transition-colors last:border-b-0 ${
         isActive
           ? "bg-[var(--color-success)]"
-          : "bg-white hover:bg-[var(--color-success)]"
+          : "bg-[var(--color-card)] hover:bg-[var(--color-success)]"
       }`}
     >
       <SearchHitMetaRow hit={hit} />
@@ -99,7 +121,7 @@ export function SearchResultsDropdown({
     <div
       id={resultsId}
       role="listbox"
-      className="absolute z-50 mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white shadow-lg"
+      className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg"
     >
       {isFetching && hits.length === 0 && <StatusRow>Searching…</StatusRow>}
 

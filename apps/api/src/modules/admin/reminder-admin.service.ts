@@ -7,22 +7,18 @@ import {
   reminderPolicySchema,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import type { AdminRepository } from "./admin-shared";
 
 interface ReminderAdminRepository extends AdminRepository {
-  reminderPolicyExists(policyId: string): Promise<boolean>;
+  readonly reminderPolicyExists: (policyId: string) => Promise<boolean>;
 }
 
 export class ReminderAdminService {
-  private readonly logger: AppLogger;
-
   constructor(
     private readonly repository: ReminderAdminRepository,
-    logger?: AppLogger,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+    private readonly logger: AppLogger,
+  ) {}
 
   private async getSnapshot(): Promise<AdminSnapshot> {
     return adminSnapshotSchema.parse(await this.repository.getSnapshot());

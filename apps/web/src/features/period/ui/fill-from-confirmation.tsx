@@ -26,7 +26,7 @@ export function useFillFromConfirmation(
       setOpen(true);
     },
     confirm: () => {
-      if (period) onFillFrom?.(period.sourceSectionId);
+      if (period?.sourceSectionId) onFillFrom?.(period.sourceSectionId);
       dismiss();
     },
     cancel: dismiss,

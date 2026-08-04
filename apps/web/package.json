@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "doctor": "react-doctor . --no-telemetry --blocking error --no-parallel --max-duration 300",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
@@ -43,6 +44,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^30.0.0",
     "postcss": "^8.5.23",
+    "react-doctor": "catalog:",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5"
   },

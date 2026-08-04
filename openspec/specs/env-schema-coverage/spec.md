@@ -2,18 +2,22 @@
 
 ## Purpose
 
-TBD - created by archiving change complete-env-schema-coverage. Update Purpose after archive.
+Declare every API environment variable in one validated schema, fail boot when mandatory configuration is absent, and route reads through validated configuration without silent defaults.
 
 ## Requirements
 
 ### Requirement: Every consumed env var is declared in the validated schema
 
-The system MUST declare every environment variable the `apps/api` runtime reads
-in `apps/api/src/infrastructure/config/env.schema.ts` (`envSchema`), so that a
-missing or malformed value is caught by one Zod parse rather than at a scattered
-raw read. A grep of `apps/api/src` (excluding `*.spec.ts`, `*.test.ts`, and
-`test-utils/*`) for a literal `process.env.<NAME>` read MUST NOT surface a
-`<NAME>` absent from `envSchema`. The seven currently-undeclared vars —
+The system MUST declare every product-config environment variable the
+`apps/api` runtime reads in `apps/api/src/infrastructure/config/env.schema.ts`
+(`envSchema`), so that a missing or malformed value is caught by one Zod parse
+rather than at a scattered raw read. A grep of `apps/api/src` (excluding
+`*.spec.ts`, `*.test.ts`, and `test-utils/*`) for a literal `process.env.<NAME>`
+read MUST NOT surface a product-config `<NAME>` absent from `envSchema`.
+Inherited process-runtime variables such as `PATH` are not product
+configuration and stay at their explicit operating-system boundary: the dev
+reseed resolver uses `PATH` only to locate an executable. The seven variables
+identified by the coverage audit —
 `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`,
 `CUSTOMREPORT_REPO_ROOT`, `TG_BOT_TOKEN`, `DLQ_ALERT_THRESHOLD`, and
 `AUTH_JWT_COOKIE_NAME` — MUST each be added.

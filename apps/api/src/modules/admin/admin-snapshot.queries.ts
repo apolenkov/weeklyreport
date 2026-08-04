@@ -11,7 +11,6 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { extractRecipientEmail } from "../reminders/index.js";
 import { audienceFromPrisma } from "./admin-enum-mappers";
 
 async function fetchSnapshotRows(prisma: PrismaService) {
@@ -36,6 +35,7 @@ async function fetchSnapshotRows(prisma: PrismaService) {
     prisma.report.findMany({ orderBy: { periodStart: "desc" } }),
     prisma.reminderRule.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.reminderExecution.findMany({
+      include: { rule: { select: { reportId: true, fireAt: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.reminderPolicy.findMany({
@@ -115,19 +115,19 @@ function toReminderRule(rule: SnapshotRows["reminderRules"][number]) {
   });
 }
 
-// Executions don't store reportId or a separate schedule instant; the admin
-// snapshot flattens to null reportId and uses createdAt as scheduledFor so the
-// wire shape stays stable for the UI.
+// Executions don't store reportId or a schedule instant; both come from the
+// owning rule's real columns (reportId, fireAt) so the snapshot never invents
+// facts — createdAt is a row timestamp, not a schedule.
 function toReminderExecution(exec: SnapshotRows["reminderExecutions"][number]) {
   return adminReminderExecutionSchema.parse({
     id: exec.id,
     ruleId: exec.ruleId,
-    reportId: null,
+    reportId: exec.rule.reportId,
     dedupeKey: exec.dedupeKey,
     status: exec.status === "pending" ? "queued" : exec.status,
-    scheduledFor: exec.createdAt,
+    scheduledFor: exec.rule.fireAt,
     sentAt: exec.sentAt,
-    recipientEmail: extractRecipientEmail(exec.dedupeKey),
+    recipientEmail: exec.recipientEmail,
     errorMessage: exec.error,
   });
 }

@@ -9,46 +9,43 @@ export type ReopenRequestStatusFilter =
   "pending" | "approved" | "rejected" | "all";
 
 export interface ListReopenRequestsInput {
-  status: ReopenRequestStatusFilter;
-  session: UserSession;
+  readonly status: ReopenRequestStatusFilter;
+  readonly session: UserSession;
 }
 
 export interface DecideReopenRequestInput {
-  id: string;
-  decision: "approved" | "rejected";
-  reviewNote: string | null;
-  decidedBy: string;
-  session: UserSession;
+  readonly id: string;
+  readonly decision: "approved" | "rejected";
+  readonly reviewNote: string | null;
+  readonly decidedBy: string;
+  readonly session: UserSession;
 }
 
 export interface StageRow {
-  id: string;
-  name: string;
-  sortOrder: number;
+  readonly id: string;
+  readonly name: string;
+  readonly sortOrder: number;
 }
 
 export interface StageAssignmentCountRow {
-  projectId: string;
-  count: number;
+  readonly projectId: string;
+  readonly count: number;
 }
 
-/**
- * One reopen-request row, joined with requester/reviewer identity and the
- * owning section's report envelope — the shape the Admin Panel "Reopen
- * Requests" tab and the head dashboard card render directly.
- */
+// One reopen-request row joined with requester/reviewer identity and the
+// owning section's report envelope — the Admin Panel + dashboard card shape.
 export interface ReopenRequestRow {
-  id: string;
-  reportSectionId: string;
-  reason: string | null;
-  status: "pending" | "approved" | "rejected";
-  reviewNote: string | null;
-  reviewedAt: Date | null;
-  createdAt: Date;
-  requestedBy: { id: string; name: string; email: string };
-  reviewedBy: { id: string; name: string; email: string } | null;
-  sectionStatus: ReportSectionStatus;
-  report: {
+  readonly id: string;
+  readonly reportSectionId: string;
+  readonly reason: string | null;
+  readonly status: "pending" | "approved" | "rejected";
+  readonly reviewNote: string | null;
+  readonly reviewedAt: Date | null;
+  readonly createdAt: Date;
+  readonly requestedBy: { id: string; name: string; email: string };
+  readonly reviewedBy: { id: string; name: string; email: string } | null;
+  readonly sectionStatus: ReportSectionStatus;
+  readonly report: {
     id: string;
     weekLabel: string | null;
     periodStart: Date;
@@ -56,45 +53,37 @@ export interface ReopenRequestRow {
   };
 }
 
-/**
- * Outcome of the race-safe decision transaction. `already-processed` is the
- * loser of a concurrent decision (zero rows matched the compare-and-set);
- * `stale` is a winning approve whose section was already reopened elsewhere
- * (auto-closed to rejected); `decided` is a real decision.
- */
+// Outcome of the race-safe decision transaction: `already-processed` lost a
+// concurrent decision (zero CAS rows); `stale` won an approve whose section was
+// already reopened elsewhere (auto-closed); `decided` is a real decision.
 export type ReopenDecisionOutcome =
   | { kind: "already-processed" }
   | { kind: "stale" }
   | { kind: "decided"; decision: "approved" | "rejected" };
 
-/**
- * One product's owning reporting group, or `null` when the product belongs to
- * no group. The batched ownership read returns one entry per requested
- * product id so the caller can key a lookup without re-deriving absence.
- */
+// One product's owning reporting group, or `null` when it belongs to none.
+// The batched read returns one entry per requested id so the caller can key a
+// lookup without re-deriving absence.
 export interface ProductGroupOwnership {
-  productId: string;
-  group: { id: string; name: string } | null;
+  readonly productId: string;
+  readonly group: { id: string; name: string } | null;
 }
 
-/**
- * The raw shape returned by `listPeriodsByState`
- * before the service layer derives `canReopen` / `canArchive`. The
- * service holds the AppSettings references (`allowReopenAfterPublish`,
- * `reopenWindowHours`) so the repository stays settings-agnostic.
- */
+// Raw shape from `listPeriodsByState` before the service derives `canReopen` /
+// `canArchive`. The service holds the AppSettings references so the repository
+// stays settings-agnostic.
 export interface PeriodRowFromRepo {
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date | null;
-  publishedAt: Date | null;
-  periodState: PeriodState;
-  periodStatus: PeriodStatus;
-  archived: boolean;
-  autoPublished: boolean;
-  autoArchived: boolean;
-  submittedCount: number;
-  totalCount: number;
-  weekLabel: string | null;
+  readonly id: string;
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  readonly deadline: Date | null;
+  readonly publishedAt: Date | null;
+  readonly periodState: PeriodState;
+  readonly periodStatus: PeriodStatus;
+  readonly archived: boolean;
+  readonly autoPublished: boolean;
+  readonly autoArchived: boolean;
+  readonly submittedCount: number;
+  readonly totalCount: number;
+  readonly weekLabel: string | null;
 }

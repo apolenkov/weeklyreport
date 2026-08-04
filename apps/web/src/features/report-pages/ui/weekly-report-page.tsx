@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import {
   DocumentActionGroup,
@@ -160,6 +161,14 @@ function WeeklyReportBody({
   readonly page: ReadyWeeklyReportPage;
   readonly scope: "product" | "lead";
 }) {
+  // Overview-card clicks lift their target into React state here; the accordion
+  // and lead sections react to it. No component reaches into another's DOM.
+  const [focusedTargetId, setFocusedTargetId] = useState<string | undefined>(
+    undefined,
+  );
+  const focusedProductId = focusedTargetId ?? page.focusedProductId;
+  const focusedLeadId = scope === "lead" ? focusedTargetId : undefined;
+
   return (
     <ReportContent
       hasAnyContent={page.hasAnyContent}
@@ -179,8 +188,10 @@ function WeeklyReportBody({
       submittedOnly={page.submittedOnly}
       submissionFilter={page.submissionFilter}
       onFilterChange={page.handlers.setSubmissionFilter}
-      focusedProductId={page.focusedProductId}
-      scrollTargetProductId={page.scrollTargetProductId}
+      focusedProductId={focusedProductId}
+      scrollTargetProductId={focusedProductId}
+      focusedLeadId={focusedLeadId}
+      onNavigateOverview={setFocusedTargetId}
     />
   );
 }

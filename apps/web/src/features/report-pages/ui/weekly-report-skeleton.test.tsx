@@ -25,14 +25,15 @@ describe("WeeklyReportSkeleton", () => {
 
   it("renders a 6-card portfolio grid (sm:grid-cols-2)", () => {
     const { container } = render(<WeeklyReportSkeleton />);
-    const grid = container.querySelector<HTMLElement>(
-      String.raw`.sm\:grid-cols-2`,
-    );
-    expect(grid).not.toBeNull();
-    expect(grid?.children).toHaveLength(6);
+    const root = getRoot(container);
+    // Root children: [header, period-nav, portfolio, accordion list]; the
+    // portfolio grid is the second child of its card.
+    const portfolioCard = root.children[2] as HTMLElement;
+    const grid = portfolioCard.children[1] as HTMLElement;
+    expect(grid.children).toHaveLength(6);
   });
 
-  it("renders 6 accordion placeholders to match the seeded product count", () => {
+  it("renders 6 accordion placeholders for the fixed skeleton shape", () => {
     const { container } = render(<WeeklyReportSkeleton />);
     const root = getRoot(container);
     // The last top-level child is the `space-y-3` list of accordion cards.

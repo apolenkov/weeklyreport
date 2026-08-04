@@ -5,10 +5,12 @@ import type { AddressInfo } from "node:net";
 import { initTRPC } from "@trpc/server";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import express from "express";
+import type Redis from "ioredis";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import type { AppLogger } from "../../lib/logger";
+import { createNullLogger } from "../../lib/logger";
+import { createFakeRedisCall } from "../../test-utils/fake-redis-call";
 import { createRateLimits } from "../throttler/rate-limit.middleware";
 import {
   CLIENT_LOGS_JSON_LIMIT,
@@ -18,7 +20,7 @@ import {
 
 // The composed mounts below never log unless a 429 fires, and these servers key
 // per loopback IP, so a no-op warn sink is all the limiter needs.
-const silentLogger = { warn: () => undefined } as unknown as AppLogger;
+const silentLogger = createNullLogger();
 
 interface HttpResponse {
   status: number;
@@ -98,9 +100,12 @@ function buildClientLogsApp(): express.Express {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
+  // Production-budget run (isTest=false) needs a store now that a missing one
+  // fails loud; the fake redis backs the real RedisStore without a live Redis.
   const { clientLogsLimiter } = createRateLimits({
     logger: silentLogger,
     isTest: false,
+    redis: createFakeRedisCall() as unknown as Redis,
   });
   mountClientLogsIngress(
     app,

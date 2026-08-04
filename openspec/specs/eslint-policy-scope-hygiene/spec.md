@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-eslint-policy-scopes. Update Purpose after archive.
+Classify every ESLint file scope with effective-config evidence, preserve useful policy, remove duplicate or unjustified relaxation, and prove retained scopes with planted probes.
 
 ## Requirements
 

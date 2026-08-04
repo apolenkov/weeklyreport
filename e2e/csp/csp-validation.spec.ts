@@ -4,9 +4,10 @@
  * already prevents part of the application from running.
  *
  * Fidelity notes:
- * - The policy string is the production one verbatim minus `report-uri`, which
- *   needs a collector this harness has none of. Directives are what the
- *   browser enforces; the report target only decides where it tattles.
+ * - The policy is parsed from deploy/caddy/Caddyfile (never hand-duplicated)
+ *   and used minus `report-uri`, which needs a collector this harness has none
+ *   of. Directives are what the browser enforces; the report target only
+ *   decides where it tattles.
  * - `connect-src 'self'` is faithful here even though web and api listen on
  *   different ports: the tRPC client calls the relative `/trpc`
  *   (apps/web/src/lib/trpc.ts), which Next rewrites server-side, exactly as
@@ -15,17 +16,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { expect, test } from "@playwright/test";
+import { errors, expect, test } from "@playwright/test";
 
-import { ACTIVE_REPORT_ID, PUBLISHED_REPORT_ID } from "../../prisma/seed-constants";
 import { parseCatalog } from "../sweep/catalog-parser.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth";
 import { byName } from "../sweep/ordering.ts";
-
-// Derived, never re-declared: the e2e tree cannot import the shared role
-// schema, and spelling the union out again is exactly what the
-// status-literal-union gate exists to prevent.
-type Role = Parameters<typeof loginByCookie>[1]["role"];
+import { readCaddyCsp, stripReportUri } from "./caddy-policy.ts";
+import { type CspRole, resolveRoute } from "./route-resolution.ts";
 
 interface CspViolation {
   directive: string;
@@ -35,49 +32,45 @@ interface CspViolation {
 }
 
 interface RouteFinding {
-  role: Role;
+  role: CspRole;
   route: string;
   violations: CspViolation[];
 }
 
 const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
 
+// Deferred/hydration resources can legitimately outlive networkidle; this
+// bounds the settle so one hanging resource cannot eat the whole run budget.
+const SETTLE_TIMEOUT_MS = 10_000;
+
+// Playwright marks a timed-out wait with a TimeoutError; only that error means
+// "the page settled as far as we allow" — anything else is a real failure.
+function isSettleTimeout(error: unknown): error is errors.TimeoutError {
+  return error instanceof errors.TimeoutError;
+}
+
 // The catalog directory IS the enumeration of role surfaces — one
 // `<role>.yaml` per role — so a new role's catalog is covered the day it
 // lands, with no list here to forget to update.
-const CATALOG_ROLES: readonly Role[] = fs
+const CATALOG_ROLES: readonly CspRole[] = fs
   .readdirSync(CATALOG_DIR)
   .filter((file) => file.endsWith(".yaml"))
-  .map((file) => path.basename(file, ".yaml") as Role)
+  .map((file) => path.basename(file, ".yaml") as CspRole)
   .sort(byName);
 
-const REPORT_PATH = path.resolve(import.meta.dirname, ".reports", "csp-validation.md");
+const REPORT_PATH = path.resolve(
+  import.meta.dirname,
+  ".reports",
+  "csp-validation.md",
+);
 
-// Byte-identical to deploy/caddy/Caddyfile's enforcing header apart from the
-// dropped report-uri. Keep the two in lockstep: a directive added there and
-// not here means the next flip ships unvalidated.
-const PRODUCTION_CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data:",
-  "connect-src 'self'",
-].join("; ");
+// Derived from deploy/caddy/Caddyfile, never re-declared by hand: a deploy
+// header change without a matching test change must fail the walk, not drift.
+// The report-uri directive is dropped because the harness has no collector;
+// every browser-enforced directive stays byte-identical.
+const PRODUCTION_CSP = stripReportUri(readCaddyCsp());
 
-function resolveRoute(route: string, role: Role): string | null {
-  if (!route.includes("[")) {
-    return route;
-  }
-  const reportId =
-    role === "viewer" || route.startsWith("/reports/")
-      ? PUBLISHED_REPORT_ID
-      : ACTIVE_REPORT_ID;
-  const resolved = route.replace("[reportId]", reportId);
-  return resolved.includes("[") ? null : resolved;
-}
-
-function loadCatalog(role: Role): readonly string[] {
+function loadCatalog(role: CspRole): readonly string[] {
   const file = path.join(CATALOG_DIR, `${role}.yaml`);
   if (!fs.existsSync(file)) return [];
   const parsed = parseCatalog(fs.readFileSync(file, "utf8"));
@@ -157,16 +150,25 @@ test.describe("Content-Security-Policy", () => {
       await loginByCookie(page, { role });
 
       for (const route of routes) {
+        // An unresolved dynamic token throws here instead of silently skipping
+        // the route: a newly-catalogued dynamic route must not escape the walk.
         const resolved = resolveRoute(route, role);
-        if (resolved === null) {
-          continue;
-        }
 
         await page.goto(resolved, { waitUntil: "domcontentloaded" });
         // Violations from deferred/hydration work fire after the document is
         // parsed; without this settle the walk reports a clean page that in
-        // fact broke a moment later.
-        await page.waitForLoadState("networkidle").catch(() => undefined);
+        // fact broke a moment later. A settle timeout is a bounded explicit
+        // wait (deferred resources can outlive networkidle); a navigation or
+        // load failure is not a settled page and must fail the walk.
+        try {
+          await page.waitForLoadState("networkidle", {
+            timeout: SETTLE_TIMEOUT_MS,
+          });
+        } catch (error) {
+          if (!isSettleTimeout(error)) {
+            throw error;
+          }
+        }
 
         const violations = await page.evaluate(
           () =>

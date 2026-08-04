@@ -8,7 +8,7 @@
  * tests create them inline via `loginAs(context, ...)`.
  */
 
-import { expect, loginAs, test } from "./fixtures";
+import { expect, test, withAuthenticatedPage } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
@@ -21,117 +21,109 @@ test.describe("Cross-role lifecycle (integration)", () => {
     await resetMutations();
   });
 
-  test("lead UI reflects a published period as locked", async ({
-    browser,
-  }) => {
-    const leadCtx = await browser.newContext();
-    const leadPage = await leadCtx.newPage();
-    await loginAs(leadCtx, { role: "lead", email: SEED_EMAILS.olga });
+  test("lead UI reflects a published period as locked", async ({ browser }) =>
+    withAuthenticatedPage(
+      browser,
+      { role: "lead", email: SEED_EMAILS.olga },
+      (leadPage) =>
+        withAuthenticatedPage(browser, { role: "head" }, async (headPage) => {
+          const sectionBefore = await prisma.reportSection.findUnique({
+            where: {
+              reportId_authorId: {
+                reportId: ACTIVE_REPORT_ID,
+                authorId: LEAD_OLGA_ID,
+              },
+            },
+          });
+          expect(sectionBefore?.status).toBe("draft");
+          const submittedBefore = await prisma.reportSection.count({
+            where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
+          });
 
-    const headCtx = await browser.newContext();
-    const headPage = await headCtx.newPage();
-    await loginAs(headCtx, { role: "head" });
+          // 1. Lead submits via DB (UI submit covered by lead-journey spec).
+          await prisma.reportSection.update({
+            where: {
+              reportId_authorId: {
+                reportId: ACTIVE_REPORT_ID,
+                authorId: LEAD_OLGA_ID,
+              },
+            },
+            data: { status: "submitted", submittedAt: new Date() },
+          });
 
-    const sectionBefore = await prisma.reportSection.findUnique({
-      where: {
-        reportId_authorId: {
-          reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_OLGA_ID,
-        },
-      },
-    });
-    expect(sectionBefore?.status).toBe("draft");
-    const submittedBefore = await prisma.reportSection.count({
-      where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
-    });
+          // 2. Head sees submission count via DB truth.
+          await headPage.goto("/head/dashboard");
+          const submittedCount = await prisma.reportSection.count({
+            where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
+          });
+          expect(submittedCount).toBe(submittedBefore + 1);
 
-    // 1. Lead submits via DB (UI submit covered by lead-journey spec).
-    await prisma.reportSection.update({
-      where: {
-        reportId_authorId: {
-          reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_OLGA_ID,
-        },
-      },
-      data: { status: "submitted", submittedAt: new Date() },
-    });
+          // 3. Head publishes via DB (UI publish covered by head-journey spec).
+          await prisma.report.update({
+            where: { id: ACTIVE_REPORT_ID },
+            data: {
+              status: "published",
+              periodState: "published",
+              periodStatus: "published",
+              publishedAt: new Date(),
+              publishedById: "a0000000-0000-4000-8000-000000000099",
+            },
+          });
 
-    // 2. Head sees submission count via DB truth.
-    await headPage.goto("/head/dashboard");
-    const submittedCount = await prisma.reportSection.count({
-      where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
-    });
-    expect(submittedCount).toBe(submittedBefore + 1);
-
-    // 3. Head publishes via DB (UI publish covered by head-journey spec).
-    await prisma.report.update({
-      where: { id: ACTIVE_REPORT_ID },
-      data: {
-        status: "published",
-        periodState: "published",
-        periodStatus: "published",
-        publishedAt: new Date(),
-        publishedById: "a0000000-0000-4000-8000-000000000099",
-      },
-    });
-
-    // 4. Lead refreshes — UI must reflect locked state.
-    await leadPage.goto("/lead/report");
-    await expect(
-      leadPage.getByRole("heading", { name: "My Report" }),
-    ).toBeVisible();
-    await expect(
-      leadPage.getByRole("button", { name: "Submit", exact: true }),
-    ).toHaveCount(0);
-    const report = await prisma.report.findUnique({
-      where: { id: ACTIVE_REPORT_ID },
-    });
-    expect(report?.status).toBe("published");
-
-    await leadCtx.close();
-    await headCtx.close();
-  });
+          // 4. Lead refreshes — UI must reflect locked state.
+          await leadPage.goto("/lead/report");
+          await expect(
+            leadPage.getByRole("heading", { name: "My Report" }),
+          ).toBeVisible();
+          await expect(
+            leadPage.getByRole("button", { name: "Submit", exact: true }),
+          ).toHaveCount(0);
+          const report = await prisma.report.findUnique({
+            where: { id: ACTIVE_REPORT_ID },
+          });
+          expect(report?.status).toBe("published");
+        }),
+    ));
 
   test("lead UI refreshes published state on the next navigation", async ({
     browser,
-  }) => {
-    const leadCtx = await browser.newContext();
-    const leadPage = await leadCtx.newPage();
-    await loginAs(leadCtx, { role: "lead", email: SEED_EMAILS.olga });
+  }) =>
+    withAuthenticatedPage(
+      browser,
+      { role: "lead", email: SEED_EMAILS.olga },
+      async (leadPage) => {
+        await leadPage.goto("/lead/report");
+        await expect(
+          leadPage.getByRole("button", { name: "Submit", exact: true }),
+        ).toBeVisible({ timeout: 15_000 });
 
-    await leadPage.goto("/lead/report");
-    await expect(
-      leadPage.getByRole("button", { name: "Submit", exact: true }),
-    ).toBeVisible({ timeout: 15_000 });
+        // Simulate head publishing while lead is on page.
+        await prisma.report.update({
+          where: { id: ACTIVE_REPORT_ID },
+          data: {
+            status: "published",
+            periodState: "published",
+            periodStatus: "published",
+            publishedAt: new Date(),
+            publishedById: "a0000000-0000-4000-8000-000000000099",
+          },
+        });
 
-    // Simulate head publishing while lead is on page.
-    await prisma.report.update({
-      where: { id: ACTIVE_REPORT_ID },
-      data: {
-        status: "published",
-        periodState: "published",
-        periodStatus: "published",
-        publishedAt: new Date(),
-        publishedById: "a0000000-0000-4000-8000-000000000099",
+        // Lead navigates — should see fresh state.
+        await leadPage.reload();
+        await expect(
+          leadPage.getByRole("heading", { name: "My Report" }),
+        ).toBeVisible();
+        await expect(
+          leadPage.getByRole("button", { name: "Submit", exact: true }),
+        ).toHaveCount(0);
+
+        const report = await prisma.report.findUnique({
+          where: { id: ACTIVE_REPORT_ID },
+        });
+        expect(report?.status).toBe("published");
       },
-    });
-
-    // Lead navigates — should see fresh state.
-    await leadPage.reload();
-    await expect(
-      leadPage.getByRole("heading", { name: "My Report" }),
-    ).toBeVisible();
-    await expect(
-      leadPage.getByRole("button", { name: "Submit", exact: true }),
-    ).toHaveCount(0);
-
-    const report = await prisma.report.findUnique({
-      where: { id: ACTIVE_REPORT_ID },
-    });
-    expect(report?.status).toBe("published");
-
-    await leadCtx.close();
-  });
+    ));
 
   test("lead UI becomes editable after a report returns to draft", async ({
     browser,
@@ -161,22 +153,23 @@ test.describe("Cross-role lifecycle (integration)", () => {
       },
     });
 
-    const leadCtx = await browser.newContext();
-    const leadPage = await leadCtx.newPage();
-    await loginAs(leadCtx, { role: "lead", email: SEED_EMAILS.olga });
-    await leadPage.goto("/lead/report");
-    const submitButton = leadPage.getByRole("button", {
-      name: "Submit",
-      exact: true,
-    });
-    await expect(submitButton).toBeVisible({ timeout: 15_000 });
-    await expect(submitButton).toBeEnabled();
+    await withAuthenticatedPage(
+      browser,
+      { role: "lead", email: SEED_EMAILS.olga },
+      async (leadPage) => {
+        await leadPage.goto("/lead/report");
+        const submitButton = leadPage.getByRole("button", {
+          name: "Submit",
+          exact: true,
+        });
+        await expect(submitButton).toBeVisible({ timeout: 15_000 });
+        await expect(submitButton).toBeEnabled();
 
-    const report = await prisma.report.findUnique({
-      where: { id: ACTIVE_REPORT_ID },
-    });
-    expect(report?.status).toBe("draft");
-
-    await leadCtx.close();
+        const report = await prisma.report.findUnique({
+          where: { id: ACTIVE_REPORT_ID },
+        });
+        expect(report?.status).toBe("draft");
+      },
+    );
   });
 });

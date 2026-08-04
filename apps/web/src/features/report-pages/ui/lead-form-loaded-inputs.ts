@@ -7,6 +7,7 @@ import type {
   CrossAuthorContentRow,
   CrossAuthorRow,
 } from "../../report-sections";
+import { leadFormGenerationOf } from "./lead-form-generation";
 import type { LeadFormLoadedData } from "./lead-form-loaded";
 import type { PublishedLineage } from "./lead-form-loaded-record-builders";
 import type { LeadFormLoadedInput } from "./lead-form-loaded-view-model";
@@ -45,7 +46,7 @@ export interface LeadFormViewModelData {
 
 export interface LeadFormPresentationState {
   readonly isSubmitted: boolean;
-  readonly selectedPeriodId: string;
+  readonly selectedPeriodId: string | null;
   readonly showArchivePeriods: boolean;
 }
 
@@ -60,14 +61,17 @@ export function resolveLeadFormLoaded(
     data.awaitingRoleRedirect ||
     data.awaitingCanonicalRedirect ||
     data.activeData === undefined ||
+    data.activeData === null ||
     !data.byPeriodData ||
     !data.historyData ||
-    !draftSection
+    !draftSection ||
+    leadFormGenerationOf(data.byPeriodData.section) !==
+      leadFormGenerationOf(draftSection)
   ) {
     return null;
   }
   return {
-    active: data.activeData ?? draftSection,
+    active: data.activeData,
     draftSection,
     byPeriodData: data.byPeriodData,
     historyData: data.historyData,

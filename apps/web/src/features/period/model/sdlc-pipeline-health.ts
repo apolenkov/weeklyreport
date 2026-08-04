@@ -41,7 +41,7 @@ export function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   };
 }
 
-function worstOwnStatus(stages: StageAssignment[]): StageStatus {
+function worstOwnStatus(stages: readonly StageAssignment[]): StageStatus {
   return worstStatusOf(
     stages.filter((s) => s.ownership === "mine").map((s) => s.status),
   );

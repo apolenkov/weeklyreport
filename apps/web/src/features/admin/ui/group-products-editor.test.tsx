@@ -237,6 +237,32 @@ describe("GroupProductsEditor", () => {
     expect(detachMutate).not.toHaveBeenCalled();
   });
 
+  it("fail-closes the toggles when the ownership query fails", () => {
+    attachedQueryMock.mockReturnValue({ isLoading: false, data: [] });
+    ownershipQueryMock.mockReturnValue({
+      isLoading: false,
+      data: undefined,
+      isError: true,
+    });
+
+    render(
+      <GroupProductsEditor
+        groupId={GROUP_ID}
+        products={[PRODUCT_A, PRODUCT_B]}
+      />,
+    );
+
+    const a = screen.getByLabelText(/Toggle Платформа интеграций/);
+    const b = screen.getByLabelText(/Toggle Partner portal/);
+    expect(a).toBeDisabled();
+    expect(b).toBeDisabled();
+    expect(a).toHaveAccessibleDescription("Could not load group assignment");
+    expect(b).toHaveAccessibleDescription("Could not load group assignment");
+    expect(
+      screen.getAllByText(/Could not load group assignment/).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("detaching a product refreshes its group list and ownership caches", async () => {
     attachedQueryMock.mockReturnValue({
       isLoading: false,

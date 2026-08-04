@@ -4,6 +4,10 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { buildSectionSlideModel } from "../model/section-slide-model";
 import { StatusSlideDeck } from "./status-slide-deck";
 
@@ -43,37 +47,36 @@ const risk = (over: Partial<Risk> = {}): Risk => ({
   ...over,
 });
 
-const makeSection = (
-  over: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel => ({
-  reportSectionId: "sec-1",
-  reportId: "rep-1",
-  authorId: "lead-1",
-  authorName: "Иванов Василий Петрович",
-  authorRole: "lead",
-  version: 1,
-  status: "draft",
-  submittedAt: null,
-  projects: [
-    {
-      projectId: "p1",
-      projectName: "Core Product",
-      trafficLight: "green",
-      ownedStages: [],
-    },
-    {
-      projectId: "p2",
-      projectName: "Data Portal",
-      trafficLight: "yellow",
-      ownedStages: [],
-    },
-  ],
-  items: [],
-  risks: [],
-  decisions: [],
-  activities: [],
-  ...over,
-});
+const makeSection = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
+  makeReportSectionFixture({
+    reportSectionId: "sec-1",
+    reportId: "rep-1",
+    authorId: "lead-1",
+    authorName: "Иванов Василий Петрович",
+    authorRole: "lead",
+    version: 1,
+    status: "draft",
+    submittedAt: null,
+    projects: [
+      {
+        projectId: "p1",
+        projectName: "Core Product",
+        trafficLight: "green",
+        ownedStages: [],
+      },
+      {
+        projectId: "p2",
+        projectName: "Data Portal",
+        trafficLight: "yellow",
+        ownedStages: [],
+      },
+    ],
+    items: [],
+    risks: [],
+    decisions: [],
+    activities: [],
+    ...over,
+  });
 
 function renderDeck(
   section: ReportSectionReadModel,
@@ -345,6 +348,24 @@ describe("StatusSlideDeck — by-product grid article", () => {
       />,
     );
     expect(screen.getByText("No slides available")).toBeInTheDocument();
+  });
+
+  it("emits no selection index on an empty deck", () => {
+    const onSelect = vi.fn();
+    render(
+      <StatusSlideDeck
+        slides={[]}
+        selectedIndex={0}
+        onSelect={onSelect}
+        mode="lead"
+      />,
+    );
+    const deck = screen.getByTestId("lead-slides-deck");
+
+    fireEvent.keyDown(deck, { key: "ArrowRight" });
+    fireEvent.keyDown(deck, { key: "ArrowLeft" });
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("passes row activation through the lead deck", () => {

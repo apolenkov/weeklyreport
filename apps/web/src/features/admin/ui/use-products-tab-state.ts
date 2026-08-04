@@ -53,7 +53,7 @@ function useProductExpansion(
   };
 }
 
-function useProductEditDialog(leads: readonly AdminUserView[]) {
+function useProductEditDialog() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProductView | null>(
     null,
@@ -68,7 +68,9 @@ function useProductEditDialog(leads: readonly AdminUserView[]) {
     closeDialog: () => setShowDialog(false),
     openAdd: () => {
       setEditingProduct(null);
-      setForm({ ...EMPTY_PRODUCT_FORM, leadId: leads[0]?.id ?? "" });
+      // No silent owner preselection: the admin chooses the lead explicitly,
+      // and the save gate blocks an unselected owner from submitting.
+      setForm({ ...EMPTY_PRODUCT_FORM });
       setShowDialog(true);
     },
     openEdit: (product: AdminProductView) => {
@@ -107,18 +109,24 @@ function useProductFilters(
 
 // product.stages is always 7 nulls — assignment data ships via
 // listStageAssignments; count with a light groupBy instead.
-function useStageCountByProject(): ReadonlyMap<string, number> {
+function useStageCountByProject(): {
+  readonly counts: ReadonlyMap<string, number>;
+  readonly countsError: boolean;
+} {
   const trpc = useTRPC();
   const stageCountsQuery = useQuery(
     trpc.admin.listStageAssignmentCounts.queryOptions(),
   );
-  return useMemo(
-    () =>
-      new Map<string, number>(
-        (stageCountsQuery.data ?? []).map((r) => [r.projectId, r.count]),
-      ),
-    [stageCountsQuery.data],
-  );
+  return {
+    counts: useMemo(
+      () =>
+        new Map<string, number>(
+          (stageCountsQuery.data ?? []).map((r) => [r.projectId, r.count]),
+        ),
+      [stageCountsQuery.data],
+    ),
+    countsError: stageCountsQuery.isError,
+  };
 }
 
 function useProductArchive(archiveProduct: (projectId: string) => void) {
@@ -189,9 +197,9 @@ export function useProductsTabState({
 }: UseProductsTabStateArgs) {
   const { leads, getUserById } = useProductLeads(users);
   const expansion = useProductExpansion(products, productFilter);
-  const dialog = useProductEditDialog(leads);
+  const dialog = useProductEditDialog();
   const filters = useProductFilters(products, productFilter);
-  const stageCountByProject = useStageCountByProject();
+  const { counts: stageCountByProject, countsError } = useStageCountByProject();
   const { saveProjectMut, deleteProjectMut } = useProductMutations(
     dialog.closeDialog,
   );
@@ -224,7 +232,11 @@ export function useProductsTabState({
     leads,
     getUserById,
     stageCountByProject,
+    countsError,
     leadProductCount,
+    // leadOwnerId is a required uuid on the wire — an unselected owner must
+    // not submit.
+    canSave: dialog.form.name.trim().length > 0 && dialog.form.leadId !== "",
     isSaving: saveProjectMut.isPending,
     isArchiving: deleteProjectMut.isPending,
   };

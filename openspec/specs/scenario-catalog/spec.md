@@ -2,33 +2,35 @@
 
 ## Purpose
 
-TBD - created by archiving change establish-scenario-catalog. Update Purpose after archive.
+Maintain a human-reviewed, route-anchored Scenario Catalog for the four roles,
+with observable intent outcomes and a CI gate that detects App Router/catalog
+drift.
 
 ## Requirements
 
-### Requirement: The catalog is derived from four independent sources
+### Requirement: The catalog is anchored to the App Router route surface
 
-The catalog MUST be derived by triangulating four independent sources of truth,
-never from any single one: (1) the full code entry-point surface, (2) the Prisma
-domain model (entities and state enums), (3) existing OpenSpec specs, mapped via
-(4) the codegraph index. The code entry-point surface MUST include not only tRPC
-procedures but ALL entry points — REST controllers, BullMQ processors, cron
-schedulers, and Next.js route handlers — because core domain behavior (the
-PeriodState lifecycle) is driven by schedulers that no procedure walk reaches.
+The catalog MUST cover the role-reachable Next.js App Router `page.tsx` routes,
+with route groups removed and dynamic segments retained as route patterns. The
+route/access/intent documents under `e2e/catalog/<role>.yaml` are the durable
+behavioral contract; tRPC and REST procedures, BullMQ processors, cron
+schedulers, Prisma entities/enums, and codegraph indexes are outside this
+route-catalog surface and remain owned by their respective API/domain checks.
 
-#### Scenario: a scheduler-driven state transition is cataloged
+#### Scenario: every non-excluded page route is cataloged
 
-- **WHEN** the catalog is derived
-- **THEN** every `PeriodState` transition driven by a cron scheduler
-  (`period-creator`, `auto-publisher`, `auto-archiver`) appears as a scenario
-- **AND** it is not omitted merely because no tRPC procedure triggers it
+- **WHEN** the route catalog is generated or checked
+- **THEN** every App Router `page.tsx` route appears in at least one role
+  catalog unless it is explicitly listed in `EXCLUDED_ROUTES`
+- **AND** an entry-point without a UI route is not invented solely to represent
+  a scheduler or backend procedure
 
-#### Scenario: an entity with no covering entry point is flagged as a gap
+#### Scenario: a system route is explicitly excluded
 
-- **WHEN** the gap critic compares the Prisma domain model against the
-  entry-point surface
-- **THEN** any entity or enum state value with no writer or reader entry point is
-  reported as a coverage gap rather than silently dropped
+- **WHEN** a page is an export or unauthenticated system surface rather than a
+  role navigation intent
+- **THEN** it is named in `e2e/sweep/catalog-check.ts` `EXCLUDED_ROUTES` with a
+  reason instead of silently disappearing from the route census
 
 ### Requirement: Every scenario has a machine-checkable outcome
 
@@ -43,50 +45,53 @@ mechanically checked MUST NOT be admitted to the catalog.
 - **THEN** it is rejected from the catalog until the `Then` states a concrete
   assertion (field value, returned shape, visible text, or error count)
 
-### Requirement: Every scenario links to the code it covers and its test
+### Requirement: Every route has a reviewed behavioral intent
 
-Each scenario MUST carry a traceable link to the entry point it exercises
-(procedure, route, processor, or scheduler) and to the test that asserts it, or
-be explicitly marked uncovered. These links are what allow a change's diff to be
-intersected with the catalog to select exactly the affected scenarios.
+Each catalog route MUST carry at least one reviewed intent with `id`, `given`,
+`when`, and `then` fields. The catalog intentionally carries no file/line,
+selector, or test-name links: those structural anchors rot on refactors. A
+Driver reads the intent against the live route, and route changes are detected
+by the drift gate rather than by intersecting source-file links.
 
-#### Scenario: a diff selects only its affected scenarios
+#### Scenario: a route without an intent is rejected
 
-- **WHEN** a code change is proposed
-- **THEN** intersecting the changed files with the catalog's code links yields
-  the exact set of affected scenarios to re-run
-- **AND** scenarios whose linked code was untouched are not re-run
+- **WHEN** a catalog route has no intent entry or omits a required behavioral
+  field
+- **THEN** generation/checking rejects the catalog instead of treating the
+  route as covered
 
-### Requirement: A drift gate keeps the catalog honest
+### Requirement: A drift gate keeps the route catalog honest
 
-A CI-runnable check MUST re-derive the code entry-point surface (procedures, all
-entry points, entity enums) and FAIL when the code exposes surface that the
-catalog does not cover. The catalog is a living contract, not a snapshot; without
-this gate it silently diverges from the code, exactly as the `period-dual-state`
-spec drifted from the carry-over implementation.
+The CI-runnable `catalog:check` MUST re-derive the App Router `page.tsx` route
+surface and FAIL when a non-excluded code route has no catalog scenario or a
+catalog route no longer exists. It MUST also check route hygiene, role
+consistency, and agreement with the guarded-role policy. The catalog is a living
+route contract, not a snapshot; backend procedure/entity coverage is not inferred
+from it.
 
-#### Scenario: a new uncovered entry point fails the gate
+#### Scenario: a new uncovered page route fails the gate
 
-- **WHEN** a new entry point (procedure, route, processor, or scheduler) is added
-  without a corresponding catalog scenario
-- **THEN** the drift check exits non-zero in CI
-- **AND** it names the uncovered surface
+- **WHEN** a new App Router page route is added without a corresponding catalog
+  scenario
+- **THEN** `pnpm catalog:check` exits non-zero in CI
+- **AND** it names the uncovered route
 
-### Requirement: Execution is two-tier with a fixed human/AI division
+### Requirement: Execution is route sweep plus within-route Driver exploration
 
-The catalog MUST drive two execution tiers from one source: an API tier (every
-entry point, asserted via Vitest/Playwright) and a UI tier (the interactive
-subset, exercised by browser click-through). Authorship of intent (the `Then`)
-and judgement of ambiguous failures stay human- or Sonnet-owned; mechanical
-execution is delegated to the cheapest capable model (Haiku). Entry points with
-no UI path MUST be marked `api-only` and never assigned to UI click-through.
+The catalog MUST drive the existing Layer-1 Playwright role sweep
+(`e2e/sweep/catalog-sweep.spec.ts`) for every catalog route. The sweep records
+navigation/load, page-error, console-error, network, and axe anomalies and writes
+per-role reports. Within-route interaction and intent judgement remain the
+swappable Driver's run-time job; this spec does not create an API tier or a
+second BDD runner for backend-only entry points.
 
-#### Scenario: an api-only entry point is not handed to click-through
+#### Scenario: a role-reachable route is swept
 
-- **WHEN** a scheduler or system procedure with no UI control is scheduled for
-  testing
-- **THEN** it is executed on the API tier
-- **AND** it is not assigned to a UI click-through agent
+- **WHEN** `pnpm test:uat` runs the catalog sweep
+- **THEN** each role catalog is loaded and each route is visited with its dynamic
+  report id resolved from the deterministic seed constants
+- **AND** the role report records every load, console, page-error, network, and
+  axe anomaly before the test outcome is asserted
 
 ### Requirement: The catalog is documentation, not a new test runner
 
@@ -106,11 +111,11 @@ competing test framework in the repo.
 
 Every `role:` and `access:` token read from `e2e/catalog/*.yaml` MUST be
 validated against the canonical four-role set (`lead`, `head`, `admin`,
-`viewer`) before use. Both catalog parsers (`e2e/sweep/catalog-parser.ts`,
-shared by the drift gate and the human checklist renderer, and
-`e2e/sweep/catalog-sweep.spec.ts`'s own reader) MUST throw immediately when
-an unrecognized token appears, rather than passing it through as an unchecked
-string.
+`viewer`) before use. The shared plain-Node parser
+(`e2e/sweep/catalog-parser.ts`) is consumed by `catalog-check.ts`,
+`render-checklist.ts`, and `catalog-sweep.spec.ts`; it MUST throw immediately
+when an unrecognized token appears, rather than passing it through as an
+unchecked string.
 
 #### Scenario: an unrecognized role token fails the parse
 

@@ -1,13 +1,18 @@
 import {
-  type DbRole,
   type ProjectActivity,
   type ProjectActivityLeadEdge,
   projectActivitySchema,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  ProjectActivityDomainError,
+  ProjectActivityNotFoundError,
+} from "./project-activity.errors.js";
 import type { ProjectActivityRepository } from "./project-activity.service.js";
+import { runProjectActivityTransaction } from "./project-activity.transaction.js";
 
 // Prisma row shape shared by every read below (leads joined for `leadIds`,
 // label-only product links joined for `linkedProducts`).
@@ -51,9 +56,103 @@ function toReadModel(row: ActivityRow): ProjectActivity {
   });
 }
 
+async function assertGroupMoveAllowed(
+  tx: Prisma.TransactionClient,
+  activityId: string,
+  nextGroupId: string,
+): Promise<void> {
+  const activity = await tx.projectActivity.findUnique({
+    where: { id: activityId },
+    select: { groupId: true },
+  });
+  if (!activity) {
+    throw new ProjectActivityNotFoundError(
+      `Project activity ${activityId} was not found.`,
+    );
+  }
+  if (activity.groupId === nextGroupId) return;
+
+  const attachedLeadCount = await tx.projectActivityLead.count({
+    where: { activityId },
+  });
+  if (attachedLeadCount > 0) {
+    throw new ProjectActivityDomainError(
+      "Detach all leads before moving the activity to another group.",
+    );
+  }
+}
+
+async function reconcileProducts(
+  tx: Prisma.TransactionClient,
+  activityId: string,
+  linkedProductIds: readonly string[],
+): Promise<void> {
+  const existing = await tx.projectActivityProduct.findMany({
+    where: { activityId },
+    select: { productId: true },
+  });
+  const existingIds = new Set(existing.map((link) => link.productId));
+  const normalizedIds = linkedProductIds.map((id) => id.toLowerCase());
+  const nextIds = new Set(normalizedIds);
+  const toRemove = [...existingIds].filter((id) => !nextIds.has(id));
+  const toAdd = normalizedIds.filter((id) => !existingIds.has(id));
+
+  if (toRemove.length > 0) {
+    await tx.projectActivityProduct.deleteMany({
+      where: { activityId, productId: { in: toRemove } },
+    });
+  }
+  if (toAdd.length > 0) {
+    await tx.projectActivityProduct.createMany({
+      data: toAdd.map((productId) => ({ activityId, productId })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+async function assertLeadAttachable(
+  tx: Prisma.TransactionClient,
+  edge: ProjectActivityLeadEdge,
+): Promise<void> {
+  const activity = await tx.projectActivity.findUnique({
+    where: { id: edge.activityId },
+    select: { groupId: true, archived: true },
+  });
+  if (!activity) {
+    throw new ProjectActivityNotFoundError(
+      `Project activity ${edge.activityId} was not found.`,
+    );
+  }
+
+  const lead = await tx.user.findUnique({
+    where: { id: edge.leadId },
+    select: { role: true, reportingGroupId: true },
+  });
+  if (!lead) {
+    throw new ProjectActivityNotFoundError(
+      `Lead ${edge.leadId} was not found.`,
+    );
+  }
+  if (activity.archived) {
+    throw new ProjectActivityDomainError(
+      "Cannot attach a lead to an archived activity.",
+    );
+  }
+  if (lead.role !== "lead") {
+    throw new ProjectActivityDomainError(
+      "Only users with the lead role can be attached to an activity.",
+    );
+  }
+  if (lead.reportingGroupId !== activity.groupId) {
+    throw new ProjectActivityDomainError(
+      "The lead belongs to another reporting group than this activity.",
+    );
+  }
+}
+
 @Injectable()
 export class ProjectActivityPrismaRepository implements ProjectActivityRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async list(): Promise<ProjectActivity[]> {
     const rows = await this.prisma.projectActivity.findMany({
@@ -105,36 +204,10 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
     jiraAccounts: string[];
   }): Promise<ProjectActivity> {
     const { id, linkedProductIds, ...data } = input;
-    // Reconcile the ProjectActivityProduct join to the submitted set (delete
-    // removed, add new) atomically with the scalar update. Untouched links keep
-    // their `createdAt`, so a no-op edit does not churn the join rows.
-    const row = await this.prisma.$transaction(async (tx) => {
+    const row = await runProjectActivityTransaction(this.prisma, async (tx) => {
+      await assertGroupMoveAllowed(tx, id, data.groupId);
       await tx.projectActivity.update({ where: { id }, data });
-      const existing = await tx.projectActivityProduct.findMany({
-        where: { activityId: id },
-        select: { productId: true },
-      });
-      const existingIds = new Set(existing.map((link) => link.productId));
-      // `productId` is String (text, case-sensitive). Lowercase to match wire-
-      // schema normalize + `uuid()` lowercase emit so a case-variant is the
-      // same link, not remove-then-add churn or a P2002.
-      const normalizedIds = linkedProductIds.map((id) => id.toLowerCase());
-      const nextIds = new Set(normalizedIds);
-      const toRemove = [...existingIds].filter((p) => !nextIds.has(p));
-      const toAdd = normalizedIds.filter((p) => !existingIds.has(p));
-      if (toRemove.length > 0) {
-        await tx.projectActivityProduct.deleteMany({
-          where: { activityId: id, productId: { in: toRemove } },
-        });
-      }
-      if (toAdd.length > 0) {
-        await tx.projectActivityProduct.createMany({
-          data: toAdd.map((productId) => ({ activityId: id, productId })),
-          // Defense-in-depth for a caller that bypasses the shared schema's
-          // uniqueness refine: an in-payload repeat cannot raise P2002 here.
-          skipDuplicates: true,
-        });
-      }
+      await reconcileProducts(tx, id, linkedProductIds);
       return tx.projectActivity.findUniqueOrThrow({
         where: { id },
         include: activityInclude,
@@ -156,12 +229,13 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
   }
 
   async attachLead(edge: ProjectActivityLeadEdge): Promise<void> {
-    // Idempotent on the unique (activityId, leadId) tuple — a double-click
-    // attach is harmless (mirrors admin.attachProductToGroup).
-    await this.prisma.projectActivityLead.upsert({
-      where: { activityId_leadId: edge },
-      create: edge,
-      update: {},
+    await runProjectActivityTransaction(this.prisma, async (tx) => {
+      await assertLeadAttachable(tx, edge);
+      await tx.projectActivityLead.upsert({
+        where: { activityId_leadId: edge },
+        create: edge,
+        update: {},
+      });
     });
   }
 
@@ -198,15 +272,5 @@ export class ProjectActivityPrismaRepository implements ProjectActivityRepositor
       select: { id: true },
     });
     return products.map(({ id }) => id);
-  }
-
-  async getLeadContext(
-    leadId: string,
-  ): Promise<{ role: DbRole; reportingGroupId: string | null } | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: leadId },
-      select: { role: true, reportingGroupId: true },
-    });
-    return user;
   }
 }

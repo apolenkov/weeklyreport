@@ -121,6 +121,11 @@ const ACTIVITY_ROWS = ACTIVITY_SEEDS.flatMap((seed, pIdx) =>
   }),
 );
 
+// The full profile's project activities are exactly these deterministic rows,
+// so a post-seed journey can assert profile-owned existence without trusting
+// unrelated residue left by another seed.
+export const PROJECT_ACTIVITY_IDS = ACTIVITY_ROWS.map((row) => row.activityId);
+
 // Lead attachment is M:M; the product label link (M:N) is what an activity
 // reports against, shown as the linkedProducts chip on every surface.
 // UNIQUE(activityId, productId) holds since each demo activity links one product.

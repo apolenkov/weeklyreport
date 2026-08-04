@@ -10,9 +10,9 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 
 import { useHydratedClient } from "../lib/use-hydrated-client";
+import { DocumentBodyPortal } from "./document-body-portal";
 
 interface TooltipState {
   content: string;
@@ -68,19 +68,18 @@ export function SdlcTooltipProvider({
   return (
     <SdlcTooltipContext.Provider value={value}>
       {children}
-      {mounted && state
-        ? createPortal(
-            <div
-              role="tooltip"
-              data-testid="sdlc-tooltip"
-              className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md bg-[var(--color-foreground)] px-2 py-1 text-left text-[11px] font-medium leading-relaxed text-white shadow-lg"
-              style={{ top: state.top, left: state.left, maxWidth: 280 }}
-            >
-              {state.content}
-            </div>,
-            document.body,
-          )
-        : null}
+      {mounted && state ? (
+        <DocumentBodyPortal>
+          <div
+            role="tooltip"
+            data-testid="sdlc-tooltip"
+            className="pointer-events-none fixed z-[var(--layer-overlay)] -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md bg-[var(--color-foreground)] px-2 py-1 text-left text-[11px] font-medium leading-relaxed text-[var(--color-sidebar-foreground)] shadow-lg"
+            style={{ top: state.top, left: state.left, maxWidth: 280 }}
+          >
+            {state.content}
+          </div>
+        </DocumentBodyPortal>
+      ) : null}
     </SdlcTooltipContext.Provider>
   );
 }

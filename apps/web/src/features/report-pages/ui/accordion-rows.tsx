@@ -37,7 +37,7 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
       <span className="min-h-[18px]" aria-hidden="true" />
       <Rail tone={tone} />
       <Gutter stage={risk.stage} owner={risk.owner} />
-      <span className="pt-px">
+      <div className="min-w-0 pt-px">
         <div className="text-[14.5px] leading-snug text-[var(--color-foreground)]">
           {risk.problem}
         </div>
@@ -63,7 +63,7 @@ export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
             ) : null}
           </div>
         ) : null}
-      </span>
+      </div>
       <span aria-hidden="true" />
     </div>
   );

@@ -31,7 +31,7 @@ export function deriveFromPreChecked(
 
 export function computeInitialStageNames(
   risk: RiskEntry | null,
-  initialStageNames: string[] | undefined,
+  initialStageNames: readonly string[] | undefined,
 ): string[] {
   if (risk?.stageNames) return [...risk.stageNames];
   return initialStageNames ? [...initialStageNames] : [];
@@ -155,7 +155,7 @@ export function deriveRiskDialogSeedProps(
       }
     | { open: true; mode: "edit"; entity: RiskSaveEntry },
   createPrefill: {
-    stageNames?: string[] | undefined;
+    stageNames?: readonly string[] | undefined;
     severity?: RiskSeverity | undefined;
   } | null,
 ) {

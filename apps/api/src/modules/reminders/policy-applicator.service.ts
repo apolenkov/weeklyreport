@@ -2,7 +2,7 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "@customreport/shared";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { ReminderPolicy } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -12,13 +12,12 @@ type PolicyApplyOutcome = "created" | "skipped" | "updated";
 type PolicyApplyTally = Record<PolicyApplyOutcome, number>;
 
 // Turns ReminderPolicy templates into ReminderRule rows for one Period.
-// Idempotent via upsert on uq_rule_report_policy; P2002 is still caught in case
-// an older database is missing that unique index.
+// Idempotent via upsert on uq_rule_report_policy.
 @Injectable()
 export class PolicyApplicatorService {
   private readonly logger = new Logger(PolicyApplicatorService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // With `now` supplied, a rule whose `fireAt` is already past is skipped instead
   // of created active: the scheduler fires any active rule with `fireAt <= now`,
@@ -137,8 +136,10 @@ export class PolicyApplicatorService {
 
       return existing ? "updated" : "created";
     } catch (error: unknown) {
-      // Concurrent applyToPeriod on the same (reportId, policyId): log and continue.
-      if (isUniqueViolation(error)) {
+      // Concurrent applyToPeriod on the same (reportId, policyId) collides on
+      // the uq_rule_report_policy unique index: log and continue. Any OTHER
+      // P2002 (a different constraint) is not this race and re-throws.
+      if (isUniqueViolation(error, { index: "uq_rule_report_policy" })) {
         this.logger.warn(
           `applyToPeriod race on (period=${period.id}, policy=${policy.id}); rule already exists`,
         );

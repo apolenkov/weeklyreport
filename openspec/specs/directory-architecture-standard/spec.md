@@ -198,9 +198,11 @@ directory MUST NOT survive the relocation. Each chart's data-shaping builder
 (`buildLeadVelocityChartData`, `buildTrafficLightHistoryChartData`) MUST travel
 co-located with its component in the slice `ui/` segment — the rule-of-2 (web)
 promotion to `src/shared/` is unmet (no second-slice consumer), so nothing
-graduates. A route or other-slice consumer MUST reach the components only through
-the slice public API barrel `features/analytics/index.ts`, which MUST export
-exactly the components consumed. The `analytics` slice MUST be listed in the
+graduates. The Trends route is the slice's only consumer and its `next/dynamic`
+loaders MUST import concrete chart modules directly, as owned by
+`web-loading-performance`; an unused public barrel MUST NOT be kept solely for a
+hypothetical static consumer. If an ordinary static consumer is introduced, the
+optional slice barrel rule applies at that point. The `analytics` slice MUST be listed in the
 `webSlices` array in `eslint.config.ts` so its cross-slice import boundary is
 machine-enforced, and the relocation MUST be behavior-neutral (no component
 logic, props, or rendered output change).
@@ -214,12 +216,12 @@ logic, props, or rendered output change).
 - **AND** `apps/web/src/components/charts/` no longer exists
 - **AND** each chart-data builder lives beside its component (not in `src/shared/`)
 
-#### Scenario: Consumers reach charts through the slice barrel
+#### Scenario: Code-split consumers reach concrete chart modules
 
-- **WHEN** the `/reports/trends` route loads the chart components
-- **THEN** it imports them from `features/analytics` (the barrel), which exports
-  exactly `LeadVelocityChart`, `PeriodComparisonChart`, and
-  `TrafficLightHistoryChart`
+- **WHEN** the Trends route loads chart components
+- **THEN** it imports concrete chart modules only inside its
+  `next/dynamic` code-split loaders
+- **AND** no unused `features/analytics/index.ts` barrel exists
 - **AND** no code outside the slice imports `components/charts/*`
 
 #### Scenario: The analytics slice boundary is machine-enforced

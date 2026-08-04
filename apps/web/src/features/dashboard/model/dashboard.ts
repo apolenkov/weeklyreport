@@ -23,37 +23,37 @@ export type { LeadInfo } from "./dashboard-lead-presentation";
 // ---- Composer ----
 
 export interface MapDashboardArgs {
-  review: readonly SubmissionDashboardRow[];
-  weeklyReport: WeeklyReportReadModel;
-  activity?: ActivityLiveResponse;
-  /** Override `now` for deterministic deadline tests. */
-  now?: Date;
-  /** Optional: identifier of the currently authenticated lead, used to flag isCurrentUser. */
-  currentUserId?: string;
+  readonly review: readonly SubmissionDashboardRow[];
+  readonly weeklyReport: WeeklyReportReadModel;
+  readonly activity?: ActivityLiveResponse;
+  // Override `now` for deterministic deadline tests.
+  readonly now?: Date;
+  // Optional authenticated lead id used to flag isCurrentUser.
+  readonly currentUserId?: string;
 }
 
 export interface MapWeeklyDashboardArgs {
-  weeklyReport: WeeklyReportReadModel;
-  /** Override `now` for deterministic deadline tests. */
-  now?: Date;
-  /** Review-backed pending count when available; weekly totals seed partial UI. */
-  pendingCount?: number;
+  readonly weeklyReport: WeeklyReportReadModel;
+  // Override `now` for deterministic deadline tests.
+  readonly now?: Date;
+  // Review-backed count fills the weekly view when available.
+  readonly pendingCount?: number;
 }
 
 export interface MapReviewDashboardArgs {
-  review?: readonly SubmissionDashboardRow[];
-  weeklyReport: WeeklyReportReadModel;
-  activity?: ActivityLiveResponse;
-  /** Override `now` for deterministic queue freshness and ordering tests. */
-  now?: Date;
-  currentUserId?: string;
+  readonly review?: readonly SubmissionDashboardRow[];
+  readonly weeklyReport: WeeklyReportReadModel;
+  readonly activity?: ActivityLiveResponse;
+  // Override `now` for deterministic queue freshness and ordering tests.
+  readonly now?: Date;
+  readonly currentUserId?: string;
 }
 
 export interface MappedDashboard {
-  kpi: KpiData;
-  leads: LeadInfo[];
-  blockedAtRisk: BlockedAtRiskItem[];
-  pendingLeads: string[];
+  readonly kpi: KpiData;
+  readonly leads: readonly LeadInfo[];
+  readonly blockedAtRisk: readonly BlockedAtRiskItem[];
+  readonly pendingLeads: readonly string[];
 }
 
 export type MappedWeeklyDashboard = Pick<
@@ -68,7 +68,7 @@ export type MappedReviewDashboard = Pick<
 
 function mapBlockedAtRisk(
   weeklyReport: WeeklyReportReadModel,
-): BlockedAtRiskItem[] {
+): readonly BlockedAtRiskItem[] {
   const stageKeyedProducts = new Set(
     weeklyReport.escalations
       .filter((e) => e.type === "blocked" || e.type === "unresolved_risk")
@@ -78,7 +78,7 @@ function mapBlockedAtRisk(
     .filter(
       (e) => e.type !== "at_risk" || !stageKeyedProducts.has(e.productName),
     )
-    .map((e, idx) => escalationToBlockedItem(e, idx));
+    .map((e) => escalationToBlockedItem(e));
 }
 
 export function mapWeeklyDashboardData({

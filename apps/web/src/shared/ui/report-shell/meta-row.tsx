@@ -14,8 +14,8 @@ const EMPTY_STAGE_CHIPS = {
   },
 } as const;
 
-/** "none" renders no chip at all — an activity-parented row is legitimately
- * stage-less, so neither the warning nor an "All stages" chip applies. */
+// Activity-parented rows can be legitimately stage-less, so "none" renders no
+// warning or implicit All stages chip.
 type EmptyStageChip = keyof typeof EMPTY_STAGE_CHIPS | "none";
 
 type EmptyStageChipSpec =
@@ -57,9 +57,9 @@ interface MetaRowProps {
   readonly stageTags: readonly string[];
   readonly ariaLabel?: string;
   readonly className?: string;
-  /** When true, render a 🔒 after authorName to signal a foreign (read-only) row. */
+  // Mark foreign rows read-only after the author name.
   readonly foreign?: boolean;
-  /** Chip rendered when `stageTags` is empty. Defaults to "All stages". */
+  // Empty-stage chip; defaults to All stages.
   readonly emptyStageChip?: EmptyStageChip;
 }
 

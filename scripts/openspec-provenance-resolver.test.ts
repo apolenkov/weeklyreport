@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -62,5 +62,14 @@ void test("returns every candidate when a marker is ambiguous", () => {
   assert.deepEqual(
     result.candidates.map((candidate) => candidate.capability),
     ["live-capability", "second-capability"],
+  );
+});
+
+void test("fails closed when a durable capability has no readable spec", () => {
+  const root = fixture();
+  rmSync(path.join(root, "openspec", "specs", "stable-capability", "spec.md"));
+  assert.throws(
+    () => resolveOpenSpecProvenance("stable-capability", root),
+    /ENOENT/,
   );
 });

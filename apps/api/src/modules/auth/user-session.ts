@@ -1,8 +1,7 @@
 import type { DbRole, UserSession } from "@customreport/shared";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
-import { ensureFallbackReportingGroup } from "../organization/index.js";
 
 // Turns a verified SAML / dev-login identity into a UserSession: resolve-or-
 // provision the user, and for a lead with no active section delegate period +
@@ -26,12 +25,34 @@ export type ProvisionLeadWorkspace = (
 // the name helpers treat as absent (canSave trims it, so it never re-saves).
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
+const LIVE_REPORT_WHERE = {
+  status: "draft",
+  archived: false,
+  periodStatus: "open",
+  periodState: { in: ["scheduled", "open"] },
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+} satisfies Prisma.ReportWhereInput;
+
 // Email match with both samlIds present and differing — reused email, different IdP identity.
 // Caller's catch-all already maps any throw to a failed login.
 export class SamlIdentityMismatchError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SamlIdentityMismatchError";
+  }
+}
+
+// A non-viewer with no group on record is a provisioning gap: silently adopting
+// the oldest group (or materializing the seeded default) turns a missing
+// ownership into a valid-looking assignment the admin never chose.
+export class ReportingGroupRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReportingGroupRequiredError";
   }
 }
 
@@ -83,17 +104,18 @@ function isUserUniqueViolation(error: unknown): boolean {
 }
 
 // Every non-viewer owns a ReportingGroup: keep the one already on record, else
-// adopt the oldest active group, else materialize the seeded default so a fresh
-// install can still complete a first login. Viewers own none.
-async function resolveNextReportingGroupId(
-  prisma: PrismaClient,
+// fail loud — a lead/head/admin with no group is an incomplete provision, not a
+// reason to adopt an arbitrary group silently. Viewers own none.
+function resolveNextReportingGroupId(
   profile: SamlProfile,
   existing: { reportingGroupId: string | null } | null,
-): Promise<string | null> {
+): string | null {
   if (profile.role === "viewer") return null;
   if (existing?.reportingGroupId) return existing.reportingGroupId;
 
-  return ensureFallbackReportingGroup(prisma);
+  throw new ReportingGroupRequiredError(
+    `A reporting group is required for a ${profile.role} user; assign one before login.`,
+  );
 }
 
 // Two concurrent first-logins of the same new identity both miss the find and
@@ -132,11 +154,7 @@ async function writeProvisionedUser(
   profile: SamlProfile,
   existing: { id: string; reportingGroupId: string | null } | null,
 ) {
-  const nextReportingGroupId = await resolveNextReportingGroupId(
-    prisma,
-    profile,
-    existing,
-  );
+  const nextReportingGroupId = resolveNextReportingGroupId(profile, existing);
 
   if (existing) {
     return prisma.user.update({
@@ -153,9 +171,8 @@ async function writeProvisionedUser(
 }
 
 // A lead with no active section gets their workspace provisioned (period +
-// section) through the injected seam — the auth module does not own that
-// persistence. Other roles never auto-create a section, but head/viewer still
-// need the active report id, so they fall back to the newest draft report.
+// section) through the injected seam — auth does not own that persistence.
+// Other roles fall back to the newest draft report for the active report id.
 async function resolveActiveWorkspace(
   prisma: PrismaClient,
   user: { id: string; role: string },
@@ -166,7 +183,7 @@ async function resolveActiveWorkspace(
 }> {
   // Multiple draft reports possible; order by report.createdAt so pick is recency, not insert order.
   const existingSection = await prisma.reportSection.findFirst({
-    where: { authorId: user.id, report: { status: "draft" } },
+    where: { authorId: user.id, report: LIVE_REPORT_WHERE },
     select: { id: true, reportId: true },
     orderBy: { report: { createdAt: "desc" } },
   });
@@ -189,7 +206,7 @@ async function resolveActiveWorkspace(
   }
 
   const activeReport = await prisma.report.findFirst({
-    where: { status: "draft" },
+    where: LIVE_REPORT_WHERE,
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

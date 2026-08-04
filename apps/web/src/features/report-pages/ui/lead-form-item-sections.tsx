@@ -12,8 +12,8 @@ import { NextWeekSection } from "./next-week-section";
 import { UnifiedActivitySection } from "./unified-activity-section";
 
 export interface LeadFormItemSectionsActions {
-  readonly onCurrentWeekItemsChange: (items: KanbanItem[]) => void;
-  readonly onNextWeekItemsChange: (items: KanbanItem[]) => void;
+  readonly onCurrentWeekItemsChange: (items: readonly KanbanItem[]) => void;
+  readonly onNextWeekItemsChange: (items: readonly KanbanItem[]) => void;
   readonly onMarkComplete: (itemId: string) => void;
   readonly onMoveToNextWeek: (itemId: string) => void;
   readonly onMoveToCurrentWeek: (itemId: string) => void;

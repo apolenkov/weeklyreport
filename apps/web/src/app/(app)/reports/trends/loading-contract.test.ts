@@ -1,6 +1,4 @@
-/**
- * @vitest-environment node
- */
+// @vitest-environment node
 
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

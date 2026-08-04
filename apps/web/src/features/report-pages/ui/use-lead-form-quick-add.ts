@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 
 import type { DraftPatch } from "./lead-form-draft-patch";
+import type { LeadFormGeneration } from "./lead-form-generation";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import type { RiskPrefillRequest } from "./lead-form-sync-bridge";
+import { useGenerationState } from "./use-generation-state";
 
 export interface QuickAddItem {
   readonly week: "current" | "next";
@@ -14,61 +16,65 @@ export interface QuickAddItem {
 interface UseLeadFormQuickAddArgs {
   readonly apply: (patch: DraftPatch) => void;
   readonly loaded: LeadFormLoadedContext;
+  readonly generation: LeadFormGeneration | null;
+}
+
+function useQuickAddState(generation: LeadFormGeneration | null) {
+  const [pending, setPending] = useGenerationState<QuickAddItem | null>(
+    generation,
+    null,
+  );
+  const open = useCallback(
+    (week: "current" | "next") => {
+      setPending({ week, seq: (pending?.seq ?? 0) + 1 });
+    },
+    [pending?.seq, setPending],
+  );
+  const clear = useCallback(() => setPending(null), [setPending]);
+  return { pending, open, clear };
+}
+
+function useRiskPrefillState(generation: LeadFormGeneration | null) {
+  const [pending, setPending] = useGenerationState<RiskPrefillRequest | null>(
+    generation,
+    null,
+  );
+  const open = useCallback(
+    (prefill: Omit<RiskPrefillRequest, "signal">) => {
+      setPending({ signal: (pending?.signal ?? 0) + 1, ...prefill });
+    },
+    [pending?.signal, setPending],
+  );
+  const clear = useCallback(() => setPending(null), [setPending]);
+  return { pending, open, clear };
 }
 
 // Modal quick-add only routes through `apply` — not version/dual-state writes.
 export function useLeadFormQuickAdd({
   apply,
   loaded,
+  generation,
 }: UseLeadFormQuickAddArgs) {
-  const [pendingQuickAdd, setPendingQuickAdd] = useState<QuickAddItem | null>(
-    null,
-  );
-  const [pendingRiskPrefill, setPendingRiskPrefill] =
-    useState<RiskPrefillRequest | null>(null);
-
-  // The one sanctioned render->callback bridge: the live loaded context a
-  // quick-add merge callback reads after commit.
-  const loadedRef = useRef(loaded);
-  // eslint-disable-next-line react-hooks/refs -- the one sanctioned render->callback bridge (see comment above)
-  loadedRef.current = loaded;
-
-  const routeToBlocker = useCallback(
-    (prefill: Omit<RiskPrefillRequest, "signal">) => {
-      setPendingRiskPrefill((prev) => ({
-        signal: (prev?.signal ?? 0) + 1,
-        ...prefill,
-      }));
-    },
-    [],
-  );
-
-  const quickAdd = useCallback((week: "current" | "next") => {
-    setPendingQuickAdd((prev) => ({ week, seq: (prev?.seq ?? 0) + 1 }));
-  }, []);
-  const clearQuickAdd = useCallback(() => setPendingQuickAdd(null), []);
-  const clearRiskPrefill = useCallback(() => setPendingRiskPrefill(null), []);
-
+  const quickAdd = useQuickAddState(generation);
+  const riskPrefill = useRiskPrefillState(generation);
   const quickAddSave = useCallback(
     (item: LeadFormLoadedContext["currentWeekItems"][number]) => {
-      if (!pendingQuickAdd) return;
-      const context = loadedRef.current;
-      const week = pendingQuickAdd.week;
+      if (!quickAdd.pending) return;
+      const week = quickAdd.pending.week;
       const base =
-        week === "next" ? context.nextWeekItems : context.currentWeekItems;
+        week === "next" ? loaded.nextWeekItems : loaded.currentWeekItems;
       apply({ kind: "week-items", week, items: [...base, item] });
-      setPendingQuickAdd(null);
+      quickAdd.clear();
     },
-    [pendingQuickAdd, apply],
+    [apply, loaded, quickAdd],
   );
-
   return {
-    quickAdd,
-    pendingQuickAdd,
+    quickAdd: quickAdd.open,
+    pendingQuickAdd: quickAdd.pending,
     quickAddSave,
-    clearQuickAdd,
-    routeToBlocker,
-    pendingRiskPrefill,
-    clearRiskPrefill,
+    clearQuickAdd: quickAdd.clear,
+    routeToBlocker: riskPrefill.open,
+    pendingRiskPrefill: riskPrefill.pending,
+    clearRiskPrefill: riskPrefill.clear,
   };
 }

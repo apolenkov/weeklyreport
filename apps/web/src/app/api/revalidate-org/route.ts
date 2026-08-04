@@ -4,11 +4,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "../../../lib/role-predicates";
 import { getServerSession } from "../../../lib/server/get-server-session";
 
-/**
- * Invalidate the landing page org-public cache after admin settings update.
- * Admin-only — its sole caller is the admin settings page.
- * CSRF-guarded — Origin header must match the server's own origin when present.
- */
+// Admin-only cache invalidation; reject cross-origin browser requests while
+// allowing session-gated server-to-server calls without an Origin header.
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
   if (!session) {

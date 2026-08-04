@@ -8,7 +8,7 @@ import type {
   TrafficLightHistoryOutput,
   UserSession,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
@@ -34,12 +34,12 @@ const PUBLISHED_FLOOR = {
 
 @Injectable()
 export class AnalyticsPrismaRepository implements AnalyticsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async trafficLightHistory(
+  readonly trafficLightHistory = async (
     input: TrafficLightHistoryInput,
     session: UserSession,
-  ): Promise<TrafficLightHistoryOutput> {
+  ): Promise<TrafficLightHistoryOutput> => {
     guardGroupScope(session);
     // Load-bearing: a Report is a unified period holding sections from EVERY
     // group and this method aggregates the included sections, so the scope must
@@ -96,12 +96,12 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     );
 
     return { periods, rows };
-  }
+  };
 
-  async leadVelocity(
+  readonly leadVelocity = async (
     input: LeadVelocityInput,
     session: UserSession,
-  ): Promise<LeadVelocityOutput> {
+  ): Promise<LeadVelocityOutput> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const sectionWhere = { status: "submitted" as const, ...scope };
@@ -147,12 +147,12 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       );
       return { periodLabel, leads: [...byLead.values()] };
     });
-  }
+  };
 
-  async periodComparison(
+  readonly periodComparison = async (
     input: PeriodComparisonInput,
     session: UserSession,
-  ): Promise<PeriodComparisonOutput> {
+  ): Promise<PeriodComparisonOutput> => {
     guardGroupScope(session);
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
@@ -202,5 +202,5 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     });
 
     return { rows };
-  }
+  };
 }

@@ -1,6 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { collectCells } from "./slide-grid-cells";
 import type { ForeignGridRow } from "./slide-grid-foreign";
 import type { GridAuthor } from "./slide-grid-rows";
@@ -47,24 +51,14 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
   ...over,
 });
 
-const section = (
-  over: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel => ({
-  reportSectionId: "sec-1",
-  reportId: "rep-1",
-  authorId: "lead-1",
-  authorName: "Lead One",
-  authorRole: "lead",
-  version: 1,
-  status: "draft",
-  submittedAt: null,
-  projects: [],
-  items: [],
-  risks: [],
-  decisions: [],
-  activities: [],
-  ...over,
-});
+const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
+  makeReportSectionFixture({
+    reportSectionId: "sec-1",
+    reportId: "rep-1",
+    authorId: "lead-1",
+    authorName: "Lead One",
+    ...over,
+  });
 
 const knownProductIds = new Set(["p1", "p2"]);
 

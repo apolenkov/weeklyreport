@@ -2,7 +2,7 @@
 
 interface LeadFormPastPeriodBannerProps {
   readonly pinnedReportId: string | undefined;
-  readonly activeReportId: string;
+  readonly activeReportId: string | null;
   readonly isSubmitted: boolean;
 }
 
@@ -14,7 +14,7 @@ export function LeadFormPastPeriodBanner({
 }: LeadFormPastPeriodBannerProps) {
   const isPastPeriod =
     Boolean(pinnedReportId) &&
-    activeReportId !== "" &&
+    activeReportId !== null &&
     pinnedReportId !== activeReportId &&
     !isSubmitted;
   if (!isPastPeriod) return null;

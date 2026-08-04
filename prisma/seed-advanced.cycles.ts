@@ -17,7 +17,7 @@ export function cyclic<T>(values: readonly T[], index: number): T {
 
 // Stage assignments and stage statuses both cover three consecutive stages
 // starting at the product's own catalogue position.
-export const CONSECUTIVE_STAGE_OFFSETS = [0, 1, 2];
+export const CONSECUTIVE_STAGE_OFFSETS = [0, 1, 2] as const;
 
 // Traffic-light rotation giving each section a varied but deterministic mix.
 const TRAFFIC_CYCLE: readonly TrafficLightStatus[] = [

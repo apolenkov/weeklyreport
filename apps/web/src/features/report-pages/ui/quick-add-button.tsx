@@ -20,9 +20,10 @@ interface QuickAddButtonProps {
   readonly onPick: (kind: QuickAddKind) => void;
   readonly disabled?: boolean;
   readonly placement?: "above" | "below";
-}
-
-// Escape dismisses the popup and returns focus to the trigger it was opened
+  // Kinds the current section cannot meaningfully create; rendered inert with
+  // an explanatory title instead of being silently dropped.
+  readonly disabledKinds?: ReadonlySet<QuickAddKind> | undefined;
+} // Escape dismisses the popup and returns focus to the trigger it was opened
 // from; outside-pointer dismissal is the shared rule.
 function useDismissOnEscape({
   open,
@@ -49,9 +50,11 @@ function useDismissOnEscape({
 function QuickAddMenu({
   placement,
   onPick,
+  disabledKinds,
 }: {
   readonly placement: "above" | "below";
   readonly onPick: (kind: QuickAddKind) => void;
+  readonly disabledKinds: ReadonlySet<QuickAddKind>;
 }) {
   return (
     <div
@@ -61,16 +64,25 @@ function QuickAddMenu({
         placement === "above" ? "bottom-full mb-1" : "top-full mt-1"
       }`}
     >
-      {QUICK_ADD_OPTIONS.map((option) => (
-        <button
-          key={option.kind}
-          type="button"
-          className="block w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          onClick={() => onPick(option.kind)}
-        >
-          {option.label}
-        </button>
-      ))}
+      {QUICK_ADD_OPTIONS.map((option) => {
+        const unavailable = disabledKinds.has(option.kind);
+        return (
+          <button
+            key={option.kind}
+            type="button"
+            disabled={unavailable}
+            title={
+              unavailable
+                ? "Add a product before reporting a blocker for it"
+                : undefined
+            }
+            className="block w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:text-[var(--color-muted-foreground)]"
+            onClick={() => onPick(option.kind)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -79,6 +91,7 @@ export function QuickAddButton({
   onPick,
   disabled = false,
   placement = "below",
+  disabledKinds = new Set<QuickAddKind>(),
 }: QuickAddButtonProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -89,6 +102,7 @@ export function QuickAddButton({
   useDismissOnEscape({ open, triggerRef, onDismiss: close });
 
   function handlePick(kind: QuickAddKind) {
+    if (disabledKinds.has(kind)) return;
     setOpen(false);
     onPick(kind);
   }
@@ -109,7 +123,13 @@ export function QuickAddButton({
       >
         + Add
       </button>
-      {open && <QuickAddMenu placement={placement} onPick={handlePick} />}
+      {open && (
+        <QuickAddMenu
+          placement={placement}
+          onPick={handlePick}
+          disabledKinds={disabledKinds}
+        />
+      )}
     </div>
   );
 }

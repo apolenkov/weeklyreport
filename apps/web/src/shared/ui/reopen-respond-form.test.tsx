@@ -3,9 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ReopenRespondForm } from "./reopen-respond-form";
 
-function renderForm(
-  pendingDecision: "approved" | "rejected" | undefined = undefined,
-) {
+function renderForm(pendingDecision?: "approved" | "rejected") {
   const actions = {
     onNoteChange: vi.fn(),
     onCancel: vi.fn(),

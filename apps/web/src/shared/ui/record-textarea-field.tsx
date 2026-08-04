@@ -1,11 +1,11 @@
 "use client";
 
-import type { ReactNode, Ref } from "react";
+import { type ReactNode, type Ref, useEffect, useRef } from "react";
 
 const TEXTAREA_BORDER_ERROR =
-  "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]";
+  "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]";
 const TEXTAREA_BORDER_DEFAULT =
-  "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]";
+  "border-[var(--color-border-strong)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)]";
 
 interface RecordTextareaFieldProps {
   readonly id: string;
@@ -16,7 +16,7 @@ interface RecordTextareaFieldProps {
   readonly error?: string | undefined;
   readonly placeholder?: string | undefined;
   readonly minHeightPx?: number | undefined;
-  readonly autoFocus?: boolean | undefined;
+  readonly focusOnMount?: boolean | undefined;
   readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
   readonly hint?: ReactNode | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
@@ -51,12 +51,25 @@ export function RecordTextareaField({
   error,
   placeholder,
   minHeightPx,
-  autoFocus = false,
+  focusOnMount = false,
   textareaRef,
   hint,
   fill = true,
 }: RecordTextareaFieldProps) {
   const errorId = `${id}-error`;
+  const ownRef = useRef<HTMLTextAreaElement | null>(null);
+  // React writes the element into this ref (the caller's when given, else the
+  // field's own), so the focus effect only ever READS .current.
+  const elementRef = textareaRef ?? ownRef;
+
+  // Initial focus for modal dialogs, driven imperatively instead of the
+  // autoFocus attribute so the shared field owns the focus contract.
+  useEffect(() => {
+    if (!focusOnMount) return;
+    const node = "current" in elementRef ? elementRef.current : null;
+    node?.focus();
+  }, [focusOnMount, elementRef]);
+
   return (
     <div className={fill ? "flex flex-1 flex-col" : undefined}>
       <label
@@ -69,12 +82,10 @@ export function RecordTextareaField({
       {hint}
       <textarea
         id={id}
-        ref={textareaRef}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus={autoFocus}
+        ref={elementRef}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
-        className={`w-full ${fill ? "flex-1 " : ""}resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+        className={`w-full ${fill ? "flex-1 " : ""}resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
           error ? TEXTAREA_BORDER_ERROR : TEXTAREA_BORDER_DEFAULT
         }`}
         style={

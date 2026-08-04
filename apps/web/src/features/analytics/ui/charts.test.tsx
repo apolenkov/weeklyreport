@@ -4,13 +4,11 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   buildLeadVelocityChartData,
-  LeadVelocityChart,
-} from "./lead-velocity.chart";
-import { PeriodComparisonChart } from "./period-comparison.chart";
-import {
   buildTrafficLightHistoryChartData,
-  TrafficLightHistoryChart,
-} from "./traffic-light-history.chart";
+} from "./analytics-chart-data";
+import { LeadVelocityChart } from "./lead-velocity.chart";
+import { PeriodComparisonChart } from "./period-comparison.chart";
+import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {
@@ -102,6 +100,24 @@ describe("buildLeadVelocityChartData", () => {
       { dataKey: idB, name: "Alex" },
     ]);
   });
+
+  it("fills absent leads with zero across multiple periods", () => {
+    const { data } = buildLeadVelocityChartData([
+      {
+        periodLabel: "2026-07-20",
+        leads: [{ leadId: "lead-a", leadName: "Lead A", submittedSections: 2 }],
+      },
+      {
+        periodLabel: "2026-07-27",
+        leads: [{ leadId: "lead-b", leadName: "Lead B", submittedSections: 3 }],
+      },
+    ]);
+
+    expect(data).toEqual([
+      { period: "2026-07-20", "lead-a": 2, "lead-b": 0 },
+      { period: "2026-07-27", "lead-a": 0, "lead-b": 3 },
+    ]);
+  });
 });
 
 describe("buildTrafficLightHistoryChartData", () => {
@@ -177,8 +193,9 @@ describe("PeriodComparisonChart", () => {
     );
     // Scoped to the delta cell itself, not container-wide, so this cannot
     // pass on the unrelated statusB="red" status cell if deltaClass's
-    // red-mapping breaks.
+    // red-mapping breaks. The semantic destructive token stands in for the
+    // raw red utility so theme swaps cannot silently break the assertion.
     const deltaCell = screen.getByText("+3");
-    expect(deltaCell.className).toContain("text-red-600");
+    expect(deltaCell.className).toContain("text-[var(--color-destructive)]");
   });
 });

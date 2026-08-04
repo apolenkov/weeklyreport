@@ -43,8 +43,6 @@ function GroupNameField({ form, onFormChange }: GroupFieldProps) {
         type="text"
         value={form.name}
         onChange={(e) => onFormChange({ ...form, name: e.target.value })}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus
         className={FIELD_CONTROL_CLASS}
       />
     </div>
@@ -188,7 +186,7 @@ function GroupDialogFooter({
         type="button"
         onClick={onSave}
         disabled={!canSave}
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saveLabel}
       </button>

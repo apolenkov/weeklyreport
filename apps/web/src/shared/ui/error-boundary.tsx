@@ -1,43 +1,68 @@
 "use client";
 
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@customreport/ui/components/ui/alert";
+import { Button } from "@customreport/ui/components/ui/button";
+import {
+  Component,
+  createElement,
+  type ErrorInfo,
+  Fragment,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 
 type Props = Readonly<{ children: ReactNode; fallback?: ReactNode }>;
 interface State {
   hasError: boolean;
-  error: Error | null;
 }
 
 export class QueryErrorBoundary extends Component<Props, State> {
-  override state: State = { hasError: false, error: null };
+  override state: State = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    toast.error(error.message);
+    // Never surface the raw exception text — a generic message keeps internals
+    // out of user copy; the error still reaches the console for diagnostics.
+    toast.error("The page hit an unexpected error.");
     console.error("[QueryErrorBoundary]", error, info.componentStack);
   }
 
-  // eslint-disable-next-line sonarjs/function-return-type -- render() already declares an explicit ReactNode return; the rule misreads the Component override signature
+  private reset = (): void => {
+    this.setState({ hasError: false });
+  };
+
   override render(): ReactNode {
     if (this.state.hasError) {
-      return (
+      return createElement(
+        Fragment,
+        null,
         this.props.fallback ?? (
-          <div
-            role="alert"
-            className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          >
-            <p className="font-semibold">We hit an error.</p>
-            <p className="mt-1">
-              {this.state.error?.message ?? "Reload to try again."}
-            </p>
+          <div className="flex min-h-svh items-center justify-center p-6">
+            <Alert variant="destructive" className="max-w-md">
+              <AlertTitle>We hit an error.</AlertTitle>
+              <AlertDescription>
+                An unexpected error interrupted this page. Your data is safe.
+              </AlertDescription>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={this.reset}
+                className="mt-3"
+              >
+                Try again
+              </Button>
+            </Alert>
           </div>
-        )
+        ),
       );
     }
-    return this.props.children;
+    return createElement(Fragment, null, this.props.children);
   }
 }

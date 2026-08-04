@@ -8,11 +8,11 @@ import type {
 } from "../application/publication-telemetry.port.js";
 
 export class PublicationPrometheusTelemetry implements PublicationTelemetry {
-  recordPublishedReport(): void {
+  readonly recordPublishedReport = (): void => {
     customreportReportsSubmittedTotal.inc({ state: "published" });
-  }
+  };
 
-  recordPeriodPublished(from: PublicationSourceState): void {
+  readonly recordPeriodPublished = (from: PublicationSourceState): void => {
     customreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
-  }
+  };
 }

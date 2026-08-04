@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen, within } from "@testing-library/react";
@@ -12,8 +10,10 @@ import { ItemCard } from "./item-card";
 
 const BASE_ITEM: KanbanItem = {
   id: "item-1",
+  parent: { kind: "product", id: "p1" },
   productId: "p1",
   productName: "DevOps Tools",
+  activityId: null,
   text: "Implement CI pipeline",
   status: "in-progress",
   author: "Alice Lead",
@@ -77,14 +77,13 @@ describe("ItemCard — stage tags container accessibility", () => {
   });
 });
 
-describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
+describe("ItemCard — SVG icon aria-hidden", () => {
   it("EditIcon svg has aria-hidden='true'", () => {
     render(<ItemCard item={BASE_ITEM} onEdit={vi.fn()} />);
     const editButton = screen.getByRole("button", { name: "Edit" });
     const svg = editButton.querySelector("svg");
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute("aria-hidden", "true");
-    expect(svg).toMatchSnapshot();
   });
 
   it("DeleteIcon svg has aria-hidden='true'", () => {
@@ -93,7 +92,6 @@ describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
     const svg = deleteButton.querySelector("svg");
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute("aria-hidden", "true");
-    expect(svg).toMatchSnapshot();
   });
 });
 
@@ -137,20 +135,6 @@ describe("ItemCard — compact touch floor", () => {
       expect(button.className).toContain("w-[var(--toolbar-control-h)]");
     },
   );
-});
-
-describe("ItemCard — card DOM structure (snapshot)", () => {
-  it("renders card with aria-hidden icons and accessible button labels", () => {
-    const { container } = render(
-      <ItemCard
-        item={{ ...BASE_ITEM, priorityRank: 1, stageNames: ["Dev"] }}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-    const card = container.querySelector('[data-testid="item-card"]');
-    expect(card).toMatchSnapshot();
-  });
 });
 
 describe("ItemCard — uniform height", () => {
@@ -277,11 +261,12 @@ describe("ItemCard — risk-derived alarm status", () => {
       <ItemCard
         item={{
           ...inProgress,
-          productId: "",
+          parent: { kind: "activity", id: "act-1" },
+          productId: null,
           activityId: "act-1",
           activityName: "Jira triage",
         }}
-        risks={[{ ...risk("blocked"), productId: "" }]}
+        risks={[risk("blocked")]}
       />,
     );
     expect(screen.getByText("In Progress")).toBeInTheDocument();

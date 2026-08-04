@@ -10,7 +10,7 @@ import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import { adminProcedure, router } from "../trpc.middleware.js";
 
 export interface ProjectActivityRouterDeps {
-  projectActivityService: ProjectActivityService;
+  readonly projectActivityService: ProjectActivityService;
 }
 
 // Stage-less, group-scoped reporting units beside products — deliberately

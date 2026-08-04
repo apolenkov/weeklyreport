@@ -85,7 +85,7 @@ routes:
         given: "head user accesses /head/history route"
         when: "the page loads"
         then: "browser navigates to /reports with ?tab=published query parameter, displaying the compiled group report history"
-        note: "UX-17 (Phase 35-08): pure 307 redirect stub. No user-initiated action required. Unifies /head/history and /reports/history into single /reports surface with role-aware default tabs."
+        note: "Pure 307 redirect stub. No user-initiated action required. Unifies /head/history and /reports/history into single /reports surface with role-aware default tabs."
   - route: /head/slides
     access: [head]
     intents:
@@ -93,8 +93,8 @@ routes:
         intent: "View compiled group report history via legacy slides alias"
         given: "the head user accesses /head/slides"
         when: "the head opens the /head/slides route"
-        then: "redirected to /reports?tab=published showing the History page with subtitle \"Compiled group report history.\"; archived report periods are included by default; no console error occurs"
-        note: "HEAD-CONSOLIDATE-01: /head/slides is a legacy alias that chains through /head/history?mode=slides (discarding mode param) and lands on the shared /reports surface. The canonical path is /reports?tab=published. This route exists only to preserve old bookmarks."
+        then: 'redirected to /reports?tab=published showing the History page with subtitle "Compiled group report history."; archived report periods are included by default; no console error occurs'
+        note: "/head/slides is a legacy alias that chains through /head/history?mode=slides (discarding mode param) and lands on the shared /reports surface. The canonical path is /reports?tab=published. This route exists only to preserve old bookmarks."
   - route: /head/report
     access: [head]
     intents:
@@ -103,7 +103,7 @@ routes:
         given: "the head lands on the bare /head/report route"
         when: "the active reportId is resolved from the server"
         then: "the browser URL changes to /head/report/[reportId] (with optional ?authorId preserved)"
-        note: "Legacy bare route preserved for back-compat; auto-redirects to canonical form via router.replace (gated by redirectToCanonical). Mutation intents (publish, reopen, archive, export-pdf) are redundant with /head/report/[reportId]. A stale ?period= is ignored — the legacy suppression branch was retired (see this change's tasks.md §3.5), so the bare route produces no behavior distinct from the addressed route."
+        note: "Legacy bare route preserved for back-compat; auto-redirects to canonical form via router.replace (gated by redirectToCanonical). Mutation intents (publish, reopen, archive, export-pdf) are redundant with /head/report/[reportId]. A stale ?period= is ignored, so the bare route produces no behavior distinct from the addressed route."
   - route: /head/report/[reportId]
     access: [head]
     intents:
@@ -163,7 +163,7 @@ routes:
         given: "the head opens a legacy /head/report/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /head/report/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline on the report page via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section next/prev, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section next/prev, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /lead/history
     access: [head]
     intents:
@@ -172,7 +172,7 @@ routes:
         given: "head user accesses /lead/history route"
         when: "the page loads"
         then: "browser navigates to /reports with ?tab=drafts query parameter, displaying the My Drafts tab"
-        note: "UX-17 (Phase 35-08): pure 307 redirect stub. No user-initiated action required. Unifies /lead/history and /reports/history into single /reports surface with role-aware default tabs."
+        note: "Pure 307 redirect stub. No user-initiated action required. Unifies /lead/history and /reports/history into single /reports surface with role-aware default tabs."
   - route: /lead/report
     access: [lead, head, admin]
     intents:
@@ -238,7 +238,7 @@ routes:
         given: "The head is viewing a published report page"
         when: "The head clicks the Export PDF button and waits for generation"
         then: "A PDF export job starts (via tRPC pdfExport.request), polling occurs, and the completed PDF opens in a new tab with a success toast"
-        note: "fix-report-surface-integrity W2: the standalone browser-Print link to /print/[reportId] is removed (the print route now 308-redirects humans away — it is the PDF worker's render template only). The single labeled Export PDF is the async pdfExport.request job, rendered by WeeklyReportPage's toolbar trailing group."
+        note: "The standalone browser-Print link to /print/[reportId] is removed because the print route is the PDF worker's render template and 308-redirects humans away. The single labeled Export PDF is the async pdfExport.request job, rendered by WeeklyReportPage's toolbar trailing group."
       - id: head-published-report-back-to-archive
         intent: "Return to the published reports archive list"
         given: "The head is viewing a published report page"
@@ -253,7 +253,7 @@ routes:
         given: "the head opens a legacy /reports/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section nav, fullscreen) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [head]
     intents:
@@ -262,7 +262,7 @@ routes:
         given: "the head user navigates to /reports/history"
         when: "the page loads"
         then: "the browser is 307-redirected to /reports?tab=published, displaying the Published tab of the merged reports page"
-        note: "UX-17 Phase 35-08: legacy archive route consolidated into merged /reports. No user actions; redirect is the sole behavior."
+        note: "Legacy archive route consolidated into merged /reports. No user actions; redirect is the sole behavior."
   - route: /reports/trends
     access: [head]
     intents:

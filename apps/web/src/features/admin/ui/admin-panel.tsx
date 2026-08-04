@@ -70,8 +70,12 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
         settings={settingsQuery.data}
         snapshotError={dependencies.snapshot && snapshotQuery.isError}
         settingsError={dependencies.settings && settingsQuery.isError}
-        retrySnapshot={() => void snapshotQuery.refetch()}
-        retrySettings={() => void settingsQuery.refetch()}
+        retrySnapshot={() => {
+          void snapshotQuery.refetch().catch(() => undefined);
+        }}
+        retrySettings={() => {
+          void settingsQuery.refetch().catch(() => undefined);
+        }}
       />
     </div>
   );

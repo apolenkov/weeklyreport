@@ -2,6 +2,11 @@ import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  ReviewAccessError,
+  ReviewConstraintError,
+  ReviewNotFoundError,
+} from "./review.service";
+import {
   type PostVerdictParams,
   type RecordAnchor,
   type ReviewActionsRepository,
@@ -120,7 +125,7 @@ describe("ReviewActionsService — acknowledgement scope", () => {
     const service = new ReviewActionsService(repo);
     await expect(
       service.acknowledge(reviewerA, { reportId: REPORT, groupId: GROUP_B }),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
   });
 
   it("admin may acknowledge any group", async () => {
@@ -147,7 +152,7 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
     const service = new ReviewActionsService(repo);
     await expect(
       service.comment(reviewerA, commentInput),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
   });
 
   it("rejects a group-A reviewer on a group-B record (no cross-group)", async () => {
@@ -156,7 +161,7 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
     const service = new ReviewActionsService(repo);
     await expect(
       service.comment(reviewerA, commentInput),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
   });
 
   it("allows the head of the record's group (implicit designation)", async () => {
@@ -169,9 +174,9 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
   it("rejects the head of a different group", async () => {
     const { repo } = buildRepo();
     const service = new ReviewActionsService(repo);
-    await expect(service.comment(headB, commentInput)).rejects.toMatchObject({
-      name: "ReviewAccessError",
-    });
+    await expect(service.comment(headB, commentInput)).rejects.toBeInstanceOf(
+      ReviewAccessError,
+    );
   });
 
   it("rejects a lead (never a designated reviewer)", async () => {
@@ -179,7 +184,7 @@ describe("ReviewActionsService — reviewer designation (comment)", () => {
     const service = new ReviewActionsService(repo);
     await expect(
       service.comment(leadSession, commentInput),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
   });
 });
 
@@ -229,7 +234,7 @@ describe("ReviewActionsService — verdict", () => {
         verdict: "changes_requested",
         version: 3,
       }),
-    ).rejects.toMatchObject({ name: "ReviewConstraintError" });
+    ).rejects.toBeInstanceOf(ReviewConstraintError);
   });
 
   it("rejects a verdict from an undesignated caller before touching the period", async () => {
@@ -241,7 +246,7 @@ describe("ReviewActionsService — verdict", () => {
         verdict: "approved",
         version: 3,
       }),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
     expect(postVerdict).not.toHaveBeenCalled();
   });
 });
@@ -255,11 +260,11 @@ describe("ReviewActionsService — deleteComment", () => {
 
     await expect(
       service.deleteComment(headA, { commentId: COMMENT_ID }),
-    ).rejects.toMatchObject({ name: "ReviewNotFoundError" });
+    ).rejects.toBeInstanceOf(ReviewNotFoundError);
     expect(deleteComment).not.toHaveBeenCalled();
   });
 
-  it("a designated reviewer on the comment's own group deletes it", async () => {
+  it("the head of the comment's group deletes a comment by another reviewer", async () => {
     const { repo, deleteComment } = buildRepo({
       commentContext: { reviewerId: "x", groupId: GROUP_A },
     });
@@ -273,6 +278,50 @@ describe("ReviewActionsService — deleteComment", () => {
     expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
   });
 
+  it("admin deletes a comment in any group", async () => {
+    const { repo, deleteComment } = buildRepo({
+      commentContext: { reviewerId: "x", groupId: GROUP_B },
+    });
+    const service = new ReviewActionsService(repo);
+
+    const result = await service.deleteComment(adminSession, {
+      commentId: COMMENT_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+  });
+
+  it("a designated reviewer deletes their OWN comment", async () => {
+    const { repo, deleteComment } = buildRepo({
+      commentContext: { reviewerId: reviewerA.userId, groupId: GROUP_A },
+      canReview: true,
+    });
+    const service = new ReviewActionsService(repo);
+
+    const result = await service.deleteComment(reviewerA, {
+      commentId: COMMENT_ID,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(deleteComment).toHaveBeenCalledWith(COMMENT_ID);
+  });
+
+  it("a designated reviewer cannot delete ANOTHER reviewer's comment", async () => {
+    // The same group, the same designation — but a different author: deleting
+    // must require authorship, not just reviewer designation for the group.
+    const { repo, deleteComment } = buildRepo({
+      commentContext: { reviewerId: "other-reviewer", groupId: GROUP_A },
+      canReview: true,
+    });
+    const service = new ReviewActionsService(repo);
+
+    await expect(
+      service.deleteComment(reviewerA, { commentId: COMMENT_ID }),
+    ).rejects.toBeInstanceOf(ReviewAccessError);
+    expect(deleteComment).not.toHaveBeenCalled();
+  });
+
   it("rejects a group-A reviewer deleting a group-B comment (no cross-group)", async () => {
     const { repo, deleteComment } = buildRepo({
       commentContext: { reviewerId: "x", groupId: GROUP_B },
@@ -282,7 +331,7 @@ describe("ReviewActionsService — deleteComment", () => {
 
     await expect(
       service.deleteComment(reviewerA, { commentId: COMMENT_ID }),
-    ).rejects.toMatchObject({ name: "ReviewAccessError" });
+    ).rejects.toBeInstanceOf(ReviewAccessError);
     expect(deleteComment).not.toHaveBeenCalled();
   });
 });

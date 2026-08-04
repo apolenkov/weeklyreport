@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
+import { CheckIcon as SharedCheckIcon } from "./icons";
 
 const REVALIDATION_FAILED_MESSAGE =
   "Saved, but the landing page cache may be stale — revalidation failed.";
@@ -41,18 +42,5 @@ export function useUpdateSettingsMut(label: string, onSaved?: () => void) {
 }
 
 export function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
+  return <SharedCheckIcon strokeWidth={2.5} />;
 }

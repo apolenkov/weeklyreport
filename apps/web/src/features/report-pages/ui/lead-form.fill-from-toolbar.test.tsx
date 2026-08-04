@@ -1,8 +1,3 @@
-/**
- * LeadForm mutation wiring (submit, revoke, autosave, dirty-state) via
- * mocked tRPC at the proxy boundary.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -52,6 +47,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     version: 1,
     status: overrides.status ?? ("draft" as const),
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -122,6 +118,7 @@ function buildHarness(
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     {
@@ -255,8 +252,10 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       fillFromOpts.onError?.(conflict);
     });
 
-    expect(toast.error).toHaveBeenCalledWith(
-      expect.stringContaining("changed elsewhere"),
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("changed elsewhere"),
+      ),
     );
   });
 

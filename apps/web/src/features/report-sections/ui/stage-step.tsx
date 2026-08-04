@@ -6,11 +6,11 @@ import { StageMultiSelect } from "./stage-multi-select";
 
 interface StageStepProps {
   readonly id: string;
-  readonly stageNames: string[];
+  readonly stageNames: readonly string[];
   readonly availableStages: readonly string[];
   readonly isDeadEnd: boolean;
   readonly error: string | undefined;
-  readonly onChange: (next: string[]) => void;
+  readonly onChange: (next: readonly string[]) => void;
   readonly previewSeverity?: "at-risk" | "blocked";
   readonly deadEndNotice: ReactNode;
 }

@@ -59,8 +59,9 @@ function ValidFromField({ form, onChange }: PolicyFieldProps) {
   );
 }
 
-// Checking "forever" clears the end date; unchecking restores today so the
-// date input never re-opens on an empty value.
+// Unchecking "forever" must NOT silently substitute today's date — the end
+// date stays deliberately empty until the admin picks one, and the form's
+// validity gate (Save disabled + hint) enforces that a real date is chosen.
 function ForeverToggle({ form, onChange }: PolicyFieldProps) {
   return (
     <label className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
@@ -71,7 +72,7 @@ function ForeverToggle({ form, onChange }: PolicyFieldProps) {
           onChange((prev) => ({
             ...prev,
             foreverChecked: e.target.checked,
-            validUntilIso: e.target.checked ? null : prev.todayIso,
+            validUntilIso: e.target.checked ? null : "",
           }))
         }
         aria-label="forever (no end date)"
@@ -101,7 +102,7 @@ function ValidUntilField({ form, onChange }: PolicyFieldProps) {
         onChange={(e) =>
           onChange((prev) => ({
             ...prev,
-            validUntilIso: e.target.value || null,
+            validUntilIso: e.target.value,
           }))
         }
         className={`${POLICY_FORM_INPUT_CLASS} disabled:cursor-not-allowed disabled:bg-[var(--color-muted)] disabled:opacity-50`}
@@ -114,7 +115,7 @@ export function PolicyFormAdvancedFields({ form, onChange }: PolicyFieldProps) {
   return (
     <details
       data-testid="reminder-advanced"
-      className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white"
+      className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)]"
     >
       <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--color-muted-foreground)]">
         Advanced

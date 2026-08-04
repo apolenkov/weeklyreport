@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { IfRole } from "../../../shared/ui/if-role";
 
 interface AlertBarProps {
-  readonly pendingLeads: string[];
+  readonly pendingLeads: readonly string[];
   readonly reportId: string;
   readonly canSendReminder: boolean;
 }
@@ -83,14 +84,13 @@ function toastDispatchOutcome({
 
 function ConfigureRemindersLink() {
   return (
-    // eslint-disable-next-line jsx-a11y/aria-role -- role is a custom prop on IfRole component, not an HTML aria role
-    <IfRole role="admin">
-      <a
+    <IfRole forRole="admin">
+      <Link
         href="/admin?tab=reminders"
         className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
       >
         Configure reminders
-      </a>
+      </Link>
     </IfRole>
   );
 }
@@ -126,7 +126,7 @@ export function AlertBar({
       // No token exists for the amber alert surface: `--color-warning` is the
       // border accent and is too saturated as a fill. The two-part shadow is the
       // dashboard card elevation shared with kpi-cards and reopen-requests-card.
-      className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fffbeb] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
+      className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-status-at-risk-bg)] p-3 shadow-[var(--shadow-card-elevated)]"
       style={{ borderLeft: "3px solid var(--color-warning)" }}
     >
       <AlertIcon />
@@ -140,7 +140,7 @@ export function AlertBar({
         type="button"
         onClick={() => dispatchMut.mutate({ reportId })}
         disabled={dispatchMut.isPending || !canSendReminder}
-        className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         title={canSendReminder ? undefined : "Active reminder policy required."}
       >
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}

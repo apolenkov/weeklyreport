@@ -7,9 +7,11 @@ import {
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
+  AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
+  AdminUserReportingGroupRequiredError,
 } from "../../modules/admin/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
@@ -19,10 +21,12 @@ import {
 import { PdfExportDomainError } from "../../modules/pdf-export/index.js";
 import {
   PeriodAccessError,
+  PeriodLifecycleIntegrityError,
   PeriodNotFoundError,
   PeriodScopeError,
 } from "../../modules/period/index.js";
 import {
+  ProjectActivityConflictError,
   ProjectActivityDomainError,
   ProjectActivityNotFoundError,
 } from "../../modules/project-activity/index.js";
@@ -446,6 +450,17 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "NOT_FOUND",
     },
     {
+      name: "PeriodAccessError",
+      make: () => new PeriodAccessError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "PeriodLifecycleIntegrityError",
+      make: () => new PeriodLifecycleIntegrityError(),
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Stored period lifecycle is inconsistent.",
+    },
+    {
       name: "ReviewNotFoundError",
       make: () => new ReviewNotFoundError("m"),
       code: "NOT_FOUND",
@@ -466,6 +481,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "CONFLICT",
     },
     {
+      name: "AdminPeriodStaleStateError",
+      make: () => new AdminPeriodStaleStateError("m"),
+      code: "CONFLICT",
+    },
+    {
       name: "AdminReopenRequestNotFoundError",
       make: () => new AdminReopenRequestNotFoundError("m"),
       code: "NOT_FOUND",
@@ -481,6 +501,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "CONFLICT",
     },
     {
+      name: "AdminUserReportingGroupRequiredError",
+      make: () => new AdminUserReportingGroupRequiredError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
       name: "ProjectActivityNotFoundError",
       make: () => new ProjectActivityNotFoundError("m"),
       code: "NOT_FOUND",
@@ -490,15 +515,20 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       make: () => new ProjectActivityDomainError("m"),
       code: "BAD_REQUEST",
     },
+    {
+      name: "ProjectActivityConflictError",
+      make: () => new ProjectActivityConflictError("m"),
+      code: "CONFLICT",
+    },
   ] as const;
 
-  it.each(cases)("maps $name → $code", ({ make, code }) => {
-    const error = make();
+  it.each(cases)("maps $name → $code", (testCase) => {
+    const error = testCase.make();
     const mapped = mapDomainError(error);
 
     expect(mapped).toBeInstanceOf(TRPCError);
-    expect(mapped.code).toBe(code);
-    expect(mapped.message).toBe("m");
+    expect(mapped.code).toBe(testCase.code);
+    expect(mapped.message).toBe("message" in testCase ? testCase.message : "m");
     expect(mapped.cause).toBe(error);
   });
 
@@ -520,6 +550,17 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
 // PeriodAccessError stays unmapped (state/policy 500s are a separate concern).
 
 describe("mapDomainError — period lifecycle authz", () => {
+  it("maps lifecycle corruption to a fixed internal message", () => {
+    const error = Object.assign(new PeriodLifecycleIntegrityError(), {
+      persistedValue: "published|archived|secret-user-id",
+    });
+    const mapped = mapDomainError(error);
+
+    expect(mapped.code).toBe("INTERNAL_SERVER_ERROR");
+    expect(mapped.message).toBe("Stored period lifecycle is inconsistent.");
+    expect(mapped.message).not.toContain(error.persistedValue);
+  });
+
   it("maps PeriodScopeError to FORBIDDEN, not INTERNAL_SERVER_ERROR", () => {
     const mapped = mapDomainError(new PeriodScopeError("out of scope"));
 
@@ -534,10 +575,11 @@ describe("mapDomainError — period lifecycle authz", () => {
     expect(mapped.code).not.toBe("INTERNAL_SERVER_ERROR");
   });
 
-  it("leaves PeriodAccessError UNMAPPED (still INTERNAL_SERVER_ERROR) — its state/policy 500s stay a separate concern", () => {
+  it("leaves PeriodAccessError mapped to BAD_REQUEST (state/policy failures, not internal errors)", () => {
     const mapped = mapDomainError(new PeriodAccessError("already published"));
 
-    expect(mapped.code).toBe("INTERNAL_SERVER_ERROR");
+    expect(mapped.code).toBe("BAD_REQUEST");
+    expect(mapped.code).not.toBe("INTERNAL_SERVER_ERROR");
   });
 });
 

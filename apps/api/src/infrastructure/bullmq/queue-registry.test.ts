@@ -22,6 +22,12 @@ describe("QueueRegistry", () => {
     expect(registry.get("pdf-export")).toBe(registry.get("pdf-export"));
   });
 
+  it("keeps get callable when detached", () => {
+    const { get } = new QueueRegistry(stubHandles);
+
+    expect(get("pdf-export")).toBe(stubHandles[1]);
+  });
+
   it("rejects an incomplete BullModule handle set", () => {
     expect(() => new QueueRegistry(stubHandles.slice(1))).toThrow(
       `Expected ${QUEUE_NAMES.length} queue handles, received ${stubHandles.length - 1}`,

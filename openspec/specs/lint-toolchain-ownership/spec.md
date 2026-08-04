@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change enable-biome-recommended-ruleset. Update Purpose after archive.
+Assign logic linting to ESLint, formatting to Prettier, CSS linting to stylelint, and Prisma script typechecking to a scoped tsc pass in the aggregate gate.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ is no longer part of this set.)
 
 React hook correctness MUST be reported only once, by ESLint's
 `react-hooks/rules-of-hooks` (at `error`) and `react-hooks/exhaustive-deps` (at
-`warn`). With Biome removed, single ownership is structural — there is no second
+`error`). With Biome removed, single ownership is structural — there is no second
 tool to disable. No Biome `useExhaustiveDependencies` / `useHookAtTopLevel`
 configuration remains, because `biome.json` no longer exists.
 
@@ -84,7 +84,7 @@ not enforce), `eslint-plugin-react`, `eslint-plugin-jsx-a11y`,
 `eslint-plugin-react-hooks`, `eslint-plugin-react-compiler`, and
 `eslint-plugin-unused-imports`. The repo-specific overrides MUST be preserved at
 their Biome severities: `@typescript-eslint/no-explicit-any` at `error`,
-`@typescript-eslint/no-non-null-assertion` at `warn`, and unused-variable
+`@typescript-eslint/no-non-null-assertion` at `error`, and unused-variable
 enforcement at `error` (via `unused-imports/no-unused-vars` with
 `ignoreRestSiblings` and a leading-underscore ignore pattern). The type-aware
 `@typescript-eslint/no-floating-promises` MUST remain at `error` with the

@@ -3,7 +3,7 @@ import {
   type ReportSectionReadModel,
   type ReportStatus,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -24,9 +24,27 @@ import { applySaveSection } from "./save-section.transaction";
 // Prisma's default budget on the largest sections.
 const SAVE_SECTION_TX_TIMEOUT_MS = 15_000;
 
+// The save transaction's child tables (ProjectStatus, StageStatus,
+// ActivityStatus, Item, Risk, Decision) are the only tables whose unique
+// constraints a malformed payload can trip. Scope the P2002 check to exactly
+// those constraints so a P2002 from any other row this transaction touches
+// (a future constraint) re-throws as an internal bug instead of being masked
+// as a friendly duplicate-row 400.
+const CHILD_UNIQUE_COLUMN_SETS = [
+  ["reportSectionId", "projectId"],
+  ["reportSectionId", "activityId"],
+  ["reportSectionId", "stableId"],
+] as const;
+
+function isChildRowDuplicate(error: unknown): boolean {
+  return CHILD_UNIQUE_COLUMN_SETS.some((columns) =>
+    isUniqueViolation(error, { columns }),
+  );
+}
+
 @Injectable()
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // Selects `report.periodStatus`, not the legacy `Report.status` column that
   // reopen leaves at `published`, so the reopen-editable states (`open` /
@@ -101,10 +119,11 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
       if (error instanceof SectionVersionConflictError) {
         throw error;
       }
-      // The DB mints child ids now, but a duplicate (reportSectionId, projectId)
-      // ProjectStatus (or any other unique violation) in a malformed payload can
-      // still trip P2002 — surface it as a clean 400, never an unhandled 500.
-      if (isUniqueViolation(error)) {
+      // A duplicate (reportSectionId, X) in a malformed payload trips a child
+      // table's unique constraint — surface it as a clean 400. Any other P2002
+      // (a constraint outside the child set) re-throws: masking it as a
+      // duplicate-row 400 would hide a real invariant bug.
+      if (isChildRowDuplicate(error)) {
         throw new ReportSectionDomainError(
           "DUPLICATE_CHILD_ROW",
           "Could not save the section: a duplicate row was rejected.",

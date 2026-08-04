@@ -1,10 +1,5 @@
-/**
- * Tests for the lead-side <PeriodNavigator/>.
- *
- * Nav emits path-segment URLs (`/lead/report/<reportId>`) via `router.push` so
- * each addressed period is shareable and back-button-friendly. Custom listbox
- * replaces a native select so archived options can carry a neutral badge.
- */
+// PeriodNavigator tests pin shareable path-segment URLs and custom addressed
+// paths; the listbox keeps archived options compatible with neutral badges.
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -27,6 +22,7 @@ import { PeriodNavigator } from "./period-navigator";
 const PERIODS: ReportPeriod[] = [
   {
     id: "2026-W17",
+    periodStart: new Date("2026-04-21T00:00:00.000Z"),
     sourceSectionId: "sec-W17",
     weekLabel: "Week 17",
     dateRange: "Apr 21–27, 2026",
@@ -35,6 +31,7 @@ const PERIODS: ReportPeriod[] = [
   },
   {
     id: "2026-W16",
+    periodStart: new Date("2026-04-14T00:00:00.000Z"),
     sourceSectionId: "sec-W16",
     weekLabel: "Week 16",
     dateRange: "Apr 14–20, 2026",
@@ -43,6 +40,7 @@ const PERIODS: ReportPeriod[] = [
   },
   {
     id: "2026-W15",
+    periodStart: new Date("2026-04-07T00:00:00.000Z"),
     sourceSectionId: "sec-W15",
     weekLabel: "Week 15",
     dateRange: "Apr 7–13, 2026",
@@ -110,6 +108,20 @@ describe("PeriodNavigator (lead)", () => {
         name: "Period navigation (swipe left/right or use arrows)",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("allows the period trigger to shrink inside a narrow toolbar", () => {
+    render(<PeriodNavigator periods={PERIODS} />);
+    const navigation = screen.getByRole("group", {
+      name: "Period navigation (swipe left/right or use arrows)",
+    });
+    const triggerContainer = getTrigger().parentElement;
+
+    expect(navigation.className).toContain("max-w-full");
+    expect(navigation.className).toContain("flex-1");
+    expect(navigation.className).toContain("basis-full");
+    expect(triggerContainer?.className).toContain("min-w-0");
+    expect(triggerContainer?.className).toContain("flex-1");
   });
 
   describe("custom listbox", () => {
@@ -380,6 +392,17 @@ describe("PeriodNavigator (lead)", () => {
       expect(trigger.getAttribute("aria-activedescendant")).toBe(
         `${optionPrefix}0`,
       );
+    });
+
+    it("emits no active-descendant and keeps a valid anchor when there are no periods", () => {
+      render(<PeriodNavigator periods={[]} />);
+      const trigger = getTrigger();
+      fireEvent.click(trigger);
+
+      expect(trigger.getAttribute("aria-activedescendant")).toBeNull();
+      fireEvent.keyDown(trigger, { key: "ArrowDown" });
+      fireEvent.keyDown(trigger, { key: "End" });
+      expect(trigger.getAttribute("aria-activedescendant")).toBeNull();
     });
   });
 

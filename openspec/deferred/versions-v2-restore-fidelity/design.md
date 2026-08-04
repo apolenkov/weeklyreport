@@ -66,7 +66,7 @@ v1 drift class.
 - No pinning (`add-version-pin`), no diff view, no cross-period browsing.
 - No event sourcing (Option B), no normalized row versioning (Option D).
 - No general `saveDraft` optimistic-concurrency control — the
-  `version Int` column at `TODO(v8.5-A-occ)`
+  `version Int` column at the OCC write-lock seam (`save-section.transaction.ts`)
   (`prisma/schema.prisma:230`) is a separate, out-of-scope item.
 - No prod-DB operations.
 
@@ -372,7 +372,7 @@ slice, closing the v1-one-layer-up gap.
 Restore and the debounced autosave (`useLeadFormAutosave`) both wipe and
 recreate the same child rows. Without a guard, a pending autosave that
 lands _after_ restore silently overwrites the restored content
-("last writer wins" — the very `TODO(v8.5-A-occ)` hazard, scoped here to
+("last writer wins" — the very OCC hazard at `save-section.transaction.ts`, scoped here to
 restore only).
 
 **Finding 3 — CAS cannot live in `saveSection`; restore needs a NEW
@@ -398,7 +398,7 @@ taken from the snapshot — they stay at the section's current live values
 (restore reinstates _content_, never lifecycle or identity).
 
 **Token: `ReportSection.updatedAt`** — NOT a new `version` column (that
-column is the separate, out-of-scope `TODO(v8.5-A-occ)` item). Every
+column is the separate, out-of-scope OCC item at the write-lock seam). Every
 section write runs `reportSection.update`, so `updatedAt` is a reliable
 witness that bumps on each write; the guarded `updateMany` above both
 checks and bumps it.
@@ -423,7 +423,7 @@ The server CAS (finding 3) is the backstop if the client drain is ever
 bypassed.
 
 Scope note: this is **restore-only** CAS. General `saveDraft` OCC stays
-out of scope (`TODO(v8.5-A-occ)`); restore does not add a `version`
+out of scope (the OCC write-lock seam); restore does not add a `version`
 column or gate ordinary draft saves.
 
 ### Snapshot source — committed server read model only
@@ -598,7 +598,7 @@ references: [id], onDelete: Cascade)`
 3. **`updatedAt`-based CAS has coarse granularity.** Two writes within the
    same millisecond could share a timestamp. Acceptable for a 6-user tool;
    the dedicated `version Int` OCC column (out of scope here) is the proper
-   fix when `TODO(v8.5-A-occ)` ships.
+   fix when the OCC write-lock seam ships.
 4. **Storage duplication per version.** Negligible: 6 leads × weekly
    sections, payloads a few KB, time-based retention caps growth.
 

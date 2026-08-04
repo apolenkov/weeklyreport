@@ -11,6 +11,7 @@ import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { isEntrypoint } from "./_entrypoint.js";
+import { requireEnv } from "./_require-env.js";
 import {
   ACTIVE_REPORT_ID,
   DEFAULT_REPORTING_GROUP_ID,
@@ -149,8 +150,7 @@ export async function seedStressOverlay(prisma: PrismaClient): Promise<void> {
 
 async function main(): Promise<void> {
   assertNonProdDestructive("seed-stress-overlay");
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL must be set");
+  const databaseUrl = requireEnv("DATABASE_URL");
   const pool = new pg.Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {
