@@ -3,7 +3,11 @@ import { promisify } from "node:util";
 
 import { z } from "zod";
 
-import { roleSchema, sourceShaSchema } from "./contracts.js";
+import {
+  type DriverValidationInput,
+  type OpenCodeDriverReport,
+  parseDriverReport,
+} from "./driver-results.ts";
 
 const execFileAsync = promisify(execFile);
 const MAX_OUTPUT_BYTES = Number("16777216");
@@ -19,31 +23,8 @@ const eventSchema = z.object({
     .optional(),
 });
 
-const driverReportSchema = z
-  .object({
-    roleDriven: roleSchema,
-    sourceSha: sourceShaSchema,
-    routesVisited: z.number().int().nonnegative(),
-    routesPlanned: z.number().int().nonnegative(),
-    canary: z
-      .object({ injected: z.literal(true), detected: z.boolean() })
-      .strict(),
-    timeline: z.object({ startedAt: z.string(), endedAt: z.string() }).loose(),
-    candidates: z.array(z.object({ cellId: z.string().min(1) }).loose()),
-    coverageNotes: z.array(
-      z
-        .object({
-          cellId: z.string().min(1),
-          status: z.enum(["covered", "blocked"]),
-          reason: z.string(),
-        })
-        .strict(),
-    ),
-  })
-  .strict();
-
 export type OpenCodeEvent = z.infer<typeof eventSchema>;
-export type OpenCodeDriverReport = z.infer<typeof driverReportSchema>;
+export type { OpenCodeDriverReport } from "./driver-results.ts";
 
 export interface OpenCodeDriveRequest {
   readonly maxTurns: number;
@@ -78,20 +59,15 @@ export function parseOpenCodeEvents(output: string): readonly OpenCodeEvent[] {
 
 export function parseOpenCodeDriverReport(
   text: string,
-  expectedSourceSha: string,
+  expected: DriverValidationInput,
 ): OpenCodeDriverReport {
-  const parsedJson: unknown = JSON.parse(text);
-  const parsedReport = driverReportSchema.safeParse(parsedJson);
-  if (!parsedReport.success) {
-    throw new OpenCodeDriveError("OpenCode returned a malformed driver report");
+  try {
+    return parseDriverReport(text, expected);
+  } catch (error) {
+    if (error instanceof OpenCodeDriveError) throw error;
+    if (error instanceof Error) throw new OpenCodeDriveError(error.message);
+    throw error;
   }
-  if (parsedReport.data.sourceSha !== expectedSourceSha) {
-    throw new OpenCodeDriveError("OpenCode driver report source SHA is stale");
-  }
-  if (!parsedReport.data.canary.detected) {
-    throw new OpenCodeDriveError("OpenCode driver canary was blind");
-  }
-  return parsedReport.data;
 }
 
 function finalAnswer(events: readonly OpenCodeEvent[]): string | undefined {

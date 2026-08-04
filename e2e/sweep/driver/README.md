@@ -37,6 +37,11 @@ Prerequisites (the Driver does not boot these — start them first, with the
 sweep's env so dev-only widgets and proxy noise stay out):
 
 ```bash
+# Use a disposable database only; do not inherit a development DATABASE_URL.
+export E2E_DATABASE_URL='postgresql://localhost/customreport_e2e_test'
+export DATABASE_URL="$E2E_DATABASE_URL"
+export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.'
+
 # API (port 3101)
 cd apps/api && PORT=3101 AUTH_DEV_MODE=true NODE_ENV=test \
   FRONTEND_URL=http://127.0.0.1:3100 LOG_DIR=.logs/driver \
@@ -75,17 +80,21 @@ Drive protocol (the agent prompt), parametric in `<role>`:
   the documented `then`, or there is a console error / pageerror / failed nav /
   infinite skeleton / layout break. Behavior that matches `then` is not an
   anomaly — never report "works as expected".
-- Walk each route in order: navigate, settle, read console errors, snapshot
-  (shallow), and execute only the bounded cell named by the Codex-owned
-  manifest. The guarded E2E database is disposable, so declared publish,
-  delete, revoke, and restore cells are exercised before reset/reseed.
+- Walk the exact cells and `controlKey` list supplied by the Codex-owned prompt
+  assignment. Navigate, settle, read console errors, snapshot (shallow), and
+  execute only each bounded cell action. The guarded E2E database is disposable,
+  so declared publish, delete, revoke, and restore cells are exercised before
+  reset/reseed.
 - **Canary (proof-of-life, task 3.4):** exactly once, inject
   `console.error('DRIVER_CANARY_42')` via `browser_evaluate` and confirm the
   console capture detects it. `canary.detected=false` means the Driver is
   blind — its empty findings cannot be trusted (the Monitor "silence is not
   success" principle).
-- Emit compact candidate anomalies (route, intentId, kind, observed, expected,
-  evidence, severity) — **never paste full snapshots**.
+- Emit one `covered` or `blocked` `controlResults` entry, with evidence refs, for
+  every assigned control. Emit compact candidates (`candidateId`, `cellId`,
+  `kind`, `summary`, `evidenceRefs`) — **never paste full snapshots**.
+- The Codex orchestrator persists the final JSON and transcripts. The Driver
+  does not write archive files or campaign evidence.
 
 The verbatim, parametric prompt lives in `drive-prompt.md` (this directory) with
 a per-role substitution table — copy it and swap `<ROLE>`, the seeded email, and
@@ -134,7 +143,7 @@ reasoning, suggestedFix }`. Only `isReal` findings reach the report.
 
 ## Output
 
-A per-role report in the sweep's shape — `e2e/sweep/.reports/<role>-driver.md`
-(role · route · anomaly), listing only verified-real findings plus the canary
-result and coverage notes. Report-only; never fails CI (Layer-1/2 gating is the
-sweep's job, not the Driver's).
+The orchestrator writes the schema-valid JSON report and transcripts under the
+campaign archive, alongside merged per-cell results and the digestable
+`driver-report` evidence refs. The report records the canary, exact assigned
+cells/control results, and candidates; the Driver itself writes no artifacts.

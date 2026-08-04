@@ -1,10 +1,22 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseSeedProfile } from "../../prisma/seed-profile-contract.js";
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
-import { CANONICAL_ROLES, type Role, SEED_PROFILES } from "./contracts.js";
+import {
+  CANONICAL_ROLES,
+  type CoverageCell,
+  coverageCellSchema,
+  type Role,
+  SEED_PROFILES,
+} from "./contracts.js";
+import {
+  type DriverValidationInput,
+  mergeDriverReport,
+  renderDriverAssignment,
+  writeMergedDriverCells,
+} from "./driver-results.js";
 import {
   assertPlaywrightMcpConnected,
   parseOpenCodeDriverReport,
@@ -71,14 +83,43 @@ function requireEnvironment(repoRoot: string): DriveEnvironment {
   return { archive: path.resolve(archive), databaseUrl, repoRoot, sourceSha };
 }
 
-function renderPrompt(template: string, role: Role, sourceSha: string): string {
+async function readAssignedCells(
+  environment: DriveEnvironment,
+  profile: (typeof SEED_PROFILES)[number],
+  role: Role,
+): Promise<readonly CoverageCell[]> {
+  const directory = path.join(environment.archive, "cells", profile, role);
+  const entries = await readdir(directory);
+  const files = entries
+    .filter((entry) => entry.endsWith(".json"))
+    .toSorted((left, right) => left.localeCompare(right));
+  if (files.length === 0)
+    throw new Error(`No runtime cells assigned to ${profile}/${role}`);
+  return Promise.all(
+    files.map(async (file) =>
+      coverageCellSchema.parse(
+        JSON.parse(await readFile(path.join(directory, file), "utf8")),
+      ),
+    ),
+  );
+}
+
+function renderPrompt(
+  template: string,
+  role: Role,
+  profile: (typeof SEED_PROFILES)[number],
+  sourceSha: string,
+  assignment: DriverValidationInput,
+): string {
   const identity = DRIVER_IDENTITIES[role];
   return template
     .replaceAll("<ROLE>", role)
     .replaceAll("<EMAIL>", identity.email)
     .replaceAll("<LANDING>", identity.landing)
     .replaceAll("<CATALOG>", identity.catalog)
-    .replaceAll("<SOURCE_SHA>", sourceSha);
+    .replaceAll("<SOURCE_SHA>", sourceSha)
+    .replaceAll("<PROFILE>", profile)
+    .replaceAll("<ASSIGNED_CELLS>", renderDriverAssignment(assignment));
 }
 
 async function driveRole(
@@ -92,32 +133,47 @@ async function driveRole(
     profile: parseSeedProfile(profile),
     repoRoot: environment.repoRoot,
   });
+  const cells = await readAssignedCells(environment, profile, role);
+  const validation: DriverValidationInput = {
+    sourceSha: environment.sourceSha,
+    profile,
+    role,
+    cells,
+  };
   const result = await runOpenCodeDrive({
     maxTurns: MAX_SESSION_TURNS,
-    prompt: renderPrompt(template, role, environment.sourceSha),
+    prompt: renderPrompt(
+      template,
+      role,
+      profile,
+      environment.sourceSha,
+      validation,
+    ),
     repoRoot: environment.repoRoot,
   });
-  const report = parseOpenCodeDriverReport(
-    result.finalText,
-    environment.sourceSha,
-  );
   const outputDir = path.join(
     environment.archive,
     "driver",
     environment.sourceSha,
     profile,
   );
+  const reportPath = path.join(outputDir, `${role}.json`);
+  const reportText = `${result.finalText.trimEnd()}\n`;
+  const report = parseOpenCodeDriverReport(reportText, validation);
+  const merged = mergeDriverReport(cells, report, {
+    ...validation,
+    reportText,
+    reportArchivePath: reportPath,
+  });
   await mkdir(outputDir, { recursive: true });
   await Promise.all([
-    writeFile(
-      path.join(outputDir, `${role}.json`),
-      `${JSON.stringify(report, null, 2)}\n`,
-    ),
+    writeFile(reportPath, reportText),
     writeFile(
       path.join(outputDir, `${role}.session.json`),
       `${JSON.stringify({ sessionId: result.sessionId, transcripts: result.transcripts }, null, 2)}\n`,
     ),
   ]);
+  await writeMergedDriverCells(path.join(outputDir, "cells"), merged);
 }
 
 async function run(): Promise<void> {

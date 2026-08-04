@@ -16,6 +16,7 @@ const requiredEnv = (name: string): string => {
 const ARCHIVE_ROOT = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const SOURCE_SHA = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
 assertSourceSha(SOURCE_SHA);
+const PROFILE = requiredEnv("RUNTIME_SWEEP_PROFILE");
 const DATABASE_URL = requiredEnv("E2E_DATABASE_URL");
 const API_PORT = Number(process.env.RUNTIME_SWEEP_API_PORT ?? "3102");
 const WEB_PORT = Number(process.env.RUNTIME_SWEEP_WEB_PORT ?? "3105");
@@ -49,8 +50,8 @@ const webEnv = {
 
 export default defineConfig({
   testDir: import.meta.dirname,
-  testMatch: /runtime-sweep\.spec\.ts/,
-  outputDir: path.join(ARCHIVE_ROOT, "playwright"),
+  testMatch: /(?:concurrency|fault-recovery|runtime-sweep)\.spec\.ts/,
+  outputDir: path.join(ARCHIVE_ROOT, "playwright", PROFILE),
   globalSetup: path.join(REPO_ROOT, "e2e/integration/global-setup.ts"),
   globalTeardown: path.join(REPO_ROOT, "e2e/integration/global-teardown.ts"),
   timeout: 180_000,
@@ -63,7 +64,12 @@ export default defineConfig({
     ["list"],
     [
       "json",
-      { outputFile: path.join(ARCHIVE_ROOT, "playwright-results.json") },
+      {
+        outputFile: path.join(
+          ARCHIVE_ROOT,
+          `playwright-results-${PROFILE}.json`,
+        ),
+      },
     ],
   ],
   use: {
