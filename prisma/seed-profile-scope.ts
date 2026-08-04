@@ -43,9 +43,10 @@ const CORE_USER_IDS = [
   LEAD_1_ID,
 ] as const;
 
+const MINIMAL_USER_IDS = [...CORE_USER_IDS, LEAD_MARIA_ID] as const;
+
 const DEMO_USER_IDS = [
-  ...CORE_USER_IDS,
-  LEAD_MARIA_ID,
+  ...MINIMAL_USER_IDS,
   LEAD_IGOR_ID,
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
@@ -102,7 +103,7 @@ const DEMO_REPORT_IDS = [
 
 export const SEED_PROFILE_SCOPES = {
   minimal: {
-    userIds: CORE_USER_IDS,
+    userIds: MINIMAL_USER_IDS,
     projectIds: [PROD_CRM],
     reportIds: [ACTIVE_REPORT_ID],
   },

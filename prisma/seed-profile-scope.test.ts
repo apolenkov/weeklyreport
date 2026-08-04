@@ -2,12 +2,33 @@ import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  ADMIN_USER_ID,
+  HEAD_USER_ID,
+  LEAD_1_ID,
+  LEAD_MARIA_ID,
+  VIEWER_USER_ID,
+} from "./seed-constants.js";
+import {
   assertCanonicalProduct,
   collectScopedSeedCounts,
   SEED_PROFILE_SCOPES,
 } from "./seed-profile-scope.js";
 
 describe("seed profile product scope integrity", () => {
+  it("includes every fixed permission actor in the minimal profile", () => {
+    const scope = SEED_PROFILE_SCOPES.minimal;
+
+    expect(scope.userIds).toEqual(
+      expect.arrayContaining([
+        ADMIN_USER_ID,
+        HEAD_USER_ID,
+        LEAD_1_ID,
+        LEAD_MARIA_ID,
+        VIEWER_USER_ID,
+      ]),
+    );
+  });
+
   it("rejects a canonical product id absent from the catalogue", () => {
     expect(() =>
       assertCanonicalProduct("a0000000-0000-4000-8000-00000000ffff"),
