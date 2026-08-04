@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildUserSession,
   type ProvisionLeadWorkspace,
+  ReportingGroupRequiredError,
   SamlIdentityMismatchError,
   type SamlProfile,
 } from "./user-session";
@@ -25,6 +26,7 @@ describe("buildUserSession — admin SAML login", () => {
       name: string;
       role: Role;
       samlId: string;
+      reportingGroupId?: string | null;
     } | null;
   }): PrismaClient {
     const existing = opts.existingUser ?? null;
@@ -93,7 +95,10 @@ describe("buildUserSession — admin SAML login", () => {
     return fake as unknown as PrismaClient;
   }
 
-  it("persists role=admin and returns session with role=admin (no narrow cast crash)", async () => {
+  it("refuses to provision a non-viewer with no group on record (typed error)", async () => {
+    // A lead/head/admin without a group is an incomplete provision: silently
+    // adopting the oldest group (or materializing the seeded default) would
+    // fabricate an ownership the admin never chose — fail loud instead.
     const prisma = fakePrisma({ existingUser: null });
     const profile: SamlProfile = {
       samlId: "saml-admin-1",
@@ -102,16 +107,9 @@ describe("buildUserSession — admin SAML login", () => {
       role: "admin",
     };
 
-    const session = await buildUserSession(prisma, profile, failIfProvisioned);
-
-    expect(session.role).toBe("admin");
-    expect(session.email).toBe("admin@customreport.local");
-    expect(session.reportingGroupName).toBe("Software Development");
-    const createMock = vi.mocked(prisma.user.create);
-    expect(createMock).toHaveBeenCalledTimes(1);
-    const createArg = createMock.mock.calls[0]?.[0] as
-      { data: { role: string } } | undefined;
-    expect(createArg?.data.role).toBe("admin");
+    await expect(
+      buildUserSession(prisma, profile, failIfProvisioned),
+    ).rejects.toBeInstanceOf(ReportingGroupRequiredError);
   });
 
   // SAML stub: lastName=displayName, firstName whitespace placeholder (canSave trims it).
@@ -189,6 +187,7 @@ describe("buildUserSession — admin SAML login", () => {
         name: "Lead One",
         role: "lead",
         samlId: "lead-saml",
+        reportingGroupId: "a0000000-0000-4000-8000-000000000301",
       },
     });
     const profile: SamlProfile = {

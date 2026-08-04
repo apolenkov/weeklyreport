@@ -1,0 +1,15 @@
+{
+  "lsp": {
+    "biome": {
+      "disabled": true
+    },
+    "typescript": {
+      "priority": 100,
+      "initialization": {
+        "tsserver": {
+          "path": "/home/user/work/weeklyreport/node_modules/typescript-language-service/lib/tsserver.js"
+        }
+      }
+    }
+  }
+}

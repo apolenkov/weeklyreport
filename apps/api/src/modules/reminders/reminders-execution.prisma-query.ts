@@ -120,6 +120,19 @@ export async function listStuckQueuedExecutions(
   return executions.map(toExecutionDomain);
 }
 
+// A `sending` row is presumed delivered after a worker crash; CAS-resolve only
+// rows still `sending` past the cutoff, never re-queue or fail a sent email.
+export async function markStuckSendingSent(
+  prisma: PrismaService,
+  olderThan: Date,
+): Promise<number> {
+  const result = await prisma.reminderExecution.updateMany({
+    where: { status: "sending", updatedAt: { lt: olderThan } },
+    data: { status: "sent" },
+  });
+  return result.count;
+}
+
 export async function queryExecutionById(
   prisma: PrismaService,
   executionId: string,

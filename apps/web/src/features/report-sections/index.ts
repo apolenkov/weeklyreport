@@ -68,6 +68,7 @@ export type {
   DecisionEntry,
   KanbanItem,
   Product,
+  ProductKanbanItem,
   ReportPeriod,
   RiskEntry,
   StageAssignment,

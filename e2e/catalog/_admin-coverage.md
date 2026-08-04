@@ -11,26 +11,26 @@ Discovered routes (18):
 
 ## Coverage matrix
 
-| Route                              | Intent count | Covered? |
-|------------------------------------|:------------:|:--------:|
-| `/`                                | 4            | yes      |
-| `/admin`                           | 9            | yes      |
-| `/admin/products`                  | 8            | yes      |
-| `/admin/settings`                  | 5            | yes      |
-| `/head/dashboard`                  | 5            | yes      |
-| `/head/history`                    | 1            | yes      |
-| `/head/report`                     | 5            | yes      |
-| `/head/report/[reportId]`          | 8            | yes      |
-| `/head/report/[reportId]/present`  | 3            | yes      |
-| `/head/slides`                     | 1            | yes      |
-| `/lead/history`                    | 1            | yes      |
-| `/lead/report`                     | 1            | yes      |
-| `/lead/report/[reportId]`          | 1            | yes      |
-| `/reports`                         | 4            | yes      |
-| `/reports/[reportId]`              | 6            | yes      |
-| `/reports/[reportId]/present`      | 3            | yes      |
-| `/reports/history`                 | 5            | yes      |
-| `/reports/trends`                  | 1            | yes      |
+| Route                             | Intent count | Covered? |
+| --------------------------------- | :----------: | :------: |
+| `/`                               |      4       |   yes    |
+| `/admin`                          |      9       |   yes    |
+| `/admin/products`                 |      8       |   yes    |
+| `/admin/settings`                 |      5       |   yes    |
+| `/head/dashboard`                 |      5       |   yes    |
+| `/head/history`                   |      1       |   yes    |
+| `/head/report`                    |      5       |   yes    |
+| `/head/report/[reportId]`         |      8       |   yes    |
+| `/head/report/[reportId]/present` |      3       |   yes    |
+| `/head/slides`                    |      1       |   yes    |
+| `/lead/history`                   |      1       |   yes    |
+| `/lead/report`                    |      1       |   yes    |
+| `/lead/report/[reportId]`         |      1       |   yes    |
+| `/reports`                        |      4       |   yes    |
+| `/reports/[reportId]`             |      6       |   yes    |
+| `/reports/[reportId]/present`     |      3       |   yes    |
+| `/reports/history`                |      5       |   yes    |
+| `/reports/trends`                 |      1       |   yes    |
 
 **Routes total:** 18 | **Routes with >= 1 intent:** 18 | **Uncovered:** 0
 **Total intent entries:** 71

@@ -63,7 +63,7 @@ describe("integrationsStatusSchema", () => {
   });
 });
 
-describe("adminTestTelegramSendSchema", () => {
+describe("adminTestTelegramSendSchema valid inputs", () => {
   it("accepts a numeric-looking chatId as a string", () => {
     const result = adminTestTelegramSendSchema.safeParse({
       chatId: "123456789",
@@ -88,7 +88,9 @@ describe("adminTestTelegramSendSchema", () => {
     expect(result.chatId).toBe("123");
     expect(result.text).toBe("body");
   });
+});
 
+describe("adminTestTelegramSendSchema invalid inputs", () => {
   it("rejects empty chatId after trimming", () => {
     expect(
       adminTestTelegramSendSchema.safeParse({
@@ -96,6 +98,59 @@ describe("adminTestTelegramSendSchema", () => {
         text: "x",
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects alphabetic garbage that is not a username", () => {
+    expect(
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "abc",
+        text: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a malformed sign on an integer chat id", () => {
+    expect(
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "+123",
+        text: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an integer beyond the signed 64-bit range", () => {
+    expect(
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "12345678901234567890",
+        text: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a username shorter than the 5-char minimum", () => {
+    expect(
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "@ab",
+        text: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a username with a space inside", () => {
+    expect(
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "@my user",
+        text: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a canonical @username", () => {
+    const result = adminTestTelegramSendSchema.safeParse({
+      chatId: "@weekly_bot",
+      text: "x",
+    });
+    expect(result.success).toBe(true);
   });
 
   it("rejects empty text after trimming", () => {

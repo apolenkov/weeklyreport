@@ -15,7 +15,7 @@ interface Props {
 const LEAD_FORM_ACTION_BAR_CLEARANCE = "88px";
 // Soft brand wash under the form chrome; fades into page background by 160px.
 const LEAD_FORM_PAGE_BG =
-  "bg-[linear-gradient(180deg,rgba(0,98,65,0.04)_0%,var(--color-background)_160px)]";
+  "bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-starbucks-green)_4%,transparent)_0%,var(--color-background)_160px)]";
 
 export default async function LeadReportByIdPage({
   params,

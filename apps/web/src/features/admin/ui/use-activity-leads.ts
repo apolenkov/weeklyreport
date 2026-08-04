@@ -18,7 +18,9 @@ function useActivityLeadMutations() {
   const qc = useQueryClient();
 
   const invalidateList = () =>
-    qc.invalidateQueries(trpc.projectActivity.list.pathFilter());
+    qc
+      .invalidateQueries(trpc.projectActivity.list.pathFilter())
+      .catch(() => undefined);
 
   const attachMut = useMutation(
     trpc.projectActivity.attachLead.mutationOptions({

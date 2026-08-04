@@ -1,4 +1,9 @@
-import { createReadStream, mkdtempSync, writeFileSync } from "node:fs";
+import {
+  createReadStream,
+  mkdtempSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
@@ -9,6 +14,7 @@ import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { createAuthController } from "../auth/auth.controller";
 import {
   canReadReport,
@@ -147,8 +153,12 @@ function makeDeps(overrides: Partial<PdfDownloadDeps> = {}): PdfDownloadDeps {
   return {
     prisma: makePrisma(),
     pdfDir,
+    // Matches the cookie name makeReq stamps; supplied explicitly so the
+    // handler never reads process.env.AUTH_JWT_COOKIE_NAME per request.
+    sessionCookieName: "customreport_session",
     verifySessionToken: () => headSession,
     sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+    logger: createNullLogger(),
     ...overrides,
   };
 }
@@ -189,6 +199,39 @@ describe("handlePdfDownload", () => {
     expect(res.body).toBe("PDF-BYTES");
   });
 
+  it("reads the session cookie under the deps cookie name, ignoring process.env (200)", async () => {
+    const originalCookieName = process.env.AUTH_JWT_COOKIE_NAME;
+    process.env.AUTH_JWT_COOKIE_NAME = "env-session-cookie";
+    try {
+      writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+      const res = new MockResponse();
+      const finished = new Promise<void>((r) => res.on("finish", () => r()));
+
+      await handlePdfDownload(
+        makeReq({ cookie: "valid" }),
+        asResponse(res),
+        makeDeps({
+          verifySessionToken: () => viewerSession,
+          prisma: makePrisma({
+            job: completedJob(),
+            reportAuthorized: true,
+            viewerGroups: ["group-1"],
+          }),
+        }),
+      );
+      await finished;
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toBe("PDF-BYTES");
+    } finally {
+      if (originalCookieName === undefined) {
+        delete process.env.AUTH_JWT_COOKIE_NAME;
+      } else {
+        process.env.AUTH_JWT_COOKIE_NAME = originalCookieName;
+      }
+    }
+  });
+
   it("rejects an unauthenticated request (401, no bytes)", async () => {
     const res = new MockResponse();
 
@@ -196,6 +239,27 @@ describe("handlePdfDownload", () => {
 
     expect(res.statusCode).toBe(401);
     expect(res.body).toBe("");
+  });
+
+  it("rejects a non-string session cookie value (validated, not cast)", async () => {
+    const res = new MockResponse();
+    const req = {
+      cookies: { customreport_session: 123_456 },
+      params: { file: `${JOB_ID}.pdf` },
+    } as unknown as Request;
+
+    await handlePdfDownload(req, asResponse(res), makeDeps());
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects an absent cookies container (401)", async () => {
+    const res = new MockResponse();
+    const req = { params: { file: `${JOB_ID}.pdf` } } as unknown as Request;
+
+    await handlePdfDownload(req, asResponse(res), makeDeps());
+
+    expect(res.statusCode).toBe(401);
   });
 
   it("rejects an out-of-scope caller, requester identity notwithstanding (403)", async () => {
@@ -276,6 +340,26 @@ describe("handlePdfDownload", () => {
     );
 
     expect(res.statusCode).toBe(404);
+  });
+
+  it("refuses to serve an artifact that is a symlink planted in the artifacts dir (404)", async () => {
+    // A symlink at `{jobId}.pdf` must be rejected at open (O_NOFOLLOW), never
+    // followed outside the pdfDir root.
+    const outside = join(tmpdir(), "pdf-handler-outside-secret.txt");
+    writeFileSync(outside, "SECRET-OUTSIDE-BYTES");
+    symlinkSync(outside, join(pdfDir, `${JOB_ID}.pdf`));
+    const res = new MockResponse();
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+      }),
+    );
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toBe("");
   });
 
   it("returns 404 for a non-completed job even with a same-named file on disk", async () => {
@@ -382,7 +466,7 @@ describe("handlePdfDownload", () => {
         read() {
           this.destroy(new Error("read failed"));
         },
-      }) as never,
+      }) as unknown as ReturnType<typeof createReadStream>,
     );
     const res = new MockResponse();
     const finished = new Promise<void>((resolve) => {
@@ -409,7 +493,7 @@ describe("handlePdfDownload", () => {
         read() {
           this.destroy(new Error("read failed"));
         },
-      }) as never,
+      }) as unknown as ReturnType<typeof createReadStream>,
     );
     const res = new MockResponse();
     res.headersSent = true;
@@ -428,6 +512,38 @@ describe("handlePdfDownload", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.destroyed).toBe(true);
+  });
+
+  it("logs a PDF stream failure with the job id (observable, not silent)", async () => {
+    writeFileSync(join(pdfDir, `${JOB_ID}.pdf`), "PDF-BYTES");
+    vi.mocked(createReadStream).mockReturnValueOnce(
+      new Readable({
+        read() {
+          this.destroy(new Error("read failed"));
+        },
+      }) as unknown as ReturnType<typeof createReadStream>,
+    );
+    const error = vi.fn();
+    const logger = { error, child: () => logger } as unknown as AppLogger;
+    const res = new MockResponse();
+    const finished = new Promise<void>((resolve) => {
+      res.on("finish", resolve);
+    });
+
+    await handlePdfDownload(
+      makeReq({ cookie: "valid" }),
+      asResponse(res),
+      makeDeps({
+        logger,
+        prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+      }),
+    );
+    await finished;
+
+    expect(error).toHaveBeenCalledWith(
+      "pdf stream read failed",
+      expect.objectContaining({ jobId: JOB_ID, error: "read failed" }),
+    );
   });
 });
 

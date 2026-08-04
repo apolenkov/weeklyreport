@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // A requestedBy PDF token's synthetic session matches the human's own; only
@@ -17,7 +18,7 @@ function buildCaller(ctx: {
   isPdfExport: boolean;
   pdfReportId: string | null;
 }) {
-  const deps = {} as unknown as Parameters<typeof createAppRouter>[0];
+  const deps = createStubAppRouterDeps();
   return createAppRouter(deps).createCaller({
     session: ctx.session,
     logger: createNullLogger(),

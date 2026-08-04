@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Viewer periodStatus filter is covered on getCompiledHistory in
@@ -22,9 +23,9 @@ function buildCaller(
   compiledHistory: ReturnType<typeof vi.fn>,
   session: UserSession,
 ) {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     weeklyReportService: { compiledHistory },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session,
     logger: createNullLogger(),

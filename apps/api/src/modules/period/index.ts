@@ -7,6 +7,7 @@ export {
 export {
   ensureCurrentPeriod,
   isOpenBoundaryConflict,
+  PeriodLifecycleIntegrityError,
 } from "./application/period-factory.js";
 export {
   emitPublishSideEffects,

@@ -21,11 +21,7 @@ function buildListProcedure(deps: ArchiveRouterDeps) {
     .input(paginationInputSchema.optional())
     .query(async ({ input, ctx }) => {
       try {
-        return await deps.archiveService.listArchiveReports(
-          input,
-          ctx.session.role,
-          ctx.session,
-        );
+        return await deps.archiveService.listArchiveReports(input, ctx.session);
       } catch (error) {
         throw mapDomainError(error);
       }
@@ -35,14 +31,16 @@ function buildListProcedure(deps: ArchiveRouterDeps) {
 function buildDetailProcedure(deps: ArchiveRouterDeps) {
   return anyRoleProcedure.input(reportIdInput).query(async ({ input, ctx }) => {
     try {
-      const detail = await deps.archiveService.getArchiveReport(
-        input.reportId,
-        ctx.session.role,
-        ctx.session,
-      );
-      // Empty sections after group-scope filter: likely a probe; rare
-      // genuine empty published reports are an acceptable false-positive.
-      if (ctx.session.role !== "admin" && detail.report.sections.length === 0) {
+      const { detail, totalSectionCount } =
+        await deps.archiveService.getArchiveReport(input.reportId, ctx.session);
+      // Zero scoped sections with sections present in the report = the caller
+      // is scoped out of every one; a genuinely section-less report is not a
+      // denial, so empty data must not read as denied.
+      if (
+        ctx.session.role !== "admin" &&
+        detail.report.sections.length === 0 &&
+        totalSectionCount > 0
+      ) {
         ctx.auditLogger.scopeDenied({
           userId: ctx.session.userId,
           role: ctx.session.role,

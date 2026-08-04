@@ -2,16 +2,20 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import type { KanbanItem } from "../../report-sections";
+import type { ProductKanbanItem } from "../../report-sections";
 import {
   type UnifiedActivityEntry,
   UnifiedActivitySection,
 } from "./unified-activity-section";
 
-function makeItem(overrides: Partial<KanbanItem> & { id: string }): KanbanItem {
+function makeItem(
+  overrides: Partial<ProductKanbanItem> & { id: string },
+): ProductKanbanItem {
   return {
+    parent: { kind: "product", id: "p1" },
     productId: "p1",
     productName: "Product 1",
+    activityId: null,
     status: "in-progress",
     text: `Item ${overrides.id}`,
     author: "Lead 1",

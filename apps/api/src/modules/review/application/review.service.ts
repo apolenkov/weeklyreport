@@ -47,10 +47,10 @@ export type DashboardScopeSession = Pick<
 >;
 
 export interface ReviewRepository {
-  getSubmissionDashboard(
+  readonly getSubmissionDashboard: (
     activeReportId: string,
     session: DashboardScopeSession,
-  ): Promise<SubmissionDashboardRow[]>;
+  ) => Promise<readonly SubmissionDashboardRow[]>;
 }
 
 // DI token binding the ReviewRepository port to its adapter at the module
@@ -62,7 +62,9 @@ const statusOrder: Record<SubmissionDashboardRow["status"], number> = {
   submitted: 1,
 };
 
-function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
+function sortRows(
+  rows: readonly SubmissionDashboardRow[],
+): readonly SubmissionDashboardRow[] {
   return [...rows].sort((left, right) => {
     const statusDiff = statusOrder[left.status] - statusOrder[right.status];
 

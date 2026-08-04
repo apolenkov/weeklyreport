@@ -6,8 +6,8 @@ import {
   deriveEffectiveProductStatus,
 } from "./report-sections.status-derivation";
 
-// Frozen snapshot of the status-derivation grid: a diff in these assertions
-// means a behavior change, not a test that needs updating.
+// Grid of the status-derivation rules: a diff in these assertions means a
+// behavior change, not a test that needs updating.
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 
 describe("deriveEffectiveProductStatus — characterization grid", () => {

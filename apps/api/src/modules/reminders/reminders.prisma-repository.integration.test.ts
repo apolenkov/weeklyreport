@@ -43,6 +43,7 @@ async function seedExecutionHistory(): Promise<readonly string[]> {
     data: executionIds.map((id, index) => ({
       id,
       ruleId: RULE_ID,
+      recipientEmail: `lead-${index}@test.local`,
       dedupeKey: `${RULE_ID}:deadline:2026-04-11:lead-${index}@test.local`,
       status: "pending",
       createdAt: new Date(CREATED_AT.getTime() - index),

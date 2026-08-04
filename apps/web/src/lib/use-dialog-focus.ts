@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useState } from "react";
+import { type RefObject, useEffect, useMemo } from "react";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -20,10 +20,15 @@ function trapTab(event: KeyboardEvent, container: HTMLElement): void {
   if (first === undefined || last === undefined) return;
   const active = document.activeElement;
 
+  const focusMovedToFirst =
+    (!event.shiftKey && active === last) ||
+    (active !== null && !container.contains(active));
   if (event.shiftKey && active === first) {
     event.preventDefault();
     last.focus();
-  } else if (!event.shiftKey && active === last) {
+  } else if (focusMovedToFirst) {
+    // Wrap forward from the last element, or pull focus back in after a
+    // content swap dropped it to the body — both land on the first element.
     event.preventDefault();
     first.focus();
   }
@@ -33,12 +38,16 @@ interface DialogFocusOptions {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly containerRef: RefObject<HTMLElement | null>;
-  /**
-   * Optional caller-managed trigger for always-mounted dialogs whose
-   * first-render opener capture is stale. Remount-on-open dialogs need none.
-   */
   readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
 }
+
+const getActiveElement = (): HTMLElement | null =>
+  typeof document === "undefined"
+    ? null
+    : (document.activeElement as HTMLElement | null);
+
+const activeElementForDialog = (open: boolean): HTMLElement | null =>
+  open ? getActiveElement() : null;
 
 // Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.
 export function useDialogFocus({
@@ -47,28 +56,20 @@ export function useDialogFocus({
   containerRef,
   triggerRef,
 }: DialogFocusOptions): void {
-  // Capture opener on first render before autoFocus moves focus inside on commit.
-  // These dialogs mount on open, so first render === open and activeElement is the trigger.
-  const [capturedOpener] = useState<HTMLElement | null>(
-    () => document.activeElement as HTMLElement | null,
-  );
+  const opener = useMemo(() => activeElementForDialog(open), [open]);
 
   useEffect(() => {
     if (!open) return;
     const container = containerRef.current;
-    const focusIsInside = container?.contains(document.activeElement) ?? false;
+    const activeElement = document.activeElement as HTMLElement | null;
+    const focusIsInside = container?.contains(activeElement) ?? false;
 
     // triggerRef wins. When autoFocus already sits inside the container, the
     // captured opener is the only remaining outside anchor.
     const openerOutside =
-      capturedOpener && container && !container.contains(capturedOpener)
-        ? capturedOpener
-        : null;
+      opener && container && !container.contains(opener) ? opener : null;
     const restoreTarget: HTMLElement | null =
-      triggerRef?.current ??
-      (focusIsInside
-        ? openerOutside
-        : (document.activeElement as HTMLElement | null));
+      triggerRef?.current ?? (focusIsInside ? openerOutside : activeElement);
 
     // Respect an inner autoFocus: only pull focus in when nothing inside holds it yet.
     if (container && !focusIsInside) {
@@ -78,7 +79,7 @@ export function useDialogFocus({
     return () => {
       restoreTarget?.focus();
     };
-  }, [open, containerRef, triggerRef, capturedOpener]);
+  }, [open, containerRef, triggerRef, opener]);
 
   useEffect(() => {
     if (!open) return;

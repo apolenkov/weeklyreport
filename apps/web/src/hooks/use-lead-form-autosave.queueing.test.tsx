@@ -4,7 +4,10 @@ import { TRPCClientError } from "@trpc/client";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { stableStringify, useLeadFormAutosave } from "./use-lead-form-autosave";
+import {
+  encodeAutosaveComparisonKey,
+  useLeadFormAutosave,
+} from "./use-lead-form-autosave";
 import {
   AUTOSAVE_SECTION_ID as SECTION_ID,
   buildAutosaveHarness as buildHarness,
@@ -318,7 +321,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     // isolating this test to the drain TARGET, not B's dirtiness (that is the
     // next test's concern).
     const bPayload = makePayloadFor(SECTION_B, "b1");
-    const bKey = stableStringify(bPayload);
+    const bKey = encodeAutosaveComparisonKey(bPayload);
     const { result, rerender } = renderHook(
       ({
         reportSectionId,
@@ -397,7 +400,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         }),
     });
     const bPayload = makePayloadFor(SECTION_B, "b-clean");
-    const bKey = stableStringify(bPayload);
+    const bKey = encodeAutosaveComparisonKey(bPayload);
     const { result, rerender } = renderHook(
       ({
         reportSectionId,
@@ -609,7 +612,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
   it("renders idle and clean when initialSavedKey already matches the first payload key", () => {
     const { wrapper } = buildHarness();
     const payload = makePayload("already-saved");
-    const initialSavedKey = stableStringify(payload);
+    const initialSavedKey = encodeAutosaveComparisonKey(payload);
 
     const { result } = renderHook(
       () =>

@@ -7,11 +7,11 @@ import {
 import type { PeriodTelemetry } from "../application/period-telemetry.port.js";
 
 export class PeriodPrometheusTelemetry implements PeriodTelemetry {
-  recordPublishedReport(): void {
+  readonly recordPublishedReport = (): void => {
     customreportReportsSubmittedTotal.inc({ state: "published" });
-  }
+  };
 
-  recordPeriodPublished(from: PeriodStatus): void {
+  readonly recordPeriodPublished = (from: PeriodStatus): void => {
     customreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
-  }
+  };
 }

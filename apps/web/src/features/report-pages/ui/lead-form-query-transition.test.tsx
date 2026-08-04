@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
@@ -72,6 +70,7 @@ vi.mock("./use-lead-form-add-signals", () => ({
 
 vi.mock("./use-lead-form-draft", () => ({
   useLeadFormDraft: ({ serverSection }: { serverSection?: unknown }) => ({
+    generation: serverSection ? "report-a:section-a" : null,
     draft: serverSection ?? null,
     draftPayload: null,
     dirty: false,
@@ -83,13 +82,6 @@ vi.mock("./use-lead-form-draft", () => ({
     submit: vi.fn(),
     submitReadiness: READINESS,
     apply: vi.fn(),
-    quickAdd: vi.fn(),
-    pendingQuickAdd: null,
-    quickAddSave: vi.fn(),
-    clearQuickAdd: vi.fn(),
-    routeToBlocker: vi.fn(),
-    pendingRiskPrefill: null,
-    clearRiskPrefill: vi.fn(),
     handleConflict: vi.fn(),
   }),
 }));

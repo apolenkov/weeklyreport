@@ -5,14 +5,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import type * as React from "react";
 
-/**
- * Radix tabs root with optional list variants.
- */
+/** Owns the active value shared by tab triggers and panels. */
 function Tabs({
   className,
   orientation = "horizontal",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+}: Readonly<React.ComponentProps<typeof TabsPrimitive.Root>>) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
@@ -27,7 +25,8 @@ function Tabs({
   );
 }
 
-const tabsListVariants = cva(
+/** Produces class variants for default and underline tab-list presentations. */
+export const tabsListVariants = cva(
   "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
@@ -49,8 +48,10 @@ function TabsList({
   className,
   variant = "default",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List> &
-  VariantProps<typeof tabsListVariants>) {
+}: Readonly<
+  React.ComponentProps<typeof TabsPrimitive.List> &
+    VariantProps<typeof tabsListVariants>
+>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
@@ -67,7 +68,7 @@ function TabsList({
 function TabsTrigger({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+}: Readonly<React.ComponentProps<typeof TabsPrimitive.Trigger>>) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -89,7 +90,7 @@ function TabsTrigger({
 function TabsContent({
   className,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+}: Readonly<React.ComponentProps<typeof TabsPrimitive.Content>>) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
@@ -99,4 +100,4 @@ function TabsContent({
   );
 }
 
-export { Tabs, TabsContent, TabsList, tabsListVariants, TabsTrigger };
+export { Tabs, TabsContent, TabsList, TabsTrigger };

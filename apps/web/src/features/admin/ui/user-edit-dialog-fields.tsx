@@ -9,7 +9,7 @@ const LABEL_CLASS =
   "mb-1 block text-sm font-medium text-[var(--color-foreground)]";
 
 const CONTROL_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
 
 interface FormBinding {
   readonly form: UserFormData;
@@ -22,14 +22,12 @@ function TextField({
   type = "text",
   value,
   onChange,
-  initialFocus = false,
 }: {
   readonly id: string;
   readonly label: string;
   readonly type?: "text" | "email";
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly initialFocus?: boolean;
 }) {
   return (
     <div>
@@ -41,8 +39,6 @@ function TextField({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus={initialFocus}
         className={CONTROL_CLASS}
       />
     </div>
@@ -57,7 +53,6 @@ function IdentityFields({ form, onFormChange }: FormBinding) {
         label="Last name"
         value={form.lastName}
         onChange={(lastName) => onFormChange({ ...form, lastName })}
-        initialFocus
       />
       <TextField
         id="user-first-name"
@@ -101,8 +96,8 @@ function withRole(
     role,
     groupId:
       role === "viewer"
-        ? ""
-        : form.groupId || activeGroups[0]?.id || groups[0]?.id || "",
+        ? null
+        : (form.groupId ?? activeGroups[0]?.id ?? groups[0]?.id ?? null),
   };
 }
 
@@ -151,12 +146,17 @@ function GroupField({
       </label>
       <select
         id="user-group"
-        value={form.groupId}
+        value={form.groupId ?? ""}
         onChange={(e) => onFormChange({ ...form, groupId: e.target.value })}
         className={CONTROL_CLASS}
         disabled={form.role === "viewer" || groupOptions.length === 0}
       >
         {form.role === "viewer" && <option value="">No owning group</option>}
+        {form.groupId === null && form.role !== "viewer" && (
+          <option value="" disabled>
+            Select group…
+          </option>
+        )}
         {groupOptions.length === 0 && (
           <option value="">No active groups configured</option>
         )}

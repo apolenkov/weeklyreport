@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
@@ -9,6 +7,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logClientError } from "../../../lib/client-error-reporting";
+import { SessionContext } from "../../../lib/session-provider";
 import { DashboardPage } from "./dashboard-page";
 import {
   ACTIVE_ACTIVITY,
@@ -78,7 +77,7 @@ describe("DashboardPage progressive readiness", () => {
       const key = (options as { queryKey: [string] }).queryKey[0];
       const state = queryStates.get(key);
       if (!state) throw new Error(`Missing query mock for ${key}`);
-      return state as unknown as ReturnType<typeof useQuery>;
+      return state;
     });
   });
 
@@ -90,7 +89,8 @@ describe("DashboardPage progressive readiness", () => {
     setQueryState("review.dashboard", { data: [] });
     setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
     render(<DashboardPage />);
-    expect(screen.getByText("Week 20 · CustomReport")).toBeInTheDocument();
+    // Absent organization must surface as the neutral placeholder, not a brand.
+    expect(screen.getByText("Week 20 · Organization")).toBeInTheDocument();
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
@@ -98,6 +98,31 @@ describe("DashboardPage progressive readiness", () => {
     expect(
       document.querySelector("[data-dashboard-loading='true']"),
     ).not.toBeInTheDocument();
+  });
+
+  it("uses the validated session organization when the dashboard is mounted under a session", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
+    render(
+      <SessionContext.Provider
+        value={{
+          user: {
+            id: "u1",
+            name: "Head User",
+            email: "head@example.test",
+            role: "head",
+          },
+          organization: { shortName: "Demo", fullName: "Example Software Department" },
+          isLoading: false,
+          isAuthenticated: true,
+        }}
+      >
+        <DashboardPage />
+      </SessionContext.Provider>,
+    );
+    expect(
+      screen.getByText("Week 20 · Example Software Department"),
+    ).toBeInTheDocument();
   });
 
   it("keeps every weekly-backed panel visible while review remains pending", () => {
@@ -164,7 +189,6 @@ describe("DashboardPage progressive readiness", () => {
     const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("activity.live", {
       error: new Error("activity failed"),
-      isError: true,
       status: "error",
       refetch: activityRefetch,
     });
@@ -190,7 +214,6 @@ describe("DashboardPage progressive readiness", () => {
     const weeklyRefetch = vi.fn().mockResolvedValue({});
     setQueryState("review.dashboard", {
       error: new Error("review failed"),
-      isError: true,
       status: "error",
       refetch: reviewRefetch,
     });
@@ -205,6 +228,25 @@ describe("DashboardPage progressive readiness", () => {
     expect(screen.queryByTestId("dashboard-kpi-error")).not.toBeInTheDocument();
     expect(reviewRefetch).not.toHaveBeenCalled();
     expect(weeklyRefetch).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the review query failure inline in the queue panel", () => {
+    const reviewRefetch = vi.fn().mockResolvedValue({});
+    setQueryState("review.dashboard", {
+      error: new Error("review failed"),
+      status: "error",
+      refetch: reviewRefetch,
+    });
+    setQueryState("weeklyReport.get", {
+      data: ACTIVE_WEEKLY,
+      refetch: vi.fn().mockResolvedValue({}),
+    });
+    render(<DashboardPage />);
+
+    const issue = screen.getByTestId("dashboard-review-error");
+    expect(issue).toHaveTextContent("review failed");
+    fireEvent.click(within(issue).getByRole("button", { name: "Retry" }));
+    expect(reviewRefetch).toHaveBeenCalledOnce();
   });
 
   it("shows no-period as a terminal state without waiting for review", () => {

@@ -16,7 +16,7 @@ function activityBaseReadiness(
   row: ActivityLiveRow,
   hasSection: boolean,
   hasContent: boolean,
-): SlideReadinessItem[] {
+): readonly SlideReadinessItem[] {
   return [
     {
       id: "scope",
@@ -52,7 +52,9 @@ function activityBaseReadiness(
   ];
 }
 
-function activityRecordReadiness(row: ActivityLiveRow): SlideReadinessItem[] {
+function activityRecordReadiness(
+  row: ActivityLiveRow,
+): readonly SlideReadinessItem[] {
   return [
     {
       id: "risks",

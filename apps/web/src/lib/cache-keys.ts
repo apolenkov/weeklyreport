@@ -4,34 +4,44 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import type { TRPCProxy } from "./trpc";
 
-// invalidateQueries returns a Promise we don't await intentionally — these
-// helpers are fire-and-forget cache busters used inside event handlers.
+// Cache-buster helper: fire-and-forget invalidation inside event handlers.
+// The promise is intentionally not awaited, but a rejection is still handled
+// (logged) so it never surfaces as an unhandled rejection.
+function invalidate(qc: QueryClient, filter: unknown): void {
+  void qc
+    .invalidateQueries(
+      filter as Parameters<QueryClient["invalidateQueries"]>[0],
+    )
+    .catch((error: unknown) => {
+      console.error("[cache-keys] invalidateQueries failed", error);
+    });
+}
 
 export function invalidateDashboard(qc: QueryClient, trpc: TRPCProxy): void {
-  void qc.invalidateQueries(trpc.review.dashboard.pathFilter());
-  void qc.invalidateQueries(trpc.archive.list.pathFilter());
-  void qc.invalidateQueries(trpc.weeklyReport.get.pathFilter());
+  invalidate(qc, trpc.review.dashboard.pathFilter());
+  invalidate(qc, trpc.archive.list.pathFilter());
+  invalidate(qc, trpc.weeklyReport.get.pathFilter());
 }
 
 export function invalidateLeadForm(qc: QueryClient, trpc: TRPCProxy): void {
-  void qc.invalidateQueries(trpc.reports.getActive.pathFilter());
-  void qc.invalidateQueries(trpc.leadForm.byPeriod.pathFilter());
+  invalidate(qc, trpc.reports.getActive.pathFilter());
+  invalidate(qc, trpc.leadForm.byPeriod.pathFilter());
 }
 
 export function invalidateAdmin(qc: QueryClient, trpc: TRPCProxy): void {
-  void qc.invalidateQueries(trpc.admin.snapshot.pathFilter());
-  void qc.invalidateQueries(trpc.admin.getSettings.pathFilter());
+  invalidate(qc, trpc.admin.snapshot.pathFilter());
+  invalidate(qc, trpc.admin.getSettings.pathFilter());
   // admin.updateOrganization changes the brand strings rendered in the
   // nav-bar (via auth.me) and the landing hero (via org.getPublic) — both
   // caches must drop so the rename is visible immediately after Save.
-  void qc.invalidateQueries(trpc.admin.getOrganization.pathFilter());
-  void qc.invalidateQueries(trpc.org.getPublic.pathFilter());
-  void qc.invalidateQueries(trpc.auth.me.pathFilter());
-  void qc.invalidateQueries(trpc.weeklyReport.get.pathFilter());
+  invalidate(qc, trpc.admin.getOrganization.pathFilter());
+  invalidate(qc, trpc.org.getPublic.pathFilter());
+  invalidate(qc, trpc.auth.me.pathFilter());
+  invalidate(qc, trpc.weeklyReport.get.pathFilter());
 }
 
 export function invalidateLeadHistory(qc: QueryClient, trpc: TRPCProxy): void {
-  void qc.invalidateQueries(trpc.reports.myHistory.pathFilter());
+  invalidate(qc, trpc.reports.myHistory.pathFilter());
 }
 
 // Publishing and reopening change every report-facing projection, regardless
@@ -52,14 +62,14 @@ export function invalidateSubmissionDashboard(
   trpc: TRPCProxy,
 ): void {
   invalidateDashboard(qc, trpc);
-  void qc.invalidateQueries(trpc.activity.live.pathFilter());
+  invalidate(qc, trpc.activity.live.pathFilter());
 }
 
 // review-acknowledgement: a reviewer action (comment, delete, verdict) mutates
 // the section read model. A `changes_requested` verdict auto-un-submits, so the
 // head report AND the lead's own form must both refetch to reflect the return.
 export function invalidateReview(qc: QueryClient, trpc: TRPCProxy): void {
-  void qc.invalidateQueries(trpc.weeklyReport.get.pathFilter());
-  void qc.invalidateQueries(trpc.leadForm.byPeriod.pathFilter());
-  void qc.invalidateQueries(trpc.reports.getActive.pathFilter());
+  invalidate(qc, trpc.weeklyReport.get.pathFilter());
+  invalidate(qc, trpc.leadForm.byPeriod.pathFilter());
+  invalidate(qc, trpc.reports.getActive.pathFilter());
 }

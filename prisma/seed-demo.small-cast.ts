@@ -46,7 +46,7 @@ export const TAG = {
   techDebt: "tech-debt",
 } as const;
 
-export const SMALL_LEADS: DemoLead[] = [
+export const SMALL_LEADS: readonly DemoLead[] = [
   {
     id: LEAD_1_ID,
     email: "lead1@customreport.local",
@@ -67,7 +67,7 @@ export const SMALL_LEADS: DemoLead[] = [
   },
 ];
 
-export const SMALL_PRODUCTS: DemoProduct[] = [
+export const SMALL_PRODUCTS: readonly DemoProduct[] = [
   { id: PROD_PORTAL, name: "Маркетинговый портал", leadId: LEAD_1_ID },
   { id: PROD_INTEGRATIONS, name: "Платформа интеграций", leadId: LEAD_1_ID },
   { id: PROD_BI, name: "Внутренний BI", leadId: LEAD_1_ID },

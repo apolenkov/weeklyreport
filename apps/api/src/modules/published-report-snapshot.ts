@@ -98,8 +98,8 @@ export function effectiveProjectStatus(
 }
 
 interface ProjectOccurrence {
-  section: ReportSectionReadModel;
-  project: ReportSectionReadModel["projects"][number];
+  readonly section: ReportSectionReadModel;
+  readonly project: ReportSectionReadModel["projects"][number];
 }
 
 function groupProjectOccurrences(
@@ -113,20 +113,13 @@ function groupProjectOccurrences(
   );
 }
 
-// Prefer frozen cross-lead union; retain legacy snapshot support.
 function computePublishedStageCount(
   occurrences: readonly ProjectOccurrence[],
 ): number {
-  const stageSetCounts = occurrences.flatMap(({ project }) =>
-    project.stageSet === undefined ? [] : [project.stageSet.length],
+  return Math.max(
+    0,
+    ...occurrences.map(({ project }) => project.stageSet.length),
   );
-
-  return stageSetCounts.length > 0
-    ? Math.max(...stageSetCounts)
-    : Math.max(
-        0,
-        ...occurrences.map(({ project }) => project.ownedStages?.length ?? 0),
-      );
 }
 
 export function computePortfolioOverviewFromReadSections(
@@ -165,11 +158,15 @@ export function buildPortfolioProductsFromSnapshotSections(
       if (!representative) return [];
 
       const contributions = occurrences.map(({ project, section }) => ({
+        leadId: section.authorId,
         leadName: section.authorName,
         status: effectiveProjectStatus(section, project),
       }));
       const statuses = contributions.flatMap(({ status }) =>
         status === null ? [] : [status],
+      );
+      const leadIds = contributions.flatMap(({ leadId, status }) =>
+        status === null ? [] : [leadId],
       );
       const leadNames = contributions.flatMap(({ leadName, status }) =>
         status === null ? [] : [leadName],
@@ -181,6 +178,7 @@ export function buildPortfolioProductsFromSnapshotSections(
           productName: representative.project.projectName,
           worstStatus: computeWorstStatus(statuses),
           stageCount: computePublishedStageCount(occurrences),
+          leadIds: [...new Set(leadIds)],
           leadNames: [...new Set(leadNames)].sort((a, b) =>
             a.localeCompare(b, "ru"),
           ),
@@ -190,13 +188,6 @@ export function buildPortfolioProductsFromSnapshotSections(
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
-// Not tacit on purpose: aggregateTrafficLight accepts
-// `readonly (TrafficLightStatus | null | undefined)[]`, and this export pins the
-// narrower contract snapshot callers actually satisfy. Aliasing it would widen
-// the published signature to admit nullish members.
-// eslint-disable-next-line functional/prefer-tacit -- signature pin, see above
-export function computeWorstStatus(
+export const computeWorstStatus: (
   statuses: readonly TrafficLightStatus[],
-): TrafficLightStatus | null {
-  return aggregateTrafficLight(statuses);
-}
+) => TrafficLightStatus | null = aggregateTrafficLight;

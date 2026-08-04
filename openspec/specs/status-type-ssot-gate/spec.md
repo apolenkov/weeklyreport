@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-status-ssot-lint-gate. Update Purpose after archive.
+Prevent re-declaration of canonical status and role literal vocabularies with a syntax-tree gate enforced by both staged and repository-wide lint paths.
 
 ## Requirements
 
@@ -23,24 +23,23 @@ stay legal), or a literal set containing all four of `"lead"`, `"head"`,
 per axis as `Role`/`DbRole`, per the `role-type` spec's own exemptions:
 runtime validators/presentation-ordered lists enumerating VALUES while
 typing from shared, the Prisma seed toolchain's one commented literal
-mirror, the e2e tree, and catalog YAML).
+mirror, the plain-Node catalog parser mirror, and catalog YAML).
 
 The gate MUST cover test files. The only exemptions are the SSOT files
 themselves (`packages/shared/src/schemas/report-primitives.schema.ts`,
 `packages/shared/src/schemas/canonical-status.ts`,
-`packages/shared/src/schemas/auth.ts`) and the documented literal mirror
-`prisma/seed-constants.ts` — all hardcoded centrally in the gate, with no
+`packages/shared/src/schemas/auth.ts`), the documented literal mirror
+`prisma/seed-constants.ts`, the presentation-order list
+`apps/web/src/shared/ui/role-switcher.tsx`, and the plain-Node catalog mirror
+`e2e/sweep/catalog-parser.ts` — all hardcoded centrally in the gate, with no
 inline annotation escape.
 
-The e2e tree needs no exemption of its own. The gate DOES walk `e2e/**` (a
-union planted there is reported), and the tree's one remaining role mirror,
-`e2e/sweep/catalog-parser.ts`, is an `as const` VALUE list rather than a type
-re-declaration — out of scope by construction, not by allowlist. That mirror
-is load-bearing: the file is a plain-node entrypoint under
+The gate DOES walk `e2e/**` (a union planted there is reported). Its one
+allowlisted role mirror, `e2e/sweep/catalog-parser.ts`, is an `as const` value
+list required by the plain-Node entrypoint compiled under the root
 `tsconfig.scripts.json`, whose `paths` is deliberately empty because Node
-resolves its imports itself and no workspace link reaches the repo root. Every
-other e2e reader takes the vocabulary from that parser or from
-`@customreport/shared`.
+resolves imports itself. Every other e2e reader takes the vocabulary from that
+parser or from `@customreport/shared`.
 
 The matching MUST be over the syntax tree rather than source text, and MUST
 run with inline configuration disabled so no comment can suppress a verdict; a

@@ -69,11 +69,11 @@ interface LeadQueueState {
 }
 
 function trafficLightsForLead(
-  leadName: string,
+  leadId: string,
   portfolio: readonly PortfolioProductOverview[],
-): TrafficLight[] {
+): readonly TrafficLight[] {
   return portfolio
-    .filter((product) => product.leadNames.includes(leadName))
+    .filter((product) => product.leadIds.includes(leadId))
     .map((product) => product.worstStatus)
     .filter((status): status is NonNullable<typeof status> => status !== null)
     .map((status) => {
@@ -132,7 +132,7 @@ function deriveLeadQueueState(
     reviewer,
     canReview,
     trafficLights: trafficLightsForLead(
-      row.leadName,
+      row.leadId,
       context.weeklyReport.portfolioOverview,
     ),
   };
@@ -212,7 +212,7 @@ export function buildLeadInfos({
   activity,
   now,
   currentUserId,
-}: BuildLeadInfosArgs): LeadInfo[] {
+}: BuildLeadInfosArgs): readonly LeadInfo[] {
   const context: LeadBuildContext = {
     weeklyReport,
     sectionByAuthor: new Map(

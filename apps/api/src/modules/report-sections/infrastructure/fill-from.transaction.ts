@@ -27,15 +27,9 @@ interface CarryableChildRows {
   decisionsToCopy: PrismaReportSectionWithRelations["decisions"];
 }
 
-/**
- * Selects the source's own past rows that carry forward. Fill From honours the
- * XOR parent and carries an activity-parented record ONLY when its activity is
- * still attached to the TARGET section; a product-parented record always
- * carries. Skipping this would orphan an activity row on a section that no
- * longer reports it — or, by dropping activityId, collapse it to no-parent and
- * trip the XOR CHECK, aborting the whole Fill From (including the valid product
- * rows). Runs before the FOR UPDATE gate: it must not read under the lock.
- */
+// Select the source's own past rows that carry forward. Fill From honours the
+// XOR parent: an activity-parented record carries ONLY when its activity is
+// still attached to the target (else the XOR CHECK aborts the whole fill).
 async function selectCarryableChildRows(
   prisma: PrismaService,
   targetSectionId: string,
@@ -62,11 +56,9 @@ async function selectCarryableChildRows(
   };
 }
 
-/**
- * FOR UPDATE gate on the target's Report. The archived + missing-row checks are
- * load-bearing: archive leaves periodStatus untouched, and a section deleted
- * mid-flight must surface as NOT_FOUND, not a period constraint.
- */
+// FOR UPDATE gate on the target's Report. The archived + missing-row checks
+// are load-bearing: archive leaves periodStatus untouched, and a section
+// deleted mid-flight surfaces as NOT_FOUND, not a period constraint.
 async function assertTargetSectionEditable(
   tx: Prisma.TransactionClient,
   targetSectionId: string,
@@ -99,11 +91,9 @@ async function assertTargetSectionEditable(
   }
 }
 
-/**
- * Optimistic-concurrency compare-and-set on the TARGET, first so a conflict
- * aborts before any deleteMany — Fill From's delete-then-recreate must not
- * clobber a target a second writer just advanced.
- */
+// Optimistic-concurrency compare-and-set on the TARGET, first so a conflict
+// aborts before any deleteMany — the delete-then-recreate must not clobber a
+// target a second writer just advanced.
 async function bumpTargetSectionVersion(
   tx: Prisma.TransactionClient,
   targetSectionId: string,
@@ -120,10 +110,8 @@ async function bumpTargetSectionVersion(
   }
 }
 
-/**
- * Delete-then-recreate the child rows Fill From owns. Priorities stay fresh for
- * the current week and must not be copied or cleared here.
- */
+// Delete-then-recreate the child rows Fill From owns. Priorities stay fresh
+// for the current week and are not copied or cleared here.
 async function rebuildOwnedChildRows(
   tx: Prisma.TransactionClient,
   targetSectionId: string,
@@ -165,12 +153,9 @@ async function rebuildOwnedChildRows(
   }
 }
 
-/**
- * Copies a lead's own past content forward into the target section under a
- * FOR UPDATE gate. The archived + missing-row checks inside the gate are
- * load-bearing: archive leaves periodStatus untouched, and a section deleted
- * mid-flight must surface as NOT_FOUND, not a period constraint.
- */
+// Copy a lead's own past content forward into the target section under a FOR
+// UPDATE gate. The archived + missing-row checks inside the gate are load-
+// bearing (archive leaves periodStatus untouched; mid-flight deletion → NOT_FOUND).
 export async function fillFromSectionTx(
   prisma: PrismaService,
   targetSectionId: string,

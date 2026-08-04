@@ -35,6 +35,7 @@ describe("RemindersReaperScheduler", () => {
         reEnqueued.push(e.id);
         return Promise.resolve();
       }),
+      reconcileStuckSendingExecutions: vi.fn(() => Promise.resolve(0)),
     } as unknown as RemindersService;
     const reaper = new RemindersReaperScheduler(service, repository);
 
@@ -60,6 +61,7 @@ describe("RemindersReaperScheduler", () => {
           ? Promise.reject(new Error("re-enqueue exploded"))
           : Promise.resolve();
       }),
+      reconcileStuckSendingExecutions: vi.fn(() => Promise.resolve(0)),
     } as unknown as RemindersService;
     const reaper = new RemindersReaperScheduler(service, repository);
 
@@ -77,6 +79,7 @@ describe("RemindersReaperScheduler", () => {
     } as unknown as RemindersPrismaRepository;
     const service = {
       reEnqueueStuckExecution: vi.fn(() => Promise.resolve()),
+      reconcileStuckSendingExecutions: vi.fn(() => Promise.resolve(0)),
     } as unknown as RemindersService;
     const reaper = new RemindersReaperScheduler(service, repository);
 
@@ -85,6 +88,26 @@ describe("RemindersReaperScheduler", () => {
 
     // The cutoff is strictly in the past — a just-created queued row is safe.
     const cutoff = expectDefined(lister.mock.calls[0])[0];
+    expect(cutoff.getTime()).toBeLessThan(now.getTime());
+  });
+
+  it("reconciles sending rows older than the stuck-sending timeout", async () => {
+    const repository = {
+      listStuckQueuedExecutions: vi.fn(() => Promise.resolve([])),
+    } as unknown as RemindersPrismaRepository;
+    const reconcile = vi.fn((_olderThan: Date) => Promise.resolve(2));
+    const service = {
+      reEnqueueStuckExecution: vi.fn(() => Promise.resolve()),
+      reconcileStuckSendingExecutions: reconcile,
+    } as unknown as RemindersService;
+    const reaper = new RemindersReaperScheduler(service, repository);
+
+    const now = new Date("2026-04-11T12:00:00.000Z");
+    await reaper.runOnce(now);
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    // The sending cutoff is strictly in the past — an in-flight send is safe.
+    const cutoff = expectDefined(reconcile.mock.calls[0])[0];
     expect(cutoff.getTime()).toBeLessThan(now.getTime());
   });
 });

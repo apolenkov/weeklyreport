@@ -3,7 +3,6 @@
 import { PlusIcon } from "../../../shared/ui/icons";
 
 interface RemindersEmptyStateProps {
-  /** `true` when there are no policies at all (vs. an empty search result). */
   readonly hasNoPolicies: boolean;
   readonly onCreate: () => void;
 }
@@ -51,7 +50,7 @@ export function RemindersEmptyState({
           <button
             type="button"
             onClick={onCreate}
-            className="btn-press mt-4 inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)]"
+            className="btn-press mt-4 inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border-accent-hover)] bg-[color-mix(in_srgb,var(--color-starbucks-accent)_8%,transparent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)]"
           >
             <PlusIcon />
             Create first reminder

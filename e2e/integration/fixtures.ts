@@ -1,24 +1,20 @@
 /**
- * Real-API auth fixtures for the integration suite.
- *
- * Each role-scoped fixture creates a fresh browser context, mints a real
- * session JWT cookie via GET /auth/dev-login, and yields the page. The
- * dev-login endpoint exists ONLY when AUTH_DEV_MODE=true on the API
- * (playwright.integration.config.ts sets this).
- *
- * The cookie installation path uses `page.context().request` (NOT the
- * top-level `request` fixture) because Playwright's top-level `request`
- * fixture has its own cookie jar that does NOT share with browser contexts.
- * `page.context().request` shares cookies with the page that uses it.
+ * Real-API auth fixtures for the integration suite: each role-scoped fixture
+ * creates a fresh browser context, mints a session JWT via /auth/dev-login,
+ * and yields the page. dev-login mounts only when AUTH_DEV_MODE=true on the
+ * API (playwright.integration.config.ts sets this).
  */
 
 import type { DbRole } from "@customreport/shared";
 import {
+  type Browser,
   type BrowserContext,
   expect,
   type Page,
   test as base,
 } from "@playwright/test";
+
+import { withOwnedResource } from "./helpers/owned-resource";
 
 const DEFAULT_API_PORT = 3002;
 // Express `res.redirect` defaults to 302; 303/307 are accepted defensively.
@@ -36,19 +32,9 @@ const API_URL =
   `http://127.0.0.1:${process.env.E2E_API_PORT ?? DEFAULT_API_PORT}`;
 
 /**
- * Mints a real session JWT cookie via the dev-login endpoint and installs it
- * on the given context. Does NOT navigate the page — caller decides where
- * to go after the cookie is set.
- *
- * Implementation notes:
- *   - We use `context.request.get(...)` so the Set-Cookie lands on the
- *     browser context's cookie jar (shared with the Page).
- *   - maxRedirects: 0 — we want the cookie, not the redirect to the
- *     role-default frontend path. Playwright treats 302/303/307 as the
- *     success signal here.
- *   - We sanity-check the cookie was installed before yielding. If
- *     SameSite/Domain rules ever drop the cookie, this throws loudly
- *     instead of producing mysterious 401s in every downstream test.
+ * Mints a session JWT cookie via dev-login and installs it on the given
+ * context. Does NOT navigate — the caller decides where to go after the
+ * cookie is set. Throws if no redirect or session cookie arrives.
  */
 export async function loginAs(
   context: BrowserContext,
@@ -89,44 +75,54 @@ interface Fixtures {
   unauthedPage: Page;
 }
 
+interface LoginOptions {
+  role: DbRole;
+  email?: string;
+}
+
+type UsePage<Result> = (page: Page) => Promise<Result>;
+
+async function withContextPage<Result>(
+  browser: Browser,
+  setup: (context: BrowserContext) => Promise<void>,
+  usePage: UsePage<Result>,
+): Promise<Result> {
+  return withOwnedResource(
+    () => browser.newContext(),
+    async (context) => {
+      await setup(context);
+      return usePage(await context.newPage());
+    },
+  );
+}
+
+export async function withAuthenticatedPage<Result>(
+  browser: Browser,
+  options: LoginOptions,
+  usePage: UsePage<Result>,
+): Promise<Result> {
+  return withContextPage(
+    browser,
+    (context) => loginAs(context, options),
+    usePage,
+  );
+}
+
 export const test = base.extend<Fixtures>({
-  leadPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await loginAs(context, {
-      role: "lead",
-      email: "lead1@customreport.local",
-    });
-    await use(page);
-    await context.close();
-  },
-  headPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await loginAs(context, { role: "head" });
-    await use(page);
-    await context.close();
-  },
-  adminPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await loginAs(context, { role: "admin" });
-    await use(page);
-    await context.close();
-  },
-  viewerPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await loginAs(context, { role: "viewer" });
-    await use(page);
-    await context.close();
-  },
-  unauthedPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await use(page);
-    await context.close();
-  },
+  leadPage: ({ browser }, use) =>
+    withAuthenticatedPage(
+      browser,
+      { role: "lead", email: "lead1@customreport.local" },
+      use,
+    ),
+  headPage: ({ browser }, use) =>
+    withAuthenticatedPage(browser, { role: "head" }, use),
+  adminPage: ({ browser }, use) =>
+    withAuthenticatedPage(browser, { role: "admin" }, use),
+  viewerPage: ({ browser }, use) =>
+    withAuthenticatedPage(browser, { role: "viewer" }, use),
+  unauthedPage: ({ browser }, use) =>
+    withContextPage(browser, () => Promise.resolve(), use),
 });
 
 export { expect };

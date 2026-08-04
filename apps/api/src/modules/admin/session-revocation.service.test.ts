@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { metricsRegistry } from "../../infrastructure/metrics/metrics.registry.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { SessionRevocationService } from "./session-revocation.service.js";
 
 const REVOCATION_KEY = "customreport:revoked";
@@ -23,15 +25,25 @@ function createFakeRedis(): FakeRedis {
 function createHarness(): {
   redis: FakeRedis;
   service: SessionRevocationService;
+  logger: AppLogger & { warn: ReturnType<typeof vi.fn> };
 } {
   const redis = createFakeRedis();
+  const warn = vi.fn();
+  const logger = { ...createNullLogger(), warn } as AppLogger & {
+    warn: ReturnType<typeof vi.fn>;
+  };
   return {
     redis,
-    service: new SessionRevocationService(redis as never),
+    logger,
+    service: new SessionRevocationService({ redis: redis as never, logger }),
   };
 }
 
 describe("SessionRevocationService", () => {
+  beforeEach(() => {
+    metricsRegistry.resetMetrics();
+  });
+
   it("revokeSession adds userId to the revoked set", async () => {
     const { redis, service } = createHarness();
     const userId = "00000000-0000-4000-8000-000000000001";
@@ -70,5 +82,62 @@ describe("SessionRevocationService", () => {
     await service.restoreSession(userId);
     expect(redis.sadd).toHaveBeenCalledWith(REVOCATION_KEY, userId);
     expect(redis.srem).toHaveBeenCalledWith(REVOCATION_KEY, userId);
+  });
+});
+
+describe("SessionRevocationService — Redis failure observability", () => {
+  beforeEach(() => {
+    metricsRegistry.resetMetrics();
+  });
+
+  it("isRevoked fails OPEN on a Redis error but emits a warn log and metric", async () => {
+    const { redis, service, logger } = createHarness();
+    redis.sismember.mockRejectedValue(new Error("connect ECONNREFUSED"));
+    const userId = "00000000-0000-4000-8000-000000000006";
+
+    const result = await service.isRevoked(userId);
+
+    expect(result).toBe(false);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "session-revocation redis failed; fast path degraded",
+      expect.objectContaining({ operation: "check" }),
+    );
+    expect(await metricsRegistry.metrics()).toContain(
+      'cr_session_revocation_failures_total{operation="check"} 1',
+    );
+  });
+
+  it("revokeSession stays non-fatal on a Redis error but emits a warn log and metric", async () => {
+    const { redis, service, logger } = createHarness();
+    redis.sadd.mockRejectedValue(new Error("redis down"));
+    const userId = "00000000-0000-4000-8000-000000000007";
+
+    await expect(service.revokeSession(userId)).resolves.toBeUndefined();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "session-revocation redis failed; fast path degraded",
+      expect.objectContaining({ operation: "revoke" }),
+    );
+    expect(await metricsRegistry.metrics()).toContain(
+      'cr_session_revocation_failures_total{operation="revoke"} 1',
+    );
+  });
+
+  it("restoreSession stays non-fatal on a Redis error but emits a warn log and metric", async () => {
+    const { redis, service, logger } = createHarness();
+    redis.srem.mockRejectedValue(new Error("redis down"));
+    const userId = "00000000-0000-4000-8000-000000000008";
+
+    await expect(service.restoreSession(userId)).resolves.toBeUndefined();
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "session-revocation redis failed; fast path degraded",
+      expect.objectContaining({ operation: "restore" }),
+    );
+    expect(await metricsRegistry.metrics()).toContain(
+      'cr_session_revocation_failures_total{operation="restore"} 1',
+    );
   });
 });

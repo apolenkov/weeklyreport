@@ -1,16 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 
 interface PauseReasonDialogProps {
   readonly open: boolean;
-  /** Single-line preview of the item being paused. */
   readonly preview: string;
-  /** Pre-fill when re-pausing an already-paused item (edit its reason). */
   readonly initialReason?: string;
   readonly onConfirm: (reason: string) => void;
   readonly onCancel: () => void;
@@ -23,7 +21,7 @@ export function PauseReasonDialog({
   ...contentProps
 }: PauseReasonDialogProps) {
   // Form remounts each open so reason seeds from initialReason without a reset effect.
-  if (!open || typeof document === "undefined") return null;
+  if (!open) return null;
   return <PauseReasonDialogContent {...contentProps} />;
 }
 
@@ -41,22 +39,23 @@ function PauseReasonDialogContent({
 
   const trimmed = reason.trim();
 
-  return createPortal(
-    <DialogSurface
-      surfaceRef={surfaceRef}
-      onDismiss={onCancel}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-      ariaLabelledBy="pause-reason-title"
-    >
-      <PauseReasonPreview preview={preview} />
-      <PauseReasonField reason={reason} onReasonChange={setReason} />
-      <PauseReasonActions
-        canConfirm={trimmed.length > 0}
-        onCancel={onCancel}
-        onConfirm={() => onConfirm(trimmed)}
-      />
-    </DialogSurface>,
-    document.body,
+  return (
+    <DocumentBodyPortal>
+      <DialogSurface
+        surfaceRef={surfaceRef}
+        onDismiss={onCancel}
+        surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+        ariaLabelledBy="pause-reason-title"
+      >
+        <PauseReasonPreview preview={preview} />
+        <PauseReasonField reason={reason} onReasonChange={setReason} />
+        <PauseReasonActions
+          canConfirm={trimmed.length > 0}
+          onCancel={onCancel}
+          onConfirm={() => onConfirm(trimmed)}
+        />
+      </DialogSurface>
+    </DocumentBodyPortal>
   );
 }
 
@@ -97,7 +96,7 @@ function PauseReasonField({
       </label>
       <textarea
         id="pause-reason-input"
-        className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         style={{ minHeight: "64px" }}
         value={reason}
         onChange={(e) => onReasonChange(e.target.value)}
@@ -128,7 +127,7 @@ function PauseReasonActions({
       <button
         type="button"
         disabled={!canConfirm}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onConfirm}
       >
         Pause

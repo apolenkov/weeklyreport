@@ -132,27 +132,20 @@ export class RemindersScopeService {
     return outcome === "deduplicated" ? "alreadySent" : "dispatched";
   }
 
-  // Sequential so enqueue/revive outcomes resolve in deterministic order.
-  private async collectDispatchOutcomes(
-    rule: { id: string; fireAt: Date },
-    remaining: readonly { email: string; notificationOptOut: boolean }[],
-    acc: readonly SectionDispatchOutcome[],
-  ): Promise<readonly SectionDispatchOutcome[]> {
-    const [section, ...rest] = remaining;
-    if (!section) return acc;
-    const outcome = await this.classifySectionDispatch(rule, section);
-    return this.collectDispatchOutcomes(rule, rest, [...acc, outcome]);
-  }
-
+  // Sequential so enqueue/revive outcomes resolve in deterministic order; the
+  // loop (not recursion, not per-step acc copies) keeps a deep recipient set
+  // flat — one await per section, O(n) memory.
   private async dispatchDraftSections(
     rule: { id: string; fireAt: Date },
-    draftSections: { email: string; notificationOptOut: boolean }[],
+    draftSections: readonly {
+      email: string;
+      notificationOptOut: boolean;
+    }[],
   ): Promise<DispatchPendingResult> {
-    const outcomes = await this.collectDispatchOutcomes(
-      rule,
-      draftSections,
-      [],
-    );
+    const outcomes: SectionDispatchOutcome[] = [];
+    for (const section of draftSections) {
+      outcomes.push(await this.classifySectionDispatch(rule, section));
+    }
     return tallyDispatchOutcomes(outcomes);
   }
 }

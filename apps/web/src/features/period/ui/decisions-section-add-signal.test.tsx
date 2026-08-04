@@ -1,7 +1,5 @@
-/**
- * Snapshot view transitions must not reopen the Add Decision dialog:
- * readOnly is out of the addSignal effect deps, so false→true→false must not re-fire.
- */
+// Snapshot transitions must not reopen Add Decision: readOnly is outside the
+// addSignal effect deps, so false→true→false must not re-fire.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

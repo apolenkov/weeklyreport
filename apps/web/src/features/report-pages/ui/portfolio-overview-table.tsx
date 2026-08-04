@@ -12,15 +12,25 @@ import {
 } from "./portfolio-overview-cards";
 
 // Overview band matches report scope: product cards or lead cards (click jumps
-// to that lead's section).
+// to that lead's section). Navigation is a lifted callback — the report surface
+// owns the scroll/focus state, never the DOM.
 type PortfolioOverviewTableProps =
-  | { readonly scope?: "product"; readonly products: WeeklyPortfolioProduct[] }
-  | { readonly scope: "lead"; readonly leads: readonly LeadOverviewRow[] };
+  | {
+      readonly scope?: "product";
+      readonly products: WeeklyPortfolioProduct[];
+      readonly onNavigate: (productId: string) => void;
+    }
+  | {
+      readonly scope: "lead";
+      readonly leads: readonly LeadOverviewRow[];
+      readonly onNavigate: (leadId: string) => void;
+    };
 
 const STATUS_SORT: Record<WeeklyProductStatus, number> = {
   blocked: 0,
   "at-risk": 1,
   "on-track": 2,
+  empty: 3,
 };
 
 function GridIcon() {
@@ -87,10 +97,18 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
         <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
           {isLead
             ? leads.map((lead) => (
-                <LeadOverviewCard key={lead.id} lead={lead} />
+                <LeadOverviewCard
+                  key={lead.id}
+                  lead={lead}
+                  onNavigate={props.onNavigate}
+                />
               ))
             : sortedProducts.map((product) => (
-                <ProductOverviewCard key={product.id} product={product} />
+                <ProductOverviewCard
+                  key={product.id}
+                  product={product}
+                  onNavigate={props.onNavigate}
+                />
               ))}
         </div>
       </div>

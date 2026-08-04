@@ -10,26 +10,38 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   ArchiveDomainError,
   type ArchiveRepository,
+  type ArchiveScopeSession,
   ArchiveService,
 } from "./archive.service";
 
 const headUserId = "00000000-0000-4000-8000-000000000001";
+
+const adminSession: ArchiveScopeSession = {
+  role: "admin",
+  viewerGroupAccess: [],
+};
 
 const sectionLead1: ReportSectionReadModel = {
   reportSectionId: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1",
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead Alpha",
+  authorRole: "lead",
   version: 1,
   status: "submitted",
   submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
       projectName: "Project Alpha",
       trafficLight: "green",
+      ownedStages: [],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -62,6 +74,7 @@ const sectionLead1: ReportSectionReadModel = {
     },
   ],
   activities: [],
+  reviews: [],
 };
 
 function makeSummary(
@@ -110,11 +123,9 @@ function createInMemoryRepository(
   details: Map<string, ArchiveReportDetail>,
 ): ArchiveRepository {
   return {
-    // The double stands in for the real repository's contract: it owns the
-    // `publishedAt desc` ordering and cursor pagination the service delegates.
-    // The service treats the cursor as opaque, so this stub keys off reportId
-    // for convenience; the real keyset-cursor semantics are covered by the
-    // repo's real-DB integration test.
+    // The double stands in for the real repository's contract (ordering +
+    // cursor pagination live in the repo's real-DB integration test); the
+    // service treats the cursor as opaque, so this stub keys off reportId.
     listArchiveReports(pagination) {
       const sorted = [...summaries].sort(
         (left, right) =>
@@ -136,9 +147,16 @@ function createInMemoryRepository(
           : null;
       return Promise.resolve({ items: structuredClone(page), nextCursor });
     },
-    getArchiveReport(reportId: string): Promise<ArchiveReportDetail | null> {
+    getArchiveReport(reportId: string): Promise<{
+      detail: ArchiveReportDetail | null;
+      totalSectionCount: number;
+    }> {
       const detail = details.get(reportId);
-      return Promise.resolve(detail ? structuredClone(detail) : null);
+      return Promise.resolve(
+        detail
+          ? { detail: structuredClone(detail), totalSectionCount: 1 }
+          : { detail: null, totalSectionCount: 0 },
+      );
     },
   };
 }
@@ -149,7 +167,7 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([], new Map());
       const service = new ArchiveService(repo);
 
-      const result = await service.listArchiveReports();
+      const result = await service.listArchiveReports(undefined, adminSession);
       const reports = result.items;
 
       expect(reports).toEqual([]);
@@ -169,7 +187,9 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([malformed], new Map());
       const service = new ArchiveService(repo);
 
-      await expect(service.listArchiveReports()).rejects.toThrow(ZodError);
+      await expect(
+        service.listArchiveReports(undefined, adminSession),
+      ).rejects.toThrow(ZodError);
     });
 
     it("handles single report", async () => {
@@ -179,7 +199,7 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([single], new Map());
       const service = new ArchiveService(repo);
 
-      const result = await service.listArchiveReports();
+      const result = await service.listArchiveReports(undefined, adminSession);
       const reports = result.items;
 
       expect(reports).toHaveLength(1);
@@ -211,7 +231,7 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository(summaries, new Map());
       const service = new ArchiveService(repo);
 
-      const result = await service.listArchiveReports();
+      const result = await service.listArchiveReports(undefined, adminSession);
       const reports = result.items;
 
       expect(reports).toHaveLength(7);
@@ -235,12 +255,12 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([], details);
       const service = new ArchiveService(repo);
 
-      const result = await service.getArchiveReport(reportId);
+      const result = await service.getArchiveReport(reportId, adminSession);
 
-      expect(result.summary.reportId).toBe(reportId);
-      expect(result.report.status).toBe("published");
-      expect(result.summary.portfolioStatus).toBe("yellow");
-      expect(result.summary.publishedByName).toBe("Department Head");
+      expect(result.detail.summary.reportId).toBe(reportId);
+      expect(result.detail.report.status).toBe("published");
+      expect(result.detail.summary.portfolioStatus).toBe("yellow");
+      expect(result.detail.summary.publishedByName).toBe("Department Head");
     });
 
     it("throws ArchiveDomainError when not found", async () => {
@@ -249,12 +269,12 @@ describe("ArchiveService — contract tests", () => {
 
       const missingId = "99999999-9999-4999-8999-999999999999";
 
-      await expect(service.getArchiveReport(missingId)).rejects.toThrow(
-        ArchiveDomainError,
-      );
-      await expect(service.getArchiveReport(missingId)).rejects.toThrow(
-        `Archive report ${missingId} was not found.`,
-      );
+      await expect(
+        service.getArchiveReport(missingId, adminSession),
+      ).rejects.toThrow(ArchiveDomainError);
+      await expect(
+        service.getArchiveReport(missingId, adminSession),
+      ).rejects.toThrow(`Archive report ${missingId} was not found.`);
     });
 
     it("validates output through Zod schema (rejects malformed detail)", async () => {
@@ -284,9 +304,9 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([], details);
       const service = new ArchiveService(repo);
 
-      await expect(service.getArchiveReport(reportId)).rejects.toThrow(
-        ZodError,
-      );
+      await expect(
+        service.getArchiveReport(reportId, adminSession),
+      ).rejects.toThrow(ZodError);
     });
 
     it("returns report with sections sorted by authorName ascending", async () => {
@@ -305,9 +325,9 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([], details);
       const service = new ArchiveService(repo);
 
-      const result = await service.getArchiveReport(reportId);
-      expect(result.report.sections).toHaveLength(2);
-      const names = result.report.sections.map((s) => s.authorName);
+      const result = await service.getArchiveReport(reportId, adminSession);
+      expect(result.detail.report.sections).toHaveLength(2);
+      const names = result.detail.report.sections.map((s) => s.authorName);
       expect(names).toEqual(["Lead Alpha", "Zulu Lead"]);
     });
 
@@ -320,11 +340,11 @@ describe("ArchiveService — contract tests", () => {
       const repo = createInMemoryRepository([], details);
       const service = new ArchiveService(repo);
 
-      const result = await service.getArchiveReport(reportId);
+      const result = await service.getArchiveReport(reportId, adminSession);
 
-      expect(result.report.sections).toHaveLength(1);
+      expect(result.detail.report.sections).toHaveLength(1);
 
-      const section = expectDefined(result.report.sections[0]);
+      const section = expectDefined(result.detail.report.sections[0]);
       expect(section.authorName).toBe("Lead Alpha");
       expect(section.status).toBe("submitted");
       expect(section.projects).toHaveLength(1);

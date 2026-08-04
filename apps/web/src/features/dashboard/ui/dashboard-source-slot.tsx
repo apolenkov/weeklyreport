@@ -72,3 +72,20 @@ export function DashboardActivityIssue({
     />
   );
 }
+
+export function DashboardReviewIssue({
+  source,
+}: {
+  readonly source: DashboardSourceState;
+}) {
+  if (!source.isError && !source.stalled) return null;
+  return (
+    <DashboardPanelIssue
+      kind="leads"
+      testId="dashboard-review-error"
+      title="Review data unavailable"
+      description={sourceIssueDescription(source, "Review", "Review data")}
+      onRetry={source.retry}
+    />
+  );
+}

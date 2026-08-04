@@ -1,5 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
@@ -20,9 +20,11 @@ const baseSection: ReportSectionReadModel = {
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -38,8 +40,11 @@ const baseSection: ReportSectionReadModel = {
           sortOrder: 0,
         },
       ],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -56,6 +61,7 @@ const baseSection: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 // the read-model item types stageNames as
@@ -65,6 +71,32 @@ const writeItems = baseSection.items.map((it) => ({
   ...it,
   stageNames: it.stageNames ?? [],
 }));
+
+function validDraftFor(section: ReportSectionReadModel) {
+  return {
+    reportSectionId: section.reportSectionId,
+    version: 1,
+    status: "draft" as const,
+    stageStatuses: [],
+    activityStatuses: [],
+    projectStatuses: [
+      {
+        projectId: expectDefined(section.projects[0]).projectId,
+        status: "green" as const,
+      },
+    ],
+    items: writeItems,
+    risks: [],
+    decisions: [],
+  };
+}
+
+function validSubmitFor(section: ReportSectionReadModel) {
+  return {
+    ...validDraftFor(section),
+    confirmed: true as const,
+  };
+}
 
 function createRepository(
   section: ReportSectionReadModel,
@@ -119,20 +151,25 @@ describe("ReportSectionsService", () => {
       createRepository(baseSection),
       testGraceSettings,
     );
-    const saved = await service.saveDraft({
-      reportSectionId: baseSection.reportSectionId,
-      version: 1,
-      status: "draft",
-      projectStatuses: [
-        {
-          projectId: expectDefined(baseSection.projects[0]).projectId,
-          status: "yellow",
-        },
-      ],
-      items: writeItems,
-      risks: [],
-      decisions: [],
-    });
+    const saved = await service.saveDraft(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [
+          {
+            projectId: expectDefined(baseSection.projects[0]).projectId,
+            status: "yellow",
+          },
+        ],
+        items: writeItems,
+        risks: [],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("draft");
     expect(saved.submittedAt).toBeNull();
@@ -151,6 +188,8 @@ describe("ReportSectionsService", () => {
           reportSectionId: baseSection.reportSectionId,
           version: 1,
           status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
           projectStatuses: [
             {
               projectId: expectDefined(baseSection.projects[0]).projectId,
@@ -166,6 +205,41 @@ describe("ReportSectionsService", () => {
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
   });
 
+  // Fail-closed: the writing actor is mandatory and must own the section — an
+  // unauthorized actor never reaches the repository write (the old optional
+  // actor let a write proceed unowned).
+  it.each([
+    {
+      method: "saveDraft",
+      call: (s: ReportSectionsService) =>
+        s.saveDraft(
+          validDraftFor(baseSection),
+          "55555555-5555-4555-8555-555555555555",
+        ),
+    },
+    {
+      method: "submitSection",
+      call: (s: ReportSectionsService) =>
+        s.submitSection(
+          validSubmitFor(baseSection),
+          "55555555-5555-4555-8555-555555555555",
+        ),
+    },
+  ] as const)(
+    "$method rejects an unauthorized actor before any write",
+    async ({ call }) => {
+      const repo = createRepository(baseSection);
+      const saveSection = vi.fn();
+      repo.saveSection = saveSection;
+      const service = new ReportSectionsService(repo, testGraceSettings);
+
+      await expect(call(service)).rejects.toBeInstanceOf(
+        ReportSectionAccessError,
+      );
+      expect(saveSection).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects submit when traffic light is missing", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
@@ -173,21 +247,26 @@ describe("ReportSectionsService", () => {
     );
 
     await expect(
-      service.submitSection({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        confirmed: true,
-        projectStatuses: [
-          {
-            projectId: "99999999-9999-4999-8999-999999999999",
-            status: "green",
-          },
-        ],
-        items: writeItems,
-        risks: [],
-        decisions: [],
-      }),
+      service.submitSection(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          confirmed: true,
+          projectStatuses: [
+            {
+              projectId: "99999999-9999-4999-8999-999999999999",
+              status: "green",
+            },
+          ],
+          items: writeItems,
+          risks: [],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({
       code: "MISSING_TRAFFIC_LIGHT",
     });
@@ -205,6 +284,8 @@ describe("ReportSectionsService", () => {
           reportSectionId: baseSection.reportSectionId,
           version: 1,
           status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
           confirmed: true,
           projectStatuses: [
             {
@@ -227,21 +308,26 @@ describe("ReportSectionsService", () => {
       testGraceSettings,
     );
 
-    const saved = await service.submitSection({
-      reportSectionId: baseSection.reportSectionId,
-      version: 1,
-      status: "draft",
-      confirmed: true,
-      projectStatuses: [
-        {
-          projectId: expectDefined(baseSection.projects[0]).projectId,
-          status: "green",
-        },
-      ],
-      items: writeItems,
-      risks: [],
-      decisions: [],
-    });
+    const saved = await service.submitSection(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        confirmed: true,
+        projectStatuses: [
+          {
+            projectId: expectDefined(baseSection.projects[0]).projectId,
+            status: "green",
+          },
+        ],
+        items: writeItems,
+        risks: [],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("submitted");
     expect(saved.projects).toHaveLength(1);
@@ -258,20 +344,25 @@ describe("ReportSectionsService", () => {
       const service = new ReportSectionsService(repo, testGraceSettings);
 
       await expect(
-        service.saveDraft({
-          reportSectionId: baseSection.reportSectionId,
-          version: 1,
-          status: "draft",
-          projectStatuses: [
-            {
-              projectId: expectDefined(baseSection.projects[0]).projectId,
-              status: "yellow",
-            },
-          ],
-          items: writeItems,
-          risks: [],
-          decisions: [],
-        }),
+        service.saveDraft(
+          {
+            reportSectionId: baseSection.reportSectionId,
+            version: 1,
+            status: "draft",
+            stageStatuses: [],
+            activityStatuses: [],
+            projectStatuses: [
+              {
+                projectId: expectDefined(baseSection.projects[0]).projectId,
+                status: "yellow",
+              },
+            ],
+            items: writeItems,
+            risks: [],
+            decisions: [],
+          },
+          baseSection.authorId,
+        ),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot edit sections of a published report.",
@@ -283,20 +374,25 @@ describe("ReportSectionsService", () => {
       // getReportPeriodStatusForSection already returns 'open' by default.
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      const saved = await service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(baseSection.projects[0]).projectId,
-            status: "green",
-          },
-        ],
-        items: writeItems,
-        risks: [],
-        decisions: [],
-      });
+      const saved = await service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: "green",
+            },
+          ],
+          items: writeItems,
+          risks: [],
+          decisions: [],
+        },
+        baseSection.authorId,
+      );
 
       expect(saved.status).toBe("draft");
       expect(saved.projects[0]?.trafficLight).toBe("green");
@@ -311,20 +407,25 @@ describe("ReportSectionsService", () => {
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      const saved = await service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(baseSection.projects[0]).projectId,
-            status: "green",
-          },
-        ],
-        items: writeItems,
-        risks: [],
-        decisions: [],
-      });
+      const saved = await service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: "green",
+            },
+          ],
+          items: writeItems,
+          risks: [],
+          decisions: [],
+        },
+        baseSection.authorId,
+      );
 
       expect(saved.status).toBe("draft");
       expect(saved.projects[0]?.trafficLight).toBe("green");
@@ -341,20 +442,25 @@ describe("ReportSectionsService", () => {
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      await service.saveDraft({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        projectStatuses: [
-          {
-            projectId: expectDefined(baseSection.projects[0]).projectId,
-            status: "yellow",
-          },
-        ],
-        items: writeItems,
-        risks: [],
-        decisions: [],
-      });
+      await service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: "yellow",
+            },
+          ],
+          items: writeItems,
+          risks: [],
+          decisions: [],
+        },
+        baseSection.authorId,
+      );
 
       expect(calls).toEqual([baseSection.reportSectionId]);
     });
@@ -376,20 +482,25 @@ describe("ReportSectionsService", () => {
       );
 
       await expect(
-        service.saveDraft({
-          reportSectionId: baseSection.reportSectionId,
-          version: 1,
-          status: "draft",
-          projectStatuses: [
-            {
-              projectId: expectDefined(baseSection.projects[0]).projectId,
-              status: "yellow",
-            },
-          ],
-          items: writeItems,
-          risks: [],
-          decisions: [],
-        }),
+        service.saveDraft(
+          {
+            reportSectionId: baseSection.reportSectionId,
+            version: 1,
+            status: "draft",
+            stageStatuses: [],
+            activityStatuses: [],
+            projectStatuses: [
+              {
+                projectId: expectDefined(baseSection.projects[0]).projectId,
+                status: "yellow",
+              },
+            ],
+            items: writeItems,
+            risks: [],
+            decisions: [],
+          },
+          baseSection.authorId,
+        ),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Submitted sections are read-only.",
@@ -411,6 +522,8 @@ describe("ReportSectionsService", () => {
       reportSectionId: baseSection.reportSectionId,
       version: 1,
       status: "draft" as const,
+      stageStatuses: [],
+      activityStatuses: [],
       confirmed: true as const,
       projectStatuses: [
         {
@@ -429,7 +542,9 @@ describe("ReportSectionsService", () => {
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      await expect(service.submitSection(submitPayload)).rejects.toMatchObject({
+      await expect(
+        service.submitSection(submitPayload, baseSection.authorId),
+      ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot submit sections of a published report.",
       });
@@ -441,7 +556,10 @@ describe("ReportSectionsService", () => {
         testGraceSettings,
       );
 
-      const saved = await service.submitSection(submitPayload);
+      const saved = await service.submitSection(
+        submitPayload,
+        baseSection.authorId,
+      );
 
       expect(saved.status).toBe("submitted");
     });
@@ -452,7 +570,10 @@ describe("ReportSectionsService", () => {
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      const saved = await service.submitSection(submitPayload);
+      const saved = await service.submitSection(
+        submitPayload,
+        baseSection.authorId,
+      );
 
       expect(saved.status).toBe("submitted");
     });
@@ -472,21 +593,26 @@ describe("ReportSectionsService", () => {
     );
 
     await expect(
-      service.submitSection({
-        reportSectionId: baseSection.reportSectionId,
-        version: 1,
-        status: "draft",
-        confirmed: true,
-        projectStatuses: [
-          {
-            projectId: expectDefined(baseSection.projects[0]).projectId,
-            status: "green",
-          },
-        ],
-        items: writeItems,
-        risks: [],
-        decisions: [],
-      }),
+      service.submitSection(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          confirmed: true,
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: "green",
+            },
+          ],
+          items: writeItems,
+          risks: [],
+          decisions: [],
+        },
+        baseSection.authorId,
+      ),
     ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });

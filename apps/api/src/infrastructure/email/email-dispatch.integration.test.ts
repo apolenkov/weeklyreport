@@ -23,15 +23,29 @@ vi.mock("bullmq", () => ({
   },
 }));
 
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   clearMessages,
   isMailpitUp,
   pollForMessage,
 } from "../../test-utils/mailpit.js";
-import { EmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
+import { EmailReminderProcessor as ProductionEmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
+
+class EmailReminderProcessor extends ProductionEmailReminderProcessor {
+  constructor(
+    reminders: ConstructorParameters<
+      typeof ProductionEmailReminderProcessor
+    >[0],
+    email: ConstructorParameters<typeof ProductionEmailReminderProcessor>[1],
+    env: EnvConfig,
+    snapshot: ConstructorParameters<typeof ProductionEmailReminderProcessor>[3],
+  ) {
+    super(reminders, email, env, snapshot, createNullLogger(), null);
+  }
+}
 
 // Real SMTP coords so EmailService picks Mailpit; Redis coords satisfy the
 // processor constructor (onModuleInit is skipped — processJob is called directly).

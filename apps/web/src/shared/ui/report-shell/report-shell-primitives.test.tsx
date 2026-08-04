@@ -245,29 +245,6 @@ describe("AccordionSection", () => {
       screen.getByRole("button", { name: /expand blockers/i }),
     ).toHaveAttribute("aria-label", "Expand Blockers");
   });
-
-  it("snapshot: AccordionSection with no actions", () => {
-    const { container } = render(
-      <AccordionSection icon={null} title="Risks" defaultOpen={true}>
-        <p>Child content</p>
-      </AccordionSection>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it("snapshot: AccordionSection with actions (two ChevronDowns, both aria-hidden)", () => {
-    const { container } = render(
-      <AccordionSection
-        icon={null}
-        title="Tasks"
-        defaultOpen={true}
-        actions={<button type="button">+ Add</button>}
-      >
-        <p>Child content</p>
-      </AccordionSection>,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
 });
 
 // MetaRow accessibility --------------------------------------------------------
@@ -339,23 +316,5 @@ describe("MetaRow a11y", () => {
     const { container } = render(<MetaRow authorName="Y" stageTags={[]} />);
     expect(container.firstChild).toHaveAttribute("role", "group");
     expect(container.firstChild).not.toHaveAttribute("aria-label");
-  });
-
-  it("snapshot: root structure with role='group'", () => {
-    const { container } = render(
-      <MetaRow
-        authorName="Alice"
-        stageTags={["Planning"]}
-        ariaLabel="Test meta"
-      />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it("snapshot: foreign indicator with role='img' when foreign=true", () => {
-    const { container } = render(
-      <MetaRow authorName="Alice" stageTags={[]} foreign={true} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
   });
 });

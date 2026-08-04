@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change unify-report-section-prisma-payload. Update Purpose after archive.
+Type report-section mapping and post-save reads from generated Prisma payloads so include drift is visible and an empty re-read fails loudly.
 
 ## Requirements
 

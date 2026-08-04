@@ -27,10 +27,10 @@ patch). Verify the patched library still passes its own test suite.
 
 ## Source
 
-`apps/api/vitest.config.ts:21` TODO(fix-xml-crypto-xmldom-onerror) +
-`apps/api/src/modules/auth/saml.samlify.test.ts` describe.skip note.
-Surfaced while implementing the partial samlify patch in change
-`fix-samlify-xmldom-onerror`.
+The original `vitest.config.ts` marker and `saml.samlify.test.ts` describe.skip
+note no longer exist — the samlify patch was completed. Re-establish a
+`TODO(fix-xml-crypto-xmldom-onerror)` marker (to-be-planted, not live) at the
+current XML-crypto seam when the remaining onerror gap is activated.
 
 ## Activation trigger
 

@@ -70,7 +70,10 @@ describe("admin tab alert labels", () => {
     expect(screen.getByText("jobs")).toBeInTheDocument();
     expect(count).toHaveTextContent("2");
     expect(count).toHaveClass("absolute", "-right-3", "-top-2");
-    expect(count).toHaveClass("bg-[var(--color-destructive)]", "text-white");
+    expect(count).toHaveClass(
+      "bg-[var(--color-destructive)]",
+      "text-[var(--color-destructive-foreground)]",
+    );
     expect(screen.getByText("2 failed jobs in DLQ")).toHaveClass("sr-only");
 
     const callArg = useQueryMock.mock.calls.at(-1)?.[0] as {

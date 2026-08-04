@@ -11,16 +11,16 @@ The DISCOVER agent sometimes appended a prose annotation to the route string
 instead of putting it in `access`/`note`, producing a route value that is not a
 clean URL:
 
-| File | As generated | Fixed to |
-| ---- | ------------ | -------- |
-| `viewer.yaml` | `route: viewer-landing` (label, not a URL) + `access: []` | `route: /` + `access: [lead, head, admin, viewer]` |
-| `head.yaml` | `route: /lead/report (access: head)` + `access: []` | `route: /lead/report` + `access: [lead, head, admin]` |
-| `admin.yaml` | `route: /admin/settings (307 redirect to /admin?tab=settings)` + `access: []` | `route: /admin/settings` + `access: [admin]` |
+| File          | As generated                                                                  | Fixed to                                              |
+| ------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `viewer.yaml` | `route: viewer-landing` (label, not a URL) + `access: []`                     | `route: /` + `access: [lead, head, admin, viewer]`    |
+| `head.yaml`   | `route: /lead/report (access: head)` + `access: []`                           | `route: /lead/report` + `access: [lead, head, admin]` |
+| `admin.yaml`  | `route: /admin/settings (307 redirect to /admin?tab=settings)` + `access: []` | `route: /admin/settings` + `access: [admin]`          |
 
 **Why it matters:** the sweep navigates with `page.goto(route)` and the parser
 keys on `^\s*-\s*route:\s*(\S+)\s*$`. A route with a trailing parenthetical fails
 that match, so the route is **silently skipped** — the exact "silent drop" failure
-mode the census/critic hardening (task 1.4b) exists to prevent, but at the
+mode the census and critic validation exists to prevent, but at the
 route-string level the critic does not see.
 
 `access: []` is the tell: all three defects also lost their guard list, because

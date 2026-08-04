@@ -1,6 +1,12 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import {
+  makeActivityFixture,
+  makeProjectFixture,
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   buildSlideGridModel,
@@ -15,11 +21,8 @@ type Risk = ReportSectionReadModel["risks"][number];
 type Decision = ReportSectionReadModel["decisions"][number];
 type Activity = ReportSectionReadModel["activities"][number];
 
-const project = (projectId: string, projectName: string) => ({
-  projectId,
-  projectName,
-  trafficLight: null,
-});
+const project = (projectId: string, projectName: string) =>
+  makeProjectFixture({ projectId, projectName, trafficLight: null });
 
 const item = (over: Partial<Item> = {}): Item => ({
   type: "current",
@@ -51,33 +54,24 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
   ...over,
 });
 
-const activity = (over: Partial<Activity> = {}): Activity => ({
-  activityId: "a1",
-  activityName: "Портал",
-  status: "yellow",
-  derivedStatus: null,
-  linkedProducts: [{ productId: "p1", productName: "Alpha" }],
-  ...over,
-});
+const activity = (over: Partial<Activity> = {}): Activity =>
+  makeActivityFixture({
+    activityId: "a1",
+    activityName: "Портал",
+    status: "yellow",
+    linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+    ...over,
+  });
 
-const section = (
-  over: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel => ({
-  reportSectionId: "sec-1",
-  reportId: "rep-1",
-  authorId: "lead-1",
-  authorName: "Иванов В.П.",
-  authorRole: "lead",
-  version: 1,
-  status: "draft",
-  submittedAt: null,
-  projects: [project("p1", "Alpha"), project("p2", "Beta")],
-  items: [],
-  risks: [],
-  decisions: [],
-  activities: [],
-  ...over,
-});
+const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
+  makeReportSectionFixture({
+    reportSectionId: "sec-1",
+    reportId: "rep-1",
+    authorId: "lead-1",
+    authorName: "Иванов В.П.",
+    projects: [project("p1", "Alpha"), project("p2", "Beta")],
+    ...over,
+  });
 
 const foreignRow = (
   over: Partial<CrossAuthorContentRow> = {},
@@ -289,6 +283,16 @@ describe("buildSlideGridModel — priority strip", () => {
         (row) => row.text,
       ),
     ).toEqual(["orphan priority"]);
+  });
+
+  it("does not fabricate a positional id for an item without id or stableId", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        items: [item({ text: "legacy priority", priorityRank: 1 })],
+      }),
+    });
+
+    expect(model.priorityStrip[0]?.id).toBeNull();
   });
 });
 

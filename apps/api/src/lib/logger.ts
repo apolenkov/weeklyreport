@@ -12,11 +12,9 @@ import {
   type FileSink,
 } from "./logger-file-sink.js";
 
-/**
- * Single source of truth for the log-level domain: the env schema validates
- * `LOG_LEVEL` with this exact enum, so a value the logger accepts and a value
- * the env accepts can never drift.
- */
+// Single source of truth for the log-level domain: the env schema validates
+// `LOG_LEVEL` with this exact enum, so logger-accepted and env-accepted values
+// can never drift.
 export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
 type LogLevel = z.infer<typeof logLevelSchema>;
 
@@ -26,6 +24,9 @@ export interface AppLogger {
   warn(message: string, context?: Record<string, unknown>): void;
   error(message: string, context?: Record<string, unknown>): void;
   child(context: Record<string, unknown>): AppLogger;
+  // Drains the file sink; rejects if any pending write failed. Omit for
+  // loggers without a file sink.
+  flush?: () => Promise<void>;
 }
 
 interface LogEntry {
@@ -38,12 +39,20 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
-/**
- * Context keys whose values are personal data and must never reach a log sink.
- * Matched by exact key name so a new PII field is opted in by adding it here,
- * not by a fragile substring heuristic.
- */
-const PII_CONTEXT_KEYS: ReadonlySet<string> = new Set(["recipientEmail"]);
+// Context keys whose values are personal data and must never reach a log sink.
+// Matched by exact key name so new PII is opted in by adding it here, not by a
+// fragile substring heuristic. Org keys (`fullName`/`shortName`) stay absent.
+const PII_CONTEXT_KEYS: ReadonlySet<string> = new Set([
+  "recipientEmail",
+  "email",
+  "leadName",
+  "headName",
+  "userName",
+  "displayName",
+  "firstName",
+  "lastName",
+  "middleName",
+]);
 const REDACTION_MARKER = "[redacted]";
 
 function redactPiiContext(
@@ -53,6 +62,26 @@ function redactPiiContext(
     Object.entries(context).map(([key, value]) =>
       PII_CONTEXT_KEYS.has(key) ? [key, REDACTION_MARKER] : [key, value],
     ),
+  );
+}
+
+// Canonical event fields a caller-supplied context must never be able to
+// overwrite: timestamp/level/message/correlationId are the entry's identity,
+// and traceId/spanId come from the active OTel span.
+const RESERVED_CONTEXT_KEYS: ReadonlySet<string> = new Set([
+  "timestamp",
+  "level",
+  "message",
+  "correlationId",
+  "traceId",
+  "spanId",
+]);
+
+function stripReservedContext(
+  context: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(context).filter(([key]) => !RESERVED_CONTEXT_KEYS.has(key)),
   );
 }
 
@@ -70,10 +99,9 @@ const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
   error: SeverityNumber.ERROR,
 };
 
-// Consumer default for callers that omit `minLevel`. Every production
-// construction (main.ts, logger-service.ts, config.module.ts,
-// worker-observability.ts) passes the validated LOG_LEVEL explicitly; this
-// covers only ad-hoc loggers built without a config in reach.
+// Consumer default for callers that omit `minLevel`; every production
+// construction passes the validated LOG_LEVEL explicitly, so this covers only
+// ad-hoc loggers built without a config in reach.
 const DEFAULT_MIN_LEVEL: LogLevel = "info";
 const DEFAULT_MAX_BYTES_MB = 50;
 const BYTES_PER_KB = 1024;
@@ -82,14 +110,14 @@ const DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES_MB * KB_PER_MB * BYTES_PER_KB;
 const DEFAULT_MAX_AGE_DAYS = 30;
 
 export interface LoggerOptions {
-  minLevel?: LogLevel | undefined;
+  readonly minLevel?: LogLevel | undefined;
   // Omit to disable file logging.
-  logDir?: string | undefined;
-  service?: string | undefined;
+  readonly logDir?: string | undefined;
+  readonly service?: string | undefined;
   // Reads correlationId from CLS; NO_CORRELATION_ID outside an active scope.
-  clsService?: ClsService | undefined;
-  maxBytes?: number | undefined;
-  maxAgeDays?: number | undefined;
+  readonly clsService?: ClsService | undefined;
+  readonly maxBytes?: number | undefined;
+  readonly maxAgeDays?: number | undefined;
 }
 
 class AppLoggerImpl implements AppLogger {
@@ -163,6 +191,10 @@ class AppLoggerImpl implements AppLogger {
     );
   }
 
+  flush = async (): Promise<void> => {
+    await this.fileSink?.flush();
+  };
+
   private resolveCorrelationId(): string {
     const cls = this.clsService;
     if (cls?.isActive()) {
@@ -193,11 +225,11 @@ class AppLoggerImpl implements AppLogger {
         : {};
 
     const entry: LogEntry = {
+      ...stripReservedContext(mergedContext),
       timestamp: new Date().toISOString(),
       level,
       message,
       correlationId: this.resolveCorrelationId(),
-      ...mergedContext,
       ...spanFields,
     };
 
@@ -245,6 +277,9 @@ class NullLogger implements AppLogger {
   }
   child(): AppLogger {
     return this;
+  }
+  flush(): Promise<void> {
+    return Promise.resolve();
   }
 }
 

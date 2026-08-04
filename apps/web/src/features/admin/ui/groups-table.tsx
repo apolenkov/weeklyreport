@@ -12,9 +12,9 @@ interface GroupsTableProps {
 
 // Compact table-row actions (denser than --touch-target-min header controls).
 const ROW_ACTION_CLASS =
-  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold transition-colors";
-const ROW_ACTION_EDIT_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)]`;
-const ROW_ACTION_ARCHIVE_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-destructive)] hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50`;
+  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors";
+const ROW_ACTION_EDIT_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-starbucks-accent)] hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]`;
+const ROW_ACTION_ARCHIVE_CLASS = `${ROW_ACTION_CLASS} text-[var(--color-destructive)] hover:border-[color-mix(in_srgb,var(--color-destructive)_30%,transparent)] hover:bg-[var(--color-status-blocked-bg)]`;
 
 const STATUS_PILL_CLASS =
   "inline-flex rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold";

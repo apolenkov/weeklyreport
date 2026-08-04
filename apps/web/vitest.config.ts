@@ -19,7 +19,7 @@ const webConfig = defineConfig({
     // Restore every spy/mock to its original after each test so an installed
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.
     restoreMocks: true,
-    exclude: ["e2e/**", "node_modules/**"],
+    exclude: ["e2e/**", "uat-suite/**", "node_modules/**"],
     // Coverage floors. Web has more UI code than tests can drive without a
     // full E2E layer, so the bar is lower than api.
     coverage: {
@@ -29,7 +29,16 @@ const webConfig = defineConfig({
         "src/**/__tests__/**",
         "src/**/types.ts",
         "src/app/**/layout.tsx",
-        "src/app/**/page.tsx", // RSC pages exercised via E2E, not unit
+        // Only framework-thin redirect aliases are excluded wholesale — a page
+        // that carries behavioral logic (client data loading, tab selection,
+        // role-aware rendering) stays in the coverage numerator/denominator.
+        "src/app/(app)/admin/products/page.tsx",
+        "src/app/(app)/admin/activities/page.tsx",
+        "src/app/(app)/admin/settings/page.tsx",
+        "src/app/(app)/head/history/page.tsx",
+        "src/app/(app)/head/slides/page.tsx",
+        "src/app/(app)/lead/history/page.tsx",
+        "src/app/(app)/reports/history/page.tsx",
       ],
       thresholds: {
         statements: 70,

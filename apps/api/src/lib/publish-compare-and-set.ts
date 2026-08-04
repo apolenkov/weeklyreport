@@ -1,5 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
+import type { LifecycleWrite } from "../modules/period/domain/period-transition.js";
+
 // Guarded predicate + zero-row disambiguation for manual publish only.
 // Injected client/data keep the caller's transaction and snapshot write strategy.
 // Spec: openspec/specs/publish-compare-and-set/spec.md
@@ -17,7 +19,7 @@ export type PublishCasOutcome = "transitioned" | "raced" | "archived";
 export async function publishCompareAndSet(
   client: PublishCasClient,
   reportId: string,
-  data: Prisma.ReportUpdateManyMutationInput,
+  data: LifecycleWrite & Prisma.ReportUpdateManyMutationInput,
 ): Promise<PublishCasOutcome> {
   const { count } = await client.report.updateMany({
     where: {

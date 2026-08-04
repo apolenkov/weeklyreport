@@ -4,9 +4,6 @@ import { Agentation } from "agentation";
 
 import { webEnv } from "../../lib/web-env";
 
-/**
- * Agentation Devtools.
- */
 export function AgentationDevtools() {
   // Escape hatch when `next dev` forces NODE_ENV=development outside an
   // interactive session (e.g. UI sweep). Without this the widget mounts, fails

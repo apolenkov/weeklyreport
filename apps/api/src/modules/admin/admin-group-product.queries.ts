@@ -24,8 +24,15 @@ async function throwProductOwnershipConflict(
     where: { id: groupId },
     select: { name: true },
   });
+  if (currentGroup === null) {
+    // FK integrity guarantees the owning group row exists; its absence is a
+    // data-integrity anomaly, never a reason to invent an "another group" label.
+    throw new AdminGroupProductConflictError(
+      `Product is already attached to group ${groupId}, but the group's row is missing. Refresh and retry.`,
+    );
+  }
   throw new AdminGroupProductConflictError(
-    `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+    `Product is already attached to ${currentGroup.name}. Detach it there before attaching it to another group.`,
   );
 }
 

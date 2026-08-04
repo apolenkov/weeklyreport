@@ -3,10 +3,9 @@
 import type { ReactNode } from "react";
 
 import type { CreateSeed } from "../../../hooks/use-editable-list-dialog";
+import { responsiveBoardGridClassName } from "../../../shared/ui/responsive-board-grid";
 import type { ItemColumn, KanbanItem } from "../../report-sections";
 import { ActivityLanesBlock, BoardColumnHeader } from "../../report-sections";
-
-const MAX_GRID_COLUMNS = 3;
 
 interface CurrentWeekBoardGridProps {
   readonly productColumns: readonly ItemColumn[];
@@ -27,12 +26,7 @@ export function CurrentWeekBoardGrid({
 }: CurrentWeekBoardGridProps) {
   return (
     <>
-      <div
-        className="grid gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(Math.max(productColumns.length, 1), MAX_GRID_COLUMNS)}, minmax(0, 1fr))`,
-        }}
-      >
+      <div className={responsiveBoardGridClassName(productColumns.length)}>
         {productColumns.map((col) => (
           <div key={col.key} className="min-w-0">
             <BoardColumnHeader
@@ -43,7 +37,7 @@ export function CurrentWeekBoardGrid({
             />
             {col.items.length === 0 ? (
               <div
-                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+                className="flex items-center justify-center rounded-lg border border-dashed border-[var(--card-surface-border)] bg-[var(--color-surface-empty)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
                 style={{ minHeight: 150 }}
               >
                 No items yet

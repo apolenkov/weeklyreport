@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { telemetrySummarySchema } from "./telemetry";
 
-describe("telemetrySummarySchema", () => {
+describe("telemetrySummarySchema accepted summaries", () => {
   it("accepts a fully-populated summary", () => {
     const ok = telemetrySummarySchema.safeParse({
       reportsThisPeriod: 1,
@@ -28,7 +28,9 @@ describe("telemetrySummarySchema", () => {
     });
     expect(ok.success).toBe(true);
   });
+});
 
+describe("telemetrySummarySchema metric bounds", () => {
   it("rejects ratio out of [0,1]", () => {
     expect(
       telemetrySummarySchema.safeParse({
@@ -70,9 +72,9 @@ describe("telemetrySummarySchema", () => {
       }).success,
     ).toBe(false);
   });
+});
 
-  // telemetry-summary-contract: the sparkline is the 4-week on-time window;
-  // the only producer emits at most 4 points, so the schema bound is ≤ 4.
+describe("telemetrySummarySchema sparkline window", () => {
   it("caps sparkline length at 4 entries (rejects 5, accepts 4)", () => {
     const base = {
       reportsThisPeriod: 0,

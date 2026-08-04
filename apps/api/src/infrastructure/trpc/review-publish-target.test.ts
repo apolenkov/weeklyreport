@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // assembledReport/dashboard must resolve the period via getCurrentEditableId,
@@ -18,11 +19,11 @@ function buildHeadCaller() {
   const getAssembledReport = vi.fn(() => Promise.resolve({ assembled: true }));
   const getSubmissionDashboard = vi.fn(() => Promise.resolve([]));
 
-  const deps = {
+  const deps = createStubAppRouterDeps({
     weeklyReportService: { getCurrentEditableId },
     publicationService: { getAssembledReport },
     reviewService: { getSubmissionDashboard },
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
 
   const session = {
     userId: HEAD_USER_ID,

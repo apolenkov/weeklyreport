@@ -5,11 +5,10 @@ import {
   pdfExportJobSchema,
   type UserSession,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { SYSTEM_ACTOR_ID } from "../../lib/actor-sentinels.js";
 import { canReadReport } from "../../lib/report-read-access.js";
 import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
@@ -17,7 +16,7 @@ import {
   reportSectionFullInclude,
 } from "../report-sections/index.js";
 import {
-  PDF_EXPORT_TEMPLATE_VERSION,
+  PdfExportDomainError,
   type PdfExportJobRecord,
   type PdfExportRepository,
 } from "./pdf-export.service.js";
@@ -59,7 +58,7 @@ const reportFullInclude = {
 
 @Injectable()
 export class PdfExportPrismaRepository implements PdfExportRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getPublishedReport(reportId: string): Promise<AssembledReport | null> {
     const report = await this.prisma.report.findUnique({
@@ -87,16 +86,20 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
   async createExportJob(
     job: PdfExportJob,
-    requestedBy?: string,
+    requestedBy: string,
   ): Promise<PdfExportJob> {
+    if (requestedBy === "") {
+      throw new PdfExportDomainError(
+        "PDF export job creation requires a requester.",
+      );
+    }
     const created = await this.prisma.pdfExportJob.create({
       data: {
         id: job.jobId,
         reportId: job.reportId,
         status: pdfStatusToDb[job.status],
-        // Thread session userId for audit; fall back to 'system' for non-tRPC
-        // callers (workers, scripts) so the column stays NOT NULL.
-        requestedBy: requestedBy ?? SYSTEM_ACTOR_ID,
+        requestedBy,
+        templateVersion: job.templateVersion,
         filePath: job.artifactUrl,
         checksum: job.checksum,
         error: null,
@@ -144,6 +147,7 @@ function toExportJob(row: {
   id: string;
   reportId: string;
   status: string;
+  templateVersion: string;
   filePath: string | null;
   checksum: string | null;
   error: string | null;
@@ -159,7 +163,9 @@ function toExportJob(row: {
       requestedAt: row.createdAt,
       completedAt: row.status === "completed" ? row.updatedAt : null,
       checksum: row.checksum,
-      templateVersion: PDF_EXPORT_TEMPLATE_VERSION,
+      // The template stamped at creation round-trips; a later code release
+      // must never relabel a persisted export with its own running version.
+      templateVersion: row.templateVersion,
       artifactUrl: row.filePath,
     }),
     requestedBy: row.requestedBy,

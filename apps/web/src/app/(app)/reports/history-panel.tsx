@@ -10,7 +10,7 @@ import type { HistoryEntry } from "../../../features/report-sections/model/lead-
 const HISTORY_INITIAL_VISIBLE = 10;
 
 interface HistoryPanelProps {
-  readonly entries: HistoryEntry[];
+  readonly entries: readonly HistoryEntry[];
   readonly includeArchive: boolean;
   readonly isLoading: boolean;
   readonly summaryTitle: string;

@@ -9,12 +9,23 @@ import { invalidateReview } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
 import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
 
-/** A comment anchors to exactly one concrete record. */
-export interface RecordCommentAnchor {
-  readonly itemId?: string;
-  readonly riskId?: string;
-  readonly decisionId?: string;
-}
+// Exactly one concrete record anchors each comment.
+export type RecordCommentAnchor =
+  | {
+      readonly itemId: string;
+      readonly riskId?: never;
+      readonly decisionId?: never;
+    }
+  | {
+      readonly riskId: string;
+      readonly itemId?: never;
+      readonly decisionId?: never;
+    }
+  | {
+      readonly decisionId: string;
+      readonly itemId?: never;
+      readonly riskId?: never;
+    };
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

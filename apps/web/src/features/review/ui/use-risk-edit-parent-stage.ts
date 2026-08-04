@@ -26,7 +26,7 @@ interface UseRiskEditParentStageArgs {
   readonly activities: readonly ParentActivityOption[];
   readonly defaultProductId?: string | undefined;
   readonly defaultActivityId?: string | undefined;
-  readonly initialStageNames?: string[] | undefined;
+  readonly initialStageNames?: readonly string[] | undefined;
   readonly initialSeverity?: RiskSeverity | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
@@ -102,27 +102,32 @@ function useRiskParentDerivations({
   risk,
   stagesForProduct,
 }: RiskParentDerivationArgs) {
-  const parentProduct = isActivityParent
-    ? undefined
-    : products.find((p) => p.id === parent.id);
+  const parentId = parent.kind === "unresolved" ? undefined : parent.id;
+  const parentProduct = parentId
+    ? products.find((p) => p.id === parentId)
+    : undefined;
   const preCheckedStages = useMemo(
     () =>
       computePreCheckedStages(
         parentProduct,
-        stagesForProduct?.(parentProduct?.id ?? "") ?? [],
+        parentId ? (stagesForProduct?.(parentId) ?? []) : [],
       ),
-    [parentProduct, stagesForProduct],
+    [parentProduct, parentId, stagesForProduct],
   );
 
   // Activities own no SDLC stage — no stages and no dead-end.
   const availableStages = isActivityParent
     ? []
-    : (stagesForProduct?.(parent.id) ?? []);
+    : parentId
+      ? (stagesForProduct?.(parentId) ?? [])
+      : [];
   const effectiveStageNames = computeEffectiveStageNames(
     stageNames,
     availableStages,
   );
-  const selectedActivity = activities.find((a) => a.id === parent.id);
+  const selectedActivity = parentId
+    ? activities.find((a) => a.id === parentId)
+    : undefined;
 
   return {
     preCheckedStages,
@@ -136,7 +141,7 @@ function useRiskParentDerivations({
       isActivityParent,
       selectedActivity,
       products,
-      parentId: parent.id,
+      parentId: parentId ?? "",
       risk,
     }),
   };

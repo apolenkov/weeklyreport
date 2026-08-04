@@ -80,7 +80,7 @@ function createSamlAuthenticationHandler(deps: AuthRouteDeps): RequestHandler {
   };
 }
 
-function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
+export function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const profile = req.user as SamlProfile | undefined;
@@ -108,13 +108,14 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       res.setHeader("Set-Cookie", setCookieHeader);
       res.redirect(deps.frontendUrl);
     } catch (error) {
-      // Any post-passport failure (DB write, JWT signing, etc.) is still a
-      // failed login from the user's perspective.
+      // Any post-passport failure is still a failed login. The audit record
+      // carries a fixed reason only — the internal detail goes to the error
+      // path (Sentry/logs), not the SIEM audit envelope.
       deps.auditLogger.loginFail({
         userId: ANONYMOUS_USER_ID,
         role: null,
         ip: req.ip ?? UNKNOWN_CLIENT_IP,
-        reason: error instanceof Error ? error.message : "callback-error",
+        reason: "callback-error",
       });
       loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
       next(error);

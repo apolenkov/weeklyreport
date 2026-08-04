@@ -41,7 +41,7 @@ const COVERED_STAGE_HINT_MESSAGE =
 export interface RiskPrefillRequest {
   signal: number;
   productId: string;
-  stageNames: string[];
+  stageNames: readonly string[];
   severity: "at-risk" | "blocked";
   // Activity-pill raise — XOR with the product fields, which are "" and [] here.
   activityId?: string;
@@ -50,8 +50,8 @@ export interface RiskPrefillRequest {
 export type StagesForProduct = (productId: string) => readonly string[];
 
 interface BridgeContextValue {
-  products: Product[];
-  risks: RiskEntry[];
+  products: readonly Product[];
+  risks: readonly RiskEntry[];
   readOnly: boolean;
   activities?: readonly { id: string; name: string }[];
   stagesForProduct?: StagesForProduct;
@@ -59,14 +59,14 @@ interface BridgeContextValue {
   risksAddSignal?: number;
   crossAuthors?: readonly CrossAuthorEntry[];
   visibilityMode?: "mine" | "everyone";
-  displayRisks?: RiskEntry[];
+  displayRisks?: readonly RiskEntry[];
   riskPrefill: RiskPrefillRequest | null;
   handleStageStatusChange: (
     productId: string,
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  handleRisksChange: (next: RiskEntry[]) => void;
+  handleRisksChange: (next: readonly RiskEntry[]) => void;
 }
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
@@ -82,10 +82,10 @@ function useBridgeContext(componentName: string): BridgeContextValue {
 }
 
 interface LeadFormSyncBridgeProviderProps {
-  readonly products: Product[];
-  readonly risks: RiskEntry[];
-  readonly onProductsChange: (next: Product[]) => void;
-  readonly onRisksChange: (next: RiskEntry[]) => void;
+  readonly products: readonly Product[];
+  readonly risks: readonly RiskEntry[];
+  readonly onProductsChange: (next: readonly Product[]) => void;
+  readonly onRisksChange: (next: readonly RiskEntry[]) => void;
   readonly readOnly?: boolean | undefined;
   readonly activities?: readonly { id: string; name: string }[] | undefined;
   readonly stagesForProduct?: StagesForProduct | undefined;
@@ -97,7 +97,7 @@ interface LeadFormSyncBridgeProviderProps {
   readonly visibilityMode?: "mine" | "everyone" | undefined;
   // Merged risks for rendering only — the sync hook still runs on own-only
   // `risks` to avoid false-positive mutations.
-  readonly displayRisks?: RiskEntry[] | undefined;
+  readonly displayRisks?: readonly RiskEntry[] | undefined;
   // One-shot prefill routed from outside the pipeline; each new `signal`
   // opens the create dialog exactly once.
   readonly externalRiskPrefill?: RiskPrefillRequest | null | undefined;
@@ -163,7 +163,7 @@ function useBridgeHandlers(
   );
 
   const handleRisksChange = useCallback(
-    (next: RiskEntry[]) => {
+    (next: readonly RiskEntry[]) => {
       if (readOnly) return;
       // Strip foreign entries so they don't bleed into draft mutations
       // (foreign risks belong to other authors).

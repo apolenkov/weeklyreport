@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-
 import { buildDraftActions } from "./lead-form-draft-actions";
+import { leadFormGenerationOf } from "./lead-form-generation";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import {
   buildLeadFormLoadedData,
@@ -14,6 +13,7 @@ import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { useLeadFormEditing } from "./use-lead-form-editing";
+import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
 import { useLeadFormShell } from "./use-lead-form-shell";
 
 interface LeadFormProps {
@@ -29,7 +29,7 @@ const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
   nextWeekItems: [],
 };
 
-export function LeadForm(props: LeadFormProps) {
+function useLeadFormState(props: LeadFormProps) {
   const {
     reportId: pinnedReportId,
     redirectToCanonical,
@@ -42,29 +42,48 @@ export function LeadForm(props: LeadFormProps) {
     isSlidesMode,
   });
   const { data } = shell;
-  // Draft module handle; `loaded` is one render behind via local ref
-  // (benign for modal quick-add; no ref object crosses into the module).
-  const loadedContextRef = useRef<LeadFormLoadedContext>(EMPTY_LOADED_CONTEXT);
+  const generation = data.byPeriodData
+    ? leadFormGenerationOf(data.byPeriodData.section)
+    : null;
   const editing = useLeadFormEditing({
+    generation,
     pinnedReportId,
     data,
-    // eslint-disable-next-line react-hooks/refs -- passes the sanctioned render->callback bridge ref value; consumed only inside post-commit callbacks
-    loaded: loadedContextRef.current,
   });
-  const { draft } = editing;
+  const loaded = resolveLeadFormLoaded(data, editing.draft.draft);
+  const viewModel = loaded
+    ? buildLeadFormLoadedViewModel(
+        leadFormViewModelInput(data, loaded, editing),
+      )
+    : null;
+  const quickAdd = useLeadFormQuickAdd({
+    apply: editing.draft.apply,
+    generation: editing.draft.generation,
+    loaded: viewModel ? loadedContextOf(viewModel) : EMPTY_LOADED_CONTEXT,
+  });
+  const draft = { ...editing.draft, ...quickAdd };
+  return {
+    data,
+    draft,
+    editing,
+    isSlidesMode,
+    loaded,
+    pinnedReportId,
+    shell,
+    viewModel,
+  };
+}
 
-  const loaded = resolveLeadFormLoaded(data, draft.draft);
-  if (loaded === null) return <LeadFormSkeleton />;
+export function LeadForm(props: LeadFormProps) {
+  const state = useLeadFormState(props);
+  const { data, draft, editing, loaded, shell, viewModel } = state;
+  if (loaded === null || viewModel === null) return <LeadFormSkeleton />;
 
-  const viewModel = buildLeadFormLoadedViewModel(
-    leadFormViewModelInput(data, loaded, editing),
-  );
-  // eslint-disable-next-line react-hooks/refs -- the one sanctioned render->callback bridge: stamps the loaded context the module's quick-add callbacks read after commit
-  loadedContextRef.current = loadedContextOf(viewModel);
   const actions = buildDraftActions(draft, editing.addSignals, viewModel);
 
   return (
     <LeadFormLoaded
+      key={draft.generation}
       data={buildLeadFormLoadedData(data)}
       viewModel={viewModel}
       draftSection={loaded.draftSection}
@@ -72,9 +91,9 @@ export function LeadForm(props: LeadFormProps) {
       submitReadiness={draft.submitReadiness}
       draftActions={actions}
       writeActions={editing.writeActions}
-      isSlidesMode={isSlidesMode}
+      isSlidesMode={state.isSlidesMode}
       isSubmitted={editing.isSubmitted}
-      pinnedReportId={pinnedReportId}
+      pinnedReportId={state.pinnedReportId}
       showArchivePeriods={editing.showArchivePeriods}
       setShowArchivePeriods={editing.setShowArchivePeriods}
       groupExpanded={editing.groupExpanded}

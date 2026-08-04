@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-quality-debt-roadmap. Update Purpose after archive.
+Run quality-debt work from measured inventories with independent completion, one-directional enforcement, explicit adjudication, and durable resume evidence.
 
 ## Requirements
 

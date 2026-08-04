@@ -52,12 +52,19 @@ function rowToAppSettings(row: {
   });
 }
 
+// The singleton row is provisioned by `prisma/seed.ts`; a READ that encounters
+// a missing row is a data-integrity failure, not a signal to materialize
+// defaults on the fly.
 export async function getSettings(prisma: PrismaService): Promise<AppSettings> {
-  const row = await prisma.appSettings.upsert({
+  const row = await prisma.appSettings.findUnique({
     where: { id: "singleton" },
-    create: { id: "singleton" },
-    update: {},
   });
+
+  if (!row) {
+    throw new Error(
+      "AppSettings singleton row 'singleton' is missing — run the seed to provision it.",
+    );
+  }
 
   return rowToAppSettings(row);
 }

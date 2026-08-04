@@ -58,14 +58,17 @@ export function guardGroupScope(
 // `|` cannot appear in a UUID; empty string is the no-access partition.
 export function scopeDiscriminator(session: UserSession): string {
   if (session.role === "admin") return "admin";
-  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- UUID ids; default code-unit sort is deterministic across locales (localeCompare is not), which a cache key requires
-  return [...computeAllowedGroupIds(session)].sort().join("|");
+  // Default code-unit sort spelled as a comparator: deterministic across
+  // locales (localeCompare is not), which the cache key requires.
+  return [...computeAllowedGroupIds(session)]
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    .join("|");
 }
 
 // Shared source for groupScopeFilter and scopeDiscriminator.
 export function computeAllowedGroupIds(
   session: Pick<UserSession, "role" | "reportingGroupId" | "viewerGroupAccess">,
-): string[] {
+): readonly string[] {
   if (session.role === "head" || session.role === "lead") {
     return session.reportingGroupId ? [session.reportingGroupId] : [];
   }

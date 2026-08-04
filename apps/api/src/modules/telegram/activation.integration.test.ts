@@ -56,7 +56,7 @@ describe("Telegram activation", () => {
         logger: false,
       }),
     ).rejects.toThrow(
-      "Not implemented — see TODO(Phase-55-activation). Telegram bot not configured",
+      "Not implemented — see TODO(activate-telegram-bot). Telegram bot not configured",
     );
   });
 });

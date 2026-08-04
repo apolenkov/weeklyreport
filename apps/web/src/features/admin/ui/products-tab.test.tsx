@@ -87,11 +87,14 @@ function renderTab(opts?: {
   products?: AdminProductView[];
   users?: AdminUserView[];
   productFilter?: string | null;
+  countsError?: boolean;
 }) {
   const { proxy } = createMockTRPC([
     {
       path: ["admin", "listStageAssignmentCounts"],
-      query: [] as unknown[],
+      query: opts?.countsError
+        ? Promise.reject(new Error("counts failed"))
+        : ([] as unknown[]),
     },
     { path: ["admin", "saveProject"], mutation: true },
     { path: ["admin", "deleteProject"], mutation: true },
@@ -314,6 +317,17 @@ describe("ProductsTab — focus management", () => {
   });
 });
 
+function openAddAndPickLead() {
+  const addBtn = screen.getByRole("button", { name: /add new product/i });
+  fireEvent.click(addBtn);
+  fireEvent.change(screen.getByLabelText(/lead owner/i), {
+    target: { value: LEAD_ID },
+  });
+  fireEvent.change(screen.getByLabelText(/product name/i), {
+    target: { value: "New Product" },
+  });
+}
+
 describe("ProductsTab — slide-capacity advisory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -329,11 +343,10 @@ describe("ProductsTab — slide-capacity advisory", () => {
     }));
   }
 
-  it("shows the over-capacity advisory at the recommended max; Save stays enabled", async () => {
-    const user = userEvent.setup();
+  it("shows the over-capacity advisory at the recommended max; Save stays enabled once a lead is chosen", () => {
     renderTab({ products: ownedProducts(6) });
 
-    await user.click(screen.getByRole("button", { name: /add new product/i }));
+    openAddAndPickLead();
 
     expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
       "6 of 6 products",
@@ -342,11 +355,31 @@ describe("ProductsTab — slide-capacity advisory", () => {
     expect(screen.getByRole("button", { name: "Add Product" })).toBeEnabled();
   });
 
-  it("shows no over-capacity advisory below the recommended ceiling", async () => {
+  it("starts the add dialog with no preselected owner and blocks save until one is chosen", async () => {
     const user = userEvent.setup();
-    renderTab({ products: ownedProducts(3) });
+    renderTab();
 
     await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    fireEvent.change(screen.getByLabelText(/product name/i), {
+      target: { value: "New Product" },
+    });
+
+    // The owner select is unselected — an accidental save cannot bind the new
+    // product to the first lead on the list even though the name is filled.
+    expect(screen.getByLabelText(/lead owner/i)).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Add Product" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/lead owner/i), {
+      target: { value: LEAD_ID },
+    });
+    expect(screen.getByRole("button", { name: "Add Product" })).toBeEnabled();
+  });
+
+  it("shows no over-capacity advisory below the recommended ceiling", () => {
+    renderTab({ products: ownedProducts(3) });
+
+    openAddAndPickLead();
 
     expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
       "3 of 6 products",
@@ -356,17 +389,26 @@ describe("ProductsTab — slide-capacity advisory", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("counts the lead's products from the FULL set, not a filtered view", async () => {
-    const user = userEvent.setup();
+  it("counts the lead's products from the FULL set, not a filtered view", () => {
     // productFilter narrows the visible list to a single product…
     renderTab({ products: ownedProducts(6), productFilter: "p-0" });
 
-    await user.click(screen.getByRole("button", { name: /add new product/i }));
+    openAddAndPickLead();
 
     // …but the advisory still counts all six products the lead owns.
     expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
       "6 of 6 products",
     );
     expect(screen.getByTestId("lead-product-overcap")).toBeInTheDocument();
+  });
+
+  it("surfaces the stage-count query failure instead of showing zero counts", async () => {
+    renderTab({ countsError: true });
+
+    expect(
+      await screen.findByText(/Could not load stage assignment counts/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\/7 stages/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Stages unavailable").length).toBeGreaterThan(0);
   });
 });

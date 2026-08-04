@@ -6,4 +6,3 @@ export {
   ReminderScopeError,
   RemindersService,
 } from "./reminders.service.js";
-export { extractRecipientEmail } from "./reminders-row-mappers.js";

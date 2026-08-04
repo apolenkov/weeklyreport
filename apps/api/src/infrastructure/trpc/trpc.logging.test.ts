@@ -1,4 +1,4 @@
-import type { TRPCError } from "@trpc/server";
+import { TRPCError } from "@trpc/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../lib/logger.js";
@@ -20,10 +20,11 @@ const silentLogger: AppLogger = {
   child: () => silentLogger,
 };
 
-// recordTrpcFailure only reads code/message/cause, so a literal stands in for
-// TRPCError — its constructor rejects the unknown-code fallback case.
-const asTrpcError = (code: string): TRPCError =>
-  ({ code, message: `stub ${code}` }) as unknown as TRPCError;
+function asTrpcError(code: string): TRPCError {
+  const error = new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  Object.defineProperty(error, "code", { value: code });
+  return error;
+}
 
 function observedStatusCode(code: string): unknown {
   const observe = vi.spyOn(httpRequestDurationSeconds, "observe");

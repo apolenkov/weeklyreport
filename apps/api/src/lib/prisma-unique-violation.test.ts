@@ -5,11 +5,9 @@ import {
   PRISMA_UNIQUE_CONSTRAINT_ERROR_CODE,
 } from "./prisma-unique-violation.js";
 
-/**
- * The pg-adapter P2002 shape: `meta.target` is UNSET and the constraint identity
- * surfaces only in `message` + serialized `meta`. A guard that reads
- * `meta.target` alone misses this; these cases pin that it does not.
- */
+// The pg-adapter P2002 shape: `meta.target` is UNSET and the constraint identity
+// surfaces only in `message` + serialized `meta`. A guard reading `meta.target`
+// alone misses this; these cases pin that it does not.
 const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
 
 function pgAdapterP2002(originalMessage: string, message: string): unknown {

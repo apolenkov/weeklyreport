@@ -10,18 +10,29 @@ import {
 import { computeWorstStatus } from "../published-report-snapshot.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
+// Raw statuses at this boundary are untrusted; only the three domain values
+// are admitted into the worst-of fold — anything else is missing data, treated
+// exactly like a null light (skipped), never cast through.
+function parseTrafficLight(raw: string): TrafficLightStatus | null {
+  return raw === "red" || raw === "yellow" || raw === "green" ? raw : null;
+}
+
 export function buildPortfolioOverview(
-  projects: {
-    id: string;
-    name: string;
-    stageAssignments: { id: string }[];
+  projects: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly stageAssignments: readonly { readonly id: string }[];
   }[],
   // Floored read-model sections (mapped via mapPrismaToReportSection): each
   // project's `trafficLight` already folds the author's own covering risks,
   // so the card status agrees with leadSections/escalations in the same payload.
-  sections: {
-    authorName: string;
-    projects: { projectId: string; trafficLight: string | null }[];
+  sections: readonly {
+    readonly authorId: string;
+    readonly authorName: string;
+    readonly projects: readonly {
+      readonly projectId: string;
+      readonly trafficLight: string | null;
+    }[];
   }[],
 ): PortfolioProductOverview[] {
   return projects.map((project) => {
@@ -29,18 +40,25 @@ export function buildPortfolioOverview(
     // traffic light for this project yet; skip it so the worst-of
     // computation isn't muddied by missing data.
     const matchingByProject = sections.flatMap((section) =>
-      section.projects
-        .filter(
-          (sectionProject) =>
-            sectionProject.projectId === project.id &&
-            sectionProject.trafficLight !== null,
-        )
-        .map((sectionProject) => ({
-          trafficLight: sectionProject.trafficLight as TrafficLightStatus,
-          authorName: section.authorName,
-        })),
+      section.projects.flatMap((sectionProject) => {
+        if (sectionProject.projectId !== project.id) return [];
+        const trafficLight =
+          sectionProject.trafficLight === null
+            ? null
+            : parseTrafficLight(sectionProject.trafficLight);
+        return trafficLight === null
+          ? []
+          : [
+              {
+                trafficLight,
+                authorId: section.authorId,
+                authorName: section.authorName,
+              },
+            ];
+      }),
     );
     const statuses = matchingByProject.map((match) => match.trafficLight);
+    const leadIdSet = new Set(matchingByProject.map((match) => match.authorId));
     const leadNameSet = new Set(
       matchingByProject.map((match) => match.authorName),
     );
@@ -52,6 +70,7 @@ export function buildPortfolioOverview(
       productName: project.name,
       worstStatus,
       stageCount: project.stageAssignments.length,
+      leadIds: [...leadIdSet].sort((a, b) => a.localeCompare(b)),
       leadNames: [...leadNameSet].sort((a, b) => a.localeCompare(b, "ru")),
     };
   });

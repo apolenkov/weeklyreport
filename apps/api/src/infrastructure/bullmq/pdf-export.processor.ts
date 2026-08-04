@@ -1,15 +1,17 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Job } from "bullmq";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 import { chromium, type Page } from "playwright";
 
+import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/index.js";
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
@@ -22,7 +24,7 @@ import {
 const PAGE_GOTO_TIMEOUT_MS = 60_000;
 
 // Cap how long the worker waits for the print template's terminal render marker
-// after network idle before failing the job.
+// after the DOM is available before failing the job.
 const PRINT_READY_TIMEOUT_MS = 30_000;
 
 // Must stay in sync with the web print template's PRINT_STATE tokens
@@ -41,10 +43,10 @@ const pdfArtifactUrl = (jobId: string): string => `/pdfs/${jobId}.pdf`;
 interface PdfExportJobData extends JobTraceContext {
   reportId: string;
   jobId: string;
-  // Short-lived (5min) JWT injected into the Playwright browser context as the
-  // session cookie before page.goto, so the print page's tRPC fetch carries an
-  // authenticated session.
-  authToken: string;
+  // Non-credential requester identity. The worker mints a fresh short-lived
+  // JWT from it at execution time so the durable payload never persists a
+  // bearer credential.
+  requestedBy: string;
 }
 
 @Injectable()
@@ -53,18 +55,19 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
   protected readonly spanName = "pdf-export.process";
 
   constructor(
+    @Inject(PdfExportService)
     private readonly pdfExportService: PdfExportService,
-    env: EnvConfig,
-    logger?: AppLogger,
-    cls?: ClsService,
+    @Inject(ENV_CONFIG) env: EnvConfig,
+    @Inject(APP_LOGGER) logger: AppLogger,
+    @Inject(ClsService) cls: ClsService | null,
   ) {
     super(env, logger, cls);
   }
 
-  protected onJobFailed(
+  protected readonly onJobFailed = (
     job: Job<PdfExportJobData> | undefined,
     error: Error,
-  ): void {
+  ): void => {
     const correlationId = job?.data.correlationId;
     const traceId = job ? extractTraceId(job.data) : undefined;
     const correlation = {
@@ -94,20 +97,27 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       jobId: job?.data.jobId,
       reportId: job?.data.reportId,
       attempt: job?.attemptsMade,
-      // Never log the actual token; only its presence.
-      authToken: job?.data.authToken ? "<redacted>" : "MISSING",
       ...correlation,
       error: error.message,
     });
-  }
+  };
 
-  protected async processJob(job: Job<PdfExportJobData>): Promise<void> {
-    const { reportId, jobId, authToken } = job.data;
+  protected readonly processJob = async (
+    job: Job<PdfExportJobData>,
+  ): Promise<void> => {
+    const { reportId, jobId, requestedBy } = job.data;
     const baseUrl = this.env.PDF_BASE_URL;
     const reportUrl = `${baseUrl}/print/${reportId}`;
 
     const browser = await chromium.launch({ headless: true });
     try {
+      // Mint the short-lived render JWT now, at execution time: the durable job
+      // never carried a credential, and a token signed at enqueue could expire
+      // before a delayed/retried job runs.
+      const authToken = this.pdfExportService.signPdfExportToken(
+        reportId,
+        requestedBy,
+      );
       // The auth cookie MUST be set before page.goto so the print page's tRPC
       // fetch carries the session out of the gate. buildAuthCookies derives
       // domain/secure from PDF_BASE_URL.
@@ -117,7 +127,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       const page = await context.newPage();
       await this.timed(jobId, "page.goto", () =>
         page.goto(reportUrl, {
-          waitUntil: "networkidle",
+          waitUntil: "domcontentloaded",
           timeout: PAGE_GOTO_TIMEOUT_MS,
         }),
       );
@@ -125,6 +135,13 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       // the template reports "ready" — a spinner or error page throws instead,
       // routing through onJobFailed → markExportFailed.
       await this.assertPrintReady(page, jobId);
+      await this.timed(jobId, "wait.fonts", () =>
+        page.waitForFunction(
+          () => document.fonts.status === "loaded",
+          undefined,
+          { timeout: PRINT_READY_TIMEOUT_MS },
+        ),
+      );
       const pdfBuffer = await this.timed(jobId, "page.pdf", () =>
         page.pdf({ format: "A4", printBackground: true }),
       );
@@ -132,23 +149,22 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       // Resolve to an absolute path so the API's static /pdfs mount and this
       // worker write to the same directory regardless of the process cwd.
       const outputDir = resolve(this.env.PDF_OUTPUT_DIR);
-      mkdirSync(outputDir, { recursive: true });
+      await mkdir(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);
-      writeFileSync(filePath, pdfBuffer);
-
       const checksum = createHash("sha256").update(pdfBuffer).digest("hex");
       const artifactUrl = pdfArtifactUrl(jobId);
-
-      await this.pdfExportService.markExportCompleted(
-        jobId,
+      await this.persistCompletedArtifact({
         artifactUrl,
         checksum,
-      );
+        filePath,
+        jobId,
+        pdfBuffer,
+      });
     } finally {
       await browser.close();
     }
-  }
+  };
 
   private async assertPrintReady(page: Page, jobId: string): Promise<void> {
     const marker = await this.timed(jobId, "wait.ready", () =>
@@ -162,6 +178,35 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       throw new Error(
         `print render did not reach ready state (${PRINT_STATE_ATTR}="${state ?? "unknown"}")`,
       );
+    }
+  }
+
+  private async persistCompletedArtifact(input: {
+    artifactUrl: string;
+    checksum: string;
+    filePath: string;
+    jobId: string;
+    pdfBuffer: Buffer;
+  }): Promise<void> {
+    try {
+      // Async I/O: a multi-MB PDF write must not block the event loop, which
+      // also serves other queue workers on this process.
+      await writeFile(input.filePath, input.pdfBuffer);
+      await this.pdfExportService.markExportCompleted(
+        input.jobId,
+        input.artifactUrl,
+        input.checksum,
+      );
+    } catch (error) {
+      try {
+        await rm(input.filePath, { force: true });
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          `failed to persist or remove PDF artifact for job ${input.jobId}`,
+        );
+      }
+      throw error;
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppSettings } from "@customreport/shared";
+import { useState } from "react";
 
 import {
   CheckIcon,
@@ -18,7 +19,7 @@ function UnifiedActivityViewToggle({
   readonly onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
+    <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)]">
       <input
         name="unified-activity-view"
         type="checkbox"
@@ -41,10 +42,12 @@ function UnifiedActivityViewToggle({
 function SavePeriodPolicyRow({
   isSaving,
   isSaved,
+  disabled,
   onSave,
 }: {
   readonly isSaving: boolean;
   readonly isSaved: boolean;
+  readonly disabled: boolean;
   readonly onSave: () => void;
 }) {
   return (
@@ -52,8 +55,8 @@ function SavePeriodPolicyRow({
       <button
         type="button"
         onClick={onSave}
-        disabled={isSaving}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={isSaving || disabled}
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Save period policy"
       >
         {isSaving ? "Saving…" : "Save Period Policy"}
@@ -94,6 +97,24 @@ export function PeriodsSubTab({
   const { draft, setDraft, markClean } =
     useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
+  const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  function handleValidityChange(id: string, valid: boolean) {
+    setInvalidFields((prev) => {
+      if (valid) {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      }
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
 
   function handleSave() {
     updateSettingsMut.mutate(toPeriodPolicyPatch(draft), {
@@ -102,12 +123,21 @@ export function PeriodsSubTab({
   }
 
   const isSaving = updateSettingsMut.isPending;
+  const hasInvalidField = invalidFields.size > 0;
 
   return (
     <div className="max-w-lg space-y-5">
-      <PeriodBaseFields draft={draft} setDraft={setDraft} />
+      <PeriodBaseFields
+        draft={draft}
+        setDraft={setDraft}
+        onValidityChange={handleValidityChange}
+      />
 
-      <PeriodCycleFields draft={draft} setDraft={setDraft} />
+      <PeriodCycleFields
+        draft={draft}
+        setDraft={setDraft}
+        onValidityChange={handleValidityChange}
+      />
 
       <UnifiedActivityViewToggle
         checked={draft.unifiedActivityView}
@@ -116,9 +146,19 @@ export function PeriodsSubTab({
         }
       />
 
+      {hasInvalidField && (
+        <p
+          className="text-xs text-[var(--color-destructive)]"
+          data-testid="period-policy-invalid-hint"
+        >
+          Fix the highlighted numeric fields before saving.
+        </p>
+      )}
+
       <SavePeriodPolicyRow
         isSaving={isSaving}
         isSaved={updateSettingsMut.isSuccess}
+        disabled={hasInvalidField}
         onSave={handleSave}
       />
     </div>

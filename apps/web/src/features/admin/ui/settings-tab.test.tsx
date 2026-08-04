@@ -16,12 +16,12 @@ import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
+const toastSuccess = vi.fn<(...args: unknown[]) => void>();
+const toastError = vi.fn<(...args: unknown[]) => void>();
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: unknown[]) => toastSuccess(...args) as unknown,
-    error: (...args: unknown[]) => toastError(...args) as unknown,
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
     info: vi.fn(),
   },
 }));
@@ -136,6 +136,22 @@ describe("SettingsTab — Identity sub-tab", () => {
     expect(screen.getByRole("tab", { name: /coming soon/i })).toBeTruthy();
   });
 
+  it("pointer and keyboard activation of the inert Holidays tab cannot change the selected tab", () => {
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    const holidaysTab = screen.getByRole("tab", { name: /coming soon/i });
+    expect(holidaysTab).toBeDisabled();
+
+    // Pointer: disabled trigger swallows the click.
+    fireEvent.click(holidaysTab);
+    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
+
+    // Keyboard: the trigger is not focusable/tab-activatable while disabled.
+    fireEvent.keyDown(holidaysTab, { key: "Enter" });
+    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
+  });
+
   it("loads the organization row into the Identity form", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -161,6 +177,31 @@ describe("SettingsTab — Identity sub-tab", () => {
       name: /save organization identity/i,
     });
     await waitFor(() => expect(saveButton.disabled).toBe(false));
+  });
+
+  it("surfaces an organization-query failure instead of a disabled blank form", async () => {
+    const proxy = createMockTRPC([
+      {
+        path: ["admin", "getOrganization"],
+        query: () => {
+          throw new Error("boom");
+        },
+      },
+      { path: ["admin", "updateOrganization"], mutation: true },
+      { path: ["admin", "updateSettings"], mutation: true },
+      { path: ["admin", "snapshot"] },
+      { path: ["admin", "getSettings"] },
+      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
+      { path: ["auth", "me"] },
+      { path: ["org", "getPublic"] },
+      { path: ["weeklyReport", "get"] },
+    ]);
+    renderSettings(proxy.proxy);
+
+    expect(
+      await screen.findByTestId("org-identity-load-error"),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/short name/i)).not.toBeInTheDocument();
   });
 
   it("edits the Identity form and submits via the mutation hook", async () => {
@@ -400,6 +441,22 @@ describe("SettingsTab — Periods sub-tab (period-cycle inputs)", () => {
     expect(payload.reopenWindowHours).toBe(24);
     // allowReopenAfterPublish was not touched — stays true.
     expect(payload.allowReopenAfterPublish).toBe(true);
+  });
+
+  it("clearing the deadline time does not silently substitute 18:00", async () => {
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /periods/i }));
+
+    const deadlineTime =
+      screen.getByLabelText<HTMLInputElement>(/deadline time/i);
+    await user.clear(deadlineTime);
+
+    // The raw empty value is kept in the draft — no fabricated default — and
+    // the shared schema rejects an empty HH:MM on Save (fail loud).
+    expect(deadlineTime.value).toBe("");
   });
 
   it("disables reopenWindowHours when allowReopenAfterPublish is off", async () => {

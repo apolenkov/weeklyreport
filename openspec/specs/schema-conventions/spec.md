@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change modernize-zod-string-formats. Update Purpose after archive.
+Standardize shared Zod string formats and require index-backed foreign keys, cascades, and consistent sibling validation for the same persisted column.
 
 ## Requirements
 

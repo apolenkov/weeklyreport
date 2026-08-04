@@ -137,7 +137,7 @@ function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
         variant="outline"
         size="sm"
         disabled={pending}
-        className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-amber-400 data-[state=open]:bg-amber-50 data-[state=open]:text-amber-900"
+        className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-status-at-risk-border)] data-[state=open]:bg-[var(--color-status-at-risk-bg)] data-[state=open]:text-[var(--color-status-at-risk-fg)]"
         data-testid="dev-role-switcher-trigger"
       >
         <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -227,7 +227,10 @@ export function DevRoleSwitcher() {
             <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
           )}
           {usersQ.error && (
-            <DropdownMenuItem disabled className="text-red-600">
+            <DropdownMenuItem
+              disabled
+              className="text-[var(--color-destructive)]"
+            >
               Load error
             </DropdownMenuItem>
           )}

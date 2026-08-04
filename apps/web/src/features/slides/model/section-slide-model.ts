@@ -54,8 +54,7 @@ export function buildSectionSlideModel(
     id: section.reportSectionId,
     ownerId: section.authorId,
     ownerName: shortNameFromName(section.authorName),
-    // Absent role stays empty — never invent "lead" for head/admin authors.
-    ownerRole: section.authorRole ?? null,
+    ownerRole: section.authorRole,
     status: section.status,
     submittedAt: section.submittedAt,
     products: projection.products,

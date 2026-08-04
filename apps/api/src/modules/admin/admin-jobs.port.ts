@@ -1,16 +1,16 @@
+import type { FailedJob } from "@customreport/shared";
+
 export interface AdminJobHandle {
-  readonly id?: string;
-  readonly name: string;
-  readonly failedReason?: string | null;
-  readonly stacktrace?: readonly string[];
-  readonly attemptsMade?: number;
-  readonly timestamp: number;
-  readonly data: unknown;
-  retry(): Promise<void>;
-  remove(): Promise<void>;
+  readonly failedJob: FailedJob;
+  readonly reminderExecutionId: string | null;
+  readonly retry: () => Promise<void>;
+  readonly remove: () => Promise<void>;
 }
 
 export interface AdminJobsQueue {
-  getFailed(start: number, end: number): Promise<readonly AdminJobHandle[]>;
-  getJob(id: string): Promise<AdminJobHandle | undefined>;
+  readonly getFailed: (
+    start: number,
+    end: number,
+  ) => Promise<readonly AdminJobHandle[]>;
+  readonly getJob: (id: string) => Promise<AdminJobHandle | undefined>;
 }

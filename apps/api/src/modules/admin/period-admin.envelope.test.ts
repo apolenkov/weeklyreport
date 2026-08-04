@@ -6,7 +6,7 @@ import type { PeriodRowFromRepo } from "./admin-shared.js";
 import {
   AdminDeadlineTimeFormatError,
   computePeriodPatch,
-  deadlineHourFromSetting,
+  deadlineTimeFromSetting,
   type PeriodEnvelope,
   toPeriodListItem,
 } from "./period-admin.envelope.js";
@@ -182,15 +182,18 @@ describe("toPeriodListItem — canReopen", () => {
   );
 });
 
-describe("deadlineHourFromSetting", () => {
-  it("parses the hour from a valid HH:mm setting", () => {
-    expect(deadlineHourFromSetting("18:30")).toBe(18);
+describe("deadlineTimeFromSetting", () => {
+  it("preserves hour and minute from a valid HH:mm setting", () => {
+    expect(deadlineTimeFromSetting("18:30")).toEqual({
+      hour: 18,
+      minute: 30,
+    });
   });
 
   it.each(["", "9:00", "24:00", "18:60", "invalid"])(
     "rejects malformed deadlineTime %j",
     (deadlineTime) => {
-      expect(() => deadlineHourFromSetting(deadlineTime)).toThrow(
+      expect(() => deadlineTimeFromSetting(deadlineTime)).toThrow(
         new AdminDeadlineTimeFormatError(deadlineTime),
       );
     },

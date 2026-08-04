@@ -11,9 +11,9 @@ export function deriveViewerPeriods(
   historyEntries: readonly CompiledHistoryEntry[] | undefined,
   displayed: WeeklyReportGetResponse | undefined,
   reportId: string,
-): ReportPeriod[] {
+): readonly ReportPeriod[] {
   const entries = historyEntries ?? [];
-  const historyPeriods: ReportPeriod[] = entries.map((entry) =>
+  const historyPeriods: readonly ReportPeriod[] = entries.map((entry) =>
     toNavigationPeriod({
       id: entry.reportId,
       periodStart: entry.periodStart,

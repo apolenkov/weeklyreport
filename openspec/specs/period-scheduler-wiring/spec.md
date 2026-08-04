@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change require-period-scheduler-deps. Update Purpose after archive.
+Make scheduled period transitions race-safe, independently reconciled, and auditable through mandatory scheduler dependencies wired at the composition root.
 
 ## Requirements
 

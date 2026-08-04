@@ -10,14 +10,10 @@ vi.mock("next/headers", () => ({
   cookies: () => Promise.resolve({ get: vi.fn() }),
 }));
 
-import { decodePrintGateResponse } from "./get-print-route-context";
+import { decodePrintGateResponse } from "./decode-print-gate";
 
-/**
- * `printGate` returns `{ session, isPdfExport, pdfReportId }`, not the bare
- * session returned by `auth.me`. Prove the decoder pulls all three fields out
- * of the realistic superjson-batched body because route-gate mocks bypass
- * this integration seam.
- */
+// Preserve the realistic batched printGate seam: route-gate mocks otherwise
+// bypass decoding of session, export mode, and report id together.
 
 const SESSION = {
   userId: "a0000000-0000-4000-8000-000000000001",

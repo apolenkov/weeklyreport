@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -37,7 +38,9 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
 
   beforeAll(() => {
     // PrismaClient structurally satisfies PrismaService (both extend PrismaClient)
-    repo = new ReportSectionsPrismaRepository(prisma as never);
+    repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
   });
 
   beforeEach(async () => {
@@ -58,6 +61,7 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       status: "draft" as const,
       projectStatuses: [],
       stageStatuses: [],
+      activityStatuses: [],
       items: [],
       risks: [],
       decisions: [],
@@ -67,7 +71,10 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       const service = new ReportSectionsService(repo, testGraceSettings);
 
       // Seed rows are minted at version 1.
-      const saved = await service.saveDraft(draftAtVersion(1));
+      const saved = await service.saveDraft(
+        draftAtVersion(1),
+        testData.lead.id,
+      );
 
       expect(saved.version).toBe(2);
     });
@@ -76,21 +83,24 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       const service = new ReportSectionsService(repo, testGraceSettings);
 
       // First writer loaded version 1, saves, and bumps the row to 2.
-      await service.saveDraft(draftAtVersion(1));
+      await service.saveDraft(draftAtVersion(1), testData.lead.id);
 
       // Second writer also loaded version 1, edits offline, and saves last.
       // The row is now at 2, so the compare-and-set finds no match.
-      await expect(service.saveDraft(draftAtVersion(1))).rejects.toThrow(
-        SectionVersionConflictError,
-      );
+      await expect(
+        service.saveDraft(draftAtVersion(1), testData.lead.id),
+      ).rejects.toThrow(SectionVersionConflictError);
     });
 
     it("lets the second writer succeed after reloading the fresh version", async () => {
       const service = new ReportSectionsService(repo, testGraceSettings);
 
-      await service.saveDraft(draftAtVersion(1));
+      await service.saveDraft(draftAtVersion(1), testData.lead.id);
       // Reload surfaces version 2; round-tripping it clears the conflict.
-      const recovered = await service.saveDraft(draftAtVersion(2));
+      const recovered = await service.saveDraft(
+        draftAtVersion(2),
+        testData.lead.id,
+      );
 
       expect(recovered.version).toBe(3);
     });
@@ -246,28 +256,40 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
         stageNames: ["Development"],
       });
 
-      const created = await service.saveDraft({
-        reportSectionId: testData.section.id,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-        stageStatuses: [],
-        items: [itemInput("svc item")],
-        risks: [],
-        decisions: [],
-      });
+      const created = await service.saveDraft(
+        {
+          reportSectionId: testData.section.id,
+          version: 1,
+          status: "draft",
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          stageStatuses: [],
+          activityStatuses: [],
+          items: [itemInput("svc item")],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      );
       const stableId = expectDefined(expectDefined(created.items[0]).stableId);
 
-      const updated = await service.saveDraft({
-        reportSectionId: testData.section.id,
-        version: created.version,
-        status: "draft",
-        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-        stageStatuses: [],
-        items: [itemInput("svc item edited", stableId)],
-        risks: [],
-        decisions: [],
-      });
+      const updated = await service.saveDraft(
+        {
+          reportSectionId: testData.section.id,
+          version: created.version,
+          status: "draft",
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          stageStatuses: [],
+          activityStatuses: [],
+          items: [itemInput("svc item edited", stableId)],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      );
       expect(expectDefined(updated.items[0]).stableId).toBe(stableId);
       expect(expectDefined(updated.items[0]).text).toBe("svc item edited");
     });
@@ -279,20 +301,30 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
       await assignLeadToProject();
       await prisma.report.update({
         where: { id: testData.report.id },
-        data: { status: "published", periodStatus: "reopened" },
+        data: {
+          status: "published",
+          periodState: "open",
+          periodStatus: "reopened",
+          publishedAt: new Date("2026-07-31T18:00:00.000Z"),
+          reopenedAt: new Date("2026-08-01T09:00:00.000Z"),
+        },
       });
 
       const service = new ReportSectionsService(repo, testGraceSettings);
-      const saved = await service.saveDraft({
-        reportSectionId: testData.section.id,
-        version: 1,
-        status: "draft",
-        projectStatuses: [],
-        stageStatuses: [],
-        items: [],
-        risks: [],
-        decisions: [],
-      });
+      const saved = await service.saveDraft(
+        {
+          reportSectionId: testData.section.id,
+          version: 1,
+          status: "draft",
+          projectStatuses: [],
+          stageStatuses: [],
+          activityStatuses: [],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      );
 
       expect(saved.version).toBe(2);
     });
@@ -344,21 +376,25 @@ describe("ReportSectionsPrismaRepository (integration) — locking, identity & w
 
       const service = new ReportSectionsService(repo, testGraceSettings);
       await expect(
-        service.submitSection({
-          reportSectionId: testData.section.id,
-          version: 1,
-          status: "draft",
-          confirmed: true,
-          projectStatuses: [
-            { projectId: testData.project.id, status: "green" },
-          ],
-          items: [],
-          risks: [],
-          decisions: [],
-          stageStatuses: [
-            { projectId: testData.project.id, stageId, status: "green" },
-          ],
-        }),
+        service.submitSection(
+          {
+            reportSectionId: testData.section.id,
+            version: 1,
+            status: "draft",
+            confirmed: true,
+            projectStatuses: [
+              { projectId: testData.project.id, status: "green" },
+            ],
+            items: [],
+            risks: [],
+            decisions: [],
+            stageStatuses: [
+              { projectId: testData.project.id, stageId, status: "green" },
+            ],
+            activityStatuses: [],
+          },
+          testData.lead.id,
+        ),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot submit sections of a published report.",

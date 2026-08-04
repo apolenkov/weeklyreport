@@ -15,6 +15,10 @@ import {
 
 type DraftSection = ReportSectionReadModel;
 type StageStatusValue = TrafficLightStatus | null;
+type ResolvedKanbanItem = Exclude<
+  KanbanItem,
+  { readonly parent: { readonly kind: "unresolved" } }
+>;
 
 function aggregateTrafficLight(
   stages: readonly { status?: StageStatusValue | undefined }[],
@@ -45,7 +49,7 @@ export function mergeProductDraft(
   );
 
   const projects = section.projects.map((project) => {
-    const ownedStages = (project.ownedStages ?? []).map((stage) => {
+    const ownedStages = project.ownedStages.map((stage) => {
       const key = `${project.projectId}::${normalizeStageName(stage.stageName)}`;
       if (!nextStageStatusByKey.has(key)) return stage;
       return {
@@ -173,22 +177,23 @@ export function mergeRiskDraft(
 }
 
 function mergeItemRow(
-  item: KanbanItem,
+  item: ResolvedKanbanItem,
   itemType: "current" | "next",
   existing: DraftSection["items"][number] | undefined,
 ) {
   const workflowStatus = persistableItemStatusToWorkflow(item.status);
-  const parentFields = item.activityId
-    ? {
-        projectId: null,
-        activityId: item.activityId,
-        stageNames: [] as string[],
-      }
-    : {
-        projectId: item.productId,
-        activityId: null,
-        stageNames: item.stageNames,
-      };
+  const parentFields =
+    item.parent.kind === "activity"
+      ? {
+          projectId: null,
+          activityId: item.parent.id,
+          stageNames: [] as string[],
+        }
+      : {
+          projectId: item.parent.id,
+          activityId: null,
+          stageNames: item.stageNames,
+        };
   const pausedReason =
     workflowStatus === "paused" ? (item.pausedReason ?? null) : null;
   if (existing) {
@@ -221,7 +226,10 @@ export function mergeItemsDraft(
   itemType: "current" | "next",
   next: readonly KanbanItem[],
 ): DraftSection {
-  const editableItems = next.filter((item) => !item.foreign);
+  const editableItems = next.filter(
+    (item): item is ResolvedKanbanItem =>
+      !item.foreign && item.parent.kind !== "unresolved",
+  );
   const existingById = new Map(
     section.items.flatMap((item) =>
       item.type === itemType && item.id ? [[item.id, item] as const] : [],

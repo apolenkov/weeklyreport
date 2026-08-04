@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change behavioral-ui-regression-gate. Update Purpose after archive.
+Define a durable, code-derived Scenario Catalog that a swappable human or AI Driver executes with per-role accessibility verdicts before critical paths become a frozen gate.
 
 ## Requirements
 
@@ -88,7 +88,7 @@ agentic-testing product.
 - **THEN** it drives the browser via the Playwright MCP and logs in via
   `dev-auth`, with no dependency on an external testing service
 
-### Requirement: Deterministic frozen gate deferred to phase 2
+### Requirement: Deterministic frozen gate remains deferred
 
 Freezing every behavioral scenario into deterministic Playwright specs as a
 blocking gate SHALL remain deferred until the product stabilizes. The
@@ -100,41 +100,44 @@ scenarios SHALL cover only critical, stabilized paths.
 
 - **WHEN** the entry-point sweep blocks on an axe violation
 - **THEN** no exhaustive per-element expected-outcome specification is added
-- **AND** formal scenario freezing remains deferred to phase 2
+- **AND** formal scenario freezing remains deferred until the product stabilizes
 
 #### Scenario: No exhaustive compiled gate is added now
 
 - **WHEN** this closeout adds a blocking verdict to the existing entry-point
   UAT sweep
 - **THEN** it does not add an exhaustive compiled per-element behavior gate
-- **AND** the phase-2 frozen critical-journey gate remains deferred
+- **AND** the frozen critical-journey gate remains deferred until those paths are
+  stable
 
 ### Requirement: Test-harness boundary
 
-This change SHALL remove the current UI e2e harness under `e2e/` (browser sweep
-config, fixtures, `dev-auth`, page helpers, visual helpers, and the
-`test:e2e`/`test:e2e:ui` scripts) to be regenerated for the sweep. It MUST keep
-the integration suite (`e2e/integration/*`, `playwright.integration.config.ts`)
-and all vitest unit tests. The removed `dev-auth` plumbing SHALL be recovered
-from git history, not rewritten.
+The owned UI e2e sweep harness SHALL remain under `e2e/sweep/` (Playwright
+config, catalog sweep, fixtures, `dev-auth`, page helpers, visual helpers, and
+the `test:uat` script). It MUST keep the integration suite
+(`e2e/integration/*`, `playwright.integration.config.ts`) and all Vitest unit
+tests. The sweep's `dev-auth` plumbing is a live source owner and MUST stay
+available to the per-role driver.
 
 #### Scenario: Integration and unit tests are preserved
 
-- **WHEN** the UI e2e harness is removed
-- **THEN** `pnpm test` (vitest unit) and the integration config still run, and no
-  unit or integration test file is deleted
+- **WHEN** the UI e2e sweep runs
+- **THEN** `pnpm test` (Vitest unit), `pnpm test:uat` (the sweep), and the
+  integration config remain runnable, and no unit or integration test file is
+  deleted
 
-#### Scenario: dev-auth is restored from history
+#### Scenario: dev-auth remains owned by the sweep
 
-- **WHEN** the regenerated sweep needs per-role login
-- **THEN** `dev-auth` is restored from git history rather than re-derived from
-  scratch
+- **WHEN** the sweep needs per-role login
+- **THEN** it imports the maintained `e2e/sweep/helpers/dev-auth` implementation
+  rather than depending on a deleted harness or an external service
 
 ### Requirement: Coverage Catalog and MBT stay out of scope
 
 The `file:line` Coverage Catalog and its drift gate SHALL remain deferred under
 `establish-scenario-catalog`, and formal Model-Based Testing SHALL remain
-deferred to phase 2. Neither MUST be introduced by this change. This change owns
+deferred until the catalog and product are ready. Neither MUST be introduced by
+this change. This change owns
 only the behavior-anchored path and the Driver.
 
 #### Scenario: No file:line coupling and no MBT model is added
@@ -195,7 +198,7 @@ role's test; an axe violation MUST therefore block completion.
   report-only behavior
 - **THEN** console, load, network, page, and axe anomalies block the UAT command
 - **AND** the deferred exhaustive frozen behavior suite remains a separate
-  phase-2 concern
+  future concern
 
 #### Scenario: A clean role passes
 

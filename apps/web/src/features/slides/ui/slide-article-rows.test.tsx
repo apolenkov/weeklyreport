@@ -135,6 +135,29 @@ describe("SlideCell row hover", () => {
     expect(screen.queryByRole("button")).toBeNull();
     expect(onRowActivate).not.toHaveBeenCalled();
   });
+
+  it("surfaces an unknown-author fallback badge instead of dropping the marker", () => {
+    const orphanRow: GridRow = {
+      ...ROW,
+      id: "row-orphan",
+      authorId: "author-not-in-roster",
+      showAuthorBadge: true,
+    };
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[orphanRow]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Current work"
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    const badge = screen.getByTestId("slide-author-badge");
+    expect(badge).toHaveTextContent("?");
+    expect(badge).toHaveTextContent("Unknown author");
+  });
 });
 
 describe("SlidePriorityStrip rank badge", () => {

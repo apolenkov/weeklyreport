@@ -20,6 +20,10 @@ export interface ResolvedFileOpts {
 // createFileSink builds, so a caller can neither read nor corrupt them.
 export interface FileSink {
   readonly enqueue: (entry: Record<string, unknown>) => void;
+  // Resolves once every entry enqueued so far has been attempted (all bytes
+  // appended or a failure reported to stderr); rejects when any of those
+  // writes failed, so a lost line is never silent to a flushing caller.
+  readonly flush: () => Promise<void>;
 }
 
 async function pruneOldArchives(
@@ -99,9 +103,15 @@ export function createFileSink(
   opts: ResolvedFileOpts,
 ): FileSink {
   const activePath = join(logDir, ACTIVE_LOG_FILENAME);
-  // The sink's whole mutable state: writes serialize on `queue`, and
-  // `lastPruneAt` (0 = never pruned) carries the prune clock between writes.
-  const state = { queue: Promise.resolve(), lastPruneAt: 0 };
+  // The sink's whole mutable state: writes serialize on `queue`,
+  // `lastPruneAt` (0 = never pruned) carries the prune clock between writes,
+  // and `pendingFailures` counts writes lost since the last flush so a
+  // flushing caller can observe them.
+  const state = {
+    queue: Promise.resolve(),
+    lastPruneAt: 0,
+    pendingFailures: 0,
+  };
   return {
     enqueue: (entry) => {
       state.queue = state.queue
@@ -115,10 +125,19 @@ export function createFileSink(
         })
         .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
         .catch((error: unknown) => {
+          state.pendingFailures += 1;
           process.stderr.write(
             `[logger] file write failed: ${String(error)}\n`,
           );
         });
+    },
+    flush: async () => {
+      await state.queue;
+      const failures = state.pendingFailures;
+      state.pendingFailures = 0;
+      if (failures > 0) {
+        throw new Error(`file sink lost ${failures} write(s)`);
+      }
     },
   };
 }

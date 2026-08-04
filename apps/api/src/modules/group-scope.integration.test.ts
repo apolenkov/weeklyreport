@@ -8,16 +8,9 @@ import {
   disconnectTestPrisma,
 } from "../test-utils/prisma-test-helper";
 
-/**
- * Live-Prisma cross-group visibility matrix.
- *
- * Seeds two groups (A and B), one section per group, one admin, one viewer.
- * Verifies that each role sees exactly the rows it should via groupScopeFilter
- * fragments spread into real Prisma queries.
- *
- * This complements the unit-level helper tests + service-spy tests with a
- * layer that catches schema drift or Prisma relation-path renames.
- */
+// Live-Prisma cross-group visibility matrix: seeds two groups, one section per
+// group, one admin, one viewer; each role sees exactly the rows it should via
+// groupScopeFilter spread into real Prisma queries. Catches schema/relation drift.
 describe("group-scope visibility matrix (integration)", () => {
   const prisma = createTestPrisma();
 

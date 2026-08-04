@@ -52,11 +52,15 @@ function reportRiskErrors(args: RiskSaveArgs, errors: RiskFieldErrors): void {
 // stage); a product parent keeps the product + stage shape.
 function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
   const { parentStage, risk } = args;
+  const parentId =
+    parentStage.parent.kind === "unresolved"
+      ? undefined
+      : parentStage.parent.id;
   if (parentStage.isActivityParent) {
     args.onSave(
       buildActivityRiskEntry({
         existingId: risk?.id,
-        activityId: parentStage.parent.id,
+        activityId: parentId ?? "",
         activityName: parentStage.selectedActivity?.name,
         severity: parentStage.severity,
         ...prose,
@@ -64,11 +68,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
     );
     return;
   }
-  const product = resolveSaveProduct(
-    args.products,
-    risk,
-    parentStage.parent.id,
-  );
+  const product = resolveSaveProduct(args.products, risk, parentId ?? "");
   if (!product) {
     reportRiskErrors(args, { text: "No product available" });
     return;

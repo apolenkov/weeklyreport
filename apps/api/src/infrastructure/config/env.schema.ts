@@ -17,10 +17,9 @@ const envObjectSchema = z.object({
   // (`reminders.scheduler.ts`). Required so prod emails never link to
   // localhost; in dev/compose it is set to the same web origin as FRONTEND_URL.
   APP_BASE_URL: z.url(),
-  // Optional CSV of additional allowed origins for CORS. Lets
-  // prod accept e.g. customreport.example.com + admin.customreport.
-  // example.com from the same API instance. Wildcards (*) are rejected
-  // in superRefine when NODE_ENV=production.
+  // Optional CSV of additional allowed origins for CORS (e.g. prod host +
+  // admin host on one API instance). Wildcards (*) are rejected in
+  // superRefine when NODE_ENV=production.
   FRONTEND_URLS: z.string().optional(),
   AUTH_DEV_MODE: z
     .enum(["true", "false"])
@@ -35,10 +34,9 @@ const envObjectSchema = z.object({
   LOG_LEVEL: logLevelSchema,
   LOG_DIR: z.string().optional(),
 
-  // Auth / JWT. Required (min 32): the JWT signer
-  // (`auth.controller.ts::createJwtSigner`) is built at boot in EVERY mode —
-  // dev-login still issues a session JWT — so a config without it crashes at
-  // controller construction regardless of AUTH_DEV_MODE.
+  // Auth / JWT. Required (min 32): the JWT signer is built at boot in EVERY
+  // mode — dev-login still issues a session JWT — so a config without it
+  // crashes at controller construction regardless of AUTH_DEV_MODE.
   AUTH_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
   // Session-cookie name. Optional: `resolveSessionCookieName` applies its
   // named SESSION_COOKIE_DEFAULT_NAME const when absent (a consumer default,
@@ -73,13 +71,17 @@ const envObjectSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
 
-  // OpenTelemetry. The endpoint stays optional — the SDK only starts
-  // when OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
-  // 'true'. The toggle + sampler are required so the telemetry posture is
-  // always explicit. See otel.bootstrap.ts.
+  // OpenTelemetry. The endpoint stays optional — the SDK only starts when
+  // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not 'true'.
+  // The toggle + sampler are required so the telemetry posture is explicit.
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   OTEL_SDK_DISABLED: z.string(),
-  OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1),
+  OTEL_TRACES_SAMPLER_ARG: z
+    .string()
+    .trim()
+    .min(1)
+    .transform(Number)
+    .pipe(z.number().min(0).max(1)),
   OTEL_SERVICE_NAME: z.string().optional(),
   OTEL_SERVICE_VERSION: z.string().optional(),
 
@@ -156,10 +158,9 @@ const addWildcardOriginIssue = (
   });
 };
 
-// SMTP must be configured in production. Without a host EmailService
-// silently selects jsonTransport and drops every reminder; without a
-// from-address it cannot address an envelope. Fail boot loud instead.
-// A whitespace-only value is unusable, so it counts as absent here.
+// SMTP must be configured in production: without a host EmailService silently
+// drops reminders (jsonTransport), and without a from-address it cannot address
+// an envelope. A whitespace-only value counts as absent.
 const SMTP_PRODUCTION_KEYS = ["SMTP_HOST", "SMTP_FROM"] as const;
 
 const addMissingSmtpIssues = (
@@ -175,12 +176,9 @@ const addMissingSmtpIssues = (
   });
 };
 
-// SAML/Keycloak must be configured in production once dev-login is off.
-// The vars stay `.optional()` in the object shape (dev-login boots
-// without an IdP); without this fence a prod boot with AUTH_DEV_MODE=false
-// and no SAML env succeeds and looks healthy until the first login, when
-// saml.strategy.ts's own requireEnv fails late. A whitespace-only value
-// is unusable, so it counts as absent here.
+// SAML/Keycloak must be configured in production once dev-login is off. The
+// vars stay `.optional()` (dev-login boots without an IdP); this fence fails
+// boot loud before saml.strategy.ts's requireEnv would fail late.
 const SAML_PRODUCTION_KEYS = [
   "KEYCLOAK_SAML_CALLBACK_URL",
   "KEYCLOAK_SAML_ENTRY_POINT",

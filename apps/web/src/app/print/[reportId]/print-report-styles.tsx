@@ -1,12 +1,4 @@
-/**
- * Print Report Styles.
- */
-export function PrintReportStyles() {
-  return (
-    <style
-      // eslint-disable-next-line react/no-danger -- static, hardcoded print CSS with no user input
-      dangerouslySetInnerHTML={{
-        __html: `
+const PRINT_STYLES = `
             @media print {
               body { margin: 0; padding: 0; }
               body nav, body .no-print { display: none; }
@@ -19,8 +11,8 @@ export function PrintReportStyles() {
               size: A4;
               margin: 15mm;
             }
-          `,
-      }}
-    />
-  );
+          `;
+
+export function PrintReportStyles() {
+  return <style>{PRINT_STYLES}</style>;
 }

@@ -167,9 +167,8 @@ async function upsertReminderPolicies(
   policies: AdminSnapshot["policies"],
 ): Promise<void> {
   // Restored BEFORE the rules so a rule's non-null policyId FK resolves on a
-  // fresh database. Unlike the live admin edit path (saveReminderPolicy),
-  // this does NOT cascade `active` onto derived rule statuses — the snapshot
-  // carries each rule row's own status and writes it explicitly below.
+  // fresh database. Unlike saveReminderPolicy, this does not cascade `active`
+  // onto rule statuses — the snapshot carries each rule's own status.
   for (const policy of policies) {
     const data = {
       kind: policy.kind,

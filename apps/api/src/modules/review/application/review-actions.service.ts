@@ -26,27 +26,27 @@ import {
 // A comment's single record anchor (exactly one set; the shared Zod input
 // enforces that before this layer).
 export interface RecordAnchor {
-  itemId?: string;
-  riskId?: string;
-  decisionId?: string;
+  readonly itemId?: string;
+  readonly riskId?: string;
+  readonly decisionId?: string;
 }
 
 // Section facts a verdict reads — editable status, owning group, period lifecycle.
 export interface VerdictContext {
-  status: ReportSectionStatus;
-  groupId: string | null;
-  periodStatus: PeriodStatus;
-  archived: boolean;
+  readonly status: ReportSectionStatus;
+  readonly groupId: string | null;
+  readonly periodStatus: PeriodStatus;
+  readonly archived: boolean;
 }
 
 export interface PostVerdictParams {
-  sectionId: string;
-  reviewerId: string;
-  verdict: ReviewVerdict;
+  readonly sectionId: string;
+  readonly reviewerId: string;
+  readonly verdict: ReviewVerdict;
   // The client-loaded version drives both the optimistic lock and the version
   // stamped on the verdict, so a stale judgement can never be persisted.
-  expectedVersion: number;
-  currentStatus: ReportSectionStatus;
+  readonly expectedVersion: number;
+  readonly currentStatus: ReportSectionStatus;
 }
 
 export interface ReviewActionsRepository {
@@ -144,10 +144,19 @@ export class ReviewActionsService {
     if (!context) {
       throw new ReviewNotFoundError("Comment not found.");
     }
-    // Designated reviewer FOR THE COMMENT'S GROUP may delete it (the author is
-    // one such reviewer; admin everywhere). Keyed on the group, so a group-A
-    // reviewer cannot delete a group-B comment.
-    await this.assertReviewer(session, context.groupId);
+    // Author may delete their own comment; admin deletes anywhere; the head of
+    // the comment's group deletes any comment in their group. A plain
+    // designated reviewer must not delete another reviewer's comment.
+    const isAuthor = session.userId === context.reviewerId;
+    const isGroupHead =
+      session.role === "head" &&
+      context.groupId !== null &&
+      session.reportingGroupId === context.groupId;
+    if (session.role !== "admin" && !isAuthor && !isGroupHead) {
+      throw new ReviewAccessError(
+        "You can only delete your own review comment.",
+      );
+    }
     await this.repository.deleteComment(input.commentId);
     return { success: true };
   }

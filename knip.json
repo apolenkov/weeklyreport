@@ -5,6 +5,8 @@
   "workspaces": {
     ".": {
       "entry": [
+        "eslint.config.ts",
+        "eslint-config/*.ts",
         "prisma/*.ts",
         "scripts/*.{ts,mjs}",
         "e2e/playwright.integration.config.ts",
@@ -19,6 +21,8 @@
         "e2e/seed-profiles/global-setup.ts"
       ],
       "project": [
+        "eslint.config.ts",
+        "eslint-config/**/*.ts",
         "prisma/**/*.ts",
         "scripts/**/*.{ts,mjs}",
         "e2e/**/*.{ts,mjs}"

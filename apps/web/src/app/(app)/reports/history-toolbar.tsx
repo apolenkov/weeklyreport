@@ -21,7 +21,7 @@ function HistoryArchiveToggle({
   return (
     <div className="flex min-h-10 shrink-0 items-center">
       <label
-        className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]"
+        className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-card)] px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]"
         title="Past weeks and closed reports"
       >
         <input
@@ -66,7 +66,7 @@ export function HistoryToolbar({
 
   const searchScope = historySearchScope(role);
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-3 py-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_75%,transparent)] px-3 py-3">
       <div className="min-w-[220px] flex-1">
         {searchScope ? (
           <SearchInput

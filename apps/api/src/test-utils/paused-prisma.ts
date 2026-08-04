@@ -6,7 +6,7 @@ export interface PauseGate {
   readonly pause: () => Promise<void>;
 }
 
-/** Creates a deterministic two-phase gate for a single intercepted DB call. */
+// Creates a deterministic two-phase gate for a single intercepted DB call.
 export function createPauseGate(): PauseGate {
   const paused = Promise.withResolvers<void>();
   const released = Promise.withResolvers<void>();
@@ -20,7 +20,7 @@ export function createPauseGate(): PauseGate {
   };
 }
 
-/** Pauses immediately before an interactive transaction reaches the database. */
+// Pauses immediately before an interactive transaction reaches the database.
 export function pauseBeforeTransaction(
   prisma: PrismaClient,
   pause: () => Promise<void>,
@@ -42,7 +42,7 @@ export function pauseBeforeTransaction(
   });
 }
 
-/** Pauses immediately before the next ReportSection updateMany statement. */
+// Pauses immediately before the next ReportSection updateMany statement.
 export function pauseBeforeSectionUpdate(
   prisma: PrismaClient,
   pause: () => Promise<void>,

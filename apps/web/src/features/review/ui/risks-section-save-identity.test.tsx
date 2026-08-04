@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -28,7 +26,10 @@ const existingRisk: RiskEntry = {
   mitigation: "Escalate",
 };
 
-function renderSection(onChange: (next: RiskEntry[]) => void, addSignal = 0) {
+function renderSection(
+  onChange: (next: readonly RiskEntry[]) => void,
+  addSignal = 0,
+) {
   return render(
     <SdlcTooltipProvider>
       <RisksSection
@@ -59,7 +60,7 @@ function fillProse(text: string): void {
 // database — the row-count arithmetic the e2e suite polls cannot come out right.
 describe("RisksSection — the emitted list decides how many rows a save writes", () => {
   it("saving an edit keeps one entry, carrying the edited risk's id", () => {
-    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     renderSection(onChange);
 
     fireEvent.click(screen.getByRole("button", { name: /Edit risk for CRM/i }));
@@ -74,7 +75,7 @@ describe("RisksSection — the emitted list decides how many rows a save writes"
   });
 
   it("saving a create appends exactly one entry with a fresh id", () => {
-    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    const onChange = vi.fn<(next: readonly RiskEntry[]) => void>();
     const { rerender } = renderSection(onChange);
 
     // An add-signal bump is the only way in: the +Add Risk control lives in the

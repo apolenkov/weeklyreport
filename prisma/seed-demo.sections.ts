@@ -7,7 +7,15 @@ import {
 } from "@prisma/client";
 
 import { ACTIVE_REPORT_ID, SEED_REPORTS } from "./seed-constants.js";
-import { makeRowId, makeSectionId, stageId } from "./seed-demo.ids.js";
+import {
+  activeDecisionId,
+  activeItemId,
+  activeProjectStatusId,
+  activeRiskId,
+  activeSectionId,
+  activeStageStatusId,
+  stageId,
+} from "./seed-demo.ids.js";
 import type { DemoSection } from "./seed-demo.types.js";
 
 /**
@@ -31,11 +39,13 @@ export function groupByLead(
 async function writeContributionStatuses(
   prisma: PrismaClient,
   sectionId: string,
+  leadIdx: number,
+  contributionIdx: number,
   c: DemoSection,
 ): Promise<void> {
   await prisma.projectStatus.create({
     data: {
-      id: makeRowId(),
+      id: activeProjectStatusId(leadIdx, contributionIdx),
       reportSectionId: sectionId,
       projectId: c.productId,
       status: c.productLight,
@@ -44,12 +54,12 @@ async function writeContributionStatuses(
   // The first owned stage carries the product's colour; the rest stay green so
   // one product light never repaints every stage the lead owns.
   await prisma.stageStatus.createMany({
-    data: c.ownedStages.map((stage, idx) => ({
-      id: makeRowId(),
+    data: c.ownedStages.map((stage, stageIdx) => ({
+      id: activeStageStatusId(leadIdx, contributionIdx, stageIdx),
       reportSectionId: sectionId,
       projectId: c.productId,
       stageId: stageId(stage),
-      status: idx === 0 ? c.productLight : TrafficLightStatus.green,
+      status: stageIdx === 0 ? c.productLight : TrafficLightStatus.green,
     })),
   });
 }
@@ -57,11 +67,13 @@ async function writeContributionStatuses(
 async function writeContributionContent(
   prisma: PrismaClient,
   sectionId: string,
+  leadIdx: number,
+  contributionIdx: number,
   c: DemoSection,
 ): Promise<void> {
   await prisma.item.createMany({
-    data: c.items.map((item) => ({
-      id: makeRowId(),
+    data: c.items.map((item, itemIdx) => ({
+      id: activeItemId(leadIdx, contributionIdx, itemIdx),
       reportSectionId: sectionId,
       type: item.type,
       projectId: c.productId,
@@ -76,7 +88,7 @@ async function writeContributionContent(
   if (c.risk) {
     await prisma.risk.create({
       data: {
-        id: makeRowId(),
+        id: activeRiskId(leadIdx, contributionIdx),
         reportSectionId: sectionId,
         projectId: c.productId,
         risk: c.risk.risk,
@@ -90,7 +102,7 @@ async function writeContributionContent(
   if (c.decision) {
     await prisma.decision.create({
       data: {
-        id: makeRowId(),
+        id: activeDecisionId(leadIdx, contributionIdx),
         reportSectionId: sectionId,
         productId: c.productId,
         text: c.decision.text,
@@ -106,8 +118,9 @@ export async function seedActiveLeadSection(
   prisma: PrismaClient,
   leadId: string,
   contributions: readonly DemoSection[],
+  leadIdx: number,
 ): Promise<void> {
-  const sectionId = makeSectionId();
+  const sectionId = activeSectionId(leadIdx);
   // A lead's single section is submitted only when EVERY contribution is.
   const allSubmitted = contributions.every(
     (c) => c.sectionStatus === ReportSectionStatus.submitted,
@@ -126,8 +139,20 @@ export async function seedActiveLeadSection(
     },
   });
 
-  for (const c of contributions) {
-    await writeContributionStatuses(prisma, sectionId, c);
-    await writeContributionContent(prisma, sectionId, c);
+  for (const [contributionIdx, c] of contributions.entries()) {
+    await writeContributionStatuses(
+      prisma,
+      sectionId,
+      leadIdx,
+      contributionIdx,
+      c,
+    );
+    await writeContributionContent(
+      prisma,
+      sectionId,
+      leadIdx,
+      contributionIdx,
+      c,
+    );
   }
 }

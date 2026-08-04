@@ -50,12 +50,18 @@ function useAcknowledgeGroup(
   const acksQ = useQuery(
     trpc.review.acknowledgements.queryOptions({ reportId, groupId }),
   );
-  const acks: ReviewAcknowledgementView[] = acksQ.data ?? [];
+  // A failed roster must not read as "nobody acknowledged" — withhold it and inert the control.
+  const acks: ReviewAcknowledgementView[] = acksQ.isError
+    ? []
+    : (acksQ.data ?? []);
+  const rosterUnavailable = acksQ.isError;
 
   const ackMut = useMutation(
     trpc.review.acknowledge.mutationOptions({
       onSuccess: () => {
-        void qc.invalidateQueries(trpc.review.acknowledgements.pathFilter());
+        void qc
+          .invalidateQueries(trpc.review.acknowledgements.pathFilter())
+          .catch(() => undefined);
         toast.success("Acknowledged");
       },
       onError: (err: unknown) => {
@@ -71,6 +77,7 @@ function useAcknowledgeGroup(
   return {
     acks,
     acknowledged: acks.some((ack) => ack.userId === currentUserId),
+    rosterUnavailable,
     ackMut,
   };
 }
@@ -87,7 +94,7 @@ function AcknowledgeGroupControl({
   readonly isHeadOrAdmin: boolean;
 }) {
   const suffix = group.label ? ` · ${group.label}` : "";
-  const { acks, acknowledged, ackMut } = useAcknowledgeGroup(
+  const { acks, acknowledged, rosterUnavailable, ackMut } = useAcknowledgeGroup(
     reportId,
     group.groupId,
     currentUserId,
@@ -99,12 +106,19 @@ function AcknowledgeGroupControl({
         type="button"
         className="btn-press inline-flex items-center gap-1.5 max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-60"
         onClick={() => ackMut.mutate({ reportId, groupId: group.groupId })}
-        disabled={ackMut.isPending || acknowledged}
+        disabled={ackMut.isPending || acknowledged || rosterUnavailable}
         aria-pressed={acknowledged}
       >
         {(acknowledged ? "Acknowledged" : "Acknowledge") + suffix}
       </button>
-      {isHeadOrAdmin && acks.length > 0 ? (
+      {rosterUnavailable ? (
+        <span
+          className="text-[11px] text-[var(--color-destructive)]"
+          role="alert"
+        >
+          Could not load acknowledgements
+        </span>
+      ) : isHeadOrAdmin && acks.length > 0 ? (
         <span className="text-[11px] text-[var(--color-muted-foreground)]">
           Seen by {acks.map((ack) => ack.userName ?? "—").join(", ")}
         </span>

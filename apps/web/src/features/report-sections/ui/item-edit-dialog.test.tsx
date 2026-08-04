@@ -1,7 +1,5 @@
-/**
- * Typed text must survive parent re-renders that pass a new
- * stagesForProduct function reference (autosave → React Query invalidate cycle).
- */
+// Typed text must survive parent re-renders that replace the stage-selector
+// callback during the autosave/invalidation cycle.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
@@ -93,14 +91,68 @@ describe("ItemEditDialog — compact touch floor", () => {
   });
 });
 
+describe("ItemEditDialog — create parent seeding", () => {
+  it("leaves the parent explicitly unresolved when the requested product id is stale", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="stale-id"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    // A stale requested product must not silently rebind to products[0]; the
+    // lead picks explicitly from the unresolved parent state.
+    expect(screen.getByLabelText("Product")).toHaveValue("unresolved:");
+  });
+
+  it("leaves the parent explicitly unresolved when no product exists", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={[]}
+        week="current"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Product")).toHaveValue("unresolved:");
+    expect(screen.getByLabelText("Product")).toBeDisabled();
+  });
+
+  it("preselects the exact requested product when it exists", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Product")).toHaveValue("product:p1");
+  });
+});
+
 describe("ItemEditDialog — reopen reset", () => {
   it("resets draft text, status, stageNames and errors when reopened", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
     const item: KanbanItem = {
       id: "item-1",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Persisted item text",
       status: "completed",
       author: "Test Lead",
@@ -175,8 +227,10 @@ describe("ItemEditDialog — canonical stage labels", () => {
     const onSave = vi.fn();
     const legacyItem: KanbanItem = {
       id: "legacy-1",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Legacy item stored with the short stage alias",
       status: "in-progress",
       author: "Test Lead",
@@ -212,8 +266,10 @@ describe("ItemEditDialog — save and reopen status reset", () => {
     const onCancel = vi.fn();
     const baseItem: KanbanItem = {
       id: "item-d12",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Deploy pipeline",
       status: "completed",
       author: "Test Lead",
@@ -280,8 +336,10 @@ describe("ItemEditDialog — unique rank picker", () => {
   it("disables taken ranks in the select while keeping the own current rank selectable", () => {
     const item: KanbanItem = {
       id: "item-rank",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Deploy pipeline",
       status: "in-progress",
       author: "Test Lead",
@@ -423,8 +481,10 @@ describe("ItemEditDialog — typing immediately on open", () => {
     const onSave = vi.fn();
     const item: KanbanItem = {
       id: "item-imm",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "existing text",
       status: "in-progress",
       author: "Test Lead",

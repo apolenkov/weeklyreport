@@ -527,16 +527,17 @@ model Decision {
 }
 
 model PdfExportJob {
-  id          String          @id @default(uuid())
-  reportId    String
-  status      PdfExportStatus @default(pending)
-  filePath    String?
-  checksum    String?
-  error       String?
-  requestedBy String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id              String          @id @default(uuid())
+  reportId        String
+  status          PdfExportStatus @default(pending)
+  templateVersion String
+  filePath        String?
+  checksum        String?
+  error           String?
+  requestedBy     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  report          Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
   @@index([requestedBy])
@@ -588,15 +589,18 @@ model ReminderPolicy {
 }
 
 model ReminderExecution {
-  id        String                  @id @default(uuid())
-  ruleId    String
-  dedupeKey String                  @unique
-  status    ReminderExecutionStatus @default(pending)
-  sentAt    DateTime?
-  error     String?
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
-  rule      ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  id             String                  @id @default(uuid())
+  ruleId         String
+  // Persisted recipient identity; the dedupeKey embeds the email for
+  // uniqueness but is never parsed back to reconstruct it.
+  recipientEmail String
+  dedupeKey      String                  @unique
+  status         ReminderExecutionStatus @default(pending)
+  sentAt         DateTime?
+  error          String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  rule           ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([createdAt(sort: Desc)])
   @@index([ruleId])

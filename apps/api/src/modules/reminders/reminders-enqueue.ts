@@ -10,20 +10,21 @@ import type {
 } from "./reminders.ports.js";
 import {
   buildQueuePayload,
+  type ReminderQueueJobData,
   type ReminderQueuePayload,
 } from "./reminders-queue-payload.js";
 
 export interface EnqueueContext {
-  queue: RemindersEnqueuer;
-  telemetry: RemindersTelemetry;
-  logger: AppLogger;
-  markExecutionFailed: (id: string, message: string) => Promise<void>;
+  readonly queue: RemindersEnqueuer;
+  readonly telemetry: RemindersTelemetry;
+  readonly logger: AppLogger;
+  readonly markExecutionFailed: (id: string, message: string) => Promise<void>;
 }
 
 async function addJob(
   ctx: EnqueueContext,
   executionId: string,
-  data: Record<string, unknown>,
+  data: ReminderQueueJobData,
   jobId: string = executionId,
 ): Promise<void> {
   await ctx.queue.enqueue(jobId, data, ctx.telemetry.captureJobContext());
@@ -65,9 +66,12 @@ export async function enqueueOrMarkFailed(
 }
 
 interface ExecutionRecorder {
-  insertExecutionOnConflict(
+  readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
-  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
+  ) => Promise<{
+    readonly execution: AdminReminderExecution;
+    readonly inserted: boolean;
+  }>;
 }
 
 export async function recordExecutionOnConflict(
@@ -77,10 +81,11 @@ export async function recordExecutionOnConflict(
   return repository.insertExecutionOnConflict(candidate);
 }
 
-// Revive failed→queued via CAS; without this a exhausted-SMTP cycle reports
-// "already sent" on manual re-dispatch because of the unified dedupe key.
+// Revive failed→queued via CAS; without it an exhausted-SMTP cycle reports
+// "already sent" on manual re-dispatch (unified dedupe key). The queue context
+// is required so a revive never mints a queued row with no worker behind it.
 export async function reviveFailedExecution(
-  ctx: EnqueueContext | null,
+  ctx: EnqueueContext,
   requeue: (executionId: string) => Promise<boolean>,
   execution: AdminReminderExecution,
   recipientEmail: string,
@@ -93,7 +98,6 @@ export async function reviveFailedExecution(
     status: "queued",
     errorMessage: null,
   });
-  if (!ctx) return requeued;
   // Fresh jobId — removeOnFail keeps the failed job; reusing execution.id is a no-op.
   return enqueueOrMarkFailed(
     ctx,

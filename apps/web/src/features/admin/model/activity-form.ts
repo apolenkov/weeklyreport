@@ -2,7 +2,8 @@ import type { ProjectActivity } from "@customreport/shared";
 
 export interface ActivityFormData {
   readonly name: string;
-  readonly groupId: string;
+  // null = no group selectable; never an empty-string group id.
+  readonly groupId: string | null;
   readonly linkedProductIds: readonly string[];
   // Raw comma-separated text; the wire array is derived on save so the admin
   // can type freely without the field fighting each keystroke.
@@ -11,7 +12,7 @@ export interface ActivityFormData {
 
 export const EMPTY_ACTIVITY_FORM: ActivityFormData = {
   name: "",
-  groupId: "",
+  groupId: null,
   linkedProductIds: [],
   jiraAccounts: "",
 };
@@ -25,7 +26,7 @@ export function formFromActivity(activity: ProjectActivity): ActivityFormData {
   };
 }
 
-export function parseJiraAccounts(raw: string): string[] {
+export function parseJiraAccounts(raw: string): readonly string[] {
   return raw
     .split(",")
     .map((account) => account.trim())

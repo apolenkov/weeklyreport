@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { DraftSaveContent } from "../../../hooks/use-lead-form-autosave";
 import type { CrossAuthorRow } from "../../report-sections";
 import { useLeadFormDraftSeam } from "./lead-form-draft-seam";
-import type { LeadFormLoadedContext } from "./lead-form-submit-context";
+import type { LeadFormGeneration } from "./lead-form-generation";
 import { useLeadFormAddSignals } from "./use-lead-form-add-signals";
 import { useLeadFormChrome } from "./use-lead-form-chrome";
 import { useLeadFormDraft } from "./use-lead-form-draft";
@@ -19,18 +19,18 @@ interface LeadFormEditingData {
   readonly byPeriodData:
     | { readonly section: ReportSectionReadModel; readonly readOnly: boolean }
     | undefined;
-  readonly sectionIdForActions: string;
+  readonly sectionIdForActions: string | null;
   readonly refetchSection: () => Promise<unknown>;
   readonly crossAuthors: readonly CrossAuthorRow[];
   readonly isEveryone: boolean;
-  readonly activeReportId: string;
+  readonly activeReportId: string | null;
   readonly historyData: readonly MyHistoryEntry[] | undefined;
 }
 
 interface UseLeadFormEditingArgs {
+  readonly generation: LeadFormGeneration | null;
   readonly pinnedReportId: string | undefined;
   readonly data: LeadFormEditingData;
-  readonly loaded: LeadFormLoadedContext;
 }
 
 // Null-traffic own stages auto-promote to On Track at submit (warned first).
@@ -45,22 +45,23 @@ function countUnsetOwnStages(payload: DraftSaveContent | null): number {
 // Draft engine, add-signals, write-action dialogs and page chrome, in the
 // order LeadForm called them — the hook count must not drift across renders.
 export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
-  const { pinnedReportId, data, loaded } = args;
+  const { generation, pinnedReportId, data } = args;
   const seam = useLeadFormDraftSeam();
   const draft = useLeadFormDraft({
+    generation,
     serverSection: data.byPeriodData?.section,
     sectionIdForActions: data.sectionIdForActions,
     serverReadOnly: data.byPeriodData ? data.byPeriodData.readOnly : true,
     refetchSection: data.refetchSection,
     crossAuthors: data.crossAuthors,
     isEveryone: data.isEveryone,
-    loaded,
     seam,
   });
   const addSignals = useLeadFormAddSignals();
   // Draft dialog lifecycle: submit-confirm, revoke, reopen, fill-from. Calls
   // the draft module's submit and reads its readiness.
   const writeActions = useLeadFormWriteActions({
+    generation: draft.generation,
     sectionIdForActions: data.sectionIdForActions,
     autosaveDirty: draft.autosave.dirty,
     submitReadiness: draft.submitReadiness,

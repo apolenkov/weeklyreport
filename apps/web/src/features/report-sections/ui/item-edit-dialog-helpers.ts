@@ -48,7 +48,7 @@ export function firstInvalidControl(
 
 export interface CoverageArgs {
   readonly isActivityParent: boolean;
-  readonly productId: string;
+  readonly productId: string | null | undefined;
   readonly stageNames: readonly string[];
   readonly status: ItemStatus;
   readonly risks: readonly RiskEntry[] | undefined;
@@ -57,7 +57,7 @@ export interface CoverageArgs {
 // Covering risk floors live edit for product+stage only; activity severity is isolated.
 // Stage-less creates are never pre-locked by the wildcard.
 function isItemCovered(args: CoverageArgs): boolean {
-  if (args.isActivityParent || args.productId === "") return false;
+  if (args.isActivityParent || !args.productId) return false;
   if (args.stageNames.length === 0) return false;
   return (
     deriveItemAlarmFromRisks(
@@ -83,14 +83,17 @@ export function resolveStatusSlot(args: CoverageArgs): StatusSlot {
 // only when the picker was never touched and the record has no product of its own.
 export function resolveSaveProduct(
   products: readonly Product[],
-  record: { readonly productId: string; readonly productName: string } | null,
-  parentId: string,
+  record: {
+    readonly productId: string | null;
+    readonly productName: string;
+  } | null,
+  parentId: string | undefined,
 ): { id: string; name: string } | undefined {
   return (
-    products.find((p) => p.id === parentId) ??
-    (record?.productId === parentId
+    (parentId ? products.find((p) => p.id === parentId) : undefined) ??
+    (parentId !== undefined && record?.productId === parentId
       ? { id: record.productId, name: record.productName }
-      : products.at(0))
+      : undefined)
   );
 }
 
@@ -111,14 +114,27 @@ export function resolveInitialItem(args: {
   readonly currentUserName: string | undefined;
 }): KanbanItem {
   if (args.item) return args.item;
-  return {
+  const common = {
     id: "",
-    productId: args.seedProduct?.id ?? "",
-    productName: args.seedProduct?.name ?? "",
     status: args.week === "current" ? IN_PROGRESS_STATUS : "planned",
     text: "",
-    author: args.currentUserName ?? "You",
-  };
+    author: args.currentUserName ?? "",
+  } as const;
+  return args.seedProduct
+    ? {
+        ...common,
+        parent: { kind: "product", id: args.seedProduct.id },
+        productId: args.seedProduct.id,
+        productName: args.seedProduct.name,
+        activityId: null,
+      }
+    : {
+        ...common,
+        parent: { kind: "unresolved" },
+        productId: null,
+        productName: "",
+        activityId: null,
+      };
 }
 
 // Legacy stored `blocked` opens as in-progress so re-save never re-persists bare blocked.
@@ -155,13 +171,15 @@ export function buildActivityItemSave(
 ): KanbanItem {
   return {
     id: args.item?.id ?? crypto.randomUUID(),
-    productId: "",
+    parent: { kind: "activity", id: args.activityId },
+    productId: null,
     productName: args.selectedActivity?.name ?? args.initial.activityName ?? "",
     activityId: args.activityId,
-    activityName: args.selectedActivity?.name ?? args.initial.activityName,
+    activityName:
+      args.selectedActivity?.name ?? args.initial.activityName ?? "",
     text: args.trimmed,
     status: args.status,
-    author: args.item?.author ?? args.currentUserName ?? "You",
+    author: args.item?.author ?? args.currentUserName ?? "",
     priorityRank: args.priorityRank ?? null,
     pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
   };
@@ -175,6 +193,7 @@ export function buildProductItemSave(
 ): KanbanItem {
   return {
     id: args.item?.id ?? crypto.randomUUID(),
+    parent: { kind: "product", id: args.product.id },
     productId: args.product.id,
     productName: args.product.name,
     activityId: null,
@@ -184,7 +203,7 @@ export function buildProductItemSave(
         : undefined,
     text: args.trimmed,
     status: args.status,
-    author: args.item?.author ?? args.currentUserName ?? "You",
+    author: args.item?.author ?? args.currentUserName ?? "",
     priorityRank: args.priorityRank ?? null,
     pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
   };

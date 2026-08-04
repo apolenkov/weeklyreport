@@ -1,14 +1,16 @@
 import { InjectQueue } from "@nestjs/bullmq";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import type { Queue } from "bullmq";
 
-/**
- * Upper bound on the Redis-backed job-count readiness probe. A wedged queue
- * connection must report down instead of hanging the whole readiness route.
- */
+// Upper bound on the Redis-backed job-count readiness probe: a wedged queue
+// connection must report down instead of hanging the whole readiness route.
 const JOB_COUNTS_TIMEOUT_MS = 2000;
+
+// The only Queue surface the probe touches; narrow so tests inject a stub
+// without an erasing cast (BullMQ's Queue class has no usable interface).
+type JobCountQueue = Pick<Queue, "getJobCounts">;
 
 function createProbeTimeout(): {
   promise: Promise<{ kind: "timeout" }>;
@@ -28,9 +30,12 @@ function createProbeTimeout(): {
 
 @Injectable()
 export class BullMQHealthIndicator {
+  private readonly logger = new Logger(BullMQHealthIndicator.name);
+
   constructor(
-    @InjectQueue("pdf-export") private readonly pdfQueue: Queue,
-    @InjectQueue("email-reminder") private readonly emailQueue: Queue,
+    @InjectQueue("pdf-export") private readonly pdfQueue: JobCountQueue,
+    @InjectQueue("email-reminder") private readonly emailQueue: JobCountQueue,
+    @Inject(HealthIndicatorService)
     private readonly healthIndicator: HealthIndicatorService,
   ) {}
 
@@ -51,12 +56,15 @@ export class BullMQHealthIndicator {
         });
       }
       if (outcome.kind === "error") {
-        return this.healthIndicator.check(key).down({
-          message:
+        // The readiness body is served to unauthenticated callers: log the raw
+        // queue error internally, never echo it in the response.
+        this.logger.error("bullmq readiness probe failed", {
+          error:
             outcome.error instanceof Error
               ? outcome.error.message
               : String(outcome.error),
         });
+        return this.healthIndicator.check(key).down();
       }
       const { counts } = outcome;
       const [pdfCounts, emailCounts] = counts;

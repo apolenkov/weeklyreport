@@ -84,4 +84,23 @@ describe("RequestReopenDialog — a11y regression", () => {
       expect(document.activeElement).toBe(screen.getByRole("textbox"));
     });
   });
+
+  it("blocks keyboard submit and dismissal while the request is pending", () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    renderDialog({ pending: true, onConfirm, onCancel });
+
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "need another pass" } });
+
+    fireEvent.keyDown(textarea, { key: "Enter", metaKey: true });
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    const backdrop = document.querySelector('[role="presentation"]');
+    if (backdrop) fireEvent.click(backdrop);
+    expect(onCancel).not.toHaveBeenCalled();
+
+    expect(screen.getByRole("button", { name: "Sending…" })).toBeDisabled();
+  });
 });

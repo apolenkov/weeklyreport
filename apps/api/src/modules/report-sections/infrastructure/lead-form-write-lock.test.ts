@@ -7,7 +7,9 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
   it("rejects a published target before the version CAS", async () => {
     const updateMany = vi.fn();
     const tx = {
-      $queryRaw: vi.fn().mockResolvedValue([{ periodStatus: "published" }]),
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ periodStatus: "published", archived: false }]),
       reportSection: { updateMany },
     };
     const prisma = {

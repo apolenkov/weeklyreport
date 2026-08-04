@@ -48,12 +48,16 @@ function useRespondReopenMutation(onResponded: () => void) {
             : "Request rejected.",
         );
         onResponded();
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.listReopenRequests.queryKey(),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: trpc.admin.pendingReopenCount.queryKey(),
-        });
+        void queryClient
+          .invalidateQueries({
+            queryKey: trpc.admin.listReopenRequests.queryKey(),
+          })
+          .catch(() => undefined);
+        void queryClient
+          .invalidateQueries({
+            queryKey: trpc.admin.pendingReopenCount.queryKey(),
+          })
+          .catch(() => undefined);
       },
       onError: (err) => {
         toast.error(`Failed to process request: ${err.message}`);

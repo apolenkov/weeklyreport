@@ -6,9 +6,9 @@ import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevro
 import type { BlockedAtRiskItem } from "../model/dashboard";
 import {
   groupByProduct,
-  ProductCard,
   type ProductGroup,
-} from "./blocked-at-risk-product-card";
+} from "../model/dashboard-escalations";
+import { ProductCard } from "./blocked-at-risk-product-card";
 
 interface BlockedAtRiskTableProps {
   readonly items: readonly BlockedAtRiskItem[];
@@ -137,8 +137,8 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
 
   return (
     <div
-      className={`card-surface-elevated overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] ${
-        hasItems ? "card-surface-fill" : "bg-[rgba(0,0,0,0.035)]"
+      className={`card-surface-elevated overflow-hidden rounded-[var(--radius)] border border-[var(--card-surface-border)] ${
+        hasItems ? "card-surface-fill" : "bg-[var(--color-surface-empty-tint)]"
       }`}
     >
       <ToggleHeader

@@ -21,18 +21,19 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 
 ## Commands
 
-Use `pnpm` from the repo root (Node >=24). Never `npm`/Yarn.
+Use `pnpm` from the repo root (Node >=26). Never `npm`/Yarn.
 
 ```bash
 pnpm dev:watch          # docker compose dev with --watch
 pnpm typecheck          # turbo run typecheck (depends on prisma generate)
-pnpm lint               # scripts/lint-gate.ts — ALL 10 checks run, every failure reported
+pnpm lint               # scripts/lint-gate.ts — ALL checks run, every failure reported
 pnpm test               # turbo run vitest (unit only)
 pnpm build              # turbo run build
 ```
 
-- `pnpm lint` is `scripts/lint-gate.ts`: it runs all 10 checks (eslint, stylelint,
-  3 tsc projects, SSOT test + sweep, runtime-node, depcruise, knip), prints a
+- `pnpm lint` is `scripts/lint-gate.ts`: it runs every configured check (eslint, stylelint,
+  3 tsc projects, typecov, SSOT test + sweep, runtime-node, depcruise, knip,
+  plus the ratchet and scope-probe suites), prints a
   PASS/FAIL table and exits 1 if any failed. Each is runnable alone
   (`pnpm lint:eslint`, …). `pnpm lint --fail-fast` restores stop-at-first.
 - Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
@@ -95,7 +96,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
   `map`/`filter`/`reduce` + spread; avoid `let`, reassignment, in-place mutation.
   Small single-purpose units; tighten lint via the repo-wide ratchet, never per-folder.
 - **Hard standard → `docs/exemplary-code-standard.md`.** The target the codebase
-  is being rolled out to: files < 250 lines, functions ≤ 50, cognitive complexity
+  is being rolled out to: files ≤ 300 lines, functions ≤ 70, cognitive complexity
   < 10, zero `let`/mutation, and the no-fallback rule below. "Done" = `eslint`
   clean with `--max-warnings 0` (zero errors AND zero warnings) and NO
   `eslint.config.ts` exempt entry for the file.

@@ -9,7 +9,9 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
 const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
 
 /** Zod string for user-facing text: rejects null bytes and invisible-only values. */
-export const safeText = (opts: { min?: number; max?: number } = {}) =>
+export const safeText = (
+  opts: { readonly min?: number; readonly max?: number } = {},
+) =>
   z
     .string()
     .min(opts.min ?? 1)
@@ -24,16 +26,20 @@ const MIN_VALID_YEAR = 2000;
 
 /** Zod coerced date that rejects years before 2000. */
 export const reportDate = () =>
-  z.coerce.date().refine((d) => d.getFullYear() >= MIN_VALID_YEAR, {
+  z.coerce.date().refine((d) => d.getUTCFullYear() >= MIN_VALID_YEAR, {
     message: "Date must be after year 2000",
   });
 
+/** Defines the traffic-light values shared by report status surfaces. */
 export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
+/** Traffic-light value shared by report status surfaces. */
 export type TrafficLightStatus = z.infer<typeof trafficLightStatusSchema>;
+/** Defines whether an item belongs to current work or next-period plans. */
 export const itemTypeSchema = z.enum(["current", "next"]);
 // Progress only — alarms (at-risk/blocked) derive from covering risks and are
 // never stored on an item. Per-type vocabulary below; the write superRefine in
 // section.schema.ts enforces it (DB CHECK is the defence-in-depth backstop).
+/** Defines the progress states valid across both item types. */
 export const itemWorkflowStatusSchema = z.enum([
   "planned",
   "in_progress",
@@ -41,16 +47,21 @@ export const itemWorkflowStatusSchema = z.enum([
   "postponed",
   "done",
 ]);
+/** Progress state stored on a report item. */
 export type ItemWorkflowStatus = z.infer<typeof itemWorkflowStatusSchema>;
-export const CURRENT_ITEM_STATUSES = ["in_progress", "paused", "done"] as const;
-export const NEXT_ITEM_STATUSES = ["planned", "postponed"] as const;
+/** Progress states accepted for current-period items. */
+export const CURRENT_ITEM_STATUSES = Object.freeze([
+  "in_progress",
+  "paused",
+  "done",
+] as const);
+/** Progress states accepted for next-period items. */
+export const NEXT_ITEM_STATUSES = Object.freeze([
+  "planned",
+  "postponed",
+] as const);
 
-/**
- * Adds a Zod issue when workflowStatus is illegal for the item type.
- * @param type - Selects the legal vocabulary: current vs next.
- * @param workflowStatus - The candidate value to check against it.
- * @param ctx - Refinement context the issue is reported on.
- */
+/** Adds a Zod issue when a workflow status is illegal for the item type. */
 export function addItemTypeStatusIssue(
   type: "current" | "next",
   workflowStatus: string,
@@ -66,26 +77,29 @@ export function addItemTypeStatusIssue(
     });
   }
 }
+/** Defines the alarm severities that a risk can impose on covered work. */
 export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
+/** Alarm severity imposed by a report risk. */
 export type RiskSeverity = z.infer<typeof riskSeveritySchema>;
+/** Defines the editable and submitted states of a lead section. */
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 /**
  * The single source of truth for the report-section status value. The two
  * literals live only here; consumers import this type.
  */
 export type ReportSectionStatus = z.infer<typeof reportSectionStatusSchema>;
+/** Defines the legacy publication states stored on a report. */
 export const reportStatusSchema = z.enum(["draft", "published"]);
 /**
  * The single source of truth for the report status value (report-status-type
  * spec). The two literals live only here; consumers import this type.
  */
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
+/** Defines the legacy lifecycle status stored on a reporting period. */
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 /**
- * Explicit lifecycle state for a Period/Report (values mirror the lowercase
- * Prisma enum), superseding the implicit (status × archived × periodStatus)
- * tuple; writers must still update the legacy fields atomically.
+ * Explicit lifecycle state; writers must also update the legacy tuple atomically.
  * Transitions: `openspec/specs/period-dual-state`.
  */
 export const periodStateSchema = z.enum([
@@ -100,9 +114,11 @@ const MAX_SELECTED_STAGES = 20;
 
 // Stage NAMES, one per element, persisted as the Postgres text[] `stageNames`
 // column on Item / Risk / Decision. Comma-joined rendering is display-only.
+/** Accepts optional legacy stage-name arrays in report read models. */
 export const stageNamesField = z
   .array(z.string())
   .max(MAX_SELECTED_STAGES)
+  .readonly()
   .optional();
 
 const stageNameElement = z
@@ -116,16 +132,20 @@ const stageNameElement = z
 // Strict write variant: every written row must carry at least one concrete
 // SDLC stage. Read models re-loosen to `stageNamesField` so stage-less legacy
 // rows still load and render the loud "No stage set" marker.
+/** Accepts a non-empty array of concrete SDLC stage names. */
 export const requiredStageNamesField = z
   .array(stageNameElement)
   .min(1)
-  .max(MAX_SELECTED_STAGES);
+  .max(MAX_SELECTED_STAGES)
+  .readonly();
 
 // Element-quality-validated like requiredStageNamesField but length-tolerant, for
 // the XOR-parented record write field. The conditional rule (≥1 stage for a
 // product parent, none for an activity parent) is enforced by the record
 // superRefine in section.schema.ts, since it depends on the parent kind.
+/** Accepts a validated stage array whose cardinality is checked with its parent. */
 export const writeStageNamesField = z
   .array(stageNameElement)
   .max(MAX_SELECTED_STAGES)
+  .readonly()
   .optional();

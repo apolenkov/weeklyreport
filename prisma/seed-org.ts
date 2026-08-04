@@ -118,11 +118,30 @@ async function seedGroupMembership(prisma: PrismaClient): Promise<void> {
   }
 }
 
+// A product whose lead is absent from the catalogue or has no explicit group is
+// corrupt ownership — fail loud rather than silently pin the default group.
+export function reportingGroupForProduct(
+  leadId: string,
+  groupByLeadId: ReadonlyMap<string, string>,
+): string {
+  const groupId = groupByLeadId.get(leadId);
+  if (groupId === undefined) {
+    throw new Error(
+      `Advanced seed: product lead ${leadId} is not a seeded user`,
+    );
+  }
+  return groupId;
+}
+
 // Product group is the report grouping source of truth; derive it from the
 // seeded lead's reporting group so seed data satisfies the UAT invariant.
 async function seedProducts(prisma: PrismaClient): Promise<void> {
-  const groupByLeadId = new Map<string, string | null>(
-    SEED_USERS.map((user) => [user.id, groupIdForUser(user)]),
+  const groupByLeadId = new Map<string, string>(
+    SEED_USERS.flatMap((user) =>
+      user.reportingGroupId === null
+        ? []
+        : [[user.id, user.reportingGroupId] as const],
+    ),
   );
 
   for (const product of SEED_PRODUCTS) {
@@ -134,8 +153,7 @@ async function seedProducts(prisma: PrismaClient): Promise<void> {
   }
 
   for (const product of SEED_PRODUCTS) {
-    const groupId =
-      groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID;
+    const groupId = reportingGroupForProduct(product.leadId, groupByLeadId);
     await prisma.groupProduct.upsert({
       where: { productId: product.id },
       update: { groupId },

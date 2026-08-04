@@ -43,6 +43,7 @@ export function toExecutionCreateData(
   return {
     id: execution.id,
     ruleId: execution.ruleId,
+    recipientEmail: execution.recipientEmail,
     dedupeKey: execution.dedupeKey,
     status: execStatusToDb[execution.status],
     sentAt: execution.sentAt,
@@ -100,21 +101,10 @@ export function toRuleDomain(rule: {
   });
 }
 
-// eslint-disable-next-line sonarjs/super-linear-regex -- negated character classes are linear; no catastrophic backtracking, input bounded to ~254 chars
-const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
-
-// Two dedupeKey layouts are in flight — legacy `${ruleId}:<ISO>:${email}` and
-// current `${ruleId}:${kind}:YYYY-MM-DD:${email}` — but both terminate with the
-// email, so the trailing segment identifies the recipient under either.
-export function extractRecipientEmail(dedupeKey: string): string {
-  const last = dedupeKey.split(":").pop();
-  if (last && EMAIL_RE.test(last)) return last;
-  return "";
-}
-
 export function toExecutionDomain(execution: {
   id: string;
   ruleId: string;
+  recipientEmail: string;
   dedupeKey: string;
   status: PrismaExecStatus;
   sentAt: Date | null;
@@ -131,7 +121,7 @@ export function toExecutionDomain(execution: {
     status: dbExecStatusToDomain[execution.status],
     scheduledFor: execution.createdAt,
     sentAt: execution.sentAt,
-    recipientEmail: extractRecipientEmail(execution.dedupeKey),
+    recipientEmail: execution.recipientEmail,
     errorMessage: execution.error,
   });
 }

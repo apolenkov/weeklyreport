@@ -30,7 +30,12 @@ function productRecordIdentities(
 ): readonly string[] {
   return [
     ...grid.priorityStrip
-      .filter((card) => card.productId === product.id)
+      // A null id has no stable record identity (the render key falls back to
+      // array position locally); only cards with an id produce a priority key.
+      .filter(
+        (card): card is typeof card & { id: string } =>
+          card.id !== null && card.productId === product.id,
+      )
       .map((card) => `priority:${product.id}:${card.id}`),
     ...product.subsections.flatMap((subsection) =>
       subsectionRecordIdentities(product.id, subsection),

@@ -3,9 +3,16 @@ import type {
   AdminReminderRule,
 } from "@customreport/shared";
 
+import type { EnvConfig } from "../../../infrastructure/config/env.schema";
 import type { OrganizationService } from "../../organization/organization.service";
 import type { DueDeadlineRule, RemindersRepository } from "../reminders.types";
 import { unusedRemindersRepositoryStubs } from "../reminders-scope.repository-stub.js";
+
+// Validated-env fixture for scheduler construction: APP_BASE_URL is resolved
+// from the injected EnvConfig at construction, never from raw process.env.
+export const schedulerTestEnv = {
+  APP_BASE_URL: "https://reports.test.local",
+} as EnvConfig;
 
 // Deterministic brand snapshot for payload subject assertions (`[Demo]`).
 export const fakeOrganizationService = {
@@ -50,7 +57,9 @@ export function dueRuleFromRecipients(
   };
 }
 
-export function createServiceRepo(): RemindersRepository {
+export function createServiceRepo(
+  overrides: Partial<RemindersRepository> = {},
+): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
@@ -95,5 +104,6 @@ export function createServiceRepo(): RemindersRepository {
         [...executions.values()].filter((e) => e.ruleId === rid),
       );
     },
+    ...overrides,
   };
 }

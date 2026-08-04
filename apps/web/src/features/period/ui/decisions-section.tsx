@@ -13,48 +13,35 @@ import { DecisionCard } from "./decision-card";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 
 interface DecisionsSectionProps {
-  readonly decisions: DecisionEntry[];
+  readonly decisions: readonly DecisionEntry[];
   readonly readOnly?: boolean | undefined;
   readonly onChange?: ((decisions: DecisionEntry[]) => void) | undefined;
   readonly defaultProductName?: string | undefined;
-  /**
-   * Display name of the currently signed-in user. Used to seed the Owner
-   * field for newly-created decisions. Ownership for Edit/Delete is decided
-   * by the id-based `foreign` flag, NOT by matching this free-text name.
-   */
+  // Seeds new decision owners; edit/delete uses the id-based `foreign` flag,
+  // never a free-text name match.
   readonly currentUserName?: string | undefined;
-  /**
-   * Stages owned on the selected product, passed through so changing the
-   * product re-scopes the available stages.
-   */
+  // Re-scopes available stages when the selected product changes.
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
   readonly products?: readonly Product[] | undefined;
-  /**
-   * The author's attached activities, forwarded so a decision can use an
-   * activity rather than a product as its parent.
-   */
+  // Lets a decision use an attached activity rather than a product as parent.
   readonly activities?: readonly ParentActivityOption[] | undefined;
   readonly defaultProductId?: string | undefined;
   readonly addSignal?: number | undefined;
-  /**
-   * Decision ids locked because their lineage appeared in a published report;
-   * rows stay resolvable but cannot be deleted (server rejects the write).
-   */
+  // Published-lineage rows stay resolvable but cannot be deleted.
   readonly publishedLockedIds?: ReadonlySet<string> | undefined;
 }
 
-// A decision created from this section inherits the section's product when the
-// dialog left it blank; "Group" is the catch-all for group-level decisions.
+// A decision created from this section keeps the parent label the dialog
+// actually resolved — an absent product name is never replaced with a
+// fabricated catch-all label.
 function withCreateDefaults(
   saved: DecisionEntry,
   defaultProductName: string | undefined,
 ): DecisionEntry {
   return {
     ...saved,
-    productName: saved.productName || defaultProductName || "Group",
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-    stageName: saved.stageName ?? "—",
+    productName: saved.productName || defaultProductName || "",
   };
 }
 
@@ -119,7 +106,7 @@ function DecisionsList({
   onEdit,
   onDelete,
 }: {
-  readonly decisions: DecisionEntry[];
+  readonly decisions: readonly DecisionEntry[];
   readonly readOnly: boolean;
   readonly publishedLockedIds: ReadonlySet<string> | undefined;
   readonly onEdit: (decision: DecisionEntry) => void;
@@ -127,7 +114,7 @@ function DecisionsList({
 }) {
   if (decisions.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+      <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
         {readOnly
           ? "No decisions reported."
           : "No decisions yet. Use “+ Add Decision” to flag one for the head."}

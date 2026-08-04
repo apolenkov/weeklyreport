@@ -1,4 +1,6 @@
 import type { PeriodStatus } from "@customreport/shared";
+import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
 import { ExportPdfButton, PdfExportComingSoonControl } from "../../pdf-export";
 import type {
@@ -8,6 +10,7 @@ import type {
 } from "../../report-sections";
 import type { ReviewMode } from "../../review";
 import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../review";
+import { SCROLL_INTO_VIEW_DELAY_MS } from "./accordion-tokens";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
 import type { LeadGroup, ReviewModel } from "./weekly-report-page-helpers";
@@ -39,6 +42,7 @@ export function ReportAccordionBody({
   leadGroups,
   focusedProductId,
   scrollTargetProductId,
+  focusedLeadId,
   review,
 }: {
   readonly scope: "product" | "lead";
@@ -46,6 +50,7 @@ export function ReportAccordionBody({
   readonly leadGroups: LeadGroup[];
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
+  readonly focusedLeadId: string | undefined;
   readonly review: ReviewModel["context"];
 }) {
   const renderAccordion = (report: WeeklyProductReport) => (
@@ -64,18 +69,14 @@ export function ReportAccordionBody({
       <div className="space-y-6">
         {leadGroups.map((group) => (
           // Stable anchor so a by-lead overview card can scroll/focus this section.
-          <section
+          <LeadSection
             key={group.id}
-            id={`report-lead-${group.id}`}
-            tabIndex={-1}
-            aria-label={group.name}
-            className="space-y-3 scroll-mt-4 focus:outline-none"
+            groupId={group.id}
+            groupName={group.name}
+            focused={focusedLeadId === group.id}
           >
-            <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
-              {group.name}
-            </h2>
             {group.products.map(renderAccordion)}
-          </section>
+          </LeadSection>
         ))}
       </div>
     );
@@ -84,20 +85,71 @@ export function ReportAccordionBody({
   return <div className="space-y-3">{products.map(renderAccordion)}</div>;
 }
 
+// React-driven scroll/focus for a lead section targeted from the overview band —
+// the section owns its own DOM; nothing pokes it from outside.
+function LeadSection({
+  groupId,
+  groupName,
+  focused,
+  children,
+}: {
+  readonly groupId: string;
+  readonly groupName: string;
+  readonly focused: boolean;
+  readonly children: ReactNode;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!focused) return;
+    const handle = window.setTimeout(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el instanceof HTMLElement) el.focus({ preventScroll: true });
+    }, SCROLL_INTO_VIEW_DELAY_MS);
+    return () => window.clearTimeout(handle);
+  }, [focused, groupId]);
+
+  return (
+    <section
+      ref={ref}
+      id={`report-lead-${groupId}`}
+      tabIndex={-1}
+      aria-label={groupName}
+      className="space-y-3 scroll-mt-4 focus:outline-none"
+    >
+      <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
+        {groupName}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 // Scope-adaptive overview: lead cards in by-lead scope, product cards otherwise.
 export function ReportOverviewBand({
   scope,
   portfolio,
   leadOverviewRows,
+  onNavigate,
 }: {
   readonly scope: "product" | "lead";
   readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
+  readonly onNavigate: (targetId: string) => void;
 }) {
   if (scope === "lead") {
-    return <PortfolioOverviewTable scope="lead" leads={leadOverviewRows} />;
+    return (
+      <PortfolioOverviewTable
+        scope="lead"
+        leads={leadOverviewRows}
+        onNavigate={onNavigate}
+      />
+    );
   }
-  return <PortfolioOverviewTable products={portfolio} />;
+  return (
+    <PortfolioOverviewTable products={portfolio} onNavigate={onNavigate} />
+  );
 }
 
 // head/admin/viewer get the real export; lead is FORBIDDEN and gets ComingSoon.

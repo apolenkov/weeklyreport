@@ -8,10 +8,25 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ArchiveDomainError,
   type ArchiveRepository,
+  type ArchiveScopeSession,
   ArchiveService,
 } from "./archive.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
+
+const adminSession: ArchiveScopeSession = {
+  role: "admin",
+  viewerGroupAccess: [],
+};
+const viewerSession: ArchiveScopeSession = {
+  role: "viewer",
+  viewerGroupAccess: [],
+};
+const headSession: ArchiveScopeSession = {
+  role: "head",
+  reportingGroupId: "group-1",
+  viewerGroupAccess: [],
+};
 
 function makeSection(
   reportSectionId: string,
@@ -23,14 +38,18 @@ function makeSection(
     reportId,
     authorId,
     authorName,
+    authorRole: "lead",
     version: 1,
     status: "submitted",
     submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+    late: false,
     projects: [],
+    referencedProjects: [],
     items: [],
     risks: [],
     decisions: [],
     activities: [],
+    reviews: [],
   };
 }
 
@@ -80,11 +99,15 @@ const latestDetail: ArchiveReportDetail = {
   },
 };
 
-function createRepository(): ArchiveRepository {
+function createRepository(
+  overrides: Partial<ArchiveRepository> = {},
+): ArchiveRepository {
   return {
     getArchiveReport(reportIdInput: string) {
       return Promise.resolve(
-        reportIdInput === reportId ? structuredClone(latestDetail) : null,
+        reportIdInput === reportId
+          ? { detail: structuredClone(latestDetail), totalSectionCount: 2 }
+          : { detail: null, totalSectionCount: 0 },
       );
     },
     listArchiveReports() {
@@ -96,13 +119,14 @@ function createRepository(): ArchiveRepository {
         nextCursor: null,
       });
     },
+    ...overrides,
   };
 }
 
 describe("ArchiveService", () => {
   it("preserves the repository's archive report order", async () => {
     const service = new ArchiveService(createRepository());
-    const result = await service.listArchiveReports();
+    const result = await service.listArchiveReports(undefined, adminSession);
 
     expect(result.items.map((item) => item.reportId)).toEqual([
       olderSummary.reportId,
@@ -112,10 +136,14 @@ describe("ArchiveService", () => {
   });
 
   it("sorts detail sections without mutating the repository result", async () => {
-    const repository = createRepository();
-    repository.getArchiveReport = vi.fn().mockResolvedValue(latestDetail);
+    const repository = createRepository({
+      getArchiveReport: vi.fn().mockResolvedValue({
+        detail: latestDetail,
+        totalSectionCount: 2,
+      }),
+    });
     const service = new ArchiveService(repository);
-    const detail = await service.getArchiveReport(reportId);
+    const { detail } = await service.getArchiveReport(reportId, adminSession);
 
     expect(detail.report.sections.map(({ authorName }) => authorName)).toEqual([
       "Alpha Lead",
@@ -130,9 +158,42 @@ describe("ArchiveService", () => {
     const service = new ArchiveService(createRepository());
 
     await expect(
-      service.getArchiveReport("99999999-9999-4999-8999-999999999999"),
+      service.getArchiveReport(
+        "99999999-9999-4999-8999-999999999999",
+        adminSession,
+      ),
     ).rejects.toBeInstanceOf(ArchiveDomainError);
   });
+
+  // Fail-closed: an absent authz context is a hard error, never a permissive
+  // no-scope read. The parameter is mandatory at the type level; this pins the
+  // runtime guard that backs it.
+  it.each([
+    {
+      method: "list",
+      call: (s: ArchiveService) =>
+        s.listArchiveReports(
+          undefined,
+          undefined as unknown as ArchiveScopeSession,
+        ),
+    },
+    {
+      method: "detail",
+      call: (s: ArchiveService) =>
+        s.getArchiveReport(
+          reportId,
+          undefined as unknown as ArchiveScopeSession,
+        ),
+    },
+  ] as const)(
+    "$method rejects an absent authorization session",
+    async ({ call }) => {
+      const service = new ArchiveService(createRepository());
+      await expect(call(service)).rejects.toThrow(
+        "group isolation not enforced",
+      );
+    },
+  );
 });
 
 // Service must pass status:published for viewers even if a router mis-wires.
@@ -148,7 +209,12 @@ describe("viewer scoping", () => {
         nextCursor: null,
       }),
     );
-    const getSpy = vi.fn(() => Promise.resolve(structuredClone(latestDetail)));
+    const getSpy = vi.fn(() =>
+      Promise.resolve({
+        detail: structuredClone(latestDetail),
+        totalSectionCount: 2,
+      }),
+    );
     const repo: ArchiveRepository = {
       listArchiveReports: listSpy,
       getArchiveReport: getSpy,
@@ -156,31 +222,31 @@ describe("viewer scoping", () => {
     return { repo, listSpy, getSpy };
   }
 
-  it("viewer role injects status:published into listArchiveReports filter", async () => {
+  it("viewer session injects status:published into listArchiveReports filter", async () => {
     const { repo, listSpy } = createSpyRepository();
     const service = new ArchiveService(repo);
 
-    await service.listArchiveReports(undefined, "viewer");
+    await service.listArchiveReports(undefined, viewerSession);
 
     expect(listSpy).toHaveBeenCalledOnce();
     expect(listSpy).toHaveBeenCalledWith(
       undefined,
       { status: "published" },
-      undefined,
+      viewerSession,
     );
   });
 
-  it("viewer role injects status:published into getArchiveReport filter", async () => {
+  it("viewer session injects status:published into getArchiveReport filter", async () => {
     const { repo, getSpy } = createSpyRepository();
     const service = new ArchiveService(repo);
 
-    await service.getArchiveReport(reportId, "viewer");
+    await service.getArchiveReport(reportId, viewerSession);
 
     expect(getSpy).toHaveBeenCalledOnce();
     expect(getSpy).toHaveBeenCalledWith(
       reportId,
       { status: "published" },
-      undefined,
+      viewerSession,
     );
   });
 
@@ -189,45 +255,43 @@ describe("viewer scoping", () => {
       listArchiveReports: vi.fn(() =>
         Promise.resolve({ items: [], nextCursor: null }),
       ),
-      getArchiveReport: vi.fn(() => Promise.resolve(null)),
+      getArchiveReport: vi.fn(() =>
+        Promise.resolve({ detail: null, totalSectionCount: 0 }),
+      ),
     };
     const service = new ArchiveService(repo);
 
     await expect(
       service.getArchiveReport(
         "99999999-9999-4999-8999-999999999999",
-        "viewer",
+        viewerSession,
       ),
     ).rejects.toBeInstanceOf(ArchiveDomainError);
   });
 
-  it("head role passes an empty filter (no status narrowing) to listArchiveReports", async () => {
+  it("head session passes an empty filter (no status narrowing) to listArchiveReports", async () => {
     const { repo, listSpy } = createSpyRepository();
     const service = new ArchiveService(repo);
 
-    await service.listArchiveReports(undefined, "head");
+    await service.listArchiveReports(undefined, headSession);
 
     expect(listSpy).toHaveBeenCalledOnce();
-    expect(listSpy).toHaveBeenCalledWith(undefined, {}, undefined);
+    expect(listSpy).toHaveBeenCalledWith(undefined, {}, headSession);
   });
 
-  it("lead and admin roles also receive an empty filter (head-equivalent for archive read)", async () => {
+  it("lead and admin sessions also receive an empty filter (head-equivalent for archive read)", async () => {
     const { repo, listSpy } = createSpyRepository();
     const service = new ArchiveService(repo);
+    const leadSession: ArchiveScopeSession = {
+      role: "lead",
+      reportingGroupId: "group-1",
+      viewerGroupAccess: [],
+    };
 
-    await service.listArchiveReports(undefined, "lead");
-    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, undefined);
+    await service.listArchiveReports(undefined, leadSession);
+    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, leadSession);
 
-    await service.listArchiveReports(undefined, "admin");
-    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, undefined);
-  });
-
-  it("undefined role passes empty filter (legacy contract — repo floor still applies)", async () => {
-    const { repo, listSpy } = createSpyRepository();
-    const service = new ArchiveService(repo);
-
-    await service.listArchiveReports(undefined, undefined);
-
-    expect(listSpy).toHaveBeenCalledWith(undefined, {}, undefined);
+    await service.listArchiveReports(undefined, adminSession);
+    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, adminSession);
   });
 });

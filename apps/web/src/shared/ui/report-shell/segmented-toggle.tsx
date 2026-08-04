@@ -15,7 +15,8 @@ const TRACK_HEIGHT = {
   lg: "h-11",
 } as const;
 
-const ACTIVE_CLASS = "bg-[var(--color-toggle-active)] text-white";
+const ACTIVE_CLASS =
+  "bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]";
 const INACTIVE_CLASS =
   "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]";
 

@@ -66,7 +66,7 @@ async function upsertHistoryReport(
     deadline: new Date(report.deadline),
     status: ReportStatus.published,
     periodStatus: PeriodStatus.published,
-    periodState: PeriodState.published,
+    periodState: report.archived ? PeriodState.archived : PeriodState.published,
     archived: report.archived,
     weekLabel: report.weekLabel,
     publishedAt: new Date(report.periodEnd),

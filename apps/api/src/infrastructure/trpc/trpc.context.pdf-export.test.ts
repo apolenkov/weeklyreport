@@ -2,7 +2,8 @@ import type { DbRole } from "@customreport/shared";
 import { userSessionSchema } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import { TRPCError } from "@trpc/server";
-import type { Request } from "express";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -33,8 +34,8 @@ function makePrismaStub() {
     user: {
       findUnique: vi.fn(() => Promise.resolve({ isActive: true })),
     },
-    // PDF-token paths short-circuit before this stub; the regular-JWT
-    // regression test below does hydrate `session.organization` from it.
+    // PDF-token paths short-circuit before this stub; the regular-JWT test
+    // below does hydrate `session.organization` from it.
     organization: {
       findUnique: vi.fn(() =>
         Promise.resolve({
@@ -77,11 +78,24 @@ function makeApp(prisma: object): INestApplication {
   return makeAppHarness(prisma).app;
 }
 
-function makeReq(cookieToken?: string): { req: Request } {
+function makeReq(cookieToken?: string): CreateExpressContextOptions {
   const req = {
     cookies: cookieToken ? { customreport_session: cookieToken } : {},
   } as unknown as Request;
-  return { req };
+  const res = {} as Response;
+  return {
+    req,
+    res,
+    info: {
+      accept: null,
+      type: "query",
+      isBatchCall: false,
+      calls: [],
+      connectionParams: null,
+      signal: new AbortController().signal,
+      url: null,
+    },
+  };
 }
 
 const TEST_REPORT_ID = "11111111-2222-4333-8444-555555555555";
@@ -122,7 +136,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("viewer");
@@ -145,7 +159,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(tokenWithoutKind) as never);
+    const ctx = await factory(makeReq(tokenWithoutKind));
 
     expect(ctx.session).toBeNull();
     expect(ctx.isPdfExport).toBe(false);
@@ -157,7 +171,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq("not-a-real-jwt") as never);
+    const ctx = await factory(makeReq("not-a-real-jwt"));
 
     expect(ctx.session).toBeNull();
     expect(ctx.isPdfExport).toBe(false);
@@ -174,7 +188,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.session).toBeNull();
     expect(ctx.isPdfExport).toBe(false);
@@ -191,7 +205,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.session).toBeNull();
     expect(ctx.isPdfExport).toBe(false);
@@ -215,7 +229,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(sessionToken) as never);
+    const ctx = await factory(makeReq(sessionToken));
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
@@ -240,7 +254,7 @@ describe("createContextFactory — PDF JWT verifier path", () => {
       makeApp(makePrismaStub()),
       createNullLogger(),
     );
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.isPdfExport).toBe(true);
     expect(ctx.session?.organization).toBeUndefined();
@@ -325,7 +339,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     });
 
     const factory = createContextFactory(makeApp(prisma), createNullLogger());
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     // The render session is the head — group-scoping yields the FULL report,
     // not the empty viewer slice.
@@ -357,7 +371,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     });
 
     const factory = createContextFactory(makeApp(prisma), createNullLogger());
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.session?.role).toBe("viewer");
     expect(ctx.session?.userId).toBe(VIEWER_REQUESTER_ID);
@@ -380,11 +394,32 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     const prisma = makeRequesterPrisma(null);
 
     const factory = createContextFactory(makeApp(prisma), createNullLogger());
-    const ctx = await factory(makeReq(token) as never);
+    const ctx = await factory(makeReq(token));
 
     expect(ctx.session).toBeNull();
     expect(ctx.isPdfExport).toBe(false);
     expect(ctx.pdfReportId).toBeNull();
+  });
+
+  it("propagates an auth-dependency read failure instead of degrading to an anonymous session", async () => {
+    const token = jwt.sign(
+      {
+        reportId: TEST_REPORT_ID,
+        kind: "pdf-export",
+        requestedBy: HEAD_REQUESTER_ID,
+      },
+      PDF_SECRET,
+      { expiresIn: "5m" },
+    );
+    const databaseError = new Error("database unavailable");
+    const prisma = makeRequesterPrisma(null);
+    // isUserAccessBarred runs first inside buildPdfExportSession; its Prisma
+    // read failing is a server fault that must propagate, not map to null.
+    prisma.user.findUnique.mockRejectedValueOnce(databaseError);
+
+    const factory = createContextFactory(makeApp(prisma), createNullLogger());
+
+    await expect(factory(makeReq(token))).rejects.toBe(databaseError);
   });
 });
 

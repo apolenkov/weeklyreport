@@ -29,6 +29,7 @@ describe("useLeadFormFillFrom", () => {
     const { result } = renderHook(
       () =>
         useLeadFormFillFrom({
+          generation: "report-a:section-a",
           sectionIdForActions: "target",
           autosaveDirty: true,
           version: 4,

@@ -1,13 +1,28 @@
 import type { Escalation } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
+// Presentation row for one escalation. The shared wire model carries no record
+// identity, so this row is explicitly unkeyed — list consumers use a local
+// render key, never a synthesized persisted-looking id.
 export interface BlockedAtRiskItem {
-  id: string;
-  severity: "blocked" | "at-risk";
-  product: string;
-  stage: string;
-  assignee: string;
-  description: string;
+  readonly severity: "blocked" | "at-risk";
+  readonly product: string;
+  readonly stage: string;
+  readonly assignee: string;
+  readonly description: string;
+}
+
+export interface ProductGroup {
+  readonly product: string;
+  readonly items: readonly BlockedAtRiskItem[];
+}
+
+export function groupByProduct(
+  items: readonly BlockedAtRiskItem[],
+): readonly ProductGroup[] {
+  return [...Map.groupBy(items, (item) => item.product)].map(
+    ([product, group]) => ({ product, items: group }),
+  );
 }
 
 // Wording for a stage-keyed escalation (blocked item / unresolved risk) that
@@ -22,11 +37,9 @@ const FLAGGED_STAGE_LABEL = "Flagged";
 
 export function escalationToBlockedItem(
   escalation: Escalation,
-  index: number,
 ): BlockedAtRiskItem {
   if (escalation.type === "blocked") {
     return {
-      id: `esc-${index}`,
       severity: "blocked",
       product: escalation.productName,
       stage: escalation.stageName ?? NO_STAGE_LABEL,
@@ -36,7 +49,6 @@ export function escalationToBlockedItem(
   }
   if (escalation.type === "at_risk") {
     return {
-      id: `esc-${index}`,
       severity: "at-risk",
       product: escalation.productName,
       stage: escalation.stageName ?? FLAGGED_STAGE_LABEL,
@@ -46,7 +58,6 @@ export function escalationToBlockedItem(
   }
   // unresolved_risk: surface as at-risk in the dashboard.
   return {
-    id: `esc-${index}`,
     severity: "at-risk",
     product: escalation.productName,
     stage: escalation.stageName ?? NO_STAGE_LABEL,

@@ -56,17 +56,34 @@ const DEMO_USER_IDS = [
   LEAD_ACTIVITY_ONLY,
 ] as const;
 
+// One product per primary lead (the catalogue's even-indexed rows), plus the
+// three small-MVP CRM extras. Addressed by stable named id, not position: a
+// reordered or shortened SEED_PRODUCTS must fail loudly instead of silently
+// dropping products from the profile scope.
+const CANONICAL_DEMO_PRODUCT_IDS = [
+  "a0000000-0000-4000-8000-000000000201",
+  "a0000000-0000-4000-8000-000000000203",
+  "a0000000-0000-4000-8000-000000000205",
+  "a0000000-0000-4000-8000-000000000207",
+  "a0000000-0000-4000-8000-000000000209",
+  "a0000000-0000-4000-8000-00000000020b",
+] as const;
+
+export function assertCanonicalProduct(id: string): string {
+  if (!SEED_PRODUCTS.some((product) => product.id === id)) {
+    throw new Error(
+      `Seed profile scope: canonical product ${id} is missing from SEED_PRODUCTS`,
+    );
+  }
+  return id;
+}
+
 const DEMO_PROJECT_IDS = [
-  SEED_PRODUCTS[0]?.id,
-  SEED_PRODUCTS[2]?.id,
-  SEED_PRODUCTS[4]?.id,
-  SEED_PRODUCTS[6]?.id,
-  SEED_PRODUCTS[8]?.id,
-  SEED_PRODUCTS[10]?.id,
+  ...CANONICAL_DEMO_PRODUCT_IDS.map(assertCanonicalProduct),
   PROD_CRM_SALES,
   PROD_CRM_DATA,
   PROD_CRM_360,
-].filter((id): id is string => id !== undefined);
+] as const;
 
 const FULL_PROJECT_IDS = [
   ...new Set([...DEMO_PROJECT_IDS, ...SEED_PRODUCTS.map(({ id }) => id)]),

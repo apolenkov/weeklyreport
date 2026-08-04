@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useReducer, useRef } from "react";
 
 import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
 
@@ -36,7 +36,7 @@ function deriveSaveView(
 // NOT green: brand green stays the single forward-commit (Submit). The busy
 // state is report-toolbar-layout's one exemption to that single-primary rule.
 const SAVING_CLASS_NAME =
-  "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100";
+  "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] disabled:opacity-100";
 const REST_CLASS_NAME =
   "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
@@ -47,12 +47,14 @@ function useSavedFlash(
   state: AutosaveSnapshot["state"],
   isInFlight: boolean,
 ): boolean {
-  const [showSaved, setShowSaved] = useState(false);
+  const [showSaved, setShowSaved] = useReducer(
+    (_current: boolean, next: boolean) => next,
+    false,
+  );
   const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (state === "saved" && !isInFlight) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- saved-then-revert timer choreography driven by the autosave state; the timeout owns the transitions
       setShowSaved(true);
       if (revertTimerRef.current !== null) {
         clearTimeout(revertTimerRef.current);

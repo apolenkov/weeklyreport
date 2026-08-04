@@ -7,8 +7,8 @@ import { PrismaService } from "./prisma.service.js";
 @Global()
 @Module({
   imports: [ConfigModule],
-  // Factory-provided: ES decorators reject parameter decorators (TS1206) when
-  // the web tsconfig type-checks PrismaService through the tRPC AppRouter graph.
+  // Factory-provided: PrismaService takes `EnvConfig` as a constructor arg, so
+  // the module builds it explicitly instead of relying on Nest parameter DI.
   providers: [
     {
       provide: PrismaService,

@@ -1,6 +1,6 @@
 e2e/.results/
 e2e/.auth/
-# Phase 39-06: visual-project distDir kept separate from `pnpm dev` (.next).
+# Visual-project output stays separate from the regular development build.
 .next-e2e/
 # Behavioral UI sweep web server distDir (coexists with `pnpm dev`).
 .next-sweep/

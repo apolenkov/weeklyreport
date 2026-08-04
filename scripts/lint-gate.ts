@@ -1,11 +1,7 @@
 #!/usr/bin/env node
-// Runs every static-analysis check and reports every failure. `pnpm lint` used
-// to be a single `&&` chain of nine links: a failure in the first meant the
-// other eight never ran, so "the tree is green" and "all checks passed" shared
-// one exit code. The chain's inner `&&` (the SSOT gate's test + sweep) hid the
-// same way, hence ten entries below. Each is its own package.json script, so
-// the command and its flags live there and stay runnable alone; this file only
-// decides ordering, reporting and exit status.
+// Runs every static-analysis check independently and reports every failure.
+// Each command remains directly runnable from package.json; this file owns
+// only ordering, complete execution, and the aggregate verdict.
 //
 // Usage (through pnpm — the gate spawns the pnpm that launched it):
 //   pnpm lint              # run all, report all (CI + humans)
@@ -35,10 +31,35 @@ interface Result extends Verdict {
 // usually waiting for. Every entry runs regardless of what precedes it.
 const CHECKS: readonly Check[] = [
   { script: "lint:eslint", what: "ESLint, zero warnings tolerated" },
+  {
+    script: "lint:prettier-scope:test",
+    what: "Prettier maintained-file scope probes",
+  },
+  {
+    script: "lint:stylelint-gate:test",
+    what: "Stylelint zero-warning planted probe",
+  },
+  {
+    script: "lint:config-hygiene:test",
+    what: "active config archaeology and path-drift probes",
+  },
   { script: "lint:stylelint", what: "stylelint over CSS" },
   { script: "lint:prisma:typecheck", what: "tsc — prisma/ project" },
   { script: "lint:scripts:typecheck", what: "tsc — scripts/ + tools/ project" },
   { script: "lint:e2e:typecheck", what: "tsc — e2e/ project" },
+  {
+    script: "lint:e2e-helpers:test",
+    what: "E2E resource-ownership planted probes",
+  },
+  {
+    script: "lint:uat-analysis:test",
+    what: "UAT static-analysis resolver and policy tests",
+  },
+  { script: "typecov", what: "package-specific type-coverage ratchet" },
+  {
+    script: "lint:typecov:test",
+    what: "type-coverage thresholds and planted escape probe",
+  },
   { script: "lint:ssot-gate:test", what: "status-SSOT gate unit tests" },
   { script: "lint:ssot-gate", what: "status-SSOT re-declaration sweep" },
   { script: "lint:runtime-node", what: "Node/pnpm version drift guard" },
@@ -57,6 +78,22 @@ const CHECKS: readonly Check[] = [
   {
     script: "lint:eslint-scopes",
     what: "ESLint scope classification and planted probes",
+  },
+  {
+    script: "lint:eslint-config:test",
+    what: "eslint-config/ module ownership probes",
+  },
+  {
+    script: "lint:web-coverage-scope:test",
+    what: "web coverage exclusion scope probes",
+  },
+  {
+    script: "lint:react-doctor:test",
+    what: "React Doctor baseline integrity probes",
+  },
+  {
+    script: "lint:react-doctor",
+    what: "React Doctor full scan against reviewed warning baseline",
   },
   {
     script: "lint:exemplary-floor:test",
@@ -85,6 +122,18 @@ const CHECKS: readonly Check[] = [
   {
     script: "lint:exact-optional:test",
     what: "exact optional properties config and planted probe",
+  },
+  {
+    script: "lint:critical-tests:test",
+    what: "critical-test and P0 evidence verifier tests",
+  },
+  {
+    script: "lint:critical-tests",
+    what: "manifest-owned tests have no advisory bypasses",
+  },
+  {
+    script: "lint:p0-evidence",
+    what: "current passing evidence for all accepted P0 findings",
   },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },

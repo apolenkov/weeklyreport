@@ -1,8 +1,3 @@
-/**
- * LeadForm mutation wiring (submit, revoke, autosave, dirty-state) via
- * mocked tRPC at the proxy boundary.
- */
-
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, within } from "@testing-library/react";
@@ -12,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import { sectionToDraftPayload } from "../../report-sections";
 import { LeadForm } from "./lead-form";
 
@@ -36,15 +32,13 @@ const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
 const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
 
 function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
     authorRole: "lead" as const,
-    version: 1,
     status: overrides.status ?? ("draft" as const),
-    submittedAt: null,
     projects: [
       {
         projectId: PROJECT_ID,
@@ -72,7 +66,6 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         carriedOver: false,
       },
     ],
-    risks: [],
     decisions: [
       {
         id: "66666666-6666-6666-6666-666666666666",
@@ -82,15 +75,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         impact: "Impact",
       },
     ],
-    priorities: [
-      {
-        id: "77777777-7777-7777-7777-777777777777",
-        rank: 1,
-        text: "Priority text",
-      },
-    ],
-    activities: [],
-  };
+  });
 }
 
 function buildHarness(
@@ -110,6 +95,7 @@ function buildHarness(
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     {
@@ -294,6 +280,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
             status: "draft" as const,
             submittedAt: null,
             projects: [],
+            referencedProjects: [],
             items: [],
             risks: [],
             decisions: [],
@@ -397,8 +384,8 @@ describe("LeadForm mode-adaptive trailing control", () => {
 
 describe("sectionToDraftPayload — activity-status slice", () => {
   it("round-trips every seeded activity into activityStatuses", () => {
-    const base = makeSection() as unknown as ReportSectionReadModel;
-    const withActivities: ReportSectionReadModel = {
+    const base = makeSection();
+    const withActivities = makeReportSectionFixture({
       ...base,
       activities: [
         {
@@ -417,7 +404,7 @@ describe("sectionToDraftPayload — activity-status slice", () => {
           derivedStatus: null,
         },
       ],
-    };
+    });
 
     const payload = sectionToDraftPayload(withActivities);
 
@@ -450,7 +437,7 @@ describe("sectionToDraftPayload — durable stableId round-trip", () => {
   });
 
   it("emits undefined stableId for a brand-new row (server mints it)", () => {
-    const base = makeSection() as unknown as ReportSectionReadModel;
+    const base = makeSection();
     const withNewItem: ReportSectionReadModel = {
       ...base,
       items: [

@@ -1,9 +1,5 @@
-/**
- * Maps the always-fetched, status-only cross-author rows used by the lead
- * form. The structural input mirrors the query result so this model layer
- * stays independent of UI component types. Full foreign content is handled
- * separately and fetched only for the Everyone view.
- */
+// Keep the always-fetched status projection independent of UI types; full
+// foreign content is a separate, Everyone-only read.
 
 import type { TrafficLightStatus } from "@customreport/shared";
 
@@ -14,12 +10,11 @@ import {
 } from "./lead-form";
 import { type StageStatus, trafficToStageStatus } from "./traffic-light";
 
-/** Subset of one `leadForm.crossAuthors` row consumed by the stage map. */
 export interface CrossAuthorRow {
   projectId: string;
   authorId: string;
   authorInitials: string;
-  /** Short form such as «Каштанова М.А.» for the stage label. */
+  // Short display name used in stage labels.
   authorShortName: string;
   stageNames: readonly string[];
   stages: readonly {
@@ -33,7 +28,6 @@ interface CrossAuthorStageOverride {
   status: StageStatus;
 }
 
-/** projectId -> normalized stage name -> cross-author override. */
 export type CrossAuthorStageMap = Map<
   string,
   Map<string, CrossAuthorStageOverride>
@@ -50,15 +44,8 @@ function getOrCreateStageMap(
   return created;
 }
 
-/**
- * Build a projectId → normalized-stage-name → { assignee, status } lookup
- * from `crossAuthors` rows only. Stage status is taken DIRECTLY from
- * `ca.stages[].status`, which the server already risk-derived
- * (deriveForeignStageStatus). Re-running the client `deriveEffectiveStageStatus`
- * here with empty risks/items would collapse a server `red`/`yellow` back to
- * on-track (the no-backing-risk path), making the foreign chip green while
- * product health reads red — so we trust the server value as-is.
- */
+// Trust the server-derived stage status; recomputing with empty client records
+// would collapse a server alarm back to on-track and miscolor the foreign chip.
 export function buildCrossAuthorStageMap(
   crossAuthors: readonly CrossAuthorRow[],
 ): CrossAuthorStageMap {
@@ -79,12 +66,8 @@ export function buildCrossAuthorStageMap(
   return map;
 }
 
-/**
- * Fill the real assignee and derived status onto foreign-owned (`locked`)
- * stages. `buildStageGrid` initially emits those stages with no assignee;
- * this resolves ownership from the cross-author query. Stages owned by the
- * current user are untouched, and unresolved locked stages remain anonymous.
- */
+// Resolve ownership on locked stages from the cross-author read; own stages
+// and unresolved locks remain unchanged.
 export function applyCrossAuthorStageOverrides(
   products: readonly LeadProduct[],
   stageOverrides: CrossAuthorStageMap,

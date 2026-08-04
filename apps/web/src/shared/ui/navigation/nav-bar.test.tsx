@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import type { Role } from "@customreport/shared";
 import { render } from "@testing-library/react";

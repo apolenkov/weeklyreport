@@ -76,4 +76,14 @@ describe("AnalyticsCache", () => {
       ["other:keep", "preserved"],
     ]);
   });
+
+  it("keeps cache operations callable after extraction", async () => {
+    const { getOrCompute, invalidateAll, onModuleDestroy } = cache;
+
+    await expect(
+      getOrCompute("customreport:analytics:k", () => Promise.resolve(42)),
+    ).resolves.toBe(42);
+    await expect(invalidateAll()).resolves.toBeUndefined();
+    await expect(onModuleDestroy()).resolves.toBeUndefined();
+  });
 });

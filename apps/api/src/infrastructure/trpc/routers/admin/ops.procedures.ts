@@ -15,14 +15,15 @@ import { adminProcedure, router } from "../../trpc.middleware.js";
 const MAX_FAILED_JOBS_LIMIT = 200;
 
 export interface AdminOpsDeps {
-  // Optional at router construction; listFailed degrades to an empty queue,
-  // while mutations and metrics fail loud through the guards below.
-  emailReminderQueue?: Queue;
-  jobsService?: JobsService;
-  actionLogService?: ActionLogService;
+  // Type-optional but runtime-guarded: an unwired dependency throws a loud
+  // TRPCError, never an empty/no-op success (no-fallback policy).
+  readonly emailReminderQueue?: Queue;
+  readonly jobsService?: JobsService;
+  readonly actionLogService?: ActionLogService;
 }
 
-// Optional on deps only for `{}` fixtures; undefined at runtime is a config bug.
+// Fields are required at the type level; the guards still fail loud on a
+// `{}`-cast fixture (or a broken composition) instead of no-op'ing.
 function requireActionLogService(deps: AdminOpsDeps): ActionLogService {
   if (!deps.actionLogService) {
     throw new TRPCError({
@@ -86,11 +87,9 @@ function createJobsRouter(deps: AdminOpsDeps) {
       .input(listFailedInputSchema)
       .query(async ({ input }) => {
         try {
-          const service = deps.jobsService;
-          if (!service) {
-            return { jobs: [], nextCursor: null };
-          }
-          return await service.listFailed(omitUndefinedProperties(input));
+          return await requireJobsService(deps).listFailed(
+            omitUndefinedProperties(input),
+          );
         } catch (error) {
           throw mapDomainError(error);
         }

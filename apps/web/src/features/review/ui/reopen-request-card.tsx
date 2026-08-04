@@ -33,9 +33,11 @@ const STATUS_LABEL: Record<ReopenRequest["status"], string> = {
 };
 
 const STATUS_PALETTE: Record<ReopenRequest["status"], string> = {
-  pending: "bg-amber-100 text-amber-900",
+  pending:
+    "bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
   approved: "bg-[var(--color-success)] text-[var(--color-starbucks-accent)]",
-  rejected: "bg-red-100 text-red-900",
+  rejected:
+    "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]",
 };
 
 function formatPeriod(
@@ -125,7 +127,7 @@ function RespondButton({
       <button
         type="button"
         onClick={onStartRespond}
-        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
       >
         Respond
       </button>
@@ -157,7 +159,7 @@ export function ReopenRequestCard({
   readonly onApprove: () => void;
 }) {
   return (
-    <li className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+    <li className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-resting)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ReopenRequestMeta request={r} />
         {r.status === "pending" && !isResponding && (

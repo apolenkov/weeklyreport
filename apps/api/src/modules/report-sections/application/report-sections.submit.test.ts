@@ -1,7 +1,10 @@
 import type {
+  DraftSavePayload,
   PeriodStatus,
   ReportSectionReadModel,
+  SubmitSectionPayload,
 } from "@customreport/shared";
+import { trafficLightStatusSchema } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -10,6 +13,7 @@ import {
   reportMetaReader,
 } from "./__tests__/report-meta-fixture";
 import {
+  ReportSectionNotFoundError,
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./report-sections.service";
@@ -26,9 +30,11 @@ const baseSection: ReportSectionReadModel = {
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
     {
       projectId: PROJECT_ID_1,
@@ -44,8 +50,11 @@ const baseSection: ReportSectionReadModel = {
           sortOrder: 0,
         },
       ],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       projectId: PROJECT_ID_1,
@@ -61,6 +70,7 @@ const baseSection: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 // read-model item types stageNames optional;
@@ -72,7 +82,7 @@ const writeItems = baseSection.items.map((it) => ({
 
 function createRepository(
   section: ReportSectionReadModel,
-  periodStatus: PeriodStatus = "open",
+  periodStatus: PeriodStatus | null = "open",
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
@@ -101,12 +111,16 @@ function createRepository(
   };
 }
 
-function validDraft(overrides: Record<string, unknown> = {}) {
+function validDraft(
+  overrides: Partial<DraftSavePayload> = {},
+): DraftSavePayload {
   return {
     reportSectionId: SECTION_ID,
     version: 1,
     status: "draft" as const,
     projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
+    stageStatuses: [],
+    activityStatuses: [],
     items: writeItems,
     risks: [],
     decisions: [],
@@ -114,9 +128,19 @@ function validDraft(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function validSubmit(overrides: Record<string, unknown> = {}) {
+function validSubmit(
+  overrides: Partial<SubmitSectionPayload> = {},
+): SubmitSectionPayload {
   return {
-    ...validDraft(),
+    reportSectionId: SECTION_ID,
+    version: 1,
+    status: "draft" as const,
+    projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
+    stageStatuses: [],
+    activityStatuses: [],
+    items: writeItems,
+    risks: [],
+    decisions: [],
     confirmed: true as const,
     ...overrides,
   };
@@ -128,7 +152,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
       createRepository(baseSection),
       testGraceSettings,
     );
-    const result = await service.submitSection(validSubmit());
+    const result = await service.submitSection(validSubmit(), AUTHOR_ID);
 
     expect(result.status).toBe("submitted");
     expect(result.submittedAt).toBeInstanceOf(Date);
@@ -143,6 +167,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
       validSubmit({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
       }),
+      AUTHOR_ID,
     );
 
     expect(result.projects[0]?.trafficLight).toBe("red");
@@ -178,6 +203,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
           },
         ],
       }),
+      AUTHOR_ID,
     );
 
     expect(result.items).toHaveLength(1);
@@ -186,6 +212,15 @@ describe("ReportSectionsService — submitSection happy path", () => {
 });
 
 describe("ReportSectionsService — submitSection validation errors", () => {
+  it("rejects when the period lookup returns null", async () => {
+    const repository = createRepository(baseSection, null);
+    const service = new ReportSectionsService(repository, testGraceSettings);
+
+    await expect(
+      service.submitSection(validSubmit(), AUTHOR_ID),
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
+  });
+
   it("rejects when section already submitted", async () => {
     const submitted: ReportSectionReadModel = {
       ...baseSection,
@@ -200,7 +235,9 @@ describe("ReportSectionsService — submitSection validation errors", () => {
       testGraceSettings,
     );
 
-    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+    await expect(
+      service.submitSection(validSubmit(), AUTHOR_ID),
+    ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
   });
@@ -221,6 +258,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
   });
@@ -246,6 +284,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
@@ -257,11 +296,14 @@ describe("ReportSectionsService — submitSection validation errors", () => {
     );
 
     await expect(
-      service.submitSection({
-        ...validSubmit(),
-        // Negative test: schema requires `confirmed: true` (z.literal(true)).
-        confirmed: false as unknown as true,
-      }),
+      service.submitSection(
+        {
+          ...validSubmit(),
+          // Negative test: schema requires `confirmed: true` (z.literal(true)).
+          confirmed: false as unknown as true,
+        },
+        AUTHOR_ID,
+      ),
     ).rejects.toThrow();
   });
 
@@ -276,13 +318,14 @@ describe("ReportSectionsService — submitSection validation errors", () => {
         validSubmit({
           projectStatuses: [],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
 });
 
 describe("ReportSectionsService — traffic light all valid statuses", () => {
-  it.each(["green", "yellow", "red"] as const)(
+  it.each(trafficLightStatusSchema.options)(
     "sets traffic light to %s",
     async (status) => {
       const service = new ReportSectionsService(
@@ -293,6 +336,7 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
         validDraft({
           projectStatuses: [{ projectId: PROJECT_ID_1, status }],
         }),
+        AUTHOR_ID,
       );
       expect(saved.projects[0]?.trafficLight).toBe(status);
     },
@@ -307,6 +351,7 @@ describe("ReportSectionsService — traffic light all valid statuses", () => {
       validDraft({
         projectStatuses: [{ projectId: PROJECT_ID_1 }],
       }),
+      AUTHOR_ID,
     );
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
@@ -346,6 +391,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
             },
           ],
         }),
+        AUTHOR_ID,
       );
       expect(saved.items).toHaveLength(1);
       expect(saved.items[0]?.tag).toBe(tag);
@@ -361,10 +407,12 @@ describe("ReportSectionsService — double submit rejected", () => {
       testGraceSettings,
     );
 
-    const submitted = await service.submitSection(validSubmit());
+    const submitted = await service.submitSection(validSubmit(), AUTHOR_ID);
     expect(submitted.status).toBe("submitted");
 
-    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+    await expect(
+      service.submitSection(validSubmit(), AUTHOR_ID),
+    ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
   });
@@ -375,9 +423,11 @@ describe("ReportSectionsService — double submit rejected", () => {
       testGraceSettings,
     );
 
-    await service.submitSection(validSubmit());
+    await service.submitSection(validSubmit(), AUTHOR_ID);
 
-    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+    await expect(
+      service.saveDraft(validDraft(), AUTHOR_ID),
+    ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
   });
@@ -406,6 +456,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -432,6 +483,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -455,6 +507,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -478,6 +531,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });
@@ -501,6 +555,7 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
             },
           ],
         }),
+        AUTHOR_ID,
       ),
     ).rejects.toThrow();
   });

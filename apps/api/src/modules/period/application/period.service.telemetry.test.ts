@@ -230,10 +230,9 @@ describe("PeriodService — manual-publish telemetry", () => {
     ).toBe(transitionsBefore);
   });
 
-  // Characterization pin: the
-  // ingestion hook receives the section ids read AFTER the publish
-  // transaction (not read before it), so sections that raced in before
-  // commit are still picked up.
+  // Pin: the ingestion hook receives section ids read AFTER the publish
+  // transaction (not before), so sections that raced in before commit are
+  // still picked up.
   it("enqueues ingestion with the section ids read after the publish transaction", async () => {
     const ingestion = vi.fn(() => Promise.resolve());
     const reports = new Map<string, SpyReport>([
@@ -328,6 +327,80 @@ describe("PeriodService — manual-publish telemetry", () => {
     expect(ingestion).not.toHaveBeenCalled();
     expect(onIngestionError).toHaveBeenCalledExactlyOnceWith(
       new Error("read blip"),
+    );
+  });
+
+  // A committed lifecycle write must not fail the API response because the
+  // post-commit cache invalidation rejected; the failure is observed via
+  // onSideEffectError, never propagated.
+  it("swallows a cache-invalidation failure without rejecting the publish", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const onSideEffectError = vi.fn();
+    const service = new PeriodService(
+      repo,
+      () => Promise.reject(new Error("cache down")),
+      noGatingReopenPolicy,
+      () => Promise.resolve(),
+      undefined,
+      undefined,
+      onSideEffectError,
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
+      new Error("cache down"),
+    );
+  });
+
+  // The publish still resolves when the post-commit telemetry adapter throws;
+  // the failure is observed via onSideEffectError, never propagated.
+  it("swallows a telemetry failure without rejecting the publish", async () => {
+    const reports = new Map<string, SpyReport>([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const repo = createSpyRepository(reports);
+    const onSideEffectError = vi.fn();
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+      () => Promise.resolve(),
+      {
+        recordPublishedReport: () => {
+          throw new Error("telemetry blip");
+        },
+        recordPeriodPublished: () => undefined,
+      },
+      undefined,
+      onSideEffectError,
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
+      new Error("telemetry blip"),
     );
   });
 });

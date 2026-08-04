@@ -2,6 +2,10 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { mapWeeklyReport } from "./weekly-report";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -13,24 +17,12 @@ const AUTHOR_A = "66666666-6666-4666-8666-666666666666";
 const AUTHOR_B = "77777777-7777-4777-8777-777777777777";
 
 function baseReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
+  overrides: WeeklyReportFixture = {},
 ): WeeklyReportReadModel {
-  return {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open",
-    archived: false,
-    weekLabel: "Week 16",
-    submissionCount: 0,
-    totalLeads: 0,
-    hasActiveReminderRule: true,
-    portfolioOverview: [],
-    leadSections: [],
-    escalations: [],
     ...overrides,
-  };
+  });
 }
 
 describe("mapWeeklyReport — grouping, severity & escalation", () => {
@@ -45,6 +37,10 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "yellow",
           stageCount: 7,
           leadNames: ["Тимлид 1", "Maria K."],
+          leadIds: [
+            "695cfa6a-0dd8-50a5-84e5-06c474e139fd",
+            "3ca366dd-180e-5668-be68-d0e0d1c65b9b",
+          ],
         },
         {
           productId: PROJECT_B,
@@ -52,6 +48,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Igor V."],
+          leadIds: ["0a9c3be4-fb24-5b94-8f7a-18b7c6d00776"],
         },
       ],
       leadSections: [
@@ -174,6 +171,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "yellow",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       leadSections: [
@@ -226,6 +224,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       leadSections: [
@@ -281,6 +280,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "red",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       leadSections: [
@@ -318,6 +318,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "yellow",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       escalations: [
@@ -346,6 +347,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       leadSections: [
@@ -405,6 +407,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
         {
           productId: PROJECT_B,
@@ -412,6 +415,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "yellow",
           stageCount: 7,
           leadNames: ["Тимлид 1"],
+          leadIds: ["695cfa6a-0dd8-50a5-84e5-06c474e139fd"],
         },
       ],
       leadSections: [

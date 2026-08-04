@@ -1,6 +1,10 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { mapWeeklyReport } from "./weekly-report";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -8,24 +12,12 @@ const PROJECT_A = "22222222-2222-4222-8222-222222222222";
 const SECTION_A = "44444444-4444-4444-8444-444444444444";
 const AUTHOR_A = "66666666-6666-4666-8666-666666666666";
 function baseReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
+  overrides: WeeklyReportFixture = {},
 ): WeeklyReportReadModel {
-  return {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open",
-    archived: false,
-    weekLabel: "Week 16",
-    submissionCount: 0,
-    totalLeads: 0,
-    hasActiveReminderRule: true,
-    portfolioOverview: [],
-    leadSections: [],
-    escalations: [],
     ...overrides,
-  };
+  });
 }
 
 describe("mapWeeklyReport", () => {
@@ -40,6 +32,7 @@ describe("mapWeeklyReport", () => {
         weekLabel: "Week 16",
         dateRange: "Apr 14–20, 2026",
         isCurrent: true,
+        periodStart: new Date("2026-04-14T00:00:00Z"),
       },
       portfolio: [],
       products: [],
@@ -63,6 +56,7 @@ describe("mapWeeklyReport", () => {
           worstStatus: null,
           stageCount: 1,
           leadNames: ["Alex Lead"],
+          leadIds: ["fdbe9b32-8141-593c-9cad-f8f26def402f"],
         },
       ],
       leadSections: [
@@ -146,14 +140,15 @@ describe("mapWeeklyReport", () => {
         weekLabel: "Week 16",
         dateRange: "Apr 14–20, 2026",
         isCurrent: true,
+        periodStart: new Date("2026-04-14T00:00:00Z"),
       },
       portfolio: [
         {
           id: PROJECT_A,
           initials: "CO",
           name: "Core",
-          status: "on-track",
-          statusLabel: "On Track · Alex Lead",
+          status: "empty",
+          statusLabel: "No status · Alex Lead",
           leads: "Alex Lead",
           currentWeekCount: 1,
           nextWeekCount: 1,
@@ -166,8 +161,8 @@ describe("mapWeeklyReport", () => {
           authorIds: [AUTHOR_A],
           initials: "CO",
           name: "Core",
-          status: "on-track",
-          statusLabel: "On Track",
+          status: "empty",
+          statusLabel: "No status",
           leads: "Alex Lead",
           needsAttention: "Launch needs approval.",
           needsAttentionSeverity: "blocked",
@@ -222,7 +217,7 @@ describe("mapWeeklyReport", () => {
               canReview: false,
             },
           ],
-          priorities: [{ rank: 2, text: "Ship release" }],
+          priorities: [{ id: "current-1", rank: 2, text: "Ship release" }],
         },
       ],
       submissionLabel: "1/2 submitted",

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appSettingsSchema, appSettingsUpdateSchema } from "./report";
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
+import { appSettingsSchema } from "./report";
 
 const validSettings = () => ({
   autoCreatePeriods: false,
@@ -181,7 +177,6 @@ describe("appSettingsSchema", () => {
   });
 
   it("rejects malformed deadlineTime (must be HH:MM 24h)", () => {
-    // Hour out of range
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
@@ -190,7 +185,6 @@ describe("appSettingsSchema", () => {
         deadlineTime: "25:00",
       }).success,
     ).toBe(false);
-    // Missing leading zero
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
@@ -199,7 +193,6 @@ describe("appSettingsSchema", () => {
         deadlineTime: "9:30",
       }).success,
     ).toBe(false);
-    // Garbage
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
@@ -208,7 +201,6 @@ describe("appSettingsSchema", () => {
         deadlineTime: "noon",
       }).success,
     ).toBe(false);
-    // Valid corner cases pass
     expect(
       appSettingsSchema.safeParse({
         ...validSettings(),
@@ -243,67 +235,6 @@ describe("appSettingsSchema", () => {
         defaultDeadlineDays: 5,
         reopenWindowHours: 169,
       }).success,
-    ).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// appSettingsUpdateSchema (partial)
-// ---------------------------------------------------------------------------
-
-describe("appSettingsUpdateSchema", () => {
-  it("accepts partial update with one field", () => {
-    const result = appSettingsUpdateSchema.safeParse({
-      defaultDeadlineDays: 7,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts empty object (no fields)", () => {
-    const result = appSettingsUpdateSchema.safeParse({});
-    expect(result.success).toBe(true);
-  });
-
-  it("still validates field constraints on partial", () => {
-    const result = appSettingsUpdateSchema.safeParse({
-      defaultDeadlineDays: 0,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("omits unifiedActivityView from the parsed output when the key is absent", () => {
-    // Guards the Zod-4 `.partial()`-keeps-defaults hazard: an update that does
-    // not mention the flag must not materialize `false`, or the write path
-    // (persists any non-undefined key) would reset a department that enabled it.
-    const parsed = appSettingsUpdateSchema.parse({ defaultDeadlineDays: 7 });
-    expect("unifiedActivityView" in parsed).toBe(false);
-    expect(parsed.unifiedActivityView).toBeUndefined();
-  });
-
-  it("keeps an explicit unifiedActivityView value", () => {
-    expect(
-      appSettingsUpdateSchema.parse({ unifiedActivityView: false })
-        .unifiedActivityView,
-    ).toBe(false);
-    expect(
-      appSettingsUpdateSchema.parse({ unifiedActivityView: true })
-        .unifiedActivityView,
-    ).toBe(true);
-  });
-
-  it("keeps explicit values and still enforces constraints", () => {
-    expect(
-      appSettingsUpdateSchema.parse({ periodLengthDays: 14 }).periodLengthDays,
-    ).toBe(14);
-    expect(
-      appSettingsUpdateSchema.parse({ notificationFromEmail: null })
-        .notificationFromEmail,
-    ).toBeNull();
-    expect(
-      appSettingsUpdateSchema.safeParse({ periodLengthDays: 0 }).success,
-    ).toBe(false);
-    expect(
-      appSettingsUpdateSchema.safeParse({ deadlineTime: "25:00" }).success,
     ).toBe(false);
   });
 });

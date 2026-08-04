@@ -47,12 +47,12 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
 
 function createRepository(
   handler: (params: {
-    q: string;
-    scope: "mine" | "all" | "published";
-    userId: string;
-    groupIds: string[] | null;
-    excludeTypes: SearchHit["type"][];
-    limit: number;
+    readonly q: string;
+    readonly scope: "mine" | "all" | "published";
+    readonly userId: string;
+    readonly groupIds: readonly string[] | null;
+    readonly excludeTypes: readonly SearchHit["type"][];
+    readonly limit: number;
   }) => SearchHit[],
 ): SearchRepository {
   return {
@@ -157,7 +157,7 @@ describe("SearchService", () => {
   });
 
   it("excludes project hits for a lead (no product destination → would dead-end)", async () => {
-    let seenExclude: SearchHit["type"][] | undefined;
+    let seenExclude: readonly SearchHit["type"][] | undefined;
     const repo = createRepository((params) => {
       seenExclude = params.excludeTypes;
       return [
@@ -187,7 +187,7 @@ describe("SearchService", () => {
   });
 
   it("keeps project hits for head (has the /admin product surface)", async () => {
-    let seenExclude: SearchHit["type"][] | undefined;
+    let seenExclude: readonly SearchHit["type"][] | undefined;
     const repo = createRepository((params) => {
       seenExclude = params.excludeTypes;
       return [
@@ -393,7 +393,7 @@ describe("SearchService", () => {
   });
 
   it("excludes project hits for a viewer (no product destination, no publish state)", async () => {
-    let seenExclude: SearchHit["type"][] | undefined;
+    let seenExclude: readonly SearchHit["type"][] | undefined;
     const repo = createRepository((params) => {
       seenExclude = params.excludeTypes;
       return [

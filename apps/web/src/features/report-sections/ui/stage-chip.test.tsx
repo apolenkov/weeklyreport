@@ -1,9 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * Locked chips show the cross-author risk color, not flat gray empty.
- * Assert via aria-label + STATUS_CONFIG bg tokens (chip face has no status glyph).
- */
+// @vitest-environment jsdom
+// Locked chips expose the cross-author risk token through their aria-labelled
+// status button; the chip face itself has no status glyph.
 import "@testing-library/jest-dom/vitest";
 
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";

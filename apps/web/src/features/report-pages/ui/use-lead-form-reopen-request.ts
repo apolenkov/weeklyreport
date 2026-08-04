@@ -1,52 +1,64 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
+import type { LeadFormGeneration } from "./lead-form-generation";
+import { useGenerationState } from "./use-generation-state";
+
+function useReopenDialog(generation: LeadFormGeneration | null) {
+  const [show, setShow] = useGenerationState(generation, false);
+  // Rejections stay in the dialog so the lead can amend the reason and retry.
+  const [error, setError] = useGenerationState<string | null>(generation, null);
+  return {
+    error,
+    setError,
+    show,
+    open: () => {
+      setError(null);
+      setShow(true);
+    },
+    close: () => {
+      setShow(false);
+      setError(null);
+    },
+  };
+}
 
 export function useLeadFormReopenRequest({
+  generation,
   sectionIdForActions,
 }: {
-  readonly sectionIdForActions: string;
+  readonly generation: LeadFormGeneration | null;
+  readonly sectionIdForActions: string | null;
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
-  const [showReopenDialog, setShowReopenDialog] = useState(false);
-  // Rejections stay inside the dialog instead of a toast so the lead can fix
-  // the reason and retry without reopening it.
-  const [reopenError, setReopenError] = useState<string | null>(null);
+  const dialog = useReopenDialog(generation);
 
   const requestReopenMut = useMutation(
     trpc.leadForm.requestReopen.mutationOptions({
       onSuccess: () => {
-        setShowReopenDialog(false);
-        setReopenError(null);
+        dialog.close();
         invalidateLeadForm(qc, trpc);
         toast.success("Reopen request sent to Head");
       },
       onError: (err: unknown) => {
         const msg =
           err instanceof Error ? err.message : "Reopen request failed";
-        setReopenError(msg);
+        dialog.setError(msg);
       },
     }),
   );
 
   return {
     requestReopenMut,
-    reopenError,
-    showReopenDialog,
-    openReopenDialog: () => {
-      setReopenError(null);
-      setShowReopenDialog(true);
-    },
-    closeReopenDialog: () => {
-      setShowReopenDialog(false);
-      setReopenError(null);
-    },
+    reopenError: dialog.error,
+    showReopenDialog: dialog.show,
+    openReopenDialog: dialog.open,
+    closeReopenDialog: dialog.close,
     handleRequestReopen: (reason: string | undefined) => {
       if (!sectionIdForActions) return;
       requestReopenMut.mutate({

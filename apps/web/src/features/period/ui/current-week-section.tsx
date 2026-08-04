@@ -139,7 +139,6 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
     <div className="relative">
       <div
         ref={scrollRef}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be keyboard-focusable (axe scrollable-region-focusable); the static rule does not model that WCAG exception
         tabIndex={0}
         role="group"
         aria-label="Current week items"

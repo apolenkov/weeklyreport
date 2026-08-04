@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { decideOtelBootstrap } from "./otel.bootstrap.js";
+import { decideOtelBootstrap, startOtel } from "./otel.bootstrap.js";
+
+const { startSdk } = vi.hoisted(() => ({ startSdk: vi.fn() }));
+
+vi.mock("@opentelemetry/sdk-node", () => ({
+  NodeSDK: class {
+    start = startSdk;
+  },
+}));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 // Env-knob → decision only; avoids pulling a live collector into the unit suite.
 describe("OTel bootstrap decision", () => {
@@ -57,11 +69,44 @@ describe("OTel bootstrap decision", () => {
     },
   );
 
+  it.each(["", " ".repeat(3)])(
+    "rejects blank OTEL_TRACES_SAMPLER_ARG=%j",
+    (value) => {
+      expect(() =>
+        decideOtelBootstrap({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
+          OTEL_TRACES_SAMPLER_ARG: value,
+        }),
+      ).toThrow(/OTEL_TRACES_SAMPLER_ARG must not be blank/u);
+    },
+  );
+
   it("case-insensitive matching on OTEL_SDK_DISABLED", () => {
     const decision = decideOtelBootstrap({
       OTEL_SDK_DISABLED: "TRUE",
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
     });
     expect(decision.started).toBe(false);
+  });
+});
+
+describe("startOtel SDK start outcome", () => {
+  it("reports start-failed (not started) when the SDK start throws", () => {
+    startSdk.mockImplementation(() => {
+      throw new Error("instrumentation conflict");
+    });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    const decision = startOtel({
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318",
+    });
+
+    expect(decision.started).toBe(false);
+    if (!decision.started) {
+      expect(decision.reason).toBe("start-failed");
+    }
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[otel] start failed"),
+    );
   });
 });

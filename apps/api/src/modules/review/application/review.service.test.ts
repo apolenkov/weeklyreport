@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
 import { createNullLogger } from "../../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { type ReviewRepository, ReviewService } from "./review.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
@@ -165,12 +166,12 @@ describe("ReviewService", () => {
 
 // Drive the live review.dashboard procedure so gating hits the wired path.
 function buildReviewCaller(service: ReviewService, session: UserSession) {
-  const deps = {
+  const deps = createStubAppRouterDeps({
     weeklyReportService: {
       getCurrentEditableId: vi.fn(() => Promise.resolve(reportId)),
     },
     reviewService: service,
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
 
   return createAppRouter(deps).createCaller({
     session,

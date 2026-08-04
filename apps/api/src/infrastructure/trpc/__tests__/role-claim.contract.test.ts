@@ -1,5 +1,6 @@
 import type { Role } from "@customreport/shared";
 import type { UserSession } from "@customreport/shared";
+import type { PassportSamlConfig } from "@node-saml/passport-saml";
 import { describe, expect, it } from "vitest";
 
 import { createAuthController } from "../../../modules/auth/index.js";
@@ -16,14 +17,16 @@ const baseOptions = {
   entryPoint: "http://localhost/entry",
   issuer: "test-issuer",
   idpCert: "CERT",
-  validateInResponseTo: "never",
+  validateInResponseTo: "never" as NonNullable<
+    PassportSamlConfig["validateInResponseTo"]
+  >,
   disableRequestedAuthnContext: true,
   signatureAlgorithm: "sha256",
   digestAlgorithm: "sha256",
   wantAssertionsSigned: true,
   wantAuthnResponseSigned: true,
   acceptedClockSkewMs: 0,
-} as unknown as SamlStrategyOptions;
+} satisfies Omit<SamlStrategyOptions, "devMode">;
 const prodOptions: SamlStrategyOptions = { ...baseOptions, devMode: false };
 
 const env: NodeJS.ProcessEnv = {
@@ -88,6 +91,7 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
     const verified = verifySamlProfile(prodOptions, {
       nameID: "u-admin",
       email: "admin@customreport.local",
+      displayName: "Admin",
       role: "admin",
     });
     expect(verified.ok).toBe(true);

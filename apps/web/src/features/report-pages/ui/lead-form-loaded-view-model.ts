@@ -28,53 +28,43 @@ import {
 } from "./lead-form-loaded-view-model-helpers";
 import type { UnifiedActivityEntry } from "./unified-activity-section";
 
-/**
- * Already-loaded query/draft inputs the pure builder projects from. The
- * boundary owns no React state, effects, routes, or queries — LeadForm
- * gathers these after its skeleton guard and consumes the returned model.
- */
+// Pure projection input; LeadForm supplies settled query/draft data after its
+// skeleton guard, so this boundary owns no React state, effects, or routing.
 export interface LeadFormLoadedInput {
-  /** `reports.getActive` result (the draft section stands in when null). */
   readonly active: ReportSectionReadModel;
-  /** The editable draft mirror of the loaded section. */
   readonly draftSection: ReportSectionReadModel;
-  /** `leadForm.byPeriod` lock flag for the loaded period. */
   readonly serverReadOnly: boolean;
-  /** Server-computed reopen affordance — never reconstructed client-side. */
+  // Server-computed; the client must not reconstruct reopen policy.
   readonly canRequestReopen: boolean;
-  /** Durable published stableId lineage from `leadForm.byPeriod`. */
   readonly publishedLineage: {
     readonly itemStableIds: readonly string[];
     readonly decisionStableIds: readonly string[];
   };
   readonly history: readonly MyHistoryEntry[];
-  /** Status-only cross-author read — always fetched, drives stage chips. */
+  // Status-only cross-author data drives stage chips and is always fetched.
   readonly crossAuthors: readonly CrossAuthorRow[];
-  /** Gated Everyone full-content read; undefined while not fetched. */
+  // Full foreign content is gated and remains undefined until requested.
   readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
   readonly isEveryone: boolean;
   readonly visibilityHydrated: boolean;
   readonly isForeignSlidesDeck: boolean;
-  /** Client-side submitted state from draft orchestration. */
   readonly isSubmitted: boolean;
-  readonly selectedPeriodId: string;
+  readonly selectedPeriodId: string | null;
   readonly showArchivePeriods: boolean;
 }
 
-/** The loaded display model LeadForm renders from. */
 export interface LeadFormLoadedViewModel {
   readonly products: Product[];
-  /** The author's attached activities offered as record parents. */
   readonly activityOptions: readonly { id: string; name: string }[];
-  readonly ownCurrentWeekItems: KanbanItem[];
-  readonly ownNextWeekItems: KanbanItem[];
-  readonly ownRisks: RiskEntry[];
-  readonly ownDecisions: DecisionEntry[];
+  readonly ownCurrentWeekItems: readonly KanbanItem[];
+  readonly ownNextWeekItems: readonly KanbanItem[];
+  readonly ownRisks: readonly RiskEntry[];
+  readonly ownDecisions: readonly DecisionEntry[];
   readonly activityCards: LeadActivityCard[];
-  readonly currentWeekItems: KanbanItem[];
-  readonly nextWeekItems: KanbanItem[];
-  readonly risks: RiskEntry[];
-  readonly decisions: DecisionEntry[];
+  readonly currentWeekItems: readonly KanbanItem[];
+  readonly nextWeekItems: readonly KanbanItem[];
+  readonly risks: readonly RiskEntry[];
+  readonly decisions: readonly DecisionEntry[];
   readonly ownPeriodRanks: readonly number[];
   readonly publishedLockedItemIds: ReadonlySet<string>;
   readonly publishedLockedDecisionIds: ReadonlySet<string>;
@@ -89,10 +79,10 @@ export interface LeadFormLoadedViewModel {
 
 // The author's own records, before co-owners' rows are merged in for display.
 interface OwnDraftRecords {
-  readonly ownCurrentWeekItems: KanbanItem[];
-  readonly ownNextWeekItems: KanbanItem[];
-  readonly ownRisks: RiskEntry[];
-  readonly ownDecisions: DecisionEntry[];
+  readonly ownCurrentWeekItems: readonly KanbanItem[];
+  readonly ownNextWeekItems: readonly KanbanItem[];
+  readonly ownRisks: readonly RiskEntry[];
+  readonly ownDecisions: readonly DecisionEntry[];
 }
 
 // Foreign stage CHIPS show only in Everyone; Mine skips the override so

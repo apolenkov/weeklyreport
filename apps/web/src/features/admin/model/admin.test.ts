@@ -13,6 +13,27 @@ const UUID_C = "33333333-3333-4333-8333-333333333333";
 const UUID_D = "44444444-4444-4444-8444-444444444444";
 const UUID_GROUP = "55555555-5555-4555-8555-555555555555";
 
+const OPEN_LIFECYCLE = {
+  status: "draft" as const,
+  periodState: "open" as const,
+  periodStatus: "open" as const,
+  archived: false,
+  autoPublished: false,
+  autoArchived: false,
+  publishedAt: null,
+  publishedById: null,
+  reopenedAt: null,
+};
+
+const PUBLISHED_LIFECYCLE = {
+  ...OPEN_LIFECYCLE,
+  status: "published" as const,
+  periodState: "published" as const,
+  periodStatus: "published" as const,
+  publishedAt: "2026-04-18T18:30:00.000Z",
+  publishedById: UUID_C,
+};
+
 function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
   return adminSnapshotSchema.parse({
     groups: overrides.groups ?? [
@@ -83,14 +104,14 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
         periodStart: "2026-04-13T00:00:00.000Z",
         periodEnd: "2026-04-19T23:59:59.000Z",
         deadline: "2026-04-18T18:00:00.000Z",
-        status: "published",
+        ...PUBLISHED_LIFECYCLE,
       },
       {
         id: UUID_B,
         periodStart: "2026-04-20T00:00:00.000Z",
         periodEnd: "2026-04-26T23:59:59.000Z",
         deadline: "2026-04-25T18:00:00.000Z",
-        status: "draft",
+        ...OPEN_LIFECYCLE,
       },
     ],
     reminderRules: overrides.reminderRules ?? [

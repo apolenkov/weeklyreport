@@ -1,9 +1,5 @@
-/**
- * Pins the context-strip derivation of `useRiskEditParentStage`: the strip
- * must track the CURRENTLY selected parent, exactly like the editable stage
- * list. A mount-time snapshot regression would render the seed product's
- * flagged stages under a newly selected product's name.
- */
+// The context strip must track the selected parent, not the mount-time seed;
+// this mirrors the editable stage list after a product switch.
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

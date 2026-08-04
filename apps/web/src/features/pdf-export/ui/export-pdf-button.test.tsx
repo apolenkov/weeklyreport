@@ -1,8 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * ExportPdfButton: popup-safe open, truthful success toast, poll-error recovery.
- */
+// @vitest-environment jsdom
+//
+// ExportPdfButton: popup-safe open, truthful success toast, poll-error recovery.
 
 import "@testing-library/jest-dom/vitest";
 
@@ -54,7 +52,7 @@ function makeQueryClient() {
 }
 
 function renderButton(options: {
-  readonly statusQuery: unknown | (() => unknown);
+  readonly statusQuery: unknown;
   readonly periodStatus?: "open" | "published" | "reopened";
 }) {
   const { proxy, captured } = createMockTRPC([

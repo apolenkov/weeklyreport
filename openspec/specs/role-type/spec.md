@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by syncing change unify-role-type. Update Purpose after archive.
+Keep role vocabularies in one shared source per session and persistence axis, with schema-derived membership guards and a single presentation label source.
 
 ## Requirements
 
@@ -22,9 +22,12 @@ narrower subsets remain legal. Exemptions: runtime validators and
 presentation-ordered lists may enumerate role VALUES while typing them from
 shared; the Prisma seed toolchain (`prisma/`, compiled by
 `tsconfig.prisma.json`, which cannot resolve workspace packages) keeps one
-commented literal mirror pointing at this spec; the e2e tree
-(isolated tsconfig without workspace resolution) stays self-contained; role
-tokens in catalog YAML are behavioral data. The two shared Zod enums MUST
+commented literal mirror pointing at this spec. The plain-Node catalog parser
+(`e2e/sweep/catalog-parser.ts`, compiled by the root `tsconfig.scripts.json`
+with empty workspace paths) keeps one value mirror for its direct Node entry
+point; Playwright/e2e TypeScript sources use the shared `Role`/`DbRole` types
+through `e2e/tsconfig.json`. Role tokens in catalog YAML are behavioral data.
+The two shared Zod enums MUST
 stay as two separate literal homes — collapsing one into the other would
 remove the deliberate room for the axes to diverge.
 

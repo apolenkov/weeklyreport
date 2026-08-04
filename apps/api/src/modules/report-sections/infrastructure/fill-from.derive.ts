@@ -21,12 +21,12 @@ export function isCarryable(
 }
 
 interface SourceItem<WF extends string> {
-  projectId: string | null;
-  activityId: string | null;
-  text: string;
-  tag: string;
-  workflowStatus: WF;
-  stageNames: string[];
+  readonly projectId: string | null;
+  readonly activityId: string | null;
+  readonly text: string;
+  readonly tag: string;
+  readonly workflowStatus: WF;
+  readonly stageNames: string[];
 }
 
 export function toFilledItemRows<WF extends string>(
@@ -47,13 +47,13 @@ export function toFilledItemRows<WF extends string>(
 }
 
 interface SourceRisk {
-  projectId: string | null;
-  activityId: string | null;
-  risk: string;
-  impact: string;
-  mitigation: string;
-  severity: string;
-  stageNames: string[];
+  readonly projectId: string | null;
+  readonly activityId: string | null;
+  readonly risk: string;
+  readonly impact: string;
+  readonly mitigation: string;
+  readonly severity: string;
+  readonly stageNames: string[];
 }
 
 export function toFilledRiskRows(
@@ -73,14 +73,14 @@ export function toFilledRiskRows(
 }
 
 interface SourceDecision {
-  text: string;
-  owner: string;
-  deadline: Date | null;
-  impact: string;
-  resolvedAt: Date | null;
-  stageNames: string[];
-  productId: string | null;
-  activityId: string | null;
+  readonly text: string;
+  readonly owner: string;
+  readonly deadline: Date | null;
+  readonly impact: string;
+  readonly resolvedAt: Date | null;
+  readonly stageNames: string[];
+  readonly productId: string | null;
+  readonly activityId: string | null;
 }
 
 export function toFilledDecisionRows(

@@ -9,9 +9,6 @@ import { ActionLogRow, type ActionLogRowData } from "./action-log-row";
 import { ActionLogSkeleton } from "./action-log-skeleton";
 
 const PAGE_SIZE = 20;
-// Proof-seed correlation prefix: exclude so empty/search-miss treat a
-// page of only proof rows as an empty log.
-const MANUAL_ACTION_LOG_PROOF_PREFIX = "manual-action-log-proof";
 
 const COLUMN_HEADERS = [
   "Time",
@@ -21,9 +18,13 @@ const COLUMN_HEADERS = [
   "Reference",
 ] as const;
 
-function ActionLogTable({ rows }: { readonly rows: ActionLogRowData[] }) {
+function ActionLogTable({
+  rows,
+}: {
+  readonly rows: readonly ActionLogRowData[];
+}) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[var(--shadow-card-resting)]">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
@@ -126,38 +127,24 @@ function matchesNeedle(row: ActionLogRowData, needle: string): boolean {
     .includes(needle);
 }
 
-function useActionLogRows(rows: ActionLogRowData[], search: string) {
-  const nonProofRows = useMemo(
-    () =>
-      rows.filter(
-        (row) => !row.correlationId.startsWith(MANUAL_ACTION_LOG_PROOF_PREFIX),
-      ),
-    [rows],
-  );
-  const visibleRows = useMemo(() => {
+function useActionLogRows(rows: readonly ActionLogRowData[], search: string) {
+  return useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return nonProofRows;
-    return nonProofRows.filter((row) => matchesNeedle(row, needle));
-  }, [nonProofRows, search]);
-  return { nonProofRows, visibleRows };
+    if (!needle) return rows;
+    return rows.filter((row) => matchesNeedle(row, needle));
+  }, [rows, search]);
 }
 
-/**
- * Action Log Tab.
- */
 export function ActionLogTab() {
   const [search, setSearch] = useState("");
   const pagination = useActionLogPagination();
-  const { nonProofRows, visibleRows } = useActionLogRows(
-    pagination.items,
-    search,
-  );
+  const visibleRows = useActionLogRows(pagination.items, search);
 
   return (
     <div className="space-y-4" data-testid="action-log-tab">
       <TabHeader
         title="Action Log"
-        description="Latest product actions with support reference ids. Search covers loaded rows only; internal proof calls are hidden."
+        description="Latest product actions with support reference ids. Search covers loaded rows only."
         count={
           pagination.isLoading
             ? "Loading…"
@@ -181,7 +168,7 @@ export function ActionLogTab() {
       {!pagination.isLoading &&
         !pagination.isError &&
         visibleRows.length === 0 && (
-          <ActionLogEmpty hasLoadedRows={nonProofRows.length > 0} />
+          <ActionLogEmpty hasLoadedRows={pagination.items.length > 0} />
         )}
 
       {visibleRows.length > 0 && <ActionLogTable rows={visibleRows} />}

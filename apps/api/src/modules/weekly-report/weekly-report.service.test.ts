@@ -5,6 +5,10 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  makeProjectReadModel,
+  makeReportSectionReadModel,
+} from "../../test-utils/report-section-fixtures.js";
+import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
   type WeeklyReportRepositoryResult,
@@ -26,6 +30,7 @@ function makeWeeklyReport(
     periodEnd: new Date("2026-04-18"),
     deadline: new Date("2026-04-17T15:00:00.000Z"),
     periodStatus: "open",
+    archived: false,
     weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 3,
@@ -37,19 +42,26 @@ function makeWeeklyReport(
         worstStatus: "green",
         stageCount: 2,
         leadNames: ["Lead A"],
+        leadIds: ["492e3762-5859-556b-a696-a97143cfad26"],
       },
     ],
     leadSections: [
-      {
+      makeReportSectionReadModel({
         reportSectionId: sectionId,
         reportId,
         authorId,
         authorName: "Lead A",
+        authorRole: "lead",
         version: 1,
         status: "submitted",
         submittedAt: new Date("2026-04-16T10:00:00.000Z"),
+        late: false,
         projects: [
-          { projectId, projectName: "Project Alpha", trafficLight: "green" },
+          makeProjectReadModel({
+            projectId,
+            projectName: "Project Alpha",
+            trafficLight: "green",
+          }),
         ],
         items: [
           {
@@ -64,14 +76,7 @@ function makeWeeklyReport(
         ],
         risks: [],
         decisions: [],
-        priorities: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            rank: 1,
-            text: "Finish feature X",
-          },
-        ],
-      },
+      }),
     ],
     escalations: [],
     ...overrides,
@@ -256,25 +261,12 @@ describe("WeeklyReportService — viewer published-or-current gate", () => {
     ).rejects.toBeInstanceOf(WeeklyReportDomainError);
   });
 
-  // viewer + archived-open id → rejected (the helper excludes archived, so it
-  // is never the current editable id → null here)
-  it("viewer is REJECTED on an archived-open period", async () => {
-    const archivedOpen = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, archivedOpen]]);
-    const service = new WeeklyReportService(
-      createSpyRepository(reports, null, null),
-    );
-
-    await expect(
-      service.getWeeklyReport(reportId, "viewer"),
-    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
-  });
-
-  // viewer + scheduled-future open id → rejected (a future period is excluded
-  // from currentEditableId by the periodStart<=now filter → not current)
-  it("viewer is REJECTED on a scheduled-future open period", async () => {
-    const future = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, future]]);
+  // viewer + open period the resolver does not surface (archived, scheduled, or
+  // otherwise excluded from currentEditableId) → rejected: the viewer cannot
+  // read a period the repository never resolves as current.
+  it("viewer is REJECTED when no current editable period resolves", async () => {
+    const open = makeWeeklyReport({ periodStatus: "open" });
+    const reports = new Map([[reportId, open]]);
     const service = new WeeklyReportService(
       createSpyRepository(reports, null, null),
     );
@@ -627,5 +619,39 @@ describe("WeeklyReportService — head default resolution", () => {
       activeReportId,
       undefined,
     );
+  });
+
+  // The admin default MUST resolve through the same leadership lifecycle
+  // resolver as viewer/head — getActiveReportId can land on an archived or
+  // stale period the head would never see as its default.
+  it("resolves the admin default via getCurrentEditableId, not getActiveReportId", async () => {
+    const report = makeWeeklyReport({ reportId });
+    const reports = new Map([[reportId, report]]);
+    // getActiveReportId points at the stale id; the leadership resolver
+    // points at the current one — admin must follow the latter.
+    const repo = createSpyRepository(reports, activeReportId, reportId, null);
+    const service = new WeeklyReportService(repo);
+
+    await service.getWeeklyReport(undefined, "admin");
+
+    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
+    expect(repo.getActiveReportId).not.toHaveBeenCalled();
+    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
+  });
+
+  it("admin no-reportId falls back to the latest non-archived published report", async () => {
+    const published = makeWeeklyReport({ periodStatus: "published" });
+    const reports = new Map([[reportId, published]]);
+    const repo = createSpyRepository(reports, activeReportId, null, reportId);
+    const service = new WeeklyReportService(repo);
+
+    const result = await service.getWeeklyReport(undefined, "admin");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.reportId).toBe(reportId);
+    expect(repo.getCurrentEditableId).toHaveBeenCalledOnce();
+    expect(repo.getLatestPublishedNonArchivedId).toHaveBeenCalledOnce();
+    expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
 });

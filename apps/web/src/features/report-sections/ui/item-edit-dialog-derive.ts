@@ -49,8 +49,14 @@ export function deriveItemEditFields(
   args: DeriveItemEditFieldsArgs,
 ): ItemEditDerivedFields {
   const isActivityParent = args.parent.kind === "activity";
-  const selectedActivity = args.activities.find((a) => a.id === args.parent.id);
-  const selectedProduct = args.products.find((p) => p.id === args.parent.id);
+  const parentId =
+    args.parent.kind === "unresolved" ? undefined : args.parent.id;
+  const selectedActivity = parentId
+    ? args.activities.find((a) => a.id === parentId)
+    : undefined;
+  const selectedProduct = parentId
+    ? args.products.find((p) => p.id === parentId)
+    : undefined;
   const parentName = resolveItemParentName({
     isActivityParent,
     selectedActivity,
@@ -62,7 +68,9 @@ export function deriveItemEditFields(
   // Product parents need a stage when owned stages exist; activity parents have none.
   const availableStages = isActivityParent
     ? []
-    : (args.stagesForProduct?.(args.parent.id) ?? []);
+    : parentId
+      ? (args.stagesForProduct?.(parentId) ?? [])
+      : [];
   const effectiveStageNames = computeEffectiveStageNames(
     args.stageNames,
     availableStages,
@@ -73,7 +81,7 @@ export function deriveItemEditFields(
 
   const statusSlot = resolveStatusSlot({
     isActivityParent,
-    productId: args.parent.id,
+    productId: isActivityParent ? null : parentId,
     stageNames: effectiveStageNames,
     status: args.status,
     risks: args.risks,

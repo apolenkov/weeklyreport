@@ -10,7 +10,11 @@ import { loginByCookie } from "./dev-auth.ts";
 const SESSION_COOKIE = "customreport_session";
 const LONG_ENOUGH = "s".repeat(40);
 
-type AuthMe = "rate_limited" | "unreadable" | string;
+function isAuthMeSequence(
+  value: string | readonly string[],
+): value is readonly string[] {
+  return Array.isArray(value);
+}
 
 interface Attempt {
   // Status the dev-login endpoint answers with. 302 unless a case is about it.
@@ -18,7 +22,7 @@ interface Attempt {
   // Session cookie value the context holds afterwards; absent means none set.
   readonly cookie?: string;
   // What the role probe reports back.
-  readonly authMe: AuthMe;
+  readonly authMe: string | readonly string[];
 }
 
 interface Recorded {
@@ -28,7 +32,7 @@ interface Recorded {
   readonly navigations: string[];
 }
 
-const authMeResponse = (answer: AuthMe) => {
+const authMeResponse = (answer: string) => {
   if (answer === "rate_limited") return { status: 429, body: null };
   if (answer === "unreadable") return { status: 500, body: null };
   return {
@@ -49,7 +53,11 @@ function scriptedPage(attempts: readonly Attempt[]): {
   const waits: number[] = [];
   const navigations: string[] = [];
 
-  const state = { attempt: -1, cookie: undefined as string | undefined };
+  const state = {
+    attempt: -1,
+    authProbe: 0,
+    cookie: undefined as string | undefined,
+  };
   const current = (): Attempt => {
     const entry = attempts[Math.min(state.attempt, attempts.length - 1)];
     if (!entry) throw new Error("scripted page ran past its script");
@@ -87,7 +95,13 @@ function scriptedPage(attempts: readonly Attempt[]): {
     context: () => context,
     request: {
       get: () => {
-        const { status, body } = authMeResponse(current().authMe);
+        const scriptedAnswer = current().authMe;
+        const answer = isAuthMeSequence(scriptedAnswer)
+          ? scriptedAnswer[Math.min(state.authProbe, scriptedAnswer.length - 1)]
+          : scriptedAnswer;
+        if (!answer) throw new Error("scripted auth.me answer is missing");
+        state.authProbe += 1;
+        const { status, body } = authMeResponse(answer);
         return Promise.resolve({
           status: () => status,
           ok: () => status === 200,
@@ -148,13 +162,15 @@ describe("loginByCookie", () => {
 
   it("backs off and retries while the role probe is rate-limited", async () => {
     const { page, recorded } = scriptedPage([
-      { cookie: LONG_ENOUGH, authMe: "rate_limited" },
-      ok("viewer"),
+      {
+        cookie: LONG_ENOUGH,
+        authMe: ["rate_limited", "viewer"],
+      },
     ]);
 
     await loginByCookie(page, { role: "viewer" });
 
-    expect(recorded.loginUrls).toHaveLength(2);
+    expect(recorded.loginUrls).toHaveLength(1);
     // 300ms base plus 100ms per attempt already spent.
     expect(recorded.waits).toEqual([400]);
     // Deliberately NOT cleared here: the cookie is good, only the probe failed.
@@ -162,15 +178,17 @@ describe("loginByCookie", () => {
     expect(recorded.navigations).toEqual(["/"]);
   });
 
-  it("accepts the session when the probe is still rate-limited on the last attempt", async () => {
+  it("fails closed when the probe is still rate-limited on the last attempt", async () => {
     const { page, recorded } = scriptedPage([
       { cookie: LONG_ENOUGH, authMe: "rate_limited" },
     ]);
 
-    await loginByCookie(page, { role: "head", maxRetries: 1 });
+    await expect(
+      loginByCookie(page, { role: "head", maxRetries: 1 }),
+    ).rejects.toThrow(/role verification remained rate-limited.*expected head/);
 
     expect(recorded.loginUrls).toHaveLength(1);
-    expect(recorded.navigations).toEqual(["/"]);
+    expect(recorded.navigations).toEqual([]);
   });
 
   it("throws naming both roles when the mismatch survives every attempt", async () => {
@@ -183,7 +201,9 @@ describe("loginByCookie", () => {
   });
 
   it("reports a null role rather than the string 'null'", async () => {
-    const { page } = scriptedPage([{ cookie: LONG_ENOUGH, authMe: "unreadable" }]);
+    const { page } = scriptedPage([
+      { cookie: LONG_ENOUGH, authMe: "unreadable" },
+    ]);
 
     await expect(
       loginByCookie(page, { role: "lead", maxRetries: 1 }),

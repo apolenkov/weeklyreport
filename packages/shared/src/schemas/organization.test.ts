@@ -8,7 +8,7 @@ import {
   organizationUpdateSchema,
 } from "./organization";
 
-describe("organizationUpdateSchema — HTML-delimiter charset guard", () => {
+describe("organizationUpdateSchema character guard", () => {
   it("rejects a fullName carrying a script-breakout payload", () => {
     expect(
       organizationUpdateSchema.safeParse({
@@ -32,7 +32,9 @@ describe("organizationUpdateSchema — HTML-delimiter charset guard", () => {
     });
     expect(parsed.fullName).toBe("Acme Platforms Inc. & Co.");
   });
+});
 
+describe("organization schemas compatibility bounds", () => {
   it("uses the exported length bounds for stored and update schemas", () => {
     expect(
       organizationUpdateSchema.safeParse({
@@ -57,9 +59,7 @@ describe("organizationUpdateSchema — HTML-delimiter charset guard", () => {
     ).toBe(false);
   });
 
-  it("read projection does NOT apply the charset guard (a legacy stored value parses on read)", () => {
-    // The guard lives only at the write boundary; reads of already-stored rows
-    // must never throw on a value persisted before the constraint existed.
+  it("keeps stored names readable when they exceed the current write charset", () => {
     expect(
       organizationPublicSchema.safeParse({
         shortName: "ok",

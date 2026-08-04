@@ -1,33 +1,42 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Transporter } from "nodemailer";
+import type { SendMailOptions } from "nodemailer";
 import nodemailer from "nodemailer";
 
 import { ENV_CONFIG } from "../config/config.module";
 import type { EnvConfig } from "../config/env.schema";
 
-// Dev/test jsonTransport has no configured SMTP_FROM; this placeholder only
-// labels the envelope in the logged dev payload (jsonTransport never sends).
-const DEV_JSON_TRANSPORT_FROM = "noreply@example.com";
+// Dev/test stream transport has no configured SMTP_FROM; this placeholder only
+// labels the envelope in the logged dev payload (the transport never sends).
+const DEV_STREAM_TRANSPORT_FROM = "noreply@example.com";
 // nodemailer's conventional submission port when SMTP_PORT is left unset.
 const DEFAULT_SMTP_PORT = 587;
 // SMTP port reserved for connections that establish TLS immediately.
 const IMPLICIT_TLS_SMTP_PORT = 465;
+const createMailTransport = nodemailer.createTransport;
+
+interface EmailTransport {
+  readonly sendMail: (options: SendMailOptions) => Promise<unknown>;
+}
+
+const DEV_TRANSPORT: EmailTransport = {
+  sendMail: () => Promise.resolve(undefined),
+};
 
 // EMAIL_PORT binds consumers to the interface so tests inject a double without nodemailer.
 export interface EmailPort {
-  sendMail(
+  readonly sendMail: (
     to: string,
     subject: string,
     text: string,
     from?: string | null,
-  ): Promise<void>;
-  sendMailMultipart(
+  ) => Promise<void>;
+  readonly sendMailMultipart: (
     to: string,
     subject: string,
     html: string,
     text: string,
     from?: string | null,
-  ): Promise<void>;
+  ) => Promise<void>;
 }
 
 export const EMAIL_PORT = Symbol("EMAIL_PORT");
@@ -35,12 +44,12 @@ export const EMAIL_PORT = Symbol("EMAIL_PORT");
 // Absent SMTP_HOST uses jsonTransport (dev only); production fails closed in env.schema.
 @Injectable()
 export class EmailService implements EmailPort {
-  private readonly transporter: Transporter;
+  private readonly transporter: EmailTransport;
   private readonly fromAddress: string;
   private readonly isDev: boolean;
 
   constructor(@Inject(ENV_CONFIG) env: EnvConfig) {
-    this.fromAddress = env.SMTP_FROM ?? DEV_JSON_TRANSPORT_FROM;
+    this.fromAddress = env.SMTP_FROM ?? DEV_STREAM_TRANSPORT_FROM;
     const host = env.SMTP_HOST;
 
     if (host) {
@@ -48,7 +57,7 @@ export class EmailService implements EmailPort {
       const auth = env.SMTP_USER
         ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
         : undefined;
-      this.transporter = nodemailer.createTransport({
+      this.transporter = createMailTransport({
         host,
         port: env.SMTP_PORT ?? DEFAULT_SMTP_PORT,
         secure: (env.SMTP_PORT ?? DEFAULT_SMTP_PORT) === IMPLICIT_TLS_SMTP_PORT,
@@ -57,19 +66,18 @@ export class EmailService implements EmailPort {
       });
     } else {
       this.isDev = true;
-      // eslint-disable-next-line sonarjs/no-clear-text-protocols -- jsonTransport is an in-memory dev transport (no network protocol); false positive
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      this.transporter = DEV_TRANSPORT;
     }
   }
 
   // Per-call `from` lets the reminder processor pass AppSettings.notificationFromEmail
   // without mutating service state.
-  async sendMail(
+  readonly sendMail = async (
     to: string,
     subject: string,
     text: string,
     from?: string | null,
-  ): Promise<void> {
+  ): Promise<void> => {
     const fromAddr = from ?? this.fromAddress;
     await this.transporter.sendMail({
       from: fromAddr,
@@ -79,22 +87,22 @@ export class EmailService implements EmailPort {
     });
 
     this.logDevDelivery(
-      "email sent (dev/jsonTransport)",
+      "email sent (dev/streamTransport)",
       fromAddr,
       to,
       subject,
     );
-  }
+  };
 
   // Multipart (html+text) scores higher with corporate spam filters;
   // text-only clients still get the body.
-  async sendMailMultipart(
+  readonly sendMailMultipart = async (
     to: string,
     subject: string,
     html: string,
     text: string,
     from?: string | null,
-  ): Promise<void> {
+  ): Promise<void> => {
     const fromAddr = from ?? this.fromAddress;
     await this.transporter.sendMail({
       from: fromAddr,
@@ -105,12 +113,12 @@ export class EmailService implements EmailPort {
     });
 
     this.logDevDelivery(
-      "email sent (dev/jsonTransport, multipart)",
+      "email sent (dev/streamTransport, multipart)",
       fromAddr,
       to,
       subject,
     );
-  }
+  };
 
   private logDevDelivery(
     message: string,

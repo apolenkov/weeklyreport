@@ -12,7 +12,8 @@ vi.mock("next/headers", () => ({
 }));
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { decodeAuthMeResponse, getServerSession } from "./get-server-session";
+import { decodeAuthMeResponse } from "./decode-auth-me";
+import { getServerSession } from "./get-server-session";
 
 const SESSION = {
   userId: "a0000000-0000-4000-8000-000000000001",

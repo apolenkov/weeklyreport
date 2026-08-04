@@ -120,7 +120,7 @@ function buildProductSlide(
   const projectRisks = section.risks.filter(
     (risk) => risk.projectId === project.projectId,
   );
-  const stages: SlideStage[] = [...(project.ownedStages ?? [])]
+  const stages: SlideStage[] = [...project.ownedStages]
     .sort((left, right) => left.sortOrder - right.sortOrder)
     .map((stage) => ({
       id: stage.stageId,

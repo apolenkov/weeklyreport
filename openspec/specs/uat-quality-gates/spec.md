@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change final-gates-resweep. Update Purpose after archive.
+Define final acceptance as green local quality gates plus honest four-role browser, console, accessibility, mutation-consumer, and infrastructure evidence.
 
 ## Requirements
 

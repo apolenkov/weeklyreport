@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-type-cycle-clusters. Update Purpose after archive.
+Eliminate runtime and type dependency cycles by landing each connected cluster atomically around one semantic owner with captured dependency-cruiser evidence.
 
 ## Requirements
 

@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnModuleDestroy,
@@ -29,7 +30,7 @@ export interface TelemetryGaugesPort {
 // Queries bounded to last 4 / 1 published periods so cost stays flat.
 @Injectable()
 export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async onTimeRatioLastNPeriods(n: number): Promise<number | null> {
     const reportIds = await querySettledPeriodIds(this.prisma, n);
@@ -70,7 +71,10 @@ const collectAssignable = (gauge: Gauge): { collect: () => Promise<void> } =>
 export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelemetryGauges.name);
 
-  constructor(private readonly repo: TelemetryGaugesPort) {}
+  constructor(
+    @Inject(TelemetryGaugesPrismaRepository)
+    private readonly repo: TelemetryGaugesPort,
+  ) {}
 
   onModuleInit(): void {
     const onTimeRatio = collectAssignable(customreportReportsOnTimeRatio);
@@ -92,10 +96,13 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
         }
         customreportReportsOnTimeRatio.set(value);
       } catch (error) {
+        // A DB outage must not publish the last good value as current: clear
+        // the gauge (NaN) so the scrape reflects the unknown state.
         this.logger.error(
           "customreportReportsOnTimeRatio collect failed",
           error,
         );
+        customreportReportsOnTimeRatio.set(Number.NaN);
       }
     };
     activeLeads.collect = async () => {
@@ -104,6 +111,7 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
         customreportActiveLeadsTotal.set(value);
       } catch (error) {
         this.logger.error("customreportActiveLeadsTotal collect failed", error);
+        customreportActiveLeadsTotal.set(Number.NaN);
       }
     };
   }

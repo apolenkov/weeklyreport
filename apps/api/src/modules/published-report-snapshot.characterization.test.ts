@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { computeWorstStatus } from "./published-report-snapshot";
 
-// Pins computeWorstStatus over the traffic-light permutation grid.
-// Frozen — a diff here means a behavior change.
+// Pins computeWorstStatus over the traffic-light permutation grid — a diff in
+// these assertions means a behavior change.
 describe("computeWorstStatus — characterization grid", () => {
   it("returns null for an empty input", () => {
     expect(computeWorstStatus([])).toBeNull();

@@ -11,19 +11,19 @@ import type {
 } from "../application/report-sections-telemetry.port.js";
 
 export class ReportSectionsPrometheusTelemetry implements ReportSectionsTelemetry {
-  recordCrossAuthorRead(result: CrossAuthorReadResult): void {
+  readonly recordCrossAuthorRead = (result: CrossAuthorReadResult): void => {
     customreportCrossAuthorContentReadsTotal.inc({ result });
-  }
+  };
 
-  recordReopenRequest(state: ReopenRequestState): void {
+  readonly recordReopenRequest = (state: ReopenRequestState): void => {
     customreportReopenRequestsTotal.inc({ state });
-  }
+  };
 
-  recordSectionSubmitted(late: boolean): void {
+  readonly recordSectionSubmitted = (late: boolean): void => {
     customreportSectionsSubmittedTotal.inc({ late: String(late) });
-  }
+  };
 
-  observeSubmissionLatency(seconds: number): void {
+  readonly observeSubmissionLatency = (seconds: number): void => {
     customreportSectionSubmissionLatencySeconds.observe(seconds);
-  }
+  };
 }

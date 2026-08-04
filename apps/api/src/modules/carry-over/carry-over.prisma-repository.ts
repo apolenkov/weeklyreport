@@ -3,7 +3,7 @@ import {
   type CarryOverRecord,
   type ReportSectionReadModel,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
@@ -25,10 +25,13 @@ import { requirePrimaryTargetSection } from "./carry-over-row-writes";
 
 // Multi-section clone can exceed Prisma's default 5s under load.
 const CARRY_OVER_TX_TIMEOUT_MS = 15_000;
+// Only this unique index signals a concurrent carry; any other P2002 inside
+// the transaction is a real write failure and must propagate unswallowed.
+const CARRY_OVER_DEDUPE_INDEX = "CarryOverExecution_dedupeKey_key";
 
 @Injectable()
 export class CarryOverPrismaRepository implements CarryOverRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async findExecutionByDedupeKey(
     dedupeKey: string,
@@ -113,9 +116,15 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
         { timeout: CARRY_OVER_TX_TIMEOUT_MS },
       );
     } catch (error) {
-      // Concurrent carry hits dedupeKey P2002 → resolve to winner (idempotent).
-      // CarryOverConflictError from editability re-check propagates unchanged.
-      if (isUniqueViolation(error)) {
+      // A concurrent carry hits the dedupeKey index → resolve to the winner
+      // (idempotent); other constraints re-throw — CarryOverConflictError from
+      // the editability re-check propagates unchanged.
+      if (
+        isUniqueViolation(error, {
+          index: CARRY_OVER_DEDUPE_INDEX,
+          columns: ["dedupeKey"],
+        })
+      ) {
         return this.resolveDedupeRace(execution);
       }
       throw error;

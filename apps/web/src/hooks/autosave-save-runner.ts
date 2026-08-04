@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { GetAutosaveRefs } from "./autosave-refs";
-import { stableStringify } from "./autosave-stable-stringify";
+import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type { AutosaveState } from "./autosave-types";
 
 export interface DebounceSaveDeps {
@@ -46,7 +46,8 @@ export interface ForceSaveDeps {
 export async function runForceSave(deps: ForceSaveDeps): Promise<void> {
   const refs = deps.getRefs();
   const current = refs.payload;
-  const currentKey = current === null ? "" : stableStringify(current);
+  const currentKey =
+    current === null ? "" : encodeAutosaveComparisonKey(current);
   const sectionId = refs.sectionId;
 
   if (!refs.enabled || current === null || currentKey === "" || !sectionId) {
@@ -71,9 +72,14 @@ export async function runForceSave(deps: ForceSaveDeps): Promise<void> {
   refs.inFlight = currentKey;
   refs.inFlightPayload = current;
   refs.inFlightSection = sectionId;
-  await refs.mutateAsync({
-    ...current,
-    reportSectionId: sectionId,
-    version: refs.version,
-  });
+  try {
+    await refs.mutateAsync({
+      ...current,
+      reportSectionId: sectionId,
+      version: refs.version,
+    });
+  } catch {
+    // The mutation's onError already surfaced this failure (toast + error
+    // state → Retry); forceSave must not reject the caller's promise on top.
+  }
 }

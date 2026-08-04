@@ -9,18 +9,18 @@ Discovered routes (10):
 
 ## Coverage matrix
 
-| Route                              | Intent count | Covered? |
-|------------------------------------|:------------:|:--------:|
-| `/`                                | 4            | yes      |
-| `/lead/report`                     | 2            | yes      |
-| `/lead/report/[reportId]`          | 17           | yes      |
-| `/lead/report/[reportId]/preview`  | 5            | yes      |
-| `/lead/history`                    | 1            | yes      |
-| `/reports`                         | 4            | yes      |
-| `/reports/[reportId]`              | 5            | yes      |
-| `/reports/[reportId]/present`      | 4            | yes      |
-| `/reports/history`                 | 1            | yes      |
-| `/reports/trends`                  | 1            | yes      |
+| Route                             | Intent count | Covered? |
+| --------------------------------- | :----------: | :------: |
+| `/`                               |      4       |   yes    |
+| `/lead/report`                    |      2       |   yes    |
+| `/lead/report/[reportId]`         |      17      |   yes    |
+| `/lead/report/[reportId]/preview` |      5       |   yes    |
+| `/lead/history`                   |      1       |   yes    |
+| `/reports`                        |      4       |   yes    |
+| `/reports/[reportId]`             |      5       |   yes    |
+| `/reports/[reportId]/present`     |      4       |   yes    |
+| `/reports/history`                |      1       |   yes    |
+| `/reports/trends`                 |      1       |   yes    |
 
 **Routes total:** 10 | **Routes with >= 1 intent:** 10 | **Uncovered:** 0 |
 **Total intent entries:** 44 | **Duplicate ids:** none

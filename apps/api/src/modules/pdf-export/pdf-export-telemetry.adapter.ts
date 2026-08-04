@@ -11,13 +11,13 @@ import type {
 } from "./pdf-export.ports.js";
 
 export class PdfExportInfrastructureTelemetry implements PdfExportTelemetry {
-  constructor(private readonly cls: ClsService | undefined) {}
+  constructor(private readonly cls: ClsService | null) {}
 
-  captureJobContext(): PdfExportJobContext {
+  readonly captureJobContext = (): PdfExportJobContext => {
     return captureJobTraceContext(resolveCorrelationId(this.cls));
-  }
+  };
 
-  recordRequest(role: string): void {
+  readonly recordRequest = (role: string): void => {
     customreportPdfExportRequestsTotal.inc({ role });
-  }
+  };
 }

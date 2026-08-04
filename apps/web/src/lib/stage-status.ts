@@ -12,13 +12,13 @@ export function deriveEffectiveStageStatus(
   risks: readonly { severity: RiskSeverity }[],
   items: readonly { workflowStatus: string }[],
 ): CanonicalStatus {
-  const riskBest = worstCanonicalStatus(
+  const worstRiskStatus = worstCanonicalStatus(
     risks.map((r) => riskSeverityToCanonicalFloor(r.severity)),
   );
-  const best = items.some((i) => i.workflowStatus === "blocked")
-    ? worstCanonicalStatus([riskBest, "blocked"])
-    : riskBest;
-  if (best !== "empty") return best;
+  const worstBackedStatus = items.some((i) => i.workflowStatus === "blocked")
+    ? worstCanonicalStatus([worstRiskStatus, "blocked"])
+    : worstRiskStatus;
+  if (worstBackedStatus !== "empty") return worstBackedStatus;
   // No backing risk/item: a manual at-risk/blocked has nothing to back it, so
   // it collapses to on-track; on-track/empty stay as-is.
   return explicit === "empty" ? "empty" : "on-track";

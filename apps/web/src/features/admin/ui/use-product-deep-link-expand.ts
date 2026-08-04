@@ -12,7 +12,9 @@ export function useProductDeepLinkExpand({
   productFilter,
   products,
   setExpandedId,
-}: UseProductDeepLinkExpandArgs): { markUserToggle: (id: string) => void } {
+}: UseProductDeepLinkExpandArgs): Readonly<{
+  markUserToggle: (id: string) => void;
+}> {
   const hasUserToggledRef = useRef(false);
   const previousProductFilterRef = useRef(productFilter);
 

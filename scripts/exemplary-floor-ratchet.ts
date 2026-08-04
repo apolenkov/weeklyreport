@@ -32,6 +32,12 @@ const RATCHET_COUNTERS: readonly RatchetCounter[] = [
   "overrideBlocks",
   "liveSuppressions",
 ];
+const isRatchetCounter = (value: string): value is RatchetCounter =>
+  value === "filesOnFloor" ||
+  value === "overrideBlocks" ||
+  value === "liveSuppressions";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const direction = (counter: RatchetCounter): "up" | "down" => {
   if (counter === "filesOnFloor") return "up";
@@ -80,21 +86,64 @@ export const ratchetViolations = (
 ];
 
 export const parseFloorSnapshot = (raw: string): FloorBaseline => {
-  const value = JSON.parse(raw) as Partial<FloorBaseline>;
+  const value: unknown = JSON.parse(raw);
+  if (!isRecord(value)) throw new Error("Invalid exemplary-floor baseline");
+  const record = value;
   for (const counter of COUNTERS) {
-    if (!Number.isInteger(value[counter]) || (value[counter] ?? -1) < 0)
+    const count = record[counter];
+    if (typeof count !== "number" || !Number.isInteger(count) || count < 0)
       throw new Error(`Invalid exemplary-floor baseline counter: ${counter}`);
   }
-  for (const entry of value.justifiedRegressions ?? []) {
+  const regressions = record.justifiedRegressions;
+  if (regressions !== undefined && !Array.isArray(regressions))
+    throw new Error("Invalid exemplary-floor justified regressions list");
+  const regressionEntries: readonly unknown[] = Array.isArray(regressions)
+    ? regressions
+    : [];
+  const justifiedRegressions = regressionEntries.map((entry) => {
     if (
-      !RATCHET_COUNTERS.includes(entry.counter) ||
+      typeof entry !== "object" ||
+      entry === null ||
+      Array.isArray(entry) ||
+      !("counter" in entry) ||
+      typeof entry.counter !== "string" ||
+      !isRatchetCounter(entry.counter) ||
+      !("from" in entry) ||
+      typeof entry.from !== "number" ||
       !Number.isInteger(entry.from) ||
+      !("to" in entry) ||
+      typeof entry.to !== "number" ||
       !Number.isInteger(entry.to) ||
+      !("reason" in entry) ||
+      typeof entry.reason !== "string" ||
       entry.reason.trim().length === 0
     )
       throw new Error("Invalid exemplary-floor justified regression");
-  }
-  return value as FloorBaseline;
+    return {
+      counter: entry.counter,
+      from: entry.from,
+      to: entry.to,
+      reason: entry.reason,
+    };
+  });
+  const filesOnFloor = record.filesOnFloor;
+  const productTotal = record.productTotal;
+  const overrideBlocks = record.overrideBlocks;
+  const liveSuppressions = record.liveSuppressions;
+  if (
+    typeof filesOnFloor !== "number" ||
+    typeof productTotal !== "number" ||
+    typeof overrideBlocks !== "number" ||
+    typeof liveSuppressions !== "number"
+  )
+    throw new Error("Invalid exemplary-floor baseline");
+  return {
+    filesOnFloor,
+    productTotal,
+    overrideBlocks,
+    liveSuppressions,
+    ...(justifiedRegressions.length === 0 ? {} : { justifiedRegressions }),
+  };
 };
 
 export const readFloorBaseline = (path: string): FloorBaseline =>

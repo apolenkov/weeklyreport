@@ -1,9 +1,9 @@
 "use client";
 
 import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
-import { createPortal } from "react-dom";
 
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type {
   DecisionEntry,
@@ -12,6 +12,8 @@ import type {
 } from "../../report-sections";
 import { DecisionEditDialogFields } from "./decision-edit-dialog-fields";
 import { useDecisionEditDialog } from "./use-decision-edit-dialog";
+
+const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
 interface DecisionEditDialogProps {
   readonly open: boolean;
@@ -51,8 +53,7 @@ function DecisionDialogShell({
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
       onBackdropKeyDown={onKeyDown}
-      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      surfaceClassName="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+      surfaceClassName="mx-4 w-full max-w-3xl rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
       ariaLabel={`${headerVerb} dialog`}
     >
       <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
@@ -68,7 +69,7 @@ function DecisionEditDialogContent({
   defaultOwner,
   stagesForProduct,
   products,
-  activities = [],
+  activities = EMPTY_ACTIVITIES,
   defaultProductId,
   onSave,
   onCancel,
@@ -85,29 +86,30 @@ function DecisionEditDialogContent({
     onCancel,
   });
 
-  return createPortal(
-    <DecisionDialogShell
-      surfaceRef={dialog.dialogSurfaceRef}
-      headerVerb={dialog.headerVerb}
-      onCancel={onCancel}
-      onKeyDown={dialog.handleKeyDown}
-    >
-      {/* The risk-dialog layout keeps prose on the left and product/stage
-          classification on the right. Decisions have no status or severity. */}
-      <DecisionEditDialogFields
-        {...dialog}
-        products={products ?? []}
-        activities={activities}
-      />
-
-      <RecordDialogFooter
-        saveLabel="Save Decision"
+  return (
+    <DocumentBodyPortal>
+      <DecisionDialogShell
+        surfaceRef={dialog.dialogSurfaceRef}
+        headerVerb={dialog.headerVerb}
         onCancel={onCancel}
-        onSave={dialog.handleSave}
-        onDelete={onDelete}
-        saveDisabled={dialog.isDeadEnd}
-      />
-    </DecisionDialogShell>,
-    document.body,
+        onKeyDown={dialog.handleKeyDown}
+      >
+        {/* The risk-dialog layout keeps prose on the left and product/stage
+          classification on the right. Decisions have no status or severity. */}
+        <DecisionEditDialogFields
+          {...dialog}
+          products={products ?? []}
+          activities={activities}
+        />
+
+        <RecordDialogFooter
+          saveLabel="Save Decision"
+          onCancel={onCancel}
+          onSave={dialog.handleSave}
+          onDelete={onDelete}
+          saveDisabled={dialog.isDeadEnd}
+        />
+      </DecisionDialogShell>
+    </DocumentBodyPortal>
   );
 }

@@ -1,6 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import { sectionToDraftPayload } from "./lead-section-draft-payload";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
@@ -8,25 +12,15 @@ const ITEM_ID = "99999999-9999-4999-8999-999999999999";
 const STABLE_ITEM_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: "22222222-2222-4222-8222-222222222222",
     reportId: "33333333-3333-4333-8333-333333333333",
     authorId: "44444444-4444-4444-8444-444444444444",
     authorName: "Test Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
     ...overrides,
-  } as ReportSectionReadModel;
+  });
 }
 
 // Distinct per fixture so a mapper that swaps risk/decision stableIds (not

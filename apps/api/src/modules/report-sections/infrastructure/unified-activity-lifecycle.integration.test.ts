@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -21,18 +22,9 @@ import { ReportSectionsPrismaRepository } from "./report-sections.prisma-reposit
 const testGraceSettings = () =>
   Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: true });
 
-/**
- * Real-DB coverage for the unified-activity-entry lifecycle rules:
- *  - resolve-not-delete: a published-lineage item/decision cannot be dropped
- *    from a reopened period's save payload (the client-authoritative stableId
- *    is verified server-side);
- *  - a record added AFTER reopen stays deletable until re-published;
- *  - a carried clone of a published record stays locked (same lineage);
- *  - move-to-next-week keeps the durable identity, so a reviewer comment
- *    anchored to the record survives the move;
- *  - the automatic carry-over materializes the lead's section in the newly
- *    opened period and moves only the prior period's open records, once.
- */
+// Real-DB coverage for the unified-activity-entry lifecycle rules:
+// resolve-not-delete on reopened-period saves, deletable-until-republished
+// additions, carried-clone lineage locks, and move-to-next-week identity survival.
 describe("unified-activity lifecycle (integration)", () => {
   const prisma = createTestPrisma();
   let repo: ReportSectionsPrismaRepository;
@@ -68,7 +60,7 @@ describe("unified-activity lifecycle (integration)", () => {
     };
   }
 
-  /** Insert a live item row carrying a known durable lineage key. */
+  // Insert a live item row carrying a known durable lineage key.
   async function seedItem(
     sectionId: string,
     stableId: string,
@@ -90,23 +82,15 @@ describe("unified-activity lifecycle (integration)", () => {
     });
   }
 
-  /**
-   * Publish-then-reopen the seeded report: the frozen snapshot pins the
-   * published lineage (the minimal shape the tolerant snapshot reader
-   * consumes) while the live rows become editable again.
-   *
-   * The snapshot JSON is fabricated to exactly the shape `snapshotLineageForSection`
-   * reads (sections → items[].stableId / decisions[].stableId), NOT built through
-   * the real `toPublishedSnapshotJson` writer: that writer requires a fully
-   * schema-valid `AssembledReport` (portfolio overview, complete per-section read
-   * models), which is deep scaffolding disproportionate to the lineage this test
-   * exercises. The reader tolerates missing fields by design, so the minimal
-   * shape is a faithful stand-in.
-   */
+  // Publish-then-reopen the seeded report: the frozen snapshot pins the
+  // published lineage while the live rows become editable again. The snapshot
+  // JSON is fabricated to the minimal shape the lineage reader consumes.
   async function publishThenReopen(publishedItemStableIds: readonly string[]) {
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
+        status: "published",
+        periodState: "open",
         periodStatus: "reopened",
         publishedAt: new Date("2026-04-14T10:00:00.000Z"),
         reopenedAt: new Date("2026-04-15T10:00:00.000Z"),
@@ -125,7 +109,9 @@ describe("unified-activity lifecycle (integration)", () => {
   }
 
   beforeAll(() => {
-    repo = new ReportSectionsPrismaRepository(prisma as never);
+    repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
     service = new ReportSectionsService(repo, testGraceSettings);
   });
 
@@ -145,15 +131,22 @@ describe("unified-activity lifecycle (integration)", () => {
     await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
 
     await expect(
-      service.saveDraft({
-        reportSectionId: testData.section.id,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-        items: [],
-        risks: [],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: testData.section.id,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      ),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
 
     // The live row is untouched — the reject happened before the recreate.
@@ -170,29 +163,39 @@ describe("unified-activity lifecycle (integration)", () => {
     await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
 
     // Add a fresh record post-reopen (not in the snapshot), then drop it.
-    const withDraft = await service.saveDraft({
-      reportSectionId: testData.section.id,
-      version: 1,
-      status: "draft",
-      projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-      items: [
-        writeItem(PUBLISHED_ITEM_LINEAGE, "Published"),
-        writeItem(DRAFT_ITEM_LINEAGE, "Added after reopen"),
-      ],
-      risks: [],
-      decisions: [],
-    });
+    const withDraft = await service.saveDraft(
+      {
+        reportSectionId: testData.section.id,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        items: [
+          writeItem(PUBLISHED_ITEM_LINEAGE, "Published"),
+          writeItem(DRAFT_ITEM_LINEAGE, "Added after reopen"),
+        ],
+        risks: [],
+        decisions: [],
+      },
+      testData.lead.id,
+    );
     expect(withDraft.items).toHaveLength(2);
 
-    const afterDelete = await service.saveDraft({
-      reportSectionId: testData.section.id,
-      version: withDraft.version,
-      status: "draft",
-      projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-      items: [writeItem(PUBLISHED_ITEM_LINEAGE, "Published")],
-      risks: [],
-      decisions: [],
-    });
+    const afterDelete = await service.saveDraft(
+      {
+        reportSectionId: testData.section.id,
+        version: withDraft.version,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        items: [writeItem(PUBLISHED_ITEM_LINEAGE, "Published")],
+        risks: [],
+        decisions: [],
+      },
+      testData.lead.id,
+    );
     expect(afterDelete.items.map((item) => item.stableId)).toEqual([
       PUBLISHED_ITEM_LINEAGE,
     ]);
@@ -228,15 +231,22 @@ describe("unified-activity lifecycle (integration)", () => {
     await seedItem(nextSection.id, PUBLISHED_ITEM_LINEAGE, "Carried clone");
 
     await expect(
-      service.saveDraft({
-        reportSectionId: nextSection.id,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-        items: [],
-        risks: [],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: nextSection.id,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      ),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
   });
 
@@ -284,15 +294,22 @@ describe("unified-activity lifecycle (integration)", () => {
     // Without `reopened` in the cross-report lineage filter this would resolve
     // to an empty lineage and the drop would succeed.
     await expect(
-      service.saveDraft({
-        reportSectionId: nextSection.id,
-        version: 1,
-        status: "draft",
-        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-        items: [],
-        risks: [],
-        decisions: [],
-      }),
+      service.saveDraft(
+        {
+          reportSectionId: nextSection.id,
+          version: 1,
+          status: "draft",
+          stageStatuses: [],
+          activityStatuses: [],
+          projectStatuses: [
+            { projectId: testData.project.id, status: "green" },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+        testData.lead.id,
+      ),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
   });
 
@@ -311,21 +328,26 @@ describe("unified-activity lifecycle (integration)", () => {
     });
 
     // The move action writes the same stableId with type flipped in place.
-    const moved = await service.saveDraft({
-      reportSectionId: testData.section.id,
-      version: 1,
-      status: "draft",
-      projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-      items: [
-        {
-          ...writeItem(PUBLISHED_ITEM_LINEAGE, "Item with feedback"),
-          type: "next" as const,
-          workflowStatus: "planned" as const,
-        },
-      ],
-      risks: [],
-      decisions: [],
-    });
+    const moved = await service.saveDraft(
+      {
+        reportSectionId: testData.section.id,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        items: [
+          {
+            ...writeItem(PUBLISHED_ITEM_LINEAGE, "Item with feedback"),
+            type: "next" as const,
+            workflowStatus: "planned" as const,
+          },
+        ],
+        risks: [],
+        decisions: [],
+      },
+      testData.lead.id,
+    );
 
     const movedItem = expectDefined(moved.items[0]);
     expect(movedItem.stableId).toBe(PUBLISHED_ITEM_LINEAGE);
@@ -343,11 +365,9 @@ describe("unified-activity lifecycle (integration)", () => {
     await seedItem(testData.section.id, PUBLISHED_ITEM_LINEAGE, "Published");
     await publishThenReopen([PUBLISHED_ITEM_LINEAGE]);
 
-    // A source section owned by the same lead. Its content is irrelevant: the
-    // lock fires on the TARGET's published lineage before the source is read.
-    // A distinct prior week — seedTestData's report already owns 2026-04-07/13,
-    // and the period is unique-constrained, so reusing those dates would 500 the
-    // create before the fill-from lock is ever exercised.
+    // A source section owned by the same lead; its content is irrelevant — the
+    // lock fires on the TARGET's lineage before the source is read. The prior
+    // week must be distinct (unique-constrained), or the create 500s first.
     const sourceReport = await prisma.report.create({
       data: {
         periodStart: new Date("2026-03-31"),
@@ -365,7 +385,7 @@ describe("unified-activity lifecycle (integration)", () => {
     });
 
     const leadService = new LeadFormService(
-      new LeadFormPrismaRepository(prisma as never),
+      new LeadFormPrismaRepository(prisma as unknown as PrismaService),
     );
 
     await expect(
@@ -403,7 +423,7 @@ describe("unified-activity lifecycle (integration)", () => {
     });
 
     const carryService = new CarryOverService(
-      new CarryOverPrismaRepository(prisma as never),
+      new CarryOverPrismaRepository(prisma as unknown as PrismaService),
     );
 
     // Period N+1: carry forward → arrives carriedOver=true, type=current.
@@ -435,10 +455,9 @@ describe("unified-activity lifecycle (integration)", () => {
     expect(carried.carriedOver).toBe(true);
     expect(carried.type).toBe("current");
 
-    // The lead moves it to next week. The web layer writes moveToNextWeekPatch
-    // through saveSection; the persisted shape is type=next, workflowStatus
-    // reset to the next vocabulary, carriedOver=false with the durable
-    // identity preserved.
+    // The lead moves it to next week (moveToNextWeekPatch via saveSection):
+    // persisted as type=next, workflowStatus in the next vocabulary,
+    // carriedOver=false, durable identity preserved.
     await prisma.item.update({
       where: { id: carried.id },
       data: { type: "next", workflowStatus: "planned", carriedOver: false },
@@ -520,7 +539,9 @@ describe("unified-activity lifecycle (integration)", () => {
       },
     });
 
-    const repository = new CarryOverPrismaRepository(prisma as never);
+    const repository = new CarryOverPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
     const deps = buildAutoCarryOverDeps({
       prisma,
       repository,

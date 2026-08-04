@@ -43,7 +43,7 @@ interface MockReport {
   periodStatus: PeriodStatus;
   publishedAt: Date | null;
   publishedById: string | null;
-  /** Defaults to false in `getReportById` when a fixture omits it. */
+  // Defaults to false in `getReportById` when a fixture omits it.
   archived?: boolean;
 }
 

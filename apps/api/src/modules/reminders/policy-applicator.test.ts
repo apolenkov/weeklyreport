@@ -4,6 +4,7 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "./policy-applicator.service";
 
 /* ------------------------------------------------------------------ */
@@ -150,7 +151,7 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
           },
         ),
       },
-    } as never,
+    } as unknown as PrismaService,
   };
 }
 
@@ -269,9 +270,8 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
 
   it("without `now`, materialises even an already-past instant (backfill/snapshot path)", async () => {
     // Callers that omit `now` — snapshot-restore and the reminder-policy
-    // backfill — reinstate rules verbatim, so the elapsed-skip must not apply.
-    // (The cron scheduler now routes through the period factory, which DOES
-    // pass `now`, so it is not an omit-`now` caller.)
+    // backfill — reinstate rules verbatim, so the elapsed-skip must not apply
+    // (the cron scheduler passes `now` via the period factory).
     const deadline = new Date("2026-06-01T18:00:00.000Z");
     const stub = makeStubPrisma([policyA], new Set());
     const svc = new PolicyApplicatorService(stub.prisma);
@@ -282,7 +282,7 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     expect(stub.upsertCalls).toHaveLength(1);
   });
 
-  it("catches P2002 race and continues with the rest of the policies", async () => {
+  it("catches P2002 race on the rule constraint and continues with the rest of the policies", async () => {
     const period = {
       id: "report-1",
       deadline: new Date("2026-06-01T18:00:00.000Z"),
@@ -293,8 +293,6 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
       offsetMinutes: -120, // T-2h, distinct rule
     };
 
-    // eslint-disable-next-line sonarjs/no-unused-collection -- test verifies result counts (created/skipped), not call history; sibling tests inspect upsertCalls
-    const upsertCalls: unknown[] = [];
     let firstCall = true;
     const prisma = {
       reminderPolicy: {
@@ -302,28 +300,72 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
       },
       reminderRule: {
         findUnique: vi.fn(() => Promise.resolve(null)),
-        upsert: vi.fn((args: unknown) => {
+        upsert: vi.fn(() => {
           if (firstCall) {
             firstCall = false;
-            const err = new Error("Unique constraint violation") as Error & {
+            const err = new Error("Unique constraint failed") as Error & {
               code?: string;
+              meta?: {
+                driverAdapterError: { cause: { originalMessage: string } };
+              };
             };
             err.code = "P2002";
+            // pg-adapter shape: constraint identity lives in meta, not meta.target.
+            err.meta = {
+              driverAdapterError: {
+                cause: {
+                  originalMessage:
+                    'duplicate key value violates unique constraint "uq_rule_report_policy"',
+                },
+              },
+            };
             return Promise.reject(err);
           }
-          upsertCalls.push(args);
           return Promise.resolve({ id: "rule-id" });
         }),
       },
-    } as never;
+    } as unknown as PrismaService;
     const svc = new PolicyApplicatorService(prisma);
 
     const result = await svc.applyToPeriod(period);
 
-    // policyA: P2002 → skipped
+    // policyA: P2002 on uq_rule_report_policy → skipped
     // policyC: success → created
     expect(result.created).toBe(1);
     expect(result.skipped).toBe(1);
+  });
+
+  it("re-throws a P2002 from an UNRELATED constraint (not the rule race)", async () => {
+    const unrelatedP2002 = new Error("Unique constraint failed") as Error & {
+      code?: string;
+      meta?: { driverAdapterError: { cause: { originalMessage: string } } };
+    };
+    unrelatedP2002.code = "P2002";
+    unrelatedP2002.meta = {
+      driverAdapterError: {
+        cause: {
+          originalMessage:
+            'duplicate key value violates unique constraint "ReminderRule_SomeOther_key"',
+        },
+      },
+    };
+    const prisma = {
+      reminderPolicy: {
+        findMany: vi.fn(() => Promise.resolve([policyA])),
+      },
+      reminderRule: {
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        upsert: vi.fn().mockRejectedValue(unrelatedP2002),
+      },
+    } as unknown as PrismaService;
+    const svc = new PolicyApplicatorService(prisma);
+
+    await expect(
+      svc.applyToPeriod({
+        id: "report-1",
+        deadline: new Date("2026-06-01T18:00:00.000Z"),
+      }),
+    ).rejects.toBe(unrelatedP2002);
   });
 
   it("re-throws an unexpected Prisma error and aborts later policies", async () => {
@@ -338,7 +380,7 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
         findUnique: vi.fn().mockResolvedValue(null),
         upsert,
       },
-    } as never;
+    } as unknown as PrismaService;
     const svc = new PolicyApplicatorService(prisma);
 
     await expect(

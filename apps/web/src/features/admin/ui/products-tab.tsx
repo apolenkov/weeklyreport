@@ -43,6 +43,7 @@ export function ProductsTab({
           archivedProducts={state.archivedProducts}
           getUserById={state.getUserById}
           stageCountByProject={state.stageCountByProject}
+          countsError={state.countsError}
           leads={state.leads}
           expandedId={state.expandedId}
           onToggleExpand={state.toggleExpand}
@@ -66,6 +67,7 @@ interface ProductsTabDialogsProps {
   readonly setForm: (form: ProductFormData) => void;
   readonly leads: readonly AdminUserView[];
   readonly leadProductCount: number;
+  readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly handleSave: () => void;
   readonly closeDialog: () => void;
@@ -81,6 +83,7 @@ function ProductsTabDialogs({
   setForm,
   leads,
   leadProductCount,
+  canSave,
   isSaving,
   handleSave,
   closeDialog,
@@ -97,6 +100,7 @@ function ProductsTabDialogs({
           onFormChange={setForm}
           leads={leads}
           leadProductCount={leadProductCount}
+          canSave={canSave}
           isSaving={isSaving}
           onSave={handleSave}
           onClose={closeDialog}
@@ -159,7 +163,7 @@ function ProductsTabHeader({
         <button
           type="button"
           onClick={onAdd}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
           aria-label="Add new product"
         >
           <PlusIcon />

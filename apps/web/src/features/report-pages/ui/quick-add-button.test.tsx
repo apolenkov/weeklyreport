@@ -41,6 +41,27 @@ describe("QuickAddButton", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders an unavailable kind inert and never fires onPick for it", () => {
+    const onPick = vi.fn();
+    render(
+      <QuickAddButton onPick={onPick} disabledKinds={new Set(["blocker"])} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+
+    const blocker = screen.getByRole("button", { name: "Blocker" });
+    expect(blocker).toBeDisabled();
+    expect(blocker).toHaveAttribute(
+      "title",
+      expect.stringContaining("Add a product"),
+    );
+    fireEvent.click(blocker);
+    expect(onPick).not.toHaveBeenCalled();
+
+    // Other kinds stay available.
+    fireEvent.click(screen.getByRole("button", { name: "Risk" }));
+    expect(onPick).toHaveBeenCalledWith("risk");
+  });
+
   it("is inert while disabled (no products)", () => {
     render(<QuickAddButton onPick={vi.fn()} disabled />);
     const trigger = screen.getByRole("button", { name: "+ Add" });

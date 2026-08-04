@@ -4,22 +4,12 @@ import { adminProcedure } from "../../infrastructure/trpc/trpc.middleware.js";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import type { ReminderAdminService } from "./reminder-admin.service.js";
 
-/**
- * Contract guarantees for the ReminderPolicy tRPC surface —
- * `admin.listPolicies`, `admin.savePolicy`, `admin.removePolicy` — and the
- * soft-deprecation of both per-rule writers.
- *
- * Contract assertions:
- *   1. The three new procedures exist under the `admin` namespace.
- *   2. Each is built on `adminProcedure` (admin-only, not head).
- *   3. `admin.saveReminderRule` and `admin.deleteReminderRule` throw TRPCError
- *      with code METHOD_NOT_SUPPORTED and never reach the service.
- *
- * The tests inspect the router shape directly (no transport / Redis /
- * Prisma) — the same trick the role-coverage gate uses.
- */
+// Contract guarantees for the ReminderPolicy tRPC surface: the three procedures
+// exist under `admin`, each is built on `adminProcedure` (admin-only), and the
+// per-rule writers throw METHOD_NOT_SUPPORTED. Router-shape inspection only.
 
 // Capture adminProcedure's middleware-chain identity so we can compare
 // router leaves against it. The resolver function is the last entry, so
@@ -65,7 +55,7 @@ function getProcedure(
 describe("admin reminder-policy contract", () => {
   // Stub deps — `createAppRouter` does not invoke any handler at
   // construction time, so an empty cast satisfies the type signature.
-  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const stubDeps = createStubAppRouterDeps();
   const appRouter = createAppRouter(stubDeps);
   const router = appRouter as unknown as {
     _def: { procedures: Record<string, unknown> };
@@ -84,9 +74,7 @@ describe("admin reminder-policy contract", () => {
   function callerOverReminderService(
     reminderAdminService: Partial<ReminderAdminService>,
   ) {
-    const realDeps = {
-      reminderAdminService,
-    } as unknown as Parameters<typeof createAppRouter>[0];
+    const realDeps = createStubAppRouterDeps({ reminderAdminService });
 
     return createAppRouter(realDeps).createCaller({
       session: {
@@ -150,22 +138,11 @@ describe("admin reminder-policy contract", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Group <-> Product M:M contract guarantees
-// ---------------------------------------------------------------------------
-//
-// Contract assertions:
-//   1. The 4 new procedures exist under the `admin` namespace.
-//   2. Each is built on `adminProcedure` so role coverage is preserved
-//      (head/admin only — leads and viewers cannot call them).
-//
-// The shape inspection is identical to the reminder-policy contract
-// above and intentionally does not invoke a handler — the router is
-// constructed against stub deps and inspected structurally.
-// ---------------------------------------------------------------------------
-
+// Group <-> Product M:M contract guarantees: the 5 procedures exist under
+// `admin` and each is built on `adminProcedure`, preserving role coverage
+// (head/admin only). Router-shape inspection, no handler invoked.
 describe("admin group-product contract", () => {
-  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const stubDeps = createStubAppRouterDeps();
   const appRouter = createAppRouter(stubDeps);
   const router = appRouter as unknown as {
     _def: { procedures: Record<string, unknown> };
@@ -182,23 +159,11 @@ describe("admin group-product contract", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// admin.snapshot is admin-only
-// ---------------------------------------------------------------------------
-//
-// Regression guard for a head-dashboard group-scope leak.
-//
-// Root cause: admin.snapshot used to run on headProcedure, which let head
-// users call it and see ALL users regardless of their reporting group. It
-// now runs on adminProcedure (admin-only), eliminating cross-group user
-// leakage from the admin panel for heads.
-//
-// This test asserts the gate is still in place so a future refactor cannot
-// accidentally revert to headProcedure and re-open the leak.
-// ---------------------------------------------------------------------------
-
+// admin.snapshot is admin-only: running it on headProcedure would leak every
+// user's data across reporting groups. This gate keeps the cross-group scope
+// leak closed.
 describe("admin.snapshot group-scope gate", () => {
-  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const stubDeps = createStubAppRouterDeps();
   const appRouter = createAppRouter(stubDeps);
   const router = appRouter as unknown as {
     _def: { procedures: Record<string, unknown> };

@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../../../lib/cache-keys";
 import { isConflictError } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
+import type { LeadFormGeneration } from "./lead-form-generation";
+import { useGenerationState } from "./use-generation-state";
 
 interface FillFromInput {
   readonly targetSectionId: string;
@@ -15,11 +16,13 @@ interface FillFromInput {
 }
 
 function useFillFromConfirmation(
+  generation: LeadFormGeneration | null,
   autosaveDirty: boolean,
   createInput: (sourceSectionId: string) => FillFromInput | null,
   fillFrom: (input: FillFromInput) => void,
 ) {
-  const [pendingInput, setPendingInput] = useState<FillFromInput | null>(null);
+  const [pendingInput, setPendingInput] =
+    useGenerationState<FillFromInput | null>(generation, null);
   return {
     pendingFillFrom: pendingInput !== null,
     handleFillFrom: (sourceSectionId: string) => {
@@ -42,12 +45,14 @@ function useFillFromConfirmation(
 }
 
 export function useLeadFormFillFrom({
+  generation,
   sectionIdForActions,
   autosaveDirty,
   version,
   handleConflict,
 }: {
-  readonly sectionIdForActions: string;
+  readonly generation: LeadFormGeneration | null;
+  readonly sectionIdForActions: string | null;
   readonly autosaveDirty: boolean;
   readonly version: number;
   readonly handleConflict: () => void;
@@ -73,6 +78,7 @@ export function useLeadFormFillFrom({
   );
 
   const confirmation = useFillFromConfirmation(
+    generation,
     autosaveDirty,
     (sourceSectionId) =>
       sectionIdForActions

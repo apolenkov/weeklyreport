@@ -1,10 +1,10 @@
 "use client";
 
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 import { DialogSurface } from "./dialog-surface";
+import { DocumentBodyPortal } from "./document-body-portal";
 
 interface ConfirmDeleteDialogProps {
   readonly open: boolean;
@@ -15,6 +15,7 @@ interface ConfirmDeleteDialogProps {
   readonly confirmLabel?: string | undefined;
   readonly reversible?: boolean | undefined;
   readonly tone?: "destructive" | "primary" | undefined;
+  readonly isPending?: boolean | undefined;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
@@ -31,6 +32,7 @@ export function ConfirmDeleteDialog({
   confirmLabel = "Delete",
   reversible = false,
   tone = "destructive",
+  isPending = false,
   onConfirm,
   onCancel,
   triggerRef,
@@ -38,34 +40,42 @@ export function ConfirmDeleteDialog({
   const confirmRef = useRef<HTMLButtonElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
+  // While the destructive action is in flight the dialog stays put: no Enter
+  // re-submit, no Escape/backdrop dismissal — the action cannot be abandoned
+  // or double-fired mid-flight.
+  const guardedCancel = isPending ? () => undefined : onCancel;
+  const guardedConfirm = isPending ? () => undefined : onConfirm;
+
   useDialogFocus({
     open,
-    onClose: onCancel,
+    onClose: guardedCancel,
     containerRef: surfaceRef,
     triggerRef,
   });
-  useConfirmOnEnter(open, onConfirm, confirmRef);
+  useConfirmOnEnter(open, guardedConfirm, confirmRef);
 
-  if (!open || typeof document === "undefined") return null;
+  if (!open) return null;
 
-  return createPortal(
-    <ConfirmDialogShell surfaceRef={surfaceRef} onDismiss={onCancel}>
-      <ConfirmDeleteBody
-        title={title}
-        preview={preview}
-        subtitle={subtitle}
-        consequence={consequence}
-        reversible={reversible}
-      />
-      <ConfirmDeleteActions
-        confirmRef={confirmRef}
-        confirmLabel={confirmLabel}
-        tone={tone}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />
-    </ConfirmDialogShell>,
-    document.body,
+  return (
+    <DocumentBodyPortal>
+      <ConfirmDialogShell surfaceRef={surfaceRef} onDismiss={guardedCancel}>
+        <ConfirmDeleteBody
+          title={title}
+          preview={preview}
+          subtitle={subtitle}
+          consequence={consequence}
+          reversible={reversible}
+        />
+        <ConfirmDeleteActions
+          confirmRef={confirmRef}
+          confirmLabel={confirmLabel}
+          tone={tone}
+          isPending={isPending}
+          onConfirm={guardedConfirm}
+          onCancel={guardedCancel}
+        />
+      </ConfirmDialogShell>
+    </DocumentBodyPortal>
   );
 }
 
@@ -169,13 +179,14 @@ const ACTION_BUTTON_CLASS =
   "btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] px-4 text-sm font-semibold";
 const CANCEL_BUTTON_CLASS = `${ACTION_BUTTON_CLASS} border border-[var(--color-muted)] bg-transparent text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]`;
 const CONFIRM_BUTTON_CLASS = `${ACTION_BUTTON_CLASS} border transition-[filter] hover:brightness-90`;
-const CONFIRM_PRIMARY_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white`;
+const CONFIRM_PRIMARY_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)]`;
 const CONFIRM_DESTRUCTIVE_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-destructive)] bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]`;
 
 interface ConfirmDeleteActionsProps {
   readonly confirmRef: RefObject<HTMLButtonElement | null>;
   readonly confirmLabel: string;
   readonly tone: "destructive" | "primary";
+  readonly isPending: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
@@ -184,12 +195,18 @@ function ConfirmDeleteActions({
   confirmRef,
   confirmLabel,
   tone,
+  isPending,
   onConfirm,
   onCancel,
 }: ConfirmDeleteActionsProps) {
   return (
     <div className="mt-5 flex justify-end gap-2">
-      <button type="button" className={CANCEL_BUTTON_CLASS} onClick={onCancel}>
+      <button
+        type="button"
+        className={CANCEL_BUTTON_CLASS}
+        onClick={onCancel}
+        disabled={isPending}
+      >
         Cancel
       </button>
       <button
@@ -199,6 +216,7 @@ function ConfirmDeleteActions({
           tone === "primary" ? CONFIRM_PRIMARY_CLASS : CONFIRM_DESTRUCTIVE_CLASS
         }
         onClick={onConfirm}
+        disabled={isPending}
       >
         {confirmLabel}
       </button>

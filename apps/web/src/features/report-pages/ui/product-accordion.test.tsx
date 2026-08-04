@@ -198,7 +198,9 @@ describe("ProductAccordion prioritized items", () => {
         defaultOpen
         report={makeReport({
           currentWeek: [makeItem({ id: "c1" })],
-          priorities: [{ rank: 1, text: "Legacy priority entry" }],
+          priorities: [
+            { id: "priority-1", rank: 1, text: "Legacy priority entry" },
+          ],
         })}
       />,
     );

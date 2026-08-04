@@ -2,9 +2,6 @@ import type { Metric } from "web-vitals";
 
 import { webEnv } from "./web-env";
 
-/**
- * Report Web Vitals.
- */
 export function reportWebVitals(): void {
   if (!webEnv.webVitals()) return;
 

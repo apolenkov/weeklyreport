@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-seed-stagestatus-id-collision. Update Purpose after archive.
+Make seed-generated identities collision-free across index ranges and require the canonical seed to cover the full item-status vocabulary.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ Seed-generated entity primary keys MUST map each distinct index tuple to a disti
 
 #### Scenario: Advanced seed runs to completion
 
-- **WHEN** `pnpm db:fresh:advanced` runs against a clean database
+- **WHEN** `pnpm db:reset:hard full` runs against a disposable clean database
 - **THEN** every `StageStatus` row is created without a `P2002` unique-constraint violation
 - **AND** the seed prints its final summary
 
@@ -28,12 +28,13 @@ The canonical seed script (`prisma/seed.ts`) MUST populate at least one
 `paused` item and one `postponed` item in its active-period data, and MUST
 call `assertSeedCoverage` at the end of its `main()` so a missing status is
 caught at seed time rather than silently shipped to every default dev/test
-database. `prisma.config.ts` targets this script for `migrate reset` and
-`db:seed`.
+database. `prisma.config.ts` delegates Prisma seeding to `seed-profile.ts full`,
+whose full profile invokes this canonical script.
 
 #### Scenario: A fresh reseed carries every Progress state
 
-- **WHEN** `pnpm db:seed` runs the canonical seed against a clean database
+- **WHEN** `pnpm db:seed:profile full` runs the full profile against a clean
+  database
 - **THEN** the resulting `Item` rows include at least one `paused` status and
   at least one `postponed` status
 - **AND** `main()` completes without the coverage guard throwing

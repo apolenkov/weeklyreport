@@ -58,7 +58,7 @@ export function RevokeLeadButton({
         aria-label={`Revoke ${leadName}'s submission`}
         title={`Revoke ${leadName}'s submission`}
         data-testid="revoke-lead-button"
-        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-red-400 hover:text-red-600 disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
+        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_60%,transparent)] hover:text-[var(--color-destructive)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >
         <RotateCcw size={12} strokeWidth={2} aria-hidden="true" />
         <span>{mutation.isPending ? "Revoking…" : "Revoke"}</span>

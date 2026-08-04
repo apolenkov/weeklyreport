@@ -1,10 +1,11 @@
 import type { OnModuleDestroy } from "@nestjs/common";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import {
   createRedisReadThroughCache,
   type RedisReadThroughCache,
 } from "../../infrastructure/cache/read-through-cache.js";
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import type { AnalyticsCachePort } from "./analytics.service.js";
 
@@ -19,7 +20,7 @@ const PREFIX = "customreport:analytics:";
 export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
   private readonly cache: RedisReadThroughCache;
 
-  constructor(env: EnvConfig) {
+  constructor(@Inject(ENV_CONFIG) env: EnvConfig) {
     this.cache = createRedisReadThroughCache({
       connection: env,
       loggerName: AnalyticsCache.name,
@@ -28,15 +29,19 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
     });
   }
 
-  getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    return this.cache.getOrCompute(key, fn);
-  }
+  readonly getOrCompute = <T>(
+    key: string,
+    fn: () => Promise<T>,
+    validate?: (value: unknown) => boolean,
+  ): Promise<T> => {
+    return this.cache.getOrCompute(key, fn, validate);
+  };
 
-  invalidateAll(): Promise<void> {
+  readonly invalidateAll = (): Promise<void> => {
     return this.cache.invalidateByPrefix(PREFIX);
-  }
+  };
 
-  onModuleDestroy(): Promise<void> {
+  readonly onModuleDestroy = (): Promise<void> => {
     return this.cache.close();
-  }
+  };
 }

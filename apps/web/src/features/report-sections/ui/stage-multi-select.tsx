@@ -122,7 +122,7 @@ function StageScopeBanner({ text }: { readonly text: string }) {
       data-testid="stage-scope-banner"
       role="status"
       aria-live="polite"
-      className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+      className="mb-2 flex w-full items-center gap-2 rounded-md border border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] px-3 py-2 text-xs text-[var(--color-status-at-risk-fg)]"
     >
       <AlertTriangleIcon />
       <span>{text}</span>
@@ -144,7 +144,7 @@ function StageChoices({
   const singleStage = stages.length === 1 ? stages[0] : undefined;
   if (stages.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
+      <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
         No assigned stages available.
       </div>
     );
@@ -178,7 +178,7 @@ const STAGE_CHOICE_CLASS =
 const STAGE_CHOICE_CHECKED_CLASS =
   "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]";
 const STAGE_CHOICE_UNCHECKED_CLASS =
-  "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]";
+  "border-[var(--color-border-strong)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]";
 
 function StageChoice({
   stage,

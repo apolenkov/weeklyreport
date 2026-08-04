@@ -51,7 +51,7 @@ export function ActivitiesTab({ groups, users, products }: ActivitiesTabProps) {
     groups,
     products,
   );
-  const state = useActivitiesTabState({ groups: activeGroups });
+  const state = useActivitiesTabState();
 
   if (state.isError) {
     return (
@@ -195,7 +195,7 @@ function ActivitiesTabHeader({
         <button
           type="button"
           onClick={onAdd}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
           aria-label="Add new activity"
         >
           <PlusIcon />

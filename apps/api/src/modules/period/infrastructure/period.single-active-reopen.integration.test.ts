@@ -20,17 +20,9 @@ const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
 const noGatingReopenPolicy: ReopenPolicyReader = () =>
   Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
-/**
- * Real-Prisma coverage for the single-active-reopen guard. The unit tests pin
- * the service branch against a mock map; this proves the ground truth against
- * Postgres:
- *   - `getReopenedNonArchivedId` matches the `periodStatus='reopened'`,
- *     `archived=false` marker the reopen transition actually writes, and skips
- *     an archived reopened row;
- *   - end-to-end, a head who has reopened the latest published period CANNOT
- *     reopen the next-latest (the walk-back the guard exists to block), while an
- *     admin still can (the recovery path).
- */
+// Real-Prisma coverage for the single-active-reopen guard: the reopened marker
+// (`periodStatus='reopened'`, `archived=false`) is matched and archived rows
+// skipped; a head cannot reopen the next-latest while an admin can (recovery).
 describe("PeriodService single-active-reopen guard (integration)", () => {
   const prisma = createTestPrisma();
   const repository = new PeriodPrismaRepository(

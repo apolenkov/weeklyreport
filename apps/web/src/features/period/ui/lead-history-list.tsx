@@ -6,7 +6,7 @@ import { joinPeriodLabel } from "../../../lib/format-date";
 import type { HistoryEntry } from "../../report-sections";
 
 interface LeadHistoryListProps {
-  readonly entries: HistoryEntry[];
+  readonly entries: readonly HistoryEntry[];
 }
 
 function TrafficDot({
@@ -21,7 +21,7 @@ function TrafficDot({
   return (
     <span
       role="img"
-      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border-subtle)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
+      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
       aria-label={`${label}: ${count}`}
     >
       <span className={`h-2 w-2 rounded-full ${className}`} />
@@ -47,7 +47,7 @@ function StatusBadge({ status }: { readonly status: HistoryEntry["status"] }) {
   }
   if (status === "archived") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-[var(--color-primary-foreground)]">
         Archived
       </span>
     );
@@ -123,7 +123,7 @@ function TimelineRow({
 
 function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
   return (
-    <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
+    <div className="mt-4 space-y-1.5 border-t border-[var(--color-border-subtle)] pt-3">
       {entry.createdAt && (
         <TimelineRow label="Created" value={entry.createdAt} />
       )}
@@ -132,11 +132,12 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
       )}
       {entry.submittedAt ? (
         <TimelineRow label="Submitted" value={entry.submittedAt} />
-      ) : entry.publishedAt ? (
-        <TimelineRow label="Published" value={entry.publishedAt} />
       ) : (
         <TimelineRow label="Submitted" value="Not submitted" muted />
       )}
+      {entry.publishedAt ? (
+        <TimelineRow label="Published" value={entry.publishedAt} />
+      ) : null}
     </div>
   );
 }

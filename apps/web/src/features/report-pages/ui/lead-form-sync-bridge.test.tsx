@@ -55,10 +55,10 @@ interface HarnessProps {
   initialProducts: Product[];
   initialRisks: RiskEntry[];
   readOnly?: boolean;
-  /** Merged own + foreign risks (visual render + foreign-coverage check). */
+  // Includes foreign risks so the render and coverage paths are exercised.
   displayRisks?: RiskEntry[];
-  onProductsChangeSpy?: (next: Product[]) => void;
-  onRisksChangeSpy?: (next: RiskEntry[]) => void;
+  onProductsChangeSpy?: (next: readonly Product[]) => void;
+  onRisksChangeSpy?: (next: readonly RiskEntry[]) => void;
 }
 
 function Harness({
@@ -99,11 +99,11 @@ function Harness({
       externalRiskPrefill={blockerPrefill}
       stagesForProduct={stagesForProduct}
       onProductsChange={(next) => {
-        setProducts(next);
+        setProducts([...next]);
         onProductsChangeSpy?.(next);
       }}
       onRisksChange={(next) => {
-        setRisks(next);
+        setRisks([...next]);
         onRisksChangeSpy?.(next);
       }}
     >
@@ -296,7 +296,7 @@ describe("LeadFormSyncBridge", () => {
 describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-through)", () => {
   it("saving a Blocked risk renders the covered chip blocked WITHOUT persisting a status", async () => {
     const user = userEvent.setup();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
       stages: [
         {
@@ -360,7 +360,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
 
   it("locked-ownership stages are never derived from a risk", async () => {
     const user = userEvent.setup();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
       stages: [
         {
@@ -413,7 +413,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // product-wide risk (the Add Risk dialog defaults all stages checked)
     // cannot flip empty owned stages to "filled".
     const user = userEvent.setup();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
       stages: [
         {
@@ -608,7 +608,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
 
   it("clicking an uncovered empty chip toggles it to on-track", async () => {
     const user = userEvent.setup();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
       stages: [
         {
@@ -645,8 +645,8 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     // so the click is a no-op with an info hint; the lead must edit the risk
     // to change the stage.
     const user = userEvent.setup();
-    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onRisksChangeSpy = vi.fn<(next: readonly RiskEntry[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct();
     const risk = coveringRisk({ severity: "blocked" });
 
@@ -676,7 +676,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     // collapses the chip to on-track and lives in another lead's section, so
     // the toggle is not blocked — the lead sets their own status.
     const user = userEvent.setup();
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
       stages: [
         {

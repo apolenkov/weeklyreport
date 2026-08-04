@@ -165,7 +165,7 @@ describe("ScopeToggle", () => {
     );
     expect(screen.getByRole("radio", { name: "Product" })).toHaveClass(
       "bg-[var(--color-toggle-active)]",
-      "text-white",
+      "text-[var(--color-primary-foreground)]",
     );
     for (const name of ["Summary", "Leads"]) {
       expect(screen.getByRole("radio", { name })).toHaveClass(

@@ -94,6 +94,18 @@ const ACTION_LOG_ROWS = [
   },
 ];
 
+// The full profile's action-log examples are exactly these deterministic rows,
+// so a post-seed journey can assert profile-owned existence instead of trusting
+// unrelated residue.
+export const ACTION_LOG_IDS = ACTION_LOG_ROWS.map((row) => row.id);
+
+// Reminder policies the full profile owns (advanced seed re-upserts the same
+// two ids), used by the journey to scope the existence check to this seed.
+export const REMINDER_POLICY_IDS = [
+  POLICY_DEADLINE,
+  POLICY_ESCALATION,
+] as const;
+
 export async function seedActionLog(prisma: PrismaClient): Promise<void> {
   console.log("[seed-simple] Creating action-log examples...");
   await prisma.userActionLog.createMany({ data: ACTION_LOG_ROWS });

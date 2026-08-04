@@ -9,14 +9,8 @@ const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
   decision: "Decision",
 };
 
-/**
- * review-acknowledgement (§8): read-only reviewer-feedback panel on the lead's
- * OWN form. When a returned (draft) section carries reviewer comments, it surfaces
- * them grouped under each anchor record — with a loud section-level count marker
- * so the return is never silent. It reuses {@link ReviewCommentList}; the lead has
- * no review capability, so the panel is strictly display-only (no composer, no
- * delete). Self-suppresses when there is nothing to show.
- */
+// Lead-owned feedback is read-only: reviewers cannot compose/delete here, and
+// an empty record list self-suppresses so no blank panel appears.
 export function LeadReviewFeedback({
   records,
 }: {
@@ -33,10 +27,10 @@ export function LeadReviewFeedback({
     <section
       aria-label="Reviewer feedback"
       data-testid="lead-review-feedback"
-      className="flex flex-col gap-3 rounded-[var(--radius)] border border-amber-200 bg-amber-50 p-4"
+      className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] p-4"
     >
       <header className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
           Reviewer feedback
         </span>
         {/* Copy stays verdict-neutral: comments can exist pre-verdict on a

@@ -2,9 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-/**
- * Use Header Actions Visibility.
- */
 export function useHeaderActionsVisibility() {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
   const [observedVisible, setObservedVisible] = useState(true);

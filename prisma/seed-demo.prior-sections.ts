@@ -11,7 +11,11 @@ import {
 } from "@prisma/client";
 
 import { MAX_RANKED_PRODUCTS } from "./seed-demo.constants.js";
-import { makeRowId, makeSectionId } from "./seed-demo.ids.js";
+import {
+  priorItemId,
+  priorProjectStatusId,
+  priorSectionId,
+} from "./seed-demo.ids.js";
 import type { DemoSection } from "./seed-demo.types.js";
 
 const FALLBACK_STAGE = "Development";
@@ -19,13 +23,15 @@ const FALLBACK_STAGE = "Development";
 async function writePriorContribution(
   prisma: PrismaClient,
   sectionId: string,
+  reportIdx: number,
+  leadIdx: number,
   index: number,
   c: DemoSection,
   productNames: ReadonlyMap<string, string>,
 ): Promise<void> {
   await prisma.projectStatus.create({
     data: {
-      id: makeRowId(),
+      id: priorProjectStatusId(reportIdx, leadIdx, index),
       reportSectionId: sectionId,
       projectId: c.productId,
       status: TrafficLightStatus.green,
@@ -33,7 +39,7 @@ async function writePriorContribution(
   });
   await prisma.item.create({
     data: {
-      id: makeRowId(),
+      id: priorItemId(reportIdx, leadIdx, index),
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId: c.productId,
@@ -50,9 +56,11 @@ async function writePriorContribution(
 }
 
 export interface PriorSectionInput {
+  reportIdx: number;
   reportId: string;
   submittedAt: Date;
   leadId: string;
+  leadIdx: number;
   contributions: readonly DemoSection[];
   productNames: ReadonlyMap<string, string>;
 }
@@ -60,14 +68,16 @@ export interface PriorSectionInput {
 export async function seedPriorLeadSection(
   prisma: PrismaClient,
   {
+    reportIdx,
     reportId,
     submittedAt,
     leadId,
+    leadIdx,
     contributions,
     productNames,
   }: PriorSectionInput,
 ): Promise<void> {
-  const sectionId = makeSectionId();
+  const sectionId = priorSectionId(reportIdx, leadIdx);
   await prisma.reportSection.create({
     data: {
       id: sectionId,
@@ -78,6 +88,14 @@ export async function seedPriorLeadSection(
     },
   });
   for (const [index, c] of contributions.entries()) {
-    await writePriorContribution(prisma, sectionId, index, c, productNames);
+    await writePriorContribution(
+      prisma,
+      sectionId,
+      reportIdx,
+      leadIdx,
+      index,
+      c,
+      productNames,
+    );
   }
 }

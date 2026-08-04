@@ -1,6 +1,10 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import {
+  currentPeriodLifecycleSchema,
+  type ReportSectionReadModel,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { PeriodLifecycleIntegrityError } from "../../period/index.js";
 import {
   ReportSectionDomainError,
   ReportSectionNotFoundError,
@@ -13,8 +17,8 @@ import {
   reinsertRecordComments,
 } from "./report-sections.save-lineage";
 import {
+  assertPersistableDecisionParents,
   clearSectionChildRows,
-  isPersistableDecision,
   toActivityStatusRows,
   toDecisionRows,
   toItemRows,
@@ -24,20 +28,28 @@ import {
 } from "./save-section.derive";
 
 // Publish/save mutual exclusion: lock the parent report row FIRST (same lock
-// order as the publish transaction, which updates Report before reading
-// sections — consistent ordering, no deadlock). A concurrent publish either
-// committed already (this locking read then sees periodStatus="published" and
-// the save fails closed before any child delete runs) or blocks on this row
-// lock until the save commits — so a snapshot freeze can never interleave a
-// half-saved section, and a published report's live rows can never be
-// rewritten by a save whose service-level gate read a stale status.
+// order as the publish tx — consistent ordering, no deadlock). A concurrent
+// publish either committed already (save fails closed) or blocks until commit.
 async function lockReportForSave(
   tx: Prisma.TransactionClient,
   reportId: string,
 ): Promise<void> {
   const gate = await tx.$queryRaw<
-    { periodStatus: string; archived: boolean }[]
-  >`SELECT "periodStatus", "archived" FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
+    {
+      status: string;
+      periodState: string;
+      periodStatus: string;
+      archived: boolean;
+      autoPublished: boolean;
+      autoArchived: boolean;
+      publishedAt: Date | null;
+      publishedById: string | null;
+      reopenedAt: Date | null;
+    }[]
+  >`SELECT "status", "periodState", "periodStatus", "archived",
+      "autoPublished", "autoArchived", "publishedAt", "publishedById",
+      "reopenedAt"
+    FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
   const gateRow = gate[0];
   // No row means the report was deleted between the precheck and this
   // transaction — the resource is gone, not period-locked, so it must surface
@@ -45,12 +57,13 @@ async function lockReportForSave(
   if (gateRow === undefined) {
     throw new ReportSectionNotFoundError("The report no longer exists.");
   }
-  // Archiving leaves periodStatus untouched, so a gate reading only that lets
-  // an archive committing inside the precheck→tx window through. Same
-  // predicate as isEditablePeriod on the authz path.
+  const lifecycle = currentPeriodLifecycleSchema.safeParse(gateRow);
+  if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
+
   if (
-    gateRow.archived ||
-    (gateRow.periodStatus !== "open" && gateRow.periodStatus !== "reopened")
+    lifecycle.data.archived ||
+    (lifecycle.data.periodStatus !== "open" &&
+      lifecycle.data.periodStatus !== "reopened")
   ) {
     throw new ReportSectionDomainError(
       "SECTION_ALREADY_SUBMITTED",
@@ -61,8 +74,7 @@ async function lockReportForSave(
 
 // Optimistic-concurrency compare-and-set, run BEFORE any deleteMany so a
 // conflict aborts with no child rows touched. `expectedVersion` is the
-// client-loaded version threaded through the payload — NOT the freshly-fetched
-// row's — so a stale writer whose row was advanced concurrently 409s.
+// client-loaded version, NOT the freshly-fetched row's, so a stale writer 409s.
 async function bumpSectionVersion(
   tx: Prisma.TransactionClient,
   section: ReportSectionReadModel,
@@ -76,7 +88,7 @@ async function bumpSectionVersion(
       submittedAt: section.submittedAt,
       // Persist the late flag computed by submitSection; saveDraft / reopen
       // paths carry the prior value through mergeSection.
-      ...(section.late === undefined ? {} : { late: section.late }),
+      late: section.late,
       version: { increment: 1 },
     },
   });
@@ -103,9 +115,8 @@ async function recreateChildRows(
   }
 
   // Mirror ProjectStatus: recreate the activity slice from the merged read
-  // model. Every id here came from the seeded server-side set — mergeSection
-  // folds client statuses onto section.activities and the service rejects any
-  // unattached activityId before this runs.
+  // model. Every id came from the seeded server-side set — mergeSection folds
+  // client statuses onto section.activities; the service rejects unattached ids.
   const activityStatusData = toActivityStatusRows(section, sectionId);
   if (activityStatusData.length > 0) {
     await tx.activityStatus.createMany({ data: activityStatusData });
@@ -119,7 +130,11 @@ async function recreateChildRows(
     await tx.risk.createMany({ data: toRiskRows(section, sectionId) });
   }
 
-  const decisionsToSave = section.decisions.filter(isPersistableDecision);
+  // XOR parent enforced here, not just in the write schema: a read-model
+  // decision carrying both (or neither) parent must fail the persist loudly,
+  // never reach the DB CHECK as a raw constraint error.
+  assertPersistableDecisionParents(section.decisions);
+  const decisionsToSave = section.decisions;
   if (decisionsToSave.length > 0) {
     await tx.decision.createMany({
       data: toDecisionRows(decisionsToSave, sectionId),
@@ -128,9 +143,8 @@ async function recreateChildRows(
 }
 
 // Re-read INSIDE the still-open transaction (read-your-own-writes), not after
-// it commits: the compare-and-set holds this transaction's row lock on THIS
-// ReportSection, which a concurrent report delete's cascade also needs, so
-// there is no post-commit gap for a delete to land in.
+// commit: the compare-and-set holds this tx's row lock on the section, which a
+// concurrent report-delete cascade also needs — no post-commit gap for a delete.
 async function readBackSavedSection(
   tx: Prisma.TransactionClient,
   sectionId: string,
@@ -161,11 +175,9 @@ export async function applySaveSection(
   await lockReportForSave(tx, section.reportId);
   await bumpSectionVersion(tx, section, sectionId, expectedVersion);
 
-  // review-acknowledgement (comment-aware save): lift reviewer comments out
-  // before the child delete-recreate cascades them away, keyed by the record's
-  // durable lineage (stableId + kind), then re-anchor the survivors below. A
-  // comment whose record is dropped from this payload is NOT re-inserted → it
-  // hard-dies with the record it flagged.
+  // Comment-aware save: lift reviewer comments out before the child
+  // delete-recreate cascades them away, keyed by the record's durable lineage
+  // (stableId + kind), then re-anchor survivors. Dropped records die with them.
   const capturedComments = await captureRecordComments(tx, sectionId);
 
   await clearSectionChildRows(tx, sectionId);

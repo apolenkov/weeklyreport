@@ -1,12 +1,23 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
-import { stableStringify } from "../../../hooks/use-lead-form-autosave";
+import { encodeAutosaveComparisonKey } from "../../../hooks/use-lead-form-autosave";
 import { sectionToDraftPayload } from "../../report-sections";
 import { applyDraftPatch, type DraftPatch } from "./lead-form-draft-patch";
+import {
+  type LeadFormGeneration,
+  leadFormGenerationOf,
+} from "./lead-form-generation";
 import { useDraftServerSync } from "./use-lead-form-server-sync";
 
 // Ref mirror of the optimistic-lock version so submit reads the current value
@@ -21,12 +32,21 @@ function useDraftVersion() {
   return { version, versionRef, setVersionSafe };
 }
 
+// The reload promise settles before the user is told it happened, so the
+// announcement is never premature and a failed refetch is surfaced as such.
 function useConflictReload(refetchSection: () => Promise<unknown>) {
   return useCallback(() => {
-    void refetchSection();
-    toast.error(
-      "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
-    );
+    void refetchSection()
+      .then(() => {
+        toast.error(
+          "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
+        );
+      })
+      .catch(() => {
+        toast.error(
+          "This section was changed elsewhere. Reload failed — refresh the page and re-apply your changes.",
+        );
+      });
   }, [refetchSection]);
 }
 
@@ -40,21 +60,41 @@ function useDraftPayloadKeys(
   );
   const initialSavedKey = useMemo(() => {
     if (!serverSection) return null;
-    return stableStringify(sectionToDraftPayload(serverSection));
+    return encodeAutosaveComparisonKey(sectionToDraftPayload(serverSection));
   }, [serverSection]);
   return { draftPayload, initialSavedKey };
 }
 
 interface LeadFormDraftCoreArgs {
+  readonly generation: LeadFormGeneration | null;
   readonly serverSection: ReportSectionReadModel | null | undefined;
-  readonly sectionIdForActions: string;
+  readonly sectionIdForActions: string | null;
   readonly serverReadOnly: boolean;
   readonly refetchSection: () => Promise<unknown>;
+}
+
+function useGenerationBoundApply(
+  generation: LeadFormGeneration | null,
+  setDraftSection: Dispatch<SetStateAction<ReportSectionReadModel | null>>,
+) {
+  return useCallback(
+    (patch: DraftPatch) => {
+      setDraftSection((current) =>
+        current !== null &&
+        generation !== null &&
+        leadFormGenerationOf(current) === generation
+          ? applyDraftPatch(current, patch)
+          : current,
+      );
+    },
+    [generation, setDraftSection],
+  );
 }
 
 // The local draft engine: editable section state, its optimistic-lock version,
 // and the autosave/reseed conversation with the server.
 export function useLeadFormDraftCore({
+  generation,
   serverSection,
   sectionIdForActions,
   serverReadOnly,
@@ -82,10 +122,9 @@ export function useLeadFormDraftCore({
     setDraftSection,
     handleConflict,
   });
-  const apply = useCallback((patch: DraftPatch) => {
-    setDraftSection((prev) => (prev ? applyDraftPatch(prev, patch) : prev));
-  }, []);
+  const apply = useGenerationBoundApply(generation, setDraftSection);
   return {
+    generation,
     draft: draftSection,
     draftPayload,
     dirty: autosave.dirty,

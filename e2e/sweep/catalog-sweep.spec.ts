@@ -29,12 +29,19 @@ import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
 } from "../../prisma/seed-constants";
-import { type Catalog, parseCatalog } from "./catalog-parser.ts";
+import {
+  CANONICAL_ROLES,
+  type Catalog,
+  parseCatalog,
+} from "./catalog-parser.ts";
 import { loginByCookie } from "./helpers/dev-auth";
 import { byName } from "./ordering.ts";
 
 type AnomalyKind = "console" | "pageerror" | "load" | "axe" | "network";
-interface Anomaly { kind: AnomalyKind; detail: string }
+interface Anomaly {
+  kind: AnomalyKind;
+  detail: string;
+}
 interface RouteResult {
   route: string;
   resolved: string | null;
@@ -42,6 +49,7 @@ interface RouteResult {
   finalUrl?: string;
   status?: number | null;
   anomalies: Anomaly[];
+  warnings: string[];
   skipped?: string;
 }
 
@@ -50,23 +58,7 @@ const REPORT_DIR = path.resolve(import.meta.dirname, ".reports");
 
 // Known-benign console noise that must NOT be reported as an anomaly.
 // Favicon 404s are expected under the sweep shell and are not product defects.
-// Dev-tools connection noise is disabled at the source via
-// NEXT_PUBLIC_DISABLE_DEVTOOLS in playwright.config.ts — this list must not
-// mask real refused connections for widgets the sweep already turns off.
 const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
-
-// Failed-request URLs that are known sweep-environment noise. Kept defensively:
-// the dev-tools backend (:4747) is now disabled at the source, but if a future
-// change re-enables a dev widget under `next dev` this keeps its noise out while
-// still surfacing every other refused URL.
-const IGNORED_REQUEST_URLS: RegExp[] = [
-  /localhost:4747/i,
-  /127\.0\.0\.1:4747/i,
-  // External font CDN, not reachable in the sweep env; an app-level concern
-  // (runtime dependency on a third-party CDN), not a per-route product defect.
-  /fonts\.googleapis\.com/i,
-  /fonts\.gstatic\.com/i,
-];
 
 /**
  * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
@@ -91,7 +83,7 @@ function loadCatalogs(): Catalog[] {
   if (!fs.existsSync(CATALOG_DIR)) {
     return [];
   }
-  return fs
+  const catalogs = fs
     .readdirSync(CATALOG_DIR)
     .filter((file) => file.endsWith(".yaml"))
     .map((file) =>
@@ -99,6 +91,15 @@ function loadCatalogs(): Catalog[] {
     )
     .filter((catalog): catalog is Catalog => catalog !== null)
     .sort((a, b) => byName(a.role, b.role));
+  const present = new Set(catalogs.map(({ role }) => role));
+  const missing = CANONICAL_ROLES.filter((role) => !present.has(role));
+  if (missing.length > 0) {
+    const missingPaths = missing.map((role) => `e2e/catalog/${role}.yaml`);
+    throw new Error(
+      `Missing required role catalog(s): ${missingPaths.join(", ")}`,
+    );
+  }
+  return catalogs;
 }
 
 function renderReport(role: DbRole, results: RouteResult[]): string {
@@ -136,6 +137,9 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
         lines.push(`  - **${anomaly.kind}**: ${anomaly.detail}`);
       }
     }
+    for (const warning of result.warnings) {
+      lines.push(`- warning: ${warning}`);
+    }
     lines.push("");
   }
   return lines.join("\n");
@@ -165,6 +169,7 @@ for (const catalog of catalogs) {
             detail: `dev-auth login failed for role ${catalog.role}: ${String(error)}`,
           },
         ],
+        warnings: [],
       });
     }
 
@@ -176,38 +181,42 @@ for (const catalog of catalogs) {
           resolved,
           access: entry.access,
           anomalies: [],
+          warnings: [],
           skipped: "unresolved route placeholder (no seed id mapping)",
         });
         continue;
       }
 
       const anomalies: Anomaly[] = [];
+      const warnings: string[] = [];
       const onConsole = (msg: ConsoleMessage): void => {
-        if (msg.type() !== "error") {
+        const type = msg.type();
+        if (type !== "error" && type !== "warning") {
           return;
         }
         const text = msg.text();
         if (IGNORED_CONSOLE.some((re) => re.test(text))) {
           return;
         }
-        anomalies.push({ kind: "console", detail: text });
+        if (type === "warning") {
+          warnings.push(text);
+        } else {
+          anomalies.push({ kind: "console", detail: text });
+        }
       };
       const onPageError = (err: Error): void => {
         anomalies.push({ kind: "pageerror", detail: err.message });
       };
       // Resource-load failures, captured WITH their URL (the console channel
-      // logs them without one). Known dev-tools-endpoint noise is skipped; any
-      // other refused URL still surfaces, so this is not a blind filter.
+      // logs them without one). No URLs are suppressed: the Agentation :4747
+      // dev backend and Google Fonts are disabled/self-hosted, so every refused
+      // URL is a real product defect.
       const onRequestFailed = (request: Request): void => {
-        const url = request.url();
-        if (IGNORED_REQUEST_URLS.some((re) => re.test(url))) {
-          return;
-        }
         const failure = request.failure();
         const cause = failure ? ` (${failure.errorText})` : "";
         anomalies.push({
           kind: "network",
-          detail: `request failed: ${url}${cause}`,
+          detail: `request failed: ${request.url()}${cause}`,
         });
       };
       page.on("console", onConsole);
@@ -262,7 +271,10 @@ for (const catalog of catalogs) {
           });
         }
       } catch (error) {
-        anomalies.push({ kind: "axe", detail: `axe scan failed: ${String(error)}` });
+        anomalies.push({
+          kind: "axe",
+          detail: `axe scan failed: ${String(error)}`,
+        });
       }
 
       page.off("console", onConsole);
@@ -276,12 +288,17 @@ for (const catalog of catalogs) {
         finalUrl: page.url(),
         status,
         anomalies,
+        warnings,
       });
     }
 
     const report = renderReport(catalog.role, results);
     fs.mkdirSync(REPORT_DIR, { recursive: true });
-    fs.writeFileSync(path.join(REPORT_DIR, `${catalog.role}.md`), report, "utf8");
+    fs.writeFileSync(
+      path.join(REPORT_DIR, `${catalog.role}.md`),
+      report,
+      "utf8",
+    );
     await testInfo.attach(`sweep-${catalog.role}.md`, {
       body: report,
       contentType: "text/markdown",

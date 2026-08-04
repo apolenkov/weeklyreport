@@ -27,7 +27,10 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-const asAny = <T>(x: unknown): T => x as T;
+// Pass a partial stub where the real service is expected: `never` erases the
+// contract, so cast through `unknown` to the constructor's parameter type —
+// a signature change in the real class becomes a compile error here.
+const asStub = <T>(value: unknown, _target?: T): T => value as T;
 
 describe("AutoPublisherScheduler", () => {
   it("skip-when-disabled: autoPublishAfterDeadline=false → no DB scan", async () => {
@@ -47,10 +50,10 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
@@ -84,16 +87,23 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(result).toEqual({ published: true, periodIds: ["rep-1"] });
-    expect(publication.publishAuto).toHaveBeenCalledWith("rep-1");
+    expect(result).toEqual({
+      published: true,
+      periodIds: ["rep-1"],
+      failures: [],
+    });
+    expect(publication.publishAuto).toHaveBeenCalledWith(
+      "rep-1",
+      new Date("2026-05-12T12:00:00Z"),
+    );
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-1",
       missingSectionsCount: 2,
@@ -117,15 +127,15 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(result).toEqual({ published: true, periodIds: [] });
+    expect(result).toEqual({ published: true, periodIds: [], failures: [] });
     expect(publication.publishAuto).not.toHaveBeenCalled();
     expect(audit.periodAutoPublish).not.toHaveBeenCalled();
   });
@@ -163,15 +173,19 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(result).toEqual({ published: true, periodIds: ["rep-good"] });
+    expect(result).toEqual({
+      published: true,
+      periodIds: ["rep-good"],
+      failures: [{ periodId: "rep-bad", error: "db transient" }],
+    });
     expect(audit.periodAutoPublish).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-good",
@@ -199,10 +213,10 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
@@ -213,10 +227,9 @@ describe("AutoPublisherScheduler", () => {
     expect(publication.publishAuto).not.toHaveBeenCalled();
   });
 
-  // period-dual-state: a skipped auto-publish (the period was archived between
-  // selection and the write → compare-and-set matched zero rows) must fire NO
-  // success side-effects — no audit, no missing-section count, id not in
-  // periodIds — and must NOT be logged as an error (a skip is an expected no-op).
+  // A skipped auto-publish (period archived between selection and the write →
+  // CAS matched zero rows) fires NO success side-effects — no audit, no count,
+  // no periodIds — and is not logged as an error (an expected no-op).
   it("skip outcome: {published:false} emits no audit, no count, no periodIds", async () => {
     const prisma = {
       report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-skip" }]) },
@@ -234,16 +247,19 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(publication.publishAuto).toHaveBeenCalledWith("rep-skip");
-    expect(result).toEqual({ published: true, periodIds: [] });
+    expect(publication.publishAuto).toHaveBeenCalledWith(
+      "rep-skip",
+      new Date("2026-05-12T12:00:00Z"),
+    );
+    expect(result).toEqual({ published: true, periodIds: [], failures: [] });
     expect(audit.periodAutoPublish).not.toHaveBeenCalled();
     expect(prisma.reportSection.count).not.toHaveBeenCalled();
   });
@@ -278,15 +294,19 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(result).toEqual({ published: true, periodIds: ["rep-ok"] });
+    expect(result).toEqual({
+      published: true,
+      periodIds: ["rep-ok"],
+      failures: [],
+    });
     expect(audit.periodAutoPublish).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-ok",
@@ -319,16 +339,19 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(publication.publishAuto).toHaveBeenCalledWith("rep-race");
-    expect(result).toEqual({ published: true, periodIds: [] });
+    expect(publication.publishAuto).toHaveBeenCalledWith(
+      "rep-race",
+      new Date("2026-05-12T12:00:00Z"),
+    );
+    expect(result).toEqual({ published: true, periodIds: [], failures: [] });
     expect(audit.periodAutoPublish).not.toHaveBeenCalled();
     expect(prisma.reportSection.count).not.toHaveBeenCalled();
   });
@@ -367,15 +390,19 @@ describe("AutoPublisherScheduler", () => {
     };
 
     const scheduler = new AutoPublisherScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(publication),
-      asAny(audit),
+      asStub(prisma),
+      asStub(admin),
+      asStub(publication),
+      asStub(audit),
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
 
-    expect(result).toEqual({ published: true, periodIds: ["rep-ok"] });
+    expect(result).toEqual({
+      published: true,
+      periodIds: ["rep-ok"],
+      failures: [],
+    });
     expect(audit.periodAutoPublish).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-ok",

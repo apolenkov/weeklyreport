@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 // Lead form Record visibility: "mine" (default) vs "everyone" (co-owners read-only).
 export type RecordVisibility = "mine" | "everyone";
@@ -8,8 +8,11 @@ export type RecordVisibility = "mine" | "everyone";
 const STORAGE_PREFIX = "leadRecordVisibility";
 
 // Keyed by user AND reportId so "everyone" never bleeds across identities or reports.
-function storageKey(userId: string | null, reportId: string): string | null {
-  if (!userId || reportId === "") return null;
+function storageKey(
+  userId: string | null,
+  reportId: string | null,
+): string | null {
+  if (!userId || !reportId) return null;
   return `${STORAGE_PREFIX}:${userId}:${reportId}`;
 }
 
@@ -31,6 +34,11 @@ function writeStored(key: string, value: string): void {
   }
 }
 
+interface ResolvedVisibility {
+  key: string | null;
+  value: string | null;
+}
+
 interface UseRecordVisibilityResult {
   visibility: RecordVisibility;
   // Full-content fetch must wait so it never races the pre-hydration "mine" default.
@@ -40,34 +48,32 @@ interface UseRecordVisibilityResult {
 
 export function useRecordVisibility(
   userId: string | null,
-  reportId: string,
+  reportId: string | null,
 ): UseRecordVisibilityResult {
-  const [visibility, setVisibilityState] = useState<RecordVisibility>("mine");
-  // Key-bound so `hydrated` is false on the first render after an identity/report change.
-  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
-
   const currentKey = storageKey(userId, reportId);
-  const hydrated = currentKey !== null && hydratedKey === currentKey;
 
-  // Re-scope whenever user/report context changes; hydration is re-derived at render.
-  useEffect(() => {
-    if (!currentKey) {
-      // Context not resolvable yet — stay on the default, unhydrated.
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- re-scopes the persisted visibility from localStorage when user/report context changes — external store sync
-      setVisibilityState("mine");
-      setHydratedKey(null);
-      return;
-    }
-    const stored = readStored(currentKey);
-    setVisibilityState(stored === "everyone" ? "everyone" : "mine");
-    setHydratedKey(currentKey);
-  }, [currentKey]);
+  // Key-bound resolved value; re-scoped during render (adjusting-state pattern)
+  // so a user/report change re-reads localStorage without an effect-driven
+  // cascading render. `hydrated` is false until the current key has resolved.
+  const [resolved, setResolved] = useState<ResolvedVisibility>(() => ({
+    key: currentKey,
+    value: currentKey === null ? null : readStored(currentKey),
+  }));
+
+  if (resolved.key !== currentKey) {
+    setResolved({
+      key: currentKey,
+      value: currentKey === null ? null : readStored(currentKey),
+    });
+  }
+
+  const visibility = resolved.value === "everyone" ? "everyone" : "mine";
+  const hydrated = currentKey !== null && resolved.key === currentKey;
 
   const setVisibility = useCallback(
     (next: RecordVisibility) => {
-      setVisibilityState(next);
-      if (!currentKey) return;
-      writeStored(currentKey, next);
+      if (currentKey) writeStored(currentKey, next);
+      setResolved({ key: currentKey, value: next });
     },
     [currentKey],
   );

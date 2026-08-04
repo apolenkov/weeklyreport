@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -20,10 +21,12 @@ describe("PolicyApplicatorService (integration)", () => {
   const policyEscalationId = "b2222222-2222-4222-8222-222222222222";
 
   beforeAll(() => {
-    // Cast to `never` to satisfy PrismaService (Nest provider) typing
-    // without dragging the full Nest container into the test setup —
-    // mirrors `admin.integration.test.ts`.
-    applicator = new PolicyApplicatorService(prisma as never);
+    // Cast to PrismaService so the Nest-provider typing is preserved without
+    // dragging the full Nest container into the test setup — mirrors
+    // `admin.integration.test.ts`.
+    applicator = new PolicyApplicatorService(
+      prisma as unknown as PrismaService,
+    );
   });
 
   beforeEach(async () => {

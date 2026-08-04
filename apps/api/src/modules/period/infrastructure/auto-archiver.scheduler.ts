@@ -1,11 +1,33 @@
 import { MS_PER_WEEK } from "@customreport/shared";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
-import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { AUDIT_LOGGER, type AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
 import { buildTransition } from "../domain/period-transition.js";
+
+// A per-candidate archive outcome: `skipped` is the benign lost-race no-op,
+// `failed` is a real write error that must be reported on the tick result.
+type ArchiveCandidateOutcome =
+  | { readonly archived: true; readonly periodId: string }
+  | { readonly archived: false; readonly reason: "skipped" }
+  | {
+      readonly archived: false;
+      readonly reason: "failed";
+      readonly error: string;
+    };
+
+export type AutoArchiverResult =
+  | { readonly archived: false; readonly reason: "disabled" }
+  | {
+      readonly archived: true;
+      readonly periodIds: readonly string[];
+      readonly failures: readonly {
+        readonly periodId: string;
+        readonly error: string;
+      }[];
+    };
 
 // Archives published Reports past publishedAt + retention. 0 weeks = never.
 // 00:15 UTC offsets period-creator (00:05) to avoid lock contention.
@@ -15,9 +37,10 @@ export class AutoArchiverScheduler {
   private readonly logger = new Logger(AutoArchiverScheduler.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(SnapshotAdminService)
     private readonly snapshotAdminService: SnapshotAdminService,
-    private readonly auditLogger: AuditLogger,
+    @Inject(AUDIT_LOGGER) private readonly auditLogger: AuditLogger,
   ) {}
 
   @Cron("15 0 * * *")
@@ -25,13 +48,9 @@ export class AutoArchiverScheduler {
     await this.runOnce(new Date());
   }
 
-  // Test seam: returns archived periodIds without scraping audit calls.
-  async runOnce(
-    now: Date,
-  ): Promise<
-    | { archived: false; reason: "disabled" }
-    | { archived: true; periodIds: readonly string[] }
-  > {
+  // Test seam: returns archived periodIds and per-row failures without
+  // scraping audit calls.
+  async runOnce(now: Date): Promise<AutoArchiverResult> {
     const settings = await this.snapshotAdminService.getSettings();
     if (settings.autoArchiveWeeksAfterPublish <= 0) {
       return { archived: false, reason: "disabled" };
@@ -52,28 +71,48 @@ export class AutoArchiverScheduler {
       select: { id: true },
     });
 
-    if (candidates.length === 0) {
-      return { archived: true, periodIds: [] };
-    }
-
     // Folded sequentially — awaiting the pending tally before the next write
     // keeps one guarded write in flight at a time; a failure must not abort
     // the remaining rows.
-    const archivedIds = await candidates.reduce<Promise<readonly string[]>>(
+    const { periodIds, failures } = await candidates.reduce<
+      Promise<{
+        readonly periodIds: readonly string[];
+        readonly failures: readonly {
+          readonly periodId: string;
+          readonly error: string;
+        }[];
+      }>
+    >(
       async (pending, candidate) => {
         const tally = await pending;
-        const archivedId = await this.archiveCandidate(candidate.id);
-        return archivedId === null ? tally : [...tally, archivedId];
+        const outcome = await this.archiveCandidate(candidate.id);
+        if (outcome.archived) {
+          return {
+            ...tally,
+            periodIds: [...tally.periodIds, outcome.periodId],
+          };
+        }
+        return outcome.reason === "failed"
+          ? {
+              ...tally,
+              failures: [
+                ...tally.failures,
+                { periodId: candidate.id, error: outcome.error },
+              ],
+            }
+          : tally;
       },
-      Promise.resolve([]),
+      Promise.resolve({ periodIds: [], failures: [] }),
     );
 
-    return { archived: true, periodIds: archivedIds };
+    return { archived: true, periodIds, failures };
   }
 
-  // Returns the periodId when this run is the one that archived it; null when
-  // a concurrent writer won the race or the write failed (logged, never thrown).
-  private async archiveCandidate(periodId: string): Promise<string | null> {
+  // The periodId when this run is the one that archived it; a concurrent
+  // writer that won the race is a benign skip, a write error is a failure.
+  private async archiveCandidate(
+    periodId: string,
+  ): Promise<ArchiveCandidateOutcome> {
     try {
       // Compare-and-set on periodStatus so a reopen between scan and write
       // drops this update to zero rows (see period-dual-state).
@@ -85,7 +124,7 @@ export class AutoArchiverScheduler {
         this.logger.log(
           `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
         );
-        return null;
+        return { archived: false, reason: "skipped" };
       }
       this.logger.log(`auto-archive period=${periodId}`);
       this.auditLogger.periodAutoArchive({
@@ -93,12 +132,11 @@ export class AutoArchiverScheduler {
         from: "published",
         to: "archived",
       });
-      return periodId;
+      return { archived: true, periodId };
     } catch (error) {
-      this.logger.error(
-        `auto-archive failed period=${periodId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return null;
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`auto-archive failed period=${periodId}: ${message}`);
+      return { archived: false, reason: "failed", error: message };
     }
   }
 }

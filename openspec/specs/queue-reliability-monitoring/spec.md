@@ -2,23 +2,23 @@
 
 ## Purpose
 
-TBD - created by archiving change observability-and-perf-hardening. Update Purpose after archive.
+Define queue failure, retention, depth, and Redis-capacity signals without
+duplicated counters, silent configuration recovery, or leaked connections.
 
 ## Requirements
 
-### Requirement: DLQ alert threshold survives a misconfigured env value
+### Requirement: DLQ alert threshold rejects a misconfigured env value
 
-The DLQ monitor MUST parse `DLQ_ALERT_THRESHOLD` defensively: a value that is
-not a finite number MUST fall back to the documented default and emit a warn log
-naming the offending value, so a typo never silently disables the DLQ alert by
-producing a `NaN` comparison.
+The environment boundary MUST reject a configured `DLQ_ALERT_THRESHOLD` that is
+not a positive integer. Omitting the optional value uses the documented named
+consumer default; supplying an invalid value MUST fail boot rather than recover.
 
-#### Scenario: Unparseable threshold falls back and warns
+#### Scenario: Unparseable threshold fails validation
 
 - **GIVEN** `DLQ_ALERT_THRESHOLD` is set to a non-numeric string
-- **WHEN** the DLQ monitor reads the threshold at startup
-- **THEN** it uses the default threshold instead of `NaN`
-- **AND** it emits a warn log identifying the invalid value
+- **WHEN** `validateEnv()` parses the environment at startup
+- **THEN** validation fails before the DLQ monitor starts
+- **AND** no inferred threshold is returned
 
 #### Scenario: Valid threshold is honored
 
@@ -35,9 +35,8 @@ so the existing DLQ monitor increments
 failure via its `QueueEvents` listener, the same single-owner path it already
 uses for `email-reminder` and `pdf-export`. The change MUST NOT add a second
 increment from a telegram worker handler, which would double-count. Because
-telegram is a Phase 55 deferred feature, the `QUEUE_NAMES` entry — the new
-activation point — MUST carry a `TODO(Phase 55)` trace per the deferred-feature
-convention.
+telegram is deferred, the `QUEUE_NAMES` entry — the activation point — MUST
+carry a `TODO(activate-telegram-bot)` trace per the deferred-feature convention.
 
 #### Scenario: A terminal telegram failure increments the DLQ counter once
 
@@ -58,8 +57,8 @@ convention.
 
 ### Requirement: Bull Board queue handles close on shutdown
 
-The two BullMQ `Queue` instances created for Bull Board MUST be lifecycle-managed
-so they are closed during application shutdown, leaving no idle Redis connection
+Every BullMQ `Queue` instance created for Bull Board MUST be lifecycle-managed
+so it is closed during application shutdown, leaving no idle Redis connection
 leaked after a graceful stop.
 
 #### Scenario: Bull Board queues close on graceful shutdown
@@ -67,7 +66,7 @@ leaked after a graceful stop.
 - **GIVEN** the application has started and created the Bull Board `Queue`
   instances
 - **WHEN** the application shuts down gracefully
-- **THEN** both Bull Board `Queue` instances are closed
+- **THEN** every Bull Board `Queue` instance is closed
 - **AND** no idle Redis connection from them remains open
 
 ### Requirement: pdf-export and email-reminder jobs carry bounded retention

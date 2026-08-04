@@ -3,11 +3,10 @@
 import type { ReactNode } from "react";
 
 import type { CreateSeed } from "../../../hooks/use-editable-list-dialog";
+import { responsiveBoardGridClassName } from "../../../shared/ui/responsive-board-grid";
 import type { ItemColumn } from "../model/next-week-columns";
 import type { KanbanItem } from "../model/types";
 import { BoardColumnHeader } from "./board-column-header";
-
-const MAX_LANE_COLUMNS = 3;
 
 interface ActivityLanesBlockProps {
   readonly lanes: readonly ItemColumn[];
@@ -27,17 +26,14 @@ export function ActivityLanesBlock({
   if (lanes.length === 0) return null;
 
   return (
-    <div className="mt-4 border-t border-dashed border-[rgba(0,0,0,0.12)] pt-3">
+    <div className="mt-4 border-t border-dashed border-[var(--card-surface-border)] pt-3">
       <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
         Activities
       </div>
       <div
         role="group"
         aria-label="Activity items"
-        className="grid gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${Math.min(lanes.length, MAX_LANE_COLUMNS)}, minmax(0, 1fr))`,
-        }}
+        className={responsiveBoardGridClassName(lanes.length)}
       >
         {lanes.map((lane) => (
           <div
@@ -51,7 +47,7 @@ export function ActivityLanesBlock({
               onAdd={onAdd}
             />
             {lane.items.length === 0 ? (
-              <div className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-white/60 p-3 text-center text-xs text-[var(--color-muted-foreground)]">
+              <div className="flex items-center justify-center rounded-lg border border-dashed border-[var(--card-surface-border)] bg-[color-mix(in_srgb,var(--color-card)_60%,transparent)] p-3 text-center text-xs text-[var(--color-muted-foreground)]">
                 No items yet
               </div>
             ) : (

@@ -1,10 +1,6 @@
-/**
- * @vitest-environment jsdom
- *
- * Verifies that AgentReviewComingSoon is mounted on every on-screen report
- * surface, that the print page carries zero such controls, and that every
- * mounted control keeps aria-disabled="true" and the expected English copy.
- */
+// @vitest-environment jsdom
+// Pin control placement across on-screen versus print surfaces and preserve
+// the inert aria-disabled contract.
 
 import "@testing-library/jest-dom/vitest";
 

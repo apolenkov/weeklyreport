@@ -7,26 +7,34 @@ import {
 } from "lucide-react";
 
 import {
+  ADMIN_ROUTE,
   HEAD_DASHBOARD_ROUTE,
   HEAD_REPORT_ROUTE,
+  LEAD_REPORT_ROUTE,
   REPORTS_LATEST_ROUTE,
+  REPORTS_ROUTE,
 } from "./nav-links";
 
+const NAV_ICON_COMMON = {
+  size: 14,
+  strokeWidth: 2,
+  "aria-hidden": true,
+} as const;
+
 export function NavIcon({ href }: { readonly href: string }) {
-  const common = { size: 14, strokeWidth: 2, "aria-hidden": true };
   switch (href) {
-    case "/lead/report":
-      return <FileText {...common} />;
+    // Lead report and viewer status both show the document-icon.
+    case LEAD_REPORT_ROUTE:
     case REPORTS_LATEST_ROUTE:
-      return <FileText {...common} />;
-    case "/reports":
-      return <Clock {...common} />;
+      return <FileText {...NAV_ICON_COMMON} />;
+    case REPORTS_ROUTE:
+      return <Clock {...NAV_ICON_COMMON} />;
     case HEAD_DASHBOARD_ROUTE:
-      return <LayoutDashboard {...common} />;
+      return <LayoutDashboard {...NAV_ICON_COMMON} />;
     case HEAD_REPORT_ROUTE:
-      return <BarChart3 {...common} />;
-    case "/admin":
-      return <Settings {...common} />;
+      return <BarChart3 {...NAV_ICON_COMMON} />;
+    case ADMIN_ROUTE:
+      return <Settings {...NAV_ICON_COMMON} />;
     default:
       return null;
   }

@@ -5,7 +5,7 @@ import type {
 } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AppLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   NOOP_PDF_EXPORT_TELEMETRY,
@@ -28,7 +28,7 @@ const NOOP_PDF_QUEUE: PdfExportEnqueuer = {
 
 function createPdfExportService(
   repository: PdfExportRepository,
-  logger?: AppLogger,
+  logger: AppLogger = createNullLogger(),
   queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
   telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
 ): PdfExportService {
@@ -96,10 +96,10 @@ function createRepository(
       }
       return Promise.resolve(null);
     },
-    createExportJob(job: PdfExportJob, requestedBy?: string) {
+    createExportJob(job: PdfExportJob, requestedBy: string) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
-        requestedBy: requestedBy ?? "system",
+        requestedBy,
       });
       return Promise.resolve(structuredClone(job));
     },
@@ -110,7 +110,7 @@ function createRepository(
     saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
-        requestedBy: jobs.get(job.jobId)?.requestedBy ?? "system",
+        requestedBy: expectDefined(jobs.get(job.jobId)).requestedBy,
       });
       return Promise.resolve(structuredClone(job));
     },
@@ -173,8 +173,9 @@ describe("PdfExportService — contract tests", () => {
     });
 
     it("enqueues a BullMQ job when a queue is provided", async () => {
-      // The queue payload carries an authToken signed with
-      // PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic signing.
+      // The queue payload carries non-credential identifiers only (reportId,
+      // jobId, requestedBy) — never the render JWT, which the worker mints at
+      // execution time.
       const originalSecret = process.env.PDF_EXPORT_JWT_SECRET;
       process.env.PDF_EXPORT_JWT_SECRET = "a".repeat(32);
       try {
@@ -192,10 +193,13 @@ describe("PdfExportService — contract tests", () => {
           expect.objectContaining({
             reportId,
             jobId: job.jobId,
-            authToken: expect.stringMatching(/^eyJ/) as unknown,
+            requestedBy: requesterSession.userId,
           }),
           {},
         );
+        const serialized = JSON.stringify(mockQueue.enqueue.mock.calls[0]?.[1]);
+        expect(serialized).not.toContain("authToken");
+        expect(serialized).not.toMatch(/eyJ/);
       } finally {
         if (originalSecret === undefined) {
           delete process.env.PDF_EXPORT_JWT_SECRET;

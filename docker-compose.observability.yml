@@ -29,9 +29,9 @@ services:
       - lgtmdata:/data
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/customreport-dashboard.json:ro
-      # 47-03 (DX-03): tRPC latency dashboard
+      # tRPC latency dashboard
       - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/trpc-latency-dashboard.json:ro
-      # Phase 52 (UFB-054): product-KPI dashboard
+      # product-KPI dashboard
       - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product-telemetry-dashboard.json:ro
       - ./deploy/prometheus-otel-lgtm.yml:/otel-lgtm/prometheus.yaml:ro
       - ./deploy/alert-rules.yml:/otel-lgtm/alert-rules.yml:ro

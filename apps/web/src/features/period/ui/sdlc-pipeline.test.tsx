@@ -1,11 +1,9 @@
-/**
- * @vitest-environment jsdom
- *
- * Left edge carries ONLY product health (always solid). Own-input completeness
- * is a SEPARATE right-side affordance (dashed ring + "N/M stages" counter) and
- * never shares the health hue. Tests prove the two signals are independent
- * across all four quadrants.
- */
+// @vitest-environment jsdom
+//
+// Left edge carries ONLY product health (always solid). Own-input completeness
+// is a SEPARATE right-side affordance (dashed ring + "N/M stages" counter) and
+// never shares the health hue. Tests prove the two signals are independent
+// across all four quadrants.
 
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -540,10 +538,8 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
 // - each [arrow, chip] cell is top-aligned (items-start)
 // - arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height
 
-/**
- * Locate the stages row: the flex-wrap div that also carries justify-center
- * (distinct from the product header which uses justify-between).
- */
+// Locate the stages row: the flex-wrap div that also carries justify-center
+// (distinct from the product header which uses justify-between).
 function getStagesRow(container: HTMLElement): HTMLElement | null {
   const card = container.querySelector(".rounded-xl");
   if (!card) return null;

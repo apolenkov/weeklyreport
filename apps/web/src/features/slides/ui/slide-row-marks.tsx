@@ -36,24 +36,30 @@ export function AuthorBadge({
 }) {
   // Hooks precede the early return (rules-of-hooks); the label mirrors the
   // footer legend entry so hover answers "who" without leaving the row.
-  const label =
-    author === undefined
-      ? ""
-      : author.role === undefined
-        ? author.name
-        : `${author.name} · ${author.role}`;
+  const unknown = author === undefined;
+  const label = unknown
+    ? "Unknown author"
+    : author.role === undefined
+      ? author.name
+      : `${author.name} · ${author.role}`;
   const tooltip = useHoverTooltip(label);
   // Inline in the text flow — no reserved column, the text wraps around it.
-  if (!show || author === undefined) return null;
+  // A missing author must still surface the foreign-record marker (as unknown),
+  // never drop the indicator silently.
+  if (!show) return null;
   return (
     <span
       {...tooltip}
       data-testid="slide-author-badge"
       className="mr-1 inline-flex h-[15px] w-[22px] translate-y-[-1px] items-center justify-center rounded align-middle text-[8px] font-semibold text-[var(--color-foreground)]"
-      style={{ background: authorSlotBackground(author) }}
+      style={
+        unknown
+          ? { background: "var(--color-muted)" }
+          : { background: authorSlotBackground(author) }
+      }
     >
-      <span aria-hidden="true">{author.initials}</span>
-      <span className="sr-only">{author.name}</span>
+      <span aria-hidden="true">{unknown ? "?" : author.initials}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }
@@ -61,14 +67,14 @@ export function AuthorBadge({
 // Frame is the status: dashed = in flight; tint-only = done/at-risk/blocked.
 // Postponed also mutes text (deprioritized, not alarmed).
 export const TONE_BORDER: Record<GridTone, string> = {
-  neutral: "border-dashed border-[rgba(0,0,0,0.18)]",
-  note: "border-[rgba(0,0,0,0.10)]",
+  neutral: "border-dashed border-[var(--color-border-strong)]",
+  note: "border-[var(--card-surface-border)]",
   completed: "border-transparent bg-[var(--color-chip-on-track-bg)]",
   "at-risk": "border-transparent bg-[var(--color-status-at-risk-bg)]",
   blocked: "border-transparent bg-[var(--color-chip-blocked-bg)]",
-  paused: "border-dashed border-[rgba(0,0,0,0.18)]",
+  paused: "border-dashed border-[var(--color-border-strong)]",
   postponed:
-    "border-dashed border-[rgba(0,0,0,0.18)] text-[var(--color-muted-foreground)]",
+    "border-dashed border-[var(--color-border-strong)] text-[var(--color-muted-foreground)]",
 };
 
 // sr-only status so frame hue remains readable for screen readers and print.

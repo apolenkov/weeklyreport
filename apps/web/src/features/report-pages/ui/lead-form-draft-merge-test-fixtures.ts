@@ -1,5 +1,11 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import {
+  type ActivityFixture,
+  makeReportSectionFixture,
+  type ProjectFixture,
+} from "../../../test-utils/report-section-fixtures";
+
 const REPORT_SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
@@ -13,7 +19,7 @@ export const DECISION_ID = "99999999-9999-4999-8999-999999999999";
 
 // Each collection is built per call so a test mutating one fixture cannot
 // leak into the next.
-function makeProjects(): ReportSectionReadModel["projects"] {
+function makeProjects(): ProjectFixture[] {
   return [
     {
       projectId: PROJECT_ID,
@@ -103,7 +109,7 @@ function makeDecisions(): ReportSectionReadModel["decisions"] {
   ];
 }
 
-function makeActivities(): ReportSectionReadModel["activities"] {
+function makeActivities(): ActivityFixture[] {
   return [
     {
       activityId: ACTIVITY_ID,
@@ -116,19 +122,15 @@ function makeActivities(): ReportSectionReadModel["activities"] {
 }
 
 export function makeDraftMergeSection(): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: REPORT_SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
     projects: makeProjects(),
     items: makeItems(),
     risks: makeRisks(),
     decisions: makeDecisions(),
     activities: makeActivities(),
-  };
+  });
 }

@@ -27,7 +27,7 @@ interface UseRiskEditDialogArgs {
   readonly defaultActivityId?: string | undefined;
   readonly initialImpact?: string | undefined;
   readonly initialMitigation?: string | undefined;
-  readonly initialStageNames?: string[] | undefined;
+  readonly initialStageNames?: readonly string[] | undefined;
   readonly initialSeverity?: RiskSeverity | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;

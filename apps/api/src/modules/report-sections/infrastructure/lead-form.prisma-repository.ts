@@ -1,5 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -31,7 +31,7 @@ import { mapPrismaToReportSection } from "./report-sections.mappers";
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // The section read model carries no per-section brand label; frontends pull
   // it from `auth.me.organization` (hydrated per request) so the source of
@@ -81,11 +81,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return row?.report.periodStatus ?? null;
   }
 
-  /**
-   * Published lineage for the byPeriod read — the same resolve-not-delete
-   * reference set the report-sections save guard uses, surfaced so the form
-   * can mark locked records. One shared query definition, no second copy.
-   */
+  // Published lineage for the byPeriod read — the same resolve-not-delete
+  // reference set the save guard uses, surfaced so the form can mark locked
+  // records. One shared query definition, no second copy.
   getPublishedLineage(section: ReportSectionReadModel): Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
@@ -140,27 +138,21 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     sectionId: string,
     revokedBy: string,
   ): Promise<void> {
-    // The caller's scoped read already proved this id is in the caller's group,
-    // so the write is by id only. The shared transition's `status: "submitted"`
-    // guard keeps it race-safe (a concurrent revoke that already drafted the
-    // section matches zero rows rather than re-stamping it). A reviewer's
-    // `changes_requested` verdict reuses this exact transition.
+    // The caller's scoped read proved the id is in the caller's group, so the
+    // write is by id only; the shared transition's `status: "submitted"` guard
+    // keeps it race-safe. The changes_requested verdict reuses this transition.
     await applyRevokeTransition(this.prisma, sectionId, revokedBy);
   }
 
-  /** Revoke every submitted section in a report. */
+  // Revoke every submitted section in a report.
   async revokeAllSubmitted(
     reportId: string,
     revokedBy: string,
     scope: Record<string, unknown>,
   ): Promise<number> {
-    // One scoped, race-safe write: the `author` group-scope filter spreads into
-    // the `where` so a head flips only their own group's submitted sections
-    // (admin scope is `{}` → every submitted section). A single `updateMany` is
-    // atomic, so no surrounding transaction is needed. The periodStatus filter
-    // is the same published-period gate the single revoke enforces in the
-    // service — a closed published report's sections (backing the frozen
-    // viewer snapshot) match zero rows here by construction.
+    // One scoped, race-safe write: the group-scope filter spreads into the
+    // `where` (head flips only their own group; admin = `{}` → all). The
+    // periodStatus filter is the same published-period gate the revoke enforces.
     const result = await this.prisma.reportSection.updateMany({
       where: {
         reportId,
@@ -196,10 +188,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     userId: string,
     reason?: string,
   ): Promise<void> {
-    // Persist the request as a ReopenRequest row so Head can review it from
-    // the Admin Panel "Reopen Requests" tab. Status starts at `pending`; the
-    // head's response (approve/reject) updates the row + may flip the
-    // section back to draft when approved.
+    // Persist the request as a ReopenRequest row for the Admin Panel. Status
+    // starts `pending`; the head's approve/reject updates the row and may flip
+    // the section back to draft when approved.
     try {
       await this.prisma.reopenRequest.create({
         data: {
@@ -209,13 +200,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         },
       });
     } catch (error) {
-      // A true race between two requestReopen calls passes the app-level pending
-      // check on both, then the partial unique index
-      // `ReopenRequest_one_pending_per_section` rejects the second with P2002.
-      // Translate it to the SAME friendly domain error the app-level check
-      // raises, instead of letting it surface as a 500. The ReopenRequest table
-      // has no other unique constraint, so any P2002 here is the one-pending
-      // guard — an unscoped guard call is exact.
+      // A true race passes the app-level check on both calls, then the
+      // one-pending partial unique index rejects the second with P2002 —
+      // translated to the same friendly domain error, never a 500.
       if (isUniqueViolation(error)) {
         throw new ReopenRequestError(
           reopenBlockedMessage("pending_request_exists"),

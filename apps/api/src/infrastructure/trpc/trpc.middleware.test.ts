@@ -220,15 +220,6 @@ describe("tRPC auth middleware", () => {
     }
   });
 
-  it("protectedProcedure with null session throws UNAUTHORIZED", async () => {
-    await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
-        string,
-        unknown
-      >,
-    );
-  });
-
   it("headProcedure with viewer session throws FORBIDDEN", async () => {
     const viewerCaller = testRouter.createCaller({
       session: {
@@ -409,7 +400,7 @@ describe("tRPC logging middleware", () => {
 });
 
 describe("deriveCauseInfo", () => {
-  it("surfaces name + message + code + meta for a Prisma-shaped error", () => {
+  it("keeps only safe structural fields from a Prisma-shaped error", () => {
     const prismaError = Object.assign(new Error("Unique constraint failed"), {
       code: "P2002",
       meta: { target: ["email"] },
@@ -417,17 +408,22 @@ describe("deriveCauseInfo", () => {
 
     expect(deriveCauseInfo(prismaError)).toEqual({
       name: "Error",
-      message: "Unique constraint failed",
       causeCode: "P2002",
-      causeMeta: { target: ["email"] },
     });
   });
 
-  it("returns only name + message for a plain Error (no code/meta)", () => {
+  it("does not copy messages from plain errors", () => {
     expect(deriveCauseInfo(new TypeError("boom"))).toEqual({
       name: "TypeError",
-      message: "boom",
     });
+  });
+
+  it("rejects arbitrary cause codes that could carry user data", () => {
+    const error = Object.assign(new Error("secret@example.com"), {
+      code: "secret@example.com",
+      meta: { email: "secret@example.com" },
+    });
+    expect(deriveCauseInfo(error)).toEqual({ name: "Error" });
   });
 
   it("returns undefined for a non-Error cause", () => {

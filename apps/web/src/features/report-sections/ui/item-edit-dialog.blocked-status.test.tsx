@@ -42,8 +42,10 @@ describe("ItemEditDialog blocked-status boundary", () => {
         open
         item={{
           id: "i1",
+          parent: { kind: "product", id: "p1" },
           productId: "p1",
           productName: "Product 1",
+          activityId: null,
           status: "blocked",
           text: "Legacy blocked row",
           author: "Lead",
@@ -77,6 +79,9 @@ describe("ItemEditDialog blocked-status boundary", () => {
 
     fireEvent.change(screen.getByLabelText("Description *"), {
       target: { value: "Needs a stage" },
+    });
+    fireEvent.change(screen.getByLabelText("Product"), {
+      target: { value: "product:p1" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
 

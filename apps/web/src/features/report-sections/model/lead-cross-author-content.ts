@@ -20,35 +20,35 @@ import type {
 // Subset of one crossAuthorContent row: co-owners' full text + author name.
 // Per-product stages are unused here — foreign chips come from the status-only read.
 export interface CrossAuthorContentRow {
-  authorId: string;
-  authorName: string;
+  readonly authorId: string;
+  readonly authorName: string;
   // Access role for the slide legend; optional so older snapshots still parse.
-  authorRole?: DbRole;
-  items: {
-    id: string;
-    projectId: string;
-    type: string;
-    text: string;
-    workflowStatus: ItemWorkflowStatus;
-    stageNames: string[];
+  readonly authorRole?: DbRole;
+  readonly items: readonly {
+    readonly id: string;
+    readonly projectId: string;
+    readonly type: string;
+    readonly text: string;
+    readonly workflowStatus: ItemWorkflowStatus;
+    readonly stageNames: readonly string[];
   }[];
-  risks: {
-    id: string;
-    projectId: string;
-    risk: string;
-    impact: string;
-    mitigation: string;
-    severity: RiskSeverity;
-    stageNames: string[];
+  readonly risks: readonly {
+    readonly id: string;
+    readonly projectId: string;
+    readonly risk: string;
+    readonly impact: string;
+    readonly mitigation: string;
+    readonly severity: RiskSeverity;
+    readonly stageNames: readonly string[];
   }[];
-  decisions: {
-    id: string;
-    productId: string;
-    text: string;
-    owner: string;
-    impact: string;
-    deadline: Date | null;
-    stageNames: string[];
+  readonly decisions: readonly {
+    readonly id: string;
+    readonly productId: string;
+    readonly text: string;
+    readonly owner: string;
+    readonly impact: string;
+    readonly deadline: Date | null;
+    readonly stageNames: readonly string[];
   }[];
 }
 
@@ -97,8 +97,10 @@ export function mapForeignItems(
       .filter((i) => i.type === itemType)
       .map((i): ForeignKanbanItem => ({
         id: `foreign:${ca.authorId}:${i.id}`,
+        parent: { kind: "product", id: i.projectId },
         productId: i.projectId,
         productName: requireProductName(productNameById, i.projectId),
+        activityId: null,
         stageNames: i.stageNames,
         status: applyBlockedRiskOverlay(
           workflowToItemStatus(i.workflowStatus),

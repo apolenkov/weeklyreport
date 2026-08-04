@@ -391,19 +391,9 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
   });
 
-  // Positive authz matrix (service layer). The service gate is (a) report
-  // access AND (b) co-ownership, with NO role bypass. The five rows collapse
-  // onto these two gates at this layer:
-  //   - own author (allowed)            ─┐ both pass both gates → result=allowed,
-  //   - same-product co-owner (allowed) ─┘ proven by the "allows" test above.
-  //   - report member NOT co-owning     → coOwnsShared:false → denied (above).
-  //   - unrelated report                → no own section     → denied (above).
-  //   - head/admin NOT co-owning        → no role bypass      → denied (above).
-  // The "own author vs same-product co-owner" SPLIT is a repository concern (it
-  // decides which rows `getCrossAuthorContent` returns + sets `coOwnsShared`),
-  // exercised in the integration suite + live verify — the service treats both
-  // as "passed both gates". This test pins that a passing caller threads the
-  // repository rows straight through unfiltered (no role-dependent narrowing).
+  // The service gate is (a) report access AND (b) co-ownership, with NO role
+  // bypass. The own-author vs co-owner split is a repository concern; the
+  // service threads rows through unchanged once both gates pass.
   it("threads the repository rows through unchanged once both gates pass (no role narrowing)", async () => {
     const repo = createMockRepository({
       getSectionForPeriod: vi
@@ -507,9 +497,8 @@ describe("LeadFormService — fillFrom", () => {
   });
 
   // fillFrom must refuse a published period — the only post-publish path that
-  // mutates live Item/Risk/Decision rows. Published search reads live rows
-  // while the viewer read serves the frozen snapshot; allowing the rewrite
-  // would leak content absent from the report the viewer can open.
+  // mutates live Item/Risk/Decision rows. Allowing the rewrite would leak
+  // content absent from the report the viewer can open.
   it("fails for a section in a published report", async () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),

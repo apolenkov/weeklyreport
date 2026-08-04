@@ -63,6 +63,29 @@ describe("extractTraceId", () => {
       extractTraceId({ traceparent: "not-a-traceparent" }),
     ).toBeUndefined();
   });
+
+  it("rejects a trace id that is not exactly 32 hex chars", () => {
+    expect(
+      extractTraceId({ traceparent: "00-abc-b7ad6b7169203331-01" }),
+    ).toBeUndefined();
+  });
+
+  it("rejects a 32-char trace id that is not hexadecimal", () => {
+    expect(
+      extractTraceId({
+        traceparent: `00-${"z".repeat(32)}-b7ad6b7169203331-01`,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("accepts an uppercase-hex trace id of the correct length", () => {
+    const traceId = "0AF7651916CD43DD8448EB211C80319C";
+    expect(
+      extractTraceId({
+        traceparent: `00-${traceId}-b7ad6b7169203331-01`,
+      }),
+    ).toBe(traceId);
+  });
 });
 
 class AsyncLocalCls {
@@ -91,7 +114,7 @@ describe("resolveCorrelationId", () => {
 
     const resolved = cls.run(() => {
       cls.set("correlationId", "corr-active");
-      return resolveCorrelationId(cls as never);
+      return resolveCorrelationId(cls);
     });
 
     expect(resolved).toBe("corr-active");
@@ -100,9 +123,9 @@ describe("resolveCorrelationId", () => {
   it("returns undefined outside a scope or when the key is unset", () => {
     const cls = new AsyncLocalCls();
 
-    expect(resolveCorrelationId(cls as never)).toBeUndefined();
-    expect(cls.run(() => resolveCorrelationId(cls as never))).toBeUndefined();
-    expect(resolveCorrelationId()).toBeUndefined();
+    expect(resolveCorrelationId(cls)).toBeUndefined();
+    expect(cls.run(() => resolveCorrelationId(cls))).toBeUndefined();
+    expect(resolveCorrelationId(null)).toBeUndefined();
   });
 });
 
@@ -111,7 +134,7 @@ describe("runInJobTraceContext", () => {
     await runInJobTraceContext(
       { traceparent: ENQUEUE_TRACEPARENT },
       "worker.process",
-      undefined,
+      null,
       async () => Promise.resolve(),
     );
 
@@ -124,7 +147,7 @@ describe("runInJobTraceContext", () => {
   });
 
   it("starts an unlinked span when no enqueue trace was captured", async () => {
-    await runInJobTraceContext({}, "worker.process", undefined, async () =>
+    await runInJobTraceContext({}, "worker.process", null, async () =>
       Promise.resolve(),
     );
 
@@ -144,7 +167,7 @@ describe("runInJobTraceContext", () => {
       runInJobTraceContext(
         { correlationId: "corr-first" },
         "worker.process",
-        cls as never,
+        cls,
         async () => {
           await secondStarted.promise;
           firstSeen(cls.get("correlationId"));
@@ -153,7 +176,7 @@ describe("runInJobTraceContext", () => {
       runInJobTraceContext(
         { correlationId: "corr-second" },
         "worker.process",
-        cls as never,
+        cls,
         async () => {
           secondStarted.resolve();
           await Promise.resolve();
@@ -173,7 +196,12 @@ describe("runInJobTraceContext", () => {
     await runInJobTraceContext(
       {},
       "worker.process",
-      { run } as never,
+      {
+        isActive: () => false,
+        get: () => undefined,
+        run,
+        set: () => undefined,
+      },
       async () => Promise.resolve(),
     );
 

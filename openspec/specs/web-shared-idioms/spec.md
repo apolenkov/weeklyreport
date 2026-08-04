@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change web-shared-idioms. Update Purpose after archive.
+Centralize repeated web presentation and navigation idioms into shared homes for card surfaces, chevrons, dates, role labels, landing routes, and report-shell URL state.
 
 ## Requirements
 
@@ -35,12 +35,13 @@ web file MUST carry a second verbatim copy of the surface class string.
 
 The web layer SHALL provide a single `RotatingChevron` component that wraps
 `lucide-react`'s `ChevronDown` with the shared rotate transition, and the three
-hand-rolled _rotating_ chevron SVGs (`report-shell/accordion-section.tsx`,
-`weekly-report/product-accordion.tsx`, `dashboard/blocked-at-risk-table.tsx` —
+hand-rolled _rotating_ chevron SVGs (`shared/ui/report-shell/accordion-section.tsx`,
+`features/report-pages/ui/product-accordion.tsx`,
+`features/dashboard/ui/blocked-at-risk-table.tsx` —
 each `h-4 w-4` with an `expanded` prop driving the transform) MUST be deleted in
 favour of it. No report-shell sibling MUST hand-roll a _rotating_ chevron while
 `lucide-react` is available. The _static_ split-button dropdown glyph in
-`lead/fill-from-button.tsx` (a non-rotating `h-3 w-3` `ChevronDown` with no
+`features/period/ui/fill-from-button.tsx` (a non-rotating `h-3 w-3` `ChevronDown` with no
 `expanded` prop) MUST NOT be routed through `RotatingChevron` — homing it there
 would change its rendered size and add rotation semantics, violating behaviour
 preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
@@ -57,7 +58,8 @@ preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
 
 #### Scenario: The static split-button glyph is left non-rotating
 
-- **GIVEN** `lead/fill-from-button.tsx` renders a static `h-3 w-3` dropdown glyph
+- **GIVEN** `features/period/ui/fill-from-button.tsx` renders a static `h-3 w-3`
+  dropdown glyph
   with no `expanded` prop
 - **WHEN** the rotating-chevron idiom is homed
 - **THEN** that glyph is NOT routed through `RotatingChevron`
@@ -121,29 +123,28 @@ label from a role token inline.
 
 ### Requirement: Role-to-route landing has a single non-divergent map
 
-`packages/shared` SHALL export exactly one role→route landing map (next to
-`roleSchema` in `schemas/auth.ts`) that backs ALL THREE existing per-role landing
-surfaces — the api `DEV_LOGIN_REDIRECT_BY_ROLE`, the web `DEFAULT_FOR_ROLE`, and
-the web `roleHomePath` (`lib/role-home.ts`, consumed by the brand link in
-`nav-bar.tsx` and by `role-gate.tsx`) — so a role's landing route cannot diverge
-between any of them; `roleHomePath` MUST become a thin re-export of the shared map
-rather than a third independent definition. The map MUST be exhaustively typed on
-the role enum with NO runtime fallback at the shared home; unknown/retired
-non-`Role` runtime values stay the responsibility of the web call site (the
-existing `defaultRedirectFor` `?? FALLBACK_REDIRECT` guard), documented there. The
-viewer target MUST be `/reports/latest`, the viewer's canonical primary entry to
-its report per the `viewer-report-navigation` spec — never the divergent
-`/reports?tab=published` list surface. In the api dev-login handler the map is the
-post-sanitizer fallback only: it replaces the `fallbackPath` argument to
-`resolveDevLoginRedirectUrl`, and the `safeRedirectPath` open-redirect precedence
-and ordering are unchanged.
+`packages/shared` SHALL export exactly one role→route landing map
+`ROLE_HOME_PATH` (next to `roleSchema` in `schemas/auth.ts`) that backs the API
+`dev-login.routes.ts` fallback, the web `devLoginHref` and `defaultRedirectFor`
+helpers in `app/login-page-roles.ts`, and the web `nav-active.ts` / `role-gate.tsx`
+home consumers — so a role's landing route cannot diverge between them. The map
+MUST be exhaustively typed on the role enum with NO runtime fallback at the
+shared home; unknown/retired non-`Role` runtime values stay the responsibility
+of the web call site (the existing `defaultRedirectFor` `FALLBACK_REDIRECT`
+guard), documented there. The viewer target MUST be `/reports/latest`, the
+viewer's canonical primary entry to its report per the
+`viewer-report-navigation` spec — never the divergent `/reports?tab=published`
+list surface. In the API dev-login handler the map is the post-sanitizer
+fallback only: it is passed as the `fallbackPath` to
+`resolveDevLoginRedirectUrl`, and the `safeRedirectPath` open-redirect
+precedence and ordering are unchanged.
 
 #### Scenario: The viewer landing route no longer diverges
 
 - **GIVEN** the single shared role→route map with viewer target `/reports/latest`
-- **WHEN** a viewer completes a param-less dev-login (api — no explicit `redirect`
-  query param, e.g. from the dev role-switcher) and when the web login page
-  computes the viewer's default redirect and when `roleHomePath("viewer")` resolves
+- **WHEN** a viewer completes a param-less dev-login (API — no explicit `redirect`
+  query param, e.g. from the dev role-switcher), the web login page computes the
+  viewer's default redirect, and `ROLE_HOME_PATH.viewer` resolves
 - **THEN** all resolve to `/reports/latest`
 - **AND** none resolves to `/reports?tab=published`
 
@@ -157,11 +158,12 @@ and ordering are unchanged.
 
 #### Scenario: A landing-route change is a single edit across every surface
 
-- **GIVEN** the api redirect, the web `DEFAULT_FOR_ROLE`, and `roleHomePath` all
-  consume the one shared role→route map
+- **GIVEN** the API redirect, the web `devLoginHref` / `defaultRedirectFor`
+  helpers, and the `nav-active.ts` / `role-gate.tsx` consumers all use the one
+  shared role→route map
 - **WHEN** a role's landing route is changed once in the shared map
-- **THEN** the api redirect, the web login default, and the brand-link /
-  role-gate home all reflect it
+- **THEN** the API redirect, web login default, brand-link, and role-gate home
+  all reflect it
 - **AND** none of the three can fall out of sync
 
 ### Requirement: The report-shell URL-state logic has a single hook

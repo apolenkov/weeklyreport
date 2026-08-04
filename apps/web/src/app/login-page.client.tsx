@@ -3,7 +3,7 @@
 import type { OrganizationPublic } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useReducer } from "react";
 
 import { PulseBackground, PulseMark, TaglineCycler } from "../features/landing";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
@@ -38,15 +38,21 @@ export function LoginPageClient({ initialOrg }: LoginPageClientProps) {
 
 // Last-role hint: client-only localStorage read so SSR/first paint match.
 function useLastRoleHint() {
-  const [lastRole, setLastRole] = useState<LastRoleRecord | null>(null);
-  const [lastRoleLoaded, setLastRoleLoaded] = useState(!AUTH_STUB);
+  const [state, load] = useReducer(
+    (
+      _state: {
+        readonly lastRole: LastRoleRecord | null;
+        readonly loaded: boolean;
+      },
+      lastRole: LastRoleRecord | null,
+    ) => ({ lastRole, loaded: true }),
+    { lastRole: null, loaded: !AUTH_STUB },
+  );
   useEffect(() => {
     if (!AUTH_STUB) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate post-hydration localStorage read: SSR/client first paint must match, then the hint pops in (external store, one-shot)
-    setLastRole(readLastRole());
-    setLastRoleLoaded(true);
+    load(readLastRole());
   }, []);
-  return { lastRole, lastRoleLoaded };
+  return { lastRole: state.lastRole, lastRoleLoaded: state.loaded };
 }
 
 // AUTH_STUB: no auto-redirect (DEV_SESSION without cookie loops with proxy).
@@ -77,12 +83,12 @@ function HeroPanel({
   readonly orgFullName: string;
 }) {
   return (
-    <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-white lg:flex">
+    <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-[var(--color-sidebar-foreground)] lg:flex">
       <PulseBackground />
       <div className="relative z-10 max-w-[480px]">
         <PulseMark />
         <TaglineCycler />
-        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-white/40">
+        <p className="mt-10 text-xs uppercase tracking-[0.22em] text-[var(--color-sidebar-foreground)]/40">
           {orgShortName} · {orgFullName}
         </p>
       </div>
@@ -110,24 +116,36 @@ function SignInPanel({
   lastRole,
   lastRoleLoaded,
   ssoHref,
+  sessionError,
 }: {
   readonly orgFullName: string;
   readonly lastRole: LastRoleRecord | null;
   readonly lastRoleLoaded: boolean;
   readonly ssoHref: string;
+  readonly sessionError: boolean;
 }) {
   return (
-    <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
+    <div className="relative flex w-full flex-col items-center justify-center bg-[var(--color-card)] px-6 sm:px-10 lg:w-[480px] lg:flex-none">
       <div className="w-full max-w-[320px] text-center">
         <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
           Status Reporting System
         </p>
 
-        <PrimaryCta
-          authStub={AUTH_STUB}
-          lastRole={lastRole}
-          ssoHref={ssoHref}
-        />
+        {sessionError ? (
+          <div
+            className="rounded-[var(--radius)] border border-[var(--color-destructive)] p-4 text-sm text-[var(--color-destructive)]"
+            role="alert"
+            data-testid="landing-session-error"
+          >
+            Sign-in status could not be verified. Refresh the page to try again.
+          </div>
+        ) : (
+          <PrimaryCta
+            authStub={AUTH_STUB}
+            lastRole={lastRole}
+            ssoHref={ssoHref}
+          />
+        )}
 
         <div
           className="mt-6 flex min-h-8 items-start justify-center text-xs leading-4 tracking-[0.02em] text-[var(--color-muted-foreground)]"
@@ -142,7 +160,7 @@ function SignInPanel({
           </div>
         )}
 
-        <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
+        <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[var(--color-border-subtle)]" />
 
         <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
           {orgFullName}
@@ -199,6 +217,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
         lastRole={lastRole}
         lastRoleLoaded={lastRoleLoaded}
         ssoHref={ssoHref}
+        sessionError={sessionQ.isError}
       />
     </main>
   );

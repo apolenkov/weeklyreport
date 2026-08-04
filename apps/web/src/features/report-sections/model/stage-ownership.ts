@@ -3,15 +3,8 @@
 // zero-owned-stage product identically. The server guard
 // (`validateStageOwnership`) is the real guarantee; this is convenience UX.
 
-/**
- * The stage names a save will persist. When the lead owns exactly one stage on
- * the chosen product and has ticked nothing, that single stage is applied
- * automatically so the one-stage UX stays frictionless; otherwise the explicit
- * selection wins.
- * @param stageNames - the explicitly selected stage names
- * @param availableStages - the stages the lead owns on the chosen product
- * @returns the stage names the save should persist
- */
+// Auto-select the sole owned stage when nothing is selected; explicit choices
+// always win.
 export function computeEffectiveStageNames(
   stageNames: readonly string[],
   availableStages: readonly string[],
@@ -21,15 +14,8 @@ export function computeEffectiveStageNames(
     : stageNames;
 }
 
-/**
- * True when the chosen product is a dead end: the lead owns zero stages on it
- * AND the row carries no stage of its own, so there is nothing to pick and the
- * dialog must not submit. A cross-stage row that already carries stageNames (its
- * product sits outside the owned list) is NOT a dead end and stays saveable.
- * @param availableStages - the stages the lead owns on the chosen product
- * @param effectiveStageNames - the stage names the save would persist
- * @returns true when Save must be disabled and the contact-admin notice shown
- */
+// A product is a dead end only when it has no owned stages and the row carries
+// no existing stage to preserve.
 export function isZeroOwnedStageDeadEnd(
   availableStages: readonly string[],
   effectiveStageNames: readonly string[],

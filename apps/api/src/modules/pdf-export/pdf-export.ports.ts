@@ -7,19 +7,21 @@ export interface PdfExportJobContext {
 export interface PdfExportEnqueueInput {
   readonly reportId: string;
   readonly jobId: string;
-  readonly authToken: string;
+  // Non-credential requester identity; the worker mints a short-lived render
+  // token from it at execution time, never from a persisted credential.
+  readonly requestedBy: string;
 }
 
 export interface PdfExportEnqueuer {
-  enqueue(
+  readonly enqueue: (
     input: PdfExportEnqueueInput,
     context: PdfExportJobContext,
-  ): Promise<void>;
+  ) => Promise<void>;
 }
 
 export interface PdfExportTelemetry {
-  captureJobContext(): PdfExportJobContext;
-  recordRequest(role: string): void;
+  readonly captureJobContext: () => PdfExportJobContext;
+  readonly recordRequest: (role: string) => void;
 }
 
 export const PDF_EXPORT_ENQUEUER = Symbol("PdfExportEnqueuer");

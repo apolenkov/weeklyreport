@@ -1,8 +1,9 @@
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Queue, QueueEvents } from "bullmq";
 
 import { errorMessage } from "../../lib/error-message.js";
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
 import {
   dlqFailedCurrent,
@@ -16,6 +17,12 @@ import {
   type QueueName,
   QueueRegistry,
 } from "./queue-registry.js";
+
+// The registry surface the monitor consumes; narrow so tests inject a
+// double without an erasing cast on the nominal QueueRegistry class.
+export interface QueueRegistryLike {
+  get(name: QueueName): Queue;
+}
 
 const DEFAULT_THRESHOLD = 5;
 const POLL_INTERVAL_MS = 60_000;
@@ -51,8 +58,8 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private pollTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    private readonly registry: QueueRegistry,
-    private readonly env: EnvConfig,
+    @Inject(QueueRegistry) private readonly registry: QueueRegistryLike,
+    @Inject(ENV_CONFIG) private readonly env: EnvConfig,
   ) {}
 
   onModuleInit(): void {

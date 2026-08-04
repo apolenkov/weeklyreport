@@ -4,7 +4,7 @@ import {
   organizationSchema,
   type OrganizationUpdate,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { OrganizationRepository } from "./organization.service.js";
@@ -17,9 +17,9 @@ const ORGANIZATION_SINGLETON_ID = "singleton";
 // collapse safely; seed normally inserts the singleton on migrate.
 @Injectable()
 export class OrganizationPrismaRepository implements OrganizationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getOrganization(): Promise<Organization> {
+  readonly getOrganization = async (): Promise<Organization> => {
     const existing = await this.prisma.organization.findUnique({
       where: { id: ORGANIZATION_SINGLETON_ID },
     });
@@ -41,9 +41,11 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
-  }
+  };
 
-  async updateOrganization(input: OrganizationUpdate): Promise<Organization> {
+  readonly updateOrganization = async (
+    input: OrganizationUpdate,
+  ): Promise<Organization> => {
     // Only the singleton row is writable; upsert is defense in depth if the
     // row was purged out-of-band (production should never take create).
     const row = await this.prisma.organization.upsert({
@@ -65,5 +67,5 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
-  }
+  };
 }

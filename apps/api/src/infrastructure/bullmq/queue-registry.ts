@@ -6,6 +6,7 @@ const QUEUE_NAMES = [
   // telegram-outbound is seeds-only until the bot activates. Its handle exists
   // now so the admin smoke-test enqueue and the DLQ monitor share one
   // connection the moment the feature turns on.
+  // TODO(activate-telegram-bot): Remove the seed-only qualification on activation.
   "telegram-outbound",
 ] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
@@ -30,13 +31,13 @@ export class QueueRegistry {
     );
   }
 
-  get(name: QueueName): Queue {
+  readonly get = (name: QueueName): Queue => {
     const queue = this.queues.get(name);
     // QUEUE_NAMES is exhaustive over QueueName, so the handle always exists;
     // the guard narrows Map#get's union without a non-null assertion.
     if (!queue) throw new Error(`No queue handle registered for '${name}'`);
     return queue;
-  }
+  };
 }
 
 export { QUEUE_NAMES };

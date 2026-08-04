@@ -33,13 +33,12 @@ export function trafficToProductStatus(
   ) {
     return presentation;
   }
-  // 'empty' (worstStatus === null) collapses to 'on-track' for portfolio display.
-  return "on-track";
+  return "empty";
 }
 
 export function statusLabelFor(
   status: WeeklyProductStatus,
-  leadNames: string[],
+  leadNames: readonly string[],
 ): string {
   const leads = leadNames.length > 0 ? leadNames.join(", ") : "unassigned";
   return `${statusLabel(status, "print")} · ${leads}`;

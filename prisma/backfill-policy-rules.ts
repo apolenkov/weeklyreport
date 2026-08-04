@@ -13,18 +13,13 @@ import {
   reminderPolicyAppliesTo,
 } from "../packages/shared/src/admin/reminder-policy-time.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { requireEnv } from "./_require-env.js";
 
 // Load .env from repo root regardless of cwd.
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
-const DATABASE_URL: string = (() => {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) {
-    throw new Error("DATABASE_URL is not set");
-  }
-  return raw;
-})();
+const DATABASE_URL = requireEnv("DATABASE_URL");
 
 interface OpenPeriod {
   readonly id: string;

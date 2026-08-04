@@ -26,7 +26,9 @@ function usePeriodDoneNotifier(): NotifyDone {
 
   return (message, closeDialog, invalidatesReportViews = false) =>
     () => {
-      void qc.invalidateQueries(trpc.admin.listPeriodsByState.pathFilter());
+      void qc
+        .invalidateQueries(trpc.admin.listPeriodsByState.pathFilter())
+        .catch(() => undefined);
       invalidateAdmin(qc, trpc);
       if (invalidatesReportViews) invalidatePeriodLifecycle(qc, trpc);
       toast.success(message);

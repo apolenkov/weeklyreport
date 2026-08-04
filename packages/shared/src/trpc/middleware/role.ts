@@ -3,18 +3,8 @@ import { TRPCError } from "@trpc/server";
 import type { Role, UserSession } from "../../schemas/auth";
 
 /**
- * Pure role assertion — testable without tRPC.
- *
- * Throws:
- *   - UNAUTHORIZED when session is null/undefined.
- *   - FORBIDDEN when the role is not in the allowed set.
- * Returns the narrowed (non-null) session on success.
- *
- * `assertRole` is the runtime contract. Use `buildRoleMiddleware` (api) to
- * compose it into a tRPC middleware bound to a caller-supplied `t` instance.
- * @param session - the caller's session, or null when unauthenticated
- * @param allowed - the role or set of roles permitted to proceed
- * @returns the narrowed, non-null session on success
+ * Narrows an authenticated session after enforcing an allowed role set.
+ * Throws `UNAUTHORIZED` without a session and `FORBIDDEN` for a disallowed role.
  */
 export function assertRole(
   session: UserSession | null,

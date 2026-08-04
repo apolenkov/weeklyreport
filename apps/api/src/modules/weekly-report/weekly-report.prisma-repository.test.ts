@@ -66,10 +66,9 @@ describe("WeeklyReportPrismaRepository.getActiveReportId", () => {
   });
 });
 
-// The where-shape of the current-editable query — the always-run unit
-// counterpart to the real-Prisma integration test. Pins archived:false + the
-// editable-only filter + the absence of any published fallback so the gate
-// cannot be silently widened.
+// Unit counterpart to the real-Prisma integration test: pins archived:false +
+// the editable-only filter + no published fallback, so the gate cannot be
+// silently widened.
 describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
   it("queries editable-only, non-archived, already-started periods, newest-first", async () => {
     const findFirst = vi.fn().mockResolvedValue({ id: "current-editable-id" });
@@ -112,7 +111,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
   });
 });
 
-// Live path uses the same mapper+builder as published-snapshot; pipeline regression here.
+// Live path uses the same mapper+builder as the published-snapshot path.
 describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () => {
   const REPORT_ID = "f9665336-7c74-4abc-8f4f-2fb8346d28bb";
   const SECTION_ID = "5b5df58b-b064-4a14-84b2-4ddf8ccef2cd";
@@ -248,6 +247,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
       periodEnd: new Date("2026-04-18"),
       deadline: new Date("2026-04-17T15:00:00.000Z"),
       periodStatus: "open",
+      archived: false,
       weekLabel: "W16-2026",
       publishedSnapshot: null,
       sections: [
@@ -415,10 +415,9 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     // Promise.all dispatch runs, without resolving the leadUsers query.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // All three reads were dispatched even though leadUsers is still
-    // unresolved — proving Promise.all, not a sequential await chain. The
-    // reminder-policy count in particular must be part of the batch, not a
-    // subsequent serial await (which would stay unreached while users pend).
+    // All three reads dispatched while leadUsers is unresolved — proving
+    // Promise.all, not a sequential await chain; the policy count must be in
+    // the batch, not a later serial await.
     expect(userFindMany).toHaveBeenCalledOnce();
     expect(projectFindMany).toHaveBeenCalledOnce();
     expect(reminderPolicyCount).toHaveBeenCalledOnce();
@@ -502,7 +501,7 @@ describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   };
 
   it("applies periodStatus='published' to BOTH the list and archive-count for a viewer", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
     const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
     const repository = createHistoryRepository(findMany, count);
 
@@ -515,7 +514,7 @@ describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   });
 
   it("does NOT apply the periodStatus filter for a head (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
     const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
     const repository = createHistoryRepository(findMany, count);
 
@@ -528,7 +527,7 @@ describe("WeeklyReportPrismaRepository.getCompiledHistory", () => {
   });
 
   it("does NOT apply the periodStatus filter for a lead (non-regression)", async () => {
-    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([] as never[]));
+    const findMany = vi.fn((_q: QueryArg) => Promise.resolve([]));
     const count = vi.fn((_q: QueryArg) => Promise.resolve(0));
     const repository = createHistoryRepository(findMany, count);
 

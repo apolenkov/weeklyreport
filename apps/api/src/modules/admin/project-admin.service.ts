@@ -12,7 +12,7 @@ import {
   stageAssignmentSchema,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { type AppLogger } from "../../lib/logger";
 import type {
   AdminRepository,
   ProductGroupOwnership,
@@ -25,9 +25,9 @@ export class ProjectAdminService {
 
   constructor(
     private readonly repository: AdminRepository,
-    logger?: AppLogger,
+    logger: AppLogger,
   ) {
-    this.logger = logger ?? createNullLogger();
+    this.logger = logger;
   }
 
   private async getSnapshot(): Promise<AdminSnapshot> {

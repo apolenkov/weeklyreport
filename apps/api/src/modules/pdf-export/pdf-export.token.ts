@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 // reportId binds the cookie to one resource; kind routes the verifier away
 // from session JWTs. requestedBy rebuilds the worker session as the requester
@@ -16,6 +17,16 @@ const PDF_EXPORT_KIND = "pdf-export" as const;
 // default, which is the same HS256.
 const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
 const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
+
+// Every claim the signer mints is required on verify: exp is enforced because
+// jwt.verify only checks an exp that is present, and sign always sets one — a
+// token without it would otherwise be accepted with no lifetime bound.
+const pdfExportTokenClaimsSchema = z.object({
+  reportId: z.string().min(1),
+  kind: z.literal(PDF_EXPORT_KIND),
+  requestedBy: z.string().min(1).optional(),
+  exp: z.number().int().positive(),
+});
 
 function requirePdfExportSecret(): string {
   const secret = process.env.PDF_EXPORT_JWT_SECRET;
@@ -36,18 +47,18 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   if (typeof decoded !== "object") {
     throw new TypeError("Invalid PDF export token payload");
   }
-  const claims = decoded as Record<string, unknown>;
-  if (claims.kind !== PDF_EXPORT_KIND) {
-    throw new Error("Token is not a PDF export token (kind mismatch)");
-  }
-  if (typeof claims.reportId !== "string" || !claims.reportId) {
-    throw new Error("PDF export token missing reportId claim");
+  const parsed = pdfExportTokenClaimsSchema.safeParse(decoded);
+  if (!parsed.success) {
+    const paths = parsed.error.issues
+      .map((issue) => issue.path.join("."))
+      .join(", ");
+    throw new Error(`Invalid PDF export token claims: ${paths}`);
   }
   return {
-    reportId: claims.reportId,
-    kind: PDF_EXPORT_KIND,
-    ...(typeof claims.requestedBy === "string" && claims.requestedBy
-      ? { requestedBy: claims.requestedBy }
+    reportId: parsed.data.reportId,
+    kind: parsed.data.kind,
+    ...(parsed.data.requestedBy
+      ? { requestedBy: parsed.data.requestedBy }
       : {}),
   };
 }

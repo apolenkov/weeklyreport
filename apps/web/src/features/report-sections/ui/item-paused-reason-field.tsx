@@ -25,10 +25,10 @@ export function PausedReasonField({
         id="item-paused-reason"
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? "item-paused-reason-error" : undefined}
-        className={`w-full resize-y rounded-xl border bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none ${
+        className={`w-full resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none ${
           error
-            ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-            : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+            ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[var(--shadow-focus-destructive)]"
+            : "border-[var(--color-border-strong)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)]"
         }`}
         style={{ minHeight: `${PAUSED_REASON_MIN_HEIGHT_PX}px` }}
         value={value}

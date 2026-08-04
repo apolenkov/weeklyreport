@@ -9,6 +9,7 @@ export interface SaveDraftHandlerDeps {
   readonly getRefs: GetAutosaveRefs;
   readonly setState: Dispatch<SetStateAction<AutosaveState>>;
   readonly setLastSavedAt: Dispatch<SetStateAction<Date | null>>;
+  readonly setLastSavedKey: (next: string) => void;
   readonly setQueuedRetryRevision: Dispatch<SetStateAction<number>>;
   readonly onVersionChange: (version: number) => void;
   readonly onSaved?:
@@ -53,6 +54,7 @@ export function buildSaveDraftHandlers(deps: SaveDraftHandlerDeps): {
       // Skip baseline stamp after navigation — would clobber the new section's prime.
       if (refs.inFlightSection === refs.sectionId) {
         refs.lastSaved = refs.inFlight;
+        deps.setLastSavedKey(refs.inFlight);
       }
       if (refs.inFlightPayload !== null) {
         deps.onSaved?.(saved, refs.inFlightPayload);

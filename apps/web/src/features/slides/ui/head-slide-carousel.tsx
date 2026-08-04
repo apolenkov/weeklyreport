@@ -33,8 +33,8 @@ export function HeadSlideCarousel({
             className={[
               "flex w-[180px] shrink-0 flex-col gap-1 rounded-[var(--radius)] border px-3 py-2.5 text-left transition-colors",
               selected
-                ? "border-[var(--color-starbucks-accent)] bg-[var(--color-card)] shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
-                : "border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] hover:border-[var(--color-border)]",
+                ? "border-[var(--color-starbucks-accent)] bg-[var(--color-card)] shadow-[var(--shadow-slide-card-selected)]"
+                : "border-[var(--card-surface-border)] bg-[var(--color-card)] hover:border-[var(--color-border)]",
             ].join(" ")}
           >
             <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">

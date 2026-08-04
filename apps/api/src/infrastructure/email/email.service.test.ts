@@ -6,11 +6,13 @@ interface TransportStub {
 
 type CreateTransportStub = (options: Record<string, unknown>) => TransportStub;
 
-const { createTransportMock } = vi.hoisted(() => ({
-  createTransportMock: vi.fn<CreateTransportStub>(() => ({
-    sendMail: vi.fn(),
-  })),
-}));
+const { createTransportMock, sendMailMock } = vi.hoisted(() => {
+  const sendMailMock = vi.fn();
+  const createTransportMock = vi.fn<CreateTransportStub>(() => ({
+    sendMail: sendMailMock,
+  }));
+  return { createTransportMock, sendMailMock };
+});
 
 vi.mock("@nestjs/common", () => ({
   Injectable: () => (target: unknown) => target,
@@ -36,6 +38,7 @@ const transportOptions = (): Record<string, unknown> | undefined =>
 
 beforeEach(() => {
   createTransportMock.mockClear();
+  sendMailMock.mockClear();
 });
 
 describe("EmailService transport security", () => {
@@ -98,6 +101,23 @@ describe("EmailService transport security", () => {
   it("keeps the development transport isolated from SMTP options", () => {
     createEmailService({ SMTP_PORT: 465, SMTP_USER: "mailer" });
 
-    expect(transportOptions()).toEqual({ jsonTransport: true });
+    expect(createTransportMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps sendMail callable when detached", async () => {
+    const service = createEmailService({
+      SMTP_HOST,
+      SMTP_FROM: "sender@example.com",
+    });
+    const { sendMail } = service;
+
+    await sendMail("recipient@example.com", "Subject", "Body");
+
+    expect(sendMailMock).toHaveBeenCalledWith({
+      from: "sender@example.com",
+      to: "recipient@example.com",
+      subject: "Subject",
+      text: "Body",
+    });
   });
 });

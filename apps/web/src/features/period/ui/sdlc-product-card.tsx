@@ -37,7 +37,7 @@ function ProductHeading({ product }: { readonly product: Product }) {
       </span>
       {product.riskSummary && (
         <span
-          className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+          className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-destructive-surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
           title={product.riskSummary}
         >
           <span

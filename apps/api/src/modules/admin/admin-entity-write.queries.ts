@@ -9,27 +9,34 @@ import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";
-import { ensureFallbackReportingGroup } from "../organization/index.js";
-import { AdminUserConflictError } from "./admin-shared.js";
+import { buildTransition } from "../period/index.js";
+import {
+  AdminUserConflictError,
+  AdminUserReportingGroupRequiredError,
+} from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
 // Single-entity writes only — never touch rows absent from the payload
 // (closes concurrent-insert data loss from whole-snapshot reconcile).
 
-// Viewers carry no group; others keep explicit group or fall back to default.
-async function resolveReportingGroupId(
-  prisma: PrismaService,
-  user: AdminUser,
-): Promise<string | null> {
+// Viewers carry no group. Any other role must name one explicitly: a lead or
+// head with no group is an incomplete admin write, not a reason to adopt the
+// default group silently.
+function resolveReportingGroupId(user: AdminUser): string | null {
   if (user.role === "viewer") return null;
-  return user.reportingGroupId ?? (await ensureFallbackReportingGroup(prisma));
+  if (user.reportingGroupId === null || user.reportingGroupId === undefined) {
+    throw new AdminUserReportingGroupRequiredError(
+      "A reporting group is required for lead, head, and admin users.",
+    );
+  }
+  return user.reportingGroupId;
 }
 
 export async function upsertUser(
   prisma: PrismaService,
   user: AdminUser,
 ): Promise<void> {
-  const reportingGroupId = await resolveReportingGroupId(prisma, user);
+  const reportingGroupId = resolveReportingGroupId(user);
   // The denormalized display name is recomputed from the structured parts
   // server-side so the `name === composeName(parts)` invariant holds for every
   // admin client / imported row, not just the web form mapper.
@@ -186,11 +193,14 @@ export async function writePeriodRow(
     where: { id: period.id },
     select: { id: true },
   });
+  const lifecycle = buildTransition("restore", {
+    lifecycle: resolveLifecycle(period),
+  });
   const data = {
     periodStart: period.periodStart,
     periodEnd: period.periodEnd,
     deadline: period.deadline,
-    ...resolveLifecycle(period),
+    ...lifecycle,
   };
   if (existing) {
     await client.report.update({ where: { id: period.id }, data });

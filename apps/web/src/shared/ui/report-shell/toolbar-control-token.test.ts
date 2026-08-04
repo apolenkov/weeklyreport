@@ -1,21 +1,10 @@
-/**
- * @vitest-environment node
- *
- * jsdom cannot compute media queries, so the touch-floor override is asserted
- * by reading the stylesheet as text. Component class checks alone stay green
- * if the media block is deleted.
- */
-import { readFileSync } from "node:fs";
-import path from "node:path";
+// @vitest-environment node
 
 import { describe, expect, it } from "vitest";
 
-// Vitest always runs with cwd = apps/web (the config's root), so the shared
-// stylesheet resolves two package levels up.
-const css = readFileSync(
-  path.resolve(process.cwd(), "../../packages/ui/src/styles/globals.css"),
-  "utf8",
-);
+import { readPackageStyleSource } from "../../../test-utils/package-style-source";
+
+const css = readPackageStyleSource();
 
 describe("shared toolbar control token", () => {
   it("defines the 2rem desktop token and the 44px touch-target floor", () => {
@@ -27,8 +16,8 @@ describe("shared toolbar control token", () => {
     const mediaStart = css.indexOf("@media (width < 48rem)");
     expect(mediaStart).toBeGreaterThan(-1);
 
-    // The override sits directly inside the media block; a bounded window
-    // keeps the assertion from matching an assignment elsewhere in the file.
+    // A bounded window prevents an unrelated assignment from satisfying the
+    // compact-media assertion.
     const mediaBlock = css.slice(mediaStart, mediaStart + 300);
     expect(mediaBlock).toContain(
       "--toolbar-control-h: var(--touch-target-min)",

@@ -2,18 +2,18 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-surface-token-integrity. Update Purpose after archive.
+Require every report UI surface token reference to resolve to a design-system token whose name matches the surface's semantic role.
 
 ## Requirements
 
 ### Requirement: Report UI references only defined surface tokens
 
-Every `var(--color-…)` surface reference in the web UI MUST resolve to a token defined in `packages/ui/src/styles/globals.css`; the undefined `--color-surface` custom property MUST NOT be referenced, and each former callsite MUST use the defined token that matches its semantic role.
+Every `var(--color-…)` surface reference in the web UI MUST resolve to a token defined in `packages/ui/src/styles/theme.css`; the undefined `--color-surface` custom property MUST NOT be referenced, and each former callsite MUST use the defined token that matches its semantic role.
 
 1. The undefined `--color-surface` MUST be removed from all `apps/web/src`
    callsites; a new `--color-surface` token MUST NOT be introduced (the palette
-   already defines `--color-card`, `--color-surface-empty`, `--color-surface-hover`,
-   `--color-surface-muted`, and `--color-empty-surface`).
+   already defines `--color-card`, `--color-surface-empty`,
+   `--color-surface-hover`, and `--color-surface-muted`).
 2. Dashed empty-state panels (no submissions, no slides, empty grids) MUST use
    `--color-surface-empty`.
 3. Elevated solid cards, tables, and skeletons (with a border/shadow) MUST use

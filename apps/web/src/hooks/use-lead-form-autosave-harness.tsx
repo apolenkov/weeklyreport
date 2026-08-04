@@ -16,6 +16,8 @@ export function makeAutosavePayload(text = "first"): DraftSavePayload {
     version: 1,
     status: "draft",
     projectStatuses: [{ projectId: PROJECT_ID, status: "green" }],
+    stageStatuses: [],
+    activityStatuses: [],
     items: [
       {
         projectId: PROJECT_ID,
@@ -53,7 +55,6 @@ export function buildAutosaveHarness(
   ]);
 
   expectDefined(captured["reports.saveDraft"]).mutationFn.mockImplementation(
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- React Query consumes the async mutation result
     async (vars: unknown) => {
       calls.push(vars);
       return userMutationFn(vars);

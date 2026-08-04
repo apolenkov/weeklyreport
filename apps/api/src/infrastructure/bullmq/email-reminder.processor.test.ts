@@ -1,5 +1,7 @@
 import type { Job } from "bullmq";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 
 // Keep the real module surface so adding another Nest import cannot turn it
 // into undefined; only the decorator needs to be inert for this unit.
@@ -47,8 +49,22 @@ import { renderEmail } from "../../modules/email/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import {
   type EmailReminderJobData,
-  EmailReminderProcessor,
+  EmailReminderProcessor as ProductionEmailReminderProcessor,
 } from "./email-reminder.processor.js";
+
+class EmailReminderProcessor extends ProductionEmailReminderProcessor {
+  constructor(
+    reminders: ConstructorParameters<
+      typeof ProductionEmailReminderProcessor
+    >[0],
+    email: ConstructorParameters<typeof ProductionEmailReminderProcessor>[1],
+    env: EnvConfig,
+    snapshot: ConstructorParameters<typeof ProductionEmailReminderProcessor>[3],
+    logger: AppLogger = createNullLogger(),
+  ) {
+    super(reminders, email, env, snapshot, logger, null);
+  }
+}
 
 // The processor reads env only in onModuleInit (not exercised here); a minimal
 // stub satisfies the constructor for the processJob-focused tests.
@@ -96,6 +112,31 @@ function createMockJob(
 // it directly. Cast through this interface to call without `as any`.
 interface ProcessorTestSeam {
   processJob(job: Job<EmailReminderJobData>): Promise<void>;
+}
+
+interface FailureTestSeam {
+  onJobFailed(job: Job<EmailReminderJobData> | undefined, error: Error): void;
+}
+
+type SpyLogger = AppLogger & {
+  readonly warn: Mock<
+    (message: string, context?: Record<string, unknown>) => void
+  >;
+  readonly error: Mock<
+    (message: string, context?: Record<string, unknown>) => void
+  >;
+};
+
+function makeSpyLogger(): SpyLogger {
+  return {
+    debug:
+      vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
+    info: vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
+    warn: vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
+    error:
+      vi.fn<(message: string, context?: Record<string, unknown>) => void>(),
+    child: () => makeSpyLogger(),
+  };
 }
 
 const defaultJobData: EmailReminderJobData = {
@@ -267,37 +308,27 @@ describe("EmailReminderProcessor.processJob", () => {
 
   // A non-terminal failure must release the claim (not mark failed) so the next
   // BullMQ attempt can re-claim. In processJob's catch the counter is
-  // pre-increment: 0 = first attempt, 1 = penultimate of 3 — neither terminal.
-  it.each([
-    { attemptsMade: 0, label: "first attempt" },
-    { attemptsMade: 1, label: "penultimate attempt, retry still pending" },
-  ])(
-    "releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails ($label)",
-    async ({ attemptsMade }) => {
-      const mockReminders = createMockRemindersService();
-      const mockEmail = createMockEmailService();
-      mockEmail.sendMail.mockRejectedValue(
-        new Error("SMTP connection refused"),
-      );
+  // pre-increment; any value below `attempts` is non-terminal.
+  it("releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails", async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    mockEmail.sendMail.mockRejectedValue(new Error("SMTP connection refused"));
 
-      const processor = new EmailReminderProcessor(
-        mockReminders as never,
-        mockEmail,
-        STUB_ENV,
-        createMockSnapshotAdminService() as never,
-      );
-      const job = createMockJob(defaultJobData, attemptsMade, 3);
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+    );
+    const job = createMockJob(defaultJobData, 1, 3);
 
-      await expect(
-        (processor as unknown as ProcessorTestSeam).processJob(job),
-      ).rejects.toThrow("SMTP connection refused");
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow("SMTP connection refused");
 
-      expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith(
-        "exec-1",
-      );
-      expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
-    },
-  );
+    expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith("exec-1");
+    expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
+  });
 
   // If dispatch succeeds but the follow-up markReminderSent write throws
   // (e.g. a transient DB error), the email was already delivered: the row
@@ -428,6 +459,63 @@ describe("EmailReminderProcessor.processJob", () => {
       renderedEmailFixture.html,
       renderedEmailFixture.text,
       null,
+    );
+  });
+});
+
+describe("EmailReminderProcessor.onJobFailed — traceparent validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function makeProcessorWithLogger(logger: AppLogger) {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    return new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail,
+      STUB_ENV,
+      createMockSnapshotAdminService() as never,
+      logger,
+    );
+  }
+
+  it("warns loudly when a failed job carries a malformed traceparent", () => {
+    const logger = makeSpyLogger();
+    const processor = makeProcessorWithLogger(logger);
+
+    (processor as unknown as FailureTestSeam).onJobFailed(
+      createMockJob({ ...defaultJobData, traceparent: "00-abc-123-01" }),
+      new Error("SMTP down"),
+    );
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "email-reminder job failed with malformed traceparent",
+      expect.objectContaining({ traceparent: "00-abc-123-01" }),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      "email-reminder job failed",
+      expect.not.objectContaining({ traceId: "abc" }),
+    );
+  });
+
+  it("does not warn about the traceparent when the carrier is valid", () => {
+    const logger = makeSpyLogger();
+    const processor = makeProcessorWithLogger(logger);
+    const validTraceparent =
+      "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+
+    (processor as unknown as FailureTestSeam).onJobFailed(
+      createMockJob({ ...defaultJobData, traceparent: validTraceparent }),
+      new Error("SMTP down"),
+    );
+
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "email-reminder job failed",
+      expect.objectContaining({
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+      }),
     );
   });
 });

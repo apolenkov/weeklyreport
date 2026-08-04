@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 
-import { readSuppressionInventory } from "./eslint-suppression-inventory.ts";
+import {
+  readSuppressionInventory,
+  readSuppressionInventoryAtCommit,
+} from "./eslint-suppression-inventory.ts";
 
 const fixtureDir = mkdtempSync(path.join(tmpdir(), "suppression-inventory-"));
 after(() => rmSync(fixtureDir, { force: true, recursive: true }));
@@ -54,4 +58,34 @@ void test("splits a multi-rule directive into independently owned records", () =
     ["no-alert", "no-console"],
   );
   assert.ok(inventory.directives.every((entry) => entry.scope === "file"));
+});
+
+void test("a commit with zero suppression matches returns an empty inventory", () => {
+  const repository = mkdtempSync(path.join(tmpdir(), "suppression-git-"));
+  execFileSync("/usr/bin/git", ["init", "--quiet"], { cwd: repository });
+  writeFileSync(
+    path.join(repository, "clean.ts"),
+    "export const clean = true;\n",
+  );
+  execFileSync("/usr/bin/git", ["add", "clean.ts"], { cwd: repository });
+  execFileSync(
+    "/usr/bin/git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "--quiet",
+      "-m",
+      "fixture",
+    ],
+    { cwd: repository },
+  );
+
+  assert.deepEqual(readSuppressionInventoryAtCommit("HEAD", repository), {
+    rawMatches: 0,
+    directives: [],
+    noise: [],
+  });
 });

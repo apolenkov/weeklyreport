@@ -4,16 +4,16 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 import type * as React from "react";
 
-/**
- * Radix avatar root. `size` maps to sm (24px), default (32px), or lg (40px).
- */
+/** Avatar shell sized to 24, 32, or 40 pixels through the shared size contract. */
 function Avatar({
   className,
   size = "default",
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
-  size?: "default" | "sm" | "lg";
-}) {
+}: Readonly<
+  React.ComponentProps<typeof AvatarPrimitive.Root> & {
+    size?: "default" | "sm" | "lg";
+  }
+>) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
@@ -33,7 +33,7 @@ function Avatar({
 function AvatarImage({
   className,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+}: Readonly<React.ComponentProps<typeof AvatarPrimitive.Image>>) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
@@ -49,7 +49,7 @@ function AvatarImage({
 function AvatarFallback({
   className,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+}: Readonly<React.ComponentProps<typeof AvatarPrimitive.Fallback>>) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
@@ -65,7 +65,10 @@ function AvatarFallback({
 /**
  * Status/badge overlay anchored to the bottom-right of its Avatar parent.
  */
-function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
+function AvatarBadge({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"span">>) {
   return (
     <span
       data-slot="avatar-badge"
@@ -84,7 +87,10 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
 /**
  * Overlapping stack container for multiple Avatar children.
  */
-function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
+function AvatarGroup({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="avatar-group"
@@ -103,7 +109,7 @@ function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
 function AvatarGroupCount({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="avatar-group-count"

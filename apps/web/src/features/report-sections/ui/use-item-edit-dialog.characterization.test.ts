@@ -59,8 +59,10 @@ describe("useItemEditDialog — characterization", () => {
   it("edit-mode seeding: seeds text/status/stageNames/priorityRank from the bound item", () => {
     const item: KanbanItem = {
       id: "item-1",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Existing text",
       status: "completed",
       author: "Someone",
@@ -83,8 +85,10 @@ describe("useItemEditDialog — characterization", () => {
   it("clears stageNames on a parent switch", () => {
     const item: KanbanItem = {
       id: "item-1",
+      parent: { kind: "product", id: "p1" },
       productId: "p1",
       productName: "DevOps Tools",
+      activityId: null,
       text: "Existing text",
       status: "in-progress",
       author: "Someone",
@@ -171,7 +175,8 @@ describe("useItemEditDialog — characterization", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
     expect(saved.activityId).toBe("a1");
-    expect(saved.productId).toBe("");
+    expect(saved.parent).toEqual({ kind: "activity", id: "a1" });
+    expect(saved.productId).toBeNull();
     expect(saved.text).toBe("Triage the queue");
   });
 });

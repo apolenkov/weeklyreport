@@ -24,6 +24,8 @@ export interface LeadFormErrorSources {
   readonly activeQ: QueryErrorSource;
   readonly byPeriodQ: QueryErrorSource;
   readonly historyQ: QueryErrorSource;
+  readonly viewSettingsQ: QueryErrorSource;
+  readonly crossAuthorsQ: QueryErrorSource;
 }
 
 // Registered by the caller, after the navigation effects, so a failing load
@@ -32,12 +34,14 @@ export function useLeadFormLoadErrors({
   activeQ,
   byPeriodQ,
   historyQ,
+  viewSettingsQ,
+  crossAuthorsQ,
   pinnedReportId,
   targetReportId,
   sessionRole,
 }: LeadFormErrorSources & {
   readonly pinnedReportId: string | undefined;
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
   readonly sessionRole: SessionUser["role"] | null;
 }) {
   useQueryErrorHandler(activeQ, {
@@ -62,6 +66,22 @@ export function useLeadFormLoadErrors({
     procedure: "reports.myHistory",
     toastPrefix: "Failed to load history",
   });
+
+  useQueryErrorHandler(viewSettingsQ, {
+    event: "leadForm.viewSettings.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.viewSettings",
+    context: { reportId: targetReportId || null },
+    toastPrefix: "Failed to load form settings",
+  });
+
+  useQueryErrorHandler(crossAuthorsQ, {
+    event: "leadForm.crossAuthors.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.crossAuthors",
+    context: { reportId: targetReportId || null },
+    toastPrefix: "Failed to load cross-author data",
+  });
 }
 
 // Owns every report-scoped read. `view` is plain data so no react-query type
@@ -78,21 +98,33 @@ export function useLeadFormReports({
   const { activeReportId, activeSectionId } = deriveActiveIds(activeQ.data);
   const targetReportId = deriveTargetReportId(pinnedReportId, activeReportId);
 
+  // With no resolvable report the query stays disabled; the reportId inside
+  // the options is inert then (never sent), so it is only ever a cache key.
   const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({ reportId: targetReportId }),
-    enabled: targetReportId !== "" && sectionFetchEnabled,
+    ...trpc.leadForm.byPeriod.queryOptions({
+      reportId: targetReportId ?? "",
+    }),
+    enabled: targetReportId !== null && sectionFetchEnabled,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
   const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
   const crossAuthorsQ = useQuery({
-    ...trpc.leadForm.crossAuthors.queryOptions({ reportId: targetReportId }),
-    enabled: targetReportId !== "",
+    ...trpc.leadForm.crossAuthors.queryOptions({
+      reportId: targetReportId ?? "",
+    }),
+    enabled: targetReportId !== null,
   });
 
   return {
-    errorSources: { activeQ, byPeriodQ, historyQ },
+    errorSources: {
+      activeQ,
+      byPeriodQ,
+      historyQ,
+      viewSettingsQ,
+      crossAuthorsQ,
+    },
     view: {
       activeData: activeQ.data,
       activeReportId,
@@ -118,7 +150,7 @@ export function useDeckVisibility({
   slidesAuthorId,
 }: {
   readonly currentUserId: string | null;
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
   readonly isSlidesMode: boolean;
   readonly slidesAuthorId: string | null;
 }): {
@@ -156,7 +188,7 @@ export function useCrossAuthorContent({
   isEveryone,
   isForeignSlidesDeck,
 }: {
-  readonly targetReportId: string;
+  readonly targetReportId: string | null;
   readonly visibilityHydrated: boolean;
   readonly isEveryone: boolean;
   readonly isForeignSlidesDeck: boolean;
@@ -164,14 +196,23 @@ export function useCrossAuthorContent({
   const trpc = useTRPC();
   const query = useQuery({
     ...trpc.leadForm.crossAuthorContent.queryOptions({
-      reportId: targetReportId,
+      reportId: targetReportId ?? "",
     }),
     enabled: crossAuthorContentFetchEnabled({
-      hasReport: targetReportId !== "",
+      hasReport: targetReportId !== null,
       visibilityHydrated,
       isEveryone,
       isOwnDeck: !isForeignSlidesDeck,
     }),
+  });
+  // Foreign rows are auxiliary content, but a failed read must still surface
+  // instead of silently reading as "no co-owner content".
+  useQueryErrorHandler(query, {
+    event: "leadForm.crossAuthorContent.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.crossAuthorContent",
+    context: { reportId: targetReportId || null },
+    toastPrefix: "Failed to load co-owner content",
   });
   return query.data;
 }

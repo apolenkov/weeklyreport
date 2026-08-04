@@ -73,9 +73,6 @@ function BlockedAtRiskSkeleton() {
   );
 }
 
-/**
- * Dashboard Skeleton.
- */
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">

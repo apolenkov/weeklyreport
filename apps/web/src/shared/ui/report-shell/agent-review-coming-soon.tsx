@@ -2,7 +2,6 @@ import { ComingSoonControl } from "@customreport/ui/components/coming-soon-contr
 import { BotMessageSquare } from "lucide-react";
 
 // compact strips touch-target min-height for tight slide headers.
-// TODO(AGENT-REVIEW-01): mount in lead+head slide and report surfaces
 export function AgentReviewComingSoon({
   compact = false,
 }: {

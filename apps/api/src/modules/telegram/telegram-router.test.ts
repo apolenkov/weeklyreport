@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 
 function buildStubRouter(
   deps: Record<string, unknown> = {},
 ): ReturnType<typeof createAppRouter> {
-  const stubDeps = deps as unknown as Parameters<typeof createAppRouter>[0];
-  return createAppRouter(stubDeps);
+  return createAppRouter(createStubAppRouterDeps(deps));
 }
 
 describe("admin.testTelegramSend wire-up", () => {

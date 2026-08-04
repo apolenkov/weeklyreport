@@ -74,8 +74,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         error={props.textError}
         placeholder="e.g. Vendor API regression delays OAuth2 integration"
         minHeightPx={RISK_TEXT_MIN_HEIGHT_PX}
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
-        autoFocus
+        focusOnMount
         textareaRef={props.textRef}
       />
       <RecordTextareaField
@@ -145,7 +144,7 @@ function RiskClassificationPanel(props: RiskClassificationPanelProps) {
           isDeadEnd={props.isZeroOwnedStageDeadEnd}
           error={props.stageError}
           deadEndNotice="No stages assigned — contact admin."
-          onChange={props.onStageChange}
+          onChange={(next) => props.onStageChange([...next])}
         />
       )}
 

@@ -11,14 +11,15 @@ verifiable in this repository (commands, configs, and specs are linked).
   boundaries) + stylelint + Prisma schema lint + `depcruise` + `knip`.
   "Done" means `--max-warnings 0` with no per-file exemption
   (`eslint.config.ts` holds only documented JUSTIFIED PERMANENT entries).
-  `scripts/lint-gate.ts` runs all 10 checks in one pass and reports each
+  `scripts/lint-gate.ts` runs every configured check in one pass and reports each
   PASS/FAIL, so one failing check can no longer hide the ones behind it.
 - **Acyclic architecture.** dependency-cruiser gate: 0 runtime import cycles
   across 812 modules / 2168 dependencies (was 41 cycles before the 2026-07
   burn-down). Spec: `openspec/specs/directory-architecture-standard/`.
 - **Dead-export gate.** knip fails the push on any exported symbol without an
   importer.
-- **Type coverage floors** per package: 100 / 99.9 / 99.95 / 99.6 %.
+- **Type coverage floors** per package: `packages/shared` 100%, `packages/ui`
+  100%, `apps/api` 99.98%, and `apps/web` 99.8%.
 - **Hooks as the merge gate.** pre-commit: lint-staged; pre-push: typecheck,
   full lint, format check, route-catalog drift gate, mutation-consumer audit,
   full unit suite (~2100 tests: 1981 web + api suites).
@@ -30,15 +31,15 @@ verifiable in this repository (commands, configs, and specs are linked).
 - **Whole-repo review, per-file verdicts.** 2026-07-17: all 1166 source files
   reviewed by a multi-model pipeline (batched reviewers, adversarial
   verification of every major finding, cross-vendor council synthesis).
-  Interactive artifact: `openspec/changes/all-green-exemplary-rollout/mass-review-artifact.html`
+  Review brief and per-file evidence: `~/work/customreport-archive/2026-07-30-exhaustive-style-audit/CODEX-REVIEW-BRIEF-2026-08-03-COMPLETE.md`
   (verdicts: 97 exemplary / 943 good / 124 needs-attention / 2 defect at scan
   time). Its entire actionable backlog was implemented and archived.
 - **Exemplary standard rollout (ongoing).** Campaign to bring every file to
-  `docs/exemplary-code-standard.md` (file < 250 lines, functions ≤ 50,
+  `docs/exemplary-code-standard.md` (file ≤ 300 lines, functions ≤ 70,
   cognitive complexity < 10, zero mutation, no silent config fallbacks).
   Waves are implemented by orchestrated agent lanes, each wave passes two
   independent adversarial reviews plus the full gate before commit.
-  Progress ledger: `openspec/changes/all-green-exemplary-rollout/`.
+  Progress ledger: `openspec/changes/repair-exhaustive-audit-exemplary-quality/`.
 
 ## Architecture and safety rails
 
@@ -57,5 +58,5 @@ verifiable in this repository (commands, configs, and specs are linked).
 1. `docs/exemplary-code-standard.md` — the bar.
 2. `eslint.config.ts` — the bar, mechanized.
 3. `openspec/specs/` — behavior as versioned requirements.
-4. `openspec/changes/all-green-exemplary-rollout/` — the live campaign:
-   plan, per-slice scoreboard, inventory data, harness template.
+4. `openspec/changes/repair-exhaustive-audit-exemplary-quality/` — the live
+   campaign plan and task ledger.

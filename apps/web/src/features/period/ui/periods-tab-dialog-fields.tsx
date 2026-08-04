@@ -1,10 +1,7 @@
 "use client";
 
+import { MAX_WEEK_LABEL_LENGTH } from "@customreport/shared";
 import type { ReactNode } from "react";
-
-// Matches packages/shared period.schema MAX_WEEK_LABEL_LENGTH (local copy —
-// shared is not re-exported for UI use).
-const MAX_WEEK_LABEL_LENGTH = 64;
 
 interface CreatePeriodFieldsProps {
   readonly periodStart: string;
@@ -21,9 +18,9 @@ interface CreatePeriodFieldsProps {
 }
 
 const FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]";
 const INVALID_FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] border-red-400 bg-red-50 focus:border-red-400";
+  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] focus:border-[var(--color-destructive)]";
 
 function OptionalHint() {
   return (
@@ -60,7 +57,11 @@ function FieldError({
   readonly message: string;
 }) {
   return (
-    <p id={id} data-testid={testId} className="mt-1 text-xs text-red-600">
+    <p
+      id={id}
+      data-testid={testId}
+      className="mt-1 text-xs text-[var(--color-destructive)]"
+    >
       {message}
     </p>
   );
@@ -73,7 +74,8 @@ function PeriodStartField({
   return (
     <div>
       <FieldLabel htmlFor="period-start">
-        Period start <span className="text-[#991b1b]">*</span>
+        Period start
+        <span className="text-[var(--color-destructive-emphasis)]">*</span>
       </FieldLabel>
       <input
         id="period-start"
@@ -81,8 +83,6 @@ function PeriodStartField({
         value={periodStart}
         onChange={(e) => onPeriodStartChange(e.target.value)}
         required
-        // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-        autoFocus
         data-testid="periods-create-start"
         className={FIELD_CLASS}
       />

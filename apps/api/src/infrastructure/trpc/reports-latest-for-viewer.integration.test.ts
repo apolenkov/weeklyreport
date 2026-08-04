@@ -12,6 +12,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import type { PrismaService } from "../prisma/prisma.service";
 import { createAppRouter } from "./trpc.router.js";
 
@@ -74,10 +75,10 @@ describe("reports.latestForViewer (integration)", () => {
       activeReportId: null,
       activeReportSectionId: null,
     };
-    const deps = {
+    const deps = createStubAppRouterDeps({
       prisma,
       weeklyReportService,
-    } as unknown as Parameters<typeof createAppRouter>[0];
+    });
     return createAppRouter(deps).createCaller({
       session,
       logger: createNullLogger(),

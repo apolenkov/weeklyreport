@@ -12,7 +12,7 @@ describe("resolveRecordParent", () => {
   it("keeps the bound row's activity parent on edit", () => {
     expect(
       resolveRecordParent(
-        { activityId: "act-2", productId: "" },
+        { activityId: "act-2", productId: null },
         {},
         ACTIVITIES,
       ),
@@ -52,10 +52,9 @@ describe("resolveRecordParent", () => {
     });
   });
 
-  it("degrades to an empty product with no seed, activities, or row parent", () => {
-    expect(resolveRecordParent({}, {}, [])).toEqual({
-      kind: "product",
-      id: "",
-    });
+  it("returns an explicit unresolved parent when no row, seed, or activity provides an owner", () => {
+    // Absence must never be fabricated as a valid-looking product with an
+    // empty id — the picker renders an explicit "Select parent…" state instead.
+    expect(resolveRecordParent({}, {}, [])).toEqual({ kind: "unresolved" });
   });
 });

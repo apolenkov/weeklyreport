@@ -15,6 +15,12 @@ interface LedgerRule {
 }
 
 interface Ledger {
+  readonly measuredAt: string;
+  readonly pluginVersion: string;
+  readonly eslintVersion: string;
+  readonly files: number;
+  readonly productionSettings: boolean;
+  readonly alreadyEnabled: number;
   readonly rules: readonly LedgerRule[];
 }
 
@@ -25,9 +31,81 @@ interface ResolvedConfig {
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
 const MEASURED_RULE_COUNT = 51;
 const MINIMUM_REASON_LENGTH = 20;
-const ledger = JSON.parse(
+const ENTRY_KEYS = [
+  "rule",
+  "count",
+  "ruling",
+  "reason",
+  "fixes",
+  "probe",
+  "gate",
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const hasExactKeys = (
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean =>
+  Object.keys(value)
+    .toSorted((left, right) => left.localeCompare(right))
+    .join("\0") ===
+  [...keys].toSorted((left, right) => left.localeCompare(right)).join("\0");
+
+const isLedgerRule = (value: unknown): value is LedgerRule =>
+  isRecord(value) &&
+  hasExactKeys(value, ENTRY_KEYS) &&
+  typeof value.rule === "string" &&
+  typeof value.count === "number" &&
+  Number.isInteger(value.count) &&
+  (value.ruling === "adopt" || value.ruling === "reject") &&
+  typeof value.reason === "string" &&
+  typeof value.fixes === "number" &&
+  Number.isInteger(value.fixes) &&
+  typeof value.probe === "string" &&
+  (value.gate === "error" || value.gate === "off" || value.gate === "vacuous");
+
+export const parseLedger = (raw: string): Ledger => {
+  const value: unknown = JSON.parse(raw);
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "measuredAt",
+      "pluginVersion",
+      "eslintVersion",
+      "files",
+      "productionSettings",
+      "alreadyEnabled",
+      "rules",
+    ]) ||
+    typeof value.measuredAt !== "string" ||
+    typeof value.pluginVersion !== "string" ||
+    typeof value.eslintVersion !== "string" ||
+    typeof value.files !== "number" ||
+    !Number.isInteger(value.files) ||
+    typeof value.productionSettings !== "boolean" ||
+    typeof value.alreadyEnabled !== "number" ||
+    !Number.isInteger(value.alreadyEnabled) ||
+    !Array.isArray(value.rules) ||
+    !value.rules.every(isLedgerRule)
+  ) {
+    throw new Error("Invalid Vitest rule ledger");
+  }
+  return {
+    measuredAt: value.measuredAt,
+    pluginVersion: value.pluginVersion,
+    eslintVersion: value.eslintVersion,
+    files: value.files,
+    productionSettings: value.productionSettings,
+    alreadyEnabled: value.alreadyEnabled,
+    rules: value.rules,
+  };
+};
+
+const ledger = parseLedger(
   readFileSync(`${REPO_ROOT}scripts/vitest-rule-ledger.json`, "utf8"),
-) as Ledger;
+);
 
 const adopted = ledger.rules.filter((entry) => entry.ruling === "adopt");
 
@@ -44,6 +122,29 @@ void test("every measured rule has a complete individual ruling", () => {
     if (entry.ruling === "adopt") assert.equal(entry.gate, "error");
     else assert.notEqual(entry.gate, "error");
   }
+});
+
+void test("malformed ledger entries fail closed", () => {
+  assert.throws(
+    () =>
+      parseLedger(
+        JSON.stringify({
+          rules: [
+            {
+              rule: "valid-expect",
+              count: 1,
+              ruling: "maybe",
+              reason: "A deliberately malformed decision fixture.",
+              fixes: 0,
+              probe: "fixture",
+              gate: "off",
+              surprise: true,
+            },
+          ],
+        }),
+      ),
+    /Invalid Vitest rule ledger/,
+  );
 });
 
 void test("all accepted rules are enabled in the production test config", async () => {

@@ -20,7 +20,6 @@ export function createPdfExportRouter(deps: PdfExportRouterDeps) {
           return await deps.pdfExportService.requestPdfExport(
             input.reportId,
             ctx.session,
-            undefined,
             ctx.session.role,
           );
         } catch (error) {

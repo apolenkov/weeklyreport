@@ -14,16 +14,12 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper.js";
+import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
 import { createAppRouter } from "./trpc.router.js";
 
-/**
- * Per-group authorization for the three reminder procedures (real DB). A
- * group-A head must not execute, list, or dispatch reminders against another
- * group's rule / report / lead, nor send to an arbitrary email; admin keeps
- * god-mode. Driven through the real router → real RemindersService → real
- * Prisma so the router's scope threading is exercised end to end.
- */
-
+// Per-group authorization for the three reminder procedures (real DB): a
+// group-A head must not execute/list/dispatch reminders against another group
+// nor send to an arbitrary email; admin keeps god-mode. Router → service → Prisma.
 const GROUP_B = "b0000000-0000-4000-8000-00000000000b";
 const LEAD_B = "b0000000-0000-4000-8000-0000000000b1";
 const LEAD_A2 = "a0000000-0000-4000-a000-0000000000a2";
@@ -61,11 +57,11 @@ function buildCaller(role: Role, activeReportId: string | null) {
   const weeklyReportService = new WeeklyReportService(
     new WeeklyReportPrismaRepository(prisma as never),
   );
-  const deps = {
+  const deps = createStubAppRouterDeps({
     prisma,
     remindersService,
     weeklyReportService,
-  } as unknown as Parameters<typeof createAppRouter>[0];
+  });
   return createAppRouter(deps).createCaller({
     session: makeSession(role, activeReportId),
     logger: createNullLogger(),
@@ -128,10 +124,9 @@ describe("reminders namespace — per-group scope (integration)", () => {
     await prisma.report.create({
       data: {
         id: REPORT_B,
-        // Deliberately BEFORE the shared report A's period (2026-04-07) so
-        // report A stays the DB-resolved current editable period across this
-        // suite — dispatchPending's gate now compares against that resolved
-        // value, not the caller-supplied `activeReportId` fixture argument.
+        // BEFORE the shared report A's period (2026-04-07) so report A stays
+        // the DB-resolved current editable period across this suite —
+        // dispatchPending's gate compares against that resolved value.
         periodStart: new Date("2026-03-24"),
         periodEnd: new Date("2026-03-30"),
         deadline: new Date("2026-03-28"),
@@ -177,12 +172,14 @@ describe("reminders namespace — per-group scope (integration)", () => {
         {
           id: TEST_IDS.reminderExec1,
           ruleId: RULE_A,
+          recipientEmail: LEAD_A_EMAIL,
           dedupeKey: dedupeKey(RULE_A, LEAD_A_EMAIL),
           status: "pending",
         },
         {
           id: TEST_IDS.reminderExec2,
           ruleId: RULE_A,
+          recipientEmail: LEAD_B_EMAIL,
           dedupeKey: dedupeKey(RULE_A, LEAD_B_EMAIL),
           status: "pending",
         },
@@ -290,12 +287,9 @@ describe("reminders namespace — per-group scope (integration)", () => {
     });
 
     it("dispatches for a lead in a group it does not belong to", async () => {
-      // The head path throws FORBIDDEN (`lead-out-of-scope`) for LEAD_B; admin
-      // god-mode authorizes the out-of-group lead and the procedure resolves to
-      // its dispatch summary instead of a scope rejection. dispatchPending's
-      // gate now compares against the DB-resolved current editable report, so
-      // this test makes REPORT_B that report (report A stays current for
-      // every other test in this suite).
+      // The head path throws FORBIDDEN for LEAD_B; admin god-mode authorizes
+      // the out-of-group lead. dispatchPending's gate resolves the current
+      // editable report from the DB, so this test makes REPORT_B that report.
       await prisma.report.update({
         where: { id: REPORT_B },
         data: {

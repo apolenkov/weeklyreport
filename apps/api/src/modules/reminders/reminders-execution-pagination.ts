@@ -5,9 +5,7 @@ import {
   type PaginationInput,
 } from "@customreport/shared";
 
-/** One keyset-page request against the execution history (newest first). */
 export interface ExecutionPageRequest {
-  /** Id of the previous page's last row; null starts from the newest row. */
   readonly cursor: string | null;
   readonly take: number;
 }
@@ -16,13 +14,15 @@ type FetchExecutionsPage = (
   page: ExecutionPageRequest,
 ) => Promise<AdminReminderExecution[]>;
 
-/** Rows-per-query floor: keeps sparse allowlist matches from degenerating
- * into one-row round-trips while still bounding memory per query. */
+// Keep sparse allowlist matches from degenerating into one-row round-trips while
+// still bounding memory per query.
 const MIN_BATCH_SIZE = 25;
 
-/** Batch size for an unpaginated read: bounds per-query memory while walking
- * the whole history. */
+// Bound per-query memory while walking an unpaginated history.
 const FULL_SCAN_BATCH_SIZE = 200;
+
+// Cap unpaginated walks so a caller that forgets pagination fails loudly.
+const UNPAGINATED_HARD_CAP = 1000;
 
 // Fetch batches until `needed` scoped rows are collected or the source is
 // exhausted; the result may hold more than `needed` rows.
@@ -68,10 +68,15 @@ export async function paginateReminderExecutions(
       matches,
       FULL_SCAN_BATCH_SIZE,
       null,
-      Number.POSITIVE_INFINITY,
+      UNPAGINATED_HARD_CAP + 1,
       [],
     );
-    return { items: [...all], nextCursor: null };
+    if (all.length > UNPAGINATED_HARD_CAP) {
+      throw new Error(
+        `Reminder execution history exceeds the unpaginated cap of ${UNPAGINATED_HARD_CAP} rows; pass pagination.`,
+      );
+    }
+    return { items: all, nextCursor: null };
   }
 
   const batchSize = Math.max(pagination.limit + 1, MIN_BATCH_SIZE);

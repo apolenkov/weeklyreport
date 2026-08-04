@@ -1,28 +1,35 @@
 import type { OnModuleDestroy } from "@nestjs/common";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import Redis from "ioredis";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
+import { sessionRevocationFailuresTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import type { AppLogger } from "../../lib/logger.js";
+
+export type SessionRevocationDependencies =
+  | { readonly redis: Redis; readonly logger: AppLogger }
+  | { readonly env: EnvConfig; readonly logger: AppLogger };
+
+export const SESSION_REVOCATION_DEPS = Symbol("SessionRevocationDeps");
 
 // Fail-open Redis set of revoked userIds: isActive DB flag is authoritative;
 // Redis is a fast-path so in-flight JWTs are rejected without waiting for expiry.
 @Injectable()
 export class SessionRevocationService implements OnModuleDestroy {
-  private readonly redis: Redis;
+  private static readonly KEY = "customreport:revoked";
 
-  // Injected redis for tests; otherwise env is required (fail loud).
-  constructor(redis?: Redis, env?: EnvConfig) {
-    if (redis) {
-      this.redis = redis;
+  private readonly redis: Redis;
+  private readonly logger: AppLogger;
+
+  constructor(
+    @Inject(SESSION_REVOCATION_DEPS) deps: SessionRevocationDependencies,
+  ) {
+    if ("redis" in deps) {
+      this.redis = deps.redis;
     } else {
-      if (!env) {
-        throw new Error(
-          "SessionRevocationService requires an EnvConfig when no Redis client is injected",
-        );
-      }
       this.redis = new Redis({
-        ...buildRedisConnectionOptions(env),
+        ...buildRedisConnectionOptions(deps.env),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
         enableOfflineQueue: false,
@@ -30,41 +37,55 @@ export class SessionRevocationService implements OnModuleDestroy {
       // Suppress unhandled error events on transient Redis blips.
       this.redis.on("error", () => undefined);
     }
+    this.logger = deps.logger;
   }
 
-  private static readonly KEY = "customreport:revoked";
+  // The degraded fast path must stay observable (warn log + metric) even
+  // though it stays non-fatal: an outage silently weakening revocation would
+  // otherwise be invisible until an in-flight JWT survives a deactivation.
+  private observeFailure(operation: string, error: unknown): void {
+    sessionRevocationFailuresTotal.inc({ operation });
+    this.logger.warn("session-revocation redis failed; fast path degraded", {
+      phase: "auth.session-revocation",
+      operation,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   // Best-effort — Redis outage must not block the Prisma write.
-  async revokeSession(userId: string): Promise<void> {
+  readonly revokeSession = async (userId: string): Promise<void> => {
     try {
       await this.redis.sadd(SessionRevocationService.KEY, userId);
-    } catch {
+    } catch (error) {
       // Non-fatal: isActive=false is authoritative; Redis is a fast-path cache.
+      this.observeFailure("revoke", error);
     }
-  }
+  };
 
-  async restoreSession(userId: string): Promise<void> {
+  readonly restoreSession = async (userId: string): Promise<void> => {
     try {
       await this.redis.srem(SessionRevocationService.KEY, userId);
-    } catch {
+    } catch (error) {
       // Non-fatal: subsequent request hits Prisma isActive anyway.
+      this.observeFailure("restore", error);
     }
-  }
+  };
 
   // Fail-open on Redis error so an outage does not lock out all users.
-  async isRevoked(userId: string): Promise<boolean> {
+  readonly isRevoked = async (userId: string): Promise<boolean> => {
     try {
       const result = await this.redis.sismember(
         SessionRevocationService.KEY,
         userId,
       );
       return result === 1;
-    } catch {
+    } catch (error) {
+      this.observeFailure("check", error);
       return false;
     }
-  }
+  };
 
-  async onModuleDestroy(): Promise<void> {
+  readonly onModuleDestroy = async (): Promise<void> => {
     await this.redis.quit().catch(() => undefined);
-  }
+  };
 }

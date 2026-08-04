@@ -1,6 +1,7 @@
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { FabricatedRow } from "./__tests__/report-sections-prisma-harness";
 import {
   AUTHOR_ID,
@@ -196,26 +197,30 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
   }
 
   it("exposes the union of all leads' assignments, deduped and ordered by sortOrder", () => {
-    const project = mapRow(rowWithCrossLeadAssignments()).projects.find(
-      (p) => p.projectId === OWNED_PROJECT,
+    const project = expectDefined(
+      mapRow(rowWithCrossLeadAssignments()).projects.find(
+        (p) => p.projectId === OWNED_PROJECT,
+      ),
     );
 
-    expect(project?.stageSet).toEqual([
+    expect(project.stageSet).toEqual([
       { stageId: STAGE_ID, stageName: "Development", sortOrder: 4 },
       { stageId: TESTING_STAGE_ID, stageName: "Testing", sortOrder: 5 },
     ]);
   });
 
   it("keeps a foreign stage in stageSet but OUT of ownedStages (write path stays owned-only)", () => {
-    const project = mapRow(rowWithCrossLeadAssignments()).projects.find(
-      (p) => p.projectId === OWNED_PROJECT,
+    const project = expectDefined(
+      mapRow(rowWithCrossLeadAssignments()).projects.find(
+        (p) => p.projectId === OWNED_PROJECT,
+      ),
     );
 
     // Testing is assigned to another lead: visible as display metadata...
-    expect(project?.stageSet?.map((s) => s.stageName)).toContain("Testing");
+    expect(project.stageSet.map((s) => s.stageName)).toContain("Testing");
     // ...but never in the writable ownedStages, so a lead can never persist a
     // status for a stage they do not own.
-    expect(project?.ownedStages?.map((s) => s.stageName)).toEqual([
+    expect(project.ownedStages.map((s) => s.stageName)).toEqual([
       "Development",
     ]);
   });
@@ -223,11 +228,11 @@ describe("mapPrismaToReportSection — assigned-stage set", () => {
   it("yields an empty stageSet when the project carries no cross-lead assignment", () => {
     // baseRow's project has an empty stageAssignments array; the mapper must
     // not throw and yields an empty set (web falls back to ownedStages).
-    const project = mapRow(baseRow()).projects.find(
-      (p) => p.projectId === OWNED_PROJECT,
+    const project = expectDefined(
+      mapRow(baseRow()).projects.find((p) => p.projectId === OWNED_PROJECT),
     );
 
-    expect(project?.stageSet).toEqual([]);
+    expect(project.stageSet).toEqual([]);
   });
 });
 
@@ -255,11 +260,13 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
       }),
     );
 
-    const project = section.projects.find((p) => p.projectId === OWNED_PROJECT);
-    expect(project?.trafficLight).toBe("red");
+    const project = expectDefined(
+      section.projects.find((p) => p.projectId === OWNED_PROJECT),
+    );
+    expect(project.trafficLight).toBe("red");
     // The raw per-stage status stays empty (null) — only the derived
     // product-level trafficLight is floored.
-    expect(project?.ownedStages?.[0]?.status ?? null).toBeNull();
+    expect(project.ownedStages[0]?.status ?? null).toBeNull();
   });
 
   it("floors yellow for a covers-all at-risk own risk on an owned empty stage", () => {
@@ -292,11 +299,9 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     ).toBe("red");
   });
 
-  // A risk naming a stage the author does NOT own never floors the product
-  // (the floor folds risks through OWNED stages only), so excluding such a
-  // vacant stage changes no health number — and the risk stays listed in the
-  // risk section, so the severity is always explained by a visible object even
-  // with no stage chip.
+  // A risk on a stage the author does NOT own never floors the product (the
+  // floor folds risks through OWNED stages only), so excluding the vacant stage
+  // changes no health number — the risk stays listed, explaining the severity.
   it("a risk on a non-owned (vacant) stage does not floor health and stays listed", () => {
     const section = mapRow(
       baseRow({

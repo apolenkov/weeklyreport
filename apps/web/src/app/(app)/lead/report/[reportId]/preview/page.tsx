@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { LeadSectionPreviewAuth } from "../../../../../../features/report-pages";
+import { LEAD_PREVIEW_ROUTE_ROLES } from "../../../../../../shared/model/route-role-policy";
 import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
 import { RoleGate } from "../../../../../../shared/ui/role-gate";
 
@@ -13,7 +14,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
   const { reportId } = await params;
 
   return (
-    <RoleGate allowedRoles={["lead"]}>
+    <RoleGate allowedRoles={LEAD_PREVIEW_ROUTE_ROLES}>
       <main
         id="main-content"
         className="min-h-screen bg-[var(--color-background)]"
@@ -33,7 +34,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
               <AgentReviewComingSoon compact />
               <Link
                 href={`/lead/report/${encodeURIComponent(reportId)}`}
-                className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                className="rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
               >
                 ← Back to form
               </Link>

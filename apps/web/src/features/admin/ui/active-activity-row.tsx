@@ -32,7 +32,7 @@ function ActivitySummary({
     .join(", ");
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <button
         type="button"
         onClick={() => onToggleExpand(activity.id)}
@@ -43,15 +43,15 @@ function ActivitySummary({
         <ChevronIcon expanded={isExpanded} />
       </button>
       <div className="flex min-w-0 flex-col gap-1">
-        <div>
-          <span className="text-sm font-semibold text-[var(--color-foreground)]">
+        <div className="min-w-0">
+          <span className="break-words text-sm font-semibold text-[var(--color-foreground)]">
             {activity.name}
           </span>
           <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
             Group: {groupName}
           </span>
         </div>
-        <span className="text-xs text-[var(--color-muted-foreground)]">
+        <span className="break-words text-xs text-[var(--color-muted-foreground)]">
           {linkedNames
             ? `Linked products: ${linkedNames}`
             : "No linked products"}
@@ -76,14 +76,14 @@ function ActivityRowActions({
   readonly isArchiving: boolean;
 }) {
   return (
-    <div className="flex flex-shrink-0 items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
       <span className="text-xs text-[var(--color-muted-foreground)]">
         {activity.leadIds.length} leads
       </span>
       <button
         type="button"
         onClick={() => onEdit(activity)}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
+        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
         aria-label={`Edit ${activity.name}`}
       >
         Edit
@@ -92,7 +92,7 @@ function ActivityRowActions({
         type="button"
         onClick={() => onArchive(activity)}
         disabled={isArchiving}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-white px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={`Archive ${activity.name}`}
       >
         Archive
@@ -112,8 +112,8 @@ export function ActiveActivityRow({
   isArchiving,
 }: ActiveActivityRowProps) {
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white transition-shadow hover:shadow-sm">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] transition-shadow hover:shadow-sm">
+      <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
         <ActivitySummary
           activity={activity}
           groupName={groupName}

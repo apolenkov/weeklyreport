@@ -18,6 +18,7 @@ export class RedisHealthIndicator implements OnModuleDestroy {
   private readonly redis: Redis;
 
   constructor(
+    @Inject(HealthIndicatorService)
     private readonly healthIndicator: HealthIndicatorService,
     @Inject(ENV_CONFIG) env: EnvConfig,
   ) {

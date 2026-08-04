@@ -15,6 +15,7 @@ import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { isEntrypoint } from "./_entrypoint.js";
+import { requireEnv } from "./_require-env.js";
 import { SEED_REPORTS, SEED_STAGES } from "./seed-constants.js";
 import { seedScaffold } from "./seed-demo.scaffold.js";
 import { SMALL_LEADS, SMALL_PRODUCTS } from "./seed-demo.small-cast.js";
@@ -111,8 +112,7 @@ export async function seedMinimal(prisma: PrismaClient): Promise<void> {
 
 async function main(): Promise<void> {
   assertNonProdDestructive("seed-minimal");
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL must be set");
+  const databaseUrl = requireEnv("DATABASE_URL");
   const pool = new pg.Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {

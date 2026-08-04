@@ -391,6 +391,32 @@ describe("RemindersTab — add / edit form", () => {
     expect(arg.offsetMinutes).toBe(2880); // 48 hours after
   });
 
+  it("clearing the offset magnitude does not silently become 0", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab({
+      policies: [policyCustom],
+      derivedRulesByPolicyId: { [policyCustom.id]: [] },
+    });
+
+    await user.click(screen.getByTestId(`edit-${policyCustom.id}`));
+
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+
+    // The raw empty value is kept and an inline error surfaces; Save stays
+    // blocked until a deliberate magnitude is entered (no fabricated 0).
+    expect(offsetInput.value).toBe("");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a non-negative number",
+    );
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.savePolicy"]).mutationFn,
+    ).not.toHaveBeenCalled();
+  });
+
   it("never persists the invalid deadline→head-of-late pair from a fresh form", async () => {
     const user = userEvent.setup();
     // Org default audience no longer reaches the pairing. A fresh reminder
@@ -459,6 +485,25 @@ describe("RemindersTab — add / edit form", () => {
     await user.type(validUntil, beforeIso);
 
     expect(screen.getByTestId("policy-validity-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+  });
+
+  it("unchecking forever does not silently acquire today's end date", async () => {
+    const user = userEvent.setup();
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("checkbox", { name: /forever \(no end date\)/i }),
+    );
+    const validUntil = screen.getByLabelText<HTMLInputElement>(
+      /^policy-valid-until$|^Valid until$/i,
+    );
+
+    // The end-date input stays empty — no fabricated today — so Save stays
+    // blocked until the admin deliberately picks a date.
+    expect(validUntil.value).toBe("");
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
   });
 });

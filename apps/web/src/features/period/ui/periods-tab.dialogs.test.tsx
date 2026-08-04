@@ -426,6 +426,27 @@ describe("PeriodsTab — a11y dialog behavioral regressions", () => {
     expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
   });
 
+  it("keeps the create dialog open and blocks dismissal while pending", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    expectDefined(
+      captured["admin.createPeriodManual"],
+    ).mutationFn.mockReturnValueOnce(new Promise(() => undefined));
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("periods-create-submit"));
+    expect(screen.getByRole("button", { name: "Creating…" })).toBeDisabled();
+
+    // Escape and backdrop dismissal are suppressed while the mutation is in
+    // flight — the dialog must not be abandoned mid-submit.
+    fireEvent.keyDown(document, { key: "Escape" });
+    await user.click(screen.getByTestId("periods-create-dialog"));
+
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+  });
+
   it("Escape closes the create/edit dialog", async () => {
     const user = userEvent.setup();
     renderTab();

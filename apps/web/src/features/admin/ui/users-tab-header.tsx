@@ -5,6 +5,7 @@ import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
 import {
   USER_ROLE_FILTER_OPTIONS,
   USER_STATUS_FILTER_OPTIONS,
+  type UserRoleFilter,
   type UserStatusFilter,
 } from "../model/user-table-filters";
 import type { UsersFilterState } from "./use-users-tab-state";
@@ -32,14 +33,14 @@ function UsersFilterBar({
       />
       <TabFilter
         value={filters.roleFilter}
-        onChange={filters.setRoleFilter}
+        onChange={(v) => filters.setRoleFilter(v as UserRoleFilter)}
         options={USER_ROLE_FILTER_OPTIONS}
         testId="users-role-filter"
         ariaLabel="Filter by role"
       />
       <TabFilter
-        value={filters.groupFilter}
-        onChange={filters.setGroupFilter}
+        value={filters.groupFilter ?? "all"}
+        onChange={(v) => filters.setGroupFilter(v === "all" ? null : v)}
         options={groupFilterOptions}
         testId="users-group-filter"
         ariaLabel="Filter by group"
@@ -60,7 +61,7 @@ function AddUserButton({ onClick }: { readonly onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
       aria-label="Add new user"
     >
       <PlusIcon />

@@ -170,10 +170,25 @@ function flattenProcedures(node, trail) {
   });
 }
 
+export function assertUniqueProcedurePaths(procedures) {
+  const seen = new Map();
+  for (const procedure of procedures) {
+    const path = `${procedure.namespace}.${procedure.name}`;
+    const previous = seen.get(path);
+    if (previous !== undefined) {
+      throw new Error(
+        `duplicate tRPC procedure path ${path}: ${previous} conflicts with ${procedure.kind}`,
+      );
+    }
+    seen.set(path, procedure.kind);
+  }
+  return procedures;
+}
+
 export function extractProcedures() {
   const root = resolveExpression(lookupDeclaration("createAppRouter"));
   if (root?.type !== "namespace") {
     return fail("createAppRouter does not resolve to a router");
   }
-  return flattenProcedures(root, []);
+  return assertUniqueProcedurePaths(flattenProcedures(root, []));
 }

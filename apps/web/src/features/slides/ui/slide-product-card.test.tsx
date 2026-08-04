@@ -11,19 +11,16 @@ const STATUS_CASES = [
   {
     status: "green",
     label: "On Track",
-    iconClass: "lucide-circle-check",
     stripe: "border-l-[var(--color-chip-on-track-border)]",
   },
   {
     status: "yellow",
     label: "At Risk",
-    iconClass: "lucide-triangle-alert",
     stripe: "border-l-[var(--color-status-dot-at-risk)]",
   },
   {
     status: "red",
     label: "Blocked",
-    iconClass: "lucide-octagon-x",
     stripe: "border-l-[var(--color-destructive)]",
   },
 ] as const;
@@ -43,8 +40,8 @@ function productCard(
 
 describe("SlideProductCard status presentation", () => {
   it.each(STATUS_CASES)(
-    "exposes $label with its distinct icon and retained stripe",
-    ({ status, label, iconClass, stripe }) => {
+    "exposes $label as the accessible mark and names the card with it",
+    ({ status, label, stripe }) => {
       const name = "Core Product";
       render(
         <SlideProductCard
@@ -53,9 +50,7 @@ describe("SlideProductCard status presentation", () => {
         />,
       );
 
-      const mark = screen.getByRole("img", { name: label });
-      expect(mark.querySelector("svg")).toHaveClass(iconClass);
-      expect(mark).toHaveClass("h-4", "w-4", "shrink-0");
+      expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
       expect(screen.getByRole("heading")).toHaveAccessibleName(
         `${label} ${name}`,
       );

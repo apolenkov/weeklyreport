@@ -43,12 +43,9 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
 
 @Module({
   imports: [
-    // ClsModule with mount=false because the raw Express handlers (/trpc,
-    // /pdfs static, SAML auth routes) are not registered via Nest's router,
-    // so consumer.apply(...).forRoutes('*') never wraps them. Both
-    // ClsMiddleware AND CorrelationIdMiddleware are mounted via app.use()
-    // in main.ts so all paths — controller, raw Express, tRPC — share the
-    // same AsyncLocalStorage scope.
+    // ClsModule with mount=false: raw Express handlers (/trpc, /pdfs, SAML)
+    // bypass Nest's router, so ClsMiddleware + CorrelationIdMiddleware are
+    // mounted via app.use() in main.ts to share one AsyncLocalStorage scope.
     ClsModule.forRoot({
       global: true,
       middleware: { mount: false, generateId: false },
@@ -131,14 +128,8 @@ import { WeeklyReportModule } from "./modules/weekly-report/index.js";
   ],
 })
 export class AppModule implements OnApplicationBootstrap {
-  /**
-   * Boot-time dev-auth fence.
-   *
-   * Lives on `OnApplicationBootstrap` instead of `bootstrap()` in main.ts so
-   * every consumer of `NestFactory.create(AppModule)` (e2e suites, CLI tools,
-   * Nest test harness) sees the same fail-closed behaviour. The fence is a
-   * no-op when NODE_ENV !== 'production', so test/dev paths are unaffected.
-   */
+  // Runs from the lifecycle hook so every `NestFactory.create(AppModule)`
+  // consumer (e2e, CLI, test harness) gets the same fail-closed fence.
   onApplicationBootstrap(): void {
     assertNoDevAuthInProduction(process.env);
   }

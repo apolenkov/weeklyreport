@@ -1,3 +1,5 @@
+import type { FailedJob } from "@customreport/shared";
+
 import { formatDateTime } from "../../../lib/format-date";
 import { truncate } from "../model/action-log-format";
 
@@ -10,21 +12,8 @@ function formatTimestamp(ms: number): string {
   return formatDateTime(new Date(ms));
 }
 
-// Structural (not the shared `FailedJob` alias): the tRPC client output the
-// parent maps over and the zod-inferred alias disagree on `data` optionality
-// and array readonly-ness, so the row accepts the readonly superset of both.
-interface JobsTableRowJob {
-  readonly id: string;
-  readonly name: string;
-  readonly failedReason?: string | null;
-  readonly stacktrace: readonly string[];
-  readonly attemptsMade: number;
-  readonly timestamp: number;
-  readonly data?: unknown;
-}
-
 interface JobsTableRowProps {
-  readonly job: JobsTableRowJob;
+  readonly job: FailedJob;
   readonly isExpanded: boolean;
   readonly isRetrying: boolean;
   readonly retryDisabled: boolean;
@@ -45,7 +34,7 @@ function JobErrorCell({
   readonly isExpanded: boolean;
   readonly onToggleExpand: (jobId: string) => void;
 }) {
-  const reason = failedReason || "—";
+  const reason = failedReason;
   const truncated = truncate(reason, MAX_ERROR_REASON_LENGTH);
   const canExpand = reason !== truncated;
 
@@ -101,7 +90,7 @@ export function JobsTableRow({
       </td>
       <JobErrorCell
         jobId={job.id}
-        failedReason={job.failedReason ?? ""}
+        failedReason={job.failedReason}
         isExpanded={isExpanded}
         onToggleExpand={onToggleExpand}
       />

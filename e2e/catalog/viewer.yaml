@@ -13,7 +13,7 @@ routes:
         given: "Viewer is on the landing page without an active session"
         when: "the viewer signs in (via SSO in production or dev-login in dev mode)"
         then: "the session is established and the page auto-redirects to /reports/latest (the viewer's default landing after login)"
-        note: "UX-16 (Phase 35-08): role-aware default landing. In production, the SSO button targets /auth/saml/login. In dev mode (AUTH_STUB=true), the button targets /auth/dev-login with role=viewer and the default email viewer@customreport.local. The redirect is deterministic and role-scoped—no viewer-specific form or choice on this page."
+        note: "Role-aware default landing. In production, the SSO button targets /auth/saml/login. In dev mode (AUTH_STUB=true), the button targets /auth/dev-login with role=viewer and the default email viewer@customreport.local. The redirect is deterministic and role-scoped—no viewer-specific form or choice on this page."
   - route: /reports
     access: [viewer]
     intents:
@@ -67,7 +67,7 @@ routes:
         given: "the current editable period has viewer-visible content (submitted or unsubmitted drafts) in the viewer's groups"
         when: "the viewer opens it via the Status entry"
         then: "the live section content is shown read-only — the same content the head sees, including unsubmitted drafts; a non-current, archived-open, or scheduled-future period requested by explicit id is rejected as not-found"
-        note: "viewer-live-status (task 5.1): the Back-to-Archive button is removed (History lives in the nav); the Agent-review coming-soon control stays (deferred-feature-pattern). The viewer toolbar control set is otherwise unchanged."
+        note: "The Back-to-Archive button is absent because History lives in the nav; the Agent-review coming-soon control stays under the deferred-feature pattern. The viewer toolbar control set is otherwise unchanged."
   - route: /reports/[reportId]/present
     access: [viewer]
     intents:
@@ -76,7 +76,7 @@ routes:
         given: "the viewer opens a legacy /reports/[reportId]/present deep link"
         when: "the route is requested"
         then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline on the report page via the Edit/Slides view-mode toggle"
-        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen, 'Status Presentation' title) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
+        note: "The standalone slide deck (section nav, fullscreen, 'Status Presentation' title) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [viewer]
     intents:
@@ -85,7 +85,7 @@ routes:
         given: "viewer is authenticated"
         when: "viewer navigates to /reports/history"
         then: "browser is redirected (307) to /reports?tab=published"
-        note: "Redirect stub (UX-17, Phase 35-08) — handles legacy bookmarks. No UI is rendered on this route itself; the redirect is the only observable behavior."
+        note: "Redirect stub — handles legacy bookmarks. No UI is rendered on this route itself; the redirect is the only observable behavior."
   - route: /reports/latest
     access: [viewer]
     intents:
@@ -94,7 +94,7 @@ routes:
         given: "viewer is authenticated and has a viewer-visible current or published report"
         when: "viewer navigates to /reports/latest"
         then: "reports.latestForViewer resolves the Status target (the current editable period when viewer-visible, else the newest visible published report) and the client redirects (router.replace) to /reports/[reportId]?source=status&recovery=0; while resolving, an 'Opening the status report…' status is shown"
-        note: "viewer-live-status (task 4.2/4.3) — a client redirect, not a server 307 (the web app has no server-side data path). replace (not push) avoids a Back-button redirect loop. The recovery marker propagates so an open→published race NOT_FOUND recovers once via /reports/latest?recovery=1."
+        note: "This is a client redirect, not a server 307, because the web app has no server-side data path. replace (not push) avoids a Back-button redirect loop. The recovery marker propagates so an open→published race NOT_FOUND recovers once via /reports/latest?recovery=1."
       - id: viewer-status-empty-state
         intent: "Viewer with no visible report sees an empty state, not an error or an unpublished period"
         given: "viewer is authenticated but no current or published report contains viewer-visible content"
@@ -108,5 +108,5 @@ routes:
         intent: "Viewer accesses analytics trends page and sees three analytics charts"
         given: "Viewer is authenticated and navigates to /reports/trends"
         when: "The page loads"
-        then: "Three charts render: traffic-light history (line chart of status by period), lead velocity (stacked-bar chart of submitted sections per lead per period), and period comparison (delta table comparing two periods). Each chart either displays data or shows a \"No data\" message."
+        then: 'Three charts render: traffic-light history (line chart of status by period), lead velocity (stacked-bar chart of submitted sections per lead per period), and period comparison (delta table comparing two periods). Each chart either displays data or shows a "No data" message.'
         note: "Route is read-only — no mutations, forms, or user-initiated actions. Layout gate permits 'lead', 'head', 'admin', 'viewer' roles; service-layer filters data scope by role."

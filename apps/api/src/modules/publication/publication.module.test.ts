@@ -2,6 +2,7 @@ import type { AssembledReport } from "@customreport/shared";
 import { MODULE_METADATA } from "@nestjs/common/constants.js";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import { AnalyticsCache } from "../analytics/index.js";
 import {
   NoopIngestionQueue,
@@ -46,12 +47,9 @@ function isFactoryProvider(entry: unknown): entry is FactoryProvider {
   );
 }
 
-/**
- * `@nestjs/testing` is not a dependency of this package (see archived
- * migrate-health-indicator-service design). Pin the Nest factory wiring by
- * reading PublicationModule's provider metadata and invoking the same
- * useFactory the module registers for PublicationService.
- */
+// `@nestjs/testing` is not a dependency of this package, so pin the Nest
+// factory wiring by reading PublicationModule's provider metadata and invoking
+// the same useFactory the module registers for PublicationService.
 function resolvePublicationServiceFactory(): FactoryProvider {
   const providers = Reflect.getMetadata(
     MODULE_METADATA.PROVIDERS,
@@ -106,12 +104,12 @@ describe("PublicationModule wiring", () => {
 
     const service = provider.useFactory(
       repository,
-      new NoopIngestionQueue(),
+      new NoopIngestionQueue(createNullLogger(), "test"),
       mockCache,
       NOOP_PUBLICATION_TELEMETRY,
     );
 
-    await service.publishAuto(reportId);
+    await service.publishAuto(reportId, new Date("2026-04-10T18:00:00.000Z"));
 
     expect(invalidateAll).toHaveBeenCalledTimes(1);
   });

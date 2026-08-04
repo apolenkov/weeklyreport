@@ -1,9 +1,16 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import { ESLint } from "eslint";
 
+import { countFileScopedConfigEntries } from "./eslint-config-scope-counter.ts";
 import { countSuppressionDirectivesByPath } from "./eslint-suppression-inventory.ts";
+import {
+  classifyExemplaryFile,
+  type ExemplaryFileKind,
+} from "./exemplary-file-kind.ts";
 import {
   type FloorSnapshot,
   parseFloorSnapshot,
@@ -26,6 +33,20 @@ const CHURN_WINDOW = "90 days ago";
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
 const DEPCRUISE_BIN = `${REPO_ROOT}node_modules/.bin/depcruise`;
 const BASELINE_RELATIVE_PATH = "scripts/exemplary-floor-baseline.json";
+const OVERRIDE_CONFIG_MODULES = [
+  "eslint-config/core.ts",
+  "eslint-config/boundaries.ts",
+  "eslint-config/immutability.ts",
+  "eslint-config/overrides.ts",
+] as const;
+// Harness/session outputs default to the external archive (CLAUDE.md), never
+// to the source tree; CI overrides with CATALOGUE_OUTPUT_DIR.
+const ARCHIVE_CATALOGUE_DIR = join(
+  homedir(),
+  "work",
+  "customreport-archive",
+  "exemplary-catalogue",
+);
 
 // Both commands emit far more than the 1 MiB default; this is a dev script, so
 // the honest bound is "whatever it produces" rather than a guessed ceiling.
@@ -36,7 +57,7 @@ const COUNT_WIDTH = 3;
 
 interface Row {
   readonly file: string;
-  readonly kind: "product" | "test" | "tooling" | "config";
+  readonly kind: ExemplaryFileKind;
   readonly cls: "A" | "B" | "C" | "E" | "F";
   readonly suppressions: number;
   readonly relaxed: readonly string[];
@@ -53,12 +74,6 @@ const git = (args: readonly string[]): string =>
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-// Test infrastructure is not named *.test.ts, so matching only that filename
-// counts harnesses, fixtures and doubles as product code — and their relaxed
-// budgets then read as product debt, which is the opposite of what they are.
-const TEST_INFRA =
-  /(?:(?:^|\/)(?:test-utils|__tests__|__fixtures__)\/)|(?:(?:-harness|\.fixtures|\.setup|-stubs?)\.tsx?$)/;
-
 // A framework entry has no importer by construction: Next.js loads routes,
 // layouts, proxy.ts and instrumentation by convention, and a package barrel is
 // consumed by name. Each is anchored to the one path the convention allows —
@@ -69,16 +84,10 @@ const FRAMEWORK_ENTRY = new RegExp(
     String.raw`^apps/web/src/app/(?:.*/)?(?:page|layout|route|template|default|loading|error|global-error|not-found)\.tsx?$`,
     String.raw`^apps/web/instrumentation(?:-client)?\.ts$`,
     String.raw`^apps/web/src/proxy\.ts$`,
+    String.raw`^apps/api/src/main\.ts$`,
     String.raw`^packages/[^/]+/src/index\.ts$`,
   ].join("|"),
 );
-
-const classifyKind = (file: string): Row["kind"] => {
-  if (/\.(test|spec)\.tsx?$/.test(file) || TEST_INFRA.test(file)) return "test";
-  if (/^(scripts|tools|prisma|e2e)\//.test(file)) return "tooling";
-  if (/\.config\.ts$/.test(file)) return "config";
-  return "product";
-};
 
 // tsPreCompilationDeps is on here on purpose: a module imported only as a type
 // has no runtime edge, and counting it as unreferenced would report every port
@@ -162,7 +171,7 @@ const buildRow = async (
   const config = (await eslint.calculateConfigForFile(file)) as
     ResolvedConfig | undefined;
   const relaxed = config === undefined ? [] : relaxedRules(config);
-  const kind = classifyKind(file);
+  const kind = classifyExemplaryFile(file);
   const inbound = fanIn.get(file) ?? 0;
   return {
     file,
@@ -245,9 +254,15 @@ const report = (rows: readonly Row[]): void => {
 };
 
 const countOverrideBlocks = (): number =>
-  readFileSync(`${REPO_ROOT}eslint.config.ts`, "utf8")
-    .split("\n")
-    .filter((line) => line.trimStart().startsWith("files: [")).length;
+  OVERRIDE_CONFIG_MODULES.reduce(
+    (sum, path) =>
+      sum +
+      countFileScopedConfigEntries(
+        readFileSync(`${REPO_ROOT}${path}`, "utf8"),
+        path,
+      ),
+    0,
+  );
 
 const previousBaseline = (): FloorSnapshot | undefined => {
   const pathInParent = git([
@@ -285,15 +300,37 @@ const checkRatchet = (rows: readonly Row[]): void => {
   }
 };
 
+// Check mode is read-only: it must not mutate workspace state, so the full
+// catalogue dump is not written anywhere. A non-check run writes it to the
+// external archive (CLAUDE.md) by default, with CATALOGUE_OUTPUT_DIR as the
+// CI override where the archive is unavailable.
+export function catalogueOutputPath(
+  checkMode: boolean,
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  if (checkMode) return null;
+  return env.CATALOGUE_OUTPUT_DIR ?? ARCHIVE_CATALOGUE_DIR;
+}
+
 const args = process.argv.slice(2);
 const unknownArgs = args.filter((arg) => arg !== "--check");
 if (unknownArgs.length > 0)
   throw new Error(`Unknown argument(s): ${unknownArgs.join(", ")}`);
 
 const rows = await buildRows();
-writeFileSync(
-  `${REPO_ROOT}catalogue.json`,
-  `${JSON.stringify(rows, undefined, 1)}\n`,
-);
 report(rows);
-if (args.includes("--check")) checkRatchet(rows);
+if (args.includes("--check")) {
+  checkRatchet(rows);
+} else {
+  const outputDir = catalogueOutputPath(false);
+  // The non-check branch can never produce the null (check-mode) result; an
+  // explicit guard keeps the type honest without a non-null assertion.
+  if (outputDir === null) {
+    throw new Error("catalogue output path is unexpectedly null");
+  }
+  mkdirSync(outputDir, { recursive: true });
+  writeFileSync(
+    join(outputDir, "catalogue.json"),
+    `${JSON.stringify(rows, undefined, 1)}\n`,
+  );
+}

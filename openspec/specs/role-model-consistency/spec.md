@@ -2,24 +2,26 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-admin-role-model-drift. Update Purpose after archive.
+Keep web route role maps and section guards aligned with the roles admitted by the API authorization gate.
 
 ## Requirements
 
 ### Requirement: The route role map matches the API authorization gate
 
-The web route role map MUST grant a route only to roles the API actually admits.
-This binds `ROUTE_ROLE_MAP` in `role-visibility.ts`, the per-section layout
-required-roles it mirrors, and the role descriptions in `openspec/config.yaml` to
-the roles the corresponding API procedures accept. Advertising access in the
-UI/docs that the API rejects is forbidden — all four sources MUST agree on one
-role model.
+The web guarded-route policy MUST grant a route only to roles the API actually
+admits. This binds the `*_ROUTE_ROLES` constants and
+`rolesForGuardedRoute` in `apps/web/src/shared/model/route-role-policy.ts`, the
+required-role arrays passed to `RoleGate` by the route layouts, and the role
+descriptions in `openspec/config.yaml` to the roles the corresponding API
+procedures accept. Advertising access in the UI/docs that the API rejects is
+forbidden — all four sources MUST agree on one role model.
 
 #### Scenario: Admin route role set matches adminProcedure
 
 - **WHEN** `adminProcedure` admits only the `admin` role
-- **THEN** `ROUTE_ROLE_MAP["/admin"]` and the admin layout required-roles list
-  `admin` only (not `head`)
+- **THEN** `ADMIN_ROUTE_ROLES` / `rolesForGuardedRoute("/admin")` and the
+  `apps/web/src/app/(app)/admin/layout.tsx` `RoleGate` required-roles list
+  contain `admin` only (not `head`)
 - **AND** the `config.yaml` role descriptions do not claim `head` has admin access
 
 #### Scenario: A role reaches a route the API then rejects

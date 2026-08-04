@@ -1,6 +1,7 @@
 import type { AdminSnapshot } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   createRepository,
@@ -10,7 +11,15 @@ import {
 } from "./__tests__/focused-admin-harness.js";
 import { type AdminRepository } from "./admin-shared.js";
 import { ProjectAdminService } from "./project-admin.service.js";
-import { SnapshotAdminService } from "./snapshot-admin.service.js";
+import { SnapshotAdminService as ProductionSnapshotAdminService } from "./snapshot-admin.service.js";
+
+class SnapshotAdminService extends ProductionSnapshotAdminService {
+  constructor(
+    repository: ConstructorParameters<typeof ProductionSnapshotAdminService>[0],
+  ) {
+    super(repository, createNullLogger());
+  }
+}
 
 describe("ProjectAdminService — stage assignments", () => {
   const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -18,7 +27,10 @@ describe("ProjectAdminService — stage assignments", () => {
   const PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 
   it("creates a stage assignment and lists it", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -37,7 +49,10 @@ describe("ProjectAdminService — stage assignments", () => {
   });
 
   it("deletes a stage assignment", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
 
     const created = await service.saveStageAssignment({
       userId: USER_ID,
@@ -53,7 +68,10 @@ describe("ProjectAdminService — stage assignments", () => {
   });
 
   it("updates the assignee for the same project stage", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
 
     const first = await service.saveStageAssignment({
       userId: USER_ID,
@@ -177,6 +195,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("attachProductToGroup returns a parsed GroupProduct row", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     const row = await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -190,6 +209,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("attachProductToGroup is idempotent when the same group is re-attached", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     const first = await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -205,6 +225,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("attachProductToGroup rejects a product owned by another group", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -228,6 +249,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("detachProductFromGroup returns {success: true} and removes the edge", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -245,6 +267,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("detachProductFromGroup is idempotent (no-op when edge already absent)", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     await expect(
       service.detachProductFromGroup({
@@ -257,6 +280,7 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   it("listGroupProducts and listProductGroups reflect the single owning group", async () => {
     const service = new ProjectAdminService(
       makeRepoWithGroupProductSurface(snapshot),
+      createNullLogger(),
     );
     await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -271,7 +295,10 @@ describe("ProjectAdminService — Group <-> Product M:M", () => {
   });
 
   it("returns the neutral unused-stub collections", async () => {
-    const service = new ProjectAdminService(createRepository(snapshot));
+    const service = new ProjectAdminService(
+      createRepository(snapshot),
+      createNullLogger(),
+    );
     expect(await service.listGroupProducts(GROUP_A)).toEqual([]);
     expect(await service.listProductGroups(PRODUCT_X)).toEqual([]);
   });
@@ -307,7 +334,10 @@ describe("focused services — users, integrations, and stages", () => {
   });
 
   it("listStages and listStageAssignmentCounts delegate to the repository", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
 
     await expect(service.listStages()).resolves.toEqual([]);
     await expect(service.listStageAssignmentCounts()).resolves.toEqual([]);

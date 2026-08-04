@@ -5,8 +5,11 @@ import {
   readSuppressionInventory,
   readSuppressionInventoryAtCommit,
   type SuppressionDirective,
-  type SuppressionNoise,
 } from "./eslint-suppression-inventory.ts";
+import {
+  parseSuppressionLedger,
+  type SuppressionLedger as Ledger,
+} from "./eslint-suppression-ledger-schema.ts";
 
 const LEDGER_PATH = new URL(
   "./eslint-suppression-ledger.json",
@@ -16,33 +19,6 @@ const START_COMMIT = "63e60d8b";
 const START_RAW_MATCHES = 126;
 const START_DIRECTIVES = 115;
 const START_NOISE = 11;
-
-type Verdict = "unadjudicated" | "remove" | "replace" | "retain";
-
-interface LedgerEntry extends SuppressionDirective {
-  readonly owner: string;
-  readonly verdict: Verdict;
-  readonly proof: string | null;
-  readonly implementationCommit: string | null;
-}
-
-interface NoiseEntry extends SuppressionNoise {
-  readonly verdict: "replace";
-  readonly reason: string;
-  readonly implementationCommit: string;
-}
-
-interface Ledger {
-  readonly version: 1;
-  readonly startingSnapshot: {
-    readonly commit: string;
-    readonly rawMatches: number;
-    readonly directives: number;
-    readonly noise: number;
-  };
-  readonly entries: readonly LedgerEntry[];
-  readonly noiseEntries: readonly NoiseEntry[];
-}
 
 const ownerOf = (path: string): string => {
   if (path.startsWith("apps/api/src/")) return "api";
@@ -87,7 +63,7 @@ const initialLedger = (): Ledger => {
 };
 
 const readLedger = (): Ledger =>
-  JSON.parse(readFileSync(LEDGER_PATH, "utf8")) as Ledger;
+  parseSuppressionLedger(readFileSync(LEDGER_PATH, "utf8"));
 
 const violations = (ledger: Ledger, complete: boolean): readonly string[] => {
   const inventory = readSuppressionInventory();

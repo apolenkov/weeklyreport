@@ -2,10 +2,10 @@ export type CrossAuthorReadResult = "allowed" | "denied" | "empty";
 export type ReopenRequestState = "requested";
 
 export interface ReportSectionsTelemetry {
-  recordCrossAuthorRead(result: CrossAuthorReadResult): void;
-  recordReopenRequest(state: ReopenRequestState): void;
-  recordSectionSubmitted(late: boolean): void;
-  observeSubmissionLatency(seconds: number): void;
+  readonly recordCrossAuthorRead: (result: CrossAuthorReadResult) => void;
+  readonly recordReopenRequest: (state: ReopenRequestState) => void;
+  readonly recordSectionSubmitted: (late: boolean) => void;
+  readonly observeSubmissionLatency: (seconds: number) => void;
 }
 
 export const REPORT_SECTIONS_TELEMETRY = Symbol("ReportSectionsTelemetry");

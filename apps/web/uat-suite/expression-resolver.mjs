@@ -55,6 +55,7 @@ export function resolveExpr(node, module, hops) {
     const found = lookup(node, module);
     return found ? resolveExpr(found.node, found.module, hops + 1) : null;
   }
+  if (ts.isElementAccessExpression(node)) return null;
   if (!ts.isPropertyAccessExpression(node)) return { node, module };
   const owner = resolveExpr(node.expression, module, hops + 1);
   const member =

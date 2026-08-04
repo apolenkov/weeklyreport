@@ -42,6 +42,12 @@ export const STATUS_CONFIG = {
     avatarBg: CSS.statusBlockedBg,
     avatarText: CSS.destructive,
   },
+  empty: {
+    bg: CSS.muted,
+    text: CSS.mutedForeground,
+    avatarBg: CSS.muted,
+    avatarText: CSS.mutedForeground,
+  },
 } as const satisfies Record<WeeklyProductStatus, StatusConfig>;
 
 // One shared grid so stage labels and content keep a common left edge.
@@ -49,11 +55,12 @@ export const ROW_GRID =
   "grid grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] items-start gap-x-2 md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
 
 // The product-status dot in the header reads its hue from a named token
-// (red=blocked alarm, amber=at-risk, green=on-track).
+// (red=blocked alarm, amber=at-risk, green=on-track, muted=empty).
 export const HEADER_STATUS_TONE = {
   "on-track": "var(--color-chip-on-track-border)",
   "at-risk": CSS.statusAtRiskBorder,
   blocked: CSS.destructive,
+  empty: CSS.mutedForeground,
 } as const satisfies Record<WeeklyProductStatus, string>;
 
 // status-color-semantics: each workflow status resolves its badge through named
@@ -99,9 +106,9 @@ export function itemRailTone(status: string): string {
 }
 
 export const SECTION_DIVIDER =
-  "border-t border-[rgba(0,0,0,0.06)] pt-5 first:border-t-0 first:pt-0";
+  "border-t border-[var(--color-border-subtle)] pt-5 first:border-t-0 first:pt-0";
 
-/** Lets the expand animation start before the smooth scroll kicks in. */
+// Lets the expand animation start before the smooth scroll kicks in.
 export const SCROLL_INTO_VIEW_DELAY_MS = 80;
 
 export type StatusBadgeStatus = WeeklyReportItem["status"];

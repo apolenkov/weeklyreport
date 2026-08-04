@@ -115,9 +115,11 @@ docker compose -f docker-compose.prod.yml stop api web
 # 2. Pick a dump.
 docker compose -f docker-compose.prod.yml run --rm backup ls -lh /backups
 
-# 3. Restore. The guard refuses unless you name the target database out loud.
+# 3. Restore. The token binds environment, host, port, and database. Production
+#    additionally requires the repository-wide destructive consent.
 docker compose -f docker-compose.prod.yml run --rm \
-  -e CONFIRM_RESTORE_DATABASE=customreport \
+  -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|customreport' \
+  -e ALLOW_PROD_DESTRUCTIVE=yes \
   backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
 
 # 4. Bring the app back and confirm before serving traffic.

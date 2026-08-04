@@ -1,15 +1,25 @@
 import { splitStageNames } from "./stage-tags";
-import type { KanbanItem, Product } from "./types";
+import type {
+  ActivityKanbanItem,
+  KanbanItem,
+  Product,
+  ProductKanbanItem,
+} from "./types";
+
+type BoardColumnParent = Exclude<
+  KanbanItem["parent"],
+  { readonly kind: "unresolved" }
+>;
 
 // One column per assigned product so empty products still get a "+ Add" CTA;
 // falls back to stage-tag grouping when `products` is not supplied.
 export interface ItemColumn {
   readonly key: string;
-  readonly productId: string;
+  readonly parent: BoardColumnParent;
+  readonly productId: string | null;
   readonly productName: string;
-  // Set on an activity lane — productId is empty; productName is the activity name.
-  readonly activityId?: string;
-  readonly items: KanbanItem[];
+  readonly activityId: string | null;
+  readonly items: readonly KanbanItem[];
 }
 
 export interface LaneActivity {
@@ -21,21 +31,18 @@ export interface LaneActivity {
 // Orphan activity ids that own rows but aren't attached are appended so no
 // row is dropped. With no attached list, lanes fall back to row-owning activities.
 function activityLanes(
-  items: KanbanItem[],
+  items: readonly ActivityKanbanItem[],
   activities: readonly LaneActivity[],
 ): ItemColumn[] {
-  const activityRows = items.filter((it) => it.activityId != null);
   const nameById = new Map(activities.map((a) => [a.id, a.name]));
   const orphanIds = [
     ...new Set(
-      activityRows
-        .map((it) => it.activityId)
-        .filter((id): id is string => id != null && !nameById.has(id)),
+      items.map((it) => it.activityId).filter((id) => !nameById.has(id)),
     ),
   ];
   const laneIds = [...activities.map((a) => a.id), ...orphanIds];
   return laneIds.map((activityId) => {
-    const laneItems = activityRows.filter((it) => it.activityId === activityId);
+    const laneItems = items.filter((it) => it.activityId === activityId);
     const name =
       nameById.get(activityId) ??
       laneItems.at(0)?.activityName ??
@@ -43,7 +50,8 @@ function activityLanes(
       "Activity";
     return {
       key: `activity:${activityId}`,
-      productId: "",
+      parent: { kind: "activity", id: activityId },
+      productId: null,
       productName: name,
       activityId,
       items: laneItems,
@@ -51,18 +59,19 @@ function activityLanes(
   });
 }
 
-function groupKeyFor(item: KanbanItem): string {
+function groupKeyFor(item: ProductKanbanItem): string {
   const tags =
     item.stageNames && item.stageNames.length > 0
       ? item.stageNames
-      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(item.stageName);
+      : splitStageNames(item.stageName);
   return tags.length > 0
-    ? `${item.productName} · ${tags.join(", ")}`
-    : item.productName;
+    ? `${item.parent.id} · ${tags.join(", ")}`
+    : item.parent.id;
 }
 
-function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
+function groupByProduct(
+  items: readonly ProductKanbanItem[],
+): Map<string, ProductKanbanItem[]> {
   return Map.groupBy(items, groupKeyFor);
 }
 
@@ -70,18 +79,24 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
 // (activities are their own row, never peer product columns).
 export function splitItemBoard(
   products: readonly Product[] | undefined,
-  items: KanbanItem[],
+  items: readonly KanbanItem[],
   activities: readonly LaneActivity[] = [],
 ): { productColumns: ItemColumn[]; activityLanes: ItemColumn[] } {
-  // Activity rows carry productId "" — route through lanes so they never vanish.
-  const productRows = items.filter((it) => it.activityId == null);
-  const lanes = activityLanes(items, activities);
+  const productRows = items.filter(
+    (it): it is ProductKanbanItem => it.parent.kind === "product",
+  );
+  const activityRows = items.filter(
+    (it): it is ActivityKanbanItem => it.parent.kind === "activity",
+  );
+  const lanes = activityLanes(activityRows, activities);
   if (products && products.length > 0) {
     return {
       productColumns: products.map((p) => ({
-        key: p.name,
+        key: p.id,
+        parent: { kind: "product", id: p.id },
         productId: p.id,
         productName: p.name,
+        activityId: null,
         items: productRows.filter((it) => it.productId === p.id),
       })),
       activityLanes: lanes,
@@ -95,8 +110,10 @@ export function splitItemBoard(
         return [
           {
             key: productName,
+            parent: first.parent,
             productId: first.productId,
             productName: first.productName,
+            activityId: null,
             items: gItems,
           },
         ];
@@ -109,7 +126,7 @@ export function splitItemBoard(
 // Attached activities (like products) seed empty lanes, so their presence
 // keeps the board non-empty even with zero items.
 export function isBoardEmpty(
-  items: KanbanItem[],
+  items: readonly KanbanItem[],
   products: readonly Product[] | undefined,
   activities: readonly LaneActivity[] = [],
 ): boolean {

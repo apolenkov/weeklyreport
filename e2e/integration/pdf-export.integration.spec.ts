@@ -6,9 +6,10 @@
  * Next.js print route through PDF_BASE_URL.
  */
 
-import { expect,test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { prisma } from "./helpers/db";
-import { PUBLISHED_REPORT_ID } from "./helpers/seed-ids";
+import { HEAD_USER_ID, PUBLISHED_REPORT_ID } from "./helpers/seed-ids";
+import { performAndWaitForTrpcMutation } from "./helpers/trpc-response";
 
 async function existingPdfJobIds(): Promise<string[]> {
   const jobs = await prisma.pdfExportJob.findMany({
@@ -29,6 +30,7 @@ async function newestUnseenPdfJob(existingIds: readonly string[]) {
 }
 
 test.describe("PDF export (integration)", () => {
+  test.setTimeout(120_000);
   test("clicking Export PDF on a published report enqueues a job", async ({
     headPage,
   }) => {
@@ -44,14 +46,10 @@ test.describe("PDF export (integration)", () => {
 
     const exportBtn = headPage.getByRole("button", { name: /export.*pdf/i });
     await expect(exportBtn).toBeVisible({ timeout: 15_000 });
-    await exportBtn.first().click();
-
-    await headPage.waitForResponse(
-      (r) =>
-        r.url().includes("/trpc/") &&
-        r.request().method() === "POST" &&
-        /pdf|export/i.test(r.url()),
-      { timeout: 15_000 },
+    await performAndWaitForTrpcMutation(
+      headPage,
+      () => exportBtn.first().click(),
+      { procedure: /pdf|export/i },
     );
 
     await expect
@@ -61,22 +59,7 @@ test.describe("PDF export (integration)", () => {
       .not.toBeNull();
   });
 
-  // BUG (environment): the PDF-export worker's own headless Chromium
-  // (apps/api/src/infrastructure/bullmq/pdf-export.processor.ts) navigates to
-  // `${PDF_BASE_URL}/print/[reportId]` with `waitUntil: "networkidle"`. The web
-  // server here is started via `next dev`, which mounts
-  // `AgentationDevtools` (apps/web/src/shared/ui/agentation-devtools.tsx) on every
-  // route including `/print`; that widget opens a persistent EventSource plus a
-  // recurring health-check fetch to an Agentation backend that is not running in
-  // this environment. e2e/playwright.integration.config.ts's web `webServer` entry
-  // does not set `NEXT_PUBLIC_DISABLE_DEVTOOLS`, unlike e2e/sweep/playwright.config.ts,
-  // which sets it for exactly this reason. The open connection keeps the print
-  // page's network from ever going idle, so `page.goto` always times out at 60s
-  // (PAGE_GOTO_TIMEOUT_MS) and the job never leaves "pending". This reproduces on
-  // every run (see suspectedBugs) and is not something this spec can fix — the
-  // web dev server needs `NEXT_PUBLIC_DISABLE_DEVTOOLS=true` in the shared
-  // Playwright config.
-  test.fixme("PDF worker completes job and stores artifact URL", async ({
+  test("PDF worker completes job and stores a readable artifact", async ({
     headPage,
   }) => {
     const existingIds = await existingPdfJobIds();
@@ -109,5 +92,18 @@ test.describe("PDF export (integration)", () => {
 
     const job = await prisma.pdfExportJob.findUnique({ where: { id: jobId } });
     expect(job?.filePath).toMatch(/^\/pdfs\/.+\.pdf$/);
+    expect(job?.checksum).toMatch(/^[0-9a-f]{64}$/);
+    expect(job?.requestedBy).toBe(HEAD_USER_ID);
+
+    const artifactUrl = job?.filePath;
+    if (!artifactUrl) throw new Error("completed PDF job has no artifact URL");
+    const response = await headPage
+      .context()
+      .request.get(new URL(artifactUrl, headPage.url()).toString());
+    expect(response.ok()).toBe(true);
+    expect(response.headers()["content-type"]).toContain("application/pdf");
+    const pdf = await response.body();
+    expect(pdf.byteLength).toBeGreaterThan(0);
+    expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
   });
 });

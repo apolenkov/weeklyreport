@@ -7,15 +7,12 @@ import {
 
 export type SlideTrafficStatus = TrafficLightStatus | null;
 
-/** A record's text field counts as content once trimmed non-empty — the
- * shared predicate every row/priority-card filter uses to drop blank rows. */
+// Trimmed non-empty text is the shared content predicate for every row filter.
 export function hasText(text: string | null | undefined): text is string {
   return typeof text === "string" && text.trim().length > 0;
 }
 
-/** Per-row frame tone: every row is a bordered two-line card; the border hue
- * IS the status — neutral (expected work), green (done), yellow (at-risk),
- * red (blocked), plus the dashed paused/postponed work states. */
+// Frame tone maps the row status to its bordered two-line card treatment.
 export type GridTone =
   | "neutral"
   | "note"
@@ -37,7 +34,6 @@ export interface GridAuthor {
   readonly name: string;
   readonly role?: string;
   readonly initials: string;
-  /** Index into the author color-token cycle (0..AUTHOR_COLOR_COUNT-1). */
   readonly colorIndex: number;
   readonly isOwner: boolean;
 }
@@ -46,11 +42,10 @@ export interface GridRow {
   readonly id: string;
   readonly text: string;
   readonly authorId: string;
-  /** False on 2nd+ rows of a same-author series — the badge is omitted. */
+  // Repeated same-author rows omit the badge after the first row.
   readonly showAuthorBadge: boolean;
   readonly tone: GridTone;
-  /** Status word shown on hover — the frame stays word-free; the tooltip
-   * pairs this status with the full row text (which the row itself clamps). */
+  // Hover combines this status with full text while the row body stays clamped.
   readonly hoverLabel: string;
   readonly stageNames: readonly string[];
   readonly editableRef?: GridRowEditableRef;
@@ -85,7 +80,7 @@ function stageRank(stageName: string): number {
   return index === -1 ? UNKNOWN_STAGE_RANK : index;
 }
 
-/** Canonical-pipeline order; names outside the pipeline keep input order last. */
+// Canonical pipeline names sort first; unknown names stay last.
 export function sortStageNames(names: readonly string[]): readonly string[] {
   return [...names].sort((a, b) => stageRank(a) - stageRank(b));
 }
@@ -112,8 +107,8 @@ export interface ToneEntry {
   readonly hoverLabel: string;
 }
 
-/** Exhaustive workflow-status → (tone, hover label) map — no default case, so
- * a new enum member fails the build instead of reading silently neutral. */
+// Exhaustive status mapping intentionally has no default, so new workflow
+// members fail the build instead of silently becoming neutral.
 export function itemToneEntry(status: OwnItem["workflowStatus"]): ToneEntry {
   switch (status) {
     case "done":
@@ -192,8 +187,7 @@ function firstStageRank(row: GridRow): number {
     : stageRank(firstStage);
 }
 
-/** Stage order first (stage-less rows last), then author (owner first, legend
- * order after), then original position — a stable, deterministic cell order. */
+// Sort by stage, then author order, then original position for stable cells.
 export function sortCellRows(
   rows: readonly GridRow[],
   authorOrder: ReadonlyMap<string, number>,
@@ -209,7 +203,7 @@ export function sortCellRows(
   );
 }
 
-/** Badge only on the first row of a consecutive same-author series. */
+// Show a badge only on the first row of each consecutive author series.
 export function collapseAuthorSeries(
   rows: readonly GridRow[],
 ): readonly GridRow[] {

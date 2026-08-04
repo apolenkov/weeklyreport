@@ -51,16 +51,21 @@ export function deriveDecisionDialogModel(
   stageNames: readonly string[],
 ): DecisionDialogModel {
   const isActivityParent = parent.kind === "activity";
+  const parentId = parent.kind === "unresolved" ? undefined : parent.id;
   // Product parents need a concrete stage when the lead owns any; one owned
   // stage auto-selects; zero is a dead end. Activity parents hide stage UI.
   const availableStages = isActivityParent
     ? []
-    : (args.stagesForProduct?.(parent.id) ?? []);
+    : parentId
+      ? (args.stagesForProduct?.(parentId) ?? [])
+      : [];
   const effectiveStageNames = computeEffectiveStageNames(
     stageNames,
     availableStages,
   );
-  const selectedProduct = args.products?.find((p) => p.id === parent.id);
+  const selectedProduct = parentId
+    ? args.products?.find((p) => p.id === parentId)
+    : undefined;
   return {
     isActivityParent,
     availableStages,
@@ -68,7 +73,9 @@ export function deriveDecisionDialogModel(
     isDeadEnd:
       !isActivityParent &&
       isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
-    selectedActivity: args.activities.find((a) => a.id === parent.id),
+    selectedActivity: parentId
+      ? args.activities.find((a) => a.id === parentId)
+      : undefined,
     selectedProduct,
     headerProductName: resolveDecisionProductName(
       selectedProduct,

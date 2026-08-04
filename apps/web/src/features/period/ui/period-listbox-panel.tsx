@@ -1,7 +1,9 @@
 "use client";
 
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { createPortal } from "react-dom";
+
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
+import { periodLabel } from "../model/use-period-navigator";
 
 // Portals to document.body so the toolbar's overflow clip cannot truncate it
 // (position:fixed from the trigger rect; scroll/resize tracked — same pattern
@@ -39,7 +41,6 @@ interface PeriodListboxPanelProps {
   readonly onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
 }
 
-/** Neutral identity badge — muted pill, never a status hue. Shared by the trigger and listbox options. */
 export function ArchivedBadge() {
   return (
     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
@@ -48,14 +49,8 @@ export function ArchivedBadge() {
   );
 }
 
-export const periodLabel = (p: { dateRange: string; isCurrent: boolean }) =>
-  p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange;
-
-/**
- * Per-lead submitted marker — neutral pill, never a status hue. Sourced only
- * from the current lead's `ReportSection.submittedAt`; head/viewer navigators
- * never pass the markers prop.
- */
+// Neutral submitted marker comes only from the current lead's submittedAt;
+// head/viewer navigators omit it.
 export function SubmittedBadge() {
   return (
     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-primary)]">
@@ -123,34 +118,35 @@ export function PeriodListboxPanel({
   onSelect,
   onKeyDown,
 }: PeriodListboxPanelProps) {
-  return createPortal(
-    <div
-      ref={panelRef}
-      id={listboxId}
-      role="listbox"
-      aria-label="Reporting period"
-      tabIndex={-1}
-      className="fixed z-50 overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white py-1 shadow-lg"
-      style={{
-        top: pos.top,
-        left: pos.left,
-        minWidth: pos.width,
-        maxHeight: PERIOD_PANEL_MAX_HEIGHT_PX,
-      }}
-      onKeyDown={onKeyDown}
-    >
-      {options.map((opt, idx) => (
-        <PeriodOptionRow
-          key={opt.id}
-          option={opt}
-          optionId={`${optionIdPrefix}${idx}`}
-          isSelected={opt.id === selectedId}
-          isActive={idx === activeIdx}
-          onHover={() => onHover(idx)}
-          onSelect={() => onSelect(opt.id)}
-        />
-      ))}
-    </div>,
-    document.body,
+  return (
+    <DocumentBodyPortal>
+      <div
+        ref={panelRef}
+        id={listboxId}
+        role="listbox"
+        aria-label="Reporting period"
+        tabIndex={-1}
+        className="fixed z-50 overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] py-1 shadow-lg"
+        style={{
+          top: pos.top,
+          left: pos.left,
+          minWidth: pos.width,
+          maxHeight: PERIOD_PANEL_MAX_HEIGHT_PX,
+        }}
+        onKeyDown={onKeyDown}
+      >
+        {options.map((opt, idx) => (
+          <PeriodOptionRow
+            key={opt.id}
+            option={opt}
+            optionId={`${optionIdPrefix}${idx}`}
+            isSelected={opt.id === selectedId}
+            isActive={idx === activeIdx}
+            onHover={() => onHover(idx)}
+            onSelect={() => onSelect(opt.id)}
+          />
+        ))}
+      </div>
+    </DocumentBodyPortal>
   );
 }

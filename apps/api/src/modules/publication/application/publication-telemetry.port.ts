@@ -1,13 +1,10 @@
-/**
- * Transition `from` values the auto-publish path records. Auto-publish only
- * ever fires on open periods; reopened-period publishes flow through
- * PeriodTelemetry, not this port.
- */
+// Transition `from` values the auto-publish path records: auto-publish only
+// fires on open periods; reopened-period publishes flow through PeriodTelemetry.
 export type PublicationSourceState = "open";
 
 export interface PublicationTelemetry {
-  recordPublishedReport(): void;
-  recordPeriodPublished(from: PublicationSourceState): void;
+  readonly recordPublishedReport: () => void;
+  readonly recordPeriodPublished: (from: PublicationSourceState) => void;
 }
 
 export const PUBLICATION_TELEMETRY = Symbol("PublicationTelemetry");

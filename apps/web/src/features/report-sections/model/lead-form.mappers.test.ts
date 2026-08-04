@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
+import {
   mapLeadDecisions,
   mapLeadItems,
   mapLeadPriorities,
@@ -18,7 +22,6 @@ const PROJECT_A = "44444444-4444-4444-8444-444444444444";
 const PROJECT_B = "55555555-5555-4555-8555-555555555555";
 const ACTIVITY_A = "77777777-7777-4777-8777-777777777777";
 
-/** One attached activity for the activity-lane routing tests. */
 const activityA = {
   activityId: ACTIVITY_A,
   activityName: "Jira triage duty",
@@ -28,23 +31,15 @@ const activityA = {
 };
 
 function baseSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Тимлид 1",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    activities: [],
     ...overrides,
-  };
+  });
 }
 
 describe("mapLeadItems", () => {
@@ -150,7 +145,8 @@ describe("mapLeadItems", () => {
     const item = expectDefined(mapped[0]);
     expect(item.activityId).toBe(ACTIVITY_A);
     expect(item.activityName).toBe("Jira triage duty");
-    expect(item.productId).toBe("");
+    expect(item.parent).toEqual({ kind: "activity", id: ACTIVITY_A });
+    expect(item.productId).toBeNull();
     expect(item.productName).toBe("Jira triage duty");
   });
 });
@@ -225,6 +221,47 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(risk.productId).toBe("");
     expect(risk.productName).toBe("Jira triage duty");
     expect(risk.text).toBe("Rotation understaffed");
+  });
+
+  it("fails loud on a risk with neither id nor stableId instead of fabricating one", () => {
+    const section = baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "yellow" },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Corrupt legacy risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+          severity: "at-risk",
+        },
+      ],
+    });
+
+    expect(() => mapLeadRisks(section)).toThrow(/missing both id and stableId/);
+  });
+
+  it("uses the durable stableId when the id is absent", () => {
+    const section = baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "yellow" },
+      ],
+      risks: [
+        {
+          stableId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          projectId: PROJECT_A,
+          risk: "Legacy risk with lineage key",
+          impact: "Impact",
+          mitigation: "Mitigation",
+          severity: "at-risk",
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.id).toBe(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    );
   });
 
   it("includes an activity-parented decision labeled with the activity name", () => {

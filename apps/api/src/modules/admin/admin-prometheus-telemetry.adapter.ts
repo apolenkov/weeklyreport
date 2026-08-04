@@ -5,7 +5,9 @@ import type {
 } from "./admin-telemetry.port.js";
 
 export class AdminPrometheusTelemetry implements AdminTelemetry {
-  recordReopenRequestDecision(decision: ReopenRequestDecision): void {
+  readonly recordReopenRequestDecision = (
+    decision: ReopenRequestDecision,
+  ): void => {
     customreportReopenRequestsTotal.inc({ state: decision });
-  }
+  };
 }

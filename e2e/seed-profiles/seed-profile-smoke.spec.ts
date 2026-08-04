@@ -10,17 +10,19 @@ import { findRepoRoot } from "../integration/global-setup.js";
 const repoRoot = findRepoRoot(import.meta.dirname);
 const databaseUrl = process.env.E2E_DATABASE_URL;
 if (!databaseUrl) throw new Error("E2E_DATABASE_URL not set");
-const apiUrl = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "3102"}`;
+const apiPort = process.env.E2E_API_PORT;
+if (!apiPort) {
+  throw new Error(
+    "E2E_API_PORT not set — the seed-profile suite needs the explicit API port " +
+      "(playwright.integration.config.ts supplies it to the web-server env).",
+  );
+}
+const apiUrl = `http://127.0.0.1:${apiPort}`;
 
 function seedProfile(profile: SeedProfile): void {
   execFileSync(
     process.execPath,
-    [
-      "--import",
-      "tsx",
-      path.join(repoRoot, "prisma/seed-profile.ts"),
-      profile,
-    ],
+    ["--import", "tsx", path.join(repoRoot, "prisma/seed-profile.ts"), profile],
     {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: databaseUrl },

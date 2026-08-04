@@ -43,17 +43,15 @@ function SettingsContent(props: AdminPanelContentProps) {
   );
 }
 
-function groupRulesByPolicyId(rules: readonly AdminReminderView[]) {
-  return rules.reduce<Readonly<Record<string, readonly AdminReminderView[]>>>(
-    (groups, rule) =>
-      rule.policyId === null
-        ? groups
-        : {
-            ...groups,
-            [rule.policyId]: [...(groups[rule.policyId] ?? []), rule],
-          },
-    {},
+function groupRulesByPolicyId(
+  rules: readonly AdminReminderView[],
+): Readonly<Record<string, readonly AdminReminderView[]>> {
+  const entries = [
+    ...Map.groupBy(rules, (rule) => rule.policyId).entries(),
+  ].filter(
+    (entry): entry is [string, AdminReminderView[]] => entry[0] !== null,
   );
+  return Object.fromEntries(entries);
 }
 
 function RemindersContent(props: AdminPanelContentProps) {

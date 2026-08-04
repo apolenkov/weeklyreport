@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import {
   ItemType,
   ItemWorkflowStatus,
@@ -20,12 +18,52 @@ import {
   PREV_SUBMIT_AT,
 } from "./seed-simple.period.js";
 
+// Deterministic history IDs make re-runs idempotent; published and archive
+// blocks stay disjoint so residue from another seed cannot satisfy the journey.
+const HISTORY_ID_PREFIX = "c0000000-0000-4000-8000-";
+const HEX_RADIX = 16;
+const UUID_TAIL_WIDTH = 12;
+export const historyRowId = (tail: number): string =>
+  `${HISTORY_ID_PREFIX}${tail.toString(HEX_RADIX).padStart(UUID_TAIL_WIDTH, "0")}`;
+
+// Row-kind anchors inside the history id space: the published week's status,
+// current item and next item, then per-period archive rows below.
+const PUBLISHED_STATUS_TAIL = 0x6_00;
+const PUBLISHED_CURRENT_ITEM_TAIL = 0x6_10;
+const PUBLISHED_NEXT_ITEM_TAIL = 0x6_20;
+// Archive rows use a 0x40 block per period: item1 = base + N*0x40 + L,
+// item2 = ... + 0x10, status = ... + 0x20; the unused tail keeps blocks disjoint.
+const ARCHIVE_BASE_TAIL = 0x7_00;
+const ARCHIVE_PERIOD_STRIDE = 0x40;
+const ARCHIVE_ITEM2_OFFSET = 0x10;
+const ARCHIVE_STATUS_OFFSET = 0x20;
+
+export function archiveHistoryRowIds(
+  periodIdx: number,
+  leadIdx: number,
+): {
+  readonly currentItemId: string;
+  readonly nextItemId: string;
+  readonly statusId: string;
+} {
+  const baseTail =
+    ARCHIVE_BASE_TAIL + periodIdx * ARCHIVE_PERIOD_STRIDE + leadIdx;
+  return {
+    currentItemId: historyRowId(baseTail),
+    nextItemId: historyRowId(baseTail + ARCHIVE_ITEM2_OFFSET),
+    statusId: historyRowId(baseTail + ARCHIVE_STATUS_OFFSET),
+  };
+}
+
 async function seedPublishedSection(
   prisma: PrismaClient,
   lead: LeadCfg,
   leadIdx: number,
 ): Promise<void> {
   const sectionId = `a0000000-0000-4000-8000-00000000041${leadIdx + 1}`;
+  const statusId = historyRowId(PUBLISHED_STATUS_TAIL + leadIdx);
+  const currentItemId = historyRowId(PUBLISHED_CURRENT_ITEM_TAIL + leadIdx);
+  const nextItemId = historyRowId(PUBLISHED_NEXT_ITEM_TAIL + leadIdx);
   await prisma.reportSection.create({
     data: {
       id: sectionId,
@@ -37,7 +75,7 @@ async function seedPublishedSection(
   });
   await prisma.projectStatus.create({
     data: {
-      id: randomUUID(),
+      id: statusId,
       reportSectionId: sectionId,
       projectId: lead.productId,
       status: TrafficLightStatus.green,
@@ -46,7 +84,7 @@ async function seedPublishedSection(
   await prisma.item.createMany({
     data: [
       {
-        id: randomUUID(),
+        id: currentItemId,
         reportSectionId: sectionId,
         type: ItemType.current,
         projectId: lead.productId,
@@ -57,7 +95,7 @@ async function seedPublishedSection(
         priorityRank: 1,
       },
       {
-        id: randomUUID(),
+        id: nextItemId,
         reportSectionId: sectionId,
         type: ItemType.next,
         projectId: lead.productId,
@@ -89,13 +127,19 @@ interface ArchiveSectionContext {
   submittedAt: Date;
   createdAt: Date;
   lightStatus: TrafficLightStatus;
+  periodIdx: number;
+  leadIdx: number;
 }
 
 function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
-  const { sectionId, submittedAt, createdAt } = ctx;
+  const { sectionId, submittedAt, createdAt, periodIdx, leadIdx } = ctx;
+  const { currentItemId, nextItemId } = archiveHistoryRowIds(
+    periodIdx,
+    leadIdx,
+  );
   return [
     {
-      id: randomUUID(),
+      id: currentItemId,
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId: lead.productId,
@@ -109,7 +153,7 @@ function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
       updatedAt: submittedAt,
     },
     {
-      id: randomUUID(),
+      id: nextItemId,
       reportSectionId: sectionId,
       type: ItemType.next,
       projectId: lead.productId,
@@ -129,7 +173,8 @@ async function seedArchiveSection(
   lead: LeadCfg,
   ctx: ArchiveSectionContext,
 ): Promise<void> {
-  const { sectionId, submittedAt, createdAt } = ctx;
+  const { sectionId, submittedAt, createdAt, periodIdx, leadIdx } = ctx;
+  const { statusId } = archiveHistoryRowIds(periodIdx, leadIdx);
   await prisma.reportSection.create({
     data: {
       id: sectionId,
@@ -143,7 +188,7 @@ async function seedArchiveSection(
   });
   await prisma.projectStatus.create({
     data: {
-      id: randomUUID(),
+      id: statusId,
       reportSectionId: sectionId,
       projectId: lead.productId,
       status: ctx.lightStatus,
@@ -186,6 +231,8 @@ async function seedArchivePeriod(
       submittedAt,
       createdAt,
       lightStatus: leadIdx === 0 ? firstLeadStatus : TrafficLightStatus.green,
+      periodIdx: reportIdx,
+      leadIdx,
     });
   }
 }

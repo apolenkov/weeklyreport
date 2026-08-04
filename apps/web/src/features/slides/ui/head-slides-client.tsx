@@ -19,8 +19,7 @@ import { SlideSkeleton } from "./slide-skeleton";
 import { StatusSlideDeck } from "./status-slide-deck";
 
 interface HeadSlidesClientProps {
-  /** When provided, loads slides for that specific report period instead of
-   * the current active period. Used by HeadReportShell slides mode. */
+  // When set, load the requested report period instead of the active period.
   readonly reportId?: string;
   // "product" aggregates every lead's content per product (head ScopeToggle).
   readonly scope?: "lead" | "product";

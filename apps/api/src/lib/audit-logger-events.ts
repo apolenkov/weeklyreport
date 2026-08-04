@@ -90,6 +90,7 @@ export function createMutationAuditEvents(
         ip: input.ip,
         procedure: input.procedure,
         ...(input.target !== undefined ? { target: input.target } : {}),
+        ...(input.targets ? { targets: input.targets } : {}),
         status: input.status,
         duration: input.duration,
         ...(input.reason ? { reason: input.reason } : {}),

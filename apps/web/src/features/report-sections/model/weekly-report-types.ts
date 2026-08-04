@@ -1,12 +1,13 @@
 // Presentation types for the Weekly Report pages, produced by mapWeeklyReport.
 import type {
+  CanonicalStatus,
   RecordCommentView,
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
 import type { ItemStatus } from "./item-status";
 
-export type WeeklyProductStatus = "on-track" | "at-risk" | "blocked";
+export type WeeklyProductStatus = CanonicalStatus;
 
 export interface WeeklyPortfolioProduct {
   id: string;
@@ -28,7 +29,7 @@ export interface WeeklyReportItem {
   text: string;
   status: ItemStatus;
   priorityRank?: number | null;
-  comments?: RecordCommentView[];
+  comments?: readonly RecordCommentView[];
   canReview?: boolean;
 }
 
@@ -43,7 +44,7 @@ export interface WeeklyReportRisk {
   problem: string;
   impact: string;
   mitigation: string;
-  comments?: RecordCommentView[];
+  comments?: readonly RecordCommentView[];
   canReview?: boolean;
 }
 
@@ -52,16 +53,30 @@ export interface WeeklyReportDecision {
   badge: string;
   owner: string;
   text: string;
-  comments?: RecordCommentView[];
+  comments?: readonly RecordCommentView[];
   canReview?: boolean;
 }
 
 export interface WeeklyReportPriority {
+  id: string;
   rank: number;
   text: string;
 }
 
-export interface WeeklyProductReport {
+// Attention text and its severity are a pair: a projection must never emit
+// text without a severity (a "blocked" vs "at-risk" callout would be invented).
+interface ProductAttentionPair {
+  readonly needsAttention: string;
+  readonly needsAttentionSeverity: "blocked" | "at-risk";
+}
+export type ProductAttention =
+  | ProductAttentionPair
+  | {
+      readonly needsAttention?: undefined;
+      readonly needsAttentionSeverity?: undefined;
+    };
+
+interface WeeklyProductReportFields {
   id: string;
   authorIds: string[];
   initials: string;
@@ -69,14 +84,14 @@ export interface WeeklyProductReport {
   status: WeeklyProductStatus;
   statusLabel: string;
   leads: string;
-  needsAttention?: string;
-  needsAttentionSeverity?: "blocked" | "at-risk";
   currentWeek: WeeklyReportItem[];
   nextWeek: WeeklyReportItem[];
   risks: WeeklyReportRisk[];
   decisions: WeeklyReportDecision[];
   priorities: WeeklyReportPriority[];
 }
+
+export type WeeklyProductReport = WeeklyProductReportFields & ProductAttention;
 
 // By-lead overview row: worst traffic across sliced products; counts summed.
 export interface LeadOverviewRow {
@@ -90,6 +105,7 @@ export interface LeadOverviewRow {
 
 export interface WeeklyReportPeriod {
   id: string;
+  periodStart: Date;
   // Explicit so publish/reopen consumers need not rely on id === reportId.
   reportId: string;
   // Lifecycle state for Publish & Lock / Reopen toggle.

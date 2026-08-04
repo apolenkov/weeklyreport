@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change adjudicate-exemplary-findings. Update Purpose after archive.
+Require source-grounded adjudication before exemplary-campaign findings become actionable and land confirmed fixes in independently verifiable slices.
 
 ## Requirements
 

@@ -4,23 +4,14 @@ import type { ReactNode } from "react";
 import type { RecordCommentAnchor } from "../../review";
 import { RecordComments } from "../../review";
 
-/**
- * The in-app reviewer context threaded from the page.
- * Present ONLY on the live head/viewer surface — the print/PDF path renders the
- * accordion WITHOUT it, so no reviewer notes or composer leak into an export.
- */
+// Live review surfaces supply this context; print/PDF omits it so reviewer UI
+// cannot leak into exports.
 export interface AccordionReviewContext {
   readonly currentUserId: string;
   readonly isAdmin: boolean;
   readonly onMutated: () => void;
 }
 
-/**
- * Wraps a content row so its reviewer comments (and, for a designated reviewer,
- * the composer) stack directly under the anchor row. A no-op when `review` is
- * absent (print/PDF) or the record has nothing to show — {@link RecordComments}
- * self-suppresses, so the row layout is unchanged for non-reviewers.
- */
 export function ReviewedRow({
   review,
   anchor,
@@ -29,7 +20,10 @@ export function ReviewedRow({
 }: {
   readonly review: AccordionReviewContext | undefined;
   readonly anchor: RecordCommentAnchor;
-  readonly record: { comments?: RecordCommentView[]; canReview?: boolean };
+  readonly record: {
+    readonly comments?: readonly RecordCommentView[];
+    readonly canReview?: boolean;
+  };
   readonly children: ReactNode;
 }) {
   // Mount the comments block ONLY when there is something to show — existing

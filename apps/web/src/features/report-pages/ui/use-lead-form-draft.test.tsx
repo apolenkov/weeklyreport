@@ -6,9 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { useLeadFormDraft } from "./use-lead-form-draft";
+import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -17,22 +19,12 @@ const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const ACTIVITY_ID = "55555555-5555-4555-8555-555555555555";
 
 function makeSection(): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    priorities: [],
-    activities: [],
-  } as ReportSectionReadModel;
+  });
 }
 
 const LOADED: LeadFormLoadedContext = {
@@ -74,17 +66,24 @@ function renderDraft(loaded: LeadFormLoadedContext = LOADED) {
     );
   }
   const rendered = renderHook(
-    () =>
-      useLeadFormDraft({
+    () => {
+      const draft = useLeadFormDraft({
+        generation: `${REPORT_ID}:${SECTION_ID}`,
         serverSection: makeSection(),
         sectionIdForActions: SECTION_ID,
         serverReadOnly: false,
         refetchSection: () => Promise.resolve(),
         crossAuthors: [],
         isEveryone: false,
-        loaded,
         seam: makeSeam(),
-      }),
+      });
+      const quickAdd = useLeadFormQuickAdd({
+        apply: draft.apply,
+        generation: draft.generation,
+        loaded,
+      });
+      return { ...draft, ...quickAdd };
+    },
     { wrapper: Wrapper },
   );
   return rendered;
@@ -139,8 +138,10 @@ describe("useLeadFormDraft merge routing", () => {
     act(() => {
       result.current.quickAddSave({
         id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        parent: { kind: "product", id: PROJECT_ID },
         productId: PROJECT_ID,
         productName: "Test Product",
+        activityId: null,
         status: "planned",
         text: "Quick item",
         author: "Test Lead",

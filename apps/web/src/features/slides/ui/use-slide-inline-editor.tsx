@@ -33,7 +33,7 @@ interface UseSlideInlineEditorArgs {
   readonly section: ReportSectionReadModel | null;
   readonly formData: LeadSlideFormData | null;
   readonly canInlineEdit: boolean;
-  readonly refetchSection: () => void;
+  readonly refetchSection: () => Promise<unknown>;
 }
 
 interface SlideInlineEditor {
@@ -166,6 +166,9 @@ function useInlineEditCommands({
 
   function requestInlineDelete() {
     if (dialogData.inlineEditRecord === null) return;
+    // Close the edit dialog when the delete confirmation takes over, so the
+    // confirm never renders on top of a still-mounted, still-open editor.
+    setInlineEditRef(null);
     setPendingDeleteRef(dialogData.inlineEditRecord.ref);
   }
 

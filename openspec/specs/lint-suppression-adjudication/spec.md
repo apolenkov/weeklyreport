@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change remove-unjustified-suppressions. Update Purpose after archive.
+Adjudicate every ESLint suppression with source evidence, keep retained directives minimal and proved, and complete only with zero unresolved dispositions.
 
 ## Requirements
 

@@ -1,8 +1,5 @@
 const SIDEBAR_SKELETON_ROW_COUNT = 4;
 
-/**
- * Slide Skeleton.
- */
 export function SlideSkeleton() {
   return (
     <div

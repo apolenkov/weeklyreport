@@ -1,12 +1,9 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
 
 import type { Role } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrintRouteContext } from "../../../lib/server/get-print-route-context";
@@ -47,10 +44,10 @@ function session(role: Role): NonNullable<PrintRouteContext["session"]> {
   };
 }
 
-function renderPage(): Promise<ReactElement> {
+function renderPage() {
   return PrintReportPage({
     params: Promise.resolve({ reportId: REPORT_ID }),
-  }) as Promise<ReactElement>;
+  });
 }
 
 describe("PrintReportPage server gate", () => {

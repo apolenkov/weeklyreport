@@ -2,6 +2,10 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined";
+import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildActivitySlideModel } from "./activity-slide-model";
 import { buildProductScopedSlides } from "./product-scoped-slides";
@@ -20,17 +24,13 @@ const PRODUCT_ID = "44444444-4444-4444-8444-444444444444";
 const PRODUCT_TWO_ID = "88888888-8888-4888-8888-888888888888";
 
 function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Alex Lead",
-    authorRole: "lead",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
     projects: [
       {
         projectId: PRODUCT_ID,
@@ -73,11 +73,8 @@ function makeSection(
         carriedOver: false,
       },
     ],
-    risks: [],
-    decisions: [],
-    activities: [],
     ...overrides,
-  };
+  });
 }
 
 const FOREIGN_AUTHOR_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";

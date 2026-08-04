@@ -8,6 +8,11 @@ import {
 } from "./seed-constants.js";
 import type { SeedProfile } from "./seed-profile-contract.js";
 import { SEED_PROFILE_SCOPES } from "./seed-profile-scope.js";
+import {
+  ACTION_LOG_IDS,
+  REMINDER_POLICY_IDS,
+} from "./seed-simple.access-and-policies.js";
+import { PROJECT_ACTIVITY_IDS } from "./seed-simple.activities.js";
 import { STRESS_PROJECT_IDS } from "./seed-stress-ids.js";
 
 const CANONICAL_ROLE_COUNT = 4;
@@ -110,12 +115,18 @@ async function runFullJourney(prisma: PrismaClient): Promise<void> {
           periodState: "archived",
         },
       }),
-      prisma.projectActivity.count({}),
+      prisma.projectActivity.count({
+        where: { id: { in: [...PROJECT_ACTIVITY_IDS] } },
+      }),
       prisma.reopenRequest.count({
         where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
       }),
-      prisma.reminderPolicy.count({}),
-      prisma.userActionLog.count({}),
+      prisma.reminderPolicy.count({
+        where: { id: { in: [...REMINDER_POLICY_IDS] } },
+      }),
+      prisma.userActionLog.count({
+        where: { id: { in: [...ACTION_LOG_IDS] } },
+      }),
       prisma.appSettings.findUnique({ where: { id: "singleton" } }),
     ]);
 

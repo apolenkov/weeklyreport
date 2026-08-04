@@ -1,4 +1,4 @@
-# Caddy reverse-proxy (Phase 38-02)
+# Caddy reverse-proxy
 
 Edge service that terminates TLS, fans out HTTP traffic to the api/web
 containers, and adds security headers.

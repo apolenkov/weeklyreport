@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -15,7 +16,7 @@ describe("PublicationPrismaRepository (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
-    repo = new PublicationPrismaRepository(prisma as never);
+    repo = new PublicationPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {
@@ -156,10 +157,9 @@ describe("PublicationPrismaRepository (integration)", () => {
   });
 
   it("saveAutoPublishedReport freezes the snapshot from a fresh in-transaction re-read (captures a lead edit committed after assemble)", async () => {
-    // The scheduler assembles the publish payload (pre-read), THEN a lead
-    // commits a section edit before the guarded write lands. The frozen
-    // snapshot MUST reflect the edit: it is built from a fresh in-transaction
-    // re-read, never from the earlier assemble-read.
+    // The scheduler pre-reads the payload, then a lead commits an edit before
+    // the guarded write lands. The frozen snapshot MUST reflect it — built from
+    // a fresh in-transaction re-read, never the earlier assemble-read.
     const assembled = await repo.getAssembledReport(testData.report.id);
     expect(expectDefined(assembled).sections[0]?.status).toBe("draft");
     const published = {

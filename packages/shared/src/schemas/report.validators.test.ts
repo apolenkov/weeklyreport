@@ -2,16 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  decisionWriteSchema,
-  type DraftSaveInput,
-  itemWriteSchema,
-  type ReportSectionReadModel,
-  riskWriteSchema,
-  type SubmitSectionPayload,
-  validateRecordActivityIds,
-  validateSubmitInput,
-} from "./report";
+import { type ReportSectionReadModel, validateSubmitInput } from "./report";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -26,6 +17,7 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
+  carriedOver: false,
   // stageNames is required (min 1) on the write contract.
   stageNames: ["Development"],
 });
@@ -55,7 +47,10 @@ const validDecision = () => ({
 const validDraft = () => ({
   reportSectionId: uuid(),
   version: 1,
+  status: "draft" as const,
   projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
+  stageStatuses: [],
+  activityStatuses: [],
   items: [validItem()],
   risks: [validRisk()],
   decisions: [validDecision()],
@@ -78,18 +73,23 @@ describe("validateSubmitInput", () => {
     version: 1,
     status: "draft",
     submittedAt: null,
+    late: false,
     projects: [
       {
         projectId: PROJECT_UUID,
         projectName: "Project Alpha",
         trafficLight: null,
         ownedStages: [],
+        stageSet: [],
+        ownerGroupId: null,
       },
     ],
+    referencedProjects: [],
     items: [],
     risks: [],
     decisions: [],
     activities: [],
+    reviews: [],
     ...overrides,
   });
 
@@ -105,12 +105,12 @@ describe("validateSubmitInput", () => {
     const section = makeSection();
     const input = {
       ...validSubmit(),
-      projectStatuses: [{ projectId: PROJECT_UUID }],
+      projectStatuses: [],
       items: [
         { ...validItem(), projectId: PROJECT_UUID, type: "current" as const },
       ],
     };
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
+    const errors = validateSubmitInput(section, input);
     expect(errors.some((e) => e.code === "MISSING_TRAFFIC_LIGHT")).toBe(true);
   });
 
@@ -151,6 +151,7 @@ describe("validateSubmitInput", () => {
           status: null,
           linkedProducts: [],
           derivedStatus: null,
+          alarmFloor: null,
         },
       ],
     });
@@ -177,6 +178,7 @@ describe("validateSubmitInput", () => {
           status: "green",
           linkedProducts: [],
           derivedStatus: "green",
+          alarmFloor: null,
         },
       ],
     });
@@ -189,130 +191,6 @@ describe("validateSubmitInput", () => {
       decisions: [],
     };
     const errors = validateSubmitInput(section, input);
-    expect(errors).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// XOR parent + conditional stage + activityId write guard
-// (validateRecordActivityIds)
-// ---------------------------------------------------------------------------
-
-describe("record write schema — XOR parent + conditional stage", () => {
-  const activityItem = () => ({
-    activityId: uuid(),
-    type: "current" as const,
-    text: "Rotate on-call",
-    tag: "ops",
-    workflowStatus: "in_progress" as const,
-    stageNames: [] as string[],
-  });
-
-  it("accepts a product-parented item (product + >=1 stage)", () => {
-    expect(itemWriteSchema.safeParse(validItem()).success).toBe(true);
-  });
-
-  it("accepts an activity-parented item (activity + no stage)", () => {
-    expect(itemWriteSchema.safeParse(activityItem()).success).toBe(true);
-  });
-
-  it("rejects an item with BOTH a product and an activity parent", () => {
-    const both = { ...validItem(), activityId: uuid() };
-    expect(itemWriteSchema.safeParse(both).success).toBe(false);
-  });
-
-  it("rejects an item with NEITHER parent", () => {
-    const { projectId: _projectId, ...noParent } = validItem();
-    expect(itemWriteSchema.safeParse(noParent).success).toBe(false);
-  });
-
-  it("rejects an activity-parented item that carries a stage", () => {
-    const withStage = { ...activityItem(), stageNames: ["Development"] };
-    expect(itemWriteSchema.safeParse(withStage).success).toBe(false);
-  });
-
-  it("applies the same XOR + activity-no-stage rule to risks", () => {
-    const activityRisk = {
-      activityId: uuid(),
-      risk: "On-call fatigue",
-      impact: "Slower response",
-      mitigation: "Rotate weekly",
-      severity: "at-risk" as const,
-      stageNames: [] as string[],
-    };
-    expect(riskWriteSchema.safeParse(activityRisk).success).toBe(true);
-    expect(
-      riskWriteSchema.safeParse({ ...activityRisk, stageNames: ["Dev"] })
-        .success,
-    ).toBe(false);
-  });
-
-  it("gives activities full decision parity (XOR covers Decision)", () => {
-    const activityDecision = {
-      activityId: uuid(),
-      text: "Adopt weekly rotation",
-      owner: "Alice",
-      impact: "Fairer load",
-      stageNames: [] as string[],
-    };
-    expect(decisionWriteSchema.safeParse(activityDecision).success).toBe(true);
-    expect(
-      decisionWriteSchema.safeParse({
-        ...activityDecision,
-        productId: uuid(),
-      }).success,
-    ).toBe(false);
-  });
-});
-
-describe("validateRecordActivityIds", () => {
-  const attachedId = uuid();
-  const section = {
-    activities: [
-      {
-        activityId: attachedId,
-        activityName: "Ops rotation",
-        status: null,
-        linkedProducts: [],
-        derivedStatus: null,
-      },
-    ],
-    items: [],
-    risks: [],
-    decisions: [],
-  } as unknown as ReportSectionReadModel;
-
-  const withActivityItem = (activityId: string): DraftSaveInput =>
-    ({
-      ...validDraft(),
-      items: [
-        {
-          ...validItem(),
-          projectId: undefined,
-          activityId,
-          stageNames: [],
-        },
-      ],
-    }) as unknown as DraftSaveInput;
-
-  it("rejects a record whose activityId is not attached to the section", () => {
-    const errors = validateRecordActivityIds(section, withActivityItem(uuid()));
-    expect(errors.some((e) => e.code === "ACTIVITY_NOT_ATTACHED")).toBe(true);
-  });
-
-  it("accepts a record parented to an attached activity", () => {
-    const errors = validateRecordActivityIds(
-      section,
-      withActivityItem(attachedId),
-    );
-    expect(errors).toHaveLength(0);
-  });
-
-  it("ignores product-parented records (null activityId)", () => {
-    const errors = validateRecordActivityIds(
-      section,
-      validDraft() as unknown as DraftSaveInput,
-    );
     expect(errors).toHaveLength(0);
   });
 });

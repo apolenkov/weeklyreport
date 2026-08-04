@@ -1,8 +1,3 @@
-/**
- * LeadForm mutation wiring (submit, revoke, autosave, dirty-state) via
- * mocked tRPC at the proxy boundary.
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
@@ -45,6 +40,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     version: 1,
     status: overrides.status ?? ("draft" as const),
     submittedAt: null,
+    referencedProjects: [],
     projects: [
       {
         projectId: PROJECT_ID,
@@ -110,6 +106,7 @@ function buildHarness(
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     {
@@ -369,8 +366,7 @@ describe("LeadForm mutation wiring", () => {
     const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
-    expect(sent.stageStatuses?.length).toBeGreaterThan(0);
-    expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+    expect(sent.stageStatuses?.map((stage) => stage.status)).toEqual(["green"]);
   });
 
   it("D4: no unset own stages → the submit-confirm shows no warning", async () => {
@@ -412,20 +408,25 @@ describe("LeadForm mutation wiring", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("D4: a stale orphan (red) own stage with no covering risk is coerced to green on submit, not warned", async () => {
-    // Under the one-source model an orphan red renders On Track on every read,
-    // so submit collapses it to green rather than re-persist a ghost severity;
-    // the "N not set" warning stays null/unset-only.
+  it("D4: explicit red and yellow own stages survive submit without an unset warning", async () => {
     const seeded = makeSection();
     const withOrphan = {
       ...seeded,
       risks: [],
       projects: seeded.projects.map((p) => ({
         ...p,
-        ownedStages: p.ownedStages.map((s) => ({
-          ...s,
-          status: "red" as const,
-        })),
+        ownedStages: [
+          ...p.ownedStages.map((stage) => ({
+            ...stage,
+            status: "red" as const,
+          })),
+          {
+            stageId: "77777777-7777-4777-8777-777777777777",
+            stageName: "Testing",
+            sortOrder: 4,
+            status: "yellow" as const,
+          },
+        ],
       })),
     };
     const { Wrapper, captured } = buildHarness({
@@ -450,7 +451,6 @@ describe("LeadForm mutation wiring", () => {
     const dialog = await screen.findByRole("alertdialog", {
       name: "Confirm submission",
     });
-    // The orphan displays On Track, so it is NOT an "unset" stage — no warning.
     expect(
       within(dialog).queryByText(/not set.*marked On Track/i),
     ).not.toBeInTheDocument();
@@ -465,8 +465,10 @@ describe("LeadForm mutation wiring", () => {
     const sent = submitEntry.mutationFn.mock.calls.at(-1)?.[0] as {
       stageStatuses?: { status: string | null }[];
     };
-    expect(sent.stageStatuses?.length).toBeGreaterThan(0);
-    expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+    expect(sent.stageStatuses?.map((stage) => stage.status)).toEqual([
+      "red",
+      "yellow",
+    ]);
   });
 
   it("uses the shared readiness projection to block risk-stage coupling", async () => {

@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 
 import type { CreateSeed } from "../../../hooks/use-editable-list-dialog";
+import { responsiveBoardGridClassName } from "../../../shared/ui/responsive-board-grid";
 import type { ItemColumn, KanbanItem } from "../../report-sections";
 import { ActivityLanesBlock, BoardColumnHeader } from "../../report-sections";
 
-const MAX_GRID_COLUMNS = 3;
 // Keeps an empty column as tall as a column holding a couple of item cards, so
 // a board with a mix of empty and filled columns stays visually balanced.
 const EMPTY_COLUMN_MIN_HEIGHT_PX = 150;
@@ -28,19 +28,9 @@ export function NextWeekBoardGrid({
   onAdd,
   renderItem,
 }: NextWeekBoardGridProps) {
-  const visibleColumnCount = Math.min(
-    Math.max(productColumns.length, 1),
-    MAX_GRID_COLUMNS,
-  );
-
   return (
     <>
-      <div
-        className="grid gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${visibleColumnCount}, minmax(0, 1fr))`,
-        }}
-      >
+      <div className={responsiveBoardGridClassName(productColumns.length)}>
         {productColumns.map((col) => (
           <ProductColumn
             key={col.key}
@@ -79,7 +69,7 @@ function ProductColumn({
   renderItem,
 }: ProductColumnProps) {
   return (
-    <div>
+    <div className="min-w-0">
       <BoardColumnHeader
         col={col}
         readOnly={readOnly}
@@ -88,7 +78,7 @@ function ProductColumn({
       />
       {col.items.length === 0 ? (
         <div
-          className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+          className="flex items-center justify-center rounded-lg border border-dashed border-[var(--card-surface-border)] bg-[var(--color-surface-empty)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
           style={{ minHeight: EMPTY_COLUMN_MIN_HEIGHT_PX }}
         >
           No items yet

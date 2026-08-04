@@ -2,12 +2,34 @@ import type { AdminReminderExecution } from "@customreport/shared";
 
 import { ReminderDomainError } from "./reminders.errors.js";
 import type {
+  DeadlineReminderPayload,
+  EscalationReminderPayload,
   ReminderExecutionPayload,
   RemindersRepository,
 } from "./reminders.types.js";
 
 export type ReminderQueuePayload =
   ReminderExecutionPayload | { reportPeriod: string };
+
+// The worker-facing job shapes, built here and consumed by the email-reminder
+// processor; keeping the union concrete preserves the per-kind fields instead
+// of erasing them to a generic object the worker would have to re-derive.
+interface DeadlineQueueData extends DeadlineReminderPayload {
+  executionId: string;
+  recipientEmail: string;
+}
+interface EscalationQueueData extends EscalationReminderPayload {
+  executionId: string;
+  recipientEmail: string;
+}
+interface PlainQueueData {
+  executionId: string;
+  recipientEmail: string;
+  reportPeriod: string;
+}
+
+export type ReminderQueueJobData =
+  DeadlineQueueData | EscalationQueueData | PlainQueueData;
 
 // Missing period label is a domain error — never a silently empty subject.
 export async function requireRulePeriodLabel(
@@ -30,7 +52,7 @@ export function buildQueuePayload(
   execution: AdminReminderExecution,
   recipientEmail: string,
   payload: ReminderQueuePayload,
-): Record<string, unknown> {
+): ReminderQueueJobData {
   if ("kind" in payload) {
     if (payload.kind === "deadline") {
       return {

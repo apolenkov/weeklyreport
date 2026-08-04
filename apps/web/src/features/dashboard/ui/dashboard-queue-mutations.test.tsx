@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -76,10 +76,21 @@ import { RevokeLeadButton } from "./revoke-lead-button";
 
 interface MockMutationOptions {
   readonly kind: "remind" | "review" | "revoke";
-  readonly options: {
-    readonly onSuccess: (result: unknown) => void;
-    readonly onError: (error: Error) => void;
-  };
+  readonly options?: MutationCallbacks | undefined;
+}
+
+interface MutationCallbacks {
+  readonly onSuccess: (result: unknown) => void;
+  readonly onError: (error: Error) => void;
+}
+
+function callbacksFor(
+  configuration: MockMutationOptions,
+  callOptions?: MutationCallbacks,
+): MutationCallbacks {
+  const callbacks = callOptions ?? configuration.options;
+  if (!callbacks) throw new Error("Mutation callbacks are required");
+  return callbacks;
 }
 
 interface RemindResult {
@@ -93,7 +104,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   useMutationMock.mockImplementation((configuration: MockMutationOptions) => ({
     isPending: false,
-    mutate: (input: unknown) => {
+    mutate: (input: unknown, callOptions?: MutationCallbacks) => {
       mutate(input);
       const result =
         configuration.kind === "remind"
@@ -101,7 +112,7 @@ beforeEach(() => {
           : configuration.kind === "review"
             ? { verdict: "changes_requested", unsubmitted: true }
             : undefined;
-      configuration.options.onSuccess(result);
+      callbacksFor(configuration, callOptions).onSuccess(result);
     },
   }));
 });
@@ -166,7 +177,8 @@ describe("dashboard queue mutation transitions", () => {
     useMutationMock.mockImplementation(
       (configuration: MockMutationOptions) => ({
         isPending: false,
-        mutate: () => configuration.options.onSuccess(result),
+        mutate: (_input: unknown, callOptions?: MutationCallbacks) =>
+          callbacksFor(configuration, callOptions).onSuccess(result),
       }),
     );
     render(
@@ -193,8 +205,10 @@ describe("dashboard queue mutation transitions", () => {
     useMutationMock.mockImplementation(
       (configuration: MockMutationOptions) => ({
         isPending: false,
-        mutate: () =>
-          configuration.options.onError(new Error("Dispatch failed")),
+        mutate: (_input: unknown, callOptions?: MutationCallbacks) =>
+          callbacksFor(configuration, callOptions).onError(
+            new Error("Dispatch failed"),
+          ),
       }),
     );
     render(

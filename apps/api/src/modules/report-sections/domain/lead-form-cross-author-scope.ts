@@ -108,7 +108,7 @@ export function filterSectionToSharedProducts(
     ...risks.flatMap((r) => (r.projectId != null ? [r.projectId] : [])),
     ...decisions.flatMap((d) => (d.productId != null ? [d.productId] : [])),
   ]);
-  const referencedProjects = section.referencedProjects?.filter((rp) =>
+  const referencedProjects = section.referencedProjects.filter((rp) =>
     referencedIds.has(rp.projectId),
   );
   // Strip the fields the Everyone lens omits before the spread carries them:
@@ -122,6 +122,7 @@ export function filterSectionToSharedProducts(
     projects,
     referencedProjects,
     activities: [],
+    reviews: [],
   };
 }
 

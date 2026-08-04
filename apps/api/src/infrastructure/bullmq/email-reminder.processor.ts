@@ -1,24 +1,26 @@
 import type { OrganizationBrand } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 
+import { APP_LOGGER } from "../../lib/audit-logger.js";
 import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { SnapshotAdminService } from "../../modules/admin/index.js";
 import { renderEmail } from "../../modules/email/index.js";
 import { RemindersService } from "../../modules/reminders/index.js";
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
-import type { EmailPort } from "../email/email.service";
+import { EMAIL_PORT, type EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
   extractTraceId,
   type JobTraceContext,
 } from "./worker-observability.js";
 
-// Legacy (kind absent) jobs pre-date the template renderer and send plaintext
-// with a hardcoded brand; deadline/escalation jobs render react-email templates
-// and carry the enqueue-time organization snapshot.
+// Kind-absent payloads send plaintext with a hardcoded brand; deadline/escalation
+// payloads render react-email templates and carry the enqueue-time organization
+// snapshot.
 interface LegacyReminderPayload {
   executionId: string;
   recipientEmail: string;
@@ -78,14 +80,16 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   protected readonly spanName = "email-reminder.process";
 
   constructor(
+    @Inject(RemindersService)
     private readonly remindersService: RemindersService,
-    private readonly emailService: EmailPort,
-    env: EnvConfig,
+    @Inject(EMAIL_PORT) private readonly emailService: EmailPort,
+    @Inject(ENV_CONFIG) env: EnvConfig,
     // Surfaces the AppSettings From-address override. A null setting means
     // "use the SMTP_FROM env default".
+    @Inject(SnapshotAdminService)
     private readonly snapshotAdminService: SnapshotAdminService,
-    logger?: AppLogger,
-    cls?: ClsService,
+    @Inject(APP_LOGGER) logger: AppLogger,
+    @Inject(ClsService) cls: ClsService | null,
   ) {
     super(env, logger, cls);
   }
@@ -93,16 +97,29 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   // Cap SMTP throughput at 5 emails per rolling 60s window so a burst of
   // late-cycle reminders doesn't throttle the corporate mail relay. Jobs that
   // exhaust their retries land in the queue's failed set (the readable DLQ).
-  protected override extraWorkerOptions(): Partial<WorkerOptions> {
-    return { concurrency: 5, limiter: { max: 5, duration: 60_000 } };
-  }
+  protected override readonly extraWorkerOptions =
+    (): Partial<WorkerOptions> => ({
+      concurrency: 5,
+      limiter: { max: 5, duration: 60_000 },
+    });
 
-  protected onJobFailed(
+  protected readonly onJobFailed = (
     job: Job<EmailReminderJobData> | undefined,
     error: Error,
-  ): void {
+  ): void => {
     const correlationId = job?.data.correlationId;
+    const traceparent = job?.data.traceparent;
     const traceId = job ? extractTraceId(job.data) : undefined;
+    if (traceparent !== undefined && traceId === undefined) {
+      // A malformed traceparent means the enqueuer emitted a bad carrier —
+      // reject it loudly so the linkage gap is diagnosable, not silent.
+      this.logger.warn("email-reminder job failed with malformed traceparent", {
+        executionId: job?.data.executionId,
+        attempt: job?.attemptsMade,
+        traceparent,
+        ...(correlationId ? { correlationId } : {}),
+      });
+    }
     this.logger.error("email-reminder job failed", {
       executionId: job?.data.executionId,
       attempt: job?.attemptsMade,
@@ -110,9 +127,11 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
       ...(traceId ? { traceId } : {}),
       error: error.message,
     });
-  }
+  };
 
-  protected async processJob(job: Job<EmailReminderJobData>): Promise<void> {
+  protected readonly processJob = async (
+    job: Job<EmailReminderJobData>,
+  ): Promise<void> => {
     const { executionId } = job.data;
 
     // Compare-and-set `queued → sending` before any SMTP work: a retry or a
@@ -149,7 +168,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     // succeeded, and leaving the row `sending` reads as "delivered,
     // persistence unconfirmed" — better than `failed`, which invites a resend.
     await this.remindersService.markReminderSent(executionId);
-  }
+  };
 
   private async dispatchEmail(data: EmailReminderJobData): Promise<void> {
     const fromOverride = (await this.snapshotAdminService.getSettings())
@@ -210,8 +229,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     );
   }
 
-  // Legacy plaintext path — preserved verbatim for follow-up reminders that
-  // pre-date the template renderer; brand stays hardcoded on this branch.
+  // Plaintext path for kind-absent payloads; brand stays hardcoded on this branch.
   private async sendLegacyReminder(
     data: LegacyReminderPayload,
     fromOverride: FromOverride,

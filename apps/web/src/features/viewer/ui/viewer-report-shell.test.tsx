@@ -1,15 +1,14 @@
-/**
- * @vitest-environment jsdom
- *
- * Read-only shell: head toolbar, no mutations, `/reports/...` URLs.
- * Status-entry NOT_FOUND recovers once; other failures are terminal.
- */
+// @vitest-environment jsdom
+// Read-only shell pins toolbar authority and one-shot NOT_FOUND recovery;
+// other failures remain terminal.
 
 import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { makeQueryState } from "../../../test-utils/query-state";
 
 vi.mock("../../slides/ui/head-slides-client", () => ({
   HeadSlidesClient: (props: { enableActivity?: boolean }) => (
@@ -145,6 +144,29 @@ afterEach(() => {
 });
 
 describe("ViewerReportShell — read-only toolbar parity", () => {
+  it("surfaces a history-query failure instead of silently truncating period navigation", () => {
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        makeQueryState({ data: undefined, error: new Error("boom") }),
+      ],
+      ["weeklyReport.get", makeQueryState({ data: undefined })],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
+    ]);
+    vi.mocked(useQuery).mockImplementation((options) => {
+      const result = resultsByQuery.get(options.queryKey[0]);
+      if (result) return result;
+      return makeQueryState({ data: undefined });
+    });
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+    expect(screen.getByTestId("viewer-history-error")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Select reporting period" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("form mode renders the scope toggle and view-mode toggle, keeps Agent-review, and drops Back-to-Archive", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
 
@@ -239,7 +261,7 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
       [
         "reports.compiledHistory",
-        {
+        makeQueryState({
           data: {
             entries: [
               {
@@ -256,13 +278,11 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
               },
             ],
           },
-          isLoading: false,
-          isError: false,
-        } as unknown as ReturnType<typeof useQuery>,
+        }),
       ],
       [
         "weeklyReport.get",
-        {
+        makeQueryState({
           data: {
             status: "active",
             reportId: addressedReportId,
@@ -270,20 +290,9 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
             periodEnd: "2026-04-20T00:00:00.000Z",
             periodStatus: "published",
           },
-          isLoading: false,
-          isError: false,
-          error: null,
-        } as unknown as ReturnType<typeof useQuery>,
+        }),
       ],
-      [
-        "pdfExport.status",
-        {
-          data: undefined,
-          isLoading: false,
-          isError: false,
-          error: null,
-        } as unknown as ReturnType<typeof useQuery>,
-      ],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
     ]);
     vi.mocked(useQuery).mockImplementation((options) => {
       const queryId = options.queryKey[0];
@@ -319,19 +328,13 @@ describe("ViewerReportShell — one-shot race recovery", () => {
   function makeGetErrorImpl() {
     return (opts: { queryKey?: readonly unknown[] }) => {
       if (opts.queryKey?.[0] === "weeklyReport.get") {
-        return {
+        // Shape getClientErrorDetails reads as a NOT_FOUND → isInvalidLink.
+        return makeQueryState({
           data: undefined,
-          isLoading: false,
-          isError: true,
-          // Shape getClientErrorDetails reads as a NOT_FOUND → isInvalidLink.
           error: { data: { code: "NOT_FOUND" } },
-        } as unknown as ReturnType<typeof useQuery>;
+        });
       }
-      return {
-        data: { entries: [] },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useQuery>;
+      return makeQueryState({ data: { entries: [] } });
     };
   }
 

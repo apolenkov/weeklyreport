@@ -77,7 +77,7 @@ export function sectionToDraftPayload(
       status: p.trafficLight ?? undefined,
     })),
     stageStatuses: section.projects.flatMap((p) =>
-      (p.ownedStages ?? []).map((stage) => ({
+      p.ownedStages.map((stage) => ({
         projectId: p.projectId,
         stageId: stage.stageId,
         status: stage.status ?? null,

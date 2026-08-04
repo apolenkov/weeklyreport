@@ -1,8 +1,8 @@
 import type { AppSettings } from "@customreport/shared";
-import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import type { AutoCarryOverOutcome } from "../../carry-over/index.js";
 import {
   flipDueScheduledToOpen,
   PeriodCreatorScheduler,
@@ -79,10 +79,9 @@ function makePrismaStub(opts: {
           // matches the real prisma client surface.
           periodState: data.periodState,
         })),
-      // The flip reads due scheduled rows then updates each.
-      // The runOnce-level tests exercise the create/skip paths, so the default
-      // is "no due scheduled rows" — the flip is a no-op. The flip's own
-      // recovery is covered by the focused flipDueScheduledToOpen tests below.
+      // The flip reads due scheduled rows then updates each; the runOnce-level
+      // tests exercise the create/skip paths, so the default here is "no due
+      // rows". The flip's own recovery is covered by the focused flip tests.
       findMany: vi.fn().mockResolvedValue([]),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
@@ -92,7 +91,26 @@ function makePrismaStub(opts: {
 // Cast to never via Nest DI seam — the scheduler types its constructor on
 // PrismaService + settings service; tests pass a minimal shape with only the
 // methods exercised.
-const asAny = <T>(x: unknown): T => x as T;
+// Pass a partial stub where the real service is expected: `never` erases the
+// contract, so cast through `unknown` to the constructor's parameter type —
+// a signature change in the real class becomes a compile error here.
+const asStub = <T>(value: unknown, _target?: T): T => value as T;
+
+function createScheduler(
+  prisma: StubPrisma,
+  admin: unknown,
+  audit: unknown,
+  policyApplicator: unknown = { applyToPeriod: vi.fn() },
+  autoCarryOver: unknown = vi.fn().mockResolvedValue({ status: "no-source" }),
+): PeriodCreatorScheduler {
+  return new PeriodCreatorScheduler(
+    asStub(prisma),
+    asStub(admin),
+    asStub(audit),
+    asStub(policyApplicator),
+    asStub(autoCarryOver),
+  );
+}
 
 describe("PeriodCreatorScheduler", () => {
   it("skip-when-disabled: autoCreatePeriods=false → no create, no audit", async () => {
@@ -103,11 +121,7 @@ describe("PeriodCreatorScheduler", () => {
         .mockResolvedValue(makeSettings({ autoCreatePeriods: false })),
     };
     const audit = createNullAuditLogger();
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
-      audit,
-    );
+    const scheduler = createScheduler(prisma, admin, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
@@ -129,18 +143,24 @@ describe("PeriodCreatorScheduler", () => {
         .fn()
         .mockResolvedValue(makeSettings({ autoCreatePeriods: false })),
     };
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
-      createNullAuditLogger(),
-    );
+    const scheduler = createScheduler(prisma, admin, createNullAuditLogger());
 
     const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
     expect(result).toEqual({ created: false, reason: "disabled" });
     expect(prisma.report.updateMany).toHaveBeenCalledWith({
       where: { id: due.id, periodState: "scheduled" },
-      data: { periodState: "open", status: "draft", archived: false },
+      data: {
+        periodState: "open",
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
     });
     expect(prisma.report.findFirst).not.toHaveBeenCalled();
     expect(prisma.report.create).not.toHaveBeenCalled();
@@ -160,11 +180,16 @@ describe("PeriodCreatorScheduler", () => {
         .mockResolvedValue(makeSettings({ autoCreatePeriods: false })),
     };
     const autoCarryOver = vi
-      .fn<(targetReportId: string) => Promise<void>>()
-      .mockResolvedValue(undefined);
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
+      .fn<(targetReportId: string) => Promise<AutoCarryOverOutcome>>()
+      .mockResolvedValue({
+        status: "completed",
+        sourceReportId: "source-1",
+        targetReportId: "target-1",
+        authorCount: 1,
+      });
+    const scheduler = createScheduler(
+      prisma,
+      admin,
       createNullAuditLogger(),
       undefined,
       autoCarryOver,
@@ -193,11 +218,7 @@ describe("PeriodCreatorScheduler", () => {
       ...createNullAuditLogger(),
       periodAutoCreate: vi.fn(),
     };
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
@@ -234,11 +255,7 @@ describe("PeriodCreatorScheduler", () => {
       ...createNullAuditLogger(),
       periodAutoCreate: vi.fn(),
     };
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, audit);
 
     await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
@@ -273,11 +290,16 @@ describe("PeriodCreatorScheduler", () => {
     );
     const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
     const autoCarryOver = vi
-      .fn<(targetReportId: string) => Promise<void>>()
-      .mockResolvedValue(undefined);
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
+      .fn<(targetReportId: string) => Promise<AutoCarryOverOutcome>>()
+      .mockResolvedValue({
+        status: "completed",
+        sourceReportId: "source-1",
+        targetReportId: "target-1",
+        authorCount: 1,
+      });
+    const scheduler = createScheduler(
+      prisma,
+      admin,
       createNullAuditLogger(),
       undefined,
       autoCarryOver,
@@ -311,10 +333,15 @@ describe("PeriodCreatorScheduler", () => {
       createdId: "period-new-1",
     });
     const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
-    const autoCarryOver = vi.fn().mockResolvedValue(undefined);
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
+    const autoCarryOver = vi.fn().mockResolvedValue({
+      status: "completed",
+      sourceReportId: "source-1",
+      targetReportId: "target-1",
+      authorCount: 1,
+    });
+    const scheduler = createScheduler(
+      prisma,
+      admin,
       createNullAuditLogger(),
       undefined,
       autoCarryOver,
@@ -345,11 +372,11 @@ describe("PeriodCreatorScheduler", () => {
     const policyApplicator = {
       applyToPeriod: vi.fn().mockResolvedValue(undefined),
     };
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
+    const scheduler = createScheduler(
+      prisma,
+      admin,
       createNullAuditLogger(),
-      asAny(policyApplicator),
+      policyApplicator,
     );
 
     const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
@@ -378,11 +405,7 @@ describe("PeriodCreatorScheduler", () => {
       ...createNullAuditLogger(),
       periodAutoCreate: vi.fn(),
     };
-    const scheduler = new PeriodCreatorScheduler(
-      asAny(prisma),
-      asAny(admin),
-      asAny(audit),
-    );
+    const scheduler = createScheduler(prisma, admin, audit);
 
     const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
@@ -398,19 +421,9 @@ describe("PeriodCreatorScheduler", () => {
 const W = new Date("2026-05-11T00:00:00.000Z");
 const W_END = new Date("2026-05-17T23:59:59.999Z");
 
-// Prisma P2002 whose meta.target is the open-boundary index name.
-function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
-  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
-    code: "P2002",
-    clientVersion: "test",
-    meta: { target: "Report_one_open_per_boundary" },
-  });
-}
-
 interface FlipReportStub {
   findMany: ReturnType<typeof vi.fn>;
   updateMany: ReturnType<typeof vi.fn>;
-  findFirst: ReturnType<typeof vi.fn>;
 }
 
 describe("flipDueScheduledToOpen", () => {
@@ -422,15 +435,24 @@ describe("flipDueScheduledToOpen", () => {
         .fn()
         .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-      findFirst: vi.fn(),
     };
     const logger = { log: vi.fn(), warn: vi.fn() };
 
-    await flipDueScheduledToOpen(asAny(report), now, logger);
+    await flipDueScheduledToOpen(asStub(report), now, logger);
 
     expect(report.updateMany).toHaveBeenCalledWith({
       where: { id: "s1", periodState: "scheduled" },
-      data: { periodState: "open", status: "draft", archived: false },
+      data: {
+        periodState: "open",
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+      },
     });
     expect(logger.log).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
@@ -442,11 +464,10 @@ describe("flipDueScheduledToOpen", () => {
         .fn()
         .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
-      findFirst: vi.fn(),
     };
     const logger = { log: vi.fn(), warn: vi.fn() };
 
-    await flipDueScheduledToOpen(asAny(report), now, logger);
+    await flipDueScheduledToOpen(asStub(report), now, logger);
 
     expect(report.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -456,71 +477,7 @@ describe("flipDueScheduledToOpen", () => {
     expect(logger.log).toHaveBeenCalledWith(
       expect.stringContaining("transitioned away from scheduled"),
     );
-    expect(report.findFirst).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
-  });
-
-  it("(a) a boundary another writer already opened is skipped, the duplicate scheduled row is left + logged", async () => {
-    const report: FlipReportStub = {
-      findMany: vi
-        .fn()
-        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
-      updateMany: vi.fn().mockRejectedValue(openBoundaryP2002()),
-      findFirst: vi.fn().mockResolvedValue({ id: "open-existing" }),
-    };
-    const logger = { log: vi.fn(), warn: vi.fn() };
-
-    await flipDueScheduledToOpen(asAny(report), now, logger);
-
-    expect(report.updateMany).toHaveBeenCalledTimes(1);
-    // recovery re-read keys on the boundary + periodState='open'
-    expect(report.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { periodStart: W, periodEnd: W_END, periodState: "open" },
-        select: { id: true },
-      }),
-    );
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("already open"),
-    );
-  });
-
-  it("(b) two scheduled rows on one boundary → exactly one opens, the other is left scheduled + logged", async () => {
-    const report: FlipReportStub = {
-      findMany: vi.fn().mockResolvedValue([
-        { id: "s1", periodStart: W, periodEnd: W_END },
-        { id: "s2", periodStart: W, periodEnd: W_END },
-      ]),
-      // s1 flips first (commits); s2 then collides on the now-open boundary.
-      updateMany: vi
-        .fn()
-        .mockResolvedValueOnce({ count: 1 })
-        .mockRejectedValueOnce(openBoundaryP2002()),
-      // the re-read after s2's P2002 finds s1, now open.
-      findFirst: vi.fn().mockResolvedValue({ id: "s1" }),
-    };
-    const logger = { log: vi.fn(), warn: vi.fn() };
-
-    await flipDueScheduledToOpen(asAny(report), now, logger);
-
-    // Deterministic order: s1 then s2; exactly one update committed.
-    expect(report.updateMany).toHaveBeenCalledTimes(2);
-    expect(report.updateMany).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        where: { id: "s1", periodState: "scheduled" },
-      }),
-    );
-    expect(report.updateMany).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: { id: "s2", periodState: "scheduled" },
-      }),
-    );
-    // The duplicate (s2) is reported, never deleted.
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("s2"));
   });
 
   it("re-throws a non-P2002 error (the tick aborts rather than silently swallowing)", async () => {
@@ -529,16 +486,13 @@ describe("flipDueScheduledToOpen", () => {
         .fn()
         .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
       updateMany: vi.fn().mockRejectedValue(new Error("db down")),
-      findFirst: vi.fn(),
     };
 
     await expect(
-      flipDueScheduledToOpen(asAny(report), now, {
+      flipDueScheduledToOpen(asStub(report), now, {
         log: vi.fn(),
         warn: vi.fn(),
       }),
     ).rejects.toThrow("db down");
-    // No recovery re-read on an unrelated error.
-    expect(report.findFirst).not.toHaveBeenCalled();
   });
 });

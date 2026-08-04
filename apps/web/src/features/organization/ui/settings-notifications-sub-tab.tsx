@@ -11,9 +11,18 @@ import {
 // The wire schema accepts null (clear) or a valid email; we keep the input as a
 // string and translate empty → null on save. UI guard: a non-empty string that
 // fails a basic email shape blocks Save with a hint.
+function hasWhitespace(value: string): boolean {
+  return [...value].some((char) => char.trim() === "");
+}
+
 function looksLikeEmail(trimmed: string): boolean {
-  // eslint-disable-next-line sonarjs/super-linear-regex -- linear negated character classes, no catastrophic backtracking; bounded form input
-  return trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  if (trimmed === "") return true;
+  if (hasWhitespace(trimmed)) return false;
+  const atIndex = trimmed.indexOf("@");
+  if (atIndex <= 0 || atIndex !== trimmed.lastIndexOf("@")) return false;
+  const domainPart = trimmed.slice(atIndex + 1);
+  const dotIndex = domainPart.indexOf(".");
+  return dotIndex > 0 && dotIndex < domainPart.length - 1;
 }
 
 // Seed only fresh server data: skip while dirty (refetch must not clobber
@@ -61,10 +70,10 @@ function NotificationFromEmailField({
         onChange={(e) =>
           onChange(e.target.value === "" ? null : e.target.value)
         }
-        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       />
       {!isValid && (
-        <p className="mt-1 text-xs text-red-600">
+        <p className="mt-1 text-xs text-[var(--color-destructive)]">
           Enter a valid email or leave the field empty.
         </p>
       )}
@@ -89,7 +98,7 @@ function NotificationSaveRow({
         type="button"
         onClick={onSave}
         disabled={disabled}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Save notification settings"
       >
         {isSaving ? "Saving…" : "Save Notification Settings"}

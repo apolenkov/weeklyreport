@@ -46,8 +46,8 @@ describe("EscalationEmail — rendered template contract", () => {
   });
 });
 
-describe("EscalationEmail — li composite key snapshot", () => {
-  it("rendered HTML for two late leads matches snapshot (li composite key)", async () => {
+describe("EscalationEmail — li rendering", () => {
+  it("rendered HTML for two late leads matches snapshot", async () => {
     const html = await render(React.createElement(EscalationEmail, baseProps));
     expect(html).toMatchSnapshot();
   });

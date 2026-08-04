@@ -9,13 +9,13 @@ type OptionalDefinedProperties<T extends object> = {
   >;
 };
 
+/** Object shape with explicit `undefined` removed from optional values. */
 export type WithoutUndefinedProperties<T extends object> =
   RequiredProperties<T> & OptionalDefinedProperties<T>;
 
 /**
  * Converts protocol objects whose optional keys may explicitly contain
  * `undefined` into domain objects where those keys are genuinely absent.
- * @param value - Protocol object to normalize.
  */
 export function omitUndefinedProperties<T extends object>(
   value: T,

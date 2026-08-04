@@ -20,6 +20,7 @@ import {
 } from "../modules/admin/index.js";
 import { AnalyticsService } from "../modules/analytics/index.js";
 import { ArchiveService } from "../modules/archive/index.js";
+import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
 import { OrganizationService } from "../modules/organization/index.js";
 import { PdfExportService } from "../modules/pdf-export/index.js";
 import { PeriodService } from "../modules/period/index.js";
@@ -41,15 +42,19 @@ import { WeeklyReportService } from "../modules/weekly-report/index.js";
 // Resolve every tRPC-facing service from the DI container and assemble the app
 // router. The cross-cutting primitives built in bootstrap (env, autoCarryOver,
 // the queue handles and the DLQ jobs service) are threaded in.
-export function buildAppRouter(deps: {
-  app: INestApplication;
-  prisma: PrismaService;
-  env: EnvConfig;
-  autoCarryOver: (targetReportId: string) => Promise<void>;
-  emailReminderQueue: Queue;
-  telegramOutboundQueue: Queue;
-  jobsService: JobsService;
-}): AppRouter {
+export interface AppRouterAssemblyDeps {
+  readonly app: INestApplication;
+  readonly prisma: PrismaService;
+  readonly env: EnvConfig;
+  readonly autoCarryOver: (
+    targetReportId: string,
+  ) => Promise<AutoCarryOverOutcome>;
+  readonly emailReminderQueue: Queue;
+  readonly telegramOutboundQueue: Queue;
+  readonly jobsService: JobsService;
+}
+
+export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
   const {
     app,
     prisma,

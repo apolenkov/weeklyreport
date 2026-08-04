@@ -2,7 +2,7 @@
 
 The **Driver** is the AI-agent sibling of the automated catalog sweep
 (`e2e/sweep/catalog-sweep.spec.ts`). Where the sweep is a Layer-1 check (every
-route loads + axe + console), the Driver explores *within-route flow and logic*
+route loads + axe + console), the Driver explores _within-route flow and logic_
 — it interacts with the page and compares what it observes against the
 documented intent in the Scenario Catalog (`e2e/catalog/<role>.yaml`). It finds
 the flow/logic bugs the sweep cannot, by design.
@@ -55,7 +55,7 @@ Drive protocol (the agent prompt), parametric in `<role>`:
   `http://127.0.0.1:3100/auth/dev-login?role=<role>&email=<seeded-email>&redirect=<role-landing>`.
   Seeded emails: `lead1@`, `head@`, `admin@`, `viewer@customreport.local`.
 - **Oracle:** read `e2e/catalog/<role>.yaml`. Each intent's `then`/`note` is the
-  expected behavior. An anomaly is real ONLY when the observation *contradicts*
+  expected behavior. An anomaly is real ONLY when the observation _contradicts_
   the documented `then`, or there is a console error / pageerror / failed nav /
   infinite skeleton / layout break. Behavior that matches `then` is not an
   anomaly — never report "works as expected".
@@ -104,7 +104,7 @@ skill orchestration.
 
 Raw driver output is a known false-positive factory (the 621→10 sweep lesson),
 so every candidate is judged by an **independent, code-reading skeptic** that
-tries to *refute* it and defaults to "not a bug" when the source does not prove a
+tries to _refute_ it and defaults to "not a bug" when the source does not prove a
 defect. This is where parallelism helps (no browser needed), so it is a
 Workflow:
 

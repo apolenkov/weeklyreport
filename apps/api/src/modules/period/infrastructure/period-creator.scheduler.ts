@@ -1,53 +1,25 @@
 import { MS_PER_DAY } from "@customreport/shared";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import type { PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
-import type { AuditLogger } from "../../../lib/audit-logger.js";
+import { AUDIT_LOGGER, type AuditLogger } from "../../../lib/audit-logger.js";
 import { SnapshotAdminService } from "../../admin/index.js";
+import {
+  type AutoCarryOver,
+  runAutoCarryOverWithRetry,
+} from "../../carry-over/index.js";
 import { PolicyApplicatorService } from "../../reminders/index.js";
 import type { EnsuredPeriod } from "../application/period-factory.js";
-import {
-  ensureCurrentPeriod,
-  isOpenBoundaryConflict,
-} from "../application/period-factory.js";
+import { ensureCurrentPeriod } from "../application/period-factory.js";
 import { buildTransition } from "../domain/period-transition.js";
 
-/** The `report` delegate methods the scheduled→open flip needs. */
+// The `report` delegate methods the scheduled→open flip needs.
 type FlipReportDelegate = Pick<
   PrismaClient["report"],
-  "findMany" | "updateMany" | "findFirst"
+  "findMany" | "updateMany"
 >;
-
-interface DueScheduledRow {
-  readonly id: string;
-  readonly periodStart: Date;
-  readonly periodEnd: Date;
-}
-
-// The partial unique boundary index rejected the flip: another row already
-// holds this boundary open. Re-read the winner so the log names it, and leave
-// the duplicate scheduled row untouched for an operator to reconcile.
-async function logBoundaryConflict(
-  report: Pick<FlipReportDelegate, "findFirst">,
-  row: DueScheduledRow,
-  logger: Pick<Logger, "warn">,
-): Promise<void> {
-  const open = await report.findFirst({
-    where: {
-      periodStart: row.periodStart,
-      periodEnd: row.periodEnd,
-      periodState: "open",
-    },
-    select: { id: true },
-  });
-  logger.warn(
-    open
-      ? `scheduled→open: boundary ${row.periodStart.toISOString()}→${row.periodEnd.toISOString()} already open (period=${open.id}); duplicate scheduled row=${row.id} left in place`
-      : `scheduled→open: P2002 on row=${row.id} but no open row found on its boundary; left scheduled for the next tick`,
-  );
-}
 
 // Re-asserting `periodState: "scheduled"` in the WHERE makes a concurrent
 // lifecycle transition win instead of being overwritten; `buildTransition`
@@ -64,19 +36,14 @@ export async function flipDueScheduledToOpen(
   });
 
   for (const row of due) {
-    try {
-      const { count } = await report.updateMany({
-        where: { id: row.id, periodState: "scheduled" },
-        data: buildTransition("open", {}),
-      });
-      if (count === 0) {
-        logger.log(
-          `scheduled→open skipped period=${row.id}: transitioned away from scheduled by a concurrent writer`,
-        );
-      }
-    } catch (error) {
-      if (!isOpenBoundaryConflict(error)) throw error;
-      await logBoundaryConflict(report, row, logger);
+    const { count } = await report.updateMany({
+      where: { id: row.id, periodState: "scheduled" },
+      data: buildTransition("open", {}),
+    });
+    if (count === 0) {
+      logger.log(
+        `scheduled→open skipped period=${row.id}: transitioned away from scheduled by a concurrent writer`,
+      );
     }
   }
 }
@@ -92,6 +59,8 @@ type PeriodTickOutcome =
       periodState: "scheduled" | "open";
     };
 
+export const PERIOD_AUTO_CARRY_OVER = Symbol("PeriodAutoCarryOver");
+
 // `@Cron`, not a repeatable queue job: one write/day sits far below the
 // queue/retry/DLQ threshold, and `@nestjs/bullmq` 11 has a DiscoveryService DI
 // bug under NestJS 11 the existing processors work around with a raw `Worker`.
@@ -100,29 +69,26 @@ export class PeriodCreatorScheduler {
   private readonly logger = new Logger(PeriodCreatorScheduler.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(SnapshotAdminService)
     private readonly snapshotAdminService: SnapshotAdminService,
-    private readonly auditLogger: AuditLogger,
-    // Wire PolicyApplicator so auto-created periods materialise reminder rules
-    // just like admin-panel-created ones.
-    private readonly policyApplicator?: PolicyApplicatorService,
-    // Auto carry-over hook (best-effort, never rejects), invoked for every
-    // fresh-open period each tick. Trailing-optional; the module factory
-    // always wires it.
-    private readonly autoCarryOver?: (targetReportId: string) => Promise<void>,
+    @Inject(AUDIT_LOGGER) private readonly auditLogger: AuditLogger,
+    @Inject(PolicyApplicatorService)
+    private readonly policyApplicator: PolicyApplicatorService,
+    @Inject(PERIOD_AUTO_CARRY_OVER)
+    private readonly autoCarryOver: AutoCarryOver,
   ) {}
 
   // Sweeps every open period, not just rows this tick flipped, so a transiently
   // failed carry is retried; carry follows a period BECOMING open, which
   // `autoCreatePeriods` does not govern. See specs/period-scheduler-wiring.
   private async reconcileCarryOver(): Promise<void> {
-    if (!this.autoCarryOver) return;
     const openPeriods = await this.prisma.report.findMany({
       where: { periodState: "open", periodStatus: "open", archived: false },
       select: { id: true },
     });
     for (const period of openPeriods) {
-      await this.autoCarryOver(period.id);
+      await runAutoCarryOverWithRetry(this.autoCarryOver, period.id);
     }
   }
 
@@ -210,8 +176,8 @@ export class PeriodCreatorScheduler {
 
     // A period minted open THIS tick post-dates the reconcile pass above; a
     // scheduled-born one is picked up by a later tick's flip + reconcile.
-    if (result.periodState === "open" && this.autoCarryOver) {
-      await this.autoCarryOver(result.reportId);
+    if (result.periodState === "open") {
+      await runAutoCarryOverWithRetry(this.autoCarryOver, result.reportId);
     }
   }
 }

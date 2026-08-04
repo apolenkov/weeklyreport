@@ -1,3 +1,5 @@
+import type { ReminderQueueJobData } from "./reminders-queue-payload.js";
+
 export interface ReminderJobContext {
   readonly traceparent?: string;
   readonly tracestate?: string;
@@ -5,15 +7,15 @@ export interface ReminderJobContext {
 }
 
 export interface RemindersEnqueuer {
-  enqueue(
+  readonly enqueue: (
     executionId: string,
-    data: Readonly<Record<string, unknown>>,
+    data: ReminderQueueJobData,
     context: ReminderJobContext,
-  ): Promise<void>;
+  ) => Promise<void>;
 }
 
 export interface RemindersTelemetry {
-  captureJobContext(): ReminderJobContext;
+  readonly captureJobContext: () => ReminderJobContext;
 }
 
 export const REMINDERS_ENQUEUER = Symbol("RemindersEnqueuer");

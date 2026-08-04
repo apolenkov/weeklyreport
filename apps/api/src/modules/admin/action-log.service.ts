@@ -4,16 +4,16 @@ const DEFAULT_ACTION_LOG_LIMIT = 20;
 
 // Mutation-audit rows share correlationId with app.log for support lookups.
 interface ActionLogFields {
-  id: string;
-  userId: string;
-  role: string | null;
-  procedure: string;
-  targetId: string | null;
-  status: string;
-  reason: string | null;
-  ip: string | null;
-  correlationId: string;
-  durationMs: number;
+  readonly id: string;
+  readonly userId: string;
+  readonly role: string | null;
+  readonly procedure: string;
+  readonly targetId: string | null;
+  readonly status: string;
+  readonly reason: string | null;
+  readonly ip: string | null;
+  readonly correlationId: string;
+  readonly durationMs: number;
 }
 
 export type ActionLogEntry = ActionLogFields & { createdAt: string };
@@ -22,10 +22,10 @@ export type ActionLogRow = ActionLogFields & { createdAt: Date };
 
 export interface ActionLogRepository {
   // Newest-first composite keyset: `createdAt DESC`, then unique `id DESC`.
-  listActionLog(pagination: {
-    limit: number;
-    cursor?: string;
-  }): Promise<ActionLogRow[]>;
+  readonly listActionLog: (pagination: {
+    readonly limit: number;
+    readonly cursor?: string;
+  }) => Promise<readonly ActionLogRow[]>;
 }
 
 export class ActionLogService {

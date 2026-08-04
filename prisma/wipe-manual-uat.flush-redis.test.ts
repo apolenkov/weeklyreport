@@ -5,7 +5,7 @@ import {
   settlePromptly,
   startMockRedisServer,
 } from "./_mock-redis-server.js";
-import { flushRedisDb } from "./wipe-manual-uat.js";
+import { assertRedisFlushOutcome, flushRedisDb } from "./wipe-manual-uat.js";
 
 function configureRedis(port: number): void {
   vi.stubEnv("MANUAL_UAT_WIPE_FLUSH_REDIS", "true");
@@ -43,5 +43,28 @@ describe("flushRedisDb", () => {
     expect(result.flushed).toBe(false);
     if (result.flushed) throw new Error("expected a failed flush");
     expect(result.reason).toContain("ECONNREFUSED");
+  });
+});
+
+describe("assertRedisFlushOutcome (entrypoint boundary)", () => {
+  it("accepts a successful flush", () => {
+    expect(() => assertRedisFlushOutcome({ flushed: true })).not.toThrow();
+  });
+
+  it("accepts the explicit disabled-by-env opt-out", () => {
+    expect(() =>
+      assertRedisFlushOutcome({ flushed: false, reason: "disabled-by-env" }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    "invalid-redis-port",
+    "timeout",
+    "closed-before-reply",
+    "ECONNREFUSED",
+  ])("rejects a non-disabled flush failure (%s)", (reason) => {
+    expect(() => assertRedisFlushOutcome({ flushed: false, reason })).toThrow(
+      /Redis FLUSHDB failed after reseed/,
+    );
   });
 });

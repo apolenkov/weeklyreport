@@ -1,9 +1,10 @@
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { type Prisma, PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema.js";
 
 const SLOW_QUERY_MS = 100;
@@ -21,33 +22,25 @@ interface ResolvedPoolConfig {
   readonly connectionTimeoutMillis: number;
 }
 
-// Prisma 7 narrows `$on` by the constructor's `log` shape; cast through this
-// structural type so event callbacks stay typed without `as any`.
-interface PrismaLogEventEmitter {
-  $on?: {
-    (
-      event: "query",
-      callback: (e: {
-        query: string;
-        params: string;
-        duration: number;
-        target?: string;
-      }) => void,
-    ): void;
-    (event: "warn" | "error", callback: (e: { message: string }) => void): void;
-  };
+// Prisma derives `$on`'s accepted events from the constructor `log` option's
+// type; declaring it on the base-class instantiation keeps the callbacks typed
+// (QueryEvent/LogEvent) without a structural cast. `adapter` is listed so the
+// constructor's Subset guard keeps accepting it.
+interface PrismaLogOptions {
+  log: Prisma.LogDefinition[];
+  adapter: PrismaPg;
 }
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends PrismaClient<PrismaLogOptions>
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
   private readonly pool: pg.Pool;
   private readonly poolConfig: ResolvedPoolConfig;
 
-  constructor(private readonly env: EnvConfig) {
+  constructor(@Inject(ENV_CONFIG) private readonly env: EnvConfig) {
     const poolConfig: ResolvedPoolConfig = {
       max: env.DB_POOL_MAX ?? DEFAULT_DB_POOL_MAX,
       idleTimeoutMillis:
@@ -86,31 +79,24 @@ export class PrismaService
 
   async onModuleInit(): Promise<void> {
     const debugEnabled = this.env.LOG_LEVEL === "debug";
-    const self = this as unknown as PrismaLogEventEmitter;
 
-    self.$on?.(
-      "query",
-      (e: {
-        query: string;
-        params: string;
-        duration: number;
-        target?: string;
-      }) => {
-        if (e.duration >= SLOW_QUERY_MS) {
-          this.logger.warn(
-            `slow query ${JSON.stringify({ phase: "db.query", durationMs: e.duration, query: e.query })}`,
-          );
-        } else if (debugEnabled) {
-          this.logger.debug(`query (${e.duration}ms): ${e.query}`);
-        }
-      },
-    );
+    // Prisma types each $on event: "query" yields QueryEvent, warn/error yield
+    // LogEvent, so the callbacks are adapter-typed without any structural cast.
+    this.$on("query", (e) => {
+      if (e.duration >= SLOW_QUERY_MS) {
+        this.logger.warn(
+          `slow query ${JSON.stringify({ phase: "db.query", durationMs: e.duration, query: e.query })}`,
+        );
+      } else if (debugEnabled) {
+        this.logger.debug(`query (${e.duration}ms): ${e.query}`);
+      }
+    });
 
-    self.$on?.("warn", (e: { message: string }) => {
+    this.$on("warn", (e) => {
       this.logger.warn(`prisma: ${e.message}`);
     });
 
-    self.$on?.("error", (e: { message: string }) => {
+    this.$on("error", (e) => {
       this.logger.error(`prisma: ${e.message}`);
     });
 

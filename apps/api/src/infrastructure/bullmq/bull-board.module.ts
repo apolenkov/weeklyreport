@@ -28,9 +28,23 @@ interface RequireHeadDeps {
   sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
 }
 
+// Only token-verification failure means "invalid session" (401). A rejected
+// isUserAccessBarred read is a server fault and must propagate to the 500
+// path, never masquerade as a bad session.
+function readGuardSession(
+  deps: RequireHeadDeps,
+  token: string,
+): { ok: true; session: UserSession } | { ok: false } {
+  try {
+    return { ok: true, session: deps.verifySessionToken(token) };
+  } catch {
+    return { ok: false };
+  }
+}
+
 // Re-check revoked/deactivated via isUserAccessBarred so a deactivated head
 // loses queue admin immediately (not for the JWT TTL). Express 5 awaits async
-// handlers; try/catch maps a thrown verify or rejected Prisma read to 401.
+// handlers; a rejected Prisma read propagates to the error handler as a 500.
 export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   return async (
     req: Request,
@@ -39,38 +53,39 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
   ): Promise<void> => {
     // Read the cookie under the same resolved name the set/clear/read paths use
     // (honours AUTH_JWT_COOKIE_NAME), finishing the cookie-name dedup.
-    const token = readRequestCookie(req, resolveSessionCookieName(process.env));
+    const token = readRequestCookie(
+      req,
+      resolveSessionCookieName(process.env.AUTH_JWT_COOKIE_NAME),
+    );
 
     if (!token) {
       res.status(HTTP_UNAUTHORIZED).json({ error: "Authentication required" });
       return;
     }
 
-    try {
-      const session = deps.verifySessionToken(token);
-
-      if (session.role !== "head") {
-        res.status(HTTP_FORBIDDEN).json({ error: "Head role required" });
-        return;
-      }
-
-      if (
-        await isUserAccessBarred(
-          session.userId,
-          deps.prisma,
-          deps.sessionRevocation,
-        )
-      ) {
-        res
-          .status(HTTP_UNAUTHORIZED)
-          .json({ error: "Session no longer valid" });
-        return;
-      }
-
-      next();
-    } catch {
+    const verified = readGuardSession(deps, token);
+    if (!verified.ok) {
       res.status(HTTP_UNAUTHORIZED).json({ error: "Invalid session" });
+      return;
     }
+
+    if (verified.session.role !== "head") {
+      res.status(HTTP_FORBIDDEN).json({ error: "Head role required" });
+      return;
+    }
+
+    if (
+      await isUserAccessBarred(
+        verified.session.userId,
+        deps.prisma,
+        deps.sessionRevocation,
+      )
+    ) {
+      res.status(HTTP_UNAUTHORIZED).json({ error: "Session no longer valid" });
+      return;
+    }
+
+    next();
   };
 }
 

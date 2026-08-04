@@ -1,7 +1,6 @@
 // Activity-status slice of the lead section save: statuses fold onto the
 // SEEDED server-side set, an omitted slice keeps the seeded values, and an
-// unattached activityId is a hard reject (the delete-recreate never trusts
-// client-supplied ids — same gap class as stage ownership).
+// unattached activityId is a hard reject (delete-recreate never trusts client ids).
 import type { TrafficLightStatus } from "@customreport/shared";
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
@@ -31,10 +30,13 @@ const baseSection: ReportSectionReadModel = {
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [],
+  referencedProjects: [],
   items: [],
   risks: [],
   decisions: [],
@@ -45,6 +47,7 @@ const baseSection: ReportSectionReadModel = {
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",
+      alarmFloor: null,
     },
     {
       activityId: ACTIVITY_B,
@@ -52,8 +55,10 @@ const baseSection: ReportSectionReadModel = {
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",
+      alarmFloor: null,
     },
   ],
+  reviews: [],
 };
 
 function createRepository(
@@ -101,7 +106,8 @@ function draftPayload(
     version: 1,
     status: "draft" as const,
     projectStatuses: [],
-    ...(activityStatuses ? { activityStatuses } : {}),
+    stageStatuses: [],
+    activityStatuses: activityStatuses ?? [],
     items: [],
     risks: [],
     decisions: [],
@@ -119,6 +125,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       draftPayload([
         { activityId: ACTIVITY_A, status: "red", note: "Blocked on vendor" },
       ]),
+      AUTHOR_ID,
     );
 
     // mergeSection folds status/note onto the seeded slice; the read-only
@@ -128,6 +135,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       {
         activityId: ACTIVITY_A,
         activityName: "Jira triage duty",
+        alarmFloor: null,
         status: "red",
         note: "Blocked on vendor",
         linkedProducts: [],
@@ -137,6 +145,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       {
         activityId: ACTIVITY_B,
         activityName: "Ops rotation",
+        alarmFloor: null,
         status: "green",
         linkedProducts: [],
         derivedStatus: "green",
@@ -150,7 +159,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       testGraceSettings,
     );
 
-    const saved = await service.saveDraft(draftPayload());
+    const saved = await service.saveDraft(draftPayload(), AUTHOR_ID);
 
     expect(saved.activities.map((a) => a.status)).toEqual(["green", "green"]);
   });
@@ -164,6 +173,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
     await expect(
       service.saveDraft(
         draftPayload([{ activityId: UNATTACHED, status: "red" }]),
+        AUTHOR_ID,
       ),
     ).rejects.toMatchObject({
       name: "ReportSectionDomainError",
@@ -180,6 +190,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
     await expect(
       service.saveDraft(
         draftPayload([{ activityId: UNATTACHED, status: "red" }]),
+        AUTHOR_ID,
       ),
     ).rejects.toBeInstanceOf(ReportSectionDomainError);
   });
@@ -201,6 +212,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
 
     const saved = await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "yellow" }]),
+      AUTHOR_ID,
     );
 
     expect(saved.activities.map((a) => a.activityId)).toEqual([ACTIVITY_A]);
@@ -224,6 +236,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
     await expect(
       service.saveDraft(
         draftPayload([{ activityId: ACTIVITY_B, status: "red" }]),
+        AUTHOR_ID,
       ),
     ).rejects.toMatchObject({
       name: "ReportSectionDomainError",
@@ -245,11 +258,15 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
 
     await service.saveDraft(
       draftPayload([{ activityId: ACTIVITY_A, status: "red" }]),
+      AUTHOR_ID,
     );
-    const savedB = await service.saveDraft({
-      ...draftPayload([{ activityId: ACTIVITY_A, status: "green" }]),
-      reportSectionId: sectionB.reportSectionId,
-    });
+    const savedB = await service.saveDraft(
+      {
+        ...draftPayload([{ activityId: ACTIVITY_A, status: "green" }]),
+        reportSectionId: sectionB.reportSectionId,
+      },
+      sectionB.authorId,
+    );
     const savedA = await service.getActiveSection(baseSection.reportSectionId);
 
     expect(savedA.activities[0]?.status).toBe("red");

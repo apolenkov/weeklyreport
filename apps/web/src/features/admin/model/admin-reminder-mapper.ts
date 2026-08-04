@@ -1,8 +1,5 @@
-/**
- * `adminReminderRuleSchema` has no name/description. We synthesize both from
- * `kind` (+ `fireAt` for the description) so the Reminders tab has readable
- * copy instead of a raw enum value.
- */
+// The API schema has no name/description, so the Reminders tab gets readable
+// copy synthesized from kind and fireAt instead of a raw enum value.
 
 import type { AdminReminderRule } from "@customreport/shared";
 
@@ -15,7 +12,6 @@ function reminderName(kind: AdminReminderRule["kind"]): string {
     case "escalation":
       return "Escalation digest";
     case "follow_up":
-    default:
       return "Follow-up reminder";
   }
 }
@@ -34,7 +30,6 @@ function reminderDescription(rule: AdminReminderRule): string {
     case "escalation":
       return `Send a T+2h escalation digest to the head with all late leads (fires at ${at} UTC).`;
     case "follow_up":
-    default:
       return `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
   }
 }

@@ -1,7 +1,6 @@
 // Characterization pins for the fill-from row-mappers and predicates extracted
-// from LeadFormPrismaRepository.fillFromSection. Pin the CURRENT behaviour:
-// the next→current workflowStatus remap table, the activityId carry rule, and
-// the exact createMany field mapping (carriedOver:false, stageNames passthrough).
+// from LeadFormPrismaRepository.fillFromSection: the next→current status remap
+// table, the activityId carry rule, and the exact createMany field mapping.
 import { describe, expect, it } from "vitest";
 
 import {

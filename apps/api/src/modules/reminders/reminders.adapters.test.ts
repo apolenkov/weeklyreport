@@ -8,16 +8,22 @@ describe("reminders infrastructure adapters", () => {
   it("preserves the queue payload, trace context, retry options, and job id", async () => {
     const queue = { add: vi.fn().mockResolvedValue({ id: "execution-1" }) };
     const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const { enqueue } = enqueuer;
 
-    await enqueuer.enqueue(
+    await enqueue(
       "execution-1",
-      { recipientEmail: "lead@example.com", reportPeriod: "Week 1" },
+      {
+        executionId: "execution-1",
+        recipientEmail: "lead@example.com",
+        reportPeriod: "Week 1",
+      },
       { tracestate: "state", correlationId: "correlation" },
     );
 
     expect(queue.add).toHaveBeenCalledWith(
       "send",
       {
+        executionId: "execution-1",
         recipientEmail: "lead@example.com",
         reportPeriod: "Week 1",
         tracestate: "state",
@@ -37,15 +43,17 @@ describe("reminders infrastructure adapters", () => {
       get: () => "correlation",
     } as unknown as ClsService;
     const telemetry = new RemindersInfrastructureTelemetry(cls);
+    const { captureJobContext } = telemetry;
 
-    expect(telemetry.captureJobContext()).toEqual({
+    expect(captureJobContext()).toEqual({
       correlationId: "correlation",
     });
   });
 
   it("returns empty context outside an active CLS scope", () => {
-    const telemetry = new RemindersInfrastructureTelemetry(undefined);
+    const telemetry = new RemindersInfrastructureTelemetry(null);
+    const { captureJobContext } = telemetry;
 
-    expect(telemetry.captureJobContext()).toEqual({});
+    expect(captureJobContext()).toEqual({});
   });
 });

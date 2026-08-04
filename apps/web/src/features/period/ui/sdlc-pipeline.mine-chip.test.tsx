@@ -1,11 +1,9 @@
-/**
- * @vitest-environment jsdom
- *
- * Left edge carries ONLY product health (always solid). Own-input completeness
- * is a SEPARATE right-side affordance (dashed ring + "N/M stages" counter) and
- * never shares the health hue. Tests prove the two signals are independent
- * across all four quadrants.
- */
+// @vitest-environment jsdom
+//
+// Left edge carries ONLY product health (always solid). Own-input completeness
+// is a SEPARATE right-side affordance (dashed ring + "N/M stages" counter) and
+// never shares the health hue. Tests prove the two signals are independent
+// across all four quadrants.
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -24,7 +22,6 @@ function getFirstCardStyle(container: HTMLElement): string {
 // hidden, not greyed. Everyone renders the full grid. Hiding chips MUST NOT
 // move product health (left edge) or own-input completeness.
 
-/** The stage names of every rendered chip (chips are buttons with aria-label). */
 function renderedStageNames(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll("button[aria-label]")).map(
     (b) => (b.getAttribute("aria-label") ?? "").split(":")[0]?.trim() ?? "",

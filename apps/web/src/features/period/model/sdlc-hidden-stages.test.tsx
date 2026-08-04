@@ -1,4 +1,4 @@
-/** @vitest-environment node */
+// @vitest-environment node
 import type { TrafficLightStatus } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 

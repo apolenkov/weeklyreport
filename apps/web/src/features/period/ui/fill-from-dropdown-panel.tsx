@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
-import { createPortal } from "react-dom";
 
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 import type { ReportPeriod } from "../../report-sections";
 
 function SearchIcon() {
@@ -29,9 +29,13 @@ function PeriodSearchInput({
   return (
     <div className="relative mb-2">
       <SearchIcon />
+      <label htmlFor="period-search" className="sr-only">
+        Search reports
+      </label>
       <input
+        id="period-search"
         type="text"
-        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         placeholder="Search reports…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -73,7 +77,7 @@ function PeriodRowButton({
             </span>
           )}
           {isPrevious && (
-            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
+            <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-primary-foreground)]">
               Previous
             </span>
           )}
@@ -93,11 +97,8 @@ interface FillFromDropdownPanelProps {
   readonly panelRef: RefObject<HTMLDivElement | null>;
   readonly pastPeriods: readonly ReportPeriod[];
   readonly filteredPeriods: readonly ReportPeriod[];
-  /**
-   * The real previous period's id (the one the main split-button fills),
-   * independent of search filtering — badges/highlights key off this
-   * identity, never off filtered-array position.
-   */
+  // Keep the real previous-period identity independent of search filtering;
+  // badges/highlights must not key off filtered-array position.
   readonly previousPeriodId: string | undefined;
   readonly search: string;
   readonly onSearchChange: (value: string) => void;
@@ -115,36 +116,37 @@ export function FillFromDropdownPanel({
   onSearchChange,
   onSelect,
 }: FillFromDropdownPanelProps) {
-  if (!open || !pos || typeof document === "undefined") return null;
-  return createPortal(
-    <div
-      ref={panelRef}
-      className="fixed z-50 w-[340px] rounded-xl border border-[var(--color-muted)] bg-white p-3 shadow-lg"
-      style={{ top: pos.top, right: pos.right }}
-    >
-      {pastPeriods.length > 0 && (
-        <PeriodSearchInput value={search} onChange={onSearchChange} />
-      )}
-      <div className="max-h-[200px] space-y-1 overflow-y-auto">
-        {pastPeriods.length === 0 ? (
-          <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
-            No submitted past reports found.
-          </p>
-        ) : filteredPeriods.length === 0 ? (
-          <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
-            No reports match your search.
-          </p>
-        ) : null}
-        {filteredPeriods.map((p) => (
-          <PeriodRowButton
-            key={p.id}
-            period={p}
-            isPrevious={p.id === previousPeriodId}
-            onSelect={() => onSelect(p)}
-          />
-        ))}
+  if (!open || !pos) return null;
+  return (
+    <DocumentBodyPortal>
+      <div
+        ref={panelRef}
+        className="fixed z-50 w-[340px] rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
+        style={{ top: pos.top, right: pos.right }}
+      >
+        {pastPeriods.length > 0 && (
+          <PeriodSearchInput value={search} onChange={onSearchChange} />
+        )}
+        <div className="max-h-[200px] space-y-1 overflow-y-auto">
+          {pastPeriods.length === 0 ? (
+            <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+              No submitted past reports found.
+            </p>
+          ) : filteredPeriods.length === 0 ? (
+            <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+              No reports match your search.
+            </p>
+          ) : null}
+          {filteredPeriods.map((p) => (
+            <PeriodRowButton
+              key={p.id}
+              period={p}
+              isPrevious={p.id === previousPeriodId}
+              onSelect={() => onSelect(p)}
+            />
+          ))}
+        </div>
       </div>
-    </div>,
-    document.body,
+    </DocumentBodyPortal>
   );
 }

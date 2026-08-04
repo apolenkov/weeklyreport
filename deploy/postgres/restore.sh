@@ -1,66 +1,107 @@
 #!/bin/sh
-# Restore a pg_dump custom-format backup over an EXISTING database.
-#
-# This DESTROYS the current contents of $PGDATABASE. It mirrors the discipline
-# of prisma/_destructive-guard.ts: the destructive path exists, but it refuses
-# to run until the operator names the target out loud.
-#
-#   docker compose -f docker-compose.prod.yml stop api web
-#   docker compose -f docker-compose.prod.yml run --rm \
-#     -e CONFIRM_RESTORE_DATABASE=customreport \
-#     backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
-#   docker compose -f docker-compose.prod.yml start api web
-#
-# Stop the api first: pg_restore --clean must DROP objects, and an open
-# application connection makes that hang or fail halfway, leaving a schema that
-# is neither the old one nor the new one.
-set -u
+# Restore a pg_dump custom-format archive over one explicitly named database.
+set -eu
 
-: "${PGHOST:?PGHOST is required}"
-: "${PGUSER:?PGUSER is required}"
-: "${PGPASSWORD:?PGPASSWORD is required}"
-: "${PGDATABASE:?PGDATABASE is required}"
+required() {
+  name="$1"
+  eval "value=\${$name:-}"
+  if [ -z "$value" ]; then
+    echo "refusing: $name is required" >&2
+    exit 2
+  fi
+}
 
-export PGHOST PGUSER PGPASSWORD PGDATABASE
+canonical_word() {
+  value="$1"
+  label="$2"
+  case "$value" in
+    *[!A-Za-z0-9_-]* | "")
+      echo "refusing: invalid $label" >&2
+      exit 2
+      ;;
+  esac
+  printf '%s' "$value" | tr '[:upper:]' '[:lower:]'
+}
 
+canonical_host() {
+  value="$1"
+  case "$value" in
+    *[!A-Za-z0-9.-]* | "" | -* | *- | .* | *..*)
+      echo "refusing: invalid PGHOST" >&2
+      exit 2
+      ;;
+  esac
+  canonical=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+  printf '%s' "${canonical%.}"
+}
+
+required RESTORE_ENVIRONMENT
+required PGHOST
+required PGPORT
+required PGUSER
+required PGPASSWORD
+required PGDATABASE
+
+environment=$(canonical_word "$RESTORE_ENVIRONMENT" RESTORE_ENVIRONMENT)
+host=$(canonical_host "$PGHOST")
+database=$(canonical_word "$PGDATABASE" PGDATABASE)
+
+case "$PGPORT" in
+  *[!0-9]* | "")
+    echo "refusing: invalid PGPORT" >&2
+    exit 2
+    ;;
+esac
+if [ "$PGPORT" -lt 1 ] || [ "$PGPORT" -gt 65535 ]; then
+  echo "refusing: invalid PGPORT" >&2
+  exit 2
+fi
+port="$PGPORT"
+
+case "$environment" in
+  development | test | uat | staging | production) ;;
+  *)
+    echo "refusing: unknown RESTORE_ENVIRONMENT" >&2
+    exit 2
+    ;;
+esac
+
+export PGHOST="$host" PGPORT="$port" PGUSER PGPASSWORD PGDATABASE="$database"
+target="${environment}|${host}|${port}|${database}"
 dump="${1:-}"
+restore_bin="${PG_RESTORE_BIN:-pg_restore}"
 
-if [ -z "$dump" ]; then
-  echo "usage: restore.sh <path-to-dump>" >&2
+if [ -z "$dump" ] || [ ! -f "$dump" ]; then
+  echo "usage: restore.sh <existing-path-to-dump>" >&2
   exit 2
 fi
 
-if [ ! -f "$dump" ]; then
-  echo "no such dump: $dump" >&2
-  exit 2
-fi
-
-if [ "${CONFIRM_RESTORE_DATABASE:-}" != "$PGDATABASE" ]; then
-  echo "refusing: set CONFIRM_RESTORE_DATABASE=${PGDATABASE} to confirm" >&2
-  echo "this OVERWRITES every table in ${PGDATABASE} on ${PGHOST}" >&2
+if [ "${CONFIRM_RESTORE_TARGET:-}" != "$target" ]; then
+  echo "refusing: set CONFIRM_RESTORE_TARGET=${target}" >&2
   exit 3
 fi
 
-# Read the archive's table of contents before touching the database: a
-# truncated or non-custom-format file fails here, while the existing data is
-# still intact.
-if ! pg_restore --list "$dump" > /dev/null 2>&1; then
-  echo "unreadable archive (truncated, or not pg_dump --format=custom): $dump" >&2
+if [ "$environment" = "production" ] &&
+  [ "${ALLOW_PROD_DESTRUCTIVE:-}" != "yes" ]; then
+  echo "refusing: production restore requires ALLOW_PROD_DESTRUCTIVE=yes" >&2
+  exit 3
+fi
+
+if ! "$restore_bin" --list "$dump" > /dev/null 2>&1; then
+  echo "refusing: unreadable pg_dump custom-format archive" >&2
   exit 4
 fi
 
-echo "[restore] restoring ${dump} into ${PGDATABASE} on ${PGHOST}"
-
-# --single-transaction so a mid-restore failure rolls back to the pre-restore
-# state rather than leaving a half-populated schema. --clean --if-exists makes
-# the run idempotent against a database that already has the schema.
-pg_restore \
-  --dbname="$PGDATABASE" \
+echo "[restore] target=${target} archive=${dump}"
+"$restore_bin" \
+  --host="$host" \
+  --port="$port" \
+  --username="$PGUSER" \
+  --dbname="$database" \
   --clean \
   --if-exists \
   --single-transaction \
   --no-owner \
   --no-privileges \
   "$dump"
-
-echo "[restore] done — start the api and verify /health/ready before serving traffic"
+echo "[restore] complete; verify /health/ready before serving traffic"

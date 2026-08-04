@@ -9,79 +9,92 @@ import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";
 import { type RemindersScopeRepository } from "./reminders-scope.types.js";
 
 export interface RemindersRepository extends RemindersScopeRepository {
-  getRule(ruleId: string): Promise<AdminReminderRule | null>;
-  findExecutionByDedupeKey(
+  readonly getRule: (ruleId: string) => Promise<AdminReminderRule | null>;
+  readonly findExecutionByDedupeKey: (
     dedupeKey: string,
-  ): Promise<AdminReminderExecution | null>;
-  saveExecution(
+  ) => Promise<AdminReminderExecution | null>;
+  readonly saveExecution: (
     execution: AdminReminderExecution,
-  ): Promise<AdminReminderExecution>;
+  ) => Promise<AdminReminderExecution>;
   // Atomic insert-on-conflict; inserted=true only for the winner (enqueue once).
-  insertExecutionOnConflict(
+  readonly insertExecutionOnConflict: (
     execution: AdminReminderExecution,
-  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
+  ) => Promise<{
+    readonly execution: AdminReminderExecution;
+    readonly inserted: boolean;
+  }>;
   // CAS queued → sending; false means another worker already claimed.
-  transitionExecutionToSending(executionId: string): Promise<boolean>;
+  readonly transitionExecutionToSending: (
+    executionId: string,
+  ) => Promise<boolean>;
   // Terminal failed; never overwrites an already-sent row.
-  markExecutionFailed(executionId: string, errorMessage: string): Promise<void>;
-  getRulePeriodLabel(ruleId: string): Promise<string | null>;
+  readonly markExecutionFailed: (
+    executionId: string,
+    errorMessage: string,
+  ) => Promise<void>;
+  readonly getRulePeriodLabel: (ruleId: string) => Promise<string | null>;
   // Undo sending claim for retryable failure; no-op if already sent/failed.
-  releaseExecutionClaim(executionId: string): Promise<void>;
+  readonly releaseExecutionClaim: (executionId: string) => Promise<void>;
   // failed → queued revival; true only when this call won.
-  requeueFailedExecution(executionId: string): Promise<boolean>;
-  getExecution(executionId: string): Promise<AdminReminderExecution | null>;
-  listExecutions(
+  readonly requeueFailedExecution: (executionId: string) => Promise<boolean>;
+  // Time-bound reconciliation: `sending` rows presumed delivered after a
+  // crashed worker resolve to `sent`; returns how many rows were reconciled.
+  readonly markStuckSendingSent: (olderThan: Date) => Promise<number>;
+  readonly getExecution: (
+    executionId: string,
+  ) => Promise<AdminReminderExecution | null>;
+  readonly listExecutions: (
     ruleId: string,
     page: ExecutionPageRequest,
-  ): Promise<AdminReminderExecution[]>;
+  ) => Promise<AdminReminderExecution[]>;
 }
 
 // Draft-section leads for a due deadline rule; opt-out skips deadline only.
 export interface DueDeadlineRule {
-  id: string;
-  reportId: string;
-  fireAt: Date;
-  reportPeriodLabel: string;
-  recipients: {
-    userId: string;
-    email: string;
-    name: string;
-    notificationOptOut: boolean;
+  readonly id: string;
+  readonly reportId: string;
+  readonly fireAt: Date;
+  readonly reportPeriodLabel: string;
+  readonly recipients: readonly {
+    readonly userId: string;
+    readonly email: string;
+    readonly name: string;
+    readonly notificationOptOut: boolean;
   }[];
 }
 
 // One digest per group head; fires while leads are still draft (pre-publish).
 export interface DueEscalationRule {
-  id: string;
-  reportId: string;
-  fireAt: Date;
-  reportPeriodLabel: string;
-  groups: EscalationGroupDigest[];
+  readonly id: string;
+  readonly reportId: string;
+  readonly fireAt: Date;
+  readonly reportPeriodLabel: string;
+  readonly groups: readonly EscalationGroupDigest[];
 }
 
 // organization is snapshotted at enqueue so mid-flight brand edits do not
 // affect already-queued emails. Omit payload → defaults to kind deadline.
 export interface DeadlineReminderPayload {
-  kind: "deadline";
-  cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
-  leadName: string;
-  reportPeriod: string;
-  deadlineIso: string;
-  sectionUrl: string;
-  organization: OrganizationBrand;
+  readonly kind: "deadline";
+  readonly cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
+  readonly leadName: string;
+  readonly reportPeriod: string;
+  readonly deadlineIso: string;
+  readonly sectionUrl: string;
+  readonly organization: OrganizationBrand;
 }
 
 export interface EscalationReminderPayload {
-  kind: "escalation";
-  cycleDate: string; // ISO YYYY-MM-DD UTC of the escalation fireAt
-  headName: string;
-  reportPeriod: string;
-  lateLeads: readonly {
-    leadName: string;
-    sectionTitle: string;
-    deadlineIso: string;
+  readonly kind: "escalation";
+  readonly cycleDate: string; // ISO YYYY-MM-DD UTC of the escalation fireAt
+  readonly headName: string;
+  readonly reportPeriod: string;
+  readonly lateLeads: readonly {
+    readonly leadName: string;
+    readonly sectionTitle: string;
+    readonly deadlineIso: string;
   }[];
-  organization: OrganizationBrand;
+  readonly organization: OrganizationBrand;
 }
 
 export type ReminderExecutionPayload =

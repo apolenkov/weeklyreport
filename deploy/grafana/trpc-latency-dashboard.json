@@ -1,6 +1,6 @@
 {
   "schemaVersion": 39,
-  "title": "CustomReport — tRPC Latency (DX-03)",
+  "title": "CustomReport — tRPC Latency",
   "uid": "trpc-latency",
   "tags": ["customreport", "trpc", "latency", "v8.1", "dx-03"],
   "timezone": "browser",

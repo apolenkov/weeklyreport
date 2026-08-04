@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change refactor-auth-exemplary-layering. Update Purpose after archive.
+Keep authentication focused on identity and session ownership while delegating period and report-section writes to their sanctioned domain modules.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ report-section domain, invoked through a narrow injected function.
   `buildTransition` (both `periodState` and the legacy tuple set atomically)
 - **AND** because the new period's deadline is in the future, the factory
   materialises its `ReminderRule` rows via `applyToPeriod`, identically to the
-  period-creator scheduler path (closing the Phase 50-A lazy-path asymmetry)
+  period-creator scheduler path
 - **AND** the lead's `ReportSection` and per-project `ProjectStatus` rows are
   created by the report-section domain
 - **AND** the auth module performs no `Report` / `ReportSection` / `ProjectStatus`

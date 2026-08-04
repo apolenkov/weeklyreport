@@ -49,7 +49,17 @@ function useHistoryRecovery(input: RecoveryEffectInput) {
         { fetchStatus, name, status },
       );
       setStalled(true);
-      void refetch();
+      void refetch().catch((error: unknown) => {
+        logRecovery(
+          "dashboard.pageshow_refetch_failed",
+          `Dashboard ${name} history-restore refetch rejected`,
+          { fetchStatus, name, status },
+        );
+        console.error(
+          "[DashboardQueryRecovery] history-restore refetch failed",
+          error,
+        );
+      });
     }
 
     window.addEventListener("pageshow", handlePageShow);
@@ -69,7 +79,14 @@ function useStallRecovery(input: RecoveryEffectInput) {
         { fetchStatus, name, status },
       );
       setStalled(true);
-      void refetch();
+      void refetch().catch((error: unknown) => {
+        logRecovery(
+          "dashboard.stall_refetch_failed",
+          `Dashboard ${name} stall refetch rejected`,
+          { fetchStatus, name, status },
+        );
+        console.error("[DashboardQueryRecovery] stall refetch failed", error);
+      });
     }, DASHBOARD_LOAD_STALL_MS);
     return () => window.clearTimeout(timer);
   }, [fetchStatus, name, refetch, setStalled, settled, stalled, status]);
@@ -87,13 +104,25 @@ export function useDashboardQueryRecovery({
   const settled = hasData || isError;
   const retry = useCallback(() => {
     setStalled(false);
-    void refetch();
-  }, [refetch]);
+    // Handle the refetch promise so a rejection is reported (logged) instead
+    // of becoming a silent unhandled rejection.
+    void refetch().catch((error: unknown) => {
+      logRecovery(
+        "dashboard.retry_refetch_failed",
+        `Dashboard ${name} retry refetch rejected`,
+        { fetchStatus, name, status },
+      );
+      console.error("[DashboardQueryRecovery] retry refetch failed", error);
+    });
+  }, [fetchStatus, name, refetch, status]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- stall flag is cleared when the QUERY settles — sync with an external async system, not derivable without re-arming bugs
+  // Reset the stall flag when the query settles; adjusting state during render
+  // (keyed on the settled transition) avoids an effect-driven cascading render.
+  const [prevSettled, setPrevSettled] = useState(settled);
+  if (settled !== prevSettled) {
+    setPrevSettled(settled);
     if (settled) setStalled(false);
-  }, [settled]);
+  }
   const recovery = {
     fetchStatus,
     hasData,

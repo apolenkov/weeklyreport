@@ -22,14 +22,16 @@
 
 import type { APIResponse, Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, test, withAuthenticatedPage } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
   LEAD_MARIA_ID,
   PUBLISHED_REPORT_ID,
+  SEED_EMAILS,
   SEED_USERS,
 } from "./helpers/seed-ids";
+import { performAndWaitForTrpcMutation } from "./helpers/trpc-response";
 
 const MARIA_ACTIVE_SECTION_ID = "a0000000-0000-4000-8000-000000004012";
 const MARIA_PUBLISHED_SECTION_ID = "a0000000-0000-4000-8000-000000004022";
@@ -82,16 +84,9 @@ async function revokeLeadViaDashboard(
     exact: true,
   });
   await expect(confirmBtn).toBeVisible({ timeout: 5000 });
-  await confirmBtn.click();
-
-  // Wait for the tRPC mutation to complete.
-  await headPage.waitForResponse(
-    (r) =>
-      r.url().includes("/trpc/") &&
-      r.request().method() === "POST" &&
-      /leadForm\.revoke/i.test(r.url()),
-    { timeout: 15_000 },
-  );
+  await performAndWaitForTrpcMutation(headPage, () => confirmBtn.click(), {
+    procedure: "leadForm.revoke",
+  });
 }
 
 /**
@@ -128,9 +123,7 @@ test.describe("Revoke downstream effects (integration)", () => {
     await resetMutations();
   });
 
-  test("after revoke, submissionCount drops by one", async ({
-    headPage,
-  }) => {
+  test("after revoke, submissionCount drops by one", async ({ headPage }) => {
     const sectionBefore = await prisma.reportSection.findUnique({
       where: { id: MARIA_ACTIVE_SECTION_ID },
     });
@@ -199,6 +192,7 @@ test.describe("Revoke downstream effects (integration)", () => {
 
   test("after revoke, resubmission restores the section to aggregation", async ({
     headPage,
+    browser,
   }) => {
     const beforeCount = await prisma.reportSection.count({
       where: { reportId: ACTIVE_REPORT_ID, status: "submitted" },
@@ -212,17 +206,36 @@ test.describe("Revoke downstream effects (integration)", () => {
     });
     expect(afterRevoke?.status).toBe("draft");
 
-    // Step 2: Maria re-submits. Use direct DB update (same pattern as
-    // cross-role-lifecycle spec — UI submit is covered by lead-journey spec).
-    await prisma.reportSection.update({
-      where: { id: MARIA_ACTIVE_SECTION_ID },
-      data: {
-        status: "submitted",
-        submittedAt: new Date(),
-        revokedAt: null,
-        revokedBy: null,
+    // Step 2: Maria re-submits through the real lead UI — the production
+    // mutation and authorization path, not an artificial DB write. This is
+    // what the "resubmission" scenario is about: a revoked draft is submitted
+    // again by its author.
+    await withAuthenticatedPage(
+      browser,
+      { role: "lead", email: SEED_EMAILS.maria },
+      async (mariaPage) => {
+        await mariaPage.goto("/lead/report");
+        const submitButton = mariaPage.getByRole("button", {
+          name: "Submit",
+          exact: true,
+        });
+        await expect(submitButton).toBeVisible({ timeout: 15_000 });
+        await submitButton.click();
+
+        const confirmDialog = mariaPage.getByRole("alertdialog", {
+          name: "Confirm submission",
+        });
+        await expect(confirmDialog).toBeVisible({ timeout: 15_000 });
+        await performAndWaitForTrpcMutation(
+          mariaPage,
+          () =>
+            confirmDialog
+              .getByRole("button", { name: "Submit", exact: true })
+              .click(),
+          { procedure: /submit/i },
+        );
       },
-    });
+    );
 
     // Step 3: Section reappears in submitted set — weekly-report picks it up.
     const afterResubmit = await prisma.reportSection.count({

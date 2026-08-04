@@ -3,7 +3,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
-  isPersistableDecision,
+  assertPersistableDecisionParents,
   toActivityStatusRows,
   toDecisionRows,
   toItemRows,
@@ -121,7 +121,7 @@ describe("toItemRows", () => {
   });
 });
 
-describe("isPersistableDecision + toDecisionRows", () => {
+describe("assertPersistableDecisionParents + toDecisionRows", () => {
   type Decision = ReportSectionReadModel["decisions"][number];
   const decision = (over: Partial<Decision>): Decision => ({
     id: "d",
@@ -138,11 +138,26 @@ describe("isPersistableDecision + toDecisionRows", () => {
     ...over,
   });
 
-  it("drops a decision with both productId and activityId null/undefined", () => {
-    expect(isPersistableDecision(decision({}))).toBe(false);
-    expect(isPersistableDecision(decision({ productId: PROJECT }))).toBe(true);
-    expect(isPersistableDecision(decision({ activityId: ACTIVITY }))).toBe(
-      true,
+  it("accepts exactly-one-parent decisions (product-only and activity-only)", () => {
+    expect(() =>
+      assertPersistableDecisionParents([
+        decision({ productId: PROJECT }),
+        decision({ activityId: ACTIVITY }),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects a decision carrying BOTH parents loudly (XOR invariant)", () => {
+    expect(() =>
+      assertPersistableDecisionParents([
+        decision({ productId: PROJECT, activityId: ACTIVITY }),
+      ]),
+    ).toThrow(/exactly one parent/);
+  });
+
+  it("rejects a decision with NEITHER parent loudly (XOR invariant)", () => {
+    expect(() => assertPersistableDecisionParents([decision({})])).toThrow(
+      /exactly one parent/,
     );
   });
 

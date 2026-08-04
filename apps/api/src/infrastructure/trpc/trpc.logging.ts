@@ -21,25 +21,25 @@ function describeShape(value: unknown): string {
     return `array[${value.length}]<${inner}>`;
   }
   if (typeof value === "object") {
-    // eslint-disable-next-line sonarjs/no-alphabetical-sort -- deterministic key ordering for a debug shape string, not user-facing sort
-    const keys = Object.keys(value).sort();
+    // Deterministic key ordering for a debug shape string — the default
+    // code-unit sort, spelled as a comparator so the intent is lint-visible.
+    const keys = Object.keys(value).sort((a, b) =>
+      a < b ? -1 : a > b ? 1 : 0,
+    );
     return `object{${keys.join(",")}}`;
   }
   return typeof value;
 }
 
-// Surface real failure (Prisma/Zod) under the generic INTERNAL_SERVER_ERROR
-// wrapper. Stack frames leak paths — only code/meta are logged.
+const SAFE_CAUSE_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
+
 export function deriveCauseInfo(cause: unknown) {
   if (!(cause instanceof Error)) return undefined;
+  const causeCode = "code" in cause ? cause.code : undefined;
   return {
     name: cause.constructor.name,
-    message: cause.message,
-    ...("code" in cause
-      ? { causeCode: (cause as { code?: unknown }).code }
-      : {}),
-    ...("meta" in cause
-      ? { causeMeta: (cause as { meta?: unknown }).meta }
+    ...(typeof causeCode === "string" && SAFE_CAUSE_CODE.test(causeCode)
+      ? { causeCode }
       : {}),
   };
 }
@@ -164,7 +164,6 @@ export function recordTrpcFailure(
     status: "error",
     error: {
       code: error.code,
-      message: error.message,
       ...(causeInfo ? { cause: causeInfo } : {}),
     },
   });

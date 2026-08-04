@@ -62,8 +62,12 @@ export function isFunctionLike(node) {
 // What a function hands back: `=> expr` directly, or the `return` in a block.
 export function returnedExpression(fn) {
   if (!fn.body) return null;
-  if (!ts.isBlock(fn.body)) return fn.body;
-  return fn.body.statements.find(ts.isReturnStatement)?.expression ?? null;
+  const expression = !ts.isBlock(fn.body)
+    ? fn.body
+    : (fn.body.statements.find(ts.isReturnStatement)?.expression ?? null);
+  return expression && ts.isParenthesizedExpression(expression)
+    ? expression.expression
+    : expression;
 }
 
 function namedBinding(node) {

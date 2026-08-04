@@ -32,5 +32,6 @@ available.
 
 ## Status
 
-Deferred — TODO(UFB-074) in `nav-bar.tsx:185`. Research phase blocked pending
-approval.
+Deferred — TODO(theme-future) in
+`apps/web/src/shared/ui/navigation/coming-soon-controls.tsx` (the inert Theme
+coming-soon control). Research phase blocked pending approval.

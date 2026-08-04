@@ -1,6 +1,7 @@
 import type { ReportStatus } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -126,7 +127,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
   }
 
   beforeAll(() => {
-    repo = new SearchPrismaRepository(prisma as never);
+    repo = new SearchPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {

@@ -1,3 +1,5 @@
+import type { FailedJobList } from "@customreport/shared";
+
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import type { AdminJobsQueue } from "./admin-jobs.port.js";
 
@@ -6,23 +8,7 @@ const MAX_FAILED_JOBS_LIMIT = 200;
 
 // No mutation audit here: mutationAuditMiddleware captures tRPC mutations.
 
-interface FailedJob {
-  id: string;
-  name: string;
-  failedReason: string;
-  stacktrace: readonly string[];
-  attemptsMade: number;
-  /** ms since epoch — when the job was added to BullMQ. */
-  timestamp: number;
-  /** Best-effort serialisable copy of the job payload. */
-  data: unknown;
-}
-
-export interface ListFailedResult {
-  jobs: FailedJob[];
-  /** BullMQ pagination cursor — next start index. `null` when exhausted. */
-  nextCursor: number | null;
-}
+export type ListFailedResult = FailedJobList;
 
 export interface RetryFailedResult {
   retried: boolean;
@@ -39,12 +25,6 @@ interface JobsServiceOptions {
 export class JobsService {
   private readonly logger: AppLogger;
 
-  /**
-   * Constructs the jobs admin surface.
-   * @param emailReminderQueue - Optional BullMQ queue adapter (absent in tests).
-   * @param logger - App logger; falls back to a null logger.
-   * @param options - Optional hooks such as reminderExecutionExists.
-   */
   constructor(
     private readonly emailReminderQueue: AdminJobsQueue | undefined,
     logger?: AppLogger,
@@ -71,15 +51,7 @@ export class JobsService {
 
     const rawJobs = await this.emailReminderQueue.getFailed(start, end);
 
-    const jobs: FailedJob[] = rawJobs.map((job) => ({
-      id: job.id ?? "",
-      name: job.name,
-      failedReason: job.failedReason ?? "",
-      stacktrace: job.stacktrace ? [...job.stacktrace] : [],
-      attemptsMade: job.attemptsMade ?? 0,
-      timestamp: job.timestamp,
-      data: job.data,
-    }));
+    const jobs = rawJobs.map((job) => job.failedJob);
 
     const nextCursor = jobs.length < limit ? null : start + limit;
 
@@ -100,7 +72,7 @@ export class JobsService {
       return { retried: false, jobId: input.jobId };
     }
 
-    const executionId = getReminderExecutionId(job.data);
+    const executionId = job.reminderExecutionId;
     if (executionId && this.options.reminderExecutionExists) {
       const exists = await this.options.reminderExecutionExists(executionId);
       if (!exists) {
@@ -129,18 +101,4 @@ export class JobsService {
     });
     return { retried: true, jobId: input.jobId };
   }
-}
-
-function getReminderExecutionId(data: unknown): string | null {
-  if (
-    data &&
-    typeof data === "object" &&
-    "executionId" in data &&
-    typeof data.executionId === "string" &&
-    data.executionId.trim().length > 0
-  ) {
-    return data.executionId;
-  }
-
-  return null;
 }

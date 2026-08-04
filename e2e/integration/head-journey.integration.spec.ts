@@ -8,6 +8,7 @@
 import { expect, test } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import { ACTIVE_REPORT_ID, SEED_EMAILS } from "./helpers/seed-ids";
+import { performAndWaitForTrpcMutation } from "./helpers/trpc-response";
 
 test.describe("Head journey (integration)", () => {
   test.afterEach(async () => {
@@ -44,7 +45,9 @@ test.describe("Head journey (integration)", () => {
     ).toBeVisible({ timeout: 15_000 });
     await expect(
       headPage.getByRole("region", {
-        name: new RegExp(String.raw`^Submissions: ${submitted} of ${totalLeads}, \d+ pending$`),
+        name: new RegExp(
+          String.raw`^Submissions: ${submitted} of ${totalLeads}, \d+ pending$`,
+        ),
       }),
     ).toBeVisible();
     expect(submitted).toBeGreaterThan(0);
@@ -68,19 +71,13 @@ test.describe("Head journey (integration)", () => {
     );
 
     await headPage.goto(`/head/report/${ACTIVE_REPORT_ID}`);
-    await headPage
-      .getByRole("button", { name: "Review", exact: true })
-      .click();
+    await headPage.getByRole("button", { name: "Review", exact: true }).click();
 
     const approve = headPage.getByRole("button", { name: "Approve" }).first();
     await expect(approve).toBeVisible({ timeout: 15_000 });
-    const response = headPage.waitForResponse(
-      (candidate) =>
-        candidate.url().includes("/trpc/review.verdict") &&
-        candidate.request().method() === "POST",
-    );
-    await approve.click();
-    await response;
+    await performAndWaitForTrpcMutation(headPage, () => approve.click(), {
+      procedure: "review.verdict",
+    });
     await expect(headPage.getByText("Section approved")).toBeVisible();
 
     const persisted = await prisma.sectionReview.findFirst({
@@ -103,26 +100,24 @@ test.describe("Head journey (integration)", () => {
       name: /publish.*lock/i,
     });
     await expect(publishBtn).toBeVisible({ timeout: 15_000 });
-    await publishBtn.click();
-
-    // Confirmation dialog.
-    const confirm = headPage.getByRole("button", {
-      name: /^(publish|confirm|yes)/i,
-    });
-    if (await confirm.count()) await confirm.last().click();
-
-    await headPage.waitForResponse(
-      (r) =>
-        r.url().includes("/trpc/") &&
-        r.request().method() === "POST" &&
-        /publish/i.test(r.url()),
-      { timeout: 15_000 },
+    await performAndWaitForTrpcMutation(
+      headPage,
+      async () => {
+        await publishBtn.click();
+        const confirm = headPage.getByRole("button", {
+          name: /^(publish|confirm|yes)/i,
+        });
+        await expect(confirm.last()).toBeVisible();
+        await confirm.last().click();
+      },
+      { procedure: /publish/i },
     );
 
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
     });
     expect(report?.status).toBe("published");
+    expect(report?.periodState).toBe("published");
     expect(report?.periodStatus).toBe("published");
     expect(report?.publishedAt).not.toBeNull();
   });
@@ -135,6 +130,8 @@ test.describe("Head journey (integration)", () => {
       where: { id: ACTIVE_REPORT_ID },
       data: {
         status: "published",
+        archived: false,
+        periodState: "published",
         periodStatus: "published",
         publishedAt: new Date(),
         publishedById: "a0000000-0000-4000-8000-000000000099",
@@ -147,24 +144,24 @@ test.describe("Head journey (integration)", () => {
       name: /reopen/i,
     });
     await expect(reopenBtn).toBeVisible({ timeout: 15_000 });
-    await reopenBtn.click();
-
-    const confirm = headPage.getByRole("button", {
-      name: /^(revoke|reopen|confirm|yes)/i,
-    });
-    const reopenResponse = headPage.waitForResponse(
-      (r) =>
-        r.url().includes("/trpc/period.reopen") &&
-        r.request().method() === "POST",
-      { timeout: 15_000 },
+    await performAndWaitForTrpcMutation(
+      headPage,
+      async () => {
+        await reopenBtn.click();
+        const confirm = headPage.getByRole("button", {
+          name: /^(revoke|reopen|confirm|yes)/i,
+        });
+        await expect(confirm.last()).toBeVisible();
+        await confirm.last().click();
+      },
+      { procedure: "period.reopen" },
     );
-    if (await confirm.count()) await confirm.last().click();
-    await reopenResponse;
 
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
     });
     expect(report?.status).toBe("published");
+    expect(report?.periodState).toBe("open");
     expect(report?.periodStatus).toBe("reopened");
 
     const submittedSections = await prisma.reportSection.count({

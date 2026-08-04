@@ -45,7 +45,7 @@ section lifecycle + published-record lock), **publication** (publish atomicity +
 Thin CRUD — activity, project-activity, analytics, email, observability, search, telegram,
 telemetry, organization — stays flat (`X.service.ts` + `X.prisma-repository.ts`). Both hexagon-track and
 modular-monolith-track flag over-abstracting thin modules (ports+mappers+tokens inflating
-file count with no invariant to protect) as **net-negative** against the <250-line exemplary
+file count with no invariant to protect) as **net-negative** against the ≤300-line exemplary
 standard. Gate the split on real branching logic, not size alone.
 
 **Considered & rejected.**

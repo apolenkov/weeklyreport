@@ -12,7 +12,7 @@ import {
 
 import {
   type DraftSaveContent,
-  stableStringify,
+  encodeAutosaveComparisonKey,
   useLeadFormAutosave,
 } from "../../../hooks/use-lead-form-autosave";
 import { sectionToDraftPayload } from "../../report-sections";
@@ -95,7 +95,7 @@ function useSaveEchoRecorder(
       savedSection: ReportSectionReadModel,
       persistedPayload: DraftSaveContent,
     ) => {
-      const serverDraftKey = stableStringify(
+      const serverDraftKey = encodeAutosaveComparisonKey(
         sectionToDraftPayload(savedSection),
       );
       ledger.record({ persistedPayload, savedSection, serverDraftKey });
@@ -131,7 +131,7 @@ function useServerSectionReseed({
     setVersionSafe(serverSection.version);
     setIsSubmitted(serverSection.status === "submitted");
 
-    const serverDraftKey = stableStringify(
+    const serverDraftKey = encodeAutosaveComparisonKey(
       sectionToDraftPayload(serverSection),
     );
     const saveEcho = ledger.find(serverDraftKey);

@@ -34,7 +34,7 @@ function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
     <span
       role="listitem"
       title={activity.name}
-      className="inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-white/70 px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
+      className="inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
     >
       <span
         aria-hidden="true"

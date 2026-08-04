@@ -60,6 +60,9 @@ export function queryActiveRuleForDispatch(
     where: {
       reportId,
       status: "active",
+      // Manual dispatch must exclude archived periods just like the
+      // deadline/escalation scheduler queries do.
+      report: { archived: false },
       ...(ruleId ? { id: ruleId } : {}),
     },
     orderBy: { fireAt: "asc" },
@@ -77,6 +80,8 @@ export async function queryDraftSectionsForDispatch(
     where: {
       reportId,
       status: "draft",
+      // Same archived-period guard as the other dispatch queries.
+      report: { archived: false },
       ...(leadId ? { authorId: leadId } : {}),
       ...groupScopeFilter(session, "reportSection"),
     },

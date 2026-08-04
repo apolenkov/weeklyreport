@@ -20,9 +20,10 @@ export default mergeConfig(
         "**/node_modules/**",
       ],
       coverage: {
-        include: ["src/**/*.ts"],
+        include: ["src/**/*.ts", "src/**/*.tsx"],
         exclude: [
           "src/**/*.test.ts",
+          "src/**/*.test.tsx",
           "src/**/*.integration.test.ts",
           "src/**/*.eval.test.ts",
           "src/**/__tests__/**",

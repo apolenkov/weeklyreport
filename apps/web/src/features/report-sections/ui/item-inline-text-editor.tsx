@@ -36,7 +36,7 @@ export function ItemInlineTextEditor({
   return (
     <textarea
       ref={textareaRef}
-      className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+      className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-[var(--color-card)] px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_var(--color-ring)]"
       style={{ minHeight: "52px" }}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}

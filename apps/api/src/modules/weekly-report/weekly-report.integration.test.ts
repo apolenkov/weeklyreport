@@ -115,6 +115,7 @@ describe("WeeklyReportService with Prisma (integration)", () => {
         worstStatus: "red",
         stageCount: 2,
         leadNames: ["Test Lead 1", "Test Lead 2"],
+        leadIds: [data.lead.id, secondLeadId].sort(),
       }),
     ]);
   });

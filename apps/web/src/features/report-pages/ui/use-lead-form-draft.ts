@@ -5,25 +5,20 @@ import { useMemo } from "react";
 
 import type { CrossAuthorRow } from "../../report-sections";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
-import {
-  buildReadinessProducts,
-  type LeadFormLoadedContext,
-} from "./lead-form-submit-context";
+import type { LeadFormGeneration } from "./lead-form-generation";
+import { buildReadinessProducts } from "./lead-form-submit-context";
 import { useLeadFormDraftCore } from "./use-lead-form-draft-core";
-import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
 import {
   buildLeadSubmitReadiness,
   useLeadFormSubmit,
 } from "./use-lead-form-submit";
 
-export type { QuickAddItem } from "./use-lead-form-quick-add";
-
 interface UseLeadFormDraftArgs {
+  readonly generation: LeadFormGeneration | null;
   readonly serverSection: ReportSectionReadModel | null | undefined;
-  readonly sectionIdForActions: string;
+  readonly sectionIdForActions: string | null;
   readonly serverReadOnly: boolean;
   readonly refetchSection: () => Promise<unknown>;
-  readonly loaded: LeadFormLoadedContext;
   readonly seam: LeadFormDraftSeam;
   // Server-static feed; readiness re-applies its overrides in the Everyone lens.
   readonly crossAuthors: readonly CrossAuthorRow[];
@@ -32,25 +27,22 @@ interface UseLeadFormDraftArgs {
 
 // Live view-model enters as plain `loaded` — no ref crosses into this module.
 export function useLeadFormDraft({
+  generation,
   serverSection,
   sectionIdForActions,
   serverReadOnly,
   refetchSection,
   crossAuthors,
   isEveryone,
-  loaded,
   seam,
 }: UseLeadFormDraftArgs) {
   const { versionRef, setVersionSafe, ...core } = useLeadFormDraftCore({
+    generation,
     serverSection,
     sectionIdForActions,
     serverReadOnly,
     refetchSection,
   });
-
-  // Modal quick-add + blocker-prefill cluster. Kept out of the core because it
-  // touches neither the optimistic-lock version nor the dual-state write path.
-  const quickAddCluster = useLeadFormQuickAdd({ apply: core.apply, loaded });
 
   const readinessProducts = useMemo(
     () =>
@@ -75,5 +67,5 @@ export function useLeadFormDraft({
     handleConflict: core.handleConflict,
   });
 
-  return { ...core, submit, submitReadiness, ...quickAddCluster };
+  return { ...core, submit, submitReadiness };
 }

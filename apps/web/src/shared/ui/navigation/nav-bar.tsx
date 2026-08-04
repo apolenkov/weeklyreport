@@ -10,9 +10,6 @@ import { buildNavBarModel } from "./nav-bar-model";
 import { NavBrand } from "./nav-brand";
 import { NavRightRail } from "./nav-right-rail";
 
-/**
- * Nav Bar.
- */
 export function NavBar() {
   const pathname = usePathname();
   const { user, organization, isLoading: sessionLoading } = useSession();

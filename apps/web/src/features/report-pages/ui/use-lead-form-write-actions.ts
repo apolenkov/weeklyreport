@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { toast } from "sonner";
 
 import type { LeadSubmitReadiness } from "../../report-sections";
+import type { LeadFormGeneration } from "./lead-form-generation";
 import type { SubmitOutcome } from "./lead-form-submit-context";
+import { useGenerationState } from "./use-generation-state";
 import { useLeadFormFillFrom } from "./use-lead-form-fill-from";
 import { useLeadFormReopenRequest } from "./use-lead-form-reopen-request";
 import { useLeadFormRevoke } from "./use-lead-form-revoke";
 
 interface UseLeadFormWriteActionsArgs {
-  readonly sectionIdForActions: string;
+  readonly generation: LeadFormGeneration | null;
+  readonly sectionIdForActions: string | null;
   readonly autosaveDirty: boolean;
   readonly submitReadiness: LeadSubmitReadiness;
   readonly submit: () => Promise<SubmitOutcome>;
@@ -22,13 +24,18 @@ interface UseLeadFormWriteActionsArgs {
 // Readiness is re-checked when the dialog is confirmed, not only when it
 // opens: the draft can go stale while the confirmation sits on screen.
 function useSubmitConfirmation({
+  generation,
   submitReadiness,
   submit,
 }: {
+  readonly generation: LeadFormGeneration | null;
   readonly submitReadiness: LeadSubmitReadiness;
   readonly submit: () => Promise<SubmitOutcome>;
 }) {
-  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useGenerationState(
+    generation,
+    false,
+  );
 
   const surfaceReadinessBlocker = () => {
     const issue = submitReadiness.blockingIssues.at(0);
@@ -71,6 +78,7 @@ function useSubmitConfirmation({
 
 // Dialog lifecycle (submit confirm, revoke, reopen, fill-from); draft owns state.
 export function useLeadFormWriteActions({
+  generation,
   sectionIdForActions,
   autosaveDirty,
   submitReadiness,
@@ -79,15 +87,24 @@ export function useLeadFormWriteActions({
   setIsSubmitted,
   handleConflict,
 }: UseLeadFormWriteActionsArgs) {
-  const revoke = useLeadFormRevoke({ sectionIdForActions, setIsSubmitted });
-  const reopen = useLeadFormReopenRequest({ sectionIdForActions });
+  const revoke = useLeadFormRevoke({
+    generation,
+    sectionIdForActions,
+    setIsSubmitted,
+  });
+  const reopen = useLeadFormReopenRequest({ generation, sectionIdForActions });
   const fillFrom = useLeadFormFillFrom({
+    generation,
     sectionIdForActions,
     autosaveDirty,
     version,
     handleConflict,
   });
-  const submitConfirmation = useSubmitConfirmation({ submitReadiness, submit });
+  const submitConfirmation = useSubmitConfirmation({
+    generation,
+    submitReadiness,
+    submit,
+  });
 
   return {
     ...revoke,

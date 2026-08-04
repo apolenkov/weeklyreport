@@ -171,7 +171,7 @@ describe("Analytics day-range matching (integration)", () => {
     expect(first).toEqual(second);
   });
 
-  it("periodComparison sums risk counts across two reports on the same side", async () => {
+  it("periodComparison counts risks only from the authoritative republish", async () => {
     await makePublishedReport({
       id: "c0000000-0000-4000-8000-000000000401",
       sectionId: "c0000000-0000-4000-8000-000000000402",
@@ -197,8 +197,7 @@ describe("Analytics day-range matching (integration)", () => {
     );
 
     const row = result.rows.find((r) => r.projectId === DR_PROJECT);
-    expect(row?.riskCountA).toBe(2);
-    // Status still follows the latest-report tie-break while risks sum.
+    expect(row?.riskCountA).toBe(1);
     expect(row?.statusA).toBe("red");
   });
 

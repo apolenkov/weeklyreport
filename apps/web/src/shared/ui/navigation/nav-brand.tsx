@@ -27,8 +27,8 @@ function BrandMark({
       aria-label={homeLabel}
     >
       {userName !== null ? (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[0_0_0_1px_rgba(0,98,65,0.08)]">
-          <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[var(--shadow-brand-mark)]">
+          <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-[var(--color-sidebar-foreground)]">
             {initials}
           </span>
         </div>

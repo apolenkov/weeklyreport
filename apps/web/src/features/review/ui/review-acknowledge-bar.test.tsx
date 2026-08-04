@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import type { ReviewAcknowledgementView } from "@customreport/shared";
@@ -49,9 +47,15 @@ function makeQueryClient() {
 function renderBar(options: {
   readonly acks?: readonly ReviewAcknowledgementView[];
   readonly isHeadOrAdmin?: boolean;
+  readonly acksError?: boolean;
 }) {
   const initialAcks = options.acks ?? [];
-  const getAcks = vi.fn(() => [...initialAcks]);
+  const getAcks = vi.fn(() => {
+    if (options.acksError) {
+      return Promise.reject(new Error("roster query failed"));
+    }
+    return Promise.resolve([...initialAcks]);
+  });
   const { proxy, captured } = createMockTRPC([
     {
       path: ["review", "acknowledgements"],
@@ -113,7 +117,8 @@ describe("ReviewAcknowledgeBar", () => {
     const { captured, getAcks } = renderBar({ acks: [] });
     const mutationFn = expectDefined(captured["review.acknowledge"]).mutationFn;
     mutationFn.mockImplementation(() => {
-      getAcks.mockReturnValue([CURRENT_USER_ACK]);
+      getAcks.mockReturnValue(Promise.resolve([CURRENT_USER_ACK]));
+      return Promise.resolve(undefined);
     });
 
     const button = await screen.findByRole("button", { name: "Acknowledge" });
@@ -148,5 +153,15 @@ describe("ReviewAcknowledgeBar", () => {
     });
 
     expect(await screen.findByText("Seen by Current User")).toBeInTheDocument();
+  });
+
+  it("keeps the control inert and shows an error when the roster query fails", async () => {
+    renderBar({ acksError: true });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Could not load acknowledgements");
+    const button = screen.getByRole("button", { name: /^Acknowledge/ });
+    expect(button).toBeDisabled();
+    expect(screen.queryByText(/^Seen by/)).not.toBeInTheDocument();
   });
 });

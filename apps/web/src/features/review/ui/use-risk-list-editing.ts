@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 
 import type {
   CreateSeed,
@@ -16,21 +16,21 @@ type SavedRisk = RiskEntry & { impact: string; mitigation: string };
 export interface RiskAddPrefill {
   signal: number;
   productId: string;
-  stageNames: string[];
+  stageNames: readonly string[];
   severity: "at-risk" | "blocked";
   // Pill raise — preselects the activity parent.
   activityId?: string | undefined;
 }
 
 interface RiskCreatePrefill {
-  readonly stageNames?: string[] | undefined;
+  readonly stageNames?: readonly string[] | undefined;
   readonly severity?: "at-risk" | "blocked" | undefined;
 }
 
 interface RiskListEditingOptions {
-  readonly risks: RiskEntry[];
+  readonly risks: readonly RiskEntry[];
   readonly readOnly: boolean;
-  readonly onChange?: ((next: RiskEntry[]) => void) | undefined;
+  readonly onChange?: ((next: readonly RiskEntry[]) => void) | undefined;
   readonly addSignal: number;
   readonly addPrefill?: RiskAddPrefill | undefined;
   readonly seedProductId?: string | undefined;
@@ -45,13 +45,13 @@ export interface RiskListEditing extends UseEditableListDialogResult<RiskEntry> 
   readonly cancelDialog: () => void;
 }
 
-const withoutRisk = (risks: RiskEntry[], id: string): RiskEntry[] =>
+const withoutRisk = (risks: readonly RiskEntry[], id: string): RiskEntry[] =>
   risks.filter((risk) => risk.id !== id);
 
 // applyRiskSeverityFloor re-derives the stage chips, so a blocked→at-risk flip
 // lowers the covered stage without opening the edit dialog.
 function withToggledSeverity(
-  risks: RiskEntry[],
+  risks: readonly RiskEntry[],
   target: RiskEntry,
 ): RiskEntry[] {
   const severity = target.severity === "blocked" ? "at-risk" : "blocked";
@@ -62,7 +62,7 @@ function withToggledSeverity(
 
 const nextRisksAfterSave = (
   dialogState: EditableListDialogState<RiskEntry>,
-  risks: RiskEntry[],
+  risks: readonly RiskEntry[],
   saved: SavedRisk,
 ): RiskEntry[] =>
   dialogState.open && dialogState.mode === "create"
@@ -75,13 +75,17 @@ function useRiskRaisePrefill(
   addPrefill: RiskAddPrefill | undefined,
   openCreate: (seed?: CreateSeed) => void,
 ) {
-  const [createPrefill, setCreatePrefill] = useState<RiskCreatePrefill | null>(
+  const lastHandledSignal = useRef(0);
+  const [createPrefill, setCreatePrefill] = useReducer(
+    (_current: RiskCreatePrefill | null, next: RiskCreatePrefill | null) =>
+      next,
     null,
   );
 
   useEffect(() => {
     if (!addPrefill || addPrefill.signal === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the addPrefill SIGNAL prop (an event delivered via props); state updates are the event's handler
+    if (addPrefill.signal <= lastHandledSignal.current) return;
+    lastHandledSignal.current = addPrefill.signal;
     setCreatePrefill({
       stageNames: addPrefill.stageNames,
       severity: addPrefill.severity,

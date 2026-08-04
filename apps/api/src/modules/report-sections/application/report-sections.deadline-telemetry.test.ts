@@ -9,6 +9,7 @@ import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
   ReportSectionAccessError,
+  ReportSectionNotFoundError,
   type ReportSectionsRepository,
   ReportSectionsService,
 } from "./report-sections.service";
@@ -24,9 +25,11 @@ const baseSection: ReportSectionReadModel = {
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -42,8 +45,11 @@ const baseSection: ReportSectionReadModel = {
           sortOrder: 0,
         },
       ],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       projectId: "44444444-4444-4444-8444-444444444444",
@@ -60,6 +66,7 @@ const baseSection: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 // the read-model item types stageNames as
@@ -121,6 +128,8 @@ describe("ReportSectionsService — deadline gate", () => {
       version: 1,
       status: "draft" as const,
       confirmed: true as const,
+      stageStatuses: [],
+      activityStatuses: [],
       projectStatuses: [
         {
           projectId: expectDefined(baseSection.projects[0]).projectId,
@@ -141,7 +150,10 @@ describe("ReportSectionsService — deadline gate", () => {
       Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: false }),
     );
 
-    const saved = await service.submitSection(validSubmitPayload());
+    const saved = await service.submitSection(
+      validSubmitPayload(),
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("submitted");
     expect(saved.late).toBe(false);
@@ -175,7 +187,10 @@ describe("ReportSectionsService — deadline gate", () => {
         Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions }),
       );
 
-      const saved = await service.submitSection(validSubmitPayload());
+      const saved = await service.submitSection(
+        validSubmitPayload(),
+        baseSection.authorId,
+      );
 
       expect(saved.status).toBe("submitted");
       expect(saved.late).toBe(true);
@@ -191,7 +206,7 @@ describe("ReportSectionsService — deadline gate", () => {
     );
 
     await expect(
-      service.submitSection(validSubmitPayload()),
+      service.submitSection(validSubmitPayload(), baseSection.authorId),
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
   });
 
@@ -209,15 +224,19 @@ describe("ReportSectionsService — deadline gate", () => {
       Promise.resolve({ gracePeriodHours: 0, allowLateSubmissions: false }),
     );
 
-    const saved = await service.submitSection(validSubmitPayload());
+    const saved = await service.submitSection(
+      validSubmitPayload(),
+      baseSection.authorId,
+    );
 
     expect(saved.status).toBe("submitted");
     expect(saved.late).toBe(false);
   });
 
-  it("skips the gate only on an explicit null report meta — late stays false", async () => {
-    // Both collaborators are required, so the only skip left is a repository
-    // EXPLICITLY reporting the report row absent.
+  it("fails closed when report meta is missing — never an un-gated submission", async () => {
+    // The section exists, so its report row must too; a null meta is a
+    // mid-flight deletion / integrity failure, surfaced as NOT_FOUND, never a
+    // silent pass-through to an on-time submission.
     const repo = {
       ...createGracedRepository({
         deadline: new Date(Date.now() - 48 * ONE_HOUR),
@@ -226,17 +245,15 @@ describe("ReportSectionsService — deadline gate", () => {
     };
     const service = new ReportSectionsService(repo, testGraceSettings);
 
-    const saved = await service.submitSection(validSubmitPayload());
-
-    expect(saved.status).toBe("submitted");
-    expect(saved.late).toBe(false);
+    await expect(
+      service.submitSection(validSubmitPayload(), baseSection.authorId),
+    ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
   });
 });
 
-// product-telemetry counters/histogram. Verifies the
-// submit path bumps `customreport_sections_submitted_total{late}` with the
-// stamped label, and observes a positive value in the latency histogram
-// when submission lands AFTER the deadline.
+// Verifies the submit path bumps `customreport_sections_submitted_total{late}`
+// with the stamped label and observes a positive latency-histogram value when
+// the submission lands AFTER the deadline.
 describe("ReportSectionsService — product telemetry", () => {
   function buildRepo(deadline: Date): ReportSectionsRepository {
     const section: ReportSectionReadModel = {
@@ -244,9 +261,11 @@ describe("ReportSectionsService — product telemetry", () => {
       reportId: "22222222-2222-4222-8222-222222222222",
       authorId: "33333333-3333-4333-8333-333333333333",
       authorName: "Lead 1",
+      authorRole: "lead",
       version: 1,
       status: "draft",
       submittedAt: null,
+      late: false,
       projects: [
         {
           projectId: "44444444-4444-4444-8444-444444444444",
@@ -261,12 +280,16 @@ describe("ReportSectionsService — product telemetry", () => {
               sortOrder: 0,
             },
           ],
+          stageSet: [],
+          ownerGroupId: null,
         },
       ],
+      referencedProjects: [],
       items: [],
       risks: [],
       decisions: [],
       activities: [],
+      reviews: [],
     };
     let current = section;
     return {
@@ -308,31 +331,37 @@ describe("ReportSectionsService — product telemetry", () => {
         Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: false }),
       new ReportSectionsPrometheusTelemetry(),
     );
-    await service.submitSection({
-      reportSectionId: "11111111-1111-4111-8111-111111111111",
-      version: 1,
-      status: "draft" as const,
-      confirmed: true as const,
-      projectStatuses: [
-        {
-          projectId: "44444444-4444-4444-8444-444444444444",
-          status: "green" as const,
-        },
-      ],
-      items: [
-        {
-          projectId: "44444444-4444-4444-8444-444444444444",
-          type: "current" as const,
-          text: "Current item",
-          tag: "feature" as const,
-          workflowStatus: "in_progress" as const,
-          // items carry ≥1 stage on write.
-          stageNames: ["Development"],
-        },
-      ],
-      risks: [],
-      decisions: [],
-    });
+    await service.submitSection(
+      {
+        reportSectionId: "11111111-1111-4111-8111-111111111111",
+        version: 1,
+        status: "draft" as const,
+        confirmed: true as const,
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            status: "green" as const,
+          },
+        ],
+        items: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            type: "current" as const,
+            text: "Current item",
+            tag: "feature" as const,
+            workflowStatus: "in_progress" as const,
+            carriedOver: false,
+            // items carry ≥1 stage on write.
+            stageNames: ["Development"],
+          },
+        ],
+        risks: [],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(
       await counterValue(customreportSectionsSubmittedTotal, {
@@ -357,31 +386,37 @@ describe("ReportSectionsService — product telemetry", () => {
         Promise.resolve({ gracePeriodHours: 24, allowLateSubmissions: true }),
       new ReportSectionsPrometheusTelemetry(),
     );
-    await service.submitSection({
-      reportSectionId: "11111111-1111-4111-8111-111111111111",
-      version: 1,
-      status: "draft" as const,
-      confirmed: true as const,
-      projectStatuses: [
-        {
-          projectId: "44444444-4444-4444-8444-444444444444",
-          status: "green" as const,
-        },
-      ],
-      items: [
-        {
-          projectId: "44444444-4444-4444-8444-444444444444",
-          type: "current" as const,
-          text: "Current item",
-          tag: "feature" as const,
-          workflowStatus: "in_progress" as const,
-          // items carry ≥1 stage on write.
-          stageNames: ["Development"],
-        },
-      ],
-      risks: [],
-      decisions: [],
-    });
+    await service.submitSection(
+      {
+        reportSectionId: "11111111-1111-4111-8111-111111111111",
+        version: 1,
+        status: "draft" as const,
+        confirmed: true as const,
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            status: "green" as const,
+          },
+        ],
+        items: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            type: "current" as const,
+            text: "Current item",
+            tag: "feature" as const,
+            workflowStatus: "in_progress" as const,
+            carriedOver: false,
+            // items carry ≥1 stage on write.
+            stageNames: ["Development"],
+          },
+        ],
+        risks: [],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
 
     expect(
       await counterValue(customreportSectionsSubmittedTotal, {

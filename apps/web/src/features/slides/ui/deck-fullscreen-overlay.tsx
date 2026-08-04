@@ -5,26 +5,31 @@ import { type Ref, useEffect, useState } from "react";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
-/** How long the transient "Press Esc to exit" hint stays on entering fullscreen. */
+// Keep the transient fullscreen hint visible long enough to be noticed.
 const ESC_HINT_MS = 3000;
 
 // Must render inside the fullscreened element (else invisible); top-center
 // avoids the floating exit pill at top-right.
 function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
-  const [show, setShow] = useState(false);
+  const [autoHidden, setAutoHidden] = useState(false);
+  const [prevFullscreen, setPrevFullscreen] = useState(isFullscreen);
+
+  // Re-arm the hint each time fullscreen is entered; adjusting state during
+  // render keeps the reset out of an effect (no cascading render).
+  if (isFullscreen !== prevFullscreen) {
+    setPrevFullscreen(isFullscreen);
+    if (isFullscreen) setAutoHidden(false);
+  }
 
   useEffect(() => {
-    if (!isFullscreen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- show-then-auto-hide timer choreography on entering fullscreen; the timeout owns the state transitions
-      setShow(false);
-      return;
-    }
-    setShow(true);
-    const timer = setTimeout(() => setShow(false), ESC_HINT_MS);
+    if (!isFullscreen || autoHidden) return;
+    const timer = setTimeout(() => setAutoHidden(true), ESC_HINT_MS);
     return () => clearTimeout(timer);
-  }, [isFullscreen]);
+  }, [isFullscreen, autoHidden]);
 
   if (!isFullscreen) return null;
+
+  const show = !autoHidden;
 
   // Keep the live region mounted while fullscreen and toggle only its text —
   // some screen readers miss a region that mounts already populated.
@@ -34,7 +39,7 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
       data-testid="slide-esc-hint"
       className={
         show
-          ? "fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-[var(--color-card)] px-4 py-1.5 text-sm font-medium text-[var(--color-foreground)] shadow-lg"
+          ? "fixed left-1/2 top-4 z-[var(--layer-popover)] -translate-x-1/2 rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-4 py-1.5 text-sm font-medium text-[var(--color-foreground)] shadow-lg"
           : "sr-only"
       }
     >

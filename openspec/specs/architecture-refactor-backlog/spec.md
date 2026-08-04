@@ -2,17 +2,19 @@
 
 ## Purpose
 
-TBD - created by archiving change backlog-architecture-refactors. Update Purpose after archive.
+Record the status and closure of architecture refactor targets across lead-form decomposition, shared domain vocabularies, repository boundaries, and dead-surface removal.
 
 ## Requirements
 
 ### Requirement: The lead-form god component is a recorded decomposition target
 
-The backlog MUST record that
-`apps/web/src/features/report-sections/ui/lead-form.tsx` (250 LOC after
-`refactor-lead-form-toolbar-chrome` on 2026-07-10; 250-line `max-lines`
-standard) is a decomposition target being reduced in recorded slices, each
-captured as its own grilled refactor change before work starts. The first slice
+The backlog MUST record that the live composition root is
+`apps/web/src/features/report-pages/ui/lead-form.tsx` (250 LOC after
+`refactor-lead-form-toolbar-chrome` on 2026-07-10; the 250-line value was the
+decomposition target, not the repository-wide `max-lines` threshold). The
+historical slices below originated under the former `report-sections` feature
+path and are retained as a record; each was captured as its own grilled
+refactor change before work started. The first slice
 is `refactor-lead-mappers`: the pure cross-author and snapshot derivations
 moved to tested adapters in `apps/web/src/lib/mappers/` (landed at 1658 LOC on
 2026-06-11; the file stood at 1930 when the slice started). The second slice is
@@ -67,8 +69,8 @@ of their own.
 #### Scenario: the lead-form size target is discoverable
 
 - **WHEN** a maintainer looks for known oversized modules
-- **THEN** the backlog names `lead-form.tsx` with its current LOC and the 250
-  target
+- **THEN** the backlog names the live `report-pages/ui/lead-form.tsx` composition
+  root and the 250-line decomposition target
 - **AND** it lists the landed slices (first: `refactor-lead-mappers`; second:
   `refactor-lead-form-draft-orchestration`; third:
   `refactor-lead-form-write-actions`; fourth:

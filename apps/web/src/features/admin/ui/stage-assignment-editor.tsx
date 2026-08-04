@@ -30,7 +30,7 @@ function stageColorOf(stageName: StageName): string {
 }
 
 const STAGE_SELECT_BASE =
-  "w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-[var(--radius-sm)] border bg-[var(--color-card)] px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50";
 // A dashed outline marks the coverage gap an unassigned stage represents.
 const STAGE_SELECT_CLASS = {
   assigned: `${STAGE_SELECT_BASE} border-[var(--color-border)] text-[var(--color-foreground)]`,

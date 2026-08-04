@@ -1,18 +1,20 @@
 // Outbound worker: only admin.testTelegramSend enqueues; lifecycle from
 // RawBullMqProcessor. Retries are set at enqueue (attempts: 3).
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { type Job, type WorkerOptions } from "bullmq";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 
 import { RawBullMqProcessor } from "../../infrastructure/bullmq/raw-bullmq-processor.js";
 import {
   extractTraceId,
   type JobTraceContext,
 } from "../../infrastructure/bullmq/worker-observability.js";
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
-import type { TelegramAdapter } from "./telegram.adapter.js";
+import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 
 export interface TelegramOutboundJobData extends JobTraceContext {
   chatId: string;
@@ -41,14 +43,11 @@ export class TelegramProcessor extends RawBullMqProcessor<TelegramOutboundJobDat
   protected readonly queueName = TELEGRAM_OUTBOUND_QUEUE_NAME;
   protected readonly spanName = "telegram-outbound.process";
 
-  // Constructed by the module's useFactory (never by Nest's reflective DI) —
-  // a param-decorator @Inject here would also break the web tsconfig's
-  // es-decorators pass, so the adapter arrives as a plain constructor arg.
   constructor(
-    private readonly adapter: TelegramAdapter,
-    env: EnvConfig,
-    logger?: AppLogger,
-    cls?: ClsService,
+    @Inject(TELEGRAM_ADAPTER) private readonly adapter: TelegramAdapter,
+    @Inject(ENV_CONFIG) env: EnvConfig,
+    @Inject(APP_LOGGER) logger: AppLogger,
+    @Inject(ClsService) cls: ClsService | null,
   ) {
     super(env, logger, cls);
   }
@@ -56,14 +55,13 @@ export class TelegramProcessor extends RawBullMqProcessor<TelegramOutboundJobDat
   // Modest concurrency — Telegram per-bot rate limit is 30 msg/s in private
   // chats; seeds-only path only sees admin smoke tests, so 2 in-flight is
   // plenty.
-  protected override extraWorkerOptions(): Partial<WorkerOptions> {
-    return { concurrency: 2 };
-  }
+  protected override readonly extraWorkerOptions =
+    (): Partial<WorkerOptions> => ({ concurrency: 2 });
 
-  protected onJobFailed(
+  protected readonly onJobFailed = (
     job: Job<TelegramOutboundJobData> | undefined,
     error: Error,
-  ): void {
+  ): void => {
     const correlationId = job?.data.correlationId;
     const traceId = job ? extractTraceId(job.data) : undefined;
     // The DLQ monitor is the sole owner of cr_dlq_failed_total; this handler
@@ -75,9 +73,11 @@ export class TelegramProcessor extends RawBullMqProcessor<TelegramOutboundJobDat
       ...(traceId ? { traceId } : {}),
       error: error.message,
     });
-  }
+  };
 
-  protected async processJob(job: Job<TelegramOutboundJobData>): Promise<void> {
+  protected readonly processJob = async (
+    job: Job<TelegramOutboundJobData>,
+  ): Promise<void> => {
     const { chatId, text } = job.data;
     const result = await this.adapter.send(chatId, text);
     if (!result.ok) {
@@ -86,5 +86,5 @@ export class TelegramProcessor extends RawBullMqProcessor<TelegramOutboundJobDat
       // branch means an unrecoverable provider rejection.
       throw new Error(`telegram adapter rejected send for chat ${chatId}`);
     }
-  }
+  };
 }

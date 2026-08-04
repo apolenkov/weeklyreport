@@ -12,11 +12,13 @@ function ProductRowLabel({
   hintId,
   lockedHint,
   ownershipLoading,
+  ownershipError,
 }: {
   readonly name: string;
   readonly hintId: string;
   readonly lockedHint: string | undefined;
   readonly ownershipLoading: boolean;
+  readonly ownershipError: boolean;
 }) {
   return (
     <span className="min-w-0">
@@ -31,6 +33,14 @@ function ProductRowLabel({
           Checking group assignment…
         </span>
       )}
+      {ownershipError && (
+        <span
+          id={hintId}
+          className="block text-xs text-[var(--color-destructive)]"
+        >
+          Could not load group assignment
+        </span>
+      )}
     </span>
   );
 }
@@ -42,6 +52,7 @@ interface ProductToggleRowProps {
   readonly owningGroup: OwningGroup | undefined;
   readonly mutating: boolean;
   readonly ownershipLoading: boolean;
+  readonly ownershipError: boolean;
   readonly onToggle: (productId: string, nextChecked: boolean) => void;
 }
 
@@ -53,6 +64,7 @@ function ProductToggleRow({
   owningGroup,
   mutating,
   ownershipLoading,
+  ownershipError,
   onToggle,
 }: ProductToggleRowProps) {
   const lockedByOtherGroup = Boolean(
@@ -63,7 +75,9 @@ function ProductToggleRow({
       ? `Already attached to ${owningGroup.name}`
       : undefined;
   const hintId = `group-product-hint-${product.id}`;
-  const disabled = mutating || lockedByOtherGroup || ownershipLoading;
+  // A failed ownership read must not present products as free-to-attach.
+  const disabled =
+    mutating || lockedByOtherGroup || ownershipLoading || ownershipError;
 
   return (
     <li>
@@ -81,7 +95,9 @@ function ProductToggleRow({
           onChange={(e) => onToggle(product.id, e.target.checked)}
           aria-label={`Toggle ${product.name}`}
           aria-describedby={
-            lockedByOtherGroup || ownershipLoading ? hintId : undefined
+            lockedByOtherGroup || ownershipLoading || ownershipError
+              ? hintId
+              : undefined
           }
           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
         />
@@ -90,6 +106,7 @@ function ProductToggleRow({
           hintId={hintId}
           lockedHint={lockedHint}
           ownershipLoading={ownershipLoading}
+          ownershipError={ownershipError}
         />
       </label>
     </li>
@@ -103,6 +120,7 @@ function ProductToggleList({
   owningGroupByProductId,
   mutating,
   ownershipLoading,
+  ownershipError,
   onToggle,
 }: {
   readonly groupId: string;
@@ -111,6 +129,7 @@ function ProductToggleList({
   readonly owningGroupByProductId: ReadonlyMap<string, OwningGroup>;
   readonly mutating: boolean;
   readonly ownershipLoading: boolean;
+  readonly ownershipError: boolean;
   readonly onToggle: (productId: string, nextChecked: boolean) => void;
 }) {
   return (
@@ -127,6 +146,7 @@ function ProductToggleList({
           owningGroup={owningGroupByProductId.get(product.id)}
           mutating={mutating}
           ownershipLoading={ownershipLoading}
+          ownershipError={ownershipError}
           onToggle={onToggle}
         />
       ))}
@@ -174,6 +194,7 @@ export function GroupProductsEditor({
           owningGroupByProductId={state.owningGroupByProductId}
           mutating={state.mutating}
           ownershipLoading={state.ownershipLoading}
+          ownershipError={state.ownershipError}
           onToggle={state.toggle}
         />
       )}

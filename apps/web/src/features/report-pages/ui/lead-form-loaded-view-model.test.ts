@@ -473,4 +473,44 @@ describe("unified activity and activity alarm derivations", () => {
       "planned-next",
     );
   });
+
+  it("buckets a blocked foreign item as explicit in-progress, not a silent fallback", () => {
+    // A blocked covering risk floors the foreign item's presentation status
+    // to 'blocked'; the bucket map must handle it explicitly (no `??`).
+    const foreignContent: CrossAuthorContentRow[] = [
+      {
+        authorId: FOREIGN_AUTHOR_ID,
+        authorName: "Foreign Lead",
+        items: [
+          {
+            id: "fi-blocked",
+            projectId: PROJECT_ID,
+            type: "current",
+            text: "Blocked foreign item",
+            workflowStatus: "in_progress",
+            stageNames: ["Development"],
+          },
+        ],
+        risks: [
+          {
+            id: "fr-blocking",
+            projectId: PROJECT_ID,
+            risk: "Blocker",
+            impact: "Impact",
+            mitigation: "",
+            severity: "blocked",
+            stageNames: ["Development"],
+          },
+        ],
+        decisions: [],
+      },
+    ];
+    const vm = buildLeadFormLoadedViewModel(
+      makeEveryoneInput({ foreignContent }),
+    );
+    const blocked = vm.unifiedEntries.find(
+      (entry) => entry.item.id === `foreign:${FOREIGN_AUTHOR_ID}:fi-blocked`,
+    );
+    expect(blocked?.bucket).toBe("in-progress");
+  });
 });

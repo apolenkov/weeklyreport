@@ -40,7 +40,7 @@ function ActivityDialogFooter({
         type="button"
         onClick={onClose}
         disabled={isSaving}
-        className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         Cancel
       </button>
@@ -48,7 +48,7 @@ function ActivityDialogFooter({
         type="button"
         onClick={onSave}
         disabled={isSaving || !canSave}
-        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Activity"}
       </button>
@@ -78,7 +78,7 @@ export function ActivityEditDialog({
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={onClose}
-      surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
       ariaLabel={editingActivity ? "Edit activity" : "Add activity"}
     >
       <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">

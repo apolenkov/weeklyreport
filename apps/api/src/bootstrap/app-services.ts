@@ -5,6 +5,7 @@ import type { EnvConfig } from "../infrastructure/config/env.schema";
 import { PrismaService } from "../infrastructure/prisma/prisma.service";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
 import type { AppLogger } from "../lib/logger";
+import type { AutoCarryOverOutcome } from "../modules/carry-over/index.js";
 import { buildAppRouter } from "./app-router";
 import { createAutoCarryOver } from "./auto-carry-over";
 import { createBootstrapJobsService } from "./jobs-service";
@@ -17,7 +18,7 @@ export function createAppServices(deps: {
   logger: AppLogger;
 }): {
   prisma: PrismaService;
-  autoCarryOver: (targetReportId: string) => Promise<void>;
+  autoCarryOver: (targetReportId: string) => Promise<AutoCarryOverOutcome>;
   appRouter: AppRouter;
 } {
   const { app, env, logger } = deps;

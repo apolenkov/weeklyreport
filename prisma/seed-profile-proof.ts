@@ -8,6 +8,7 @@ import pg from "pg";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { isEntrypoint } from "./_entrypoint.js";
+import { requireEnv } from "./_require-env.js";
 import { SEED_PROFILES, type SeedProfile } from "./seed-profile-contract.js";
 import { runSeedProfile } from "./seed-profile-runner.js";
 import {
@@ -43,8 +44,7 @@ async function proveProfile(
 
 async function main(): Promise<void> {
   assertNonProdDestructive("seed-profile-proof");
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL must be set");
+  const databaseUrl = requireEnv("DATABASE_URL");
 
   for (const profile of SEED_PROFILES) {
     await proveProfile(databaseUrl, profile);

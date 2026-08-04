@@ -1,5 +1,4 @@
 import type { UserSession } from "@customreport/shared";
-import jwt from "jsonwebtoken";
 import {
   afterAll,
   afterEach,
@@ -11,6 +10,8 @@ import {
   vi,
 } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -19,6 +20,8 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import type { PdfExportEnqueuer } from "./pdf-export.ports";
+import { NOOP_PDF_EXPORT_TELEMETRY } from "./pdf-export.ports.js";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportService } from "./pdf-export.service";
 
@@ -28,7 +31,7 @@ describe("PdfExportPrismaRepository (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
-    repo = new PdfExportPrismaRepository(prisma as never);
+    repo = new PdfExportPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {
@@ -52,7 +55,7 @@ describe("PdfExportPrismaRepository (integration)", () => {
       artifactUrl: null,
     };
 
-    const created = await repo.createExportJob(job);
+    const created = await repo.createExportJob(job, testData.head.id);
 
     expect(created.jobId).toBe(TEST_IDS.pdfJob1);
     expect(created.reportId).toBe(testData.report.id);
@@ -66,16 +69,19 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 
   it("saveExportJob updates status and filePath", async () => {
-    await repo.createExportJob({
-      jobId: TEST_IDS.pdfJob2,
-      reportId: testData.report.id,
-      status: "queued" as const,
-      requestedAt: new Date(),
-      completedAt: null,
-      checksum: null,
-      templateVersion: "phase-2-pdf-v1",
-      artifactUrl: null,
-    });
+    await repo.createExportJob(
+      {
+        jobId: TEST_IDS.pdfJob2,
+        reportId: testData.report.id,
+        status: "queued" as const,
+        requestedAt: new Date(),
+        completedAt: null,
+        checksum: null,
+        templateVersion: "phase-2-pdf-v1",
+        artifactUrl: null,
+      },
+      testData.head.id,
+    );
 
     const completedChecksum = "sha256:deadbeef";
     const updated = await repo.saveExportJob({
@@ -115,7 +121,7 @@ describe("cookie seam — service against real Prisma repo", () => {
   let repo: PdfExportPrismaRepository;
 
   beforeAll(() => {
-    repo = new PdfExportPrismaRepository(prisma as never);
+    repo = new PdfExportPrismaRepository(prisma as unknown as PrismaService);
   });
 
   beforeEach(async () => {
@@ -137,7 +143,7 @@ describe("cookie seam — service against real Prisma repo", () => {
     await disconnectTestPrisma();
   });
 
-  it("enqueues a JWT-shaped authToken bound to the reportId for a published report", async () => {
+  it("enqueues non-credential identifiers bound to the requester for a published report", async () => {
     const testData = await seedTestData(prisma);
     // Promote the report to published so the service accepts the export.
     await prisma.report.update({
@@ -153,7 +159,7 @@ describe("cookie seam — service against real Prisma repo", () => {
     interface EnqueuedJob {
       reportId: string;
       jobId: string;
-      authToken: string;
+      requestedBy: string;
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
@@ -161,9 +167,14 @@ describe("cookie seam — service against real Prisma repo", () => {
         enqueued.push(data);
         return Promise.resolve();
       },
-    } as never;
+    } as unknown as PdfExportEnqueuer;
 
-    const service = new PdfExportService(repo, undefined, fakeQueue);
+    const service = new PdfExportService(
+      repo,
+      createNullLogger(),
+      fakeQueue,
+      NOOP_PDF_EXPORT_TELEMETRY,
+    );
     const session: UserSession = {
       userId: testData.head.id,
       email: testData.head.email,
@@ -177,16 +188,13 @@ describe("cookie seam — service against real Prisma repo", () => {
 
     expect(enqueued).toHaveLength(1);
     expect(expectDefined(enqueued[0]).reportId).toBe(testData.report.id);
-    expect(expectDefined(enqueued[0]).authToken).toMatch(/^eyJ/);
-
-    const decoded = jwt.verify(
-      expectDefined(enqueued[0]).authToken,
-      "integration-test-secret-32-chars-or-more",
-    ) as { reportId: string; requestedBy?: string };
-    expect(decoded.reportId).toBe(testData.report.id);
-    // Token binds the worker render session to the requester so export
-    // matches their in-app view (not an empty viewer session).
-    expect(decoded.requestedBy).toBe(testData.head.id);
+    expect(expectDefined(enqueued[0]).jobId).toBeTypeOf("string");
+    // The durable payload must not carry a bearer credential — the worker
+    // mints the short-lived render token from this identity at execution time.
+    expect(expectDefined(enqueued[0]).requestedBy).toBe(testData.head.id);
+    const serialized = JSON.stringify(enqueued[0]);
+    expect(serialized).not.toContain("authToken");
+    expect(serialized).not.toMatch(/eyJ/);
   });
 
   it("rejects a published report outside the caller's group before enqueue", async () => {
@@ -227,7 +235,12 @@ describe("cookie seam — service against real Prisma repo", () => {
       reportingGroupId: otherGroup.id,
     };
     const queue = { enqueue: vi.fn() };
-    const service = new PdfExportService(repo, undefined, queue);
+    const service = new PdfExportService(
+      repo,
+      createNullLogger(),
+      queue,
+      NOOP_PDF_EXPORT_TELEMETRY,
+    );
 
     await expect(
       service.requestPdfExport(testData.report.id, session),

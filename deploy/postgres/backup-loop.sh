@@ -47,7 +47,7 @@ while true; do
   else
     # Keep looping instead of exiting: a restart storm would bury the cause in
     # container churn. The staleness healthcheck turns the container red on its
-    # own once the newest dump ages past one interval.
+    # own once the newest dump ages past the two-interval health window.
     rm -f "$partial"
     log "FAILED — pg_dump did not complete; retrying after the interval"
   fi

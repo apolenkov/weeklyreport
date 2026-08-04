@@ -9,7 +9,7 @@ const ARCHIVE_TOGGLE_LABEL = "Show closed (archived) report periods";
 const CHECKED_CLASS =
   "cursor-pointer border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-starbucks-accent)]";
 const UNCHECKED_CLASS =
-  "cursor-pointer border-[var(--color-border)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]";
+  "cursor-pointer border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]";
 
 interface ArchiveToggleProps {
   readonly checked: boolean;

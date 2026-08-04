@@ -10,10 +10,6 @@ interface Props {
   searchParams: Promise<{ authorId?: string; mode?: string }>;
 }
 
-/**
- * Addressed head report. Inline form ↔ slides mode toggle via
- * HeadReportShell. `?mode=slides` shows the head slide deck; default is form.
- */
 export default async function HeadReportByIdPage({
   params,
   searchParams,

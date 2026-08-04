@@ -2,13 +2,14 @@
 
 import type { Product } from "../model/types";
 
-type RecordParentKind = "product" | "activity";
+type ResolvedRecordParentKind = "product" | "activity";
 
 // XOR: a record parents to either a product or an activity, never both.
-export interface RecordParent {
-  readonly id: string;
-  readonly kind: RecordParentKind;
-}
+// `unresolved` is the explicit absence of a selectable parent (no row, seed,
+// or activity option) — never a product/activity with an empty id.
+export type RecordParent =
+  | { readonly kind: ResolvedRecordParentKind; readonly id: string }
+  | { readonly kind: "unresolved" };
 
 export interface ParentActivityOption {
   readonly id: string;
@@ -25,18 +26,33 @@ interface ParentPickerProps {
 }
 
 const OPTION_SEP = ":";
+const UNRESOLVED_VALUE = "unresolved:";
 
 function encodeParent(parent: RecordParent): string {
-  return `${parent.kind}${OPTION_SEP}${parent.id}`;
+  return parent.kind === "unresolved"
+    ? UNRESOLVED_VALUE
+    : `${parent.kind}${OPTION_SEP}${parent.id}`;
 }
 
-function decodeParent(raw: string): RecordParent {
+function decodeParent(
+  raw: string,
+  products: readonly Product[],
+  activities: readonly ParentActivityOption[],
+): RecordParent {
+  if (raw === UNRESOLVED_VALUE) return { kind: "unresolved" };
   const sep = raw.indexOf(OPTION_SEP);
+  if (sep === -1) return { kind: "unresolved" };
   const kind = raw.slice(0, sep);
-  return {
-    kind: kind === "activity" ? "activity" : "product",
-    id: raw.slice(sep + 1),
-  };
+  const id = raw.slice(sep + 1);
+  // The value only means a parent when its id actually exists in the option
+  // list — anything else is an explicit absence, never a coerced product.
+  if (kind === "product" && products.some((p) => p.id === id)) {
+    return { kind: "product", id };
+  }
+  if (kind === "activity" && activities.some((a) => a.id === id)) {
+    return { kind: "activity", id };
+  }
+  return { kind: "unresolved" };
 }
 
 // Option values carry the parent kind so the XOR survives the round trip
@@ -47,7 +63,7 @@ function ParentOptionGroup({
   options,
 }: {
   readonly label: string;
-  readonly kind: RecordParentKind;
+  readonly kind: ResolvedRecordParentKind;
   readonly options: readonly { readonly id: string; readonly name: string }[];
 }) {
   return (
@@ -71,6 +87,10 @@ export function ParentPicker({
   const hasActivities = activities.length > 0;
   const label = hasActivities ? "Parent" : "Product";
   const totalOptions = products.length + activities.length;
+  // An unresolved parent with options must stay selectable so the user can
+  // resolve it; an empty picker is disabled, and a resolved sole option is
+  // locked (no alternative to switch to).
+  const isUnresolved = value.kind === "unresolved";
 
   return (
     <div>
@@ -82,11 +102,18 @@ export function ParentPicker({
       </label>
       <select
         id={id}
-        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={encodeParent(value)}
-        onChange={(e) => onChange(decodeParent(e.target.value))}
-        disabled={totalOptions <= 1}
+        onChange={(e) =>
+          onChange(decodeParent(e.target.value, products, activities))
+        }
+        disabled={totalOptions === 0 || (!isUnresolved && totalOptions <= 1)}
       >
+        {isUnresolved && (
+          <option value={UNRESOLVED_VALUE} disabled>
+            Select parent…
+          </option>
+        )}
         {products.length > 0 && (
           <ParentOptionGroup
             label="Products"

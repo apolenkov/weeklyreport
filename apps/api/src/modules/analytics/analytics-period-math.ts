@@ -18,9 +18,9 @@ export function nextUtcDay(dateOnly: string): Date {
 }
 
 interface PeriodStamped {
-  id: string;
-  periodEnd: Date;
-  createdAt: Date;
+  readonly id: string;
+  readonly periodEnd: Date;
+  readonly createdAt: Date;
 }
 
 // periodEnd, then createdAt, then id — never fall back to non-deterministic DB order.
@@ -47,11 +47,11 @@ export function groupReportsByLabel<T extends { periodEnd: Date }>(
 }
 
 interface ProjectStatusRow {
-  projectId: string;
-  status: TrafficLightCell;
+  readonly projectId: string;
+  readonly status: TrafficLightCell;
 }
 interface SectionStatusRow {
-  projectStatuses: ProjectStatusRow[];
+  readonly projectStatuses: readonly ProjectStatusRow[];
 }
 export type LabelReport = PeriodStamped & { sections: SectionStatusRow[] };
 
@@ -82,14 +82,14 @@ export function statusForProject(
 }
 
 interface NamedProjectStatus {
-  projectId: string;
-  project: { name: string };
+  readonly projectId: string;
+  readonly project: { name: string };
 }
 interface NamedSection {
-  projectStatuses: NamedProjectStatus[];
+  readonly projectStatuses: readonly NamedProjectStatus[];
 }
 export interface NamedReport {
-  sections: NamedSection[];
+  readonly sections: readonly NamedSection[];
 }
 
 // First name wins; optional projectId filters to one project.
@@ -109,17 +109,17 @@ export function collectProjectNames(
 }
 
 export interface ComparisonCell {
-  status: TrafficLightCell;
-  risks: number;
-  name: string;
+  readonly status: TrafficLightCell;
+  readonly risks: number;
+  readonly name: string;
 }
 interface ComparisonSection {
-  projectStatuses: {
+  readonly projectStatuses: readonly {
     projectId: string;
     status: TrafficLightCell;
     project: { name: string };
   }[];
-  risks: { projectId: string | null }[];
+  readonly risks: readonly { projectId: string | null }[];
 }
 export type ComparisonReport = PeriodStamped & {
   sections: ComparisonSection[];
@@ -177,11 +177,22 @@ function accumulateRisks(
   ]);
 }
 
-// Oldest-first so latest status wins; risks accumulate across all reports.
+// Oldest-first so the latest status wins; risks accumulate across all reports.
+// A republished period is two reports sharing a label — only the LATEST per
+// label is authoritative, so its risks count once, not double.
 export function collectComparisonCells(
   reports: ComparisonReport[],
 ): Map<string, ComparisonCell> {
-  return [...reports]
+  const authoritativeReports = [
+    ...groupReportsByLabel(reports).values(),
+  ].flatMap((group) => {
+    const [first] = group;
+    return first === undefined
+      ? []
+      : [group.slice(1).reduce(laterReport, first)];
+  });
+
+  return [...authoritativeReports]
     .sort(comparePeriodThenCreated)
     .flatMap((report) => report.sections)
     .reduce(

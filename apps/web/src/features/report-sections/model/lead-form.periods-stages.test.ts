@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
+  makeReportSectionFixture,
+  type ReportSectionFixture,
+} from "../../../test-utils/report-section-fixtures";
+import {
   mapLeadFormData,
   mapLeadPeriods,
   mapLeadProducts,
@@ -18,25 +22,16 @@ const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
 const PROJECT_A = "44444444-4444-4444-8444-444444444444";
 const PROJECT_B = "55555555-5555-4555-8555-555555555555";
-/** One attached activity for the activity-lane routing tests. */
 function baseSection(
-  overrides: Partial<ReportSectionReadModel> = {},
+  overrides: ReportSectionFixture = {},
 ): ReportSectionReadModel {
-  return {
+  return makeReportSectionFixture({
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Тимлид 1",
-    version: 1,
-    status: "draft",
-    submittedAt: null,
-    projects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    activities: [],
     ...overrides,
-  };
+  });
 }
 
 describe("mapLeadPeriods", () => {

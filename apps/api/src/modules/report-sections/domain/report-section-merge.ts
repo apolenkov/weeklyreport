@@ -1,14 +1,14 @@
 import {
-  type DraftSavePayload,
+  type DraftSaveInput,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
-  type SubmitSectionPayload,
+  type SubmitSectionInput,
   type TrafficLightStatus,
 } from "@customreport/shared";
 
 import { aggregateTrafficLight } from "./traffic-light-aggregation";
 
-type SectionWritePayload = DraftSavePayload | SubmitSectionPayload;
+type SectionWritePayload = DraftSaveInput | SubmitSectionInput;
 type SectionProject = ReportSectionReadModel["projects"][number];
 
 // A stage is identified by (project, stage): the same stage id can be owned on
@@ -18,17 +18,20 @@ function stageKey(projectId: string, stageId: string): string {
 }
 
 // Fold the client's stage-status slice onto the author's owned stages. A stage
-// the payload omits keeps whatever status the section row already carries.
+// the payload omits keeps whatever status the section row already carries, and
+// an entry whose status field is absent does too — only an explicit null (or a
+// value) writes through, so a draft never silently clears a persisted status.
 function applyStageStatuses(
   project: SectionProject,
-  stageStatusByKey: ReadonlyMap<string, TrafficLightStatus | null>,
+  stageStatusByKey: ReadonlyMap<string, TrafficLightStatus | null | undefined>,
 ): SectionProject {
   return {
     ...project,
-    ownedStages: (project.ownedStages ?? []).map((stage) => {
+    ownedStages: project.ownedStages.map((stage) => {
       const key = stageKey(project.projectId, stage.stageId);
       if (!stageStatusByKey.has(key)) return stage;
-      return { ...stage, status: stageStatusByKey.get(key) ?? null };
+      const status = stageStatusByKey.get(key);
+      return status === undefined ? stage : { ...stage, status };
     }),
   };
 }
@@ -39,7 +42,7 @@ function withAggregatedTrafficLight(
   project: SectionProject,
   projectStatuses: SectionWritePayload["projectStatuses"],
 ): SectionProject {
-  const ownedStageStatuses = (project.ownedStages ?? []).map(
+  const ownedStageStatuses = project.ownedStages.map(
     (stage): TrafficLightStatus | null =>
       stage.status === "red" ||
       stage.status === "yellow" ||
@@ -60,6 +63,9 @@ export function mergeSection(
   section: ReportSectionReadModel,
   input: SectionWritePayload,
   nextStatus: "draft" | "submitted",
+  // Submission timestamp injected from the boundary so the pure seam never
+  // reads the wall clock; unused on the draft path.
+  now: Date,
   // Explicit late flag set by submitSection when `now > Report.deadline` at
   // submit-time. Defaults to whatever the existing section row already carries
   // so saveDraft / reopen paths don't accidentally clear a previously-stamped
@@ -67,9 +73,9 @@ export function mergeSection(
   late?: boolean,
 ): ReportSectionReadModel {
   const stageStatusByKey = new Map(
-    (input.stageStatuses ?? []).map((status) => [
+    input.stageStatuses.map((status) => [
       stageKey(status.projectId, status.stageId),
-      status.status ?? null,
+      status.status,
     ]),
   );
 
@@ -78,14 +84,14 @@ export function mergeSection(
   // its current status, and an id outside the seeded set never enters the
   // merged model (the write guard has already rejected it).
   const activityStatusById = new Map(
-    (input.activityStatuses ?? []).map((status) => [status.activityId, status]),
+    input.activityStatuses.map((status) => [status.activityId, status]),
   );
 
   return reportSectionReadModelSchema.parse({
     ...section,
     status: nextStatus,
-    submittedAt: nextStatus === "submitted" ? new Date() : section.submittedAt,
-    late: late ?? section.late ?? false,
+    submittedAt: nextStatus === "submitted" ? now : section.submittedAt,
+    late: late ?? section.late,
     projects: section.projects
       .map((project) => applyStageStatuses(project, stageStatusByKey))
       .map((project) =>
@@ -105,8 +111,8 @@ export function mergeSection(
       if (!written) return activity;
       return {
         ...activity,
-        status: written.status ?? null,
-        note: written.note ?? null,
+        ...(written.status === undefined ? {} : { status: written.status }),
+        ...(written.note === undefined ? {} : { note: written.note }),
       };
     }),
   });

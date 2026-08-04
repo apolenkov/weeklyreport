@@ -15,6 +15,7 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardRevokeAllControl } from "./dashboard-revoke-all-control";
 import {
   DashboardActivityIssue,
+  DashboardReviewIssue,
   DashboardSourceSlot,
   type DashboardSourceState,
 } from "./dashboard-source-slot";
@@ -62,6 +63,7 @@ interface DashboardPanelsProps {
   readonly activitySource: DashboardSourceState;
   readonly queue?: ReturnType<typeof mapReviewDashboardData> | undefined;
   readonly queueSource: DashboardSourceState;
+  readonly reviewSource: DashboardSourceState;
   readonly weeklySource: DashboardSourceState;
   readonly weekly?: ReturnType<typeof mapWeeklyDashboardData> | undefined;
   readonly weeklyReport?: WeeklyReportReadModel | undefined;
@@ -98,6 +100,7 @@ function DashboardQueuePanel(props: DashboardPanelsProps) {
             reportId={reportId}
             onMutated={props.onRefreshDashboard}
           />
+          <DashboardReviewIssue source={props.reviewSource} />
           <DashboardActivityIssue source={props.activitySource} />
         </div>
       ) : null}
@@ -192,6 +195,9 @@ function dashboardPanelModel(
     queue,
     activitySource: props.activityState,
     queueSource: weeklyState,
+    // Review failure must surface in the queue panel that consumes it, even
+    // while the weekly-backed panels stay available.
+    reviewSource: props.reviewState,
     weeklySource: weeklyState,
     weekly,
     weeklyReport,

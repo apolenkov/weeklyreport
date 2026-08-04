@@ -12,7 +12,11 @@ import {
   SECTION_ID,
   submittedSection,
 } from "./__tests__/lead-form-contract-harness.js";
-import { LeadFormDomainError, LeadFormService } from "./lead-form.service";
+import {
+  LeadFormAccessError,
+  LeadFormDomainError,
+  LeadFormService,
+} from "./lead-form.service";
 
 // ---------------------------------------------------------------------------
 // getByPeriod
@@ -168,7 +172,7 @@ describe("LeadFormService — getByPeriod", () => {
     expect(result.readOnly).toBe(true);
   });
 
-  it("falls back to the caller's own section for a lead with no shared product", async () => {
+  it("denies a lead a foreign section when they share no product (no silent fallback)", async () => {
     const repo = createMockRepository({
       getSectionForPeriod: vi
         .fn()
@@ -177,16 +181,15 @@ describe("LeadFormService — getByPeriod", () => {
     });
     const service = new LeadFormService(repo);
 
-    const result = await service.getByPeriod(
+    await expect(
+      service.getByPeriod(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),
+    ).rejects.toThrow(LeadFormAccessError);
+    // The denied read must not fabricate the caller's own section as the target:
+    // the foreign author's section is never loaded.
+    expect(repo.getSectionForPeriod).not.toHaveBeenCalledWith(
       REPORT_ID,
-      AUTHOR_ID,
-      "lead",
       OTHER_USER_ID,
     );
-
-    expect(repo.getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
-    expect(result.section.authorId).toBe(AUTHOR_ID);
-    expect(result.readOnly).toBe(false);
   });
 
   it("fails when no section found for user in report", async () => {

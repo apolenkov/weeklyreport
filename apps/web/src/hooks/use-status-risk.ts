@@ -14,10 +14,10 @@ interface ProductCoupling {
   productId: string;
   productName: string;
   status: "at-risk" | "blocked";
-  riskRowsWithoutStages: string[];
+  riskRowsWithoutStages: readonly string[];
 }
 
-export type CouplingState = ProductCoupling[];
+export type CouplingState = readonly ProductCoupling[];
 
 // Empty stageNames is valid for green products (legacy "all stages"); enforced only for red/yellow.
 export function computeCoupling(
@@ -50,7 +50,7 @@ export function computeCoupling(
 }
 
 export function validateCoupling(coupling: CouplingState): {
-  missing: string[];
+  missing: readonly string[];
 } {
   const missing = coupling
     .filter((c) => c.riskRowsWithoutStages.length > 0)
@@ -58,7 +58,8 @@ export function validateCoupling(coupling: CouplingState): {
   return { missing };
 }
 
-type ProductsUpdater = Product[] | ((prev: Product[]) => Product[]);
+type ProductsUpdater =
+  readonly Product[] | ((prev: readonly Product[]) => Product[]);
 
 export interface UseStatusRiskSyncArgs {
   onProductsChange: (next: ProductsUpdater) => void;

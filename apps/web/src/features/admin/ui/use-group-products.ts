@@ -89,6 +89,7 @@ function useProductOwnership(activeProducts: readonly AdminProductView[]) {
   return {
     owningGroupByProductId,
     ownershipLoading: ownershipQuery.isLoading,
+    ownershipError: ownershipQuery.isError,
   };
 }
 
@@ -109,7 +110,7 @@ export function useGroupProducts({ groupId, products }: GroupProductsArgs) {
     [products],
   );
 
-  const { owningGroupByProductId, ownershipLoading } =
+  const { owningGroupByProductId, ownershipLoading, ownershipError } =
     useProductOwnership(activeProducts);
   const { attach, detach, mutating } = useGroupProductMutations(groupId);
 
@@ -133,6 +134,7 @@ export function useGroupProducts({ groupId, products }: GroupProductsArgs) {
     attachedIds,
     owningGroupByProductId,
     ownershipLoading,
+    ownershipError,
     mutating,
     toggle,
   };

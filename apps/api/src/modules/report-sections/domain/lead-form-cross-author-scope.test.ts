@@ -19,19 +19,27 @@ function sectionWithComments(): ReportSectionReadModel {
     reportId: "22222222-2222-4222-8222-222222222222",
     authorId: "33333333-3333-4333-8333-333333333333",
     authorName: "Foreign Lead",
+    authorRole: "lead",
     version: 1,
     status: "draft",
     submittedAt: null,
+    late: false,
     projects: [
       {
         projectId: SHARED_PRODUCT_ID,
         projectName: "Shared product",
         trafficLight: "green",
+        ownedStages: [],
+        stageSet: [],
+        ownerGroupId: null,
       },
       {
         projectId: UNSHARED_PRODUCT_ID,
         projectName: "Unshared product",
         trafficLight: "red",
+        ownedStages: [],
+        stageSet: [],
+        ownerGroupId: null,
       },
     ],
     referencedProjects: [
@@ -103,6 +111,7 @@ function sectionWithComments(): ReportSectionReadModel {
         note: "Sensitive note",
         linkedProducts: [],
         derivedStatus: null,
+        alarmFloor: null,
       },
     ],
     reviews: [
@@ -163,13 +172,13 @@ describe("filterSectionToSharedProducts", () => {
     ]);
   });
 
-  it("still empties activities and drops reviews", () => {
+  it("still empties activities and reviews", () => {
     const result = filterSectionToSharedProducts(
       sectionWithComments(),
       new Set([SHARED_PRODUCT_ID]),
     );
 
     expect(result.activities).toEqual([]);
-    expect(result.reviews).toBeUndefined();
+    expect(result.reviews).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change cleanup-dead-enum-states. Update Purpose after archive.
+Require every persisted enum value to have a production writer or be removed consistently from persistence, shared schemas, and domain mappings.
 
 ## Requirements
 

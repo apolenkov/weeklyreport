@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { formatPeriodRangeWithYear } from "../../../lib/format-date";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../test-utils/report-section-fixtures";
+import {
   __testing,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
@@ -23,24 +27,12 @@ const AUTHOR_A = "66666666-6666-4666-8666-666666666666";
 const AUTHOR_B = "77777777-7777-4777-8777-777777777777";
 
 function baseReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
+  overrides: WeeklyReportFixture = {},
 ): WeeklyReportReadModel {
-  return {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open",
-    archived: false,
-    weekLabel: "Week 16",
-    submissionCount: 0,
-    totalLeads: 0,
-    hasActiveReminderRule: true,
-    portfolioOverview: [],
-    leadSections: [],
-    escalations: [],
     ...overrides,
-  };
+  });
 }
 
 describe("formatPeriodRangeWithYear", () => {
@@ -71,8 +63,8 @@ describe("trafficToProductStatus", () => {
     expect(fn("red")).toBe("blocked");
   });
 
-  it("null worstStatus collapses to on-track", () => {
-    expect(fn(null)).toBe("on-track");
+  it("null worstStatus stays explicitly empty", () => {
+    expect(fn(null)).toBe("empty");
   });
 });
 
@@ -104,6 +96,7 @@ describe("product name resolution", () => {
           worstStatus: "green",
           stageCount: 7,
           leadNames: ["Igor V."],
+          leadIds: ["0a9c3be4-fb24-5b94-8f7a-18b7c6d00776"],
         },
       ],
       leadSections: [
@@ -337,7 +330,19 @@ describe("mapWeeklyReportLeadOverview", () => {
           status: "blocked",
           currentWeek: [item("c3")],
           nextWeek: [],
-          risks: [{ id: "r1" } as never],
+          risks: [
+            {
+              id: "r1",
+              badge: "Product",
+              stage: "",
+              owner: "Lead",
+              severity: "at-risk",
+              text: "r",
+              problem: "r",
+              impact: "",
+              mitigation: "",
+            },
+          ],
         }),
       ]),
     ]);
@@ -356,12 +361,15 @@ describe("mapWeeklyReportLeadOverview", () => {
   it("includes a lead whose only content is decisions / priorities / Needs-Attention (zero current/next/risk)", () => {
     const rows = mapWeeklyReportLeadOverview([
       group("D", "Decisions Only", [
-        product({ status: "on-track", decisions: [{ id: "d1" } as never] }),
+        product({
+          status: "on-track",
+          decisions: [{ id: "d1", badge: "Product", owner: "Lead", text: "d" }],
+        }),
       ]),
       group("P", "Priorities Only", [
         product({
           status: "at-risk",
-          priorities: [{ rank: 1, text: "P" }],
+          priorities: [{ id: "priority-1", rank: 1, text: "P" }],
         }),
       ]),
       group("N", "Needs Attention Only", [
@@ -393,6 +401,18 @@ describe("mapWeeklyReportLeadOverview", () => {
     // blocked first, then the two at-risk by name, then on-track.
     expect(order1).toEqual(["Boris", "Anna", "Clara", "Dmitri"]);
     expect(order2).toEqual(order1);
+  });
+
+  it("keeps an empty product status distinct from on-track in lead rollups", () => {
+    const rows = mapWeeklyReportLeadOverview([
+      group("empty", "Empty", [product({ status: "empty" })]),
+      group("green", "Green", [product({ status: "on-track" })]),
+    ]);
+
+    expect(rows.map((row) => [row.name, row.worstStatus])).toEqual([
+      ["Green", "on-track"],
+      ["Empty", "empty"],
+    ]);
   });
 
   it("returns an empty array for no lead groups", () => {

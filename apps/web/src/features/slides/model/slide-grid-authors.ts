@@ -3,12 +3,10 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import type { GridAuthor } from "./slide-grid-rows";
 
-/** Distinct author color tokens before the cycle repeats. */
 const AUTHOR_COLOR_COUNT = 6;
 
-/** Foreign authors never take the owner's slot 0 — only the remaining
- * AUTHOR_COLOR_COUNT-1 tokens cycle for them, so a 6th+ foreign author repeats
- * a foreign token instead of silently colliding with the owner's swatch. */
+// Reserve the owner's slot 0; foreign authors cycle only through the remaining
+// colors so they never silently collide with the owner's swatch.
 const FOREIGN_COLOR_COUNT = AUTHOR_COLOR_COUNT - 1;
 
 const INITIALS_TOKENS = 2;
@@ -24,7 +22,7 @@ function initialsOf(name: string): string {
 
 export interface AuthorRoster {
   readonly owner: GridAuthor;
-  /** Owner first, foreign authors after in name order — legend order. */
+  // Owner first, then foreign authors sorted by name for the legend.
   readonly authors: readonly GridAuthor[];
 }
 
@@ -46,7 +44,7 @@ export function buildAuthorRoster(
   const owner = {
     id: section.authorId,
     name: section.authorName,
-    ...(section.authorRole === undefined ? {} : { role: section.authorRole }),
+    role: section.authorRole,
     initials: initialsOf(section.authorName),
     colorIndex: 0,
     isOwner: true,

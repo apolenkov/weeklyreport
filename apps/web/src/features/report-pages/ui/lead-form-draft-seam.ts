@@ -22,9 +22,6 @@ export interface LeadFormDraftSeam {
   readonly onSubmitSuccess: () => void;
 }
 
-/**
- * Use Lead Form Draft Seam.
- */
 export function useLeadFormDraftSeam(): LeadFormDraftSeam {
   const trpc = useTRPC();
   const qc = useQueryClient();

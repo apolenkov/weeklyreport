@@ -15,17 +15,37 @@
 //
 // Run from the repo root:
 //   node e2e/sweep/render-checklist.ts
-// Writes e2e/sweep/.reports/checklist-<role>.md per catalog found.
+// Writes manual-uat/checklist-<role>.md under the external archive.
 // ============================================================================
 import * as fs from "node:fs";
+import { homedir } from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { type CatalogRoute, parseCatalog } from "./catalog-parser.ts";
+import {
+  type Catalog,
+  type CatalogRoute,
+  parseCatalog,
+} from "./catalog-parser.ts";
 import { byName } from "./ordering.ts";
 
 const HERE = import.meta.dirname;
 const CATALOG_DIR = path.resolve(HERE, "..", "catalog");
-const REPORT_DIR = path.resolve(HERE, ".reports");
+export const checklistReportDirectory = (
+  archiveRoot = process.env.CUSTOMREPORT_ARCHIVE_DIR,
+  home = homedir(),
+): string =>
+  path.join(
+    archiveRoot ?? path.join(home, "work", "customreport-archive"),
+    "manual-uat",
+  );
+
+export const requireCatalog = (source: string, file: string): Catalog => {
+  const parsed = parseCatalog(source);
+  if (parsed === null)
+    throw new Error(`Invalid catalog ${file}: no role/routes parsed`);
+  return parsed;
+};
 
 const countIntents = (routes: readonly CatalogRoute[]): number =>
   routes.reduce((n, r) => n + r.intents.length, 0);
@@ -49,7 +69,10 @@ const renderRoute = (route: CatalogRoute): readonly string[] => [
     : [...renderIntents(route), ""]),
 ];
 
-function renderChecklist(role: string, routes: readonly CatalogRoute[]): string {
+function renderChecklist(
+  role: string,
+  routes: readonly CatalogRoute[],
+): string {
   const header = [
     `# Manual UAT checklist — ${role}`,
     "",
@@ -70,7 +93,8 @@ function main(): void {
     console.error(`No catalog dir at ${CATALOG_DIR}`);
     process.exit(1);
   }
-  fs.mkdirSync(REPORT_DIR, { recursive: true });
+  const reportDir = checklistReportDirectory();
+  fs.mkdirSync(reportDir, { recursive: true });
   const catalogs = fs
     .readdirSync(CATALOG_DIR)
     .filter((f) => f.endsWith(".yaml"))
@@ -80,14 +104,11 @@ function main(): void {
     process.exit(1);
   }
   for (const file of catalogs) {
-    const parsed = parseCatalog(
+    const parsed = requireCatalog(
       fs.readFileSync(path.join(CATALOG_DIR, file), "utf8"),
+      file,
     );
-    if (!parsed) {
-      console.warn(`skip ${file}: no role/routes parsed`);
-      continue;
-    }
-    const out = path.join(REPORT_DIR, `checklist-${parsed.role}.md`);
+    const out = path.join(reportDir, `checklist-${parsed.role}.md`);
     fs.writeFileSync(out, renderChecklist(parsed.role, parsed.routes), "utf8");
     console.log(
       `checklist ${parsed.role}: ${parsed.routes.length} routes, ${countIntents(parsed.routes)} intents → ${path.relative(process.cwd(), out)}`,
@@ -95,4 +116,8 @@ function main(): void {
   }
 }
 
-main();
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+)
+  main();

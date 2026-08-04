@@ -41,17 +41,20 @@ function buildProduct(overrides?: Partial<Product>): Product {
   };
 }
 
-function setup(initialProducts: Product[]) {
+function setup(initialProducts: readonly Product[]) {
   const state = {
-    products: initialProducts,
+    products: [...initialProducts],
     productsCalls: [] as Product[][],
   };
 
   const onProductsChange = vi.fn(
-    (next: Product[] | ((p: Product[]) => Product[])) => {
+    (
+      next:
+        readonly Product[] | ((p: readonly Product[]) => readonly Product[]),
+    ) => {
       const resolved = typeof next === "function" ? next(state.products) : next;
-      state.products = resolved;
-      state.productsCalls.push(resolved);
+      state.products = [...resolved];
+      state.productsCalls.push([...resolved]);
     },
   );
 

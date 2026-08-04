@@ -25,7 +25,7 @@ export function AdminQueryIssue({
       <button
         type="button"
         onClick={onRetry}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] w-fit items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-primary)]"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] w-fit items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary)]"
       >
         <RefreshCw aria-hidden="true" className="h-4 w-4" />
         Retry

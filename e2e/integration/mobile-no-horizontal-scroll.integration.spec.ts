@@ -1,18 +1,4 @@
-/**
- * Mobile no-horizontal-scroll contract.
- *
- * Asserts that on mobile viewports (iPhone 14: 390x844, Pixel 7: 412x915)
- * the document does not scroll horizontally. Two assertions per page:
- *
- *   1. CSS-level: html[overflow-x] must NOT be 'scroll' / 'auto'.
- *   2. Pixel-level: documentElement.scrollWidth <= window.innerWidth.
- *
- * The @MOB-01 tag routes this spec only to mobile-ios / mobile-android;
- * chromium-integration excludes it via grepInvert. The project assertion
- * below fails loudly if that routing contract regresses.
- */
-
-import { expect,test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { loginAs } from "./fixtures";
 
@@ -34,7 +20,7 @@ const PAGES: readonly PageEntry[] = [
   { path: "/admin", auth: "head" },
 ];
 
-test.describe("Mobile — no horizontal scroll @MOB-01", () => {
+test.describe("Mobile — no horizontal scroll @MOB-SCROLL", () => {
   for (const entry of PAGES) {
     test(`${entry.path} fits the viewport`, async ({
       page,

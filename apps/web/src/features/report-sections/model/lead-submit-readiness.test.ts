@@ -131,11 +131,26 @@ describe("buildLeadSubmitPayload", () => {
     expect(payload.confirmed).toBe(true);
   });
 
-  it("coerces a stale orphan red stage to green without warning", () => {
-    const payload = buildLeadSubmitPayload(draft, 7);
+  it("preserves explicit stage statuses while promoting only unset stages", () => {
+    const payload = buildLeadSubmitPayload(
+      {
+        ...draft,
+        stageStatuses: [
+          ...(draft.stageStatuses ?? []),
+          { projectId: "product-1", stageId: "stage-3", status: "yellow" },
+          { projectId: "product-1", stageId: "stage-4", status: "green" },
+        ],
+      },
+      7,
+    );
     const readiness = deriveLeadSubmitReadiness(baseInput);
 
-    expect(payload.stageStatuses[1]?.status).toBe("green");
+    expect(payload.stageStatuses.map((status) => status.status)).toEqual([
+      "green",
+      "red",
+      "yellow",
+      "green",
+    ]);
     expect(readiness.unsetStatuses.map((status) => status.id)).not.toContain(
       "stage:product-1:stage-2",
     );

@@ -63,7 +63,7 @@ export interface DemoSection {
 }
 
 export interface TierDataset {
-  leads: DemoLead[];
-  products: DemoProduct[];
-  sections: DemoSection[];
+  readonly leads: readonly DemoLead[];
+  readonly products: readonly DemoProduct[];
+  readonly sections: readonly DemoSection[];
 }

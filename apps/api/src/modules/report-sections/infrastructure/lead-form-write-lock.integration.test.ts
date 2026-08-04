@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   createPauseGate,
   pauseBeforeSectionUpdate,
@@ -24,7 +25,7 @@ import {
 
 describe("lead-form published-period write locks (integration)", () => {
   const prisma = createTestPrisma();
-  const repo = new LeadFormPrismaRepository(prisma as never);
+  const repo = new LeadFormPrismaRepository(prisma as unknown as PrismaService);
   const publishedAt = new Date("2026-07-22T12:00:00.000Z");
 
   beforeEach(async () => {
@@ -42,7 +43,7 @@ describe("lead-form published-period write locks (integration)", () => {
     const before = await targetRows(prisma, testData);
     const gate = createPauseGate();
     const pausedRepo = new LeadFormPrismaRepository(
-      pauseBeforeTransaction(prisma, gate.pause) as never,
+      pauseBeforeTransaction(prisma, gate.pause) as unknown as PrismaService,
     );
 
     const fill = pausedRepo.fillFromSection(
@@ -146,7 +147,7 @@ describe("lead-form published-period write locks (integration)", () => {
     });
     const gate = createPauseGate();
     const pausedRepo = new LeadFormPrismaRepository(
-      pauseBeforeSectionUpdate(prisma, gate.pause) as never,
+      pauseBeforeSectionUpdate(prisma, gate.pause) as unknown as PrismaService,
     );
 
     const revoke = pausedRepo.revokeSectionSubmission(

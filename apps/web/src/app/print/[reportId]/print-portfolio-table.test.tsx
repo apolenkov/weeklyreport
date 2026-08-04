@@ -25,6 +25,7 @@ describe("PrintPortfolioTable — status label/color pins", () => {
     { status: "on-track", label: "On Track", color: "#006241" },
     { status: "at-risk", label: "At Risk", color: "#daa520" },
     { status: "blocked", label: "Blocked", color: "#c82014" },
+    { status: "empty", label: "No status", color: "#6b7280" },
   ] as const)(
     "renders '$label' with $color for status '$status'",
     ({ status, label, color }) => {

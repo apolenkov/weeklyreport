@@ -18,7 +18,7 @@ function sectionDashboardRow(
   return {
     leadId: section.authorId,
     leadName: section.authorName,
-    role: section.authorRole ?? "lead",
+    role: section.authorRole,
     projectNames: section.projects.map((project) => project.projectName),
     status: section.status,
     submittedAt: section.submittedAt,
@@ -42,7 +42,7 @@ function activityDashboardRow(
 function replaceDashboardRow(
   rows: readonly SubmissionDashboardRow[],
   next: SubmissionDashboardRow,
-): SubmissionDashboardRow[] {
+): readonly SubmissionDashboardRow[] {
   return [...rows.filter((row) => row.leadId !== next.leadId), next];
 }
 
@@ -50,7 +50,7 @@ export function buildDashboardLeadRows({
   review = [],
   weeklyReport,
   activity,
-}: DashboardLeadRowsInput): SubmissionDashboardRow[] {
+}: DashboardLeadRowsInput): readonly SubmissionDashboardRow[] {
   const sections = weeklyReport.leadSections;
   const sectionByAuthor = new Map(
     sections.map((section) => [section.authorId, section]),
@@ -62,7 +62,7 @@ export function buildDashboardLeadRows({
     ) ?? []),
     ...review,
   ];
-  return progressiveRows.reduce<SubmissionDashboardRow[]>(
+  return progressiveRows.reduce<readonly SubmissionDashboardRow[]>(
     replaceDashboardRow,
     [],
   );

@@ -16,6 +16,7 @@ export { SEED_USERS };
 
 export {
   ACTIVE_REPORT_ID,
+  HEAD_USER_ID,
   LEAD_1_ID,
   LEAD_MARIA_ID,
   LEAD_OLGA_ID,

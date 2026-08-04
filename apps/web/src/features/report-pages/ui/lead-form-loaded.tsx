@@ -45,15 +45,15 @@ export interface LeadFormLoadedData {
   readonly toolbarVisibility: RecordVisibility;
   readonly setRecordVisibility: (next: RecordVisibility) => void;
   readonly isForeignSlidesDeck: boolean;
-  readonly targetReportId: string;
-  readonly activeReportId: string;
+  readonly targetReportId: string | null;
+  readonly activeReportId: string | null;
   readonly visibilityHydrated: boolean;
   readonly unifiedView: boolean;
   readonly recordVisibility: RecordVisibility;
   readonly crossAuthors: CrossAuthorEntry[];
 }
 
-interface LeadFormLoadedProps {
+export interface LeadFormLoadedProps {
   readonly data: LeadFormLoadedData;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly draftSection: ReportSectionReadModel;
@@ -74,7 +74,6 @@ interface LeadFormLoadedProps {
   readonly unsetOwnStageCount: number;
 }
 
-/** Everything the completion surfaces render: actions + visibility switches. */
 interface CompletionPresentation {
   readonly completionActions: {
     readonly autosave: AutosaveSnapshot;
@@ -100,6 +99,12 @@ function useCompletionPresentation(
     autosave: props.autosave,
     onAdd: props.draftActions.onQuickAdd,
     addDisabled: props.viewModel.products.length === 0,
+    // A blocker is a product-scoped risk; with no product to attach it to the
+    // quick-add option is inert until the section gains one.
+    disabledQuickAddKinds:
+      props.viewModel.products.length === 0
+        ? new Set<QuickAddKind>(["blocker"])
+        : undefined,
     onSubmit: props.writeActions.handleSubmit,
     submitDisabled: !readiness.canOpenConfirmation,
     submitDisabledReason: readiness.blockingIssues[0]?.label,

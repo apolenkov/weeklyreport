@@ -1,6 +1,7 @@
 import type { AdminSnapshot } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   adminSession,
@@ -13,8 +14,24 @@ import {
   leadSession,
 } from "./__tests__/focused-admin-harness.js";
 import { ProjectAdminService } from "./project-admin.service.js";
-import { ReminderAdminService } from "./reminder-admin.service.js";
-import { SnapshotAdminService } from "./snapshot-admin.service.js";
+import { ReminderAdminService as ProductionReminderAdminService } from "./reminder-admin.service.js";
+import { SnapshotAdminService as ProductionSnapshotAdminService } from "./snapshot-admin.service.js";
+
+class ReminderAdminService extends ProductionReminderAdminService {
+  constructor(
+    repository: ConstructorParameters<typeof ProductionReminderAdminService>[0],
+  ) {
+    super(repository, createNullLogger());
+  }
+}
+
+class SnapshotAdminService extends ProductionSnapshotAdminService {
+  constructor(
+    repository: ConstructorParameters<typeof ProductionSnapshotAdminService>[0],
+  ) {
+    super(repository, createNullLogger());
+  }
+}
 
 describe("focused admin services", () => {
   it("checks reminder-policy existence without listing policies", async () => {
@@ -64,7 +81,10 @@ describe("focused admin services", () => {
   });
 
   it("creates and archives reporting groups", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
     const groupId = "99999999-9999-4999-8999-999999999992";
 
     const created = await service.upsertReportingGroup({
@@ -85,7 +105,10 @@ describe("focused admin services", () => {
   });
 
   it("persists headUserId round-trip on upsertReportingGroup", async () => {
-    const service = new ProjectAdminService(createRepository(initialSnapshot));
+    const service = new ProjectAdminService(
+      createRepository(initialSnapshot),
+      createNullLogger(),
+    );
     const groupId = "99999999-9999-4999-8999-000000042000";
     const leaderId = "00000000-0000-4000-8000-000000000099";
 
@@ -113,7 +136,10 @@ describe("focused admin services", () => {
 
   it("routes project and reminder writes to their owning services", async () => {
     const repository = createRepository(initialSnapshot);
-    const projectService = new ProjectAdminService(repository);
+    const projectService = new ProjectAdminService(
+      repository,
+      createNullLogger(),
+    );
     const reminderService = new ReminderAdminService(repository);
 
     const withProject = await projectService.upsertProject({
@@ -185,6 +211,14 @@ describe("focused admin services", () => {
             periodEnd: new Date("2026-04-19T23:59:59.000Z"),
             deadline: new Date("2026-04-17T15:00:00.000Z"),
             status: "draft",
+            periodState: "open",
+            periodStatus: "open",
+            archived: false,
+            autoPublished: false,
+            autoArchived: false,
+            publishedAt: null,
+            publishedById: null,
+            reopenedAt: null,
           },
         ],
         reminderRules: [
@@ -326,10 +360,11 @@ describe("focused admin services", () => {
         isActive: true,
       });
 
-      const names = result.users.map((u) => u.name);
-      expect(names).toEqual(
-        [...names].sort((a, b) => a.localeCompare(b, "ru")),
-      );
+      expect(result.users.map((user) => user.name)).toEqual([
+        "Alpha",
+        "Department Head",
+        "Zulu",
+      ]);
     });
   });
 
@@ -337,6 +372,7 @@ describe("focused admin services", () => {
     it("creates a new project", async () => {
       const service = new ProjectAdminService(
         createRepository(initialSnapshot),
+        createNullLogger(),
       );
 
       const result = await service.upsertProject({
@@ -354,6 +390,7 @@ describe("focused admin services", () => {
     it("updates existing project by ID", async () => {
       const service = new ProjectAdminService(
         createRepository(initialSnapshot),
+        createNullLogger(),
       );
 
       await service.upsertProject({
@@ -542,6 +579,7 @@ describe("removeProject — archive behavior", () => {
     };
     const service = new ProjectAdminService(
       createRepository(snapshotWithProject),
+      createNullLogger(),
     );
     const result = await service.removeProject(
       "44444444-4444-4444-8444-444444444444",

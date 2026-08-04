@@ -1,4 +1,5 @@
 // Stub tRPC proxy; drive captured mutationFn, not a real network.
+import type { FailedJob } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -21,16 +22,6 @@ vi.mock("sonner", () => ({
 }));
 
 import { JobsTab } from "./jobs-tab";
-
-interface FailedJob {
-  id: string;
-  name: string;
-  failedReason: string;
-  stacktrace: string[];
-  attemptsMade: number;
-  timestamp: number;
-  data: unknown;
-}
 
 const BASE_DESCRIPTORS = [
   { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
@@ -63,9 +54,30 @@ function makeJob(id: string, overrides: Partial<FailedJob> = {}): FailedJob {
     stacktrace: ["at smtpClient.send (smtp.ts:42)"],
     attemptsMade: 3,
     timestamp: Date.UTC(2026, 4, 1, 9, 0, 0),
-    data: { recipient: "lead@example.com" },
     ...overrides,
   };
+}
+
+// Two cursor pages of 50; the factory pages by the injected `cursor`.
+function makePagedMockTRPC() {
+  const firstPage = Array.from({ length: 50 }, (_, i) =>
+    makeJob(`job-${String(i).padStart(3, "0")}`),
+  );
+  const secondPage = Array.from({ length: 7 }, (_, i) =>
+    makeJob(`job-${String(50 + i).padStart(3, "0")}`),
+  );
+  return createMockTRPC([
+    {
+      path: ["admin", "jobs", "listFailed"],
+      query: (input: { cursor?: number }) => {
+        if (input.cursor === 0 || input.cursor === undefined) {
+          return Promise.resolve({ jobs: firstPage, nextCursor: 50 });
+        }
+        return Promise.resolve({ jobs: secondPage, nextCursor: null });
+      },
+    },
+    ...BASE_DESCRIPTORS,
+  ]);
 }
 
 function renderTab(jobs: FailedJob[]) {
@@ -263,6 +275,38 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
         /No failed email reminder jobs\. Queue is clean\./,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("loads rows beyond the first 50-job page through Load more", async () => {
+    const { proxy } = makePagedMockTRPC();
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    function Wrapper({ children }: { readonly children: ReactNode }) {
+      return (
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={proxy}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>
+      );
+    }
+    render(<JobsTab />, { wrapper: Wrapper });
+
+    // First page: 50 rows, still a further page.
+    expect(await screen.findByText("job-000")).toBeInTheDocument();
+    expect(screen.getByText("50 loaded+")).toBeInTheDocument();
+
+    const loadMore = screen.getByRole("button", { name: "Load more" });
+    await userEvent.setup().click(loadMore);
+
+    // Second page rows appear and the cursor is exhausted.
+    expect(await screen.findByText("job-050")).toBeInTheDocument();
+    expect(screen.getByText("57 loaded")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
   it("renders 2 mock jobs and clicking Retry on job-1 fires the mutation with that jobId", async () => {

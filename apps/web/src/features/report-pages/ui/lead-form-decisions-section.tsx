@@ -9,7 +9,7 @@ import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import type { StagesForProduct } from "./lead-form-sync-bridge";
 
 export interface LeadFormDecisionsActions {
-  readonly onDecisionsChange: (next: DecisionEntry[]) => void;
+  readonly onDecisionsChange: (next: readonly DecisionEntry[]) => void;
   readonly addDecision: () => void;
   readonly decisionsAddSignal: number;
 }

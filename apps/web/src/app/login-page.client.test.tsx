@@ -1,9 +1,10 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
+import { sessionRoleSchema } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeQueryState } from "./../test-utils/query-state";
 
 const useQueryMock = vi.fn();
 const useSearchParamsMock = vi.fn();
@@ -14,12 +15,13 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
+    useQuery: (opts: { queryKey?: readonly unknown[] }) =>
+      useQueryMock(opts) as ReturnType<typeof actual.useQuery>,
   };
 });
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => useSearchParamsMock() as unknown,
+  useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
 vi.mock("../lib/trpc-context", () => ({
@@ -52,14 +54,12 @@ beforeEach(() => {
 
   useQueryMock.mockImplementation((opts: { queryKey?: readonly unknown[] }) => {
     const key = opts.queryKey?.at(0);
-    if (key === "auth.me") return { data: null, isLoading: false };
-    if (key === "org.getPublic") return { data: STUB_ORG, isLoading: false };
-    return { data: null, isLoading: false };
+    if (key === "auth.me") return makeQueryState({ data: null });
+    if (key === "org.getPublic") return makeQueryState({ data: STUB_ORG });
+    return makeQueryState({ data: null });
   });
 
-  useSearchParamsMock.mockReturnValue({
-    get: (_k: string) => null,
-  });
+  useSearchParamsMock.mockReturnValue(new URLSearchParams());
 });
 
 afterEach(() => {
@@ -110,13 +110,35 @@ describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
     // read as a layout jump and left no way to pick a role).
     const picker = await screen.findByTestId("role-picker");
     expect(picker).toBeInTheDocument();
-    for (const role of ["lead", "head", "admin", "viewer"] as const) {
+    for (const role of sessionRoleSchema.options) {
       expect(
         screen.getByTestId(`last-role-option-${role}`),
       ).toBeInTheDocument();
     }
     expect(
       screen.queryByTestId("last-role-hint-skeleton"),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("Login page — session query failure", () => {
+  it("surfaces the failure instead of rendering the ordinary signed-out state", async () => {
+    useQueryMock.mockImplementation(
+      (opts: { queryKey?: readonly unknown[] }) => {
+        const key = opts.queryKey?.[0];
+        if (key === "auth.me")
+          return makeQueryState({ data: null, error: new Error("boom") });
+        if (key === "org.getPublic") return makeQueryState({ data: STUB_ORG });
+        return makeQueryState({ data: null });
+      },
+    );
+
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    expect(screen.getByTestId("landing-session-error")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /sign in/i }),
     ).not.toBeInTheDocument();
   });
 });

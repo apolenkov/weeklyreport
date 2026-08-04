@@ -23,12 +23,22 @@ export const draftSection: ReportSectionReadModel = {
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
-    { projectId: PROJECT_ID, projectName: "Project Alpha", trafficLight: null },
+    {
+      projectId: PROJECT_ID,
+      projectName: "Project Alpha",
+      trafficLight: null,
+      ownedStages: [],
+      stageSet: [],
+      ownerGroupId: null,
+    },
   ],
+  referencedProjects: [],
   items: [
     {
       projectId: PROJECT_ID,
@@ -42,6 +52,7 @@ export const draftSection: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 export const submittedSection: ReportSectionReadModel = {

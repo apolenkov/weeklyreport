@@ -3,13 +3,11 @@
 import { deriveCardStatus } from "../model/item-card-status";
 import type { StatusBadge } from "../model/item-card-style";
 import { cardContainerStyle, STATUS_BADGE } from "../model/item-card-style";
+import { deriveItemCardStageTags } from "../model/stage-tags";
 import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCardActions } from "./item-card-actions";
 import { ItemCardBadges } from "./item-card-badges";
-import {
-  deriveItemCardStageTags,
-  ItemCardStageTagsRow,
-} from "./item-card-stage-tags";
+import { ItemCardStageTagsRow } from "./item-card-stage-tags";
 import { ItemInlineTextEditor } from "./item-inline-text-editor";
 
 interface ItemCardProps {
@@ -58,7 +56,7 @@ export function ItemCard(props: ItemCardProps) {
   return (
     <div
       data-testid="item-card"
-      className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
+      className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[var(--color-border-strong)] hover:shadow-[0_2px_8px_var(--color-highlight-shadow)]"
       style={cardContainerStyle({
         isPlanned,
         isBlocked,

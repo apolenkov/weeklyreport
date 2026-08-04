@@ -105,10 +105,12 @@ export function groupPrioritiesByProject(
     [...Map.groupBy(entries, (item) => item.projectId)].map(
       ([projectId, items]) => [
         projectId,
-        items.map((item) => ({
-          rank: item.priorityRank,
-          text: item.text,
-        })),
+        items.map((item) => {
+          if (item.id === undefined) {
+            throw new Error("Priority item is missing its persisted id");
+          }
+          return { id: item.id, rank: item.priorityRank, text: item.text };
+        }),
       ],
     ),
   );

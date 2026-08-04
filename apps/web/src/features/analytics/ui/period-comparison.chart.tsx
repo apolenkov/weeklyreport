@@ -13,15 +13,15 @@ function statusLabel(cell: TrafficLightCell): string {
 }
 
 function statusColor(cell: TrafficLightCell): string {
-  if (cell === "green") return "text-green-600";
-  if (cell === "yellow") return "text-amber-500";
-  if (cell === "red") return "text-red-600";
+  if (cell === "green") return "text-[var(--color-starbucks-accent)]";
+  if (cell === "yellow") return "text-[var(--color-status-dot-at-risk)]";
+  if (cell === "red") return "text-[var(--color-destructive)]";
   return "text-muted-foreground";
 }
 
 function deltaClass(delta: number): string {
-  if (delta > 0) return "text-red-600";
-  if (delta < 0) return "text-green-600";
+  if (delta > 0) return "text-[var(--color-destructive)]";
+  if (delta < 0) return "text-[var(--color-starbucks-accent)]";
   return "text-muted-foreground";
 }
 

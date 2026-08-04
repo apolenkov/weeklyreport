@@ -18,7 +18,7 @@ import {
 import { useTRPC } from "../../../lib/trpc-context";
 
 export interface HistoryView {
-  readonly entries: HistoryEntry[];
+  readonly entries: readonly HistoryEntry[];
   readonly archiveCount: number;
   readonly isLoading: boolean;
   readonly includeArchive: boolean;

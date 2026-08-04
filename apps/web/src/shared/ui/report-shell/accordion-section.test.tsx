@@ -1,7 +1,5 @@
-/**
- * a11y: both AccordionSection toggles expose aria-controls pointing at the
- * collapsible panel, and that id resolves to the panel element in the DOM.
- */
+// Accessibility seam: both toggle variants must point aria-controls at the
+// rendered collapsible panel.
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";

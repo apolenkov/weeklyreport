@@ -72,7 +72,7 @@ describe("ensureLeadSection", () => {
     expect(sectionCreate).not.toHaveBeenCalled();
   });
 
-  it("creates a fresh section and seeds project statuses for the lead's projects", async () => {
+  it("creates a fresh section and seeds unassessed project statuses", async () => {
     const { client, projectStatusCreateMany } = makePrisma({
       createdId: "sec-new",
       projects: [{ id: "p1" }, { id: "p2" }],
@@ -90,12 +90,12 @@ describe("ensureLeadSection", () => {
     expect(arg.data[0]).toMatchObject({
       reportSectionId: "sec-new",
       projectId: "p1",
-      status: "green",
+      status: null,
     });
     expect(arg.skipDuplicates).toBe(true);
   });
 
-  it("seeds one default-green ActivityStatus per attached activity on a fresh create", async () => {
+  it("seeds one unassessed ActivityStatus per attached activity", async () => {
     const { client, activityLeadFindMany, activityStatusCreateMany } =
       makePrisma({
         createdId: "sec-new",
@@ -115,8 +115,8 @@ describe("ensureLeadSection", () => {
       skipDuplicates: boolean;
     };
     expect(arg.data).toEqual([
-      { reportSectionId: "sec-new", activityId: "act-1", status: "green" },
-      { reportSectionId: "sec-new", activityId: "act-2", status: "green" },
+      { reportSectionId: "sec-new", activityId: "act-1", status: null },
+      { reportSectionId: "sec-new", activityId: "act-2", status: null },
     ]);
     expect(arg.skipDuplicates).toBe(true);
   });

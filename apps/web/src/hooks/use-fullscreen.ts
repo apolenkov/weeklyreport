@@ -8,11 +8,13 @@ import {
   useState,
 } from "react";
 
-/** The fullscreen handle consumers receive: current state + one toggle. */
 export interface FullscreenHandle {
   readonly isFullscreen: boolean;
   readonly toggle: () => void;
 }
+
+// Which fullscreen transition rejected: entering (request) or exiting (exit).
+export type FullscreenFailureKind = "request" | "exit";
 
 // Single owner of a slide deck's fullscreen state and keyboard listener —
 // deck surfaces must not register their own, or exit focus and the f-key
@@ -21,6 +23,7 @@ export function useFullscreen(
   targetRef: RefObject<HTMLElement | null>,
   focusOnExitRef?: RefObject<HTMLElement | null>,
   enabled = true,
+  onFullscreenError?: (kind: FullscreenFailureKind, error: unknown) => void,
 ): FullscreenHandle {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const wasFullscreenRef = useRef(false);
@@ -29,15 +32,17 @@ export function useFullscreen(
     const el = targetRef.current;
     if (!el) return;
     if (!document.fullscreenElement) {
-      el.requestFullscreen().catch(() => {
-        /* ignore — denied without transient activation / in iframe contexts */
+      el.requestFullscreen().catch((error: unknown) => {
+        // Denial without transient activation / in iframe contexts is expected,
+        // but a genuine failure must stay observable through the callback.
+        onFullscreenError?.("request", error);
       });
     } else {
-      document.exitFullscreen().catch(() => {
-        /* ignore */
+      document.exitFullscreen().catch((error: unknown) => {
+        onFullscreenError?.("exit", error);
       });
     }
-  }, [targetRef]);
+  }, [targetRef, onFullscreenError]);
 
   useEffect(() => {
     if (!enabled) return;

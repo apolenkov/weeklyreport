@@ -24,9 +24,11 @@ const section: ReportSectionReadModel = {
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  authorRole: "lead",
   version: 1,
   status: "draft",
   submittedAt: null,
+  late: false,
   projects: [
     {
       projectId: PROJECT_ID,
@@ -39,8 +41,11 @@ const section: ReportSectionReadModel = {
           sortOrder: 0,
         },
       ],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
+  referencedProjects: [],
   items: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -68,6 +73,7 @@ const section: ReportSectionReadModel = {
   risks: [],
   decisions: [],
   activities: [],
+  reviews: [],
 };
 
 function writeItemsFrom(source: ReportSectionReadModel) {
@@ -106,6 +112,8 @@ function basePayload() {
     version: 1,
     status: "draft" as const,
     projectStatuses: [{ projectId: PROJECT_ID, status: "green" as const }],
+    stageStatuses: [],
+    activityStatuses: [],
     items: writeItemsFrom(section),
     risks: [],
     decisions: [],
@@ -120,12 +128,15 @@ describe("resolve-not-delete save guard", () => {
     );
     const payload = basePayload();
     await expect(
-      service.saveDraft({
-        ...payload,
-        items: payload.items.filter(
-          (item) => item.stableId !== PUBLISHED_ITEM_LINEAGE,
-        ),
-      }),
+      service.saveDraft(
+        {
+          ...payload,
+          items: payload.items.filter(
+            (item) => item.stableId !== PUBLISHED_ITEM_LINEAGE,
+          ),
+        },
+        section.authorId,
+      ),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
   });
 
@@ -136,14 +147,17 @@ describe("resolve-not-delete save guard", () => {
     );
     const payload = basePayload();
     await expect(
-      service.saveDraft({
-        ...payload,
-        items: payload.items.map((item) =>
-          item.stableId === PUBLISHED_ITEM_LINEAGE
-            ? { ...item, stableId: "99999999-9999-4999-8999-999999999999" }
-            : item,
-        ),
-      }),
+      service.saveDraft(
+        {
+          ...payload,
+          items: payload.items.map((item) =>
+            item.stableId === PUBLISHED_ITEM_LINEAGE
+              ? { ...item, stableId: "99999999-9999-4999-8999-999999999999" }
+              : item,
+          ),
+        },
+        section.authorId,
+      ),
     ).rejects.toBeInstanceOf(ReportSectionDomainError);
   });
 
@@ -153,12 +167,15 @@ describe("resolve-not-delete save guard", () => {
       testGraceSettings,
     );
     const payload = basePayload();
-    const saved = await service.saveDraft({
-      ...payload,
-      items: payload.items.filter(
-        (item) => item.stableId !== DRAFT_ITEM_LINEAGE,
-      ),
-    });
+    const saved = await service.saveDraft(
+      {
+        ...payload,
+        items: payload.items.filter(
+          (item) => item.stableId !== DRAFT_ITEM_LINEAGE,
+        ),
+      },
+      section.authorId,
+    );
     expect(saved.items).toHaveLength(1);
     expect(saved.items[0]?.stableId).toBe(PUBLISHED_ITEM_LINEAGE);
   });
@@ -169,14 +186,17 @@ describe("resolve-not-delete save guard", () => {
       testGraceSettings,
     );
     const payload = basePayload();
-    const saved = await service.saveDraft({
-      ...payload,
-      items: payload.items.map((item) =>
-        item.stableId === PUBLISHED_ITEM_LINEAGE
-          ? { ...item, workflowStatus: "done" as const, completed: true }
-          : item,
-      ),
-    });
+    const saved = await service.saveDraft(
+      {
+        ...payload,
+        items: payload.items.map((item) =>
+          item.stableId === PUBLISHED_ITEM_LINEAGE
+            ? { ...item, workflowStatus: "done" as const, completed: true }
+            : item,
+        ),
+      },
+      section.authorId,
+    );
     expect(
       saved.items.find((item) => item.stableId === PUBLISHED_ITEM_LINEAGE)
         ?.workflowStatus,

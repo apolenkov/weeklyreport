@@ -10,6 +10,7 @@ import {
   HISTORY_REPORT_4_ID,
   PUBLISHED_REPORT_ID,
 } from "./seed-identifiers.js";
+import { seedReferenceDate } from "./seed-reference-date.js";
 
 export interface SeedReport {
   id: string;
@@ -128,7 +129,10 @@ function weekLabel(monday: Date): string {
   return `Week ${isoWeekNumber(monday)}`;
 }
 
-const NOW = new Date();
+// Periods derive from an explicit reference instant (SEED_REFERENCE_DATE, or
+// today when unset as a documented dev convenience) so the same seed commit
+// cannot change identity across days or mid-campaign at a week boundary.
+const NOW = seedReferenceDate();
 const ACTIVE_MONDAY = mondayOfWeek(NOW);
 const PREV_MONDAY = weekBefore(ACTIVE_MONDAY);
 const PREV2_MONDAY = weekBefore(PREV_MONDAY);

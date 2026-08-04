@@ -1,5 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
+import type { LifecycleWrite } from "../modules/period/domain/period-transition.js";
+
 // Guarded predicate + zero-row classification for reopen (and admin manual archive).
 // Injected client/data keep the caller's transaction and buildTransition lifecycle write.
 // Spec: openspec/specs/reopen-compare-and-set/spec.md
@@ -17,7 +19,7 @@ export type ReopenCasOutcome = "transitioned" | "archived" | "notReopenable";
 export async function reopenCompareAndSet(
   client: ReopenCasClient,
   reportId: string,
-  data: Prisma.ReportUpdateManyMutationInput,
+  data: LifecycleWrite & Prisma.ReportUpdateManyMutationInput,
 ): Promise<ReopenCasOutcome> {
   const { count } = await client.report.updateMany({
     where: {

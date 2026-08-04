@@ -1,10 +1,8 @@
-/**
- * @vitest-environment jsdom
- *
- * deferred-feature-pattern: the lead Export-PDF control is a UI-deferred
- * ComingSoon control — inert, never wired to pdfExport.request. Lead is
- * FORBIDDEN from the real export path (role-coverage-gate).
- */
+// @vitest-environment jsdom
+//
+// deferred-feature-pattern: the lead Export-PDF control is a UI-deferred
+// ComingSoon control — inert, never wired to pdfExport.request. Lead is
+// FORBIDDEN from the real export path (role-coverage-gate).
 
 import "@testing-library/jest-dom/vitest";
 

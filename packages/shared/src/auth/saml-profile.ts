@@ -12,7 +12,8 @@ export const SamlProfileSchema = z
     email: z.email(),
     displayName: z.string().optional(),
   })
-  .strict();
+  .strict()
+  .readonly();
 
 /** Parsed SAML assertion profile shape accepted from Keycloak. */
 export type SamlProfile = z.infer<typeof SamlProfileSchema>;

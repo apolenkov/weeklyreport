@@ -4,12 +4,12 @@ import type * as React from "react";
 /**
  * Surface container root that composes card layout slots.
  */
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, ...props }: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+        "flex flex-col gap-6 rounded-xl border border-border bg-card py-6 text-card-foreground shadow-sm",
         className,
       )}
       {...props}
@@ -20,7 +20,10 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Header grid for title, description, and optional action slots.
  */
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+function CardHeader({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-header"
@@ -36,7 +39,10 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Primary title slot inside CardHeader.
  */
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+function CardTitle({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-title"
@@ -49,7 +55,10 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Muted description slot inside CardHeader.
  */
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+function CardDescription({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-description"
@@ -62,7 +71,10 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Action cell aligned in the CardHeader grid (end column, span rows).
  */
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+function CardAction({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-action"
@@ -78,7 +90,10 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Main body content slot of Card.
  */
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+function CardContent({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-content"
@@ -91,7 +106,10 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * Footer actions row of Card.
  */
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+function CardFooter({
+  className,
+  ...props
+}: Readonly<React.ComponentProps<"div">>) {
   return (
     <div
       data-slot="card-footer"

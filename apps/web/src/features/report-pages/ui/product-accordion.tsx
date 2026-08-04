@@ -31,14 +31,16 @@ interface ProductAccordionProps {
 function surfaceProps(hasContent: boolean, isHighlightActive: boolean) {
   return {
     className: `card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] ${
-      hasContent ? "card-surface-fill" : "bg-[rgba(0,0,0,0.035)] opacity-90"
+      hasContent
+        ? "card-surface-fill"
+        : "bg-[var(--color-surface-empty-tint)] opacity-90"
     }`,
     style: {
       borderColor: isHighlightActive
         ? "var(--color-starbucks-accent)"
-        : "rgba(0,0,0,0.10)",
+        : "var(--card-surface-border)",
       boxShadow: isHighlightActive
-        ? "0 0 0 2px var(--color-highlight-shadow), 0 8px 18px -14px rgba(0,0,0,0.18)"
+        ? "0 0 0 2px var(--color-highlight-shadow), 0 8px 18px -14px var(--color-border-strong)"
         : undefined,
     },
   };

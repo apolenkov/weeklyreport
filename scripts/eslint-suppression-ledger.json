@@ -94,9 +94,9 @@
       "target": "this.transporter = nodemailer.createTransport({ jsonTransport: true });",
       "fingerprint": "d5e1de6214bea466",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-clear-text-protocols; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -107,9 +107,9 @@
       "target": "let sdk: NodeSDK | null = null;",
       "fingerprint": "f4598b600fd2b76c",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -120,9 +120,9 @@
       "target": "let loggerProvider: LoggerProvider | null = null;",
       "fingerprint": "aa13142f7659e072",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/otel/otel.bootstrap.ts",
@@ -133,9 +133,9 @@
       "target": "export function startOtel(",
       "fingerprint": "c790754de3b140bc",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-invariant-returns; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/routers/dev.router.ts",
@@ -146,9 +146,9 @@
       "target": "const stdout = execSync(buildReseedScript(input.variant), {",
       "fingerprint": "782ed78fb5795654",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/os-command; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.context.ts",
@@ -185,9 +185,9 @@
       "target": "const keys = Object.keys(value).sort();",
       "fingerprint": "e140ea8d3240ea08",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/infrastructure/trpc/trpc.session-hydration.ts",
@@ -198,9 +198,9 @@
       "target": "let orgCache: {",
       "fingerprint": "e16cec6aab154ab0",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -211,9 +211,9 @@
       "target": "let dt = DateTime.fromJSDate(date).setZone(tz);",
       "fingerprint": "1ee907c319155321",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -224,9 +224,9 @@
       "target": "let remaining = Math.abs(n);",
       "fingerprint": "7922c584ffd6f9f6",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/lib/business-date.ts",
@@ -237,9 +237,9 @@
       "target": "let iter = 0;",
       "fingerprint": "ad73a7ee632004e7",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/lib/group-scope.ts",
@@ -250,9 +250,9 @@
       "target": "return [...computeAllowedGroupIds(session)].sort().join(\"|\");",
       "fingerprint": "007b92d55c23006b",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/lib/logger.ts",
@@ -276,9 +276,9 @@
       "target": "/* eslint-disable simple-import-sort/imports -- bootstrap order is load-bearing: `reflect-metadata` MUST be the first executed import for Nest DI metadata, and Sentry.init() MUST run before the OTel bootstrap import (http-module hook order); sorting these imports would break runtime instrumentation. */",
       "fingerprint": "636e47aea990528a",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits simple-import-sort/imports; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/analytics/analytics.service.ts",
@@ -289,9 +289,9 @@
       "target": ".sort()",
       "fingerprint": "25be5b38a339d4aa",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/auth/dev-login.routes.test.ts",
@@ -328,9 +328,9 @@
       "target": "export type VerifiedSamlProfile = {",
       "fingerprint": "b3551e8aed65efa0",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/consistent-type-definitions; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/auth/user-session.test.ts",
@@ -523,9 +523,9 @@
       "target": "export function computeWorstStatus(",
       "fingerprint": "13608807e07e53f3",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits functional/prefer-tacit; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/reminders/policy-applicator.test.ts",
@@ -536,9 +536,9 @@
       "target": "const upsertCalls: unknown[] = [];",
       "fingerprint": "4a229b0d963841ea",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-unused-collection; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/reminders/reminders-row-mappers.ts",
@@ -549,9 +549,9 @@
       "target": "const EMAIL_RE = /^[^@\\s:]+@[^@\\s:]+\\.[^@\\s:]+$/;",
       "fingerprint": "7e1543a35fff254f",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/modules/report-sections/infrastructure/report-sections.prisma-repository.test.ts",
@@ -568,7 +568,7 @@
     },
     {
       "path": "apps/api/src/modules/telemetry/telemetry.gauges.test.ts",
-      "line": 66,
+      "line": 63,
       "scope": "next-line",
       "rule": "sonarjs/no-floating-point-equality",
       "reason": "asserts the port value (0.85) passes through the gauge unchanged; exact equality is intended",
@@ -581,7 +581,7 @@
     },
     {
       "path": "apps/api/src/modules/telemetry/telemetry.gauges.test.ts",
-      "line": 94,
+      "line": 91,
       "scope": "next-line",
       "rule": "sonarjs/no-floating-point-equality",
       "reason": "asserts the port value passes through unchanged before the no-data transition",
@@ -601,9 +601,9 @@
       "target": "expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.42);",
       "fingerprint": "775190a5682d518a",
       "owner": "api",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-floating-point-equality; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/api/src/test-utils/mailpit.ts",
@@ -627,9 +627,9 @@
       "target": "export const CLIENT_LOGS_MAX_BODY_BYTES = 128 * 1024;",
       "fingerprint": "05c9023d6e2e4fea",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-magic-numbers; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/app/login-page-roles.ts",
@@ -653,9 +653,9 @@
       "target": "setLastRole(readLastRole());",
       "fingerprint": "504c9585aa9afbc8",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/app/print/[reportId]/print-lead-records.tsx",
@@ -666,9 +666,9 @@
       "target": "<li key={`${priority.rank}-${index}`} value={priority.rank}>",
       "fingerprint": "262f59695e637e8f",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react/no-array-index-key; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/app/print/[reportId]/print-report-styles.tsx",
@@ -679,9 +679,9 @@
       "target": "dangerouslySetInnerHTML={{",
       "fingerprint": "8e47ccc8d62033b8",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react/no-danger; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/admin/model/action-log-format.ts",
@@ -705,9 +705,9 @@
       "target": "autoFocus",
       "fingerprint": "1066824db0f789bc",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/admin/ui/group-edit-dialog.tsx",
@@ -718,9 +718,9 @@
       "target": "autoFocus",
       "fingerprint": "1066824db0f789bc",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/admin/ui/jobs-tab.tsx",
@@ -744,9 +744,9 @@
       "target": "autoFocus",
       "fingerprint": "1066824db0f789bc",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/admin/ui/reminders-tab.test.tsx",
@@ -796,9 +796,9 @@
       "target": "autoFocus={initialFocus}",
       "fingerprint": "d213c151a1b44631",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/alert-bar.tsx",
@@ -809,9 +809,9 @@
       "target": "<IfRole role=\"admin\">",
       "fingerprint": "77cd80ae5dd1f49a",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/aria-role; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/remind-lead-button.tsx",
@@ -822,9 +822,9 @@
       "target": "trpc.reminders.dispatchPending.mutationOptions({",
       "fingerprint": "c50b6bfabcf69829",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/dashboard/ui/use-dashboard-query-recovery.ts",
@@ -835,9 +835,9 @@
       "target": "if (settled) setStalled(false);",
       "fingerprint": "691cf8eccf95e036",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/landing/ui/tagline-cycler.tsx",
@@ -848,9 +848,9 @@
       "target": "return Math.floor(Math.random() * LANDING_TAGLINES.length);",
       "fingerprint": "030e41ada29f24d2",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/pseudo-random; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/organization/ui/settings-notifications-sub-tab.tsx",
@@ -861,9 +861,9 @@
       "target": "return trimmed === \"\" || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(trimmed);",
       "fingerprint": "2bb2fc894012b132",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/pdf-export/ui/use-pdf-export-job.ts",
@@ -874,9 +874,9 @@
       "target": "exportRequestHandlers(deliveryModeRef, openedTabRef, setJobId),",
       "fingerprint": "ed23972169a704f8",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/pdf-export/ui/use-pdf-export-job.ts",
@@ -887,9 +887,9 @@
       "target": "setJobId(null);",
       "fingerprint": "6f03d607979aecc5",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/current-week-section.tsx",
@@ -900,9 +900,9 @@
       "target": "tabIndex={0}",
       "fingerprint": "4f06d2f5a6118aac",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/decision-card.tsx",
@@ -913,9 +913,9 @@
       "target": "splitStageNames(decision.stageName)",
       "fingerprint": "08259dcf372bb5b1",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/decision-edit-dialog-fields.tsx",
@@ -926,9 +926,9 @@
       "target": "autoFocus",
       "fingerprint": "7fa200177d68aef3",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/decisions-section.tsx",
@@ -939,9 +939,9 @@
       "target": "stageName: saved.stageName ?? \"—\",",
       "fingerprint": "0dfeab769409c61e",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/periods-tab-dialog-fields.tsx",
@@ -952,9 +952,9 @@
       "target": "autoFocus",
       "fingerprint": "1066824db0f789bc",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/period/ui/periods-tab.dialogs.test.tsx",
@@ -987,26 +987,39 @@
       "line": 51,
       "scope": "next-line",
       "rule": "react-hooks/refs",
-      "reason": "passes the sanctioned render->callback bridge ref value; consumed only inside post-commit callbacks",
+      "reason": "Generation-keyed state passes current render data directly and eliminates the ref bridge.",
       "target": "loaded: loadedContextRef.current,",
       "fingerprint": "be2448f205d27818",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "replace",
+      "proof": "LeadForm generation navigation and stale-callback suites; ESLint zero warnings",
+      "implementationCommit": "repair-exhaustive-audit-critical-integrity"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/lead-form.tsx",
       "line": 62,
       "scope": "next-line",
       "rule": "react-hooks/refs",
-      "reason": "the one sanctioned render->callback bridge: stamps the loaded context the module's quick-add callbacks read after commit",
+      "reason": "Generation-keyed state makes the current loaded context explicit without render-time ref writes.",
       "target": "loadedContextRef.current = loadedContextOf(viewModel);",
       "fingerprint": "45413351b555a970",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "replace",
+      "proof": "LeadForm generation navigation and first-render suites; ESLint zero warnings",
+      "implementationCommit": "repair-exhaustive-audit-critical-integrity"
+    },
+    {
+      "path": "apps/web/src/features/report-pages/ui/use-lead-form-quick-add.ts",
+      "line": 33,
+      "scope": "next-line",
+      "rule": "react-hooks/refs",
+      "reason": "The generation-state hook isolates callbacks and removes the mutable loaded-context ref.",
+      "target": "loadedRef.current = loaded;",
+      "fingerprint": "dfddbb42f0103649",
+      "owner": "web",
+      "verdict": "replace",
+      "proof": "Quick-add stale-generation and cross-report regression suites; ESLint zero warnings",
+      "implementationCommit": "repair-exhaustive-audit-critical-integrity"
     },
     {
       "path": "apps/web/src/features/report-pages/ui/next-week-section.tsx",
@@ -1017,22 +1030,9 @@
       "target": "tabIndex={0}",
       "fingerprint": "4f06d2f5a6118aac",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
-    },
-    {
-      "path": "apps/web/src/features/report-pages/ui/use-lead-form-quick-add.ts",
-      "line": 33,
-      "scope": "next-line",
-      "rule": "react-hooks/refs",
-      "reason": "the one sanctioned render->callback bridge (see comment above)",
-      "target": "loadedRef.current = loaded;",
-      "fingerprint": "dfddbb42f0103649",
-      "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/report-sections/model/next-week-columns.ts",
@@ -1043,9 +1043,9 @@
       "target": "splitStageNames(item.stageName);",
       "fingerprint": "978d678090f6cef7",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-card-stage-tags.tsx",
@@ -1056,9 +1056,9 @@
       "target": "splitStageNames(item.stageName);",
       "fingerprint": "978d678090f6cef7",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-edit-dialog-fields.tsx",
@@ -1069,9 +1069,9 @@
       "target": "autoFocus",
       "fingerprint": "7fa200177d68aef3",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/report-sections/ui/item-edit-dialog.stage-scoping.test.tsx",
@@ -1108,9 +1108,9 @@
       "target": "autoFocus",
       "fingerprint": "7fa200177d68aef3",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/review/ui/risk-edit-dialog.stage-selector.test.tsx",
@@ -1134,9 +1134,9 @@
       "target": "setCreatePrefill({",
       "fingerprint": "b26d5a31fcc3ba58",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/slides/ui/deck-fullscreen-overlay.tsx",
@@ -1147,9 +1147,9 @@
       "target": "setShow(false);",
       "fingerprint": "db7ec9129c92c7f7",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/slides/ui/slide-skeleton.test.tsx",
@@ -1173,9 +1173,9 @@
       "target": "{Icon !== null && <Icon aria-hidden=\"true\" className=\"h-3.5 w-3.5\" />}",
       "fingerprint": "202aa26c50592db4",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/static-components; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/slides/ui/status-slide-deck.tsx",
@@ -1186,9 +1186,9 @@
       "target": "tabIndex={0}",
       "fingerprint": "838cc7d6a274f084",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-noninteractive-tabindex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/features/slides/ui/use-slide-inline-editor-support.tsx",
@@ -1199,9 +1199,9 @@
       "target": "trpc.reports.saveDraft.mutationOptions({",
       "fingerprint": "d9c6395e94e1ba6a",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/autosave-effects.ts",
@@ -1212,22 +1212,22 @@
       "target": "e.returnValue = \"\";",
       "fingerprint": "a0bcb01b0199535f",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/autosave-stable-stringify.ts",
       "line": 9,
       "scope": "next-line",
       "rule": "sonarjs/no-alphabetical-sort",
-      "reason": "stable serialization for dirty-state comparison; localeCompare would break payload hashing",
+      "reason": "Stable serialization now satisfies the configured rule without a suppression.",
       "target": "const keys = Object.keys(obj).sort();",
       "fingerprint": "ed28c98148fda3b3",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-alphabetical-sort; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "replace",
+      "proof": "Current suppression inventory omits this directive; lint:eslint-suppressions --complete reports 67 live directives.",
+      "implementationCommit": "repair-exhaustive-audit-critical-integrity"
     },
     {
       "path": "apps/web/src/hooks/use-editable-list-dialog.ts",
@@ -1238,9 +1238,9 @@
       "target": "readOnlyRef.current = readOnly;",
       "fingerprint": "381c7a6f69e115d5",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/use-editable-list-dialog.ts",
@@ -1251,9 +1251,9 @@
       "target": "setOpenSeq((n) => n + 1);",
       "fingerprint": "86f45dbd49c7bb05",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/use-lead-form-autosave-harness.tsx",
@@ -1264,9 +1264,9 @@
       "target": "async (vars: unknown) => {",
       "fingerprint": "3853b7eb997af56c",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-misused-promises; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/use-lead-form-autosave.ts",
@@ -1277,9 +1277,9 @@
       "target": "payloadKey !== refs.current.lastSaved;",
       "fingerprint": "d01aac33326aad41",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/hooks/use-record-visibility.ts",
@@ -1290,9 +1290,9 @@
       "target": "setVisibilityState(\"mine\");",
       "fingerprint": "d1cfa5a3a8653318",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/lib/client-logger.ts",
@@ -1303,9 +1303,9 @@
       "target": "let flushTimer: ReturnType<typeof setTimeout> | null = null;",
       "fingerprint": "4f235bb954f3326e",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits no-restricted-syntax; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/lib/item-alarm.ts",
@@ -1316,9 +1316,9 @@
       "target": "return splitStageNames(item.stageName);",
       "fingerprint": "f352dea4fff792f0",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits @typescript-eslint/no-deprecated; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/lib/use-query-error-handler.ts",
@@ -1329,9 +1329,9 @@
       "target": "optsRef.current = opts;",
       "fingerprint": "ca806ec79b5fb7ba",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/refs; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/shared/ui/error-boundary.tsx",
@@ -1342,9 +1342,9 @@
       "target": "override render(): ReactNode {",
       "fingerprint": "564c5a2d73067da4",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/function-return-type; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/shared/ui/navigation/nav-bar.test.tsx",
@@ -1381,9 +1381,9 @@
       "target": "autoFocus={autoFocus}",
       "fingerprint": "597e2cb0a59d04cb",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits jsx-a11y/no-autofocus; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/shared/ui/report-shell/save-now-button.test.tsx",
@@ -1407,9 +1407,9 @@
       "target": "setShowSaved(true);",
       "fingerprint": "009da0f20f9df3b6",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits react-hooks/set-state-in-effect; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/shared/ui/search-input-utils.tsx",
@@ -1420,9 +1420,9 @@
       "target": "const parts = snippet.split(/(<<[^>]*?>>)/g);",
       "fingerprint": "8a75e6eb7789d7b5",
       "owner": "web",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/super-linear-regex; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "Directive absent from final inventory; the owning code passes production ESLint without suppression.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "apps/web/src/shared/ui/search-input.test.tsx",
@@ -1439,7 +1439,7 @@
     },
     {
       "path": "e2e/integration/global-setup.ts",
-      "line": 48,
+      "line": 41,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
       "reason": "pnpm is the documented entrypoint on a dev machine and in CI; an absolute path would be wrong on both",
@@ -1465,7 +1465,7 @@
     },
     {
       "path": "prisma/reset-hard.ts",
-      "line": 172,
+      "line": 195,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
       "reason": "pnpm (workspace package manager) invoked intentionally in dev-only DB reset; shell:false set",
@@ -1478,7 +1478,7 @@
     },
     {
       "path": "prisma/reset-hard.ts",
-      "line": 190,
+      "line": 213,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
       "reason": "pnpm (workspace package manager) invoked intentionally in dev-only seeding; shell:false set",
@@ -1491,7 +1491,7 @@
     },
     {
       "path": "scripts/exemplary-catalogue.ts",
-      "line": 52,
+      "line": 69,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
       "reason": "git's location is machine-specific and cannot be pinned to a path this repo controls; shell is not used, and every argument here is a literal",

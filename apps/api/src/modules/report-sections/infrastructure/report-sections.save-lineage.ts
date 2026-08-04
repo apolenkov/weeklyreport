@@ -4,11 +4,11 @@ import { Prisma } from "@prisma/client";
 // after saveSection delete-recreates anchor rows.
 type RecordKind = "item" | "risk" | "decision";
 export interface CapturedComment {
-  stableId: string;
-  kind: RecordKind;
-  reviewerId: string;
-  text: string;
-  createdAt: Date;
+  readonly stableId: string;
+  readonly kind: RecordKind;
+  readonly reviewerId: string;
+  readonly text: string;
+  readonly createdAt: Date;
 }
 
 const lineageKey = (kind: RecordKind, stableId: string): string =>
@@ -74,20 +74,18 @@ async function loadIdByLineage(
   tx: Prisma.TransactionClient,
   sectionId: string,
 ): Promise<Map<string, string>> {
-  const [items, risks, decisions] = await Promise.all([
-    tx.item.findMany({
-      where: { reportSectionId: sectionId },
-      select: { id: true, stableId: true },
-    }),
-    tx.risk.findMany({
-      where: { reportSectionId: sectionId },
-      select: { id: true, stableId: true },
-    }),
-    tx.decision.findMany({
-      where: { reportSectionId: sectionId },
-      select: { id: true, stableId: true },
-    }),
-  ]);
+  const items = await tx.item.findMany({
+    where: { reportSectionId: sectionId },
+    select: { id: true, stableId: true },
+  });
+  const risks = await tx.risk.findMany({
+    where: { reportSectionId: sectionId },
+    select: { id: true, stableId: true },
+  });
+  const decisions = await tx.decision.findMany({
+    where: { reportSectionId: sectionId },
+    select: { id: true, stableId: true },
+  });
 
   return new Map<string, string>([
     ...lineageEntries("item", items),

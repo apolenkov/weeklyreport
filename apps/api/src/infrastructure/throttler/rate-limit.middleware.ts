@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+
 import { MS_PER_SECOND } from "@customreport/shared";
 import type { RequestHandler } from "express";
 import rateLimit, {
@@ -12,7 +14,11 @@ import { UNKNOWN_CLIENT_IP } from "../../lib/actor-sentinels";
 import type { AppLogger } from "../../lib/logger";
 import type { EnvConfig } from "../config/env.schema";
 import { buildRedisConnectionOptions } from "../config/redis-connection";
-import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";
+import {
+  rateLimitHitsTotal,
+  rateLimitStoreErrorsTotal,
+} from "../metrics/metrics.registry.js";
+import { RateLimitDegradedStore } from "./rate-limit-degraded-store.js";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
 // Test-mode bumps every bucket to this figure so E2E suites firing 10+ rapid
@@ -35,14 +41,28 @@ function buildStoreClient(
   if (!env) {
     return undefined;
   }
-  const client = new Redis({
+  return new Redis({
     ...buildRedisConnectionOptions(env),
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
   });
-  client.on("error", () => undefined);
-  return client;
+}
+
+// rate-limit-redis only understands boolean/number/string (or arrays of those)
+// replies; anything else is a contract breach — reject it loudly instead of
+// asserting the reply shape with a cast.
+export function isRateLimitRedisReply(value: unknown): value is RedisReply {
+  return (
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    (Array.isArray(value) && value.every(isRateLimitRedisReply))
+  );
+}
+
+function describeRedisReply(value: unknown): string {
+  return typeof value === "string" ? value : inspect(value);
 }
 
 // Distinct rl:<bucket>: prefix per limiter so buckets never share a counter;
@@ -50,8 +70,19 @@ function buildStoreClient(
 function redisStoreFor(client: Redis, bucket: string): RedisStore {
   return new RedisStore({
     prefix: `rl:${bucket}:`,
-    sendCommand: (...args: string[]): Promise<RedisReply> =>
-      client.call(...(args as [string, ...string[]])) as Promise<RedisReply>,
+    sendCommand: async (...args: string[]): Promise<RedisReply> => {
+      const [command, ...rest] = args;
+      if (command === undefined) {
+        throw new Error("rate-limit Redis store: sendCommand needs a command.");
+      }
+      const reply = await client.call(command, ...rest);
+      if (!isRateLimitRedisReply(reply)) {
+        throw new Error(
+          `rate-limit Redis store: unexpected reply ${describeRedisReply(reply)}`,
+        );
+      }
+      return reply;
+    },
   });
 }
 
@@ -61,9 +92,9 @@ function buildBaseConfig(logger: AppLogger): Partial<Options> {
     windowMs: RATE_LIMIT_WINDOW_MS,
     standardHeaders: RATE_LIMIT_STANDARD_HEADERS,
     legacyHeaders: false,
-    // Fail open on store outage: library default rethrows and turns a Redis
-    // blip into 500s. Unlimited-but-up beats down; health indicator still fires.
-    passOnStoreError: true,
+    // Store faults are handled by RateLimitDegradedStore. Reaching this layer
+    // means both enforcement paths failed, so the request must not bypass.
+    passOnStoreError: false,
     // ipKeyGenerator normalises IPv6 by /64; without it low-bit churn bypasses
     // the limit and express-rate-limit emits ERR_ERL_KEY_GEN_IPV6 every request.
     keyGenerator: (req) => {
@@ -108,11 +139,32 @@ export function createRateLimits(options: {
 } {
   const { logger, isTest, env, redis } = options;
 
-  // Production uses Redis so the window survives restart; isTest / env-less
-  // unit suites keep MemoryStore. Optional injected `redis` for integration tests.
-  const client = isTest ? undefined : (redis ?? buildStoreClient(env));
+  const client = redis ?? buildStoreClient(env);
+  if (!isTest && client === undefined) {
+    // Silent MemoryStore fallback would reset every bucket per process — the
+    // ingress limiters would enforce nothing after a restart. Fail boot loud.
+    throw new Error(
+      "Rate-limit Redis store is required outside test mode: REDIS_HOST/REDIS_PORT env or an injected redis client is missing.",
+    );
+  }
+
+  const reportStoreError = (error: unknown): void => {
+    rateLimitStoreErrorsTotal.inc();
+    logger.error("rate-limit Redis store error; using local enforcement", {
+      phase: "rate-limit",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  };
+
+  client?.on("error", reportStoreError);
+
   const storeFor = (bucket: string): Store | undefined =>
-    client ? redisStoreFor(client, bucket) : undefined;
+    client
+      ? new RateLimitDegradedStore(
+          redisStoreFor(client, bucket),
+          reportStoreError,
+        )
+      : undefined;
 
   const baseConfig = buildBaseConfig(logger);
   const limiterFor = (bucket: string, limit: number): RequestHandler => {

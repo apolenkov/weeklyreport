@@ -4,15 +4,13 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Separator as SeparatorPrimitive } from "radix-ui";
 import type * as React from "react";
 
-/**
- * Horizontal or vertical visual divider (Radix Separator).
- */
+/** Decorative or semantic divider with horizontal and vertical orientations. */
 function Separator({
   className,
   orientation = "horizontal",
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: Readonly<React.ComponentProps<typeof SeparatorPrimitive.Root>>) {
   return (
     <SeparatorPrimitive.Root
       data-slot="separator"

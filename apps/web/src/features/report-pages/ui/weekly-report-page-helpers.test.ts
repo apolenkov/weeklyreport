@@ -2,7 +2,14 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { buildAccordionModel } from "./weekly-report-page-helpers";
+import {
+  makeWeeklyReportFixture,
+  type WeeklyReportFixture,
+} from "../../../test-utils/report-section-fixtures";
+import {
+  buildAccordionModel,
+  resolveTerminalNotice,
+} from "./weekly-report-page-helpers";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const AUTHOR_A = "22222222-2222-4222-8222-222222222222";
@@ -11,25 +18,44 @@ const ACTIVITY_A = "44444444-4444-4444-8444-444444444444";
 const SECTION_A = "55555555-5555-4555-8555-555555555555";
 
 function baseReport(
-  overrides: Partial<WeeklyReportReadModel> = {},
+  overrides: WeeklyReportFixture = {},
 ): WeeklyReportReadModel {
-  return {
+  return makeWeeklyReportFixture({
     reportId: REPORT_ID,
-    periodStart: new Date("2026-04-14T00:00:00Z"),
-    periodEnd: new Date("2026-04-20T00:00:00Z"),
-    deadline: new Date("2026-04-17T15:00:00Z"),
-    periodStatus: "open",
-    archived: false,
-    weekLabel: "Week 16",
-    submissionCount: 0,
     totalLeads: 1,
-    hasActiveReminderRule: true,
-    portfolioOverview: [],
-    leadSections: [],
-    escalations: [],
     ...overrides,
-  };
+  });
 }
+
+describe("resolveTerminalNotice — failure classes stay distinct", () => {
+  it("returns null for a healthy active period", () => {
+    expect(
+      resolveTerminalNotice({
+        isError: false,
+        error: null,
+        data: { status: "active" },
+      }),
+    ).toBeNull();
+  });
+
+  it("surfaces a transient failure instead of 'no active period'", () => {
+    const notice = resolveTerminalNotice({
+      isError: true,
+      error: new Error("boom"),
+      data: undefined,
+    });
+    expect(notice?.title).toBe("Report could not be loaded");
+  });
+
+  it("renders 'no active period' only when data genuinely says so", () => {
+    const notice = resolveTerminalNotice({
+      isError: false,
+      error: null,
+      data: { status: "no-period" },
+    });
+    expect(notice?.title).toBe("No active reporting period");
+  });
+});
 
 describe("buildAccordionModel — draftCount includes activity-only drafts", () => {
   it("counts a draft section whose only content is a touched activity, with no draft product content", () => {
@@ -125,6 +151,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
           worstStatus: "green",
           stageCount: 1,
           leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
         },
       ],
       leadSections: [

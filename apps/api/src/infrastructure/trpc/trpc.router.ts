@@ -14,6 +14,7 @@ import type {
 import type { SessionRevocationService } from "../../modules/admin/index.js";
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
+import type { AutoCarryOverOutcome } from "../../modules/carry-over/index.js";
 import { OrganizationService } from "../../modules/organization/index.js";
 import { PdfExportService } from "../../modules/pdf-export/index.js";
 import type { PeriodService } from "../../modules/period/index.js";
@@ -48,51 +49,54 @@ import { createWeeklyReportRouter } from "./routers/weekly-report.router.js";
 import { router } from "./trpc.middleware.js";
 
 export interface AppRouterDeps {
-  prisma: PrismaClient;
+  readonly prisma: PrismaClient;
   // Threaded from main.ts so procedures read the validated env, never raw
   // `process.env`.
-  env: EnvConfig;
-  reportSectionsService: ReportSectionsService;
-  reviewService: ReviewService;
+  readonly env: EnvConfig;
+  readonly reportSectionsService: ReportSectionsService;
+  readonly reviewService: ReviewService;
   // Review write surface: rides `leadershipProcedure` (lead excluded), with
   // per-group scope and reviewer designation enforced inside the service.
-  // Optional for role-coverage `{}` deps.
-  reviewActionsService?: ReviewActionsService;
-  publicationService: PublicationService;
-  pdfExportService: PdfExportService;
-  snapshotAdminService: SnapshotAdminService;
-  projectAdminService: ProjectAdminService;
-  reminderAdminService: ReminderAdminService;
-  periodAdminService: PeriodAdminService;
-  reopenRequestAdminService: ReopenRequestAdminService;
-  organizationService: OrganizationService;
-  remindersService: RemindersService;
+  // Required: missing wiring must fail loud, never surface empty success.
+  readonly reviewActionsService: ReviewActionsService;
+  readonly publicationService: PublicationService;
+  readonly pdfExportService: PdfExportService;
+  readonly snapshotAdminService: SnapshotAdminService;
+  readonly projectAdminService: ProjectAdminService;
+  readonly reminderAdminService: ReminderAdminService;
+  readonly periodAdminService: PeriodAdminService;
+  readonly reopenRequestAdminService: ReopenRequestAdminService;
+  readonly organizationService: OrganizationService;
+  readonly remindersService: RemindersService;
   // Best-effort carry-over for a period minted open; never rejects (a
   // scheduled-born period carries at its scheduled→open flip instead).
   // Optional for role-coverage `{}` deps; main.ts always wires it.
-  autoCarryOver?: (targetReportId: string) => Promise<void>;
-  archiveService: ArchiveService;
-  periodService: PeriodService;
-  weeklyReportService: WeeklyReportService;
-  leadFormService: LeadFormService;
+  readonly autoCarryOver?: (
+    targetReportId: string,
+  ) => Promise<AutoCarryOverOutcome>;
+  readonly archiveService: ArchiveService;
+  readonly periodService: PeriodService;
+  readonly weeklyReportService: WeeklyReportService;
+  readonly leadFormService: LeadFormService;
   // Redis prefix invalidation on period publish/reopen.
-  analyticsService: AnalyticsService;
-  searchService: SearchService;
-  activityService: ActivityService;
+  readonly analyticsService: AnalyticsService;
+  readonly searchService: SearchService;
+  readonly activityService: ActivityService;
   // Distinct from activityService (live-status feed under activity.*).
-  projectActivityService: ProjectActivityService;
-  // Optional so test fixtures avoid instantiating Redis.
-  emailReminderQueue?: Queue;
-  // Optional for role-coverage `{}` deps; undefined → INTERNAL_SERVER_ERROR.
-  telegramOutboundQueue?: Queue;
-  // Optional for role-coverage `{}` deps; undefined Queue → empty/no-op.
-  jobsService?: JobsService;
-  // Optional for role-coverage; undefined returns a schema-valid zero payload.
-  telemetryService?: TelemetryService;
-  // Optional for role-coverage; undefined → skip Redis, JWT TTL only.
-  sessionRevocationService?: SessionRevocationService;
-  // Optional for role-coverage; real boot always wires it (ops.procedures).
-  actionLogService?: ActionLogService;
+  readonly projectActivityService: ProjectActivityService;
+  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
+  readonly emailReminderQueue?: Queue;
+  // Optional with a loud require guard in settings.procedures (never empty-success).
+  readonly telegramOutboundQueue?: Queue;
+  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
+  readonly jobsService?: JobsService;
+  // Required: missing wiring must fail loud, never fabricate a zero payload.
+  readonly telemetryService: TelemetryService;
+  // Required: the admin deactivate/activate procedures enforce revocation; a
+  // missing service must fail loud, not silently skip the Redis fast path.
+  readonly sessionRevocationService: SessionRevocationService;
+  // Type-optional but runtime-guarded in ops.procedures (fail-loud TRPCError).
+  readonly actionLogService?: ActionLogService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {

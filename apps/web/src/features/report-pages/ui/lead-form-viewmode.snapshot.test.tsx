@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -33,6 +31,7 @@ function makeSection() {
     authorRole: "lead" as const,
     status: "draft" as const,
     submittedAt: null,
+    referencedProjects: [],
     projects: [],
     items: [],
     risks: [],
@@ -50,6 +49,7 @@ function buildTRPC() {
         reportId: REPORT_ID,
         reportSectionId: SECTION_ID,
         authorName: "Test Lead",
+        authorRole: "lead" as const,
       },
     },
     {

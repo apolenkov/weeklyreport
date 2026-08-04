@@ -152,11 +152,16 @@ export class CarryOverService {
       await this.loadCarryOverInputs(sourceReportId, targetReportId, dedupeKey);
     assertNoSubmittedTarget(sourceSections, targetSections);
 
+    // ONE lifecycle instant for the whole run, minted at the domain boundary:
+    // the plan clones and the execution builder consume it and never invent
+    // their own timestamps.
+    const now = new Date();
     const carriedByAuthor = planCarriedEntries(
       sourceSections,
       targetSections,
       sourceReportId,
       targetReportId,
+      now,
     );
     assertUniqueCarriedAuthors(carriedByAuthor);
     const counts = carriedCounts(carriedByAuthor);
@@ -174,6 +179,7 @@ export class CarryOverService {
         dedupeKey,
         carriedItemCount: counts.items,
         carriedDecisionCount: counts.decisions,
+        now,
       });
     const records = existingExecution
       ? []

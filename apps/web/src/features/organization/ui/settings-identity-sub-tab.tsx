@@ -65,9 +65,12 @@ function useOrgIdentityForm() {
     fullNameOver,
     isSaving: updateOrgMut.isPending,
     isSaved: updateOrgMut.isSuccess,
+    loadError: orgQ.isError,
+    isLoading: orgQ.isLoading,
     canSave:
       !updateOrgMut.isPending &&
       !orgQ.isLoading &&
+      !orgQ.isError &&
       shortName.trim().length > 0 &&
       fullName.trim().length > 0 &&
       !shortNameOver &&
@@ -124,13 +127,15 @@ function OrgIdentityField({
         maxLength={maxLength}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       />
       <div className="mt-1 flex items-center justify-between text-xs">
         <span className="text-[var(--color-muted-foreground)]">{hint}</span>
         <span
           className={
-            isOver ? "text-red-600" : "text-[var(--color-muted-foreground)]"
+            isOver
+              ? "text-[var(--color-destructive)]"
+              : "text-[var(--color-muted-foreground)]"
           }
         >
           {value.length}/{maxLength}
@@ -157,7 +162,7 @@ function SaveIdentityRow({
         type="button"
         onClick={onSave}
         disabled={!canSave}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Save organization identity"
       >
         {isSaving ? "Saving…" : "Save Identity"}
@@ -174,6 +179,21 @@ function SaveIdentityRow({
 
 export function IdentitySubTab() {
   const form = useOrgIdentityForm();
+
+  if (form.loadError) {
+    return (
+      <div className="max-w-lg space-y-5">
+        <p
+          className="text-sm text-[var(--color-destructive)]"
+          role="alert"
+          data-testid="org-identity-load-error"
+        >
+          Organization identity could not be loaded. Refresh the page and try
+          again.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg space-y-5">

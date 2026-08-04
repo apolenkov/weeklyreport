@@ -10,9 +10,9 @@ import type {
 } from "./reminders.ports.js";
 
 export class RemindersInfrastructureTelemetry implements RemindersTelemetry {
-  constructor(private readonly cls: ClsService | undefined) {}
+  constructor(private readonly cls: ClsService | null) {}
 
-  captureJobContext(): ReminderJobContext {
+  readonly captureJobContext = (): ReminderJobContext => {
     return captureJobTraceContext(resolveCorrelationId(this.cls));
-  }
+  };
 }

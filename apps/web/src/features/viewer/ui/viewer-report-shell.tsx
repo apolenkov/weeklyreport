@@ -206,6 +206,7 @@ export function ViewerReportShell({
         mode={mode}
         periods={periods}
         urlState={urlState}
+        historyError={historyQ.isError}
       />
     ),
   };

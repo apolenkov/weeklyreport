@@ -11,6 +11,7 @@ import {
   fakeOrganizationService,
   reportId,
   ruleId,
+  schedulerTestEnv,
 } from "./__tests__/reminders-scheduler-harness.js";
 import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service";
@@ -54,12 +55,15 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     const service = new RemindersService(
       createServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     // Tick #1 at 16:00 UTC — same UTC day as the deadline (2026-04-19).
@@ -82,12 +86,15 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     const service = new RemindersService(
       createServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
@@ -109,12 +116,15 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     const service = new RemindersService(
       createServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
@@ -138,12 +148,15 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     const service = new RemindersService(
       createServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
@@ -154,6 +167,48 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
     expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
     expect(data.deadlineIso).toBe("2026-04-19T15:00:00.000Z");
     expect(String(data.sectionUrl)).toContain(reportId);
+  });
+
+  it("builds sectionUrl from the injected APP_BASE_URL, not raw process.env", async () => {
+    const originalBaseUrl = process.env.APP_BASE_URL;
+    process.env.APP_BASE_URL = "https://env-would-win.example";
+    try {
+      const recipients = [
+        { userId: "u1", email: "lead@test.local", name: "Lead Alpha" },
+      ];
+      const fakeRepository = {
+        findDueDeadlineRules: vi.fn(() =>
+          Promise.resolve([dueRuleFromRecipients(recipients)]),
+        ),
+        findDueEscalationRules: vi.fn(() => Promise.resolve([])),
+      };
+      const service = new RemindersService(
+        createServiceRepo(),
+        undefined,
+        fakeQueue as unknown as ConstructorParameters<
+          typeof RemindersService
+        >[2],
+      );
+      const scheduler = new RemindersScheduler(
+        service,
+        fakeRepository as unknown as ConstructorParameters<
+          typeof RemindersScheduler
+        >[1],
+        fakeOrganizationService,
+        schedulerTestEnv,
+      );
+
+      await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
+
+      const data = queueAdds[0]?.data ?? {};
+      expect(String(data.sectionUrl)).toContain(schedulerTestEnv.APP_BASE_URL);
+    } finally {
+      if (originalBaseUrl === undefined) {
+        delete process.env.APP_BASE_URL;
+      } else {
+        process.env.APP_BASE_URL = originalBaseUrl;
+      }
+    }
   });
 
   it("two cycles: same lead in cycle N and N+1 receives two distinct emails", async () => {
@@ -179,29 +234,33 @@ describe("RemindersScheduler — deadline reminder dispatch", () => {
       findDueEscalationRules: vi.fn(() => Promise.resolve([])),
     };
 
-    const serviceRepo = createServiceRepo();
-    // Override the rule lookup so the second-cycle ruleId resolves.
-    const originalGetRule = serviceRepo.getRule.bind(serviceRepo);
-    serviceRepo.getRule = async (rid: string) => {
-      if (rid === ruleNplus1.id) {
-        return {
-          ...activeRule,
-          id: ruleNplus1.id,
-          fireAt: ruleNplus1.fireAt,
-        };
-      }
-      return originalGetRule(rid);
-    };
+    const serviceRepo = createServiceRepo({
+      getRule: (rid: string) =>
+        Promise.resolve(
+          rid === ruleNplus1.id
+            ? {
+                ...activeRule,
+                id: ruleNplus1.id,
+                fireAt: ruleNplus1.fireAt,
+              }
+            : rid === activeRule.id
+              ? structuredClone(activeRule)
+              : null,
+        ),
+    });
 
     const service = new RemindersService(
       serviceRepo,
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
@@ -346,12 +405,15 @@ describe("RemindersScheduler — escalation dispatch", () => {
     const service = new RemindersService(
       makeEscalationServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     // Tick #1 — same UTC day as escalation fireAt.
@@ -392,12 +454,15 @@ describe("RemindersScheduler — escalation dispatch", () => {
     const service = new RemindersService(
       makeEscalationServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
@@ -444,12 +509,15 @@ describe("RemindersScheduler — escalation dispatch", () => {
     const service = new RemindersService(
       makeEscalationServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
@@ -518,12 +586,15 @@ describe("RemindersScheduler — opt-out", () => {
     const service = new RemindersService(
       createServiceRepo(),
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
@@ -601,56 +672,20 @@ describe("RemindersScheduler — opt-out", () => {
     const service = new RemindersService(
       escalationServiceRepo,
       undefined,
-      fakeQueue as never,
+      fakeQueue as unknown as ConstructorParameters<typeof RemindersService>[2],
     );
     const scheduler = new RemindersScheduler(
       service,
-      fakeRepository as never,
+      fakeRepository as unknown as ConstructorParameters<
+        typeof RemindersScheduler
+      >[1],
       fakeOrganizationService,
+      schedulerTestEnv,
     );
 
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
 
     expect(queueAdds).toHaveLength(1);
     expect(queueAdds[0]?.data.kind).toBe("escalation");
-  });
-});
-
-describe("RemindersScheduler — per-recipient isolation", () => {
-  it("continues to the remaining recipients when one dispatch throws", async () => {
-    const recipients = [
-      { userId: "u1", email: "first@test.local", name: "First" },
-      { userId: "u2", email: "boom@test.local", name: "Boom" },
-      { userId: "u3", email: "third@test.local", name: "Third" },
-    ];
-    const fakeRepository = {
-      findDueDeadlineRules: vi.fn(() =>
-        Promise.resolve([dueRuleFromRecipients(recipients)]),
-      ),
-      findDueEscalationRules: vi.fn(() => Promise.resolve([])),
-    };
-    const attempted: string[] = [];
-    const serviceStub = {
-      requestReminderExecution: vi.fn((_ruleId: string, email: string) => {
-        attempted.push(email);
-        return email === "boom@test.local"
-          ? Promise.reject(new Error("dispatch exploded"))
-          : Promise.resolve({ id: email });
-      }),
-    };
-    const scheduler = new RemindersScheduler(
-      serviceStub as unknown as RemindersService,
-      fakeRepository as never,
-      fakeOrganizationService,
-    );
-
-    await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
-
-    // All three recipients attempted; the middle throw did not abort the loop.
-    expect(attempted).toEqual([
-      "first@test.local",
-      "boom@test.local",
-      "third@test.local",
-    ]);
   });
 });

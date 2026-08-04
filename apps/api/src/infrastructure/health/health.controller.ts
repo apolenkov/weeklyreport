@@ -2,6 +2,7 @@ import { Controller, Get, Inject } from "@nestjs/common";
 import {
   HealthCheck,
   HealthCheckService,
+  type HealthIndicatorResult,
   MemoryHealthIndicator,
 } from "@nestjs/terminus";
 
@@ -11,14 +12,34 @@ import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
 
+// The terminus surfaces this controller consumes; narrow so tests inject
+// stubs without erasing casts. The `@HealthCheck()` decorator reshapes the
+// check() result for the wire, so the controller never reads its members.
+interface HealthCheckRunner {
+  check(
+    indicators: (() => Promise<HealthIndicatorResult>)[],
+  ): Promise<Record<string, unknown>>;
+}
+
+interface HeapChecker {
+  checkHeap(
+    key: string,
+    heapUsedThreshold: number,
+  ): Promise<HealthIndicatorResult>;
+}
+
+interface HealthProbe {
+  isHealthy(key: string): Promise<HealthIndicatorResult>;
+}
+
 @Controller("health")
 export class HealthController {
   constructor(
-    private readonly health: HealthCheckService,
-    private readonly memory: MemoryHealthIndicator,
-    private readonly prismaHealth: PrismaHealthIndicator,
-    private readonly redisHealth: RedisHealthIndicator,
-    private readonly bullmqHealth: BullMQHealthIndicator,
+    @Inject(HealthCheckService) private readonly health: HealthCheckRunner,
+    @Inject(MemoryHealthIndicator) private readonly memory: HeapChecker,
+    @Inject(PrismaHealthIndicator) private readonly prismaHealth: HealthProbe,
+    @Inject(RedisHealthIndicator) private readonly redisHealth: HealthProbe,
+    @Inject(BullMQHealthIndicator) private readonly bullmqHealth: HealthProbe,
     @Inject(ENV_CONFIG) private readonly env: EnvConfig,
   ) {}
 

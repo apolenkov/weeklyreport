@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import { useContext } from "react";
 
 import { SessionContext } from "../../../lib/session-provider";
@@ -26,9 +27,6 @@ function DashboardNoPeriod() {
   );
 }
 
-/**
- * Dashboard Page.
- */
 export function DashboardPage() {
   const session = useContext(SessionContext);
   const data = useDashboardData();
@@ -38,7 +36,10 @@ export function DashboardPage() {
 
   return (
     <DashboardContent
-      organizationName={session?.organization?.fullName ?? "CustomReport"}
+      organizationName={
+        session?.organization?.fullName ??
+        DEFAULT_ORGANIZATION_IDENTITY.fullName
+      }
       review={data.reviewQ.data}
       reviewState={{
         error: data.reviewQ.error,
@@ -59,7 +60,7 @@ export function DashboardPage() {
       }}
       revokeAllPending={data.revokeAllMutation.isPending}
       onRevokeAll={(reportId) => data.revokeAllMutation.mutate({ reportId })}
-      onRefreshDashboard={data.refreshDashboardData}
+      onRefreshDashboard={() => void data.refreshDashboardData()}
     />
   );
 }

@@ -25,6 +25,7 @@ interface PolicyFormProps {
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
+  readonly onOffsetValidityChange: (valid: boolean) => void;
   readonly onCancel: () => void;
   readonly onSave: () => void;
 }
@@ -78,6 +79,7 @@ export function PolicyForm({
   isSaving,
   validityValid,
   onChange,
+  onOffsetValidityChange,
   onCancel,
   onSave,
 }: PolicyFormProps) {
@@ -100,7 +102,11 @@ export function PolicyForm({
     >
       <div className="grid gap-4 md:grid-cols-2">
         <ReminderTypeField form={form} onChange={onChange} />
-        <ReminderOffsetRow form={form} onChange={onChange} />
+        <ReminderOffsetRow
+          form={form}
+          onChange={onChange}
+          onValidityChange={onOffsetValidityChange}
+        />
       </div>
 
       <PolicyFormAdvancedFields form={form} onChange={onChange} />

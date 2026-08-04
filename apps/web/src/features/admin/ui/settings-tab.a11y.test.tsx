@@ -9,12 +9,12 @@ import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
+const toastSuccess = vi.fn<(...args: unknown[]) => void>();
+const toastError = vi.fn<(...args: unknown[]) => void>();
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: unknown[]) => toastSuccess(...args) as unknown,
-    error: (...args: unknown[]) => toastError(...args) as unknown,
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
     info: vi.fn(),
   },
 }));
@@ -137,14 +137,20 @@ describe("SettingsTab — accessibility regression", () => {
     expect(announced[0]?.contains(holidaysSpan)).toBe(true);
   });
 
-  it("holidays-coming-soon span retains aria-disabled=true", () => {
+  it("holidays tab trigger itself is disabled — inert, not selectable", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
-    const span = screen.getByTestId("holidays-coming-soon");
-    expect(span.getAttribute("aria-disabled")).toBe("true");
+    const holidaysTrigger = screen
+      .getByRole("tab", { name: /coming soon/i })
+      .closest<HTMLElement>("[data-slot='tabs-trigger'], button");
+    expect(holidaysTrigger).not.toBeNull();
+    // The disabled state lives on the actual trigger, not a nested label span.
+    expect(
+      (holidaysTrigger?.hasAttribute("disabled") ?? false) ||
+        holidaysTrigger?.getAttribute("aria-disabled") === "true",
+    ).toBe(true);
   });
-
   it("holidays tab trigger has no icon (matches sibling tabs)", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);

@@ -5,11 +5,11 @@ import type { RiskEntry } from "../../report-sections";
 import { DeleteIcon, EditIcon } from "./risk-card-icons";
 
 const ACTION_BUTTON_CLASS =
-  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5";
+  "flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5";
 const DEFAULT_ACTION_HOVER_CLASS =
   "text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
 const DESTRUCTIVE_ACTION_HOVER_CLASS =
-  "text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]";
+  "text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_10%,transparent)] hover:text-[var(--color-destructive)]";
 
 interface ToggleSeverityButtonProps {
   readonly risk: RiskEntry;

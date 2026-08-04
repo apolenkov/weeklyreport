@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
@@ -50,24 +48,36 @@ describe("LeadHistoryList", () => {
     expect(screen.queryByText("Versions")).not.toBeInTheDocument();
   });
 
-  describe("TrafficDot ARIA — role=img on span wrapper", () => {
-    it.each([
+  it("shows the publication time even when a submission exists", () => {
+    render(
+      <LeadHistoryList
+        entries={[
+          {
+            ...entry,
+            status: "submitted",
+            submittedAt: "3 hours ago",
+            publishedAt: "1 hour ago",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("3 hours ago")).toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getByText("1 hour ago")).toBeInTheDocument();
+  });
+
+  it("exposes each traffic dot in the a11y tree as an image with its count label", () => {
+    render(<LeadHistoryList entries={[entry]} />);
+
+    const dots = screen.getAllByRole("img");
+    expect(dots).toHaveLength(3);
+    for (const name of [
       "Green statuses: 2",
       "Yellow statuses: 0",
       "Red statuses: 1",
-    ] as const)("traffic dot %s has role=img", (name) => {
-      render(<LeadHistoryList entries={[entry]} />);
+    ]) {
       expect(screen.getByRole("img", { name })).toBeInTheDocument();
-    });
-
-    it("all three traffic dots are exposed in a11y tree as images with correct labels", () => {
-      render(<LeadHistoryList entries={[entry]} />);
-      const dots = screen.getAllByRole("img");
-      expect(dots).toHaveLength(3);
-      const names = dots.map((el) => el.getAttribute("aria-label"));
-      expect(names).toContain("Green statuses: 2");
-      expect(names).toContain("Yellow statuses: 0");
-      expect(names).toContain("Red statuses: 1");
-    });
+    }
   });
 });

@@ -10,7 +10,7 @@ import { mapDomainError } from "../../trpc.error-mapper.js";
 import { adminProcedure } from "../../trpc.middleware.js";
 
 export interface AdminReminderPoliciesDeps {
-  reminderAdminService: ReminderAdminService;
+  readonly reminderAdminService: ReminderAdminService;
 }
 
 // Rules are scheduler-derived from ReminderPolicy; mutation is blocked.

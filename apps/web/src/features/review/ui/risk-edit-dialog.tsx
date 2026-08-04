@@ -1,8 +1,7 @@
 "use client";
 
-import { createPortal } from "react-dom";
-
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
 import type {
   ParentActivityOption,
@@ -32,7 +31,7 @@ interface RiskEditDialogProps {
   readonly initialImpact?: string | undefined;
   readonly initialMitigation?: string | undefined;
   // Chip-raise create prefill; ignored in edit mode (risk values win).
-  readonly initialStageNames?: string[] | undefined;
+  readonly initialStageNames?: readonly string[] | undefined;
   readonly initialSeverity?: RiskSeverity | undefined;
   // Owned stages for the stage select; [] disables Save with a dead-end notice.
   readonly stagesForProduct?:
@@ -59,8 +58,8 @@ function PreCheckedStagesBanner({
   }[];
 }) {
   return (
-    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
-      <div className="font-medium text-amber-900">
+    <div className="mb-4 rounded-md border border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] px-3 py-2 text-xs">
+      <div className="font-medium text-[var(--color-status-at-risk-fg)]">
         {parentName} →{" "}
         {preCheckedStages
           .map(
@@ -69,7 +68,7 @@ function PreCheckedStagesBanner({
           )
           .join(" · ")}
       </div>
-      <div className="mt-0.5 text-[11px] text-amber-700">
+      <div className="mt-0.5 text-[11px] text-[var(--color-status-at-risk-fg)]">
         Already flagged in SDLC pipeline.
       </div>
     </div>
@@ -161,8 +160,7 @@ function RiskDialogSurface({
       surfaceRef={surfaceRef}
       onDismiss={onCancel}
       onBackdropKeyDown={dialog.handleKeyDown}
-      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      surfaceClassName="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-4 md:p-5 shadow-2xl"
+      surfaceClassName="mx-4 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-[var(--color-popover)] p-4 md:p-5 shadow-2xl"
       ariaLabel={`${dialog.headerVerb} dialog`}
     >
       <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
@@ -206,22 +204,23 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       stagesForProduct: props.stagesForProduct,
     });
 
-  return createPortal(
-    <RiskDialogSurface
-      dialog={dialog}
-      surfaceRef={dialogSurfaceRef}
-      onCancel={props.onCancel}
-      onDelete={props.onDelete}
-    >
-      <RiskDialogBody
+  return (
+    <DocumentBodyPortal>
+      <RiskDialogSurface
         dialog={dialog}
-        products={props.products}
-        activities={activities}
-        textRef={textRef}
-        impactRef={impactRef}
-        mitigationRef={mitigationRef}
-      />
-    </RiskDialogSurface>,
-    document.body,
+        surfaceRef={dialogSurfaceRef}
+        onCancel={props.onCancel}
+        onDelete={props.onDelete}
+      >
+        <RiskDialogBody
+          dialog={dialog}
+          products={props.products}
+          activities={activities}
+          textRef={textRef}
+          impactRef={impactRef}
+          mitigationRef={mitigationRef}
+        />
+      </RiskDialogSurface>
+    </DocumentBodyPortal>
   );
 }

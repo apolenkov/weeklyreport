@@ -15,7 +15,7 @@ import {
 } from "vitest";
 
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
-import type { AppLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   NOOP_PDF_EXPORT_TELEMETRY,
@@ -39,7 +39,7 @@ const NOOP_PDF_QUEUE: PdfExportEnqueuer = {
 
 function createPdfExportService(
   repository: PdfExportRepository,
-  logger?: AppLogger,
+  logger: AppLogger = createNullLogger(),
   queue: PdfExportEnqueuer = NOOP_PDF_QUEUE,
   telemetry: PdfExportTelemetry = NOOP_PDF_EXPORT_TELEMETRY,
 ): PdfExportService {
@@ -48,6 +48,7 @@ function createPdfExportService(
 
 beforeEach(() => {
   vi.stubEnv("PDF_EXPORT_JWT_SECRET", TEST_PDF_SECRET);
+  vi.stubEnv("PDF_BASE_URL", "http://localhost:3000");
 });
 
 afterEach(() => {
@@ -96,7 +97,7 @@ const draftReport: AssembledReport = {
 
 function createRepository(
   report: AssembledReport | null,
-  capture?: { lastRequestedBy?: string },
+  capture?: { lastRequestedBy?: string; lastCreatedJobId?: string },
   canRead = true,
 ): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
@@ -105,17 +106,14 @@ function createRepository(
     canReadReport() {
       return Promise.resolve(canRead);
     },
-    createExportJob(job: PdfExportJob, requestedBy?: string) {
+    createExportJob(job: PdfExportJob, requestedBy: string) {
       if (capture) {
-        if (requestedBy === undefined) {
-          delete capture.lastRequestedBy;
-        } else {
-          capture.lastRequestedBy = requestedBy;
-        }
+        capture.lastRequestedBy = requestedBy;
+        capture.lastCreatedJobId = job.jobId;
       }
       jobs.set(job.jobId, {
         ...structuredClone(job),
-        requestedBy: requestedBy ?? "system",
+        requestedBy,
       });
       return Promise.resolve(structuredClone(job));
     },
@@ -133,7 +131,7 @@ function createRepository(
     saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
-        requestedBy: jobs.get(job.jobId)?.requestedBy ?? "system",
+        requestedBy: expectDefined(jobs.get(job.jobId)).requestedBy,
       });
       return Promise.resolve(structuredClone(job));
     },
@@ -269,19 +267,14 @@ describe("PdfExportService", () => {
       createRepository(publishedReport),
       undefined,
       queue,
-      new PdfExportInfrastructureTelemetry(undefined),
+      new PdfExportInfrastructureTelemetry(null),
     );
     const before = await getCounterValue(customreportPdfExportRequestsTotal, {
       role: "head",
     });
 
     await expect(
-      service.requestPdfExport(
-        reportId,
-        requesterSession,
-        "pre-signed-token",
-        "head",
-      ),
+      service.requestPdfExport(reportId, requesterSession, "head"),
     ).rejects.toThrow("Redis down");
 
     expect(
@@ -289,6 +282,37 @@ describe("PdfExportService", () => {
         role: "head",
       }),
     ).toBe(before);
+  });
+
+  it("requires real logger and telemetry collaborators at the composition boundary", () => {
+    // The constructor must demand a real logger and telemetry (no
+    // `?? createNullLogger()` / NOOP default), so a miswired module fails to
+    // compile instead of silently degrading.
+    expectTypeOf<
+      ConstructorParameters<typeof PdfExportService>
+    >().toEqualTypeOf<
+      [PdfExportRepository, AppLogger, PdfExportEnqueuer, PdfExportTelemetry]
+    >();
+  });
+
+  it("marks the queued row failed when enqueue throws (never a queued row without a job)", async () => {
+    const capture: { lastCreatedJobId?: string } = {};
+    const repository = createRepository(publishedReport, capture);
+    const queue = {
+      enqueue: vi.fn().mockRejectedValue(new Error("Redis down")),
+    };
+    const service = createPdfExportService(repository, undefined, queue);
+
+    await expect(
+      service.requestPdfExport(reportId, requesterSession),
+    ).rejects.toThrow("Redis down");
+
+    const jobId = expectDefined(capture.lastCreatedJobId);
+    const job = await service.getPdfExportStatus(
+      jobId,
+      requesterSession.userId,
+    );
+    expect(job.status).toBe("failed");
   });
 
   // Role-labelled counter. Three labels exercised (head | viewer | system)
@@ -299,7 +323,7 @@ describe("PdfExportService", () => {
       createRepository(publishedReport),
       undefined,
       undefined,
-      new PdfExportInfrastructureTelemetry(undefined),
+      new PdfExportInfrastructureTelemetry(null),
     );
     const beforeHead = await getCounterValue(
       customreportPdfExportRequestsTotal,
@@ -320,16 +344,10 @@ describe("PdfExportService", () => {
       },
     );
 
-    await service.requestPdfExport(
-      reportId,
-      sessionFor("u-head"),
-      undefined,
-      "head",
-    );
+    await service.requestPdfExport(reportId, sessionFor("u-head"), "head");
     await service.requestPdfExport(
       reportId,
       sessionFor("u-viewer", "viewer"),
-      undefined,
       "viewer",
     );
     await service.requestPdfExport(reportId, requesterSession);
@@ -424,11 +442,11 @@ describe("PDF export JWT signing", () => {
     expect(decoded.exp).toBeLessThanOrEqual(after + 5 * 60 + 1);
   });
 
-  it("requestPdfExport enqueues a JWT-shaped authToken bound to the reportId", async () => {
+  it("requestPdfExport enqueues non-credential identifiers bound to the requester", async () => {
     interface EnqueuedJob {
       reportId: string;
       jobId: string;
-      authToken: string;
+      requestedBy: string;
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
@@ -447,42 +465,33 @@ describe("PDF export JWT signing", () => {
 
     expect(enqueued).toHaveLength(1);
     expect(expectDefined(enqueued[0]).reportId).toBe(reportId);
-    expect(expectDefined(enqueued[0]).authToken).toMatch(/^eyJ/);
-
-    const decoded = jwt.verify(
-      expectDefined(enqueued[0]).authToken,
-      PDF_SECRET,
-    ) as {
-      reportId: string;
-    };
-    expect(decoded.reportId).toBe(reportId);
+    expect(expectDefined(enqueued[0]).jobId).toBeTypeOf("string");
+    expect(expectDefined(enqueued[0]).requestedBy).toBe(
+      requesterSession.userId,
+    );
   });
 
-  it("requestPdfExport allows pre-signed authToken pass-through (does not re-sign)", async () => {
-    interface EnqueuedJob {
-      reportId: string;
-      jobId: string;
-      authToken: string;
-    }
-    const enqueued: EnqueuedJob[] = [];
+  it("never persists a bearer credential in the serialized job payload", async () => {
+    // The durable BullMQ payload must not carry the short-lived render JWT (or
+    // any JWT-shaped credential); the worker mints one at execution time.
+    const enqueued: unknown[] = [];
     const fakeQueue = {
-      enqueue: (data: EnqueuedJob) => {
+      enqueue: (data: unknown) => {
         enqueued.push(data);
         return Promise.resolve();
       },
     };
 
-    const presigned = jwt.sign({ reportId, custom: "override" }, PDF_SECRET, {
-      expiresIn: "1m",
-    });
     const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,
       fakeQueue,
     );
-    await service.requestPdfExport(reportId, requesterSession, presigned);
+    await service.requestPdfExport(reportId, requesterSession);
 
-    expect(expectDefined(enqueued[0]).authToken).toBe(presigned);
+    const serialized = JSON.stringify(enqueued[0]);
+    expect(serialized).not.toContain("authToken");
+    expect(serialized).not.toMatch(/eyJ/);
   });
 });
 

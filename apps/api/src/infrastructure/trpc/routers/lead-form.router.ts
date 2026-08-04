@@ -1,3 +1,4 @@
+import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
@@ -12,8 +13,6 @@ import {
   protectedProcedure,
   router,
 } from "../trpc.middleware.js";
-
-const MAX_REOPEN_REASON_LENGTH = 500;
 
 export interface LeadFormRouterDeps {
   snapshotAdminService: SnapshotAdminService;

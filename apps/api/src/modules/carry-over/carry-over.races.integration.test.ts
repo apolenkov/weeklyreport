@@ -84,10 +84,13 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: itemLeadId,
@@ -103,12 +106,14 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       risks: [],
       decisions: [],
       activities: [],
+      reviews: [],
     };
     const sectionHeadReadModel = {
       ...sectionLeadReadModel,
       reportSectionId: sectionHead.id,
       authorId: testData.head.id,
       authorName: "Test Head",
+      authorRole: "head" as const,
       items: [
         {
           id: itemHeadId,
@@ -163,9 +168,8 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
 
     const dedupeKey = `${testData.report.id}:${targetReport.id}`;
     // Pre-insert the execution that "won" a concurrent race, holding the
-    // dedupeKey. Its source/target are swapped so the in-transaction findFirst
-    // (keyed on source/target, not dedupeKey) misses it and the create reaches
-    // the unique constraint — exactly the race the catch must absorb.
+    // dedupeKey. Source/target are swapped so the in-tx findFirst (keyed on
+    // source/target, not dedupeKey) misses it and the create hits the constraint.
     const winnerId = crypto.randomUUID();
     await prisma.carryOverExecution.create({
       data: {
@@ -193,14 +197,18 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [],
       risks: [],
       decisions: [],
       activities: [],
+      reviews: [],
     };
 
     const result = await repo.saveCarryOver(
@@ -296,15 +304,19 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [],
       risks: [],
       decisions: [],
       priorities: [],
       activities: [],
+      reviews: [],
     };
 
     const result = await repo.saveCarryOver(phantomExecution, phantomRecords, [
@@ -382,10 +394,13 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       reportId: targetReport.id,
       authorId: testData.lead.id,
       authorName: "Test Lead 1",
+      authorRole: "lead" as const,
       version: 1,
       status: "draft" as const,
       submittedAt: null,
+      late: false,
       projects: [],
+      referencedProjects: [],
       items: [
         {
           id: crypto.randomUUID(),
@@ -401,6 +416,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       decisions: [],
       priorities: [],
       activities: [],
+      reviews: [],
     };
 
     await expect(

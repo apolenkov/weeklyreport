@@ -2,7 +2,8 @@
 
 ## Purpose
 
-TBD - created by archiving change observability-and-perf-hardening. Update Purpose after archive.
+Keep high-volume read and reconciliation paths bounded, deterministic, and free
+of avoidable sequential database work.
 
 ## Requirements
 
@@ -66,18 +67,27 @@ shared-contract change in this MVP phase).
 - **THEN** the heavy nested section graph is loaded only for the snapshot-less
   fallback rows
 
-### Requirement: User reconciliation writes in bulk
+### Requirement: Snapshot user writes remain additive and explicit removals are bounded
 
-`upsertUsers` MUST reconcile removed users with a bulk prefetch and a single
-`deleteMany` rather than issuing a per-user count+delete, so removing N users
-does not cost `O(3N)` sequential queries.
+The whole-snapshot restore's `upsertUsers` MUST remain additive-only: it may
+prefetch current ids and upsert/create each user present in the snapshot, but it
+MUST NOT infer removals from absent snapshot rows. Explicit user removal uses the
+dedicated admin remove command and its idempotent `deleteMany` operation, rather
+than a per-user count-plus-delete loop.
 
-#### Scenario: Removing multiple users uses one bulk delete
+#### Scenario: An omitted snapshot user is not implicitly removed
 
-- **GIVEN** an `upsertUsers` call that removes several users
-- **WHEN** the reconciliation runs
-- **THEN** it prefetches the affected rows in bulk and removes them with a
-  single `deleteMany`, not a per-user count+delete loop
+- **GIVEN** a whole-snapshot restore whose user list omits an existing user
+- **WHEN** `upsertUsers` runs
+- **THEN** the omitted user remains; only users present in the snapshot are
+  upserted or created
+
+#### Scenario: Explicit removal uses one idempotent delete
+
+- **GIVEN** an administrator removes a user through the dedicated admin command
+- **WHEN** removal runs
+- **THEN** it uses one `deleteMany` for that user id, not a count-plus-delete
+  loop
 
 ### Requirement: Organization read does not write on read
 
@@ -144,10 +154,10 @@ number of active products in the catalog.
 ### Requirement: Session-hydration organization read does not write on a cache miss
 
 `hydrateSession`'s organization-hydration step MUST read the `Organization`
-singleton with `findUnique` on a cache miss and only fall back to a write
-(`create`/`upsert`) when the row is absent, so a normal 5-second-TTL cache
-refresh on the authenticated request hot path does not take a write lock on
-every concurrent cold request.
+singleton with `findUnique` on a cache miss. A missing row MUST fail loudly;
+hydration MUST NOT invent a default or write the singleton on the authenticated
+request hot path, so a normal 5-second-TTL cache refresh does not take a write
+lock on every concurrent cold request.
 
 #### Scenario: Cache-miss read of an existing organization performs no write
 
@@ -157,13 +167,12 @@ every concurrent cold request.
 - **THEN** it re-populates the cache via `findUnique` without performing a
   write
 
-#### Scenario: Absent singleton row is created once
+#### Scenario: Absent singleton row fails loudly
 
 - **GIVEN** the `Organization` singleton row does not exist
 - **WHEN** `hydrateOrganization` runs on a cache miss
-- **THEN** it falls back to creating the row with the default identity,
-  after which subsequent reads within the TTL are served from cache without
-  a write
+- **THEN** it throws a descriptive missing-singleton error and performs no
+  write
 
 ### Requirement: Weekly-report reminder-policy count runs alongside the other independent reads
 

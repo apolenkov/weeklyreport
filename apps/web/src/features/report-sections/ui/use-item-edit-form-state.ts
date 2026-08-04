@@ -26,15 +26,16 @@ interface UseItemEditFormStateArgs {
   readonly onCancel: () => void;
 }
 
-// Create mode seeds from the requested product, falling back to the lead's
-// first; edit mode takes its parent from the bound row instead.
+// Create mode seeds from the REQUESTED product only — a stale or missing id
+// leaves the parent explicitly unresolved so the lead picks, instead of the
+// create silently binding work to an arbitrary product.
 function resolveSeedProduct(
   isCreate: boolean,
   products: readonly Product[],
   defaultProductId: string | undefined,
 ): Product | undefined {
   if (!isCreate) return undefined;
-  return products.find((p) => p.id === defaultProductId) ?? products[0];
+  return products.find((p) => p.id === defaultProductId);
 }
 
 interface ItemEditFieldsArgs {
@@ -53,7 +54,7 @@ function useItemEditFields({
 }: ItemEditFieldsArgs) {
   const [text, setText] = useState(initial.text);
   // Legacy blocked coerces to in-progress so re-save never persists bare blocked.
-  const [status, setStatus] = useState<ItemStatus>(
+  const [status, setStatus] = useState<ItemStatus>(() =>
     coerceInitialStatus(initial.status),
   );
   // Seed from bound row so edit preserves pause reason; required only while Paused.

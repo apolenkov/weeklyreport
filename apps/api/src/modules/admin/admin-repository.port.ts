@@ -4,6 +4,7 @@ import type {
   AdminSnapshot,
   AdminUser,
   AppSettings,
+  DraftPeriodState,
   GroupProduct,
   GroupProductEdgeInput,
   PeriodState,
@@ -28,20 +29,13 @@ import type {
 
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
-  /**
-   * Whole-snapshot restore (e.g. importing an AdminSnapshot), run atomically.
-   *
-   * Additive-only: it upserts every supplied row and NEVER deletes or archives
-   * a row merely for being absent from the payload. Removals go exclusively
-   * through the targeted `removeUser` / `removeProject` / `removeReminderRule`
-   * methods below; snapshot absence never implies deletion. A future import
-   * that needs removals adds an explicit deletion id-set then.
-   */
+  // Whole-snapshot restore, run atomically. Additive-only: upserts every
+  // supplied row, NEVER deletes/archives a row absent from the payload —
+  // removals go exclusively through the targeted remove* methods.
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;
-  // Targeted single-entity writes — each touches ONLY the named row (upsert by
-  // id; delete/archive by id), so an edit to one entity never reconciles an
-  // unrelated, concurrently-inserted row away. Callers re-read `getSnapshot`
-  // for the response shape their tRPC procedure returns.
+  // Targeted single-entity writes: each touches ONLY the named row (upsert /
+  // delete / archive by id), so an edit never reconciles an unrelated
+  // concurrently-inserted row. Callers re-read getSnapshot for the response.
   upsertUser(user: AdminUser): Promise<void>;
   removeUser(userId: string): Promise<void>;
   upsertProject(project: AdminProject): Promise<void>;
@@ -64,7 +58,7 @@ export interface AdminRepository {
   deleteReminderPolicy(policyId: string): Promise<void>;
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
-    /** Cap is enforced server-side; defaults to 50 when caller omits. */
+    // Cap is enforced server-side; defaults to 50 when the caller omits it.
     limit: number;
   }): Promise<PeriodRowFromRepo[]>;
   archivePeriod(periodId: string): Promise<void>;
@@ -79,33 +73,24 @@ export interface AdminRepository {
     status: ReportStatus;
     periodStatus: PeriodStatus;
   } | null>;
-  // detect any existing Report whose [periodStart, periodEnd]
-  // overlaps the supplied half-open range. The service uses this BEFORE
-  // calling createPeriodManual to surface a friendly error pointing at
-  // the blocking row. Returns the first overlap (newest-first); null when
-  // free.
-  //
-  // `excludeId` lets the update path rerun the overlap gate while
-  // excluding the row being edited (otherwise a no-op rewrite of the
-  // same envelope would self-conflict). Callers that omit the field get
-  // unchanged behavior.
+  // Detect any Report overlapping the supplied half-open range, so the service
+  // can surface a friendly error before creating. Returns the first overlap
+  // (newest-first) or null; `excludeId` reruns the gate excluding the edited row.
   findOverlappingPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
     excludeId?: string;
   }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null>;
-  // mint a Report row with the supplied dates + initial state, then
-  // materialise its reminder rules via the PolicyApplicator (parity with
-  // saveSnapshot and period-factory). `now` is forwarded to the applicator so
-  // a backfilled (past-dated) period does not arm already-elapsed reminders as
-  // `active` — they would fire stale on the next scheduler tick.
+  // Mint a Report row with the supplied dates + initial state, then materialise
+  // its reminder rules via the PolicyApplicator. `now` is forwarded so a
+  // backfilled (past-dated) period does not arm elapsed reminders as active.
   createPeriodManual(
     input: {
       periodStart: Date;
       periodEnd: Date;
       deadline: Date;
       weekLabel: string | null;
-      periodState: PeriodState;
+      periodState: DraftPeriodState;
     },
     now?: Date,
   ): Promise<{
@@ -113,12 +98,10 @@ export interface AdminRepository {
     periodStart: Date;
     periodEnd: Date;
     deadline: Date;
-    periodState: PeriodState;
+    periodState: DraftPeriodState;
   }>;
-  // read a single period's current envelope for the update path.
-  // Returns null when the id does not resolve so the service can throw
-  // `AdminPeriodNotFoundError` (maps to NOT_FOUND). The current envelope
-  // is also used for the audit `from`-snapshot of changed fields.
+  // Read one period's current envelope for the update path; null → the service
+  // throws AdminPeriodNotFoundError. The envelope is also the audit from-snapshot.
   readPeriodById(periodId: string): Promise<{
     id: string;
     periodStart: Date;
@@ -127,9 +110,8 @@ export interface AdminRepository {
     weekLabel: string | null;
     periodState: PeriodState;
   } | null>;
-  // patch the date envelope + weekLabel of an existing Report.
-  // Repository writes only the keys present in `data` (partial PATCH);
-  // returns the updated row in the same projection used by `readPeriodById`.
+  // Patch the date envelope + weekLabel of an existing Report (partial PATCH:
+  // writes only the keys present in `data`); returns the readPeriodById projection.
   updatePeriodManual(input: {
     reportId: string;
     data: {
@@ -151,39 +133,31 @@ export interface AdminRepository {
   detachProductFromGroup(input: GroupProductEdgeInput): Promise<void>;
   listGroupProducts(groupId: string): Promise<AdminProject[]>;
   listProductGroups(productId: string): Promise<ReportingGroup[]>;
-  // batched owning-group lookup for the "products attached" editor.
-  // One query resolves the single owning group for every requested product,
-  // replacing the per-product listProductGroups fan-out.
+  // Batched owning-group lookup: one query resolves the owning group for every
+  // requested product, replacing the per-product listProductGroups fan-out.
   listProductGroupOwnership(
     productIds: readonly string[],
   ): Promise<ProductGroupOwnership[]>;
-  // -----------------------------------------------------------------
-  // Deactivate/activate user, integrations status, stage catalogue,
-  // reopen-request lifecycle (drain-admin-router). Required — every
-  // AdminRepository double gets an explicit stub (see
-  // `unusedAdminRepositoryStubs` in admin-repository-unused-stubs.ts).
-  // -----------------------------------------------------------------
-  /** Flip `User.isActive=false`. Session revocation stays the caller's job. */
+  // Deactivate/activate user, integrations status, stage catalogue, reopen-
+  // request lifecycle. Every AdminRepository double gets an explicit stub (see
+  // unusedAdminRepositoryStubs). Flip isActive; revocation stays the caller's job.
   deactivateUser(userId: string): Promise<void>;
-  /** Flip `User.isActive=true`. Session restoration stays the caller's job. */
+  // Flip `User.isActive=true`. Session restoration stays the caller's job.
   activateUser(userId: string): Promise<void>;
-  /** Count of `TelegramBinding` rows with `active=true`, for the Settings → Integrations sub-tab. */
+  // Count of `TelegramBinding` rows with `active=true` (Settings → Integrations).
   countActiveTelegramBindings(): Promise<number>;
-  /** Full SDLC stage catalogue, ordered by `sortOrder`. */
+  // Full SDLC stage catalogue, ordered by `sortOrder`.
   listStages(): Promise<StageRow[]>;
-  /** Per-project `StageAssignment` counts (single grouped query). */
+  // Per-project `StageAssignment` counts (single grouped query).
   listStageAssignmentCounts(): Promise<StageAssignmentCountRow[]>;
-  /** Group-scoped reopen-request list for the Admin Panel / head dashboard. */
+  // Group-scoped reopen-request list for the Admin Panel / head dashboard.
   listReopenRequests(
     input: ListReopenRequestsInput,
   ): Promise<ReopenRequestRow[]>;
-  /** Group-scoped pending-reopen count. */
+  // Group-scoped pending-reopen count.
   countPendingReopenRequests(session: UserSession): Promise<number>;
-  /**
-   * The full race-safe decision: scoped re-load + the compare-and-set
-   * transaction. Throws {@link AdminReopenRequestNotFoundError} when the
-   * scoped re-load finds nothing.
-   */
+  // The full race-safe decision: scoped re-load + the compare-and-set
+  // transaction. Throws AdminReopenRequestNotFoundError when the re-load fails.
   decideReopenRequest(
     input: DecideReopenRequestInput,
   ): Promise<ReopenDecisionOutcome>;

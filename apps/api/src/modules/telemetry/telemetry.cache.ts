@@ -1,11 +1,12 @@
-import { Injectable, type OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleDestroy } from "@nestjs/common";
 
 import {
   createRedisReadThroughCache,
   type RedisReadThroughCache,
 } from "../../infrastructure/cache/read-through-cache.js";
+import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import type { TelemetryCachePort } from "./telemetry.service.js";
+import type { TelemetryCachePort } from "./telemetry.ports.js";
 
 // 60s TTL (vs analytics' 3600s): the KPI card is the primary leadership view,
 // so stale numbers are worse than a slightly hotter Redis. The separate prefix
@@ -17,7 +18,7 @@ const PREFIX = "customreport:telemetry:";
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
   private readonly cache: RedisReadThroughCache;
 
-  constructor(env: EnvConfig) {
+  constructor(@Inject(ENV_CONFIG) env: EnvConfig) {
     this.cache = createRedisReadThroughCache({
       connection: env,
       loggerName: TelemetryCache.name,
@@ -26,11 +27,15 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
     });
   }
 
-  getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    return this.cache.getOrCompute(key, fn);
-  }
+  readonly getOrCompute = <T>(
+    key: string,
+    fn: () => Promise<T>,
+    validate?: (value: unknown) => boolean,
+  ): Promise<T> => {
+    return this.cache.getOrCompute(key, fn, validate);
+  };
 
-  onModuleDestroy(): Promise<void> {
+  readonly onModuleDestroy = (): Promise<void> => {
     return this.cache.close();
-  }
+  };
 }

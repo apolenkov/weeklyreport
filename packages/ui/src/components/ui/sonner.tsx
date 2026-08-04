@@ -10,10 +10,11 @@ import {
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-/**
- * App-level toast host (Sonner) themed for light/dark via next-themes.
- */
-const Toaster = ({ theme: themeOverride, ...props }: ToasterProps) => {
+/** Global toast host that follows the active light or dark theme. */
+const Toaster = ({
+  theme: themeOverride,
+  ...props
+}: Readonly<ToasterProps>) => {
   const { theme: activeTheme } = useTheme();
   const theme = themeOverride ?? activeTheme ?? "system";
 
@@ -30,9 +31,9 @@ const Toaster = ({ theme: themeOverride, ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          "--normal-bg": "var(--color-popover)",
+          "--normal-text": "var(--color-popover-foreground)",
+          "--normal-border": "var(--color-border)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }

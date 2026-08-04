@@ -1,10 +1,8 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import type { OrganizationPublic } from "@customreport/shared";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock server-side dependencies before importing the component.
 // getOrgPublic is a server-only helper; the `server-only` guard is already
@@ -16,6 +14,15 @@ vi.mock("next/font/google", () => ({
   Fraunces: () => ({ variable: "font-fraunces" }),
   Lexend: () => ({ variable: "font-lexend" }),
   Source_Sans_3: () => ({ variable: "font-source-sans" }),
+}));
+vi.mock("next/script", () => ({
+  default: ({
+    src,
+    integrity,
+  }: {
+    readonly src: string;
+    readonly integrity: string;
+  }) => <template data-next-script-src={src} data-integrity={integrity} />,
 }));
 
 // Stub client-only components that would fail in a jsdom render of the
@@ -44,6 +51,10 @@ const STUB_ORG: OrganizationPublic = {
   shortName: "TST",
   fullName: "Test Organization",
 };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 function renderLayout(org: OrganizationPublic): Document {
   // layout.tsx imports getOrgPublic at module scope (generateMetadata).
@@ -91,5 +102,49 @@ describe("RootLayout metadata, fonts, and inline-script safety", () => {
     ]);
     expect(doc.querySelector('link[href*="fonts.googleapis.com"]')).toBeNull();
     expect(doc.querySelector('link[href*="fonts.gstatic.com"]')).toBeNull();
+  });
+
+  it("loads local-development inspection tools only when devtools are enabled", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_DISABLE_DEVTOOLS", "false");
+
+    const doc = renderLayout(STUB_ORG);
+    expect(
+      [...doc.querySelectorAll<HTMLElement>("[data-next-script-src]")].map(
+        (script) => script.dataset.nextScriptSrc,
+      ),
+    ).toEqual([
+      "https://unpkg.com/react-grab@0.1.50/dist/index.global.js",
+      "https://unpkg.com/react-scan@0.5.7/dist/auto.global.js",
+    ]);
+    expect(
+      [...doc.querySelectorAll<HTMLElement>("[data-integrity]")].map(
+        (script) => script.dataset.integrity,
+      ),
+    ).toEqual([
+      "sha384-toQcgpwBJRMq7yM03jNqi39gpDMk3ucx4bacWjjdtBovQupQx9xH1tyS8L0Pl/rw",
+      "sha384-DDZCsimcjpG92OUulxf7DHi4rGS/fNIW7lC5DT8+5ftaTDiUKfzIq+pDTUbPjC86",
+    ]);
+  });
+
+  it("keeps inspection tools out of disabled development sessions", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_DISABLE_DEVTOOLS", "true");
+
+    const doc = renderLayout(STUB_ORG);
+    expect(
+      doc.querySelector('[data-next-script-src*="react-grab"]'),
+    ).toBeNull();
+    expect(
+      doc.querySelector('[data-next-script-src*="react-scan"]'),
+    ).toBeNull();
+  });
+
+  it("keeps inspection tools out of production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DISABLE_DEVTOOLS", "false");
+
+    const doc = renderLayout(STUB_ORG);
+    expect(doc.querySelector("[data-next-script-src]")).toBeNull();
   });
 });

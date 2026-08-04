@@ -17,18 +17,33 @@ export function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 // No `#section-<id>` fragment: lead form has no matching id target (dead scroll).
-export function targetUrlFor(hit: SearchHit, isViewer: boolean): string {
+// An unavailable hit has no real destination — never a "#" placeholder that
+// would jump the page as if it were a link.
+export type SearchTarget =
+  | { readonly kind: "navigable"; readonly url: string }
+  | { readonly kind: "unavailable" };
+
+export function targetUrlFor(hit: SearchHit, isViewer: boolean): SearchTarget {
   if (hit.type === "project") {
-    // Viewer has no product surface; project hits are excluded server- and client-side.
-    return isViewer ? "#" : `/admin?tab=products&filter=${hit.id}`;
+    // Viewer has no product surface; project hits are excluded server- and
+    // client-side, so a stray hit is an unavailable result, not a page jump.
+    if (isViewer) return { kind: "unavailable" };
+    return {
+      kind: "navigable",
+      url: `/admin?tab=products&filter=${hit.id}`,
+    };
   }
   if (hit.reportId) {
-    // Viewer item/risk/decision hits go to the read-only published report, not the lead form.
-    return isViewer
-      ? `/reports/${hit.reportId}`
-      : `/lead/report/${hit.reportId}`;
+    // Viewer item/risk/decision hits go to the read-only published report,
+    // not the lead form.
+    return {
+      kind: "navigable",
+      url: isViewer
+        ? `/reports/${hit.reportId}`
+        : `/lead/report/${hit.reportId}`,
+    };
   }
-  return "#";
+  return { kind: "unavailable" };
 }
 
 export const TYPE_BADGE: Record<
@@ -41,14 +56,15 @@ export const TYPE_BADGE: Record<
   project: { label: "Product", aria: "Product match" },
 };
 
-/** Length of the `<<` / `>>` snippet markers, stripped when unwrapping a match. */
+// Marker width used when unwrapping server-highlighted snippets.
 const SNIPPET_MARKER_LENGTH = 2;
 
 // Stable keys per chunk so React can reconcile highlight marks across re-renders.
+// The server wraps each match in literal `<<…>>` markers; split + indexOf bounds
+// the scan to one linear pass with no regex backtracking.
 export function renderSnippet(snippet: string): React.ReactNode {
   if (!snippet) return null;
-  // eslint-disable-next-line sonarjs/super-linear-regex -- server-generated literal markers, negated class + lazy quantifier, bounded input
-  const parts = snippet.split(/(<<[^>]*?>>)/g);
+  const parts = splitSnippetMarkers(snippet);
   return parts.map((part, idx) => {
     if (part.startsWith("<<") && part.endsWith(">>")) {
       const inner = part.slice(SNIPPET_MARKER_LENGTH, -SNIPPET_MARKER_LENGTH);
@@ -63,4 +79,19 @@ export function renderSnippet(snippet: string): React.ReactNode {
     }
     return <span key={`t-${idx.toString()}`}>{part}</span>;
   });
+}
+
+function splitSnippetMarkers(snippet: string): readonly string[] {
+  const [head = "", ...chunks] = snippet.split("<<");
+  return [
+    head,
+    ...chunks.flatMap((chunk) => {
+      const close = chunk.indexOf(">>");
+      if (close === -1) return [`<<${chunk}`];
+      return [
+        `<<${chunk.slice(0, close + SNIPPET_MARKER_LENGTH)}`,
+        chunk.slice(close + SNIPPET_MARKER_LENGTH),
+      ];
+    }),
+  ];
 }

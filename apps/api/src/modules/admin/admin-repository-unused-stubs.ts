@@ -35,9 +35,6 @@ const STUB_ID = "00000000-0000-4000-8000-000000000000";
 const STUB_DATE = new Date(0);
 
 // Neutral stubs for methods a test does not exercise; doubles override owned behavior.
-/**
- * Unused Admin Repository Stubs.
- */
 export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
   return {
     activateUser: vi.fn().mockResolvedValue(undefined),

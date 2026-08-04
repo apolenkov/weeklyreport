@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
 import {
   type ReactNode,
   type RefObject,
@@ -7,13 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialog-surface";
-
-// Matches the leadForm.requestReopen API max (local copy — do not import from api).
-const MAX_REOPEN_REASON_LENGTH = 500;
+import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
 
 interface RequestReopenDialogProps {
   readonly open: boolean;
@@ -30,7 +28,7 @@ export function RequestReopenDialog({
 }: RequestReopenDialogProps) {
   // The form mounts fresh on every open, so `reason` starts empty on mount —
   // no reset effect.
-  if (!open || typeof document === "undefined") return null;
+  if (!open) return null;
   return <RequestReopenDialogContent {...contentProps} />;
 }
 
@@ -44,16 +42,21 @@ function RequestReopenDialogContent({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
+  // While the request is in flight the dialog stays put: no keyboard submit,
+  // no Escape/backdrop dismissal — the submit cannot be abandoned mid-flight.
+  const guardedCancel = pending ? () => undefined : onCancel;
+
   // Escape + focus trap + restore-to-trigger via the shared primitive. The
   // content component exists only while open.
   useDialogFocus({
     open: true,
-    onClose: onCancel,
+    onClose: guardedCancel,
     containerRef: dialogSurfaceRef,
   });
   useFocusOnMount(textareaRef);
 
   function handleConfirm() {
+    if (pending) return;
     const trimmed = reason.trim();
     onConfirm(trimmed.length > 0 ? trimmed : undefined);
   }
@@ -65,29 +68,32 @@ function RequestReopenDialogContent({
     }
   }
 
-  return createPortal(
-    <ReopenDialogShell
-      surfaceRef={dialogSurfaceRef}
-      onDismiss={onCancel}
-      onKeyDown={handleKeyDown}
-    >
-      <ReopenDialogHeader />
-      <ReopenReasonField
-        reason={reason}
-        onReasonChange={setReason}
-        textareaRef={textareaRef}
-      />
-      {error && (
-        <p className="mt-2 text-xs text-[var(--color-destructive)]">{error}</p>
-      )}
-      <ReopenDialogFootnote />
-      <ReopenDialogActions
-        pending={pending}
-        onCancel={onCancel}
-        onConfirm={handleConfirm}
-      />
-    </ReopenDialogShell>,
-    document.body,
+  return (
+    <DocumentBodyPortal>
+      <ReopenDialogShell
+        surfaceRef={dialogSurfaceRef}
+        onDismiss={guardedCancel}
+        onKeyDown={handleKeyDown}
+      >
+        <ReopenDialogHeader />
+        <ReopenReasonField
+          reason={reason}
+          onReasonChange={setReason}
+          textareaRef={textareaRef}
+        />
+        {error && (
+          <p className="mt-2 text-xs text-[var(--color-destructive)]">
+            {error}
+          </p>
+        )}
+        <ReopenDialogFootnote />
+        <ReopenDialogActions
+          pending={pending}
+          onCancel={onCancel}
+          onConfirm={handleConfirm}
+        />
+      </ReopenDialogShell>
+    </DocumentBodyPortal>
   );
 }
 
@@ -109,8 +115,7 @@ function ReopenDialogShell({
       surfaceRef={surfaceRef}
       onDismiss={onDismiss}
       onBackdropKeyDown={onKeyDown}
-      backdropClassName="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      surfaceClassName="w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-2xl"
+      surfaceClassName="mx-4 w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-2xl"
       ariaLabel="Request Reopen dialog"
     >
       {children}
@@ -178,7 +183,7 @@ function ReopenReasonField({
       <textarea
         id="reopen-reason"
         ref={textareaRef}
-        className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         style={{ minHeight: "80px" }}
         maxLength={MAX_REOPEN_REASON_LENGTH}
         value={reason}
@@ -209,7 +214,7 @@ function ReopenDialogActions({
         type="button"
         onClick={onCancel}
         disabled={pending}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
       >
         Cancel
       </button>
@@ -217,7 +222,7 @@ function ReopenDialogActions({
         type="button"
         onClick={onConfirm}
         disabled={pending}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:opacity-50"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:opacity-50"
       >
         {pending ? "Sending…" : "Send Request"}
       </button>

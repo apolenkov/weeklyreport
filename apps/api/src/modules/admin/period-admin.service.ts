@@ -26,7 +26,7 @@ import {
 import {
   assertEnvelopeEditable,
   computePeriodPatch,
-  deadlineHourFromSetting,
+  deadlineTimeFromSetting,
   defaultPeriodEnd,
   overlapMessage,
   type PeriodPatchDiff,
@@ -48,10 +48,9 @@ function assertEndNotBeforeStart(periodStart: Date, periodEnd: Date): void {
   }
 }
 
-// Manual-create defaults mirror the scheduler's date math. The order here is
-// load-bearing: the envelope is resolved and validated BEFORE the deadline is
-// computed, so a backwards range always surfaces as the overlap error rather
-// than as whatever computeDeadline would raise first.
+// Manual-create defaults mirror the scheduler's date math. Load-bearing order:
+// the envelope resolves and validates BEFORE the deadline is computed, so a
+// backwards range surfaces as the overlap error, not a computeDeadline error.
 function resolveManualPeriodEnvelope(
   input: AdminCreatePeriodManualInput,
   settings: AppSettings,
@@ -70,7 +69,7 @@ function resolveManualPeriodEnvelope(
       settings.defaultDeadlineDays,
       settings.workingDays,
       settings.defaultTimezone,
-      deadlineHourFromSetting(settings.deadlineTime),
+      deadlineTimeFromSetting(settings.deadlineTime),
     );
 
   return { periodEnd, deadline };
@@ -111,8 +110,8 @@ export class PeriodAdminService {
 
   // Flips archived + periodState together; CAS fails closed on concurrent archive.
   async archivePeriod(periodId: string): Promise<{ success: true }> {
-    this.logger.info("archived period", { periodId });
     await this.repository.archivePeriod(periodId);
+    this.logger.info("archived period", { periodId });
     return { success: true };
   }
 
@@ -232,8 +231,8 @@ export class PeriodAdminService {
   async unarchivePeriod(
     periodId: string,
   ): Promise<{ success: true; periodState: PeriodState }> {
-    this.logger.info("unarchived period", { periodId });
     const result = await this.repository.unarchivePeriod(periodId);
+    this.logger.info("unarchived period", { periodId });
     return { success: true, periodState: result.nextPeriodState };
   }
 
@@ -248,8 +247,8 @@ export class PeriodAdminService {
         "Cannot delete a published period. Reopen it first if needed.",
       );
     }
-    this.logger.info("deleted report", { reportId });
     await this.repository.deleteReport(reportId);
+    this.logger.info("deleted report", { reportId });
     return { success: true };
   }
 }

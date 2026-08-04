@@ -67,7 +67,11 @@ describe("Archive → restore round-trip (integration)", () => {
   }
 
   async function archivedIds(): Promise<string[]> {
-    const { items } = await archiveRepo.listArchiveReports();
+    const { items } = await archiveRepo.listArchiveReports(
+      undefined,
+      undefined,
+      headSession,
+    );
     return items.map((item) => item.reportId);
   }
 

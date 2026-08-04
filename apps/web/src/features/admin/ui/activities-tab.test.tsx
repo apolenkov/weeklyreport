@@ -202,6 +202,10 @@ describe("ActivitiesTab — create", () => {
     await user.click(screen.getByRole("button", { name: "Add new activity" }));
 
     await user.type(screen.getByLabelText("Activity Name"), "Compliance Audit");
+    await user.selectOptions(
+      screen.getByLabelText("Reporting Group"),
+      GROUP_ID,
+    );
     await user.click(screen.getByLabelText("Link Checkout"));
     await user.type(screen.getByLabelText("Jira Accounts"), " ACME , PLAT ,");
 
@@ -219,7 +223,7 @@ describe("ActivitiesTab — create", () => {
     });
   });
 
-  it("keeps Save disabled until the activity has a name", async () => {
+  it("keeps Save disabled until the activity has both a name and a chosen group", async () => {
     const user = userEvent.setup();
     renderTab();
 
@@ -227,9 +231,16 @@ describe("ActivitiesTab — create", () => {
     await user.click(screen.getByRole("button", { name: "Add new activity" }));
 
     const save = screen.getByRole("button", { name: "Add Activity" });
+    // No silent preselection of the first group; both fields are explicit.
     expect(save).toBeDisabled();
 
     await user.type(screen.getByLabelText("Activity Name"), "X");
+    expect(save).toBeDisabled();
+
+    await user.selectOptions(
+      screen.getByLabelText("Reporting Group"),
+      GROUP_ID,
+    );
     expect(save).toBeEnabled();
   });
 });

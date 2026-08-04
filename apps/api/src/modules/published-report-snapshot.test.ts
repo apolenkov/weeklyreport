@@ -5,6 +5,11 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  makeProjectReadModel,
+  makeReportSectionReadModel,
+  makeSectionActivity,
+} from "../test-utils/report-section-fixtures.js";
+import {
   buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
 } from "./published-report-snapshot";
@@ -33,31 +38,47 @@ const SECOND_STAGE = {
 };
 const CO_OWNED_STAGE_SET = [FIRST_STAGE, SECOND_STAGE];
 
-function makeSection(
-  overrides: Partial<ReportSectionReadModel> = {},
-): ReportSectionReadModel {
-  return reportSectionReadModelSchema.parse({
-    reportSectionId: SECTION_ID,
-    reportId: REPORT_ID,
-    authorId: AUTHOR_ID,
-    authorName: "Alice Lead",
-    version: 1,
-    status: "submitted",
-    submittedAt: null,
-    projects: [
-      {
-        projectId: OWNED_PRODUCT,
-        projectName: "CRM Portal",
-        trafficLight: "green",
-        ownedStages: [],
-      },
-    ],
-    referencedProjects: [],
-    items: [],
-    risks: [],
-    decisions: [],
-    ...overrides,
-  });
+type ProjectFixture = Partial<ReportSectionReadModel["projects"][number]> &
+  Pick<
+    ReportSectionReadModel["projects"][number],
+    "projectId" | "projectName" | "trafficLight"
+  >;
+type ActivityFixture = Partial<ReportSectionReadModel["activities"][number]> &
+  Pick<
+    ReportSectionReadModel["activities"][number],
+    "activityId" | "activityName" | "status"
+  >;
+type SectionFixture = Omit<
+  Partial<ReportSectionReadModel>,
+  "activities" | "projects"
+> & {
+  activities?: ActivityFixture[];
+  projects?: ProjectFixture[];
+};
+
+function makeSection(overrides: SectionFixture = {}): ReportSectionReadModel {
+  const { activities = [], projects, ...sectionOverrides } = overrides;
+  return reportSectionReadModelSchema.parse(
+    makeReportSectionReadModel({
+      reportSectionId: SECTION_ID,
+      reportId: REPORT_ID,
+      authorId: AUTHOR_ID,
+      authorName: "Alice Lead",
+      status: "submitted",
+      submittedAt: null,
+      projects: (
+        projects ?? [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+          },
+        ]
+      ).map(makeProjectReadModel),
+      activities: activities.map(makeSectionActivity),
+      ...sectionOverrides,
+    }),
+  );
 }
 
 function makeCoOwnedProductSections(): ReportSectionReadModel[] {

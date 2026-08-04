@@ -6,11 +6,9 @@ import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
 import { reportSectionFullInclude } from "./report-sections.include";
 import { mapPrismaToReportSection } from "./report-sections.mappers";
 
-/**
- * Shared Prisma include for `getSectionForPeriod` and its group-scoped twin
- * `getSectionForPeriodAsGroupPeer` — one contract, so a query change (e.g. a
- * new reopen-lifecycle field) lands in both reads together.
- */
+// Shared Prisma include for `getSectionForPeriod` and its group-scoped twin —
+// one contract, so a query change (e.g. a new reopen-lifecycle field) lands in
+// both reads together.
 const sectionForPeriodInclude = {
   ...reportSectionFullInclude,
   report: { select: { periodStatus: true, archived: true } },
@@ -33,11 +31,9 @@ export interface SectionForPeriodResult {
   reopenFacts: ReopenEligibilityFacts;
 }
 
-/**
- * Shared mapping for `getSectionForPeriod` and `getSectionForPeriodAsGroupPeer`
- * — both queries share the same `sectionForPeriodInclude`, so the row shape
- * and the derived `readOnly`/`reopenFacts` are computed exactly once.
- */
+// Shared mapping for `getSectionForPeriod` and its group-scoped twin — both
+// share `sectionForPeriodInclude`, so the row shape and derived
+// `readOnly`/`reopenFacts` are computed exactly once.
 function mapSectionForPeriodRow(
   row: SectionForPeriodRow,
 ): SectionForPeriodResult {
@@ -76,19 +72,9 @@ export async function getSectionForPeriod(
   return mapSectionForPeriodRow(row);
 }
 
-/**
- * Atomic head cross-author read: returns the section only if, in the SAME
- * query snapshot, the author's reporting group currently contains
- * `peerUserId`. `assertHeadTargetInGroup` (two separate group lookups) stays
- * the fast pre-check for a clear 403 message, but it reads the group
- * membership in a separate statement — a concurrent reassignment between
- * that check and an unscoped section read could slip a cross-group section
- * through. Folding the group predicate into this one `findFirst` closes that
- * window: the membership and the section come from one atomic read, so
- * there is no gap for the group to change in. A peer with no reporting group
- * (`reportingGroupId: null`) fails the relation filter and yields null —
- * fail closed with no separate null-check needed.
- */
+// Atomic head cross-author read: the group predicate is folded into this one
+// `findFirst`, so membership + section come from a single snapshot, closing the
+// reassignment race a separate assertHeadTargetInGroup pre-check leaves open.
 export async function getSectionForPeriodAsGroupPeer(
   prisma: PrismaService,
   reportId: string,

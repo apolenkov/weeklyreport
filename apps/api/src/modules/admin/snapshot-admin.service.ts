@@ -9,18 +9,14 @@ import {
   omitUndefinedProperties,
 } from "@customreport/shared";
 
-import { type AppLogger, createNullLogger } from "../../lib/logger";
+import type { AppLogger } from "../../lib/logger";
 import type { AdminRepository } from "./admin-shared";
 
 export class SnapshotAdminService {
-  private readonly logger: AppLogger;
-
   constructor(
     private readonly repository: AdminRepository,
-    logger?: AppLogger,
-  ) {
-    this.logger = logger ?? createNullLogger();
-  }
+    private readonly logger: AppLogger,
+  ) {}
 
   async getSettings(): Promise<AppSettings> {
     return appSettingsSchema.parse(await this.repository.getSettings());

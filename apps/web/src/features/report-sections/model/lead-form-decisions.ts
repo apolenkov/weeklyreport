@@ -18,7 +18,7 @@ function clampRank(rank: number): number {
 
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
-): LeadDecisionEntry[] {
+): readonly LeadDecisionEntry[] {
   const projectIndex = buildProjectIndex(section);
   const activityNameById = buildActivityIndex(section);
   // Product-parented, legacy parentless ("Group"), AND activity-parented
@@ -48,7 +48,7 @@ export function mapLeadDecisions(
 
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
-): LeadPriorityEntry[] {
+): readonly LeadPriorityEntry[] {
   const projectIndex = buildProjectIndex(section);
   // Priorities are product-side; activity items are never product priorities.
   return section.items

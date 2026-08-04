@@ -96,7 +96,7 @@ describe("API module public boundary", () => {
           ruleId: "import-x/no-restricted-paths",
           message: expect.stringContaining(
             "through an owning public entrypoint",
-          ) as unknown,
+          ) as unknown as string,
         }),
       ]);
     },

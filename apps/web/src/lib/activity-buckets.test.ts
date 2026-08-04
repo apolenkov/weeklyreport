@@ -40,9 +40,20 @@ describe("deriveActivityBucket", () => {
     expect(allCombos()).toHaveLength(20);
   });
 
-  it("is deterministic", () => {
+  it("is deterministic and matches the fixed workflow-status mapping for every combination", () => {
+    // Independent oracle: the expected bucket for each workflowStatus, keyed
+    // verbatim — not derived from the implementation under test.
+    const EXPECTED: Readonly<
+      Record<BucketInput["workflowStatus"], ActivityBucket>
+    > = {
+      done: "done",
+      paused: "paused",
+      postponed: "deferred",
+      planned: "planned-next",
+      in_progress: "in-progress",
+    };
     for (const combo of allCombos()) {
-      expect(deriveActivityBucket(combo)).toBe(deriveActivityBucket(combo));
+      expect(deriveActivityBucket(combo)).toBe(EXPECTED[combo.workflowStatus]);
     }
   });
 

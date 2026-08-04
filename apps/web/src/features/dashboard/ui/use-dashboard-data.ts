@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { invalidateSubmissionDashboard } from "../../../lib/cache-keys";
+import { logClientError } from "../../../lib/client-error-reporting";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { useDashboardQueryRecovery } from "./use-dashboard-query-recovery";
@@ -89,12 +90,21 @@ function useDashboardQueries() {
   const review = useReviewDashboardQuery();
   const weekly = useWeeklyDashboardQuery();
   const activity = useActivityDashboardQuery();
-  const refreshDashboardData = useCallback(() => {
-    void Promise.allSettled([
+  const refreshDashboardData = useCallback(async () => {
+    // Surface every refetch rejection through the same logClientError seam the
+    // query load failures use — a rejected refetch must not be silently dropped.
+    const results = await Promise.allSettled([
       review.query.refetch(),
       weekly.query.refetch(),
       activity.query.refetch(),
     ]);
+    for (const result of results) {
+      if (result.status === "rejected") {
+        logClientError("dashboard.refresh_refetch_failed", result.reason, {
+          component: "DashboardPage",
+        });
+      }
+    }
   }, [review.query, weekly.query, activity.query]);
   return {
     reviewQ: review.query,
@@ -123,9 +133,6 @@ function useRevokeAllSubmitted() {
   );
 }
 
-/**
- * Use Dashboard Data.
- */
 export function useDashboardData() {
   return {
     ...useDashboardQueries(),

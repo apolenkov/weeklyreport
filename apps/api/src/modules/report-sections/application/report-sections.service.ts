@@ -58,12 +58,9 @@ export class ReportSectionNotFoundError extends Error {
   }
 }
 
-/**
- * Raised when a section write's expected version no longer matches the stored
- * row (a concurrent writer advanced it). Distinct from ReportSectionDomainError
- * (BAD_REQUEST) so the error-mapper can surface it as CONFLICT (409) and the
- * client can reload-then-retry rather than treat it as a validation failure.
- */
+// Raised when a write's expected version no longer matches the stored row (a
+// concurrent writer advanced it). Distinct from ReportSectionDomainError so the
+// error-mapper surfaces CONFLICT (409) and the client reloads and retries.
 export class SectionVersionConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -75,32 +72,21 @@ export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel | null>;
-  /**
-   * Canonical period status of the section's report, keyed on the section id.
-   * Both write paths decide editability from this — never the legacy
-   * `Report.status` column — so reopen editing works and the published lock
-   * still holds. Mirrors the lead-form port's identically named lookup, so the
-   * two surfaces read one shared query shape.
-   */
+  // Canonical period status keyed on the section id. Both write paths decide
+  // editability from this — never the legacy Report.status column — so reopen
+  // editing works and the published lock holds. Mirrors the lead-form port lookup.
   getReportPeriodStatusForSection(
     sectionId: string,
   ): Promise<PeriodStatus | null>;
-  /**
-   * Deadline-aware variant. Returns `null` when the
-   * report does not exist (caller treats that as "no gate to enforce").
-   * Required: an unimplemented reader would silently disable the deadline
-   * gate — a repository without deadline data must return null EXPLICITLY.
-   */
+  // Deadline-aware variant. Null means the report does not exist — the deadline
+  // gate treats that as a NOT_FOUND integrity failure, never a free pass.
+  // Required: an unimplemented reader would silently disable the deadline gate.
   getReportMeta(
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date | null } | null>;
-  /**
-   * Resolve which of the section's CURRENT item/decision lineages (stableIds)
-   * have appeared in a published report — the delete-lock reference set
-   * (resolve-not-delete, ADR 0015). Required so a repository omitting it fails
-   * to compile rather than silently disabling the save-path delete lock. Risks
-   * are excluded by design: a risk is re-raised, not carried.
-   */
+  // Resolve which CURRENT item/decision lineages have appeared in a published
+  // report — the delete-lock reference set, required so an omitting repository
+  // fails to compile. Risks are excluded: a risk is re-raised, not carried.
   getPublishedLineage(section: ReportSectionReadModel): Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
@@ -109,12 +95,9 @@ export interface ReportSectionsRepository {
     section: ReportSectionReadModel,
     expectedVersion: number,
   ): Promise<ReportSectionReadModel>;
-  /**
-   * Every section authored by `authorId`, newest reporting-period first
-   * (`report.periodStart desc`, `createdAt` stable tiebreak) — the raw rows
-   * behind `ReportSectionsService.myHistory`. See `buildMyHistoryEntries`
-   * for why this ordering must match `compiledHistory`.
-   */
+  // Every section authored by `authorId`, newest reporting-period first
+  // (periodStart desc, createdAt tiebreak) — the raw rows behind myHistory.
+  // See buildMyHistoryEntries for why the ordering must match compiledHistory.
   getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]>;
 }
 
@@ -122,12 +105,8 @@ export interface ReportSectionsRepository {
 // module boundary — the service depends on the port, not the prisma class.
 export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
 
-/**
- * Minimal AppSettings shape the service needs to enforce grace + late
- * submission rules. Modeled as a callback rather
- * than a direct settings-service dependency so unit tests can pass a tiny
- * stub without standing up the admin module.
- */
+// Minimal AppSettings shape for grace + late-submission rules, read through a
+// callback so unit tests pass a tiny stub without standing up the admin module.
 export type GetGraceSettings = () => Promise<{
   gracePeriodHours: number;
   allowLateSubmissions: boolean;
@@ -138,32 +117,25 @@ export class ReportSectionsService {
 
   constructor(
     private readonly repository: ReportSectionsRepository,
-    // Grace-period settings provider. Required — an unwired provider would
-    // silently disable late stamping, a product behavior. submitSection
-    // enforces:
-    //   - now > deadline + gracePeriodHours AND !allowLateSubmissions
-    //     → ReportSectionAccessError ("Past deadline; submissions closed.")
-    //   - now > deadline (irrespective of grace) → section.late = true
+    // Grace-period settings provider — required, or late stamping would
+    // silently disable. submitSection: now > deadline + grace AND
+    // !allowLateSubmissions → AccessError; now > deadline → section.late = true.
     private readonly getGraceSettings: GetGraceSettings,
     private readonly telemetry: ReportSectionsTelemetry = NOOP_REPORT_SECTIONS_TELEMETRY,
   ) {}
 
   private assertCanEditSection(
     section: ReportSectionReadModel,
-    actorUserId?: string,
+    actorUserId: string,
   ): void {
-    if (actorUserId && section.authorId !== actorUserId) {
+    if (section.authorId !== actorUserId) {
       throw new ReportSectionAccessError("Can only edit your own section.");
     }
   }
 
-  /**
-   * lead-form-stage-access-integrity: hard-reject a write whose new/changed
-   * item / risk / decision row carries a stage the section AUTHOR does not own
-   * on that row's product. Runs on both write paths before persistence; the
-   * author's server-loaded `ownedStages` is the reference, so a head/admin
-   * on-behalf edit cannot inject an unowned stage either.
-   */
+  // Hard-reject a write whose new/changed row carries a stage the section
+  // AUTHOR does not own on that product. Runs on both write paths before
+  // persistence; the author's server-loaded ownedStages is the reference.
   private assertStageOwnership(
     section: ReportSectionReadModel,
     input: DraftSaveInput | SubmitSectionInput,
@@ -174,22 +146,16 @@ export class ReportSectionsService {
     }
   }
 
-  /**
-   * Hard-reject a write whose activity-status slice carries an activityId not
-   * attached/seeded for the section author. The server-loaded seeded set is
-   * the reference — the delete-recreate never trusts client-supplied ids
-   * (same gap class the stage-ownership guard closes). Runs on both write
-   * paths before persistence.
-   */
+  // Hard-reject a write whose activity slice carries an activityId not
+  // attached/seeded for the author. The server-loaded seeded set is the
+  // reference — the delete-recreate never trusts client-supplied ids.
   private assertActivityAttachment(
     section: ReportSectionReadModel,
     input: DraftSaveInput | SubmitSectionInput,
   ): void {
-    // Two client-trust gaps, same seeded-set reference and same
-    // ACTIVITY_NOT_ATTACHED reject: the status-slice guard
-    // (`validateActivityStatuses`) plus the record-parent guard
-    // (`validateRecordActivityIds`, Decision 7) for any item/risk/decision
-    // parented by an unattached activityId. First violation wins.
+    // Two client-trust gaps, same seeded-set reference, same reject: the
+    // status-slice guard plus the record-parent guard for rows parented by an
+    // unattached activityId. First violation wins.
     const violation =
       validateActivityStatuses(section, input).at(0) ??
       validateRecordActivityIds(section, input).at(0);
@@ -198,12 +164,9 @@ export class ReportSectionsService {
     }
   }
 
-  /**
-   * Resolve-not-delete (ADR 0015): a published-lineage item/decision cannot be
-   * dropped from the section — `stableId` is CLIENT-authoritative on the save
-   * payload, so preservation is verified server-side. The pure comparison lives
-   * in `published-record-guard.ts`.
-   */
+  // Resolve-not-delete: a published-lineage item/decision cannot be dropped
+  // from the section — stableId is client-authoritative on the payload, so
+  // preservation is verified server-side (comparison in published-record-guard).
   private async assertPublishedRecordsPreserved(
     section: ReportSectionReadModel,
     input: DraftSaveInput | SubmitSectionInput,
@@ -215,21 +178,30 @@ export class ReportSectionsService {
     }
   }
 
-  /**
-   * Deadline gate for submitSection. Returns the
-   * `late` flag to stamp on the section. Throws ReportSectionAccessError
-   * (→ 403 in the tRPC layer) when the deadline has passed beyond the
-   * configured grace window AND late submissions are forbidden.
-   *
-   * Both collaborators are required, so the gate is always armed; the only
-   * skips are an explicit `null` from `getReportMeta` (report absent) and a
-   * period whose deadline was explicitly cleared (ruling F16) — logged, so
-   * "no late stamping" is always traceable to a visible cause.
-   */
+  private assertPeriodEditable(
+    periodStatus: PeriodStatus | null,
+    action: "edit" | "submit",
+  ): void {
+    if (periodStatus === null)
+      throw new ReportSectionNotFoundError("Missing report.");
+    if (periodStatus === "open" || periodStatus === "reopened") return;
+
+    throw new ReportSectionDomainError(
+      "SECTION_ALREADY_SUBMITTED",
+      `Cannot ${action} sections of a published report.`,
+    );
+  }
+
+  // Deadline gate for submitSection: returns the `late` flag to stamp, and
+  // throws AccessError (→403) when past deadline+grace AND late is forbidden.
+  // Always armed; null meta → NOT_FOUND, never a silent on-time pass.
   private async evaluateDeadlineGate(reportId: string) {
     const meta = await this.repository.getReportMeta(reportId);
     if (!meta) {
-      return { late: false, reportMeta: null };
+      // The section just loaded references this report (FK), so a null meta
+      // means the report row vanished mid-flight — fail closed, never an
+      // un-gated on-time submission.
+      throw new ReportSectionNotFoundError("The report no longer exists.");
     }
     if (meta.deadline === null) {
       this.logger.info("deadline gate skipped: period has no deadline", {
@@ -265,7 +237,10 @@ export class ReportSectionsService {
 
   async saveDraft(
     input: DraftSavePayload,
-    actorUserId?: string,
+    // Writing actor is mandatory: the authenticated caller, never an optional
+    // identity that would let a write slip through unowned. The router passes
+    // `ctx.session.userId` (reports.router.ts).
+    actorUserId: string,
   ): Promise<ReportSectionReadModel> {
     const parsedInput = draftSaveSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
@@ -275,12 +250,7 @@ export class ReportSectionsService {
       section.reportSectionId,
     );
 
-    if (periodStatus === "published") {
-      throw new ReportSectionDomainError(
-        "SECTION_ALREADY_SUBMITTED",
-        "Cannot edit sections of a published report.",
-      );
-    }
+    this.assertPeriodEditable(periodStatus, "edit");
 
     if (section.status === "submitted") {
       throw new ReportSectionDomainError(
@@ -294,7 +264,8 @@ export class ReportSectionsService {
     await this.assertPublishedRecordsPreserved(section, parsedInput);
 
     const saved = await this.repository.saveSection(
-      mergeSection(section, parsedInput, "draft"),
+      // Wall clock read at the boundary; mergeSection stays pure.
+      mergeSection(section, parsedInput, "draft", new Date()),
       // Expected version is the CLIENT-loaded value, not the freshly-fetched
       // row's — otherwise the compare-and-set always matches and the lock is a
       // no-op.
@@ -309,36 +280,26 @@ export class ReportSectionsService {
 
   async submitSection(
     input: SubmitSectionPayload,
-    actorUserId?: string,
+    // Same mandatory writing-actor contract as saveDraft.
+    actorUserId: string,
   ): Promise<ReportSectionReadModel> {
     const parsedInput = submitSectionSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
     // Gate the destructive delete-recreate on the canonical period status, not
-    // the legacy Report.status column. A section can sit in `draft` under a
-    // published period (publishing never flips section statuses), and submitting
-    // it would rewrite the live rows the frozen snapshot no longer matches.
+    // the legacy Report.status column: a section can sit in `draft` under a
+    // published period, and submitting would rewrite rows the snapshot froze.
     const periodStatus = await this.repository.getReportPeriodStatusForSection(
       section.reportSectionId,
     );
 
-    if (periodStatus === "published") {
-      throw new ReportSectionDomainError(
-        "SECTION_ALREADY_SUBMITTED",
-        "Cannot submit sections of a published report.",
-      );
-    }
+    this.assertPeriodEditable(periodStatus, "submit");
 
-    // Deadline gate runs BEFORE the content validator so a past-deadline
-    // submission with !allowLateSubmissions
-    // returns 403 even when the payload is otherwise valid. Conversely
-    // a payload with missing traffic-lights still fails on the content
-    // check first when within grace window — UX wants the most-specific
-    // error, and "you forgot a traffic light" beats "you're late" when
-    // both are true.
+    // Deadline gate runs BEFORE the content validator: a past-deadline submit
+    // with late forbidden returns 403 even for a valid payload, while missing
+    // traffic-lights fail on content first when within grace (most-specific error).
     const deadlineGate = await this.evaluateDeadlineGate(section.reportId);
-    const { late } = deadlineGate;
 
     // Integrity before completeness: a stage the author does not own is a hard
     // authz reject, checked before the traffic-light / current-item nags.
@@ -358,20 +319,23 @@ export class ReportSectionsService {
     }
 
     const saved = await this.repository.saveSection(
-      mergeSection(section, parsedInput, "submitted", late),
+      mergeSection(
+        section,
+        parsedInput,
+        "submitted",
+        new Date(),
+        deadlineGate.late,
+      ),
       parsedInput.version,
     );
 
-    // Product telemetry. We always bump the submission counter, labelled by
-    // the same `late` flag persisted on the row, so dashboard math matches
-    // the badge in the UI. The latency histogram reuses the meta the gate
-    // already fetched (null = report row gone → no histogram point). Wrapped
-    // in a defensive try/catch because telemetry MUST NOT break the write
-    // path.
+    // Always bump the submission counter, labelled by the same `late` flag
+    // persisted on the row, so dashboard math matches the UI badge. Telemetry
+    // must never break the write path, hence the defensive try/catch.
     try {
-      this.telemetry.recordSectionSubmitted(late);
+      this.telemetry.recordSectionSubmitted(deadlineGate.late);
       const meta = deadlineGate.reportMeta;
-      if (meta?.deadline) {
+      if (meta.deadline) {
         // Signed seconds: positive = late, negative = submitted early. A
         // cleared deadline has no reference point — no histogram sample.
         const deltaSeconds =
@@ -385,18 +349,14 @@ export class ReportSectionsService {
     this.logger.info("section submitted", {
       reportSectionId: parsedInput.reportSectionId,
       authorId: section.authorId,
-      late,
+      late: deadlineGate.late,
     });
     return saved;
   }
 
-  /**
-   * The lead's own section history — every section they authored, newest
-   * reporting-period first. Pure post-processing (traffic-light folding,
-   * distinct-product counting, last-edit resolution) lives in
-   * `buildMyHistoryEntries`; this method only threads the repository rows
-   * through it.
-   */
+  // The lead's own section history, newest reporting-period first. Pure
+  // post-processing lives in buildMyHistoryEntries; this threads the repo rows
+  // through it.
   async myHistory(authorId: string): Promise<MyHistoryEntry[]> {
     const sections = await this.repository.getMyHistoryRows(authorId);
     return buildMyHistoryEntries(sections);

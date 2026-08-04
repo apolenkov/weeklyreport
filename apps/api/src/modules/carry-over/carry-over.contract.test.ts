@@ -36,17 +36,24 @@ function makeSection(
     version: 1,
     status: "submitted",
     submittedAt: new Date("2026-04-09T10:00:00.000Z"),
+    authorRole: "lead",
+    late: false,
     projects: [
       {
         projectId: projectAlphaId,
         projectName: "Project Alpha",
         trafficLight: "green",
+        ownedStages: [],
+        stageSet: [],
+        ownerGroupId: null,
       },
     ],
+    referencedProjects: [],
     items: [],
     risks: [],
     decisions: [],
     activities: [],
+    reviews: [],
     ...overrides,
   };
 }
@@ -118,6 +125,9 @@ const sourceBeta: ReportSectionReadModel = makeSection({
       projectId: projectBetaId,
       projectName: "Project Beta",
       trafficLight: "yellow",
+      ownedStages: [],
+      stageSet: [],
+      ownerGroupId: null,
     },
   ],
   items: [
@@ -452,8 +462,7 @@ describe("CarryOverService — contract tests", () => {
 
     // sourceAlpha: 1 next item + 1 unresolved decision = 2 records
     // sourceBeta: 1 next item + 1 unresolved decision = 2 records
-    // sourceGamma: 1 next item + 0 decisions = 1 record
-    // Total: 5 records
+    // sourceGamma: 1 next item + 0 decisions = 1 record → 5 total
     expect(result.records).toHaveLength(5);
     expect(result.execution.carriedItemCount).toBe(3);
     expect(result.execution.carriedDecisionCount).toBe(2);

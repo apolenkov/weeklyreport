@@ -23,10 +23,12 @@ const INSTALLED_MARK = Symbol.for("customreport.client-logger.installed");
 
 // Mutable by design: a batching buffer producers push into and flush drains;
 // patchConsole reassigns console.error/warn because intercepting the global is
-// the module's whole purpose.
+// the module's whole purpose. The flush handle lives in a single field holder
+// so the module keeps its intentional lifecycle state without a `let` binding.
 const queue: Entry[] = [];
-// eslint-disable-next-line no-restricted-syntax -- enqueue schedules the batch flush and flush clears the handle; module-level timer state is intentional.
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const flushTimer: { current: ReturnType<typeof setTimeout> | null } = {
+  current: null,
+};
 
 export function safeStringify(arg: unknown): string {
   if (arg instanceof Error) return arg.message;
@@ -48,14 +50,14 @@ function enqueue(entry: Entry) {
   if (queue.length >= FLUSH_AT_COUNT) {
     void flush();
   } else {
-    flushTimer ??= setTimeout(() => void flush(), FLUSH_MS);
+    flushTimer.current ??= setTimeout(() => void flush(), FLUSH_MS);
   }
 }
 
 async function flush() {
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
+  if (flushTimer.current) {
+    clearTimeout(flushTimer.current);
+    flushTimer.current = null;
   }
   if (queue.length === 0) return;
   const batch = queue.splice(0);

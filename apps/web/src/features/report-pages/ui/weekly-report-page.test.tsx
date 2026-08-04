@@ -282,6 +282,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
               worstStatus: "green",
               stageCount: 1,
               leadNames: ["Alice"],
+              leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
             },
           ],
           leadSections: [
@@ -459,6 +460,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
           worstStatus: "green",
           stageCount: 2,
           leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
         },
         {
           productId: PRODUCT_ID_B,
@@ -466,6 +468,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring", () => {
           worstStatus: "yellow",
           stageCount: 1,
           leadNames: ["Alice"],
+          leadIds: ["5ccd4f78-2a3d-58e4-889a-e9ad6be0b941"],
         },
       ],
       leadSections: [

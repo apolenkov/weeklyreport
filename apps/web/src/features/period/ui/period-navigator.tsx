@@ -5,47 +5,30 @@ import type {
   PeriodListboxNav,
   PeriodNavigatorSelection,
 } from "../model/use-period-navigator";
-import { usePeriodNavigator } from "../model/use-period-navigator";
+import { periodLabel, usePeriodNavigator } from "../model/use-period-navigator";
 import {
   ArchivedBadge,
-  periodLabel,
   PeriodListboxPanel,
   SubmittedBadge,
 } from "./period-listbox-panel";
 import { ChevronLeft, ChevronRight } from "./period-navigator-icons";
 
-const PERIOD_SELECT_WIDTH_CH = 24;
-
 interface PeriodNavigatorProps {
-  readonly periods: ReportPeriod[];
-  /**
-   * Addressed period id. When supplied, this takes precedence over the
-   * pathname regex used to infer the current period.
-   */
+  readonly periods: readonly ReportPeriod[];
+  // Explicit addressed id takes precedence over pathname inference.
   readonly currentPeriodId?: string | undefined;
-  /**
-   * Optional URL builder for navigation. When provided, replaces the default
-   * lead-specific `/lead/report/<periodId>` path construction so the navigator
-   * can be reused by other roles via a custom addressed-path scheme.
-   * Receives the target periodId; must return the full href to push.
-   */
+  // Allows other roles to supply an addressed-path scheme instead of the
+  // lead-specific default URL.
   readonly urlBuilder?: ((periodId: string) => string) | undefined;
-  /**
-   * Opt-in per-lead submitted marker. Only the lead surface passes this;
-   * head and viewer navigators omit it and therefore never show the marker.
-   */
+  // Only the lead surface opts into submitted markers.
   readonly showLeadSubmissionMarkers?: boolean | undefined;
-  /**
-   * The current lead's `ReportSection.submittedAt` for the displayed
-   * period. Sourced ONLY from the lead's own section — never the head shell's
-   * fabricated `isSubmitted` flag. The marker shows on the selected period
-   * when `showLeadSubmissionMarkers` is set and this value is non-null.
-   */
+  // Source this marker only from the lead's own section, never a head-shell
+  // fabricated flag.
   readonly leadSubmittedAt?: Date | string | null | undefined;
 }
 
 const PERIOD_NAV_ARROW_BUTTON_CLASS =
-  "inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
+  "inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_var(--color-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
 function PeriodNavArrowButton({
   direction,
@@ -89,6 +72,7 @@ function PeriodSelectTrigger({
   const {
     open,
     activeIdx,
+    hasOptions,
     optionIdPrefix,
     triggerRef,
     listboxId,
@@ -96,10 +80,7 @@ function PeriodSelectTrigger({
     handleTriggerKeyDown,
   } = listbox;
   return (
-    <div
-      className="relative max-w-full flex-none"
-      style={{ width: `${PERIOD_SELECT_WIDTH_CH}ch` }}
-    >
+    <div className="relative min-w-0 flex-1 md:w-[24ch] md:flex-none">
       <button
         ref={triggerRef}
         type="button"
@@ -109,9 +90,9 @@ function PeriodSelectTrigger({
         aria-expanded={open}
         aria-controls={listboxId}
         aria-activedescendant={
-          open ? `${optionIdPrefix}${activeIdx}` : undefined
+          open && hasOptions ? `${optionIdPrefix}${activeIdx}` : undefined
         }
-        className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
+        className="flex h-[var(--toolbar-control-h)] w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         onClick={toggleOpen}
         onKeyDown={handleTriggerKeyDown}
       >
@@ -148,7 +129,7 @@ export function PeriodNavigator({
 
   return (
     <div
-      className="flex min-w-0 items-center gap-1.5"
+      className="flex min-w-0 max-w-full flex-1 basis-full items-center gap-1.5 md:basis-auto"
       onTouchStart={listbox.handleTouchStart}
       onTouchEnd={listbox.handleTouchEnd}
       role="group"
@@ -180,7 +161,7 @@ export function PeriodNavigator({
 }
 
 // Portaled listbox panel; rendered only while open and after the trigger rect
-// has been measured (SSR has no document to portal into).
+// has been measured.
 function PeriodOptionsPanel({
   listbox,
   selection,
@@ -188,7 +169,7 @@ function PeriodOptionsPanel({
   readonly listbox: PeriodListboxNav;
   readonly selection: PeriodNavigatorSelection;
 }) {
-  if (!listbox.open || !listbox.panelPos || typeof document === "undefined") {
+  if (!listbox.open || !listbox.panelPos) {
     return null;
   }
   return (

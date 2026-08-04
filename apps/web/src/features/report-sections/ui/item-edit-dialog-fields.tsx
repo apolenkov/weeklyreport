@@ -74,8 +74,7 @@ function ItemDescriptionField({
           : "What is planned for next week…"
       }
       minHeightPx={70}
-      // eslint-disable-next-line jsx-a11y/no-autofocus -- forwarded to RecordTextareaField, which owns the actual DOM autofocus and its own justification
-      autoFocus
+      focusOnMount
     />
   );
 }
@@ -99,7 +98,7 @@ function ItemPriorityRankField({
       </label>
       <select
         id="item-priority-rank"
-        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={priorityRank ?? ""}
         onChange={(e) => {
           const v = e.target.value;
@@ -179,7 +178,7 @@ function ItemParentStageFields({
           isDeadEnd={isDeadEnd}
           error={stageError}
           deadEndNotice={`No stages assigned on ${parentName} — contact admin.`}
-          onChange={onStageChange}
+          onChange={(next) => onStageChange([...next])}
         />
       )}
     </>

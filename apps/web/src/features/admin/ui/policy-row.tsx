@@ -12,11 +12,10 @@ import {
 
 interface PolicyRowProps {
   readonly policy: AdminReminderPolicyView;
-  /** Derived rules for this policy — used only to compute the next-send line. */
+  // Derived rules feed only the next-send line.
   readonly derivedRules: readonly AdminReminderView[];
-  /** True only while THIS reminder's own save/remove is in flight. */
   readonly isBusy: boolean;
-  /** Injected so the next-send line is deterministic in tests. */
+  // Injected so the next-send line is deterministic in tests.
   readonly now: Date;
   readonly onToggleActive: () => void;
   readonly onEdit: () => void;
@@ -24,11 +23,11 @@ interface PolicyRowProps {
 }
 
 const ACTION_BASE =
-  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border bg-white px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 const EDIT_ACTION_CLASS = `${ACTION_BASE} border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-empty)]`;
 
-const REMOVE_ACTION_CLASS = `${ACTION_BASE} border-transparent text-[var(--color-destructive)] hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50`;
+const REMOVE_ACTION_CLASS = `${ACTION_BASE} border-transparent text-[var(--color-destructive)] hover:border-[color-mix(in_srgb,var(--color-destructive)_30%,transparent)] hover:bg-[var(--color-status-blocked-bg)]`;
 
 function PolicyToggle({
   policy,
@@ -61,7 +60,7 @@ function PolicyToggle({
     >
       <span
         aria-hidden="true"
-        className="h-4 w-4 rounded-full bg-white shadow-sm transition-transform"
+        className="h-4 w-4 rounded-full bg-[var(--color-card)] shadow-sm transition-transform"
         style={{
           transform: policy.active ? "translateX(16px)" : "translateX(0)",
         }}
@@ -156,7 +155,7 @@ export function PolicyRow({
   return (
     <div
       data-testid={`policy-row-${policy.id}`}
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-compact)]"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 items-start gap-3">

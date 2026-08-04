@@ -4,6 +4,7 @@ import type {
   AdminSnapshot,
   AdminUser,
   AppSettings,
+  DraftPeriodState,
   GroupProduct,
   GroupProductEdgeInput,
   PeriodState,
@@ -14,7 +15,7 @@ import type {
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/index.js";
@@ -41,24 +42,17 @@ import * as snapshotQueries from "./admin-snapshot.queries";
 import * as snapshotWriteQueries from "./admin-snapshot-write.queries";
 import * as stageQueries from "./admin-stage.queries";
 
-/**
- * Prisma implementation of AdminRepository.
- *
- * This class is a thin DI facade. The per-domain Prisma logic
- * lives in sibling `admin-*.queries.ts` modules (settings / group /
- * reminder-policy / snapshot / period / group-product); each method delegates
- * to a free function taking `this.prisma` (and, for snapshot writes,
- * `this.policyApplicator`). Method signatures match the AdminRepository
- * interface and the DI token. All output is parsed through Zod schemas in
- * the query modules.
- */
+// Prisma implementation of AdminRepository — a thin DI facade delegating to
+// sibling `admin-*.queries.ts` modules, with output parsed through their Zod
+// schemas. Method signatures match the AdminRepository interface + DI token.
 @Injectable()
 export class AdminPrismaRepository implements AdminRepository {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     // post-create hook that materializes one
     // ReminderRule per active ReminderPolicy whose validity window
     // covers the new period's deadline. Wired in admin.module.ts.
+    @Inject(PolicyApplicatorService)
     private readonly policyApplicator?: PolicyApplicatorService,
   ) {}
 
@@ -104,7 +98,7 @@ export class AdminPrismaRepository implements AdminRepository {
     return policyQueries.listReminderPolicies(this.prisma);
   }
 
-  reminderPolicyExists = (policyId: string): Promise<boolean> =>
+  readonly reminderPolicyExists = (policyId: string): Promise<boolean> =>
     policyQueries.reminderPolicyExists(this.prisma, policyId);
 
   saveReminderPolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
@@ -178,7 +172,7 @@ export class AdminPrismaRepository implements AdminRepository {
       periodEnd: Date;
       deadline: Date;
       weekLabel: string | null;
-      periodState: PeriodState;
+      periodState: DraftPeriodState;
     },
     now?: Date,
   ): Promise<{
@@ -186,20 +180,15 @@ export class AdminPrismaRepository implements AdminRepository {
     periodStart: Date;
     periodEnd: Date;
     deadline: Date;
-    periodState: PeriodState;
+    periodState: DraftPeriodState;
   }> {
     const created = await periodLifecycle.createPeriodManual(
       this.prisma,
       input,
     );
-    // materialize one ReminderRule per active policy on the
-    // freshly-created period — like `saveSnapshot` (snapshot periods) and
-    // `period-factory` (scheduler/login periods). `now` is forwarded so a
-    // backfilled period whose deadline is already past does not arm elapsed
-    // reminders as `active` (they would fire stale on the next tick) — the
-    // applicator drops those when `now` is supplied. Runs AFTER the create
-    // commits (an applicator failure cannot roll back the period) and
-    // propagates on error so an admin sees the failure, not a silent gap.
+    // Materialize one ReminderRule per active policy on the fresh period. `now`
+    // is forwarded so a backfilled period with a past deadline does not arm
+    // elapsed reminders as active. Runs after the create; errors propagate.
     if (this.policyApplicator) {
       await this.policyApplicator.applyToPeriod(created, now);
     }

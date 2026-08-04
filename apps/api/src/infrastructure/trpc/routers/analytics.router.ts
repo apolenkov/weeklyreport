@@ -9,7 +9,7 @@ import { mapDomainError } from "../trpc.error-mapper.js";
 import { anyRoleProcedure, router } from "../trpc.middleware.js";
 
 export interface AnalyticsRouterDeps {
-  analyticsService: AnalyticsService;
+  readonly analyticsService: AnalyticsService;
 }
 
 // anyRoleProcedure: all roles consume trends; repository published-only floor

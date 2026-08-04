@@ -2,9 +2,11 @@
 // the behavior analytics/telemetry wrappers rely on but never cover themselves.
 import { Readable } from "node:stream";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Logger } from "@nestjs/common";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvConfig } from "../config/env.schema";
+import { redisCacheErrorsTotal } from "../metrics/metrics.registry.js";
 import { createRedisReadThroughCache } from "./read-through-cache.js";
 
 const { instances } = vi.hoisted(() => ({
@@ -12,16 +14,20 @@ const { instances } = vi.hoisted(() => ({
     store: Map<string, string>;
     get(key: string): Promise<string | null>;
     setex(key: string, ttl: number, value: string): Promise<string>;
+    on(event: string, handler: (error: unknown) => void): void;
+    errorHandlers: ((error: unknown) => void)[];
   }[],
 }));
 
 vi.mock("ioredis", () => {
   class FakeRedis {
     readonly store = new Map<string, string>();
+    readonly errorHandlers: ((error: unknown) => void)[] = [];
     constructor() {
       instances.push(this);
     }
-    on(): this {
+    on(_event: string, handler: (error: unknown) => void): this {
+      this.errorHandlers.push(handler);
       return this;
     }
     get(key: string): Promise<string | null> {
@@ -67,6 +73,10 @@ function redisOf() {
 describe("createRedisReadThroughCache", () => {
   beforeEach(() => {
     instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("prepends keyPrefix before the key reaches Redis", async () => {
@@ -186,5 +196,162 @@ describe("createRedisReadThroughCache", () => {
 
     expect(storeOf().has("cache:analytics:a")).toBe(false);
     expect(storeOf().has("cache:telemetry:keep")).toBe(true);
+  });
+
+  it("keeps every operation callable after extraction", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "detached:",
+    });
+    const { getOrCompute, invalidateByPrefix, close } = cache;
+
+    await expect(getOrCompute("key", () => Promise.resolve(42))).resolves.toBe(
+      42,
+    );
+    await expect(invalidateByPrefix("")).resolves.toBeUndefined();
+    await expect(close()).resolves.toBeUndefined();
+  });
+
+  it("short-circuits compute when a cached value passes the validator", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    storeOf().set("p:k", "42");
+    const fn = vi.fn(() => Promise.resolve(42));
+    const validate = vi.fn((value: unknown) => value === 42);
+
+    await cache.getOrCompute("k", fn, validate);
+    await cache.getOrCompute("k", fn, validate);
+
+    expect(fn).not.toHaveBeenCalled();
+    expect(validate).toHaveBeenCalledTimes(2);
+  });
+
+  it("recomputes and warns when a cached value fails validation", async () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    const incSpy = vi.spyOn(redisCacheErrorsTotal, "inc");
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    storeOf().set("p:k", "{}");
+    const validate = vi.fn((value: unknown) => value === 42);
+    const compute = vi.fn(() => Promise.resolve(99));
+
+    const result = await cache.getOrCompute("k", compute, validate);
+
+    expect(result).toBe(99);
+    expect(compute).toHaveBeenCalledOnce();
+    expect(incSpy).toHaveBeenCalledWith({ operation: "validation" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("failed validation"),
+      expect.objectContaining({ key: "k" }),
+    );
+  });
+
+  it("recomputes and warns when a cached value is not valid JSON", async () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    const incSpy = vi.spyOn(redisCacheErrorsTotal, "inc");
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    const fn = vi.fn(() => Promise.resolve(7));
+
+    storeOf().set("p:k", "{not json");
+    await cache.getOrCompute("k", fn);
+
+    expect(fn).toHaveBeenCalledOnce();
+    expect(incSpy).toHaveBeenCalledWith({ operation: "parse" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("parse failed"),
+      expect.anything(),
+    );
+  });
+
+  it("warns and counts a Redis read failure instead of swallowing it", async () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    const incSpy = vi.spyOn(redisCacheErrorsTotal, "inc");
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    vi.spyOn(redisOf(), "get").mockRejectedValueOnce(
+      new Error("Redis unavailable"),
+    );
+
+    await expect(
+      cache.getOrCompute("k", () => Promise.resolve(1)),
+    ).resolves.toBe(1);
+
+    expect(incSpy).toHaveBeenCalledWith({ operation: "read" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("cache read failed"),
+      expect.objectContaining({ error: "Redis unavailable" }),
+    );
+  });
+
+  it("warns and counts a Redis write failure instead of swallowing it", async () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    const incSpy = vi.spyOn(redisCacheErrorsTotal, "inc");
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    vi.spyOn(redisOf(), "setex").mockRejectedValueOnce(
+      new Error("write refused"),
+    );
+
+    await expect(
+      cache.getOrCompute("k", () => Promise.resolve(42)),
+    ).resolves.toBe(42);
+
+    expect(incSpy).toHaveBeenCalledWith({ operation: "write" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("cache write failed"),
+      expect.anything(),
+    );
+  });
+
+  it("warns (instead of silently swallowing) on a Redis connection-level error event", () => {
+    const warnSpy = vi
+      .spyOn(Logger.prototype, "warn")
+      .mockImplementation(() => undefined);
+    createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+
+    const [instance] = instances;
+    expect(instance?.errorHandlers.length).toBeGreaterThan(0);
+    instance?.errorHandlers[0]?.(new Error("ECONNREFUSED"));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("redis connection error"),
+      expect.objectContaining({ error: "ECONNREFUSED" }),
+    );
   });
 });

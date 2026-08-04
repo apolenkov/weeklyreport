@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
-    # 39-03: load pg_stat_statements so we can mine real slow-query stats
+    # Load pg_stat_statements so we can mine real slow-query stats
     # from the running dev DB. The extension itself is created via the
     # init script below on first boot. log_min_duration_statement=200 logs
     # any SQL > 200ms to docker stderr — visible via `docker logs postgres`.
@@ -30,10 +30,10 @@ services:
     ports:
       - "5432:5432"
 
-  # Phase 33-04: migrated mailhog (amd64-only via Rosetta) → mailpit. Mailpit
-  # is a multi-arch fork by axllent — same SMTP :1025 + Web UI :8025 contract,
-  # native arm64 image, actively maintained, modern UI. Keep service name
-  # `mailhog` so existing SMTP_HOST=mailhog env wiring still works without
+  # Mailpit is a multi-arch fork by axllent — same SMTP :1025 + Web UI :8025
+  # contract as mailhog, native arm64 image, actively maintained, modern UI.
+  # Keep service name `mailhog` so existing SMTP_HOST=mailhog env wiring still
+  # works without
   # touching every consumer.
   mailhog:
     image: axllent/mailpit:latest@sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6
@@ -94,7 +94,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_MAXMEMORY_BYTES: 209715200
-      # 36-03: this is the DEV compose (mailhog catch-all, exposed ports,
+      # This is the DEV compose (mailhog catch-all, exposed ports,
       # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.
       # The boot fence in env.schema.ts now refuses to start when both
       # NODE_ENV=production AND AUTH_DEV_MODE=true; keeping NODE_ENV=development

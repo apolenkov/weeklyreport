@@ -1,17 +1,5 @@
-/**
- * Composes the three `LeadForm`-page tRPC queries into the mock-shaped slices
- * the existing presentational components expect:
- *
- *   - `reports.getActive`     -> `ReportSectionReadModel | null`
- *   - `leadForm.byPeriod`     -> `{ section: ReportSectionReadModel; readOnly: boolean }`
- *   - `reports.myHistory`     -> `MyHistoryEntry[]`
- *
- * Each record-family mapper lives in a sibling `lead-form-*` module and
- * documents its own resolution rules; this file re-exports them and wires the
- * composer. `leadForm.byPeriod` returns a single section, and `products` /
- * `risks` / `decisions` / `priorities` are derived from that section's flat
- * arrays.
- */
+// Compose the three LeadForm query slices; sibling mappers own record-field
+// resolution while this module wires the shared presentation shape.
 
 import type {
   DbRole,
@@ -61,17 +49,9 @@ export { normalizeStageName, stageNamesMatch };
 export interface LeadCurrentUser {
   name: string;
   initials: string;
-  /**
-   * Display label rendered next to the user's name in the form chrome.
-   * Derived from the section's `authorRole` — a fixed label here would read
-   * "Dev Lead" to a head or admin opening the same form.
-   */
+  // Derived from authorRole so head/admin views do not receive a fixed label.
   role: string;
-  /**
-   * Authoritative role token (the Prisma `Role` enum) used for gating
-   * head/admin-only form actions like "Revoke". Driven by the read model's
-   * `authorRole`.
-   */
+  // Raw role token drives head/admin action gates such as Revoke.
   authorRole: DbRole;
 }
 
@@ -82,18 +62,10 @@ export interface LeadCurrentUser {
 export interface LeadActivityCard {
   readonly activityId: string;
   readonly activityName: string;
-  /** Stored lead-chosen status (nullable legacy). */
   readonly status: TrafficLightStatus | null;
-  /**
-   * Risk/blocker floor folded with the lead's stored choice — read-only surfaces
-   * (slides, head report) render `derivedStatus ?? status`. Server-computed.
-   */
+  // Server-derived risk floor used by read-only surfaces.
   readonly derivedStatus: TrafficLightStatus | null;
-  /**
-   * The RECORD-ONLY floor (covering risks/blockers), excluding the stored choice.
-   * The interactive pill gates a manual lower on THIS — so a lead can still lower
-   * a status they raised themselves — and displays `worse(status, alarmFloor)`.
-   */
+  // Record-only alarm floor gates manual lowering; the stored choice is excluded.
   readonly alarmFloor: TrafficLightStatus | null;
   readonly linkedProducts: readonly {
     productId: string;
@@ -117,26 +89,13 @@ function mapLeadActivityCards(
 // ---- Composer ----
 
 export interface MapLeadFormArgs {
-  /**
-   * The active section returned by `reports.getActive`. When `null`, no active
-   * report is bound to the user's session — the caller should render an empty
-   * state. Mappers below assume `active !== null` once data is settled.
-   */
+  // Active query section; callers pass settled data before mapping.
   active: ReportSectionReadModel;
-  /**
-   * Wrapper from `leadForm.byPeriod` — section + readOnly flag. We use
-   * `byPeriod.section` when present (period-scoped read), else fall back to
-   * `active`.
-   */
+  // Period-scoped section and server lock state used by the form.
   byPeriod: {
     section: ReportSectionReadModel;
     readOnly: boolean;
-    /**
-     * reopen-request-lifecycle: server-computed flag — true only when the
-     * lead may file a reopen request (submitted section, open/reopened period,
-     * no pending request). The button reads this; it does NOT reconstruct the
-     * policy. Optional so legacy/test args without it default to "hidden".
-     */
+    // Server-computed lifecycle gate; the client never reconstructs policy.
     canRequestReopen?: boolean;
   };
   history: readonly MyHistoryEntry[];
@@ -149,24 +108,15 @@ export interface MappedLeadForm {
   risks: ReturnType<typeof mapLeadRisks>;
   decisions: ReturnType<typeof mapLeadDecisions>;
   priorities: ReturnType<typeof mapLeadPriorities>;
-  /** activity-first-class: the author's attached activities as full record cards. */
   activityCards: LeadActivityCard[];
   periods: ReturnType<typeof mapLeadPeriods>;
   currentUser: LeadCurrentUser;
-  /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
-  /**
-   * reopen-request-lifecycle: whether to show the lead's Request Reopen
-   * control. Server-computed; the client never reconstructs the lifecycle.
-   */
+  // Server-computed reopen control; the client never reconstructs lifecycle.
   canRequestReopen: boolean;
 }
 
-/**
- * Compose all three queries into a single LeadForm-shaped payload. Caller is
- * responsible for ensuring all inputs are settled (i.e., not undefined) before
- * invoking — use `isLoading || !data` guards in the page component.
- */
+// Inputs must be settled before mapping; page guards own loading checks.
 export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   const section = args.byPeriod.section;
   // Lock the form when the period is locked OR the section is already submitted.
@@ -175,9 +125,8 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // Surface the section author's role end-to-end. The display label
   // comes from the shared `ROLE_LABEL` home; the raw token (`authorRole`) is
   // exposed so role-based UI gating doesn't have to reverse-engineer the label
-  // string. Defaults to 'lead' when the read model omits it (legacy fixtures,
-  // harness-driven tests).
-  const authorRole: DbRole = args.active.authorRole ?? "lead";
+  // string.
+  const authorRole: DbRole = args.active.authorRole;
   const roleLabel = ROLE_LABEL[authorRole];
 
   return {

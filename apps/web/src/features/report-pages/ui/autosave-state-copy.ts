@@ -5,11 +5,14 @@ interface AutosaveCopy {
   readonly readiness: string;
 }
 
+// idle and saved share the same copy; one value so they cannot drift apart.
+const SAVED_COPY: AutosaveCopy = {
+  status: "Draft saved",
+  readiness: "Draft is saved.",
+};
+
 const AUTOSAVE_COPY: Record<AutosaveState, AutosaveCopy> = {
-  idle: {
-    status: "Draft saved",
-    readiness: "Draft is saved.",
-  },
+  idle: SAVED_COPY,
   pending: {
     status: "Draft changes pending",
     readiness: "Draft changes are waiting to save.",
@@ -18,10 +21,7 @@ const AUTOSAVE_COPY: Record<AutosaveState, AutosaveCopy> = {
     status: "Saving draft",
     readiness: "Draft changes are saving.",
   },
-  saved: {
-    status: "Draft saved",
-    readiness: "Draft is saved.",
-  },
+  saved: SAVED_COPY,
   error: {
     status: "Draft save failed",
     readiness: "Draft save failed. Use Save to retry.",

@@ -49,6 +49,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
           },
         ],
         stageSet: [{ stageId: STAGE_BUILD, stageName: "Build", sortOrder: 0 }],
+        ownerGroupId: "66666666-6666-4666-8666-666666666661",
       },
       {
         projectId: UNSHARED_PROJECT_ID,
@@ -63,6 +64,7 @@ function foreignSectionWithTwoProducts(): ReportSectionReadModel {
           },
         ],
         stageSet: [{ stageId: STAGE_TEST, stageName: "Test", sortOrder: 1 }],
+        ownerGroupId: "66666666-6666-4666-8666-666666666662",
       },
     ],
     referencedProjects: [
@@ -239,10 +241,9 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     );
 
     const texts = section.decisions.map((d) => d.text);
-    // The cross-author co-lead lens mirrors getCrossAuthorContent's
-    // sharedIds.has(productId): a null-productId (cross-cutting) decision is not
-    // on a shared product, so it is dropped here exactly as the Everyone lens
-    // drops it — the two co-lead read paths disclose at the same level.
+    // The co-lead lens mirrors getCrossAuthorContent's sharedIds.has(productId):
+    // a null-productId (cross-cutting) decision is not on a shared product, so
+    // it is dropped here exactly as the Everyone lens drops it.
     expect(texts).not.toContain("Cross-cutting decision");
     // a decision on the author's unshared product is also hidden.
     expect(texts).not.toContain("Secret decision");
@@ -273,7 +274,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       { stageId: STAGE_BUILD, stageName: "Build", sortOrder: 0 },
     ]);
     // referencedProjects recomputed from the filtered rows → unshared name gone
-    expect(section.referencedProjects ?? []).toEqual([]);
+    expect(section.referencedProjects).toEqual([]);
   });
 
   it("empties activities and drops reviews, keeping shared items/risks/decisions", async () => {
@@ -287,6 +288,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
           note: "Confidential note",
           linkedProducts: [],
           derivedStatus: null,
+          alarmFloor: null,
         },
       ],
       reviews: [
@@ -320,10 +322,8 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
       OTHER_USER_ID,
     );
 
-    // the section author's per-activity status + free-text notes and per-section
-    // reviews are stripped — the co-lead lens never exceeds the Everyone lens
     expect(section.activities).toEqual([]);
-    expect(section.reviews).toBeUndefined();
+    expect(section.reviews).toEqual([]);
     const serialized = JSON.stringify(section);
     expect(serialized).not.toContain("Confidential note");
     expect(serialized).not.toContain("Sensitive activity");
@@ -454,12 +454,9 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
   });
 
   it("closes the TOCTOU: refuses the read even when the pre-check's group snapshot is stale", async () => {
-    // Simulates a group reassignment racing the read: `assertHeadTargetInGroup`
-    // (a separate query) still sees the OLD, matching group and passes — but
-    // the atomic `getSectionForPeriodAsGroupPeer` re-evaluates membership in
-    // the SAME statement as the section load and now sees the target has
-    // is outside the head's group, so it returns null. The scoped read, not
-    // the pre-check, is what must fail this closed.
+    // A group reassignment races the read: the separate assertHeadTargetInGroup
+    // pre-check passes on the OLD group, but the atomic peer-read re-evaluates
+    // membership in the same statement as the section load and fails closed.
     const repo = crossAuthorRepo({
       getUserReportingGroupId: vi.fn().mockResolvedValue(HEAD_GROUP_ID),
       getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
@@ -508,22 +505,17 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
     expect(repo.getUserReportingGroupId).not.toHaveBeenCalled();
   });
 
-  it("denies the read for archived-only sharing and falls back to the own section", async () => {
+  it("denies the read for archived-only sharing instead of falling back to the own section", async () => {
     const repo = crossAuthorRepo({
       // archived-only co-ownership → empty non-archived set
       getSharedNonArchivedProductIds: vi.fn().mockResolvedValue([]),
     });
     const service = new LeadFormService(repo);
 
-    const { section, readOnly } = await service.getByPeriod(
-      REPORT_ID,
-      AUTHOR_ID,
-      "lead",
-      OTHER_USER_ID,
-    );
+    await expect(
+      service.getByPeriod(REPORT_ID, AUTHOR_ID, "lead", OTHER_USER_ID),
+    ).rejects.toThrow(LeadFormAccessError);
 
-    expect(section.authorId).toBe(AUTHOR_ID);
-    expect(readOnly).toBe(false);
     // the foreign section's status/metadata were never read
     expect(repo.getSectionForPeriod).not.toHaveBeenCalledWith(
       REPORT_ID,
