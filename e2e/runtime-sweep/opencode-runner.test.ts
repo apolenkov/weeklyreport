@@ -4,6 +4,7 @@ import type { CoverageCell } from "./contracts.ts";
 import {
   assertPlaywrightMcpConnected,
   OpenCodeDriveError,
+  OpenCodeDriveInterruptedError,
   type OpenCodeExecutor,
   parseOpenCodeDriverReport,
   parseOpenCodeEvents,
@@ -42,6 +43,16 @@ describe("OpenCode runtime-sweep runner", () => {
       safety: "reversible",
       transition: "none",
     },
+    execution: {
+      kind: "control",
+      action: {
+        controlKey: "save",
+        operation: "click",
+        safety: "reversible",
+        transition: "none",
+      },
+    },
+    faultId: null,
     oracle: {
       domainSpecRefs: ["exhaustive-runtime-sweep"],
       function: { required: true, expectation: "save works" },
@@ -82,7 +93,7 @@ describe("OpenCode runtime-sweep runner", () => {
           cellId: "cell-a",
           catalogRoute: "/lead/report",
           resolvedRoute: "/lead/report",
-          controlKeys: ["save"],
+          actionKey: "save",
         },
       ],
       routesVisited: 1,
@@ -111,9 +122,12 @@ describe("OpenCode runtime-sweep runner", () => {
     ).toHaveLength(1);
   });
 
-  it("resumes one session until Luna emits a final answer", async () => {
+  it("resumes one session until the driver emits a final answer", async () => {
     const execute = vi
       .fn<OpenCodeExecutor>()
+      .mockResolvedValueOnce({
+        stdout: `${event("final_answer", "DRIVER_BOOTSTRAP_READY")}\n`,
+      })
       .mockResolvedValueOnce({ stdout: `${event("tool", "working")}\n` })
       .mockResolvedValueOnce({ stdout: `${event("final_answer", "{}")}\n` });
 
@@ -123,8 +137,26 @@ describe("OpenCode runtime-sweep runner", () => {
         execute,
       ),
     ).resolves.toMatchObject({ finalText: "{}", sessionId: "session-1" });
+    for (const [args] of execute.mock.calls) {
+      const agentIndex = args.indexOf("--agent");
+      expect(agentIndex).toBeGreaterThanOrEqual(0);
+      expect(args[agentIndex + 1]).toBe("flash-browser-driver");
+      expect(args).not.toContain("--pure");
+      expect(args).toEqual(
+        expect.arrayContaining([
+          "--model",
+          "opencode-go/deepseek-v4-flash",
+          "--variant",
+          "max",
+        ]),
+      );
+    }
+    expect(
+      execute.mock.calls[1]?.[0].some((arg) => /prompt\.md/u.test(arg)),
+    ).toBe(true);
+    expect(execute.mock.calls[1]?.[0]).not.toContain("--file");
     expect(execute).toHaveBeenNthCalledWith(
-      2,
+      3,
       expect.arrayContaining(["--session", "session-1"]),
     );
   });
@@ -134,6 +166,35 @@ describe("OpenCode runtime-sweep runner", () => {
     await expect(assertPlaywrightMcpConnected(execute)).rejects.toThrow(
       OpenCodeDriveError,
     );
+  });
+
+  it("fails MCP preflight when a required browser tool is missing", async () => {
+    const execute = vi
+      .fn<OpenCodeExecutor>()
+      .mockResolvedValue({ stdout: "playwright connected" });
+    await expect(
+      assertPlaywrightMcpConnected(execute, ["browser_navigate"]),
+    ).rejects.toThrow(/missing tools/iu);
+  });
+
+  it("preserves transcripts when a session is interrupted", async () => {
+    const execute = vi
+      .fn<OpenCodeExecutor>()
+      .mockResolvedValueOnce({
+        stdout: `${event("final_answer", "DRIVER_BOOTSTRAP_READY")}\n`,
+      })
+      .mockResolvedValue({ stdout: `${event("tool", "working")}\n` });
+    try {
+      await runOpenCodeDrive(
+        { maxTurns: 1, prompt: "drive", repoRoot: "/repo" },
+        execute,
+      );
+      throw new Error("expected an interrupted session");
+    } catch (error) {
+      expect(error).toBeInstanceOf(OpenCodeDriveInterruptedError);
+      if (error instanceof OpenCodeDriveInterruptedError)
+        expect(error.transcripts).toHaveLength(1);
+    }
   });
 
   it("rejects stale and malformed driver reports", () => {
@@ -149,5 +210,14 @@ describe("OpenCode runtime-sweep runner", () => {
     expect(() => parseOpenCodeDriverReport("{}", expected)).toThrow(
       "driver result rejected",
     );
+    expect(() => parseOpenCodeDriverReport("{", expected)).toThrow(
+      "not valid JSON",
+    );
+    expect(() =>
+      parseOpenCodeDriverReport(
+        report().replace('"detected":true', '"detected":false'),
+        expected,
+      ),
+    ).toThrow(/canary/iu);
   });
 });

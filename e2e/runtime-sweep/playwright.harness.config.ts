@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: /dom-inventory\.spec\.ts/,
+  testMatch:
+    /(?:control-actions(?:-form)?|dom-inventory|evidence-capture|live-control-lane)\.spec\.ts/,
   outputDir: ".results-harness",
   timeout: 30_000,
   expect: { timeout: 5000 },

@@ -19,6 +19,7 @@ import {
   LedgerValidationError,
   readCoverageLedger,
   verifyCoverageLedger,
+  writeOrderedCoverageLedger,
 } from "./ledger.ts";
 
 const SOURCE_SHA = "a".repeat(40);
@@ -102,6 +103,8 @@ function makeCell(
     viewport: { browser: "chromium", width: 1440, height: 900 },
     state,
     action,
+    execution: { kind: "control", action },
+    faultId: null,
     oracle,
     controls: [{ ...control, cellId }],
     evidence: {
@@ -194,6 +197,36 @@ describe("runtime sweep ledger", () => {
     ).toThrow(/final verdict/);
   });
 
+  it("allows reasoned contextual controls on navigation cells", () => {
+    const navigationAction = {
+      controlKey: "route",
+      operation: "navigate",
+      safety: "read-only",
+      transition: "none",
+    } as const;
+    const navigationCell: CoverageCell = {
+      ...makeCell(),
+      action: navigationAction,
+      execution: { kind: "navigation", action: navigationAction },
+      controls: [
+        {
+          ...control,
+          actionResult: {
+            kind: "not-exercised",
+            policy: "inapplicable",
+            reason: "Navigation case does not execute contextual controls",
+          },
+        },
+      ],
+    };
+    expect(
+      verifyCoverageLedger([navigationCell], {
+        ...options,
+        expectedCellIds: [navigationCell.cellId],
+      }),
+    ).toMatchObject({ counts: { pass: 1 } });
+  });
+
   it("proves zero-gap counts when every expected cell passes", () => {
     const result = verifyCoverageLedger(
       [makeCell(), makeCell("cell-b")],
@@ -212,8 +245,33 @@ describe("runtime sweep ledger", () => {
       await appendCoverageCell(path, makeCell("cell-b"), {
         sourceSha: SOURCE_SHA,
       });
+      await expect(
+        appendCoverageCell(path, makeCell(), { sourceSha: SOURCE_SHA }),
+      ).rejects.toThrow(/duplicate cell id cell-a/);
       const cells = await readCoverageLedger(path);
       expect(cells.map((cell) => cell.cellId)).toEqual(["cell-a", "cell-b"]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("writes a single immutable ledger in expected matrix order", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "runtime-sweep-ledger-"));
+    const path = join(directory, "baseline", "coverage-cells.jsonl");
+    try {
+      await writeOrderedCoverageLedger(path, [makeCell("cell-b"), makeCell()], {
+        sourceSha: SOURCE_SHA,
+        expectedCellIds: ["cell-a", "cell-b"],
+      });
+      expect(
+        (await readCoverageLedger(path)).map(({ cellId }) => cellId),
+      ).toEqual(["cell-a", "cell-b"]);
+      await expect(
+        writeOrderedCoverageLedger(path, [makeCell(), makeCell("cell-b")], {
+          sourceSha: SOURCE_SHA,
+          expectedCellIds: ["cell-a", "cell-b"],
+        }),
+      ).rejects.toMatchObject({ code: "EEXIST" });
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

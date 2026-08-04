@@ -1,16 +1,20 @@
+import path from "node:path";
+
+import { compileCampaignMatrix } from "./campaign-matrix.ts";
 import {
   type CampaignManifest,
   campaignManifestSchema,
-  CANONICAL_ROLES,
-  type Exclusion,
   matrixDeclarationSchema,
-  type Role,
-  type RouteDeclaration,
   SEED_PROFILES,
-  seedProfileDefinitionSchema,
   STATE_KINDS,
 } from "./contracts.ts";
 import { sha256Hex, stableSerialize } from "./ids.ts";
+import {
+  completeSet,
+  normalizeRoutesAndProfiles,
+  sortExclusions,
+  sortRoles,
+} from "./manifest-normalization.ts";
 import {
   type CampaignManifestInput,
   cleanTreeDigest,
@@ -20,9 +24,26 @@ import {
   ManifestInputError,
   requirePath,
   runGitCommand,
-  type SeedProfileDefinitionInput,
+  writeAtomicManifestPair,
   writeManifestFile,
 } from "./manifest-source.ts";
+import {
+  finalizeCampaignMatrix,
+  type FrozenMatrix,
+  serializeFrozenMatrix,
+} from "./matrix-finalizer.ts";
+import {
+  assertPreflightMatchesSource,
+  type PreflightArtifact,
+  readPreflightArtifact,
+} from "./preflight-artifact.ts";
+import {
+  parseSourceArtifact,
+  readSourceArtifact,
+  serializeSourceArtifact,
+  type SourceArtifact,
+} from "./source-artifact.ts";
+import { SPECIALIZED_DECLARATIONS } from "./specialized-declarations.ts";
 
 export type {
   CampaignManifestInput,
@@ -36,103 +57,59 @@ export {
   ManifestWriteError,
   SourceShaMismatchError,
 } from "./manifest-source.ts";
+export {
+  parseSourceArtifact,
+  readSourceArtifact,
+  serializeSourceArtifact,
+  type SourceArtifact,
+  sourceArtifactSchema,
+} from "./source-artifact.ts";
 
-const REQUIRED_EXCLUSION_TARGETS = [
-  "firefox",
-  "webkit",
-  "mobile",
-  "tablet",
-] as const;
+const sourceBody = (input: {
+  readonly manifest: CampaignManifestInput;
+  readonly treeDigest: string;
+  readonly catalogDigest: string;
+  readonly domainSpecDigest: string;
+  readonly routes: CampaignManifest["routes"];
+  readonly seedProfiles: CampaignManifest["seedProfiles"];
+  readonly matrixDeclaration: CampaignManifest["matrixDeclaration"];
+  readonly plan: ReturnType<typeof compileCampaignMatrix>;
+}) => ({
+  artifact: "SOURCE" as const,
+  version: 1 as const,
+  campaignId: input.manifest.campaignId,
+  sourceSha: input.manifest.sourceSha,
+  treeDigest: input.treeDigest,
+  browser: input.manifest.browser,
+  viewport: input.manifest.viewport,
+  roles: sortRoles(input.manifest.roles),
+  routes: input.routes,
+  profiles: completeSet(
+    input.manifest.profiles,
+    SEED_PROFILES,
+    "seed profiles",
+  ),
+  seedProfiles: input.seedProfiles,
+  stateKinds: completeSet(
+    input.manifest.stateKinds,
+    STATE_KINDS,
+    "state kinds",
+  ),
+  actions: input.manifest.actions,
+  toolVersions: input.manifest.toolVersions,
+  catalogDigest: input.catalogDigest,
+  domainSpecDigest: input.domainSpecDigest,
+  matrixDeclaration: input.matrixDeclaration,
+  exclusions: sortExclusions(input.manifest.exclusions),
+  plan: input.plan,
+  specializedDeclarations: SPECIALIZED_DECLARATIONS,
+  matrixLimits: input.manifest.matrixLimits,
+});
 
-function sortRoles(roles: readonly Role[]): readonly Role[] {
-  const unique = new Set(roles);
-  if (unique.size !== CANONICAL_ROLES.length)
-    throw new ManifestInputError(
-      "Manifest must declare all canonical roles once",
-    );
-  if (CANONICAL_ROLES.some((role) => !unique.has(role)))
-    throw new ManifestInputError("Manifest must declare all canonical roles");
-  return [...CANONICAL_ROLES];
-}
-
-function completeSet<T extends string>(
-  values: readonly T[],
-  expected: readonly T[],
-  label: string,
-): readonly T[] {
-  const unique = new Set(values);
-  if (
-    unique.size !== expected.length ||
-    expected.some((value) => !unique.has(value))
-  ) {
-    throw new ManifestInputError(`Manifest must declare all ${label}`);
-  }
-  return [...expected];
-}
-
-function sortRoutes(
-  routes: readonly RouteDeclaration[],
-): readonly RouteDeclaration[] {
-  const keys = routes.map(
-    ({ role, catalogRoute, resolvedRoute }) =>
-      `${role}\0${catalogRoute}\0${resolvedRoute}`,
-  );
-  if (new Set(keys).size !== keys.length)
-    throw new ManifestInputError("Manifest routes must be unique");
-  const routeRoles = new Set(routes.map(({ role }) => role));
-  if (routeRoles.size !== CANONICAL_ROLES.length)
-    throw new ManifestInputError(
-      "Manifest routes must cover all canonical roles",
-    );
-  return routes.toSorted(
-    (left, right) =>
-      left.role.localeCompare(right.role) ||
-      left.catalogRoute.localeCompare(right.catalogRoute) ||
-      left.resolvedRoute.localeCompare(right.resolvedRoute),
-  );
-}
-
-function sortExclusions(
-  exclusions: readonly Exclusion[],
-): readonly Exclusion[] {
-  const targets = new Set(exclusions.map(({ target }) => target.toLowerCase()));
-  const missing = REQUIRED_EXCLUSION_TARGETS.filter(
-    (target) => !targets.has(target),
-  );
-  if (missing.length > 0)
-    throw new ManifestInputError(
-      `Manifest exclusions are missing: ${missing.join(", ")}`,
-    );
-  return exclusions.toSorted(
-    (left, right) =>
-      left.scope.localeCompare(right.scope) ||
-      left.target.localeCompare(right.target) ||
-      left.id.localeCompare(right.id),
-  );
-}
-
-function seedBindings(
-  definitions: readonly SeedProfileDefinitionInput[],
-): CampaignManifest["seedProfiles"] {
-  if (definitions.length !== SEED_PROFILES.length)
-    throw new ManifestInputError("Manifest must declare four seed profiles");
-  const parsed = definitions.map(({ profile, definition }) => ({
-    profile,
-    definition: seedProfileDefinitionSchema.parse(definition),
-    digest: sha256Hex({ profile, definition }),
-  }));
-  const profiles = new Set(parsed.map(({ profile }) => profile));
-  if (profiles.size !== SEED_PROFILES.length)
-    throw new ManifestInputError("Manifest seed profiles must be unique");
-  return parsed.toSorted((left, right) =>
-    left.profile.localeCompare(right.profile),
-  );
-}
-
-export async function buildCampaignManifest(
+export async function buildCampaignSource(
   input: CampaignManifestInput,
   runCommand: ManifestCommandRunner = runGitCommand,
-): Promise<CampaignManifest> {
+): Promise<SourceArtifact> {
   const repoRoot = requirePath(input.repoRoot, "repoRoot");
   requirePath(input.outputPath, "outputPath");
   if (input.campaignId.trim() === "")
@@ -145,41 +122,138 @@ export async function buildCampaignManifest(
   const matrixDeclaration = matrixDeclarationSchema.parse(
     input.matrixDeclaration,
   );
-  const seedProfiles = seedBindings(input.seedProfiles);
-  const matrixDigest = sha256Hex(matrixDeclaration);
-  const manifest = campaignManifestSchema.parse({
-    campaignId: input.campaignId,
+  const { routes, seedProfiles } = normalizeRoutesAndProfiles(input);
+  const plan = compileCampaignMatrix({
     sourceSha: input.sourceSha,
-    treeDigest,
-    browser: input.browser,
-    viewport: input.viewport,
-    roles: sortRoles(input.roles),
-    routes: sortRoutes(input.routes),
-    profiles: completeSet(input.profiles, SEED_PROFILES, "seed profiles"),
+    declaration: matrixDeclaration,
+    routes,
     seedProfiles,
-    stateKinds: completeSet(input.stateKinds, STATE_KINDS, "state kinds"),
-    actions: input.actions,
-    toolVersions: input.toolVersions,
+  });
+  const body = sourceBody({
+    manifest: input,
+    treeDigest,
     catalogDigest,
     domainSpecDigest,
+    routes,
+    seedProfiles,
     matrixDeclaration,
-    matrixDigest,
-    exclusions: sortExclusions(input.exclusions),
+    plan,
   });
-  return freezeDeep(manifest);
+  return parseSourceArtifact({ ...body, sourceDigest: sha256Hex(body) });
+}
+
+const matrixFor = (
+  source: SourceArtifact,
+  preflight: PreflightArtifact,
+): FrozenMatrix => {
+  assertPreflightMatchesSource(source, preflight);
+  return finalizeCampaignMatrix({
+    sourceSha: source.sourceSha,
+    declaration: source.matrixDeclaration,
+    plan: source.plan,
+    routes: source.routes,
+    preflight: preflight.segments,
+    maxCases: source.matrixLimits.maxCases,
+    maxControlsPerSegment: source.matrixLimits.maxControlsPerSegment,
+  });
+};
+
+const manifestFor = (
+  source: SourceArtifact,
+  matrix: FrozenMatrix,
+): CampaignManifest => {
+  const {
+    artifact: _artifact,
+    version: _version,
+    plan: _plan,
+    specializedDeclarations: _specializedDeclarations,
+    sourceDigest: _sourceDigest,
+    matrixLimits: _matrixLimits,
+    ...manifestFields
+  } = source;
+  return freezeDeep(
+    campaignManifestSchema.parse({
+      ...manifestFields,
+      matrixDigest: matrix.digest,
+    }),
+  );
+};
+
+export async function buildCampaignManifest(
+  input: CampaignManifestInput,
+  runCommand: ManifestCommandRunner = runGitCommand,
+): Promise<CampaignManifest> {
+  const { source, preflight } = await sourceForStageB(input, runCommand);
+  const matrix = matrixFor(source, preflight);
+  return manifestFor(source, matrix);
 }
 
 export function serializeCampaignManifest(manifest: CampaignManifest): string {
-  const parsed = campaignManifestSchema.parse(manifest);
-  return `${stableSerialize(parsed)}\n`;
+  return `${stableSerialize(campaignManifestSchema.parse(manifest))}\n`;
 }
+
+export async function writeCampaignSource(
+  input: CampaignManifestInput,
+  runCommand: ManifestCommandRunner = runGitCommand,
+): Promise<SourceArtifact> {
+  const source = await buildCampaignSource(input, runCommand);
+  const sourcePath = requirePath(
+    input.sourcePath ??
+      path.join(path.dirname(input.outputPath), "SOURCE.json"),
+    "sourcePath",
+  );
+  await writeManifestFile(sourcePath, serializeSourceArtifact(source));
+  return source;
+}
+
+const sourceForStageB = async (
+  input: CampaignManifestInput,
+  runCommand: ManifestCommandRunner,
+): Promise<{
+  readonly source: SourceArtifact;
+  readonly preflight: PreflightArtifact;
+}> => {
+  const sourcePath = requirePath(
+    input.sourcePath ??
+      path.join(path.dirname(input.outputPath), "SOURCE.json"),
+    "sourcePath",
+  );
+  const preflightPath = requirePath(
+    input.preflightPath ??
+      path.join(path.dirname(input.outputPath), "PREFLIGHT.json"),
+    "preflightPath",
+  );
+  const source = await readSourceArtifact(sourcePath);
+  if (
+    source.sourceSha !== input.sourceSha ||
+    source.campaignId !== input.campaignId
+  )
+    throw new ManifestInputError("SOURCE.json does not match manifest inputs");
+  const currentTreeDigest = await cleanTreeDigest(
+    { ...input, sourceSha: source.sourceSha },
+    runCommand,
+  );
+  if (currentTreeDigest !== source.treeDigest)
+    throw new ManifestInputError(
+      "SOURCE.json tree digest does not match the current clean HEAD",
+    );
+  const preflight = await readPreflightArtifact(preflightPath);
+  return { source, preflight };
+};
 
 export async function writeCampaignManifest(
   input: CampaignManifestInput,
   runCommand: ManifestCommandRunner = runGitCommand,
 ): Promise<CampaignManifest> {
-  const manifest = await buildCampaignManifest(input, runCommand);
-  const outputPath = requirePath(input.outputPath, "outputPath");
-  await writeManifestFile(outputPath, serializeCampaignManifest(manifest));
+  const { source, preflight } = await sourceForStageB(input, runCommand);
+  const matrix = matrixFor(source, preflight);
+  const manifest = manifestFor(source, matrix);
+  const manifestPath = requirePath(input.outputPath, "outputPath");
+  await writeAtomicManifestPair({
+    matrixPath: path.join(path.dirname(manifestPath), "MATRIX.json"),
+    matrixText: serializeFrozenMatrix(matrix),
+    manifestPath,
+    manifestText: serializeCampaignManifest(manifest),
+  });
   return manifest;
 }

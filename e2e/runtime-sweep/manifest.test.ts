@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, readFile, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -7,200 +6,154 @@ import { describe, expect, it } from "vitest";
 import { campaignManifestSchema } from "./contracts.ts";
 import {
   buildCampaignManifest,
+  buildCampaignSource,
   type CampaignManifestInput,
   type ManifestCommandRunner,
   writeCampaignManifest,
+  writeCampaignSource,
 } from "./manifest.ts";
+import {
+  createManifestFixture,
+  fakeManifestGit,
+  FIXTURE_SOURCE_SHA,
+} from "./manifest-fixture.ts";
+import {
+  assertSpecializedNominalTargets,
+  runBrowserPreflight,
+} from "./playwright-preflight.ts";
+import { writePreflightArtifact } from "./preflight-artifact.ts";
 
-const SOURCE_SHA = "a".repeat(40);
-const TREE_SHA = "b".repeat(40);
-
-const fakeGit = (): ManifestCommandRunner => (args) => {
-  const command = args.join(" ");
-  if (command === "status --porcelain=v1 --untracked-files=all")
-    return Promise.resolve("");
-  if (command === "rev-parse --verify HEAD")
-    return Promise.resolve(`${SOURCE_SHA}\n`);
-  if (command === "rev-parse --verify HEAD^{tree}")
-    return Promise.resolve(`${TREE_SHA}\n`);
-  return Promise.reject(new Error(`Unexpected git command: ${command}`));
-};
-
-function definition() {
-  return {
-    purpose: "Deterministic runtime sweep fixture",
-    capabilities: ["canonical-identities"] as const,
-    stableIds: { activeReport: "report-1" },
-    counts: {
-      users: { min: 1, max: 2 },
-      projects: { min: 1, max: 2 },
-      reports: { min: 1, max: 2 },
-      sections: { min: 1, max: 2 },
-      items: { min: 1, max: 2 },
+async function writePreflightFixture(
+  input: CampaignManifestInput,
+): Promise<void> {
+  const source = await buildCampaignSource(input, fakeManifestGit());
+  await writeCampaignSource(input, fakeManifestGit());
+  const preflight = await runBrowserPreflight({
+    source,
+    harness: {
+      prepare: () => Promise.resolve(),
+      navigate: () => Promise.resolve(),
+      inventory: () => Promise.resolve({ controls: [], issues: [] }),
     },
-  };
+  });
+  if (input.preflightPath === undefined)
+    throw new Error("Preflight fixture path is required");
+  await writePreflightArtifact(input.preflightPath, preflight);
 }
 
-async function fixture(): Promise<{
-  readonly root: string;
-  readonly input: CampaignManifestInput;
-}> {
-  const root = await mkdtemp(path.join(tmpdir(), "runtime-manifest-"));
-  const catalogPath = path.join(root, "catalog.yaml");
-  const specPath = path.join(root, "spec.md");
-  await writeFile(catalogPath, "role: lead\nroutes:\n", "utf8");
-  await writeFile(specPath, "# runtime sweep\n", "utf8");
-  const profiles = ["minimal", "demo", "full", "stress"] as const;
-  const input: CampaignManifestInput = {
-    repoRoot: root,
-    outputPath: path.join(root, "MANIFEST.json"),
-    campaignId: "campaign-1",
-    sourceSha: SOURCE_SHA,
-    browser: "chromium",
-    viewport: { browser: "chromium", width: 1440, height: 900 },
-    roles: ["lead", "head", "admin", "viewer"],
-    routes: [
-      { role: "lead", catalogRoute: "/lead", resolvedRoute: "/lead" },
-      { role: "head", catalogRoute: "/head", resolvedRoute: "/head" },
-      { role: "admin", catalogRoute: "/admin", resolvedRoute: "/admin" },
-      { role: "viewer", catalogRoute: "/reports", resolvedRoute: "/reports" },
-    ],
-    profiles,
-    seedProfiles: profiles.map((profile) => ({
-      profile,
-      definition: definition(),
-    })),
-    stateKinds: ["nominal", "boundary", "lifecycle", "permission", "fault"],
-    actions: [
-      {
-        controlKey: "route",
-        operation: "navigate",
-        safety: "read-only",
-        transition: "none",
-      },
-    ],
-    toolVersions: { node: "26.0.0", pnpm: "11.17.0", playwright: "1.62.0" },
-    catalogPaths: [catalogPath],
-    domainSpecPaths: [specPath],
-    matrixDeclaration: {
-      generatorSeed: "fixed",
-      axes: {
-        role: ["lead"],
-        route: ["/lead"],
-        profileCapability: ["canonical-identities"],
-        lifecycle: ["open"],
-        submission: ["draft"],
-        ownershipDensity: ["single"],
-        permission: ["allowed"],
-        fault: ["none"],
-        controlTransition: ["none"],
-      },
-      constraints: [],
-    },
-    exclusions: [
-      {
-        id: "exclude-firefox",
-        scope: "browser",
-        target: "firefox",
-        reason: "Chromium-only campaign",
-      },
-      {
-        id: "exclude-webkit",
-        scope: "browser",
-        target: "webkit",
-        reason: "Chromium-only campaign",
-      },
-      {
-        id: "exclude-mobile",
-        scope: "viewport",
-        target: "mobile",
-        reason: "Desktop viewport only",
-      },
-      {
-        id: "exclude-tablet",
-        scope: "viewport",
-        target: "tablet",
-        reason: "Desktop viewport only",
-      },
-    ],
-  };
-  return { root, input };
+async function withFixture(
+  callback: (
+    fixture: Awaited<ReturnType<typeof createManifestFixture>>,
+  ) => Promise<void>,
+): Promise<void> {
+  const fixture = await createManifestFixture();
+  try {
+    await callback(fixture);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+}
+
+async function provesNominalTargets(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    const source = await buildCampaignSource(input, fakeManifestGit());
+    expect(() => assertSpecializedNominalTargets(source)).not.toThrow();
+  });
+}
+
+async function buildsDeterministicManifest(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    await writePreflightFixture(input);
+    const first = await buildCampaignManifest(input, fakeManifestGit());
+    const second = await buildCampaignManifest(input, fakeManifestGit());
+    expect(second).toEqual(first);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(first.sourceSha).toBe(FIXTURE_SOURCE_SHA);
+    expect(first.treeDigest).toMatch(/^[0-9a-f]{64}$/u);
+    expect(first.seedProfiles).toHaveLength(4);
+    expect(first.matrixDigest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+}
+
+async function rejectsDirtyOrMismatchedSource(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    await writePreflightFixture(input);
+    const dirtyGit: ManifestCommandRunner = (args) =>
+      args[0] === "status"
+        ? Promise.resolve(" M apps/web/src/app/page.tsx\n")
+        : Promise.reject(new Error("git should stop at dirty status"));
+    await expect(buildCampaignManifest(input, dirtyGit)).rejects.toThrow(
+      "worktree is not clean",
+    );
+    await expect(
+      buildCampaignManifest(
+        { ...input, sourceSha: "A".repeat(40) },
+        fakeManifestGit(),
+      ),
+    ).rejects.toThrow("SOURCE.json does not match manifest inputs");
+  });
+}
+
+async function writesOnce(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    await writePreflightFixture(input);
+    await writeCampaignManifest(input, fakeManifestGit());
+    const text = await readFile(input.outputPath, "utf8");
+    expect(text.endsWith("\n")).toBe(true);
+    expect(campaignManifestSchema.parse(JSON.parse(text)).sourceSha).toBe(
+      FIXTURE_SOURCE_SHA,
+    );
+    await expect(
+      writeCampaignManifest(input, fakeManifestGit()),
+    ).rejects.toThrow("Cannot atomically create campaign artifacts");
+  });
+}
+
+async function refusesMissingPreflight(): Promise<void> {
+  await withFixture(async ({ root, input }) => {
+    await writeCampaignSource(input, fakeManifestGit());
+    await expect(
+      writeCampaignManifest(input, fakeManifestGit()),
+    ).rejects.toThrow("Cannot read PREFLIGHT.json");
+    await expect(access(path.join(root, "MATRIX.json"))).rejects.toThrow();
+  });
+}
+
+async function preservesFrozenSourceDigest(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    await writePreflightFixture(input);
+    const first = await buildCampaignManifest(input, fakeManifestGit());
+    const catalogPath = input.catalogPaths.at(0);
+    if (catalogPath === undefined) throw new Error("catalog fixture is empty");
+    await writeFile(
+      catalogPath,
+      "role: lead\nroutes:\nchanged: true\n",
+      "utf8",
+    );
+    const second = await buildCampaignManifest(input, fakeManifestGit());
+    expect(second.catalogDigest).toBe(first.catalogDigest);
+    expect(second.domainSpecDigest).toBe(first.domainSpecDigest);
+    expect(second.matrixDigest).toBe(first.matrixDigest);
+  });
 }
 
 describe("runtime sweep campaign manifest", () => {
-  it("builds an immutable deterministic SHA-bound manifest", async () => {
-    const { root, input } = await fixture();
-    try {
-      const first = await buildCampaignManifest(input, fakeGit());
-      const second = await buildCampaignManifest(input, fakeGit());
-      expect(second).toEqual(first);
-      expect(Object.isFrozen(first)).toBe(true);
-      expect(first.sourceSha).toBe(SOURCE_SHA);
-      expect(first.treeDigest).toMatch(/^[0-9a-f]{64}$/u);
-      expect(first.seedProfiles).toHaveLength(4);
-      expect(first.matrixDigest).toMatch(/^[0-9a-f]{64}$/u);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("rejects a dirty worktree and malformed source SHA before writing", async () => {
-    const { root, input } = await fixture();
-    try {
-      const dirtyGit: ManifestCommandRunner = (args) => {
-        if (args[0] === "status")
-          return Promise.resolve(" M apps/web/src/app/page.tsx\n");
-        return Promise.reject(new Error("git should stop at dirty status"));
-      };
-      await expect(buildCampaignManifest(input, dirtyGit)).rejects.toThrow(
-        "worktree is not clean",
-      );
-      await expect(
-        buildCampaignManifest(
-          { ...input, sourceSha: "A".repeat(40) },
-          fakeGit(),
-        ),
-      ).rejects.toThrow("exactly 40 lowercase hexadecimal");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("writes canonical JSON once and refuses an overwrite", async () => {
-    const { root, input } = await fixture();
-    try {
-      await writeCampaignManifest(input, fakeGit());
-      const text = await readFile(input.outputPath, "utf8");
-      expect(text.endsWith("\n")).toBe(true);
-      expect(campaignManifestSchema.parse(JSON.parse(text)).sourceSha).toBe(
-        SOURCE_SHA,
-      );
-      await expect(writeCampaignManifest(input, fakeGit())).rejects.toThrow(
-        "Cannot create immutable campaign manifest",
-      );
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("changes source-input digests when catalog content changes", async () => {
-    const { root, input } = await fixture();
-    try {
-      const first = await buildCampaignManifest(input, fakeGit());
-      const catalogPath = input.catalogPaths.at(0);
-      if (catalogPath === undefined)
-        throw new Error("catalog fixture is empty");
-      await writeFile(
-        catalogPath,
-        "role: lead\nroutes:\nchanged: true\n",
-        "utf8",
-      );
-      const second = await buildCampaignManifest(input, fakeGit());
-      expect(second.catalogDigest).not.toBe(first.catalogDigest);
-      expect(second.domainSpecDigest).toBe(first.domainSpecDigest);
-      expect(second.matrixDigest).toBe(first.matrixDigest);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+  it(
+    "proves a nominal target for every specialized declaration",
+    provesNominalTargets,
+  );
+  it(
+    "builds an immutable deterministic SHA-bound manifest",
+    buildsDeterministicManifest,
+  );
+  it(
+    "rejects a dirty worktree and mismatched source",
+    rejectsDirtyOrMismatchedSource,
+  );
+  it("refuses to create MATRIX without PREFLIGHT", refusesMissingPreflight);
+  it("writes canonical JSON once and refuses an overwrite", writesOnce);
+  it(
+    "preserves the frozen source digest after input files change",
+    preservesFrozenSourceDigest,
+  );
 });

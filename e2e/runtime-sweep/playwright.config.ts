@@ -21,6 +21,7 @@ const DATABASE_URL = requiredEnv("E2E_DATABASE_URL");
 const API_PORT = Number(process.env.RUNTIME_SWEEP_API_PORT ?? "3102");
 const WEB_PORT = Number(process.env.RUNTIME_SWEEP_WEB_PORT ?? "3105");
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
+process.env.RUNTIME_SWEEP_BASE_URL = WEB_URL;
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
 const webServers = integrationConfig.webServer;
@@ -50,7 +51,8 @@ const webEnv = {
 
 export default defineConfig({
   testDir: import.meta.dirname,
-  testMatch: /(?:concurrency|fault-recovery|runtime-sweep)\.spec\.ts/,
+  testMatch:
+    /(?:concurrency|fault-recovery|runtime-matrix|runtime-sweep|z-runtime-sweep-live-lane|opencode-driver)\.spec\.ts/,
   outputDir: path.join(ARCHIVE_ROOT, "playwright", PROFILE),
   globalSetup: path.join(REPO_ROOT, "e2e/integration/global-setup.ts"),
   globalTeardown: path.join(REPO_ROOT, "e2e/integration/global-teardown.ts"),
@@ -82,7 +84,32 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "runtime-sweep-chromium",
+      name: "runtime-prerequisites",
+      testMatch: /(?:concurrency|fault-recovery)\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+    {
+      name: "runtime-baseline",
+      testMatch: /runtime-sweep\.spec\.ts/,
+      dependencies: ["runtime-prerequisites"],
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+    {
+      name: "runtime-matrix",
+      testMatch: /runtime-matrix\.spec\.ts/,
+      dependencies: ["runtime-baseline"],
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+    {
+      name: "runtime-live-controls",
+      testMatch: /z-runtime-sweep-live-lane\.spec\.ts/,
+      dependencies: ["runtime-matrix"],
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+    {
+      name: "opencode-flash-driver",
+      testMatch: /opencode-driver\.spec\.ts/,
+      dependencies: ["runtime-live-controls"],
       use: { ...devices["Desktop Chrome"], browserName: "chromium" },
     },
   ],

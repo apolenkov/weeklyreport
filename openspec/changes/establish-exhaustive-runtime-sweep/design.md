@@ -31,7 +31,10 @@ legacy tuple together). It adds no production API or database contract.
   and verdict bound to one SHA, seed/profile snapshot, role, route, viewport, and oracle.
 - Keep the baseline immutable through independent adjudication; then rerun affected cells for each fix and the
   full matrix at the fix SHA.
-- Give Codex one append-only ledger; bounded OpenCode Luna Max Drivers drive roles sequentially in one browser.
+- Give Codex one append-only ledger; bounded OpenCode DeepSeek V4 Flash Max
+  browser Drivers drive roles sequentially in one browser. Native `gpt-5.6-luna`
+  workers handle bounded implementation, while `gpt-5.6-sol` owns architecture,
+  planning, and final synthesis.
   Parallelism is limited to read-only candidate verification and evidence review.
 - Make completion a blocking verdict with zero confirmed or unresolved functional, accessibility, or visual gaps.
 
@@ -45,7 +48,7 @@ legacy tuple together). It adds no production API or database contract.
 
 ## Decisions
 
-### Domain-first coverage and pairwise matrix
+### Two-stage executable matrix
 
 The campaign compiler reads durable domain specs before the catalog/page,
 extracts valid values/transitions (period lifecycle, submission, ownership,
@@ -53,13 +56,24 @@ health, permission), and maps each requirement to a deterministic seed
 capability. A profile that cannot provide a required state is rejected; nothing
 is silently invented or skipped.
 
-The named profiles (`minimal`, `demo`, `full`, `stress`) feed a pairwise array
-over role, reachable route, profile capability, lifecycle, submission,
-ownership-density, permission, fault, and control transition. Every valid pair
-is exercised; impossible combinations are `not-applicable` with a reason. Each
-route/state uses the smallest capable profile; `full` supplies all shipped
-families and `stress` only volume/pagination. This avoids both DOM-defined
-business state and an unfinishable Cartesian product.
+The named profiles (`minimal`, `demo`, `full`, `stress`) first produce ordered
+nominal route/state segments over role, reachable route, profile capability,
+lifecycle, submission, ownership-density, and permission. A deterministic
+Stage A freezes those inputs and the compiled nominal plan in immutable
+`SOURCE.json` (without a matrix digest). The dedicated Playwright preflight
+then consumes SOURCE, resets/prepares every nominal segment, and freezes its
+semantic control inventory in immutable `PREFLIGHT.json`. Only then does one
+execution policy finalize `MATRIX.json`: navigation/idle,
+one exact control action per cell, and named fault/concurrency/infrastructure
+cells at their proven applicability targets.
+
+Pairwise coverage is calculated over those legal executable rows, never a raw
+Cartesian crossing of every fault with every unrelated control. Every declared
+axis value and legal pair is either present in an executable cell or a typed
+`not-applicable` record with a stable constraint id and reason. The same frozen
+inventory, declarations, profiles, and source inputs produce identical ordered
+cell ids and digest. Runtime discovery drift after finalization fails the cell;
+it never silently changes the matrix or trims work to a limit.
 
 ### Typed coverage cell and evidence identity
 
@@ -73,6 +87,9 @@ CoverageCell {
   subject: { role, catalogRoute, resolvedRoute, profile, seedDigest };
   state: { domainAxes, pairwiseSet, transition, faultMode };
   action: { intentId?, controlKey, operation, safety };
+  execution: navigation | idle | control | recovery | fault |
+             concurrency | infrastructure;
+  faultId?: stable named declaration;
   oracle: { domainSpecRefs, function, accessibility, visual };
   evidence: {
     before: [artifactRef];
@@ -85,6 +102,11 @@ CoverageCell {
                   fixSha?, rationale };
 }
 ```
+
+Every executable cell contains exactly one bounded action or observation. Its
+declared transition equals the action transition; every non-`none` fault has a
+fault id and execution declaration in that same cell. A fabricated `none`
+value cannot witness a missing specialized axis value.
 
 `artifactRef` carries a kind (DOM/URL, console/page error, failed request,
 API/DB assertion, axe, keyboard trace, or screen capture), archive path, and
@@ -104,8 +126,9 @@ retain loopback bypass, dev-auth, API/web isolation, and report preservation.
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
 `prisma migrate reset`/profile seed; Prisma's destructive guard remains final
 authority, with seed validation/stable IDs in the manifest. Bounded OpenCode
-Luna Max Drivers emit candidates only and never mutate the ledger or share the
-browser in parallel. Codex owns scheduling, reset/reseed, manifest, ledger,
+DeepSeek V4 Flash Max browser Drivers emit candidates only and never mutate the
+ledger or share the browser in parallel. Codex owns scheduling, reset/reseed,
+manifest, ledger,
 merge, adjudication, and gate; read-only verifiers may parallelize.
 
 ### Controlled fault and observation model
@@ -131,16 +154,23 @@ reports describe one source version.
 
 The new flow is:
 
-1. **Freeze:** create a campaign manifest containing `HEAD` SHA/tree digest,
-   Playwright/browser/viewport, environment identifiers, catalog digest, domain
-   spec digest, profile set, pairwise matrix, and explicit exclusions. Refuse to
-   continue if the SHA or declared inputs change.
-2. **Prepare:** reset the disposable E2E database, run the selected profile,
-   validate its manifest/journey, and record a seed digest. Capture route-level
-   `before` evidence after login and settle (URL, shallow DOM, console/network
-   state, axe baseline, and visual capture).
-3. **Drive:** derive runtime controls and transitions from the live DOM; for
-   each cell, execute one bounded action/fault (including an authorized
+1. **Freeze:** `pnpm test:runtime-source` creates a campaign SOURCE artifact
+   containing the clean `HEAD` SHA/tree digest, Playwright/browser/viewport,
+   environment identifiers, catalog digest, domain spec digest, profile set,
+   compiled nominal plan, specialized declarations, and explicit exclusions.
+   It refuses a dirty tree or SHA drift.
+2. **Preflight and finalize:** `pnpm test:runtime-preflight` consumes the
+   required `RUNTIME_SWEEP_SOURCE` and `RUNTIME_SWEEP_PREFLIGHT` paths, resets
+   the disposable E2E database, runs each nominal route/state segment, validates
+   its profile/journey, and freezes semantic control inventory into PREFLIGHT.
+   `pnpm test:runtime-manifest` then requires both immutable artifacts, rechecks
+   the clean HEAD/tree, and compiles final ordered executable cases, typed
+   inapplicable combinations, total limits, and digest into `MATRIX.json`;
+   abort before baseline work if limits are exceeded.
+3. **Prepare and drive:** replay only frozen cases. Capture route-level `before`
+   evidence after login and settle (URL, shallow DOM, console/network state,
+   axe baseline, and visual capture). For each cell, execute one bounded
+   action/fault (including an authorized
    irreversible action when declared) and capture `after` function,
    axe/keyboard, visual, console/network/API, and relevant DB/period
    assertions. Stateful cells reset/reseed and verify the DB oracle before the
@@ -165,7 +195,8 @@ Campaign artifacts live outside curated `docs/`, under
 `~/work/customreport-archive/<campaign-id>/` (with the archive `INDEX.md`
 updated). At minimum the archive contains:
 
-- `MANIFEST.json` with SHA/tree/environment/profile/matrix/exclusion inputs;
+- `MANIFEST.json` with SHA/tree/environment/profile/matrix/exclusion inputs and
+  a digest reference to the frozen `MATRIX.json` executable cases;
 - immutable `baseline/coverage-cells.jsonl`, `baseline/ledger.jsonl`, and
   per-cell content-addressed evidence (traces, screenshots, DOM/axe,
   network/API and DB proofs); retain every failure trace;
@@ -201,9 +232,9 @@ as covered.
 ## Risks / Trade-offs
 
 - **[Matrix growth]** Pairwise coverage across four profiles, roles, routes,
-  controls, and faults can still be large → generate a manifest first, enforce
-  bounded per-cell timeouts, and reject duplicate-equivalent cells before the
-  browser drive.
+  controls, and faults can still be large → finalize legal executable cases
+  after preflight, enforce limits over the total case set before baseline, and
+  reject duplicate-equivalent cells. Limits abort; they never trim coverage.
 - **[Dynamic DOM drift]** Runtime control keys can change between runs → derive
   stable semantic keys from role/name/route/intent and retain the raw DOM
   artifact; never use source line numbers as identity.
@@ -263,8 +294,10 @@ relax the destructive guard or the final gate.
 
 ## Open Questions
 
-None. The first implementation uses the declared nine-axis pairwise matrix,
-maps each route to the smallest supplying profile with `stress` reserved for
-volume, uses Playwright route interception plus two-context concurrency, limits
-infrastructure faults to existing test seams, and applies the fixed
-`1440x900` visual baseline with zero unreviewed diffs (declared masks only).
+None. The first implementation uses the two-stage executable nine-axis matrix,
+maps each route to every profile that supplies its required capability, freezes
+live control applicability before baseline, uses `stress` to repeat capable
+routes at volume, uses Playwright route interception plus real two-context
+stale-version concurrency, limits infrastructure faults to proven existing test
+seams, and applies the fixed `1440x900` visual baseline with zero unreviewed
+diffs (declared masks only).

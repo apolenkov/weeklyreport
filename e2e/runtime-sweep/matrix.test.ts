@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CONTROL_TRANSITIONS,
+  FAULT_MODES,
+  LIFECYCLE_STATES,
+  OWNERSHIP_DENSITIES,
+  PERMISSION_BOUNDARIES,
+  SEED_CAPABILITIES,
+  SUBMISSION_STATES,
+} from "./contracts.ts";
+import {
   type AxisValues,
   compilePairwiseMatrix,
   MATRIX_AXIS_NAMES,
@@ -22,6 +31,22 @@ const input = {
   sourceSha: "a".repeat(40),
   generatorSeed: "fixed-seed",
   axes,
+};
+
+const highCardinalityInput = {
+  sourceSha: "a".repeat(40),
+  generatorSeed: "high-cardinality",
+  axes: {
+    role: ["lead"],
+    route: ["lead:/lead/report"],
+    profileCapability: SEED_CAPABILITIES,
+    lifecycle: LIFECYCLE_STATES,
+    submission: SUBMISSION_STATES,
+    ownershipDensity: OWNERSHIP_DENSITIES,
+    permission: PERMISSION_BOUNDARIES,
+    fault: FAULT_MODES,
+    controlTransition: CONTROL_TRANSITIONS,
+  } satisfies AxisValues,
 };
 
 function pairKeys(
@@ -99,5 +124,35 @@ describe("runtime sweep pairwise compiler", () => {
         (entry) => entry.constraintId === "forbidden-publish",
       ),
     ).toBe(true);
+  });
+
+  it("prunes an impossible branch before later axes expand", () => {
+    const matrix = compilePairwiseMatrix({
+      ...input,
+      constraints: [
+        {
+          id: "lead-owner",
+          reason: "Only lead may use owner permission",
+          check: ({ role, permission }) =>
+            permission !== "owner" || role === "lead",
+          checkPartial: ({ role, permission }) =>
+            permission !== "owner" || role === undefined || role === "lead",
+        },
+      ],
+    });
+
+    expect(
+      matrix.states.some(
+        ({ axes }) => axes.role === "viewer" && axes.permission === "owner",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the full declared axis set pairwise without Cartesian explosion", () => {
+    const matrix = compilePairwiseMatrix(highCardinalityInput);
+
+    expect(matrix.states.length).toBeLessThanOrEqual(256);
+    expect(matrix.inapplicable).toHaveLength(0);
+    expect(matrix.coveredPairs).toHaveLength(1432);
   });
 });

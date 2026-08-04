@@ -23,11 +23,14 @@ opencode mcp list # must show: playwright connected
 ```
 
 OpenCode configuration points `mcp.playwright` at
-`http://localhost:8931/mcp`. Codex launches one role/profile session at a time
-with `opencode run --model opencode-go/gpt-5.6-luna --variant max --format json`
-and resumes the recorded session id until a `final_answer` event exists.
+`http://localhost:8931/mcp`. Codex launches one DeepSeek V4 Flash Max browser
+Driver role/profile session at a time with
+`opencode run --model opencode-go/deepseek-v4-flash --variant max --format json`
+and resumes the recorded session id until a `final_answer` event exists. Native
+`gpt-5.6-luna` workers remain the bounded implementation lane; `gpt-5.6-sol`
+owns architecture, planning, and final synthesis.
 
-## Phase 1 — Drive (one Luna Max session per role/profile, sequential)
+## Phase 1 — Drive (one DeepSeek V4 Flash Max session per role/profile, sequential)
 
 A single agent drives a real browser through the **Playwright MCP** server. It
 is **not** a parallel fan-out: there is one shared browser instance, so each
@@ -38,24 +41,13 @@ sweep's env so dev-only widgets and proxy noise stay out):
 
 ```bash
 # Use a disposable database only; do not inherit a development DATABASE_URL.
-export E2E_DATABASE_URL='postgresql://localhost/customreport_e2e_test'
+export E2E_DATABASE_URL='postgresql://localhost/customreport_e2e'
 export DATABASE_URL="$E2E_DATABASE_URL"
 export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.'
 
-# API (port 3101)
-cd apps/api && PORT=3101 AUTH_DEV_MODE=true NODE_ENV=test \
-  FRONTEND_URL=http://127.0.0.1:3100 LOG_DIR=.logs/driver \
-  node --env-file=../../.env --import tsx src/main.ts &
-
-# Web (port 3100) — NEXT_PUBLIC_DISABLE_DEVTOOLS keeps the Agentation widget out
-# NEXT_PUBLIC_SENTRY_DSN wires web error boundaries to Bugsink so browser-side
-# errors surface in the environment-feedback channel (Phase 2.5). Copy the DSN
-# from http://localhost:8000 after creating a project there.
-NEXT_PUBLIC_API_URL=http://127.0.0.1:3101 AUTH_DEV_MODE=true NODE_ENV=test \
-  NEXT_PUBLIC_AUTH_STUB=true NEXT_PUBLIC_DISABLE_DEVTOOLS=true \
-  NEXT_DIST_DIR=.next-sweep \
-  NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
-  pnpm --filter @customreport/web exec next dev -p 3100 &
+# The integrated runtime-sweep command starts the current-source API/web pair,
+# keeps them alive through the Driver project, and injects the exact web URL.
+pnpm test:runtime-sweep
 ```
 
 Loopback proxy note: if the machine sets `HTTP_PROXY` without `127.0.0.1` in
@@ -72,8 +64,9 @@ Loki channel has no streams — it marks the channel "blind", not "clean").
 
 Drive protocol (the agent prompt), parametric in `<role>`:
 
-- Log in: navigate to
-  `http://127.0.0.1:3100/auth/dev-login?role=<role>&email=<seeded-email>&redirect=<role-landing>`.
+- Log in: navigate to the exact `RUNTIME_SWEEP_BASE_URL` supplied by the
+  current Playwright webServer, followed by
+  `/auth/dev-login?role=<role>&email=<seeded-email>&redirect=<role-landing>`.
   Seeded emails: `lead1@`, `head@`, `admin@`, `viewer@customreport.local`.
 - **Oracle:** read `e2e/catalog/<role>.yaml`. Each intent's `then`/`note` is the
   expected behavior. An anomaly is real ONLY when the observation _contradicts_

@@ -1,6 +1,7 @@
 import type { Route } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
+import { FAULT_DECLARATIONS } from "./fault-declarations.ts";
 import type {
   FaultDeclaration,
   FaultRouteHandler,
@@ -84,7 +85,7 @@ function registrar(): {
   };
 }
 
-describe("runtime fault injection", () => {
+describe("runtime HTTP faults", () => {
   it.each([
     ["auth-missing", 401],
     ["auth-expired", 401],
@@ -112,7 +113,9 @@ describe("runtime fault injection", () => {
     expect(harness.routeCalls).toBe(1);
     expect(harness.unrouteCalls).toBe(1);
   });
+});
 
+describe("runtime aborted faults", () => {
   it.each([
     ["network-timeout", "timedout"],
     ["request-aborted", "aborted"],
@@ -129,7 +132,9 @@ describe("runtime fault injection", () => {
     expect(abort).toHaveBeenCalledWith(code);
     expect(fulfill).not.toHaveBeenCalled();
   });
+});
 
+describe("runtime scoped teardown", () => {
   it("always tears down after the action, including action failures", async () => {
     const harness = registrar();
     const actionFailure = new Error("action failed");
@@ -142,4 +147,26 @@ describe("runtime fault injection", () => {
     expect(harness.routeCalls).toBe(1);
     expect(harness.unrouteCalls).toBe(1);
   });
+
+  it.each(FAULT_DECLARATIONS)(
+    "tears down the scoped %s injector after success and failure",
+    async (fault) => {
+      const success = registrar();
+      await expect(
+        withFault(success.registrar, fault, () => Promise.resolve("ok")),
+      ).resolves.toBe("ok");
+      expect(success.routeCalls).toBe(1);
+      expect(success.unrouteCalls).toBe(1);
+
+      const failure = registrar();
+      const actionFailure = new Error(`${fault.id} failed`);
+      await expect(
+        withFault(failure.registrar, fault, () =>
+          Promise.reject(actionFailure),
+        ),
+      ).rejects.toBe(actionFailure);
+      expect(failure.routeCalls).toBe(1);
+      expect(failure.unrouteCalls).toBe(1);
+    },
+  );
 });

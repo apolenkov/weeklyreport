@@ -97,7 +97,9 @@ describe("EmailService transport security", () => {
 
     expect(transportOptions()).not.toHaveProperty("requireTLS");
   });
+});
 
+describe("EmailService delivery behavior", () => {
   it("keeps the development transport isolated from SMTP options", () => {
     createEmailService({ SMTP_PORT: 465, SMTP_USER: "mailer" });
 
@@ -118,6 +120,38 @@ describe("EmailService transport security", () => {
       to: "recipient@example.com",
       subject: "Subject",
       text: "Body",
+    });
+  });
+
+  it("observes one SMTP transport rejection and recovers on the subsequent send", async () => {
+    const service = createEmailService({
+      SMTP_HOST,
+      SMTP_FROM: "sender@example.com",
+    });
+    const transportError = new Error("SMTP transport unavailable");
+    sendMailMock
+      .mockRejectedValueOnce(transportError)
+      .mockResolvedValueOnce(undefined);
+
+    await expect(
+      service.sendMail("first@example.com", "First", "First body"),
+    ).rejects.toThrow("SMTP transport unavailable");
+    await expect(
+      service.sendMail("second@example.com", "Second", "Second body"),
+    ).resolves.toBeUndefined();
+
+    expect(sendMailMock).toHaveBeenCalledTimes(2);
+    expect(sendMailMock).toHaveBeenNthCalledWith(1, {
+      from: "sender@example.com",
+      to: "first@example.com",
+      subject: "First",
+      text: "First body",
+    });
+    expect(sendMailMock).toHaveBeenNthCalledWith(2, {
+      from: "sender@example.com",
+      to: "second@example.com",
+      subject: "Second",
+      text: "Second body",
     });
   });
 });
