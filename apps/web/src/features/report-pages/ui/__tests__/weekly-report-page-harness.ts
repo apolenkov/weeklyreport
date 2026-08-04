@@ -103,3 +103,5 @@ export function makeWeeklyReportData(
     escalations: [],
   };
 }
+
+export type WeeklyReportData = ReturnType<typeof makeWeeklyReportData>;

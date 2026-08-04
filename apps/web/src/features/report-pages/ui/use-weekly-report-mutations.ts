@@ -5,11 +5,12 @@ import {
   invalidateDashboard,
   invalidatePeriodLifecycle,
 } from "../../../lib/cache-keys";
+import { mutationErrorMessage } from "../../../lib/mutation-error-message";
 import { useTRPC } from "../../../lib/trpc-context";
 
 function toastMutationError(fallbackMessage: string) {
   return (err: unknown) => {
-    toast.error(err instanceof Error ? err.message : fallbackMessage);
+    toast.error(mutationErrorMessage(err, fallbackMessage));
   };
 }
 

@@ -21,10 +21,10 @@ const STATUS_PRESENTATION: Record<CanonicalStatus, StatusPresentation> = {
   blocked: {
     icon: AlertTriangle,
     dotClassName: "bg-[var(--color-destructive)]",
-    // The pill text is destructive, not --color-chip-blocked-text: reproduced
-    // verbatim from the header pill it replaces.
+    // Blocked pills pair the stronger surface with destructive text so their
+    // status remains legible at presentation scale.
     toneClassName:
-      "bg-[var(--color-chip-blocked-bg)] text-[var(--color-destructive)] border-[var(--color-chip-blocked-border)]",
+      "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)] border-[var(--color-chip-blocked-border)]",
     labels: { screen: "Blocked", print: "Blocked", worstPill: "Blockers" },
   },
   "at-risk": {
