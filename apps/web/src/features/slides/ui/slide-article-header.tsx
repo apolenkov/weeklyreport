@@ -64,7 +64,7 @@ export function SlideGridHeader({
           data-testid="slide-on-track-chip"
           className={`rounded-[var(--radius-pill)] px-2.5 py-1 text-xs font-semibold ${
             short
-              ? "bg-[var(--color-chip-blocked-bg)] text-[var(--color-destructive)]"
+              ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
               : "bg-[var(--color-chip-on-track-bg)] text-[var(--color-chip-on-track-text)]"
           }`}
         >

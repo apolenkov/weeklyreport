@@ -52,6 +52,10 @@ describe("statusToneClassName", () => {
       "text-[var(--color-destructive)]",
     );
     expect(statusToneClassName("blocked")).not.toContain("chip-blocked-text");
+    expect(statusToneClassName("blocked")).toContain(
+      "bg-[var(--color-status-blocked-bg)]",
+    );
+    expect(statusToneClassName("blocked")).not.toContain("chip-blocked-bg");
   });
 });
 

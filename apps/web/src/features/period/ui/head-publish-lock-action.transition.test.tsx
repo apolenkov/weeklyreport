@@ -5,6 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
@@ -83,58 +84,83 @@ function makeHarness() {
   return { Providers, captured };
 }
 
+async function removesStalePublishTrigger(): Promise<void> {
+  const { Providers } = makeHarness();
+  const rendered = render(<HeadPublishLockAction reportId="report-a" />, {
+    wrapper: Providers,
+  });
+  expect(
+    await screen.findByRole("button", { name: /publish & lock/i }),
+  ).toBeEnabled();
+  rendered.rerender(<HeadPublishLockAction reportId="report-b" />);
+  await waitFor(() => {
+    expect(
+      screen.queryByRole("button", { name: /publish|reopen/i }),
+    ).not.toBeInTheDocument();
+  });
+}
+
+async function invalidatesAfterPublishSuccess(): Promise<void> {
+  const { Providers, captured } = makeHarness();
+  render(<HeadPublishLockAction reportId="report-a" />, {
+    wrapper: Providers,
+  });
+  await screen.findByRole("button", { name: /publish & lock/i });
+  const onSuccess = expectDefined(captured["period.publish"]).lastOptions
+    .onSuccess as (() => void) | undefined;
+  act(() => {
+    expectDefined(onSuccess)();
+  });
+  expect(invalidatePeriodLifecycle).toHaveBeenCalledTimes(1);
+}
+
+async function preservesProjectionOnPublishFailure(): Promise<void> {
+  const { Providers, captured } = makeHarness();
+  render(<HeadPublishLockAction reportId="report-a" />, {
+    wrapper: Providers,
+  });
+  await screen.findByRole("button", { name: /publish & lock/i });
+  const onError = expectDefined(captured["period.publish"]).lastOptions
+    .onError as ((error: Error) => void) | undefined;
+  act(() => {
+    expectDefined(onError)(new Error("publish failed"));
+  });
+  expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
+}
+
+async function mapsTransportFailure(): Promise<void> {
+  const { Providers, captured } = makeHarness();
+  render(<HeadPublishLockAction reportId="report-a" />, {
+    wrapper: Providers,
+  });
+  await screen.findByRole("button", { name: /publish & lock/i });
+  const onError = expectDefined(captured["period.publish"]).lastOptions
+    .onError as ((error: Error) => void) | undefined;
+  act(() => {
+    expectDefined(onError)(new TypeError("Failed to fetch"));
+  });
+  expect(toast.error).toHaveBeenCalledWith("Failed to publish period");
+}
+
 describe("HeadPublishLockAction report-key transitions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("removes the report A publish trigger while report B is pending", async () => {
-    const { Providers } = makeHarness();
-    const rendered = render(<HeadPublishLockAction reportId="report-a" />, {
-      wrapper: Providers,
-    });
-    expect(
-      await screen.findByRole("button", { name: /publish & lock/i }),
-    ).toBeEnabled();
-
-    rendered.rerender(<HeadPublishLockAction reportId="report-b" />);
-
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("button", { name: /publish|reopen/i }),
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  it("invalidates all report projections after publish success", async () => {
-    const { Providers, captured } = makeHarness();
-    render(<HeadPublishLockAction reportId="report-a" />, {
-      wrapper: Providers,
-    });
-    await screen.findByRole("button", { name: /publish & lock/i });
-    const onSuccess = expectDefined(captured["period.publish"]).lastOptions
-      .onSuccess as (() => void) | undefined;
-
-    act(() => {
-      expectDefined(onSuccess)();
-    });
-
-    expect(invalidatePeriodLifecycle).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not invalidate report projections after publish failure", async () => {
-    const { Providers, captured } = makeHarness();
-    render(<HeadPublishLockAction reportId="report-a" />, {
-      wrapper: Providers,
-    });
-    await screen.findByRole("button", { name: /publish & lock/i });
-    const onError = expectDefined(captured["period.publish"]).lastOptions
-      .onError as ((error: Error) => void) | undefined;
-
-    act(() => {
-      expectDefined(onError)(new Error("publish failed"));
-    });
-
-    expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
-  });
+  it(
+    "removes the report A publish trigger while report B is pending",
+    removesStalePublishTrigger,
+  );
+  it(
+    "invalidates all report projections after publish success",
+    invalidatesAfterPublishSuccess,
+  );
+  it(
+    "does not invalidate report projections after publish failure",
+    preservesProjectionOnPublishFailure,
+  );
+  it(
+    "maps a transport failure to the publish-specific message",
+    mapsTransportFailure,
+  );
 });

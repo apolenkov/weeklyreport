@@ -5,6 +5,7 @@ import { useContext } from "react";
 import { toast } from "sonner";
 
 import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
+import { mutationErrorMessage } from "../../../lib/mutation-error-message";
 import { isHeadLike } from "../../../lib/role-predicates";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -28,7 +29,7 @@ function periodMutationCallbacks(
       toast.success(messages.success);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : messages.failure);
+      toast.error(mutationErrorMessage(err, messages.failure));
     },
   };
 }
