@@ -49,6 +49,12 @@ export class BrowserPreflightError extends Error {
   override readonly name = "BrowserPreflightError";
 }
 
+export const preflightStateGroupKey = (
+  state: CampaignMatrixState,
+  route: PreflightRoute,
+): string =>
+  `${state.profile}:${route.target === "published" ? "published" : "active"}`;
+
 const routeForState = (
   source: SourceArtifact,
   state: CampaignMatrixState,
@@ -235,22 +241,27 @@ export async function runBrowserPreflight(input: {
 }): Promise<PreflightArtifact> {
   assertSpecializedDeclarations(input.source.specializedDeclarations);
   assertSpecializedNominalTargets(input.source);
-  const segments = await input.source.plan.states
-    .toSorted((left, right) => left.stateId.localeCompare(right.stateId))
-    .reduce<Promise<readonly MatrixPreflightSegment[]>>(
-      async (promise, state) => {
-        const prior = await promise;
-        const route = routeForState(input.source, state);
-        await input.harness.prepare(state, route);
-        await input.harness.navigate(route.resolvedRoute);
-        const inventory = await input.harness.inventory();
-        return [
-          ...prior,
-          { state, controls: controlsFor(inventory), specialized: [] },
-        ];
-      },
-      Promise.resolve([]),
-    );
+  const entries = input.source.plan.states
+    .map((state) => ({ state, route: routeForState(input.source, state) }))
+    .toSorted((left, right) => {
+      const byGroup = preflightStateGroupKey(
+        left.state,
+        left.route,
+      ).localeCompare(preflightStateGroupKey(right.state, right.route));
+      return byGroup || left.state.stateId.localeCompare(right.state.stateId);
+    });
+  const segments = await entries.reduce<
+    Promise<readonly MatrixPreflightSegment[]>
+  >(async (promise, { state, route }) => {
+    const prior = await promise;
+    await input.harness.prepare(state, route);
+    await input.harness.navigate(route.resolvedRoute);
+    const inventory = await input.harness.inventory();
+    return [
+      ...prior,
+      { state, controls: controlsFor(inventory), specialized: [] },
+    ];
+  }, Promise.resolve([]));
   return createPreflightArtifact({
     source: input.source,
     segments: attachSpecializedDeclarations(input.source, segments),
