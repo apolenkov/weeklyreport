@@ -11,7 +11,23 @@ It runs in **four phases** (drive → environment feedback → verify → output
 deliberately kept low-overhead (one shared browser → the drive is sequential;
 only verification fans out):
 
-## Phase 1 — Drive (one agent per role, sequential)
+The installed compatible setup is OpenCode `1.18.11` plus
+`@playwright/mcp@0.0.78`. Start exactly one shared server before a drive:
+
+```bash
+npx -y @playwright/mcp@0.0.78 \
+  --browser chromium \
+  --headless --isolated --shared-browser-context \
+  --viewport-size 1440x900 --port 8931 --host localhost
+opencode mcp list # must show: playwright connected
+```
+
+OpenCode configuration points `mcp.playwright` at
+`http://localhost:8931/mcp`. Codex launches one role/profile session at a time
+with `opencode run --model opencode-go/gpt-5.6-luna --variant max --format json`
+and resumes the recorded session id until a `final_answer` event exists.
+
+## Phase 1 — Drive (one Luna Max session per role/profile, sequential)
 
 A single agent drives a real browser through the **Playwright MCP** server. It
 is **not** a parallel fan-out: there is one shared browser instance, so each
@@ -60,9 +76,9 @@ Drive protocol (the agent prompt), parametric in `<role>`:
   infinite skeleton / layout break. Behavior that matches `then` is not an
   anomaly — never report "works as expected".
 - Walk each route in order: navigate, settle, read console errors, snapshot
-  (shallow), and exercise the intents that can be observed **without
-  irreversible actions** (no publish / permanent delete / irrevocable mutation —
-  record those as `coverageNotes` instead).
+  (shallow), and execute only the bounded cell named by the Codex-owned
+  manifest. The guarded E2E database is disposable, so declared publish,
+  delete, revoke, and restore cells are exercised before reset/reseed.
 - **Canary (proof-of-life, task 3.4):** exactly once, inject
   `console.error('DRIVER_CANARY_42')` via `browser_evaluate` and confirm the
   console capture detects it. `canary.detected=false` means the Driver is

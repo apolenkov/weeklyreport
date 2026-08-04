@@ -65,6 +65,8 @@
     "test:e2e:prodbuild": "pnpm build:e2e:prodbuild && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.prodbuild.config.ts",
     "test:e2e:csp": "pnpm build:e2e:prodbuild && pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.csp.config.ts",
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
+    "test:runtime-sweep": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/playwright.config.ts",
+    "test:runtime-driver": "tsx e2e/runtime-sweep/run-opencode-drives.ts",
     "catalog:check": "node e2e/sweep/catalog-check.ts",
     "db:seed:profile": "tsx prisma/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seed-profile-proof.ts",
@@ -119,9 +121,10 @@
     "turbo": "^2.10.7",
     "type-coverage": "^2.30.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "typescript-language-service": "npm:typescript@6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vitest": "^4.1.10"
+    "typescript-language-service": "npm:typescript@6.0.3",
+    "vitest": "^4.1.10",
+    "zod": "catalog:"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [

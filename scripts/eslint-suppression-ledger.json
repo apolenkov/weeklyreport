@@ -1442,13 +1442,13 @@
       "line": 41,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
-      "reason": "pnpm is the documented entrypoint on a dev machine and in CI; an absolute path would be wrong on both",
+      "reason": "Database setup now delegates command execution to the guarded profile-aware helper.",
       "target": "execFileSync(\"pnpm\", [\"exec\", \"prisma\", ...args], {",
       "fingerprint": "446939aa3f3bbed2",
       "owner": "e2e",
-      "verdict": "retain",
-      "proof": "planted production-config proof: removing this exact directive emits sonarjs/no-os-command-from-path; scripts/eslint-retained-suppression-probes.ts",
-      "implementationCommit": "49238ad1"
+      "verdict": "remove",
+      "proof": "The directive is absent and the E2E setup passes ESLint plus its focused tests.",
+      "implementationCommit": "pending-final-commit"
     },
     {
       "path": "e2e/sweep/catalog-sweep.spec.ts",
