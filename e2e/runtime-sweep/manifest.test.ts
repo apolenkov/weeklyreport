@@ -61,6 +61,28 @@ async function provesNominalTargets(): Promise<void> {
   });
 }
 
+async function groupsStatePreparationBySeedTarget(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    const source = await buildCampaignSource(input, fakeManifestGit());
+    const groups: string[] = [];
+    await runBrowserPreflight({
+      source,
+      harness: {
+        prepare: (state, route) => {
+          const target = route.target === "published" ? "published" : "active";
+          const group = `${state.profile}:${target}`;
+          if (groups.at(-1) !== group) groups.push(group);
+          return Promise.resolve();
+        },
+        navigate: () => Promise.resolve(),
+        inventory: () => Promise.resolve({ controls: [], issues: [] }),
+      },
+    });
+
+    expect(groups).toEqual([...new Set(groups)]);
+  });
+}
+
 async function buildsDeterministicManifest(): Promise<void> {
   await withFixture(async ({ input }) => {
     await writePreflightFixture(input);
@@ -141,6 +163,10 @@ describe("runtime sweep campaign manifest", () => {
   it(
     "proves a nominal target for every specialized declaration",
     provesNominalTargets,
+  );
+  it(
+    "groups state preparation by the underlying seed target",
+    groupsStatePreparationBySeedTarget,
   );
   it(
     "builds an immutable deterministic SHA-bound manifest",

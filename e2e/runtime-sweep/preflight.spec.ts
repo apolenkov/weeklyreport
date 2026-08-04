@@ -2,18 +2,23 @@ import * as path from "node:path";
 
 import { expect, type Page, test } from "@playwright/test";
 
+import { setupE2eDatabase } from "../helpers/e2e-database-setup.ts";
 import { prisma } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import type { CampaignMatrixState } from "./campaign-matrix.ts";
 import {
   type PreflightRoute,
+  preflightStateGroupKey,
   runPlaywrightPreflight,
 } from "./playwright-preflight.ts";
 import { writePreflightArtifact } from "./preflight-artifact.ts";
 import { createPrismaRuntimeStateDatabase } from "./prisma-state-database.ts";
 import { actorForPermission } from "./runtime-matrix.ts";
 import { readSourceArtifact } from "./source-artifact.ts";
-import { prepareRuntimeState } from "./state-preparation.ts";
+import {
+  prepareRuntimeState,
+  type RuntimeStateResetter,
+} from "./state-preparation.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -48,10 +53,17 @@ test("preflight prepares and inventories every nominal source segment", async ({
 }) => {
   const source = await readSourceArtifact(sourcePath);
   const database = createPrismaRuntimeStateDatabase(prisma);
+  let preparedGroup: string | undefined;
   const artifact = await runPlaywrightPreflight({
     source,
     page,
     prepare: async (state, route) => {
+      const group = preflightStateGroupKey(state, route);
+      const resetForGroup: RuntimeStateResetter = (setup) => {
+        if (preparedGroup === group) return;
+        setupE2eDatabase(setup);
+        preparedGroup = group;
+      };
       const prepared = await prepareRuntimeState(
         {
           profile: state.profile,
@@ -67,6 +79,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
           routeRole: route.role,
         },
         database,
+        resetForGroup,
       );
       if (!prepared.observation.matches) {
         throw new Error(

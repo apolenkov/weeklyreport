@@ -17,6 +17,7 @@ export default defineConfig({
   testDir: import.meta.dirname,
   testMatch: /preflight\.spec\.ts/,
   outputDir: path.join(archiveRoot, "playwright-preflight"),
+  timeout: 300_000,
   fullyParallel: false,
   workers: 1,
   projects: [
