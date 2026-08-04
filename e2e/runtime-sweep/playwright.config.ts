@@ -1,0 +1,99 @@
+import "../no-proxy-localhost";
+
+import * as path from "node:path";
+
+import { defineConfig, devices } from "@playwright/test";
+
+import integrationConfig from "../playwright.integration.config.ts";
+import { assertSourceSha } from "./ids.ts";
+
+const requiredEnv = (name: string): string => {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`Runtime sweep requires ${name}`);
+  return value;
+};
+
+const ARCHIVE_ROOT = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
+const SOURCE_SHA = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
+assertSourceSha(SOURCE_SHA);
+const DATABASE_URL = requiredEnv("E2E_DATABASE_URL");
+const API_PORT = Number(process.env.RUNTIME_SWEEP_API_PORT ?? "3102");
+const WEB_PORT = Number(process.env.RUNTIME_SWEEP_WEB_PORT ?? "3105");
+const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+
+const webServers = integrationConfig.webServer;
+if (!Array.isArray(webServers) || webServers.length !== 2) {
+  throw new Error("Runtime sweep requires the integration API and web servers");
+}
+const [apiServer, webServer] = webServers;
+if (!apiServer || !webServer) {
+  throw new Error("Runtime sweep server configuration is incomplete");
+}
+
+const apiEnv = {
+  ...apiServer.env,
+  DATABASE_URL,
+  PORT: String(API_PORT),
+  FRONTEND_URL: WEB_URL,
+  APP_BASE_URL: WEB_URL,
+  PDF_BASE_URL: WEB_URL,
+};
+const webEnv = {
+  ...webServer.env,
+  NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
+  NEXT_PUBLIC_AUTH_STUB: "false",
+  NEXT_PUBLIC_DISABLE_DEVTOOLS: "true",
+  NEXT_DIST_DIR: ".next-runtime-sweep",
+};
+
+export default defineConfig({
+  testDir: import.meta.dirname,
+  testMatch: /runtime-sweep\.spec\.ts/,
+  outputDir: path.join(ARCHIVE_ROOT, "playwright"),
+  globalSetup: path.join(REPO_ROOT, "e2e/integration/global-setup.ts"),
+  globalTeardown: path.join(REPO_ROOT, "e2e/integration/global-teardown.ts"),
+  timeout: 180_000,
+  expect: { timeout: 10_000 },
+  fullyParallel: false,
+  workers: 1,
+  forbidOnly: true,
+  retries: 0,
+  reporter: [
+    ["list"],
+    [
+      "json",
+      { outputFile: path.join(ARCHIVE_ROOT, "playwright-results.json") },
+    ],
+  ],
+  use: {
+    baseURL: WEB_URL,
+    viewport: { width: 1440, height: 900 },
+    colorScheme: "light",
+    contextOptions: { reducedMotion: "reduce" },
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [
+    {
+      name: "runtime-sweep-chromium",
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+  ],
+  webServer: [
+    {
+      ...apiServer,
+      command: "pnpm --filter @customreport/api dev",
+      url: `http://127.0.0.1:${API_PORT}/health/ready`,
+      reuseExistingServer: false,
+      env: apiEnv,
+    },
+    {
+      ...webServer,
+      command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+      url: WEB_URL,
+      reuseExistingServer: false,
+      env: webEnv,
+    },
+  ],
+});

@@ -1,11 +1,16 @@
 // Refuse wipe/reset on prod-looking DBs. Docker host `postgres` is not local —
 // allow only when the db name carries a non-prod suffix (_uat/_dev/_test/…).
 // Override: ALLOW_PROD_DESTRUCTIVE=yes. See openspec/specs/destructive-db-guard.
-export function assertNonProdDestructive(scriptName: string): void {
-  // ESLint lints this file under the default project (not tsconfig.prisma.json),
-  // where `process` resolves to `any`; cast `process` itself to a concrete shape
-  // so the no-unsafe-* family checks real types instead of `any`.
-  const env = (process as { env: Record<string, string | undefined> }).env;
+export interface DestructiveTargetEnv {
+  readonly ALLOW_PROD_DESTRUCTIVE?: string;
+  readonly DATABASE_URL?: string;
+  readonly NODE_ENV?: string;
+}
+
+export function assertNonProdDestructiveTarget(
+  scriptName: string,
+  env: DestructiveTargetEnv,
+): void {
   if (env.ALLOW_PROD_DESTRUCTIVE === "yes") return;
 
   if (env.NODE_ENV === "production") {
@@ -65,4 +70,8 @@ export function assertNonProdDestructive(scriptName: string): void {
     `Host "${host}" is not local and database "${lastSegment}" lacks ` +
       `non-prod suffix (_uat/_dev/_test/_local/_staging).`,
   );
+}
+
+export function assertNonProdDestructive(scriptName: string): void {
+  assertNonProdDestructiveTarget(scriptName, process.env);
 }

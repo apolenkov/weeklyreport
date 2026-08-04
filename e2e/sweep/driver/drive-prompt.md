@@ -1,6 +1,6 @@
 # Drive-phase agent prompt (parametric in `<ROLE>`)
 
-Spawn one agent (model: sonnet — mechanical browser-driving + observation) with
+Run one OpenCode agent (`opencode-go/gpt-5.6-luna`, variant `max`) with
 the prompt below. Substitute the four `<...>` placeholders per role:
 
 | placeholder        | lead                     | head                    | admin                    | viewer                       |
@@ -10,15 +10,19 @@ the prompt below. Substitute the four `<...>` placeholders per role:
 | `<LANDING>` (enc.) | %2Flead%2Freport         | %2Fhead%2Fdashboard     | %2Fadmin                 | %2Freports%3Ftab%3Dpublished |
 | `<CATALOG>`        | e2e/catalog/lead.yaml    | e2e/catalog/head.yaml   | e2e/catalog/admin.yaml   | e2e/catalog/viewer.yaml      |
 
+The Codex orchestrator also substitutes `<SOURCE_SHA>` from the immutable
+campaign manifest and supplies the exact assigned cell ids.
+
 ---
 
 You are an AI UI Driver for the `<ROLE>` role of the CustomReport web app. A web
 app + API are ALREADY RUNNING locally and a Chromium browser is already open via
 the Playwright MCP server. Drive the `<ROLE>` surface through the browser,
 compare what you OBSERVE against the documented expected behavior, and return a
-compact list of candidate anomalies. Read-mostly: do NOT perform irreversible
-destructive actions (no publishing, no permanent deletes you can't undo); if an
-intent requires one, record it under `coverageNotes` as "not-exercised".
+schema-valid candidate anomalies and evidence references for the assigned cells.
+The database is disposable and guarded: declared publish, delete, revoke, and
+restore cells are in scope. Perform only the action named by the assigned cell;
+never invent an undeclared mutation.
 
 Setup:
 
@@ -28,7 +32,7 @@ Setup:
 - Resolve `[reportId]` from the URL you land on, or by visiting a list route and
   following a link.
 
-Oracle: read `/home/user/work/customreport/<CATALOG>`. Each `routes[].intents[]`
+Oracle: read `/home/user/work/weeklyreport/<CATALOG>`. Each `routes[].intents[]`
 has `id`/`given`/`when`/`then`/`note`; `then`+`note` are the EXPECTED behavior. An
 anomaly is REAL only when an observation CONTRADICTS `then`, OR you hit a console
 error / pageerror / failed navigation / infinite skeleton / layout break.
@@ -45,8 +49,8 @@ Procedure (sequential — one shared browser):
 2. Log in via the dev-login URL; confirm you land in-app.
 3. For each route in the catalog, in order: record `enteredAt`, navigate
    (resolve `[reportId]`), wait to settle, read console errors, snapshot
-   shallow, and for each intent observe whether `then` holds — interacting
-   where it is safe and bounded. Record `leftAt` after finishing the route.
+   shallow, and execute only the assigned bounded cell action. Record `leftAt`
+   after finishing the route.
    Record contradictions / console errors / failed nav / infinite skeleton /
    layout breaks as candidate anomalies.
 4. CANARY (once, on any route after reading its real console state):
@@ -54,15 +58,17 @@ Procedure (sequential — one shared browser):
    then re-read console errors and confirm `DRIVER_CANARY_42` appears.
 5. Record `endedAt` = current ISO 8601 timestamp.
 
-Persist the per-role report to `e2e/sweep/.reports/<ROLE>-driver.md` BEFORE
-returning the JSON below — write it even if the drive is interrupted, so the
-run window is always recoverable for environment-feedback correlation.
+Persist the per-role report under
+`$RUNTIME_SWEEP_ARCHIVE/driver/<SOURCE_SHA>/<ROLE>-driver.md` BEFORE returning
+the JSON below. Write it even if interrupted so the run window is recoverable
+for environment-feedback correlation; never write campaign evidence to `docs/`.
 
 Return ONLY this JSON (no prose):
 
 ```json
 {
-  "rolesDriven": "<ROLE>",
+  "roleDriven": "<ROLE>",
+  "sourceSha": "<SOURCE_SHA>",
   "routesVisited": 0,
   "routesPlanned": 0,
   "canary": { "injected": true, "detected": true },
@@ -79,20 +85,22 @@ Return ONLY this JSON (no prose):
   },
   "candidates": [
     {
+      "cellId": "",
       "route": "",
       "intentId": "",
       "kind": "console|flow|nav|render|layout|axe",
       "observed": "",
       "expected": "",
-      "evidence": "",
+      "evidenceRefs": [""],
       "severity": "high|medium|low"
     }
   ],
-  "coverageNotes": [""]
+  "coverageNotes": [{ "cellId": "", "status": "covered|blocked", "reason": "" }]
 }
 ```
 
-Be conservative: when unsure whether something is a real bug vs
+The orchestrator rejects output with a different `sourceSha`, missing cell ids,
+blind canary, or unreferenced evidence. Be conservative: when unsure whether something is a real bug vs
 expected/environmental, file it as severity "low" and explain in `observed` — the
 verify phase will judge it. Do NOT invent anomalies; an empty `candidates` with
 `canary.detected=true` is a good result. Keep the response compact.

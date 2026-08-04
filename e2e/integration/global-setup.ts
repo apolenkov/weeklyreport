@@ -1,6 +1,8 @@
-import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import * as path from "node:path";
+
+import { parseSeedProfile } from "../../prisma/seed-profile-contract.js";
+import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
 
 export function findRepoRoot(startDir: string): string {
   if (existsSync(path.join(startDir, "package.json"))) return startDir;
@@ -17,8 +19,8 @@ export function findRepoRoot(startDir: string): string {
 /**
  * Runs ONCE before any integration test.
  *
- * - `prisma migrate reset --force` drops + recreates schema without auto-seeding
- * - `prisma db seed` runs the configured explicit `full` profile
+ * - `prisma migrate reset --force` drops + recreates the guarded E2E schema
+ * - the selected named profile is seeded and validated (`full` by default)
  *   against E2E_DATABASE_URL
  *
  * MUST run against E2E_DATABASE_URL — never the dev DATABASE_URL. The
@@ -30,27 +32,6 @@ export default function globalSetup(): void {
   if (!dbUrl) throw new Error("E2E_DATABASE_URL not set");
 
   const repoRoot = findRepoRoot(import.meta.dirname);
-
-  // Prisma 7 does not auto-invoke the configured seed command after a reset.
-  // Seed explicitly so dev-login cannot create ad-hoc records that replace
-  // the deterministic users and reports required by cross-role specs.
-
-  // argv form, not a shell string: nothing here is interpolated into a command
-  // line, so the database name cannot become part of the invocation.
-  const runPrisma = (...args: readonly string[]): void => {
-    // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm is the documented entrypoint on a dev machine and in CI; an absolute path would be wrong on both
-    execFileSync("pnpm", ["exec", "prisma", ...args], {
-      cwd: repoRoot,
-      env: { ...process.env, DATABASE_URL: dbUrl },
-      stdio: "inherit",
-    });
-  };
-
-  console.log("[e2e] Resetting integration database...");
-  runPrisma("migrate", "reset", "--force");
-
-  console.log("[e2e] Seeding integration database with profile full...");
-  runPrisma("db", "seed");
-
-  console.log("[e2e] Database ready.");
+  const profile = parseSeedProfile(process.env.E2E_SEED_PROFILE ?? "full");
+  setupE2eDatabase({ databaseUrl: dbUrl, profile, repoRoot });
 }

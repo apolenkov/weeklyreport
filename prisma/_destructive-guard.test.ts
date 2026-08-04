@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { assertNonProdDestructive } from "./_destructive-guard.js";
+import {
+  assertNonProdDestructive,
+  assertNonProdDestructiveTarget,
+} from "./_destructive-guard.js";
 
 function setDatabaseUrl(url: string): void {
   vi.stubEnv("ALLOW_PROD_DESTRUCTIVE", "");
@@ -13,6 +16,15 @@ afterEach(() => {
 });
 
 describe("assertNonProdDestructive credential-less URLs", () => {
+  it("checks an explicit E2E target without mutating process.env", () => {
+    expect(() =>
+      assertNonProdDestructiveTarget("e2e-setup", {
+        DATABASE_URL: "postgresql://localhost/customreport_e2e",
+        NODE_ENV: "test",
+      }),
+    ).not.toThrow();
+  });
+
   it("allows an explicit production-destructive override", () => {
     vi.stubEnv("ALLOW_PROD_DESTRUCTIVE", "yes");
     vi.stubEnv("NODE_ENV", "production");
