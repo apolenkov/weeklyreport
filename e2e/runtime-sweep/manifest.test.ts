@@ -19,6 +19,7 @@ import {
 } from "./manifest-fixture.ts";
 import {
   assertSpecializedNominalTargets,
+  preflightSessionGroupKey,
   runBrowserPreflight,
 } from "./playwright-preflight.ts";
 import { writePreflightArtifact } from "./preflight-artifact.ts";
@@ -80,6 +81,55 @@ async function groupsStatePreparationBySeedTarget(): Promise<void> {
     });
 
     expect(groups).toEqual([...new Set(groups)]);
+  });
+}
+
+async function groupsStatePreparationBySessionActor(): Promise<void> {
+  await withFixture(async ({ input }) => {
+    const source = await buildCampaignSource(input, fakeManifestGit());
+    const groups: string[] = [];
+    const visits: Parameters<typeof preflightSessionGroupKey>[] = [];
+    await runBrowserPreflight({
+      source,
+      harness: {
+        prepare: (state, route) => {
+          visits.push([state, route]);
+          const group = preflightSessionGroupKey(state, route);
+          if (groups.at(-1) !== group) groups.push(group);
+          return Promise.resolve();
+        },
+        navigate: () => Promise.resolve(),
+        inventory: () => Promise.resolve({ controls: [], issues: [] }),
+      },
+    });
+
+    expect(groups).toEqual([...new Set(groups)]);
+    expect(groups.length).toBeLessThan(source.plan.states.length);
+    const [state, route] = visits.at(0) ?? [];
+    if (state === undefined || route === undefined)
+      throw new Error("Manifest fixture has no preflight visits");
+    const key = preflightSessionGroupKey(state, route);
+    const lifecycle = state.axes.lifecycle === "open" ? "published" : "open";
+    const permission =
+      state.axes.permission === "anonymous" ? "allowed" : "anonymous";
+    expect(
+      preflightSessionGroupKey(
+        { ...state, axes: { ...state.axes, lifecycle } },
+        route,
+      ),
+    ).toBe(key);
+    expect(
+      preflightSessionGroupKey(
+        { ...state, axes: { ...state.axes, permission } },
+        route,
+      ),
+    ).not.toBe(key);
+    expect(
+      preflightSessionGroupKey(state, {
+        ...route,
+        target: route.target === "published" ? "active" : "published",
+      }),
+    ).not.toBe(key);
   });
 }
 
@@ -167,6 +217,10 @@ describe("runtime sweep campaign manifest", () => {
   it(
     "groups state preparation by the underlying seed target",
     groupsStatePreparationBySeedTarget,
+  );
+  it(
+    "orders exact actor session groups contiguously",
+    groupsStatePreparationBySessionActor,
   );
   it(
     "builds an immutable deterministic SHA-bound manifest",

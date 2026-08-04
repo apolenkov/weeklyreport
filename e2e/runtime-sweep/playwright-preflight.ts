@@ -22,6 +22,7 @@ import {
   createPreflightArtifact,
   type PreflightArtifact,
 } from "./preflight-artifact.ts";
+import { actorForPermission } from "./runtime-matrix.ts";
 import type { SourceArtifact } from "./source-artifact.ts";
 import {
   assertSpecializedDeclarations,
@@ -54,6 +55,18 @@ export const preflightStateGroupKey = (
   route: PreflightRoute,
 ): string =>
   `${state.profile}:${route.target === "published" ? "published" : "active"}`;
+
+export const preflightSessionGroupKey = (
+  state: CampaignMatrixState,
+  route: PreflightRoute,
+): string => {
+  const actor = actorForPermission(state.axes.permission, route.role);
+  return [
+    preflightStateGroupKey(state, route),
+    actor.role ?? "anonymous",
+    actor.email ?? "anonymous",
+  ].join(":");
+};
 
 const routeForState = (
   source: SourceArtifact,
@@ -244,11 +257,18 @@ export async function runBrowserPreflight(input: {
   const entries = input.source.plan.states
     .map((state) => ({ state, route: routeForState(input.source, state) }))
     .toSorted((left, right) => {
-      const byGroup = preflightStateGroupKey(
+      const bySession = preflightSessionGroupKey(
         left.state,
         left.route,
-      ).localeCompare(preflightStateGroupKey(right.state, right.route));
-      return byGroup || left.state.stateId.localeCompare(right.state.stateId);
+      ).localeCompare(preflightSessionGroupKey(right.state, right.route));
+      const byRoute = left.route.resolvedRoute.localeCompare(
+        right.route.resolvedRoute,
+      );
+      return (
+        bySession ||
+        byRoute ||
+        left.state.stateId.localeCompare(right.state.stateId)
+      );
     });
   const segments = await entries.reduce<
     Promise<readonly MatrixPreflightSegment[]>
