@@ -37,7 +37,11 @@ export async function navigate(
   page: Page,
   route: string,
 ): Promise<number | null> {
-  const initialUrl = new URL(route, page.url()).toString();
+  const currentUrl = page.url();
+  const initialUrl =
+    currentUrl === "about:blank"
+      ? route
+      : new URL(route, currentUrl).toString();
   try {
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
     await settle(page);
