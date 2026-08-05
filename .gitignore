@@ -2,6 +2,7 @@ node_modules/
 
 .turbo/
 .next/
+apps/web/.next-runtime-*/
 
 dist/
 *.tsbuildinfo

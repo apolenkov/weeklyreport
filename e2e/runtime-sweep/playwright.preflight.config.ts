@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../playwright.integration.config.ts";
+import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -12,6 +13,14 @@ const requiredEnv = (name: string): string => {
 
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
+const integrationServers = integrationConfig.webServer;
+if (!Array.isArray(integrationServers) || integrationServers.length !== 2) {
+  throw new Error("Runtime preflight requires the integration web servers");
+}
+const [apiServer, webServer] = integrationServers;
+if (!apiServer || !webServer) {
+  throw new Error("Runtime preflight server configuration is incomplete");
+}
 
 export default defineConfig({
   ...integrationConfig,
@@ -26,6 +35,16 @@ export default defineConfig({
       name: "runtime-preflight",
       testMatch: /preflight\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+  webServer: [
+    apiServer,
+    {
+      ...webServer,
+      env: runtimeSweepWebEnvironment(
+        webServer.env,
+        `.next-runtime-preflight-${process.pid}`,
+      ),
     },
   ],
 });
