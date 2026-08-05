@@ -54,10 +54,31 @@ test.each([
   "not-a-database-url",
   "postgres:///customreport_e2e",
   "postgres://localhost",
+  "postgres://localhost/customreport/e2e",
 ])("rejects a non-PostgreSQL UAT database URL: %s", async (databaseUrl) => {
   vi.stubEnv("E2E_DATABASE_URL", databaseUrl);
 
   await expect(import("./playwright.config.ts")).rejects.toThrow(
     "UAT database URLs must be valid PostgreSQL URLs.",
   );
+});
+
+test("does not expose database credentials in validation errors", async () => {
+  const secret = "must-not-leak";
+  vi.stubEnv(
+    "E2E_DATABASE_URL",
+    `https://uat-user:${secret}@localhost/customreport_e2e`,
+  );
+
+  const error = await import("./playwright.config.ts").catch(
+    (error_: unknown) => error_,
+  );
+  if (!(error instanceof Error)) {
+    throw new TypeError("Expected UAT database validation to reject");
+  }
+
+  expect(error.message).toBe(
+    "UAT database URLs must be valid PostgreSQL URLs.",
+  );
+  expect(error.message).not.toContain(secret);
 });
