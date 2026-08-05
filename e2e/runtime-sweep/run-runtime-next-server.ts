@@ -16,7 +16,7 @@ export const runtimeNextServerCommand = (
   lane: RuntimeNextLane,
   port: string | number,
 ): string =>
-  `pnpm exec tsx ../../e2e/runtime-sweep/run-runtime-next-server.ts ${lane} ${port}`;
+  `pnpm exec tsx e2e/runtime-sweep/run-runtime-next-server.ts ${lane} ${port}`;
 
 const parsePort = (value: string | undefined): number => {
   const port = Number(value);
