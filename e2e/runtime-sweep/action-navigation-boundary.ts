@@ -8,6 +8,7 @@ const SIGN_OUT_NAVIGATION_TIMEOUT_MS = 10_000;
 const SIGN_OUT_CONTROL_KEY = /^button:Sign(?:%20|\s)out:\d+$/u;
 const GENERIC_NAVIGATION_ROLES = new Set(["link"]);
 const GENERIC_NAVIGATION_NAMES = new Set(["dashboard", "status", "document"]);
+const SAME_DOCUMENT_LINK_NAMES = new Set(["skip to content"]);
 
 export interface ActionNavigationExpectation {
   readonly expectedPathname?: string;
@@ -40,6 +41,8 @@ export const expectedActionNavigationFor = (
   if (SIGN_OUT_CONTROL_KEY.test(controlKey))
     return { expectedPathname: "/", timeoutMs: SIGN_OUT_NAVIGATION_TIMEOUT_MS };
   const parts = controlParts(controlKey);
+  if (parts?.role === "link" && SAME_DOCUMENT_LINK_NAMES.has(parts.name))
+    return undefined;
   if (
     parts !== undefined &&
     (GENERIC_NAVIGATION_ROLES.has(parts.role) ||

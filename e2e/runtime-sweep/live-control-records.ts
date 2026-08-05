@@ -6,9 +6,11 @@ import type {
 } from "./control-actions.ts";
 import type { DomControlObservation } from "./dom-inventory.ts";
 import {
+  controlAlreadyActive,
   observationFor,
   type PageSnapshot,
   snapshotPage,
+  waitForObservation,
 } from "./live-control-observation.ts";
 import type {
   LiveControlActionRecord,
@@ -22,6 +24,7 @@ const STATEFUL_SUCCESS: Readonly<Record<StatefulOperation, RegExp>> = {
   revoke: /submission revoked|revoked|returned to draft|draft status/i,
   restore: /restored|unarchived/i,
 };
+const MAX_OBSERVATION_WAIT_MS = 2000;
 export type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
 
 const stateful = (operation: string): operation is StatefulOperation =>
@@ -109,12 +112,30 @@ export const observerFor = (
   operation: string,
   before: PageSnapshot,
   timeoutMs: number,
+  options: Readonly<{
+    readonly control?: ControlActionTarget;
+    readonly allowIdempotent?: boolean;
+    readonly requireMeaningfulFocus?: boolean;
+  }> = {},
 ): (() => Promise<"pass" | "fail">) =>
   stateful(operation)
     ? outcomeObserver(page, operation, timeoutMs)
     : async (): Promise<"pass" | "fail"> => {
-        const after = await snapshotPage(page);
-        return observationFor(before, after) === undefined ? "fail" : "pass";
+        const alreadyActive =
+          options.allowIdempotent === true &&
+          options.control !== undefined &&
+          controlAlreadyActive(before, options.control);
+        if (alreadyActive) return "pass";
+        const observed = await waitForObservation(
+          page,
+          before,
+          Math.min(timeoutMs, MAX_OBSERVATION_WAIT_MS),
+          options.requireMeaningfulFocus === true
+            ? { requireMeaningfulFocus: true }
+            : {},
+        );
+        if (observed !== undefined) return "pass";
+        return "fail";
       };
 
 export const observationAfter = async (
@@ -122,6 +143,11 @@ export const observationAfter = async (
   operation: string,
   before: PageSnapshot,
   status: ControlActionExecution["status"],
+  options: Readonly<{
+    readonly control?: ControlActionTarget;
+    readonly allowIdempotent?: boolean;
+    readonly requireMeaningfulFocus?: boolean;
+  }> = {},
 ): Promise<LiveControlObservation | undefined> => {
   if (stateful(operation))
     return {
@@ -131,9 +157,21 @@ export const observationAfter = async (
           ? "Stateful success oracle observed"
           : "Stateful action had no bounded success oracle",
     };
-  const observed = observationFor(before, await snapshotPage(page));
+  const observed = observationFor(
+    before,
+    await snapshotPage(page),
+    options.requireMeaningfulFocus === true
+      ? { requireMeaningfulFocus: true }
+      : {},
+  );
   return (
     observed ??
+    (status === "pass" &&
+    options.allowIdempotent === true &&
+    options.control !== undefined &&
+    controlAlreadyActive(before, options.control)
+      ? { kind: "dom", detail: "Control was already active" }
+      : undefined) ??
     (status === "fail"
       ? { kind: "dom", detail: "No observable outcome was produced" }
       : undefined)

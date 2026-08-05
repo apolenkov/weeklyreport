@@ -1,6 +1,9 @@
 import {
+  type ControlActionAttempt,
   executeControlAttempt,
   targetLocator,
+  titleTargetLocator,
+  waitForVisible,
 } from "./control-action-executor.ts";
 import {
   requiresControlRecovery,
@@ -35,6 +38,7 @@ export {
 } from "./control-recovery.ts";
 
 const DEFAULT_ACTION_TIMEOUT_MS = 10_000;
+const TARGET_RESOLUTION_TIMEOUT_MS = 1000;
 
 const unsupported = (
   input: ControlActionInput,
@@ -62,25 +66,52 @@ const failed = (
 const executionResultFor = (
   input: ControlActionInput,
   operation: "pass" | "fail",
+  reason?: string,
 ): ControlActionExecution => ({
   status: operation,
   controlKey: input.control.controlKey,
   operation: input.action.operation,
   resetPerformed: false,
   ...(operation === "fail"
-    ? { reason: "The control action did not complete successfully" }
+    ? { reason: reason ?? "The control action did not complete successfully" }
     : {}),
 });
+
+const attemptStatus = (
+  attempt: ControlActionAttempt,
+): "pass" | "fail" | "ambiguous" =>
+  typeof attempt === "string" ? attempt : attempt.status;
+
+const attemptReason = (attempt: ControlActionAttempt): string | undefined =>
+  typeof attempt === "string" ? undefined : attempt.reason;
+
+const candidateLocator = async (
+  input: ControlActionInput,
+): Promise<ReturnType<typeof targetLocator> | undefined> => {
+  const timeoutMs = Math.min(
+    input.timeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS,
+    TARGET_RESOLUTION_TIMEOUT_MS,
+  );
+  const primary = targetLocator(input.page, input.control);
+  if ((await primary.count()) > 0)
+    return (await waitForVisible(primary, timeoutMs)) ? primary : undefined;
+  const titled = titleTargetLocator(input.page, input.control);
+  if ((await titled.count()) > 0)
+    return (await waitForVisible(titled, timeoutMs)) ? titled : undefined;
+  const [primaryVisible, titledVisible] = await Promise.all([
+    waitForVisible(primary, timeoutMs),
+    waitForVisible(titled, timeoutMs),
+  ]);
+  return primaryVisible ? primary : titledVisible ? titled : undefined;
+};
 
 const locateControl = async (
   input: ControlActionInput,
 ): Promise<ReturnType<typeof targetLocator> | ControlActionExecution> => {
   try {
-    const locator = targetLocator(input.page, input.control);
-    if ((await locator.count()) === 0)
+    const locator = await candidateLocator(input);
+    if (locator === undefined)
       return unsupported(input, "Control is not present in the live DOM");
-    if (!(await locator.isVisible()))
-      return unsupported(input, "Control is not visible in the live DOM");
     if (!(await locator.isEnabled()))
       return unsupported(input, "Control is disabled");
     return locator;
@@ -98,7 +129,7 @@ const isExecution = (
 
 const recoveryResult = async (
   input: ControlActionInput,
-  operation: Awaited<ReturnType<typeof executeControlAttempt>>,
+  attempt: ControlActionAttempt,
   recovery: ControlActionRecovery,
 ): Promise<ControlActionExecution> => {
   try {
@@ -109,13 +140,15 @@ const recoveryResult = async (
       error instanceof Error ? error.message : "Control action recovery failed",
     );
   }
+  const operation = attemptStatus(attempt);
+  const reason = attemptReason(attempt);
   if (operation === "ambiguous")
     return {
       status: "ambiguous",
       controlKey: input.control.controlKey,
       operation: input.action.operation,
       resetPerformed: true,
-      reason: "The stateful action did not produce a bounded outcome",
+      reason: reason ?? "The stateful action did not produce a bounded outcome",
     };
   return {
     status: operation,
@@ -123,7 +156,7 @@ const recoveryResult = async (
     operation: input.action.operation,
     resetPerformed: true,
     ...(operation === "fail"
-      ? { reason: "The control action did not complete successfully" }
+      ? { reason: reason ?? "The control action did not complete successfully" }
       : {}),
   };
 };
@@ -136,14 +169,19 @@ export async function executeControlAction(
   const timeoutMs = input.timeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
   const located = await locateControl(input);
   if (isExecution(located)) return located;
-  const operation = await executeControlAttempt(input, located, timeoutMs);
+  const attempt = await executeControlAttempt(input, located, timeoutMs);
+  const operation = attemptStatus(attempt);
+  const reason = attemptReason(attempt);
   if (!requiresControlRecovery(input)) {
     if (operation === "ambiguous")
-      return failed(input, "A read-only control produced an ambiguous outcome");
-    return executionResultFor(input, operation);
+      return failed(
+        input,
+        reason ?? "A read-only control produced an ambiguous outcome",
+      );
+    return executionResultFor(input, operation, reason);
   }
   const recovery = input.recovery;
   if (recovery === undefined)
     return failed(input, "Stateful action recovery disappeared");
-  return recoveryResult(input, operation, recovery);
+  return recoveryResult(input, attempt, recovery);
 }

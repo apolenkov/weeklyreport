@@ -89,6 +89,54 @@ test.describe("runtime live-control lane", () => {
     });
   });
 
+  test("waits for a delayed DOM outcome before failing a click", async ({
+    page,
+  }) => {
+    await page.setContent(`
+      <button type="button">Reveal result</button>
+      <output id="result"></output>
+      <script>
+        document.querySelector("button").addEventListener("click", () => {
+          setTimeout(() => {
+            document.querySelector("#result").textContent = "revealed";
+          }, 25);
+        });
+      </script>
+    `);
+    const inventory = await inventoryDom(page);
+    const records = await executeLiveControlPlans({
+      page,
+      plans: planLiveControlActions(inventory.controls),
+      preparePage: () => Promise.resolve(),
+      timeoutMs: 250,
+    });
+
+    expect(records[0]).toMatchObject({
+      status: "pass",
+      observation: { kind: "dom" },
+    });
+  });
+
+  test("accepts a read-only click on an already-selected control", async ({
+    page,
+  }) => {
+    await page.setContent(
+      '<button type="button" aria-pressed="true">Read</button>',
+    );
+    const inventory = await inventoryDom(page);
+    const records = await executeLiveControlPlans({
+      page,
+      plans: planLiveControlActions(inventory.controls),
+      preparePage: () => Promise.resolve(),
+      timeoutMs: 100,
+    });
+
+    expect(records[0]).toMatchObject({
+      status: "pass",
+      observation: { kind: "dom" },
+    });
+  });
+
   test("observes skip-to-content focus and scroll without accepting ordinary focus", async ({
     page,
   }) => {

@@ -27,6 +27,8 @@ import {
   type StatePreparationRequest,
 } from "./state-preparation.ts";
 
+const ACTION_TARGET_WAIT_TIMEOUT_MS = 1000;
+
 export interface FrozenCaseLiveRuntime {
   readonly archiveRoot: string;
   readonly baseURL: string;
@@ -135,6 +137,40 @@ const targetForAction = (
 ) =>
   inventory.controls.find(({ controlKey }) => controlKey === action.controlKey);
 
+const waitForActionTargetUntil = async (
+  page: Page,
+  action: NonNullable<ReturnType<typeof executionAction>>,
+  deadline: number,
+): Promise<ReturnType<typeof targetForAction>> => {
+  const target = targetForAction(await inventoryDom(page), action);
+  if (target !== undefined || Date.now() >= deadline) return target;
+  try {
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        }),
+    );
+  } catch (error: unknown) {
+    if (!(
+      error instanceof Error &&
+      /Execution context was destroyed.*navigation/iu.test(error.message)
+    ))
+      throw error;
+  }
+  return waitForActionTargetUntil(page, action, deadline);
+};
+
+const waitForActionTarget = async (
+  page: Page,
+  action: NonNullable<ReturnType<typeof executionAction>>,
+): Promise<ReturnType<typeof targetForAction>> =>
+  waitForActionTargetUntil(
+    page,
+    action,
+    Date.now() + ACTION_TARGET_WAIT_TIMEOUT_MS,
+  );
+
 const outcomeFromRecord = (
   record: LiveControlActionRecord | undefined,
   controlKey: string,
@@ -162,7 +198,7 @@ export const runAction = async (
 ): Promise<ActionOutcome | undefined> => {
   const action = executionAction(matrixCase.execution);
   if (action === undefined || action.operation === "navigate") return undefined;
-  const target = targetForAction(await inventoryDom(page), action);
+  const target = await waitForActionTarget(page, action);
   if (target === undefined)
     return outcomeFromRecord(undefined, action.controlKey);
   const plan: LiveControlPlan = { control: target, action };

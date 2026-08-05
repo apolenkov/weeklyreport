@@ -125,6 +125,12 @@ describe("runtime navigation recovery", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("does not require frame navigation for a same-document skip link", () => {
+    expect(
+      expectedActionNavigationFor("link:Skip%20to%20content:1"),
+    ).toBeUndefined();
+  });
+
   it("waits for delayed navigation from generic router controls", async () => {
     vi.useFakeTimers();
     const frame = {};
