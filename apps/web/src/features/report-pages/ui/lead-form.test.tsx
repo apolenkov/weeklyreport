@@ -1429,6 +1429,7 @@ describe("sectionToDraftPayload — activity-status slice", () => {
         {
           activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           activityName: "Jira triage duty",
+          jiraAccounts: [],
           status: "red",
           note: "Blocked on vendor",
           linkedProducts: [],
@@ -1437,6 +1438,7 @@ describe("sectionToDraftPayload — activity-status slice", () => {
         {
           activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           activityName: "Ops rotation",
+          jiraAccounts: [],
           status: null,
           linkedProducts: [],
           derivedStatus: null,

@@ -25,7 +25,7 @@ export function findRepoRoot(startDir: string): string {
  * Runs ONCE before any integration test.
  *
  * - `prisma migrate reset --force --skip-seed` drops + recreates schema, no auto-seed
- * - then `tsx prisma/seed.ts` runs the canonical seed against E2E_DATABASE_URL
+ * - then the supported canonical seed orchestrator runs against E2E_DATABASE_URL
  *
  * MUST run against E2E_DATABASE_URL — never the dev DATABASE_URL. The
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
@@ -53,8 +53,8 @@ export default async function globalSetup(): Promise<void> {
     stdio: "inherit",
   });
 
-  console.log("[e2e] Seeding integration database...");
-  execSync("pnpm exec prisma db seed", {
+  console.log("[e2e] Seeding integration database through the orchestrator...");
+  execSync("pnpm db:seed:canonical", {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: dbUrl },
     stdio: "inherit",

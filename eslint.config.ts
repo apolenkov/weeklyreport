@@ -798,7 +798,7 @@ export default defineConfig([
       "apps/api/src/modules/report-sections/application/report-sections.service.ts",
       "apps/api/src/modules/review/application/review-actions.service.ts",
       "apps/api/src/modules/review/application/review.service.ts",
-      "apps/api/src/modules/search/search.service.ts",
+      "apps/api/src/modules/search/application/search.service.ts",
       "apps/api/src/modules/telemetry/telemetry.gauges.ts",
       "apps/api/src/modules/telemetry/telemetry.service.ts",
       "apps/api/src/modules/weekly-report/weekly-report.service.ts",

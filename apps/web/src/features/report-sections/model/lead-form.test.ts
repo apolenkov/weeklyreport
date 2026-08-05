@@ -29,6 +29,7 @@ const ACTIVITY_A = "77777777-7777-4777-8777-777777777777";
 const activityA = {
   activityId: ACTIVITY_A,
   activityName: "Jira triage duty",
+  jiraAccounts: [],
   status: "green" as const,
   linkedProducts: [],
   derivedStatus: null,

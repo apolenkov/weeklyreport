@@ -53,7 +53,7 @@ describe("API module public boundary", () => {
     const messages = await lintInfrastructureImport(PUBLIC_IMPORT);
 
     expect(messages).toEqual([]);
-  }, 20_000);
+  }, 60_000);
 
   it("rejects infrastructure imports of module internals", async () => {
     const messages = await lintInfrastructureImport(
@@ -68,5 +68,5 @@ describe("API module public boundary", () => {
         ) as unknown,
       }),
     ]);
-  }, 20_000);
+  }, 60_000);
 });

@@ -40,6 +40,7 @@ import {
   riskSeveritySchema,
   riskWriteSchema,
   safeText,
+  sectionActivitySchema,
   stageAssignmentSchema,
   stageSchema,
   type SubmitSectionPayload,
@@ -56,6 +57,26 @@ import {
 
 const uuid = () => randomUUID();
 const PROJECT_UUID = uuid();
+
+describe("sectionActivitySchema — Jira aliases", () => {
+  const activity = () => ({
+    activityId: uuid(),
+    activityName: "Operations rotation",
+    status: "green" as const,
+  });
+
+  it("round-trips Jira aliases in new snapshots", () => {
+    const parsed = sectionActivitySchema.parse({
+      ...activity(),
+      jiraAccounts: ["ops-rotation", "OPS"],
+    });
+    expect(parsed.jiraAccounts).toEqual(["ops-rotation", "OPS"]);
+  });
+
+  it("parses historical snapshots without Jira aliases", () => {
+    expect(sectionActivitySchema.parse(activity()).jiraAccounts).toEqual([]);
+  });
+});
 
 const validItem = () => ({
   projectId: uuid(),
@@ -1079,6 +1100,7 @@ describe("validateSubmitInput", () => {
         {
           activityId,
           activityName: "Ops rotation",
+          jiraAccounts: [],
           status: null,
           linkedProducts: [],
           derivedStatus: null,
@@ -1105,6 +1127,7 @@ describe("validateSubmitInput", () => {
         {
           activityId,
           activityName: "Ops rotation",
+          jiraAccounts: [],
           status: "green",
           linkedProducts: [],
           derivedStatus: "green",
@@ -1202,6 +1225,7 @@ describe("validateRecordActivityIds", () => {
       {
         activityId: attachedId,
         activityName: "Ops rotation",
+        jiraAccounts: [],
         status: null,
         linkedProducts: [],
         derivedStatus: null,

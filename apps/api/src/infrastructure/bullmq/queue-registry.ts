@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 
 import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
+import { SEMANTIC_INDEX_QUEUE_NAME } from "./semantic-index-queue-contract.js";
 
 const QUEUE_NAMES = [
   "email-reminder",
@@ -11,6 +12,7 @@ const QUEUE_NAMES = [
   // now so the admin smoke-test enqueue and the DLQ monitor share one
   // connection the moment the feature turns on.
   "telegram-outbound",
+  SEMANTIC_INDEX_QUEUE_NAME,
 ] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 

@@ -3,6 +3,9 @@ import { z } from "zod";
 import { logLevelSchema } from "../../lib/logger.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
+const MIN_SIMILARITY_THRESHOLD = 0;
+const MAX_SIMILARITY_THRESHOLD = 1;
+const positiveIntegerEnv = z.coerce.number().int().positive();
 
 // No `.default()` anywhere in this schema by design: every value the API needs
 // to run is REQUIRED and must be supplied explicitly per environment (`.env`
@@ -101,6 +104,31 @@ export const envSchema = z
     // MockTelegramAdapter; a non-blank value activates real delivery. The
     // configured-check is centralised in `isTelegramConfigured`.
     TG_BOT_TOKEN: z.string().optional(),
+
+    // Native Lead report assistant. These values are required in every
+    // environment, including tests; test environments use placeholders and
+    // deterministic fakes, never a real provider call. No model, server,
+    // dimension, or budget is selected in code.
+    MISTRAL_API_KEY: z.string().min(1),
+    MISTRAL_PLANNER_MODEL: z.string().min(1),
+    MISTRAL_ANSWER_MODEL: z.string().min(1),
+    MISTRAL_EMBEDDING_MODEL: z.string().min(1),
+    MISTRAL_EMBEDDING_DIMENSIONS: positiveIntegerEnv,
+    MISTRAL_API_SERVER: z.string().min(1),
+    REPORT_ASSISTANT_INPUT_VERSION: z.string().min(1),
+    REPORT_ASSISTANT_SIMILARITY_THRESHOLD: z.coerce
+      .number()
+      .min(MIN_SIMILARITY_THRESHOLD)
+      .max(MAX_SIMILARITY_THRESHOLD),
+    REPORT_ASSISTANT_CANDIDATE_LIMIT: positiveIntegerEnv,
+    REPORT_ASSISTANT_READ_THROUGH_LIMIT: positiveIntegerEnv,
+    REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: positiveIntegerEnv,
+    REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: positiveIntegerEnv,
+    REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: positiveIntegerEnv,
+    REPORT_ASSISTANT_PLANNER_MAX_TOKENS: positiveIntegerEnv,
+    REPORT_ASSISTANT_ANSWER_MAX_TOKENS: positiveIntegerEnv,
+    REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: positiveIntegerEnv,
+    REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: positiveIntegerEnv,
 
     // PDF generation
     PDF_BASE_URL: z.url(),

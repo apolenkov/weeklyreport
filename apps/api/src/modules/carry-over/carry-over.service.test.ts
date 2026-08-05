@@ -516,6 +516,7 @@ describe("CarryOverService — activity-parented carry-over", () => {
       {
         activityId: ACTIVITY_ID,
         activityName: "Jira triage duty",
+        jiraAccounts: [],
         status: "green",
         linkedProducts: [],
         derivedStatus: "green",
@@ -567,6 +568,7 @@ describe("CarryOverService — carry filter set (pin)", () => {
     {
       activityId: ACTIVITY,
       activityName: "Reattached activity",
+      jiraAccounts: [],
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",

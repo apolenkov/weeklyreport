@@ -22,6 +22,7 @@ describe("ActivityStatusStrip", () => {
           {
             activityId: ACTIVITY_ID,
             activityName: "Jira triage duty",
+            jiraAccounts: [],
             status: "red",
             note: "Blocked on vendor",
             linkedProducts: [],
@@ -37,6 +38,7 @@ describe("ActivityStatusStrip", () => {
           {
             activityId: ACTIVITY_ID,
             activityName: "Jira triage duty",
+            jiraAccounts: [],
             status: "green",
             linkedProducts: [],
             derivedStatus: null,

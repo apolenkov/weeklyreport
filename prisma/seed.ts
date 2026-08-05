@@ -3,7 +3,6 @@ import "dotenv/config";
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
-  Prisma,
   PrismaClient,
   Role,
   ReportSectionStatus,
@@ -40,7 +39,7 @@ import {
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { assertSeedCoverage } from "./seed-coverage-check.js";
+import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -432,10 +431,6 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
-      // Keep advanced seed content source-of-truth in the section rows. A
-      // stale empty snapshot makes /reports/<id> render 0 products even when
-      // the seeded published report has submitted sections.
-      publishedSnapshot: Prisma.DbNull,
     },
     create: {
       id: publishedReport.id,
@@ -449,7 +444,6 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
-      publishedSnapshot: Prisma.DbNull,
     },
   });
 
@@ -1438,7 +1432,7 @@ async function main() {
       `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
 
-  await assertSeedCoverage(prisma, "seed");
+  await stabilizeSeedRecordIdentities(prisma);
 }
 
 void main()

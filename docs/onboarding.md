@@ -68,6 +68,27 @@ CustomReport автоматизирует еженедельные статус-
 иначе браузер их не увидит. Например, `NEXT_PUBLIC_SENTRY_DSN` нужен в окружении
 web, чтобы заработала корреляция ошибок с трейсами (см. раздел 6).
 
+### Native Lead Chat
+
+Для Lead Chat нужны отдельные Mistral workspaces и ключи для development/UAT и
+production. Ключ хранится только в untracked `.env` или secret manager; в Git,
+OpenSpec, логах и скриншотах его не бывает. Production rollout требует paid
+workspace, отдельного spending limit, подтверждения режима обучения и
+retention/ZDR, а также одобрения EU data region. Настройки фиксированы и не
+используют `-latest`: `mistral-medium-3-5` для planner/answer,
+`mistral-embed` с `1024` dimensions и `MISTRAL_API_SERVER=eu`.
+
+Сначала выкатывают и проверяют полную конфигурацию, затем код: `GET
+/v1/models` на `api.eu.mistral.ai` проверяет доступность моделей и HTTPS/443
+без report content. Для PostgreSQL сначала проверяют initialized-database
+ledger через `pnpm db:check-init-target`, затем применяют DDL через прямой
+`DIRECT_URL` connection, а не PgBouncer; production database никогда не
+reset-ят. После этого smoke-проверка идёт в порядке save → submit → publish →
+search → PDF → Chat, а расходы, token/request rate, 429 и timeout смотрят по
+workspace billing и bounded `customreport_assistant_*` metrics. При проблеме
+откатывают application image, не удаляя additive DB objects. Полный порядок
+команд — в [`operations/lead-report-assistant-rollout.md`](./operations/lead-report-assistant-rollout.md).
+
 Аутентификация локально:
 
 - `AUTH_DEV_MODE=true` включает dev-вход через `/auth/dev-login`.
@@ -83,9 +104,23 @@ web, чтобы заработала корреляция ошибок с тре
 - Схема — `prisma/schema.prisma`. Меняешь её напрямую и пересобираешь; отдельные
   alter-миграции не пишешь (есть единственная init-миграция, её держат в синхроне
   со схемой вручную, когда Prisma не выражает конструкцию).
-- Залить демо-данные: `pnpm db:fresh:simple` (минимум) или
-  `pnpm db:fresh:advanced` (объёмно). Оба сначала делают hard-reset.
-- Сиды — `prisma/seed-simple.ts` и `prisma/seed.ts`.
+- Залить демо-данные: `pnpm db:fresh:simple` (middle-tier) или
+  `pnpm db:fresh:advanced` (canonical). Оба сначала делают hard-reset, затем
+  выполняют relational seed, canonical snapshot finalization и проверку
+  готовности Lead Chat.
+- Поддерживаемые частичные команды — `pnpm db:seed:canonical`,
+  `pnpm db:seed:small`, `pnpm db:seed:middle` и `pnpm db:seed:huge`.
+  Файлы `prisma/seed.ts`, `prisma/seed-simple.ts` и `prisma/seed-demo.ts` —
+  внутренние relational writers: не запускай их напрямую, иначе будут
+  пропущены финализация snapshot и readiness-check.
+- Для восстановления базы, созданной дефектными demo-fixtures, сначала укажи
+  явный non-production `DATABASE_URL`, затем выполни `pnpm db:reset:hard`.
+  Команда применяет миграции, очищает таблицы и Redis, заново создаёт middle
+  fixture через orchestration и завершается только после проверки Lead Chat.
+  Для canonical fixture после reset выполни `pnpm db:seed:canonical`.
+  В UAT используй тот же порядок только для базы с суффиксом `_uat`; guard
+  откажется работать с production-looking URL. Production базу не reset-ят и
+  не пересеивают ни при каких обстоятельствах.
 - Защита от случайного сноса не той базы — `prisma/_destructive-guard.ts`: он
   разбирает `DATABASE_URL` и не даёт деструктивную операцию без суффикса
   `_uat` / `_dev` / `_test` (продакшен защищён отдельно флагом

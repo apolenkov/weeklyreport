@@ -226,6 +226,7 @@ describe("ProjectActivity (integration)", () => {
       {
         activityId,
         activityName: "Jira triage duty",
+        jiraAccounts: [],
         status: "green",
         note: null,
         // activity-first-class: the read model now joins the label-only linked

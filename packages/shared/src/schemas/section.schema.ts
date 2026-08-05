@@ -47,6 +47,9 @@ export const linkedProductSchema = z.object({
 export const sectionActivitySchema = z.object({
   activityId: z.uuid(),
   activityName: z.string().min(1),
+  // Frozen snapshots retain exact Jira aliases for future entity resolution;
+  // historical snapshots predate the field and therefore parse as no aliases.
+  jiraAccounts: z.array(safeText({ max: 200 })).default([]),
   status: trafficLightStatusSchema.nullable(),
   note: z.string().nullable().optional(),
   // activity-first-class: products this activity reports against (M:N, label-

@@ -24,6 +24,7 @@ import type { LeadFormService } from "../../modules/report-sections/index.js";
 import type { ReportSectionsService } from "../../modules/report-sections/index.js";
 import type { ReviewService } from "../../modules/review/index.js";
 import type { ReviewActionsService } from "../../modules/review/index.js";
+import type { ReportAssistantService } from "../../modules/search/index.js";
 import { type SearchService } from "../../modules/search/index.js";
 import type { TelemetryService } from "../../modules/telemetry/index.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/index.js";
@@ -109,6 +110,8 @@ interface RouterDeps {
    * scope via SearchAuthorizationError → FORBIDDEN.
    */
   searchService: SearchService;
+  /** Lead-only native report assistant; omitted only by structural test fixtures. */
+  reportAssistantService?: ReportAssistantService;
   /**
    * Live activity feed for the head/admin dashboard
    * "Активность за текущий период" panel. One row per lead's section in

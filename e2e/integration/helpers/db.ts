@@ -35,7 +35,7 @@ export const prisma = new PrismaClient({ adapter });
 /**
  * Re-run the canonical seed to restore mutable state to the seeded baseline.
  *
- * NOT a full migrate-reset — just `tsx prisma/seed.ts`. The seed is
+ * NOT a full migrate-reset — the supported canonical seed orchestration. The seed is
  * idempotent (uses upsert by ID/email/composite-key), so it safely re-applies
  * baseline values on top of whatever the previous test left behind. New rows
  * created by tests (e.g., new Items, new Projects) are NOT deleted by this —
@@ -48,7 +48,7 @@ export async function resetMutations(): Promise<void> {
   const { execSync } = await import("node:child_process");
   const { findRepoRoot } = await import("../global-setup");
   const repoRoot = findRepoRoot(__dirname);
-  execSync("pnpm exec prisma db seed", {
+  execSync("pnpm db:seed:canonical", {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL! },
     stdio: "pipe",

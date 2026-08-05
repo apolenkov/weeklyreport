@@ -1,3 +1,8 @@
+-- pgvector is provided by the PostgreSQL image selected in every tracked
+-- environment. Keep this before the cache table; report tables remain
+-- canonical and are intentionally unchanged by the assistant feature.
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('lead', 'head', 'viewer', 'admin');
 
@@ -978,3 +983,23 @@ ALTER TABLE "Risk"
 ALTER TABLE "Decision"
   ADD CONSTRAINT "Decision_parent_xor_check"
   CHECK ((("productId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+
+-- Content-addressed semantic cache. It stores no report text, report/record
+-- IDs, authorization data, or generated answers. `vector` is intentionally
+-- unbounded so model dimensions can be partitioned by the CHECK below.
+CREATE TABLE "SemanticEmbedding" (
+    "contentHash" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "model" TEXT NOT NULL,
+    "inputVersion" TEXT NOT NULL,
+    "dimensions" INTEGER NOT NULL,
+    "vector" vector NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SemanticEmbedding_pkey" PRIMARY KEY ("contentHash", "provider", "model", "inputVersion"),
+    CONSTRAINT "SemanticEmbedding_vector_dimensions_check" CHECK (vector_dims("vector") = "dimensions")
+);
+
+CREATE INDEX "SemanticEmbedding_provider_model_inputVersion_dimensions_idx"
+  ON "SemanticEmbedding"("provider", "model", "inputVersion", "dimensions");

@@ -99,6 +99,7 @@ function sectionWithComments(): ReportSectionReadModel {
       {
         activityId: "77777777-7777-4777-8777-777777777771",
         activityName: "Sensitive activity",
+        jiraAccounts: [],
         status: "red",
         note: "Sensitive note",
         linkedProducts: [],

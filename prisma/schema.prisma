@@ -824,6 +824,24 @@ model RecordComment {
   @@index([reviewerId])
 }
 
+// Content-addressed semantic cache. This table intentionally has no report,
+// record, ACL, or text columns; canonical occurrences remain the only source
+// of report data. Prisma cannot read/write the unsupported vector field, so
+// the semantic repository uses parameterized SQL for that field.
+model SemanticEmbedding {
+  contentHash  String
+  provider     String
+  model        String
+  inputVersion String
+  dimensions   Int
+  vector       Unsupported("vector")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@id([contentHash, provider, model, inputVersion])
+  @@index([provider, model, inputVersion, dimensions])
+}
+
 enum ReviewVerdict {
   approved
   changes_requested

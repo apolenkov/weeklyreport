@@ -7,6 +7,10 @@ import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
 import { QueueRegistry } from "./queue-registry.js";
+import {
+  SEMANTIC_INDEX_JOB_OPTS,
+  SEMANTIC_INDEX_QUEUE_NAME,
+} from "./semantic-index-queue-contract.js";
 
 // Bounded completed/failed retention shared by the pdf-export and
 // email-reminder queues, matching telegram-outbound's TELEGRAM_OUTBOUND_JOB_OPTS.
@@ -49,6 +53,10 @@ const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
     // telegram-outbound is seeds-only until the bot activates; `attempts: 3` and
     // equivalent retention are set per-job at enqueue time, not on the queue.
     BullModule.registerQueue({ name: "telegram-outbound" }),
+    BullModule.registerQueue({
+      name: SEMANTIC_INDEX_QUEUE_NAME,
+      defaultJobOptions: SEMANTIC_INDEX_JOB_OPTS,
+    }),
   ],
   providers: [
     {

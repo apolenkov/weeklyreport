@@ -1,11 +1,18 @@
+import {
+  reportAssistantOutcomeSchema,
+  reportAssistantRequestSchema,
+} from "@customreport/shared";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
 import type { SnapshotAdminService } from "../../../modules/admin/index.js";
 import type { LeadFormService } from "../../../modules/report-sections/index.js";
+import type { ReportAssistantService } from "../../../modules/search/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   headProcedure,
+  leadProcedure,
   protectedProcedure,
   router,
 } from "../trpc.middleware.js";
@@ -15,10 +22,31 @@ const MAX_REOPEN_REASON_LENGTH = 500;
 export interface LeadFormRouterDeps {
   snapshotAdminService: SnapshotAdminService;
   leadFormService: LeadFormService;
+  reportAssistantService?: ReportAssistantService;
 }
 
 export function createLeadFormRouter(deps: LeadFormRouterDeps) {
   return router({
+    assistant: leadProcedure
+      .input(reportAssistantRequestSchema)
+      .output(reportAssistantOutcomeSchema)
+      .mutation(async ({ input, ctx }) => {
+        try {
+          if (!deps.reportAssistantService) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Report assistant is not configured",
+            });
+          }
+          return await deps.reportAssistantService.answer(
+            input,
+            ctx.session.userId,
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
     // Org-wide lead-form presentation flags. Read-only slice of AppSettings
     // (admin-managed via admin.updateSettings, like every other setting);
     // exposed to every authenticated role so the lead form can pick classic
