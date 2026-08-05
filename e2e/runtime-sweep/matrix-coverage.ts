@@ -1,9 +1,10 @@
 import type { CoverageCell, Role, SeedProfile } from "./contracts.ts";
 import { stableSerialize } from "./ids.ts";
 import {
+  coverageCellWitnessKey,
   coverageIdentityIssues,
   isSpecializedCoverageCase,
-  sameNominalCoverageWitness,
+  matrixCoverageWitnessKey,
 } from "./matrix-coverage-identity.ts";
 import type { FrozenMatrix, MatrixExecutableCase } from "./matrix-finalizer.ts";
 import { pairKeys } from "./matrix-finalizer-support.ts";
@@ -51,9 +52,15 @@ const gap = (
   details: Readonly<Partial<MatrixCoverageGap>> = {},
 ): MatrixCoverageGap => ({ kind, message, ...details });
 
-const duplicateIds = (ids: readonly string[]): readonly string[] => [
-  ...new Set(ids.filter((id, index) => ids.indexOf(id) !== index)),
-];
+const duplicateIds = (ids: readonly string[]): readonly string[] =>
+  [...Map.groupBy(ids.entries(), ([, id]) => id)]
+    .filter(([, occurrences]) => occurrences.length > 1)
+    .toSorted(
+      ([, left], [, right]) =>
+        (left.at(1)?.[0] ?? Number.MAX_SAFE_INTEGER) -
+        (right.at(1)?.[0] ?? Number.MAX_SAFE_INTEGER),
+    )
+    .map(([id]) => id);
 
 const pairGaps = (
   matrix: FrozenMatrix,
@@ -126,6 +133,12 @@ const missingGaps = (
   cells: readonly CoverageCell[],
 ): readonly MatrixCoverageGap[] => {
   const actualIds = new Set(cells.map(({ cellId }) => cellId));
+  const hasMissingCase = matrix.cases.some(
+    ({ caseId }) => !actualIds.has(caseId),
+  );
+  const witnessKeys = hasMissingCase
+    ? new Set(cells.map(coverageCellWitnessKey))
+    : new Set<string>();
   return matrix.cases.flatMap((matrixCase) => {
     if (actualIds.has(matrixCase.caseId)) return [];
     const isSpecialized = isSpecializedCoverageCase(matrixCase);
@@ -135,7 +148,7 @@ const missingGaps = (
         `missing ${isSpecialized ? "specialized " : ""}coverage case ${matrixCase.caseId}`,
         { caseId: matrixCase.caseId },
       ),
-      ...(cells.some((cell) => sameNominalCoverageWitness(matrixCase, cell))
+      ...(witnessKeys.has(matrixCoverageWitnessKey(matrixCase))
         ? [
             gap(
               "fabricated-none-witness",
@@ -151,14 +164,16 @@ const missingGaps = (
 const coveredCases = (
   matrix: FrozenMatrix,
   cells: readonly CoverageCell[],
-): readonly MatrixExecutableCase[] =>
-  matrix.cases.filter((matrixCase) => {
-    const cell = cells.find(({ cellId }) => cellId === matrixCase.caseId);
+): readonly MatrixExecutableCase[] => {
+  const cellsById = Map.groupBy(cells, ({ cellId }) => cellId);
+  return matrix.cases.filter((matrixCase) => {
+    const cell = cellsById.get(matrixCase.caseId)?.at(0);
     return (
       cell !== undefined &&
       coverageIdentityIssues(matrixCase, cell).length === 0
     );
   });
+};
 
 const collectCaseGaps = (
   matrix: FrozenMatrix,

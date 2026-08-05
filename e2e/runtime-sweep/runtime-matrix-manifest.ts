@@ -50,6 +50,8 @@ class RuntimeMatrixScaleError extends Error {
   override readonly name = "RuntimeMatrixScaleError";
 }
 
+export const DEFAULT_RUNTIME_MATRIX_MAX_CELLS = 100_000;
+
 const readFrozenMatrix = async (matrixPath: string): Promise<FrozenMatrix> => {
   try {
     return parseFrozenMatrix(JSON.parse(await readFile(matrixPath, "utf8")));
@@ -87,11 +89,11 @@ const statesFromFrozenCases = (
   const selected = cases
     .filter(({ profile: candidate }) => candidate === profile)
     .toSorted((left, right) => left.stateId.localeCompare(right.stateId));
+  const firstByStateId = new Map(
+    selected.toReversed().map((entry) => [entry.stateId, entry] as const),
+  );
   return selected
-    .filter(
-      (entry, index, entries) =>
-        entries.findIndex(({ stateId }) => stateId === entry.stateId) === index,
-    )
+    .filter((entry) => firstByStateId.get(entry.stateId) === entry)
     .map((entry) => {
       const axes = {
         role: entry.role,
@@ -152,10 +154,11 @@ export async function loadRuntimeMatrix(
   input: Readonly<{
     readonly archiveRoot: string;
     readonly profile: string;
-    readonly maxCells: number;
+    readonly maxCells?: number;
   }>,
 ): Promise<RuntimeMatrixSource> {
-  if (!Number.isInteger(input.maxCells) || input.maxCells < 1)
+  const maxCells = input.maxCells ?? DEFAULT_RUNTIME_MATRIX_MAX_CELLS;
+  if (!Number.isInteger(maxCells) || maxCells < 1)
     throw new RuntimeMatrixScaleError(
       "Runtime matrix maxCells must be positive",
     );
@@ -177,9 +180,9 @@ export async function loadRuntimeMatrix(
     seedProfiles: manifest.seedProfiles,
   });
   const selected = selectRuntimeStates(plan, profile, matrix.cases);
-  if (matrix.counts.total > input.maxCells) {
+  if (matrix.counts.total > maxCells) {
     throw new RuntimeMatrixScaleError(
-      `Runtime matrix has ${matrix.counts.total} finalized cases; max is ${input.maxCells}`,
+      `Runtime matrix has ${matrix.counts.total} finalized cases; max is ${maxCells}`,
     );
   }
   return {

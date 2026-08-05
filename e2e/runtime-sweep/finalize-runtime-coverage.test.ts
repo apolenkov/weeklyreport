@@ -6,7 +6,10 @@ import path from "node:path";
 import { expect, test } from "vitest";
 
 import { type CoverageCell, coverageCellSchema } from "./contracts.ts";
-import { finalizeRuntimeCoverage } from "./finalize-runtime-coverage.ts";
+import {
+  finalizeRuntimeCoverage,
+  readCanonicalCoverageCells,
+} from "./finalize-runtime-coverage.ts";
 import { sha256Hex } from "./ids.ts";
 import type { FrozenMatrix, MatrixExecutableCase } from "./matrix-finalizer.ts";
 import { pairKeys } from "./matrix-finalizer-support.ts";
@@ -122,6 +125,35 @@ test("finalizes exact canonical cells into one ordered immutable ledger", async 
   );
   expect(coverageCellSchema.parse(JSON.parse(ledger)).cellId).toBe(
     matrixCase.caseId,
+  );
+});
+
+test("reads canonical cells in ordered batches of at most 64", async () => {
+  const cases = Array.from({ length: 129 }, (_, index) => ({
+    ...matrixCase,
+    caseId: `case-finalize-${index}`,
+  }));
+  const reads = { active: 0, maximum: 0, started: [] as string[] };
+  const cells = await readCanonicalCoverageCells(
+    "fixture",
+    cases,
+    async (_, matrixCaseInput) => {
+      reads.active += 1;
+      reads.maximum = Math.max(reads.maximum, reads.active);
+      reads.started.push(matrixCaseInput.caseId);
+      await Promise.resolve();
+      reads.active -= 1;
+      return coverageCellSchema.parse({
+        ...cell,
+        cellId: matrixCaseInput.caseId,
+      });
+    },
+  );
+
+  expect(reads.maximum).toBe(64);
+  expect(reads.started).toEqual(cases.map(({ caseId }) => caseId));
+  expect(cells.map(({ cellId }) => cellId)).toEqual(
+    cases.map(({ caseId }) => caseId),
   );
 });
 
