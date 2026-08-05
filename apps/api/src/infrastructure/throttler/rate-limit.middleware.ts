@@ -34,7 +34,8 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_STANDARD_HEADERS = "draft-7" as const;
 
 // Host/port via buildRedisConnectionOptions (never raw process.env) so a
-// missing var fails at the boot fence; lazyConnect keeps boot non-blocking.
+// missing var fails at the boot fence; lazyConnect lets the factory own the
+// explicit readiness boundary below.
 function buildStoreClient(
   env: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> | undefined,
 ): Redis | undefined {
@@ -46,6 +47,9 @@ function buildStoreClient(
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
+    // A failed boot must reject once instead of leaving an unbounded reconnect
+    // loop alive after the bootstrap promise has already failed.
+    retryStrategy: () => null,
   });
 }
 
@@ -126,17 +130,17 @@ function buildBaseConfig(logger: AppLogger): Partial<Options> {
 
 // Per-IP limiters for public ingress; Caddy-unmatched routes need their own
 // bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
-export function createRateLimits(options: {
+export async function createRateLimits(options: {
   logger: AppLogger;
   isTest: boolean;
   env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
   redis?: Redis;
-}): {
+}): Promise<{
   authLimiter: RequestHandler;
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
   clientLogsLimiter: RequestHandler;
-} {
+}> {
   const { logger, isTest, env, redis } = options;
 
   const client = redis ?? buildStoreClient(env);
@@ -157,6 +161,11 @@ export function createRateLimits(options: {
   };
 
   client?.on("error", reportStoreError);
+  // The factory owns only clients it created itself. Injected clients belong to
+  // their callers, which retain connection lifecycle control for tests/apps.
+  if (redis === undefined && client !== undefined) {
+    await client.connect();
+  }
 
   const storeFor = (bucket: string): Store | undefined =>
     client

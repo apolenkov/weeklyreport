@@ -17,11 +17,12 @@ export async function bootstrapApi(
 ): Promise<void> {
   const env = validateEnv();
   const { app, logger } = await createNestApp({ env, otelDecision });
-  const { authLimiter, trpcLimiter, vitalsLimiter } = configureHttpPipeline({
-    app,
-    env,
-    logger,
-  });
+  const { authLimiter, trpcLimiter, vitalsLimiter } =
+    await configureHttpPipeline({
+      app,
+      env,
+      logger,
+    });
   const { prisma, autoCarryOver, appRouter } = createAppServices({
     app,
     env,

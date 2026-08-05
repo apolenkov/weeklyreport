@@ -24,11 +24,11 @@ export interface DeferredIngressLimiters {
   readonly vitalsLimiter: RequestHandler;
 }
 
-export function configureHttpPipeline(deps: {
+export async function configureHttpPipeline(deps: {
   app: INestApplication;
   env: EnvConfig;
   logger: AppLogger;
-}): DeferredIngressLimiters {
+}): Promise<DeferredIngressLimiters> {
   const { app, env, logger } = deps;
 
   app.enableShutdownHooks();
@@ -54,7 +54,7 @@ export function configureHttpPipeline(deps: {
   // Per-IP limiters for every public ingress surface. Built once here so the
   // client-logs forwarder below is guarded ahead of its terminating handler.
   const { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter } =
-    createRateLimits({
+    await createRateLimits({
       logger,
       isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
       env,
