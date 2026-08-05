@@ -18,6 +18,15 @@ export interface PreflightSessionCache {
   readonly use: (actor: RuntimeMatrixActor) => Promise<void>;
 }
 
+export type ProfileSessionCacheResult = Readonly<{
+  cache: PreflightSessionCache;
+  created: boolean;
+}>;
+
+export interface ProfileSessionCacheRegistry<Profile extends string> {
+  readonly get: (profile: Profile) => Promise<ProfileSessionCacheResult>;
+}
+
 export class PreflightSessionError extends Error {
   override readonly name = "PreflightSessionError";
 }
@@ -45,6 +54,21 @@ const sessionCookies = (cookies: readonly Cookie[]): readonly Cookie[] =>
 const isAuthenticatedActor = (
   actor: RuntimeMatrixActor,
 ): actor is AuthenticatedActor => actor.role !== null;
+
+export function createProfileSessionCacheRegistry<Profile extends string>(
+  create: (profile: Profile) => Promise<PreflightSessionCache>,
+): ProfileSessionCacheRegistry<Profile> {
+  const caches = new Map<Profile, PreflightSessionCache>();
+  return {
+    async get(profile) {
+      const cached = caches.get(profile);
+      if (cached !== undefined) return { cache: cached, created: false };
+      const cache = await create(profile);
+      caches.set(profile, cache);
+      return { cache, created: true };
+    },
+  };
+}
 
 export function createPreflightSessionCache(
   context: PreflightCookieContext,
