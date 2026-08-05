@@ -42,6 +42,9 @@ test("orders the Flash Driver after deterministic runtime projects", async () =>
     expect(webServers[1]?.cwd).toBe(
       path.resolve(import.meta.dirname, "..", ".."),
     );
+    expect(webServers[1]?.command).toBe(
+      "pnpm exec tsx e2e/runtime-sweep/run-runtime-next-server.ts sweep 3105",
+    );
 
     const { default: preflightConfig } =
       await import("./playwright.preflight.config.ts");
@@ -50,6 +53,9 @@ test("orders the Flash Driver after deterministic runtime projects", async () =>
       throw new Error("preflight web servers missing");
     expect(preflightServers[1]?.cwd).toBe(
       path.resolve(import.meta.dirname, "..", ".."),
+    );
+    expect(preflightServers[1]?.command).toBe(
+      "pnpm exec tsx e2e/runtime-sweep/run-runtime-next-server.ts preflight 3105",
     );
   } finally {
     delete process.env.E2E_DATABASE_URL;
