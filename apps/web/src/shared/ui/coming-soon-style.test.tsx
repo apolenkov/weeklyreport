@@ -138,7 +138,8 @@ describe("shared coming-soon primitive owns the inert button chrome", () => {
 
     fireEvent.focus(screen.getByTestId("primitive-portal"));
 
-    await screen.findByRole("tooltip");
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveAccessibleName("Coming Soon");
     const content = document.querySelector('[data-slot="tooltip-content"]');
     const badge = content?.querySelector('[data-state="coming-soon"]');
     expect(badge).not.toBeNull();
@@ -176,10 +177,9 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
       fireEvent.focus(screen.getByTestId(testid));
 
       await screen.findByRole("tooltip");
-      // Visible badge lives in Radix content (`data-slot`), not the blanked
-      // sr-only `role="tooltip"` description node.
       const content = document.querySelector('[data-slot="tooltip-content"]');
       expect(content).not.toBeNull();
+      expect(screen.getByRole("tooltip")).toHaveAccessibleName("Coming Soon");
       const badge = content?.querySelector('[data-state="coming-soon"]');
       expect(badge).not.toBeNull();
       expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
@@ -190,16 +190,14 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
   );
 
   it.each(controls)(
-    "$label: the badge is decorative — the control's own aria-label is the single coming-soon source (no double-announce)",
+    "$label: the control keeps its label and exposes the semantic tooltip description",
     async ({ node, testid }) => {
       render(node);
       const control = screen.getByTestId(testid);
       fireEvent.focus(control);
       await screen.findByRole("tooltip");
-      // Persistent accessible name carries the coming-soon state (browse mode).
       expect(control).toHaveAccessibleName(/coming soon/i);
-      // Radix's auto description is blanked, so SR users do not hear it twice.
-      expect(control).toHaveAccessibleDescription("");
+      expect(control).toHaveAccessibleDescription("Coming Soon");
     },
   );
 });

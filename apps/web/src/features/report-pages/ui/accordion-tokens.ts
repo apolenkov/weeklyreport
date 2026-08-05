@@ -57,7 +57,7 @@ export const ROW_GRID =
 // The product-status dot in the header reads its hue from a named token
 // (red=blocked alarm, amber=at-risk, green=on-track, muted=empty).
 export const HEADER_STATUS_TONE = {
-  "on-track": "var(--color-chip-on-track-border)",
+  "on-track": "var(--color-chip-on-track-text)",
   "at-risk": CSS.statusAtRiskBorder,
   blocked: CSS.destructive,
   empty: CSS.mutedForeground,

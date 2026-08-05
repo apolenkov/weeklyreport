@@ -84,31 +84,51 @@ export default defineConfig({
     {
       name: "runtime-prerequisites",
       testMatch: /(?:concurrency|fault-recovery)\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
     },
     {
       name: "runtime-baseline",
       testMatch: /runtime-sweep\.spec\.ts/,
       dependencies: ["runtime-prerequisites"],
-      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
     },
     {
       name: "runtime-matrix",
       testMatch: /runtime-matrix\.spec\.ts/,
       dependencies: ["runtime-baseline"],
-      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
     },
     {
       name: "runtime-live-controls",
       testMatch: /z-runtime-sweep-live-lane\.spec\.ts/,
       dependencies: ["runtime-matrix"],
-      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
     },
     {
       name: "opencode-flash-driver",
       testMatch: /opencode-driver\.spec\.ts/,
       dependencies: ["runtime-live-controls"],
-      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        viewport: { width: 1440, height: 900 },
+      },
     },
   ],
   webServer: [
