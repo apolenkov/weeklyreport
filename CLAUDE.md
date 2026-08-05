@@ -63,7 +63,7 @@ only when asked / append-only migrations" caution. Ends at first production poin
   Hand-edit the single init migration's SQL when Prisma can't express a construct.
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; the per-run AI-consent guard
   still fires — pass `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
-- `prisma/_destructive-guard.ts` still protects prod (gated by `ALLOW_PROD_DESTRUCTIVE`);
+- `prisma/guards/_destructive-guard.ts` still protects prod (gated by `ALLOW_PROD_DESTRUCTIVE`);
   never reset the prod DB.
 
 ## Load-Bearing Invariants

@@ -4,26 +4,29 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { requireEnv } from "./_require-env.js";
-import { seedActiveSections } from "./seed-advanced.active-sections.js";
-import { seedAdminExamples } from "./seed-advanced.admin-examples.js";
-import { seedCrossAuthorOverlay } from "./seed-advanced.cross-author.js";
-import { seedDecisions } from "./seed-advanced.decisions.js";
-import { seedHistoryPeriods } from "./seed-advanced.history.js";
-import { seedPublishedSections } from "./seed-advanced.published-sections.js";
-import { seedReminders } from "./seed-advanced.reminders.js";
+import { assertNonProdDestructive } from "./guards/_destructive-guard.js";
+import { requireEnv } from "./guards/_require-env.js";
+import { seedActiveSections } from "./seeds/advanced/seed-advanced.active-sections.js";
+import { seedAdminExamples } from "./seeds/advanced/seed-advanced.admin-examples.js";
+import { seedCrossAuthorOverlay } from "./seeds/advanced/seed-advanced.cross-author.js";
+import { seedDecisions } from "./seeds/advanced/seed-advanced.decisions.js";
+import { seedHistoryPeriods } from "./seeds/advanced/seed-advanced.history.js";
+import { seedPublishedSections } from "./seeds/advanced/seed-advanced.published-sections.js";
+import { seedReminders } from "./seeds/advanced/seed-advanced.reminders.js";
 import {
   seedActiveReport,
   seedPublishedReport,
-} from "./seed-advanced.reports.js";
-import { seedRisks } from "./seed-advanced.risks.js";
-import { seedSingletons } from "./seed-advanced.settings.js";
-import { seedStageAssignments } from "./seed-advanced.stage-assignments.js";
-import { logSeedSummary, sumSectionCounts } from "./seed-advanced.summary.js";
-import { SEED_REPORTS } from "./seed-constants.js";
-import { assertSeedCoverage } from "./seed-coverage-check.js";
-import { seedOrganizationBaseline } from "./seed-org.js";
+} from "./seeds/advanced/seed-advanced.reports.js";
+import { seedRisks } from "./seeds/advanced/seed-advanced.risks.js";
+import { seedSingletons } from "./seeds/advanced/seed-advanced.settings.js";
+import { seedStageAssignments } from "./seeds/advanced/seed-advanced.stage-assignments.js";
+import {
+  logSeedSummary,
+  sumSectionCounts,
+} from "./seeds/advanced/seed-advanced.summary.js";
+import { SEED_REPORTS } from "./seeds/support/seed-constants.js";
+import { assertSeedCoverage } from "./seeds/support/seed-coverage-check.js";
+import { seedOrganizationBaseline } from "./seeds/support/seed-org.js";
 
 const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
 const adapter = new PrismaPg(pool);

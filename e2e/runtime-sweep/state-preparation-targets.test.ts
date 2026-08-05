@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { LEAD_SLOT_PRIMARY } from "../../prisma/seed-advanced.anchors.ts";
+import { LEAD_SLOT_PRIMARY } from "../../prisma/seeds/advanced/seed-advanced.anchors.ts";
 import {
   PUBLISHED_SUFFIX,
   sectionId as advancedSectionId,
-} from "../../prisma/seed-advanced.ids.ts";
+} from "../../prisma/seeds/advanced/seed-advanced.ids.ts";
+import { publishedSectionId } from "../../prisma/seeds/simple/seed-simple.history.ts";
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants.ts";
-import { publishedSectionId } from "../../prisma/seed-simple.history.ts";
+} from "../../prisma/seeds/support/seed-constants.ts";
 import {
   buildStatePreparationPlan,
   type RuntimeStateAxes,

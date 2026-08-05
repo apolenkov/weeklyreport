@@ -4,7 +4,7 @@ import * as path from "node:path";
 import {
   parseSeedProfile,
   type SeedProfile,
-} from "../../prisma/seed-profile-contract.js";
+} from "../../prisma/seeds/profiles/seed-profile-contract.js";
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
 
 export function findRepoRoot(startDir: string): string {

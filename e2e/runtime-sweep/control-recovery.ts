@@ -1,4 +1,4 @@
-import { assertNonProdDestructiveTarget } from "../../prisma/_destructive-guard.js";
+import { assertNonProdDestructiveTarget } from "../../prisma/guards/_destructive-guard.js";
 import { reseedE2eDatabase } from "../helpers/e2e-database-setup.js";
 import type { SeedProfile } from "./contracts.ts";
 

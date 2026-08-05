@@ -26,7 +26,7 @@ describe("E2E database setup", () => {
         args: [
           "--import",
           "tsx",
-          path.join(repoRoot, "prisma/seed-profile.ts"),
+          path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
           "stress",
         ],
       },
@@ -55,7 +55,7 @@ describe("E2E database setup", () => {
         args: [
           "--import",
           "tsx",
-          path.join(repoRoot, "prisma/seed-profile.ts"),
+          path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
           "stress",
         ],
       },

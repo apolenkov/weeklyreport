@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
-import { assertNonProdDestructiveTarget } from "../../prisma/_destructive-guard.js";
-import type { SeedProfile } from "../../prisma/seed-profile-contract.js";
+import { assertNonProdDestructiveTarget } from "../../prisma/guards/_destructive-guard.js";
+import type { SeedProfile } from "../../prisma/seeds/profiles/seed-profile-contract.js";
 
 export interface E2eDatabaseSetup {
   readonly databaseUrl: string;
@@ -45,7 +45,7 @@ export function e2eSetupCommands(
       args: [
         "--import",
         "tsx",
-        path.join(repoRoot, "prisma/seed-profile.ts"),
+        path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
         profile,
       ],
     },

@@ -13,7 +13,12 @@ export default function seedProfileGlobalSetup(): void {
   const repoRoot = findRepoRoot(import.meta.dirname);
   execFileSync(
     process.execPath,
-    ["--import", "tsx", path.join(repoRoot, "prisma/seed-profile.ts"), "full"],
+    [
+      "--import",
+      "tsx",
+      path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
+      "full",
+    ],
     {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: databaseUrl },

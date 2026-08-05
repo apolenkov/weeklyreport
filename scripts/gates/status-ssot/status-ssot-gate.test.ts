@@ -157,7 +157,7 @@ scenario("canonical subsets and aliases pass", () => {
 
 scenario("the allowlist passes at its repo-rooted paths only", () => {
   const result = scan({
-    "prisma/seed-constants.ts": `type S = { status: "draft" | "published" };`,
+    "prisma/seeds/support/seed-constants.ts": `type S = { status: "draft" | "published" };`,
     "packages/shared/src/schemas/primitives/report-primitives.schema.ts": `const s = z.enum(["green", "yellow", "red"]);`,
     "packages/shared/src/schemas/status/canonical-status.ts": `type C = "blocked" | "at-risk" | "on-track" | "empty";`,
     "packages/shared/src/schemas/auth/auth.ts": `const s = z.enum(["lead", "head", "admin", "viewer"]);`,
@@ -185,7 +185,7 @@ scenario("role subsets pass", () => {
 
 scenario("a same-named file elsewhere is NOT allowlisted", () => {
   const result = scan({
-    "apps/api/prisma/seed-constants.ts": `type S = "draft" | "published";`,
+    "apps/api/prisma/seeds/support/seed-constants.ts": `type S = "draft" | "published";`,
   });
   assert.equal(result.status, 1, result.stdout);
 });

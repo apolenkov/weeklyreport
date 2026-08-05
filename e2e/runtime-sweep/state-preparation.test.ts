@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PUBLISHED_REPORT_ID } from "../../prisma/seed-constants.ts";
+import { PUBLISHED_REPORT_ID } from "../../prisma/seeds/support/seed-constants.ts";
 import type { RuntimeDatabaseSnapshot } from "./state-oracle.ts";
 import {
   buildStatePreparationPlan,
@@ -124,7 +124,7 @@ describe("runtime state preparation policy", () => {
 
     expect(second).toEqual(first);
     // prettier-ignore
-    expect(first.resetCommands).toEqual([{ executable: process.execPath, args: ["--import", "tsx", "/workspace/customreport/prisma/seed-profile.ts", "full"] }]);
+    expect(first.resetCommands).toEqual([{ executable: process.execPath, args: ["--import", "tsx", "/workspace/customreport/prisma/seeds/profiles/seed-profile.ts", "full"] }]);
     expect(first.digest).toHaveLength(64);
   });
 });

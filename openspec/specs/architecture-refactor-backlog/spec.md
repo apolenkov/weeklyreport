@@ -237,7 +237,7 @@ removed. The two `computeFireAt` implementations MUST stay separate
 functions, cross-referencing each other by file path, because the prisma
 toolchain's isolated `tsconfig.prisma.json` cannot resolve `apps/api` or
 `packages/shared` imports — the same constraint already carved out for
-`prisma/seed-constants.ts`.
+`prisma/seeds/support/seed-constants.ts`.
 
 #### Scenario: the dead-code cleanup is discoverable
 
@@ -254,7 +254,7 @@ toolchain's isolated `tsconfig.prisma.json` cannot resolve `apps/api` or
 - **WHEN** an agent or maintainer considers importing workspace code into a
   `prisma/*.ts` script
 - **THEN** the backlog's carve-out (first established for
-  `prisma/seed-constants.ts`, reaffirmed here for `computeFireAt`) applies:
+  `prisma/seeds/support/seed-constants.ts`, reaffirmed here for `computeFireAt`) applies:
   the isolated `tsconfig.prisma.json` cannot resolve those imports, so the
   logic is kept as an intentionally cross-referenced literal mirror instead
 

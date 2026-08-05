@@ -85,9 +85,9 @@ web, чтобы заработала корреляция ошибок с тре
   со схемой вручную, когда Prisma не выражает конструкцию).
 - Залить данные: `pnpm db:seed:profile minimal` (быстрый smoke),
   `demo`, `full` или `stress`. Профили образуют монотонную лестницу.
-- Единая публичная точка входа — `prisma/seed-profile.ts`; внутренние writers
+- Единая публичная точка входа — `prisma/seeds/profiles/seed-profile.ts`; внутренние writers
   остаются раздельными.
-- Защита от случайного сноса не той базы — `prisma/_destructive-guard.ts`: он
+- Защита от случайного сноса не той базы — `prisma/guards/_destructive-guard.ts`: он
   разбирает `DATABASE_URL` и не даёт деструктивную операцию без суффикса
   `_uat` / `_dev` / `_test` (продакшен защищён отдельно флагом
   `ALLOW_PROD_DESTRUCTIVE`).

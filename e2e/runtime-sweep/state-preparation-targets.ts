@@ -1,10 +1,10 @@
-import { LEAD_SLOT_PRIMARY } from "../../prisma/seed-advanced.anchors.js";
+import { LEAD_SLOT_PRIMARY } from "../../prisma/seeds/advanced/seed-advanced.anchors.js";
 import {
   PUBLISHED_SUFFIX,
   sectionId as advancedSectionId,
-} from "../../prisma/seed-advanced.ids.js";
-import * as seed from "../../prisma/seed-constants.js";
-import { publishedSectionId } from "../../prisma/seed-simple.history.js";
+} from "../../prisma/seeds/advanced/seed-advanced.ids.js";
+import { publishedSectionId } from "../../prisma/seeds/simple/seed-simple.history.js";
+import * as seed from "../../prisma/seeds/support/seed-constants.js";
 import type { RouteBindingTarget, SeedProfile } from "./contracts.ts";
 
 const MINIMAL_SECTION_ID = "f0000000-0000-4000-8000-000000000005";

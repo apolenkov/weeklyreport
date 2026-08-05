@@ -4,7 +4,7 @@ import path from "node:path";
 import type { DbRole } from "@customreport/shared";
 import { type BrowserContext, expect, test } from "@playwright/test";
 
-import type { SeedProfile } from "../../prisma/seed-profile-contract.js";
+import type { SeedProfile } from "../../prisma/seeds/profiles/seed-profile-contract.js";
 import { findRepoRoot } from "../integration/global-setup.js";
 
 const repoRoot = findRepoRoot(import.meta.dirname);
@@ -22,7 +22,12 @@ const apiUrl = `http://127.0.0.1:${apiPort}`;
 function seedProfile(profile: SeedProfile): void {
   execFileSync(
     process.execPath,
-    ["--import", "tsx", path.join(repoRoot, "prisma/seed-profile.ts"), profile],
+    [
+      "--import",
+      "tsx",
+      path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
+      profile,
+    ],
     {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: databaseUrl },

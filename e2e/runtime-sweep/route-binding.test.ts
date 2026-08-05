@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants.ts";
+} from "../../prisma/seeds/support/seed-constants.ts";
 import type { CatalogRoute } from "../sweep/catalog-parser.ts";
 import {
   bindCatalogRoute,

@@ -39,7 +39,7 @@ model, tRPC surface, or rendered UI is intentionally changed.
 
 Product source continues to use domain then layer. Auxiliary roots use concern
 then role: for example `runtime-sweep/matrix/compiler.ts`,
-`prisma/seeds/profiles/runner.ts`, or `scripts/eslint/suppression/ledger.ts`.
+`prisma/seeds/profiles/seed-profile-runner.ts`, or `scripts/eslint/suppression/ledger.ts`.
 Alternatives considered were filename prefixes in flat folders (current state,
 poor scanning/ownership) and one package per tool family (unnecessary resolution
 and Knip workspace semantics).

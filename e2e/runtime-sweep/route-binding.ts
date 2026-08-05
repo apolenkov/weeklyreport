@@ -1,11 +1,11 @@
 import {
-  ACTIVE_REPORT_ID,
-  PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants.ts";
-import {
   SEED_PROFILE_MANIFESTS,
   type SeedCapability,
-} from "../../prisma/seed-profile-contract.ts";
+} from "../../prisma/seeds/profiles/seed-profile-contract.ts";
+import {
+  ACTIVE_REPORT_ID,
+  PUBLISHED_REPORT_ID,
+} from "../../prisma/seeds/support/seed-constants.ts";
 import type { CatalogRoute } from "../sweep/catalog-parser.ts";
 import {
   type Role,

@@ -6,7 +6,7 @@ import {
   test,
 } from "@playwright/test";
 
-import { ACTIVE_REPORT_ID } from "../../prisma/seed-constants.ts";
+import { ACTIVE_REPORT_ID } from "../../prisma/seeds/support/seed-constants.ts";
 import { prisma, resetMutations } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import { seedProfileSchema } from "./contracts.ts";

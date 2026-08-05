@@ -8,7 +8,7 @@ import type { Role } from "@customreport/shared";
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants.js";
+} from "../../prisma/seeds/support/seed-constants.js";
 
 export type CspRole = Role;
 

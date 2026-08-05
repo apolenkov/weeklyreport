@@ -65,7 +65,7 @@ const VOCABULARIES: readonly Vocabulary[] = [
 // elsewhere in the tree is NOT exempt.
 const ALLOWLIST = [
   "packages/shared/src/schemas/primitives/report-primitives.schema.ts",
-  "prisma/seed-constants.ts",
+  "prisma/seeds/support/seed-constants.ts",
   // The canonical presentation vocabulary's single declaration
   // (status-presentation-model spec).
   "packages/shared/src/schemas/status/canonical-status.ts",

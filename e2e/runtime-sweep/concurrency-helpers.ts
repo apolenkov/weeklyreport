@@ -6,7 +6,10 @@ import {
   type Route,
 } from "@playwright/test";
 
-import { ACTIVE_REPORT_ID, LEAD_OLGA_ID } from "../../prisma/seed-constants.ts";
+import {
+  ACTIVE_REPORT_ID,
+  LEAD_OLGA_ID,
+} from "../../prisma/seeds/support/seed-constants.ts";
 import { prisma } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 

@@ -28,7 +28,7 @@ import {
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants";
+} from "../../prisma/seeds/support/seed-constants";
 import {
   isExpectedNavigationAbort,
   navigate,
