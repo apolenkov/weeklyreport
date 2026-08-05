@@ -207,7 +207,12 @@ describe("rate-limit middleware — fail-loud store policy", () => {
   it("awaits readiness for an owned client but not an injected client", async () => {
     const connect = vi.spyOn(Redis.prototype, "connect");
     const readiness = Promise.withResolvers<void>();
-    connect.mockReturnValue(readiness.promise);
+    connect.mockImplementation(function (this: Redis) {
+      // The owned client must retain IORedis recovery after a post-start
+      // disconnect; the process-level boot catch already exits on initial failure.
+      expect(this.options.retryStrategy).toBeTypeOf("function");
+      return readiness.promise;
+    });
     const callsBeforeFactory = connect.mock.calls.length;
 
     try {

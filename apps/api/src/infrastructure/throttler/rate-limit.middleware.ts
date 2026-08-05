@@ -47,9 +47,6 @@ function buildStoreClient(
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
-    // A failed boot must reject once instead of leaving an unbounded reconnect
-    // loop alive after the bootstrap promise has already failed.
-    retryStrategy: () => null,
   });
 }
 
