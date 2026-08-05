@@ -38,6 +38,7 @@ export type MatrixState = RuntimeMatrixSource["plan"]["states"][number];
 export type ActionOutcome = Readonly<{
   readonly status: LiveControlActionRecord["status"];
   readonly controlKey: string;
+  readonly observation?: LiveControlActionRecord["observation"];
   readonly reason?: string;
 }>;
 
@@ -147,6 +148,9 @@ const outcomeFromRecord = (
     : {
         status: record.status,
         controlKey,
+        ...(record.observation === undefined
+          ? {}
+          : { observation: record.observation }),
         ...(record.reason === undefined ? {} : { reason: record.reason }),
       };
 

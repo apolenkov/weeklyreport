@@ -1,7 +1,12 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
-import { isExpectedNavigationAbort, navigate } from "./navigation.ts";
+import { observeActionNavigation } from "./action-navigation-boundary.ts";
+import {
+  isExpectedNavigationAbort,
+  navigate,
+  settleNavigation,
+} from "./navigation.ts";
 
 function fakePage(
   gotoError: Error,
@@ -61,5 +66,27 @@ describe("runtime navigation recovery", () => {
     await expect(navigate(page, "/")).rejects.toBe(error);
     expect(isExpectedNavigationAbort(error)).toBe(false);
     expect(isExpectedNavigationAbort(new Error("net::ERR_ABORTED"))).toBe(true);
+  });
+
+  it("propagates non-timeout errors from the navigation settle boundary", async () => {
+    const error = new Error("browser disconnected");
+    const page = {
+      waitForLoadState: () => Promise.reject(error),
+    } as unknown as Page;
+
+    await expect(settleNavigation(page)).rejects.toBe(error);
+  });
+
+  it("propagates non-timeout errors from an armed action observer", async () => {
+    const error = new Error("browser disconnected");
+    const frame = {};
+    const page = {
+      url: () => "http://127.0.0.1:3105/report",
+      mainFrame: () => frame,
+      waitForEvent: () => Promise.reject(error),
+    } as unknown as Page;
+    const observer = observeActionNavigation(page);
+
+    await expect(observer.waitForNavigation()).rejects.toBe(error);
   });
 });

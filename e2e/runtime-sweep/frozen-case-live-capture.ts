@@ -3,6 +3,11 @@ import type { Page } from "@playwright/test";
 import { type EvidenceBundle, type EvidenceRef } from "./contracts.ts";
 import { inventoryDom } from "./dom-inventory.ts";
 import { captureRouteEvidence } from "./evidence-capture.ts";
+import {
+  beginFrozenActionNavigation,
+  type FrozenActionNavigationBoundary,
+  settleFrozenActionNavigation,
+} from "./frozen-case-action-navigation.ts";
 import { writeFrozenCaseArtifact } from "./frozen-case-artifacts.ts";
 import {
   actionFor,
@@ -155,21 +160,59 @@ const captureEvidence = async (
     })
   ).bundle;
 
+const actionOutcomeForPhase = async (
+  input: FrozenPhaseInput,
+  boundary: FrozenActionNavigationBoundary | undefined,
+): Promise<ActionOutcome | undefined> => {
+  const outcome =
+    input.phase === "action"
+      ? await runAction(
+          input.page,
+          input.source,
+          input.matrixCase,
+          input.runtime,
+        )
+      : undefined;
+  return boundary === undefined
+    ? outcome
+    : settleFrozenActionNavigation(input.page, boundary, outcome);
+};
+
+const phaseListenersFor = (
+  input: FrozenPhaseInput,
+  listeners: RuntimeEvents,
+): RuntimeEvents =>
+  input.phase === "before"
+    ? {
+        ...listeners,
+        consoleMessages: [
+          ...input.initialEvents.consoleMessages,
+          ...listeners.consoleMessages,
+        ],
+        pageErrors: [
+          ...input.initialEvents.pageErrors,
+          ...listeners.pageErrors,
+        ],
+        requestFailures: [
+          ...input.initialEvents.requestFailures,
+          ...listeners.requestFailures,
+        ],
+      }
+    : listeners;
+
 export const captureFrozenPhase = async (
   input: FrozenPhaseInput,
 ): Promise<EvidenceBundle> => {
   const listeners = eventsFor(input.page);
+  const action = actionFor(input.matrixCase.execution);
+  const navigationBoundary =
+    input.phase === "action" &&
+    action !== undefined &&
+    action.operation !== "navigate"
+      ? beginFrozenActionNavigation(input.page, action.controlKey)
+      : undefined;
   try {
-    const outcome =
-      input.phase === "action"
-        ? await runAction(
-            input.page,
-            input.source,
-            input.matrixCase,
-            input.runtime,
-          )
-        : undefined;
-    const action = actionFor(input.matrixCase.execution);
+    const outcome = await actionOutcomeForPhase(input, navigationBoundary);
     const navigationStatus =
       input.phase === "action" && action?.operation === "navigate"
         ? await navigate(input.page, input.route)
@@ -183,24 +226,7 @@ export const captureFrozenPhase = async (
       outcome?.status === "pass" ||
       (input.matrixCase.execution.kind === "fault" &&
         outcome?.status !== "not-exercised");
-    const phaseListeners: RuntimeEvents =
-      input.phase === "before"
-        ? {
-            ...listeners,
-            consoleMessages: [
-              ...input.initialEvents.consoleMessages,
-              ...listeners.consoleMessages,
-            ],
-            pageErrors: [
-              ...input.initialEvents.pageErrors,
-              ...listeners.pageErrors,
-            ],
-            requestFailures: [
-              ...input.initialEvents.requestFailures,
-              ...listeners.requestFailures,
-            ],
-          }
-        : listeners;
+    const phaseListeners = phaseListenersFor(input, listeners);
     const captured = await captureEvidence(
       input,
       phaseListeners,
@@ -222,6 +248,7 @@ export const captureFrozenPhase = async (
       ],
     };
   } finally {
+    navigationBoundary?.observer.cancel();
     listeners.detach();
   }
 };
