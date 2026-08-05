@@ -26,12 +26,12 @@ Use `pnpm` from the repo root (Node >=26). Never `npm`/Yarn.
 ```bash
 pnpm dev:watch          # docker compose dev with --watch
 pnpm typecheck          # turbo run typecheck (depends on prisma generate)
-pnpm lint               # scripts/lint-gate.ts — ALL checks run, every failure reported
+pnpm lint               # scripts/gates/orchestrator/lint-gate.ts — ALL checks run, every failure reported
 pnpm test               # turbo run vitest (unit only)
 pnpm build              # turbo run build
 ```
 
-- `pnpm lint` is `scripts/lint-gate.ts`: it runs every configured check (eslint, stylelint,
+- `pnpm lint` is `scripts/gates/orchestrator/lint-gate.ts`: it runs every configured check (eslint, stylelint,
   3 tsc projects, typecov, SSOT test + sweep, runtime-node, depcruise, knip,
   plus the ratchet and scope-probe suites), prints a
   PASS/FAIL table and exits 1 if any failed. Each is runnable alone

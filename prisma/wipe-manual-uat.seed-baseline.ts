@@ -5,7 +5,7 @@
 import { type Prisma, Role } from "@prisma/client";
 
 import { DEFAULT_REPORTING_GROUP } from "../packages/shared/src/organization/default-reporting-group.js";
-import { appSettingsSchema } from "../packages/shared/src/schemas/period.schema.js";
+import { appSettingsSchema } from "../packages/shared/src/schemas/report.js";
 import {
   DEFAULT_REPORTING_GROUP_ID,
   HEAD_USER_ID,

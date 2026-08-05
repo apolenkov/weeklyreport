@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appSettingsSchema } from "../packages/shared/src/schemas/period.schema.js";
+import { appSettingsSchema } from "../packages/shared/src/schemas/report.js";
 import { MANUAL_UAT_SETTINGS } from "./wipe-manual-uat.seed-baseline.js";
 
 describe("manual UAT settings fixture", () => {

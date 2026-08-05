@@ -13,7 +13,7 @@ passes the full rule set (`pnpm typecheck && pnpm lint && pnpm test`), is
 named in **no** `eslint.config.ts` `files:` override block, and carries
 **no** bare or file-scope `eslint-disable` directive. This is exactly
 `catalogue.json` classification `cls: "A"` for `kind: "product"`, produced by
-`pnpm catalogue` (`scripts/exemplary-catalogue.ts`).
+`pnpm catalogue` (`scripts/quality/exemplary/exemplary-catalogue.ts`).
 
 A single-line `eslint-disable-next-line` carrying a reason that explains why
 compliance is architecturally impossible is tolerated in review, but it MUST
@@ -107,7 +107,7 @@ commit.
 #### Scenario: `catalogue.json` is stale
 
 - **WHEN** `catalogue.json`'s mtime predates the latest commit to
-  `scripts/exemplary-catalogue.ts`
+  `scripts/quality/exemplary/exemplary-catalogue.ts`
 - **THEN** any counter read from it MUST be treated as unverified
 - **AND** `pnpm catalogue` MUST be re-run before the counter is cited in a
   proposal or report

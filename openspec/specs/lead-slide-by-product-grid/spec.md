@@ -181,7 +181,7 @@ icons positioned at the row's bottom-right, one icon per stage, reusing
 `apps/web/src/features/report-sections/model/stage-chip-config.ts` with the
 stage name in a `title` tooltip; rows inside project subsections render without
 stage icons. Rows within a cell MUST sort by the item's first stage index in
-`STAGE_NAMES` (`packages/shared/src/schemas/stage-names.ts`), then by author with
+`STAGE_NAMES` (`packages/shared/src/schemas/stages/stage-names.ts`), then by author with
 the lead first; the sort MUST be stable.
 
 #### Scenario: multi-stage item

@@ -8,7 +8,7 @@ Bound every section-save array payload so no client-supplied array field can gro
 
 Every array field in `draftSaveSchema` and `submitSectionSchema` MUST carry
 `.max(MAX_RECORDS_PER_SECTION_SAVE)`
-(`packages/shared/src/schemas/section.schema.ts`). This includes `projectStatuses` and
+(`packages/shared/src/schemas/report-sections/section.schema.ts`). This includes `projectStatuses` and
 `stageStatuses` alongside the already-bounded `activityStatuses`, `items`,
 `risks`, and `decisions`, so no section-save array can accept an unbounded
 client-supplied payload.
