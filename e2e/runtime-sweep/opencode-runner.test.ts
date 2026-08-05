@@ -22,10 +22,14 @@ const event = (phase: string, text: string): string =>
     part: { metadata: { phase }, text },
   });
 
+class FakeTimeoutCause extends Error {
+  override readonly name = "TimeoutError";
+}
+
 class FakeTimeoutError extends Error {
-  override readonly name = "FakeTimeoutError";
-  readonly killed = true as const;
-  readonly signal = "SIGTERM" as const;
+  override readonly name = "AbortError";
+  readonly code = "ABORT_ERR" as const;
+  override readonly cause = new FakeTimeoutCause();
 
   constructor(readonly stdout = "partial output") {
     super("Command timed out");
