@@ -95,8 +95,10 @@ beforeAll(async () => {
 const PERIOD = "2026-06-02 → 2026-06-08";
 const ORG = { shortName: "TEST", fullName: "Test Organisation" };
 
-// Stub RemindersService — only markReminderSent needs to resolve without error.
+// Stub RemindersService — the processor claims the execution before SMTP work
+// and marks it sent after the message is accepted by Mailpit.
 const remindersStub = {
+  claimExecutionForSending: vi.fn().mockResolvedValue(true),
   markReminderSent: vi.fn().mockResolvedValue(undefined),
 };
 

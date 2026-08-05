@@ -7,7 +7,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { createServiceLogger } from "../../lib/logger-service.js";
+import { createServiceLogger } from "../../../lib/logger-service.js";
 
 /**
  * SearchRepository contract — Prisma-free at the service

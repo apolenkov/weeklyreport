@@ -99,6 +99,7 @@ import { ReportSectionsService } from "./modules/report-sections/index.js";
 import { ReviewActionsService } from "./modules/review/index.js";
 import { ReviewService } from "./modules/review/index.js";
 import { SearchService } from "./modules/search/index.js";
+import { ReportAssistantService } from "./modules/search/index.js";
 import { TelemetryService } from "./modules/telemetry/index.js";
 import { WeeklyReportService } from "./modules/weekly-report/index.js";
 
@@ -409,6 +410,7 @@ async function bootstrap() {
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
     searchService: app.get(SearchService),
+    reportAssistantService: app.get(ReportAssistantService),
     activityService: app.get(ActivityService),
     projectActivityService: app.get(ProjectActivityService),
     emailReminderQueue,

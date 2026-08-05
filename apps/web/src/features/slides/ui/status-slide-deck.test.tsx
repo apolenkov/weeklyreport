@@ -182,6 +182,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
           {
             activityId: "act-1",
             activityName: "Поддержка",
+            jiraAccounts: [],
             status: "green",
             derivedStatus: null,
             linkedProducts: [{ productId: "p1", productName: "Alpha" }],

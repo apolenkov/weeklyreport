@@ -2,7 +2,7 @@
  * Hard reset for clean UAT.
  *
  * Drops EVERY row in EVERY app table (CASCADE), flushes Redis (BullMQ + cache),
- * then re-seeds via seed-simple. Use before manual UAT runs to start from a
+ * then re-seeds via the supported middle-tier orchestrator. Use before manual UAT runs to start from a
  * known-zero state — no leftover audit logs, no stale jobs, no orphaned admin
  * data.
  *
@@ -179,8 +179,8 @@ async function main(): Promise<void> {
   await truncateAll();
   await flushRedis();
 
-  console.log("[reset-hard] Re-seeding via seed-simple…");
-  // Invoke seed-simple via the api workspace so tsx is on PATH, and pass
+  console.log("[reset-hard] Re-seeding via the middle-tier orchestrator…");
+  // Invoke the orchestrator via the api workspace so tsx is on PATH, and pass
   // process.env explicitly so dotenv-loaded DATABASE_URL crosses the boundary
   // even though seed-simple.ts itself only reads dotenv from its own cwd.
   const seed = spawnSync(
@@ -191,7 +191,8 @@ async function main(): Promise<void> {
       "@customreport/api",
       "exec",
       "tsx",
-      "../../prisma/seed-simple.ts",
+      "../../prisma/seed-orchestrator.ts",
+      "middle",
     ],
     {
       stdio: "inherit",
@@ -201,7 +202,9 @@ async function main(): Promise<void> {
     },
   );
   if (seed.status !== 0) {
-    throw new Error(`seed-simple exited with code ${seed.status ?? "unknown"}`);
+    throw new Error(
+      `seed orchestrator exited with code ${seed.status ?? "unknown"}`,
+    );
   }
 
   console.log(

@@ -103,6 +103,7 @@ export function makeDraftMergeSection(): ReportSectionReadModel {
       {
         activityId: ACTIVITY_ID,
         activityName: "Ops rotation",
+        jiraAccounts: [],
         status: "green",
         linkedProducts: [],
         derivedStatus: "green",

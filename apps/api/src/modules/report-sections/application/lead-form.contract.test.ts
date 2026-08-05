@@ -1135,6 +1135,7 @@ describe("LeadFormService — getByPeriod cross-author scoping", () => {
         {
           activityId: "77777777-7777-4777-8777-777777777771",
           activityName: "Sensitive activity",
+          jiraAccounts: [],
           status: "red",
           note: "Confidential note",
           linkedProducts: [],

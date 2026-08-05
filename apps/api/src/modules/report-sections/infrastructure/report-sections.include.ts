@@ -89,18 +89,21 @@ export const reportSectionFullInclude = {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },
     },
+    orderBy: { id: "asc" },
   },
   risks: {
     include: {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },
     },
+    orderBy: { id: "asc" },
   },
   decisions: {
     include: {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },
     },
+    orderBy: { id: "asc" },
   },
   sectionReviews: {
     include: { reviewer: { select: { name: true } } },

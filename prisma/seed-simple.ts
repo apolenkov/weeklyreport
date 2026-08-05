@@ -11,8 +11,8 @@
  *
  * Differs from seed.ts (advanced, 12 products / 6 leads / dozens of items)
  * which is the canonical fixture for tests. This simple seed is for
- * `pnpm db:seed:simple` only — the migrations.seed in prisma.config.ts
- * still points at seed.ts.
+ * `pnpm db:seed:middle` only. The supported seed orchestrator runs this
+ * relational writer before snapshot finalization and readiness checks.
  *
  * The active period is anchored to the *current* week (Monday..Sunday in
  * UTC) so weeklyReport.get always finds an open report covering today. A
@@ -24,12 +24,12 @@
  * content for a Development department demo.
  *
  * Run:
- *   pnpm db:seed:simple
+ *   pnpm db:seed:middle
  */
 
 import "dotenv/config";
 
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -50,7 +50,7 @@ import {
   UserActionStatus,
 } from "@prisma/client";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { assertSeedCoverage } from "./seed-coverage-check.js";
+import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
 import {
   ADMIN_EMAIL,
   HEAD_EMAIL,
@@ -108,6 +108,14 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 const POLICY_DEADLINE = "a0000000-0000-4000-8000-000000000a01";
 const POLICY_ESCALATION = "a0000000-0000-4000-8000-000000000a02";
+
+const deterministicSeedId = (...parts: readonly (string | number)[]): string => {
+  const digest = createHash("sha256")
+    .update(parts.join(":"), "utf8")
+    .digest("hex")
+    .slice(0, 12);
+  return `a0000000-0000-4000-8000-${digest}`;
+};
 
 // Activity-only lead fixture anchors (own id range, distinct from the ca/cb/cc
 // product-activity rows below). One activity, its lead link + product label,
@@ -278,30 +286,6 @@ const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
   r.setUTCHours(r.getUTCHours() + 2);
   return r;
 })();
-
-function demoPublishedSnapshot(input: {
-  reportId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  publishedAt: Date;
-}) {
-  return {
-    reportId: input.reportId,
-    periodStart: input.periodStart.toISOString(),
-    periodEnd: input.periodEnd.toISOString(),
-    deadline: input.deadline.toISOString(),
-    status: ReportStatus.published,
-    publishedAt: input.publishedAt.toISOString(),
-    publishedById: HEAD_ID,
-    publishedByName: "Елена Р.",
-    portfolioOverview: {
-      status: TrafficLightStatus.green,
-      totals: { green: 1, yellow: 0, red: 0 },
-    },
-    sections: [],
-  };
-}
 
 async function main() {
   // Destructive-guard: refuse on prod-looking DATABASE_URL.
@@ -864,13 +848,6 @@ async function main() {
         publishedAt: PREV_SUNDAY,
         publishedById: HEAD_ID,
         periodState: PeriodState.published,
-        publishedSnapshot: demoPublishedSnapshot({
-          reportId: REPORT_PUBLISHED,
-          periodStart: PREV_MONDAY,
-          periodEnd: PREV_SUNDAY,
-          deadline: PREV_FRIDAY_DEADLINE,
-          publishedAt: PREV_SUNDAY,
-        }),
       },
       ...EXTRA_REPORTS.map((r) => {
         const periodEnd = endOfDayUTC(plusDaysUTC(r.monday, 6));
@@ -1569,7 +1546,7 @@ async function main() {
         id:
           dIdx === 0
             ? `a0000000-0000-4000-8000-00000000070${i + 1}`
-            : randomUUID(),
+            : deterministicSeedId("simple", "active", "decision", i, dIdx),
         reportSectionId: sectionId,
         productId: lead.productId,
         text: d.text,
@@ -2093,6 +2070,44 @@ async function main() {
   });
 
   console.log(
+    "[seed-simple] Creating searchable primary-Lead sections for future periods...",
+  );
+  const futureReports = EXTRA_REPORTS.filter(
+    (report) => report.periodStatus === PeriodStatus.open,
+  );
+  for (const [index, report] of futureReports.entries()) {
+    const sectionId = deterministicSeedId("simple", "future", "section", index);
+    await prisma.reportSection.create({
+      data: {
+        id: sectionId,
+        reportId: report.id,
+        authorId: LEAD_1,
+        status: ReportSectionStatus.draft,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        id: deterministicSeedId("simple", "future", "status", index),
+        reportSectionId: sectionId,
+        projectId: PROD_CRM,
+        status: TrafficLightStatus.green,
+      },
+    });
+    await prisma.item.create({
+      data: {
+        id: deterministicSeedId("simple", "future", "item", index),
+        reportSectionId: sectionId,
+        projectId: PROD_CRM,
+        type: ItemType.next,
+        text: `Плановый фокус периода по продукту «Маркетинговый портал» (${index + 1})`,
+        tag: "feature",
+        workflowStatus: ItemWorkflowStatus.planned,
+        stageNames: ["Development"],
+      },
+    });
+  }
+
+  console.log(
     '[seed-simple] Creating published-week sections (RU "Fill from Previous" content)...',
   );
   for (let i = 0; i < leads.length; i++) {
@@ -2110,7 +2125,7 @@ async function main() {
 
     await prisma.projectStatus.create({
       data: {
-        id: randomUUID(),
+        id: deterministicSeedId("simple", "published", "status", i),
         reportSectionId: prevSectionId,
         projectId: lead.productId,
         status: TrafficLightStatus.green,
@@ -2120,7 +2135,7 @@ async function main() {
     await prisma.item.createMany({
       data: [
         {
-          id: randomUUID(),
+          id: deterministicSeedId("simple", "published", "current", i),
           reportSectionId: prevSectionId,
           type: ItemType.current,
           projectId: lead.productId,
@@ -2131,7 +2146,7 @@ async function main() {
           priorityRank: 1,
         },
         {
-          id: randomUUID(),
+          id: deterministicSeedId("simple", "published", "next", i),
           reportSectionId: prevSectionId,
           type: ItemType.next,
           projectId: lead.productId,
@@ -2183,7 +2198,13 @@ async function main() {
 
       await prisma.projectStatus.create({
         data: {
-          id: randomUUID(),
+          id: deterministicSeedId(
+            "simple",
+            "history",
+            "status",
+            reportIdx,
+            i,
+          ),
           reportSectionId: archiveSectionId,
           projectId: lead.productId,
           status: lightStatus,
@@ -2195,7 +2216,13 @@ async function main() {
       await prisma.item.createMany({
         data: [
           {
-            id: randomUUID(),
+            id: deterministicSeedId(
+              "simple",
+              "history",
+              "current",
+              reportIdx,
+              i,
+            ),
             reportSectionId: archiveSectionId,
             type: ItemType.current,
             projectId: lead.productId,
@@ -2209,7 +2236,13 @@ async function main() {
             updatedAt: submittedAt,
           },
           {
-            id: randomUUID(),
+            id: deterministicSeedId(
+              "simple",
+              "history",
+              "next",
+              reportIdx,
+              i,
+            ),
             reportSectionId: archiveSectionId,
             type: ItemType.next,
             projectId: lead.productId,
@@ -2365,7 +2398,7 @@ async function main() {
   console.log(
     `[seed-simple] Active period: ${ACTIVE_MONDAY.toISOString().slice(0, 10)}..${ACTIVE_SUNDAY.toISOString().slice(0, 10)}`,
   );
-  await assertSeedCoverage(prisma, "seed-simple");
+  await stabilizeSeedRecordIdentities(prisma);
 }
 
 main()

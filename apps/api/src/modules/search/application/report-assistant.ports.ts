@@ -1,0 +1,111 @@
+import type { GroundingBundle } from "../domain/context-builder.js";
+
+export const REPORT_ASSISTANT_PLANNER = Symbol("ReportAssistantPlanner");
+export const REPORT_ASSISTANT_ANSWERER = Symbol("ReportAssistantAnswerer");
+export const REPORT_ASSISTANT_EMBEDDINGS = Symbol("ReportAssistantEmbeddings");
+
+export type ReportAssistantProviderOperation =
+  "planner" | "planner repair" | "answer" | "citation repair" | "embedding";
+
+export class ReportAssistantProviderError extends Error {
+  readonly operation: ReportAssistantProviderOperation;
+  readonly statusCode: number | undefined;
+  readonly retryable: boolean;
+
+  constructor(
+    operation: ReportAssistantProviderOperation,
+    cause: unknown,
+    statusCode: number | undefined,
+    retryable: boolean,
+  ) {
+    super(`Report assistant provider ${operation} request failed`, { cause });
+    this.name = "ReportAssistantProviderError";
+    this.operation = operation;
+    this.statusCode = statusCode;
+    this.retryable = retryable;
+  }
+}
+
+export type PlannerInput = Readonly<{
+  question: string;
+  now: Date;
+  timeZone: string;
+}>;
+
+type PlannerValidationIssue = Readonly<{
+  path: readonly (string | number)[];
+  code: string;
+}>;
+
+export type PlannerRepairInput = Readonly<{
+  original: PlannerInput;
+  previousArguments: unknown;
+  issues: readonly PlannerValidationIssue[];
+}>;
+
+export interface ReportAssistantPlannerPort {
+  plan(input: PlannerInput): Promise<unknown>;
+}
+
+export interface ReportAssistantPlannerRepairPort {
+  repairPlan(input: PlannerRepairInput): Promise<unknown>;
+}
+
+export type GroundedAnswerInput = Readonly<{
+  question: string;
+  grounding: GroundingBundle;
+}>;
+
+export type CitationRepairInput = Readonly<{
+  original: GroundedAnswerInput;
+  previousAnswer: GroundedAnswer;
+  allowedSourceIds: readonly string[];
+  issues: readonly string[];
+}>;
+
+export type ReportAssistantTokenUsage = Readonly<{
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}>;
+
+export type GroundedAnswer = Readonly<{
+  answerMarkdown: string;
+  sourceIds: readonly string[];
+  insufficientEvidence: boolean;
+  usage: ReportAssistantTokenUsage;
+}>;
+
+export interface ReportAssistantAnswerPort {
+  answer(input: GroundedAnswerInput): Promise<GroundedAnswer>;
+}
+
+export interface ReportAssistantCitationRepairPort {
+  repairAnswer(input: CitationRepairInput): Promise<GroundedAnswer>;
+}
+
+export interface ReportLanguageModelPort
+  extends
+    ReportAssistantPlannerPort,
+    ReportAssistantPlannerRepairPort,
+    ReportAssistantAnswerPort,
+    ReportAssistantCitationRepairPort {}
+
+export type EmbeddingVector = readonly number[];
+
+export type EmbeddingDocument = Readonly<{
+  contentHash: string;
+  text: string;
+}>;
+
+export type EmbeddedDocument = Readonly<{
+  contentHash: string;
+  vector: EmbeddingVector;
+}>;
+
+export interface EmbeddingPort {
+  embedQuery(text: string): Promise<EmbeddingVector>;
+  embedDocuments(
+    documents: readonly EmbeddingDocument[],
+  ): Promise<readonly EmbeddedDocument[]>;
+}

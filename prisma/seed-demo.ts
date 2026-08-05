@@ -20,8 +20,8 @@
  * re-seeds — folding it into a generic writer would risk both. See
  * `openspec/changes/demo-seed-datasets/design.md` ("Structure").
  *
- * `seed.ts` (the canonical test fixture) and `prisma.config.ts`'s
- * `migrations.seed` pointer are untouched.
+ * `seed.ts` remains the canonical fixture; supported commands run its
+ * relational writer through `seed-orchestrator.ts` before finalization.
  *
  * Determinism: identifiers and textual content are fixed constants (no run-time
  * randomness in IDs). Only period dates are week-relative (reused from
@@ -52,7 +52,7 @@ import {
 } from "@prisma/client";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { assertSeedCoverage } from "./seed-coverage-check.js";
+import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
 import {
   HEAD_USER_ID,
   VIEWER_USER_ID,
@@ -853,21 +853,6 @@ async function seedReports(): Promise<void> {
         periodState: PeriodState.published,
         publishedAt: new Date(published.publishedAt),
         publishedById: HEAD_USER_ID,
-        publishedSnapshot: {
-          reportId: published.id,
-          periodStart: published.periodStart,
-          periodEnd: published.periodEnd,
-          deadline: published.deadline,
-          status: ReportStatus.published,
-          publishedAt: published.publishedAt,
-          publishedById: HEAD_USER_ID,
-          publishedByName: HEAD_NAME,
-          portfolioOverview: {
-            status: TrafficLightStatus.green,
-            totals: { green: 1, yellow: 0, red: 0 },
-          },
-          sections: [],
-        },
       },
       // History periods (N-2 .. N-4). N-3 and N-4 are archived so the lead
       // report toolbar surfaces the show-archived filter (it renders only when
@@ -1355,7 +1340,7 @@ async function seedDemo(tier: Tier): Promise<void> {
     decisions: await prisma.decision.count(),
   };
   console.log(`[seed-demo:${tier}] Done: ${JSON.stringify(counts)}`);
-  await assertSeedCoverage(prisma, `seed-demo:${tier}`);
+  await stabilizeSeedRecordIdentities(prisma);
 }
 
 function parseTier(): Tier {

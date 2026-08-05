@@ -22,9 +22,9 @@ if (!process.env.E2E_API_PORT) {
 if (!process.env.E2E_WEB_PORT) {
   process.env.E2E_WEB_PORT = String(WEB_PORT);
 }
-if (!process.env.NEXT_PUBLIC_API_URL) {
-  process.env.NEXT_PUBLIC_API_URL = API_URL;
-}
+// The integration fixtures call the API directly from the Playwright parent
+// process, so an inherited local-dev URL must not win over the test port.
+process.env.NEXT_PUBLIC_API_URL = API_URL;
 
 if (!process.env.E2E_DATABASE_URL) {
   throw new Error(
@@ -120,6 +120,9 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,
+        // Isolate the dev build so the integration server can coexist with a
+        // developer's running Next instance in the shared worktree.
+        NEXT_DIST_DIR: ".next-e2e",
         // FORCE-OVERRIDE NEXT_PUBLIC_AUTH_STUB — `.env` at repo root sets it
         // to 'true' for local dev convenience, and Next.js's turbopack.root
         // points at the monorepo root so that file is loaded automatically.

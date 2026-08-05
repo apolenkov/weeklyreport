@@ -92,6 +92,12 @@ routes:
         when: "the lead hovers or focuses the version-history control (data-testid version-coming-soon)"
         then: "a 'Coming Soon' tooltip badge appears; the control is inert (aria-disabled) and clicking it opens no dialog and triggers no navigation"
         note: "Version snapshots, history browsing, and restore were removed end to end (defer-versions-coming-soon); the inert control follows the deferred-feature-pattern (VersionComingSoonControl)"
+      - id: lead-report-ask-grounded-question
+        intent: "Ask a grounded question from the Lead report workspace"
+        given: "The lead is viewing an accessible report and the report chat is available"
+        when: "the lead opens report chat, submits a question, resolves a clarification option, and follows an answer source"
+        then: "the chat panel shows the grounded answer and authorized source, and following the source navigates to that report without console or accessibility errors"
+        note: "The assistant keeps the original question while adding the selected clarification token; source links target report pages only"
       - id: lead-report-fill-from-period
         intent: "Populate current draft with values from a prior reporting period"
         given: "The lead is in edit mode on a draft report"

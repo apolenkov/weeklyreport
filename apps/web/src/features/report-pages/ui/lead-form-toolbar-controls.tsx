@@ -1,10 +1,12 @@
 "use client";
 
+import type { Role } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
-import type { ComponentProps, RefObject } from "react";
+import { type ComponentProps, type RefObject, useContext } from "react";
 
 import type { FullscreenHandle } from "../../../hooks/use-fullscreen";
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
+import { SessionContext } from "../../../lib/session-provider";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
@@ -13,7 +15,12 @@ import { PeriodNavigator } from "../../period";
 import { SlideFullscreenButton } from "../../slides";
 import { CollapseIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
+import { LeadReportAssistant } from "./lead-report-assistant";
 import { RecordVisibilityToggle } from "./record-visibility-toggle";
+
+export const canShowLeadReportAssistant = (
+  role: Role | null | undefined,
+): boolean => role === "lead";
 
 type SlidesFullscreen = FullscreenHandle;
 type LeadSubmittedAt = ComponentProps<
@@ -57,6 +64,7 @@ export function LeadFormToolbarControls({
   groupExpanded,
   setGroupExpanded,
 }: LeadFormToolbarControlsProps) {
+  const session = useContext(SessionContext);
   const {
     currentWeekItems,
     decisions,
@@ -113,6 +121,9 @@ export function LeadFormToolbarControls({
           {/* Inert Agent-review placeholder leads the right-aligned view
               group (head-toolbar-semantics: compact, leading edge). */}
           <AgentReviewComingSoon compact />
+          {canShowLeadReportAssistant(session?.user?.role) && (
+            <LeadReportAssistant />
+          )}
           {/* slides-record-visibility: the Record-visibility toggle now
               renders in BOTH edit and slides (report-toolbar-parity) so the
               controls after it never shift between modes. In slides it

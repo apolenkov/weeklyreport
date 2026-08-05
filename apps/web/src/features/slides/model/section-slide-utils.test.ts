@@ -96,6 +96,7 @@ describe("section slide utilities", () => {
           {
             activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
             activityName: "Jira triage duty",
+            jiraAccounts: [],
             status: "red",
             linkedProducts: [],
             derivedStatus: null,
@@ -143,6 +144,7 @@ describe("section slide utilities", () => {
           {
             activityId,
             activityName: "Jira triage duty",
+            jiraAccounts: [],
             status: "green",
             linkedProducts: [],
             derivedStatus: null,

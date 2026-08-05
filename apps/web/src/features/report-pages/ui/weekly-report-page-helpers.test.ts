@@ -54,6 +54,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
             {
               activityId: ACTIVITY_A,
               activityName: "Jira triage duty",
+              jiraAccounts: [],
               status: "red",
               derivedStatus: "red",
               linkedProducts: [],
@@ -96,6 +97,7 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
             {
               activityId: ACTIVITY_A,
               activityName: "Jira triage duty",
+              jiraAccounts: [],
               // Seeded-but-untouched: green with no note and no owned records
               // is not evidence of lead input (activity-first-class).
               status: "green",

@@ -29,6 +29,23 @@ const COMPLETE = {
   KEYCLOAK_SAML_ISSUER: "customreport",
   KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
+  MISTRAL_API_KEY: "test-only-placeholder",
+  MISTRAL_PLANNER_MODEL: "mistral-medium-3-5",
+  MISTRAL_ANSWER_MODEL: "mistral-medium-3-5",
+  MISTRAL_EMBEDDING_MODEL: "mistral-embed",
+  MISTRAL_EMBEDDING_DIMENSIONS: "1024",
+  MISTRAL_API_SERVER: "eu",
+  REPORT_ASSISTANT_INPUT_VERSION: "1",
+  REPORT_ASSISTANT_SIMILARITY_THRESHOLD: "0.55",
+  REPORT_ASSISTANT_CANDIDATE_LIMIT: "500",
+  REPORT_ASSISTANT_READ_THROUGH_LIMIT: "16",
+  REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: "200",
+  REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: "8000",
+  REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: "30000",
+  REPORT_ASSISTANT_PLANNER_MAX_TOKENS: "1500",
+  REPORT_ASSISTANT_ANSWER_MAX_TOKENS: "2000",
+  REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: "32",
+  REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: "8000",
 } as const;
 
 describe("envSchema — no defaults, every product var required", () => {
@@ -55,6 +72,23 @@ describe("envSchema — no defaults, every product var required", () => {
     "PDF_OUTPUT_DIR",
     "PDF_EXPORT_JWT_SECRET",
     "HEAP_HEALTH_THRESHOLD_BYTES",
+    "MISTRAL_API_KEY",
+    "MISTRAL_PLANNER_MODEL",
+    "MISTRAL_ANSWER_MODEL",
+    "MISTRAL_EMBEDDING_MODEL",
+    "MISTRAL_EMBEDDING_DIMENSIONS",
+    "MISTRAL_API_SERVER",
+    "REPORT_ASSISTANT_INPUT_VERSION",
+    "REPORT_ASSISTANT_SIMILARITY_THRESHOLD",
+    "REPORT_ASSISTANT_CANDIDATE_LIMIT",
+    "REPORT_ASSISTANT_READ_THROUGH_LIMIT",
+    "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT",
+    "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET",
+    "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS",
+    "REPORT_ASSISTANT_PLANNER_MAX_TOKENS",
+    "REPORT_ASSISTANT_ANSWER_MAX_TOKENS",
+    "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE",
+    "REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET",
   ] as const)("rejects a config missing %s", (key) => {
     const { [key]: _omit, ...without } = COMPLETE;
     expect(envSchema.safeParse(without).success).toBe(false);
@@ -144,6 +178,30 @@ describe("envSchema — no defaults, every product var required", () => {
       envSchema.safeParse({ ...COMPLETE, APP_BASE_URL: "not-a-url" }).success,
     ).toBe(false);
   });
+
+  it.each(["0", "-1", "1.5", "not-a-number"] as const)(
+    "rejects invalid assistant integer limits (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          REPORT_ASSISTANT_CANDIDATE_LIMIT: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["-0.1", "1.1", "not-a-number"] as const)(
+    "rejects an invalid assistant similarity threshold (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          REPORT_ASSISTANT_SIMILARITY_THRESHOLD: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
 });
 
 describe("envSchema — production fences", () => {

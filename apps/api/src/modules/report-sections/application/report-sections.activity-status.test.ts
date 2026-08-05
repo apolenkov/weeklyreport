@@ -35,6 +35,7 @@ const baseSection: ReportSectionReadModel = {
     {
       activityId: ACTIVITY_A,
       activityName: "Jira triage duty",
+      jiraAccounts: [],
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",
@@ -42,6 +43,7 @@ const baseSection: ReportSectionReadModel = {
     {
       activityId: ACTIVITY_B,
       activityName: "Ops rotation",
+      jiraAccounts: [],
       status: "green",
       linkedProducts: [],
       derivedStatus: "green",
@@ -118,6 +120,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       {
         activityId: ACTIVITY_A,
         activityName: "Jira triage duty",
+        jiraAccounts: [],
         status: "red",
         note: "Blocked on vendor",
         linkedProducts: [],
@@ -127,6 +130,7 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       {
         activityId: ACTIVITY_B,
         activityName: "Ops rotation",
+        jiraAccounts: [],
         status: "green",
         linkedProducts: [],
         derivedStatus: "green",

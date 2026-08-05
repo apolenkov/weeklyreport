@@ -61,22 +61,9 @@ test.describe("PDF export (integration)", () => {
       .not.toBeNull();
   });
 
-  // BUG (environment): the PDF-export worker's own headless Chromium
-  // (apps/api/src/infrastructure/bullmq/pdf-export.processor.ts) navigates to
-  // `${PDF_BASE_URL}/print/[reportId]` with `waitUntil: "networkidle"`. The web
-  // server here is started via `next dev`, which mounts
-  // `AgentationDevtools` (apps/web/src/shared/ui/agentation-devtools.tsx) on every
-  // route including `/print`; that widget opens a persistent EventSource plus a
-  // recurring health-check fetch to an Agentation backend that is not running in
-  // this environment. e2e/playwright.integration.config.ts's web `webServer` entry
-  // does not set `NEXT_PUBLIC_DISABLE_DEVTOOLS`, unlike e2e/sweep/playwright.config.ts,
-  // which sets it for exactly this reason. The open connection keeps the print
-  // page's network from ever going idle, so `page.goto` always times out at 60s
-  // (PAGE_GOTO_TIMEOUT_MS) and the job never leaves "pending". This reproduces on
-  // every run (see suspectedBugs) and is not something this spec can fix — the
-  // web dev server needs `NEXT_PUBLIC_DISABLE_DEVTOOLS=true` in the shared
-  // Playwright config.
-  test.fixme("PDF worker completes job and stores artifact URL", async ({
+  // The integration web server disables Agentation so the worker's print-page
+  // navigation can reach network idle and complete deterministically.
+  test("PDF worker completes job and stores artifact URL", async ({
     headPage,
   }) => {
     const existingIds = await existingPdfJobIds();

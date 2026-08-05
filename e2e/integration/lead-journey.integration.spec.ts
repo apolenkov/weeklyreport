@@ -8,6 +8,7 @@
  * the suite instead of being skipped.
  */
 
+import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "./fixtures";
 import { prisma, resetMutations } from "./helpers/db";
 import {
@@ -218,5 +219,100 @@ test.describe("Lead journey (integration)", () => {
     expect(html).not.toContain("Мария К.");
     expect(html).not.toContain("Игорь В.");
     expect(html).not.toContain("Дмитрий С.");
+  });
+
+  test("lead can ask a grounded question, resolve clarification, and follow a source", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
+    const assistantRequests: unknown[] = [];
+    const assistantResponses = [
+      {
+        kind: "clarification_required" as const,
+        options: [{ label: "Portal", token: "clarification-token" }],
+      },
+      {
+        kind: "ok" as const,
+        answerMarkdown: "**The release is on track.** [S1]",
+        citations: [
+          {
+            sourceId: "S1",
+            reportId: ACTIVE_REPORT_ID,
+            periodLabel: "Week 31",
+            authorName: "Lead",
+            subjectName: "Portal",
+            recordKind: "item",
+          },
+        ],
+        metadata: { truncated: false, insufficientEvidence: false },
+      },
+    ];
+
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.route("**/trpc/leadForm.assistant*", async (route) => {
+      assistantRequests.push(route.request().postDataJSON());
+      const response = assistantResponses.shift();
+      if (!response) {
+        await route.abort("failed");
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{ result: { data: { json: response } } }]),
+      });
+    });
+
+    await loginAs(context, { role: "lead", email: SEED_EMAILS.lead1 });
+    await page.goto("/lead/report");
+
+    await page.getByRole("button", { name: "Open report chat" }).click();
+    const dialog = page.getByRole("dialog", { name: "Report chat" });
+    await expect(dialog).toBeVisible();
+
+    const axeResult = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .analyze();
+    expect(axeResult.violations).toEqual([]);
+
+    await dialog.getByRole("textbox", { name: "Your question" }).fill(
+      "What changed in Portal?",
+    );
+    await dialog.getByRole("button", { name: "Ask report chat" }).click();
+    await expect(
+      dialog.getByRole("button", { name: "Portal", exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Portal", exact: true }).click();
+
+    await expect(dialog.getByText("The release is on track.")).toBeVisible();
+    const sourceLink = dialog.getByRole("link", {
+      name: /S1.*Week 31.*Portal/u,
+    });
+    await expect(sourceLink).toHaveAttribute(
+      "href",
+      `/lead/report/${ACTIVE_REPORT_ID}`,
+    );
+    await sourceLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/lead/report/${ACTIVE_REPORT_ID}$`),
+    );
+
+    expect(assistantRequests).toHaveLength(2);
+    expect(JSON.stringify(assistantRequests[0])).toContain(
+      "What changed in Portal?",
+    );
+    expect(JSON.stringify(assistantRequests[1])).toContain(
+      "clarification-token",
+    );
+    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
+
+    await context.close();
   });
 });

@@ -5,7 +5,7 @@ import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
-} from "../../test-utils/prisma-test-helper";
+} from "../../../test-utils/prisma-test-helper";
 import { SearchPrismaRepository } from "./search.prisma-repository";
 
 /**

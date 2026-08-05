@@ -55,6 +55,7 @@ const decision = (over: Partial<Decision> = {}): Decision => ({
 const activity = (over: Partial<Activity> = {}): Activity => ({
   activityId: "a1",
   activityName: "Портал",
+  jiraAccounts: [],
   status: "yellow",
   derivedStatus: null,
   linkedProducts: [{ productId: "p1", productName: "Alpha" }],

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
+import { LeadReportAssistantStore } from "../../features/report-pages/ui/lead-report-assistant-store";
 import { SessionProvider } from "../../lib/session-provider";
 import { NavBar } from "../../shared/ui/navigation/nav-bar";
 import { NavBarSkeleton } from "../../shared/ui/navigation/nav-bar-skeleton";
@@ -29,7 +30,7 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
       <Suspense fallback={<NavBarSkeleton />}>
         <NavBar />
       </Suspense>
-      {children}
+      <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
     </SessionProvider>
   );
 }

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type {
   RiskSeverity,
   TrafficLightStatus,
@@ -9,7 +11,13 @@ import type {
  * fold both reduce to this ladder instead of each keeping its own precedence
  * table.
  */
-export type CanonicalStatus = "blocked" | "at-risk" | "on-track" | "empty";
+export const canonicalStatusSchema = z.enum([
+  "blocked",
+  "at-risk",
+  "on-track",
+  "empty",
+]);
+export type CanonicalStatus = z.infer<typeof canonicalStatusSchema>;
 
 export const CANONICAL_STATUS_PRECEDENCE: Record<CanonicalStatus, number> = {
   blocked: 3,
