@@ -29,6 +29,10 @@ export {
   ownedStagesForProject,
 } from "./model/lead-form";
 export type { HistoryEntry } from "./model/lead-history";
+export {
+  mapCompiledHistoryEntries,
+  mapHistoryEntries,
+} from "./model/lead-history";
 export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
