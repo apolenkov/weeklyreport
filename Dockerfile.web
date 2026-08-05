@@ -16,7 +16,13 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 COPY prisma ./prisma
-RUN pnpm install --frozen-lockfile
+# The pruned workspace retains the web package's type-only API link, while the
+# dev server executes only the web, shared-schema, and shared-UI workspaces.
+# Avoid installing the API's unrelated dependency tree into this image.
+RUN pnpm install --frozen-lockfile \
+  --filter @customreport/web \
+  --filter @customreport/shared \
+  --filter @customreport/ui
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 
