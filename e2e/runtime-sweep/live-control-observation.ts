@@ -2,8 +2,6 @@ import type { Page } from "@playwright/test";
 
 import type { LiveControlObservation } from "./live-control-planning.ts";
 
-const MEANINGFUL_SCROLL_DELTA_PX = 8;
-
 export interface PageSnapshot {
   readonly url: string;
   readonly dom: string;
@@ -65,17 +63,6 @@ const meaningfulFocusChanged = (
   (before.focus !== after.focus || before.focusTarget !== after.focusTarget) &&
   meaningfulFocusTarget(after.focusTarget);
 
-const meaningfulScrollChanged = (
-  before: PageSnapshot,
-  after: PageSnapshot,
-): boolean => {
-  const deltaX = Math.abs((after.scrollX ?? 0) - (before.scrollX ?? 0));
-  const deltaY = Math.abs((after.scrollY ?? 0) - (before.scrollY ?? 0));
-  return (
-    deltaX >= MEANINGFUL_SCROLL_DELTA_PX || deltaY >= MEANINGFUL_SCROLL_DELTA_PX
-  );
-};
-
 export const observationFor = (
   before: PageSnapshot,
   after: PageSnapshot,
@@ -93,11 +80,6 @@ export const observationFor = (
     return {
       kind: "focus",
       detail: "Focus moved to page content after the action",
-    };
-  if (meaningfulScrollChanged(before, after))
-    return {
-      kind: "focus",
-      detail: "Page content scroll position changed after the action",
     };
   return undefined;
 };

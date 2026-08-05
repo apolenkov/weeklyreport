@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../playwright.integration.config.ts";
+import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
 
 const requiredEnv = (name: string): string => {
@@ -42,7 +43,7 @@ export default defineConfig({
     apiServer,
     {
       ...webServer,
-      command: `pnpm exec tsx ../../e2e/runtime-sweep/run-runtime-next-server.ts preflight ${PREFLIGHT_WEB_PORT}`,
+      command: runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT),
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
       env: runtimeSweepWebEnvironment(webServer.env),
     },

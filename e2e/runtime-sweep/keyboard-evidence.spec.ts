@@ -56,6 +56,28 @@ test("keeps the roving radio member as the group's tab stop", async ({
   ]);
 });
 
+test("fails when an extra ARIA radio member is tabbable", async ({ page }) => {
+  await page.setContent(`
+    <div role="radiogroup" aria-label="Scope">
+      <button type="button" role="radio" aria-checked="true">Summary</button>
+      <button type="button" role="radio" aria-checked="false">Product</button>
+    </div>
+  `);
+
+  const trace = await captureKeyboardTrace(page);
+  const product = trace.controls.find(
+    ({ accessibleName }) => accessibleName === "Product",
+  );
+
+  expect(product).toMatchObject({
+    expectedFocusable: false,
+    focusable: true,
+    focusPolicy: "forbidden",
+    outcome: "fail",
+  });
+  expect(trace.focusGaps).toContainEqual(product);
+});
+
 test("keeps a standalone tabindex-minus-one button as a keyboard gap", async ({
   page,
 }) => {
@@ -76,9 +98,7 @@ test("keeps a standalone tabindex-minus-one button as a keyboard gap", async ({
   });
 });
 
-test("requires modal controls while excluding background controls from scope", async ({
-  page,
-}) => {
+test("fails when focus escapes an active modal", async ({ page }) => {
   await page.setContent(`
     <button type="button">Background</button>
     <div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px">
@@ -98,7 +118,7 @@ test("requires modal controls while excluding background controls from scope", a
 
   expect(evidence.get("Background")).toEqual({
     expectedFocusable: false,
-    outcome: "not-applicable",
+    outcome: "fail",
   });
   expect(evidence.get("Confirm")).toEqual({
     expectedFocusable: true,
@@ -108,4 +128,40 @@ test("requires modal controls while excluding background controls from scope", a
     expectedFocusable: true,
     outcome: "pass",
   });
+});
+
+test("keeps unreachable modal background controls not-applicable", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <main inert>
+      <button type="button">Background</button>
+    </main>
+    <div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px">
+      <button type="button">Confirm</button>
+      <button type="button">Cancel</button>
+    </div>
+  `);
+  await page.getByRole("button", { name: "Confirm" }).focus();
+
+  const trace = await captureKeyboardTrace(page);
+  const background = trace.controls.find(
+    ({ accessibleName }) => accessibleName === "Background",
+  );
+
+  expect(background).toMatchObject({
+    expectedFocusable: false,
+    focusable: false,
+    focusPolicy: "unreachable",
+    outcome: "not-applicable",
+  });
+  expect(
+    trace.controls
+      .filter(
+        ({ accessibleName, role }) =>
+          role === "button" && ["Confirm", "Cancel"].includes(accessibleName),
+      )
+      .map(({ outcome }) => outcome),
+  ).toEqual(["pass", "pass"]);
+  expect(trace.focusGaps).toEqual([]);
 });

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { type DomControlObservation, inventoryDom } from "./dom-inventory.ts";
+import type { KeyboardFocusPolicy } from "./keyboard-focus-policy.ts";
 
 const NON_TAB_FOCUS_ROLES = new Set([
   "alertdialog",
@@ -18,6 +19,7 @@ export type KeyboardControlEvidence = Readonly<{
   enabled: boolean;
   expectedFocusable: boolean;
   focusable: boolean;
+  focusPolicy: KeyboardFocusPolicy;
   outcome: "pass" | "fail" | "not-applicable";
 }>;
 
@@ -116,6 +118,38 @@ const blurActiveElement = (page: Page): Promise<void> =>
 const focusedControl = (page: Page): Promise<FocusedControl | null> =>
   page.evaluate<FocusedControl | null>(FOCUSED_CONTROL_SCRIPT);
 
+const focusPolicyFor = (
+  control: DomControlObservation,
+): KeyboardFocusPolicy => {
+  if (control.keyboardFocusPolicy !== undefined) {
+    return control.keyboardFocusPolicy;
+  }
+  const expectedFocusable =
+    control.keyboardExpectedFocusable ??
+    (control.enabled && !NON_TAB_FOCUS_ROLES.has(control.role));
+  return expectedFocusable ? "required" : "unreachable";
+};
+
+const outcomeFor = (
+  policy: KeyboardFocusPolicy,
+  focusable: boolean,
+): "pass" | "fail" | "not-applicable" => {
+  switch (policy) {
+    case "required":
+      return focusable ? "pass" : "fail";
+    case "forbidden":
+      return focusable ? "fail" : "not-applicable";
+    case "unreachable":
+      return "not-applicable";
+    default:
+      return assertNever(policy);
+  }
+};
+
+const assertNever = (value: never): never => {
+  throw new Error(`Unknown keyboard focus policy: ${String(value)}`);
+};
+
 const tabSequence = async (
   page: Page,
   steps: number,
@@ -135,22 +169,17 @@ const controlsEvidence = (
   focusedKeys: ReadonlySet<string>,
 ): readonly KeyboardControlEvidence[] =>
   controls.map((control) => {
-    const expectedFocusable =
-      control.keyboardExpectedFocusable ??
-      (control.enabled && !NON_TAB_FOCUS_ROLES.has(control.role));
+    const focusPolicy = focusPolicyFor(control);
     const focusable = focusedKeys.has(control.controlKey);
     return {
       controlKey: control.controlKey,
       role: control.role,
       accessibleName: control.accessibleName,
       enabled: control.enabled,
-      expectedFocusable,
+      expectedFocusable: focusPolicy === "required",
       focusable,
-      outcome: !expectedFocusable
-        ? "not-applicable"
-        : focusable
-          ? "pass"
-          : "fail",
+      focusPolicy,
+      outcome: outcomeFor(focusPolicy, focusable),
     };
   });
 

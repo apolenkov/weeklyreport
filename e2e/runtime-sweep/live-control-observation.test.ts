@@ -54,13 +54,10 @@ describe("live control observations", () => {
     });
   });
 
-  it("accepts a meaningful page scroll after a skip-link action", () => {
+  it("does not count bare viewport scrolling as an action outcome", () => {
     const before = snapshot({ scrollY: 0 });
     const after = snapshot({ scrollY: 480 });
 
-    expect(observationFor(before, after)).toEqual({
-      kind: "focus",
-      detail: "Page content scroll position changed after the action",
-    });
+    expect(observationFor(before, after)).toBeUndefined();
   });
 });

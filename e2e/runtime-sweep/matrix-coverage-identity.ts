@@ -182,9 +182,3 @@ export const coverageIdentityIssues = (
   ...transitionMismatches(matrixCase, cell),
   ...fabricatedNoneMismatches(matrixCase, cell),
 ];
-
-export const sameNominalCoverageWitness = (
-  matrixCase: MatrixExecutableCase,
-  cell: CoverageCell,
-): boolean =>
-  matrixCoverageWitnessKey(matrixCase) === coverageCellWitnessKey(cell);
