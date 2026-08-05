@@ -208,7 +208,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
 
   return (
-    <main id="main-content" className="flex min-h-svh">
+    <main id="main-content" tabIndex={-1} className="flex min-h-svh">
       {/* PulseMark is graphical only — sr-only h1 for page-has-heading-one. */}
       <h1 className="sr-only">Weekly Report</h1>
       <HeroPanel orgShortName={org.shortName} orgFullName={org.fullName} />

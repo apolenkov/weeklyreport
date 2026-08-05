@@ -55,6 +55,8 @@ function ReadyReport({
     <>
       <PrintReportStyles />
       <main
+        id="main-content"
+        tabIndex={-1}
         data-print-state={PRINT_STATE.ready}
         style={{ ...SHELL_STYLE, lineHeight: "1.5", letterSpacing: "-0.01em" }}
       >

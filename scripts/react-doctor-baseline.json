@@ -59,7 +59,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/app/(app)/reports/latest/page.tsx::48:7::react-doctor/nextjs-no-client-side-redirect::e954564883fc8ee5e8662fa96e8a847414693952312b0a5614eedbddc3259e1e",
+      "id": "src/app/(app)/reports/latest/page.tsx::49:7::react-doctor/nextjs-no-client-side-redirect::e954564883fc8ee5e8662fa96e8a847414693952312b0a5614eedbddc3259e1e",
       "file": "src/app/(app)/reports/latest/page.tsx",
       "rule": "nextjs-no-client-side-redirect",
       "verdict": "overturn",
@@ -80,7 +80,7 @@
       "rationale": "The module intentionally exposes a small composition contract used by its sibling components, tests, or provider consumers. Splitting the local contract solely for the generic Fast Refresh heuristic would add API churn without an observed runtime state-preservation defect."
     },
     {
-      "id": "src/app/print/[reportId]/print-report-template.tsx::75:39::react-doctor/rendering-hydration-mismatch-time::4af09be3a21842711f5db9906c3068e60db9fc8b39712081b3a690e18d7ce291",
+      "id": "src/app/print/[reportId]/print-report-template.tsx::77:39::react-doctor/rendering-hydration-mismatch-time::4af09be3a21842711f5db9906c3068e60db9fc8b39712081b3a690e18d7ce291",
       "file": "src/app/print/[reportId]/print-report-template.tsx",
       "rule": "rendering-hydration-mismatch-time",
       "verdict": "overturn",

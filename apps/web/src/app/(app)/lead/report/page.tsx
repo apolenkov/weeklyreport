@@ -17,6 +17,7 @@ export default async function LeadReportPage({ searchParams }: Props) {
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div
