@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createPreflightSessionCache,
+  createProfileSessionCacheRegistry,
   type PreflightCookieContext,
+  type PreflightSessionCache,
 } from "./preflight-session.ts";
 import type { RuntimeMatrixActor } from "./runtime-matrix.ts";
 
@@ -85,32 +87,23 @@ describe("preflight session cache", () => {
     );
   });
 
-  it("requires a fresh cache when the seeded profile changes", async () => {
-    let activeCookies: readonly Cookie[] = [];
-    const context: PreflightCookieContext = {
-      clearCookies: vi.fn(() => {
-        activeCookies = [];
-        return Promise.resolve();
-      }),
-      cookies: vi.fn(() => Promise.resolve(activeCookies)),
-      addCookies: vi.fn((cookies: readonly Cookie[]) => {
-        activeCookies = [...cookies];
-        return Promise.resolve();
-      }),
-    };
-    const login = vi.fn((actor: RuntimeMatrixActor) => {
-      if (actor.role !== null) activeCookies = [cookieFor(actor.role)];
-      return Promise.resolve();
+  it("creates one distinct cache per seeded profile", async () => {
+    const cacheFor = (): PreflightSessionCache => ({
+      authenticate: vi.fn(() => Promise.resolve()),
+      use: vi.fn(() => Promise.resolve()),
     });
+    const create = vi.fn((_profile: string) => Promise.resolve(cacheFor()));
+    const registry = createProfileSessionCacheRegistry(create);
 
-    const minimalCache = createPreflightSessionCache(context, login);
-    await minimalCache.authenticate([lead]);
-    await minimalCache.use(lead);
+    const firstMinimal = await registry.get("minimal");
+    const secondMinimal = await registry.get("minimal");
+    const demo = await registry.get("demo");
 
-    const demoCache = createPreflightSessionCache(context, login);
-    await demoCache.authenticate([lead]);
-    await demoCache.use(lead);
-
-    expect(login).toHaveBeenCalledTimes(2);
+    expect(firstMinimal.created).toBe(true);
+    expect(secondMinimal.created).toBe(false);
+    expect(demo.created).toBe(true);
+    expect(firstMinimal.cache).toBe(secondMinimal.cache);
+    expect(demo.cache).not.toBe(firstMinimal.cache);
+    expect(create).toHaveBeenCalledTimes(2);
   });
 });
