@@ -13,6 +13,7 @@ const requiredEnv = (name: string): string => {
 };
 
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
 const PREFLIGHT_WEB_PORT = requiredEnv("E2E_WEB_PORT");
 const integrationServers = integrationConfig.webServer;
@@ -44,6 +45,7 @@ export default defineConfig({
     {
       ...webServer,
       command: runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT),
+      cwd: REPO_ROOT,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
       env: runtimeSweepWebEnvironment(webServer.env),
     },

@@ -143,6 +143,7 @@ export default defineConfig({
     {
       ...webServer,
       command: runtimeNextServerCommand("sweep", WEB_PORT),
+      cwd: REPO_ROOT,
       url: WEB_URL,
       reuseExistingServer: false,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
