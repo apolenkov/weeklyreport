@@ -24,6 +24,7 @@ export type {
 } from "./runtime-matrix-manifest.ts";
 export {
   assertFreshRuntimeManifest,
+  DEFAULT_RUNTIME_MATRIX_MAX_CELLS,
   loadRuntimeMatrix,
   routeForState,
   selectRuntimeStates,

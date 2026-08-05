@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { seedProfileSchema } from "./contracts.ts";
 import {
   assertFreshRuntimeManifest,
+  DEFAULT_RUNTIME_MATRIX_MAX_CELLS,
   loadRuntimeMatrix,
   type RuntimeMatrixSource,
 } from "./runtime-matrix.ts";
@@ -20,9 +21,13 @@ const SOURCE_SHA = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
 const PROFILE = seedProfileSchema.parse(
   process.env.RUNTIME_SWEEP_PROFILE ?? process.env.E2E_SEED_PROFILE ?? "full",
 );
-const MAX_CELLS = Number.parseInt(
-  process.env.RUNTIME_SWEEP_MAX_MATRIX_CELLS ?? "1000",
-  10,
+const MAX_CELLS = Math.min(
+  DEFAULT_RUNTIME_MATRIX_MAX_CELLS,
+  Number.parseInt(
+    process.env.RUNTIME_SWEEP_MAX_MATRIX_CELLS ??
+      String(DEFAULT_RUNTIME_MATRIX_MAX_CELLS),
+    10,
+  ),
 );
 
 const sourceHolder: { value?: RuntimeMatrixSource } = {};

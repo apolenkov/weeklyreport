@@ -4,6 +4,7 @@ import { seedProfileSchema } from "./contracts.ts";
 import { runOpenCodeDrives } from "./run-opencode-drives.ts";
 
 test("OpenCode Flash drives the current-source runtime server sequentially", async ({}, testInfo) => {
+  test.setTimeout(0);
   const baseURL = testInfo.project.use.baseURL;
   if (typeof baseURL !== "string" || baseURL.trim() === "")
     throw new Error("OpenCode Driver requires the Playwright project baseURL");

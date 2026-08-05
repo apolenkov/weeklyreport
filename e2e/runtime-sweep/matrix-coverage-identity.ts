@@ -24,6 +24,46 @@ const actionForCoverageCase = (matrixCase: MatrixExecutableCase): Action => {
   };
 };
 
+type NominalCoverageWitnessInput = Readonly<{
+  readonly profile: CoverageCell["profile"];
+  readonly role: CoverageCell["role"];
+  readonly catalogRoute: CoverageCell["catalogRoute"];
+  readonly state: CoverageCell["state"];
+  readonly action: Pick<Action, "controlKey" | "operation">;
+}>;
+
+const nominalCoverageWitnessKey = (
+  input: NominalCoverageWitnessInput,
+): string =>
+  stableSerialize({
+    profile: input.profile,
+    role: input.role,
+    catalogRoute: input.catalogRoute,
+    state: {
+      ...input.state,
+      fault: "none",
+      controlTransition: "none",
+    },
+    action: {
+      controlKey: input.action.controlKey,
+      operation: input.action.operation,
+    },
+  });
+
+export const matrixCoverageWitnessKey = (
+  matrixCase: MatrixExecutableCase,
+): string =>
+  nominalCoverageWitnessKey({
+    profile: matrixCase.profile,
+    role: matrixCase.role,
+    catalogRoute: matrixCase.catalogRoute,
+    state: matrixCase.state,
+    action: actionForCoverageCase(matrixCase),
+  });
+
+export const coverageCellWitnessKey = (cell: CoverageCell): string =>
+  nominalCoverageWitnessKey(cell);
+
 export const isSpecializedCoverageCase = (
   matrixCase: MatrixExecutableCase,
 ): boolean =>
@@ -146,24 +186,5 @@ export const coverageIdentityIssues = (
 export const sameNominalCoverageWitness = (
   matrixCase: MatrixExecutableCase,
   cell: CoverageCell,
-): boolean => {
-  const expectedState = {
-    ...matrixCase.state,
-    fault: "none",
-    controlTransition: "none",
-  };
-  const actualState = {
-    ...cell.state,
-    fault: "none",
-    controlTransition: "none",
-  };
-  const expectedAction = actionForCoverageCase(matrixCase);
-  return (
-    cell.profile === matrixCase.profile &&
-    cell.role === matrixCase.role &&
-    cell.catalogRoute === matrixCase.catalogRoute &&
-    stableSerialize(actualState) === stableSerialize(expectedState) &&
-    cell.action.controlKey === expectedAction.controlKey &&
-    cell.action.operation === expectedAction.operation
-  );
-};
+): boolean =>
+  matrixCoverageWitnessKey(matrixCase) === coverageCellWitnessKey(cell);

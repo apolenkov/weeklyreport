@@ -110,6 +110,44 @@ const runFrozenCase = async (
   return result.cell;
 };
 
+const runFrozenCaseRange = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  cases: readonly MatrixExecutableCase[],
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+  start: number,
+  end: number,
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  if (start >= end) return [];
+  if (end - start === 1) {
+    const matrixCase = cases[start];
+    if (matrixCase === undefined)
+      throw new Error(`Frozen case range has no case at index ${start}`);
+    return [await runFrozenCase(page, source, matrixCase, runtime, testInfo)];
+  }
+  const middle = start + Math.floor((end - start) / 2);
+  const left = await runFrozenCaseRange(
+    page,
+    source,
+    cases,
+    runtime,
+    testInfo,
+    start,
+    middle,
+  );
+  const right = await runFrozenCaseRange(
+    page,
+    source,
+    cases,
+    runtime,
+    testInfo,
+    middle,
+    end,
+  );
+  return [...left, ...right];
+};
+
 export const runFrozenCases = (
   page: Page,
   source: RuntimeMatrixSource,
@@ -117,10 +155,4 @@ export const runFrozenCases = (
   runtime: FrozenCaseLiveRuntime,
   testInfo: TestInfo,
 ): Promise<readonly FrozenCaseCoverageCell[]> =>
-  cases.reduce<Promise<readonly FrozenCaseCoverageCell[]>>(
-    async (pending, matrixCase) => [
-      ...(await pending),
-      await runFrozenCase(page, source, matrixCase, runtime, testInfo),
-    ],
-    Promise.resolve([]),
-  );
+  runFrozenCaseRange(page, source, cases, runtime, testInfo, 0, cases.length);

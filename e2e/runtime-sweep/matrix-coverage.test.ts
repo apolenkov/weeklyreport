@@ -165,7 +165,10 @@ const frozen = (
       inapplicable: inapplicableRows.length,
       total: cases.length + inapplicableRows.length,
     },
-    limits: { maxCases: 100, maxControlsPerSegment: 10 },
+    limits: {
+      maxCases: Math.max(100, cases.length + inapplicableRows.length),
+      maxControlsPerSegment: 10,
+    },
   };
   return parseFrozenMatrix({ ...body, digest: sha256Hex(body) });
 };
@@ -207,18 +210,25 @@ describe("frozen MATRIX coverage", () => {
 
   it("rejects duplicate, extra, and typed-inapplicable emitted rows", () => {
     const nominal = navigation("case-navigation");
+    const canonicalControl = control("case-control");
     const excluded = inapplicable("case-excluded");
-    const matrix = frozen([nominal, control("case-control")], [excluded]);
+    const matrix = frozen([nominal, canonicalControl], [excluded]);
     const duplicate = cellFor(nominal);
     const extra = cellFor(nominal, { cellId: "case-extra" });
     const excludedCell = cellFor(nominal, { cellId: excluded.caseId });
     const gaps = verifyFrozenMatrixCoverage(matrix, [
       duplicate,
-      duplicate,
       extra,
+      extra,
+      duplicate,
       excludedCell,
     ]);
 
+    expect(
+      gaps
+        .filter(({ kind }) => kind === "duplicate-case")
+        .map(({ caseId }) => caseId),
+    ).toEqual([extra.cellId, nominal.caseId]);
     expect(gaps.map(({ kind }) => kind)).toEqual(
       expect.arrayContaining([
         "duplicate-case",
@@ -250,5 +260,14 @@ describe("frozen MATRIX coverage", () => {
     expect(() =>
       assertFrozenMatrixCoverage(frozen([matrixCase]), [cell]),
     ).toThrow(FrozenMatrixCoverageError);
+  });
+
+  it("verifies a large complete matrix without repeated cell scans", () => {
+    const cases = Array.from({ length: 8192 }, (_, index) =>
+      navigation(`case-large-${index}`),
+    );
+    const cells = cases.map((entry) => cellFor(entry));
+
+    expect(verifyFrozenMatrixCoverage(frozen(cases), cells)).toEqual([]);
   });
 });
