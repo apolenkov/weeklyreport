@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EvidenceBundle } from "./contracts.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture.ts";
@@ -126,6 +126,9 @@ const fakeInput = (page: object): FrozenPhaseInput =>
   }) as unknown as FrozenPhaseInput;
 
 describe("frozen action evidence capture", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
   it("waits for delayed sign-out navigation beyond the ordinary action grace", async () => {
     harness.events.length = 0;
     harness.frame = undefined;
@@ -168,7 +171,9 @@ describe("frozen action evidence capture", () => {
       }),
     };
 
-    const result = await captureFrozenPhase(fakeInput(page));
+    const capture = captureFrozenPhase(fakeInput(page));
+    await vi.advanceTimersByTimeAsync(harness.delayMs);
+    const result = await capture;
     expect(result.action).toHaveLength(1);
 
     expect(harness.events).toEqual([
@@ -223,7 +228,9 @@ describe("frozen action evidence capture", () => {
       }),
     };
 
-    const result = await captureFrozenPhase(fakeInput(page));
+    const capture = captureFrozenPhase(fakeInput(page));
+    await vi.advanceTimersByTimeAsync(harness.delayMs);
+    const result = await capture;
 
     expect(result.action).toHaveLength(1);
     expect(harness.actionSucceeded).toBe(false);

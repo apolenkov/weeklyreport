@@ -1,7 +1,10 @@
 import type { Page } from "@playwright/test";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { observeActionNavigation } from "./action-navigation-boundary.ts";
+import {
+  expectedActionNavigationFor,
+  observeActionNavigation,
+} from "./action-navigation-boundary.ts";
 import {
   isExpectedNavigationAbort,
   navigate,
@@ -30,6 +33,8 @@ function fakePage(
 }
 
 describe("runtime navigation recovery", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("navigates a relative route from the initial blank page", async () => {
     const page = {
       url: () => "about:blank",
@@ -88,5 +93,35 @@ describe("runtime navigation recovery", () => {
     const observer = observeActionNavigation(page);
 
     await expect(observer.waitForNavigation()).rejects.toBe(error);
+  });
+
+  it("cancels the sign-out observer at its deterministic timeout", async () => {
+    vi.useFakeTimers();
+    const frame = {};
+    let signal: AbortSignal | undefined;
+    const page = {
+      url: () => "http://127.0.0.1:3105/report",
+      mainFrame: () => frame,
+      waitForEvent: (
+        _event: string,
+        options: { readonly signal?: AbortSignal },
+      ) => {
+        signal = options.signal;
+        return new Promise((_resolve, reject) =>
+          options.signal?.addEventListener("abort", () => reject(), {
+            once: true,
+          }),
+        );
+      },
+    } as unknown as Page;
+    const expectation = expectedActionNavigationFor("button:Sign%20out:1");
+    const observer = observeActionNavigation(page, expectation);
+    const waiting = observer.waitForNavigation();
+
+    await vi.advanceTimersByTimeAsync(expectation?.timeoutMs ?? 0);
+
+    await expect(waiting).resolves.toBe(false);
+    expect(signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
