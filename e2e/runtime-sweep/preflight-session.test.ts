@@ -5,6 +5,7 @@ import {
   createPreflightSessionCache,
   createProfileSessionCacheRegistry,
   type PreflightCookieContext,
+  preflightGroupNeedsReset,
   type PreflightSessionCache,
 } from "./preflight-session.ts";
 import type { RuntimeMatrixActor } from "./runtime-matrix.ts";
@@ -105,5 +106,20 @@ describe("preflight session cache", () => {
     expect(firstMinimal.cache).toBe(secondMinimal.cache);
     expect(demo.cache).not.toBe(firstMinimal.cache);
     expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it("forces a clean seed after authenticating a new profile session set", () => {
+    expect(preflightGroupNeedsReset(undefined, "minimal:active", true)).toBe(
+      true,
+    );
+    expect(
+      preflightGroupNeedsReset("minimal:active", "minimal:active", true),
+    ).toBe(true);
+    expect(
+      preflightGroupNeedsReset("minimal:active", "minimal:active", false),
+    ).toBe(false);
+    expect(
+      preflightGroupNeedsReset("minimal:active", "minimal:published", false),
+    ).toBe(true);
   });
 });

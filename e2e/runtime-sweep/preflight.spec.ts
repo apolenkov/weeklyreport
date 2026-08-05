@@ -14,6 +14,7 @@ import { writePreflightArtifact } from "./preflight-artifact.ts";
 import {
   createPreflightSessionCache,
   createProfileSessionCacheRegistry,
+  preflightGroupNeedsReset,
 } from "./preflight-session.ts";
 import { createPrismaRuntimeStateDatabase } from "./prisma-state-database.ts";
 import {
@@ -77,9 +78,13 @@ test("preflight prepares and inventories every nominal source segment", async ({
     prepare: async (state, route) => {
       const group = preflightStateGroupKey(state, route);
       const profileSessions = await sessionsByProfile.get(state.profile);
-      if (profileSessions.created) preparedGroup = group;
+      const resetRequired = preflightGroupNeedsReset(
+        preparedGroup,
+        group,
+        profileSessions.created,
+      );
       const resetForGroup: RuntimeStateResetter = (setup) => {
-        if (preparedGroup === group) return;
+        if (!resetRequired) return;
         setupE2eDatabase(setup);
         preparedGroup = group;
       };
