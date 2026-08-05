@@ -131,6 +131,14 @@ ledger or share the browser in parallel. Codex owns scheduling, reset/reseed,
 manifest, ledger,
 merge, adjudication, and gate; read-only verifiers may parallelize.
 
+The campaign records the installed OpenCode version from `opencode --version`
+in immutable `SOURCE.json` rather than pinning a version in the runbook. Before
+driving, the compatibility preflight checks `opencode mcp list` and the
+required Playwright MCP tools. Both runtime-preflight and live runtime configs
+deliberately set `NEXT_PUBLIC_AUTH_STUB=true` only to keep anonymous login
+bootstrap stable; the web proxy still requires a session cookie for protected
+routes.
+
 ### Controlled fault and observation model
 
 Named faults have deterministic setup/recovery: missing/expired/forbidden auth,
@@ -139,6 +147,13 @@ and declared infrastructure-unavailable. HTTP/network uses Playwright route
 interception; concurrency uses two contexts and the real optimistic path;
 infrastructure uses only existing test seams, never a production hook. Scope and
 tear down each injector; its failure is infrastructure, never product pass.
+
+Environment feedback requires `RUNTIME_SWEEP_API_LOG`,
+`RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_LOKI_PUSH_URL`, and
+`RUNTIME_SWEEP_LOKI_QUERY_URL`; missing or unreachable values are blind and fail
+the drive closed. Loki authentication is optional only as a pair: both
+`RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are absent for
+unauthenticated local Loki or both are present for authenticated Loki.
 
 Function evidence follows the domain `Given/When/Then`; accessibility combines
 axe with keyboard/focus/name/role checks. Visual evidence is settled Chromium

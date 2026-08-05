@@ -31,6 +31,7 @@ data.
 Example:
 
 ```bash
+unset DATABASE_URL
 export E2E_DATABASE_URL='postgresql://localhost/customreport_e2e'
 pnpm test:e2e:integration
 ```
@@ -65,16 +66,23 @@ four canonical roles, the four named seed profiles, catalog-reachable routes,
 live DOM controls, declared state transitions, and controlled faults. Firefox,
 WebKit, mobile, and production data are explicit exclusions, not covered cases.
 
-1. Start the pinned standalone Playwright MCP server described in
+1. Start the standalone Playwright MCP server (the MCP package remains pinned
+   at `@playwright/mcp@0.0.78`) described in
    `e2e/sweep/driver/README.md` and require `opencode mcp list` to report
    `playwright connected`.
+   OpenCode itself is not pinned: `pnpm test:runtime-source` captures the
+   installed `opencode --version` (alongside the other tool versions) in the
+   immutable `SOURCE.json`, and the Driver preflight verifies the required MCP
+   tools before driving.
 2. Set `RUNTIME_SWEEP_ARCHIVE` to a fresh directory under
    `~/work/customreport-archive/` and freeze `RUNTIME_SWEEP_SOURCE_SHA` to the
-   clean source commit. Point `RUNTIME_SWEEP_API_LOG` at the native API JSON
-   log and configure the local feedback probes with
-   `RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_LOKI_PUSH_URL`,
-   `RUNTIME_SWEEP_LOKI_QUERY_URL`, `RUNTIME_SWEEP_LOKI_USERNAME`, and
-   `RUNTIME_SWEEP_LOKI_PASSWORD`. Keep those values in the shell; never write
+   clean source commit. The observer requires
+   `RUNTIME_SWEEP_API_LOG`, `RUNTIME_SWEEP_BUGSINK_DSN`,
+   `RUNTIME_SWEEP_LOKI_PUSH_URL`, and `RUNTIME_SWEEP_LOKI_QUERY_URL`; a missing
+   or unreachable value is blind and fails the drive closed. Loki
+   `RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are an
+   optional pair: leave both unset for an unauthenticated local Loki, or set
+   both for an authenticated Loki. Keep values in the shell; never write
    credentials or DSNs to campaign artifacts.
 3. Freeze the campaign inputs before starting any browser work:
 
@@ -94,6 +102,11 @@ WebKit, mobile, and production data are explicit exclusions, not covered cases.
    Stage B refuses to run without both artifacts, revalidates the clean HEAD,
    then atomically publishes `MATRIX.json` and `MANIFEST.json`. There is no
    navigation or matrix fallback when PREFLIGHT is missing.
+
+   Both the runtime-preflight and live runtime Playwright configs deliberately
+   set `NEXT_PUBLIC_AUTH_STUB=true` only to keep anonymous login bootstrap
+   stable. The web proxy still requires a session cookie for protected routes;
+   this setting is not an authentication bypass.
 
 4. Run `pnpm test:runtime-sweep` once for each `RUNTIME_SWEEP_PROFILE` value
    (`minimal`, `demo`, `full`, and `stress`). Playwright starts the API and web
