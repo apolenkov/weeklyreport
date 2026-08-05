@@ -3,13 +3,13 @@
   "threshold": 30,
   "sourceIdentity": {
     "scripts": {
-      "gitTree": "2d777604753b10b2d8261cd86007e460fbf750dd",
-      "pathDigest": "1bf54d39898580c1713155cbc5f610b3d36206e25c67edf3f692f690c17676f8",
-      "trackedFiles": 68
+      "gitTree": "8c0f6bd51c4fa3a481a947685bd3cf8a57245591",
+      "pathDigest": "f8e562dde3bb24bee5b98b6bf69db3b1d7ee78a758c522a610a50b3df70c0a20",
+      "trackedFiles": 69
     },
     "e2e/runtime-sweep": {
-      "gitTree": "2e8f83347fe6500d5694296dde63066b2df0cbfd",
-      "pathDigest": "55812a6ab5c2c42d0874220bbebe4366222079becb232ef988538b5e4edf0e8c",
+      "gitTree": "c42e56ed49519775e8ccc379b38547471a1e0a5b",
+      "pathDigest": "21a72a6ec78a6e102d8cec375b13130235179cbf6679bceed8537cf520f5d58f",
       "trackedFiles": 180
     },
     "prisma": {
@@ -49,8 +49,8 @@
     },
     "apps/api/src/modules": {
       "gitTree": "4f1b5db791ab38130ea72f941ab63a3710b47a8f",
-      "pathDigest": "cce9c838edc79cbdaa65ef4ddc09d20f90f64b2a7a3d9f00513393f37c6dc106",
-      "trackedFiles": 423
+      "pathDigest": "9b1dc1395f1ed5c5e6a08ff6af504b6cdc1bf0015dadc88d23f3b911e1600f95",
+      "trackedFiles": 427
     }
   },
   "directCounts": {
@@ -70,7 +70,7 @@
     "apps/web/src/features/slides/ui": 37,
     "apps/web/src/lib": 65,
     "apps/web/src/shared/ui": 45,
-    "e2e/runtime-sweep": 177
+    "e2e/runtime-sweep/replay": 58
   },
   "boundedFlatExceptions": [
     {
@@ -154,9 +154,9 @@
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     },
     {
-      "directory": "e2e/runtime-sweep",
-      "baseline": 177,
-      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+      "directory": "e2e/runtime-sweep/replay",
+      "baseline": 58,
+      "reason": "The reviewed runtime replay concern remains a single cohesive stateful-control boundary; the count may only shrink."
     }
   ]
 }

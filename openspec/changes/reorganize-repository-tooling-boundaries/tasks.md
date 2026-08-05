@@ -15,10 +15,10 @@
 
 ## 3. API Test Seams
 
-- [ ] 3.1 Replace period-to-weekly-report/admin deep test imports with facade exports or local test adapters.
-- [ ] 3.2 Replace report-sections/review-to-carry-over and report-sections deep test imports with explicit harness seams.
-- [ ] 3.3 Remove the remaining archive, project-activity, and publication deep test imports and prove production deep imports remain zero.
-- [ ] 3.4 Tighten the API test boundary ratchet to zero deep cross-module imports and run the single-worker API integration gate.
+- [x] 3.1 Replace period-to-weekly-report/admin deep test imports with facade exports or local test adapters.
+- [x] 3.2 Replace report-sections/review-to-carry-over and report-sections deep test imports with explicit harness seams.
+- [x] 3.3 Remove the remaining archive, project-activity, and publication deep test imports and prove production deep imports remain zero.
+- [x] 3.4 Tighten the API test boundary ratchet to zero deep cross-module imports and run the single-worker API integration gate.
 
 ## 4. Web Canonical Homes
 
@@ -42,12 +42,12 @@
 ## 6. Runtime-Sweep Harness Tree
 
 - [x] 6.1 Finalize the exact 180-file runtime ownership/path map and freeze serialized artifact fixtures before moves.
-- [ ] 6.2 Move source/manifest/matrix compilation and validation behind minimal concern entrypoints.
-- [ ] 6.3 Move preflight and replay preparation/execution code while preserving one-profile seed reuse and recovery semantics.
-- [ ] 6.4 Move evidence capture and exactly-once cell/ledger writers without changing schemas, digests, or external archive paths.
-- [ ] 6.5 Move fault, concurrency, infrastructure, and driver/import concerns with fail-closed cleanup and verifier contracts intact.
-- [ ] 6.6 Move server/environment/support code and update Playwright/Vitest/TypeScript/Knip/package consumers.
-- [ ] 6.7 Run all runtime-sweep unit/contract tests and revalidate the frozen pre-move artifact fixtures byte/semantic compatibility.
+- [x] 6.2 Move source/manifest/matrix compilation and validation behind minimal concern entrypoints.
+- [x] 6.3 Move preflight and replay preparation/execution code while preserving one-profile seed reuse and recovery semantics.
+- [x] 6.4 Move evidence capture and exactly-once cell/ledger writers without changing schemas, digests, or external archive paths.
+- [x] 6.5 Move fault, concurrency, infrastructure, and driver/import concerns with fail-closed cleanup and verifier contracts intact.
+- [x] 6.6 Move server/environment/support code and update Playwright/Vitest/TypeScript/Knip/package consumers.
+- [x] 6.7 Run all runtime-sweep unit/contract tests and revalidate the frozen pre-move artifact fixtures byte/semantic compatibility.
 
 ## 7. Prisma Tree
 

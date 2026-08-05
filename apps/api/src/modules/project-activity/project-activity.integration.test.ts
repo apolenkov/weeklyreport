@@ -9,8 +9,8 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
-import { ensureLeadSection } from "../report-sections/application/ensure-lead-section";
-import { ReportSectionsPrismaRepository } from "../report-sections/infrastructure/report-sections.prisma-repository";
+import { ensureLeadSection } from "../report-sections/index.js";
+import { ReportSectionsPrismaRepository } from "../report-sections/test-seams/index.js";
 import { ProjectActivityPrismaRepository } from "./project-activity.prisma-repository";
 import {
   ProjectActivityDomainError,

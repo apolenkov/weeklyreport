@@ -21,7 +21,7 @@ Every imported report is JSON with these exact metadata values:
 The remaining fields are `attemptId`, `transcriptEvidence`, `roleDriven`,
 `profile`, `sourceSha`, `assignedCells`, `routesVisited`, `routesPlanned`,
 `canary`, `timeline`, `controlResults`, and `candidates` as defined by
-`e2e/runtime-sweep/driver-results-contract.ts`. The importer rejects stale
+`e2e/runtime-sweep/driver/driver-results-contract.ts`. The importer rejects stale
 source/profile/role values, missing or extra assigned cells, missing control
 results, stale routes/actions, malformed evidence, and a missing canary.
 The report may add candidates, but native Luna never edits a coverage cell or

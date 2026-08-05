@@ -11,9 +11,9 @@ import {
 import {
   buildAutoCarryOverDeps,
   carryOverIntoOpenedPeriod,
-} from "../../carry-over/auto-carry-over";
-import { CarryOverPrismaRepository } from "../../carry-over/carry-over.prisma-repository";
-import { CarryOverService } from "../../carry-over/carry-over.service";
+  CarryOverPrismaRepository,
+  CarryOverService,
+} from "../../carry-over/index.js";
 import { LeadFormService } from "../application/lead-form.service";
 import { ReportSectionsService } from "../application/report-sections.service";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";

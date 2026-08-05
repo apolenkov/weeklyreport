@@ -95,7 +95,7 @@
         "apps/api/src/modules/",
         "apps/api/src/test-seams/"
       ],
-      "includePattern": "^(?:apps/api/src/modules/(?:[^/]+/)*[^/]+\\.(?:test|spec)\\.[cm]?[jt]sx?|apps/api/src/modules/(?:[^/]+/)*__(?:tests|fixtures|snapshots)__/.+)$"
+      "includePattern": "^(?:apps/api/src/modules/(?:[^/]+/)*[^/]+\\.(?:test|spec)\\.[cm]?[jt]sx?|apps/api/src/modules/(?:[^/]+/)*(?:__(?:tests|fixtures|snapshots)__|test-seams)/.+)$"
     }
   ],
   "rules": [
@@ -690,6 +690,14 @@
       "concern": "shared-server",
       "role": "implementation",
       "target": "apps/web/src/shared/server/$1"
+    },
+    {
+      "id": "api-test-seam-entrypoints",
+      "scope": "api-test-seams",
+      "pattern": "^apps/api/src/modules/([^/]+)/test-seams/(index\\.ts)$",
+      "concern": "api-test-seam",
+      "role": "facade",
+      "target": "apps/api/src/modules/$1/test-seams/$2"
     },
     {
       "id": "api-test-direct-seams",

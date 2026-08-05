@@ -32,7 +32,7 @@ import {
 import {
   isExpectedNavigationAbort,
   navigate,
-} from "../runtime-sweep/navigation.ts";
+} from "../runtime-sweep/replay/navigation.ts";
 import {
   CANONICAL_ROLES,
   type Catalog,

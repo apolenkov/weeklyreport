@@ -8,8 +8,8 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
-import { PeriodPrismaRepository } from "../period/infrastructure/period.prisma-repository.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
+import { PeriodPrismaRepository } from "../period/test-seams/index.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/index.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 import type { ArchiveScopeSession } from "./archive.service.js";
 import { encodeArchiveCursor } from "./archive-cursor.js";
