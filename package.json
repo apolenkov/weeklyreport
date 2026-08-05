@@ -70,7 +70,7 @@
     "test:runtime-preflight": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/playwright.preflight.config.ts",
     "test:runtime-manifest": "tsx e2e/runtime-sweep/finalize-runtime-manifest.ts",
     "test:runtime-coverage": "tsx e2e/runtime-sweep/finalize-runtime-coverage-cli.ts",
-    "test:runtime-driver": "tsx e2e/runtime-sweep/run-opencode-drives.ts",
+    "test:runtime-driver": "tsx e2e/runtime-sweep/import-ai-driver-cli.ts",
     "catalog:check": "node e2e/sweep/catalog-check.ts",
     "db:seed:profile": "tsx prisma/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seed-profile-proof.ts",

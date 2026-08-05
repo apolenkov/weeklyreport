@@ -5,20 +5,20 @@ workspace Playwright installation owned by `@customreport/web`.
 
 ## Commands
 
-| Command                                           | Purpose                                        | Data contract                                                          |
-| ------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| `pnpm test:e2e:integration`                       | Cross-role API and web journeys                | Resets a dedicated `E2E_DATABASE_URL`; profile defaults to `full`      |
-| `E2E_SEED_PROFILE=demo pnpm test:e2e:integration` | Integration suite with one named profile       | `minimal`, `demo`, `full`, or `stress`                                 |
-| `pnpm test:e2e:seed-profiles`                     | Smoke-check all four deterministic profiles    | Resets the E2E database between profiles                               |
-| `pnpm test:uat`                                   | Catalog route, console, network, and axe sweep | Report artifacts under `e2e/sweep/.reports/`                           |
-| `pnpm catalog:check`                              | Check route/catalog drift without a browser    | Read-only                                                              |
-| `pnpm test:e2e:prodbuild`                         | Production-build browser checks                | Uses isolated local ports                                              |
-| `pnpm test:e2e:csp`                               | CSP checks against a production build          | Uses isolated local ports                                              |
-| `pnpm test:runtime-sweep`                         | Declared Chromium matrix and Flash Driver      | Requires the guarded E2E database and archive path                     |
-| `pnpm test:runtime-source`                        | Freeze immutable `SOURCE.json`                 | Requires a clean `RUNTIME_SWEEP_SOURCE_SHA`                            |
-| `pnpm test:runtime-preflight`                     | Prepare/reset and inventory every source state | Requires `RUNTIME_SWEEP_SOURCE`, `RUNTIME_SWEEP_PREFLIGHT`, and E2E DB |
-| `pnpm test:runtime-manifest`                      | Finalize `MATRIX.json` and `MANIFEST.json`     | Requires matching immutable SOURCE/PREFLIGHT artifacts                 |
-| `pnpm test:runtime-driver`                        | Resume Flash Driver against a live source      | Requires `RUNTIME_SWEEP_BASE_URL`; never falls back                    |
+| Command                                           | Purpose                                           | Data contract                                                          |
+| ------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| `pnpm test:e2e:integration`                       | Cross-role API and web journeys                   | Resets a dedicated `E2E_DATABASE_URL`; profile defaults to `full`      |
+| `E2E_SEED_PROFILE=demo pnpm test:e2e:integration` | Integration suite with one named profile          | `minimal`, `demo`, `full`, or `stress`                                 |
+| `pnpm test:e2e:seed-profiles`                     | Smoke-check all four deterministic profiles       | Resets the E2E database between profiles                               |
+| `pnpm test:uat`                                   | Catalog route, console, network, and axe sweep    | Report artifacts under `e2e/sweep/.reports/`                           |
+| `pnpm catalog:check`                              | Check route/catalog drift without a browser       | Read-only                                                              |
+| `pnpm test:e2e:prodbuild`                         | Production-build browser checks                   | Uses isolated local ports                                              |
+| `pnpm test:e2e:csp`                               | CSP checks against a production build             | Uses isolated local ports                                              |
+| `pnpm test:runtime-sweep`                         | Declared Chromium matrix and deterministic review | Requires the guarded E2E database and archive path                     |
+| `pnpm test:runtime-source`                        | Freeze immutable `SOURCE.json`                    | Requires a clean `RUNTIME_SWEEP_SOURCE_SHA`                            |
+| `pnpm test:runtime-preflight`                     | Prepare/reset and inventory every source state    | Requires `RUNTIME_SWEEP_SOURCE`, `RUNTIME_SWEEP_PREFLIGHT`, and E2E DB |
+| `pnpm test:runtime-manifest`                      | Finalize `MATRIX.json` and `MANIFEST.json`        | Requires matching immutable SOURCE/PREFLIGHT artifacts                 |
+| `pnpm test:runtime-driver`                        | Import native Codex Luna Max report(s)            | Requires explicit report, cells, output, SHA, profile, and role        |
 
 ## Destructive database boundary
 
@@ -59,21 +59,19 @@ pnpm --filter @customreport/web exec playwright test \
   e2e/integration/lead-journey.integration.spec.ts
 ```
 
-## Runtime sweep with OpenCode DeepSeek V4 Flash Max
+## Runtime sweep and native Codex Luna review
 
 The runtime campaign is deliberately bounded to Chromium at `1440x900`, the
 four canonical roles, the four named seed profiles, catalog-reachable routes,
 live DOM controls, declared state transitions, and controlled faults. Firefox,
 WebKit, mobile, and production data are explicit exclusions, not covered cases.
 
-1. Start the standalone Playwright MCP server (the MCP package remains pinned
-   at `@playwright/mcp@0.0.78`) described in
-   `e2e/sweep/driver/README.md` and require `opencode mcp list` to report
-   `playwright connected`.
-   OpenCode itself is not pinned: `pnpm test:runtime-source` captures the
-   installed `opencode --version` (alongside the other tool versions) in the
-   immutable `SOURCE.json`, and the Driver preflight verifies the required MCP
-   tools before driving.
+1. Treat the deterministic Playwright projects as the exhaustive authority.
+   They run in one worker in the fixed order
+   `runtime-prerequisites -> runtime-baseline -> runtime-matrix ->
+runtime-live-controls`. The required supplemental native Codex Luna review
+   is bounded to canonical role/profile evidence batches, emits candidates
+   only, and never runs an external provider process or mutates the ledger.
 2. Set `RUNTIME_SWEEP_ARCHIVE` to a fresh directory under
    `~/work/customreport-archive/` and freeze `RUNTIME_SWEEP_SOURCE_SHA` to the
    clean source commit. The observer requires
@@ -110,9 +108,8 @@ WebKit, mobile, and production data are explicit exclusions, not covered cases.
 
 4. Run `pnpm test:runtime-sweep` once for each `RUNTIME_SWEEP_PROFILE` value
    (`minimal`, `demo`, `full`, and `stress`). Playwright starts the API and web
-   servers from the current source and runs
-   `runtime-prerequisites -> runtime-baseline -> runtime-matrix ->
-runtime-live-controls -> opencode-flash-driver` in one worker. Each run
+   servers from the current source and runs the four deterministic projects in
+   one worker. Each run
    writes immutable case projections under `cells/<profile>/<role>/`; do not
    reuse an archive from another source SHA.
 5. After all four profile runs finish, build the one ordered immutable baseline
@@ -127,24 +124,29 @@ runtime-live-controls -> opencode-flash-driver` in one worker. Each run
    `baseline/coverage-cells.jsonl` with exclusive creation. A missing,
    duplicate, stale, or already-published case fails closed.
 
-6. Resume an interrupted Driver directly only while the same current-source
-   server is live, with its exact URL explicitly supplied:
+6. Import a native Codex Luna Max report only with explicit paths and identity:
 
    ```bash
-   export RUNTIME_SWEEP_BASE_URL='http://127.0.0.1:3105'
-   pnpm test:runtime-driver
+   pnpm test:runtime-driver -- \
+     --report /archive/native-codex/lead.json \
+     --cells /archive/cells/minimal/lead \
+     --output /archive/imported/minimal-lead \
+     --source-sha "$(git rev-parse HEAD)" \
+     --profile minimal \
+     --role lead
    ```
 
-   The direct command rejects missing, non-loopback, non-live, or stale-source
-   targets. Never merge partial evidence from a different source SHA or seed
-   digest.
+   A report containing candidates also requires an explicit
+   `--verification /archive/native-codex/lead.verification.json` import. The
+   command rejects missing, malformed, stale, partial, or unverified reports;
+   see `e2e/sweep/driver/README.md` for the record shape.
 
 Stateful cells may publish, delete, revoke, or restore only on the dedicated
 disposable E2E database. Each is followed by reset/reseed and a database-oracle
 check before another cell begins.
 
-The driver result is rejected when any feedback channel is blind. OpenCode must
-actually call the Playwright MCP console and network tools; a declared clean
-result is not evidence. Deterministic Playwright captures browser `pageerror`
-events separately, while the native API log, Bugsink, and Loki probes bind
-server-side signals to the driver's route timeline.
+The native report is rejected when its canary or an applicable environment
+channel is blind. Deterministic Playwright captures browser `pageerror` events
+separately, while the native API log, Bugsink, and Loki probes bind server-side
+signals to the review timeline. Never treat an empty candidate list as a pass
+without live canary/environment evidence and complete deterministic cells.

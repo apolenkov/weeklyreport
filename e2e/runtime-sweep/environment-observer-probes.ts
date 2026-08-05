@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
-import type { OpenCodeDriverReport } from "./driver-results-contract.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 import type { EnvironmentChannelInput } from "./environment-feedback.ts";
 
 const PROBE_MESSAGE = "runtime-sweep-probe";
@@ -57,7 +57,7 @@ const timestamp = (value: string): number | null => {
 
 export async function probeBugsinkChannel(
   dsn: string | undefined,
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   fetcher: typeof fetch,
 ): Promise<EnvironmentChannelInput> {
   if (!dsn) return blind("bugsink");
@@ -102,7 +102,7 @@ export async function probeBugsinkChannel(
 
 export async function probeLokiChannel(
   config: LokiProbeConfig | undefined,
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   fetcher: typeof fetch,
 ): Promise<EnvironmentChannelInput> {
   if (!config?.pushUrl || !config.queryUrl) return blind("loki");

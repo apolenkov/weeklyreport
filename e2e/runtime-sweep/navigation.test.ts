@@ -96,6 +96,15 @@ describe("runtime navigation recovery", () => {
     expect(predicate?.("#main-content")).toBe(false);
   });
 
+  it("requires two consecutive ready checks after a route settles", async () => {
+    const waitForFunction = vi.fn(() => Promise.resolve());
+    const page = { waitForFunction } satisfies AppReadyPage;
+
+    await waitForAppReady(page);
+
+    expect(waitForFunction).toHaveBeenCalledTimes(2);
+  });
+
   it("navigates a relative route from the initial blank page", async () => {
     const page = {
       url: () => "about:blank",

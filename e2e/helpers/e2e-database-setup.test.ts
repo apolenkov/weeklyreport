@@ -16,7 +16,7 @@ describe("E2E database setup", () => {
   it("builds a deterministic reset then named-profile plan", () => {
     const repoRoot = path.join("workspace", "customreport");
 
-    expect(e2eSetupCommands(repoRoot, "stress")).toEqual([
+    expect(e2eSetupCommands(repoRoot, "stress", "schema+seed")).toEqual([
       {
         executable: "pnpm",
         args: ["exec", "prisma", "migrate", "reset", "--force"],
@@ -41,7 +41,24 @@ describe("E2E database setup", () => {
         databaseUrl: "postgresql://localhost/customreport_dev",
         profile: "full",
         repoRoot: "/unused",
+        mode: "schema+seed",
       }),
     ).toThrow(E2eDatabaseSetupError);
+  });
+
+  it("keeps a profile-only reseed data-only", () => {
+    const repoRoot = path.join("workspace", "customreport");
+
+    expect(e2eSetupCommands(repoRoot, "stress", "profile-reseed")).toEqual([
+      {
+        executable: process.execPath,
+        args: [
+          "--import",
+          "tsx",
+          path.join(repoRoot, "prisma/seed-profile.ts"),
+          "stress",
+        ],
+      },
+    ]);
   });
 });

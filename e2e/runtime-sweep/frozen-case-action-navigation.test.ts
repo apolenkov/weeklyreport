@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, it } from "vitest";
 
+import type { DomInventory } from "./dom-inventory.ts";
 import {
   type FrozenActionNavigationBoundary,
   settleFrozenActionNavigation,
@@ -20,11 +21,25 @@ describe("frozen action navigation promotion", () => {
         cancel: () => undefined,
       },
     };
+    const target = {
+      controlKey: "link:Status:1",
+      domOrderKey: "0001:link:Status:1",
+      order: 1,
+      role: "link",
+      accessibleName: "Status",
+      enabled: true,
+      disabled: false,
+      visible: true,
+      tagName: "a",
+      inputType: null,
+      href: "/status",
+    } satisfies DomInventory["controls"][number];
 
     await expect(
       settleFrozenActionNavigation(page, boundary, {
         status: "fail",
         controlKey: "link:Status:1",
+        target,
         reason: "The action produced no immediate DOM outcome",
       }),
     ).resolves.toEqual({
@@ -34,6 +49,7 @@ describe("frozen action navigation promotion", () => {
         kind: "url",
         detail: "Main-frame navigation observed after the action",
       },
+      target,
     });
   });
 });

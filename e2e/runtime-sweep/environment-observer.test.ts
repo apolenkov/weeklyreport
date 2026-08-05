@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { OpenCodeDriverReport } from "./driver-results-contract.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 import { observeEnvironmentFeedback } from "./environment-observer.ts";
 
 const SOURCE_SHA = "a".repeat(40);
@@ -25,8 +25,16 @@ const timeline = {
   ],
 } as const;
 
-const report = (candidates: OpenCodeDriverReport["candidates"] = []) =>
+const report = (candidates: AiDriverReport["candidates"] = []) =>
   ({
+    provider: "native-codex",
+    model: "gpt-5.6-luna",
+    reasoning: "max",
+    attemptId: "attempt-1",
+    transcriptEvidence: {
+      status: "captured",
+      evidenceRefs: ["transcript:attempt-1"],
+    },
     roleDriven: "lead",
     profile: "minimal",
     sourceSha: SOURCE_SHA,
@@ -65,13 +73,13 @@ const report = (candidates: OpenCodeDriverReport["candidates"] = []) =>
       },
     ],
     candidates,
-  }) satisfies OpenCodeDriverReport;
+  }) satisfies AiDriverReport;
 
 const candidate = (
-  kind: OpenCodeDriverReport["candidates"][number]["kind"],
+  kind: AiDriverReport["candidates"][number]["kind"],
   candidateId: string,
   cellId: string,
-): OpenCodeDriverReport["candidates"][number] => ({
+): AiDriverReport["candidates"][number] => ({
   candidateId,
   cellId,
   kind,

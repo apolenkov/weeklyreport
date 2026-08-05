@@ -71,6 +71,26 @@ const observedUnavailableSurface: RuntimeSurfaceObservation = {
   },
 };
 
+const frozenActionTarget = {
+  controlKey: actionControlKey,
+  domOrderKey: `0001:${actionControlKey}`,
+  order: 1,
+  role: "button",
+  accessibleName: "Edit",
+  enabled: true,
+  disabled: false,
+  visible: true,
+  tagName: "button",
+  inputType: null,
+  href: null,
+} as const;
+
+const exercised = (result: "pass" | "fail") => ({
+  kind: "exercised" as const,
+  result,
+  evidenceIds: ["live-surface-proof"],
+});
+
 const evidenceRefFor = (archivePath: string) =>
   evidenceRefSchema.parse({
     artifactId: "live-surface-proof",
@@ -140,3 +160,82 @@ test("accepts a missing action only when its live artifact proves the marker", a
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("retains an exercised frozen target when the post-action control is renamed", () => {
+  const controls = controlsForCase(
+    {
+      controls: [
+        {
+          ...frozenActionTarget,
+          controlKey: "button:Edit%20report:1",
+          accessibleName: "Edit report",
+          domOrderKey: "0001:button:Edit%20report:1",
+        },
+      ],
+      issues: [],
+    },
+    matrixCase,
+    exercised("pass"),
+    deniedSurface,
+    frozenActionTarget,
+  );
+
+  expect(controls).toContainEqual({
+    controlKey: actionControlKey,
+    cellId: matrixCase.caseId,
+    ariaRole: "button",
+    accessibleName: "Edit",
+    enabled: true,
+    order: 1,
+    actionResult: exercised("pass"),
+  });
+  expect(
+    controlIssues(matrixCase, controls, [evidenceRefFor("/action")]),
+  ).toEqual([]);
+});
+
+test("keeps a synthetic frozen target in canonical DOM order", () => {
+  const controls = controlsForCase(
+    {
+      controls: [
+        {
+          ...frozenActionTarget,
+          controlKey: "button:Later:1",
+          domOrderKey: "0003:button:Later:1",
+          accessibleName: "Later",
+          order: 3,
+        },
+      ],
+      issues: [],
+    },
+    matrixCase,
+    exercised("pass"),
+    deniedSurface,
+    frozenActionTarget,
+  );
+
+  expect(controls.map(({ controlKey }) => controlKey)).toEqual([
+    actionControlKey,
+    "button:Later:1",
+  ]);
+});
+
+test.each([
+  ["no pre-action target", exercised("pass"), undefined],
+  ["failed action", exercised("fail"), frozenActionTarget],
+] as const)(
+  "keeps a missing frozen target failing when %s",
+  (_reason, actionResult, target) => {
+    const controls = controlsForCase(
+      { controls: [], issues: [] },
+      matrixCase,
+      actionResult,
+      deniedSurface,
+      target,
+    );
+
+    expect(controlIssues(matrixCase, controls, [])).toContain(
+      "case-denied-product-action is missing frozen control button:Edit:1",
+    );
+  },
+);

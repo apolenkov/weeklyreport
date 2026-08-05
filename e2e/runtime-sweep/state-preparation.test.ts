@@ -93,7 +93,6 @@ function fakeDatabase(
 }
 
 afterEach(() => vi.unstubAllEnvs());
-
 describe("runtime state preparation policy", () => {
   it("maps an allowed boundary to the canonical actor for each route role", () => {
     // prettier-ignore
@@ -124,25 +123,11 @@ describe("runtime state preparation policy", () => {
     const second = buildStatePreparationPlan(request);
 
     expect(second).toEqual(first);
-    expect(first.resetCommands).toEqual([
-      {
-        executable: "pnpm",
-        args: ["exec", "prisma", "migrate", "reset", "--force"],
-      },
-      {
-        executable: process.execPath,
-        args: [
-          "--import",
-          "tsx",
-          "/workspace/customreport/prisma/seed-profile.ts",
-          "full",
-        ],
-      },
-    ]);
+    // prettier-ignore
+    expect(first.resetCommands).toEqual([{ executable: process.execPath, args: ["--import", "tsx", "/workspace/customreport/prisma/seed-profile.ts", "full"] }]);
     expect(first.digest).toHaveLength(64);
   });
 });
-
 describe("runtime state preparation rejection", () => {
   it("rejects a state when stable seed rows cannot supply it", () => {
     expect(() =>
@@ -242,6 +227,29 @@ describe("runtime state preparation mutations", () => {
       "read",
     ]);
     expect(result.observation.matches).toBe(true);
+  });
+
+  it("fails closed when profile reseeding fails before the transaction", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
+    vi.stubEnv("NODE_ENV", "test");
+    const events: string[] = [];
+    const database = fakeDatabase(
+      events,
+      snapshotFor(buildStatePreparationPlan(request)),
+    );
+    const reseed = vi.fn(() =>
+      Promise.reject(new Error("profile reseed failed")),
+    );
+
+    await expect(
+      prepareRuntimeState(
+        { ...request, databaseUrl: "postgresql://localhost/customreport_e2e" },
+        database,
+        reseed,
+      ),
+    ).rejects.toThrow("profile reseed failed");
+    expect(reseed).toHaveBeenCalledOnce();
+    expect(events).toEqual([]);
   });
 });
 

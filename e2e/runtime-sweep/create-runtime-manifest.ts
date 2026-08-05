@@ -126,7 +126,6 @@ const routeDeclarations = (catalogs: readonly Catalog[]) =>
 
 const toolVersions = () => ({
   node: process.version,
-  opencode: command("opencode", ["--version"]),
   playwright: command("pnpm", [
     "--filter",
     "@customreport/web",

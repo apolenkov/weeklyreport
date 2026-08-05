@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { expect, type Page, test } from "@playwright/test";
 
-import { setupE2eDatabase } from "../helpers/e2e-database-setup.ts";
+import { reseedE2eDatabase } from "../helpers/e2e-database-setup.ts";
 import { prisma } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import type { CampaignMatrixState } from "./campaign-matrix.ts";
@@ -88,7 +88,11 @@ test("preflight prepares and inventories every nominal source segment", async ({
       );
       const actors = actorsForProfile(source, state.profile);
       if (resetRequired) {
-        setupE2eDatabase({ databaseUrl, profile: state.profile, repoRoot });
+        reseedE2eDatabase({
+          databaseUrl,
+          profile: state.profile,
+          repoRoot,
+        });
         preparedGroup = group;
         if (profileSessions.created) {
           await profileSessions.cache.authenticate(actors);

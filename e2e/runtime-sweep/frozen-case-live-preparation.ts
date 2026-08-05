@@ -13,6 +13,7 @@ import {
 import {
   type PreparedRuntimeState,
   prepareRuntimeState,
+  type RuntimeStateResetter,
   type StatePreparationRequest,
 } from "./state-preparation.ts";
 
@@ -62,6 +63,7 @@ export const prepareCase = async (
   source: RuntimeMatrixSource,
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
+  resetAndSeed?: RuntimeStateResetter,
 ): Promise<
   Readonly<{ state: MatrixState; prepared: PreparedRuntimeState }>
 > => {
@@ -84,6 +86,7 @@ export const prepareCase = async (
   const prepared = await prepareRuntimeState(
     request,
     createPrismaRuntimeStateDatabase(prisma),
+    resetAndSeed,
   );
   if (!prepared.observation.matches)
     throw new Error(
