@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { buildEscalationsFromReadSections } from "../report-escalations";
-import type { PrismaReportSectionWithRelations } from "../report-sections/infrastructure/report-sections.include";
-import { mapPrismaToReportSection } from "../report-sections/infrastructure/report-sections.mappers";
+import {
+  buildEscalationsFromReadSections,
+  mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
+} from "../report-sections/index.js";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 
 function createRepository(findFirst: ReturnType<typeof vi.fn>) {

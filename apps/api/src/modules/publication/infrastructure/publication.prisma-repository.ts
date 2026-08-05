@@ -8,7 +8,7 @@ import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "../../published-report-snapshot";
+} from "../../report-sections/index.js";
 import type {
   AutoPublishResult,
   PublicationRepository,

@@ -8,7 +8,7 @@ import {
   makeProjectReadModel,
   makeReportSectionReadModel,
   makeSectionActivity,
-} from "../test-utils/report-section-fixtures.js";
+} from "../../../test-utils/report-section-fixtures.js";
 import {
   buildAssembledReportFromPrismaRow,
   buildPortfolioProductsFromSnapshotSections,

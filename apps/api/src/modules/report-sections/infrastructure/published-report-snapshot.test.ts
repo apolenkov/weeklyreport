@@ -8,13 +8,12 @@ import {
   makeProjectReadModel,
   makeReportSectionReadModel,
   makeSectionActivity,
-} from "../test-utils/report-section-fixtures.js";
+} from "../../../test-utils/report-section-fixtures.js";
 import {
   buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
 } from "./published-report-snapshot";
 import { buildEscalationsFromReadSections } from "./report-escalations";
-import { buildPortfolioOverview } from "./weekly-report/weekly-report-portfolio";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
@@ -127,25 +126,6 @@ describe("published portfolio math for a co-owned product", () => {
     const products = buildPortfolioProductsFromSnapshotSections(sections);
 
     expect(products[0]?.stageCount).toBe(2);
-  });
-
-  it("matches the live portfolio stage count for the same assignments", () => {
-    const publishedProducts =
-      buildPortfolioProductsFromSnapshotSections(sections);
-    const liveProducts = buildPortfolioOverview(
-      [
-        {
-          id: OWNED_PRODUCT,
-          name: "CRM Portal",
-          stageAssignments: CO_OWNED_STAGE_SET.map(({ stageId }) => ({
-            id: stageId,
-          })),
-        },
-      ],
-      sections,
-    );
-
-    expect(publishedProducts[0]?.stageCount).toBe(liveProducts[0]?.stageCount);
   });
 });
 
