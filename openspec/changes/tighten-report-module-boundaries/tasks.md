@@ -14,5 +14,5 @@
 
 ## 3. Verification and planning closeout
 
-- [ ] 3.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:integration`, `pnpm catalog:check`, and `openspec validate --all --strict`; record exact exits.
+- [x] 3.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm --filter @customreport/api test:integration`, `pnpm catalog:check`, and `openspec validate --all --strict`; record exact exits in `verification.md`.
 - [ ] 3.2 Run exact-final-SHA code-quality and architecture reviews, resolve all blockers, sync the `directory-architecture-standard` delta, and archive this change before freezing runtime-sweep evidence.
