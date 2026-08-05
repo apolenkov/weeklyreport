@@ -2,7 +2,7 @@ import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import express from "express";
-import type Redis from "ioredis";
+import Redis from "ioredis";
 import { describe, expect, it, vi } from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
@@ -27,7 +27,7 @@ async function resolveReqIp(headers: Record<string, string>): Promise<string> {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  const { authLimiter } = createRateLimits({
+  const { authLimiter } = await createRateLimits({
     logger: silentLogger,
     isTest: true,
   });
@@ -119,7 +119,7 @@ describe("rate-limit middleware — vitals limiter budget", () => {
     const app = express();
     app.disable("x-powered-by");
     app.set("trust proxy", 1);
-    const { vitalsLimiter } = createRateLimits({
+    const { vitalsLimiter } = await createRateLimits({
       logger: silentLogger,
       isTest: false,
       redis: createFakeRedisCall() as unknown as Redis,
@@ -165,7 +165,7 @@ describe("rate-limit middleware — client-logs limiter budget", () => {
     const app = express();
     app.disable("x-powered-by");
     app.set("trust proxy", 1);
-    const { clientLogsLimiter } = createRateLimits({
+    const { clientLogsLimiter } = await createRateLimits({
       logger: silentLogger,
       isTest: false,
       redis: createFakeRedisCall() as unknown as Redis,
@@ -204,21 +204,75 @@ describe("rate-limit middleware — client-logs limiter budget", () => {
 });
 
 describe("rate-limit middleware — fail-loud store policy", () => {
-  it("throws at creation when a non-test limiter has no Redis store", () => {
+  it("awaits readiness for an owned client but not an injected client", async () => {
+    const connect = vi.spyOn(Redis.prototype, "connect");
+    const readiness = Promise.withResolvers<void>();
+    connect.mockReturnValue(readiness.promise);
+    const callsBeforeFactory = connect.mock.calls.length;
+
+    try {
+      const creation = createRateLimits({
+        logger: silentLogger,
+        isTest: false,
+        env: { REDIS_HOST: "redis.internal", REDIS_PORT: 6379 },
+      });
+      const beforeReadiness = await Promise.race([
+        creation.then(() => "created" as const),
+        Promise.resolve("waiting" as const),
+      ]);
+      expect(beforeReadiness).toBe("waiting");
+
+      readiness.resolve();
+      await creation;
+      const callsAfterOwnedFactory = connect.mock.calls.length;
+      expect(callsAfterOwnedFactory).toBeGreaterThan(callsBeforeFactory);
+
+      await createRateLimits({
+        logger: silentLogger,
+        isTest: false,
+        redis: createFakeRedisCall() as unknown as Redis,
+      });
+      expect(connect).toHaveBeenCalledTimes(callsAfterOwnedFactory);
+    } finally {
+      connect.mockRestore();
+    }
+  });
+
+  it("propagates an owned-client connection failure", async () => {
+    const connect = vi
+      .spyOn(Redis.prototype, "connect")
+      .mockRejectedValue(new Error("redis unavailable"));
+
+    try {
+      await expect(
+        createRateLimits({
+          logger: silentLogger,
+          isTest: false,
+          env: { REDIS_HOST: "redis.internal", REDIS_PORT: 6379 },
+        }),
+      ).rejects.toThrow("redis unavailable");
+    } finally {
+      connect.mockRestore();
+    }
+  });
+
+  it("throws at creation when a non-test limiter has no Redis store", async () => {
     // An absent env (or injected client) in production must fail boot loud
     // instead of silently degrading to the per-process MemoryStore
     // express-rate-limit would otherwise default to.
-    expect(() =>
+    await expect(
       createRateLimits({ logger: silentLogger, isTest: false }),
-    ).toThrow(/Redis store is required outside test mode/);
+    ).rejects.toThrow(/Redis store is required outside test mode/);
   });
 
-  it("keeps MemoryStore in test mode without a Redis store", () => {
+  it("keeps MemoryStore in test mode without a Redis store", async () => {
     // Test mode is the sanctioned MemoryStore exception (E2E/unit suites run
     // without Redis); it must not trip the production fail-loud fence.
-    expect(() =>
-      createRateLimits({ logger: silentLogger, isTest: true }),
-    ).not.toThrow();
+    const limiters = await createRateLimits({
+      logger: silentLogger,
+      isTest: true,
+    });
+    expect(limiters.authLimiter).toBeTypeOf("function");
   });
 
   it("enforces the auth budget locally while Redis is unavailable", async () => {
@@ -232,7 +286,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
     const app = express();
     app.disable("x-powered-by");
     app.set("trust proxy", 1);
-    const { authLimiter } = createRateLimits({
+    const { authLimiter } = await createRateLimits({
       logger: silentLogger,
       isTest: false,
       redis: redis as unknown as Redis,
@@ -276,7 +330,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
     };
     const fake = createFakeRedisCall();
     rateLimitStoreErrorsTotal.reset();
-    createRateLimits({
+    await createRateLimits({
       logger,
       isTest: false,
       redis: fake as unknown as Redis,

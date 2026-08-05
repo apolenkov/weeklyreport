@@ -89,11 +89,11 @@ function get(port: number, path: string): Promise<number> {
 
 // Boots a fresh Express app whose /auth and /trpc handlers are guarded by a
 // Redis-backed limiter built from an owned client — one app per "process".
-function buildApp(): express.Express {
+async function buildApp(): Promise<express.Express> {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  const { authLimiter, trpcLimiter } = createRateLimits({
+  const { authLimiter, trpcLimiter } = await createRateLimits({
     logger: silentLogger,
     isTest: false,
     redis: ownedClient(),
@@ -109,7 +109,7 @@ function buildApp(): express.Express {
 
 describe("rate-limit Redis store — restart survival", () => {
   it("keeps the auth window across a fresh factory (simulated restart)", async () => {
-    const first = await listen(buildApp());
+    const first = await listen(await buildApp());
     const firstPort = (first.address() as AddressInfo).port;
     try {
       const statuses: number[] = [];
@@ -125,7 +125,7 @@ describe("rate-limit Redis store — restart survival", () => {
     // A second factory with a brand-new client stands in for a restarted
     // process. MemoryStore would reset the window to zero here; the Redis
     // store retains the count, so the very next request is still limited.
-    const second = await listen(buildApp());
+    const second = await listen(await buildApp());
     const secondPort = (second.address() as AddressInfo).port;
     try {
       expect(await get(secondPort, "/auth")).toBe(429);
@@ -137,7 +137,7 @@ describe("rate-limit Redis store — restart survival", () => {
 
 describe("rate-limit Redis store — per-bucket isolation", () => {
   it("does not let the auth bucket bleed into the trpc bucket", async () => {
-    const server = await listen(buildApp());
+    const server = await listen(await buildApp());
     const { port } = server.address() as AddressInfo;
     try {
       // Exhaust the auth bucket for this IP.
