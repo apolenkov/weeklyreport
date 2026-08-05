@@ -16,7 +16,7 @@ import {
   runAction,
 } from "./frozen-case-live-actions.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
-import { navigate } from "./navigation.ts";
+import { navigate, settleNavigation } from "./navigation.ts";
 import type { RuntimeMatrixSource } from "./runtime-matrix.ts";
 import { eventsFor, type RuntimeEvents } from "./runtime-matrix-evidence.ts";
 import type { PreparedRuntimeState } from "./state-preparation.ts";
@@ -49,6 +49,7 @@ export const initialNavigation = async (
   const listeners = eventsFor(page);
   try {
     const response = await page.goto(route);
+    await settleNavigation(page);
     return {
       responseStatus: response?.status() ?? null,
       events: {

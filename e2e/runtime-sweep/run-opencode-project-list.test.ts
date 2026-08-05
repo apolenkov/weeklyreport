@@ -29,6 +29,13 @@ test("orders the Flash Driver after deterministic runtime projects", async () =>
       ["runtime-matrix"],
       ["runtime-live-controls"],
     ]);
+    expect(configured.map(({ use }) => use?.viewport)).toEqual([
+      { width: 1440, height: 900 },
+      { width: 1440, height: 900 },
+      { width: 1440, height: 900 },
+      { width: 1440, height: 900 },
+      { width: 1440, height: 900 },
+    ]);
   } finally {
     delete process.env.E2E_DATABASE_URL;
     delete process.env.RUNTIME_SWEEP_ARCHIVE;

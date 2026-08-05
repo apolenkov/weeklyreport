@@ -281,6 +281,29 @@ describe("ProductAccordion — item status badge", () => {
   });
 });
 
+describe("ProductAccordion — header status tone", () => {
+  it("uses the readable on-track text token for the label and dot", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          status: "on-track",
+          statusLabel: "On track",
+          currentWeek: [makeItem({ id: "c1" })],
+        })}
+      />,
+    );
+
+    const statusLabel = screen.getByText("On track");
+    expect(statusLabel).toHaveStyle({
+      color: "var(--color-chip-on-track-text)",
+    });
+    expect(statusLabel.querySelector("span")).toHaveStyle({
+      background: "var(--color-chip-on-track-text)",
+    });
+  });
+});
+
 describe("ProductAccordion — owner initials on every row", () => {
   it("renders owner initials on item, risk, and decision rows", () => {
     render(
