@@ -9,6 +9,7 @@ test("orders the Flash Driver after deterministic runtime projects", async () =>
   const archive = await mkdtemp(path.join(os.tmpdir(), "runtime-driver-list-"));
   try {
     process.env.E2E_DATABASE_URL = "postgresql://localhost/customreport_e2e";
+    process.env.E2E_WEB_PORT = "3105";
     process.env.RUNTIME_SWEEP_ARCHIVE = archive;
     process.env.RUNTIME_SWEEP_PROFILE = "full";
     process.env.RUNTIME_SWEEP_SOURCE_SHA = SOURCE_SHA;
@@ -36,8 +37,23 @@ test("orders the Flash Driver after deterministic runtime projects", async () =>
       { width: 1440, height: 900 },
       { width: 1440, height: 900 },
     ]);
+    const webServers = config.webServer;
+    if (!Array.isArray(webServers)) throw new Error("web servers missing");
+    expect(webServers[1]?.cwd).toBe(
+      path.resolve(import.meta.dirname, "..", ".."),
+    );
+
+    const { default: preflightConfig } =
+      await import("./playwright.preflight.config.ts");
+    const preflightServers = preflightConfig.webServer;
+    if (!Array.isArray(preflightServers))
+      throw new Error("preflight web servers missing");
+    expect(preflightServers[1]?.cwd).toBe(
+      path.resolve(import.meta.dirname, "..", ".."),
+    );
   } finally {
     delete process.env.E2E_DATABASE_URL;
+    delete process.env.E2E_WEB_PORT;
     delete process.env.RUNTIME_SWEEP_ARCHIVE;
     delete process.env.RUNTIME_SWEEP_PROFILE;
     delete process.env.RUNTIME_SWEEP_SOURCE_SHA;

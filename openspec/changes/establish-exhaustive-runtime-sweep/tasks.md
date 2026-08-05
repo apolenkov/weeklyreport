@@ -117,9 +117,9 @@
       command, and `openspec validate --all --strict`; record exact exits/artifacts.
 - [ ] 8.2 Perform exact-final-SHA goal/constraint, code-quality, security, and
       independent manual visual QA reviews; resolve every blocking finding.
-- [ ] 8.3 Verify the final ledger, report projections, Mermaid rendering,
-      `HEAD = origin/main`, clean worktree, empty stash, no owned test/browser
-      processes, and the explicit owner waiver for server-side CI.
+- [ ] 8.3 Verify the final ledger, report projections, Mermaid rendering, the
+      final campaign branch at its remote tip, clean worktree, empty stash, no
+      owned test/browser processes, and the explicit owner waiver for server-side CI.
 - [ ] 8.4 Sync durable specs, archive the completed OpenSpec change, commit and
-      push the green final SHA to `main`, then publish `REPORT.md` and `HANDOFF.md`
-      with required remainder `0`.
+      push the green final SHA to the dedicated campaign branch without merging
+      `main`, then publish `REPORT.md` and `HANDOFF.md` with required remainder `0`.
