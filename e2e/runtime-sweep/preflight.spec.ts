@@ -7,14 +7,16 @@ import { prisma } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import type { CampaignMatrixState } from "./campaign-matrix.ts";
 import {
-  type PreflightRoute,
-  preflightSessionGroupKey,
   preflightStateGroupKey,
   runPlaywrightPreflight,
 } from "./playwright-preflight.ts";
 import { writePreflightArtifact } from "./preflight-artifact.ts";
+import { createPreflightSessionCache } from "./preflight-session.ts";
 import { createPrismaRuntimeStateDatabase } from "./prisma-state-database.ts";
-import { actorForPermission } from "./runtime-matrix.ts";
+import {
+  actorForPermission,
+  type RuntimeMatrixActor,
+} from "./runtime-matrix.ts";
 import { readSourceArtifact } from "./source-artifact.ts";
 import {
   prepareRuntimeState,
@@ -32,14 +34,11 @@ const preflightPath = path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT"));
 const databaseUrl = requiredEnv("E2E_DATABASE_URL");
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
-const loginForState = async (
+const loginForActor = async (
   page: Page,
-  state: CampaignMatrixState,
-  route: PreflightRoute,
+  actor: RuntimeMatrixActor,
 ): Promise<void> => {
-  const actor = actorForPermission(state.axes.permission, route.role);
   if (actor.role === null) {
-    await page.context().clearCookies();
     return;
   }
   await loginByCookie(page, {
@@ -55,12 +54,33 @@ test("preflight prepares and inventories every nominal source segment", async ({
   const source = await readSourceArtifact(sourcePath);
   const database = createPrismaRuntimeStateDatabase(prisma);
   let preparedGroup: string | undefined;
-  let sessionGroup: string | undefined;
+  const sessionsByProfile = new Map<
+    CampaignMatrixState["profile"],
+    ReturnType<typeof createPreflightSessionCache>
+  >();
   const artifact = await runPlaywrightPreflight({
     source,
     page,
     prepare: async (state, route) => {
       const group = preflightStateGroupKey(state, route);
+      let sessions = sessionsByProfile.get(state.profile);
+      if (sessions === undefined) {
+        setupE2eDatabase({
+          databaseUrl,
+          profile: state.profile,
+          repoRoot,
+        });
+        sessions = createPreflightSessionCache(page.context(), (actor) =>
+          loginForActor(page, actor),
+        );
+        await sessions.authenticate(
+          source.plan.states
+            .filter((candidate) => candidate.profile === state.profile)
+            .map(({ axes }) => actorForPermission(axes.permission, axes.role)),
+        );
+        sessionsByProfile.set(state.profile, sessions);
+        preparedGroup = group;
+      }
       const resetForGroup: RuntimeStateResetter = (setup) => {
         if (preparedGroup === group) return;
         setupE2eDatabase(setup);
@@ -89,11 +109,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
           `State oracle mismatch before preflight navigation for ${state.stateId}: ${JSON.stringify(prepared.observation.mismatches)}`,
         );
       }
-      const requiredSessionGroup = preflightSessionGroupKey(state, route);
-      if (sessionGroup !== requiredSessionGroup) {
-        await loginForState(page, state, route);
-        sessionGroup = requiredSessionGroup;
-      }
+      await sessions.use(actorForPermission(state.axes.permission, route.role));
     },
   });
   await writePreflightArtifact(preflightPath, artifact);
