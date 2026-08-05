@@ -1,6 +1,7 @@
 ## Verification
 
-Implementation SHA: `e04df69393277750ce40b898f39f3842d9223e4c`.
+Implementation and full-gate SHA: `e04df69393277750ce40b898f39f3842d9223e4c`.
+Boundary-proof and exact-review SHA: `e85d205f29523ea4da95ccf28badfcdfab56988e`.
 
 | Command                                                                                                                             | Exit | Result                                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ---: | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -13,6 +14,14 @@ Implementation SHA: `e04df69393277750ce40b898f39f3842d9223e4c`.
 | `pnpm catalog:check`                                                                                                                |    0 | 23 code routes, 2 exclusions, 21 catalog routes, no drift.                                                                              |
 | `openspec validate --all --strict`                                                                                                  |    0 | 162/162 items passed.                                                                                                                   |
 | `pnpm --filter @customreport/api exec vitest run src/infrastructure/module-public-api-boundary.test.ts --reporter=verbose`          |    0 | 3/3 planted public/internal boundary probes passed.                                                                                     |
+
+The boundary-proof SHA received an independent exact-HEAD architecture and
+code-quality review with verdict `APPROVE`: no semantic drift, facade leakage,
+or dependency cycle was found. The reviewer also reran the focused boundary
+suite (3/3), strict ESLint for the test, `git diff --check`, and strict OpenSpec
+validation successfully. The full-gate row set above belongs to the earlier
+implementation SHA; the final boundary-only commit is covered by these focused
+checks rather than misattributed to that SHA.
 
 Fail-fast configuration probes were retained as evidence rather than counted as
 product failures. An overloaded parallel `pnpm test` attempt exited 1 when the
