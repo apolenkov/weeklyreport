@@ -1,4 +1,7 @@
-import type { CampaignMatrixState } from "./campaign-matrix.ts";
+import type {
+  CampaignMatrixPlan,
+  CampaignMatrixState,
+} from "./campaign-matrix.ts";
 import { sha256Hex, stableId, stableSerialize } from "./ids.ts";
 import { MATRIX_AXIS_NAMES } from "./matrix.ts";
 import {
@@ -72,6 +75,20 @@ const omissionState = (
   };
 };
 
+const planInapplicableState = (
+  input: MatrixFinalizationInput,
+  entry: CampaignMatrixPlan["inapplicable"][number],
+): CampaignMatrixState => ({
+  profile: entry.profile,
+  axes: entry.axes,
+  stateId: stableId("matrix-plan-inapplicable-state", {
+    sourceSha: input.sourceSha,
+    profile: entry.profile,
+    axes: entry.axes,
+  }),
+  pairwiseDigest: sha256Hex(entry.axes),
+});
+
 const omittedRows = (
   input: MatrixFinalizationInput,
   cases: readonly MatrixExecutableCase[],
@@ -91,16 +108,10 @@ const planRows = (
   input: MatrixFinalizationInput,
 ): readonly MatrixInapplicableCase[] =>
   input.plan.inapplicable.map((entry) =>
-    inapplicable(
-      input,
-      omissionState(
-        input,
-        "profileCapability",
-        entry.axes.profileCapability,
-        entry.profile,
-      ),
-      { constraintId: entry.constraintId, reason: entry.reason },
-    ),
+    inapplicable(input, planInapplicableState(input, entry), {
+      constraintId: entry.constraintId,
+      reason: entry.reason,
+    }),
   );
 
 const rowsFor = (

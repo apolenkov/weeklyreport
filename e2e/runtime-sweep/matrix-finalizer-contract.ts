@@ -23,8 +23,8 @@ import {
 import { sha256Hex, stableId } from "./ids.ts";
 import { validateLegalMatrixRow } from "./matrix-execution-policy.ts";
 
-export const DEFAULT_MAX_CONTROLS = 128;
-export const DEFAULT_MAX_CASES = 10_000;
+export const DEFAULT_MAX_CONTROLS = 1024;
+export const DEFAULT_MAX_CASES = 100_000;
 export const DESKTOP_WIDTH = 1440;
 export const DESKTOP_HEIGHT = 900;
 
