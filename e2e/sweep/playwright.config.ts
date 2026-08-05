@@ -25,6 +25,9 @@ if (!E2E_DATABASE_URL) {
 const databaseTarget = (databaseUrl: string): string => {
   try {
     const parsed = new URL(databaseUrl);
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      throw new TypeError("Unsupported database protocol");
+    }
     const port = parsed.port || "5432";
     return `${parsed.hostname.toLocaleLowerCase()}:${port}${parsed.pathname}`;
   } catch {
@@ -33,9 +36,10 @@ const databaseTarget = (databaseUrl: string): string => {
 };
 
 const developmentDatabaseUrl = process.env.DATABASE_URL;
+const e2eDatabaseTarget = databaseTarget(E2E_DATABASE_URL);
 if (
   developmentDatabaseUrl &&
-  databaseTarget(E2E_DATABASE_URL) === databaseTarget(developmentDatabaseUrl)
+  e2eDatabaseTarget === databaseTarget(developmentDatabaseUrl)
 ) {
   throw new Error(
     "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
