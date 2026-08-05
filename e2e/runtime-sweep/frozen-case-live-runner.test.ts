@@ -13,6 +13,26 @@ import type { RuntimeMatrixSource } from "./runtime-matrix.ts";
 
 const harness = vi.hoisted(() => ({
   inventories: [] as DomInventory[],
+  prepareCase: vi.fn(
+    (
+      _source: unknown,
+      _matrixCase: unknown,
+      _runtime: unknown,
+      _resetter?: () => unknown,
+    ) =>
+      Promise.resolve({
+        prepared: {
+          plan: {
+            surface: {
+              productContent: "available",
+              productActions: "exercise",
+              productActionsReason: null,
+              shell: "required",
+            },
+          },
+        },
+      }),
+  ),
 }));
 
 vi.mock("./dom-inventory.ts", () => ({
@@ -58,20 +78,7 @@ vi.mock("./frozen-case-live-actions.ts", () => ({
     }));
   }),
   loginForCase: vi.fn(() => Promise.resolve()),
-  prepareCase: vi.fn(() =>
-    Promise.resolve({
-      prepared: {
-        plan: {
-          surface: {
-            productContent: "available",
-            productActions: "exercise",
-            productActionsReason: null,
-            shell: "required",
-          },
-        },
-      },
-    }),
-  ),
+  prepareCase: harness.prepareCase,
   stateForCase: vi.fn(() => ({})),
 }));
 
@@ -179,5 +186,8 @@ describe("frozen case live runner", () => {
     expect(
       cells[0]?.controls.map(({ accessibleName }) => accessibleName),
     ).toEqual(["After"]);
+    const resetter = harness.prepareCase.mock.calls[0]?.[3];
+    expect(resetter).toEqual(expect.any(Function));
+    if (typeof resetter === "function") expect(resetter()).toBeUndefined();
   });
 });

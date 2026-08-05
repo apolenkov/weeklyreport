@@ -38,6 +38,8 @@ const persistFrozenCaseCell = async (
   await writeCell(runtime.archiveRoot, cell);
 };
 
+const reuseProfileBaseline = (): void => undefined;
+
 const captureFrozenCase = async (
   page: Page,
   source: RuntimeMatrixSource,
@@ -137,7 +139,12 @@ const runFrozenCase = async (
     await persistFrozenCaseCell(runtime, specialized.cell);
     return specialized.cell;
   }
-  const { prepared } = await prepareCase(source, matrixCase, runtime);
+  const { prepared } = await prepareCase(
+    source,
+    matrixCase,
+    runtime,
+    reuseProfileBaseline,
+  );
   await loginForCase(page, matrixCase);
   const route = routeForState(source, stateForCase(matrixCase));
   const navigation = await initialNavigation(page, route.resolvedRoute);
