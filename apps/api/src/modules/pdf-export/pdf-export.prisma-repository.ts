@@ -10,8 +10,8 @@ import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { canReadReport } from "../../lib/report-read-access.js";
-import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
+  computePortfolioOverviewFromReadSections,
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/index.js";

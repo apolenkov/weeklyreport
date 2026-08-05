@@ -26,28 +26,11 @@ const apiModules = [
   "weekly-report",
 ] as const;
 
-// Loose cross-module files that still live at modules/ ROOT rather than inside a
-// module — published-report-snapshot.ts and report-escalations.ts. Until they
-// relocate into an owning module (a later slice), the modules that import them
-// keep a path exception here, keyed by CONSUMING module. This is the ONLY
-// path-based cross-module exception left: every module→module edge now goes
-// through a sibling index.ts facade barrel (generated below), and any deep
-// internal path errors. (published-report-snapshot.ts itself imports
-// report-sections, but it is not under modules/M/** so no zone targets it.)
-const apiCrossModuleLooseFiles: Record<string, readonly string[]> = {
-  archive: ["published-report-snapshot.ts"],
-  "pdf-export": ["published-report-snapshot.ts"],
-  period: ["published-report-snapshot.ts"],
-  publication: ["published-report-snapshot.ts"],
-  "weekly-report": ["published-report-snapshot.ts", "report-escalations.ts"],
-};
-
 // One zone per module: files under modules/M may import from modules/ ONLY within
-// their own module (except: [M]), through a sibling's index.ts facade barrel, or
-// via a still-loose root file the module already depends on. Any other sibling
-// internal path errors. The barrel allowlist is GENERATED (every sibling's
-// index.ts), so a new module→module edge is legal the moment it targets the
-// facade — no per-edge grandfathering to maintain.
+// their own module (except: [M]), or through a sibling's index.ts facade barrel.
+// Any other sibling internal path errors. The barrel allowlist is GENERATED
+// (every sibling's index.ts), so a new module→module edge is legal the moment it
+// targets the facade — no per-edge grandfathering to maintain.
 const apiCrossModuleZones = apiModules.map((moduleName) => ({
   target: `${apiModulesDir}/${moduleName}`,
   from: apiModulesDir,
@@ -56,7 +39,6 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
     ...apiModules
       .filter((sibling) => sibling !== moduleName)
       .map((sibling) => `${sibling}/index.ts`),
-    ...(apiCrossModuleLooseFiles[moduleName] ?? []),
   ],
   message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture).`,
 }));

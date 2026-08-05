@@ -6,11 +6,11 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import {
+  buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
   filterSnapshotSections,
-} from "../published-report-snapshot.js";
-import { buildEscalationsFromReadSections } from "../report-escalations.js";
-import type { reportSectionFullInclude } from "../report-sections/index.js";
+  type reportSectionFullInclude,
+} from "../report-sections/index.js";
 import { computeCrossGroupSignalFromSnapshotProjects } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepositoryResult,
