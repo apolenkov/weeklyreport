@@ -1464,7 +1464,7 @@
       "implementationCommit": "f6bce9702334f56163797c9323532227525de237"
     },
     {
-      "path": "prisma/reset-hard.ts",
+      "path": "prisma/operations/reset-hard.ts",
       "line": 195,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",
@@ -1477,7 +1477,7 @@
       "implementationCommit": "49238ad1"
     },
     {
-      "path": "prisma/reset-hard.ts",
+      "path": "prisma/operations/reset-hard.ts",
       "line": 213,
       "scope": "next-line",
       "rule": "sonarjs/no-os-command-from-path",

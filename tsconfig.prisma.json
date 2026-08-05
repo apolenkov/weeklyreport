@@ -8,7 +8,7 @@
     // them: `prisma/` is not a workspace package and the repo root does not
     // depend on @customreport/*, so a mapping here would typecheck an import
     // that fails at runtime under tsx. The role-type spec names this isolation
-    // as the reason `prisma/seed-constants.ts` may mirror shared literals.
+    // as the reason `prisma/seeds/support/seed-constants.ts` may mirror shared literals.
     "paths": {}
   },
   "include": ["prisma/**/*.ts"]

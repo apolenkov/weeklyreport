@@ -71,7 +71,7 @@ context: |
     `Error('Not implemented — see TODO(<ref>)')`
   - Non-prod `POSTGRES_DB` and the database name inside `DATABASE_URL` must
     suffix with `_uat`, `_dev`, or `_test` when the host is not truly local;
-    `prisma/_destructive-guard.ts` parses `DATABASE_URL`
+    `prisma/guards/_destructive-guard.ts` parses `DATABASE_URL`
   - Prisma migrations are append-only; review destructive migrations
     against the guard
   - In MVP phase schema and interfaces can change freely (`migrate reset`
@@ -136,4 +136,4 @@ rules:
       role-coverage-gate; change touches the Report write path -> link
       period-dual-state;
       change adds a deferred UI element -> link deferred-feature-pattern;
-      change touches prisma/_destructive-guard -> link destructive-db-guard."
+      change touches prisma/guards/_destructive-guard -> link destructive-db-guard."

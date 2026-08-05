@@ -4,7 +4,7 @@ import { readdir } from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SEED_PROFILE_MANIFESTS } from "../../prisma/seed-profile-contract.ts";
+import { SEED_PROFILE_MANIFESTS } from "../../prisma/seeds/profiles/seed-profile-contract.ts";
 import { type Catalog, parseCatalog } from "../sweep/catalog-parser.ts";
 import {
   type Action,

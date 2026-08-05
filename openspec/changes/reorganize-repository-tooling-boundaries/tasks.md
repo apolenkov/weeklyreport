@@ -41,7 +41,7 @@
 
 ## 6. Runtime-Sweep Harness Tree
 
-- [ ] 6.1 Finalize the exact 180-file runtime ownership/path map and freeze serialized artifact fixtures before moves.
+- [x] 6.1 Finalize the exact 180-file runtime ownership/path map and freeze serialized artifact fixtures before moves.
 - [ ] 6.2 Move source/manifest/matrix compilation and validation behind minimal concern entrypoints.
 - [ ] 6.3 Move preflight and replay preparation/execution code while preserving one-profile seed reuse and recovery semantics.
 - [ ] 6.4 Move evidence capture and exactly-once cell/ledger writers without changing schemas, digests, or external archive paths.
@@ -51,11 +51,11 @@
 
 ## 7. Prisma Tree
 
-- [ ] 7.1 Freeze the 114-file Prisma ownership/path map and retain `schema.prisma`, migrations, and root `seed.ts` as stable entrypoints.
-- [ ] 7.2 Move common seed support and profile contract/runner/validator code; update Prisma/e2e consumers and typecheck paths.
+- [x] 7.1 Freeze the 114-file Prisma ownership/path map and retain `schema.prisma`, migrations, and root `seed.ts` as stable entrypoints.
+- [x] 7.2 Move common seed support and profile contract/runner/validator code; update Prisma/e2e consumers and typecheck paths.
 - [ ] 7.3 Move minimal/simple seed families with their tests and run both profiles against the disposable E2E database.
 - [ ] 7.4 Move demo/advanced/stress seed families with their tests and prove deterministic identities/reference time.
-- [ ] 7.5 Move destructive guards and reset/wipe/backfill operations; prove production-target rejection and Redis cleanup behavior.
+- [x] 7.5 Move destructive guards and reset/wipe/backfill operations; prove production-target rejection and Redis cleanup behavior.
 - [ ] 7.6 Run Prisma typecheck, seed profile contracts/journeys, destructive target probes, reset/seed for all profiles, and stale-path search.
 
 ## 8. Repository-Wide Verification and Runtime Restart

@@ -452,33 +452,41 @@
       "target": "e2e/runtime-sweep/$1"
     },
     {
+      "id": "runtime-source",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-source(?:\\.test)?|source-artifact)\\.ts)$",
+      "concern": "source-contracts",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/source/$1"
+    },
+    {
+      "id": "runtime-manifest",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/(?:manifest/)?((?:finalize-runtime-manifest|manifest(?:-fixture|-normalization|\\.test)?)\\.ts)$",
+      "concern": "manifest",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/manifest/$1"
+    },
+    {
       "id": "runtime-matrix",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:campaign-|matrix(?:[.-])|runtime-matrix|specialized-)[^/]+)$",
+      "pattern": "^e2e/runtime-sweep/(?:matrix/)?((?:campaign-|matrix(?:[.-])|runtime-matrix|specialized-)[^/]+)$",
       "concern": "matrix",
       "role": "implementation",
       "target": "e2e/runtime-sweep/matrix/$1"
     },
     {
-      "id": "runtime-manifest",
-      "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:manifest|create-runtime-manifest|finalize-runtime-manifest|source-artifact|contracts(?:-types)?)[^/]*)$",
-      "concern": "manifest-and-source",
-      "role": "implementation",
-      "target": "e2e/runtime-sweep/manifest/$1"
-    },
-    {
       "id": "runtime-preflight",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
-      "concern": "preflight-and-environment",
+      "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
+      "concern": "preflight",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {
       "id": "runtime-concurrency",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:concurrency(?:[-.])[^/]+))$",
+      "pattern": "^e2e/runtime-sweep/(?:scenarios/concurrency/)?((?:concurrency(?:[-.])[^/]+))$",
       "concern": "concurrency",
       "role": "implementation",
       "target": "e2e/runtime-sweep/scenarios/concurrency/$1"
@@ -486,15 +494,23 @@
     {
       "id": "runtime-faults",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:fault-|infrastructure-(?:fault-|runner)|infrastructure-runner)[^/]*)$",
-      "concern": "faults-and-infrastructure",
+      "pattern": "^e2e/runtime-sweep/(?:scenarios/faults/)?((?:fault-)[^/]*)$",
+      "concern": "faults",
       "role": "implementation",
       "target": "e2e/runtime-sweep/scenarios/faults/$1"
     },
     {
+      "id": "runtime-infrastructure",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/(?:scenarios/infrastructure/)?((?:infrastructure-)[^/]*)$",
+      "concern": "infrastructure",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/scenarios/infrastructure/$1"
+    },
+    {
       "id": "runtime-driver",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:driver-|import-ai-driver-)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:driver/)?((?:driver-|import-ai-driver-)[^/]*)$",
       "concern": "driver-import",
       "role": "implementation",
       "target": "e2e/runtime-sweep/driver/$1"
@@ -502,7 +518,7 @@
     {
       "id": "runtime-evidence",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:evidence-|failure-summary|ledger|runtime-event-summary|finalize-runtime-coverage)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:evidence/)?((?:evidence-|failure-summary|ledger|runtime-event-summary|finalize-runtime-coverage)[^/]*)$",
       "concern": "evidence",
       "role": "implementation",
       "target": "e2e/runtime-sweep/evidence/$1"
@@ -510,7 +526,7 @@
     {
       "id": "runtime-evidence-capture",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/evidence-capture/(.+)$",
+      "pattern": "^e2e/runtime-sweep/(?:evidence-capture|evidence/capture)/(.+)$",
       "concern": "evidence",
       "role": "implementation",
       "target": "e2e/runtime-sweep/evidence/capture/$1"
@@ -518,7 +534,7 @@
     {
       "id": "runtime-live-control",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:frozen-case-|live-control-|control-|action-navigation|navigation|dom-inventory|axe-context|keyboard-|runtime-sweep|z-runtime-sweep)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:replay/)?((?:frozen-case-|live-control-|control-|action-navigation|navigation|dom-inventory|axe-context|keyboard-|runtime-sweep|z-runtime-sweep)[^/]*)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/$1"
@@ -526,10 +542,10 @@
     {
       "id": "runtime-state-support",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
-      "concern": "replay-support",
+      "pattern": "^e2e/runtime-sweep/(?:support/)?((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
+      "concern": "support",
       "role": "implementation",
-      "target": "e2e/runtime-sweep/replay/support/$1"
+      "target": "e2e/runtime-sweep/support/$1"
     },
     {
       "id": "prisma-stable-entrypoints",
@@ -550,7 +566,7 @@
     {
       "id": "prisma-guards",
       "scope": "prisma",
-      "pattern": "^prisma/(_(?:destructive-guard|entrypoint|mock-redis-server|require-env)(?:\\.[^/]+)?)$",
+      "pattern": "^prisma/(?:guards/)?(_(?:destructive-guard|entrypoint|mock-redis-server|require-env)(?:\\.[^/]+)?)$",
       "concern": "destructive-guards",
       "role": "implementation",
       "target": "prisma/guards/$1"
@@ -558,7 +574,7 @@
     {
       "id": "prisma-advanced-seed",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-advanced[^/]*)$",
+      "pattern": "^prisma/(?:seeds/advanced/)?(seed-advanced[^/]*)$",
       "concern": "advanced-seed",
       "role": "implementation",
       "target": "prisma/seeds/advanced/$1"
@@ -566,7 +582,7 @@
     {
       "id": "prisma-demo-seed",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-demo[^/]*)$",
+      "pattern": "^prisma/(?:seeds/demo/)?(seed-demo[^/]*)$",
       "concern": "demo-seed",
       "role": "implementation",
       "target": "prisma/seeds/demo/$1"
@@ -574,7 +590,7 @@
     {
       "id": "prisma-simple-seed",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-simple[^/]*)$",
+      "pattern": "^prisma/(?:seeds/simple/)?(seed-simple[^/]*)$",
       "concern": "simple-seed",
       "role": "implementation",
       "target": "prisma/seeds/simple/$1"
@@ -582,7 +598,7 @@
     {
       "id": "prisma-stress-seed",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-stress[^/]*)$",
+      "pattern": "^prisma/(?:seeds/stress/)?(seed-stress[^/]*)$",
       "concern": "stress-seed",
       "role": "implementation",
       "target": "prisma/seeds/stress/$1"
@@ -590,7 +606,7 @@
     {
       "id": "prisma-profile-seed",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-profile[^/]*)$",
+      "pattern": "^prisma/(?:seeds/profiles/)?(seed-profile[^/]*)$",
       "concern": "profile-seed",
       "role": "implementation",
       "target": "prisma/seeds/profiles/$1"
@@ -598,15 +614,23 @@
     {
       "id": "prisma-seed-support",
       "scope": "prisma",
-      "pattern": "^prisma/(seed-(?:catalog|constants|coverage-check|entrypoint-env|identifiers|org|people|periods|reference-date|minimal)[^/]*)$",
+      "pattern": "^prisma/(?:seeds/support/)?(seed-(?:catalog|constants|coverage-check|entrypoint-env|identifiers|org|people|periods|reference-date)[^/]*)$",
       "concern": "seed-support",
       "role": "implementation",
       "target": "prisma/seeds/support/$1"
     },
     {
+      "id": "prisma-minimal-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(?:seeds/minimal/)?(seed-minimal\\.ts)$",
+      "concern": "minimal-seed",
+      "role": "entrypoint",
+      "target": "prisma/seeds/minimal/$1"
+    },
+    {
       "id": "prisma-operations",
       "scope": "prisma",
-      "pattern": "^prisma/((?:backfill-policy-rules|reset-hard|wipe-manual-uat)[^/]*)$",
+      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|reset-hard|wipe-manual-uat)[^/]*)$",
       "concern": "database-operations",
       "role": "entrypoint",
       "target": "prisma/operations/$1"

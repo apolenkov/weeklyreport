@@ -18,7 +18,7 @@ export default defineConfig({
   },
   test: {
     include: [
-      "prisma/*.test.ts",
+      "prisma/**/*.test.ts",
       "e2e/integration/*.test.ts",
       "e2e/runtime-sweep/*.test.ts",
       "e2e/sweep/*.test.ts",

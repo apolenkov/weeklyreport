@@ -153,7 +153,7 @@ migrations. It never resets.
 Until the first production point the databases are disposable and the schema
 may be reshaped in place (`CLAUDE.md`, MVP section). **After** that point
 migrations become append-only: forward-only, never edited once shipped.
-`prisma/_destructive-guard.ts` blocks destructive Prisma commands against a
+`prisma/guards/_destructive-guard.ts` blocks destructive Prisma commands against a
 production database unless `ALLOW_PROD_DESTRUCTIVE` is set — leave it unset.
 
 ## Rollback

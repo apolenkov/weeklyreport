@@ -1,11 +1,11 @@
 import type { ReportStatus } from "@customreport/shared";
 
-import { assertNonProdDestructiveTarget } from "../../prisma/_destructive-guard.js";
-import * as seed from "../../prisma/seed-constants.js";
+import { assertNonProdDestructiveTarget } from "../../prisma/guards/_destructive-guard.js";
 import {
   SEED_PROFILE_MANIFESTS,
   type SeedCapability,
-} from "../../prisma/seed-profile-contract.js";
+} from "../../prisma/seeds/profiles/seed-profile-contract.js";
+import * as seed from "../../prisma/seeds/support/seed-constants.js";
 import {
   type E2eDatabaseSetup,
   type E2eSetupCommand,

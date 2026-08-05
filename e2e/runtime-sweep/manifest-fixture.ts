@@ -2,7 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-import { ACTIVE_REPORT_ID } from "../../prisma/seed-constants.ts";
+import { ACTIVE_REPORT_ID } from "../../prisma/seeds/support/seed-constants.ts";
 import {
   type CampaignManifestInput,
   type ManifestCommandRunner,

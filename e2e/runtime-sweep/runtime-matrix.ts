@@ -6,8 +6,11 @@ import {
   LEAD_1_ID,
   LEAD_MARIA_ID,
   VIEWER_USER_ID,
-} from "../../prisma/seed-constants.ts";
-import { SEED_USERS, type SeedUser } from "../../prisma/seed-people.ts";
+} from "../../prisma/seeds/support/seed-constants.ts";
+import {
+  SEED_USERS,
+  type SeedUser,
+} from "../../prisma/seeds/support/seed-people.ts";
 import { type CampaignMatrixState } from "./campaign-matrix.ts";
 import {
   type CoverageCell,

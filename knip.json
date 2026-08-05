@@ -6,7 +6,7 @@
     ".": {
       "entry": [
         "eslint-config/*.ts",
-        "prisma/*.ts",
+        "prisma/**/*.ts",
         "e2e/playwright.integration.config.ts",
         "e2e/playwright.seed-profiles.config.ts",
         "e2e/playwright.prodbuild.config.ts",

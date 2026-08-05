@@ -5,7 +5,7 @@ import {
   type Response,
 } from "@playwright/test";
 
-import { ACTIVE_REPORT_ID } from "../../prisma/seed-constants.ts";
+import { ACTIVE_REPORT_ID } from "../../prisma/seeds/support/seed-constants.ts";
 import { prisma } from "../integration/helpers/db.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth.ts";
 import type { FaultDeclaration } from "./fault-injection.ts";

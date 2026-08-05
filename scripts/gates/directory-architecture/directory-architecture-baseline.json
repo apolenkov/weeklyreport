@@ -13,8 +13,8 @@
       "trackedFiles": 180
     },
     "prisma": {
-      "gitTree": "6b853d68cee272d1075890c5be9abb17d475ad4a",
-      "pathDigest": "dfb06d93a3ecef1972aa2094054843427bdd241082d007a64873b22628c4d541",
+      "gitTree": "7030a120d8c90dc14470995fc9407d8b4ad77517",
+      "pathDigest": "b914d4b7a6f140235e6962042313470868353122ef5d248b1893d4aa611d7704",
       "trackedFiles": 114
     },
     "apps/web/src/shared/ui": {
@@ -70,8 +70,7 @@
     "apps/web/src/features/slides/ui": 37,
     "apps/web/src/lib": 65,
     "apps/web/src/shared/ui": 45,
-    "e2e/runtime-sweep": 177,
-    "prisma": 112
+    "e2e/runtime-sweep": 177
   },
   "boundedFlatExceptions": [
     {
@@ -157,11 +156,6 @@
     {
       "directory": "e2e/runtime-sweep",
       "baseline": 177,
-      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "prisma",
-      "baseline": 112,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     }
   ]
