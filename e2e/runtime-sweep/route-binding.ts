@@ -108,8 +108,10 @@ function targetForRoute(
 
 function capabilityForTarget(
   target: RouteBindingTarget,
+  role: Role,
 ): SeedCapability | null {
-  if (target === "active") return "editable-active-report";
+  if (target === "active")
+    return role === "viewer" ? "submission-contrast" : "editable-active-report";
   if (target === "published") return "published-period";
   return null;
 }
@@ -194,7 +196,7 @@ export function bindRouteDeclaration(
     declaration.catalogRoute,
     allowsCurrentLive,
   );
-  const requiredCapability = capabilityForTarget(target);
+  const requiredCapability = capabilityForTarget(target, declaration.role);
   const minimumProfile = minimumProfileFor(
     requiredCapability,
     profileCapabilities,

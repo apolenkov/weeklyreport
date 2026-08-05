@@ -27,6 +27,12 @@ export interface ProfileSessionCacheRegistry<Profile extends string> {
   readonly get: (profile: Profile) => Promise<ProfileSessionCacheResult>;
 }
 
+export const preflightGroupNeedsReset = (
+  preparedGroup: string | undefined,
+  nextGroup: string,
+  sessionsCreated: boolean,
+): boolean => sessionsCreated || preparedGroup !== nextGroup;
+
 export class PreflightSessionError extends Error {
   override readonly name = "PreflightSessionError";
 }

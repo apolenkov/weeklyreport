@@ -54,6 +54,7 @@ const DEADLINE_HOUR_UTC = 15;
 const LAST_HOUR_OF_DAY = 23;
 const LAST_MINUTE_OF_HOUR = 59;
 const LAST_SECOND_OF_MINUTE = 59;
+const LAST_MILLISECOND_OF_SECOND = 999;
 
 function utcMidnight(d: Date): Date {
   return new Date(
@@ -103,6 +104,7 @@ function endOfDay(d: Date): Date {
       LAST_HOUR_OF_DAY,
       LAST_MINUTE_OF_HOUR,
       LAST_SECOND_OF_MINUTE,
+      LAST_MILLISECOND_OF_SECOND,
     ),
   );
 }

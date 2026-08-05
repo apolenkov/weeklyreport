@@ -58,7 +58,7 @@ describe("runtime route binding", () => {
     );
   });
 
-  it("allows a viewer current-live route to bind the active report only with an oracle marker", () => {
+  it("binds viewer live status only to profiles with visible submitted content", () => {
     const catalog = route(
       "/reports/[reportId]",
       "viewer",
@@ -67,13 +67,21 @@ describe("runtime route binding", () => {
     const binding = bindCatalogRoute(catalog, "viewer");
 
     expect(binding.target).toBe("active");
-    expect(binding.minimumProfile).toBe("minimal");
+    expect(binding.requiredCapability).toBe("submission-contrast");
+    expect(binding.minimumProfile).toBe("demo");
     expect(binding.resolvedRoute).toBe(`/reports/${ACTIVE_REPORT_ID}`);
     expect(binding.bindings[0]).toMatchObject({
-      status: "assigned",
+      status: "not-applicable",
       profile: "minimal",
       target: "active",
     });
+    expect(binding.bindings.slice(1)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "assigned", profile: "demo" }),
+        expect.objectContaining({ status: "assigned", profile: "full" }),
+        expect.objectContaining({ status: "assigned", profile: "stress" }),
+      ]),
+    );
   });
 
   it("keeps a viewer published route on the published id when the oracle is silent", () => {
