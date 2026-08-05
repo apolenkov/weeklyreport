@@ -8,4 +8,4 @@
 
 - [x] 2.1 Run focused rate-limit unit and Redis integration tests, API TypeScript, and strict ESLint.
 - [x] 2.2 Restart the source API against minimal Postgres/Redis; prove readiness, zero false startup errors, and a shared `rl:*` counter.
-- [ ] 2.3 Run an exact-change review, resolve blockers, sync the new spec, and archive the change before final runtime evidence.
+- [x] 2.3 Run an exact-change review, resolve blockers, sync the new spec, and archive the change before final runtime evidence.
