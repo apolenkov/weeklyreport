@@ -1,7 +1,7 @@
 import type { CarryOverExecution } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { baseRow } from "../report-sections/infrastructure/__tests__/report-sections-prisma-harness";
+import { baseRow } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 
 const sourceReportId = "22222222-2222-4222-8222-222222222222";

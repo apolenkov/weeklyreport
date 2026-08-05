@@ -6,7 +6,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 // Real-Postgres coverage for the publish compare-and-set: two concurrent

@@ -5,6 +5,10 @@ import test from "node:test";
 
 import { REPO_ROOT, resolveRepoPath } from "../../shared/repo-root.ts";
 import {
+  findApiTestBoundaryViolations,
+  formatApiTestBoundaryViolation,
+} from "./api-test-boundary.ts";
+import {
   type DensityBaseline,
   parseDensityBaseline,
   validateBaselineRoots,
@@ -140,6 +144,13 @@ const densityBaseline = (
     ),
     boundedFlatExceptions,
   });
+
+const virtualApiTestSource = (
+  entries: readonly (readonly [string, string])[],
+) => {
+  const sources = new Map(entries);
+  return (file: string): string => sources.get(file) ?? "";
+};
 
 void test("the checked catalogue gives every tracked in-scope file one owner", () => {
   const validation = validateOwnership(trackedFiles(), OWNERSHIP_CATALOGUE);
@@ -533,5 +544,57 @@ void test("baseline parser fails closed on malformed data", () => {
   assert.throws(
     () => parseDensityBaseline({ ...readBaseline(), threshold: 31 }),
     /threshold must be exactly 30/,
+  );
+});
+
+void test("API test boundary rejects deep import, export, and dynamic-import edges", () => {
+  const file = "apps/api/src/modules/period/api-boundary.test.ts";
+  const violations = findApiTestBoundaryViolations(
+    [file],
+    virtualApiTestSource([
+      [
+        file,
+        [
+          'import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";',
+          'export { PeriodAdminService } from "../admin/period-admin.service.js";',
+          'void import("../weekly-report/weekly-report.service.js");',
+        ].join("\n"),
+      ],
+    ]),
+  );
+
+  assert.deepEqual(violations.map(formatApiTestBoundaryViolation), [
+    `${file}: API test boundary violation: import "../admin/period-admin.service.js" resolves to apps/api/src/modules/admin/period-admin.service; use the sibling index.ts facade or test-seams/index.ts seam.`,
+    `${file}: API test boundary violation: import "../weekly-report/weekly-report.prisma-repository.js" resolves to apps/api/src/modules/weekly-report/weekly-report.prisma-repository; use the sibling index.ts facade or test-seams/index.ts seam.`,
+    `${file}: API test boundary violation: import "../weekly-report/weekly-report.service.js" resolves to apps/api/src/modules/weekly-report/weekly-report.service; use the sibling index.ts facade or test-seams/index.ts seam.`,
+  ]);
+});
+
+void test("API test boundary allows same-module imports, sibling facades, and test seams", () => {
+  const file = "apps/api/src/modules/period/api-boundary.test.ts";
+  assert.deepEqual(
+    findApiTestBoundaryViolations(
+      [file],
+      virtualApiTestSource([
+        [
+          file,
+          [
+            'import { PeriodService } from "./application/period.service.js";',
+            'export { WeeklyReportService } from "../weekly-report/index.js";',
+            'void import("../admin/test-seams/index.js");',
+          ].join("\n"),
+        ],
+      ]),
+    ),
+    [],
+  );
+});
+
+void test("current API test tree has no deep cross-module import edges", () => {
+  assert.deepEqual(
+    findApiTestBoundaryViolations(trackedFiles()).map(
+      formatApiTestBoundaryViolation,
+    ),
+    [],
   );
 });

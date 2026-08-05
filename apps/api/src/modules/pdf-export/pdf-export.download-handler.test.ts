@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import { createAuthController } from "../auth/auth.controller";
+import { createAuthController } from "../auth/index.js";
 import {
   canReadReport,
   handlePdfDownload,

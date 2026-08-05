@@ -9,9 +9,11 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper.js";
-import { AnalyticsPrismaRepository } from "../../analytics/analytics.prisma-repository.js";
-import type { AnalyticsCachePort } from "../../analytics/analytics.service.js";
 import { AnalyticsService } from "../../analytics/index.js";
+import {
+  type AnalyticsCachePort,
+  AnalyticsPrismaRepository,
+} from "../../analytics/test-seams/index.js";
 import {
   NoopIngestionQueue,
   PublicationService,
