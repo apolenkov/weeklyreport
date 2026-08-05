@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: ".",
   testMatch:
-    /(?:control-actions(?:-form)?|dom-inventory|evidence-capture|keyboard-evidence|live-control-lane)\.spec\.ts/,
+    /(?:control-actions(?:-form)?|dom-inventory|evidence-capture|keyboard-evidence|live-control-(?:lane|frozen-case))\.spec\.ts/,
   outputDir: ".results-harness",
   timeout: 30_000,
   expect: { timeout: 5000 },

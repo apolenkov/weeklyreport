@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../playwright.integration.config.ts";
 import { assertSourceSha } from "./ids.ts";
+import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
 
 const requiredEnv = (name: string): string => {
@@ -141,7 +142,7 @@ export default defineConfig({
     },
     {
       ...webServer,
-      command: `pnpm exec tsx ../../e2e/runtime-sweep/run-runtime-next-server.ts sweep ${WEB_PORT}`,
+      command: runtimeNextServerCommand("sweep", WEB_PORT),
       url: WEB_URL,
       reuseExistingServer: false,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },

@@ -112,6 +112,40 @@ test("assigns distinct stable keys to duplicate semantic controls", async ({
   expect(controls[0]?.domOrderKey).toBe("0001:button:Repeat:1");
 });
 
+test("preserves DOM order while annotating keyboard focus policy", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">Before</button>
+    <div role="radiogroup" aria-label="Scope">
+      <button type="button" role="radio" aria-checked="true">Summary</button>
+      <button type="button" role="radio" aria-checked="false">Product</button>
+    </div>
+  `);
+
+  const controls = (await inventoryDom(page)).controls;
+
+  expect(
+    controls.map(
+      ({
+        accessibleName,
+        order,
+        keyboardExpectedFocusable,
+        keyboardFocusPolicy,
+      }) => [
+        accessibleName,
+        order,
+        keyboardExpectedFocusable,
+        keyboardFocusPolicy,
+      ],
+    ),
+  ).toEqual([
+    ["Before", 1, true, "required"],
+    ["Summary", 2, true, "required"],
+    ["Product", 3, false, "forbidden"],
+  ]);
+});
+
 test("reports a visible interactive control with no accessible name", async ({
   page,
 }) => {
