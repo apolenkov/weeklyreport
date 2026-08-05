@@ -7,7 +7,7 @@ import { SearchInput } from "../../../shared/ui/search-input";
 import {
   historySearchPlaceholder,
   historySearchScope,
-} from "./history-role-view";
+} from "../model/report-history-role";
 
 function HistoryArchiveToggle({
   checked,

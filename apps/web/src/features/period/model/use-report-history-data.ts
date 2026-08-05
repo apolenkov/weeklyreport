@@ -6,18 +6,19 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  type HistoryEntry,
-  mapCompiledHistoryEntries,
-  mapHistoryEntries,
-} from "../../../features/report-sections/model/lead-history";
-import {
   isHeadLike,
   isLead as isLeadRole,
   isViewer,
 } from "../../../lib/role-predicates";
 import { useTRPC } from "../../../lib/trpc-context";
+import {
+  type HistoryEntry,
+  mapCompiledHistoryEntries,
+  mapHistoryEntries,
+} from "../../report-sections";
 
 export interface HistoryView {
+  readonly isLead: boolean;
   readonly entries: readonly HistoryEntry[];
   readonly archiveCount: number;
   readonly isLoading: boolean;
@@ -104,6 +105,7 @@ export function useHistoryData(role: Role | null): HistoryView {
   );
 
   return {
+    isLead,
     entries: isLead ? leadEntries : compiledEntries,
     archiveCount: isLead
       ? allEntries.filter((entry) => entry.archived).length

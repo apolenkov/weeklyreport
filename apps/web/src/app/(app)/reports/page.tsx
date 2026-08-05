@@ -1,11 +1,12 @@
 "use client";
 
-import { isLead as isLeadRole } from "../../../lib/role-predicates";
+import {
+  HistoryPanel,
+  historySubtitle,
+  HistoryToolbar,
+  useHistoryData,
+} from "../../../features/period";
 import { useSession } from "../../../lib/session-provider";
-import { HistoryPanel } from "./history-panel";
-import { historySubtitle } from "./history-role-view";
-import { HistoryToolbar } from "./history-toolbar";
-import { useHistoryData } from "./use-history-data";
 
 // One role-defaulted history view: leads get personal History, everyone else
 // compiled. No tab state and no `tab` query parameter; Archive is local, non-URL
@@ -13,7 +14,6 @@ import { useHistoryData } from "./use-history-data";
 export default function ReportsPage() {
   const { user } = useSession();
   const role = user?.role ?? null;
-  const isLead = isLeadRole(role);
 
   const {
     entries,
@@ -21,6 +21,7 @@ export default function ReportsPage() {
     isLoading,
     includeArchive,
     setIncludeArchive,
+    isLead,
   } = useHistoryData(role);
 
   return (

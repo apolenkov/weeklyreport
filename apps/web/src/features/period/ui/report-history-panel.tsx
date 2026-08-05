@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 
-import { LeadHistoryList } from "../../../features/period/ui/lead-history-list";
-import { LeadHistorySidebar } from "../../../features/period/ui/lead-history-sidebar";
-import { LeadHistorySkeleton } from "../../../features/period/ui/lead-history-skeleton";
-import type { HistoryEntry } from "../../../features/report-sections/model/lead-history";
+import type { HistoryEntry } from "../../report-sections";
+import { LeadHistoryList } from "./lead-history-list";
+import { LeadHistorySidebar } from "./lead-history-sidebar";
+import { LeadHistorySkeleton } from "./lead-history-skeleton";
 
 const HISTORY_INITIAL_VISIBLE = 10;
 

@@ -1,4 +1,6 @@
+export { historySubtitle } from "./model/report-history-role";
 export type { CrossAuthorEntry } from "./model/sdlc-cross-author";
+export { useHistoryData } from "./model/use-report-history-data";
 export { ActivityStatusSection } from "./ui/activity-status-section";
 export { CurrentWeekSection } from "./ui/current-week-section";
 export { DecisionEditDialog } from "./ui/decision-edit-dialog";
@@ -8,6 +10,8 @@ export { HeadPublishLockAction } from "./ui/head-publish-lock-action";
 export { PeriodNavigator } from "./ui/period-navigator";
 export { PeriodsTab } from "./ui/periods-tab";
 export { PublishLockButton } from "./ui/publish-lock-button";
+export { HistoryPanel } from "./ui/report-history-panel";
+export { HistoryToolbar } from "./ui/report-history-toolbar";
 export { RequestReopenDialog } from "./ui/request-reopen-dialog";
 export { SdlcPipeline } from "./ui/sdlc-pipeline";
 export { PeriodsSubTab } from "./ui/settings-periods-sub-tab";
