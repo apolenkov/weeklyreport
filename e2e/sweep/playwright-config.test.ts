@@ -33,3 +33,14 @@ test("fails closed without a dedicated UAT database", async () => {
     "E2E_DATABASE_URL must be set to a disposable database for the UAT sweep.",
   );
 });
+
+test("rejects the development database as the UAT target", async () => {
+  const developmentDatabaseUrl =
+    "postgresql://customreport@localhost/customreport_dev";
+  vi.stubEnv("DATABASE_URL", developmentDatabaseUrl);
+  vi.stubEnv("E2E_DATABASE_URL", developmentDatabaseUrl);
+
+  await expect(import("./playwright.config.ts")).rejects.toThrow(
+    "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
+  );
+});

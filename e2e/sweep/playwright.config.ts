@@ -22,6 +22,26 @@ if (!E2E_DATABASE_URL) {
   );
 }
 
+const databaseTarget = (databaseUrl: string): string => {
+  try {
+    const parsed = new URL(databaseUrl);
+    const port = parsed.port || "5432";
+    return `${parsed.hostname.toLocaleLowerCase()}:${port}${parsed.pathname}`;
+  } catch {
+    throw new Error("UAT database URLs must be valid PostgreSQL URLs.");
+  }
+};
+
+const developmentDatabaseUrl = process.env.DATABASE_URL;
+if (
+  developmentDatabaseUrl &&
+  databaseTarget(E2E_DATABASE_URL) === databaseTarget(developmentDatabaseUrl)
+) {
+  throw new Error(
+    "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
+  );
+}
+
 // Repo root (e2e/sweep/playwright.config.ts → ../..).
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
