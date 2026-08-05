@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../playwright.integration.config.ts";
 import { assertSourceSha } from "./ids.ts";
+import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -42,11 +43,11 @@ const apiEnv = {
   PDF_BASE_URL: WEB_URL,
 };
 const webEnv = {
-  ...webServer.env,
+  ...runtimeSweepWebEnvironment(
+    webServer.env,
+    `.next-runtime-sweep-${process.pid}`,
+  ),
   NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
-  NEXT_PUBLIC_AUTH_STUB: "false",
-  NEXT_PUBLIC_DISABLE_DEVTOOLS: "true",
-  NEXT_DIST_DIR: ".next-runtime-sweep",
 };
 
 export default defineConfig({
