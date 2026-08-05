@@ -3,8 +3,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";

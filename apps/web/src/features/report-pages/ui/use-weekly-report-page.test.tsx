@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   SessionContext,
   type SessionUser,
-} from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+} from "../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import {
   useWeeklyReportPage,

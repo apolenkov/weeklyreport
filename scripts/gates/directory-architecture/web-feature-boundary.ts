@@ -39,7 +39,8 @@ const resolvedTarget = (file: string, specifier: string): string =>
     .replace(SOURCE_EXTENSION, "");
 
 const isFacade = (parts: readonly string[]): boolean =>
-  parts.length === 0 || (parts.length === 1 && parts[0] === "index");
+  parts.length === 0 ||
+  (parts.length === 1 && (parts[0] === "index" || parts[0] === "client"));
 
 const compareViolations = (
   left: WebFeatureBoundaryViolation,

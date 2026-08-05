@@ -4,11 +4,11 @@ import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo } from "react";
 
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
-} from "../../../lib/format-date";
-import { SessionContext } from "../../../lib/session-provider";
+} from "../../../shared/lib/format/format-date";
 
 interface CanonicalRedirectArgs {
   readonly enabled: boolean | undefined;

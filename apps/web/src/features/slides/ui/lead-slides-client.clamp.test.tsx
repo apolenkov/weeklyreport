@@ -28,7 +28,7 @@ vi.mock("./use-slide-inline-editor", () => ({
   useSlideInlineEditor: () => ({ onRowActivate: undefined, dialogs: null }),
 }));
 
-vi.mock("../../../hooks/use-fullscreen", () => ({
+vi.mock("../../../shared/hooks/browser/use-fullscreen", () => ({
   useFullscreen: () => ({ isFullscreen: false, toggle: () => undefined }),
 }));
 

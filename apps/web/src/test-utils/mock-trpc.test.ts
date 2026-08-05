@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../lib/trpc-context";
+import { TRPCProxyContext } from "../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "./mock-trpc";
 
 // Structural Record view of the dynamic stub (not the full TRPCProxy type).

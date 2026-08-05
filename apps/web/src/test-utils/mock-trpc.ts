@@ -1,7 +1,7 @@
 // pathFilter/queryKey/queryOptions derive from one path so they cannot diverge.
 import { vi } from "vitest";
 
-import type { TRPCProxy } from "../lib/trpc";
+import type { TRPCProxy } from "../shared/lib/trpc/trpc";
 
 export interface ProcedureDescriptor {
   path: string[];

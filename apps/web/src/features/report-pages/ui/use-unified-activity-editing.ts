@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { ActivityBucket } from "../../../lib/activity-buckets";
+import type { ActivityBucket } from "../../report-sections";
 import type { KanbanItem } from "../../report-sections";
 
 // Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).

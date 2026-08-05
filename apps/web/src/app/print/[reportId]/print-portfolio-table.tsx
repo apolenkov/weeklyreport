@@ -1,5 +1,5 @@
-import type { WeeklyPortfolioProduct } from "../../../features/report-sections/model/weekly-report-types";
-import { statusLabel } from "../../../lib/status-presentation";
+import type { WeeklyPortfolioProduct } from "../../../features/report-sections";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import {
   BORDER_LIGHT,
   BRAND_DARK_SURFACE,

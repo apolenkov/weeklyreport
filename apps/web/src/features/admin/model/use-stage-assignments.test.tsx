@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminUserView } from "../model/admin-types";
 import { useStageAssignmentData } from "./use-stage-assignments";

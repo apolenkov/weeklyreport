@@ -9,8 +9,8 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-} from "../../../lib/cache-keys";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+} from "../../../shared/lib/query/cache-keys";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
@@ -19,8 +19,10 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
-vi.mock("../../../lib/cache-keys", async (importActual) => ({
-  ...(await importActual<typeof import("../../../lib/cache-keys")>()),
+vi.mock("../../../shared/lib/query/cache-keys", async (importActual) => ({
+  ...(await importActual<
+    typeof import("../../../shared/lib/query/cache-keys")
+  >()),
   invalidateLeadForm: vi.fn(),
   invalidateDashboard: vi.fn(),
   invalidateLeadHistory: vi.fn(),

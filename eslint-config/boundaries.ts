@@ -62,7 +62,7 @@ const apiInfrastructureModuleZones = [
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice or through a sibling's index.ts barrel. ALL populated
+// within their own slice or through a sibling's public index.ts/client.ts entrypoint. ALL populated
 // slices are enforced (boundaries flip #33); any slice-to-slice coupling not
 // through a barrel is a lint error.
 const webFeaturesDir = "apps/web/src/features";
@@ -88,14 +88,14 @@ const webCrossSliceZones = webSlices.map((sliceName) => ({
     sliceName,
     ...webSlices
       .filter((sibling) => sibling !== sliceName)
-      .map((sibling) => `${sibling}/index.ts`),
+      .flatMap((sibling) => [`${sibling}/index.ts`, `${sibling}/client.ts`]),
   ],
-  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its index.ts barrel (restructure-directory-architecture).`,
+  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its public index.ts or client.ts entrypoint (restructure-directory-architecture).`,
 }));
 
 export const boundaryConfig: Linter.Config[] = [
   // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
-  // client legitimately needs the AppRouter *type* (apps/web/src/lib/trpc.ts), so
+  // client legitimately needs the AppRouter *type* (apps/web/src/shared/lib/trpc/trpc.ts), so
   // type-only imports are allowed via allowTypeImports; a VALUE import would pull
   // the Nest/Prisma server graph into the browser bundle. Currently 0 violations.
   {

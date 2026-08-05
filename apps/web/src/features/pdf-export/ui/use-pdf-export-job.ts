@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
 

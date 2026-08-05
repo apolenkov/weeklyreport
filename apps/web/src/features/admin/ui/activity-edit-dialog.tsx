@@ -3,7 +3,7 @@
 import type { ProjectActivity } from "@customreport/shared";
 import { useRef } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import type { ActivityFormData } from "../model/activity-form";
 import type { AdminGroupView, AdminProductView } from "../model/admin-types";

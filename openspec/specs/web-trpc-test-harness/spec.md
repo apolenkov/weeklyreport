@@ -55,7 +55,7 @@ invalidation assertions into tautologies.
 
 ### Requirement: The auth-redirect link seam is covered by tests
 
-The auth-redirect tRPC link in `apps/web/src/lib/trpc.ts` MUST have
+The auth-redirect tRPC link in `apps/web/src/shared/lib/trpc/trpc.ts` MUST have
 unit tests covering its three observable behaviors: a 401 error
 triggers the redirect handler and is swallowed (`complete` is NOT
 called), a non-401 error propagates via `observer.error`, and

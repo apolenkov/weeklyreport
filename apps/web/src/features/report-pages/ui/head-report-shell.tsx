@@ -4,8 +4,8 @@ import type { WeeklyReportGetResponse } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useContext, useMemo } from "react";
 
-import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import {

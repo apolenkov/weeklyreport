@@ -12,7 +12,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { useStatusRiskSync } from "../../../hooks/use-status-risk";
 import type { CrossAuthorEntry } from "../../period";
 import { SdlcPipeline } from "../../period";
 import {
@@ -20,6 +19,7 @@ import {
   type RiskEntry,
   type StageStatus,
 } from "../../report-sections";
+import { useStatusRiskSync } from "../../report-sections/client";
 import { RisksSection } from "../../review";
 import {
   annotateOwnRiskCoverage,

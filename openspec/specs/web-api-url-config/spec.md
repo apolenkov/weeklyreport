@@ -9,14 +9,14 @@ Resolve the web API base URL and tRPC batch decoding through fail-loud shared se
 ### Requirement: API base URL resolves fail-loud with no silent fallback
 
 The web app MUST resolve the API base URL through a single seam
-(`requireApiUrl` in `apps/web/src/lib/server/api-url.ts`) that reads `API_URL`
+(`requireApiUrl` in `apps/web/src/shared/server/transport/api-url.ts`) that reads `API_URL`
 then `NEXT_PUBLIC_API_URL` and throws a descriptive error when neither is set.
 It MUST NOT fall back to a hardcoded `http://localhost:3002` (or any other
 default). Every consumer — `apps/web/next.config.ts`,
 `apps/web/src/app/api/client-logs/route.ts`,
-`apps/web/src/lib/server/get-org-public.ts`,
-`apps/web/src/lib/server/get-server-session.ts`, and
-`apps/web/src/lib/server/get-print-route-context.ts` — MUST obtain the URL from
+`apps/web/src/shared/server/organization/get-org-public.ts`,
+`apps/web/src/shared/server/auth/get-server-session.ts`, and
+`apps/web/src/features/pdf-export/server/gate/get-print-route-context.ts` — MUST obtain the URL from
 this seam, so a missing value fails loud at config-load / request time rather
 than silently targeting localhost.
 
@@ -45,7 +45,7 @@ than silently targeting localhost.
 ### Requirement: Org-identity transport failure degrades to the generic identity and is reported
 
 Config resolution and transport failure are separate categories in
-`apps/web/src/lib/server/get-org-public.ts`. `requireApiUrl()` is called OUTSIDE
+`apps/web/src/shared/server/organization/get-org-public.ts`. `requireApiUrl()` is called OUTSIDE
 the try, so a missing base URL still fails loud per the requirement above. A
 failure of the `org.getPublic` FETCH — non-ok status, undecodable payload, or a
 thrown transport error — MUST NOT propagate: `getOrgPublic` feeds the ROOT
@@ -103,7 +103,7 @@ loading skeleton while the session query is in flight.
 
 The web app MUST decode tRPC v11 superjson-batched query responses through one
 shared helper (`decodeTrpcBatchPayload` in
-`apps/web/src/lib/server/api-url.ts`) rather than re-implementing the
+`apps/web/src/shared/server/transport/api-url.ts`) rather than re-implementing the
 batch-envelope unwrap per call site. The helper MUST return the inner payload
 of the first batch entry, unwrapping the superjson `{ json }` wrapper when
 present, and MUST return `null` when the body is not a non-empty array, when
@@ -137,7 +137,7 @@ shared decode.
 
 The web server session helpers MUST decide whether to attempt the dev-auth
 session fallback through one shared predicate (`shouldUseDevAuthFallback` in
-`apps/web/src/lib/server/api-url.ts`). The predicate MUST return `true` only
+`apps/web/src/shared/server/transport/api-url.ts`). The predicate MUST return `true` only
 when `NODE_ENV` is not `production` AND (`AUTH_DEV_MODE === "true"` OR
 `AUTH_DEV_MODE_ALLOW_TEST === "true"`); otherwise it MUST return `false`. Both
 `get-server-session` and `get-print-route-context` MUST use this predicate

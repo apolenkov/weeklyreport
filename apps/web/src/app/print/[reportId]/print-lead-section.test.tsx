@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
+import type { WeeklyProductReport } from "../../../features/report-sections";
 import { PrintLeadSection } from "./print-lead-section";
 
 function makeReport(

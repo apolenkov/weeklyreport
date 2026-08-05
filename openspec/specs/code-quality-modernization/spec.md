@@ -82,18 +82,18 @@ invoked, so no migration prerequisite or Biome-specific gate may be required.
 
 ### Requirement: Print and admin surfaces reuse canonical presentation helpers instead of reimplementing them
 
-Print status labels MUST be produced by calling the canonical `statusLabel(status, "print")` helper in `lib/status-presentation`, and any admin surface rendering a plus icon MUST render the canonical `PlusIcon` from `shared/ui/icons` rather than a locally reimplemented copy.
+Print status labels MUST be produced by calling the canonical `statusLabel(status, "print")` helper in `shared/lib/status/status-presentation`, and any admin surface rendering a plus icon MUST render the canonical `PlusIcon` from `shared/ui/icons/action-icons` rather than a locally reimplemented copy.
 
 #### Scenario: A print surface renders a status label
 
 - **WHEN** `print-portfolio-table.tsx` or `print-lead-section.tsx` renders a report or product status
-- **THEN** it calls `statusLabel(status, "print")` from `lib/status-presentation`
+- **THEN** it calls `statusLabel(status, "print")` from `shared/lib/status/status-presentation`
 - **AND** no local `printStatusLabel` function exists in `print-report-theme.ts`
 
 #### Scenario: An admin tab renders the add/create icon
 
 - **WHEN** `reminders-tab.tsx` or `reminders-empty-state.tsx` renders the plus icon next to a create action
-- **THEN** it imports `PlusIcon` from `shared/ui/icons`
+- **THEN** it imports `PlusIcon` from `shared/ui/icons/action-icons`
 - **AND** no local `PlusIcon` definition remains in `policy-form.tsx`
 
 #### Scenario: Rendered label and icon output is unchanged

@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import type { UserFormData } from "../model/user-form";
 import { UserEditDialogActions } from "./user-edit-dialog-actions";

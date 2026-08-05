@@ -17,7 +17,7 @@ function makeTrpc() {
       },
     },
   } as unknown as ReturnType<
-    typeof import("../../../lib/trpc-context").useTRPC
+    typeof import("../../../shared/lib/trpc/trpc-context").useTRPC
   >;
 }
 

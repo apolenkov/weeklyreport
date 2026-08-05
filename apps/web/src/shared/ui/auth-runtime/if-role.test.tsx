@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: (...args: unknown[]): unknown => useQueryMock(...args),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     auth: {
       me: {

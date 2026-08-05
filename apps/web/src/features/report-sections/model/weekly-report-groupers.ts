@@ -5,9 +5,9 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
-import type { AlarmRisk } from "../../../lib/item-alarm";
-import { statusLabel } from "../../../lib/status-presentation";
-import { initialsFromName } from "../../../lib/user-initials";
+import { initialsFromName } from "../../../shared/lib/format/user-initials";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
+import type { AlarmRisk } from "./alarms/item-alarm";
 import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
 import type {

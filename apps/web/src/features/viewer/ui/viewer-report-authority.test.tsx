@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {
@@ -56,7 +56,7 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../../lib/client-error-reporting", () => ({
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
   getClientErrorDetails: () => ({ isInvalidLink: false }),
 }));
 

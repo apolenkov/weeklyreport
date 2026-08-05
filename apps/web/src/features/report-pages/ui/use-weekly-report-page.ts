@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext, useMemo, useState } from "react";
 
-import { invalidateReview } from "../../../lib/cache-keys";
-import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { invalidateReview } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { ReviewMode, SubmissionFilter } from "../../review";
 import {
   useWeeklyReportMutations,

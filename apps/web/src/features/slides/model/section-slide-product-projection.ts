@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
-import { worstTrafficStatus } from "../../../lib/status-presentation";
+import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import {
   riskCoversStage,
   stageStatusToTraffic,

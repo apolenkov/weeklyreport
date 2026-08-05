@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export type ReopenFilterStatus = "pending" | "approved" | "rejected" | "all";
 

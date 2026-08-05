@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../lib/cache-keys";
-import { toIsoDateString } from "../../../lib/format-date";
-import { useTRPC } from "../../../lib/trpc-context";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
+import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { toReminderPolicyInput } from "./admin";
 import type { AdminReminderPolicyView } from "./admin-types";
 

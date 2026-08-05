@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { resolveRecordParent } from "../model/record-parent";
 import type { ItemStatus, KanbanItem, Product } from "../model/types";
 import {

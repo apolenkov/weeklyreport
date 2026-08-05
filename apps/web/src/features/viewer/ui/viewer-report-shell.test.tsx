@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../test-utils/query-state";
 
-vi.mock("../../slides/ui/head-slides-client", () => ({
+vi.mock("../../slides", () => ({
   HeadSlidesClient: (props: { enableActivity?: boolean }) => (
     <div
       data-testid="slides-client-stub"
@@ -19,7 +19,7 @@ vi.mock("../../slides/ui/head-slides-client", () => ({
   ),
 }));
 
-vi.mock("../../report-pages/ui/weekly-report-page", () => ({
+vi.mock("../../report-pages", () => ({
   WeeklyReportPage: ({
     documentActionsLeading,
     contextControls,
@@ -101,7 +101,7 @@ vi.mock("@tanstack/react-query", async () => {
 // The shell is the only consumer of getClientErrorDetails in this render tree
 // (WeeklyReportPage is stubbed). Mock it so the recovery tests can flag an
 // invalid-link NOT_FOUND without constructing a real TRPCClientError.
-vi.mock("../../../lib/client-error-reporting", () => ({
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
   getClientErrorDetails: (error: unknown) => ({
     isInvalidLink:
       (error as { data?: { code?: string } } | null)?.data?.code ===
@@ -109,7 +109,7 @@ vi.mock("../../../lib/client-error-reporting", () => ({
   }),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {

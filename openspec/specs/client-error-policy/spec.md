@@ -15,7 +15,7 @@ seam, not error copy.
 
 Every TanStack Query load failure on a page surface MUST be reported
 (in `apps/web/src/**`) through the error-policy seam
-(`useQueryErrorHandler` in `apps/web/src/lib/use-query-error-handler.ts`):
+(`useQueryErrorHandler` in `apps/web/src/shared/hooks/query/use-query-error-handler.ts`):
 logged via `logClientError` with `component` and `procedure` context,
 exactly once per error transition. Components MUST NOT hand-roll
 query-error `useEffect` + `logClientError` blocks. Exempt: non-query
@@ -81,7 +81,7 @@ the formatter is the shared seam every role's queries flow through.
 
 The query client MUST NOT retry a query load failure that carries a
 deterministic client-error HTTP status (4xx). The TanStack Query client
-(`apps/web/src/lib/query-client.ts`) MUST set a `retry` predicate that returns
+(`apps/web/src/shared/lib/query/query-client.ts`) MUST set a `retry` predicate that returns
 `false` for any 4xx so a deterministic `BAD_REQUEST` (e.g. a malformed
 `reportId`) fails once, not three additional times.
 

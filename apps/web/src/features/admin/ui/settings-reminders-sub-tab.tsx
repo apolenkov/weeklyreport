@@ -2,7 +2,7 @@
 
 import type { AppSettings } from "@customreport/shared";
 
-import { useServerSeededDraft } from "../../../shared/hooks/use-server-seeded-draft";
+import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
   CheckIcon,
   useUpdateSettingsMut,

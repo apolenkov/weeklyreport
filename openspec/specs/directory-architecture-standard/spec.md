@@ -367,10 +367,9 @@ output change).
 
 - **WHEN** `lock-badge.tsx` and `save-now-button.tsx` are relocated
 - **THEN** `lock-badge.tsx` imports `sdlc-tooltip` from
-  `../../../components/ui/sdlc-tooltip` (routed back through `components/`, not
-  `shared/ui/sdlc-tooltip`)
+  `../feedback/sdlc-tooltip`
 - **AND** `save-now-button.tsx` imports the `AutosaveSnapshot` type from
-  `../../../hooks/use-lead-form-autosave`
+  `features/report-sections/client`
 - **AND** intra-folder `./`-relative imports between the moved files stay valid
   unchanged
 
@@ -460,8 +459,8 @@ in `apps/web/src/shared/ui/`, not in any `features/<domain>` slice — the web
 rule-of-2. Concretely, the global search box `search-input.tsx` (consumed by the
 `reports` route and the `admin` slice) and the role-guard render wrapper
 `if-role.tsx` (consumed by the `dashboard` slice beside the `auth` domain) MUST
-reside at `apps/web/src/shared/ui/search-input.tsx` and
-`apps/web/src/shared/ui/if-role.tsx` (filenames unchanged from the legacy
+reside at `apps/web/src/shared/ui/search/search-input.tsx` and
+`apps/web/src/shared/ui/auth-runtime/if-role.tsx` (filenames unchanged from the legacy
 `components/search/` and `components/auth/` trees), and those legacy directories
 MUST NOT survive the relocation. Consumers MUST import each component directly
 from `shared/ui/*` — no public-API barrel is introduced, as
@@ -474,7 +473,8 @@ allowlisting them. The relocation MUST be behavior-neutral.
 #### Scenario: Both leaves land in the shared ui layer
 
 - **WHEN** the relocation is applied
-- **THEN** `apps/web/src/shared/ui/` contains `search-input.tsx`, `if-role.tsx`,
+- **THEN** `apps/web/src/shared/ui/search/` and `apps/web/src/shared/ui/auth-runtime/`
+  contain `search-input.tsx`, `if-role.tsx`,
   and their co-located `*.test.tsx`
 - **AND** `apps/web/src/components/search/` and `apps/web/src/components/auth/`
   no longer exist
@@ -493,29 +493,26 @@ allowlisting them. The relocation MUST be behavior-neutral.
 - **THEN** the `webSlices` array contains no `search` or `auth` entry
 - **AND** no cross-slice allowlist entry is added for admin→search or dashboard→auth
 
-### Requirement: The review comment list MUST live in `shared/ui`, not a feature slice
+### Requirement: Review comment UI MUST form one cohesive review-owned family
 
-The display-only review comment list MUST reside at
-`apps/web/src/shared/ui/review-comment-list.tsx` (filename unchanged from the
-legacy `components/review/` tree), because it is consumed by two different slices
-— `weekly-report` and `report-sections`/lead — which trips the web rule-of-2 and
-cannot be satisfied by either slice importing the other (zone 5). The legacy
-`components/review/` directory MUST NOT survive the relocation. Consumers MUST
-import `ReviewCommentList` directly from `shared/ui/review-comment-list` — no
-barrel. The relocation MUST be behavior-neutral.
+The display-only review comment list and its two consumers MUST reside together
+under `apps/web/src/features/review/ui/comments/`. The legacy
+`components/review/` directory MUST NOT survive the relocation. This keeps the
+review vocabulary in its owning feature and avoids a generic shared bucket for
+domain-specific UI. The relocation MUST be behavior-neutral.
 
-#### Scenario: The comment list lands in the shared ui layer
+#### Scenario: The comment family lands in the review slice
 
 - **WHEN** the relocation is applied
-- **THEN** `apps/web/src/shared/ui/review-comment-list.tsx` exists
+- **THEN** `apps/web/src/features/review/ui/comments/review-comment-list.tsx` exists
+- **AND** `record-comments.tsx` and `lead-review-feedback.tsx` are co-located with it
 - **AND** `apps/web/src/components/review/` no longer exists
-- **AND** the file resides under `shared/`, not under any `features/<domain>` slice
+- **AND** no review-comment implementation is duplicated under `shared/`
 
-#### Scenario: Both slice consumers import it directly from shared
+#### Scenario: Both consumers use the co-located review implementation
 
-- **WHEN** the weekly-report `record-comments` or the lead `lead-review-feedback`
-  component renders the comment list
-- **THEN** it imports `ReviewCommentList` from `shared/ui/review-comment-list` directly
+- **WHEN** `record-comments` or `lead-review-feedback` renders the comment list
+- **THEN** it imports `ReviewCommentList` within the review comments family
 - **AND** no code imports `components/review/*`
 
 ### Requirement: The lead domain MUST dissolve into its canonical slices, not a `features/lead` slice
@@ -531,7 +528,7 @@ report-section rendering core (`lead-form`, `item-card*`, `item-edit-dialog`,
 the period-navigation and SDLC-pipeline files MUST live under `features/period/{ui,model}`;
 the risk/review files under `features/review/ui`; `pdf-export-coming-soon` under
 `features/pdf-export/ui`; `version-coming-soon` under `features/admin/ui`; and the
-generic `confirm-delete-dialog` under `shared/ui/` (rule-of-2). The relocation
+generic `confirm-delete-dialog` under `shared/ui/dialogs/` (rule-of-2). The relocation
 MUST be behavior-neutral.
 
 The kernel files with wide external fan-in (`mock-data`, `stage-tags`,
@@ -602,7 +599,7 @@ be behavior-neutral.
 (filename unchanged from `components/viewer/`), as `viewer` is a standalone
 canonical domain in the grouping rules. The legacy `components/viewer/` directory
 MUST NOT survive. Its route consumer under `app/(app)/reports/[reportId]/` MUST
-import it from `features/viewer/ui/viewer-report-shell`. The relocation MUST be
+import it through the `features/viewer` public facade. The relocation MUST be
 behavior-neutral.
 
 #### Scenario: The viewer shell forms the viewer slice
@@ -610,7 +607,7 @@ behavior-neutral.
 - **WHEN** the relocation is applied
 - **THEN** `apps/web/src/features/viewer/ui/viewer-report-shell.tsx` exists
 - **AND** `apps/web/src/components/viewer/` no longer exists
-- **AND** the reports viewer route imports it from `features/viewer/ui/*`
+- **AND** the reports viewer route imports it from the `features/viewer` facade
 
 ### Requirement: The weekly-report tree MUST dissolve into its canonical slices
 
@@ -643,7 +640,8 @@ NOT survive it.
 The flat `apps/web/src/components/` root MUST NOT hold business-agnostic UI
 primitives. `error-boundary`, `forbidden-page`, `role-gate`, `agentation-devtools`,
 the `coming-soon-style` source-scan test, and the former `components/ui/` bucket
-(`confirmation-dialog`, `sdlc-tooltip`) MUST reside under `apps/web/src/shared/ui/`.
+(`confirmation-dialog`, `sdlc-tooltip`) MUST reside under their cohesive
+`apps/web/src/shared/ui/dialogs/` and `apps/web/src/shared/ui/feedback/` families.
 `web-vitals-reporter` MUST reside in its own `features/telemetry/ui/` slice. The
 `components/ui/` and `components/__snapshots__/` directories MUST NOT survive. After
 this change, `components/` retains only the deferred `slides/` tree and the `dev/`
@@ -652,8 +650,10 @@ tooling (its own later slice). The relocation MUST be behavior-neutral.
 #### Scenario: Primitives graduate to shared
 
 - **WHEN** the relocation is applied
-- **THEN** `error-boundary`, `forbidden-page`, `role-gate`, `agentation-devtools`,
-  `confirmation-dialog`, and `sdlc-tooltip` reside under `apps/web/src/shared/ui/`
+- **THEN** `error-boundary`, `forbidden-page`, `role-gate`, and `agentation-devtools`
+  reside under `apps/web/src/shared/ui/auth-runtime/`
+- **AND** `confirmation-dialog` and `sdlc-tooltip` reside under
+  `apps/web/src/shared/ui/dialogs/` and `apps/web/src/shared/ui/feedback/`
 - **AND** `web-vitals-reporter` resides under `apps/web/src/features/telemetry/ui/`
 - **AND** `apps/web/src/components/ui/` no longer exists
 - **AND** consumers import each from its new home, with no `components/` root primitive left
@@ -664,9 +664,9 @@ tooling (its own later slice). The relocation MUST be behavior-neutral.
 - **THEN** its filesystem `repoRoot` and control-file path anchors account for the
   deeper location, so it still scans `apps/web/src` + `packages/ui/src`
 
-### Requirement: The dev role-switcher MUST live in `shared/ui`, not a feature slice
+### Requirement: The dev role-switcher MUST live in the shared auth-runtime family
 
-`role-switcher.tsx` MUST reside at `apps/web/src/shared/ui/` (filename unchanged
+`role-switcher.tsx` MUST reside at `apps/web/src/shared/ui/auth-runtime/` (filename unchanged
 from `components/dev/`). It MUST NOT land in `features/auth/`: its consumer
 `shared/ui/navigation/nav-bar.tsx` is in the `shared/` layer, and `shared/` MUST
 NOT depend on a `features/` slice, so an `auth`-slice home would create a forbidden
@@ -676,9 +676,9 @@ survive. The relocation MUST be behavior-neutral.
 #### Scenario: The role-switcher lands in shared, leaving only slides in components
 
 - **WHEN** the relocation is applied
-- **THEN** `apps/web/src/shared/ui/role-switcher.tsx` exists
+- **THEN** `apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` exists
 - **AND** `apps/web/src/components/dev/` no longer exists
-- **AND** `nav-bar.tsx` imports it from `../role-switcher` (a same-layer import,
+- **AND** `nav-bar.tsx` imports it from `../auth-runtime/role-switcher` (a same-layer import,
   not a `shared → features` edge)
 
 ### Requirement: The lib/mappers tree MUST dissolve into each slice's model dir
@@ -712,26 +712,23 @@ behavior-neutral, and the `lib/mappers/` tree MUST NOT survive it.
 
 Once the FSD-lite relocation has settled, EVERY populated `features/<slice>` MUST
 appear in the `webSlices` array in `eslint.config.ts`, so that a slice reaching
-into another slice's internals is a lint error unless the edge is an explicitly
-grandfathered pre-existing coupling. The enforced set MUST cover all populated
-slices — `admin`, `analytics`, `dashboard`, `landing`, `organization`,
-`pdf-export`, `period`, `report-sections`, `review`, `telemetry`, `viewer` — and
-the `webSliceGrandfatheredExcept` allowlist MUST contain exactly the cross-slice
-edges that exist at flip time (no missing edge, no over-grant). Because `except` is
-slice-granular, the allowlist forbids a slice from reaching into a NEW sibling but
-permits further imports within a pair it already couples to.
+into another slice's internals is a lint error. The enforced set MUST cover all
+populated slices. Cross-slice consumers MUST use the sibling's public `index.ts`
+facade or its explicit client-only `client.ts` entrypoint; server entrypoints are
+not valid feature-to-feature dependencies. No slice-pair grandfathering is allowed.
 
 #### Scenario: an unlisted cross-slice import is rejected
 
 - **WHEN** a file under `features/analytics` imports from another slice's internals
-  (e.g. `features/admin`) that is not in the grandfathered allowlist
+  (e.g. `features/admin/ui/admin-panel`)
 - **THEN** `import-x/no-restricted-paths` reports a web-slice-boundary error
 
-#### Scenario: a grandfathered cross-slice edge is permitted
+#### Scenario: an explicit sibling facade is permitted
 
 - **WHEN** a file under `features/viewer` imports from `features/report-sections`
-- **THEN** no boundary error is reported, because `report-sections` is in
-  `viewer`'s grandfathered `except` list
+  or `features/report-sections/client`
+- **THEN** no boundary error is reported
+- **AND** an import from any deeper report-sections path is rejected
 
 #### Scenario: the enforced set is complete
 

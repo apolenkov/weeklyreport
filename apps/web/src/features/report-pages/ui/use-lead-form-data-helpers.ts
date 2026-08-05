@@ -1,5 +1,8 @@
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
-import type { SessionState, SessionUser } from "../../../lib/session-provider";
+import type {
+  SessionState,
+  SessionUser,
+} from "../../../shared/lib/auth/session-provider";
+import type { RecordVisibility } from "../../report-sections/client";
 
 export function deriveSessionActors(sessionState: SessionState | null): {
   sessionRole: SessionUser["role"] | null;

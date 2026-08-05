@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-import { requireApiUrl } from "./src/lib/server/api-url";
-import { assertWebEnv } from "./src/lib/web-env";
+import { assertWebEnv } from "./src/shared/lib/runtime/web-env";
+import { requireApiUrl } from "./src/shared/server/transport/api-url";
 
 // Runs during `next build`, where the real NEXT_PUBLIC_* values are still in
 // process.env before inlining — a malformed value fails the build loud here.

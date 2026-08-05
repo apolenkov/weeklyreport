@@ -1,6 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import type { DraftSaveContent } from "../../../hooks/use-lead-form-autosave";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
@@ -9,6 +8,7 @@ import {
   mapLeadProducts,
   type Product,
 } from "../../report-sections";
+import type { DraftSaveContent } from "../../report-sections/client";
 
 // Plain per-render args for draft callbacks; readiness stays on the live draft.
 export interface LeadFormLoadedContext {

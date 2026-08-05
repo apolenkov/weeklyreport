@@ -1,7 +1,7 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { formatPeriodRangeWithYear } from "../../../lib/format-date";
+import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   makeWeeklyReportFixture,

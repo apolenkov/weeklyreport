@@ -4,11 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext } from "react";
 import { toast } from "sonner";
 
-import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
-import { mutationErrorMessage } from "../../../lib/mutation-error-message";
-import { isHeadLike } from "../../../lib/role-predicates";
-import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
+import { isHeadLike } from "../../../shared/lib/auth/role-predicates";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
+import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { mapWeeklyReport, reportHasContent } from "../../report-sections";
 import { PublishLockButton } from "./publish-lock-button";
 

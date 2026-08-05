@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
+import { useDismissOnOutsidePointer } from "../../../shared/hooks/browser/use-dismiss-on-outside-pointer";
 import {
   ANCHORED_PANEL_GAP_PX,
   useAnchoredPanelPosition,

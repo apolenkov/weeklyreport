@@ -3,7 +3,7 @@
 import type { AppSettings } from "@customreport/shared";
 import { useState } from "react";
 
-import { useServerSeededDraft } from "../../../shared/hooks/use-server-seeded-draft";
+import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
   CheckIcon,
   useUpdateSettingsMut,

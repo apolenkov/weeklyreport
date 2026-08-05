@@ -42,7 +42,7 @@ CustomReport автоматизирует еженедельные статус-
 Поток одного запроса с фронтенда:
 
 1. Браузер вызывает tRPC-клиент. URL запроса — относительный `/trpc`
-   (`apps/web/src/lib/trpc.ts`), то есть same-origin к web-серверу.
+   (`apps/web/src/shared/lib/trpc/trpc.ts`), то есть same-origin к web-серверу.
 2. Next.js по правилам из `apps/web/next.config.ts` (`rewrites`) проксирует
    `/trpc`, `/auth`, `/health`, `/api` на бэкенд (`API_URL`, по умолчанию
    `http://localhost:3002`).
@@ -176,7 +176,7 @@ Catalog», «Role sweep» определены в [`../CONTEXT.md`](../CONTEXT.m
 1. Запусти проект по «Быстрому старту» из README и зайди под каждой ролью через
    переключатель ролей.
 2. Прочитай `CONTEXT.md` целиком — это язык, на котором написан проект.
-3. Пройди один поток данных в коде: открой `apps/web/src/lib/trpc.ts`, найди
+3. Пройди один поток данных в коде: открой `apps/web/src/shared/lib/trpc/trpc.ts`, найди
    вызов процедуры, проследи его до сервиса модуля в `apps/api/src/modules/*` и
    до Prisma.
 4. Посмотри `openspec list` — это то, над чем идёт работа прямо сейчас.

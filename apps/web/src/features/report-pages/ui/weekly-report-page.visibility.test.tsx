@@ -4,7 +4,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),

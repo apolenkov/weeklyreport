@@ -1,4 +1,4 @@
-import type { Product } from "../features/report-sections/model/types";
+import type { Product } from "../features/report-sections";
 
 const DESIGN_ASSIGNEE = "Petrova M.";
 const DEVOPS_ASSIGNEE = "Sidorov P.";

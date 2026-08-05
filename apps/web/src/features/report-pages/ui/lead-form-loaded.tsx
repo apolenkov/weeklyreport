@@ -3,12 +3,12 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
-import type { FullscreenHandle } from "../../../hooks/use-fullscreen";
-import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
+import type { FullscreenHandle } from "../../../shared/hooks/browser/use-fullscreen";
 import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
 import type { CrossAuthorEntry } from "../../period";
 import type { LeadSubmitReadiness } from "../../report-sections";
+import type { AutosaveSnapshot } from "../../report-sections/client";
+import type { RecordVisibility } from "../../report-sections/client";
 import { LeadSlidesClient } from "../../slides";
 import {
   LeadFormDialogs,

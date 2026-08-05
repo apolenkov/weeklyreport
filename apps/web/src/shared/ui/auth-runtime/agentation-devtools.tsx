@@ -2,7 +2,7 @@
 
 import { Agentation } from "agentation";
 
-import { webEnv } from "../../../lib/web-env";
+import { webEnv } from "../../lib/runtime/web-env";
 
 export function AgentationDevtools() {
   // Escape hatch when `next dev` forces NODE_ENV=development outside an

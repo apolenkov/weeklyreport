@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageSquareWarning } from "lucide-react";
 import { toast } from "sonner";
 
-import { invalidateReview } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+import { invalidateReview } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 interface RequestChangesButtonProps {
   readonly reportSectionId: string;

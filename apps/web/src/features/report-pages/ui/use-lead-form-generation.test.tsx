@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";

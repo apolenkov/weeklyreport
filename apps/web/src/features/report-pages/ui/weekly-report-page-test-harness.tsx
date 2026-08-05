@@ -6,8 +6,8 @@ import {
   SessionContext,
   type SessionState,
   type SessionUser,
-} from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+} from "../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import {
   type CapturedMutation,
   createMockTRPC,

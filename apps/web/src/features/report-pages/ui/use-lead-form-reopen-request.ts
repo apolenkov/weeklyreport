@@ -3,8 +3,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateLeadForm } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import { useGenerationState } from "./use-generation-state";
 

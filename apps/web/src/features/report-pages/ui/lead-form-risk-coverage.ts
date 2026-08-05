@@ -1,4 +1,4 @@
-import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
+import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
 import {
   type Product,
   riskCoversStage,

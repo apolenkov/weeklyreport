@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import {
   invalidateAdmin,
   invalidatePeriodLifecycle,
-} from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+} from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 // Server messages pipe through verbatim (overlap ranges, policy rejections, etc.).
 function notifyError(err: { readonly message: string }) {

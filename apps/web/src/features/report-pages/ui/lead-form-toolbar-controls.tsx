@@ -3,13 +3,13 @@
 import { Separator } from "@customreport/ui/components/ui/separator";
 import type { ComponentProps, RefObject } from "react";
 
-import type { FullscreenHandle } from "../../../hooks/use-fullscreen";
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
+import type { FullscreenHandle } from "../../../shared/hooks/browser/use-fullscreen";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { PeriodNavigator } from "../../period";
+import type { RecordVisibility } from "../../report-sections/client";
 import { SlideFullscreenButton } from "../../slides";
 import { CollapseIcon } from "./lead-form-icons";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";

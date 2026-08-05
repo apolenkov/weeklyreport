@@ -4,7 +4,7 @@ import {
   formatDateTime,
   formatPeriodRangeWithYear,
   joinPeriodLabel,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 import { ReopenRespondForm } from "../../../shared/ui/forms/reopen-respond-form";
 
 interface DashboardReopenRequest {

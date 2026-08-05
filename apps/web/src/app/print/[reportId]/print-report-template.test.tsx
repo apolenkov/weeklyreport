@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
+import type { MapWeeklyReportResult } from "../../../features/report-sections";
 
 // Module mocks must be hoisted above the import-under-test.
 vi.mock("@tanstack/react-query", async () => {
@@ -45,7 +45,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn() },
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
       get: {
@@ -57,7 +57,16 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../../features/report-sections/model/weekly-report", () => ({
+vi.mock("../../../features/report-sections", () => ({
+  STATUS_BADGE: {
+    "in-progress": { label: "In Progress" },
+    completed: { label: "Completed" },
+    blocked: { label: "Blocked" },
+    "at-risk": { label: "At Risk" },
+    planned: { label: "Planned" },
+    paused: { label: "Paused" },
+    postponed: { label: "Postponed" },
+  },
   mapWeeklyReport: () =>
     ({
       portfolio: [

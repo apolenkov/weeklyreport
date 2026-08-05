@@ -6,10 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useReducer } from "react";
 
 import { PulseBackground, PulseMark, TaglineCycler } from "../features/landing";
-import { type LastRoleRecord, readLastRole } from "../lib/last-role";
-import { sanitizeNext } from "../lib/safe-next";
-import { useTRPC } from "../lib/trpc-context";
-import { webEnv } from "../lib/web-env";
+import {
+  type LastRoleRecord,
+  readLastRole,
+} from "../shared/lib/auth/last-role";
+import { sanitizeNext } from "../shared/lib/navigation/safe-next";
+import { webEnv } from "../shared/lib/runtime/web-env";
+import { useTRPC } from "../shared/lib/trpc/trpc-context";
 import { LastRoleCard, PrimaryCta } from "./login-page-controls";
 import {
   defaultRedirectFor,

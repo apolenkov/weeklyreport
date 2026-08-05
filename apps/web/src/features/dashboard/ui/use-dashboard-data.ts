@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
-import { invalidateSubmissionDashboard } from "../../../lib/cache-keys";
-import { logClientError } from "../../../lib/client-error-reporting";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
+import { invalidateSubmissionDashboard } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { useDashboardQueryRecovery } from "./use-dashboard-query-recovery";
 
 const ACTIVITY_POLL_INTERVAL_MS = 15_000;

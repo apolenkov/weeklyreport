@@ -9,8 +9,8 @@ import {
   isHeadLike,
   isLead as isLeadRole,
   isViewer,
-} from "../../../lib/role-predicates";
-import { useTRPC } from "../../../lib/trpc-context";
+} from "../../../shared/lib/auth/role-predicates";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   type HistoryEntry,
   mapCompiledHistoryEntries,

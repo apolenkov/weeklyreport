@@ -213,7 +213,7 @@ types.
 - **WHEN** `pnpm typecheck` runs after `@types/cookie` is removed
 - **THEN** the `cookie` imports in
   `apps/api/src/modules/auth/auth.controller.ts` and
-  `apps/web/src/server/auth/session.ts` resolve against the `cookie` package's
+  `apps/web/src/shared/server/auth/session.ts` resolve against the `cookie` package's
   bundled types with no new errors
 - **AND** `@types/cookie-parser` usage in `apps/api` still typechecks, since it
   does not depend on the removed stub

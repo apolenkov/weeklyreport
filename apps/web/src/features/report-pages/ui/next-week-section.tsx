@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
+import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import {
   isBoardEmpty,
   ItemCard,

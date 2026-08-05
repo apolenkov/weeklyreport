@@ -4,7 +4,7 @@ import type { ProjectActivity } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { useActivityMutations } from "../model/activities-tab-mutations";
 import {
   type ActivityFormData,

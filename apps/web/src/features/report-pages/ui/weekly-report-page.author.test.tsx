@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),

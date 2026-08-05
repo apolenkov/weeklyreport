@@ -3,17 +3,17 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 
-import {
-  markCompletePatch,
-  moveToCurrentWeekPatch,
-  moveToNextWeekPatch,
-  pauseItemPatch,
-} from "../../../lib/lead-item-actions";
 import type {
   DecisionEntry,
   KanbanItem,
   Product,
   RiskEntry,
+} from "../../report-sections";
+import {
+  markCompletePatch,
+  moveToCurrentWeekPatch,
+  moveToNextWeekPatch,
+  pauseItemPatch,
 } from "../../report-sections";
 import type { DraftPatch } from "./lead-form-draft-patch";
 import type { RiskPrefillRequest } from "./lead-form-sync-bridge";

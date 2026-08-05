@@ -4,11 +4,11 @@ import type { MyHistoryEntry } from "@customreport/shared";
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import { useContext, useEffect, useMemo, useState } from "react";
 
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
-} from "../../../lib/format-date";
-import { SessionContext } from "../../../lib/session-provider";
+} from "../../../shared/lib/format/format-date";
 
 interface UseLeadFormChromeInput {
   readonly pinnedReportId: string | undefined;

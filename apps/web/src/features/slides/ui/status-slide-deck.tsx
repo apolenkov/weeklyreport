@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
 
-import { useFullscreen } from "../../../hooks/use-fullscreen";
+import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";

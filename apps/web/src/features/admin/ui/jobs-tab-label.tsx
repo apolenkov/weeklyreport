@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
 
 // DLQ depth is a background health signal, not a live counter; a slow poll

@@ -12,7 +12,7 @@ The system MUST derive a workflow status's tone-token key, icon, and dot class
 from one canonical map keyed on the canonical status set (`blocked` / `at-risk`
 / `on-track` / `empty`), so no in-scope surface re-derives tone, icon, or dot
 from its own `Record<status, …>`. The canonical map lives in a single module
-under `apps/web/src/lib`. The enumerated consumers — `status-slide-deck`,
+at `apps/web/src/shared/lib/status/status-presentation.ts`. The enumerated consumers — `status-slide-deck`,
 `slide-activity-pills`, `slide-product-chips`, `lead-slide-hero`,
 `lead-product-grid`, `blocked-at-risk-product-card` (its `SEVERITY_BADGE`
 label/tone only), and the label helpers in `weekly-report` /
@@ -128,7 +128,7 @@ that would let a caller bypass the map.
 
 The system MUST declare the canonical status union
 (`"blocked" | "at-risk" | "on-track" | "empty"`) exactly once: `CanonicalStatus` in
-`apps/web/src/lib/status-presentation.ts`, next to the canonical map it
+`apps/web/src/shared/lib/status/status-presentation.ts`, next to the canonical map it
 keys. Every other name for the vocabulary MUST be a type alias of
 `CanonicalStatus` (e.g. `StageStatus` in
 `features/report-sections/model/traffic-light.ts` is the feature-domain
@@ -138,9 +138,9 @@ feature module — `lib` code types against `CanonicalStatus` directly.
 
 #### Scenario: a module needs the canonical status type
 
-- **WHEN** a module in `apps/web/src/lib` needs the vocabulary type
-- **THEN** it imports `CanonicalStatus` from `lib/status-presentation`
-- **AND** no `lib` module imports the type from a feature module
+- **WHEN** a module in `apps/web/src/shared/lib` needs the vocabulary type
+- **THEN** it imports `CanonicalStatus` from `shared/lib/status/status-presentation`
+- **AND** no shared library module imports the type from a feature module
 
 #### Scenario: a feature-domain name is kept
 

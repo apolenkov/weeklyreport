@@ -9,13 +9,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import type { DraftSaveContent } from "../../../hooks/use-lead-form-autosave";
-import { isConflictError } from "../../../lib/trpc";
+import { isConflictError } from "../../../shared/lib/trpc/trpc";
 import {
   buildLeadSubmitPayload,
   deriveLeadSubmitReadiness,
   mapLeadRisks,
 } from "../../report-sections";
+import type { DraftSaveContent } from "../../report-sections/client";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import {
   buildSubmitStages,

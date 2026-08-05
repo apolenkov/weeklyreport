@@ -8,9 +8,9 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SessionState } from "../../../lib/session-provider";
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import type { SessionState } from "../../../shared/lib/auth/session-provider";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { useLeadFormData } from "./use-lead-form-data";
 

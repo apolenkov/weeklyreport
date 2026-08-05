@@ -8,7 +8,7 @@ import {
   formatPeriodRangeWithYear,
   formatRelativePast,
   isoWeekNumber,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 import { mapCompiledHistoryEntries, mapHistoryEntries } from "./lead-history";
 
 const baseEntry = (

@@ -279,7 +279,7 @@ owner according to the criteria below.
    `no-circular` violations under `--ts-pre-compilation-deps`; the target remains
    zero. The command captures its own exit status without a pipeline. The
    unrelated unresolved import from
-   `apps/web/src/lib/trpc.ts` is fixed or separately recorded, never counted as
+   `apps/web/src/shared/lib/trpc/trpc.ts` is fixed or separately recorded, never counted as
    a cycle.
 4. **Local test-harness repetition after a `max-lines` split is allowed.** It
    is allowed only inside one test family when the harness is small, stable,

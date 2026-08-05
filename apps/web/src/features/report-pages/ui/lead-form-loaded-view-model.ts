@@ -3,7 +3,7 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
-import { deriveActivityAlarmFloor } from "../../../lib/activity-alarm";
+import { deriveActivityAlarmFloor } from "../../report-sections";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, useState } from "react";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { DashboardPanelIssue } from "./dashboard-panel-state";
 import { ReopenRequestRow } from "./reopen-request-row";
 

@@ -15,12 +15,12 @@ import { makeQueryState } from "../../../test-utils/query-state";
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
 // Deck no longer surfaces a focus href; stub is a plain marker.
-vi.mock("../../slides/ui/head-slides-client", () => ({
+vi.mock("../../slides", () => ({
   HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
 }));
 
 // Shell test only verifies Publish & Lock is mounted, not its internals.
-vi.mock("../../period/ui/head-publish-lock-action", () => ({
+vi.mock("../../period", () => ({
   HeadPublishLockAction: () => (
     <div data-testid="head-publish-lock-action-stub" />
   ),
@@ -106,7 +106,7 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {

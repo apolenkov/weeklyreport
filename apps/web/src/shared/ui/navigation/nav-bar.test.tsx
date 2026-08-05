@@ -5,8 +5,8 @@ import { render } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SessionState } from "../../../lib/session-provider";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import type { SessionState } from "../../lib/auth/session-provider";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/lead/report",
@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const useSessionMock = vi.fn();
-vi.mock("../../../lib/session-provider", () => ({
+vi.mock("../../lib/auth/session-provider", () => ({
   useSession: () => useSessionMock() as SessionState,
 }));
 

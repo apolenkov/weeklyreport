@@ -15,9 +15,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import { useState } from "react";
 
-import { useTRPC } from "../../../lib/trpc-context";
-import { webEnv } from "../../../lib/web-env";
-import { logoutThenRedirect } from "../../lib/logout-then-redirect";
+import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
+import { webEnv } from "../../lib/runtime/web-env";
+import { useTRPC } from "../../lib/trpc/trpc-context";
 
 type DataResetVariant = "minimal" | "demo" | "full" | "stress";
 

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 // Each mutation wires its own cache invalidation and toast feedback so the
 // Users tab component only has to call `.mutate`.

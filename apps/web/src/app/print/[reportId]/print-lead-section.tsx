@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
-import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
-import { statusLabel } from "../../../lib/status-presentation";
+import type { WeeklyProductReport } from "../../../features/report-sections";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import {
   CurrentWeekRecords,
   DecisionRecords,

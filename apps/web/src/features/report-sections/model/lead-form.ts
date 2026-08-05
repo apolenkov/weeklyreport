@@ -13,7 +13,7 @@ import {
   stageNamesMatch,
 } from "@customreport/shared";
 
-import { initialsFromName } from "../../../lib/user-initials";
+import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { mapLeadDecisions, mapLeadPriorities } from "./lead-form-decisions";
 import { mapLeadItems } from "./lead-form-items";
 import {

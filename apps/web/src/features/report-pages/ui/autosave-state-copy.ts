@@ -1,4 +1,4 @@
-import type { AutosaveState } from "../../../hooks/use-lead-form-autosave";
+import type { AutosaveState } from "../../report-sections/client";
 
 interface AutosaveCopy {
   readonly status: string;

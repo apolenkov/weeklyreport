@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
+import { LAST_ROLE_STORAGE_KEY } from "../shared/lib/auth/last-role";
 
 const useQueryMock = vi.fn();
 const useSearchParamsMock = vi.fn();
@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
-vi.mock("../lib/trpc-context", () => ({
+vi.mock("../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     auth: { me: { queryOptions: () => ({ queryKey: ["auth.me"] }) } },
     org: {

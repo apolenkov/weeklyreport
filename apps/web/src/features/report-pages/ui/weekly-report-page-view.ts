@@ -1,7 +1,7 @@
 import type { PeriodStatus, WeeklyReportReadModel } from "@customreport/shared";
 
-import { joinPeriodLabel } from "../../../lib/format-date";
-import { isHeadLike, isLead } from "../../../lib/role-predicates";
+import { isHeadLike, isLead } from "../../../shared/lib/auth/role-predicates";
+import { joinPeriodLabel } from "../../../shared/lib/format/format-date";
 import {
   type LeadOverviewRow,
   mapWeeklyReport,

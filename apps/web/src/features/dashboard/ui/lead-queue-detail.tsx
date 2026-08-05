@@ -1,4 +1,4 @@
-import { formatRelativePast } from "../../../lib/format-date";
+import { formatRelativePast } from "../../../shared/lib/format/format-date";
 import type { LeadInfo } from "../model/dashboard";
 import { LeadSecondaryActions } from "./lead-queue-actions";
 

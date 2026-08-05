@@ -3,7 +3,7 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SessionContext } from "../../../lib/session-provider";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import {
   useCanonicalReportRedirect,
   useReportDocumentTitle,
