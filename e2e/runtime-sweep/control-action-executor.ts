@@ -65,6 +65,10 @@ const TITLE_ROLE_SELECTORS: Readonly<
 const titleSelectorFor = (role: SupportedControlRole): string =>
   TITLE_ROLE_SELECTORS[role] ?? `[role='${role}']`;
 
+const isSkipToContentLink = (control: ControlActionTarget): boolean =>
+  control.ariaRole === "link" &&
+  control.accessibleName.trim().toLocaleLowerCase() === "skip to content";
+
 export const targetLocator = (
   page: Page,
   control: ControlActionTarget,
@@ -148,6 +152,20 @@ const confirmStatefulAction = async (
   await confirm.click({ timeout: timeoutMs });
 };
 
+const activateControl = async (
+  page: Page,
+  locator: Locator,
+  control: ControlActionTarget,
+  timeoutMs: number,
+): Promise<void> => {
+  if (!isSkipToContentLink(control)) {
+    await locator.click({ timeout: timeoutMs });
+    return;
+  }
+  await locator.focus({ timeout: timeoutMs });
+  await page.keyboard.press("Enter");
+};
+
 const bounded = async <T>(
   operation: Promise<T>,
   timeoutMs: number,
@@ -185,7 +203,7 @@ export const executeControlAttempt = async (
   try {
     if (action.operation === "fill" || action.operation === "select")
       await fillOrSelect(locator, input, timeoutMs);
-    else await locator.click({ timeout: timeoutMs });
+    else await activateControl(page, locator, input.control, timeoutMs);
     if (isStateful(action.operation))
       await confirmStatefulAction(page, action.operation, timeoutMs);
     if (observeOutcome === undefined)

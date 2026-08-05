@@ -3,6 +3,7 @@ import { expect, test, type TestInfo } from "@playwright/test";
 import type { DOMControl, EvidenceBundle, Oracle } from "./contracts.ts";
 import { inventoryDom } from "./dom-inventory.ts";
 import { captureRouteEvidence } from "./evidence-capture.ts";
+import { compactFailureSummary } from "./failure-summary.ts";
 import { writeFrozenCaseArtifact } from "./frozen-case-artifacts.ts";
 import { captureFrozenCasePhases } from "./frozen-case-evidence.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
@@ -174,6 +175,6 @@ test("replays a frozen control through before/action/after evidence", async ({
   expect(result.cell.evidence.before).not.toHaveLength(0);
   expect(result.cell.evidence.action).not.toHaveLength(0);
   expect(result.cell.evidence.after).not.toHaveLength(0);
-  expect(result.issues, result.issues.join("; ")).toEqual([]);
+  expect(result.issues, compactFailureSummary(result.issues)).toEqual([]);
   expect(result.cell.verdict).toBe("pass");
 });

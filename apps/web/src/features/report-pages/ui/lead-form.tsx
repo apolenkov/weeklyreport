@@ -29,6 +29,29 @@ const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
   nextWeekItems: [],
 };
 
+function LeadFormUnavailable() {
+  return (
+    <section
+      aria-labelledby="lead-form-unavailable-title"
+      className="card-surface space-y-3 p-6"
+    >
+      <h1
+        id="lead-form-unavailable-title"
+        className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]"
+      >
+        Report form unavailable
+      </h1>
+      <p role="status" className="text-sm text-[var(--color-foreground)]">
+        This reporting period does not have an editable section for your
+        account.
+      </p>
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Choose a report assigned to you or contact your reporting lead.
+      </p>
+    </section>
+  );
+}
+
 function useLeadFormState(props: LeadFormProps) {
   const {
     reportId: pinnedReportId,
@@ -77,6 +100,7 @@ function useLeadFormState(props: LeadFormProps) {
 export function LeadForm(props: LeadFormProps) {
   const state = useLeadFormState(props);
   const { data, draft, editing, loaded, shell, viewModel } = state;
+  if (data.sectionUnavailable) return <LeadFormUnavailable />;
   if (loaded === null || viewModel === null) return <LeadFormSkeleton />;
 
   const actions = buildDraftActions(draft, editing.addSignals, viewModel);

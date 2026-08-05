@@ -27,6 +27,7 @@ const request = {
   repoRoot: "/workspace/customreport",
   routeRole: "lead" as const,
   routeTarget: "active" as const,
+  routeKey: "lead:/lead/report/[reportId]",
 };
 const EXPECTED_DEMO_PUBLISHED_SECTION_ID =
   "a0000000-0000-4000-8000-000000000411";

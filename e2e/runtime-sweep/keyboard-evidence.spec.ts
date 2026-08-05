@@ -56,6 +56,30 @@ test("keeps the roving radio member as the group's tab stop", async ({
   ]);
 });
 
+test("requires only the active roving tab as a tab stop", async ({ page }) => {
+  await page.setContent(`
+    <div role="tablist" aria-label="Sections">
+      <button type="button" role="tab" aria-selected="true" tabindex="0">Overview</button>
+      <button type="button" role="tab" aria-selected="false" tabindex="-1">Settings</button>
+    </div>
+  `);
+
+  const trace = await captureKeyboardTrace(page);
+  const tabs = trace.controls.filter(({ role }) => role === "tab");
+
+  expect(
+    tabs.map(({ accessibleName, expectedFocusable, outcome }) => [
+      accessibleName,
+      expectedFocusable,
+      outcome,
+    ]),
+  ).toEqual([
+    ["Overview", true, "pass"],
+    ["Settings", false, "not-applicable"],
+  ]);
+  expect(trace.focusGaps).toEqual([]);
+});
+
 test("does not require a non-tabbable listbox panel", async ({ page }) => {
   await page.setContent(`
     <main>

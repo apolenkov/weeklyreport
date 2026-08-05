@@ -26,9 +26,9 @@
     {
       "command": "pnpm --filter @customreport/web exec vitest run src/features/report-pages/ui/lead-form-generation-navigation.test.tsx src/features/report-pages/ui/use-generation-state.test.tsx src/features/report-pages/ui/use-lead-form-generation.test.tsx src/features/report-pages/ui/lead-form-loaded-inputs.test.ts",
       "exitCode": 0,
-      "sourceDigest": "6d3cb6b6e587f194b0c3997196a78052312c75a87ec4616a4ce17921c7990af4",
-      "summary": "4 files and 5 LeadForm generation-isolation tests passed",
-      "rerunAt": "2026-08-04T06:06:10.161Z"
+      "sourceDigest": "384d133355509278b65c8a4eb8f847efa0e00a02367158f3cd10a284dc9a8b48",
+      "summary": "4 files and 6 LeadForm generation-isolation tests passed",
+      "rerunAt": "2026-08-05T08:21:12.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/period/application/period-factory.test.ts",

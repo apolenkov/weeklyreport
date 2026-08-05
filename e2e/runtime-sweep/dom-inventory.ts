@@ -98,7 +98,11 @@ const INVENTORY_SCRIPT = String.raw`(() => {
     const role = roleFor(element);
     const style = window.getComputedStyle(element);
     const bounds = element.getBoundingClientRect();
-    const visible = !element.closest("[hidden],[aria-hidden='true']") &&
+    const closedDetails = element.closest("details:not([open])");
+    const visibleSummary =
+      element.matches("summary") && element.parentElement === closedDetails;
+    const visible = (closedDetails === null || visibleSummary) &&
+      !element.closest("[hidden],[aria-hidden='true']") &&
       style.display !== "none" && style.visibility !== "hidden" &&
       style.visibility !== "collapse" && Number(style.opacity) !== 0 &&
       bounds.width > 0 && bounds.height > 0;
@@ -120,6 +124,7 @@ const INVENTORY_SCRIPT = String.raw`(() => {
       inert: Boolean(element.closest("[inert]")),
       tabIndex: element.tabIndex,
       explicitTabIndex: element.hasAttribute("tabindex"),
+      selected: element.getAttribute("aria-selected")?.toLowerCase() === "true",
       checked: element instanceof HTMLInputElement
         ? element.checked
         : element.getAttribute("aria-checked")?.toLowerCase() === "true" };

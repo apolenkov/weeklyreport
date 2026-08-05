@@ -8,6 +8,7 @@ interface PageControlSnapshot {
   readonly title: string | null;
   readonly checked: boolean | undefined;
   readonly ariaChecked: string | null;
+  readonly ariaExpanded: string | null;
   readonly ariaPressed: string | null;
   readonly selected: string | null;
   readonly value: string | undefined;
@@ -54,6 +55,7 @@ export const snapshotPage = async (page: Page): Promise<PageSnapshot> =>
       checked:
         element instanceof HTMLInputElement ? element.checked : undefined,
       ariaChecked: element.getAttribute("aria-checked"),
+      ariaExpanded: element.getAttribute("aria-expanded"),
       ariaPressed: element.getAttribute("aria-pressed"),
       selected: element.getAttribute("aria-selected"),
       value:

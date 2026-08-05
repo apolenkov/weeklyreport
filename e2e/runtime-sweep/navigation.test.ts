@@ -29,6 +29,7 @@ function fakePage(
       return Promise.resolve();
     },
     waitForLoadState: () => Promise.resolve(),
+    waitForFunction: () => Promise.resolve(),
   } as unknown as Page;
 }
 
@@ -40,6 +41,7 @@ describe("runtime navigation recovery", () => {
       url: () => "about:blank",
       goto: () => Promise.resolve({ status: () => 200 }),
       waitForLoadState: () => Promise.resolve(),
+      waitForFunction: () => Promise.resolve(),
     } as unknown as Page;
 
     await expect(navigate(page, "/head")).resolves.toBe(200);
@@ -162,6 +164,7 @@ describe("runtime navigation recovery", () => {
           }),
       ),
       waitForLoadState: vi.fn(() => Promise.resolve()),
+      waitForFunction: vi.fn(() => Promise.resolve()),
     } as unknown as Page;
     const expectation = expectedActionNavigationFor("link:Status:1");
     if (expectation === undefined)

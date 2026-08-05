@@ -263,6 +263,36 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     });
   });
 
+  it("overview navigation reveals and opens a product hidden by submitted-only", async () => {
+    renderPage(
+      makeWeeklyReportData("open", {
+        portfolioOverview: TWO_PRODUCT_OVERVIEW,
+        leadSections: [submittedSection(), draftSection()],
+      }),
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(accordionCard(PRODUCT_ID_B)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: /Product Beta/ }));
+
+    await waitFor(() => {
+      const product = expectDefined(accordionCard(PRODUCT_ID_B));
+      expect(product).not.toBeNull();
+      expect(
+        within(product).getByRole("button", {
+          name: /Product Beta/,
+        }),
+      ).toHaveAttribute("aria-expanded", "true");
+    });
+    expect(
+      within(screen.getByRole("group", { name: "Section filter" })).getByRole(
+        "button",
+        { name: "All" },
+      ),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("all-draft live period shows the 'N in draft — Show all' signal, not the empty-state", async () => {
     renderPage({
       ...makeWeeklyReportData("open", {

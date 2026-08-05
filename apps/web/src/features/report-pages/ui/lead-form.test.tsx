@@ -604,6 +604,41 @@ describe("LeadForm mutation wiring", () => {
     );
   });
 
+  it("byPeriod NOT_FOUND renders an accessible unavailable surface without a toast", async () => {
+    const err = new TRPCClientError("No section found for user");
+    Object.defineProperty(err, "data", {
+      value: { httpStatus: 404, code: "NOT_FOUND" },
+      configurable: true,
+    });
+
+    const { Wrapper } = buildHarness({
+      byPeriodQueryFn: () => Promise.reject(err),
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      render(
+        <Wrapper>
+          <LeadForm />
+        </Wrapper>,
+      );
+
+      expect(
+        await screen.findByRole("heading", {
+          name: /report form unavailable/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /does not have an editable section/i,
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("changing a stage status marks the form dirty (autosave indicator changes from Autosaved)", async () => {
     // Stage chip click dirties via handleProductsChange → autosave pending.
     const { Wrapper } = buildHarness();

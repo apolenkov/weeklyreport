@@ -79,6 +79,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
           repoRoot,
           routeTarget: route.target,
           routeRole: route.role,
+          routeKey: `${route.role}:${route.catalogRoute}`,
         },
         database,
         resetForGroup,

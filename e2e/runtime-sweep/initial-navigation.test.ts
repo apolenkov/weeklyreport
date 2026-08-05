@@ -76,6 +76,7 @@ describe("frozen-case initial navigation", () => {
         await settlement;
         harness.events.push("settled");
       }),
+      waitForFunction: vi.fn(() => Promise.resolve()),
     } as unknown as Page;
 
     const navigation = initialNavigation(page, "/head/report");

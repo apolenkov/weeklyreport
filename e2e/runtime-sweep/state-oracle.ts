@@ -39,7 +39,6 @@ export type RuntimeOracleMismatch = Readonly<{ axis: "lifecycle" | "submission" 
 export type RuntimeOracleObservation = Readonly<{ matches: boolean; mismatches: readonly RuntimeOracleMismatch[] }>;
 // prettier-ignore
 export type RuntimeDomainOracle = Readonly<{ lifecycle: LifecycleExpectation; submission: SubmissionExpectation; ownership: OwnershipExpectation; permission: PermissionExpectation; key: string }>;
-
 // prettier-ignore
 type LifecycleRow = readonly [LifecycleState, ReportStatus, PeriodState, PeriodStatus, boolean, boolean, boolean];
 const LIFECYCLE_ROWS: readonly LifecycleRow[] = [

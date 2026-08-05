@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { seedProfileSchema } from "./contracts.ts";
+import { compactFailedCellSummary } from "./failure-summary.ts";
 import {
   type FrozenCaseLiveRuntime,
   runFrozenCases,
@@ -113,7 +114,8 @@ test.describe("replays every frozen runtime case in matrix order", () => {
         },
       );
       expect(cells.map(({ cellId }) => cellId)).toEqual(shard.caseIds);
-      expect(cells.filter(({ verdict }) => verdict !== "pass")).toHaveLength(0);
+      const failedCells = cells.filter(({ verdict }) => verdict !== "pass");
+      expect(failedCells.length, compactFailedCellSummary(failedCells)).toBe(0);
     });
   }
 });

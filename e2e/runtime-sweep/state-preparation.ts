@@ -23,6 +23,10 @@ import type {
 } from "./contracts.ts";
 import { sha256Hex } from "./ids.ts";
 import {
+  type RuntimeSurfaceExpectation,
+  runtimeSurfaceExpectation,
+} from "./runtime-surface-expectation.ts";
+import {
   buildRuntimeDomainOracle,
   observeRuntimeDatabase,
   type RuntimeDatabaseSnapshot,
@@ -63,9 +67,9 @@ export type OwnershipStateMutation = Readonly<{ projectId: string; assignments: 
 // prettier-ignore
 export type PermissionSubject = Readonly<{ boundary: PermissionBoundary; actorId: string | null; groupId: string }>;
 // prettier-ignore
-export type StatePreparationPlan = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; axes: RuntimeStateAxes; resetCommands: readonly E2eSetupCommand[]; targets: StateTarget; report: ReportStateMutation; section: SectionStateMutation; ownership: OwnershipStateMutation; permission: PermissionSubject; oracle: RuntimeDomainOracle; digest: string }>;
+export type StatePreparationPlan = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; routeKey: string | undefined; axes: RuntimeStateAxes; resetCommands: readonly E2eSetupCommand[]; targets: StateTarget; report: ReportStateMutation; section: SectionStateMutation; ownership: OwnershipStateMutation; permission: PermissionSubject; oracle: RuntimeDomainOracle; surface: RuntimeSurfaceExpectation; digest: string }>;
 // prettier-ignore
-export type StatePreparationPlanInput = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; axes: RuntimeStateAxes; repoRoot: string }>;
+export type StatePreparationPlanInput = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; routeKey?: string | undefined; axes: RuntimeStateAxes; repoRoot: string }>;
 
 // prettier-ignore
 export interface RuntimeStateTransaction { updateReport(mutation: ReportStateMutation): Promise<void>; updateSection(mutation: SectionStateMutation): Promise<void>; replaceOwnership(mutation: OwnershipStateMutation): Promise<void>; readSnapshot(targets: StateTarget, permission: PermissionSubject): Promise<RuntimeDatabaseSnapshot> }
@@ -176,6 +180,7 @@ export function buildStatePreparationPlan(
     profile: input.profile,
     routeRole: input.routeRole,
     routeTarget: input.routeTarget,
+    routeKey: input.routeKey,
     axes: input.axes,
     resetCommands: Object.freeze(
       e2eSetupCommands(input.repoRoot, input.profile),
@@ -212,6 +217,10 @@ export function buildStatePreparationPlan(
       groupId: target.groupId,
     },
     oracle,
+    surface: runtimeSurfaceExpectation({
+      route: input.routeKey ?? `${input.routeRole}:${input.routeTarget}`,
+      permission: input.axes.permission,
+    }),
   };
   return Object.freeze({ ...plan, digest: sha256Hex(plan) });
 }

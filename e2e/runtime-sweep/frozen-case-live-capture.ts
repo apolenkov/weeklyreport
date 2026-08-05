@@ -126,6 +126,7 @@ const captureEvidence = async (
   inventory: Awaited<ReturnType<typeof inventoryDom>>,
   phaseStatus: number | null,
   actionSucceeded: boolean,
+  actionInapplicableReason?: string,
 ): Promise<EvidenceBundle> =>
   (
     await captureRouteEvidence({
@@ -146,12 +147,20 @@ const captureEvidence = async (
       capturePhase: input.phase,
       functionalAssertion: {
         assertionId: `frozen-${input.matrixCase.caseId}-${input.phase}`,
-        expected: { reachable: true, actionSucceeded: true },
+        expected:
+          actionInapplicableReason === undefined
+            ? { reachable: true, actionSucceeded: true }
+            : { reachable: true, productActions: "inapplicable" },
         actual: {
           reachable: phaseStatus !== null && phaseStatus < HTTP_OK_LIMIT,
-          actionSucceeded,
+          ...(actionInapplicableReason === undefined
+            ? { actionSucceeded }
+            : { productActions: "inapplicable" }),
         },
-        message: `Frozen ${input.phase} evidence captured for ${input.matrixCase.caseId}`,
+        message:
+          actionInapplicableReason === undefined
+            ? `Frozen ${input.phase} evidence captured for ${input.matrixCase.caseId}`
+            : `Frozen ${input.phase} product actions are inapplicable for ${input.matrixCase.caseId}: ${actionInapplicableReason}`,
       },
       geometryOracle: {
         viewport: { width: 1440, height: 900 },
@@ -172,6 +181,7 @@ const actionOutcomeForPhase = async (
           input.source,
           input.matrixCase,
           input.runtime,
+          input.prepared.plan.surface,
         )
       : undefined;
   return boundary === undefined
@@ -201,6 +211,29 @@ const phaseListenersFor = (
       }
     : listeners;
 
+const actionSucceededFor = (
+  input: FrozenPhaseInput,
+  action: ReturnType<typeof actionFor>,
+  outcome: ActionOutcome | undefined,
+): boolean =>
+  input.phase !== "action" ||
+  action === undefined ||
+  action.operation === "navigate" ||
+  outcome?.status === "pass" ||
+  (input.matrixCase.execution.kind === "fault" &&
+    outcome?.status !== "not-exercised");
+
+const actionInapplicableReasonFor = (
+  input: FrozenPhaseInput,
+  outcome: ActionOutcome | undefined,
+): string | undefined =>
+  input.phase === "action" &&
+  input.prepared.plan.surface.productActions === "inapplicable" &&
+  outcome?.status === "not-exercised"
+    ? (input.prepared.plan.surface.productActionsReason ??
+      "Product actions are inapplicable for this surface")
+    : undefined;
+
 export const captureFrozenPhase = async (
   input: FrozenPhaseInput,
 ): Promise<EvidenceBundle> => {
@@ -220,13 +253,11 @@ export const captureFrozenPhase = async (
         : undefined;
     const inventory = await inventoryDom(input.page);
     const phaseStatus = navigationStatus ?? input.responseStatus;
-    const actionSucceeded =
-      input.phase !== "action" ||
-      action === undefined ||
-      action.operation === "navigate" ||
-      outcome?.status === "pass" ||
-      (input.matrixCase.execution.kind === "fault" &&
-        outcome?.status !== "not-exercised");
+    const actionSucceeded = actionSucceededFor(input, action, outcome);
+    const actionInapplicableReason = actionInapplicableReasonFor(
+      input,
+      outcome,
+    );
     const phaseListeners = phaseListenersFor(input, listeners);
     const captured = await captureEvidence(
       input,
@@ -234,6 +265,7 @@ export const captureFrozenPhase = async (
       inventory,
       phaseStatus,
       actionSucceeded,
+      actionInapplicableReason,
     );
     if (input.phase !== "action") return captured;
     const [controlRef, database] = await Promise.all([

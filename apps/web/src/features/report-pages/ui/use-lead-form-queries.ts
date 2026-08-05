@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import { useRecordVisibility } from "../../../hooks/use-record-visibility";
+import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
 import type { SessionUser } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -18,6 +19,10 @@ import {
 interface QueryErrorSource {
   readonly isError: boolean;
   readonly error: unknown;
+}
+
+function isLeadFormUnavailableError(error: unknown): boolean {
+  return getClientErrorDetails(error).trpcCode === "NOT_FOUND";
 }
 
 export interface LeadFormErrorSources {
@@ -116,11 +121,16 @@ export function useLeadFormReports({
     }),
     enabled: targetReportId !== null,
   });
+  const sectionUnavailable =
+    byPeriodQ.isError && isLeadFormUnavailableError(byPeriodQ.error);
 
   return {
     errorSources: {
       activeQ,
-      byPeriodQ,
+      byPeriodQ: {
+        isError: byPeriodQ.isError && !sectionUnavailable,
+        error: byPeriodQ.error,
+      },
       historyQ,
       viewSettingsQ,
       crossAuthorsQ,
@@ -133,6 +143,7 @@ export function useLeadFormReports({
       sectionIdForActions:
         byPeriodQ.data?.section.reportSectionId ?? activeSectionId,
       byPeriodData: byPeriodQ.data,
+      sectionUnavailable,
       refetchSection: byPeriodQ.refetch,
       historyData: historyQ.data,
       unifiedView: viewSettingsQ.data?.unifiedActivityView === true,
