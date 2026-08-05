@@ -5,8 +5,10 @@ import type { DomControlObservation } from "./dom-inventory.ts";
 const INTERACTIVE_ROLES = new Set([
   "button",
   "checkbox",
+  "combobox",
   "gridcell",
   "link",
+  "listbox",
   "menuitem",
   "menuitemcheckbox",
   "menuitemradio",
@@ -73,6 +75,26 @@ const retryAction = (controlKey: string): Action => ({
 
 const normalizedName = (name: string): string =>
   name.trim().replaceAll(/\s+/g, " ").toLocaleLowerCase();
+
+const normalizedTagName = (control: DomControlObservation): string =>
+  control.tagName.trim().toLocaleLowerCase();
+
+const normalizedInputType = (control: DomControlObservation): string =>
+  (control.inputType ?? "").trim().toLocaleLowerCase();
+
+const isSearchInput = (control: DomControlObservation): boolean =>
+  normalizedTagName(control) === "input" &&
+  normalizedInputType(control) === "search";
+
+const isNativeSelect = (control: DomControlObservation): boolean =>
+  normalizedTagName(control) === "select" &&
+  FORM_SELECT_ROLES.has(control.role);
+
+const isFormFillControl = (control: DomControlObservation): boolean =>
+  FORM_FILL_ROLES.has(control.role) || isSearchInput(control);
+
+const isFormSelectControl = (control: DomControlObservation): boolean =>
+  isNativeSelect(control);
 
 const isSubmitControl = (control: DomControlObservation): boolean =>
   control.role === "button" &&
@@ -156,9 +178,9 @@ const formPlan = (
       "unsafe",
       "Potentially mutating form controls are not exercised without disposable-reset recovery",
     );
-  if (FORM_FILL_ROLES.has(control.role))
+  if (isFormFillControl(control))
     return { control, action: formAction(control, "fill", "irreversible") };
-  if (FORM_SELECT_ROLES.has(control.role))
+  if (isFormSelectControl(control))
     return {
       control,
       action: formAction(control, "select", "irreversible"),
@@ -191,8 +213,8 @@ const planFor = (
   if (stateful !== undefined)
     return { control, action: statefulAction(stateful, control.controlKey) };
   if (
-    FORM_FILL_ROLES.has(control.role) ||
-    FORM_SELECT_ROLES.has(control.role) ||
+    isFormFillControl(control) ||
+    isFormSelectControl(control) ||
     isSubmitControl(control)
   )
     return formPlan(control, options);

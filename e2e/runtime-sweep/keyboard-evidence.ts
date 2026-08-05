@@ -107,6 +107,12 @@ const activeElement = (page: Page): Promise<string> =>
     return `${role}:${name}`;
   });
 
+const blurActiveElement = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+  });
+
 const focusedControl = (page: Page): Promise<FocusedControl | null> =>
   page.evaluate<FocusedControl | null>(FOCUSED_CONTROL_SCRIPT);
 
@@ -130,7 +136,8 @@ const controlsEvidence = (
 ): readonly KeyboardControlEvidence[] =>
   controls.map((control) => {
     const expectedFocusable =
-      control.enabled && !NON_TAB_FOCUS_ROLES.has(control.role);
+      control.keyboardExpectedFocusable ??
+      (control.enabled && !NON_TAB_FOCUS_ROLES.has(control.role));
     const focusable = focusedKeys.has(control.controlKey);
     return {
       controlKey: control.controlKey,
@@ -153,26 +160,26 @@ export async function captureKeyboardTrace(
 ): Promise<KeyboardTrace> {
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
-  await page.evaluate(() => {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) active.blur();
-  });
-  const sequence = await tabSequence(
-    page,
-    Math.max(1, resolvedControls.length * MAX_TAB_STEPS + 1),
-  );
-  const after =
-    sequence[0] === undefined
-      ? await activeElement(page)
-      : `${sequence[0].role}:${sequence[0].accessibleName}`;
-  await page.keyboard.press("Shift+Tab");
-  const focusedKeys = new Set(sequence.map(({ controlKey }) => controlKey));
-  const evidence = controlsEvidence(resolvedControls, focusedKeys);
-  return {
-    after,
-    before,
-    focusMoved: before !== after && after !== "none",
-    controls: evidence,
-    focusGaps: evidence.filter(({ outcome }) => outcome === "fail"),
-  };
+  await blurActiveElement(page);
+  try {
+    const sequence = await tabSequence(
+      page,
+      Math.max(1, resolvedControls.length * MAX_TAB_STEPS + 1),
+    );
+    const after =
+      sequence[0] === undefined
+        ? await activeElement(page)
+        : `${sequence[0].role}:${sequence[0].accessibleName}`;
+    const focusedKeys = new Set(sequence.map(({ controlKey }) => controlKey));
+    const evidence = controlsEvidence(resolvedControls, focusedKeys);
+    return {
+      after,
+      before,
+      focusMoved: before !== after && after !== "none",
+      controls: evidence,
+      focusGaps: evidence.filter(({ outcome }) => outcome === "fail"),
+    };
+  } finally {
+    await blurActiveElement(page);
+  }
 }

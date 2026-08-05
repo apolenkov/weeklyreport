@@ -124,4 +124,59 @@ describe("runtime navigation recovery", () => {
     expect(signal?.aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("waits for delayed navigation from generic router controls", async () => {
+    vi.useFakeTimers();
+    const frame = {};
+    let resolveNavigation: (() => void) | undefined;
+    const pageState = { url: "http://127.0.0.1:3105/report" };
+    const page = {
+      url: () => pageState.url,
+      mainFrame: () => frame,
+      waitForEvent: vi.fn(
+        (
+          _event: string,
+          options: {
+            readonly predicate?: (candidate: object) => boolean;
+            readonly signal?: AbortSignal;
+          },
+        ) =>
+          new Promise<object>((resolve, reject) => {
+            resolveNavigation = () => {
+              if (options.predicate?.(frame) === true) {
+                pageState.url = "http://127.0.0.1:3105/status";
+                resolve(frame);
+              }
+            };
+            options.signal?.addEventListener(
+              "abort",
+              () => reject(new Error("observer cancelled")),
+              { once: true },
+            );
+          }),
+      ),
+      waitForLoadState: vi.fn(() => Promise.resolve()),
+    } as unknown as Page;
+    const expectation = expectedActionNavigationFor("link:Status:1");
+    if (expectation === undefined)
+      throw new Error("Generic router links must arm navigation observation");
+    const observer = observeActionNavigation(page, expectation);
+    const waiting = observer.waitForNavigation();
+    let settled = false;
+    const completion = waiting.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(settled).toBe(false);
+    resolveNavigation?.();
+    await expect(waiting).resolves.toBe(true);
+    await completion;
+    expect(page.url()).toContain("/status");
+  });
 });

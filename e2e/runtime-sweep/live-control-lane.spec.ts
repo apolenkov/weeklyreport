@@ -189,6 +189,62 @@ test.describe("runtime live-control lane", () => {
 
     expect(records[0]?.status).toBe("fail");
   });
+
+  test("observes a switch transition through aria-checked", async ({
+    page,
+  }) => {
+    await page.setContent(`
+      <button type="button" role="switch" aria-label="Notifications" aria-checked="false">Notifications</button>
+      <script>
+        document.querySelector('[role="switch"]').addEventListener("click", (event) => {
+          const switchControl = event.currentTarget;
+          switchControl.setAttribute(
+            "aria-checked",
+            switchControl.getAttribute("aria-checked") === "true" ? "false" : "true",
+          );
+        });
+      </script>
+    `);
+    const inventory = await inventoryDom(page);
+    const records = await executeLiveControlPlans({
+      page,
+      plans: planLiveControlActions(inventory.controls),
+      preparePage: () => Promise.resolve(),
+    });
+
+    expect(records[0]).toMatchObject({
+      status: "pass",
+      observation: { kind: "dom" },
+    });
+  });
+
+  test("observes skip-to-content focus and scroll without accepting ordinary focus", async ({
+    page,
+  }) => {
+    await page.setContent(`
+      <button type="button" aria-label="Skip to content">Skip to content</button>
+      <div style="height: 900px"></div>
+      <main id="main-content" tabindex="-1">Report content</main>
+      <script>
+        document.querySelector("button").addEventListener("click", () => {
+          const main = document.getElementById("main-content");
+          main.focus();
+          window.scrollTo(0, 480);
+        });
+      </script>
+    `);
+    const inventory = await inventoryDom(page);
+    const records = await executeLiveControlPlans({
+      page,
+      plans: planLiveControlActions(inventory.controls),
+      preparePage: () => Promise.resolve(),
+    });
+
+    expect(records[0]).toMatchObject({
+      status: "pass",
+      observation: { kind: "focus" },
+    });
+  });
 });
 
 test("replays a frozen control through before/action/after evidence", async ({
