@@ -2,7 +2,6 @@ import { execFile } from "node:child_process";
 
 const MAX_OUTPUT_BYTES = Number("16777216");
 const OPENCODE_BINARY = "/opt/homebrew/bin/opencode";
-const OPENCODE_KILL_SIGNAL: NodeJS.Signals = "SIGTERM";
 const OPENCODE_INVOCATION_TIMEOUT_MINUTES = Number("15");
 const MILLISECONDS_PER_MINUTE = Number("60000");
 
@@ -14,8 +13,8 @@ export type OpenCodeExecutor = (
 ) => Promise<{ readonly stdout: string }>;
 
 interface TimedOutOpenCodeProcessError extends Error {
-  readonly killed: true;
-  readonly signal: NodeJS.Signals;
+  readonly code: "ABORT_ERR";
+  readonly cause: { readonly name: "TimeoutError" };
   readonly stdout?: string;
 }
 
@@ -33,26 +32,36 @@ export type OpenCodeExecFile = (
   options: {
     readonly encoding: "utf8";
     readonly maxBuffer: number;
-    readonly timeout: number;
-    readonly killSignal: NodeJS.Signals;
+    readonly signal: AbortSignal;
   },
   callback: (error: unknown, stdout: string) => void,
 ) => { readonly stdin?: { end(): void } | null };
 
+export type OpenCodeTimeoutSignal = (timeoutMs: number) => AbortSignal;
+
 const productionExecFile: OpenCodeExecFile = (file, args, options, callback) =>
   execFile(file, args, options, (error, stdout) => callback(error, stdout));
+const productionTimeoutSignal: OpenCodeTimeoutSignal = (timeoutMs) =>
+  AbortSignal.timeout(timeoutMs);
 
 export const isTimedOutOpenCodeProcessError = (
   error: unknown,
 ): error is TimedOutOpenCodeProcessError =>
   error instanceof Error &&
-  "killed" in error &&
-  error.killed === true &&
-  "signal" in error &&
-  error.signal === OPENCODE_KILL_SIGNAL;
+  error.name === "AbortError" &&
+  "code" in error &&
+  error.code === "ABORT_ERR" &&
+  "cause" in error &&
+  typeof error.cause === "object" &&
+  error.cause !== null &&
+  "name" in error.cause &&
+  error.cause.name === "TimeoutError";
 
 export const createOpenCodeExecutor =
-  (run: OpenCodeExecFile = productionExecFile): OpenCodeExecutor =>
+  (
+    run: OpenCodeExecFile = productionExecFile,
+    timeoutSignal: OpenCodeTimeoutSignal = productionTimeoutSignal,
+  ): OpenCodeExecutor =>
   async (args: readonly string[]): Promise<{ readonly stdout: string }> =>
     new Promise((resolve, reject) => {
       const child = run(
@@ -61,8 +70,7 @@ export const createOpenCodeExecutor =
         {
           encoding: "utf8",
           maxBuffer: MAX_OUTPUT_BYTES,
-          timeout: OPENCODE_INVOCATION_TIMEOUT_MS,
-          killSignal: OPENCODE_KILL_SIGNAL,
+          signal: timeoutSignal(OPENCODE_INVOCATION_TIMEOUT_MS),
         },
         (error, stdout) => {
           if (error) {
