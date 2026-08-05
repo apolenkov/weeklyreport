@@ -17,9 +17,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { History } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
-import { VersionComingSoonControl } from "../../features/admin/ui/version-coming-soon";
-import { PdfExportComingSoonControl } from "../../features/pdf-export/ui/pdf-export-coming-soon";
-import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
+import { VersionComingSoonControl } from "../../../features/admin/ui/version-coming-soon";
+import { PdfExportComingSoonControl } from "../../../features/pdf-export/ui/pdf-export-coming-soon";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 
 const CANONICAL_BG = "bg-coming-soon";
 const CANONICAL_FG = "text-coming-soon-foreground";
@@ -206,7 +206,7 @@ describe("every tooltip control uses the shared Radix wrapper (source scan)", ()
   // Holidays keeps its own inert-span (nested-button validity); other controls
   // compose the shared primitive and are covered by its unit tests.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const TOOLTIP_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
+  const TOOLTIP_CONTROL_FILES = ["../../../features/admin/ui/settings-tab.tsx"];
 
   it("each control uses ComingSoonTooltip and dropped the retired CSS anchor", () => {
     for (const rel of TOOLTIP_CONTROL_FILES) {
@@ -222,7 +222,7 @@ describe("every tooltip control uses the shared Radix wrapper (source scan)", ()
     // carries a PERSISTENT (sr-only) ComingSoonBadge — the tab's accessible name
     // still announces the coming-soon state without adding an aria-label.
     const source = readFileSync(
-      path.join(componentsRoot, "../../features/admin/ui/settings-tab.tsx"),
+      path.join(componentsRoot, "../../../features/admin/ui/settings-tab.tsx"),
       "utf8",
     );
     expect(source).toContain("ComingSoonBadge");
@@ -234,7 +234,7 @@ describe("every inert Coming Soon control — no stacked native title", () => {
   // Native `title` stacks a second browser tooltip over the amber badge.
   // Shared primitive already forbids it; scan remaining hand-rolled controls.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const INERT_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
+  const INERT_CONTROL_FILES = ["../../../features/admin/ui/settings-tab.tsx"];
 
   it("no inert control source carries title=Coming Soon", () => {
     const violations = INERT_CONTROL_FILES.filter((rel) =>
@@ -252,7 +252,7 @@ describe("deferred-feature-pattern — no bespoke 'Coming Soon' pill", () => {
   // rendered occurrence is a bespoke pill that bypasses the shared primitive.
   const repoRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../../../../..",
+    "../../../../../../",
   );
   const SCAN_ROOTS = [
     path.join(repoRoot, "apps/web/src"),

@@ -1,4 +1,8 @@
-export { DeleteIcon, EditIcon, PlusIcon } from "../../../shared/ui/icons";
+export {
+  DeleteIcon,
+  EditIcon,
+  PlusIcon,
+} from "../../../shared/ui/icons/action-icons";
 
 const DANGER_ICON_CLASSES =
   "text-[var(--color-destructive-emphasis)] hover:text-[var(--color-destructive-emphasis-hover)]";

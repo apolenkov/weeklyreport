@@ -108,7 +108,7 @@ vi.mock("../../period/ui/decision-edit-dialog", () => ({
     ) : null,
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     title,

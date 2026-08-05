@@ -1,3 +1,3 @@
 "use client";
 
-export { DeleteIcon, EditIcon } from "../../../shared/ui/icons";
+export { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";

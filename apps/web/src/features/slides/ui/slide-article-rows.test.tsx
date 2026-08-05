@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
+import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
 import type {
   GridAuthor,
   GridRow,

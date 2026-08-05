@@ -2,8 +2,8 @@
 
 import type { Ref } from "react";
 
-import { ChoiceChipRow } from "../../../shared/ui/choice-chip-row";
-import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
+import { ChoiceChipRow } from "../../../shared/ui/forms/choice-chip-row";
+import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 import type {
   ParentActivityOption,
   Product,

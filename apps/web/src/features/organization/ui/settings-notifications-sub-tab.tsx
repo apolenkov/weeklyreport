@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   useUpdateSettingsMut,
-} from "../../../shared/ui/settings-tab-shared";
+} from "../../../shared/ui/settings/settings-tab";
 
 // The wire schema accepts null (clear) or a valid email; we keep the input as a
 // string and translate empty → null on save. UI guard: a non-empty string that

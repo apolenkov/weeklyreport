@@ -55,7 +55,7 @@ vi.mock("../../../lib/trpc-context", () => ({
     },
   }),
 }));
-vi.mock("../../../shared/ui/confirmation-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirmation-dialog", () => ({
   ConfirmationDialog: ({
     open,
     onConfirm,

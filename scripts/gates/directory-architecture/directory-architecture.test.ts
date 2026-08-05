@@ -29,6 +29,10 @@ import {
   sourceIdentityOf,
   sourceIdentityViolations,
 } from "./source-identity.ts";
+import {
+  findWebFeatureBoundaryViolations,
+  formatWebFeatureBoundaryViolation,
+} from "./web-feature-boundary.ts";
 
 const BASELINE_PATH = resolveRepoPath(
   "scripts/gates/directory-architecture/directory-architecture-baseline.json",
@@ -151,6 +155,8 @@ const virtualApiTestSource = (
   const sources = new Map(entries);
   return (file: string): string => sources.get(file) ?? "";
 };
+
+const virtualWebSource = virtualApiTestSource;
 
 void test("the checked catalogue gives every tracked in-scope file one owner", () => {
   const validation = validateOwnership(trackedFiles(), OWNERSHIP_CATALOGUE);
@@ -594,6 +600,58 @@ void test("current API test tree has no deep cross-module import edges", () => {
   assert.deepEqual(
     findApiTestBoundaryViolations(trackedFiles()).map(
       formatApiTestBoundaryViolation,
+    ),
+    [],
+  );
+});
+
+void test("web feature boundary rejects deep import, export, and dynamic-import edges", () => {
+  const file = "apps/web/src/features/viewer/ui/viewer-boundary.test.tsx";
+  const violations = findWebFeatureBoundaryViolations(
+    [file],
+    virtualWebSource([
+      [
+        file,
+        [
+          'import { LeadForm } from "../../report-pages/ui/lead-form";',
+          'export { StageChip } from "../../report-sections/ui/stage-chip";',
+          'void import("../../period/model/use-report-history-data");',
+        ].join("\n"),
+      ],
+    ]),
+  );
+
+  assert.deepEqual(violations.map(formatWebFeatureBoundaryViolation), [
+    `${file}: web feature boundary violation: import "../../period/model/use-report-history-data" resolves to apps/web/src/features/period/model/use-report-history-data; use the sibling feature facade.`,
+    `${file}: web feature boundary violation: import "../../report-pages/ui/lead-form" resolves to apps/web/src/features/report-pages/ui/lead-form; use the sibling feature facade.`,
+    `${file}: web feature boundary violation: import "../../report-sections/ui/stage-chip" resolves to apps/web/src/features/report-sections/ui/stage-chip; use the sibling feature facade.`,
+  ]);
+});
+
+void test("web feature boundary allows same-feature paths and sibling facades", () => {
+  const file = "apps/web/src/features/viewer/ui/viewer-boundary.test.tsx";
+  assert.deepEqual(
+    findWebFeatureBoundaryViolations(
+      [file],
+      virtualWebSource([
+        [
+          file,
+          [
+            'import { ViewerShell } from "./viewer-shell";',
+            'export { WeeklyReportPage } from "../../report-pages";',
+            'void import("../../period/index");',
+          ].join("\n"),
+        ],
+      ]),
+    ),
+    [],
+  );
+});
+
+void test("current web feature tree has no deep cross-slice imports", () => {
+  assert.deepEqual(
+    findWebFeatureBoundaryViolations(trackedFiles()).map(
+      formatWebFeatureBoundaryViolation,
     ),
     [],
   );

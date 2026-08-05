@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { TabCountPill } from "../../../shared/ui/tab-count-pill";
+import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
 
 // DLQ depth is a background health signal, not a live counter; a slow poll
 // keeps the badge fresh without a per-render query on every admin tab.

@@ -6,9 +6,13 @@ import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { PlusIcon } from "../../../shared/ui/icons";
-import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
+import { PlusIcon } from "../../../shared/ui/icons/action-icons";
+import {
+  TabFilter,
+  TabHeader,
+  TabSearch,
+} from "../../../shared/ui/tabs/tab-header";
 import { toReportingGroupInput } from "../model/admin";
 import type {
   AdminGroupView,

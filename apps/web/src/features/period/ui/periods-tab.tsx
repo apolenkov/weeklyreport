@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatPeriodLabel, formatPeriodRange } from "../../../lib/format-date";
 import { useTRPC } from "../../../lib/trpc-context";
-import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { usePeriodMutations } from "../model/use-period-mutations";
 import { PeriodsActiveSection } from "./periods-active-section";
 import { PeriodsArchiveSection } from "./periods-archive-section";

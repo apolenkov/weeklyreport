@@ -1,9 +1,8 @@
 import { readFileSync } from "node:fs";
 import { posix } from "node:path";
 
-import ts from "typescript";
-
 import { resolveRepoPath } from "../../shared/repo-root.ts";
+import { typescriptImportSpecifiers } from "./typescript-import-specifiers.ts";
 
 const API_MODULES_PREFIX = "apps/api/src/modules/";
 const API_TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
@@ -19,45 +18,6 @@ export type ApiTestSourceReader = (file: string) => string;
 
 const readRepositorySource: ApiTestSourceReader = (file) =>
   readFileSync(resolveRepoPath(file), "utf8");
-
-const staticSpecifier = (node: ts.Node | undefined): string | undefined =>
-  node !== undefined &&
-  (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
-    ? node.text
-    : undefined;
-
-const sourceKindFor = (file: string): ts.ScriptKind =>
-  file.endsWith(".tsx")
-    ? ts.ScriptKind.TSX
-    : file.endsWith(".jsx")
-      ? ts.ScriptKind.JSX
-      : ts.ScriptKind.TS;
-
-const sourceSpecifiers = (source: ts.SourceFile): readonly string[] => {
-  const specifiers: string[] = [];
-  const visit = (node: ts.Node): void => {
-    const own = [
-      ts.isImportDeclaration(node)
-        ? staticSpecifier(node.moduleSpecifier)
-        : undefined,
-      ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined
-        ? staticSpecifier(node.moduleSpecifier)
-        : undefined,
-      ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
-        ? staticSpecifier(node.argument.literal)
-        : undefined,
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-        ? staticSpecifier(node.arguments[0])
-        : undefined,
-    ].filter((specifier): specifier is string => specifier !== undefined);
-    specifiers.push(...own);
-    ts.forEachChild(node, visit);
-  };
-
-  visit(source);
-  return specifiers;
-};
 
 const moduleNameFor = (file: string): string | undefined => {
   const normalized = posix.normalize(file);
@@ -113,26 +73,21 @@ export function findApiTestBoundaryViolations(
     .flatMap((file) => {
       const sourceModule = moduleNameFor(file);
       if (sourceModule === undefined) return [];
-      const source = ts.createSourceFile(
-        file,
-        readSource(file),
-        ts.ScriptTarget.Latest,
-        true,
-        sourceKindFor(file),
+      return typescriptImportSpecifiers(file, readSource(file)).flatMap(
+        (specifier) => {
+          if (!specifier.startsWith(".")) return [];
+          const target = resolvedTargetFor(file, specifier);
+          const targetParts = targetModuleAndParts(target);
+          if (
+            targetParts === null ||
+            targetParts.moduleName === sourceModule ||
+            isAllowedSiblingTarget(targetParts.parts)
+          ) {
+            return [];
+          }
+          return [{ file, specifier, target }];
+        },
       );
-      return sourceSpecifiers(source).flatMap((specifier) => {
-        if (!specifier.startsWith(".")) return [];
-        const target = resolvedTargetFor(file, specifier);
-        const targetParts = targetModuleAndParts(target);
-        if (
-          targetParts === null ||
-          targetParts.moduleName === sourceModule ||
-          isAllowedSiblingTarget(targetParts.parts)
-        ) {
-          return [];
-        }
-        return [{ file, specifier, target }];
-      });
     })
     .toSorted(compareViolations);
 }

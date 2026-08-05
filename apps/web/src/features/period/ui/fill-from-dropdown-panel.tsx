@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 
-import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
+import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import type { ReportPeriod } from "../../report-sections";
 
 function SearchIcon() {

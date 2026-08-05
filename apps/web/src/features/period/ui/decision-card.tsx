@@ -1,5 +1,5 @@
 import { formatTimestampShort } from "../../../lib/format-date";
-import { DeleteIcon, EditIcon } from "../../../shared/ui/icons";
+import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";

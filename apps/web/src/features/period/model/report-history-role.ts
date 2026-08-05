@@ -6,7 +6,7 @@ import {
   isLead as isLeadRole,
   isViewer,
 } from "../../../lib/role-predicates";
-import type { SearchScope } from "../../../shared/ui/search-input-utils";
+import type { SearchScope } from "../../../shared/ui/search/search-input-utils";
 
 // Search reach per role: a lead sees only their own sections, head-like roles
 // see everything, and a viewer is confined to published, group-scoped content.

@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { useSdlcTooltip } from "../../shared/ui/sdlc-tooltip";
+import { useSdlcTooltip } from "../../shared/ui/feedback/sdlc-tooltip";
 
 // The layout wraps its content in SessionProvider + NavBar; both are
 // passthroughs here so the tooltip-provider contract is what gets tested.

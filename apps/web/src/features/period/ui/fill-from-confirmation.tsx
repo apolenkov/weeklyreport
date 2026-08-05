@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import type { ReportPeriod } from "../../report-sections";
 
 export function useFillFromConfirmation(

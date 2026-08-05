@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 import { ItemEditDialog } from "../../report-sections";
 

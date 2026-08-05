@@ -1,7 +1,7 @@
 "use client";
 
-import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
-import type { LeadReviewFeedbackRecord } from "../../report-sections";
+import type { LeadReviewFeedbackRecord } from "../../../report-sections";
+import { ReviewCommentList } from "./review-comment-list";
 
 const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
   item: "Item",

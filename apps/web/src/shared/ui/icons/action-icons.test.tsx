@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { PlusIcon } from "./icons";
+import { PlusIcon } from "./action-icons";
 
 describe("PlusIcon", () => {
   it("renders the pinned cross-glyph markup", () => {

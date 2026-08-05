@@ -10,7 +10,7 @@ import {
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
 
-import { TabHeader } from "../../../shared/ui/tab-header";
+import { TabHeader } from "../../../shared/ui/tabs/tab-header";
 import {
   IdentitySubTab,
   IntegrationsSubTab,

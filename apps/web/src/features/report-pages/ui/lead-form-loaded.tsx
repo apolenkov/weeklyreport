@@ -6,7 +6,7 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { FullscreenHandle } from "../../../hooks/use-fullscreen";
 import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
 import type { RecordVisibility } from "../../../hooks/use-record-visibility";
-import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
+import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
 import type { CrossAuthorEntry } from "../../period";
 import type { LeadSubmitReadiness } from "../../report-sections";
 import { LeadSlidesClient } from "../../slides";

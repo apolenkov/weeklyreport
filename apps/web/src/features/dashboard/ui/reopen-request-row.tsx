@@ -5,7 +5,7 @@ import {
   formatPeriodRangeWithYear,
   joinPeriodLabel,
 } from "../../../lib/format-date";
-import { ReopenRespondForm } from "../../../shared/ui/reopen-respond-form";
+import { ReopenRespondForm } from "../../../shared/ui/forms/reopen-respond-form";
 
 interface DashboardReopenRequest {
   readonly id: string;

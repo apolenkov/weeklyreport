@@ -1,7 +1,7 @@
 "use client";
 
 import { webEnv } from "../../../lib/web-env";
-import { DevRoleSwitcher } from "../role-switcher";
+import { DevRoleSwitcher } from "../auth-runtime/role-switcher";
 import {
   LanguageComingSoonControl,
   ThemeComingSoonControl,

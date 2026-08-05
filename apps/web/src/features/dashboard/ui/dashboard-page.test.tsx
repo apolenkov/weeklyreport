@@ -64,7 +64,7 @@ vi.mock("./reopen-requests-card", () => ({
 vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));
-vi.mock("../../../shared/ui/confirmation-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 

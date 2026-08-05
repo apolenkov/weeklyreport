@@ -3,7 +3,7 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { useState } from "react";
 
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 
 interface DashboardRevokeAllControlProps {
   readonly pending: boolean;

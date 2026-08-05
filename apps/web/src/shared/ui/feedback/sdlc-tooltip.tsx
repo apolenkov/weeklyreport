@@ -11,8 +11,8 @@ import {
   useState,
 } from "react";
 
-import { useHydratedClient } from "../lib/use-hydrated-client";
-import { DocumentBodyPortal } from "./document-body-portal";
+import { useHydratedClient } from "../../lib/use-hydrated-client";
+import { DocumentBodyPortal } from "../dialogs/document-body-portal";
 
 interface TooltipState {
   content: string;

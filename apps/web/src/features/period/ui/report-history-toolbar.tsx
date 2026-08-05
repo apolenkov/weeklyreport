@@ -3,7 +3,7 @@
 import type { Role } from "@customreport/shared";
 import { Archive } from "lucide-react";
 
-import { SearchInput } from "../../../shared/ui/search-input";
+import { SearchInput } from "../../../shared/ui/search/search-input";
 import {
   historySearchPlaceholder,
   historySearchScope,

@@ -2,7 +2,7 @@
 
 import type { Ref } from "react";
 
-import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
+import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 import type {
   ParentActivityOption,
   Product,

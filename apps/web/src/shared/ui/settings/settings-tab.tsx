@@ -3,9 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../lib/cache-keys";
-import { useTRPC } from "../../lib/trpc-context";
-import { CheckIcon as SharedCheckIcon } from "./icons";
+import { invalidateAdmin } from "../../../lib/cache-keys";
+import { useTRPC } from "../../../lib/trpc-context";
+import { CheckIcon as SharedCheckIcon } from "../icons/action-icons";
 
 const REVALIDATION_FAILED_MESSAGE =
   "Saved, but the landing page cache may be stale — revalidation failed.";

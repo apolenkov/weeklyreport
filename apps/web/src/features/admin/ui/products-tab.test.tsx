@@ -30,11 +30,11 @@ vi.mock("./stage-assignment-editor", () => ({
   ),
 }));
 
-vi.mock("../../../shared/ui/search-input", () => ({
+vi.mock("../../../shared/ui/search/search-input", () => ({
   SearchInput: () => <div data-testid="search-input-stub" />,
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     onCancel,

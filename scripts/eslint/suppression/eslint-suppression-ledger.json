@@ -1334,7 +1334,7 @@
       "implementationCommit": "pending-final-commit"
     },
     {
-      "path": "apps/web/src/shared/ui/error-boundary.tsx",
+      "path": "apps/web/src/shared/ui/auth-runtime/error-boundary.tsx",
       "line": 24,
       "scope": "next-line",
       "rule": "sonarjs/function-return-type",
@@ -1373,7 +1373,7 @@
       "implementationCommit": "1a6542f2"
     },
     {
-      "path": "apps/web/src/shared/ui/record-textarea-field.tsx",
+      "path": "apps/web/src/shared/ui/forms/record-textarea-field.tsx",
       "line": 73,
       "scope": "next-line",
       "rule": "jsx-a11y/no-autofocus",
@@ -1412,7 +1412,7 @@
       "implementationCommit": "pending-final-commit"
     },
     {
-      "path": "apps/web/src/shared/ui/search-input-utils.tsx",
+      "path": "apps/web/src/shared/ui/search/search-input-utils.tsx",
       "line": 50,
       "scope": "next-line",
       "rule": "sonarjs/super-linear-regex",
@@ -1425,7 +1425,7 @@
       "implementationCommit": "pending-final-commit"
     },
     {
-      "path": "apps/web/src/shared/ui/search-input.test.tsx",
+      "path": "apps/web/src/shared/ui/search/search-input.test.tsx",
       "line": 237,
       "scope": "next-line",
       "rule": "@typescript-eslint/no-unnecessary-type-assertion",

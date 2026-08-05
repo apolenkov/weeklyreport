@@ -4,7 +4,7 @@ import {
   CheckIcon as SharedCheckIcon,
   DeleteIcon as SharedDeleteIcon,
   EditIcon as SharedEditIcon,
-} from "../../../shared/ui/icons";
+} from "../../../shared/ui/icons/action-icons";
 
 // Row buttons are compact: size the canonical shared icons down to h-3.
 export function EditIcon() {
