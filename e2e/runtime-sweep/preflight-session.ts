@@ -18,7 +18,7 @@ export interface PreflightSessionCache {
   readonly use: (actor: RuntimeMatrixActor) => Promise<void>;
 }
 
-export type ProfileSessionCacheResult = Readonly<{
+type ProfileSessionCacheResult = Readonly<{
   cache: PreflightSessionCache;
   created: boolean;
 }>;
@@ -33,7 +33,7 @@ export const preflightGroupNeedsReset = (
   sessionsCreated: boolean,
 ): boolean => sessionsCreated || preparedGroup !== nextGroup;
 
-export class PreflightSessionError extends Error {
+class PreflightSessionError extends Error {
   override readonly name = "PreflightSessionError";
 }
 

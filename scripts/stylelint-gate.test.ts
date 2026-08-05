@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 function pnpmCommand(): readonly [string, readonly string[]] {
@@ -35,4 +35,29 @@ void test("Stylelint exits nonzero when a configured warning fires", () => {
 
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}${result.stderr}`, /declaration-no-important/);
+});
+
+void test("Stylelint excludes generated Playwright report CSS", () => {
+  const fixture = resolve("playwright-report/stylelint-scope-probe/trace.css");
+  const [command, prefix] = pnpmCommand();
+  try {
+    mkdirSync(dirname(fixture), { recursive: true });
+    writeFileSync(fixture, ".probe { color: red !important; }\n");
+    const result = spawnSync(
+      command,
+      [
+        ...prefix,
+        "exec",
+        "stylelint",
+        fixture,
+        "--allow-empty-input",
+        "--max-warnings",
+        "0",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+  } finally {
+    rmSync(dirname(fixture), { recursive: true, force: true });
+  }
 });
