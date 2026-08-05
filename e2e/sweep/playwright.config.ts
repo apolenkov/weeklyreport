@@ -14,6 +14,13 @@ const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3100);
 const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3101);
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
+const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL;
+
+if (!E2E_DATABASE_URL) {
+  throw new Error(
+    "E2E_DATABASE_URL must be set to a disposable database for the UAT sweep.",
+  );
+}
 
 // Repo root (e2e/sweep/playwright.config.ts → ../..).
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -67,6 +74,7 @@ export default defineConfig({
       timeout: 240_000,
       env: {
         ...process.env,
+        DATABASE_URL: E2E_DATABASE_URL,
         PORT: String(API_PORT),
         AUTH_DEV_MODE: "true",
         NODE_ENV: "test",
