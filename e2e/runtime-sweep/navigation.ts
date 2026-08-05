@@ -13,7 +13,7 @@ export function isExpectedNavigationAbort(error: unknown): boolean {
   );
 }
 
-async function settle(page: Page): Promise<void> {
+export async function settleNavigation(page: Page): Promise<void> {
   try {
     await page.waitForLoadState("networkidle", { timeout: 3000 });
   } catch (error: unknown) {
@@ -31,7 +31,7 @@ async function waitForFinalNavigation(
       timeout: 10_000,
     });
   }
-  await settle(page);
+  await settleNavigation(page);
 }
 
 export async function navigate(
@@ -45,7 +45,7 @@ export async function navigate(
       : new URL(route, currentUrl).toString();
   try {
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    await settle(page);
+    await settleNavigation(page);
     return response?.status() ?? null;
   } catch (error: unknown) {
     if (!isExpectedNavigationAbort(error)) throw error;
