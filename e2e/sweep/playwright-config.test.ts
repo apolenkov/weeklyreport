@@ -35,12 +35,27 @@ test("fails closed without a dedicated UAT database", async () => {
 });
 
 test("rejects the development database as the UAT target", async () => {
-  const developmentDatabaseUrl =
-    "postgresql://customreport@localhost/customreport_dev";
-  vi.stubEnv("DATABASE_URL", developmentDatabaseUrl);
-  vi.stubEnv("E2E_DATABASE_URL", developmentDatabaseUrl);
+  vi.stubEnv(
+    "DATABASE_URL",
+    "postgres://dev-user:dev-password@LOCALHOST/customreport_dev",
+  );
+  vi.stubEnv(
+    "E2E_DATABASE_URL",
+    "postgresql://e2e-user:e2e-password@localhost:5432/customreport_dev",
+  );
 
   await expect(import("./playwright.config.ts")).rejects.toThrow(
     "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
   );
 });
+
+test.each(["https://localhost/customreport_e2e", "not-a-database-url"])(
+  "rejects a non-PostgreSQL UAT database URL: %s",
+  async (databaseUrl) => {
+    vi.stubEnv("E2E_DATABASE_URL", databaseUrl);
+
+    await expect(import("./playwright.config.ts")).rejects.toThrow(
+      "UAT database URLs must be valid PostgreSQL URLs.",
+    );
+  },
+);
