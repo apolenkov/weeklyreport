@@ -55,7 +55,8 @@ export const KEYBOARD_FOCUS_POLICY_SCRIPT = `
     radioTabStops.add(tabStop.element);
   });
   const focusPolicyFor = (entry) => {
-    if (entry.disabled || entry.inert || nonTabRoles.has(entry.role)) return "unreachable";
+    if (entry.disabled || entry.inert || nonTabRoles.has(entry.role) ||
+      (entry.role === "listbox" && entry.tabIndex < 0)) return "unreachable";
     if (!scopeAllowsTab(entry)) return "forbidden";
     if (entry.role !== "radio" || radioTabStops.has(entry.element)) return "required";
     return !entry.nativeRadio && entry.tabIndex >= 0 ? "forbidden" : "unreachable";

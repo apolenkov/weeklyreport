@@ -29,6 +29,14 @@ class ControlActionTimeoutError extends Error {
   override readonly name = "ControlActionTimeoutError";
 }
 
+export type ControlActionAttempt =
+  | ControlActionObservation
+  | "ambiguous"
+  | Readonly<{
+      readonly status: "fail" | "ambiguous";
+      readonly reason: string;
+    }>;
+
 const isStateful = (
   operation: ActionOperation,
 ): operation is StatefulControlOperation =>
@@ -43,6 +51,20 @@ const occurrenceFrom = (controlKey: string): number => {
   return Number.isInteger(value) && value > 0 ? value : DEFAULT_OCCURRENCE;
 };
 
+const TITLE_ROLE_SELECTORS: Readonly<
+  Partial<Record<SupportedControlRole, string>>
+> = {
+  link: "a",
+  button:
+    "button,[role='button'],input[type='button'],input[type='submit'],input[type='reset']",
+  checkbox: "input[type='checkbox'],[role='checkbox']",
+  radio: "input[type='radio'],[role='radio']",
+  switch: "[role='switch']",
+};
+
+const titleSelectorFor = (role: SupportedControlRole): string =>
+  TITLE_ROLE_SELECTORS[role] ?? `[role='${role}']`;
+
 export const targetLocator = (
   page: Page,
   control: ControlActionTarget,
@@ -55,6 +77,32 @@ export const targetLocator = (
       exact: true,
     })
     .nth(occurrenceFrom(control.controlKey) - 1);
+};
+
+export const titleTargetLocator = (
+  page: Page,
+  control: ControlActionTarget,
+): Locator => {
+  if (!isSupportedRole(control.ariaRole))
+    throw new ControlActionPolicyError(`Unsupported role ${control.ariaRole}`);
+  return page
+    .locator(
+      `:is(${titleSelectorFor(control.ariaRole)})[title=${JSON.stringify(control.accessibleName)}]`,
+    )
+    .nth(occurrenceFrom(control.controlKey) - 1);
+};
+
+export const waitForVisible = async (
+  locator: Locator,
+  timeoutMs: number,
+): Promise<boolean> => {
+  try {
+    await locator.waitFor({ state: "visible", timeout: timeoutMs });
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "TimeoutError") return false;
+    throw error;
+  }
 };
 
 const representativeValueFor = (control: ControlActionTarget): string => {
@@ -120,11 +168,19 @@ const bounded = async <T>(
   return Promise.race([operation, timeout]);
 };
 
+const failedAttemptFor = (
+  action: ActionOperation,
+  error: unknown,
+): ControlActionAttempt => ({
+  status: isStateful(action) ? "ambiguous" : "fail",
+  reason: error instanceof Error ? error.message : "The control action failed",
+});
+
 export const executeControlAttempt = async (
   input: ControlActionInput,
   locator: Locator,
   timeoutMs: number,
-): Promise<ControlActionObservation | "ambiguous"> => {
+): Promise<ControlActionAttempt> => {
   const { action, page, observeOutcome } = input;
   try {
     if (action.operation === "fill" || action.operation === "select")
@@ -135,8 +191,7 @@ export const executeControlAttempt = async (
     if (observeOutcome === undefined)
       return requiresControlRecovery(input) ? "ambiguous" : "pass";
     return await bounded(observeOutcome(), timeoutMs);
-  } catch {
-    if (isStateful(action.operation)) return "ambiguous";
-    return "fail";
+  } catch (error: unknown) {
+    return failedAttemptFor(action.operation, error);
   }
 };

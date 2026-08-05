@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  controlAlreadyActive,
   observationFor,
   type PageSnapshot,
 } from "./live-control-observation.ts";
@@ -59,5 +60,58 @@ describe("live control observations", () => {
     const after = snapshot({ scrollY: 480 });
 
     expect(observationFor(before, after)).toBeUndefined();
+  });
+
+  it("recognizes an already-pressed read-only control", () => {
+    const before = snapshot();
+    const withControl: PageSnapshot = {
+      ...before,
+      controls: [
+        {
+          role: "button",
+          name: "Read",
+          title: null,
+          checked: undefined,
+          ariaChecked: null,
+          ariaPressed: "true",
+          selected: null,
+          value: undefined,
+        },
+      ],
+    };
+
+    expect(
+      controlAlreadyActive(withControl, {
+        controlKey: "button:Read:1",
+        ariaRole: "button",
+        accessibleName: "Read",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not treat an active switch as an idempotent click", () => {
+    const before: PageSnapshot = {
+      ...snapshot(),
+      controls: [
+        {
+          role: "switch",
+          name: "Notifications",
+          title: null,
+          checked: undefined,
+          ariaChecked: "true",
+          ariaPressed: null,
+          selected: null,
+          value: undefined,
+        },
+      ],
+    };
+
+    expect(
+      controlAlreadyActive(before, {
+        controlKey: "switch:Notifications:1",
+        ariaRole: "switch",
+        accessibleName: "Notifications",
+      }),
+    ).toBe(false);
   });
 });

@@ -55,11 +55,26 @@ const executePlan = async (
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const before: PageSnapshot = await snapshotPage(input.page);
   const operation = plan.action.operation;
-  const observeOutcome = observerFor(input.page, operation, before, timeoutMs);
+  const control = targetFor(plan.control);
+  const observationOptions = {
+    control,
+    allowIdempotent:
+      plan.action.operation === "click" && plan.action.safety === "read-only",
+    requireMeaningfulFocus:
+      plan.control.role === "link" &&
+      plan.control.accessibleName.toLocaleLowerCase() === "skip to content",
+  } as const;
+  const observeOutcome = observerFor(
+    input.page,
+    operation,
+    before,
+    timeoutMs,
+    observationOptions,
+  );
   try {
     const execution = await executeControlAction({
       page: input.page,
-      control: targetFor(plan.control),
+      control,
       action: plan.action,
       ...(input.recovery === undefined ? {} : { recovery: input.recovery }),
       observeOutcome,
@@ -71,6 +86,7 @@ const executePlan = async (
       operation,
       before,
       execution.status,
+      observationOptions,
     );
     if (execution.status === "pass" && observation === undefined)
       return actionFailureRecord(

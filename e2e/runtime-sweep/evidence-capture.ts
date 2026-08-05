@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 
-import AxeBuilder from "@axe-core/playwright";
 import { z } from "zod";
 
+import { finalizeAxeContext, prepareAxeContext } from "./axe-context.ts";
 import { evidenceBundleSchema, type EvidenceRef } from "./contracts.ts";
 import {
   captureGeometry,
@@ -110,12 +110,14 @@ export async function captureRouteEvidence(
   const directory = routeDirectory(input);
   await mkdir(directory, { recursive: true });
   const baseline = await readVisualBaseline(input, directory);
-  const axe = await new AxeBuilder({ page: input.page }).analyze();
+  const axeContext = await prepareAxeContext(input.page);
   const keyboard = await captureKeyboardTrace(
     input.page,
     input.inventory.controls,
   );
   const geometrySnapshot = await captureGeometry(input.page);
+  const screenshot = await captureScreenshot(input, directory);
+  const axe = await finalizeAxeContext(input.page, axeContext);
   const captured = await captureJson(
     input,
     directory,
@@ -123,7 +125,6 @@ export async function captureRouteEvidence(
     keyboard,
     geometrySnapshot,
   );
-  const screenshot = await captureScreenshot(input, directory);
   const visual = evaluateVisual(
     screenshot,
     geometrySnapshot,

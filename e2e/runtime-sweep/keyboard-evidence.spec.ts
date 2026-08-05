@@ -56,6 +56,50 @@ test("keeps the roving radio member as the group's tab stop", async ({
   ]);
 });
 
+test("does not require a non-tabbable listbox panel", async ({ page }) => {
+  await page.setContent(`
+    <main>
+      <button type="button">Before</button>
+      <select multiple aria-label="Native periods">
+        <option>Current</option>
+        <option>Previous</option>
+      </select>
+    </main>
+    <div
+      role="listbox"
+      aria-label="Reporting period"
+      tabindex="-1"
+      style="width:240px;height:40px"
+    >
+      <div role="option" aria-selected="true" tabindex="-1">Current</div>
+    </div>
+  `);
+
+  const trace = await captureKeyboardTrace(page);
+  const panel = trace.controls.find(
+    ({ role, accessibleName }) =>
+      role === "listbox" && accessibleName === "Reporting period",
+  );
+  const native = trace.controls.find(
+    ({ role, accessibleName }) =>
+      role === "listbox" && accessibleName === "Native periods",
+  );
+
+  expect(panel).toMatchObject({
+    expectedFocusable: false,
+    focusable: false,
+    focusPolicy: "unreachable",
+    outcome: "not-applicable",
+  });
+  expect(native).toMatchObject({
+    expectedFocusable: true,
+    focusable: true,
+    focusPolicy: "required",
+    outcome: "pass",
+  });
+  expect(trace.focusGaps).toEqual([]);
+});
+
 test("fails when an extra ARIA radio member is tabbable", async ({ page }) => {
   await page.setContent(`
     <div role="radiogroup" aria-label="Scope">

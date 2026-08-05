@@ -252,6 +252,7 @@ test("does not click a control that became hidden after inventory", async ({
       enabled: true,
     },
     action: actionFor("click", "read-only"),
+    timeoutMs: 50,
   });
 
   expect(result).toMatchObject({
