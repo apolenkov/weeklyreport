@@ -1,6 +1,6 @@
 // Side-effect import: ensure loopback health probes bypass any corporate proxy
 // (see e2e/no-proxy-localhost.ts) before the webServer probes run.
-import "../no-proxy-localhost";
+import "../no-proxy-localhost.js";
 
 import * as path from "node:path";
 
@@ -63,7 +63,7 @@ export default defineConfig({
       command: `node --env-file=${REPO_ROOT}/.env --import @swc-node/register/esm-register src/main.ts`,
       cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 240_000,
       env: {
         ...process.env,
@@ -75,9 +75,9 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+      command: `pnpm --filter @customreport/web exec next dev --webpack -p ${WEB_PORT}`,
       url: WEB_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 240_000,
       env: {
         ...process.env,
