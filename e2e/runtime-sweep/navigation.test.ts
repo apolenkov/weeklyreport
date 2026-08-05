@@ -1,20 +1,49 @@
-import type { Page } from "@playwright/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  type ActionNavigationPage,
   expectedActionNavigationFor,
   observeActionNavigation,
 } from "./action-navigation-boundary.ts";
 import {
+  type AppReadyPage,
   isExpectedNavigationAbort,
   navigate,
+  type NavigationPage,
+  type NavigationSettlePage,
   settleNavigation,
+  waitForAppReady,
 } from "./navigation.ts";
+
+class FakeElement {
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly hasHeading: boolean;
+
+  constructor(
+    attributes: Readonly<Record<string, string>> = {},
+    hasHeading = false,
+  ) {
+    this.attributes = attributes;
+    this.hasHeading = hasHeading;
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes[name] ?? null;
+  }
+
+  getClientRects(): readonly object[] {
+    return [{}];
+  }
+
+  querySelector(selector: string): FakeElement | null {
+    return selector === "h1" && this.hasHeading ? new FakeElement() : null;
+  }
+}
 
 function fakePage(
   gotoError: Error,
   finalUrl = "http://127.0.0.1:3105/head/dashboard",
-): Page {
+): NavigationPage {
   const currentUrl = vi
     .fn<() => string>()
     .mockReturnValueOnce("http://127.0.0.1:3105/")
@@ -30,19 +59,51 @@ function fakePage(
     },
     waitForLoadState: () => Promise.resolve(),
     waitForFunction: () => Promise.resolve(),
-  } as unknown as Page;
+  } satisfies NavigationPage;
 }
 
 describe("runtime navigation recovery", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("requires the app heading to be inside main content", async () => {
+    const main = new FakeElement({
+      "aria-busy": "false",
+      "aria-hidden": "false",
+    });
+    const outsideHeading = new FakeElement();
+    let predicate: ((selector: string) => boolean) | undefined;
+    const page = {
+      waitForFunction: (candidate: (selector: string) => boolean) => {
+        predicate = candidate;
+        return Promise.resolve();
+      },
+    } satisfies AppReadyPage;
+    vi.stubGlobal("HTMLElement", FakeElement);
+    vi.stubGlobal("document", {
+      querySelector: (selector: string) =>
+        selector === "#main-content"
+          ? main
+          : selector === "h1"
+            ? outsideHeading
+            : null,
+    });
+
+    await waitForAppReady(page);
+
+    expect(predicate?.("#main-content")).toBe(false);
+  });
 
   it("navigates a relative route from the initial blank page", async () => {
     const page = {
       url: () => "about:blank",
       goto: () => Promise.resolve({ status: () => 200 }),
+      waitForURL: () => Promise.resolve(),
       waitForLoadState: () => Promise.resolve(),
       waitForFunction: () => Promise.resolve(),
-    } as unknown as Page;
+    } satisfies NavigationPage;
 
     await expect(navigate(page, "/head")).resolves.toBe(200);
   });
@@ -79,7 +140,8 @@ describe("runtime navigation recovery", () => {
     const error = new Error("browser disconnected");
     const page = {
       waitForLoadState: () => Promise.reject(error),
-    } as unknown as Page;
+      waitForFunction: () => Promise.resolve(),
+    } satisfies NavigationSettlePage;
 
     await expect(settleNavigation(page)).rejects.toBe(error);
   });
@@ -91,7 +153,7 @@ describe("runtime navigation recovery", () => {
       url: () => "http://127.0.0.1:3105/report",
       mainFrame: () => frame,
       waitForEvent: () => Promise.reject(error),
-    } as unknown as Page;
+    } satisfies ActionNavigationPage;
     const observer = observeActionNavigation(page);
 
     await expect(observer.waitForNavigation()).rejects.toBe(error);
@@ -115,7 +177,7 @@ describe("runtime navigation recovery", () => {
           }),
         );
       },
-    } as unknown as Page;
+    } satisfies ActionNavigationPage;
     const expectation = expectedActionNavigationFor("button:Sign%20out:1");
     const observer = observeActionNavigation(page, expectation);
     const waiting = observer.waitForNavigation();
@@ -163,9 +225,7 @@ describe("runtime navigation recovery", () => {
             );
           }),
       ),
-      waitForLoadState: vi.fn(() => Promise.resolve()),
-      waitForFunction: vi.fn(() => Promise.resolve()),
-    } as unknown as Page;
+    } satisfies ActionNavigationPage;
     const expectation = expectedActionNavigationFor("link:Status:1");
     if (expectation === undefined)
       throw new Error("Generic router links must arm navigation observation");

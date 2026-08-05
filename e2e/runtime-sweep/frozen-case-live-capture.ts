@@ -1,8 +1,5 @@
-import type { Page } from "@playwright/test";
-
 import { type EvidenceBundle, type EvidenceRef } from "./contracts.ts";
 import { inventoryDom } from "./dom-inventory.ts";
-import { captureRouteEvidence } from "./evidence-capture.ts";
 import {
   beginFrozenActionNavigation,
   type FrozenActionNavigationBoundary,
@@ -15,53 +12,18 @@ import {
   type FrozenCaseLiveRuntime,
   runAction,
 } from "./frozen-case-live-actions.ts";
+import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
+import { captureEvidence } from "./frozen-case-live-phase-evidence.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
-import { navigate, settleNavigation } from "./navigation.ts";
-import type { RuntimeMatrixSource } from "./runtime-matrix.ts";
+import { navigate } from "./navigation.ts";
 import { eventsFor, type RuntimeEvents } from "./runtime-matrix-evidence.ts";
 import type { PreparedRuntimeState } from "./state-preparation.ts";
 
-const HTTP_OK_LIMIT = 400;
+const INAPPLICABLE_ACTIONS = "inapplicable" as const;
+const NOT_EXERCISED_ACTION = "not-exercised" as const;
 
-export interface FrozenPhaseInput {
-  readonly page: Page;
-  readonly source: RuntimeMatrixSource;
-  readonly matrixCase: MatrixExecutableCase;
-  readonly runtime: FrozenCaseLiveRuntime;
-  readonly prepared: PreparedRuntimeState;
-  readonly route: string;
-  readonly responseStatus: number | null;
-  readonly phase: "before" | "action" | "after";
-  readonly initialEvents: RuntimeEventWindow;
-}
-
-type RuntimeEventWindow = Pick<
-  RuntimeEvents,
-  "consoleMessages" | "pageErrors" | "requestFailures"
->;
-
-export const initialNavigation = async (
-  page: Page,
-  route: string,
-): Promise<
-  Readonly<{ responseStatus: number | null; events: RuntimeEventWindow }>
-> => {
-  const listeners = eventsFor(page);
-  try {
-    const response = await page.goto(route);
-    await settleNavigation(page);
-    return {
-      responseStatus: response?.status() ?? null,
-      events: {
-        consoleMessages: [...listeners.consoleMessages],
-        pageErrors: [...listeners.pageErrors],
-        requestFailures: [...listeners.requestFailures],
-      },
-    };
-  } finally {
-    listeners.detach();
-  }
-};
+export type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
+export { initialNavigation } from "./frozen-case-live-navigation.ts";
 
 const databaseRef = async (
   matrixCase: MatrixExecutableCase,
@@ -120,56 +82,6 @@ const actionRef = async (
   });
 };
 
-const captureEvidence = async (
-  input: FrozenPhaseInput,
-  listeners: RuntimeEvents,
-  inventory: Awaited<ReturnType<typeof inventoryDom>>,
-  phaseStatus: number | null,
-  actionSucceeded: boolean,
-  actionInapplicableReason?: string,
-): Promise<EvidenceBundle> =>
-  (
-    await captureRouteEvidence({
-      page: input.page,
-      archiveRoot: input.runtime.archiveRoot,
-      sourceSha: input.matrixCase.sourceSha,
-      profile: input.matrixCase.profile,
-      role: input.matrixCase.role,
-      catalogRoute: input.matrixCase.catalogRoute,
-      resolvedRoute: input.matrixCase.resolvedRoute,
-      cellId: input.matrixCase.caseId,
-      inventory,
-      consoleMessages: listeners.consoleMessages,
-      pageErrors: listeners.pageErrors,
-      requestFailures: listeners.requestFailures,
-      responseStatus: phaseStatus,
-      capturedAt: new Date().toISOString(),
-      capturePhase: input.phase,
-      functionalAssertion: {
-        assertionId: `frozen-${input.matrixCase.caseId}-${input.phase}`,
-        expected:
-          actionInapplicableReason === undefined
-            ? { reachable: true, actionSucceeded: true }
-            : { reachable: true, productActions: "inapplicable" },
-        actual: {
-          reachable: phaseStatus !== null && phaseStatus < HTTP_OK_LIMIT,
-          ...(actionInapplicableReason === undefined
-            ? { actionSucceeded }
-            : { productActions: "inapplicable" }),
-        },
-        message:
-          actionInapplicableReason === undefined
-            ? `Frozen ${input.phase} evidence captured for ${input.matrixCase.caseId}`
-            : `Frozen ${input.phase} product actions are inapplicable for ${input.matrixCase.caseId}: ${actionInapplicableReason}`,
-      },
-      geometryOracle: {
-        viewport: { width: 1440, height: 900 },
-        maxHorizontalOverflow: 0,
-        requireNoZeroSize: false,
-      },
-    })
-  ).bundle;
-
 const actionOutcomeForPhase = async (
   input: FrozenPhaseInput,
   boundary: FrozenActionNavigationBoundary | undefined,
@@ -221,18 +133,15 @@ const actionSucceededFor = (
   action.operation === "navigate" ||
   outcome?.status === "pass" ||
   (input.matrixCase.execution.kind === "fault" &&
-    outcome?.status !== "not-exercised");
+    outcome?.status !== NOT_EXERCISED_ACTION);
 
-const actionInapplicableReasonFor = (
+const unavailableSurfaceExpectedFor = (
   input: FrozenPhaseInput,
   outcome: ActionOutcome | undefined,
-): string | undefined =>
+): boolean =>
   input.phase === "action" &&
-  input.prepared.plan.surface.productActions === "inapplicable" &&
-  outcome?.status === "not-exercised"
-    ? (input.prepared.plan.surface.productActionsReason ??
-      "Product actions are inapplicable for this surface")
-    : undefined;
+  input.prepared.plan.surface.productActions === INAPPLICABLE_ACTIONS &&
+  outcome?.status === NOT_EXERCISED_ACTION;
 
 export const captureFrozenPhase = async (
   input: FrozenPhaseInput,
@@ -252,9 +161,10 @@ export const captureFrozenPhase = async (
         ? await navigate(input.page, input.route)
         : undefined;
     const inventory = await inventoryDom(input.page);
+    input.onInventory?.(inventory);
     const phaseStatus = navigationStatus ?? input.responseStatus;
     const actionSucceeded = actionSucceededFor(input, action, outcome);
-    const actionInapplicableReason = actionInapplicableReasonFor(
+    const unavailableSurfaceExpected = unavailableSurfaceExpectedFor(
       input,
       outcome,
     );
@@ -265,7 +175,8 @@ export const captureFrozenPhase = async (
       inventory,
       phaseStatus,
       actionSucceeded,
-      actionInapplicableReason,
+      unavailableSurfaceExpected,
+      outcome?.surfaceObservation,
     );
     if (input.phase !== "action") return captured;
     const [controlRef, database] = await Promise.all([
