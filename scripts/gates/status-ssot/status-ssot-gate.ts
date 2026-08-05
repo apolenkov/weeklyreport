@@ -72,7 +72,7 @@ const ALLOWLIST = [
   // The role vocabulary's single declaration, both axes (role-type spec).
   "packages/shared/src/schemas/auth/auth.ts",
   // Presentation order intentionally differs from the role schema order.
-  "apps/web/src/shared/ui/role-switcher.tsx",
+  "apps/web/src/shared/ui/auth-runtime/role-switcher.tsx",
   // Plain-Node catalog parsing cannot resolve the workspace package at runtime.
   "e2e/sweep/catalog-parser.ts",
 ];

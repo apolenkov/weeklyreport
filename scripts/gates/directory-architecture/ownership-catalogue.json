@@ -652,12 +652,84 @@
       "target": "apps/web/src/shared/ui/$1"
     },
     {
-      "id": "web-shared-primitives",
+      "id": "web-shared-auth-runtime",
       "scope": "web-shared-ui",
-      "pattern": "^apps/web/src/shared/ui/((?!(?:report-shell|navigation)/).+)$",
-      "concern": "shared-primitives",
+      "pattern": "^apps/web/src/shared/ui/(auth-runtime/.+)$",
+      "concern": "auth-runtime",
       "role": "implementation",
-      "target": "apps/web/src/shared/ui/primitives/$1"
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-dialogs",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(dialogs/.+)$",
+      "concern": "dialogs",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-feedback",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(feedback/.+)$",
+      "concern": "feedback",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-forms",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(forms/.+)$",
+      "concern": "forms",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-icons",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(icons/.+)$",
+      "concern": "icons",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-layout",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(layout/.+)$",
+      "concern": "layout",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-search",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(search/.+)$",
+      "concern": "search",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-settings",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(settings/.+)$",
+      "concern": "settings",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-style",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(style/.+)$",
+      "concern": "style-contracts",
+      "role": "test",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-tabs",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(tabs/.+)$",
+      "concern": "tabs",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
     },
     {
       "id": "web-report-pages-composition",
@@ -665,7 +737,7 @@
       "pattern": "^apps/web/src/features/report-pages/(.+)$",
       "concern": "page-composition",
       "role": "implementation",
-      "target": "apps/web/src/features/report-pages/composition/$1"
+      "target": "apps/web/src/features/report-pages/$1"
     },
     {
       "id": "web-shared-library",

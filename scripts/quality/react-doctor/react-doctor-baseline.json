@@ -521,7 +521,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/reviewed-row.tsx::5:1::react-doctor/no-barrel-import::e5d9aa876923a27492c914cdca423e19be149baf4cde4205128e8e59bd4203cf",
+      "id": "src/features/report-pages/ui/reviewed-row.tsx::5:1::react-doctor/no-barrel-import::5dd8aa3ce53b0703e73134c9f336a3bc8681ca1be4ecc748a61b5d0bbc9f8794",
       "file": "src/features/report-pages/ui/reviewed-row.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -1088,8 +1088,8 @@
       "rationale": "The module intentionally exposes a small composition contract used by its sibling components, tests, or provider consumers. Splitting the local contract solely for the generic Fast Refresh heuristic would add API churn without an observed runtime state-preservation defect."
     },
     {
-      "id": "src/shared/ui/dialog-surface.tsx::55:9::react-doctor/prefer-html-dialog::f86089b7533da239ddfbf1d7fe07c9d2349fcfbe5dcdb4b8c52e477cf089fd44",
-      "file": "src/shared/ui/dialog-surface.tsx",
+      "id": "src/shared/ui/dialogs/dialog-surface.tsx::55:9::react-doctor/prefer-html-dialog::f86089b7533da239ddfbf1d7fe07c9d2349fcfbe5dcdb4b8c52e477cf089fd44",
+      "file": "src/shared/ui/dialogs/dialog-surface.tsx",
       "rule": "prefer-html-dialog",
       "verdict": "overturn",
       "rationale": "DialogSurface uses the shared useDialogFocus hook, which traps Tab/Shift+Tab, handles Escape, restores focus, and tests role/aria-modal behavior. Native dialog is not a drop-in replacement for this established compatibility contract; the warning is a false positive."
@@ -1102,36 +1102,36 @@
       "rationale": "The module intentionally exposes a small composition contract used by sibling components. Splitting it only for Fast Refresh would add API churn without an observed runtime defect."
     },
     {
-      "id": "src/shared/ui/review-comment-list.tsx::49:10::react-doctor/no-locale-format-in-render::802c0d89c5b75fb9b3000d828d0507bd89c76069b1e2a50855b6a68c12e81203",
-      "file": "src/shared/ui/review-comment-list.tsx",
+      "id": "src/features/review/ui/comments/review-comment-list.tsx::49:10::react-doctor/no-locale-format-in-render::802c0d89c5b75fb9b3000d828d0507bd89c76069b1e2a50855b6a68c12e81203",
+      "file": "src/features/review/ui/comments/review-comment-list.tsx",
       "rule": "no-locale-format-in-render",
       "verdict": "overturn",
       "rationale": "ReviewCommentList is reached from client-owned review surfaces (RecordComments and LeadReviewFeedback), whose comment records arrive through the client weekly-report/query state; the current routes do not server-render a comment Date before hydration. The explicit en-US locale is intentional, and no server/client locale mismatch is observable in this data path."
     },
     {
-      "id": "src/shared/ui/role-switcher.tsx::26:14::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
-      "file": "src/shared/ui/role-switcher.tsx",
+      "id": "src/shared/ui/auth-runtime/role-switcher.tsx::26:14::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "file": "src/shared/ui/auth-runtime/role-switcher.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",
       "rationale": "ROLE_ORDER is exported solely for the role-switcher completeness test, as documented beside the export. It is an intentional test contract, not a production component-state export; keep it with the component."
     },
     {
-      "id": "src/shared/ui/search-input-utils.tsx::80:18::react-doctor/no-array-index-as-key::c66686de82ec2c11c1f830cdc96f59bf1f9beb079a3d8cfb51da447937851447",
-      "file": "src/shared/ui/search-input-utils.tsx",
+      "id": "src/shared/ui/search/search-input-utils.tsx::80:18::react-doctor/no-array-index-as-key::c66686de82ec2c11c1f830cdc96f59bf1f9beb079a3d8cfb51da447937851447",
+      "file": "src/shared/ui/search/search-input-utils.tsx",
       "rule": "no-array-index-as-key",
       "verdict": "overturn",
       "rationale": "renderSnippet keys stateless text chunks produced from one snippet. The chunks have no identity, local state, or reorderable records, so the index is the only meaningful key and cannot cause wrong user data."
     },
     {
-      "id": "src/shared/ui/settings-tab-shared.tsx::14:23::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
-      "file": "src/shared/ui/settings-tab-shared.tsx",
+      "id": "src/shared/ui/settings/settings-tab.tsx::14:23::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "file": "src/shared/ui/settings/settings-tab.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",
       "rationale": "The module intentionally exposes a small composition contract used by sibling components. Splitting it only for Fast Refresh would add API churn without an observed runtime defect."
     },
     {
-      "id": "src/shared/ui/use-server-seeded-draft.ts::26:7::react-doctor/no-derived-state::3157086a0a47dc6ce0367fad0473f2e1b82e07343d194384e02465e90e2443c3",
-      "file": "src/shared/ui/use-server-seeded-draft.ts",
+      "id": "src/shared/hooks/use-server-seeded-draft.ts::26:7::react-doctor/no-derived-state::3157086a0a47dc6ce0367fad0473f2e1b82e07343d194384e02465e90e2443c3",
+      "file": "src/shared/hooks/use-server-seeded-draft.ts",
       "rule": "no-derived-state",
       "verdict": "overturn",
       "rationale": "draft is deliberately local state seeded from a server value: it tracks user edits, dirty state, markClean, and suppression of background refetches while a form is being edited. The warning confuses a user-editable draft with render-derived display data."

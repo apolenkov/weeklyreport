@@ -13,7 +13,7 @@ vi.mock("@tanstack/react-query", () => ({
   useMutation: (opts: unknown): unknown => useMutationMock(opts),
 }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     dev: {
       listUsers: { queryOptions: () => ({ queryKey: ["dev.listUsers"] }) },

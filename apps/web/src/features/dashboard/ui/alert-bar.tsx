@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { IfRole } from "../../../shared/ui/if-role";
+import { IfRole } from "../../../shared/ui/auth-runtime/if-role";
 
 interface AlertBarProps {
   readonly pendingLeads: readonly string[];

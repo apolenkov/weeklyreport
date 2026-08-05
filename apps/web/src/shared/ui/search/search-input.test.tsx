@@ -2,7 +2,7 @@ import type { QueryObserverResult } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeQueryState } from "../../test-utils/query-state";
+import { makeQueryState } from "../../../test-utils/query-state";
 
 type QueryResult = QueryObserverResult;
 
@@ -28,7 +28,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
 }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     search: {
       query: {
@@ -41,7 +41,7 @@ vi.mock("../../lib/trpc-context", () => ({
 // Default to a non-viewer role so the lead/admin routing assertions hold;
 // the viewer cases override it per test.
 const useSessionMock = vi.fn(() => ({ user: { role: "head" } }));
-vi.mock("../../lib/session-provider", () => ({
+vi.mock("../../../lib/session-provider", () => ({
   useSession: () => useSessionMock(),
 }));
 

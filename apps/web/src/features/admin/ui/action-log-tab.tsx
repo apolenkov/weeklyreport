@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { useCursorPagination } from "../../../lib/use-cursor-pagination";
-import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { ActionLogRow, type ActionLogRowData } from "./action-log-row";
 import { ActionLogSkeleton } from "./action-log-skeleton";
 

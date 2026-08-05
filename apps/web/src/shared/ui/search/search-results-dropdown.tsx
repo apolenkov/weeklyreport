@@ -1,6 +1,6 @@
 import type { SearchHit } from "@customreport/shared";
 
-import { formatDateWithYear } from "../../lib/format-date";
+import { formatDateWithYear } from "../../../lib/format-date";
 import { renderSnippet, targetUrlFor, TYPE_BADGE } from "./search-input-utils";
 
 export interface SearchResultsDropdownProps {

@@ -3,7 +3,7 @@
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import type {
   AdminGroupView,
   AdminProductView,

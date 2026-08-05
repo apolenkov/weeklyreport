@@ -3,8 +3,8 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { ComponentProps } from "react";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import { RequestReopenDialog } from "../../period";
 import {
   ItemEditDialog,

@@ -6,7 +6,7 @@ import {
 import {
   type ReopenDecision,
   ReopenRespondForm,
-} from "../../../shared/ui/reopen-respond-form";
+} from "../../../shared/ui/forms/reopen-respond-form";
 
 type ReopenStatus = "pending" | "approved" | "rejected";
 

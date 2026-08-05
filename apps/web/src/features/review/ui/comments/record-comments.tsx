@@ -5,9 +5,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateReview } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
-import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
+import { invalidateReview } from "../../../../lib/cache-keys";
+import { useTRPC } from "../../../../lib/trpc-context";
+import { ReviewCommentList } from "./review-comment-list";
 
 // Exactly one concrete record anchors each comment.
 export type RecordCommentAnchor =

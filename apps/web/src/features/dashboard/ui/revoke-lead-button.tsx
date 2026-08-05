@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { invalidateSubmissionDashboard } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 
 interface RevokeLeadButtonProps {
   readonly reportSectionId: string;

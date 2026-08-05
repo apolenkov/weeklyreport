@@ -4,8 +4,8 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { LeadReviewFeedbackRecord } from "../../report-sections";
-import { mapLeadReviewFeedback } from "../../report-sections";
+import type { LeadReviewFeedbackRecord } from "../../../report-sections";
+import { mapLeadReviewFeedback } from "../../../report-sections";
 import { LeadReviewFeedback } from "./lead-review-feedback";
 
 const REVIEWER_ID = "99999999-9999-4999-8999-999999999999";

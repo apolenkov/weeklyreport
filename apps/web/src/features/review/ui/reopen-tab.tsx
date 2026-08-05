@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReopenDecision } from "../../../shared/ui/reopen-respond-form";
-import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
+import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { type ReopenRequest, ReopenRequestCard } from "./reopen-request-card";
 import {
   type ReopenFilterStatus,

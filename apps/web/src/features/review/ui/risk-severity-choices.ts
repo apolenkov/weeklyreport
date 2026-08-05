@@ -1,4 +1,4 @@
-import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
+import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 
 export const SEVERITY_CHOICES: readonly ChipChoice<RiskSeverity>[] = [

@@ -1,7 +1,7 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
 import { userGroupFilterOptions } from "../model/user-table-filters";
 import { useUsersTabState } from "./use-users-tab-state";

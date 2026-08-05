@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 
 // The submit summary counts the lead's OWN records only — it reflects what will
 // actually be submitted, never the foreign read-only records merged in for the

@@ -10,8 +10,8 @@ import {
 } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { DialogSurface } from "../../../shared/ui/dialog-surface";
-import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
+import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 
 interface RequestReopenDialogProps {
   readonly open: boolean;

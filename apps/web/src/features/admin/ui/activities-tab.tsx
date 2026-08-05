@@ -3,9 +3,9 @@
 import type { ProjectActivity } from "@customreport/shared";
 import { useMemo } from "react";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { PlusIcon } from "../../../shared/ui/icons";
-import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
+import { PlusIcon } from "../../../shared/ui/icons/action-icons";
+import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import type { ActivityFormData } from "../model/activity-form";
 import type {
   AdminGroupView,

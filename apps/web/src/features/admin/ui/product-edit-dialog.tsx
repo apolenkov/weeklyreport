@@ -4,7 +4,7 @@ import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 

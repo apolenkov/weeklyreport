@@ -21,7 +21,7 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     title,

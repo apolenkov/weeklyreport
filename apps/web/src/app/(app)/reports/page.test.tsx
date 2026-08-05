@@ -36,7 +36,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn() },
 }));
 
-vi.mock("../../../shared/ui/search-input", () => ({
+vi.mock("../../../shared/ui/search/search-input", () => ({
   SearchInput: ({
     placeholder,
     scope,

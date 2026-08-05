@@ -9,8 +9,8 @@ import { WebVitalsReporter } from "../features/telemetry/ui/web-vitals-reporter"
 import { getOrgPublic } from "../lib/server/get-org-public";
 import { TRPCProvider } from "../lib/trpc-provider";
 import { webEnv } from "../lib/web-env";
-import { AgentationDevtools } from "../shared/ui/agentation-devtools";
-import { QueryErrorBoundary } from "../shared/ui/error-boundary";
+import { AgentationDevtools } from "../shared/ui/auth-runtime/agentation-devtools";
+import { QueryErrorBoundary } from "../shared/ui/auth-runtime/error-boundary";
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;

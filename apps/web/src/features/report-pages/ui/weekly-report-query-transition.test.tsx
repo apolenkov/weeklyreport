@@ -14,7 +14,7 @@ import {
 } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { ViewerReportShell } from "../../viewer/ui/viewer-report-shell";
+import { ViewerReportShell } from "../../viewer";
 import { HeadReportShell } from "./head-report-shell";
 
 vi.mock("next/navigation", () => ({

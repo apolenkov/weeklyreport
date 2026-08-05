@@ -13,7 +13,7 @@ import { useTRPC } from "../../../lib/trpc-context";
 import {
   CheckIcon,
   revalidateOrgLandingPage,
-} from "../../../shared/ui/settings-tab-shared";
+} from "../../../shared/ui/settings/settings-tab";
 
 function useSaveOrgIdentity(onSaved: () => void) {
   const trpc = useTRPC();

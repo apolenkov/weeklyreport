@@ -10,7 +10,7 @@
 ## 2. Shared and Package Surfaces
 
 - [x] 2.1 Catalogue `packages/shared/src/schemas` by contract domain; split only families whose internal/public consumer map stays compatible through the root facade.
-- [ ] 2.2 Catalogue flat `apps/web/src/shared/ui` primitives into cohesive families while preserving direct shared imports and existing report-shell/navigation groups.
+- [x] 2.2 Catalogue flat `apps/web/src/shared/ui` primitives into cohesive families while preserving direct shared imports and existing report-shell/navigation groups.
 - [x] 2.3 Verify package/public exports and production import-edge counts remain unchanged; defer the `packages/ui` wildcard export-map redesign as specified.
 
 ## 3. API Test Seams
@@ -27,8 +27,8 @@
 - [ ] 4.3 Move period- and review-owned `report-pages` behavior behind their facades, leaving only genuine page composition in `report-pages`.
 - [ ] 4.4 Move root `lib` modules by concern to feature model/api or `shared/lib`; remove obsolete root paths and mega-barrels.
 - [ ] 4.5 Move generic hooks/server code to `shared/hooks` and `shared/server`, and domain hooks to the owning feature model.
-- [ ] 4.6 Group remaining flat shared UI primitives by cohesive family without introducing a shared mega-barrel.
-- [ ] 4.7 Remove the test-only viewer deep import and prove zero production and test deep cross-slice imports.
+- [x] 4.6 Group remaining flat shared UI primitives by cohesive family without introducing a shared mega-barrel.
+- [x] 4.7 Remove the test-only viewer deep import and prove zero production and test deep cross-slice imports.
 
 ## 5. Tooling Tree
 
@@ -53,10 +53,10 @@
 
 - [x] 7.1 Freeze the 114-file Prisma ownership/path map and retain `schema.prisma`, migrations, and root `seed.ts` as stable entrypoints.
 - [x] 7.2 Move common seed support and profile contract/runner/validator code; update Prisma/e2e consumers and typecheck paths.
-- [ ] 7.3 Move minimal/simple seed families with their tests and run both profiles against the disposable E2E database.
-- [ ] 7.4 Move demo/advanced/stress seed families with their tests and prove deterministic identities/reference time.
+- [x] 7.3 Move minimal/simple seed families with their tests and run both profiles against the disposable E2E database.
+- [x] 7.4 Move demo/advanced/stress seed families with their tests and prove deterministic identities/reference time.
 - [x] 7.5 Move destructive guards and reset/wipe/backfill operations; prove production-target rejection and Redis cleanup behavior.
-- [ ] 7.6 Run Prisma typecheck, seed profile contracts/journeys, destructive target probes, reset/seed for all profiles, and stale-path search.
+- [x] 7.6 Run Prisma typecheck, seed profile contracts/journeys, destructive target probes, reset/seed for all profiles, and stale-path search.
 
 ## 8. Repository-Wide Verification and Runtime Restart
 
