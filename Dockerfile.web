@@ -16,13 +16,10 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 COPY prisma ./prisma
-# The pruned workspace retains the web package's type-only API link, while the
-# dev server executes only the web, shared-schema, and shared-UI workspaces.
-# Avoid installing the API's unrelated dependency tree into this image.
-RUN pnpm install --frozen-lockfile \
-  --filter @customreport/web \
-  --filter @customreport/shared \
-  --filter @customreport/ui
+# The web typechecks against the API router source, so its dependency closure
+# is build-time-required even though the browser bundle never executes the API.
+# Exclude only the unrelated workspace root from this pruned image.
+RUN pnpm install --frozen-lockfile --filter @customreport/web...
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 
