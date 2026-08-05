@@ -28,8 +28,12 @@ const databaseTarget = (databaseUrl: string): string => {
     if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
       throw new TypeError("Unsupported database protocol");
     }
+    const databaseName = decodeURIComponent(parsed.pathname.slice(1));
+    if (!parsed.hostname || !databaseName || databaseName.includes("/")) {
+      throw new TypeError("Incomplete database target");
+    }
     const port = parsed.port || "5432";
-    return `${parsed.hostname.toLocaleLowerCase()}:${port}${parsed.pathname}`;
+    return `${parsed.hostname.toLocaleLowerCase()}:${port}/${databaseName}`;
   } catch {
     throw new Error("UAT database URLs must be valid PostgreSQL URLs.");
   }
