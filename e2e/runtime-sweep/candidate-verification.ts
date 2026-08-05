@@ -6,14 +6,10 @@ import {
   seedProfileSchema,
   sourceShaSchema,
 } from "./contracts.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 import type { EnvironmentFeedback } from "./environment-feedback.ts";
-import {
-  type OpenCodeDriveRequest,
-  type OpenCodeDriverReport,
-  runOpenCodeDrive,
-} from "./opencode-runner.ts";
 
-export type DriverCandidate = OpenCodeDriverReport["candidates"][number];
+export type DriverCandidate = AiDriverReport["candidates"][number];
 const verificationStatusSchema = z.enum(["confirmed", "dismissed"]);
 export const candidateVerificationSchema = z
   .object({
@@ -55,42 +51,6 @@ export class CandidateVerificationError extends Error {
   }
 }
 
-const defaultPrompt = (
-  candidate: DriverCandidate,
-  context: CandidateVerificationContext,
-): string =>
-  [
-    "Independently verify one runtime-sweep candidate by reading source only.",
-    "Do not use a browser, mutate files, mutate a database, or change the ledger.",
-    "Return only JSON matching the requested schema.",
-    JSON.stringify({
-      candidate,
-      sourceSha: context.sourceSha,
-      profile: context.profile,
-      role: context.role,
-    }),
-    JSON.stringify({
-      candidateId: candidate.candidateId,
-      cellId: candidate.cellId,
-      sourceSha: context.sourceSha,
-      status: "confirmed|dismissed",
-      verifierRef: "read-only-verifier-id",
-      rationale: "source-grounded reason",
-    }),
-  ].join("\n");
-
-const defaultVerifier = async (
-  candidate: DriverCandidate,
-  context: CandidateVerificationContext,
-): Promise<string> => {
-  const request: OpenCodeDriveRequest = {
-    maxTurns: 3,
-    prompt: defaultPrompt(candidate, context),
-    repoRoot: context.repoRoot,
-  };
-  return (await runOpenCodeDrive(request)).finalText;
-};
-
 export function parseCandidateVerification(
   value: unknown,
   expected: Readonly<{
@@ -118,6 +78,59 @@ export function parseCandidateVerification(
   return parsed.data;
 }
 
+export function createImportedCandidateVerifier(
+  values: readonly unknown[],
+  expectedCandidates: readonly DriverCandidate[],
+): CandidateVerifier {
+  const parsed = values.map((value) => {
+    const result = candidateVerificationSchema.safeParse(value);
+    if (!result.success)
+      throw new CandidateVerificationError(
+        result.error.issues.map((issue) => issue.message),
+      );
+    return result.data;
+  });
+  const duplicateIds = parsed
+    .map(({ candidateId }) => candidateId)
+    .filter((candidateId, index, ids) => ids.indexOf(candidateId) !== index);
+  if (duplicateIds.length > 0)
+    throw new CandidateVerificationError(
+      [...new Set(duplicateIds)].map(
+        (candidateId) => `duplicate imported verification ${candidateId}`,
+      ),
+    );
+  const expectedIds = expectedCandidates.map(({ candidateId }) => candidateId);
+  const importedIds = parsed.map(({ candidateId }) => candidateId);
+  const expected = new Set(expectedIds);
+  const imported = new Set(importedIds);
+  const identityIssues = [
+    ...expectedIds
+      .filter((candidateId) => !imported.has(candidateId))
+      .map((candidateId) => `missing imported verification ${candidateId}`),
+    ...importedIds
+      .filter((candidateId) => !expected.has(candidateId))
+      .map((candidateId) => `unused imported verification ${candidateId}`),
+  ];
+  if (identityIssues.length > 0)
+    throw new CandidateVerificationError(identityIssues);
+  const byCandidateId = new Map(
+    parsed.map((verification) => [verification.candidateId, verification]),
+  );
+  return (candidate, context) => {
+    const verification = byCandidateId.get(candidate.candidateId);
+    if (!verification)
+      throw new CandidateVerificationError([
+        `missing imported verification ${candidate.candidateId}`,
+      ]);
+    return Promise.resolve(
+      parseCandidateVerification(verification, {
+        candidate,
+        sourceSha: context.sourceSha,
+      }),
+    );
+  };
+}
+
 async function verifyOne(
   candidate: DriverCandidate,
   context: CandidateVerificationContext,
@@ -141,7 +154,7 @@ async function verifyOne(
 export async function verifyDriverCandidates(
   candidates: readonly DriverCandidate[],
   context: CandidateVerificationContext,
-  verifier: CandidateVerifier = defaultVerifier,
+  verifier: CandidateVerifier,
 ): Promise<CandidateVerificationSummary> {
   if (!sourceShaSchema.safeParse(context.sourceSha).success)
     throw new CandidateVerificationError(["campaign source SHA is malformed"]);
@@ -182,10 +195,10 @@ export async function verifyDriverCandidates(
 }
 
 export function appendEnvironmentCandidates(
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   feedback: EnvironmentFeedback,
   cells: readonly CoverageCell[],
-): OpenCodeDriverReport {
+): AiDriverReport {
   const existingIds = new Set(
     report.candidates.map(({ candidateId }) => candidateId),
   );

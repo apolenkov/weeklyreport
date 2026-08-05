@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import {
   type CoverageCell,
@@ -8,10 +15,10 @@ import {
   evidenceRefSchema,
 } from "./contracts.ts";
 import {
+  type AiDriverReport,
   type DriverMergeOptions,
   DriverResultValidationError,
-  type OpenCodeDriverReport,
-  parseDriverReport,
+  parseAiDriverReport,
   validateDriverReport,
 } from "./driver-results-contract.ts";
 import { makeArtifactId } from "./ids.ts";
@@ -58,7 +65,7 @@ function mergeVerdict(
 
 function mergeCell(
   cell: CoverageCell,
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   reportText: string,
   archivePath: string,
 ): CoverageCell {
@@ -102,7 +109,7 @@ function mergeCell(
 
 export function mergeDriverReport(
   cells: readonly CoverageCell[],
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   options: DriverMergeOptions,
 ): readonly CoverageCell[] {
   validateDriverReport(report, options);
@@ -116,7 +123,7 @@ export function mergeDriverResults(
   reportText: string,
   options: DriverMergeOptions,
 ): readonly CoverageCell[] {
-  const report = parseDriverReport(reportText, options);
+  const report = parseAiDriverReport(reportText, options);
   return mergeDriverReport(cells, report, options);
 }
 
@@ -124,14 +131,28 @@ export async function writeMergedDriverCells(
   directory: string,
   cells: readonly CoverageCell[],
 ): Promise<void> {
-  await mkdir(directory, { recursive: true });
-  await Promise.all(
-    cells.map((cell) =>
-      writeFile(
-        join(directory, `${cell.cellId}.json`),
-        `${JSON.stringify(cell, null, 2)}\n`,
-        "utf8",
+  await mkdir(dirname(directory), { recursive: true });
+  try {
+    await access(directory);
+    throw new Error(`output directory already exists: ${directory}`);
+  } catch (error: unknown) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+      throw error;
+  }
+  const staging = await mkdtemp(join(dirname(directory), ".runtime-driver-"));
+  try {
+    await Promise.all(
+      cells.map((cell) =>
+        writeFile(
+          join(staging, `${cell.cellId}.json`),
+          `${JSON.stringify(cell, null, 2)}\n`,
+          { encoding: "utf8", flag: "wx" },
+        ),
       ),
-    ),
-  );
+    );
+    await rename(staging, directory);
+  } catch (error: unknown) {
+    await rm(staging, { recursive: true, force: true });
+    throw error;
+  }
 }

@@ -1,7 +1,10 @@
 import { existsSync } from "node:fs";
 import * as path from "node:path";
 
-import { parseSeedProfile } from "../../prisma/seed-profile-contract.js";
+import {
+  parseSeedProfile,
+  type SeedProfile,
+} from "../../prisma/seed-profile-contract.js";
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
 
 export function findRepoRoot(startDir: string): string {
@@ -14,6 +17,26 @@ export function findRepoRoot(startDir: string): string {
     );
   }
   return findRepoRoot(parent);
+}
+
+export function selectedSeedProfile(
+  environment: Readonly<{
+    readonly RUNTIME_SWEEP_PROFILE?: string;
+    readonly E2E_SEED_PROFILE?: string;
+  }> = process.env,
+): SeedProfile {
+  const runtimeProfile = environment.RUNTIME_SWEEP_PROFILE;
+  const integrationProfile = environment.E2E_SEED_PROFILE;
+  if (
+    runtimeProfile !== undefined &&
+    integrationProfile !== undefined &&
+    runtimeProfile !== integrationProfile
+  ) {
+    throw new Error(
+      `RUNTIME_SWEEP_PROFILE (${runtimeProfile}) must match E2E_SEED_PROFILE (${integrationProfile})`,
+    );
+  }
+  return parseSeedProfile(runtimeProfile ?? integrationProfile ?? "full");
 }
 
 /**
@@ -32,6 +55,11 @@ export default function globalSetup(): void {
   if (!dbUrl) throw new Error("E2E_DATABASE_URL not set");
 
   const repoRoot = findRepoRoot(import.meta.dirname);
-  const profile = parseSeedProfile(process.env.E2E_SEED_PROFILE ?? "full");
-  setupE2eDatabase({ databaseUrl: dbUrl, profile, repoRoot });
+  const profile = selectedSeedProfile();
+  setupE2eDatabase({
+    databaseUrl: dbUrl,
+    profile,
+    repoRoot,
+    mode: "schema+seed",
+  });
 }

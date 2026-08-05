@@ -1,8 +1,5 @@
 export { createDriverShardPlan } from "./driver-shard-planning.ts";
-export {
-  type DriverShardAssignment,
-  DriverShardError,
-} from "./driver-shard-types.ts";
+export { DriverShardError } from "./driver-shard-types.ts";
 export {
   assertDriverShardResult,
   assertExactDriverShardCaseIds,

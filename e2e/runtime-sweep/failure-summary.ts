@@ -4,6 +4,8 @@ const MAX_FAILURE_SUMMARY_ENTRIES = 20;
 const MAX_FAILURE_SUMMARY_LENGTH = 4096;
 const MAX_FAILURE_ID_LENGTH = 120;
 const MAX_FAILURE_REASON_LENGTH = 180;
+const NAVIGATION_SCAFFOLD_REASON =
+  "Navigation-only matrix scaffold; live-control lane must execute each DOM control";
 
 export interface FailureSummaryEntry {
   readonly id: string;
@@ -11,7 +13,10 @@ export interface FailureSummaryEntry {
 }
 
 type FailureCell =
-  | Pick<CoverageCell, "cellId" | "verdict" | "controls" | "evidence">
+  | Pick<
+      CoverageCell,
+      "cellId" | "verdict" | "action" | "controls" | "evidence"
+    >
   | Readonly<{
       readonly cellId: string;
       readonly verdict: string;
@@ -20,6 +25,16 @@ type FailureCell =
 
 const truncate = (value: string, maxLength: number): string =>
   value.length <= maxLength ? value : `${value.slice(0, maxLength - 1)}…`;
+
+const isScaffoldControl = (
+  cell: Extract<FailureCell, { readonly controls: readonly unknown[] }>,
+  controlKey: string,
+  actionResult: { readonly kind: string; readonly reason?: string },
+): boolean =>
+  "action" in cell &&
+  actionResult.kind === "not-exercised" &&
+  actionResult.reason === NAVIGATION_SCAFFOLD_REASON &&
+  controlKey !== cell.action.controlKey;
 
 const renderEntries = (
   entries: readonly FailureSummaryEntry[],
@@ -54,7 +69,8 @@ const reasonsFor = (cell: FailureCell): readonly string[] =>
           .filter(({ outcome }) => outcome === "fail")
           .map(({ observationId, message }) => `${observationId}: ${message}`),
         ...cell.controls.flatMap(({ controlKey, actionResult }) =>
-          actionResult.kind === "not-exercised"
+          actionResult.kind === "not-exercised" &&
+          !isScaffoldControl(cell, controlKey, actionResult)
             ? [`${controlKey}: ${actionResult.reason}`]
             : [],
         ),

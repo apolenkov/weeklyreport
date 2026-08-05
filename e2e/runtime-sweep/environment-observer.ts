@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import type { OpenCodeDriverReport } from "./driver-results-contract.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 import {
   correlateEnvironmentFeedback,
   type EnvironmentChannelInput,
@@ -26,7 +26,7 @@ const MAX_MESSAGE_LENGTH = 500;
 const apiLogRecordSchema = z.record(z.string(), z.unknown());
 
 export interface EnvironmentObserverInput {
-  readonly report: OpenCodeDriverReport;
+  readonly report: AiDriverReport;
   readonly transcripts: readonly string[];
   readonly apiLogPath?: string;
   readonly bugsinkDsn?: string;
@@ -72,15 +72,13 @@ const blindChannel = (
   events: [],
 });
 
-const routeByCell = (
-  report: OpenCodeDriverReport,
-): ReadonlyMap<string, string> =>
+const routeByCell = (report: AiDriverReport): ReadonlyMap<string, string> =>
   new Map(
     report.assignedCells.map((cell) => [cell.cellId, cell.resolvedRoute]),
   );
 
 const candidateKind = (
-  kind: OpenCodeDriverReport["candidates"][number]["kind"],
+  kind: AiDriverReport["candidates"][number]["kind"],
 ): EnvironmentEvent["kind"] | null => {
   switch (kind) {
     case "console":
@@ -93,7 +91,7 @@ const candidateKind = (
 };
 
 const driverEvents = (
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   kind: EnvironmentEvent["kind"],
 ): readonly EnvironmentEvent[] => {
   const routes = routeByCell(report);
@@ -114,7 +112,7 @@ const driverEvents = (
 };
 
 const driverChannel = (
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   transcripts: readonly string[],
   channel: EnvironmentChannelInput["channel"],
   kind: EnvironmentEvent["kind"],
@@ -161,7 +159,7 @@ const parseTimestamp = (value: unknown): number | null => {
 };
 
 const apiLogChannel = async (
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   apiLogPath: string | undefined,
 ): Promise<EnvironmentChannelInput> => {
   if (!apiLogPath) return blindChannel("app-log");

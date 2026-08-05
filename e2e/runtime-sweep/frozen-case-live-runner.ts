@@ -27,6 +27,7 @@ import {
 } from "./runtime-matrix.ts";
 import { writeCell } from "./runtime-matrix-evidence.ts";
 import { runSpecializedCase } from "./specialized-case-runner.ts";
+import type { PreparedRuntimeState } from "./state-preparation.ts";
 
 export type { FrozenCaseLiveRuntime } from "./frozen-case-live-actions.ts";
 
@@ -35,6 +36,58 @@ const persistFrozenCaseCell = async (
   cell: FrozenCaseCoverageCell,
 ): Promise<void> => {
   await writeCell(runtime.archiveRoot, cell);
+};
+
+const captureFrozenCase = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  matrixCase: MatrixExecutableCase,
+  runtime: FrozenCaseLiveRuntime,
+  prepared: PreparedRuntimeState,
+  route: string,
+  navigation: Awaited<ReturnType<typeof initialNavigation>>,
+): Promise<FrozenCaseCoverageCell> => {
+  const phaseInventories = new Map<EvidencePhase, DomInventory>();
+  const actionTargets = new Map<
+    EvidencePhase,
+    DomInventory["controls"][number]
+  >();
+  const result = await captureFrozenCasePhases({
+    matrixCase,
+    oracle: RUNTIME_MATRIX_ORACLE,
+    surface: prepared.plan.surface,
+    controls: (evidence) => {
+      const actionInventory = phaseInventories.get("action");
+      if (actionInventory === undefined)
+        throw new Error(
+          `Frozen case ${matrixCase.caseId} has no action-phase inventory`,
+        );
+      return controlsForCase(
+        actionInventory,
+        matrixCase,
+        actionResultFor(evidence),
+        prepared.plan.surface,
+        actionTargets.get("action"),
+      );
+    },
+    capturePhase: async (phase) => {
+      const evidence = await captureFrozenPhase({
+        page,
+        source,
+        matrixCase,
+        runtime,
+        prepared,
+        route,
+        responseStatus: navigation.responseStatus,
+        initialEvents: navigation.events,
+        phase,
+        onInventory: (inventory) => phaseInventories.set(phase, inventory),
+        onActionTarget: (target) => actionTargets.set("action", target),
+      });
+      return evidence;
+    },
+  });
+  return result.cell;
 };
 
 const actionResultFor = (
@@ -88,42 +141,17 @@ const runFrozenCase = async (
   await loginForCase(page, matrixCase);
   const route = routeForState(source, stateForCase(matrixCase));
   const navigation = await initialNavigation(page, route.resolvedRoute);
-  const phaseInventories = new Map<EvidencePhase, DomInventory>();
-  const result = await captureFrozenCasePhases({
+  const cell = await captureFrozenCase(
+    page,
+    source,
     matrixCase,
-    oracle: RUNTIME_MATRIX_ORACLE,
-    surface: prepared.plan.surface,
-    controls: (evidence) => {
-      const actionInventory = phaseInventories.get("action");
-      if (actionInventory === undefined)
-        throw new Error(
-          `Frozen case ${matrixCase.caseId} has no action-phase inventory`,
-        );
-      return controlsForCase(
-        actionInventory,
-        matrixCase,
-        actionResultFor(evidence),
-        prepared.plan.surface,
-      );
-    },
-    capturePhase: async (phase) => {
-      const evidence = await captureFrozenPhase({
-        page,
-        source,
-        matrixCase,
-        runtime,
-        prepared,
-        route: route.resolvedRoute,
-        responseStatus: navigation.responseStatus,
-        initialEvents: navigation.events,
-        phase,
-        onInventory: (inventory) => phaseInventories.set(phase, inventory),
-      });
-      return evidence;
-    },
-  });
-  await persistFrozenCaseCell(runtime, result.cell);
-  return result.cell;
+    runtime,
+    prepared,
+    route.resolvedRoute,
+    navigation,
+  );
+  await persistFrozenCaseCell(runtime, cell);
+  return cell;
 };
 
 const runFrozenCaseRange = async (

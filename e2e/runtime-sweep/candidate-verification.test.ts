@@ -78,6 +78,16 @@ describe("runtime-sweep independent candidate verification", () => {
     ).rejects.toThrow(CandidateVerificationError);
   });
 
+  it("fails closed when no explicit verifier is supplied", async () => {
+    await expect(
+      verifyDriverCandidates(
+        [candidate],
+        context,
+        undefined as unknown as CandidateVerifier,
+      ),
+    ).rejects.toThrow();
+  });
+
   it("preserves an interrupted verifier as unavailable instead of adjudicating", async () => {
     await expect(
       verifyDriverCandidates([candidate], context, () =>
@@ -86,7 +96,7 @@ describe("runtime-sweep independent candidate verification", () => {
     ).rejects.toThrow(/session interrupted/iu);
   });
 
-  it("verifies candidates sequentially to bound OpenCode sessions", async () => {
+  it("verifies candidates sequentially through an explicit verifier", async () => {
     const first = Promise.withResolvers<unknown>();
     const secondCandidate = {
       ...candidate,

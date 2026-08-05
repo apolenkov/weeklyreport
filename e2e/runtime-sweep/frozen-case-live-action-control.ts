@@ -30,6 +30,8 @@ const ACTION_TARGET_WAIT_TIMEOUT_MS = 1000;
 export type ActionOutcome = Readonly<{
   readonly status: LiveControlActionRecord["status"];
   readonly controlKey: string;
+  // Keep the pre-action identity when the action removes or renames the target.
+  readonly target?: DomInventory["controls"][number];
   readonly observation?: LiveControlActionRecord["observation"];
   readonly surfaceObservation?: RuntimeSurfaceObservation;
   readonly reason?: string;
@@ -49,7 +51,7 @@ const recoveryFor = (
     profile: matrixCase.profile,
     repoRoot: runtime.repoRoot,
     assertBaseline: async () => {
-      await prepareCase(source, matrixCase, runtime);
+      await prepareCase(source, matrixCase, runtime, () => Promise.resolve());
       await loginForCase(page, matrixCase);
       const route = routeForState(source, stateForCase(matrixCase));
       await page.goto(route.resolvedRoute);
@@ -126,12 +128,14 @@ const outcomeFromRecord = (
   controlKey: string,
   surface?: RuntimeSurfaceExpectation,
   surfaceObservation?: RuntimeSurfaceObservation,
+  target?: DomInventory["controls"][number],
 ): ActionOutcome => {
   if (record === undefined)
     return outcomeWithoutRecord(controlKey, surface, surfaceObservation);
   return {
     status: record.status,
     controlKey,
+    ...(target === undefined ? {} : { target }),
     ...(record.observation === undefined
       ? {}
       : { observation: record.observation }),
@@ -182,20 +186,61 @@ export const runAction = async (
     declaration === undefined
       ? await execute()
       : await withFault(page, declaration, execute);
-  return outcomeFromRecord(record, action.controlKey, surface);
+  return outcomeFromRecord(
+    record,
+    action.controlKey,
+    surface,
+    undefined,
+    target,
+  );
 };
+
+type FrozenActionTarget = DomInventory["controls"][number];
+
+const actionControlFor = (
+  control: FrozenActionTarget,
+  actionResult: DOMControl["actionResult"],
+  matrixCase: MatrixExecutableCase,
+): DOMControl => {
+  const [actionControl] = controlEvidence(
+    { controls: [control], issues: [] },
+    matrixCase.caseId,
+  );
+  if (actionControl === undefined)
+    throw new Error(`Unable to freeze action target ${control.controlKey}`);
+  return { ...actionControl, actionResult };
+};
+
+const orderControls = (
+  controls: readonly DOMControl[],
+): readonly DOMControl[] =>
+  controls.toSorted(
+    (left, right) =>
+      left.order - right.order ||
+      left.controlKey.localeCompare(right.controlKey),
+  );
 
 export const controlsForCase = (
   inventory: DomInventory,
   matrixCase: MatrixExecutableCase,
   actionResult: DOMControl["actionResult"],
   _surface?: RuntimeSurfaceExpectation,
+  frozenTarget?: FrozenActionTarget,
 ): readonly DOMControl[] => {
   const controls = controlEvidence(inventory, matrixCase.caseId);
   const action = executionAction(matrixCase.execution);
   if (action === undefined || action.operation === "navigate") return controls;
   const target = targetForAction(inventory, action);
-  if (target === undefined) return controls;
+  if (target === undefined) {
+    return actionResult.kind === "exercised" &&
+      actionResult.result === "pass" &&
+      frozenTarget !== undefined
+      ? orderControls([
+          ...controls,
+          actionControlFor(frozenTarget, actionResult, matrixCase),
+        ])
+      : controls;
+  }
   return controls.map((control) =>
     control.controlKey === target.controlKey
       ? { ...control, controlKey: action.controlKey, actionResult }

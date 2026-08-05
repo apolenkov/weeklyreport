@@ -53,33 +53,33 @@
       `MATRIX.json` cases, typed inapplicable records, total-case limits, and
       digest before immutable baseline execution.
 
-## 4. OpenCode DeepSeek V4 Flash Max Driver and feedback loop
+## 4. Native Codex Luna Max review and fail-closed import
 
-- [x] 4.1 Capture the installed OpenCode and Playwright versions in immutable
-      `SOURCE.json`, then run the compatibility preflight (`opencode mcp list`
-      plus the required Playwright MCP tools) against the installed OpenCode.
-      Connect Microsoft Playwright MCP `0.0.78` as isolated headless Chromium
-      at `1440x900`; verify the MCP reports connected.
-- [x] 4.2 Replace stale Driver paths and the read-mostly prompt with a bounded
-      cell protocol that permits declared disposable-DB mutations and returns only
-      schema-valid candidates, timelines, canary, and evidence refs.
-- [x] 4.3 Implement the primary-orchestrator command that freezes one SHA,
-      resets profiles, schedules one DeepSeek V4 Flash Max role/profile drive at a time, captures
-      OpenCode session ids, and refuses browser/database parallelism.
-- [x] 4.4 Implement environment-feedback correlation and independent read-only
-      candidate verification; only verified candidates may enter adjudication.
-- [x] 4.5 Add preflight and planted tests for missing MCP tools, blind canary,
-      malformed model output, interrupted sessions, stale SHA, and partial report
-      recovery.
-- [x] 4.6 Shard finalized cases into deterministic route-local OpenCode
-      assignments of at most 32 exact cell ids and reject missing, extra,
-      reordered, or out-of-shard results.
+- [x] 4.1 Keep immutable `SOURCE.json` tool versions provider-neutral; the
+      deterministic Playwright project chain remains the exhaustive authority
+      and no external provider executable is required.
+- [x] 4.2 Define a strict provider-neutral report contract with metadata
+      `provider: native-codex`, `model: gpt-5.6-luna`, and `reasoning: max`.
+      Reports validate source SHA/profile/role, exact assigned cells/actions,
+      timelines, canary, environment evidence when applicable, and candidates.
+- [x] 4.3 Keep native Luna review bounded to one canonical role/profile route
+      evidence batch at a time. Native Luna emits candidates only and never
+      mutates deterministic cells or the canonical ledger.
+- [x] 4.4 Require an explicitly supplied read-only verifier/import for every
+      candidate; missing, malformed, stale, or partial verification fails
+      closed and only confirmed candidates may enter adjudication.
+- [x] 4.5 Add the `pnpm test:runtime-driver` CLI to ingest one or more supplied
+      report files, validate and merge exact frozen cells, and write projections
+      only after all identity/canary/verifier checks pass.
+- [x] 4.6 Retain deterministic route-local assignment/shard checks for exact
+      cell identity; the AI review references those cells without duplicating
+      every deterministic action.
 
 ## 5. Documentation and operator surface
 
 - [x] 5.1 Replace the stale `e2e/README.md` layout and commands with the current
-      integration, catalog-sweep, runtime-sweep, seed-profile, and OpenCode Driver
-      workflows and destructive-data warning.
+      integration, catalog-sweep, runtime-sweep, seed-profile, and native Codex
+      Luna import workflows and destructive-data warning.
 - [x] 5.2 Document the declared Chromium desktop scope, explicit engine/viewport
       exclusions, matrix/profile mapping, controlled faults, archive layout, and
       exact resume procedure without claiming unbounded coverage.
@@ -93,8 +93,9 @@
 - [ ] 6.2 Run the complete deterministic Playwright matrix sequentially across
       all declared roles, routes, states, controls, transitions, and controlled
       faults, preserving every cell and artifact before verdict aggregation.
-- [ ] 6.3 Run bounded OpenCode DeepSeek V4 Flash Max Driver passes for every assigned cell,
-      collect canary/timeline/environment evidence, and preserve interrupted output.
+- [ ] 6.3 Run bounded native Codex `gpt-5.6-luna` Max review passes for every
+      canonical role/profile route evidence batch, collect canary/timeline/
+      environment evidence, and import reports through the fail-closed CLI.
 - [ ] 6.4 Independently verify every candidate, close every baseline cell, and
       publish an immutable adjudicated finding register before changing product or
       harness behavior.
@@ -106,9 +107,11 @@
       tests and do not overwrite baseline evidence.
 - [ ] 7.2 After each batch, rerun every affected cell from a clean reset/profile
       at the new SHA and bind its evidence to the baseline finding.
-- [ ] 7.3 Run the entire declared Playwright and DeepSeek V4 Flash Max matrix again at one final
-      SHA; require every final cell to pass with complete function/a11y/visual
-      evidence and zero unresolved or confirmed gaps.
+- [ ] 7.3 Run the entire declared deterministic Playwright matrix again at one
+      final SHA, then run bounded native Codex Luna Max review batches through
+      the explicit import/verifier path; require every final cell to pass with
+      complete function/a11y/visual evidence and zero unresolved or confirmed
+      gaps.
 
 ## 8. Verification, review, and closeout
 

@@ -5,6 +5,7 @@ const NAVIGATION_ABORT_PATTERNS = [
 ] as const;
 const APP_READY_SELECTOR = "#main-content";
 const APP_READY_TIMEOUT_MS = 10_000;
+const APP_READY_STABILITY_PASSES = 2;
 
 export interface AppReadyPage {
   readonly waitForFunction: (
@@ -46,8 +47,8 @@ export function isExpectedNavigationAbort(error: unknown): boolean {
   );
 }
 
-export async function waitForAppReady(page: AppReadyPage): Promise<void> {
-  await page.waitForFunction(
+const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
+  page.waitForFunction(
     (selector: string) => {
       const main = document.querySelector(selector);
       if (!(main instanceof HTMLElement)) return false;
@@ -63,6 +64,15 @@ export async function waitForAppReady(page: AppReadyPage): Promise<void> {
     },
     APP_READY_SELECTOR,
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
+  );
+
+export async function waitForAppReady(page: AppReadyPage): Promise<void> {
+  await Array.from({ length: APP_READY_STABILITY_PASSES }).reduce(
+    async (previous) => {
+      await previous;
+      return waitForReadyPass(page);
+    },
+    Promise.resolve(),
   );
 }
 

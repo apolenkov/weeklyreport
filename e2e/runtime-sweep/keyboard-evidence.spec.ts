@@ -14,6 +14,35 @@ test("captures a bounded keyboard focus transition", async ({ page }) => {
   ).resolves.toBe("BODY");
 });
 
+test("starts the tab trace at the document start after a mid-page focus", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">First</button>
+    <button type="button">Middle</button>
+    <button type="button">Last</button>
+  `);
+  await page.getByRole("button", { name: "Middle" }).focus();
+
+  await expect(captureKeyboardTrace(page)).resolves.toMatchObject({
+    after: "button:First",
+    focusMoved: true,
+  });
+});
+
+test("fails closed when the keyboard start marker already belongs to the page", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <span id="runtime-sweep-keyboard-start"></span>
+    <button type="button">Continue</button>
+  `);
+
+  await expect(captureKeyboardTrace(page)).rejects.toThrow(
+    "Keyboard trace marker runtime-sweep-keyboard-start already exists",
+  );
+});
+
 test("requires one reachable tab stop for a native radio group", async ({
   page,
 }) => {

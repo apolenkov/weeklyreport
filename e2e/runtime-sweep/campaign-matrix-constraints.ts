@@ -25,10 +25,10 @@ export const permissionsForRole = (
 export const VIEWER_PUBLISHED_ROUTE = "viewer:/reports/[reportId]/present";
 export const VIEWER_PUBLISHED_ROUTE_NONCURRENT_LIFECYCLE =
   "viewer-published-route-noncurrent-lifecycle";
-export const VIEWER_PUBLISHED_ROUTE_NONCURRENT_REASON =
+const VIEWER_PUBLISHED_ROUTE_NONCURRENT_REASON =
   "Viewer published-target route rejects non-current open/reopened periods";
 
-export const isViewerPublishedRouteNonCurrent = (
+const isViewerPublishedRouteNonCurrent = (
   axes: Readonly<Partial<MatrixAxes>>,
 ): boolean =>
   axes.role === "viewer" &&
@@ -53,7 +53,7 @@ export const nominalLifecycleForRoute = (
   input.lifecycleValues.at(0) ??
   "open";
 
-export const viewerPublishedRouteNonCurrentConstraint: MatrixConstraint = {
+const viewerPublishedRouteNonCurrentConstraint: MatrixConstraint = {
   id: VIEWER_PUBLISHED_ROUTE_NONCURRENT_LIFECYCLE,
   reason: VIEWER_PUBLISHED_ROUTE_NONCURRENT_REASON,
   check: (axes) => !isViewerPublishedRouteNonCurrent(axes),

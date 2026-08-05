@@ -10,7 +10,7 @@ import {
   type E2eDatabaseSetup,
   type E2eSetupCommand,
   e2eSetupCommands,
-  setupE2eDatabase,
+  reseedE2eDatabase,
 } from "../helpers/e2e-database-setup.js";
 import type {
   LifecycleState,
@@ -76,7 +76,7 @@ export interface RuntimeStateTransaction { updateReport(mutation: ReportStateMut
 // prettier-ignore
 export interface RuntimeStateDatabase { transaction<T>(work: (transaction: RuntimeStateTransaction) => Promise<T>): Promise<T> }
 export type RuntimeStateResetter = (
-  input: E2eDatabaseSetup,
+  input: Omit<E2eDatabaseSetup, "mode">,
 ) => void | Promise<void>;
 // prettier-ignore
 export type StatePreparationRequest = StatePreparationPlanInput & Readonly<{ databaseUrl: string }>;
@@ -183,7 +183,7 @@ export function buildStatePreparationPlan(
     routeKey: input.routeKey,
     axes: input.axes,
     resetCommands: Object.freeze(
-      e2eSetupCommands(input.repoRoot, input.profile),
+      e2eSetupCommands(input.repoRoot, input.profile, "profile-reseed"),
     ),
     targets: target,
     report: {
@@ -255,7 +255,7 @@ function assertDatabaseTarget(databaseUrl: string): void {
 export async function prepareRuntimeState(
   request: StatePreparationRequest,
   database: RuntimeStateDatabase,
-  resetAndSeed: RuntimeStateResetter = setupE2eDatabase,
+  resetAndSeed: RuntimeStateResetter = reseedE2eDatabase,
 ): Promise<PreparedRuntimeState> {
   assertDatabaseTarget(request.databaseUrl);
   const plan = buildStatePreparationPlan(request);

@@ -1,24 +1,29 @@
 ## MODIFIED Requirements
 
-### Requirement: AI-Driver exploratory pass covers every role's catalog
+### Requirement: Native AI review is bound to deterministic role coverage
 
 Every role-reachable catalog (`lead`, `head`, `admin`, `viewer`) SHALL be
-covered by the bounded AI-agent exploratory Driver pass once the role is scoped.
-Each drive SHALL declare the campaign's canonical source SHA, seed/profile,
-role, route, deterministic state, action, and oracle cell before it runs, and
-the Driver's report and candidate findings SHALL reference those cell ids in
-the single evidence ledger. The pass SHALL reuse the shared drive protocol and
-the adversarial-verify workflow rather than a per-role fork; whenever it runs,
-its console-capture path SHALL be proven live, and every candidate SHALL be
-dispositioned with evidence. Within-route exploration remains run-time coverage
+covered by the deterministic Playwright project chain. A required supplemental
+native Codex `gpt-5.6-luna` Max review SHALL consume each canonical role/profile
+route evidence batch after that chain, but it SHALL emit candidates only and never
+mutate deterministic cells or the canonical ledger. Every imported report SHALL
+declare `provider: native-codex`, `model: gpt-5.6-luna`, `reasoning: max`, the
+campaign source SHA, seed/profile, role, route, deterministic state, action,
+and oracle cell before it runs. Reports and candidate findings SHALL reference
+exact cell ids. Every report SHALL carry a nonempty `attemptId` and nonempty
+transcript/tool-event evidence refs with `transcriptEvidence.status: captured`;
+a native report without capture evidence fails closed. An explicit read-only
+verifier/import SHALL disposition every candidate; missing or unused
+verification fails closed. Within-route exploration remains run-time coverage
 and is not frozen into a per-element spec.
 
-#### Scenario: Each role is driven with a verified capture path
+#### Scenario: Each role has a verified capture path
 
-- **WHEN** the AI-Driver runs a role's catalog
-- **THEN** it drives every declared catalog route in a live Chromium browser at
-  1440x900 and records each drive under the canonical source SHA/profile and
-  coverage cell
+- **WHEN** the deterministic projects and required native AI review cover a
+  role's catalog
+- **THEN** the projects drive every declared catalog route in live Chromium at
+  1440x900, while any AI report records the canonical source SHA/profile and
+  exact coverage cells
 - **AND** an injected console canary is detected during the run, proving the
   capture path is live, while Firefox, WebKit, mobile, and tablet remain
   explicit exclusions
@@ -27,7 +32,7 @@ and is not frozen into a per-element spec.
 
 #### Scenario: Confirmed findings are dispositioned and bound to evidence
 
-- **WHEN** the adversarial-verify workflow classifies a candidate finding
+- **WHEN** the explicit adversarial-verifier import classifies a candidate
 - **THEN** a seed or test artifact is dismissed with a recorded reason, and a
   confirmed bug is fixed with a test, deferred with an explicit reason, or
   split into its own change
@@ -35,19 +40,21 @@ and is not frozen into a per-element spec.
   route, state, action, oracle, evidence links, and terminal verdict in the
   canonical ledger
 
-#### Scenario: A drive from the wrong SHA cannot satisfy coverage
+#### Scenario: A report from the wrong SHA cannot satisfy coverage
 
-- **WHEN** a Driver report or candidate references a source SHA, profile, or
+- **WHEN** an AI report or candidate references a source SHA, profile, or
   coverage cell different from the active campaign ledger
-- **THEN** verification rejects the artifact as stale and the affected cell
-  remains uncovered until rerun against the active SHA
+- **THEN** import rejects the artifact as stale and the affected cell remains
+  uncovered until rerun against the active SHA
 
-#### Scenario: Driver scope is bounded and reproducible
+#### Scenario: Review scope is bounded and reproducible
 
-- **WHEN** the same campaign manifest and deterministic profile are driven more
-  than once
-- **THEN** the Driver consumes the same finite route/state/action matrix and
-  emits comparable cell identities, while semantic observations may add
-  candidates without expanding the declared browser or viewport scope
-- **AND** the empty-candidate result is trusted only when the canary and all
-  required cell evidence are present
+- **WHEN** the same campaign manifest and deterministic profile are reviewed
+  more than once
+- **THEN** deterministic projects consume the same finite route/state/action
+  matrix and native AI reports reference comparable cell identities, while
+  semantic observations may add candidates without expanding the declared
+  browser or viewport scope
+- **AND** an empty-candidate result is trusted only when the canary, applicable
+  environment evidence, and all required deterministic cell evidence are
+  present

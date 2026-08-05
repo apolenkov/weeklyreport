@@ -41,7 +41,7 @@ describe("runtime-sweep driver recovery", () => {
         status: "interrupted",
         failure: {
           kind: "timeout",
-          message: "OpenCode invocation timed out after 900000ms",
+          message: "Native Codex Luna report capture timed out after 900000ms",
         },
       });
 
@@ -59,7 +59,7 @@ describe("runtime-sweep driver recovery", () => {
       expect(session.transcripts).toEqual(["turn one", "turn two"]);
       expect(session.failure).toEqual({
         kind: "timeout",
-        message: "OpenCode invocation timed out after 900000ms",
+        message: "Native Codex Luna report capture timed out after 900000ms",
       });
     } finally {
       await rm(directory, { recursive: true, force: true });

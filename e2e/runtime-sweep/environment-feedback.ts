@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { z } from "zod";
 
-import type { OpenCodeDriverReport } from "./driver-results-contract.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 
 export const ENVIRONMENT_CHANNELS = [
   "browser-console",
@@ -51,7 +51,7 @@ export type EnvironmentChannelInput = z.infer<
 export type EnvironmentFeedbackDocument = z.infer<
   typeof environmentFeedbackDocumentSchema
 >;
-export type EnvironmentTimeline = OpenCodeDriverReport["timeline"];
+export type EnvironmentTimeline = AiDriverReport["timeline"];
 export type EnvironmentHit = Readonly<{
   readonly channel: EnvironmentChannel;
   readonly eventId: string;

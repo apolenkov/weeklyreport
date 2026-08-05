@@ -31,10 +31,11 @@ legacy tuple together). It adds no production API or database contract.
   and verdict bound to one SHA, seed/profile snapshot, role, route, viewport, and oracle.
 - Keep the baseline immutable through independent adjudication; then rerun affected cells for each fix and the
   full matrix at the fix SHA.
-- Give Codex one append-only ledger; bounded OpenCode DeepSeek V4 Flash Max
-  browser Drivers drive roles sequentially in one browser. Native `gpt-5.6-luna`
-  workers handle bounded implementation, while `gpt-5.6-sol` owns architecture,
-  planning, and final synthesis.
+- Give Codex one append-only ledger; deterministic Playwright projects own the
+  exhaustive cell sweep. Native Codex `gpt-5.6-luna` Max reviews consume each
+  canonical role/profile evidence batch sequentially, emit candidates only, and
+  require an explicit verifier import before merge. `gpt-5.6-sol` owns
+  architecture, planning, and final synthesis.
   Parallelism is limited to read-only candidate verification and evidence review.
 - Make completion a blocking verdict with zero confirmed or unresolved functional, accessibility, or visual gaps.
 
@@ -125,16 +126,15 @@ retain loopback bypass, dev-auth, API/web isolation, and report preservation.
 
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
 `prisma migrate reset`/profile seed; Prisma's destructive guard remains final
-authority, with seed validation/stable IDs in the manifest. Bounded OpenCode
-DeepSeek V4 Flash Max browser Drivers emit candidates only and never mutate the
-ledger or share the browser in parallel. Codex owns scheduling, reset/reseed,
-manifest, ledger,
-merge, adjudication, and gate; read-only verifiers may parallelize.
+authority, with seed validation/stable IDs in the manifest. Native Codex
+`gpt-5.6-luna` Max reviews emit candidates only and never mutate the ledger or
+deterministic browser/database state. Codex owns scheduling, reset/reseed,
+manifest, ledger, merge, adjudication, and gate; read-only verifiers may
+parallelize only through explicitly imported results.
 
-The campaign records the installed OpenCode version from `opencode --version`
-in immutable `SOURCE.json` rather than pinning a version in the runbook. Before
-driving, the compatibility preflight checks `opencode mcp list` and the
-required Playwright MCP tools. Both runtime-preflight and live runtime configs
+The report metadata is fixed to `provider: native-codex`, `model:
+gpt-5.6-luna`, and `reasoning: max`; no provider executable or version is
+captured in `SOURCE.json`. Both runtime-preflight and live runtime configs
 deliberately set `NEXT_PUBLIC_AUTH_STUB=true` only to keep anonymous login
 bootstrap stable; the web proxy still requires a session cookie for protected
 routes.
@@ -163,7 +163,7 @@ allowed except declared reviewed masks, and all failure traces are retained.
 ### Before/after evidence flow
 
 The existing flow is `reset/seed once → route walk → per-role Markdown report`,
-with the AI Driver's candidates, environment feedback, and verifier output
+with native AI review candidates, environment feedback, and verifier output
 stored separately. It cannot prove that a control/state was covered or that
 reports describe one source version.
 

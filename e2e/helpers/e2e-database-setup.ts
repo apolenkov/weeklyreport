@@ -8,7 +8,12 @@ export interface E2eDatabaseSetup {
   readonly databaseUrl: string;
   readonly profile: SeedProfile;
   readonly repoRoot: string;
+  readonly mode: E2eDatabaseSetupMode;
 }
+
+export type E2eDatabaseSetupMode = "schema+seed" | "profile-reseed";
+
+export type E2eDatabaseSetupInput = Omit<E2eDatabaseSetup, "mode">;
 
 export interface E2eSetupCommand {
   readonly args: readonly string[];
@@ -22,12 +27,19 @@ export class E2eDatabaseSetupError extends Error {
 export function e2eSetupCommands(
   repoRoot: string,
   profile: SeedProfile,
+  mode: E2eDatabaseSetupMode,
 ): readonly E2eSetupCommand[] {
+  const schemaReset =
+    mode === "schema+seed"
+      ? [
+          {
+            executable: "pnpm",
+            args: ["exec", "prisma", "migrate", "reset", "--force"],
+          },
+        ]
+      : [];
   return [
-    {
-      executable: "pnpm",
-      args: ["exec", "prisma", "migrate", "reset", "--force"],
-    },
+    ...schemaReset,
     {
       executable: process.execPath,
       args: [
@@ -49,11 +61,19 @@ export function setupE2eDatabase(input: E2eDatabaseSetup): void {
   const env = { ...process.env, DATABASE_URL: input.databaseUrl };
   assertNonProdDestructiveTarget("e2e-global-setup", env);
 
-  for (const command of e2eSetupCommands(input.repoRoot, input.profile)) {
+  for (const command of e2eSetupCommands(
+    input.repoRoot,
+    input.profile,
+    input.mode,
+  )) {
     execFileSync(command.executable, [...command.args], {
       cwd: input.repoRoot,
       env,
       stdio: "inherit",
     });
   }
+}
+
+export function reseedE2eDatabase(input: E2eDatabaseSetupInput): void {
+  setupE2eDatabase({ ...input, mode: "profile-reseed" });
 }

@@ -23,4 +23,5 @@ export interface FrozenPhaseInput {
   readonly phase: "before" | "action" | "after";
   readonly initialEvents: RuntimeEventWindow;
   readonly onInventory?: (inventory: DomInventory) => void;
+  readonly onActionTarget?: (target: DomInventory["controls"][number]) => void;
 }

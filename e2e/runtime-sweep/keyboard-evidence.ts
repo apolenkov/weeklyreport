@@ -115,6 +115,29 @@ const blurActiveElement = (page: Page): Promise<void> =>
     if (active instanceof HTMLElement) active.blur();
   });
 
+const KEYBOARD_START_MARKER = "runtime-sweep-keyboard-start";
+
+const focusDocumentStart = (page: Page): Promise<void> =>
+  page.evaluate((markerId: string) => {
+    if (document.getElementById(markerId) !== null)
+      throw new Error(`Keyboard trace marker ${markerId} already exists`);
+    const marker = document.createElement("span");
+    marker.id = markerId;
+    marker.tabIndex = 0;
+    marker.setAttribute("aria-hidden", "true");
+    marker.style.position = "fixed";
+    marker.style.width = "1px";
+    marker.style.height = "1px";
+    marker.style.overflow = "hidden";
+    document.body.prepend(marker);
+    marker.focus({ preventScroll: true });
+  }, KEYBOARD_START_MARKER);
+
+const removeDocumentStart = (page: Page): Promise<void> =>
+  page.evaluate((markerId: string) => {
+    document.getElementById(markerId)?.remove();
+  }, KEYBOARD_START_MARKER);
+
 const focusedControl = (page: Page): Promise<FocusedControl | null> =>
   page.evaluate<FocusedControl | null>(FOCUSED_CONTROL_SCRIPT);
 
@@ -190,6 +213,7 @@ export async function captureKeyboardTrace(
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
   await blurActiveElement(page);
+  await focusDocumentStart(page);
   try {
     const sequence = await tabSequence(
       page,
@@ -209,6 +233,7 @@ export async function captureKeyboardTrace(
       focusGaps: evidence.filter(({ outcome }) => outcome === "fail"),
     };
   } finally {
+    await removeDocumentStart(page);
     await blurActiveElement(page);
   }
 }

@@ -17,10 +17,11 @@ inside each page. The gap is visible in `e2e/sweep/catalog-sweep.spec.ts`,
   controlled-failure states against a disposable E2E database.
 - Keep the immutable baseline separate from fixes; rerun affected cells after
   each fix and the full matrix before completion.
-- Restrict OpenCode to bounded DeepSeek V4 Flash Max browser Drivers and
-  independent verification while one primary orchestrator owns the canonical
-  ledger; keep native `gpt-5.6-luna` workers in the bounded implementation lane
-  and `gpt-5.6-sol` in charge of architecture, planning, and final synthesis.
+- Keep native Codex `gpt-5.6-luna` Max reviews bounded to canonical role/profile
+  evidence batches. Reports use the `native-codex` provider contract, emit
+  candidates only, and require an explicit verifier import before any merge;
+  one primary orchestrator owns the canonical ledger and `gpt-5.6-sol` remains
+  in charge of architecture, planning, and final synthesis.
 - Require zero unresolved or confirmed functional, accessibility, and visual
   gaps at the final SHA.
 

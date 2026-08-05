@@ -35,4 +35,101 @@ describe("runtime failure summaries", () => {
     expect(summary).toContain("issue-a");
     expect(summary.length).toBeLessThanOrEqual(4096);
   });
+
+  it("does not list navigation scaffold controls as failed causes", () => {
+    const summary = compactFailedCellSummary([
+      {
+        cellId: "cell-scaffold",
+        verdict: "fail",
+        action: {
+          controlKey: "button:Target:1",
+          operation: "click",
+          safety: "read-only",
+          transition: "none",
+        },
+        controls: [
+          {
+            controlKey: "button:Continue:1",
+            cellId: "cell-scaffold",
+            ariaRole: "button",
+            accessibleName: "Continue",
+            enabled: true,
+            order: 0,
+            actionResult: {
+              kind: "not-exercised",
+              policy: "unavailable",
+              reason:
+                "Navigation-only matrix scaffold; live-control lane must execute each DOM control",
+            },
+          },
+        ],
+        evidence: {
+          before: [],
+          action: [],
+          after: [],
+          observations: [],
+          inapplicable: [],
+        },
+      },
+    ]);
+
+    expect(summary).toContain("cell-scaffold");
+    expect(summary).toContain("no failure reason recorded");
+    expect(summary).not.toContain("button:Continue");
+  });
+
+  it("retains the frozen target when its scaffold reason is the actual failure", () => {
+    const summary = compactFailedCellSummary([
+      {
+        cellId: "cell-target",
+        verdict: "fail",
+        action: {
+          controlKey: "button:Continue:1",
+          operation: "click",
+          safety: "read-only",
+          transition: "none",
+        },
+        controls: [
+          {
+            controlKey: "button:Continue:1",
+            cellId: "cell-target",
+            ariaRole: "button",
+            accessibleName: "Continue",
+            enabled: true,
+            order: 0,
+            actionResult: {
+              kind: "not-exercised",
+              policy: "unavailable",
+              reason:
+                "Navigation-only matrix scaffold; live-control lane must execute each DOM control",
+            },
+          },
+          {
+            controlKey: "button:Other:1",
+            cellId: "cell-target",
+            ariaRole: "button",
+            accessibleName: "Other",
+            enabled: true,
+            order: 1,
+            actionResult: {
+              kind: "not-exercised",
+              policy: "unavailable",
+              reason:
+                "Navigation-only matrix scaffold; live-control lane must execute each DOM control",
+            },
+          },
+        ],
+        evidence: {
+          before: [],
+          action: [],
+          after: [],
+          observations: [],
+          inapplicable: [],
+        },
+      },
+    ]);
+
+    expect(summary).toContain("button:Continue");
+    expect(summary).not.toContain("button:Other");
+  });
 });

@@ -96,6 +96,14 @@ function report(
   blockedControls: readonly string[] = [],
 ): string {
   return JSON.stringify({
+    provider: "native-codex",
+    model: "gpt-5.6-luna",
+    reasoning: "max",
+    attemptId: "attempt-1",
+    transcriptEvidence: {
+      status: "captured",
+      evidenceRefs: ["transcript:attempt-1"],
+    },
     roleDriven: "lead",
     profile: "minimal",
     sourceSha,
@@ -153,13 +161,25 @@ function options(reportText: string): DriverMergeOptions {
   };
 }
 
-describe("OpenCode driver result contract", () => {
+describe("AI driver result contract", () => {
   it("rejects a report from a stale source SHA", () => {
     const stale = report(["save"], OTHER_SOURCE_SHA);
 
     expect(() =>
       mergeDriverResults([makeCell()], stale, options(stale)),
     ).toThrow(/source SHA/iu);
+  });
+
+  it("rejects reports from a non-native provider or model", () => {
+    const reportText = report(["save"]);
+    const wrongProvider = reportText.replace(
+      '"provider":"native-codex"',
+      '"provider":"openai"',
+    );
+
+    expect(() =>
+      mergeDriverResults([makeCell()], wrongProvider, options(wrongProvider)),
+    ).toThrow(/native-codex/iu);
   });
 
   it("rejects missing and duplicate control results", () => {

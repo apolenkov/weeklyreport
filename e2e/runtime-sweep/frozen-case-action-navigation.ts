@@ -46,10 +46,14 @@ export const settleFrozenActionNavigation = async (
   }
   return {
     status: "pass",
-    controlKey: outcome.controlKey,
     observation: {
       kind: "url",
       detail: "Main-frame navigation observed after the action",
     },
+    controlKey: outcome.controlKey,
+    ...(outcome.target === undefined ? {} : { target: outcome.target }),
+    ...(outcome.surfaceObservation === undefined
+      ? {}
+      : { surfaceObservation: outcome.surfaceObservation }),
   };
 };

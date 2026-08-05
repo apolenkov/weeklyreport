@@ -2,15 +2,18 @@
 
 ### Requirement: Per-role sweep produces a blocking accessibility verdict
 
-The Driver SHALL run each canonical role (`lead`, `head`, `admin`, `viewer`)
-via `/auth/dev-login` within the declared Exhaustive Runtime Sweep matrix and
-report anomalies per role, route, deterministic state, and action. The sweep
-MUST write the role report and its SHA-bound ledger records before applying a
-verdict. It SHALL dynamically enumerate every reachable interactive control
-and transition at run time, attach function, accessibility, and visual
-evidence, and fail the owning cell for any reported functional, accessibility,
-or visual anomaly. A role passes only when all of its declared cells are
-terminal and clean; the final campaign gate remains blocking.
+The deterministic Playwright projects SHALL cover each canonical role (`lead`,
+`head`, `admin`, `viewer`) via `/auth/dev-login` within the declared Exhaustive
+Runtime Sweep matrix and report anomalies per role, route, deterministic state,
+and action. A native Codex `gpt-5.6-luna` Max review SHALL inspect each
+canonical role/profile evidence batch, and its strict `native-codex` report emits
+candidates only and never mutates the ledger. The sweep MUST write the role
+report and its SHA-bound ledger records before applying a verdict. It SHALL
+dynamically enumerate every reachable interactive control and transition at
+run time, attach function, accessibility, and visual evidence, and fail the
+owning cell for any reported functional, accessibility, or visual anomaly. A
+role passes only when all of its declared cells are terminal and clean; the
+final campaign gate remains blocking.
 
 #### Scenario: Report names the anomaly with its complete context
 

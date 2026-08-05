@@ -53,8 +53,19 @@ const routeTimelineSchema = z
     leftAt: z.string().min(1),
   })
   .strict();
+const transcriptEvidenceSchema = z
+  .object({
+    status: z.literal("captured"),
+    evidenceRefs: z.array(z.string().min(1)).min(1).readonly(),
+  })
+  .strict();
 const driverReportSchema = z
   .object({
+    provider: z.literal("native-codex"),
+    model: z.literal("gpt-5.6-luna"),
+    reasoning: z.literal("max"),
+    attemptId: z.string().min(1),
+    transcriptEvidence: transcriptEvidenceSchema,
     roleDriven: roleSchema,
     profile: seedProfileSchema,
     sourceSha: sourceShaSchema,
@@ -75,7 +86,15 @@ const driverReportSchema = z
   .strict();
 
 type DriverAssignmentCell = z.infer<typeof driverAssignmentCellSchema>;
-export type OpenCodeDriverReport = z.infer<typeof driverReportSchema>;
+export type AiDriverReport = z.infer<typeof driverReportSchema>;
+export type AiDriverTranscriptEvidence = z.infer<
+  typeof transcriptEvidenceSchema
+>;
+export const AI_DRIVER_METADATA = {
+  provider: "native-codex",
+  model: "gpt-5.6-luna",
+  reasoning: "max",
+} as const;
 export interface DriverValidationInput {
   readonly sourceSha: string;
   readonly profile: z.infer<typeof seedProfileSchema>;
@@ -92,7 +111,7 @@ export class DriverResultValidationError extends Error {
   override readonly name = "DriverResultValidationError";
 
   constructor(readonly issues: readonly string[]) {
-    super(`OpenCode driver result rejected: ${issues.join("; ")}`);
+    super(`AI driver result rejected: ${issues.join("; ")}`);
   }
 }
 
@@ -150,7 +169,7 @@ export function renderDriverAssignment(input: DriverValidationInput): string {
 }
 
 function assignmentIssues(
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   expected: readonly DriverAssignmentCell[],
 ): readonly string[] {
   const expectedById = new Map(expected.map((cell) => [cell.cellId, cell]));
@@ -184,7 +203,7 @@ function assignmentIssues(
 }
 
 function controlIssues(
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   expected: readonly DriverAssignmentCell[],
 ): readonly string[] {
   const expectedPairs = expected.map((cell) =>
@@ -208,9 +227,9 @@ function controlIssues(
 }
 
 export function validateDriverReport(
-  report: OpenCodeDriverReport,
+  report: AiDriverReport,
   input: DriverValidationInput,
-): OpenCodeDriverReport {
+): AiDriverReport {
   const expected = expectedAssignments(input);
   const expectedCells = new Map(expected.map((cell) => [cell.cellId, cell]));
   const metadataIssues = [
@@ -257,10 +276,10 @@ export function validateDriverReport(
   return report;
 }
 
-export function parseDriverReport(
+export function parseAiDriverReport(
   text: string,
   input: DriverValidationInput,
-): OpenCodeDriverReport {
+): AiDriverReport {
   const parsedJson: unknown = JSON.parse(text);
   const parsed = driverReportSchema.safeParse(parsedJson);
   if (!parsed.success) {

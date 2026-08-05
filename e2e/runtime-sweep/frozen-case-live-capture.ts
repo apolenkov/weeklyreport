@@ -78,7 +78,7 @@ const actionRef = async (
     kind: "control-action",
     dimension: "runtime",
     capturedAt: new Date().toISOString(),
-    value: { action, outcome },
+    value: { action, target: outcome?.target ?? null, outcome },
   });
 };
 
@@ -143,6 +143,15 @@ const unavailableSurfaceExpectedFor = (
   input.prepared.plan.surface.productActions === INAPPLICABLE_ACTIONS &&
   outcome?.status === NOT_EXERCISED_ACTION;
 
+const publishActionTarget = (
+  input: FrozenPhaseInput,
+  outcome: ActionOutcome | undefined,
+): void => {
+  if (input.phase !== "action" || outcome?.status !== "pass") return;
+  const target = outcome.target;
+  if (target !== undefined) input.onActionTarget?.(target);
+};
+
 export const captureFrozenPhase = async (
   input: FrozenPhaseInput,
 ): Promise<EvidenceBundle> => {
@@ -156,6 +165,7 @@ export const captureFrozenPhase = async (
       : undefined;
   try {
     const outcome = await actionOutcomeForPhase(input, navigationBoundary);
+    publishActionTarget(input, outcome);
     const navigationStatus =
       input.phase === "action" && action?.operation === "navigate"
         ? await navigate(input.page, input.route)

@@ -51,7 +51,7 @@ const webEnv = {
 export default defineConfig({
   testDir: import.meta.dirname,
   testMatch:
-    /(?:concurrency|fault-recovery|runtime-matrix|runtime-sweep|z-runtime-sweep-live-lane|opencode-driver)\.spec\.ts/,
+    /(?:concurrency|fault-recovery|runtime-matrix|runtime-sweep|z-runtime-sweep-live-lane)\.spec\.ts/,
   outputDir: path.join(ARCHIVE_ROOT, "playwright", PROFILE),
   globalSetup: path.join(REPO_ROOT, "e2e/integration/global-setup.ts"),
   globalTeardown: path.join(REPO_ROOT, "e2e/integration/global-teardown.ts"),
@@ -115,16 +115,6 @@ export default defineConfig({
       name: "runtime-live-controls",
       testMatch: /z-runtime-sweep-live-lane\.spec\.ts/,
       dependencies: ["runtime-matrix"],
-      use: {
-        ...devices["Desktop Chrome"],
-        browserName: "chromium",
-        viewport: { width: 1440, height: 900 },
-      },
-    },
-    {
-      name: "opencode-flash-driver",
-      testMatch: /opencode-driver\.spec\.ts/,
-      dependencies: ["runtime-live-controls"],
       use: {
         ...devices["Desktop Chrome"],
         browserName: "chromium",

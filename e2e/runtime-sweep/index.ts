@@ -25,8 +25,6 @@ export * from "./matrix.ts";
 export * from "./matrix-coverage.ts";
 export * from "./matrix-finalizer.ts";
 export * from "./navigation.ts";
-export * from "./opencode-runner.ts";
-export * from "./playwright-mcp-preflight.ts";
 export * from "./playwright-preflight.ts";
 export * from "./preflight-artifact.ts";
 export * from "./prisma-state-database.ts";
