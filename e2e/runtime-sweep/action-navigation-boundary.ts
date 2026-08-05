@@ -1,6 +1,4 @@
-import type { Page } from "@playwright/test";
-
-import { settleNavigation } from "./navigation.ts";
+import { type NavigationPage, settleNavigation } from "./navigation.ts";
 
 const ACTION_NAVIGATION_GRACE_MS = 100;
 const ACTION_NAVIGATION_TIMEOUT_MS = 2000;
@@ -13,6 +11,19 @@ const SAME_DOCUMENT_LINK_NAMES = new Set(["skip to content"]);
 export interface ActionNavigationExpectation {
   readonly expectedPathname?: string;
   readonly timeoutMs: number;
+}
+
+export interface ActionNavigationPage {
+  readonly url: () => string;
+  readonly mainFrame: () => object;
+  readonly waitForEvent: (
+    event: "framenavigated",
+    options: Readonly<{
+      readonly predicate?: (frame: object) => boolean;
+      readonly timeout?: number;
+      readonly signal?: AbortSignal;
+    }>,
+  ) => Promise<object>;
 }
 
 const controlParts = (
@@ -59,7 +70,7 @@ export interface ActionNavigationObserver {
 }
 
 export const observeActionNavigation = (
-  page: Page,
+  page: ActionNavigationPage,
   expectation?: ActionNavigationExpectation,
 ): ActionNavigationObserver => {
   const initialUrl = page.url();
@@ -121,7 +132,7 @@ const navigationFailureFor = (
       };
 
 export const settleActionNavigation = async (
-  page: Page,
+  page: NavigationPage & ActionNavigationPage,
   observer: ActionNavigationObserver,
   outcome:
     | Readonly<{

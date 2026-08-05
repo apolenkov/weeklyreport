@@ -1,7 +1,8 @@
 import type { Page, TestInfo } from "@playwright/test";
 
 import type { DOMControl } from "./contracts.ts";
-import { inventoryDom } from "./dom-inventory.ts";
+import type { DomInventory } from "./dom-inventory.ts";
+import type { EvidencePhase } from "./evidence-types.ts";
 import {
   captureFrozenCasePhases,
   type CompleteFrozenCaseEvidence,
@@ -87,20 +88,26 @@ const runFrozenCase = async (
   await loginForCase(page, matrixCase);
   const route = routeForState(source, stateForCase(matrixCase));
   const navigation = await initialNavigation(page, route.resolvedRoute);
-  const initialInventory = await inventoryDom(page);
+  const phaseInventories = new Map<EvidencePhase, DomInventory>();
   const result = await captureFrozenCasePhases({
     matrixCase,
     oracle: RUNTIME_MATRIX_ORACLE,
     surface: prepared.plan.surface,
-    controls: (evidence) =>
-      controlsForCase(
-        initialInventory,
+    controls: (evidence) => {
+      const actionInventory = phaseInventories.get("action");
+      if (actionInventory === undefined)
+        throw new Error(
+          `Frozen case ${matrixCase.caseId} has no action-phase inventory`,
+        );
+      return controlsForCase(
+        actionInventory,
         matrixCase,
         actionResultFor(evidence),
         prepared.plan.surface,
-      ),
-    capturePhase: (phase) =>
-      captureFrozenPhase({
+      );
+    },
+    capturePhase: async (phase) => {
+      const evidence = await captureFrozenPhase({
         page,
         source,
         matrixCase,
@@ -110,7 +117,10 @@ const runFrozenCase = async (
         responseStatus: navigation.responseStatus,
         initialEvents: navigation.events,
         phase,
-      }),
+        onInventory: (inventory) => phaseInventories.set(phase, inventory),
+      });
+      return evidence;
+    },
   });
   await persistFrozenCaseCell(runtime, result.cell);
   return result.cell;

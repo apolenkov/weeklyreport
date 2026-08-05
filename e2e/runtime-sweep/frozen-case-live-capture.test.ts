@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EvidenceBundle } from "./contracts.ts";
+import type { DomInventory } from "./dom-inventory.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture.ts";
 import { captureFrozenPhase } from "./frozen-case-live-capture.ts";
 
@@ -137,6 +138,20 @@ const fakeInput = (page: object): FrozenPhaseInput =>
 describe("frozen action evidence capture", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
+
+  it("shares the captured phase inventory with the frozen-case consumer", async () => {
+    const observed: { value?: DomInventory } = {};
+
+    await captureFrozenPhase({
+      ...fakeInput({}),
+      phase: "before",
+      onInventory: (inventory) => {
+        observed.value = inventory;
+      },
+    });
+
+    expect(observed.value).toEqual({ controls: [], issues: [] });
+  });
 
   it("waits for delayed sign-out navigation beyond the ordinary action grace", async () => {
     harness.events.length = 0;

@@ -1,21 +1,23 @@
-import type { Page } from "@playwright/test";
-
 import {
   type ActionNavigationExpectation,
   type ActionNavigationObserver,
+  type ActionNavigationPage,
   expectedActionNavigationFor,
   observeActionNavigation,
   settleActionNavigation,
 } from "./action-navigation-boundary.ts";
 import type { ActionOutcome } from "./frozen-case-live-actions.ts";
+import type { NavigationPage } from "./navigation.ts";
 
 export interface FrozenActionNavigationBoundary {
   readonly expectation: ActionNavigationExpectation | undefined;
   readonly observer: ActionNavigationObserver;
 }
 
+type FrozenActionNavigationPage = NavigationPage & ActionNavigationPage;
+
 export const beginFrozenActionNavigation = (
-  page: Page,
+  page: ActionNavigationPage,
   controlKey: string,
 ): FrozenActionNavigationBoundary => {
   const expectation = expectedActionNavigationFor(controlKey);
@@ -26,7 +28,7 @@ export const beginFrozenActionNavigation = (
 };
 
 export const settleFrozenActionNavigation = async (
-  page: Page,
+  page: FrozenActionNavigationPage,
   boundary: FrozenActionNavigationBoundary,
   outcome: ActionOutcome | undefined,
 ): Promise<ActionOutcome | undefined> => {
