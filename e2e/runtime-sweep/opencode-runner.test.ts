@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CoverageCell } from "./contracts.ts";
 import {
+  OPENCODE_INVOCATION_TIMEOUT_MS,
+  type OpenCodeExecutor,
+} from "./opencode-executor.ts";
+import {
   assertPlaywrightMcpConnected,
   OpenCodeDriveError,
   OpenCodeDriveInterruptedError,
-  type OpenCodeExecutor,
+  OpenCodeDriveTimeoutError,
   parseOpenCodeDriverReport,
   parseOpenCodeEvents,
   runOpenCodeDrive,
@@ -17,6 +21,16 @@ const event = (phase: string, text: string): string =>
     type: "text",
     part: { metadata: { phase }, text },
   });
+
+class FakeTimeoutError extends Error {
+  override readonly name = "FakeTimeoutError";
+  readonly killed = true as const;
+  readonly signal = "SIGTERM" as const;
+
+  constructor(readonly stdout = "partial output") {
+    super("Command timed out");
+  }
+}
 
 describe("OpenCode runtime-sweep runner", () => {
   const sourceSha = "a".repeat(40);
@@ -165,6 +179,60 @@ describe("OpenCode runtime-sweep runner", () => {
     const execute = vi.fn<OpenCodeExecutor>().mockResolvedValue({ stdout: "" });
     await expect(assertPlaywrightMcpConnected(execute)).rejects.toThrow(
       OpenCodeDriveError,
+    );
+  });
+
+  it("classifies a timed-out invocation as an interrupted OpenCode error", async () => {
+    const execute = vi
+      .fn<OpenCodeExecutor>()
+      .mockRejectedValue(new FakeTimeoutError());
+
+    await expect(
+      runOpenCodeDrive(
+        { maxTurns: 1, prompt: "drive", repoRoot: "/repo" },
+        execute,
+      ),
+    ).rejects.toSatisfy((error: unknown) => {
+      if (!(error instanceof OpenCodeDriveTimeoutError)) return false;
+      expect(error).toBeInstanceOf(OpenCodeDriveInterruptedError);
+      expect(error.timeoutMs).toBe(OPENCODE_INVOCATION_TIMEOUT_MS);
+      expect(error.sessionId).toBeUndefined();
+      expect(error.transcripts).toEqual(["partial output"]);
+      return true;
+    });
+  });
+
+  it("retains the active session and partial output when a turn times out", async () => {
+    const execute = vi
+      .fn<OpenCodeExecutor>()
+      .mockResolvedValueOnce({
+        stdout: `${event("final_answer", "DRIVER_BOOTSTRAP_READY")}\n`,
+      })
+      .mockRejectedValueOnce(new FakeTimeoutError("partial turn"));
+
+    await expect(
+      runOpenCodeDrive(
+        { maxTurns: 1, prompt: "drive", repoRoot: "/repo" },
+        execute,
+      ),
+    ).rejects.toMatchObject({
+      name: "OpenCodeDriveTimeoutError",
+      sessionId: "session-1",
+      transcripts: [
+        expect.stringContaining("DRIVER_BOOTSTRAP_READY"),
+        "partial turn",
+      ],
+      timeoutMs: OPENCODE_INVOCATION_TIMEOUT_MS,
+    });
+  });
+
+  it("classifies a timed-out MCP preflight as a typed OpenCode error", async () => {
+    const execute = vi
+      .fn<OpenCodeExecutor>()
+      .mockRejectedValue(new FakeTimeoutError());
+
+    await expect(assertPlaywrightMcpConnected(execute)).rejects.toBeInstanceOf(
+      OpenCodeDriveTimeoutError,
     );
   });
 

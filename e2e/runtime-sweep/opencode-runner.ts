@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,9 +9,14 @@ import {
   type OpenCodeDriverReport,
   parseDriverReport,
 } from "./driver-results.ts";
+import {
+  createOpenCodeExecutor,
+  isTimedOutOpenCodeProcessError,
+  OPENCODE_INVOCATION_TIMEOUT_MS,
+  type OpenCodeExecutor,
+  OpenCodeExecutorTimeoutError,
+} from "./opencode-executor.ts";
 
-const MAX_OUTPUT_BYTES = Number("16777216");
-const OPENCODE_BINARY = "/opt/homebrew/bin/opencode";
 const OPENCODE_DRIVER_AGENT = "flash-browser-driver";
 const OPENCODE_DRIVER_MODEL = "opencode-go/deepseek-v4-flash";
 const OPENCODE_DRIVER_VARIANT = "max";
@@ -43,22 +47,35 @@ export interface OpenCodeDriveResult {
   readonly transcripts: readonly string[];
 }
 
-export type OpenCodeExecutor = (
-  args: readonly string[],
-) => Promise<{ readonly stdout: string }>;
-
 export class OpenCodeDriveError extends Error {
   override readonly name: string = "OpenCodeDriveError";
 }
 
 export class OpenCodeDriveInterruptedError extends OpenCodeDriveError {
-  override readonly name = "OpenCodeDriveInterruptedError";
+  override readonly name: string = "OpenCodeDriveInterruptedError";
 
   constructor(
     readonly sessionId: string | undefined,
     readonly transcripts: readonly string[],
+    message = "OpenCode session ended before a final answer",
   ) {
-    super("OpenCode session ended before a final answer");
+    super(message);
+  }
+}
+
+export class OpenCodeDriveTimeoutError extends OpenCodeDriveInterruptedError {
+  override readonly name = "OpenCodeDriveTimeoutError";
+
+  constructor(
+    sessionId: string | undefined,
+    transcripts: readonly string[],
+    readonly timeoutMs: number,
+  ) {
+    super(
+      sessionId,
+      transcripts,
+      `OpenCode invocation timed out after ${timeoutMs}ms`,
+    );
   }
 }
 
@@ -124,64 +141,96 @@ function invocationArgs(
   ];
 }
 
+interface OpenCodeInvocationContext {
+  readonly sessionId?: string;
+  readonly transcripts: readonly string[];
+}
+
+const transcriptsWithPartialOutput = (
+  transcripts: readonly string[],
+  stdout: string | undefined,
+): readonly string[] =>
+  stdout && stdout.length > 0 ? [...transcripts, stdout] : transcripts;
+
+const executeInvocation = async (
+  execute: OpenCodeExecutor,
+  args: readonly string[],
+  context: OpenCodeInvocationContext,
+): Promise<{ readonly stdout: string }> => {
+  try {
+    return await execute(args);
+  } catch (error) {
+    if (error instanceof OpenCodeExecutorTimeoutError)
+      throw new OpenCodeDriveTimeoutError(
+        context.sessionId,
+        transcriptsWithPartialOutput(context.transcripts, error.stdout),
+        OPENCODE_INVOCATION_TIMEOUT_MS,
+      );
+    if (!isTimedOutOpenCodeProcessError(error)) throw error;
+    throw new OpenCodeDriveTimeoutError(
+      context.sessionId,
+      transcriptsWithPartialOutput(context.transcripts, error.stdout),
+      OPENCODE_INVOCATION_TIMEOUT_MS,
+    );
+  }
+};
+
+interface EstablishedOpenCodeSession {
+  readonly sessionId: string;
+  readonly bootstrapOutput: string;
+}
+
 async function establishSession(
   request: OpenCodeDriveRequest,
   execute: OpenCodeExecutor,
-): Promise<string> {
-  const { stdout } = await execute(
+): Promise<EstablishedOpenCodeSession> {
+  const { stdout } = await executeInvocation(
+    execute,
     invocationArgs(
       request,
       "Return exactly DRIVER_BOOTSTRAP_READY. Do not use tools.",
     ),
+    { transcripts: [] },
   );
   const sessionId = parseOpenCodeEvents(stdout).at(0)?.sessionID;
   if (!sessionId)
     throw new OpenCodeDriveError(
       "OpenCode bootstrap did not include a session id",
     );
-  return sessionId;
+  return { sessionId, bootstrapOutput: stdout };
 }
 
 async function executeInitialTurn(
   request: OpenCodeDriveRequest,
   execute: OpenCodeExecutor,
+  transcripts: readonly string[],
 ): Promise<{ readonly stdout: string }> {
   const directory = await mkdtemp(join(tmpdir(), "customreport-driver-"));
   const promptPath = join(directory, "prompt.md");
   try {
     await writeFile(promptPath, request.prompt, "utf8");
-    const sessionId = await establishSession(request, execute);
-    return await execute(
+    const { sessionId, bootstrapOutput } = await establishSession(
+      request,
+      execute,
+    );
+    return await executeInvocation(
+      execute,
       invocationArgs(
         request,
         `Read ${JSON.stringify(promptPath)} in full, then execute its runtime-driver instructions exactly.`,
         sessionId,
       ),
+      {
+        sessionId,
+        transcripts: [...transcripts, bootstrapOutput],
+      },
     );
   } finally {
     await rm(directory, { force: true, recursive: true });
   }
 }
 
-async function defaultExecutor(
-  args: readonly string[],
-): Promise<{ readonly stdout: string }> {
-  return new Promise((resolve, reject) => {
-    const child = execFile(
-      OPENCODE_BINARY,
-      [...args],
-      {
-        encoding: "utf8",
-        maxBuffer: MAX_OUTPUT_BYTES,
-      },
-      (error, stdout) => {
-        if (error) reject(error);
-        else resolve({ stdout });
-      },
-    );
-    child.stdin?.end();
-  });
-}
+const defaultExecutor = createOpenCodeExecutor();
 
 async function driveTurn(
   request: OpenCodeDriveRequest,
@@ -194,14 +243,16 @@ async function driveTurn(
     throw new OpenCodeDriveInterruptedError(sessionId, transcripts);
   }
   const { stdout } = sessionId
-    ? await execute(
+    ? await executeInvocation(
+        execute,
         invocationArgs(
           request,
           "Do not use tools. Return only the required final JSON now.",
           sessionId,
         ),
+        { sessionId, transcripts },
       )
-    : await executeInitialTurn(request, execute);
+    : await executeInitialTurn(request, execute, transcripts);
   const events = parseOpenCodeEvents(stdout);
   const observedSessionId = events.at(0)?.sessionID ?? sessionId;
   if (!observedSessionId) {
@@ -231,7 +282,9 @@ export async function assertPlaywrightMcpConnected(
   execute: OpenCodeExecutor = defaultExecutor,
   requiredTools: readonly string[] = [],
 ): Promise<void> {
-  const { stdout } = await execute(["mcp", "list"]);
+  const { stdout } = await executeInvocation(execute, ["mcp", "list"], {
+    transcripts: [],
+  });
   if (!/playwright[\s\S]*\bconnected\b/u.test(stdout)) {
     throw new OpenCodeDriveError("OpenCode Playwright MCP is not connected");
   }

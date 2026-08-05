@@ -2,12 +2,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type DriverAttemptStatus = "completed" | "interrupted";
+export interface DriverAttemptFailure {
+  readonly kind: "timeout";
+  readonly message: string;
+}
 export interface DriverAttemptInput {
   readonly directory: string;
   readonly reportText: string;
   readonly sessionId: string;
   readonly transcripts: readonly string[];
   readonly status: DriverAttemptStatus;
+  readonly failure?: DriverAttemptFailure;
   readonly reportName?: string;
   readonly sessionName?: string;
 }
@@ -37,6 +42,7 @@ export async function persistDriverAttempt(
           status: input.status,
           sessionId: input.sessionId,
           transcripts: input.transcripts,
+          ...(input.failure ? { failure: input.failure } : {}),
         },
         null,
         2,

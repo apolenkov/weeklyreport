@@ -12,7 +12,10 @@ import {
   readAssignedCells,
 } from "./driver-assignment.js";
 import { renderDriverPrompt } from "./driver-prompt.js";
-import { persistDriverAttempt } from "./driver-recovery.js";
+import {
+  type DriverAttemptArtifacts,
+  persistDriverAttempt,
+} from "./driver-recovery.js";
 import {
   type DriverValidationInput,
   mergeDriverReport,
@@ -33,6 +36,7 @@ import {
 } from "./environment-observer.js";
 import {
   OpenCodeDriveInterruptedError,
+  OpenCodeDriveTimeoutError,
   parseOpenCodeDriverReport,
   runOpenCodeDrive,
 } from "./opencode-runner.js";
@@ -47,6 +51,28 @@ const prepareRuntimeShardState: DriverStatePreparer = async (request) => {
   const { prepareRuntimeState } = await import("./state-preparation.js");
   return prepareRuntimeState(request, createPrismaRuntimeStateDatabase(prisma));
 };
+
+export const persistOpenCodeDriveInterruption = (
+  directory: string,
+  error: OpenCodeDriveInterruptedError,
+): Promise<DriverAttemptArtifacts> =>
+  persistDriverAttempt({
+    directory,
+    reportText: "",
+    sessionId: error.sessionId ?? "unknown",
+    transcripts: error.transcripts,
+    status: "interrupted",
+    ...(error instanceof OpenCodeDriveTimeoutError
+      ? {
+          failure: {
+            kind: "timeout" as const,
+            message: error.message,
+          },
+        }
+      : {}),
+    reportName: "interrupted-report.json",
+    sessionName: "interrupted-session.json",
+  });
 
 interface ShardDriveInput {
   readonly environment: DriveEnvironment;
@@ -112,15 +138,7 @@ const runShard = async (input: ShardDriveInput) => {
     });
   } catch (error) {
     if (error instanceof OpenCodeDriveInterruptedError)
-      await persistDriverAttempt({
-        directory: input.outputDir,
-        reportText: "",
-        sessionId: error.sessionId ?? "unknown",
-        transcripts: error.transcripts,
-        status: "interrupted",
-        reportName: "interrupted-report.json",
-        sessionName: "interrupted-session.json",
-      });
+      await persistOpenCodeDriveInterruption(input.outputDir, error);
     throw error;
   }
 };
