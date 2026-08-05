@@ -55,9 +55,11 @@
 
 ## 4. OpenCode DeepSeek V4 Flash Max Driver and feedback loop
 
-- [x] 4.1 Pin and connect Microsoft Playwright MCP `0.0.78` to the installed
-      OpenCode `1.18.11` as isolated headless Chromium at `1440x900`; verify the MCP
-      reports connected.
+- [x] 4.1 Capture the installed OpenCode and Playwright versions in immutable
+      `SOURCE.json`, then run the compatibility preflight (`opencode mcp list`
+      plus the required Playwright MCP tools) against the installed OpenCode.
+      Connect Microsoft Playwright MCP `0.0.78` as isolated headless Chromium
+      at `1440x900`; verify the MCP reports connected.
 - [x] 4.2 Replace stale Driver paths and the read-mostly prompt with a bounded
       cell protocol that permits declared disposable-DB mutations and returns only
       schema-valid candidates, timelines, canary, and evidence refs.

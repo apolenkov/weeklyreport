@@ -7,6 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
 import integrationConfig from "../playwright.integration.config.ts";
 import { assertSourceSha } from "./ids.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
+import { RUNTIME_NEXT_DIST } from "./runtime-next-dist.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -43,10 +44,7 @@ const apiEnv = {
   PDF_BASE_URL: WEB_URL,
 };
 const webEnv = {
-  ...runtimeSweepWebEnvironment(
-    webServer.env,
-    `.next-runtime-sweep-${process.pid}`,
-  ),
+  ...runtimeSweepWebEnvironment(webServer.env, RUNTIME_NEXT_DIST.live),
   NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
 };
 
@@ -124,7 +122,7 @@ export default defineConfig({
     },
     {
       ...webServer,
-      command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+      command: `pnpm exec tsx e2e/runtime-sweep/prepare-runtime-next-dist.ts ${RUNTIME_NEXT_DIST.live} && pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: false,
       env: webEnv,

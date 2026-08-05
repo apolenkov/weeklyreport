@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../playwright.integration.config.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
+import { RUNTIME_NEXT_DIST } from "./runtime-next-dist.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -41,9 +42,10 @@ export default defineConfig({
     apiServer,
     {
       ...webServer,
+      command: `pnpm exec tsx e2e/runtime-sweep/prepare-runtime-next-dist.ts ${RUNTIME_NEXT_DIST.preflight} && ${webServer.command}`,
       env: runtimeSweepWebEnvironment(
         webServer.env,
-        `.next-runtime-preflight-${process.pid}`,
+        RUNTIME_NEXT_DIST.preflight,
       ),
     },
   ],

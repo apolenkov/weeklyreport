@@ -11,8 +11,12 @@ It runs in **four phases** (drive → environment feedback → verify → output
 deliberately kept low-overhead (one shared browser → the drive is sequential;
 only verification fans out):
 
-The installed compatible setup is OpenCode `1.18.11` plus
-`@playwright/mcp@0.0.78`. Start exactly one shared server before a drive:
+The Playwright MCP package remains pinned at `@playwright/mcp@0.0.78`, while
+OpenCode is captured from the installed tool for each campaign rather than
+treated as a fixed-version contract. `opencode --version` is recorded by
+`pnpm test:runtime-source` in immutable `SOURCE.json`; the compatibility
+preflight must also report a connected MCP server and the required tools before
+a drive. Start exactly one shared server before a drive:
 
 ```bash
 npx -y @playwright/mcp@0.0.78 \
@@ -40,9 +44,9 @@ Prerequisites (the Driver does not boot these — start them first, with the
 sweep's env so dev-only widgets and proxy noise stay out):
 
 ```bash
-# Use a disposable database only; do not inherit a development DATABASE_URL.
+# Use a disposable database only; clear any inherited development DATABASE_URL.
+unset DATABASE_URL
 export E2E_DATABASE_URL='postgresql://localhost/customreport_e2e'
-export DATABASE_URL="$E2E_DATABASE_URL"
 export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.'
 
 # The integrated runtime-sweep command starts the current-source API/web pair,
@@ -61,6 +65,14 @@ hostname that only resolves inside Compose. For the native sweep API to ship
 logs to Loki, set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in your
 shell before starting the API (or the collector degrades gracefully when the
 Loki channel has no streams — it marks the channel "blind", not "clean").
+
+Feedback prerequisites are fail-closed: set `RUNTIME_SWEEP_API_LOG`,
+`RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_LOKI_PUSH_URL`, and
+`RUNTIME_SWEEP_LOKI_QUERY_URL` for every drive. A missing or unreachable value
+makes its channel blind and blocks the result. Loki authentication is optional
+as a pair: leave both `RUNTIME_SWEEP_LOKI_USERNAME` and
+`RUNTIME_SWEEP_LOKI_PASSWORD` unset for an unauthenticated local Loki, or set
+both for an authenticated Loki; never set only one.
 
 Drive protocol (the agent prompt), parametric in `<role>`:
 
