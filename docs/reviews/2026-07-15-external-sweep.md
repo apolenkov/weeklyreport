@@ -15,7 +15,7 @@ HEAD at review time: `d5642688`. Raw lane reports: session scratchpad `sweep/rep
 ## P1 — correctness / real UX defects (7)
 
 1. **Stage-name normalization lives in 3 places, API read-path skips aliasing** (D)
-   `packages/shared/src/schemas/stage-names.ts:40` vs local copy in
+   `packages/shared/src/schemas/stages/stage-names.ts:40` vs local copy in
    `lead-form.prisma-repository.ts:33,858` vs raw `.includes` in
    `report-sections.status-derivation.ts:46` vs web `stage-tags.ts:101`.
    Legacy `"Dev"` can floor red in web but green in published floor. Fix: one shared

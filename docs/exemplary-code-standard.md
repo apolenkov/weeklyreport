@@ -86,7 +86,7 @@ titles), Stylelint for CSS, and Prettier. `.husky/pre-push` runs
 `pnpm uat:audit --check`, and `CI=true pnpm test`; the same core commands run in
 the push, pull-request, and manual-dispatch jobs in `.github/workflows/ci.yml`.
 
-The current `scripts/lint-gate.ts` contains 35 checks and runs all of them by
+The current `scripts/gates/orchestrator/lint-gate.ts` contains 38 checks and runs all of them by
 default; `pnpm lint --fail-fast` is the explicit opt-in to stop
 after the first failure. The aggregate includes the Prettier scope probe
 (`pnpm lint:prettier-scope:test`), while the formatter owner itself remains the

@@ -17,7 +17,7 @@ export const LEAD_OLGA_ID = "a0000000-0000-4000-8000-000000000015";
 export const LEAD_SERGEY_ID = "a0000000-0000-4000-8000-000000000016";
 
 // The 4 canonical dev-login role emails (mirrors the shared
-// `DEV_LOGIN_EMAIL_BY_ROLE` in packages/shared/src/schemas/auth.ts — this
+// `DEV_LOGIN_EMAIL_BY_ROLE` in packages/shared/src/schemas/auth/auth.ts — this
 // prisma toolchain's isolated tsconfig.prisma.json cannot resolve workspace
 // packages, so this is a literal, not an import).
 export const HEAD_EMAIL = "head@customreport.local";

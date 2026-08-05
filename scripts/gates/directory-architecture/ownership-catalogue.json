@@ -1,0 +1,959 @@
+{
+  "version": 1,
+  "threshold": 30,
+  "roots": [
+    {
+      "id": "scripts",
+      "prefix": "scripts/",
+      "allowedTargetPrefixes": [
+        "scripts/shared/",
+        "scripts/eslint/shared/",
+        "scripts/eslint/policy/",
+        "scripts/eslint/suppression/",
+        "scripts/quality/exemplary/",
+        "scripts/quality/react-doctor/",
+        "scripts/quality/type-cycles/",
+        "scripts/gates/directory-architecture/",
+        "scripts/gates/repository-tests/",
+        "scripts/gates/orchestrator/",
+        "scripts/gates/critical-tests/",
+        "scripts/gates/planning-provenance/",
+        "scripts/gates/formatting/",
+        "scripts/gates/type-system/",
+        "scripts/gates/operations/",
+        "scripts/gates/status-ssot/",
+        "scripts/gates/vitest-rules/",
+        "scripts/gates/environment/",
+        "scripts/gates/configuration/",
+        "scripts/gates/web-coverage/"
+      ]
+    },
+    {
+      "id": "runtime-sweep",
+      "prefix": "e2e/runtime-sweep/",
+      "allowedTargetPrefixes": ["e2e/runtime-sweep/"]
+    },
+    {
+      "id": "prisma",
+      "prefix": "prisma/",
+      "allowedTargetPrefixes": ["prisma/"]
+    },
+    {
+      "id": "web-shared-ui",
+      "prefix": "apps/web/src/shared/ui/",
+      "allowedTargetPrefixes": ["apps/web/src/shared/ui/"]
+    },
+    {
+      "id": "web-report-pages",
+      "prefix": "apps/web/src/features/report-pages/",
+      "allowedTargetPrefixes": ["apps/web/src/features/report-pages/"]
+    },
+    {
+      "id": "web-lib",
+      "prefix": "apps/web/src/lib/",
+      "allowedTargetPrefixes": ["apps/web/src/shared/lib/"]
+    },
+    {
+      "id": "web-hooks",
+      "prefix": "apps/web/src/hooks/",
+      "allowedTargetPrefixes": ["apps/web/src/shared/hooks/"]
+    },
+    {
+      "id": "web-server",
+      "prefix": "apps/web/src/server/",
+      "allowedTargetPrefixes": ["apps/web/src/shared/server/"]
+    },
+    {
+      "id": "shared-schemas",
+      "prefix": "packages/shared/src/schemas/",
+      "allowedTargetPrefixes": [
+        "packages/shared/src/schemas/analytics/",
+        "packages/shared/src/schemas/auth/",
+        "packages/shared/src/schemas/status/",
+        "packages/shared/src/schemas/integrations/",
+        "packages/shared/src/schemas/organization/",
+        "packages/shared/src/schemas/period/",
+        "packages/shared/src/schemas/project-activity/",
+        "packages/shared/src/schemas/admin/",
+        "packages/shared/src/schemas/history/",
+        "packages/shared/src/schemas/primitives/",
+        "packages/shared/src/schemas/report/",
+        "packages/shared/src/schemas/review/",
+        "packages/shared/src/schemas/search/",
+        "packages/shared/src/schemas/report-sections/",
+        "packages/shared/src/schemas/stages/",
+        "packages/shared/src/schemas/telemetry/",
+        "packages/shared/src/schemas/observability/",
+        "packages/shared/src/schemas/facade/"
+      ],
+      "allowedTargets": ["packages/shared/src/schemas/report.ts"]
+    },
+    {
+      "id": "api-test-seams",
+      "prefix": "apps/api/src/modules/",
+      "allowedTargetPrefixes": [
+        "apps/api/src/modules/",
+        "apps/api/src/test-seams/"
+      ],
+      "includePattern": "^(?:apps/api/src/modules/(?:[^/]+/)*[^/]+\\.(?:test|spec)\\.[cm]?[jt]sx?|apps/api/src/modules/(?:[^/]+/)*__(?:tests|fixtures|snapshots)__/.+)$"
+    }
+  ],
+  "rules": [
+    {
+      "id": "scripts-shared-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/shared/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "shared-tooling",
+      "role": "implementation",
+      "target": "scripts/shared/$1"
+    },
+    {
+      "id": "scripts-shared-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/shared/(.+\\.test\\.ts)$",
+      "concern": "shared-tooling",
+      "role": "test",
+      "target": "scripts/shared/$1"
+    },
+    {
+      "id": "scripts-directory-architecture-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/directory-architecture/(.+\\.test\\.ts)$",
+      "concern": "directory-architecture-gate",
+      "role": "test",
+      "target": "scripts/gates/directory-architecture/$1"
+    },
+    {
+      "id": "scripts-directory-architecture-data",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/directory-architecture/(.+\\.json)$",
+      "concern": "directory-architecture-gate",
+      "role": "data",
+      "target": "scripts/gates/directory-architecture/$1"
+    },
+    {
+      "id": "scripts-directory-architecture-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/directory-architecture/((?!.*\\.test\\.ts$)(?!.*\\.json$).+\\.ts)$",
+      "concern": "directory-architecture-gate",
+      "role": "implementation",
+      "target": "scripts/gates/directory-architecture/$1"
+    },
+    {
+      "id": "scripts-repository-tests-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/repository-tests/(.+\\.test\\.ts)$",
+      "concern": "repository-test-ownership",
+      "role": "test",
+      "target": "scripts/gates/repository-tests/$1"
+    },
+    {
+      "id": "scripts-repository-tests-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/repository-tests/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "repository-test-ownership",
+      "role": "implementation",
+      "target": "scripts/gates/repository-tests/$1"
+    },
+    {
+      "id": "scripts-eslint-shared-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/shared/)?(eslint-parser-comments\\.ts)$",
+      "concern": "eslint-shared",
+      "role": "implementation",
+      "target": "scripts/eslint/shared/$1"
+    },
+    {
+      "id": "scripts-eslint-policy-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/policy/)?((?:eslint-config-ownership|eslint-config-scope-counter|eslint-policy-scope-ledger-schema)\\.test\\.ts)$",
+      "concern": "eslint-policy",
+      "role": "test",
+      "target": "scripts/eslint/policy/$1"
+    },
+    {
+      "id": "scripts-eslint-policy-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/policy/)?((?:eslint-config-scope-counter|eslint-policy-scope-cases|eslint-policy-scope-ledger-schema)\\.ts)$",
+      "concern": "eslint-policy",
+      "role": "implementation",
+      "target": "scripts/eslint/policy/$1"
+    },
+    {
+      "id": "scripts-eslint-policy-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/policy/)?(eslint-policy-scope-probes\\.ts)$",
+      "concern": "eslint-policy",
+      "role": "entrypoint",
+      "target": "scripts/eslint/policy/$1"
+    },
+    {
+      "id": "scripts-eslint-policy-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/policy/)?(eslint-policy-scope-ledger\\.json)$",
+      "concern": "eslint-policy",
+      "role": "data",
+      "target": "scripts/eslint/policy/$1"
+    },
+    {
+      "id": "scripts-eslint-suppression-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/suppression/)?((?:eslint-suppression-inventory|eslint-suppression-ledger-schema)\\.test\\.ts)$",
+      "concern": "eslint-suppression",
+      "role": "test",
+      "target": "scripts/eslint/suppression/$1"
+    },
+    {
+      "id": "scripts-eslint-suppression-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/suppression/)?((?:eslint-suppression-inventory|eslint-suppression-ledger-schema)\\.ts)$",
+      "concern": "eslint-suppression",
+      "role": "implementation",
+      "target": "scripts/eslint/suppression/$1"
+    },
+    {
+      "id": "scripts-eslint-suppression-entrypoints",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/suppression/)?((?:eslint-retained-suppression-probes|eslint-suppression-ledger)\\.ts)$",
+      "concern": "eslint-suppression",
+      "role": "entrypoint",
+      "target": "scripts/eslint/suppression/$1"
+    },
+    {
+      "id": "scripts-eslint-suppression-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:eslint/suppression/)?(eslint-suppression-ledger\\.json)$",
+      "concern": "eslint-suppression",
+      "role": "data",
+      "target": "scripts/eslint/suppression/$1"
+    },
+    {
+      "id": "scripts-quality-exemplary-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue-output|exemplary-file-kind|exemplary-floor-ratchet)\\.test\\.ts)$",
+      "concern": "quality-exemplary",
+      "role": "test",
+      "target": "scripts/quality/exemplary/$1"
+    },
+    {
+      "id": "scripts-quality-exemplary-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-file-kind|exemplary-floor-ratchet)\\.ts)$",
+      "concern": "quality-exemplary",
+      "role": "implementation",
+      "target": "scripts/quality/exemplary/$1"
+    },
+    {
+      "id": "scripts-quality-exemplary-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/exemplary/)?(exemplary-catalogue\\.ts)$",
+      "concern": "quality-exemplary",
+      "role": "entrypoint",
+      "target": "scripts/quality/exemplary/$1"
+    },
+    {
+      "id": "scripts-quality-exemplary-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/exemplary/)?(exemplary-floor-baseline\\.json)$",
+      "concern": "quality-exemplary",
+      "role": "data",
+      "target": "scripts/quality/exemplary/$1"
+    },
+    {
+      "id": "scripts-quality-react-doctor-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/react-doctor/)?(react-doctor-baseline\\.test\\.ts)$",
+      "concern": "quality-react-doctor",
+      "role": "test",
+      "target": "scripts/quality/react-doctor/$1"
+    },
+    {
+      "id": "scripts-quality-react-doctor-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/react-doctor/)?(react-doctor-baseline\\.ts)$",
+      "concern": "quality-react-doctor",
+      "role": "implementation",
+      "target": "scripts/quality/react-doctor/$1"
+    },
+    {
+      "id": "scripts-quality-react-doctor-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/react-doctor/)?(react-doctor-gate\\.ts)$",
+      "concern": "quality-react-doctor",
+      "role": "entrypoint",
+      "target": "scripts/quality/react-doctor/$1"
+    },
+    {
+      "id": "scripts-quality-react-doctor-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/react-doctor/)?(react-doctor-baseline\\.json)$",
+      "concern": "quality-react-doctor",
+      "role": "data",
+      "target": "scripts/quality/react-doctor/$1"
+    },
+    {
+      "id": "scripts-quality-type-cycles-test",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/type-cycles/)?(type-cycle-ratchet\\.test\\.ts)$",
+      "concern": "quality-type-cycles",
+      "role": "test",
+      "target": "scripts/quality/type-cycles/$1"
+    },
+    {
+      "id": "scripts-quality-type-cycles-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/type-cycles/)?(type-cycle-ratchet\\.ts)$",
+      "concern": "quality-type-cycles",
+      "role": "entrypoint",
+      "target": "scripts/quality/type-cycles/$1"
+    },
+    {
+      "id": "scripts-quality-type-cycles-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:quality/type-cycles/)?(type-cycle-baseline\\.json)$",
+      "concern": "quality-type-cycles",
+      "role": "data",
+      "target": "scripts/quality/type-cycles/$1"
+    },
+    {
+      "id": "scripts-gates-orchestrator-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/orchestrator/)?(lint-gate\\.ts)$",
+      "concern": "lint-orchestrator",
+      "role": "entrypoint",
+      "target": "scripts/gates/orchestrator/$1"
+    },
+    {
+      "id": "scripts-gates-critical-tests-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/critical-tests/)?((?:critical-test-marker-gate|p0-evidence-verifier)\\.test\\.ts)$",
+      "concern": "critical-test-evidence",
+      "role": "test",
+      "target": "scripts/gates/critical-tests/$1"
+    },
+    {
+      "id": "scripts-gates-critical-tests-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/critical-tests/)?((?:critical-test-marker-gate|p0-evidence-model)\\.ts)$",
+      "concern": "critical-test-evidence",
+      "role": "implementation",
+      "target": "scripts/gates/critical-tests/$1"
+    },
+    {
+      "id": "scripts-gates-critical-tests-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/critical-tests/)?(p0-evidence-verifier\\.ts)$",
+      "concern": "critical-test-evidence",
+      "role": "entrypoint",
+      "target": "scripts/gates/critical-tests/$1"
+    },
+    {
+      "id": "scripts-gates-planning-provenance-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/planning-provenance/)?((?:deferred-reference-gate|openspec-provenance-resolver)\\.test\\.ts)$",
+      "concern": "planning-provenance",
+      "role": "test",
+      "target": "scripts/gates/planning-provenance/$1"
+    },
+    {
+      "id": "scripts-gates-planning-provenance-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/planning-provenance/)?(openspec-provenance-resolver\\.ts)$",
+      "concern": "planning-provenance",
+      "role": "implementation",
+      "target": "scripts/gates/planning-provenance/$1"
+    },
+    {
+      "id": "scripts-gates-formatting-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/formatting/)?((?:prettier-scope-gate|stylelint-gate)\\.test\\.ts)$",
+      "concern": "formatting-gates",
+      "role": "test",
+      "target": "scripts/gates/formatting/$1"
+    },
+    {
+      "id": "scripts-gates-type-system-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/type-system/)?((?:exact-optional-property-types|type-coverage-gate)\\.test\\.ts)$",
+      "concern": "type-system-gates",
+      "role": "test",
+      "target": "scripts/gates/type-system/$1"
+    },
+    {
+      "id": "scripts-gates-operations-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/operations/)?((?:prod-compose-gate|restore-guard)\\.test\\.ts)$",
+      "concern": "operations-gates",
+      "role": "test",
+      "target": "scripts/gates/operations/$1"
+    },
+    {
+      "id": "scripts-gates-status-ssot-test",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/status-ssot/)?(status-ssot-gate\\.test\\.ts)$",
+      "concern": "status-ssot-gate",
+      "role": "test",
+      "target": "scripts/gates/status-ssot/$1"
+    },
+    {
+      "id": "scripts-gates-status-ssot-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/status-ssot/)?(status-ssot-gate\\.ts)$",
+      "concern": "status-ssot-gate",
+      "role": "entrypoint",
+      "target": "scripts/gates/status-ssot/$1"
+    },
+    {
+      "id": "scripts-gates-vitest-rules-test",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/vitest-rules/)?(vitest-rule-ledger\\.node-test\\.ts)$",
+      "concern": "vitest-rules-gate",
+      "role": "test",
+      "target": "scripts/gates/vitest-rules/$1"
+    },
+    {
+      "id": "scripts-gates-vitest-rules-data",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/vitest-rules/)?(vitest-rule-ledger\\.json)$",
+      "concern": "vitest-rules-gate",
+      "role": "data",
+      "target": "scripts/gates/vitest-rules/$1"
+    },
+    {
+      "id": "scripts-gates-environment-entrypoint",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/environment/)?(check-runtime-node-sync\\.ts)$",
+      "concern": "environment-gate",
+      "role": "entrypoint",
+      "target": "scripts/gates/environment/$1"
+    },
+    {
+      "id": "scripts-gates-configuration-test",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/configuration/)?(config-hygiene-gate\\.test\\.ts)$",
+      "concern": "configuration-gate",
+      "role": "test",
+      "target": "scripts/gates/configuration/$1"
+    },
+    {
+      "id": "scripts-gates-web-coverage-test",
+      "scope": "scripts",
+      "pattern": "^scripts/(?:gates/web-coverage/)?(web-coverage-scope\\.test\\.ts)$",
+      "concern": "web-coverage-gate",
+      "role": "test",
+      "target": "scripts/gates/web-coverage/$1"
+    },
+    {
+      "id": "runtime-entrypoint",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/(index\\.ts)$",
+      "concern": "runtime-entrypoint",
+      "role": "entrypoint",
+      "target": "e2e/runtime-sweep/$1"
+    },
+    {
+      "id": "runtime-matrix",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:campaign-|matrix(?:[.-])|runtime-matrix|specialized-)[^/]+)$",
+      "concern": "matrix",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/matrix/$1"
+    },
+    {
+      "id": "runtime-manifest",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:manifest|create-runtime-manifest|finalize-runtime-manifest|source-artifact|contracts(?:-types)?)[^/]*)$",
+      "concern": "manifest-and-source",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/manifest/$1"
+    },
+    {
+      "id": "runtime-preflight",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
+      "concern": "preflight-and-environment",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-concurrency",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:concurrency(?:[-.])[^/]+))$",
+      "concern": "concurrency",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/scenarios/concurrency/$1"
+    },
+    {
+      "id": "runtime-faults",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:fault-|infrastructure-(?:fault-|runner)|infrastructure-runner)[^/]*)$",
+      "concern": "faults-and-infrastructure",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/scenarios/faults/$1"
+    },
+    {
+      "id": "runtime-driver",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:driver-|import-ai-driver-)[^/]*)$",
+      "concern": "driver-import",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/driver/$1"
+    },
+    {
+      "id": "runtime-evidence",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:evidence-|failure-summary|ledger|runtime-event-summary|finalize-runtime-coverage)[^/]*)$",
+      "concern": "evidence",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/evidence/$1"
+    },
+    {
+      "id": "runtime-evidence-capture",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/evidence-capture/(.+)$",
+      "concern": "evidence",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/evidence/capture/$1"
+    },
+    {
+      "id": "runtime-live-control",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:frozen-case-|live-control-|control-|action-navigation|navigation|dom-inventory|axe-context|keyboard-|runtime-sweep|z-runtime-sweep)[^/]*)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/$1"
+    },
+    {
+      "id": "runtime-state-support",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
+      "concern": "replay-support",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/support/$1"
+    },
+    {
+      "id": "prisma-stable-entrypoints",
+      "scope": "prisma",
+      "pattern": "^prisma/(schema\\.prisma|migrations/.+)$",
+      "concern": "stable-prisma-entrypoints",
+      "role": "entrypoint",
+      "target": "prisma/$1"
+    },
+    {
+      "id": "prisma-seed-entrypoint",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed\\.ts)$",
+      "concern": "stable-seed-entrypoint",
+      "role": "entrypoint",
+      "target": "prisma/$1"
+    },
+    {
+      "id": "prisma-guards",
+      "scope": "prisma",
+      "pattern": "^prisma/(_(?:destructive-guard|entrypoint|mock-redis-server|require-env)(?:\\.[^/]+)?)$",
+      "concern": "destructive-guards",
+      "role": "implementation",
+      "target": "prisma/guards/$1"
+    },
+    {
+      "id": "prisma-advanced-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-advanced[^/]*)$",
+      "concern": "advanced-seed",
+      "role": "implementation",
+      "target": "prisma/seeds/advanced/$1"
+    },
+    {
+      "id": "prisma-demo-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-demo[^/]*)$",
+      "concern": "demo-seed",
+      "role": "implementation",
+      "target": "prisma/seeds/demo/$1"
+    },
+    {
+      "id": "prisma-simple-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-simple[^/]*)$",
+      "concern": "simple-seed",
+      "role": "implementation",
+      "target": "prisma/seeds/simple/$1"
+    },
+    {
+      "id": "prisma-stress-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-stress[^/]*)$",
+      "concern": "stress-seed",
+      "role": "implementation",
+      "target": "prisma/seeds/stress/$1"
+    },
+    {
+      "id": "prisma-profile-seed",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-profile[^/]*)$",
+      "concern": "profile-seed",
+      "role": "implementation",
+      "target": "prisma/seeds/profiles/$1"
+    },
+    {
+      "id": "prisma-seed-support",
+      "scope": "prisma",
+      "pattern": "^prisma/(seed-(?:catalog|constants|coverage-check|entrypoint-env|identifiers|org|people|periods|reference-date|minimal)[^/]*)$",
+      "concern": "seed-support",
+      "role": "implementation",
+      "target": "prisma/seeds/support/$1"
+    },
+    {
+      "id": "prisma-operations",
+      "scope": "prisma",
+      "pattern": "^prisma/((?:backfill-policy-rules|reset-hard|wipe-manual-uat)[^/]*)$",
+      "concern": "database-operations",
+      "role": "entrypoint",
+      "target": "prisma/operations/$1"
+    },
+    {
+      "id": "web-shared-report-shell",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(report-shell/.+)$",
+      "concern": "report-shell",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-navigation",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/(navigation/.+)$",
+      "concern": "navigation",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/$1"
+    },
+    {
+      "id": "web-shared-primitives",
+      "scope": "web-shared-ui",
+      "pattern": "^apps/web/src/shared/ui/((?!(?:report-shell|navigation)/).+)$",
+      "concern": "shared-primitives",
+      "role": "implementation",
+      "target": "apps/web/src/shared/ui/primitives/$1"
+    },
+    {
+      "id": "web-report-pages-composition",
+      "scope": "web-report-pages",
+      "pattern": "^apps/web/src/features/report-pages/(.+)$",
+      "concern": "page-composition",
+      "role": "implementation",
+      "target": "apps/web/src/features/report-pages/composition/$1"
+    },
+    {
+      "id": "web-shared-library",
+      "scope": "web-lib",
+      "pattern": "^apps/web/src/lib/(.+)$",
+      "concern": "shared-library",
+      "role": "implementation",
+      "target": "apps/web/src/shared/lib/$1"
+    },
+    {
+      "id": "web-shared-hooks",
+      "scope": "web-hooks",
+      "pattern": "^apps/web/src/hooks/(.+)$",
+      "concern": "shared-hooks-or-domain-hook-review",
+      "role": "implementation",
+      "target": "apps/web/src/shared/hooks/$1"
+    },
+    {
+      "id": "web-shared-server",
+      "scope": "web-server",
+      "pattern": "^apps/web/src/server/(.+)$",
+      "concern": "shared-server",
+      "role": "implementation",
+      "target": "apps/web/src/shared/server/$1"
+    },
+    {
+      "id": "api-test-direct-seams",
+      "scope": "api-test-seams",
+      "pattern": "^apps/api/src/modules/([^/]+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+      "concern": "api-test-seam",
+      "role": "test",
+      "target": "apps/api/src/test-seams/$1"
+    },
+    {
+      "id": "api-test-nested-seams",
+      "scope": "api-test-seams",
+      "pattern": "^apps/api/src/modules/([^/]+)/(?:.*\\/)?__(?:tests|fixtures|snapshots)__\\/(.+)$",
+      "concern": "api-test-seam",
+      "role": "test",
+      "target": "apps/api/src/modules/$1/test-seams/$2"
+    },
+    {
+      "id": "api-test-file-seams",
+      "scope": "api-test-seams",
+      "pattern": "^apps/api/src/modules/([^/]+)/(?!__(?:tests|fixtures|snapshots)__\\/)(?!.*\\/__(?:tests|fixtures|snapshots)__\\/)(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+      "concern": "api-test-seam",
+      "role": "test",
+      "target": "apps/api/src/modules/$1/test-seams/$2"
+    },
+    {
+      "id": "shared-schemas-analytics-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:analytics/)?(analytics\\.ts)$",
+      "concern": "analytics-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/analytics/$1"
+    },
+    {
+      "id": "shared-schemas-analytics-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:analytics/)?(analytics\\.test\\.ts)$",
+      "concern": "analytics-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/analytics/$1"
+    },
+    {
+      "id": "shared-schemas-auth-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:auth/)?(auth\\.ts)$",
+      "concern": "auth-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/auth/$1"
+    },
+    {
+      "id": "shared-schemas-auth-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:auth/)?(auth(?:\\.session-fields)?\\.test\\.ts)$",
+      "concern": "auth-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/auth/$1"
+    },
+    {
+      "id": "shared-schemas-status-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:status/)?(canonical-status\\.ts)$",
+      "concern": "status-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/status/$1"
+    },
+    {
+      "id": "shared-schemas-status-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:status/)?(canonical-status\\.test\\.ts)$",
+      "concern": "status-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/status/$1"
+    },
+    {
+      "id": "shared-schemas-integrations-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:integrations/)?(integrations\\.ts)$",
+      "concern": "integrations-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/integrations/$1"
+    },
+    {
+      "id": "shared-schemas-integrations-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:integrations/)?(integrations\\.test\\.ts)$",
+      "concern": "integrations-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/integrations/$1"
+    },
+    {
+      "id": "shared-schemas-organization-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:organization/)?(organization\\.ts)$",
+      "concern": "organization-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/organization/$1"
+    },
+    {
+      "id": "shared-schemas-organization-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:organization/)?(organization\\.test\\.ts)$",
+      "concern": "organization-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/organization/$1"
+    },
+    {
+      "id": "shared-schemas-period-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:period/)?((?:period-lifecycle\\.schema|period\\.schema)\\.ts)$",
+      "concern": "period-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/period/$1"
+    },
+    {
+      "id": "shared-schemas-period-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:period/)?((?:period-lifecycle\\.schema|period\\.schema)\\.test\\.ts)$",
+      "concern": "period-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/period/$1"
+    },
+    {
+      "id": "shared-schemas-project-activity-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:project-activity/)?(project-activity\\.schema\\.ts)$",
+      "concern": "project-activity-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/project-activity/$1"
+    },
+    {
+      "id": "shared-schemas-project-activity-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:project-activity/)?(project-activity\\.test\\.ts)$",
+      "concern": "project-activity-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/project-activity/$1"
+    },
+    {
+      "id": "shared-schemas-admin-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:admin/)?(report-admin\\.schema\\.ts)$",
+      "concern": "admin-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/admin/$1"
+    },
+    {
+      "id": "shared-schemas-history-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:history/)?(report-history\\.schema\\.ts)$",
+      "concern": "history-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/history/$1"
+    },
+    {
+      "id": "shared-schemas-primitives-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:primitives/)?(report-primitives\\.schema\\.ts)$",
+      "concern": "primitive-contract-ssot",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/primitives/$1"
+    },
+    {
+      "id": "shared-schemas-primitives-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:primitives/)?(report-primitives\\.schema\\.test\\.ts)$",
+      "concern": "primitive-contract-ssot",
+      "role": "test",
+      "target": "packages/shared/src/schemas/primitives/$1"
+    },
+    {
+      "id": "shared-schemas-report-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:report/)?(report\\.schema\\.ts)$",
+      "concern": "report-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/report/$1"
+    },
+    {
+      "id": "shared-schemas-report-facade",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(report\\.ts)$",
+      "concern": "shared-schema-facade",
+      "role": "facade",
+      "target": "packages/shared/src/schemas/report.ts"
+    },
+    {
+      "id": "shared-schemas-report-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:report/)?(report(?:\\.[^.]+)*\\.test\\.ts)$",
+      "concern": "report-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/report/$1"
+    },
+    {
+      "id": "shared-schemas-review-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:review/)?(review\\.schema\\.ts)$",
+      "concern": "review-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/review/$1"
+    },
+    {
+      "id": "shared-schemas-search-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:search/)?(search\\.ts)$",
+      "concern": "search-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/search/$1"
+    },
+    {
+      "id": "shared-schemas-search-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:search/)?(search\\.test\\.ts)$",
+      "concern": "search-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/search/$1"
+    },
+    {
+      "id": "shared-schemas-report-sections-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:report-sections/)?((?:section-record\\.schema|section-stage-ownership|section-validation\\.schema|section-validation\\.types|section\\.schema)\\.ts)$",
+      "concern": "report-sections-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/report-sections/$1"
+    },
+    {
+      "id": "shared-schemas-report-sections-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:report-sections/)?(section-(?:activity|legacy-compatibility)\\.test\\.ts)$",
+      "concern": "report-sections-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/report-sections/$1"
+    },
+    {
+      "id": "shared-schemas-stages-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:stages/)?((?:stage-names|stage\\.schema)\\.ts)$",
+      "concern": "stages-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/stages/$1"
+    },
+    {
+      "id": "shared-schemas-stages-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:stages/)?(stage-names\\.test\\.ts)$",
+      "concern": "stages-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/stages/$1"
+    },
+    {
+      "id": "shared-schemas-telemetry-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:telemetry/)?(telemetry\\.ts)$",
+      "concern": "telemetry-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/telemetry/$1"
+    },
+    {
+      "id": "shared-schemas-telemetry-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:telemetry/)?(telemetry\\.test\\.ts)$",
+      "concern": "telemetry-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/telemetry/$1"
+    },
+    {
+      "id": "shared-schemas-observability-implementation",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:observability/)?(web-vitals\\.ts)$",
+      "concern": "observability-contract",
+      "role": "implementation",
+      "target": "packages/shared/src/schemas/observability/$1"
+    },
+    {
+      "id": "shared-schemas-observability-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:observability/)?(web-vitals\\.test\\.ts)$",
+      "concern": "observability-contract",
+      "role": "test",
+      "target": "packages/shared/src/schemas/observability/$1"
+    },
+    {
+      "id": "shared-schemas-facade-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:facade/)?(public-contract-immutability\\.test\\.ts)$",
+      "concern": "shared-schema-facade",
+      "role": "test",
+      "target": "packages/shared/src/schemas/facade/$1"
+    }
+  ]
+}

@@ -169,7 +169,7 @@ Retention treats all three kinds uniformly under the time-window sweep.
 
 Source of truth read today:
 `reportSectionReadModelSchema`
-(`packages/shared/src/schemas/section.schema.ts:135`) and
+(`packages/shared/src/schemas/report-sections/section.schema.ts:135`) and
 `mapPrismaToReportSection`
 (`apps/api/src/modules/report-sections/report-sections.prisma-repository.ts:146`).
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { type Role } from "../schemas/auth";
+import { type Role } from "../schemas/auth/auth";
 
 /**
  * Strict Keycloak SAML profile: nameID + email only; roles stay admin-assigned.

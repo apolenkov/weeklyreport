@@ -608,7 +608,7 @@ all declarations MUST share that same major.
 
 #### Scenario: Every declaration agrees with the images
 
-- **WHEN** `scripts/check-runtime-node-sync.ts` runs as part of `pnpm lint`
+- **WHEN** `scripts/gates/environment/check-runtime-node-sync.ts` runs as part of `pnpm lint`
 - **THEN** `.nvmrc`, `engines.node`, the `FROM node:<major>` tag in
   `Dockerfile.api`, the same tag in `Dockerfile.web`, and the `@types/node`
   major in the workspace catalog all resolve to one major
