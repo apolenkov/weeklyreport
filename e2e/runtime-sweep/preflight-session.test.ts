@@ -75,6 +75,71 @@ describe("preflight session cache", () => {
     expect(context.addCookies).toHaveBeenCalledTimes(2);
   });
 
+  it("does not reuse a provisioned actor cookie after a profile reset", async () => {
+    let activeCookies: readonly Cookie[] = [];
+    let loginCount = 0;
+    const context: PreflightCookieContext = {
+      clearCookies: vi.fn(() => {
+        activeCookies = [];
+        return Promise.resolve();
+      }),
+      cookies: vi.fn(() => Promise.resolve(activeCookies)),
+      addCookies: vi.fn((cookies: readonly Cookie[]) => {
+        activeCookies = [...cookies];
+        return Promise.resolve();
+      }),
+    };
+    const login = vi.fn((actor: RuntimeMatrixActor) => {
+      loginCount += 1;
+      if (actor.role !== null) {
+        activeCookies = [cookieFor(`${actor.role}-${loginCount}`)];
+      }
+      return Promise.resolve();
+    });
+    const cache = createPreflightSessionCache(context, login);
+
+    await cache.authenticate([lead]);
+    await cache.reauthenticate([lead]);
+    await cache.use(lead);
+
+    expect(activeCookies[0]?.value).toBe("session-lead-2");
+    expect(login).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports reset, authentication, state preparation, then navigation order", async () => {
+    const events: string[] = [];
+    let activeCookies: readonly Cookie[] = [];
+    const context: PreflightCookieContext = {
+      clearCookies: vi.fn(() => {
+        activeCookies = [];
+        return Promise.resolve();
+      }),
+      cookies: vi.fn(() => Promise.resolve(activeCookies)),
+      addCookies: vi.fn((cookies: readonly Cookie[]) => {
+        activeCookies = [...cookies];
+        return Promise.resolve();
+      }),
+    };
+    const cache = createPreflightSessionCache(context, (actor) => {
+      events.push(`authenticate:${actor.role}`);
+      activeCookies = [cookieFor(actor.role)];
+      return Promise.resolve();
+    });
+
+    events.push("reset");
+    await cache.authenticate([lead]);
+    events.push("state-prepared");
+    await cache.use(lead);
+    events.push("navigation");
+
+    expect(events).toEqual([
+      "reset",
+      "authenticate:lead",
+      "state-prepared",
+      "navigation",
+    ]);
+  });
+
   it("fails closed when a non-anonymous actor has no cached session", async () => {
     const context: PreflightCookieContext = {
       clearCookies: vi.fn(() => Promise.resolve()),
@@ -91,6 +156,7 @@ describe("preflight session cache", () => {
   it("creates one distinct cache per seeded profile", async () => {
     const cacheFor = (): PreflightSessionCache => ({
       authenticate: vi.fn(() => Promise.resolve()),
+      reauthenticate: vi.fn(() => Promise.resolve()),
       use: vi.fn(() => Promise.resolve()),
     });
     const create = vi.fn((_profile: string) => Promise.resolve(cacheFor()));
