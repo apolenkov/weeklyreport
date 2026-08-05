@@ -3,6 +3,7 @@
   "compilerOptions": {
     "verbatimModuleSyntax": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     // Deliberately REPLACES the base workspace mappings rather than extending
     // them: `prisma/` is not a workspace package and the repo root does not
     // depend on @customreport/*, so a mapping here would typecheck an import

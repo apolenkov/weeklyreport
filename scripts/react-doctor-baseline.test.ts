@@ -25,16 +25,13 @@ void test("accepts an exact terminal baseline", () => {
 
 interface RuntimeReport {
   readonly diagnostics: readonly { readonly filePath: string }[];
-  readonly projects: readonly {
-    readonly analyzedFiles: readonly string[];
-  }[];
 }
 
-void test("excludes the scenario sweep build from a real full scan", () => {
-  const fixture = join(
+void test("filters generated sweep builds from real full-scan diagnostics", () => {
+  const fixtures = [
     "apps/web/.next-sweep/react-doctor-regression-fixture",
-    "untrusted-redirect.js",
-  );
+    "apps/web/.next-runtime-preflight-probe/react-doctor-regression-fixture",
+  ].map((directory) => join(directory, "untrusted-redirect.js"));
   const pnpmExecPath = process.env.npm_execpath;
   if (pnpmExecPath === undefined) {
     throw new Error("npm_execpath is unset; run this test through pnpm");
@@ -44,11 +41,13 @@ void test("excludes the scenario sweep build from a real full scan", () => {
     : [pnpmExecPath, []];
 
   try {
-    mkdirSync(dirname(fixture), { recursive: true });
-    writeFileSync(
-      fixture,
-      'const target = new URLSearchParams(location.search).get("redirect");\nif (target) location.assign(target);\n',
-    );
+    fixtures.forEach((fixture) => {
+      mkdirSync(dirname(fixture), { recursive: true });
+      writeFileSync(
+        fixture,
+        'const target = new URLSearchParams(location.search).get("redirect");\nif (target) location.assign(target);\n',
+      );
+    });
     const output = execFileSync(
       command,
       [
@@ -72,18 +71,18 @@ void test("excludes the scenario sweep build from a real full scan", () => {
       { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
     );
     const report = JSON.parse(output) as RuntimeReport;
-    const analyzedSweepBuild = report.projects
-      .flatMap(({ analyzedFiles }) => analyzedFiles)
-      .some((file) => file.includes(".next-sweep"));
-    assert.equal(analyzedSweepBuild, false);
     assert.equal(
-      report.diagnostics.some(({ filePath }) =>
-        filePath.includes(".next-sweep"),
+      report.diagnostics.some(
+        ({ filePath }) =>
+          filePath.includes(".next-sweep") ||
+          filePath.includes(".next-runtime-"),
       ),
       false,
     );
   } finally {
-    rmSync(dirname(fixture), { recursive: true, force: true });
+    fixtures.forEach((fixture) => {
+      rmSync(dirname(fixture), { recursive: true, force: true });
+    });
   }
 });
 

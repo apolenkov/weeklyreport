@@ -6,4 +6,7 @@ coverage
 .turbo
 prisma/generated
 e2e
+playwright-report
+test-results
+apps/web/.next-*
 pnpm-lock.yaml

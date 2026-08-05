@@ -59,6 +59,13 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
+      "id": "src/app/(app)/reports/page.tsx::3:1::react-doctor/no-barrel-import::c8d4b4d79a30fe08f3317986cca44c67638e8f11439becdf6f10f1e09f57ed20",
+      "file": "src/app/(app)/reports/page.tsx",
+      "rule": "no-barrel-import",
+      "verdict": "overturn",
+      "rationale": "The route intentionally composes report history through the period feature's public index.ts facade. The enforced web-slice boundary and directory-architecture spec prohibit reaching into feature internals, so React Doctor's generic barrel heuristic conflicts with the repository's public API contract."
+    },
+    {
       "id": "src/app/(app)/reports/latest/page.tsx::49:7::react-doctor/nextjs-no-client-side-redirect::e954564883fc8ee5e8662fa96e8a847414693952312b0a5614eedbddc3259e1e",
       "file": "src/app/(app)/reports/latest/page.tsx",
       "rule": "nextjs-no-client-side-redirect",
@@ -162,6 +169,13 @@
       "rule": "no-derived-state",
       "verdict": "overturn",
       "rationale": "draft is deliberately local state seeded from server settings: it tracks edits, dirty state, and save/reset behavior and must not be re-derived on every render. The warning confuses a user-editable draft with derived display data."
+    },
+    {
+      "id": "src/features/period/model/use-report-history-data.ts::14:1::react-doctor/no-barrel-import::724c3eef5ffd09dfb82a20224e448ee1c56463afcae18b506d1bcd80f69bb6f1",
+      "file": "src/features/period/model/use-report-history-data.ts",
+      "rule": "no-barrel-import",
+      "verdict": "overturn",
+      "rationale": "The period feature intentionally consumes report-section mappers through that sibling feature's public index.ts facade. Importing concrete internals would violate the enforced cross-slice boundary, so the generic barrel heuristic is inapplicable to this architecture contract."
     },
     {
       "id": "src/features/period/model/sdlc-hidden-stages.ts::2:1::react-doctor/no-barrel-import::60169810d502685a7eca118e83f438ca02ab8bc5b5f5446ebee7c1a12a9d1f61",
