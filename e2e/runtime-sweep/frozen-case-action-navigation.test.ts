@@ -10,6 +10,7 @@ describe("frozen action navigation promotion", () => {
   it("removes a stale action failure reason when navigation proves the action", async () => {
     const page = {
       waitForLoadState: () => Promise.resolve(),
+      waitForFunction: () => Promise.resolve(),
     } as unknown as Page;
     const boundary: FrozenActionNavigationBoundary = {
       expectation: undefined,

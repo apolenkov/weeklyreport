@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { finalizeAxeContext, prepareAxeContext } from "./axe-context.ts";
 import { evidenceBundleSchema, type EvidenceRef } from "./contracts.ts";
+import { inventoryDom } from "./dom-inventory.ts";
 import {
   captureGeometry,
   captureScreenshot,
@@ -104,6 +105,13 @@ const phaseBundle = (
   after: phase === "after" ? all : [],
 });
 
+const inventoryFor = (
+  input: EvidenceCaptureInput,
+): Promise<EvidenceCaptureInput["inventory"]> =>
+  input.capturePhase === "action"
+    ? inventoryDom(input.page)
+    : Promise.resolve(input.inventory);
+
 export async function captureRouteEvidence(
   input: EvidenceCaptureInput,
 ): Promise<EvidenceCaptureResult> {
@@ -111,15 +119,16 @@ export async function captureRouteEvidence(
   await mkdir(directory, { recursive: true });
   const baseline = await readVisualBaseline(input, directory);
   const axeContext = await prepareAxeContext(input.page);
+  const captureInput = { ...input, inventory: await inventoryFor(input) };
   const keyboard = await captureKeyboardTrace(
     input.page,
-    input.inventory.controls,
+    captureInput.inventory.controls,
   );
   const geometrySnapshot = await captureGeometry(input.page);
   const screenshot = await captureScreenshot(input, directory);
   const axe = await finalizeAxeContext(input.page, axeContext);
   const captured = await captureJson(
-    input,
+    captureInput,
     directory,
     axe,
     keyboard,

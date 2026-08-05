@@ -17,6 +17,7 @@ import {
   phaseIssues,
 } from "./frozen-case-evidence-validation.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
+import type { RuntimeSurfaceExpectation } from "./runtime-surface-expectation.ts";
 
 export type CompleteFrozenCaseEvidence = Readonly<
   Record<EvidencePhase, EvidenceBundle>
@@ -28,6 +29,7 @@ export interface FrozenCaseReplayInput {
   readonly controls: readonly DOMControl[];
   readonly evidence: FrozenCaseEvidence;
   readonly cellId?: string;
+  readonly surface?: RuntimeSurfaceExpectation;
 }
 
 export interface FrozenCaseReplayResult {
@@ -42,6 +44,7 @@ export interface FrozenCasePhaseCaptureInput {
     | readonly DOMControl[]
     | ((evidence: CompleteFrozenCaseEvidence) => readonly DOMControl[]);
   readonly cellId?: string;
+  readonly surface?: RuntimeSurfaceExpectation;
   readonly capturePhase: (phase: EvidencePhase) => Promise<EvidenceBundle>;
 }
 
@@ -97,7 +100,7 @@ export function replayFrozenCase(
       : []),
     ...phases.flatMap((phase) => [...phaseIssues(matrixCase.caseId, phase)]),
     ...identityIssues(matrixCase, refs),
-    ...controlIssues(matrixCase, input.controls, refs),
+    ...controlIssues(matrixCase, input.controls, refs, input.surface),
     ...caseSpecificIssues(matrixCase, phases, action.transition),
   ]);
   const faultId =
@@ -147,6 +150,7 @@ export async function captureFrozenCasePhases(
     oracle: input.oracle,
     controls,
     evidence,
+    ...(input.surface === undefined ? {} : { surface: input.surface }),
   });
 }
 

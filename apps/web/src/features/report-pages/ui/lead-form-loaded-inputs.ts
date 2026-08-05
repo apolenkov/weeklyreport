@@ -24,6 +24,7 @@ export interface LeadFormLoadingState {
   readonly isLoading: boolean;
   readonly awaitingRoleRedirect: boolean;
   readonly awaitingCanonicalRedirect: boolean;
+  readonly sectionUnavailable: boolean;
   readonly activeData: ReportSectionReadModel | null | undefined;
   readonly byPeriodData: LeadFormByPeriodLoaded | undefined;
   readonly historyData: readonly MyHistoryEntry[] | undefined;

@@ -114,7 +114,16 @@ const fakeInput = (page: object): FrozenPhaseInput =>
       },
     },
     runtime: {},
-    prepared: {},
+    prepared: {
+      plan: {
+        surface: {
+          productContent: "available",
+          productActions: "exercise",
+          productActionsReason: null,
+          shell: "required",
+        },
+      },
+    },
     route: "/head/report",
     responseStatus: 200,
     phase: "action",
@@ -169,6 +178,7 @@ describe("frozen action evidence capture", () => {
         harness.events.push("settled");
         return Promise.resolve();
       }),
+      waitForFunction: vi.fn(() => Promise.resolve()),
     };
 
     const capture = captureFrozenPhase(fakeInput(page));
@@ -226,6 +236,7 @@ describe("frozen action evidence capture", () => {
         harness.events.push("settled");
         return Promise.resolve();
       }),
+      waitForFunction: vi.fn(() => Promise.resolve()),
     };
 
     const capture = captureFrozenPhase(fakeInput(page));

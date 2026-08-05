@@ -37,6 +37,20 @@ export const KEYBOARD_FOCUS_POLICY_SCRIPT = `
     nativeRadio: nativeRadioFor(entry.element),
   }));
   const scopeAllowsTab = (entry) => activeModal === null || entry.focusScope === "active-modal";
+  const tabGroupsByKey = new Map();
+  entries.filter(({ role }) => role === "tab").forEach((entry, index) => {
+    const tabList = entry.element.closest('[role="tablist"]');
+    const key = tabList || "standalone-tab:" + index;
+    const members = tabGroupsByKey.get(key) || [];
+    tabGroupsByKey.set(key, [...members, entry]);
+  });
+  const tabStops = new Set();
+  tabGroupsByKey.forEach((members) => {
+    const tabStop = members.find((entry) =>
+      scopeAllowsTab(entry) && !entry.disabled && !entry.inert &&
+      (entry.tabIndex === 0 || entry.selected));
+    if (tabStop !== undefined) tabStops.add(tabStop.element);
+  });
   const radioGroupsByKey = new Map();
   entries.filter(({ radioGroupKey }) => radioGroupKey !== null).forEach((entry) => {
     const members = radioGroupsByKey.get(entry.radioGroupKey) || [];
@@ -58,6 +72,7 @@ export const KEYBOARD_FOCUS_POLICY_SCRIPT = `
     if (entry.disabled || entry.inert || nonTabRoles.has(entry.role) ||
       (entry.role === "listbox" && entry.tabIndex < 0)) return "unreachable";
     if (!scopeAllowsTab(entry)) return "forbidden";
+    if (entry.role === "tab") return tabStops.has(entry.element) ? "required" : "unreachable";
     if (entry.role !== "radio" || radioTabStops.has(entry.element)) return "required";
     return !entry.nativeRadio && entry.tabIndex >= 0 ? "forbidden" : "unreachable";
   };

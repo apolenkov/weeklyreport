@@ -21,6 +21,7 @@ import {
   type RuntimeMatrixSource,
 } from "./runtime-matrix.ts";
 import { controlEvidence } from "./runtime-matrix-evidence.ts";
+import type { RuntimeSurfaceExpectation } from "./runtime-surface-expectation.ts";
 import {
   type PreparedRuntimeState,
   prepareRuntimeState,
@@ -101,6 +102,7 @@ export const prepareCase = async (
     repoRoot: runtime.repoRoot,
     routeTarget: route.target,
     routeRole: route.role,
+    routeKey: state.axes.route,
   };
   const prepared = await prepareRuntimeState(
     request,
@@ -174,12 +176,17 @@ const waitForActionTarget = async (
 const outcomeFromRecord = (
   record: LiveControlActionRecord | undefined,
   controlKey: string,
+  surface?: RuntimeSurfaceExpectation,
 ): ActionOutcome =>
   record === undefined
     ? {
         status: "not-exercised",
         controlKey,
-        reason: "Frozen action has no matching live control",
+        reason:
+          surface?.productActions === "inapplicable"
+            ? (surface.productActionsReason ??
+              "Product actions are inapplicable for this surface")
+            : "Frozen action has no matching live control",
       }
     : {
         status: record.status,
@@ -195,12 +202,13 @@ export const runAction = async (
   source: RuntimeMatrixSource,
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
+  surface?: RuntimeSurfaceExpectation,
 ): Promise<ActionOutcome | undefined> => {
   const action = executionAction(matrixCase.execution);
   if (action === undefined || action.operation === "navigate") return undefined;
   const target = await waitForActionTarget(page, action);
   if (target === undefined)
-    return outcomeFromRecord(undefined, action.controlKey);
+    return outcomeFromRecord(undefined, action.controlKey, surface);
   const plan: LiveControlPlan = { control: target, action };
   const execute = async (): Promise<LiveControlActionRecord | undefined> =>
     (
@@ -221,19 +229,40 @@ export const runAction = async (
     declaration === undefined
       ? await execute()
       : await withFault(page, declaration, execute);
-  return outcomeFromRecord(record, action.controlKey);
+  return outcomeFromRecord(record, action.controlKey, surface);
 };
 
 export const controlsForCase = (
   inventory: DomInventory,
   matrixCase: MatrixExecutableCase,
   actionResult: DOMControl["actionResult"],
+  surface?: RuntimeSurfaceExpectation,
 ): readonly DOMControl[] => {
   const controls = controlEvidence(inventory, matrixCase.caseId);
   const action = executionAction(matrixCase.execution);
   if (action === undefined || action.operation === "navigate") return controls;
   const target = targetForAction(inventory, action);
-  if (target === undefined) return controls;
+  if (target === undefined) {
+    if (surface?.productActions !== "inapplicable") return controls;
+    return [
+      ...controls,
+      {
+        controlKey: action.controlKey,
+        cellId: matrixCase.caseId,
+        ariaRole: action.controlKey.split(":", 1)[0] ?? "control",
+        accessibleName: action.controlKey,
+        enabled: false,
+        order: controls.length,
+        actionResult: {
+          kind: "not-exercised",
+          policy: "inapplicable",
+          reason:
+            surface.productActionsReason ??
+            "Product actions are inapplicable for this surface",
+        },
+      },
+    ];
+  }
   return controls.map((control) =>
     control.controlKey === target.controlKey
       ? { ...control, controlKey: action.controlKey, actionResult }

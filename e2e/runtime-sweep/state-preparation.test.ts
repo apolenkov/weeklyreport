@@ -26,6 +26,7 @@ const request = {
   repoRoot: "/workspace/customreport",
   routeRole: "lead" as const,
   routeTarget: "active" as const,
+  routeKey: "lead:/lead/report/[reportId]",
 };
 // prettier-ignore
 const EXPECTED_DEMO_PUBLISHED_SECTION_ID = "a0000000-0000-4000-8000-000000000411";
@@ -202,6 +203,20 @@ describe("runtime state preparation mutations", () => {
     expect(plan.ownership.assignments[1]?.userId).not.toBe(
       plan.targets.ownerId,
     );
+  });
+
+  it("carries denied lead-form surface semantics without changing ownership targets", () => {
+    const plan = buildStatePreparationPlan({
+      ...request,
+      axes: { ...axes, permission: "non-owner" },
+    });
+
+    expect(plan.targets.ownerId).not.toBe(plan.permission.actorId);
+    expect(plan.surface).toMatchObject({
+      productContent: "denied",
+      productActions: "inapplicable",
+      shell: "required",
+    });
   });
 
   it("resets and reseeds before mutating state inside one transaction", async () => {

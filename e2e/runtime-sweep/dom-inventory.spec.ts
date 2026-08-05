@@ -94,6 +94,23 @@ test("keeps visible disabled controls and omits hidden controls", async ({
   expect(controls.map((control) => control.enabled)).toEqual([false, false]);
 });
 
+test("omits controls inside a closed details disclosure", async ({ page }) => {
+  await page.setContent(`
+    <details>
+      <summary>Advanced</summary>
+      <button type="button">Hidden advanced action</button>
+    </details>
+    <button type="button">Visible action</button>
+  `);
+
+  const controls = (await inventoryDom(page)).controls;
+
+  expect(controls.map(({ accessibleName }) => accessibleName)).toEqual([
+    "Advanced",
+    "Visible action",
+  ]);
+});
+
 test("assigns distinct stable keys to duplicate semantic controls", async ({
   page,
 }) => {

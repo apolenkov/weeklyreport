@@ -5,8 +5,34 @@ import {
   executeLiveControlPlans,
   planLiveControlActions,
 } from "./live-control-lane.ts";
+import { settleNavigation } from "./navigation.ts";
 
 test.describe("runtime live-control lane", () => {
+  test("waits for route app readiness beyond network idle", async ({
+    page,
+  }) => {
+    await page.setContent(`
+      <main id="main-content" aria-busy="true">Loading</main>
+      <script>
+        setTimeout(() => {
+          const main = document.querySelector("#main-content");
+          main?.setAttribute("aria-busy", "false");
+          main?.insertAdjacentHTML("beforeend", "<h1>Ready report</h1>");
+        }, 25);
+      </script>
+    `);
+
+    await settleNavigation(page);
+
+    await expect(page.locator("#main-content")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Ready report",
+    );
+  });
+
   test("re-inventories and exercises a control revealed by a menu", async ({
     page,
   }) => {
@@ -89,6 +115,34 @@ test.describe("runtime live-control lane", () => {
     });
   });
 
+  test("observes an expandable control through aria-expanded", async ({
+    page,
+  }) => {
+    await page.setContent(`
+      <button type="button" aria-expanded="false">Details</button>
+      <script>
+        document.querySelector("button").addEventListener("click", (event) => {
+          const control = event.currentTarget;
+          control.setAttribute(
+            "aria-expanded",
+            control.getAttribute("aria-expanded") === "true" ? "false" : "true",
+          );
+        });
+      </script>
+    `);
+    const inventory = await inventoryDom(page);
+    const records = await executeLiveControlPlans({
+      page,
+      plans: planLiveControlActions(inventory.controls),
+      preparePage: () => Promise.resolve(),
+    });
+
+    expect(records[0]).toMatchObject({
+      status: "pass",
+      observation: { kind: "dom" },
+    });
+  });
+
   test("waits for a delayed DOM outcome before failing a click", async ({
     page,
   }) => {
@@ -141,7 +195,18 @@ test.describe("runtime live-control lane", () => {
     page,
   }) => {
     await page.setContent(`
-      <a href="#main-content">Skip to content</a>
+      <style>
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+          pointer-events: none;
+        }
+      </style>
+      <a class="sr-only" href="#main-content">Skip to content</a>
       <div style="height: 900px"></div>
       <main id="main-content" tabindex="-1">Report content</main>
       <script>

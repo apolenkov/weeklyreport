@@ -6,6 +6,7 @@ import type {
 } from "./contracts.ts";
 import type { EvidencePhase } from "./evidence-types.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
+import type { RuntimeSurfaceExpectation } from "./runtime-surface-expectation.ts";
 
 const CONSOLE_KIND: EvidenceRef["kind"] = "console";
 const PAGE_ERROR_KIND: EvidenceRef["kind"] = "page-error";
@@ -154,6 +155,7 @@ export const controlIssues = (
   matrixCase: MatrixExecutableCase,
   controls: readonly DOMControl[],
   refs: readonly EvidenceRef[],
+  surface?: RuntimeSurfaceExpectation,
 ): readonly string[] => {
   const action =
     "action" in matrixCase.execution ? matrixCase.execution.action : undefined;
@@ -192,7 +194,11 @@ export const controlIssues = (
         ? controls
             .filter(({ controlKey }) => controlKey === action.controlKey)
             .flatMap((control) =>
-              control.actionResult.kind === "not-exercised"
+              control.actionResult.kind === "not-exercised" &&
+              !(
+                control.actionResult.policy === "inapplicable" &&
+                surface?.productActions === "inapplicable"
+              )
                 ? [
                     `${matrixCase.caseId} frozen control ${action.controlKey} was not exercised: ${control.actionResult.reason}`,
                   ]

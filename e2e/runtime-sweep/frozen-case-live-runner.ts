@@ -91,8 +91,14 @@ const runFrozenCase = async (
   const result = await captureFrozenCasePhases({
     matrixCase,
     oracle: RUNTIME_MATRIX_ORACLE,
+    surface: prepared.plan.surface,
     controls: (evidence) =>
-      controlsForCase(initialInventory, matrixCase, actionResultFor(evidence)),
+      controlsForCase(
+        initialInventory,
+        matrixCase,
+        actionResultFor(evidence),
+        prepared.plan.surface,
+      ),
     capturePhase: (phase) =>
       captureFrozenPhase({
         page,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 import { expect, test, type TestInfo } from "@playwright/test";
 
@@ -22,6 +23,7 @@ const GEOMETRY_ORACLE: GeometryOracle = {
 type CaptureOverrides = Readonly<{
   cellId?: string;
   capturePhase?: EvidenceCaptureInput["capturePhase"];
+  inventory?: EvidenceCaptureInput["inventory"];
   functionalAssertion?: FunctionalAssertion;
   visualBaseline?: VisualBaseline;
   geometryOracle?: GeometryOracle;
@@ -55,7 +57,7 @@ const capture = async (
     catalogRoute: "/harness",
     resolvedRoute: "/harness",
     cellId: overrides.cellId ?? "harness-cell",
-    inventory: await inventoryDom(page),
+    inventory: overrides.inventory ?? (await inventoryDom(page)),
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
@@ -179,6 +181,51 @@ test("fails accessibility evidence when an enabled control misses keyboard focus
   });
 
   expect(observationOutcome(result, "keyboard")).toBe("fail");
+});
+
+test("refreshes action inventory after a rerender before keyboard capture", async ({
+  page,
+}, testInfo) => {
+  await page.setContent(`
+    <style>@keyframes settle { from { opacity: 1; } to { opacity: 0.99; } } #transition { width: 1px; height: 1px; animation: settle 100ms linear; }</style>
+    <main><button type="button">Before</button>
+      <div id="transition"></div>
+    </main>
+    <script>
+      document.querySelector("#transition")?.addEventListener("animationend", () => {
+        const current = document.querySelector("button");
+        const replacement = document.createElement("button");
+        replacement.type = "button";
+        replacement.textContent = "After";
+        current?.replaceWith(replacement);
+      });
+    </script>
+  `);
+  const staleInventory = await inventoryDom(page);
+
+  const result = await capture(page, testInfo, {
+    capturePhase: "action",
+    geometryOracle: GEOMETRY_ORACLE,
+    inventory: staleInventory,
+  });
+  const readArtifact = async (kind: string): Promise<unknown> => {
+    const ref = result.all.find((candidate) => candidate.kind === kind);
+    if (ref === undefined) throw new Error(`Missing ${kind} artifact`);
+    return JSON.parse(await readFile(ref.archivePath, "utf8"));
+  };
+  const dom = (await readArtifact("dom")) as {
+    readonly controls: readonly { readonly accessibleName: string }[];
+  };
+  const keyboard = (await readArtifact("keyboard")) as {
+    readonly controls: readonly { readonly accessibleName: string }[];
+  };
+
+  expect(dom.controls.map(({ accessibleName }) => accessibleName)).toEqual([
+    "After",
+  ]);
+  expect(keyboard.controls.map(({ accessibleName }) => accessibleName)).toEqual(
+    ["After"],
+  );
 });
 
 test("does not claim functional evidence from navigation status alone", async ({

@@ -168,6 +168,10 @@ function WeeklyReportBody({
   );
   const focusedProductId = focusedTargetId ?? page.focusedProductId;
   const focusedLeadId = scope === "lead" ? focusedTargetId : undefined;
+  const navigateOverview = (targetId: string): void => {
+    if (page.submittedOnly) page.handlers.setSubmissionFilter("all");
+    setFocusedTargetId(targetId);
+  };
 
   return (
     <ReportContent
@@ -191,7 +195,7 @@ function WeeklyReportBody({
       focusedProductId={focusedProductId}
       scrollTargetProductId={focusedProductId}
       focusedLeadId={focusedLeadId}
-      onNavigateOverview={setFocusedTargetId}
+      onNavigateOverview={navigateOverview}
     />
   );
 }
