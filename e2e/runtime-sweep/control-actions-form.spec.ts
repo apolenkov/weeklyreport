@@ -32,6 +32,17 @@ const FORM_CASES = [
     markup: '<input aria-label="Search" />',
     role: "textbox" as const,
     accessibleName: "Search",
+    tagName: "input",
+    inputType: "text",
+  },
+  {
+    operation: "fill" as const,
+    markup:
+      '<input type="search" role="combobox" aria-label="Search Reports" />',
+    role: "combobox" as const,
+    accessibleName: "Search Reports",
+    tagName: "input",
+    inputType: "search",
   },
   {
     operation: "select" as const,
@@ -39,6 +50,8 @@ const FORM_CASES = [
       '<select aria-label="Status"><option value="draft">Draft</option></select>',
     role: "combobox" as const,
     accessibleName: "Status",
+    tagName: "select",
+    inputType: null,
   },
   {
     operation: "submit" as const,
@@ -46,6 +59,8 @@ const FORM_CASES = [
       '<form><button type="submit">Submit</button><output id="result"></output></form><script>document.querySelector("form").addEventListener("submit", (event) => { event.preventDefault(); document.getElementById("result").textContent = "done"; });</script>',
     role: "button" as const,
     accessibleName: "Submit",
+    tagName: "button",
+    inputType: "submit",
   },
 ] as const;
 
@@ -61,6 +76,8 @@ const runFormCase = async (page: Page, testCase: FormCase): Promise<void> => {
       ariaRole: testCase.role,
       accessibleName: testCase.accessibleName,
       enabled: true,
+      inputType: testCase.inputType,
+      tagName: testCase.tagName,
     },
     action: actionFor(testCase.operation, "irreversible"),
     recovery: recoveryFixture(events),
@@ -95,6 +112,8 @@ test.describe("runtime bounded form actions", () => {
         ariaRole: "textbox",
         accessibleName: "Search",
         enabled: true,
+        inputType: "text",
+        tagName: "input",
       },
       action: actionFor("fill", "irreversible"),
       recovery: recoveryFixture(events),
@@ -113,15 +132,21 @@ test.describe("runtime bounded form actions", () => {
     page,
   }) => {
     const cases = [
-      ["fill", "textbox", "Search"],
-      ["select", "combobox", "Status"],
-      ["submit", "button", "Submit"],
+      ["fill", "textbox", "Search", "input", "text"],
+      ["select", "combobox", "Status", "select", null],
+      ["submit", "button", "Submit", "button", "submit"],
     ] as const;
     await page.setContent(
       '<input aria-label="Search" /><select aria-label="Status"><option>Draft</option></select><button type="submit">Submit</button>',
     );
 
-    for (const [operation, ariaRole, accessibleName] of cases) {
+    for (const [
+      operation,
+      ariaRole,
+      accessibleName,
+      tagName,
+      inputType,
+    ] of cases) {
       const result = await executeControlAction({
         page,
         control: {
@@ -129,6 +154,8 @@ test.describe("runtime bounded form actions", () => {
           ariaRole,
           accessibleName,
           enabled: true,
+          inputType,
+          tagName,
         },
         action: actionFor(operation, "irreversible"),
       });

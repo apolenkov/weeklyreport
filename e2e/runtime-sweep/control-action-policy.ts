@@ -52,6 +52,14 @@ const isFormFillRole = (role: string): boolean =>
 const isFormSelectRole = (role: string): boolean =>
   (FORM_SELECT_ROLES as readonly string[]).includes(role);
 
+const isNativeSelect = (input: ControlActionInput): boolean =>
+  input.control.tagName?.trim().toLocaleLowerCase() === "select" &&
+  isFormSelectRole(input.control.ariaRole);
+
+const isSearchInput = (input: ControlActionInput): boolean =>
+  input.control.tagName?.trim().toLocaleLowerCase() === "input" &&
+  input.control.inputType?.trim().toLocaleLowerCase() === "search";
+
 const messageFrom = (error: unknown): string =>
   error instanceof Error ? error.message : "Unknown control-action failure";
 
@@ -140,8 +148,8 @@ const validateFormOperation = (
 ): ControlActionExecution | undefined => {
   const supported =
     operation === "fill"
-      ? isFormFillRole(input.control.ariaRole)
-      : isFormSelectRole(input.control.ariaRole);
+      ? isFormFillRole(input.control.ariaRole) || isSearchInput(input)
+      : isNativeSelect(input);
   return supported
     ? validateFormMutationPolicy(input)
     : unsupported(

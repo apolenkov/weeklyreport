@@ -10,6 +10,8 @@ const LANDMARK_ROLES: ReadonlySet<string> = new Set([
 const ORDER_WIDTH = 4;
 const INVENTORY_CONTEXT_ATTEMPTS = 3;
 
+export type KeyboardFocusScope = "page" | "active-modal" | "background";
+
 export interface DomControlObservation {
   readonly controlKey: string;
   readonly domOrderKey: string;
@@ -22,6 +24,8 @@ export interface DomControlObservation {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly keyboardExpectedFocusable?: boolean;
+  readonly keyboardFocusScope?: KeyboardFocusScope;
 }
 
 export interface DomInventoryIssue {
@@ -49,6 +53,8 @@ interface RawDomElement {
   readonly text: string;
   readonly visible: boolean;
   readonly disabled: boolean;
+  readonly keyboardExpectedFocusable?: boolean;
+  readonly keyboardFocusScope?: KeyboardFocusScope;
 }
 
 const normalizeText = (value: string | null): string =>
@@ -59,6 +65,7 @@ const INVENTORY_SCRIPT = String.raw`(() => {
     "menuitem","menuitemcheckbox","menuitemradio","option","radio","scrollbar",
     "searchbox","slider","spinbutton","switch","tab","textbox","treeitem"];
   const landmarks = ["alertdialog","dialog","menu","tabpanel"];
+  const nonTabRoles = new Set(["alertdialog","dialog","menu","option","tabpanel"]);
   const roleFor = (element) => {
     const explicit = element.getAttribute("role")?.trim().split(/\s+/).at(0);
     if (explicit) return explicit;
@@ -75,9 +82,12 @@ const INVENTORY_SCRIPT = String.raw`(() => {
     if (tag === "textarea" || element.isContentEditable) return "textbox";
     return tag === "option" ? "option" : "";
   };
-  const elements = Array.from(document.querySelectorAll(
-    "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]"));
-  return elements.map((element) => {
+  const labels = Array.from(document.querySelectorAll("label"));
+  const formElements = Array.from(document.querySelectorAll("form"));
+  const radioGroups = Array.from(document.querySelectorAll('[role="radiogroup"]'));
+  const candidates = Array.from(document.querySelectorAll(
+    "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]"
+  )).map((element) => {
     const tagName = element.tagName.toLowerCase();
     const inputType = element instanceof HTMLInputElement ? element.type.toLowerCase() : null;
     const role = roleFor(element);
@@ -90,21 +100,88 @@ const INVENTORY_SCRIPT = String.raw`(() => {
     const labelledBy = element.getAttribute("aria-labelledby");
     const labelledByText = labelledBy ? labelledBy.split(/\s+/)
       .map((id) => document.getElementById(id)?.textContent || "").join(" ") : null;
-    const labels = Array.from(document.querySelectorAll("label"));
     const labelText = element.id ? labels.find((label) => label.htmlFor === element.id)?.textContent
       || null : element.closest("label")?.textContent || null;
     const imageAlt = element.querySelector("img[alt]")?.getAttribute("alt") || null;
     const value = element instanceof HTMLInputElement &&
       ["button","image","reset","submit"].includes(inputType || "")
       ? element.value || element.alt : null;
-    return { role, tagName, inputType,
+    return { element, role, tagName, inputType,
       href: element instanceof HTMLAnchorElement ? element.getAttribute("href") : null,
       ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,
       title: element.getAttribute("title"), imageAlt, value,
       text: element.textContent || "", visible,
-      disabled: element.matches(":disabled") || element.getAttribute("aria-disabled") === "true" };
+      disabled: element.matches(":disabled") || element.getAttribute("aria-disabled") === "true",
+      inert: Boolean(element.closest("[inert]")),
+      tabIndex: element.tabIndex,
+      explicitTabIndex: element.hasAttribute("tabindex"),
+      checked: element instanceof HTMLInputElement
+        ? element.checked
+        : element.getAttribute("aria-checked")?.toLowerCase() === "true" };
   }).filter((element) => element.visible &&
     (interactive.includes(element.role) || landmarks.includes(element.role)));
+  const activeModals = candidates.filter(({ element, role }) =>
+    (role === "dialog" || role === "alertdialog") &&
+    element.getAttribute("aria-modal")?.toLowerCase() === "true");
+  const activeModal = activeModals.find(({ element }) => element.contains(document.activeElement))?.element
+    || activeModals.at(-1)?.element
+    || null;
+  const scopeFor = (element) => activeModal === null
+    ? "page"
+    : activeModal.contains(element) ? "active-modal" : "background";
+  const nativeRadioFor = (element) =>
+    element instanceof HTMLInputElement && element.type.toLowerCase() === "radio";
+  const groupKeyFor = (entry, index) => {
+    if (entry.role !== "radio") return null;
+    if (nativeRadioFor(entry.element)) {
+      const name = entry.element.getAttribute("name")?.trim();
+      if (!name) return "native:standalone:" + index;
+      const formIndex = entry.element.form === null
+        ? "document"
+        : String(formElements.indexOf(entry.element.form));
+      return "native:" + formIndex + ":" + name;
+    }
+    const group = entry.element.closest('[role="radiogroup"]');
+    return group === null
+      ? "aria:standalone:" + index
+      : "aria:" + radioGroups.indexOf(group);
+  };
+  const entries = candidates.map((entry, index) => ({
+    ...entry,
+    focusScope: scopeFor(entry.element),
+    radioGroupKey: groupKeyFor(entry, index),
+    nativeRadio: nativeRadioFor(entry.element),
+  }));
+  const scopeAllowsTab = (entry) => activeModal === null || entry.focusScope === "active-modal";
+  const radioGroupsByKey = new Map();
+  entries.filter(({ radioGroupKey }) => radioGroupKey !== null).forEach((entry) => {
+    const members = radioGroupsByKey.get(entry.radioGroupKey) || [];
+    radioGroupsByKey.set(entry.radioGroupKey, [...members, entry]);
+  });
+  const radioTabStops = new Set();
+  radioGroupsByKey.forEach((members) => {
+    const candidatesForGroup = members.filter((entry) =>
+      scopeAllowsTab(entry) && !entry.disabled && !entry.inert);
+    if (candidatesForGroup.length === 0) return;
+    const roving = members.some((entry) => !entry.nativeRadio && entry.explicitTabIndex);
+    const tabEligible = candidatesForGroup.filter((entry) => entry.tabIndex >= 0);
+    const tabStop = roving
+      ? tabEligible.find((entry) => entry.tabIndex === 0) || tabEligible[0] || candidatesForGroup[0]
+      : tabEligible.find((entry) => entry.checked) || tabEligible[0] || candidatesForGroup[0];
+    radioTabStops.add(tabStop.element);
+  });
+  return entries.map((entry) => {
+    const keyboardExpectedFocusable = entry.disabled || entry.inert ||
+      !scopeAllowsTab(entry) || nonTabRoles.has(entry.role)
+      ? false
+      : entry.role !== "radio" || radioTabStops.has(entry.element);
+    return { role: entry.role, tagName: entry.tagName, inputType: entry.inputType,
+      href: entry.href, ariaLabel: entry.ariaLabel, labelledByText: entry.labelledByText,
+      labelText: entry.labelText, title: entry.title, imageAlt: entry.imageAlt,
+      value: entry.value, text: entry.text, visible: entry.visible,
+      disabled: entry.disabled, keyboardExpectedFocusable,
+      keyboardFocusScope: entry.focusScope };
+  });
 })()`;
 
 const accessibleNameFor = (element: RawDomElement): string => {
@@ -148,6 +225,12 @@ const controlFrom = (
     tagName: element.tagName,
     inputType: element.inputType,
     href: element.href,
+    ...(element.keyboardExpectedFocusable === undefined
+      ? {}
+      : { keyboardExpectedFocusable: element.keyboardExpectedFocusable }),
+    ...(element.keyboardFocusScope === undefined
+      ? {}
+      : { keyboardFocusScope: element.keyboardFocusScope }),
   };
 };
 

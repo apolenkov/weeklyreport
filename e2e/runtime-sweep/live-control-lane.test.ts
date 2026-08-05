@@ -8,6 +8,8 @@ const control = (
   accessibleName: string,
   role = "button",
   enabled = true,
+  tagName = role === "link" ? "a" : "button",
+  inputType: string | null = null,
 ): DomControlObservation => ({
   controlKey,
   domOrderKey: `0001:${controlKey}`,
@@ -17,8 +19,8 @@ const control = (
   enabled,
   disabled: !enabled,
   visible: true,
-  tagName: role === "link" ? "a" : "button",
-  inputType: null,
+  tagName,
+  inputType,
   href: role === "link" ? "/details" : null,
 });
 
@@ -61,7 +63,7 @@ test("leaves disabled and unsupported controls explicitly unexercised", () => {
 test("only plans bounded form values when a safety oracle is declared", () => {
   const controls = [
     control("query", "Search", "searchbox"),
-    control("status", "Status", "combobox"),
+    control("status", "Status", "combobox", true, "select"),
     control("submit", "Submit", "button"),
   ];
 
@@ -80,7 +82,7 @@ test("does not pretend potentially mutating forms are safe in non-mutating mode"
   const plans = planLiveControlActions(
     [
       control("query", "Search", "searchbox"),
-      control("status", "Status", "combobox"),
+      control("status", "Status", "combobox", true, "select"),
       control("submit", "Submit", "button"),
     ],
     { formSafety: "non-mutating" },
@@ -104,6 +106,44 @@ test("does not pretend potentially mutating forms are safe in non-mutating mode"
       "unsafe",
       "Potentially mutating form controls are not exercised without disposable-reset recovery",
     ],
+  ]);
+});
+
+test("plans form operations from the semantic role and actual element", () => {
+  const plans = planLiveControlActions(
+    [
+      control(
+        "combobox:Select%20reporting%20period:1",
+        "Select reporting period",
+        "combobox",
+        true,
+        "button",
+      ),
+      control(
+        "combobox:Search%20Reports:1",
+        "Search Reports",
+        "combobox",
+        true,
+        "input",
+        "search",
+      ),
+      control(
+        "combobox:Native%20period:1",
+        "Native period",
+        "combobox",
+        true,
+        "select",
+      ),
+    ],
+    { formSafety: "disposable-reset" },
+  );
+
+  expect(
+    plans.map(({ action }) => [action?.operation, action?.transition]),
+  ).toEqual([
+    ["click", "none"],
+    ["fill", "none"],
+    ["select", "none"],
   ]);
 });
 

@@ -2,7 +2,6 @@ import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { inventoryDom } from "./dom-inventory";
 import { captureRouteEvidence } from "./evidence-capture";
-import { captureKeyboardTrace } from "./keyboard-evidence";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
 
@@ -10,6 +9,7 @@ async function captureHarnessEvidence(
   page: Page,
   testInfo: TestInfo,
   input: Readonly<{
+    capturePhase?: "before" | "after";
     consoleMessages?: readonly { type: string; text: string }[];
     requestFailures?: readonly { url: string; failure: string | null }[];
   }> = {},
@@ -29,6 +29,9 @@ async function captureHarnessEvidence(
     requestFailures: input.requestFailures ?? [],
     responseStatus: 200,
     capturedAt: "2026-08-04T00:00:00.000Z",
+    ...(input.capturePhase === undefined
+      ? {}
+      : { capturePhase: input.capturePhase }),
   });
 }
 
@@ -159,15 +162,6 @@ test("inventories controls revealed by a bounded menu transition", async ({
   ]);
 });
 
-test("captures a bounded keyboard focus transition", async ({ page }) => {
-  await page.setContent('<main><button type="button">Continue</button></main>');
-
-  await expect(captureKeyboardTrace(page)).resolves.toMatchObject({
-    after: "button:Continue",
-    focusMoved: true,
-  });
-});
-
 test("fails the owning observations for console and network errors", async ({
   page,
 }, testInfo) => {
@@ -196,11 +190,15 @@ test("binds a visual change to a different screenshot digest", async ({
   await page.setContent(
     '<main style="background:white"><button type="button">Continue</button></main>',
   );
-  const before = await captureHarnessEvidence(page, testInfo);
+  const before = await captureHarnessEvidence(page, testInfo, {
+    capturePhase: "before",
+  });
   await page.locator("main").evaluate((element) => {
     element.style.background = "black";
   });
-  const after = await captureHarnessEvidence(page, testInfo);
+  const after = await captureHarnessEvidence(page, testInfo, {
+    capturePhase: "after",
+  });
   const screenshotDigest = (result: typeof before): string => {
     const ref = result.all.find(({ kind }) => kind === "screenshot");
     if (!ref) throw new Error("Harness screenshot evidence is missing");

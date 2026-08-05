@@ -3,20 +3,51 @@ import type { Page } from "@playwright/test";
 import { settleNavigation } from "./navigation.ts";
 
 const ACTION_NAVIGATION_GRACE_MS = 100;
+const ACTION_NAVIGATION_TIMEOUT_MS = 2000;
 const SIGN_OUT_NAVIGATION_TIMEOUT_MS = 10_000;
 const SIGN_OUT_CONTROL_KEY = /^button:Sign(?:%20|\s)out:\d+$/u;
+const GENERIC_NAVIGATION_ROLES = new Set(["link"]);
+const GENERIC_NAVIGATION_NAMES = new Set(["dashboard", "status", "document"]);
 
 export interface ActionNavigationExpectation {
-  readonly expectedPathname: string;
+  readonly expectedPathname?: string;
   readonly timeoutMs: number;
 }
 
+const controlParts = (
+  controlKey: string,
+): Readonly<{ role: string; name: string }> | undefined => {
+  const roleSeparator = controlKey.indexOf(":");
+  const occurrenceSeparator = controlKey.lastIndexOf(":");
+  if (roleSeparator <= 0 || occurrenceSeparator <= roleSeparator)
+    return undefined;
+  const role = controlKey.slice(0, roleSeparator);
+  const encodedName = controlKey.slice(roleSeparator + 1, occurrenceSeparator);
+  try {
+    return {
+      role,
+      name: decodeURIComponent(encodedName).trim().toLocaleLowerCase(),
+    };
+  } catch (error: unknown) {
+    if (error instanceof URIError) return undefined;
+    throw error;
+  }
+};
+
 export const expectedActionNavigationFor = (
   controlKey: string,
-): ActionNavigationExpectation | undefined =>
-  SIGN_OUT_CONTROL_KEY.test(controlKey)
-    ? { expectedPathname: "/", timeoutMs: SIGN_OUT_NAVIGATION_TIMEOUT_MS }
-    : undefined;
+): ActionNavigationExpectation | undefined => {
+  if (SIGN_OUT_CONTROL_KEY.test(controlKey))
+    return { expectedPathname: "/", timeoutMs: SIGN_OUT_NAVIGATION_TIMEOUT_MS };
+  const parts = controlParts(controlKey);
+  if (
+    parts !== undefined &&
+    (GENERIC_NAVIGATION_ROLES.has(parts.role) ||
+      (parts.role === "button" && GENERIC_NAVIGATION_NAMES.has(parts.name)))
+  )
+    return { timeoutMs: ACTION_NAVIGATION_TIMEOUT_MS };
+  return undefined;
+};
 
 export interface ActionNavigationObserver {
   readonly initialUrl: string;
@@ -73,6 +104,19 @@ export type ActionNavigationResult =
   | Readonly<{ status: "none" | "observed" }>
   | Readonly<{ status: "failed"; reason: string }>;
 
+const navigationFailureFor = (
+  expectation: ActionNavigationExpectation,
+): ActionNavigationResult =>
+  expectation.expectedPathname === "/"
+    ? {
+        status: "failed",
+        reason: "Sign out did not navigate to / within the bounded wait",
+      }
+    : {
+        status: "failed",
+        reason: "Navigation was not observed within the bounded wait",
+      };
+
 export const settleActionNavigation = async (
   page: Page,
   observer: ActionNavigationObserver,
@@ -91,12 +135,10 @@ export const settleActionNavigation = async (
   if (!observed)
     return expectation === undefined
       ? { status: "none" }
-      : {
-          status: "failed",
-          reason: "Sign out did not navigate to / within the bounded wait",
-        };
+      : navigationFailureFor(expectation);
   await settleNavigation(page);
-  if (expectation === undefined) return { status: "observed" };
+  if (expectation?.expectedPathname === undefined)
+    return { status: "observed" };
   const pathname = new URL(page.url()).pathname;
   return pathname === expectation.expectedPathname
     ? { status: "observed" }
