@@ -52,6 +52,14 @@ const loginForActor = async (
   });
 };
 
+const actorsForProfile = (
+  source: Awaited<ReturnType<typeof readSourceArtifact>>,
+  profile: CampaignMatrixState["profile"],
+): readonly RuntimeMatrixActor[] =>
+  source.plan.states
+    .filter((candidate) => candidate.profile === profile)
+    .map(({ axes }) => actorForPermission(axes.permission, axes.role));
+
 test("preflight prepares and inventories every nominal source segment", async ({
   page,
 }) => {
@@ -60,18 +68,13 @@ test("preflight prepares and inventories every nominal source segment", async ({
   let preparedGroup: string | undefined;
   const sessionsByProfile = createProfileSessionCacheRegistry<
     CampaignMatrixState["profile"]
-  >(async (profile) => {
-    setupE2eDatabase({ databaseUrl, profile, repoRoot });
-    const sessions = createPreflightSessionCache(page.context(), (actor) =>
-      loginForActor(page, actor),
-    );
-    await sessions.authenticate(
-      source.plan.states
-        .filter((candidate) => candidate.profile === profile)
-        .map(({ axes }) => actorForPermission(axes.permission, axes.role)),
-    );
-    return sessions;
-  });
+  >(() =>
+    Promise.resolve(
+      createPreflightSessionCache(page.context(), (actor) =>
+        loginForActor(page, actor),
+      ),
+    ),
+  );
   const artifact = await runPlaywrightPreflight({
     source,
     page,
@@ -83,11 +86,16 @@ test("preflight prepares and inventories every nominal source segment", async ({
         group,
         profileSessions.created,
       );
-      const resetForGroup: RuntimeStateResetter = (setup) => {
-        if (!resetRequired) return;
-        setupE2eDatabase(setup);
+      const actors = actorsForProfile(source, state.profile);
+      if (resetRequired) {
+        setupE2eDatabase({ databaseUrl, profile: state.profile, repoRoot });
         preparedGroup = group;
-      };
+        if (profileSessions.created) {
+          await profileSessions.cache.authenticate(actors);
+        } else {
+          await profileSessions.cache.reauthenticate(actors);
+        }
+      }
       const prepared = await prepareRuntimeState(
         {
           profile: state.profile,
@@ -104,7 +112,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
           routeKey: `${route.role}:${route.catalogRoute}`,
         },
         database,
-        resetForGroup,
+        (() => undefined) satisfies RuntimeStateResetter,
       );
       if (!prepared.observation.matches) {
         throw new Error(

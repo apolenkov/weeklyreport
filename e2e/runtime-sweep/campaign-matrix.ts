@@ -1,7 +1,11 @@
+import {
+  campaignMatrixConstraints,
+  nominalLifecycleForRoute,
+  permissionsForRole,
+} from "./campaign-matrix-constraints.ts";
 import type {
   MatrixAxes,
   MatrixDeclaration,
-  PermissionBoundary,
   Role,
   RouteBindingTarget,
   RouteDeclaration,
@@ -12,17 +16,16 @@ import type {
 import { makeStateId, sha256Hex } from "./ids.ts";
 import {
   compilePairwiseMatrix,
-  type MatrixConstraint,
   type MatrixInapplicable,
   type PairwiseState,
 } from "./matrix.ts";
 import {
   excludedStateCombinations,
-  stateCapabilities,
   witnessCapability,
 } from "./matrix-coverage.ts";
 
 const DEFAULT_WITNESS: SeedCapability = "canonical-identities";
+const NOMINAL_PERMISSION = "allowed" as const;
 
 export interface CampaignMatrixInput {
   readonly sourceSha: string;
@@ -45,60 +48,6 @@ export interface CampaignMatrixPlan {
   readonly digest: string;
 }
 
-const ROLE_PERMISSIONS: Readonly<
-  Record<Role, ReadonlySet<PermissionBoundary>>
-> = {
-  lead: new Set(["allowed", "owner", "non-owner", "anonymous", "forbidden"]),
-  head: new Set(["allowed", "head", "anonymous"]),
-  admin: new Set(["allowed", "admin", "anonymous"]),
-  viewer: new Set(["allowed", "viewer", "anonymous"]),
-};
-
-const NOMINAL_PERMISSION: Readonly<Record<Role, PermissionBoundary>> = {
-  lead: "allowed",
-  head: "allowed",
-  admin: "allowed",
-  viewer: "allowed",
-};
-
-const constraints = (
-  availableCapabilities: readonly SeedCapability[],
-  routeCapability: SeedCapability | null,
-): readonly MatrixConstraint[] => [
-  {
-    id: "profile-capability-boundary",
-    reason: "State requires a capability absent from the seed profile",
-    check: (axes) =>
-      stateCapabilities(axes, routeCapability).every((capability) =>
-        availableCapabilities.includes(capability),
-      ),
-    checkPartial: (axes) =>
-      stateCapabilities(axes, routeCapability).every((capability) =>
-        availableCapabilities.includes(capability),
-      ),
-  },
-  {
-    id: "role-permission-boundary",
-    reason: "Permission boundary is not meaningful for the session role",
-    check: ({ role, permission }) => ROLE_PERMISSIONS[role].has(permission),
-    checkPartial: ({ role, permission }) =>
-      role === undefined ||
-      permission === undefined ||
-      ROLE_PERMISSIONS[role].has(permission),
-  },
-  {
-    id: "ownership-permission-boundary",
-    reason: "Owner permission requires an assigned stage",
-    check: ({ ownershipDensity, permission }) =>
-      permission !== "owner" || ownershipDensity !== "none",
-    checkPartial: ({ ownershipDensity, permission }) =>
-      permission === undefined ||
-      ownershipDensity === undefined ||
-      permission !== "owner" ||
-      ownershipDensity !== "none",
-  },
-];
-
 const profileBinding = (
   profiles: readonly SeedProfileBinding[],
   profile: SeedProfile,
@@ -116,6 +65,17 @@ const assignedProfiles = (route: RouteDeclaration): readonly SeedProfile[] => {
   return route.bindings.flatMap((binding) =>
     binding.status === "assigned" ? [binding.profile] : [],
   );
+};
+
+const assignedBinding = (route: RouteDeclaration, profile: SeedProfile) => {
+  const binding = route.bindings?.find(
+    (candidate) => candidate.profile === profile,
+  );
+  if (binding?.status !== "assigned")
+    throw new Error(
+      `Campaign matrix profile ${profile} is not assigned to ${route.role}:${route.catalogRoute}`,
+    );
+  return binding;
 };
 
 const remapCapabilityWitness = (
@@ -154,12 +114,14 @@ const canonicalNominalState = (input: {
   readonly route: string;
   readonly routeCapability: SeedCapability | null;
   readonly availableCapabilities: readonly SeedCapability[];
+  readonly lifecycleValues: readonly MatrixAxes["lifecycle"][];
 }): PairwiseState => {
+  const lifecycle = nominalLifecycleForRoute(input);
   const candidate: MatrixAxes = {
     role: input.role,
     route: input.route,
     profileCapability: DEFAULT_WITNESS,
-    lifecycle: "open",
+    lifecycle,
     submission: "draft",
     ownershipDensity: "single",
     permission: "allowed",
@@ -199,15 +161,13 @@ const stateAxesFor = (
         lifecycle: ["open" as const],
         submission: ["draft" as const],
         ownershipDensity: ["single" as const],
-        permission: [NOMINAL_PERMISSION[role]],
+        permission: [NOMINAL_PERMISSION],
       }
     : {
         lifecycle: input.declaration.axes.lifecycle,
         submission: input.declaration.axes.submission,
         ownershipDensity: input.declaration.axes.ownershipDensity,
-        permission: input.declaration.axes.permission.filter((value) =>
-          ROLE_PERMISSIONS[role].has(value),
-        ),
+        permission: permissionsForRole(role, input.declaration.axes.permission),
       };
 
 const compileGroup = (
@@ -216,13 +176,7 @@ const compileGroup = (
   profile: SeedProfile,
 ) => {
   const definition = profileBinding(input.seedProfiles, profile).definition;
-  const binding = route.bindings?.find(
-    (candidate) => candidate.profile === profile,
-  );
-  if (binding?.status !== "assigned")
-    throw new Error(
-      `Campaign matrix profile ${profile} is not assigned to ${route.role}:${route.catalogRoute}`,
-    );
+  const binding = assignedBinding(route, profile);
   const routeCapability = binding.requiredCapability;
   const generatorSeed = `${input.declaration.generatorSeed}:${profile}:${route.role}:${route.catalogRoute}`;
   const stateAxes = stateAxesFor(input, route.role, binding.target);
@@ -241,7 +195,10 @@ const compileGroup = (
       fault: ["none"],
       controlTransition: ["none"],
     },
-    constraints: constraints(definition.capabilities, routeCapability),
+    constraints: campaignMatrixConstraints(
+      definition.capabilities,
+      routeCapability,
+    ),
   });
   const remapped = remapCapabilityWitness(
     matrix,
@@ -259,6 +216,7 @@ const compileGroup = (
       route: `${route.role}:${route.catalogRoute}`,
       routeCapability,
       availableCapabilities: definition.capabilities,
+      lifecycleValues: stateAxes.lifecycle,
     }),
   );
   return {

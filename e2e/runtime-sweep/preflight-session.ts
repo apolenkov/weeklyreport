@@ -15,6 +15,9 @@ export interface PreflightSessionCache {
   readonly authenticate: (
     actors: readonly RuntimeMatrixActor[],
   ) => Promise<void>;
+  readonly reauthenticate: (
+    actors: readonly RuntimeMatrixActor[],
+  ) => Promise<void>;
   readonly use: (actor: RuntimeMatrixActor) => Promise<void>;
 }
 
@@ -83,27 +86,42 @@ export function createPreflightSessionCache(
   const cookiesByActor = new Map<string, readonly Cookie[]>();
   const state = { initialized: false };
 
+  const authenticateActors = async (
+    actors: readonly RuntimeMatrixActor[],
+  ): Promise<void> => {
+    // A destructive profile reset can remove a section referenced by a JWT.
+    // Drop every old cookie before rebuilding the set so a partial login never
+    // falls back to a token from the previous database incarnation.
+    cookiesByActor.clear();
+    for (const actor of uniqueActors(actors)) {
+      if (!isAuthenticatedActor(actor)) continue;
+      await context.clearCookies();
+      await login(actor);
+      const cookies = sessionCookies(await context.cookies());
+      if (cookies.length === 0)
+        throw new PreflightSessionError(
+          `Login for role ${actor.role} did not produce a session cookie`,
+        );
+      cookiesByActor.set(actorKey(actor), cookies);
+    }
+    state.initialized = true;
+    await context.clearCookies();
+  };
+
   return {
     async authenticate(actors) {
       if (state.initialized)
         throw new PreflightSessionError(
           "Session cache was already initialized",
         );
-
-      for (const actor of uniqueActors(actors)) {
-        if (!isAuthenticatedActor(actor)) continue;
-        await context.clearCookies();
-        await login(actor);
-        const cookies = sessionCookies(await context.cookies());
-        if (cookies.length === 0)
-          throw new PreflightSessionError(
-            `Login for role ${actor.role} did not produce a session cookie`,
-          );
-        cookiesByActor.set(actorKey(actor), cookies);
-      }
-
-      state.initialized = true;
-      await context.clearCookies();
+      await authenticateActors(actors);
+    },
+    async reauthenticate(actors) {
+      if (!state.initialized)
+        throw new PreflightSessionError(
+          "Cannot reauthenticate sessions before authentication completes",
+        );
+      await authenticateActors(actors);
     },
     async use(actor) {
       if (!state.initialized)
