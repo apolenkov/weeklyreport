@@ -4,8 +4,8 @@ import type { PeriodListItem } from "@customreport/shared";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";
 
-import { toIsoDateString } from "../../../lib/format-date";
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import {
   PeriodDialogActions,
   PeriodDialogSurface,

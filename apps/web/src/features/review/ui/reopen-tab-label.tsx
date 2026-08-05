@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabCountPill } from "../../../shared/ui/tabs/tab-count-pill";
 
 // Absolute corner badge (no layout shift on hydrate). No polling — refreshes

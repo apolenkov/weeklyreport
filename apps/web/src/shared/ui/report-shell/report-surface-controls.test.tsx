@@ -9,7 +9,7 @@ import { render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PrintRouteContext } from "../../../lib/server/get-print-route-context";
+import type { PrintRouteContext } from "../../../features/pdf-export/server";
 
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
 
@@ -35,7 +35,7 @@ vi.mock("next/navigation", () => ({
 // The /print server gate reads the cookie once via this helper; mock it
 // per-test to drive the worker / human / no-session branches.
 const getPrintRouteContext = vi.fn<() => Promise<PrintRouteContext>>();
-vi.mock("../../../lib/server/get-print-route-context", () => ({
+vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
@@ -61,7 +61,7 @@ vi.mock("../../../features/report-pages/ui/weekly-report-skeleton", () => ({
 }));
 
 // RoleGate: pass children straight through for the lead preview test.
-vi.mock("../role-gate", () => ({
+vi.mock("../auth-runtime/role-gate", () => ({
   RoleGate: ({ children }: { children: ReactElement }) => children,
 }));
 
@@ -114,7 +114,7 @@ vi.mock("@tanstack/react-query", async () => {
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {
@@ -135,7 +135,31 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../../features/report-sections/model/weekly-report", () => ({
+vi.mock("../../../features/report-sections", () => ({
+  STATUS_BADGE: {
+    "in-progress": { label: "In Progress" },
+    completed: { label: "Completed" },
+    blocked: { label: "Blocked" },
+    "at-risk": { label: "At Risk" },
+    planned: { label: "Planned" },
+    paused: { label: "Paused" },
+    postponed: { label: "Postponed" },
+  },
+  toNavigationPeriod: (args: {
+    id: string;
+    periodStart: Date | string;
+    periodEnd: Date | string;
+    archived: boolean;
+    isCurrent: boolean;
+  }) => ({
+    ...args,
+    periodStart:
+      args.periodStart instanceof Date
+        ? args.periodStart
+        : new Date(args.periodStart),
+    weekLabel: "W1",
+    dateRange: "Jun 1 – Jun 7",
+  }),
   mapWeeklyReport: () => ({
     portfolio: [],
     products: [],

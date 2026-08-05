@@ -13,8 +13,8 @@ import {
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
-} from "../../../lib/format-date";
-import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
+} from "../../../shared/lib/format/format-date";
+import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
 import { riskCoversStage } from "./stage-tags";
 import { trafficToStageStatus } from "./traffic-light";
 import type { Product, ReportPeriod, StageAssignment } from "./types";

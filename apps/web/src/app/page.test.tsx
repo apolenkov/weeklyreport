@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../lib/server/get-org-public", () => ({
+vi.mock("../shared/server/organization/get-org-public", () => ({
   getOrgPublic: vi.fn(),
 }));
 
@@ -8,7 +8,7 @@ vi.mock("./login-page.client", () => ({
   LoginPageClient: vi.fn(() => null),
 }));
 
-import { getOrgPublic } from "../lib/server/get-org-public";
+import { getOrgPublic } from "../shared/server/organization/get-org-public";
 import { LoginPageClient } from "./login-page.client";
 import LoginPage from "./page";
 

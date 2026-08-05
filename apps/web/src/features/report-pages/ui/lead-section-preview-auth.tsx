@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { WeeklyReportPage } from "./weekly-report-page";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 

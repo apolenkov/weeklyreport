@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import { toIsoDateString } from "../../../lib/format-date";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import { buildActivityIndex, buildProjectIndex } from "./lead-form-shared";
 import type { DecisionEntry, PriorityEntry } from "./types";
 

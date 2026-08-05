@@ -11,8 +11,8 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { encodeAutosaveComparisonKey } from "../../../hooks/use-lead-form-autosave";
 import { sectionToDraftPayload } from "../../report-sections";
+import { encodeAutosaveComparisonKey } from "../../report-sections/client";
 import { applyDraftPatch, type DraftPatch } from "./lead-form-draft-patch";
 import {
   type LeadFormGeneration,

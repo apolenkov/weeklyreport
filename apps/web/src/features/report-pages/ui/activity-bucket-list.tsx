@@ -4,7 +4,7 @@ import {
   ACTIVITY_BUCKET_LABELS,
   ACTIVITY_BUCKET_ORDER,
   type ActivityBucket,
-} from "../../../lib/activity-buckets";
+} from "../../report-sections";
 import { ItemCard, type RiskEntry } from "../../report-sections";
 import type { UnifiedActivityEntry } from "./use-unified-activity-editing";
 

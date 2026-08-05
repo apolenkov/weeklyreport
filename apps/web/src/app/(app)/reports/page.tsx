@@ -6,7 +6,7 @@ import {
   HistoryToolbar,
   useHistoryData,
 } from "../../../features/period";
-import { useSession } from "../../../lib/session-provider";
+import { useSession } from "../../../shared/lib/auth/session-provider";
 
 // One role-defaulted history view: leads get personal History, everyone else
 // compiled. No tab state and no `tab` query parameter; Archive is local, non-URL

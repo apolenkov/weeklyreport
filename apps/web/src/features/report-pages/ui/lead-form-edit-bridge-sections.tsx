@@ -3,8 +3,8 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import type { ComponentProps } from "react";
 
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import type { CrossAuthorEntry } from "../../period";
+import type { RecordVisibility } from "../../report-sections/client";
 import type { LeadFormBridgeAccordionsActions } from "./lead-form-bridge-accordions";
 import { LeadFormBridgeAccordions } from "./lead-form-bridge-accordions";
 import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";

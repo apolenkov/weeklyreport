@@ -7,11 +7,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 
 // We mock cache-keys to verify invalidation cascade without actually inspecting
 // react-query internals.
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
@@ -45,7 +45,7 @@ vi.mock("next/navigation", () => ({
 import {
   SessionContext,
   type SessionUser,
-} from "../../../lib/session-provider";
+} from "../../../shared/lib/auth/session-provider";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import {

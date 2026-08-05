@@ -1,4 +1,4 @@
-import { deriveItemAlarmFromRisks } from "../../../lib/item-alarm";
+import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
 import { canonicalStageNames } from "../model/stage-tags";
 import type {
   ItemStatus,

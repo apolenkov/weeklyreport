@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-import { useSession } from "../../../lib/session-provider";
-import { useHydratedClient } from "../../lib/use-hydrated-client";
+import { useHydratedClient } from "../../hooks/browser/use-hydrated-client";
+import { useSession } from "../../lib/auth/session-provider";
 import { DesktopNav } from "./desktop-nav";
 import { MobileNav } from "./mobile-nav";
 import { buildNavBarModel } from "./nav-bar-model";

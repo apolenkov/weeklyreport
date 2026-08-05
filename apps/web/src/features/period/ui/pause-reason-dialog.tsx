@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 

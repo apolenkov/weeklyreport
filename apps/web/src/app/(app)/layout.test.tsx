@@ -8,7 +8,7 @@ import { useSdlcTooltip } from "../../shared/ui/feedback/sdlc-tooltip";
 
 // The layout wraps its content in SessionProvider + NavBar; both are
 // passthroughs here so the tooltip-provider contract is what gets tested.
-vi.mock("../../lib/session-provider", () => ({
+vi.mock("../../shared/lib/auth/session-provider", () => ({
   SessionProvider: ({ children }: { readonly children: React.ReactNode }) =>
     children,
   SessionContext: undefined,
@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../shared/ui/navigation/nav-bar", () => ({
   NavBar: () => null,
 }));
-vi.mock("../../shared/lib/use-hydrated-client", () => ({
+vi.mock("../../shared/hooks/browser/use-hydrated-client", () => ({
   useHydratedClient: () => true,
 }));
 

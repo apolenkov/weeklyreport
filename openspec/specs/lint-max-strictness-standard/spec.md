@@ -106,7 +106,7 @@ The standard MUST declare these import boundaries (verified clean in code at
 declaration time): `packages/*` MUST NOT import from `apps/*`; `packages/shared`
 and `packages/ui` MUST NOT import each other; `apps/api` MUST NOT import
 `packages/ui` or `apps/web`; `apps/web` MUST NOT import `apps/api` **except via
-`import type`** (the AppRouter tRPC contract at `apps/web/src/lib/trpc.ts`). The
+`import type`** (the AppRouter tRPC contract at `apps/web/src/shared/lib/trpc/trpc.ts`). The
 type-only carve-out MUST be rule-enforced (e.g.
 `@typescript-eslint/no-restricted-imports` with `allowTypeImports: true`), not a
 per-site disable.

@@ -7,7 +7,7 @@ import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
   joinPeriodLabel,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 import {
   ActionIconRow,
   type PeriodActionHandlers,

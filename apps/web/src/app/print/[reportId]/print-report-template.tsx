@@ -7,10 +7,13 @@ import { toast } from "sonner";
 import {
   mapWeeklyReport,
   type MapWeeklyReportResult,
-} from "../../../features/report-sections/model/weekly-report";
-import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
-import { formatDateTime, joinPeriodLabel } from "../../../lib/format-date";
-import { useTRPC } from "../../../lib/trpc-context";
+} from "../../../features/report-sections";
+import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
+import {
+  formatDateTime,
+  joinPeriodLabel,
+} from "../../../shared/lib/format/format-date";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { PrintExecutiveSummary } from "./print-executive-summary";
 import {
   PrintPortfolioOverview,

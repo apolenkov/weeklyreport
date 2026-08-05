@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import { useFullscreen } from "../../../hooks/use-fullscreen";
+import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
 import {
   type SlideDensity,
   slidesForDensity,

@@ -1,7 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../lib/status-presentation";
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import {
   buildActivityHomeById,
   CROSS_PRODUCT_LABEL,

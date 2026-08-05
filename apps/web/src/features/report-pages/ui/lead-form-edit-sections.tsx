@@ -2,12 +2,12 @@
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import type { CrossAuthorEntry } from "../../period";
 import {
   mapLeadReviewFeedback,
   ownedStagesForProject,
 } from "../../report-sections";
+import type { RecordVisibility } from "../../report-sections/client";
 import { LeadReviewFeedback } from "../../review";
 import {
   type LeadFormDecisionsActions,

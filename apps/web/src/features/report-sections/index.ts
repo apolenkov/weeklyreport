@@ -1,5 +1,19 @@
-export { FOREIGN_ENTRY_OPACITY } from "./model/item-card-style";
+export type { ActivityBucket } from "./model/activity/activity-buckets";
+export {
+  ACTIVITY_BUCKET_LABELS,
+  ACTIVITY_BUCKET_ORDER,
+  deriveActivityBucket,
+} from "./model/activity/activity-buckets";
+export { deriveActivityAlarmFloor } from "./model/alarms/activity-alarm";
+export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
+export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
+export {
+  markCompletePatch,
+  moveToCurrentWeekPatch,
+  moveToNextWeekPatch,
+  pauseItemPatch,
+} from "./model/lead-actions/lead-item-actions";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
 export {
   applyCrossAuthorStageOverrides,
@@ -46,6 +60,7 @@ export {
   type ItemColumn,
   splitItemBoard,
 } from "./model/next-week-columns";
+export { sortByPriorityRank } from "./model/priority/priority-sort";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";
 export { toNavigationPeriod } from "./model/report-period";
@@ -85,6 +100,7 @@ export {
 } from "./model/weekly-report";
 export type {
   LeadOverviewRow,
+  MapWeeklyReportResult,
   WeeklyPortfolioProduct,
   WeeklyProductReport,
   WeeklyProductStatus,

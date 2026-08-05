@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../lib/status-presentation";
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildAuthorRoster } from "./slide-grid-authors";
 import { activityHomeProduct, collectCells } from "./slide-grid-cells";

@@ -15,7 +15,7 @@ const REQUIRE_JSDOC = "jsdoc/require-jsdoc";
 const WEB_LEAD_FORM = "apps/web/src/features/report-pages/ui/lead-form.tsx";
 const WEB_LEAD_FORM_TEST =
   "apps/web/src/features/report-pages/ui/lead-form.test.tsx";
-const WEB_TRPC = "apps/web/src/lib/trpc.ts";
+const WEB_TRPC = "apps/web/src/shared/lib/trpc/trpc.ts";
 const longSource = Array.from(
   { length: 305 },
   (_unused, index) => `export const line${index} = ${index};`,

@@ -7,9 +7,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { makeQueryClient } from "../../../lib/query-client";
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("../../../hooks/use-record-visibility", () => ({
+vi.mock("../../report-sections/client", () => ({
   useRecordVisibility: () => ({
     visibility: "mine",
     hydrated: true,
@@ -26,7 +26,7 @@ vi.mock("../../../hooks/use-record-visibility", () => ({
   }),
 }));
 
-vi.mock("../../../hooks/use-fullscreen", () => ({
+vi.mock("../../../shared/hooks/browser/use-fullscreen", () => ({
   useFullscreen: () => ({ isFullscreen: false, toggle: vi.fn() }),
 }));
 

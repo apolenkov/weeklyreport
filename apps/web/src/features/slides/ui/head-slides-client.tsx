@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useMemo, useState } from "react";
 
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { buildActivitySlideModel } from "../model/activity-slide-model";
 import { buildProductScopedSlides } from "../model/product-scoped-slides";
 import { buildSectionSlideModel } from "../model/section-slide-model";

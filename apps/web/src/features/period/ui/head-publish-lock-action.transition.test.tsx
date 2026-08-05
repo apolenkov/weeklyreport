@@ -8,15 +8,15 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
-import { makeQueryClient } from "../../../lib/query-client";
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { HeadPublishLockAction } from "./head-publish-lock-action";
 
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidatePeriodLifecycle: vi.fn(),
 }));
 

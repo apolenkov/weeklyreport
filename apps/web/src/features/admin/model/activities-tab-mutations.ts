@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 // Activities live outside admin.snapshot, so `invalidateAdmin` would refetch
 // six unrelated caches and still miss the list this tab reads.

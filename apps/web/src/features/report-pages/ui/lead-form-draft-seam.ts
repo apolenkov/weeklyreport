@@ -7,8 +7,8 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-} from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+} from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { buildLeadSubmitPayload } from "../../report-sections";
 
 type LeadSubmitInput = ReturnType<typeof buildLeadSubmitPayload>;

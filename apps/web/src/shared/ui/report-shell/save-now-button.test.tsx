@@ -1,12 +1,16 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
-import { SaveNowButton } from "./save-now-button";
+import { SaveNowButton, type SaveNowButtonState } from "./save-now-button";
+
+type SnapshotFixture = SaveNowButtonState & {
+  readonly lastSavedAt: Date | null;
+  readonly dirty: boolean;
+};
 
 function makeSnapshot(
-  overrides: Partial<AutosaveSnapshot> = {},
-): AutosaveSnapshot {
+  overrides: Partial<SnapshotFixture> = {},
+): SnapshotFixture {
   return {
     state: "idle",
     lastSavedAt: null,

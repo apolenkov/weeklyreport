@@ -10,7 +10,7 @@ const { neverSettles } = vi.hoisted(() => ({
   neverSettles: (): Promise<never> => new Promise<never>(() => undefined),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     auth: {
       me: {

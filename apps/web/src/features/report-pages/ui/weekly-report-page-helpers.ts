@@ -5,8 +5,12 @@ import type {
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-import { getClientErrorDetails } from "../../../lib/client-error-reporting";
-import { isAdmin, isHeadLike, isLead } from "../../../lib/role-predicates";
+import {
+  isAdmin,
+  isHeadLike,
+  isLead,
+} from "../../../shared/lib/auth/role-predicates";
+import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
 import {
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,

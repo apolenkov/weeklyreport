@@ -3,7 +3,7 @@
 import { sessionRoleSchema } from "@customreport/shared";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-import { type LastRoleRecord } from "../lib/last-role";
+import { type LastRoleRecord } from "../shared/lib/auth/last-role";
 import {
   DEV_EMAIL_FOR_ROLE,
   devLoginHref,

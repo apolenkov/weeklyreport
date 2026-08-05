@@ -1,6 +1,6 @@
 "use client";
 
-import { pluralize } from "../../../lib/pluralize";
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import { PlusIcon } from "../../../shared/ui/icons/action-icons";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 

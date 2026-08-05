@@ -616,6 +616,7 @@ void test("web feature boundary rejects deep import, export, and dynamic-import 
           'import { LeadForm } from "../../report-pages/ui/lead-form";',
           'export { StageChip } from "../../report-sections/ui/stage-chip";',
           'void import("../../period/model/use-report-history-data");',
+          'vi.mock("../../review/ui/section-verdict-control", () => ({}));',
         ].join("\n"),
       ],
     ]),
@@ -625,6 +626,7 @@ void test("web feature boundary rejects deep import, export, and dynamic-import 
     `${file}: web feature boundary violation: import "../../period/model/use-report-history-data" resolves to apps/web/src/features/period/model/use-report-history-data; use the sibling feature facade.`,
     `${file}: web feature boundary violation: import "../../report-pages/ui/lead-form" resolves to apps/web/src/features/report-pages/ui/lead-form; use the sibling feature facade.`,
     `${file}: web feature boundary violation: import "../../report-sections/ui/stage-chip" resolves to apps/web/src/features/report-sections/ui/stage-chip; use the sibling feature facade.`,
+    `${file}: web feature boundary violation: import "../../review/ui/section-verdict-control" resolves to apps/web/src/features/review/ui/section-verdict-control; use the sibling feature facade.`,
   ]);
 });
 
@@ -640,6 +642,7 @@ void test("web feature boundary allows same-feature paths and sibling facades", 
             'import { ViewerShell } from "./viewer-shell";',
             'export { WeeklyReportPage } from "../../report-pages";',
             'void import("../../period/index");',
+            'export { useLeadFormAutosave } from "../../report-sections/client";',
           ].join("\n"),
         ],
       ]),

@@ -40,7 +40,7 @@ under the planning-only scope.
 
 - **WHEN** the Core Web Vitals section of the memo is read
 - **THEN** it references the existing instrumentation
-  (`apps/web/src/lib/web-vitals.ts`,
+  (`apps/web/src/features/telemetry/model/vitals/web-vitals.ts`,
   `apps/web/src/features/telemetry/ui/web-vitals-reporter.tsx`,
   `apps/web/src/app/layout.tsx`)
 - **AND** it presents a "what to measure later" plan rather than fabricated LCP,

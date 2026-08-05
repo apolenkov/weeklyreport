@@ -62,7 +62,7 @@ explicit severity. This also serves as the migration for legacy explicit
 at-risk/blocked stage rows — they render On Track on next load with no backfill.
 
 The RAW read-model status is a SEPARATE layer from the displayed chip. The
-mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`) applies the
+mapper (`mapLeadProducts` in `apps/web/src/features/report-sections/model/lead-form.ts`) applies the
 floor to a NON-EMPTY stage (via `deriveEffectiveStageStatus`: floor up to a worse
 covering risk, collapse a stale unbacked severity down) but PRESERVES an EMPTY
 stage's raw status as empty — the empty→empty guard. It records coverage

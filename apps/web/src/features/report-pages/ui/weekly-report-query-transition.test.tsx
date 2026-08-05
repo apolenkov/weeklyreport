@@ -7,12 +7,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { makeQueryClient } from "../../../lib/query-client";
 import {
   SessionContext,
   type SessionUser,
-} from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+} from "../../../shared/lib/auth/session-provider";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { ViewerReportShell } from "../../viewer";
 import { HeadReportShell } from "./head-report-shell";

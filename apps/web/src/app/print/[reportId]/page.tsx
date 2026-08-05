@@ -1,7 +1,7 @@
 import type { Role } from "@customreport/shared";
 import { redirect } from "next/navigation";
 
-import { getPrintRouteContext } from "../../../lib/server/get-print-route-context";
+import { getPrintRouteContext } from "../../../features/pdf-export/server";
 import { PrintReportTemplate } from "./print-report-template";
 
 interface Props {

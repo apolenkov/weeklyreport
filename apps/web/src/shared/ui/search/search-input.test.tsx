@@ -28,7 +28,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     search: {
       query: {
@@ -41,7 +41,7 @@ vi.mock("../../../lib/trpc-context", () => ({
 // Default to a non-viewer role so the lead/admin routing assertions hold;
 // the viewer cases override it per test.
 const useSessionMock = vi.fn(() => ({ user: { role: "head" } }));
-vi.mock("../../../lib/session-provider", () => ({
+vi.mock("../../lib/auth/session-provider", () => ({
   useSession: () => useSessionMock(),
 }));
 

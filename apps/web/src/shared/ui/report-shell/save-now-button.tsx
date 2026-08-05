@@ -2,17 +2,23 @@
 
 import { type ReactNode, useEffect, useReducer, useRef } from "react";
 
-import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
-
 const SAVED_REVERT_MS = 1500;
 
+type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
+
+export interface SaveNowButtonState {
+  readonly state: SaveState;
+  readonly isInFlight: boolean;
+  readonly forceSave: () => Promise<void>;
+}
+
 interface SaveNowButtonProps {
-  autosave: AutosaveSnapshot;
+  autosave: SaveNowButtonState;
 }
 
 // State → label/icon mapping, kept out of the component for complexity budget.
 function deriveSaveView(
-  state: AutosaveSnapshot["state"],
+  state: SaveState,
   isSaving: boolean,
   showSaved: boolean,
 ): { ariaLabel: string; label: string; icon: ReactNode } {
@@ -43,10 +49,7 @@ const REST_CLASS_NAME =
 // Post-success flash: true for SAVED_REVERT_MS after a save lands, and dropped
 // the moment autosave leaves "saved" (new edit → pending, failed save → error)
 // rather than waiting out the timer, which would strand a stale green check.
-function useSavedFlash(
-  state: AutosaveSnapshot["state"],
-  isInFlight: boolean,
-): boolean {
+function useSavedFlash(state: SaveState, isInFlight: boolean): boolean {
   const [showSaved, setShowSaved] = useReducer(
     (_current: boolean, next: boolean) => next,
     false,

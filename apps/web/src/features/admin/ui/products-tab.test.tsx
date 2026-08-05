@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductsTab } from "./products-tab";

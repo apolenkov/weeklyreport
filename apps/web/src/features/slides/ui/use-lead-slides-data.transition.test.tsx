@@ -5,9 +5,9 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { makeQueryClient } from "../../../lib/query-client";
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { useLeadSlidesData } from "./use-lead-slides-data";
 
@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("../../../lib/use-query-error-handler", () => ({
+vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
@@ -34,6 +34,7 @@ vi.mock("../model/lead-slides-deck-model", () => ({
 }));
 
 vi.mock("../../report-sections", () => ({
+  crossAuthorContentFetchEnabled: () => true,
   mapLeadFormData: () => ({ readOnly: false }),
 }));
 

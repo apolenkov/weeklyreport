@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => useSearchParamsMock() as URLSearchParams,
 }));
 
-vi.mock("../lib/trpc-context", () => ({
+vi.mock("../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     auth: { me: { queryOptions: () => ({ queryKey: ["auth.me"] }) } },
     org: {

@@ -6,8 +6,8 @@ import type {
   CreateSeed,
   EditableListDialogState,
   UseEditableListDialogResult,
-} from "../../../hooks/use-editable-list-dialog";
-import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
+} from "../../../shared/hooks/dialogs/use-editable-list-dialog";
+import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import type { RiskEntry } from "../../report-sections";
 
 type SavedRisk = RiskEntry & { impact: string; mitigation: string };

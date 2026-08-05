@@ -26,7 +26,7 @@ HEAD at review time: `d5642688`. Raw lane reports: session scratchpad `sweep/rep
    Precedence tweak in one copy → silent write/read status drift. Fix: single domain helper.
 
 3. **Global `keepPreviousData` + `isLoading`-only gates leak previous period's data** (C)
-   `apps/web/src/lib/query-client.ts:44`; consumers never check `isPlaceholderData`.
+   `apps/web/src/shared/lib/query/query-client.ts`; consumers never check `isPlaceholderData`.
    Navigating period A→B can render A's content under B's URL; mutations can target the wrong period.
    Fix: scope keepPreviousData or gate report-scoped UI/mutations on `isPlaceholderData || isFetching`.
 

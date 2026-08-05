@@ -6,7 +6,7 @@ import {
   statusLabel,
   type StatusLabelVariant,
   statusToneClassName,
-} from "../../../lib/status-presentation";
+} from "../../../shared/lib/status/status-presentation";
 
 // No pre-formatted tone prop — callers must go through the canonical map.
 export function SlideStatusBadge({

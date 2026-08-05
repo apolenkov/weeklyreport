@@ -4,8 +4,8 @@ import type { ReviewVerdict, SectionReviewView } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateReview } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+import { invalidateReview } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 type VerdictBadge =
   | { kind: "changes"; label: string }

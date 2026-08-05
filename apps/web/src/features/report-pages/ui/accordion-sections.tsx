@@ -1,11 +1,11 @@
-import { pluralize } from "../../../lib/pluralize";
-import { sortByPriorityRank } from "../../../lib/priority-sort";
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type {
   WeeklyProductReport,
   WeeklyReportDecision,
   WeeklyReportItem,
   WeeklyReportRisk,
 } from "../../report-sections";
+import { sortByPriorityRank } from "../../report-sections";
 import { SectionHeader } from "./accordion-row-primitives";
 import { DecisionRow, EscalationRow, ItemRow, RiskRow } from "./accordion-rows";
 import { SECTION_DIVIDER } from "./accordion-tokens";

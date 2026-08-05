@@ -2,7 +2,7 @@ import {
   formatDateTime,
   formatPeriodRangeWithYear,
   joinPeriodLabel,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 import {
   type ReopenDecision,
   ReopenRespondForm,

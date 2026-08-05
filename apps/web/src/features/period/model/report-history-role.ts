@@ -5,7 +5,7 @@ import {
   isHeadLike,
   isLead as isLeadRole,
   isViewer,
-} from "../../../lib/role-predicates";
+} from "../../../shared/lib/auth/role-predicates";
 import type { SearchScope } from "../../../shared/ui/search/search-input-utils";
 
 // Search reach per role: a lead sees only their own sections, head-like roles

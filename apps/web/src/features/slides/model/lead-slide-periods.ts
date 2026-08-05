@@ -3,7 +3,7 @@ import type { MyHistoryEntry } from "@customreport/shared";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 
 export interface LeadSlidePeriodOption {
   readonly reportId: string;

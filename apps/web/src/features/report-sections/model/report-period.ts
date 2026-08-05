@@ -1,7 +1,7 @@
 import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 import type { ReportPeriod } from "./types";
 
 // Navigation-only shape: these lists offer no fill-from and no submission

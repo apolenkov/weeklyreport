@@ -1,7 +1,7 @@
 "use client";
 
-import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
 import { SaveNowButton } from "../../../shared/ui/report-shell/save-now-button";
+import type { AutosaveSnapshot } from "../../report-sections/client";
 import { QuickAddButton, type QuickAddKind } from "./quick-add-button";
 
 export interface LeadCompletionActionContract {

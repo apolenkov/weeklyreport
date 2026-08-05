@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 
-import { getClientErrorDetails } from "../../../lib/client-error-reporting";
-import { useTRPC } from "../../../lib/trpc-context";
+import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ExportPdfButton } from "../../pdf-export";

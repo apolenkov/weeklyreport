@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { useLeadFormFillFrom } from "./use-lead-form-fill-from";

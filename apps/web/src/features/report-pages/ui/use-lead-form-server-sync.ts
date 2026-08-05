@@ -10,12 +10,12 @@ import {
   useRef,
 } from "react";
 
+import { sectionToDraftPayload } from "../../report-sections";
 import {
   type DraftSaveContent,
   encodeAutosaveComparisonKey,
   useLeadFormAutosave,
-} from "../../../hooks/use-lead-form-autosave";
-import { sectionToDraftPayload } from "../../report-sections";
+} from "../../report-sections/client";
 import {
   classifyReseed,
   type PendingSaveEcho,

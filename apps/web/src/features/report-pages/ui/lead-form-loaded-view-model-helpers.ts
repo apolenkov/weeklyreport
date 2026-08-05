@@ -3,7 +3,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import {
   type ActivityBucket,
   deriveActivityBucket,
-} from "../../../lib/activity-buckets";
+} from "../../report-sections";
 import {
   type CrossAuthorContentRow,
   type DecisionEntry,

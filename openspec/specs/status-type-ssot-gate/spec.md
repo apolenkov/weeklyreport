@@ -30,7 +30,7 @@ themselves (`packages/shared/src/schemas/primitives/report-primitives.schema.ts`
 `packages/shared/src/schemas/status/canonical-status.ts`,
 `packages/shared/src/schemas/auth/auth.ts`), the documented literal mirror
 `prisma/seeds/support/seed-constants.ts`, the presentation-order list
-`apps/web/src/shared/ui/role-switcher.tsx`, and the plain-Node catalog mirror
+`apps/web/src/shared/ui/auth-runtime/role-switcher.tsx`, and the plain-Node catalog mirror
 `e2e/sweep/catalog-parser.ts` — all hardcoded centrally in the gate, with no
 inline annotation escape.
 

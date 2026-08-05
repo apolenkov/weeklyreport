@@ -72,7 +72,7 @@ by the current lead's OWN non-empty staged risk. A risk is the lead's
 input about that stage, so a stage the lead never explicitly set still
 counts when their own risk covers it. The counter MUST be derived from a
 `coveredByOwnRisk` annotation placed on the raw stage by the read-model
-mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`),
+mapper (`mapLeadProducts` in `apps/web/src/features/report-sections/model/lead-form.ts`),
 where `computeCompleteness` counts a stage when
 `status !== "empty" || coveredByOwnRisk`. Two cases MUST NOT inflate the
 counter:

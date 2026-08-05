@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import type { CreateSeed } from "../../../hooks/use-editable-list-dialog";
+import type { CreateSeed } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import { responsiveBoardGridClassName } from "../../../shared/ui/layout/responsive-board-grid";
 import type { ItemColumn, KanbanItem } from "../../report-sections";
 import { ActivityLanesBlock, BoardColumnHeader } from "../../report-sections";

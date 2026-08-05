@@ -1,6 +1,6 @@
 "use client";
 
-import { pluralize } from "../../../lib/pluralize";
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,

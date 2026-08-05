@@ -4,7 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/head/report",
 }));
 
-import { invalidatePeriodLifecycle } from "../../../lib/cache-keys";
+import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   makeWeeklyReportData,

@@ -3,7 +3,7 @@
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 import { useContext } from "react";
 
-import { SessionContext } from "../../../lib/session-provider";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { DashboardContent } from "./dashboard-content";
 import { useDashboardData } from "./use-dashboard-data";
 

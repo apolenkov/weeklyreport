@@ -1,7 +1,7 @@
 import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { getServerSession } from "../../../lib/server/get-server-session";
+import { getServerSession } from "../../server/auth/get-server-session";
 import { ForbiddenPage } from "./forbidden-page";
 
 // UX-only SSR gate: denied sessions render ForbiddenPage in place; API role

@@ -1,6 +1,6 @@
-import type { UseEditableListDialogResult } from "../../../hooks/use-editable-list-dialog";
-import type { usePauseReason } from "../../../hooks/use-pause-reason";
+import type { UseEditableListDialogResult } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import type { KanbanItem } from "../../report-sections";
+import type { usePauseReason } from "../model/controls/use-pause-reason";
 import type { CurrentWeekSectionProps } from "./current-week-section.types";
 
 export type CurrentWeekDialog = UseEditableListDialogResult<KanbanItem>;

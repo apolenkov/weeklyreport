@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { DraftSaveContent } from "../../../hooks/use-lead-form-autosave";
 import type { Product } from "../../report-sections";
+import type { DraftSaveContent } from "../../report-sections/client";
 import { buildSubmitStages } from "./lead-form-submit-context";
 
 const DRAFT: DraftSaveContent = {

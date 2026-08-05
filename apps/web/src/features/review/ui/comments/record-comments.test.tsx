@@ -14,11 +14,11 @@ const mutationCalls = vi.hoisted(() => ({
   deleteComment: [] as unknown[],
 }));
 
-vi.mock("../../../../lib/cache-keys", () => ({
+vi.mock("../../../../shared/lib/query/cache-keys", () => ({
   invalidateReview: vi.fn(),
 }));
 
-vi.mock("../../../../lib/trpc-context", () => ({
+vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     review: {
       comment: {

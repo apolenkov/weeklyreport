@@ -1,6 +1,6 @@
 import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
 
-import { isViewer } from "../../../lib/role-predicates";
+import { isViewer } from "../../lib/auth/role-predicates";
 import {
   HEAD_DASHBOARD_ROUTE,
   HEAD_REPORT_ROUTE,

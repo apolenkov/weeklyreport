@@ -38,7 +38,7 @@ vi.mock("./slide-skeleton", () => ({
   SlideSkeleton: () => <div data-testid="slide-skeleton" />,
 }));
 
-vi.mock("../../../lib/use-query-error-handler", () => ({
+vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
@@ -57,7 +57,7 @@ vi.mock("../model/section-slide-pagination", () => ({
   sortSlidesForReview: (slides: unknown[]) => slides,
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
       get: {

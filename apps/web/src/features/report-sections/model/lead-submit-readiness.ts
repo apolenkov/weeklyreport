@@ -1,9 +1,6 @@
-import type { AutosaveState } from "../../../hooks/use-lead-form-autosave";
-import {
-  computeCoupling,
-  validateCoupling,
-} from "../../../hooks/use-status-risk";
+import type { AutosaveState } from "./autosave/autosave-types";
 import type { DraftSaveContent } from "./lead-section-draft-payload";
+import { computeCoupling, validateCoupling } from "./status-risk/coupling";
 import type { Product, RiskEntry } from "./types";
 
 interface LeadSubmitStatusIdentity {

@@ -1,4 +1,4 @@
-import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
+import type { MapWeeklyReportResult } from "../../../features/report-sections";
 import { PrintLeadSection } from "./print-lead-section";
 import { PrintPortfolioTable } from "./print-portfolio-table";
 import {

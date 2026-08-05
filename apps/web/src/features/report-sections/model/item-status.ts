@@ -4,10 +4,7 @@
 
 import type { ItemWorkflowStatus } from "@customreport/shared";
 
-import {
-  type AlarmRisk,
-  deriveItemAlarmFromRisks,
-} from "../../../lib/item-alarm";
+import { type AlarmRisk, deriveItemAlarmFromRisks } from "./alarms/item-alarm";
 
 const IN_PROGRESS_STATUS = "in-progress";
 

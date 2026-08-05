@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
-import { STATUS_BADGE } from "../../../features/report-sections/model/item-card-style";
-import type { WeeklyProductReport } from "../../../features/report-sections/model/weekly-report-types";
+import type { WeeklyProductReport } from "../../../features/report-sections";
+import { STATUS_BADGE } from "../../../features/report-sections";
 import {
   ATTENTION_BG,
   DECISION_ACCENT,

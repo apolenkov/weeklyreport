@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
-import { isViewer as isViewerRole } from "../../../lib/role-predicates";
-import { useSession } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
+import { useDismissOnOutsidePointer } from "../../hooks/browser/use-dismiss-on-outside-pointer";
+import { isViewer as isViewerRole } from "../../lib/auth/role-predicates";
+import { useSession } from "../../lib/auth/session-provider";
+import { useTRPC } from "../../lib/trpc/trpc-context";
 import {
   DEBOUNCE_MS,
   MAX_LEN,

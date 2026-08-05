@@ -5,7 +5,7 @@ import { render } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SessionContext } from "../../../lib/session-provider";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { useLeadFormChrome } from "./use-lead-form-chrome";
 
 const HISTORY: readonly MyHistoryEntry[] = [

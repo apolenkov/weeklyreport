@@ -2,13 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
-import { useRecordVisibility } from "../../../hooks/use-record-visibility";
-import { getClientErrorDetails } from "../../../lib/client-error-reporting";
-import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
-import type { SessionUser } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import type { SessionUser } from "../../../shared/lib/auth/session-provider";
+import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { crossAuthorContentFetchEnabled } from "../../report-sections";
+import type { RecordVisibility } from "../../report-sections/client";
+import { useRecordVisibility } from "../../report-sections/client";
 import {
   deriveActiveIds,
   deriveDeckVisibility,

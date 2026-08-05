@@ -6,9 +6,9 @@ import Script from "next/script";
 import type { ReactNode } from "react";
 
 import { WebVitalsReporter } from "../features/telemetry/ui/web-vitals-reporter";
-import { getOrgPublic } from "../lib/server/get-org-public";
-import { TRPCProvider } from "../lib/trpc-provider";
-import { webEnv } from "../lib/web-env";
+import { webEnv } from "../shared/lib/runtime/web-env";
+import { TRPCProvider } from "../shared/lib/trpc/trpc-provider";
+import { getOrgPublic } from "../shared/server/organization/get-org-public";
 import { AgentationDevtools } from "../shared/ui/auth-runtime/agentation-devtools";
 import { QueryErrorBoundary } from "../shared/ui/auth-runtime/error-boundary";
 

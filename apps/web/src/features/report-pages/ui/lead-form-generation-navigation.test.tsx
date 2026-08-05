@@ -14,9 +14,9 @@ import {
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeQueryClient } from "../../../lib/query-client";
-import { SessionContext } from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import type { KanbanItem } from "../../report-sections";
@@ -30,14 +30,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
-vi.mock("../../../hooks/use-record-visibility", () => ({
-  useRecordVisibility: () => ({
-    visibility: "mine",
-    hydrated: true,
-    setVisibility: vi.fn(),
-  }),
-}));
-vi.mock("../../../hooks/use-fullscreen", () => ({
+vi.mock("../../report-sections/client", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../report-sections/client")
+  >("../../report-sections/client");
+  return {
+    ...actual,
+    useRecordVisibility: () => ({
+      visibility: "mine",
+      hydrated: true,
+      setVisibility: vi.fn(),
+    }),
+  };
+});
+vi.mock("../../../shared/hooks/browser/use-fullscreen", () => ({
   useFullscreen: () => ({ isFullscreen: false, toggle: vi.fn() }),
 }));
 vi.mock("./use-lead-form-foreign-content-purge", () => ({

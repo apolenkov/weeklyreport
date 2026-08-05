@@ -6,8 +6,8 @@ import type {
 } from "@customreport/shared";
 import { useState } from "react";
 
-import type { DraftSaveContent } from "../../../hooks/use-lead-form-autosave";
 import type { CrossAuthorRow } from "../../report-sections";
+import type { DraftSaveContent } from "../../report-sections/client";
 import { useLeadFormDraftSeam } from "./lead-form-draft-seam";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import { useLeadFormAddSignals } from "./use-lead-form-add-signals";

@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import {
   invalidateDashboard,
   invalidatePeriodLifecycle,
-} from "../../../lib/cache-keys";
-import { mutationErrorMessage } from "../../../lib/mutation-error-message";
-import { useTRPC } from "../../../lib/trpc-context";
+} from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 function toastMutationError(fallbackMessage: string) {
   return (err: unknown) => {

@@ -2,11 +2,11 @@
 
 import { User, Users } from "lucide-react";
 
-import type { RecordVisibility } from "../../../hooks/use-record-visibility";
 import {
   segmentClassName,
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
+import type { RecordVisibility } from "../../report-sections/client";
 
 const RECORD_VISIBILITY_OPTIONS = [
   { key: "mine", label: "Mine only", Icon: User },

@@ -1,4 +1,4 @@
-import type { UseEditableListDialogResult } from "../../../hooks/use-editable-list-dialog";
+import type { UseEditableListDialogResult } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
 
 export interface NextWeekSectionProps {

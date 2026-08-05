@@ -12,7 +12,10 @@ import type {
 } from "@customreport/shared";
 import { STAGE_NAMES } from "@customreport/shared";
 
-import { formatPeriodLabel, toIsoDateString } from "../../../lib/format-date";
+import {
+  formatPeriodLabel,
+  toIsoDateString,
+} from "../../../shared/lib/format/format-date";
 import { mapReminder } from "./admin-reminder-mapper";
 import type {
   AdminGroupView,

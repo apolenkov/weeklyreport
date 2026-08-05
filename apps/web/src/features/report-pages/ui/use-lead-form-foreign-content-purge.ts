@@ -3,8 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import type { SessionUser } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
+import type { SessionUser } from "../../../shared/lib/auth/session-provider";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 interface UseLeadFormForeignContentPurgeInput {
   readonly isEveryone: boolean;

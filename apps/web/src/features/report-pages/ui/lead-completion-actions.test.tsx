@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
+import type { AutosaveSnapshot } from "../../report-sections/client";
 import { LeadCompletionActions } from "./lead-completion-actions";
 import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
 

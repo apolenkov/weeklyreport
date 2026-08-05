@@ -2,7 +2,7 @@
 
 import type { Ref } from "react";
 
-import { isLead } from "../../../lib/role-predicates";
+import { isLead } from "../../../shared/lib/auth/role-predicates";
 import { DocumentActionGroup } from "../../../shared/ui/report-shell/report-toolbar";
 import { VersionComingSoonControl } from "../../admin";
 import { PdfExportComingSoonControl } from "../../pdf-export";

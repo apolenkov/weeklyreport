@@ -1,7 +1,7 @@
 import { type Role, ROLE_LABEL } from "@customreport/shared";
 
-import type { SessionState } from "../../../lib/session-provider";
-import { initialsFromParts } from "../../../lib/user-initials";
+import type { SessionState } from "../../lib/auth/session-provider";
+import { initialsFromParts } from "../../lib/format/user-initials";
 import { NAV_LINKS, type NavLink } from "./nav-links";
 
 interface NavBarModel {
