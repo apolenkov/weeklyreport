@@ -34,7 +34,11 @@ export default async function LeadReportByIdPage({
   }
 
   return (
-    <main id="main-content" className={`min-h-screen ${LEAD_FORM_PAGE_BG}`}>
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className={`min-h-screen ${LEAD_FORM_PAGE_BG}`}
+    >
       <div
         className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
         style={{ paddingBottom: LEAD_FORM_ACTION_BAR_CLEARANCE }}

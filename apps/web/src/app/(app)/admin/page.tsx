@@ -21,7 +21,11 @@ export default async function AdminPage({ searchParams }: Props) {
   const activeTab = isAdminTab(tab) ? tab : "users";
 
   return (
-    <main id="main-content" className="operational-paper-shell min-h-screen">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="operational-paper-shell min-h-screen"
+    >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">

@@ -77,9 +77,14 @@ function UserOverflowMenu({
           aria-label={`More actions for ${user.name}`}
         >
           <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+          <span className="sr-only">User actions</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-44">
+      <DropdownMenuContent
+        align="end"
+        aria-label="User actions"
+        className="min-w-44"
+      >
         <DropdownMenuItem
           variant="destructive"
           className="min-h-10 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"

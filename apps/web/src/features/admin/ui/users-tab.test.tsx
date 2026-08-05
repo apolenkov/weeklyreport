@@ -265,6 +265,10 @@ describe("UsersTab — delete modal focus management", () => {
     });
     trigger.focus();
     await user.click(trigger);
+    expect(screen.getByRole("menu", { name: /more actions/i })).toHaveAttribute(
+      "aria-label",
+      "User actions",
+    );
     await user.click(screen.getByRole("menuitem", { name: /delete user/i }));
     return trigger;
   }
