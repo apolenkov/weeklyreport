@@ -164,6 +164,7 @@ export function ProductOverviewCard({
         background: isEmpty ? EMPTY_CARD_BG : STATUS_BG[product.status],
       }}
       title={isEmpty ? undefined : `Open ${product.name} details`}
+      aria-controls={isEmpty ? undefined : `report-product-${product.id}`}
       disabled={isEmpty}
       aria-disabled={isEmpty}
       onClick={() => {
