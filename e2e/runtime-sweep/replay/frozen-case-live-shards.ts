@@ -12,6 +12,28 @@ export type FrozenCaseLiveShard = Readonly<{
 
 export type FrozenCaseGroup = readonly MatrixExecutableCase[];
 
+export const selectFrozenCasesForReplay = (
+  cases: readonly MatrixExecutableCase[],
+  requestedCaseIds: string | undefined,
+): readonly MatrixExecutableCase[] => {
+  if (requestedCaseIds === undefined) return cases;
+  const ids = requestedCaseIds.split(",").map((caseId) => caseId.trim());
+  if (ids.includes(""))
+    throw new Error("RUNTIME_SWEEP_CASE_IDS contains an empty case id");
+  if (new Set(ids).size !== ids.length)
+    throw new Error("RUNTIME_SWEEP_CASE_IDS contains duplicate case ids");
+  const requested = new Set(ids);
+  const selected = cases.filter(({ caseId }) => requested.has(caseId));
+  if (selected.length !== ids.length) {
+    const available = new Set(cases.map(({ caseId }) => caseId));
+    const missing = ids.filter((caseId) => !available.has(caseId));
+    throw new Error(
+      `RUNTIME_SWEEP_CASE_IDS contains unknown profile case ids: ${missing.join(", ")}`,
+    );
+  }
+  return selected;
+};
+
 export const groupFrozenCases = (
   cases: readonly MatrixExecutableCase[],
   groupKeyFor: (matrixCase: MatrixExecutableCase) => string,

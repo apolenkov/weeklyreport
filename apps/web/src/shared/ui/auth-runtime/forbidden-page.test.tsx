@@ -8,7 +8,12 @@ describe("ForbiddenPage", () => {
     render(
       <ForbiddenPage requiredRoles={["head"]} homeHref="/head/dashboard" />,
     );
-    expect(screen.getByText(/page unavailable/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /page unavailable for your role/i,
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/reserved for the head role/i)).toBeInTheDocument();
   });
 
@@ -36,5 +41,7 @@ describe("ForbiddenPage", () => {
     const allMains = screen.getAllByRole("main");
     expect(allMains).toHaveLength(1);
     expect(allMains[0]).not.toHaveAttribute("role");
+    expect(allMains[0]).toHaveAttribute("id", "main-content");
+    expect(allMains[0]).toHaveAttribute("tabindex", "-1");
   });
 });

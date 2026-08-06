@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from "@customreport/ui/components/ui/card";
 import Link from "next/link";
 
@@ -18,10 +17,16 @@ export interface ForbiddenPageProps {
 export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
   const rolesLabel = requiredRoles.join(" or ");
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-background px-6"
+    >
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Page unavailable for your role</CardTitle>
+          <h1 className="leading-none font-semibold">
+            Page unavailable for your role
+          </h1>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">

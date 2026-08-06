@@ -47,7 +47,7 @@ const FORM_CASES = [
   {
     operation: "select" as const,
     markup:
-      '<select aria-label="Status"><option value="draft">Draft</option></select>',
+      '<select aria-label="Status"><option value="draft">Draft</option><option value="active">Active</option></select>',
     role: "combobox" as const,
     accessibleName: "Status",
     tagName: "select",
@@ -90,6 +90,10 @@ const runFormCase = async (page: Page, testCase: FormCase): Promise<void> => {
     resetPerformed: true,
   });
   expect(events).toEqual(["reset", "oracle"]);
+  if (testCase.operation === "select")
+    await expect(page.getByRole("combobox", { name: "Status" })).toHaveValue(
+      "active",
+    );
 };
 
 test("waits for a frozen control during a transient route render", async ({
@@ -161,6 +165,37 @@ test.describe("runtime bounded form actions", () => {
       status: "fail",
       operation: "fill",
       resetPerformed: true,
+    });
+    expect(events).toEqual(["reset", "oracle"]);
+  });
+
+  test("fails closed when a native select has no enabled alternative", async ({
+    page,
+  }) => {
+    const events: string[] = [];
+    await page.setContent(
+      '<select aria-label="Status"><option value="draft">Draft</option></select>',
+    );
+
+    const result = await executeControlAction({
+      page,
+      control: {
+        controlKey: "combobox:Status:1",
+        ariaRole: "combobox",
+        accessibleName: "Status",
+        enabled: true,
+        inputType: null,
+        tagName: "select",
+      },
+      action: actionFor("select", "irreversible"),
+      recovery: recoveryFixture(events),
+    });
+
+    expect(result).toMatchObject({
+      status: "fail",
+      operation: "select",
+      resetPerformed: true,
+      reason: "Native select has no enabled alternative option",
     });
     expect(events).toEqual(["reset", "oracle"]);
   });

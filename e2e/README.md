@@ -120,6 +120,23 @@ runtime-live-controls`. The required supplemental native Codex Luna review
    one worker. Each run
    writes immutable case projections under `cells/<profile>/<role>/`; do not
    reuse an archive from another source SHA.
+
+   If a browser or Driver crash stops inside a live-control shard, preserve the
+   partial attempt outside the canonical `routes/` and `cells/` paths, reset or
+   reseed the dedicated E2E database, and replay only the missing frozen case
+   identities:
+
+   ```bash
+   export RUNTIME_SWEEP_CASE_IDS='matrix-case-...,...'
+   export RUNTIME_SWEEP_REUSE_DATABASE=true
+   pnpm test:runtime-sweep --project runtime-live-controls --no-deps
+   ```
+
+   `RUNTIME_SWEEP_CASE_IDS` is an exact comma-separated identity allowlist. The
+   runner rejects empty, duplicate, or foreign-profile ids and preserves the
+   frozen MATRIX order. Never point it at a case whose canonical projection or
+   artifact path already exists; immutable writes fail closed.
+
 5. After all four profile runs finish, build the one ordered immutable baseline
    ledger from the frozen MATRIX:
 
