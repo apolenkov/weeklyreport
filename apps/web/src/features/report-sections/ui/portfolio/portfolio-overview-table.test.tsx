@@ -197,7 +197,9 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Product Alpha"));
+    const card = screen.getByRole("button", { name: /Product Alpha/u });
+    expect(card).toHaveAttribute("aria-controls", "report-product-p1");
+    fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
   });
 });

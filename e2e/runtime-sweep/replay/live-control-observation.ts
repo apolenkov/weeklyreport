@@ -10,6 +10,7 @@ interface PageControlSnapshot {
   readonly ariaChecked: string | null;
   readonly ariaExpanded: string | null;
   readonly ariaPressed: string | null;
+  readonly controlledExpanded?: boolean | undefined;
   readonly selected: string | null;
   readonly value: string | undefined;
 }
@@ -44,6 +45,15 @@ const IDENTITY_ACTIVE_ROLES: ReadonlySet<string> = new Set([
 export const snapshotPage = async (page: Page): Promise<PageSnapshot> =>
   page.evaluate(() => {
     const active = document.activeElement ?? document.body;
+    const controlledExpanded = (element: Element): boolean | undefined => {
+      const controlledId = element.getAttribute("aria-controls");
+      const controlled =
+        controlledId === null ? null : document.getElementById(controlledId);
+      return controlled === null
+        ? undefined
+        : controlled.getAttribute("aria-expanded") === "true" ||
+            controlled.querySelector('[aria-expanded="true"]') !== null;
+    };
     const controls = Array.from(
       document.querySelectorAll(
         "a[href],button,input,select,textarea,[role],[contenteditable='true']",
@@ -57,6 +67,7 @@ export const snapshotPage = async (page: Page): Promise<PageSnapshot> =>
       ariaChecked: element.getAttribute("aria-checked"),
       ariaExpanded: element.getAttribute("aria-expanded"),
       ariaPressed: element.getAttribute("aria-pressed"),
+      controlledExpanded: controlledExpanded(element),
       selected: element.getAttribute("aria-selected"),
       value:
         element instanceof HTMLInputElement ||
@@ -140,6 +151,7 @@ export const controlAlreadyActive = (
   return (
     control?.ariaPressed === "true" ||
     control?.selected === "true" ||
+    control?.controlledExpanded === true ||
     (IDENTITY_ACTIVE_ROLES.has(target.ariaRole) &&
       (control?.checked === true || control?.ariaChecked === "true"))
   );

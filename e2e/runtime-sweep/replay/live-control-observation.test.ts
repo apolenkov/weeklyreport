@@ -91,6 +91,62 @@ describe("live control observations", () => {
     ).toBe(true);
   });
 
+  it("recognizes a read-only control whose semantic target is already expanded", () => {
+    const before: PageSnapshot = {
+      ...snapshot(),
+      controls: [
+        {
+          role: "button",
+          name: "Product Alpha",
+          title: "Open Product Alpha details",
+          checked: undefined,
+          ariaChecked: null,
+          ariaExpanded: null,
+          ariaPressed: null,
+          controlledExpanded: true,
+          selected: null,
+          value: undefined,
+        },
+      ],
+    };
+
+    expect(
+      controlAlreadyActive(before, {
+        controlKey: "button:Open%20Product%20Alpha%20details:1",
+        ariaRole: "button",
+        accessibleName: "Open Product Alpha details",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not accept a control whose semantic target is still collapsed", () => {
+    const before: PageSnapshot = {
+      ...snapshot(),
+      controls: [
+        {
+          role: "button",
+          name: "Product Alpha",
+          title: "Open Product Alpha details",
+          checked: undefined,
+          ariaChecked: null,
+          ariaExpanded: null,
+          ariaPressed: null,
+          controlledExpanded: false,
+          selected: null,
+          value: undefined,
+        },
+      ],
+    };
+
+    expect(
+      controlAlreadyActive(before, {
+        controlKey: "button:Open%20Product%20Alpha%20details:1",
+        ariaRole: "button",
+        accessibleName: "Open Product Alpha details",
+      }),
+    ).toBe(false);
+  });
+
   it("does not treat an active switch as an idempotent click", () => {
     const before: PageSnapshot = {
       ...snapshot(),
