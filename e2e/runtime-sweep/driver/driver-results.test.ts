@@ -11,6 +11,7 @@ import {
   type DriverMergeOptions,
   mergeDriverResults,
 } from "./driver-results.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const OTHER_SOURCE_SHA = "b".repeat(40);
@@ -90,10 +91,23 @@ function makeCell(cellId = "cell-a"): CoverageCell {
   };
 }
 
+const baseTimeline: AiDriverReport["timeline"] = {
+  startedAt: "2026-08-04T00:00:00.000Z",
+  endedAt: "2026-08-04T00:01:00.000Z",
+  routes: [
+    {
+      route: "/lead/report",
+      enteredAt: "2026-08-04T00:00:01.000Z",
+      leftAt: "2026-08-04T00:00:59.000Z",
+    },
+  ],
+};
+
 function report(
   controls: readonly string[],
   sourceSha = SOURCE_SHA,
   blockedControls: readonly string[] = [],
+  timeline = baseTimeline,
 ): string {
   return JSON.stringify({
     provider: "native-codex",
@@ -103,6 +117,7 @@ function report(
     transcriptEvidence: {
       status: "captured",
       evidenceRefs: ["transcript:attempt-1"],
+      digest: "a".repeat(64),
     },
     roleDriven: "lead",
     profile: "minimal",
@@ -118,17 +133,7 @@ function report(
     routesVisited: 1,
     routesPlanned: 1,
     canary: { injected: true, detected: true },
-    timeline: {
-      startedAt: "2026-08-04T00:00:00.000Z",
-      endedAt: "2026-08-04T00:01:00.000Z",
-      routes: [
-        {
-          route: "/lead/report",
-          enteredAt: "2026-08-04T00:00:01.000Z",
-          leftAt: "2026-08-04T00:00:59.000Z",
-        },
-      ],
-    },
+    timeline,
     controlResults: controls.map((controlKey) =>
       blockedControls.includes(controlKey)
         ? {
@@ -227,5 +232,68 @@ describe("AI driver result contract", () => {
     expect(merged?.evidence.action).toHaveLength(1);
     expect(merged?.evidence.action[0]?.kind).toBe("driver-report");
     expect(merged?.evidence.action[0]?.digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it("rejects a reversed report timeline", () => {
+    const reportText = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:01:00.000Z",
+      endedAt: "2026-08-04T00:00:00.000Z",
+      routes: [],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], reportText, options(reportText)),
+    ).toThrow(/endedAt is before startedAt/iu);
+  });
+
+  it("requires one known route interval for every assigned route", () => {
+    const baseRoute = {
+      route: "/lead/report",
+      enteredAt: "2026-08-04T00:00:01.000Z",
+      leftAt: "2026-08-04T00:00:59.000Z",
+    };
+    const missing = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [],
+    });
+    const duplicate = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [baseRoute, baseRoute],
+    });
+    const unknown = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [{ ...baseRoute, route: "/unknown" }],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], missing, options(missing)),
+    ).toThrow(/missing driver timeline route/iu);
+    expect(() =>
+      mergeDriverResults([makeCell()], duplicate, options(duplicate)),
+    ).toThrow(/duplicate driver timeline route/iu);
+    expect(() =>
+      mergeDriverResults([makeCell()], unknown, options(unknown)),
+    ).toThrow(/unknown/iu);
+  });
+
+  it("rejects malformed or out-of-window route intervals", () => {
+    const reportText = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [
+        {
+          route: "/lead/report",
+          enteredAt: "2026-08-03T23:59:00.000Z",
+          leftAt: "2026-08-04T00:02:00.000Z",
+        },
+      ],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], reportText, options(reportText)),
+    ).toThrow(/starts before report/iu);
   });
 });

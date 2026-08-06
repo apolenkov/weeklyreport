@@ -7,6 +7,11 @@ import {
   seedProfileSchema,
   sourceShaSchema,
 } from "../source/contracts.ts";
+import { driverTimelineIssues } from "./driver-results-timeline.ts";
+import {
+  type TranscriptEvidence,
+  transcriptEvidenceSchema,
+} from "./driver-results-transcript.ts";
 
 const driverAssignmentCellSchema = z
   .object({
@@ -49,14 +54,8 @@ const driverCandidateSchema = z
 const routeTimelineSchema = z
   .object({
     route: z.string().min(1),
-    enteredAt: z.string().min(1),
-    leftAt: z.string().min(1),
-  })
-  .strict();
-const transcriptEvidenceSchema = z
-  .object({
-    status: z.literal("captured"),
-    evidenceRefs: z.array(z.string().min(1)).min(1).readonly(),
+    enteredAt: z.iso.datetime(),
+    leftAt: z.iso.datetime(),
   })
   .strict();
 const driverReportSchema = z
@@ -75,8 +74,8 @@ const driverReportSchema = z
     canary: z.object({ injected: z.boolean(), detected: z.boolean() }).strict(),
     timeline: z
       .object({
-        startedAt: z.string().min(1),
-        endedAt: z.string().min(1),
+        startedAt: z.iso.datetime(),
+        endedAt: z.iso.datetime(),
         routes: z.array(routeTimelineSchema).readonly(),
       })
       .strict(),
@@ -87,9 +86,7 @@ const driverReportSchema = z
 
 type DriverAssignmentCell = z.infer<typeof driverAssignmentCellSchema>;
 export type AiDriverReport = z.infer<typeof driverReportSchema>;
-export type AiDriverTranscriptEvidence = z.infer<
-  typeof transcriptEvidenceSchema
->;
+export type AiDriverTranscriptEvidence = TranscriptEvidence;
 export const AI_DRIVER_METADATA = {
   provider: "native-codex",
   model: "gpt-5.6-luna",
@@ -270,6 +267,10 @@ export function validateDriverReport(
     ...metadataIssues,
     ...assignmentIssues(report, expected),
     ...controlIssues(report, expected),
+    ...driverTimelineIssues({
+      timeline: report.timeline,
+      assignedCells: expected,
+    }),
     ...candidateIssues,
   ];
   if (issues.length > 0) throw new DriverResultValidationError(issues);

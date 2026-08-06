@@ -10,8 +10,10 @@ import { defineConfig, devices } from "@playwright/test";
 // anomalies after preserving the complete per-role report.
 // See openspec/specs/behavioral-ui-regression-gate/spec.md.
 
-const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3100);
-const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3101);
+// Keep the UAT pair clear of local Loki (3100) and the integration pair
+// (3102/3105) so the documented observability stack can stay online.
+const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3110);
+const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3111);
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL;

@@ -76,12 +76,20 @@ runtime-live-controls`. The required supplemental native Codex Luna review
    `~/work/customreport-archive/` and freeze `RUNTIME_SWEEP_SOURCE_SHA` to the
    clean source commit. The observer requires
    `RUNTIME_SWEEP_API_LOG`, `RUNTIME_SWEEP_BUGSINK_DSN`,
-   `RUNTIME_SWEEP_LOKI_PUSH_URL`, and `RUNTIME_SWEEP_LOKI_QUERY_URL`; a missing
-   or unreachable value is blind and fails the drive closed. Loki
+   `RUNTIME_SWEEP_BUGSINK_API_TOKEN`, `RUNTIME_SWEEP_LOKI_PUSH_URL`, and
+   `RUNTIME_SWEEP_LOKI_QUERY_URL`; a missing or unreachable value is blind and
+   fails the drive closed. Bugsink requires both the DSN and a 40-character
+   lowercase-hex API token, and the DSN must point at the dedicated
+   `runtime-sweep` project. The harness is sequential and assumes no other
+   writers use that project while counters are polled; this is not a generic
+   concurrent liveness proof. Loki
    `RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are an
    optional pair: leave both unset for an unauthenticated local Loki, or set
    both for an authenticated Loki. Keep values in the shell; never write
-   credentials or DSNs to campaign artifacts.
+   credentials, API tokens, or DSNs to campaign artifacts.
+   The live runtime API receives `LOG_DIR=$RUNTIME_SWEEP_ARCHIVE/api-log` and
+   writes JSONL to `app.log`; export the matching observer path explicitly:
+   `export RUNTIME_SWEEP_API_LOG="$RUNTIME_SWEEP_ARCHIVE/api-log/app.log"`.
 3. Freeze the campaign inputs before starting any browser work:
 
    ```bash
@@ -131,12 +139,16 @@ runtime-live-controls`. The required supplemental native Codex Luna review
      --report /archive/native-codex/lead.json \
      --cells /archive/cells/minimal/lead \
      --output /archive/imported/minimal-lead \
+     --transcript /archive/native-codex/lead.transcript.jsonl \
      --source-sha "$(git rev-parse HEAD)" \
      --profile minimal \
      --role lead
    ```
 
-   A report containing candidates also requires an explicit
+   Supply exactly one `--transcript` JSONL path per `--report`; missing or
+   unreadable transcript files, or any blind environment channel, fail before
+   output is written. A report containing candidates (including candidates
+   generated from environment hits) also requires an explicit
    `--verification /archive/native-codex/lead.verification.json` import. The
    command rejects missing, malformed, stale, partial, or unverified reports;
    see `e2e/sweep/driver/README.md` for the record shape.

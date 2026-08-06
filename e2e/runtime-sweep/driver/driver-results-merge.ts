@@ -127,6 +127,29 @@ export function mergeDriverResults(
   return mergeDriverReport(cells, report, options);
 }
 
+const writeCells = async (
+  directory: string,
+  cells: readonly CoverageCell[],
+): Promise<void> => {
+  await mkdir(directory, { recursive: true });
+  await Promise.all(
+    cells.map((cell) =>
+      writeFile(
+        join(directory, `${cell.cellId}.json`),
+        `${JSON.stringify(cell, null, 2)}\n`,
+        { encoding: "utf8", flag: "wx" },
+      ),
+    ),
+  );
+};
+
+export const writeMergedDriverCellsToDirectory = async (
+  directory: string,
+  cells: readonly CoverageCell[],
+): Promise<void> => {
+  await writeCells(directory, cells);
+};
+
 export async function writeMergedDriverCells(
   directory: string,
   cells: readonly CoverageCell[],
@@ -141,15 +164,7 @@ export async function writeMergedDriverCells(
   }
   const staging = await mkdtemp(join(dirname(directory), ".runtime-driver-"));
   try {
-    await Promise.all(
-      cells.map((cell) =>
-        writeFile(
-          join(staging, `${cell.cellId}.json`),
-          `${JSON.stringify(cell, null, 2)}\n`,
-          { encoding: "utf8", flag: "wx" },
-        ),
-      ),
-    );
+    await writeCells(staging, cells);
     await rename(staging, directory);
   } catch (error: unknown) {
     await rm(staging, { recursive: true, force: true });

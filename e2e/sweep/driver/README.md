@@ -28,8 +28,9 @@ The report may add candidates, but native Luna never edits a coverage cell or
 ledger directly.
 
 `transcriptEvidence` is `{ "status": "captured", "evidenceRefs":
-["transcript-or-tool-event-ref"] }`. The nonempty `attemptId` binds the report
-to one native run; a native report without capture evidence is rejected.
+["transcript-or-tool-event-ref"], "digest": "<sha256>" }`. The nonempty
+`attemptId` binds the report to one native run; a native report without capture
+evidence is rejected.
 
 The native report must be captured from the same canonical role/profile route
 batch and reference exact cell ids. It complements deterministic evidence; it
@@ -47,12 +48,15 @@ pnpm test:runtime-driver -- \
   --report /archive/native-codex/lead.json \
   --cells /archive/cells/minimal/lead \
   --output /archive/imported/minimal-lead \
+  --transcript /archive/native-codex/lead.transcript.jsonl \
   --source-sha "$(git rev-parse HEAD)" \
   --profile minimal \
   --role lead
 ```
 
-When a report contains candidates, pass an explicit verifier import. It must be
+Supply exactly one `--transcript` JSONL path per `--report`; missing or
+unreadable transcripts and blind environment channels fail before output. When
+a report contains candidates, pass an explicit verifier import. It must be
 a JSON array of `CandidateVerification` records and every candidate must have
 one matching record:
 
@@ -61,14 +65,23 @@ pnpm test:runtime-driver -- \
   --report /archive/native-codex/lead.json \
   --cells /archive/cells/minimal/lead \
   --output /archive/imported/minimal-lead \
+  --transcript /archive/native-codex/lead.transcript.jsonl \
   --verification /archive/native-codex/lead.verification.json \
   --source-sha "$(git rev-parse HEAD)" \
   --profile minimal \
   --role lead
 ```
 
-Missing `--verification` for a candidate-bearing report is an error. The
-importer writes merged cell projections only after schema, SHA, profile, role,
-assigned-cell, canary, and explicit-verifier checks pass. It never defaults to
-an AI process, silently accepts a partial report, or changes the canonical
-ledger.
+Missing `--verification` for any original or environment-generated candidate is
+an error. Prepared reports, including observed environment candidates, are
+written to the fresh `<output>/reports/` artifact directory before merged cell
+projections reference their content digests. The importer writes projections
+only after schema, SHA, profile, role, assigned-cell, canary, environment, and
+explicit-verifier checks pass. It never defaults to an AI process, silently
+accepts a partial report, or changes the canonical ledger.
+
+The observer also requires `RUNTIME_SWEEP_BUGSINK_DSN` and
+`RUNTIME_SWEEP_BUGSINK_API_TOKEN` in the shell. The token is exactly 40
+lowercase hexadecimal characters. Liveness uses the dedicated `runtime-sweep`
+project and a sequential harness with no competing writers; missing or
+malformed credentials make the import blind.

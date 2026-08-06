@@ -12,6 +12,7 @@ export * from "./matrix/matrix-finalizer.ts";
 export * from "./matrix/specialized-declarations.ts";
 export * from "./preflight/environment-feedback.ts";
 export * from "./preflight/environment-observer.ts";
+export * from "./preflight/environment-observer-bugsink.ts";
 export * from "./preflight/environment-observer-probes.ts";
 export * from "./preflight/playwright-preflight.ts";
 export * from "./preflight/preflight-artifact.ts";

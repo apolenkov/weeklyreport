@@ -6,7 +6,7 @@ import {
 import type { Page } from "@playwright/test";
 
 // Use relative URL so the request goes through the Playwright baseURL
-// (http://127.0.0.1:3100 in E2E mode) instead of hardcoded localhost:3000.
+// (the configured UAT web origin in E2E mode) instead of hardcoded localhost:3000.
 // Cookies set via localhost domain are not sent to 127.0.0.1 and the tRPC
 // context DEV_SESSION fallback would return role=head for any unauthenticated
 // request, causing false "role mismatch" failures.
