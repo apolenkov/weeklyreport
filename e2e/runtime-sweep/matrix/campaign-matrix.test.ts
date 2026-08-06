@@ -236,6 +236,12 @@ describe("campaign runtime matrix", () => {
 
     expect(plan.states.length).toBeGreaterThan(0);
     expect(
+      plan.states.some(({ axes }) => axes.permission === "forbidden"),
+    ).toBe(false);
+    expect(
+      plan.states.some(({ axes }) => axes.permission === "non-owner"),
+    ).toBe(true);
+    expect(
       plan.states.every(
         ({ axes }) =>
           axes.fault === "none" && axes.controlTransition === "none",

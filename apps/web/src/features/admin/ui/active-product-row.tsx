@@ -4,7 +4,7 @@ import { STAGE_NAMES } from "@customreport/shared";
 
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
-import { StageAssignmentEditor } from "./stage-assignment-editor";
+import { StageAssignmentEditor } from "./stage-assignments/stage-assignment-editor";
 
 interface ActiveProductRowProps {
   readonly product: AdminProductView;

@@ -13,8 +13,8 @@ import {
   reseedE2eDatabase,
 } from "../../helpers/e2e-database-setup.js";
 import {
+  REACHABLE_ROUTE_SURFACE_EXPECTATION,
   type RuntimeSurfaceExpectation,
-  runtimeSurfaceExpectation,
 } from "../preflight/runtime-surface-expectation.ts";
 import type {
   LifecycleState,
@@ -217,10 +217,7 @@ export function buildStatePreparationPlan(
       groupId: target.groupId,
     },
     oracle,
-    surface: runtimeSurfaceExpectation({
-      route: input.routeKey ?? `${input.routeRole}:${input.routeTarget}`,
-      permission: input.axes.permission,
-    }),
+    surface: REACHABLE_ROUTE_SURFACE_EXPECTATION,
   };
   return Object.freeze({ ...plan, digest: sha256Hex(plan) });
 }

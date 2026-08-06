@@ -129,6 +129,32 @@ test("assigns distinct stable keys to duplicate semantic controls", async ({
   expect(controls[0]?.domOrderKey).toBe("0001:button:Repeat:1");
 });
 
+test("uses a composite name that Playwright can locate exactly", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">
+      <span style="display: flex">
+        <span>Product Status</span><span>0 assigned products</span>
+      </span>
+      <span style="display: block">Assigned stages</span>
+    </button>
+  `);
+
+  const control = (await inventoryDom(page)).controls[0];
+  if (control === undefined) throw new Error("Composite control is missing");
+
+  expect(control.accessibleName).toBe(
+    "Product Status 0 assigned products Assigned stages",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: control.accessibleName,
+      exact: true,
+    }),
+  ).toHaveCount(1);
+});
+
 test("preserves DOM order while annotating keyboard focus policy", async ({
   page,
 }) => {

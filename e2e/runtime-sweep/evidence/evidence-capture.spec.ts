@@ -171,6 +171,39 @@ test("fails accessibility evidence when axe reports a violation", async ({
   expect(observationOutcome(result, "axe")).toBe("fail");
 });
 
+test("stores compact axe evidence without duplicating successful node payloads", async ({
+  page,
+}, testInfo) => {
+  await page.setContent(
+    '<html lang="en"><head><title>Evidence</title></head><body><main><h1>Evidence</h1></main></body></html>',
+  );
+
+  const result = await capture(page, testInfo, {
+    geometryOracle: GEOMETRY_ORACLE,
+  });
+  const axeRef = result.all.find(({ kind }) => kind === "axe");
+  if (axeRef === undefined) throw new Error("Axe evidence is missing");
+  const content = await readFile(axeRef.archivePath, "utf8");
+  const evidence = JSON.parse(content) as {
+    readonly passes: readonly Record<string, unknown>[];
+    readonly fullPageAfterPortalClose: {
+      readonly passes: readonly Record<string, unknown>[];
+    };
+  };
+
+  expect(content).not.toContain('\n  "');
+  expect(evidence.passes[0]).toEqual(
+    expect.objectContaining({
+      id: expect.any(String),
+      nodeCount: expect.any(Number),
+    }),
+  );
+  expect(evidence.passes[0]).not.toHaveProperty("nodes");
+  expect(evidence.fullPageAfterPortalClose.passes[0]).not.toHaveProperty(
+    "nodes",
+  );
+});
+
 test("fails accessibility evidence when an enabled control misses keyboard focus", async ({
   page,
 }, testInfo) => {

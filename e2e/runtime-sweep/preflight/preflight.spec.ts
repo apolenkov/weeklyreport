@@ -10,6 +10,7 @@ import {
   actorForPermission,
   type RuntimeMatrixActor,
 } from "../matrix/runtime-matrix.ts";
+import { clearClientStorage } from "../replay/browser-state/client-storage.ts";
 import { readSourceArtifact } from "../source/source-artifact.ts";
 import {
   prepareRuntimeState,
@@ -126,6 +127,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
       await profileSessions.cache.use(
         actorForPermission(state.axes.permission, route.role),
       );
+      await clearClientStorage(page);
     },
   });
   await writePreflightArtifact(preflightPath, artifact);

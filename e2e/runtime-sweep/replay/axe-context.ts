@@ -26,10 +26,72 @@ export type AxeContextResults = AxeResults &
     fullPageAfterPortalClose: AxeResults;
   }>;
 
+type AxeRule = AxeResults["violations"][number];
+
+export type AxeRuleSummary = Readonly<{
+  id: string;
+  impact: AxeRule["impact"];
+  nodeCount: number;
+}>;
+
+type AxeResultEvidence = Readonly<{
+  testEngine: AxeResults["testEngine"];
+  testRunner: AxeResults["testRunner"];
+  testEnvironment: AxeResults["testEnvironment"];
+  url: string;
+  toolOptions: AxeResults["toolOptions"];
+  violations: AxeResults["violations"];
+  incomplete: AxeResults["incomplete"];
+  passes: readonly AxeRuleSummary[];
+  inapplicable: readonly AxeRuleSummary[];
+}>;
+
+export type AxeEvidence = AxeResultEvidence &
+  Readonly<{
+    activePortalSelectors: readonly string[];
+    fullPageAfterPortalClose: Readonly<{
+      violations: readonly AxeRuleSummary[];
+      incomplete: readonly AxeRuleSummary[];
+      passes: readonly AxeRuleSummary[];
+      inapplicable: readonly AxeRuleSummary[];
+    }>;
+  }>;
+
 const uniqueValues = <T>(values: readonly T[]): readonly T[] =>
   Array.from(
     new Map(values.map((value) => [JSON.stringify(value), value])).values(),
   );
+
+const ruleSummary = ({ id, impact, nodes }: AxeRule): AxeRuleSummary => ({
+  id,
+  impact,
+  nodeCount: nodes.length,
+});
+
+const summarizedRules = (
+  rules: readonly AxeRule[],
+): readonly AxeRuleSummary[] => rules.map(ruleSummary);
+
+export const axeEvidenceFor = (results: AxeContextResults): AxeEvidence => ({
+  testEngine: results.testEngine,
+  testRunner: results.testRunner,
+  testEnvironment: results.testEnvironment,
+  url: results.url,
+  toolOptions: results.toolOptions,
+  violations: results.violations,
+  incomplete: results.incomplete,
+  passes: summarizedRules(results.passes),
+  inapplicable: summarizedRules(results.inapplicable),
+  activePortalSelectors: results.activePortalSelectors,
+  fullPageAfterPortalClose: {
+    violations: summarizedRules(results.fullPageAfterPortalClose.violations),
+    incomplete: summarizedRules(results.fullPageAfterPortalClose.incomplete),
+    passes: summarizedRules(results.fullPageAfterPortalClose.passes),
+    inapplicable: summarizedRules(
+      results.fullPageAfterPortalClose.inapplicable,
+    ),
+  },
+});
 
 const mergeResults = (results: readonly AxeResults[]): AxeResults => {
   const [first, ...rest] = results;

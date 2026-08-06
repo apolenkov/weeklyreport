@@ -57,7 +57,7 @@ export const writeJson = async (
 ): Promise<EvidenceRef> => {
   const [name, value, kind, dimension] = spec;
   const filePath = inside(input.archiveRoot, path.join(directory, name));
-  const content = Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+  const content = Buffer.from(`${JSON.stringify(value)}\n`, "utf8");
   await writeFile(filePath, content, { flag: "wx" });
   const contentDigest = digest(content);
   return evidenceRefSchema.parse({

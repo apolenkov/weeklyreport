@@ -55,7 +55,7 @@ const recoveryFor = (
     repoRoot: runtime.repoRoot,
     assertBaseline: async () => {
       await prepareCase(source, matrixCase, runtime, () => Promise.resolve());
-      await loginForCase(page, matrixCase);
+      await loginForCase(page, matrixCase, runtime.baseURL);
       const route = routeForState(source, stateForCase(matrixCase));
       await page.goto(route.resolvedRoute);
     },

@@ -88,6 +88,8 @@ const INVENTORY_SCRIPT = String.raw`(() => {
     return tag === "option" ? "option" : "";
   };
   const labels = Array.from(document.querySelectorAll("label"));
+  const readableText = (node) =>
+    node instanceof HTMLElement && node.innerText ? node.innerText : node.textContent || "";
   const formElements = Array.from(document.querySelectorAll("form"));
   const radioGroups = Array.from(document.querySelectorAll('[role="radiogroup"]'));
   const candidates = Array.from(document.querySelectorAll(
@@ -108,9 +110,14 @@ const INVENTORY_SCRIPT = String.raw`(() => {
       bounds.width > 0 && bounds.height > 0;
     const labelledBy = element.getAttribute("aria-labelledby");
     const labelledByText = labelledBy ? labelledBy.split(/\s+/)
-      .map((id) => document.getElementById(id)?.textContent || "").join(" ") : null;
-    const labelText = element.id ? labels.find((label) => label.htmlFor === element.id)?.textContent
-      || null : element.closest("label")?.textContent || null;
+      .map((id) => {
+        const label = document.getElementById(id);
+        return label ? readableText(label) : "";
+      }).join(" ") : null;
+    const explicitLabel = element.id ? labels.find((label) => label.htmlFor === element.id) : null;
+    const wrappingLabel = element.closest("label");
+    const labelText = explicitLabel ? readableText(explicitLabel) :
+      wrappingLabel ? readableText(wrappingLabel) : null;
     const imageAlt = element.querySelector("img[alt]")?.getAttribute("alt") || null;
     const value = element instanceof HTMLInputElement &&
       ["button","image","reset","submit"].includes(inputType || "")
@@ -119,7 +126,7 @@ const INVENTORY_SCRIPT = String.raw`(() => {
       href: element instanceof HTMLAnchorElement ? element.getAttribute("href") : null,
       ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,
       title: element.getAttribute("title"), imageAlt, value,
-      text: element.textContent || "", visible,
+      text: readableText(element), visible,
       disabled: element.matches(":disabled") || element.getAttribute("aria-disabled") === "true",
       inert: Boolean(element.closest("[inert]")),
       tabIndex: element.tabIndex,

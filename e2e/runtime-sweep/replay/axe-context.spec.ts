@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  axeEvidenceFor,
   finalizeAxeContext,
   prepareAxeContext,
   settleEvidenceAnimations,
@@ -56,12 +57,23 @@ test("scans an active portal and then a full page after it closes", async ({
 
   const prepared = await prepareAxeContext(page);
   const result = await finalizeAxeContext(page, prepared);
+  const evidence = axeEvidenceFor(result);
 
   expect(result.activePortalSelectors).toEqual([
     "[data-radix-popper-content-wrapper]",
   ]);
   expect(result.fullPageAfterPortalClose).toEqual(
     expect.objectContaining({ violations: [] }),
+  );
+  expect(evidence.passes[0]).toEqual(
+    expect.objectContaining({
+      id: expect.any(String),
+      nodeCount: expect.any(Number),
+    }),
+  );
+  expect(evidence.passes[0]).not.toHaveProperty("nodes");
+  expect(evidence.fullPageAfterPortalClose.passes[0]).not.toHaveProperty(
+    "nodes",
   );
   await expect(page.locator("[data-radix-popper-content-wrapper]")).toHaveCount(
     0,

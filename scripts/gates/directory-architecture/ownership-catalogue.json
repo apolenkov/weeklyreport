@@ -540,6 +540,14 @@
       "target": "e2e/runtime-sweep/replay/$1"
     },
     {
+      "id": "runtime-browser-state",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/browser-state/(client-storage(?:\\.spec)?\\.ts)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/browser-state/$1"
+    },
+    {
       "id": "runtime-state-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:support/)?((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",

@@ -10,9 +10,11 @@ import { loginByCookie } from "./dev-auth.ts";
 const SESSION_COOKIE = "customreport_session";
 const LONG_ENOUGH = "s".repeat(40);
 
+type AuthMeAnswer = string | Readonly<{ role: string; email: string | null }>;
+
 function isAuthMeSequence(
-  value: string | readonly string[],
-): value is readonly string[] {
+  value: AuthMeAnswer | readonly AuthMeAnswer[],
+): value is readonly AuthMeAnswer[] {
   return Array.isArray(value);
 }
 
@@ -22,7 +24,7 @@ interface Attempt {
   // Session cookie value the context holds afterwards; absent means none set.
   readonly cookie?: string;
   // What the role probe reports back.
-  readonly authMe: string | readonly string[];
+  readonly authMe: AuthMeAnswer | readonly AuthMeAnswer[];
 }
 
 interface Recorded {
@@ -32,12 +34,16 @@ interface Recorded {
   readonly navigations: string[];
 }
 
-const authMeResponse = (answer: string) => {
+const authMeResponse = (answer: AuthMeAnswer) => {
   if (answer === "rate_limited") return { status: 429, body: null };
   if (answer === "unreadable") return { status: 500, body: null };
+  const identity =
+    typeof answer === "string"
+      ? { role: answer, email: `${answer}@example.test` }
+      : answer;
   return {
     status: 200,
-    body: [{ result: { data: { json: { role: answer } } } }],
+    body: [{ result: { data: { json: identity } } }],
   };
 };
 
@@ -160,7 +166,7 @@ describe("loginByCookie", () => {
     expect(recorded.waits).toEqual([]);
   });
 
-  it("backs off and retries while the role probe is rate-limited", async () => {
+  it("backs off and retries while the identity probe is rate-limited", async () => {
     const { page, recorded } = scriptedPage([
       {
         cookie: LONG_ENOUGH,
@@ -178,14 +184,16 @@ describe("loginByCookie", () => {
     expect(recorded.navigations).toEqual(["/"]);
   });
 
-  it("fails closed when the probe is still rate-limited on the last attempt", async () => {
+  it("fails closed when the identity probe is still rate-limited on the last attempt", async () => {
     const { page, recorded } = scriptedPage([
       { cookie: LONG_ENOUGH, authMe: "rate_limited" },
     ]);
 
     await expect(
       loginByCookie(page, { role: "head", maxRetries: 1 }),
-    ).rejects.toThrow(/role verification remained rate-limited.*expected head/);
+    ).rejects.toThrow(
+      /identity verification remained rate-limited.*expected role=head/,
+    );
 
     expect(recorded.loginUrls).toHaveLength(1);
     expect(recorded.navigations).toEqual([]);
@@ -196,7 +204,7 @@ describe("loginByCookie", () => {
 
     await expect(
       loginByCookie(page, { role: "lead", maxRetries: 1 }),
-    ).rejects.toThrow(/expected lead, got viewer/);
+    ).rejects.toThrow(/expected role=lead.*got role=viewer/);
     expect(recorded.navigations).toEqual([]);
   });
 
@@ -207,7 +215,7 @@ describe("loginByCookie", () => {
 
     await expect(
       loginByCookie(page, { role: "lead", maxRetries: 1 }),
-    ).rejects.toThrow(/got null/);
+    ).rejects.toThrow(/got role=null email=null/);
   });
 
   it("gives up immediately when dev-login does not redirect", async () => {
@@ -236,6 +244,28 @@ describe("loginByCookie", () => {
     await loginByCookie(page, { role: "lead", expectRole: "head" });
 
     expect(recorded.loginUrls[0]).toContain("role=lead");
+    expect(recorded.navigations).toEqual(["/"]);
+  });
+
+  it("verifies an explicitly selected same-role identity by email", async () => {
+    const { page, recorded } = scriptedPage([
+      {
+        cookie: LONG_ENOUGH,
+        authMe: { role: "lead", email: "maria@customreport.local" },
+      },
+      {
+        cookie: LONG_ENOUGH,
+        authMe: { role: "lead", email: "lead1@customreport.local" },
+      },
+    ]);
+
+    await loginByCookie(page, {
+      role: "lead",
+      email: "lead1@customreport.local",
+    });
+
+    expect(recorded.loginUrls).toHaveLength(2);
+    expect(recorded.clearCookieCalls).toHaveLength(2);
     expect(recorded.navigations).toEqual(["/"]);
   });
 });
