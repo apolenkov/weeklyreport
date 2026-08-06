@@ -30,6 +30,32 @@ test("starts the tab trace at the document start after a mid-page focus", async 
   });
 });
 
+test("matches focused controls by their rendered accessible text", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <a href="#users" style="text-transform: capitalize">users</a>
+    <button type="button">
+      Summary
+      <span style="display: none">Hidden details</span>
+    </button>
+  `);
+
+  const trace = await captureKeyboardTrace(page);
+
+  expect(
+    trace.controls.map(({ accessibleName, focusable, outcome }) => ({
+      accessibleName,
+      focusable,
+      outcome,
+    })),
+  ).toEqual([
+    { accessibleName: "Users", focusable: true, outcome: "pass" },
+    { accessibleName: "Summary", focusable: true, outcome: "pass" },
+  ]);
+  expect(trace.focusGaps).toEqual([]);
+});
+
 test("fails closed when the keyboard start marker already belongs to the page", async ({
   page,
 }) => {

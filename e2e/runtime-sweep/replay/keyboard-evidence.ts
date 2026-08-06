@@ -40,6 +40,8 @@ type FocusedControl = Readonly<{
 const FOCUSED_CONTROL_SCRIPT = String.raw`(() => {
   const active = document.activeElement;
   if (!(active instanceof HTMLElement)) return null;
+  const readableText = (node) =>
+    node instanceof HTMLElement && node.innerText ? node.innerText : node?.textContent || "";
   const roleFor = (element) => {
     const explicit = element.getAttribute("role")?.trim().split(/\s+/).at(0);
     if (explicit) return explicit;
@@ -62,7 +64,7 @@ const FOCUSED_CONTROL_SCRIPT = String.raw`(() => {
     const labelledBy = element.getAttribute("aria-labelledby");
     if (labelledBy) {
       const text = labelledBy.split(/\s+/)
-        .map((id) => document.getElementById(id)?.textContent || "")
+        .map((id) => readableText(document.getElementById(id)))
         .join(" ").replaceAll(/\s+/g, " ").trim();
       if (text) return text;
     }
@@ -72,11 +74,11 @@ const FOCUSED_CONTROL_SCRIPT = String.raw`(() => {
     const label = id
       ? Array.from(document.querySelectorAll("label")).find((candidate) => candidate.htmlFor === id)
       : element.closest("label");
-    const labelText = label?.textContent?.replaceAll(/\s+/g, " ").trim();
+    const labelText = readableText(label).replaceAll(/\s+/g, " ").trim();
     if (labelText) return labelText;
     const title = element.getAttribute("title")?.trim();
     if (title) return title;
-    return element.textContent.replaceAll(/\s+/g, " ").trim();
+    return readableText(element).replaceAll(/\s+/g, " ").trim();
   };
   const elements = Array.from(document.querySelectorAll(
     "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]"
