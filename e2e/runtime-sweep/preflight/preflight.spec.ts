@@ -16,15 +16,13 @@ import {
   prepareRuntimeState,
   type RuntimeStateResetter,
 } from "../support/state-preparation.ts";
-import {
-  preflightStateGroupKey,
-  runPlaywrightPreflight,
-} from "./playwright-preflight.ts";
+import { runPlaywrightPreflight } from "./playwright-preflight.ts";
 import { writePreflightArtifact } from "./preflight-artifact.ts";
 import {
   createPreflightSessionCache,
   createProfileSessionCacheRegistry,
   preflightGroupNeedsReset,
+  preflightStateGroupKey,
 } from "./preflight-session.ts";
 import { createPrismaRuntimeStateDatabase } from "./prisma-state-database.ts";
 

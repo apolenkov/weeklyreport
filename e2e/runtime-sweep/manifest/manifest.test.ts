@@ -5,10 +5,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertSpecializedNominalTargets,
-  preflightSessionGroupKey,
   runBrowserPreflight,
 } from "../preflight/playwright-preflight.ts";
 import { writePreflightArtifact } from "../preflight/preflight-artifact.ts";
+import { preflightSessionGroupKey } from "../preflight/preflight-session.ts";
 import { campaignManifestSchema } from "../source/contracts.ts";
 import {
   buildCampaignManifest,

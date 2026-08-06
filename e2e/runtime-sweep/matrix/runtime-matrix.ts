@@ -17,6 +17,7 @@ import {
   type Oracle,
   type PermissionBoundary,
   type Role,
+  type RouteBindingTarget,
   stateAxesSchema,
 } from "../source/contracts.ts";
 import { type CampaignMatrixState } from "./campaign-matrix.ts";
@@ -57,6 +58,11 @@ export type RuntimeMatrixActor = Readonly<{
   readonly role: DbRole | null;
   readonly email: string | null;
 }>;
+
+export const runtimeStateGroupKey = (
+  profile: CampaignMatrixState["profile"],
+  target: RouteBindingTarget,
+): string => `${profile}:${target === "published" ? "published" : "active"}`;
 
 const actorFromId = (id: string): RuntimeMatrixActor => {
   const user = userById(id);

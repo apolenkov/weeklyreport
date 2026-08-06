@@ -1,6 +1,34 @@
 import type { Cookie } from "@playwright/test";
 
-import type { RuntimeMatrixActor } from "../matrix/runtime-matrix.ts";
+import type { CampaignMatrixState } from "../matrix/campaign-matrix.ts";
+import {
+  actorForPermission,
+  type RuntimeMatrixActor,
+  runtimeStateGroupKey,
+} from "../matrix/runtime-matrix.ts";
+import type { RouteBindingTarget } from "../source/contracts.ts";
+
+type PreflightGroupRoute = Readonly<{
+  readonly role: CampaignMatrixState["axes"]["role"];
+  readonly target: RouteBindingTarget;
+}>;
+
+export const preflightStateGroupKey = (
+  state: CampaignMatrixState,
+  route: PreflightGroupRoute,
+): string => runtimeStateGroupKey(state.profile, route.target);
+
+export const preflightSessionGroupKey = (
+  state: CampaignMatrixState,
+  route: PreflightGroupRoute,
+): string => {
+  const actor = actorForPermission(state.axes.permission, route.role);
+  return [
+    preflightStateGroupKey(state, route),
+    actor.role ?? "anonymous",
+    actor.email ?? "anonymous",
+  ].join(":");
+};
 
 export interface PreflightCookieContext {
   readonly clearCookies: () => Promise<void>;

@@ -13,6 +13,7 @@ import {
 
 const harness = vi.hoisted(() => ({
   inventories: [] as DomInventory[],
+  reseed: vi.fn(),
   prepareCase: vi.fn(
     (
       _source: unknown,
@@ -33,6 +34,10 @@ const harness = vi.hoisted(() => ({
         },
       }),
   ),
+}));
+
+vi.mock("../../helpers/e2e-database-setup.ts", () => ({
+  reseedE2eDatabase: harness.reseed,
 }));
 
 vi.mock("./dom-inventory.ts", () => ({
@@ -56,7 +61,13 @@ vi.mock("./frozen-case-evidence.ts", () => ({
           observations: [{ observationId: "functional", outcome: "pass" }],
         },
       });
-      return { cell: { cellId: "case-rerender", controls }, issues: [] };
+      const matrixCase = input as typeof input & {
+        readonly matrixCase: MatrixExecutableCase;
+      };
+      return {
+        cell: { cellId: matrixCase.matrixCase.caseId, controls },
+        issues: [],
+      };
     },
   ),
 }));
@@ -79,7 +90,10 @@ vi.mock("./frozen-case-live-actions.ts", () => ({
   }),
   loginForCase: vi.fn(() => Promise.resolve()),
   prepareCase: harness.prepareCase,
-  stateForCase: vi.fn(() => ({})),
+  stateForCase: vi.fn((matrixCase: MatrixExecutableCase) => ({
+    profile: matrixCase.profile,
+    axes: { route: `${matrixCase.role}:${matrixCase.catalogRoute}` },
+  })),
 }));
 
 vi.mock("./frozen-case-live-capture.ts", () => ({
@@ -106,7 +120,16 @@ vi.mock("./frozen-case-live-capture.ts", () => ({
 
 vi.mock("../matrix/runtime-matrix.ts", () => ({
   RUNTIME_MATRIX_ORACLE: {},
-  routeForState: vi.fn(() => ({ resolvedRoute: "/lead/report" })),
+  routeForState: vi.fn(
+    (_source: unknown, state: { axes: { route: string } }) =>
+      state.axes.route.includes("published")
+        ? { resolvedRoute: "/reports/published", target: "published" }
+        : { resolvedRoute: "/lead/report", target: "active" },
+  ),
+  runtimeStateGroupKey: vi.fn(
+    (profile: string, target: string) =>
+      `${profile}:${target === "published" ? "published" : "active"}`,
+  ),
 }));
 
 vi.mock("../matrix/runtime-matrix-evidence.ts", () => ({
@@ -167,6 +190,8 @@ const matrixCase: MatrixExecutableCase = {
 
 describe("frozen case live runner", () => {
   it("persists the action-phase inventory after a rerender", async () => {
+    harness.reseed.mockClear();
+    harness.prepareCase.mockClear();
     harness.inventories = [
       inventory("Before"),
       inventory("After"),
@@ -176,7 +201,8 @@ describe("frozen case live runner", () => {
     const cells = await runFrozenCases(
       {
         context: () => ({ browser: () => ({}) }),
-      } as Page,
+        goto: vi.fn(() => Promise.resolve(null)),
+      } as unknown as Page,
       {} as RuntimeMatrixSource,
       [matrixCase],
       {} as FrozenCaseLiveRuntime,
@@ -189,5 +215,64 @@ describe("frozen case live runner", () => {
     const resetter = harness.prepareCase.mock.calls[0]?.[3];
     expect(resetter).toEqual(expect.any(Function));
     if (typeof resetter === "function") expect(resetter()).toBeUndefined();
+    expect(harness.reseed).not.toHaveBeenCalled();
+  });
+
+  it("reseeds once between target groups and restores matrix order", async () => {
+    harness.reseed.mockClear();
+    harness.prepareCase.mockClear();
+    harness.inventories = Array.from({ length: 9 }, (_, index) =>
+      inventory(`Control ${index}`),
+    );
+    const published = {
+      ...matrixCase,
+      caseId: "case-published",
+      stateId: "state-published",
+      catalogRoute: "/reports/published",
+      resolvedRoute: "/reports/published",
+    } satisfies MatrixExecutableCase;
+    const active = {
+      ...matrixCase,
+      caseId: "case-active",
+      stateId: "state-active",
+    } satisfies MatrixExecutableCase;
+    const publishedSecond = {
+      ...published,
+      caseId: "case-published-second",
+    } satisfies MatrixExecutableCase;
+
+    const goto = vi.fn(() => Promise.resolve(null));
+    const cells = await runFrozenCases(
+      {
+        context: () => ({ browser: () => ({}) }),
+        goto,
+      } as unknown as Page,
+      {} as RuntimeMatrixSource,
+      [published, active, publishedSecond],
+      {
+        archiveRoot: "/archive",
+        baseURL: "http://127.0.0.1:3105",
+        databaseUrl: "postgresql://runtime",
+        repoRoot: "/repo",
+      },
+      {} as TestInfo,
+    );
+
+    expect(cells.map(({ cellId }) => cellId)).toEqual([
+      "case-published",
+      "case-active",
+      "case-published-second",
+    ]);
+    expect(harness.reseed).toHaveBeenCalledOnce();
+    expect(harness.reseed).toHaveBeenCalledWith({
+      databaseUrl: "postgresql://runtime",
+      profile: "minimal",
+      repoRoot: "/repo",
+    });
+    expect(goto).toHaveBeenCalledOnce();
+    expect(goto).toHaveBeenCalledWith("about:blank");
+    expect(goto.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.reseed.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
   });
 });
