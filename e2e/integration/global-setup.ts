@@ -7,6 +7,7 @@ import {
 } from "../../prisma/seeds/profiles/seed-profile-contract.js";
 import type { E2eDatabaseSetupMode } from "../helpers/e2e-database-setup.js";
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
+import { resetE2eRedis } from "../helpers/e2e-redis-setup.js";
 
 export function findRepoRoot(startDir: string): string {
   if (existsSync(path.join(startDir, "package.json"))) return startDir;
@@ -64,7 +65,7 @@ export function runtimeDatabaseSetupMode(
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
  * so by the time we get here it is guaranteed defined.
  */
-export default function globalSetup(): void {
+export default async function globalSetup(): Promise<void> {
   const dbUrl = process.env.E2E_DATABASE_URL;
   if (!dbUrl) throw new Error("E2E_DATABASE_URL not set");
 
@@ -76,4 +77,5 @@ export default function globalSetup(): void {
     repoRoot,
     mode: runtimeDatabaseSetupMode(),
   });
+  await resetE2eRedis();
 }
