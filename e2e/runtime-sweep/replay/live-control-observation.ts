@@ -105,7 +105,7 @@ const occurrenceFrom = (controlKey: string): number => {
 const normalized = (value: string): string =>
   value.replaceAll(/\s+/gu, " ").trim();
 
-export const matchingControlCount = (
+const matchingControlCount = (
   snapshot: PageSnapshot,
   target: ObservableControlTarget,
 ): number =>
