@@ -33,6 +33,30 @@ test("locates a title-labelled control when its visible name differs", async ({
   expect(result).toMatchObject({ status: "pass" });
 });
 
+test("uses the frozen href when a link accessible name changes", async ({
+  page,
+}) => {
+  await page.setContent('<a href="#settings">Current label</a>');
+
+  const result = await executeControlAction({
+    page,
+    control: {
+      controlKey: "link:Settings:1",
+      ariaRole: "link",
+      accessibleName: "Settings",
+      enabled: true,
+      href: "#settings",
+    },
+    action: clickAction("link:Settings:1"),
+    observeOutcome: async (): Promise<"pass"> => {
+      await expect(page).toHaveURL(/#settings$/u);
+      return "pass";
+    },
+  });
+
+  expect(result).toMatchObject({ status: "pass" });
+});
+
 test("waits for a transient control before exercising it", async ({ page }) => {
   await page.setContent(`
     <button type="button" hidden>Open details</button>

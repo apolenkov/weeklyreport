@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { inventoryDom } from "./dom-inventory.ts";
+import { captureKeyboardTrace } from "./keyboard-evidence.ts";
 import {
   executeLiveControlPlans,
   planLiveControlActions,
@@ -249,5 +250,35 @@ test.describe("runtime live-control lane", () => {
       status: "fail",
       observation: { kind: "dom" },
     });
+  });
+
+  test("captures roving menu items with arrow navigation", async ({ page }) => {
+    await page.setContent(`
+      <div role="menu" aria-label="User actions" tabindex="0">
+        <button role="menuitem" tabindex="-1">View user</button>
+        <button role="menuitem" tabindex="-1">Delete user</button>
+      </div>
+      <script>
+        document.querySelector('[role="menu"]').addEventListener("keydown", (event) => {
+          if (event.key !== "ArrowDown") return;
+          event.preventDefault();
+          const items = Array.from(document.querySelectorAll('[role="menuitem"]'));
+          const current = items.indexOf(document.activeElement);
+          items[(current + 1) % items.length].focus();
+        });
+      </script>
+    `);
+    await page.getByRole("menu", { name: "User actions" }).focus();
+
+    const trace = await captureKeyboardTrace(page);
+    const items = trace.controls.filter(({ role }) => role === "menuitem");
+
+    expect(
+      items.map(({ accessibleName, outcome }) => [accessibleName, outcome]),
+    ).toEqual([
+      ["View user", "pass"],
+      ["Delete user", "pass"],
+    ]);
+    expect(trace.focusGaps).toEqual([]);
   });
 });

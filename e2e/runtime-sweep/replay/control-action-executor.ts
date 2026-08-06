@@ -96,6 +96,21 @@ export const titleTargetLocator = (
     .nth(occurrenceFrom(control.controlKey) - 1);
 };
 
+export const hrefTargetLocator = (
+  page: Page,
+  control: ControlActionTarget,
+): Locator | undefined => {
+  if (
+    control.ariaRole !== "link" ||
+    control.href === null ||
+    control.href === undefined
+  )
+    return undefined;
+  return page
+    .locator(`a[href=${JSON.stringify(control.href)}]`)
+    .nth(occurrenceFrom(control.controlKey) - 1);
+};
+
 export const waitForVisible = async (
   locator: Locator,
   timeoutMs: number,
