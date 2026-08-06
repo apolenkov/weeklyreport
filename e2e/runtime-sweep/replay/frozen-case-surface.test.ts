@@ -220,22 +220,35 @@ test("keeps a synthetic frozen target in canonical DOM order", () => {
   ]);
 });
 
-test.each([
-  ["no pre-action target", exercised("pass"), undefined],
-  ["failed action", exercised("fail"), frozenActionTarget],
-] as const)(
-  "keeps a missing frozen target failing when %s",
-  (_reason, actionResult, target) => {
-    const controls = controlsForCase(
-      { controls: [], issues: [] },
-      matrixCase,
-      actionResult,
-      deniedSurface,
-      target,
-    );
+test("keeps a missing frozen target failing without a pre-action target", () => {
+  const controls = controlsForCase(
+    { controls: [], issues: [] },
+    matrixCase,
+    exercised("pass"),
+    deniedSurface,
+  );
 
-    expect(controlIssues(matrixCase, controls, [])).toContain(
-      "case-denied-product-action is missing frozen control button:Edit:1",
-    );
-  },
-);
+  expect(controlIssues(matrixCase, controls, [])).toContain(
+    "case-denied-product-action is missing frozen control button:Edit:1",
+  );
+});
+
+test("retains the pre-action target and failed result after recovery", () => {
+  const controls = controlsForCase(
+    { controls: [], issues: [] },
+    matrixCase,
+    exercised("fail"),
+    deniedSurface,
+    frozenActionTarget,
+  );
+
+  expect(controls).toContainEqual({
+    controlKey: actionControlKey,
+    cellId: matrixCase.caseId,
+    ariaRole: "button",
+    accessibleName: "Edit",
+    enabled: true,
+    order: 1,
+    actionResult: exercised("fail"),
+  });
+});

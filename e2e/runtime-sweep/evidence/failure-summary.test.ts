@@ -132,4 +132,57 @@ describe("runtime failure summaries", () => {
     expect(summary).toContain("button:Continue");
     expect(summary).not.toContain("button:Other");
   });
+
+  it("names a failed exercised target without blaming disabled controls", () => {
+    const summary = compactFailedCellSummary([
+      {
+        cellId: "cell-delete",
+        verdict: "fail",
+        action: {
+          controlKey: "button:Delete:1",
+          operation: "delete",
+          safety: "irreversible",
+          transition: "delete",
+        },
+        controls: [
+          {
+            controlKey: "button:Delete:1",
+            cellId: "cell-delete",
+            ariaRole: "button",
+            accessibleName: "Delete",
+            enabled: true,
+            order: 1,
+            actionResult: {
+              kind: "exercised",
+              result: "fail",
+              evidenceIds: ["action-proof"],
+            },
+          },
+          {
+            controlKey: "button:Theme:1",
+            cellId: "cell-delete",
+            ariaRole: "button",
+            accessibleName: "Theme selection is coming soon",
+            enabled: false,
+            order: 2,
+            actionResult: {
+              kind: "not-exercised",
+              policy: "unavailable",
+              reason: "Control is disabled",
+            },
+          },
+        ],
+        evidence: {
+          before: [],
+          action: [],
+          after: [],
+          observations: [],
+          inapplicable: [],
+        },
+      },
+    ]);
+
+    expect(summary).toContain("button:Delete:1: exercised action failed");
+    expect(summary).not.toContain("Theme");
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   controlAlreadyActive,
+  controlCountDecreased,
   observationFor,
   type PageSnapshot,
 } from "./live-control-observation.ts";
@@ -115,5 +116,29 @@ describe("live control observations", () => {
         accessibleName: "Notifications",
       }),
     ).toBe(false);
+  });
+
+  it("recognizes deletion only when the matching semantic control count decreases", () => {
+    const deleteControl = {
+      role: "button",
+      name: "Delete",
+      title: null,
+      checked: undefined,
+      ariaChecked: null,
+      ariaExpanded: null,
+      ariaPressed: null,
+      selected: null,
+      value: undefined,
+    };
+    const before = snapshot({ controls: [deleteControl, deleteControl] });
+    const after = snapshot({ controls: [deleteControl] });
+    const target = {
+      controlKey: "button:Delete:1",
+      ariaRole: "button",
+      accessibleName: "Delete",
+    };
+
+    expect(controlCountDecreased(before, after, target)).toBe(true);
+    expect(controlCountDecreased(before, before, target)).toBe(false);
   });
 });

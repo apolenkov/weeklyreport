@@ -105,6 +105,25 @@ const occurrenceFrom = (controlKey: string): number => {
 const normalized = (value: string): string =>
   value.replaceAll(/\s+/gu, " ").trim();
 
+export const matchingControlCount = (
+  snapshot: PageSnapshot,
+  target: ObservableControlTarget,
+): number =>
+  (snapshot.controls ?? []).filter(
+    (control) =>
+      control.role === target.ariaRole &&
+      [control.name, control.title ?? ""].some(
+        (name) => normalized(name) === normalized(target.accessibleName),
+      ),
+  ).length;
+
+export const controlCountDecreased = (
+  before: PageSnapshot,
+  after: PageSnapshot,
+  target: ObservableControlTarget,
+): boolean =>
+  matchingControlCount(after, target) < matchingControlCount(before, target);
+
 export const controlAlreadyActive = (
   before: PageSnapshot,
   target: ObservableControlTarget,

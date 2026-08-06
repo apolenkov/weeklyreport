@@ -243,9 +243,7 @@ export const controlsForCase = (
   if (action === undefined || action.operation === "navigate") return controls;
   const target = targetForAction(inventory, action);
   if (target === undefined) {
-    return actionResult.kind === "exercised" &&
-      actionResult.result === "pass" &&
-      frozenTarget !== undefined
+    return frozenTarget !== undefined
       ? orderControls([
           ...controls,
           actionControlFor(frozenTarget, actionResult, matrixCase),
