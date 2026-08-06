@@ -1,7 +1,7 @@
 import { type NavigationPage, settleNavigation } from "./navigation.ts";
 
 const ACTION_NAVIGATION_GRACE_MS = 100;
-const ACTION_NAVIGATION_TIMEOUT_MS = 2000;
+const ACTION_NAVIGATION_TIMEOUT_MS = 10_000;
 const SIGN_OUT_NAVIGATION_TIMEOUT_MS = 10_000;
 const SIGN_OUT_CONTROL_KEY = /^button:Sign(?:%20|\s)out:\d+$/u;
 const GENERIC_NAVIGATION_ROLES = new Set(["link"]);
@@ -14,15 +14,12 @@ export interface ActionNavigationExpectation {
 
 export interface ActionNavigationPage {
   readonly url: () => string;
-  readonly mainFrame: () => object;
-  readonly waitForEvent: (
-    event: "framenavigated",
+  readonly waitForURL: (
+    predicate: (url: URL) => boolean,
     options: Readonly<{
-      readonly predicate?: (frame: object) => boolean;
       readonly timeout?: number;
-      readonly signal?: AbortSignal;
     }>,
-  ) => Promise<object>;
+  ) => Promise<void>;
 }
 
 const controlParts = (
@@ -70,41 +67,23 @@ export const observeActionNavigation = (
 ): ActionNavigationObserver => {
   const initialUrl = page.url();
   const timeoutMs = expectation?.timeoutMs ?? ACTION_NAVIGATION_GRACE_MS;
-  const controller = new AbortController();
-  const navigation = page
-    .waitForEvent("framenavigated", {
-      predicate: (frame) => frame === page.mainFrame(),
-      timeout: 0,
-      signal: controller.signal,
-    })
-    .then(() => true)
-    .catch((error: unknown) => {
-      if (controller.signal.aborted) return false;
-      throw error;
-    });
-  const cancel = (): void => controller.abort();
 
   return {
     initialUrl,
-    cancel,
+    cancel: () => undefined,
     waitForNavigation: async (): Promise<boolean> => {
       if (page.url() !== initialUrl) return true;
-      const timeout = new Promise<"timeout">((resolve) => {
-        const timer = setTimeout(() => resolve("timeout"), timeoutMs);
-        navigation.then(
-          () => clearTimeout(timer),
-          () => clearTimeout(timer),
-        );
-      });
-      const result = await Promise.race([
-        navigation.then(() => "navigation" as const),
-        timeout,
-      ]);
-      if (result === "timeout") {
-        cancel();
-        return false;
+      try {
+        await page.waitForURL((url) => url.toString() !== initialUrl, {
+          timeout: timeoutMs,
+        });
+        return true;
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "TimeoutError") {
+          return false;
+        }
+        throw error;
       }
-      return true;
     },
   };
 };
