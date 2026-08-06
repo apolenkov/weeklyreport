@@ -8,13 +8,13 @@ import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
 } from "../../report-sections";
+import { ActivityStatusStrip } from "../../report-sections";
 import type { ReviewMode, SubmissionFilter } from "../../review";
 import {
   DraftHiddenSignal,
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../review";
-import { ActivityStatusStrip } from "./activity-status-strip";
 import {
   AcknowledgeSurface,
   ReportAccordionBody,

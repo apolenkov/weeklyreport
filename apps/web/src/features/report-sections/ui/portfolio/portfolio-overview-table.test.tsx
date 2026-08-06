@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
-} from "../../report-sections";
+} from "../../model/weekly-report-types";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 
 const NOOP_NAVIGATE = () => undefined;

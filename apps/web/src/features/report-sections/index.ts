@@ -1,8 +1,3 @@
-export type { ActivityBucket } from "./model/activity/activity-buckets";
-export {
-  ACTIVITY_BUCKET_LABELS,
-  ACTIVITY_BUCKET_ORDER,
-} from "./model/activity/activity-buckets";
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
@@ -87,7 +82,6 @@ export type {
   DecisionEntry,
   KanbanItem,
   Product,
-  ProductKanbanItem,
   ReportPeriod,
   RiskEntry,
   StageAssignment,
@@ -108,6 +102,8 @@ export type {
   WeeklyReportItem,
   WeeklyReportRisk,
 } from "./model/weekly-report-types";
+export { ActivityStatusStrip } from "./ui/activity/activity-status-strip";
+export { UnifiedActivitySection } from "./ui/activity/unified-activity-section";
 export { ActivityLanesBlock } from "./ui/activity-lanes-block";
 export { BoardColumnHeader } from "./ui/board-column-header";
 export { BoardEmptyState } from "./ui/board-empty-state";
@@ -115,7 +111,9 @@ export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
 export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
+export { NextWeekSection } from "./ui/next-week/next-week-section";
 export type { ParentActivityOption, RecordParent } from "./ui/parent-picker";
 export { ParentPicker } from "./ui/parent-picker";
+export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";

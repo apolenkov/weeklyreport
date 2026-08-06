@@ -8,10 +8,10 @@ import type {
   KanbanItem,
   LeadFormLoadedViewModel,
 } from "../../report-sections";
+import { NextWeekSection } from "../../report-sections";
+import { UnifiedActivitySection } from "../../report-sections";
 import { addItemAction } from "./lead-form-add-item-button";
 import { CalendarIcon, NextWeekIcon } from "./lead-form-icons";
-import { NextWeekSection } from "./next-week-section";
-import { UnifiedActivitySection } from "./unified-activity-section";
 
 export interface LeadFormItemSectionsActions {
   readonly onCurrentWeekItemsChange: (items: readonly KanbanItem[]) => void;

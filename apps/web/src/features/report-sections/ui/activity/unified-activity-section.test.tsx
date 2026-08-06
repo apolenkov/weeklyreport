@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { expectDefined } from "../../../test-utils/expect-defined.js";
-import type { ProductKanbanItem } from "../../report-sections";
+import { expectDefined } from "../../../../test-utils/expect-defined.js";
+import type { ProductKanbanItem } from "../../model/types";
 import {
   type UnifiedActivityEntry,
   UnifiedActivitySection,

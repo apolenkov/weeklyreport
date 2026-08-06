@@ -23,7 +23,7 @@
 ## 4. Web Canonical Homes
 
 - [x] 4.1 Freeze a symbol/consumer map for `report-pages`, root `lib`, root hooks, `src/server`, and flat shared UI before any move.
-- [ ] 4.2 Move report-section-owned `report-pages` UI/model/hooks behind the report-sections facade without changing page behavior.
+- [x] 4.2 Move report-section-owned `report-pages` UI/model/hooks behind the report-sections facade without changing page behavior.
 - [ ] 4.3 Move period- and review-owned `report-pages` behavior behind their facades, leaving only genuine page composition in `report-pages`.
 - [x] 4.4 Move root `lib` modules by concern to feature model/api or `shared/lib`; remove obsolete root paths and mega-barrels.
 - [x] 4.5 Move generic hooks/server code to `shared/hooks` and `shared/server`, and domain hooks to the owning feature model.

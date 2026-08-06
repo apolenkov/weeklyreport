@@ -4,9 +4,10 @@ import {
   ACTIVITY_BUCKET_LABELS,
   ACTIVITY_BUCKET_ORDER,
   type ActivityBucket,
-} from "../../report-sections";
-import { ItemCard, type RiskEntry } from "../../report-sections";
-import type { UnifiedActivityEntry } from "./use-unified-activity-editing";
+} from "../../model/activity/activity-buckets";
+import type { UnifiedActivityEntry } from "../../model/activity/use-unified-activity-editing";
+import type { RiskEntry } from "../../model/types";
+import { ItemCard } from "../item-card";
 
 interface BucketCardProps {
   readonly risks?: readonly RiskEntry[] | undefined;
