@@ -23,8 +23,8 @@
       "trackedFiles": 83
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "fbbfed9d4ae1414e74411be70aeb0d0962107582",
-      "pathDigest": "d6083066b20eb76ecbc505ff5407a7b6d9fb415fc9bbdf7e97a27d36a02862f5",
+      "gitTree": "a040c0a0b2225f0cd275adffa5c3d05b0ae936fd",
+      "pathDigest": "2f7c574f634661984770dc0eae223e17e834190c6e5073352f2a58515704b3c9",
       "trackedFiles": 98
     },
     "apps/web/src/shared/lib": {
@@ -62,7 +62,6 @@
     "apps/web/src/features/admin/ui": 74,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
-    "apps/web/src/features/report-pages/ui": 95,
     "apps/web/src/features/report-sections/model": 47,
     "apps/web/src/features/report-sections/ui": 35,
     "apps/web/src/features/review/ui": 33,
@@ -109,11 +108,6 @@
     {
       "directory": "apps/web/src/features/period/ui",
       "baseline": 72,
-      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "apps/web/src/features/report-pages/ui",
-      "baseline": 143,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     },
     {
