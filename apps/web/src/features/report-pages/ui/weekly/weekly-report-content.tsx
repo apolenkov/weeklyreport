@@ -88,6 +88,7 @@ type ReportTopSurfacesProps = Pick<
   | "scope"
   | "portfolio"
   | "leadOverviewRows"
+  | "accordion"
   | "activitySections"
   | "submittedOnly"
   | "onNavigateOverview"
@@ -99,6 +100,7 @@ function ReportTopSurfaces({
   scope,
   portfolio,
   leadOverviewRows,
+  accordion,
   activitySections,
   submittedOnly,
   onNavigateOverview,
@@ -119,6 +121,7 @@ function ReportTopSurfaces({
         scope={scope}
         portfolio={portfolio}
         leadOverviewRows={leadOverviewRows}
+        mountedProductIds={new Set(accordion.products.map(({ id }) => id))}
         onNavigate={onNavigateOverview}
       />
 
@@ -237,6 +240,7 @@ export function ReportContent(props: ReportContentProps) {
         scope={props.scope}
         portfolio={props.portfolio}
         leadOverviewRows={props.leadOverviewRows}
+        accordion={props.accordion}
         activitySections={props.activitySections}
         submittedOnly={props.submittedOnly}
         onNavigateOverview={props.onNavigateOverview}

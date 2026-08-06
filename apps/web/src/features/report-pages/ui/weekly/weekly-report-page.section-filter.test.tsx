@@ -274,11 +274,17 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     await screen.findByRole("heading", { name: /status report/i });
     expect(accordionCard(PRODUCT_ID_B)).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: /Product Beta/ }));
+    const draftCard = screen.getByRole("button", { name: /Product Beta/ });
+    expect(draftCard).not.toHaveAttribute("aria-controls");
+    await userEvent.click(draftCard);
 
     await waitFor(() => {
       const product = expectDefined(accordionCard(PRODUCT_ID_B));
       expect(product).not.toBeNull();
+      expect(draftCard).toHaveAttribute(
+        "aria-controls",
+        `report-product-${PRODUCT_ID_B}`,
+      );
       expect(
         within(product).getByRole("button", {
           name: /Product Beta/,

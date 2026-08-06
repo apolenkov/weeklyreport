@@ -193,12 +193,29 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     render(
       <PortfolioOverviewTable
         products={[makeProduct({ id: "p1" })]}
+        mountedProductIds={new Set(["p1"])}
         onNavigate={onNavigate}
       />,
     );
 
     const card = screen.getByRole("button", { name: /Product Alpha/u });
     expect(card).toHaveAttribute("aria-controls", "report-product-p1");
+    fireEvent.click(card);
+    expect(onNavigate).toHaveBeenCalledWith("p1");
+  });
+
+  it("omits aria-controls until the product details target is mounted", () => {
+    const onNavigate = vi.fn();
+    render(
+      <PortfolioOverviewTable
+        products={[makeProduct({ id: "p1" })]}
+        mountedProductIds={new Set()}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    const card = screen.getByRole("button", { name: /Product Alpha/u });
+    expect(card).not.toHaveAttribute("aria-controls");
     fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
   });

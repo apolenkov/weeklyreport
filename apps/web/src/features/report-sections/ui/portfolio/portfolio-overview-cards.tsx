@@ -148,9 +148,11 @@ function ProductCardBody({
 export function ProductOverviewCard({
   product,
   onNavigate,
+  controlsDetails,
 }: {
   readonly product: WeeklyPortfolioProduct;
   readonly onNavigate: (productId: string) => void;
+  readonly controlsDetails: boolean;
 }) {
   const isEmpty =
     product.currentWeekCount === 0 &&
@@ -164,7 +166,9 @@ export function ProductOverviewCard({
         background: isEmpty ? EMPTY_CARD_BG : STATUS_BG[product.status],
       }}
       title={isEmpty ? undefined : `Open ${product.name} details`}
-      aria-controls={isEmpty ? undefined : `report-product-${product.id}`}
+      aria-controls={
+        isEmpty || !controlsDetails ? undefined : `report-product-${product.id}`
+      }
       disabled={isEmpty}
       aria-disabled={isEmpty}
       onClick={() => {

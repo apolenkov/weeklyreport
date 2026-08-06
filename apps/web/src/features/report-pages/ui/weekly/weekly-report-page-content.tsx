@@ -134,11 +134,13 @@ export function ReportOverviewBand({
   scope,
   portfolio,
   leadOverviewRows,
+  mountedProductIds,
   onNavigate,
 }: {
   readonly scope: "product" | "lead";
   readonly portfolio: WeeklyPortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
+  readonly mountedProductIds: ReadonlySet<string>;
   readonly onNavigate: (targetId: string) => void;
 }) {
   if (scope === "lead") {
@@ -151,7 +153,11 @@ export function ReportOverviewBand({
     );
   }
   return (
-    <PortfolioOverviewTable products={portfolio} onNavigate={onNavigate} />
+    <PortfolioOverviewTable
+      products={portfolio}
+      mountedProductIds={mountedProductIds}
+      onNavigate={onNavigate}
+    />
   );
 }
 
