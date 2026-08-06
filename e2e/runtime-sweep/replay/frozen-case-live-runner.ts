@@ -1,11 +1,13 @@
 import type { Page, TestInfo } from "@playwright/test";
 
+import { reseedE2eDatabase } from "../../helpers/e2e-database-setup.ts";
 import type { EvidencePhase } from "../evidence/evidence-types.ts";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import {
   routeForState,
   RUNTIME_MATRIX_ORACLE,
   type RuntimeMatrixSource,
+  runtimeStateGroupKey,
 } from "../matrix/runtime-matrix.ts";
 import { writeCell } from "../matrix/runtime-matrix-evidence.ts";
 import { runSpecializedCase } from "../matrix/specialized-case-runner.ts";
@@ -28,6 +30,11 @@ import {
   captureFrozenPhase,
   initialNavigation,
 } from "./frozen-case-live-capture.ts";
+import {
+  type FrozenCaseGroup,
+  groupFrozenCases,
+  restoreFrozenCaseOrder,
+} from "./frozen-case-live-shards.ts";
 
 export type { FrozenCaseLiveRuntime } from "./frozen-case-live-actions.ts";
 
@@ -39,6 +46,15 @@ const persistFrozenCaseCell = async (
 };
 
 const reuseProfileBaseline = (): void => undefined;
+
+const groupKeyFor = (
+  source: RuntimeMatrixSource,
+  matrixCase: MatrixExecutableCase,
+): string =>
+  runtimeStateGroupKey(
+    matrixCase.profile,
+    routeForState(source, stateForCase(matrixCase)).target,
+  );
 
 const captureFrozenCase = async (
   page: Page,
@@ -199,11 +215,61 @@ const runFrozenCaseRange = async (
   return [...left, ...right];
 };
 
-export const runFrozenCases = (
+const runFrozenCaseGroups = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  groups: readonly FrozenCaseGroup[],
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+  index: number,
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  const group = groups[index];
+  if (group === undefined) return [];
+  const firstCase = group[0];
+  if (firstCase === undefined)
+    throw new Error(`Frozen case group ${index} is empty`);
+  if (index > 0) {
+    await page.goto("about:blank");
+    reseedE2eDatabase({
+      databaseUrl: runtime.databaseUrl,
+      profile: firstCase.profile,
+      repoRoot: runtime.repoRoot,
+    });
+  }
+  const current = await runFrozenCaseRange(
+    page,
+    source,
+    group,
+    runtime,
+    testInfo,
+    0,
+    group.length,
+  );
+  const remaining = await runFrozenCaseGroups(
+    page,
+    source,
+    groups,
+    runtime,
+    testInfo,
+    index + 1,
+  );
+  return [...current, ...remaining];
+};
+
+export const runFrozenCases = async (
   page: Page,
   source: RuntimeMatrixSource,
   cases: readonly MatrixExecutableCase[],
   runtime: FrozenCaseLiveRuntime,
   testInfo: TestInfo,
-): Promise<readonly FrozenCaseCoverageCell[]> =>
-  runFrozenCaseRange(page, source, cases, runtime, testInfo, 0, cases.length);
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  const cells = await runFrozenCaseGroups(
+    page,
+    source,
+    groupFrozenCases(cases, (matrixCase) => groupKeyFor(source, matrixCase)),
+    runtime,
+    testInfo,
+    0,
+  );
+  return restoreFrozenCaseOrder(cases, cells);
+};

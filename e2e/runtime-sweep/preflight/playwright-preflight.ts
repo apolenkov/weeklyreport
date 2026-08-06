@@ -6,7 +6,6 @@ import type {
   MatrixPreflightEntry,
   MatrixPreflightSegment,
 } from "../matrix/matrix-finalizer-contract.ts";
-import { actorForPermission } from "../matrix/runtime-matrix.ts";
 import {
   assertSpecializedDeclarations,
   SPECIALIZED_DECLARATIONS,
@@ -29,6 +28,7 @@ import {
   createPreflightArtifact,
   type PreflightArtifact,
 } from "./preflight-artifact.ts";
+import { preflightSessionGroupKey } from "./preflight-session.ts";
 
 export type PreflightRoute = Readonly<{
   readonly role: CampaignMatrixState["axes"]["role"];
@@ -49,24 +49,6 @@ export interface BrowserPreflightHarness {
 export class BrowserPreflightError extends Error {
   override readonly name = "BrowserPreflightError";
 }
-
-export const preflightStateGroupKey = (
-  state: CampaignMatrixState,
-  route: PreflightRoute,
-): string =>
-  `${state.profile}:${route.target === "published" ? "published" : "active"}`;
-
-export const preflightSessionGroupKey = (
-  state: CampaignMatrixState,
-  route: PreflightRoute,
-): string => {
-  const actor = actorForPermission(state.axes.permission, route.role);
-  return [
-    preflightStateGroupKey(state, route),
-    actor.role ?? "anonymous",
-    actor.email ?? "anonymous",
-  ].join(":");
-};
 
 const routeForState = (
   source: SourceArtifact,

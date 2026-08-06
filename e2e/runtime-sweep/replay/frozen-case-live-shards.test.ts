@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import {
   createFrozenCaseLiveShardPlan,
+  groupFrozenCases,
   MAX_FROZEN_CASE_LIVE_SHARD_CASES,
 } from "./frozen-case-live-shards.ts";
 
@@ -80,5 +81,19 @@ describe("frozen live replay shards", () => {
     expect(new Set(plan.flatMap(({ caseIds }) => caseIds)).size).toBe(
       cases.length,
     );
+  });
+
+  it("groups cases by first-seen state target without reordering a group", () => {
+    const cases = Array.from({ length: 4 }, (_, index) => makeCase(index));
+    const groups = groupFrozenCases(cases, ({ caseId }) =>
+      ["case-000000", "case-000002"].includes(caseId)
+        ? "minimal:published"
+        : "minimal:active",
+    );
+
+    expect(groups.map(ids)).toEqual([
+      ["case-000000", "case-000002"],
+      ["case-000001", "case-000003"],
+    ]);
   });
 });
