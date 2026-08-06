@@ -216,3 +216,14 @@ test("keeps navigation and UI-only disclosure buttons read-only", () => {
     "read-only",
   ]);
 });
+
+test("withholds asynchronous exports without a queue-cleanup oracle", () => {
+  const [plan] = planLiveControlActions([control("export", "Export PDF")]);
+
+  expect(plan?.action).toBeUndefined();
+  expect(plan).toMatchObject({
+    policy: "unsafe",
+    reason:
+      "Async PDF export requires a dedicated job-completion and queue-cleanup oracle",
+  });
+});
