@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { AiDriverReport } from "../driver/driver-results-contract.ts";
+import type {
+  EnvironmentFeedback,
+  EnvironmentHit,
+} from "../preflight/environment-feedback.ts";
+import type { CoverageCell } from "../source/contracts.ts";
 import {
+  appendEnvironmentCandidates,
   CandidateVerificationError,
   type CandidateVerifier,
   parseCandidateVerification,
@@ -21,6 +28,42 @@ const context = {
   role: "lead" as const,
   repoRoot: "/repo",
 };
+
+const cells = (routes: readonly string[] = ["/lead/report"]): CoverageCell[] =>
+  routes.map(
+    (route, index) =>
+      ({
+        cellId: `cell-${index + 1}`,
+        catalogRoute: route,
+        resolvedRoute: route,
+        action: { controlKey: `control-${index + 1}` },
+      }) as CoverageCell,
+  );
+
+const feedback = (hits: readonly EnvironmentHit[]): EnvironmentFeedback => ({
+  canary: { injected: true, detected: true },
+  channels: [],
+  blindChannels: [],
+  hits,
+  blockingReasons: [],
+  clean: hits.length === 0,
+});
+
+const hit = (overrides: Partial<EnvironmentHit> = {}): EnvironmentHit => ({
+  channel: "app-log",
+  eventId: "event-1",
+  timestamp: "2026-08-04T00:00:01.000Z",
+  kind: "server",
+  message: "server warning",
+  evidenceRefs: ["api-log:1"],
+  route: "/lead/report",
+  cellId: "cell-1",
+  ...overrides,
+});
+
+const reportWithCandidates = (
+  candidates: readonly AiDriverReport["candidates"][number][],
+): AiDriverReport => ({ candidates }) as AiDriverReport;
 
 describe("runtime-sweep independent candidate verification", () => {
   it("keeps only independently confirmed candidates for adjudication", async () => {
@@ -136,5 +179,40 @@ describe("runtime-sweep independent candidate verification", () => {
       ],
     });
     expect(verifier).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails closed when an environment hit has no route or cell mapping", () => {
+    expect(() =>
+      appendEnvironmentCandidates(
+        reportWithCandidates([]),
+        feedback([hit({ route: null, cellId: null })]),
+        cells(),
+      ),
+    ).toThrow(/expected exactly one/iu);
+  });
+
+  it("fails closed when a route maps to multiple assigned cells", () => {
+    expect(() =>
+      appendEnvironmentCandidates(
+        reportWithCandidates([]),
+        feedback([hit({ route: "/shared", cellId: null })]),
+        cells(["/shared", "/shared"]),
+      ),
+    ).toThrow(/expected exactly one/iu);
+  });
+
+  it("fails closed on environment candidate id collisions", () => {
+    const existing = {
+      ...candidate,
+      candidateId: "environment-event-1",
+    };
+
+    expect(() =>
+      appendEnvironmentCandidates(
+        reportWithCandidates([existing]),
+        feedback([hit()]),
+        cells(),
+      ),
+    ).toThrow(/collides with an existing candidate/iu);
   });
 });

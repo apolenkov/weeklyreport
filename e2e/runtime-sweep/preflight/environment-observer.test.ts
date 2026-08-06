@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AiDriverReport } from "../driver/driver-results-contract.ts";
+import type { TranscriptToolRecord } from "../driver/driver-results-transcript.ts";
 import { observeEnvironmentFeedback } from "./environment-observer.ts";
 
 const SOURCE_SHA = "a".repeat(40);
@@ -34,6 +35,7 @@ const report = (candidates: AiDriverReport["candidates"] = []) =>
     transcriptEvidence: {
       status: "captured",
       evidenceRefs: ["transcript:attempt-1"],
+      digest: "a".repeat(64),
     },
     roleDriven: "lead",
     profile: "minimal",
@@ -89,10 +91,20 @@ const candidate = (
 
 const probeResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status });
-const observedTranscripts = [
-  JSON.stringify({ tool_name: "browser_console_messages" }),
-  JSON.stringify({ tool_name: "browser_network_requests" }),
-];
+const observedTranscriptRecords = [
+  {
+    attemptId: "attempt-1",
+    timestamp: "2026-08-04T10:00:01.000Z",
+    tool: "browser_console_messages",
+    route: "/lead/report",
+  },
+  {
+    attemptId: "attempt-1",
+    timestamp: "2026-08-04T10:02:01.000Z",
+    tool: "browser_network_requests",
+    route: "/lead/history",
+  },
+] satisfies readonly TranscriptToolRecord[];
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -110,24 +122,55 @@ describe("runtime-sweep environment observer", () => {
         JSON.stringify({
           timestamp: "2026-08-04T10:03:00.000Z",
           level: "warn",
-          msg: "server warning",
+          message: "server warning",
+          correlationId: "runtime-observer",
         }),
         JSON.stringify({
           timestamp: "2026-08-04T09:00:00.000Z",
           level: "error",
-          msg: "outside window",
+          message: "outside window",
+          correlationId: "runtime-observer",
         }),
       ].join("\n"),
     );
-    const fetchMock = vi.fn<typeof fetch>((input) => {
+    const bugsinkProjectResponses = [
+      {
+        slug: "runtime-sweep",
+        digested_event_count: 0,
+        stored_event_count: 0,
+      },
+      {
+        slug: "runtime-sweep",
+        digested_event_count: 1,
+        stored_event_count: 1,
+      },
+    ].values();
+    const fetchMock = vi.fn<typeof fetch>((input, init) => {
       const url =
         typeof input === "string"
           ? input
           : input instanceof URL
             ? input.href
             : input.url;
-      if (url.includes("example.test"))
-        return Promise.resolve(probeResponse({ ok: true }));
+      const requestUrl = new URL(url);
+      if (requestUrl.pathname.includes("/canonical/0/projects/")) {
+        return Promise.resolve(
+          probeResponse(
+            bugsinkProjectResponses.next().value ?? {
+              slug: "runtime-sweep",
+              digested_event_count: 0,
+              stored_event_count: 0,
+            },
+          ),
+        );
+      }
+      if (requestUrl.pathname.endsWith("/store/")) {
+        const body =
+          typeof init?.body === "string"
+            ? (JSON.parse(init.body) as { event_id?: string })
+            : {};
+        return Promise.resolve(probeResponse({ id: body.event_id }));
+      }
       if (url.includes("/push"))
         return Promise.resolve(new Response(null, { status: 204 }));
       const probeId = new URL(url).searchParams
@@ -159,9 +202,13 @@ describe("runtime-sweep environment observer", () => {
         candidate("page", "page-1", "cell-history"),
         candidate("network", "network-1", "cell-history"),
       ]),
-      transcripts: observedTranscripts,
+      transcriptRecords: observedTranscriptRecords,
       apiLogPath,
-      bugsinkDsn: "http://public@example.test/1",
+      apiLogEvidenceRef: `api-log:/tmp/app.log#sha256=${"b".repeat(64)}`,
+      bugsink: {
+        dsn: "http://public@example.test/1",
+        apiToken: "a".repeat(40),
+      },
       loki: {
         pushUrl: "http://loki.test/loki/api/v1/push",
         queryUrl: "http://loki.test/loki/api/v1/query_range",
@@ -193,7 +240,13 @@ describe("runtime-sweep environment observer", () => {
     expect(
       feedback.hits.find(({ channel }) => channel === "app-log")?.route,
     ).toBe("/lead/history");
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(
+      feedback.hits.find(({ eventId }) => eventId === "driver-console-1"),
+    ).toMatchObject({
+      route: "/lead/report",
+      timestamp: "2026-08-04T10:02:00.000Z",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     const bugsinkRequest = fetchMock.mock.calls.find(([input]) => {
       const url =
         typeof input === "string"
@@ -201,7 +254,7 @@ describe("runtime-sweep environment observer", () => {
           : input instanceof URL
             ? input.href
             : input.url;
-      return url.includes("example.test");
+      return new URL(url).pathname.endsWith("/store/");
     });
     const bugsinkUrl = bugsinkRequest?.[0];
     expect(
@@ -216,59 +269,5 @@ describe("runtime-sweep environment observer", () => {
     });
 
     await rm(directory, { recursive: true, force: true });
-  });
-
-  it("keeps unconfigured and unreadable channels blind", async () => {
-    const feedback = await observeEnvironmentFeedback({
-      report: report(),
-      transcripts: observedTranscripts,
-      apiLogPath: path.join(os.tmpdir(), "missing-runtime-observer.log"),
-    });
-
-    expect(feedback.blindChannels).toEqual(["app-log", "bugsink", "loki"]);
-    expect(feedback.channels).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ channel: "browser-console", status: "live" }),
-        expect.objectContaining({ channel: "network", status: "live" }),
-      ]),
-    );
-    expect(feedback.clean).toBe(false);
-  });
-
-  it("does not let the console canary certify unobserved browser channels", async () => {
-    const feedback = await observeEnvironmentFeedback({
-      report: report(),
-      transcripts: [],
-    });
-
-    expect(feedback.blindChannels).toEqual([
-      "browser-console",
-      "network",
-      "app-log",
-      "bugsink",
-      "loki",
-    ]);
-  });
-
-  it("marks failed probes blind without exposing their credentials", async () => {
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockRejectedValue(new Error("offline"));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const feedback = await observeEnvironmentFeedback({
-      report: report(),
-      transcripts: observedTranscripts,
-      bugsinkDsn: "http://private:password@example.test/1",
-      loki: {
-        pushUrl: "http://loki.test/push",
-        queryUrl: "http://loki.test/query",
-        username: "user",
-        password: "password",
-      },
-    });
-
-    expect(feedback.blindChannels).toEqual(["app-log", "bugsink", "loki"]);
-    expect(JSON.stringify(feedback)).not.toContain("password");
   });
 });

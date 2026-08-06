@@ -202,25 +202,57 @@ export function appendEnvironmentCandidates(
   const existingIds = new Set(
     report.candidates.map(({ candidateId }) => candidateId),
   );
-  const environmentCandidates = feedback.hits.flatMap((hit) => {
-    const cell = hit.cellId
-      ? cells.find(({ cellId }) => cellId === hit.cellId)
-      : cells.find(
-          ({ catalogRoute, resolvedRoute }) =>
-            catalogRoute === hit.route || resolvedRoute === hit.route,
-        );
-    const candidateId = `environment-${hit.eventId}`;
-    if (!cell || existingIds.has(candidateId)) return [];
-    return [
-      {
-        candidateId,
-        cellId: cell.cellId,
-        controlKey: cell.action.controlKey,
-        kind: "env" as const,
-        summary: `${hit.channel}: ${hit.message}`,
-        evidenceRefs: hit.evidenceRefs,
-      },
-    ];
+  const mapped = feedback.hits.map((hit) => {
+    const matches =
+      hit.cellId === null && hit.route === null
+        ? []
+        : cells.filter(
+            ({ cellId, catalogRoute, resolvedRoute }) =>
+              (hit.cellId === null || cellId === hit.cellId) &&
+              (hit.route === null ||
+                catalogRoute === hit.route ||
+                resolvedRoute === hit.route),
+          );
+    return { hit, matches, candidateId: `environment-${hit.eventId}` };
+  });
+  const mappingIssues = mapped.flatMap(({ hit, matches }) =>
+    matches.length === 1
+      ? []
+      : [
+          `environment hit ${hit.eventId} maps to ${matches.length} assigned cells; expected exactly one`,
+        ],
+  );
+  const generatedIds = mapped.map(({ candidateId }) => candidateId);
+  const duplicateIds = generatedIds.filter(
+    (candidateId, index) => generatedIds.indexOf(candidateId) !== index,
+  );
+  const collisionIssues = [
+    ...generatedIds
+      .filter((candidateId) => existingIds.has(candidateId))
+      .map(
+        (candidateId) =>
+          `environment candidate ${candidateId} collides with an existing candidate`,
+      ),
+    ...[...new Set(duplicateIds)].map(
+      (candidateId) => `environment candidate ${candidateId} is duplicated`,
+    ),
+  ];
+  const issues = [...mappingIssues, ...collisionIssues];
+  if (issues.length > 0) throw new CandidateVerificationError(issues);
+  const environmentCandidates = mapped.map(({ hit, matches, candidateId }) => {
+    const [cell] = matches;
+    if (!cell)
+      throw new CandidateVerificationError([
+        `environment hit ${hit.eventId} has no assigned cell`,
+      ]);
+    return {
+      candidateId,
+      cellId: cell.cellId,
+      controlKey: cell.action.controlKey,
+      kind: "env" as const,
+      summary: `${hit.channel}: ${hit.message}`,
+      evidenceRefs: hit.evidenceRefs,
+    };
   });
   return {
     ...report,

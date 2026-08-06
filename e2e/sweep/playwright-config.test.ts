@@ -23,7 +23,9 @@ test("starts current-source servers against the dedicated UAT database", async (
   expect(webServer.reuseExistingServer).toBe(false);
   expect(apiServer.command).toContain("src/main.ts");
   expect(apiServer.env?.DATABASE_URL).toBe(databaseUrl);
-  expect(webServer.command).toMatch(/next dev --webpack -p \d+$/);
+  expect(apiServer.url).toBe("http://127.0.0.1:3111/health/live");
+  expect(webServer.command).toMatch(/next dev --webpack -p 3110$/);
+  expect(webServer.url).toBe("http://127.0.0.1:3110");
 });
 
 test("fails closed without a dedicated UAT database", async () => {

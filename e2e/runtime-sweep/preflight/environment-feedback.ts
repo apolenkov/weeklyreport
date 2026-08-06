@@ -18,7 +18,7 @@ const environmentChannelSchema = z.enum(ENVIRONMENT_CHANNELS);
 const environmentEventSchema = z
   .object({
     eventId: z.string().min(1),
-    timestamp: z.string().min(1),
+    timestamp: z.iso.datetime(),
     kind: z.enum(signalKinds),
     message: z.string().min(1),
     evidenceRefs: z.array(z.string().min(1)).min(1).readonly(),
@@ -161,7 +161,7 @@ function collectHits(
       kind: event.kind,
       message: event.message,
       evidenceRefs: event.evidenceRefs,
-      route: routeAt(event.timestamp, timeline) ?? event.route ?? null,
+      route: event.route ?? routeAt(event.timestamp, timeline) ?? null,
       cellId: event.cellId ?? null,
     })),
   );

@@ -1,12 +1,25 @@
-import { access, readdir, readFile, stat } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+} from "node:fs/promises";
 import path from "node:path";
 
 import { z } from "zod";
 
-import type { ImportOptions } from "./import-ai-driver-options.ts";
-
+import {
+  assertReportTranscriptMapping,
+  type ImportOptions,
+  readTranscriptFiles,
+  verifyImportedCandidates,
+} from "./import-ai-driver-options.ts";
 export type { ImportOptions } from "./import-ai-driver-options.ts";
-
+import { readEnvironmentObserverConfig } from "../preflight/environment-observer.ts";
 import { type CoverageCell, coverageCellSchema } from "../source/contracts.ts";
 import {
   CandidateVerificationError,
@@ -19,15 +32,14 @@ import {
   type DriverValidationInput,
   mergeDriverReport,
   parseAiDriverReport,
-  writeMergedDriverCells,
+  writeMergedDriverCellsToDirectory,
 } from "./driver-results.ts";
-
-interface ReportDocument {
-  readonly path: string;
-  readonly text: string;
-  readonly assignedCellIds: readonly string[];
-  readonly candidateIds: readonly string[];
-}
+import {
+  cellsForReport,
+  type ReportDocument,
+  writePreparedReports,
+} from "./import-ai-driver-environment.ts";
+import { prepareStagedReports } from "./import-ai-driver-transaction.ts";
 
 interface ImportState {
   readonly merged: readonly CoverageCell[];
@@ -40,7 +52,6 @@ const reportIdentitySchema = z.object({
     .array(z.looseObject({ candidateId: z.string().min(1) }))
     .readonly(),
 });
-
 const pathContains = (parent: string, child: string): boolean =>
   child === parent || child.startsWith(`${parent}${path.sep}`);
 
@@ -51,7 +62,7 @@ const assertFreshOutput = async (options: ImportOptions): Promise<void> => {
     throw new Error("--output must not overlap --cells");
   try {
     await access(output);
-    throw new Error(`output directory already exists: ${output}`);
+    throw new Error(`fresh import path already exists: ${output}`);
   } catch (error: unknown) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
       throw error;
@@ -130,56 +141,25 @@ const readVerificationValues = async (
   return z.array(z.unknown()).parse(parsed);
 };
 
-const verifyImportIdentity = (
-  reports: readonly ReportDocument[],
-  values: readonly unknown[],
-): void => {
-  const expectedIds = uniqueIds(
-    reports.flatMap(({ candidateIds }) => candidateIds),
-    "candidate across reports",
-  );
-  const records = values.map((value) =>
-    candidateVerificationSchema.parse(value),
-  );
-  const importedIds = uniqueIds(
-    records.map(({ candidateId }) => candidateId),
-    "imported verification",
-  );
-  const expected = new Set(expectedIds);
-  const imported = new Set(importedIds);
-  const missing = expectedIds.filter((id) => !imported.has(id));
-  const extra = importedIds.filter((id) => !expected.has(id));
-  if (missing.length > 0 || extra.length > 0)
-    throw new CandidateVerificationError([
-      ...missing.map((id) => `missing imported verification ${id}`),
-      ...extra.map((id) => `unused imported verification ${id}`),
-    ]);
-};
-
 const importReport = async (
   document: ReportDocument,
   allCells: readonly CoverageCell[],
   options: ImportOptions,
   verificationValues: readonly unknown[] | undefined,
 ): Promise<readonly CoverageCell[]> => {
-  const ids = new Set(document.assignedCellIds);
-  const cells = allCells.filter(({ cellId }) => ids.has(cellId));
-  if (cells.length !== document.assignedCellIds.length)
-    throw new DriverResultValidationError([
-      `report ${document.path} references a cell missing from --cells`,
-    ]);
+  const cells = cellsForReport(document, allCells);
   const validation: DriverValidationInput = {
     sourceSha: options.sourceSha,
     profile: options.profile,
     role: options.role,
     cells,
   };
-  const report = parseAiDriverReport(document.text, validation);
-  const reportVerificationValues = (verificationValues ?? []).filter(
-    (value) => {
-      const parsed = candidateVerificationSchema.parse(value);
-      return document.candidateIds.includes(parsed.candidateId);
-    },
+  const report =
+    document.report ?? parseAiDriverReport(document.text, validation);
+  const reportVerificationValues = (verificationValues ?? []).filter((value) =>
+    document.candidateIds.includes(
+      candidateVerificationSchema.parse(value).candidateId,
+    ),
   );
   const verifiedReport =
     report.candidates.length === 0
@@ -199,8 +179,8 @@ const importReport = async (
         };
   return mergeDriverReport(cells, verifiedReport, {
     ...validation,
-    reportText: document.text,
-    reportArchivePath: document.path,
+    reportText: document.preparedText ?? document.text,
+    reportArchivePath: document.preparedArchivePath ?? document.path,
   });
 };
 
@@ -252,25 +232,61 @@ export async function importAiDriverReports(
     readCells(options.cellsPath),
     Promise.all(options.reportPaths.map(readReport)),
   ]);
-  const candidateIds = reports.flatMap(({ candidateIds }) => candidateIds);
-  const verificationValues = options.verificationPath
-    ? await readVerificationValues(options.verificationPath)
-    : undefined;
-  if (candidateIds.length > 0 && verificationValues === undefined)
-    throw new CandidateVerificationError([
-      "candidate report requires an explicit --verification import",
-    ]);
-  if (candidateIds.length === 0 && verificationValues !== undefined)
-    throw new CandidateVerificationError([
-      "--verification import cannot be supplied for reports without candidates",
-    ]);
-  if (verificationValues) verifyImportIdentity(reports, verificationValues);
-  const merged = await importReports(
-    reports,
-    allCells,
-    options,
-    verificationValues,
+  assertReportTranscriptMapping(options);
+  const transcripts = await readTranscriptFiles(options.transcriptPaths);
+  const observerConfig = readEnvironmentObserverConfig(
+    path.resolve(import.meta.dirname, "../../.."),
   );
-  await writeMergedDriverCells(options.outputPath, merged);
-  return merged;
+  const outputPath = path.resolve(options.outputPath);
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  const stagingRoot = await mkdtemp(
+    path.join(path.dirname(outputPath), ".runtime-driver-"),
+  );
+  try {
+    const preparedReports = await prepareStagedReports({
+      reports,
+      allCells,
+      options,
+      transcripts,
+      observerConfig,
+      stagingRoot,
+      outputPath,
+    });
+    const candidateIds = preparedReports.flatMap(
+      ({ candidateIds }) => candidateIds,
+    );
+    const verificationValues = options.verificationPath
+      ? await readVerificationValues(options.verificationPath)
+      : undefined;
+    if (candidateIds.length > 0 && verificationValues === undefined)
+      throw new CandidateVerificationError([
+        "candidate report requires an explicit --verification import",
+      ]);
+    if (candidateIds.length === 0 && verificationValues !== undefined)
+      throw new CandidateVerificationError([
+        "--verification import cannot be supplied for reports without candidates",
+      ]);
+    if (verificationValues)
+      verifyImportedCandidates(
+        preparedReports.flatMap(({ candidateIds }) => candidateIds),
+        verificationValues,
+      );
+    const archivedReports = await writePreparedReports(
+      preparedReports,
+      stagingRoot,
+      outputPath,
+    );
+    const merged = await importReports(
+      archivedReports,
+      allCells,
+      options,
+      verificationValues,
+    );
+    await writeMergedDriverCellsToDirectory(stagingRoot, merged);
+    await rename(stagingRoot, outputPath);
+    return merged;
+  } catch (error: unknown) {
+    await rm(stagingRoot, { recursive: true, force: true });
+    throw error;
+  }
 }

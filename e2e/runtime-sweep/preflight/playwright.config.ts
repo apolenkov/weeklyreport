@@ -25,6 +25,7 @@ const WEB_PORT = Number(process.env.RUNTIME_SWEEP_WEB_PORT ?? "3105");
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 process.env.RUNTIME_SWEEP_BASE_URL = WEB_URL;
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
+const API_LOG_DIR = path.join(ARCHIVE_ROOT, "api-log");
 
 const webServers = integrationConfig.webServer;
 if (!Array.isArray(webServers) || webServers.length !== 2) {
@@ -42,6 +43,7 @@ const apiEnv = {
   FRONTEND_URL: WEB_URL,
   APP_BASE_URL: WEB_URL,
   PDF_BASE_URL: WEB_URL,
+  LOG_DIR: API_LOG_DIR,
 };
 const webEnv = {
   ...runtimeSweepWebEnvironment(webServer.env),

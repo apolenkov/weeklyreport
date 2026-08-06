@@ -149,9 +149,13 @@ infrastructure uses only existing test seams, never a production hook. Scope and
 tear down each injector; its failure is infrastructure, never product pass.
 
 Environment feedback requires `RUNTIME_SWEEP_API_LOG`,
-`RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_LOKI_PUSH_URL`, and
-`RUNTIME_SWEEP_LOKI_QUERY_URL`; missing or unreachable values are blind and fail
-the drive closed. Loki authentication is optional only as a pair: both
+`RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_BUGSINK_API_TOKEN`,
+`RUNTIME_SWEEP_LOKI_PUSH_URL`, and `RUNTIME_SWEEP_LOKI_QUERY_URL`; missing or
+unreachable values are blind and fail the drive closed. Bugsink requires both
+credentials, a 40-character lowercase-hex API token, and its dedicated
+`runtime-sweep` project. The harness is sequential and assumes no other
+writers use that project while counters are polled; this is not a generic
+concurrent liveness proof. Loki authentication is optional only as a pair: both
 `RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are absent for
 unauthenticated local Loki or both are present for authenticated Loki.
 

@@ -2,136 +2,22 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import type { CoverageCell } from "../source/contracts.ts";
+import { importAiDriverReports } from "./import-ai-driver-report.ts";
 import {
-  importAiDriverReports,
-  type ImportOptions,
-} from "./import-ai-driver-report.ts";
+  cell,
+  clearLiveEnvironment,
+  liveTranscript,
+  options,
+  report,
+  setLiveEnvironment,
+  SOURCE_SHA,
+  transcriptForCell,
+  writeJson,
+} from "./import-ai-driver-test-fixtures.ts";
 
-const SOURCE_SHA = "a".repeat(40);
-const action = {
-  controlKey: "save",
-  operation: "click" as const,
-  safety: "reversible" as const,
-  transition: "none" as const,
-};
-const cell = (cellId = "cell-a"): CoverageCell => ({
-  cellId,
-  sourceSha: SOURCE_SHA,
-  profile: "minimal",
-  role: "lead",
-  catalogRoute: "/lead/report",
-  resolvedRoute: "/lead/report",
-  viewport: { browser: "chromium", width: 1440, height: 900 },
-  state: {
-    profileCapability: "canonical-identities",
-    lifecycle: "open",
-    submission: "draft",
-    ownershipDensity: "single",
-    permission: "allowed",
-    fault: "none",
-    controlTransition: "none",
-  },
-  action,
-  execution: { kind: "control", action },
-  faultId: null,
-  oracle: {
-    domainSpecRefs: ["exhaustive-runtime-sweep"],
-    function: { required: true, expectation: "the action succeeds" },
-    accessibility: { required: true, expectation: "the control is named" },
-    visual: { required: true, expectation: "the layout is stable" },
-  },
-  controls: [],
-  evidence: {
-    before: [],
-    action: [],
-    after: [],
-    observations: [],
-    inapplicable: [],
-  },
-  verdict: "pending",
-});
-
-const report = (
-  candidate = false,
-  cellId = "cell-a",
-  candidateId = `candidate-${cellId}`,
-) => ({
-  provider: "native-codex",
-  model: "gpt-5.6-luna",
-  reasoning: "max",
-  attemptId: `attempt-${cellId}`,
-  transcriptEvidence: {
-    status: "captured" as const,
-    evidenceRefs: [`transcript:${cellId}`],
-  },
-  roleDriven: "lead",
-  profile: "minimal",
-  sourceSha: SOURCE_SHA,
-  assignedCells: [
-    {
-      cellId,
-      catalogRoute: "/lead/report",
-      resolvedRoute: "/lead/report",
-      actionKey: "save",
-    },
-  ],
-  routesVisited: 1,
-  routesPlanned: 1,
-  canary: { injected: true, detected: true },
-  timeline: {
-    startedAt: "2026-08-05T00:00:00.000Z",
-    endedAt: "2026-08-05T00:01:00.000Z",
-    routes: [
-      {
-        route: "/lead/report",
-        enteredAt: "2026-08-05T00:00:01.000Z",
-        leftAt: "2026-08-05T00:00:59.000Z",
-      },
-    ],
-  },
-  controlResults: [
-    {
-      cellId,
-      controlKey: "save",
-      status: "covered" as const,
-      result: "pass" as const,
-      evidenceRefs: ["control-evidence"],
-    },
-  ],
-  candidates: candidate
-    ? [
-        {
-          candidateId,
-          cellId,
-          controlKey: "save",
-          kind: "functional" as const,
-          summary: "candidate finding",
-          evidenceRefs: ["candidate-evidence"],
-        },
-      ]
-    : [],
-});
-
-const options = (
-  reportPaths: readonly string[],
-  cellsPath: string,
-  outputPath: string,
-  verificationPath?: string,
-): ImportOptions => ({
-  reportPaths,
-  cellsPath,
-  outputPath,
-  ...(verificationPath ? { verificationPath } : {}),
-  sourceSha: SOURCE_SHA,
-  profile: "minimal",
-  role: "lead",
-});
-
-const writeJson = (filePath: string, value: unknown): Promise<void> =>
-  writeFile(filePath, `${JSON.stringify(value)}\n`, "utf8");
+afterEach(clearLiveEnvironment);
 
 describe("native AI driver report import", () => {
   it("accepts a single cell file and writes merged output", async () => {
@@ -139,13 +25,16 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const transcriptPath = await setLiveEnvironment(directory);
       const reportPath = path.join(directory, "report.json");
       const cellPath = path.join(directory, "cell-a.json");
       const outputPath = path.join(directory, "output");
       await writeJson(reportPath, report());
       await writeJson(cellPath, cell());
       await expect(
-        importAiDriverReports(options([reportPath], cellPath, outputPath)),
+        importAiDriverReports(
+          options([reportPath], cellPath, outputPath, transcriptPath),
+        ),
       ).resolves.toHaveLength(1);
       await expect(
         readFile(path.join(outputPath, "cell-a.json"), "utf8"),
@@ -160,6 +49,7 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const transcriptPath = await setLiveEnvironment(directory);
       const cellsPath = path.join(directory, "cells");
       await mkdir(cellsPath);
       const reportPath = path.join(directory, "report.json");
@@ -168,7 +58,9 @@ describe("native AI driver report import", () => {
       await writeJson(reportPath, report(true));
       await writeJson(cellPath, cell());
       await expect(
-        importAiDriverReports(options([reportPath], cellsPath, outputPath)),
+        importAiDriverReports(
+          options([reportPath], cellsPath, outputPath, transcriptPath),
+        ),
       ).rejects.toThrow(/explicit --verification/iu);
       await expect(
         readFile(path.join(outputPath, "cell-a.json"), "utf8"),
@@ -183,6 +75,7 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const transcriptPath = await setLiveEnvironment(directory);
       const reportPath = path.join(directory, "report.json");
       const cellPath = path.join(directory, "cell-a.json");
       await writeJson(reportPath, report());
@@ -190,11 +83,68 @@ describe("native AI driver report import", () => {
       const existingOutput = path.join(directory, "existing");
       await mkdir(existingOutput);
       await expect(
-        importAiDriverReports(options([reportPath], cellPath, existingOutput)),
+        importAiDriverReports(
+          options([reportPath], cellPath, existingOutput, transcriptPath),
+        ),
       ).rejects.toThrow(/already exists/iu);
       await expect(
-        importAiDriverReports(options([reportPath], cellPath, directory)),
+        importAiDriverReports(
+          options([reportPath], cellPath, directory, transcriptPath),
+        ),
       ).rejects.toThrow(/overlap/iu);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let a legacy sibling report directory block atomic output", async () => {
+    const directory = await mkdtemp(
+      path.join(os.tmpdir(), "runtime-ai-import-legacy-sibling-"),
+    );
+    try {
+      const transcriptPath = await setLiveEnvironment(directory);
+      const reportPath = path.join(directory, "report.json");
+      const cellPath = path.join(directory, "cell-a.json");
+      const outputPath = path.join(directory, "output");
+      const legacyPath = `${outputPath}.reports`;
+      await mkdir(legacyPath);
+      await writeFile(path.join(legacyPath, "sentinel"), "keep", "utf8");
+      await writeJson(reportPath, report());
+      await writeJson(cellPath, cell());
+
+      await expect(
+        importAiDriverReports(
+          options([reportPath], cellPath, outputPath, transcriptPath),
+        ),
+      ).resolves.toHaveLength(1);
+      await expect(
+        readFile(path.join(legacyPath, "sentinel"), "utf8"),
+      ).resolves.toBe("keep");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("creates a missing output parent before the atomic rename", async () => {
+    const directory = await mkdtemp(
+      path.join(os.tmpdir(), "runtime-ai-import-parent-"),
+    );
+    try {
+      const transcriptPath = await setLiveEnvironment(directory);
+      const reportPath = path.join(directory, "report.json");
+      const cellPath = path.join(directory, "cell-a.json");
+      const outputPath = path.join(directory, "nested", "missing", "output");
+      await writeJson(reportPath, report());
+      await writeJson(cellPath, cell());
+
+      await expect(
+        importAiDriverReports(
+          options([reportPath], cellPath, outputPath, transcriptPath),
+        ),
+      ).resolves.toHaveLength(1);
+      await expect(
+        readFile(path.join(outputPath, "cell-a.json"), "utf8"),
+      ).resolves.toContain('"verdict": "pass"');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
@@ -205,6 +155,7 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const transcriptPath = await setLiveEnvironment(directory);
       const reportPath = path.join(directory, "report.json");
       const cellPath = path.join(directory, "cell-a.json");
       await writeJson(reportPath, report(true));
@@ -223,7 +174,13 @@ describe("native AI driver report import", () => {
         await writeJson(verificationPath, values);
         await expect(
           importAiDriverReports(
-            options([reportPath], cellPath, outputPath, verificationPath),
+            options(
+              [reportPath],
+              cellPath,
+              outputPath,
+              transcriptPath,
+              verificationPath,
+            ),
           ),
         ).rejects.toThrow();
         await expect(
@@ -243,6 +200,9 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const firstTranscript = await setLiveEnvironment(directory);
+      const secondTranscript = path.join(directory, "second.transcript.jsonl");
+      await writeFile(secondTranscript, `${liveTranscript}\n`, "utf8");
       const first = path.join(directory, "first.json");
       const second = path.join(directory, "second.json");
       const cellPath = path.join(directory, "cell-a.json");
@@ -251,7 +211,11 @@ describe("native AI driver report import", () => {
       await writeJson(second, report());
       await writeJson(cellPath, cell());
       await expect(
-        importAiDriverReports(options([first, second], cellPath, outputPath)),
+        importAiDriverReports({
+          ...options([first], cellPath, outputPath, firstTranscript),
+          reportPaths: [first, second],
+          transcriptPaths: [firstTranscript, secondTranscript],
+        }),
       ).rejects.toThrow(/more than one report/iu);
       await expect(
         readFile(path.join(outputPath, "cell-a.json"), "utf8"),
@@ -266,6 +230,13 @@ describe("native AI driver report import", () => {
       path.join(os.tmpdir(), "runtime-ai-import-"),
     );
     try {
+      const firstTranscript = await setLiveEnvironment(directory);
+      const secondTranscript = path.join(directory, "second.transcript.jsonl");
+      await writeFile(
+        secondTranscript,
+        `${transcriptForCell("cell-b")}\n`,
+        "utf8",
+      );
       const cellsPath = path.join(directory, "cells");
       const first = path.join(directory, "first.json");
       const second = path.join(directory, "second.json");
@@ -278,14 +249,17 @@ describe("native AI driver report import", () => {
       await writeJson(verification, []);
 
       await expect(
-        importAiDriverReports(
-          options(
-            [first, second],
+        importAiDriverReports({
+          ...options(
+            [first],
             cellsPath,
             path.join(directory, "output"),
+            firstTranscript,
             verification,
           ),
-        ),
+          reportPaths: [first, second],
+          transcriptPaths: [firstTranscript, secondTranscript],
+        }),
       ).rejects.toThrow(
         /duplicate candidate across reports candidate-shared/iu,
       );
