@@ -242,7 +242,6 @@ test("does not click a control that became hidden after inventory", async ({
   page,
 }) => {
   await page.setContent('<button type="button" hidden>Open details</button>');
-
   const result = await executeControlAction({
     page,
     control: {

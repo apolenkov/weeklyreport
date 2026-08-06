@@ -38,7 +38,7 @@ export {
 } from "./control-recovery.ts";
 
 const DEFAULT_ACTION_TIMEOUT_MS = 10_000;
-const TARGET_RESOLUTION_TIMEOUT_MS = 1000;
+const TARGET_RESOLUTION_TIMEOUT_MS = 5000;
 
 const unsupported = (
   input: ControlActionInput,

@@ -16,6 +16,23 @@ export interface FrozenActionNavigationBoundary {
 
 type FrozenActionNavigationPage = NavigationPage & ActionNavigationPage;
 
+const targetsCurrentLocation = (
+  boundary: FrozenActionNavigationBoundary,
+  outcome: ActionOutcome | undefined,
+): boolean => {
+  const href = outcome?.target?.href;
+  if (href === undefined || href === null) return false;
+  try {
+    return (
+      new URL(href, boundary.observer.initialUrl).toString() ===
+      new URL(boundary.observer.initialUrl).toString()
+    );
+  } catch (error: unknown) {
+    if (error instanceof TypeError) return false;
+    throw error;
+  }
+};
+
 export const beginFrozenActionNavigation = (
   page: ActionNavigationPage,
   controlKey: string,
@@ -32,6 +49,14 @@ export const settleFrozenActionNavigation = async (
   boundary: FrozenActionNavigationBoundary,
   outcome: ActionOutcome | undefined,
 ): Promise<ActionOutcome | undefined> => {
+  if (outcome?.status === "not-exercised") {
+    boundary.observer.cancel();
+    return outcome;
+  }
+  if (targetsCurrentLocation(boundary, outcome)) {
+    boundary.observer.cancel();
+    return outcome;
+  }
   const navigation = await settleActionNavigation(
     page,
     boundary.observer,
