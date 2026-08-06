@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import type { Action } from "../source/contracts.ts";
 import { executeControlAction } from "./control-actions.ts";
+import { inventoryDom } from "./dom-inventory.ts";
 
 const clickAction = (controlKey: string): Action => ({
   controlKey,
@@ -50,6 +51,48 @@ test("uses the frozen href when a link accessible name changes", async ({
     action: clickAction("link:Settings:1"),
     observeOutcome: async (): Promise<"pass"> => {
       await expect(page).toHaveURL(/#settings$/u);
+      return "pass";
+    },
+  });
+
+  expect(result).toMatchObject({ status: "pass" });
+});
+
+test("uses rendered inner text when CSS transforms the role name", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">
+      <div>MP</div>
+      <div>Marketing portal</div>
+      <div style="text-transform: uppercase">No status</div>
+      <div>unassigned</div>
+    </button>
+    <output></output>
+    <script>
+      document.querySelector("button").addEventListener("click", () => {
+        document.querySelector("output").textContent = "opened";
+      });
+    </script>
+  `);
+  const control = (await inventoryDom(page)).controls[0];
+  if (control === undefined) throw new Error("Composite control is missing");
+  expect(control.accessibleName).toBe(
+    "MP Marketing portal NO STATUS unassigned",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: control.accessibleName,
+      exact: true,
+    }),
+  ).toHaveCount(0);
+
+  const result = await executeControlAction({
+    page,
+    control: { ...control, ariaRole: "button" },
+    action: clickAction(control.controlKey),
+    observeOutcome: async (): Promise<"pass"> => {
+      await expect(page.locator("output")).toHaveText("opened");
       return "pass";
     },
   });
