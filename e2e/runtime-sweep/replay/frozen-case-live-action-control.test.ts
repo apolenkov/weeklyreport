@@ -120,8 +120,9 @@ afterEach(() => {
 describe("frozen stateful control recovery", () => {
   it("reseeds once and prepares the oracle without a second reseed", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
+    const goto = vi.fn(() => Promise.resolve());
     const outcome = await runAction(
-      { goto: vi.fn(() => Promise.resolve()) } as unknown as Page,
+      { goto } as unknown as Page,
       {} as never,
       matrixCase,
       runtime,
@@ -134,5 +135,6 @@ describe("frozen stateful control recovery", () => {
     expect(resetter).toEqual(expect.any(Function));
     if (typeof resetter === "function") await resetter();
     expect(harness.reseed).toHaveBeenCalledOnce();
+    expect(goto.mock.calls).toEqual([["about:blank"], ["/lead/report"]]);
   });
 });
