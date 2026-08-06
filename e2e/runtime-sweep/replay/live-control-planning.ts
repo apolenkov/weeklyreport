@@ -22,6 +22,19 @@ const INTERACTIVE_ROLES = new Set([
 ]);
 const FORM_FILL_ROLES = new Set(["searchbox", "spinbutton", "textbox"]);
 const FORM_SELECT_ROLES = new Set(["combobox", "listbox"]);
+const DIRECT_MUTATION_BUTTON_NAMES = new Set([
+  "at risk",
+  "blocked",
+  "mark complete",
+  "move this report to the archive",
+  "move to current week",
+  "move to next week",
+  "on track",
+]);
+const DIRECT_MUTATION_BUTTON_PREFIX =
+  /^(?:acknowledge|activate|deactivate|downgrade risk|escalate risk)\b/u;
+const STAGE_STATUS_BUTTON_NAME =
+  /^[^:]+: (?:empty|on-track|at-risk|blocked)(?: (?:by risk|— status set))?$/u;
 type NotExercisedPolicy = "inapplicable" | "unsafe" | "unavailable";
 type FormSafety = "non-mutating" | "disposable-reset";
 type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
@@ -133,21 +146,37 @@ const unsupportedPlan = (
   reason: string,
 ): LiveControlPlan => ({ control, policy, reason });
 
-const clickAction = (controlKey: string): Action => ({
+const clickAction = (
+  controlKey: string,
+  safety: Action["safety"] = "read-only",
+): Action => ({
   controlKey,
   operation: "click",
-  safety: "read-only",
+  safety,
   transition: "none",
 });
+
+const isDirectMutationName = (name: string): boolean => {
+  const normalized = normalizedName(name);
+  return (
+    DIRECT_MUTATION_BUTTON_NAMES.has(normalized) ||
+    DIRECT_MUTATION_BUTTON_PREFIX.test(normalized) ||
+    STAGE_STATUS_BUTTON_NAME.test(normalized)
+  );
+};
+
+const isDirectMutationButton = (control: DomControlObservation): boolean =>
+  control.role === "button" && isDirectMutationName(control.accessibleName);
 
 const interactiveAction = (control: DomControlObservation): Action => {
   const normalized = normalizedName(control.accessibleName);
   if (/^(?:retry|try again)\b/u.test(normalized))
     return retryAction(control.controlKey);
+  const safety = isDirectMutationButton(control) ? "irreversible" : "read-only";
   const transition = transitionForName(control.accessibleName);
   return transition === undefined
-    ? clickAction(control.controlKey)
-    : { ...clickAction(control.controlKey), transition };
+    ? clickAction(control.controlKey, safety)
+    : { ...clickAction(control.controlKey, safety), transition };
 };
 
 const formAction = (

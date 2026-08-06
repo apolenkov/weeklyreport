@@ -174,3 +174,45 @@ test("binds open, cancel, and retry intent to the semantic transition", () => {
     ["retry", "retry"],
   ]);
 });
+
+test("requires disposable recovery after direct mutation buttons", () => {
+  const directMutations = [
+    "Acknowledge · Product group",
+    "Activate Lead User",
+    "Deactivate Admin User",
+    "Downgrade risk for Portal to at risk",
+    "Escalate risk for Portal to blocked",
+    "Mark complete",
+    "Move this report to the archive",
+    "Move to current week",
+    "Move to next week",
+    "Analysis: on-track — status set",
+    "On Track",
+    "At Risk",
+    "Blocked",
+  ];
+
+  expect(
+    planLiveControlActions(
+      directMutations.map((name, index) => control(`mutation-${index}`, name)),
+    ).map(({ action }) => [action?.operation, action?.safety]),
+  ).toEqual(directMutations.map(() => ["click", "irreversible"]));
+});
+
+test("keeps navigation and UI-only disclosure buttons read-only", () => {
+  const plans = planLiveControlActions([
+    control("sign-out", "Sign out"),
+    control("respond", "Respond"),
+    control("reopen", "Reopen Period"),
+    control("archive", "Archive Portal"),
+    control("link", "Settings", "link"),
+  ]);
+
+  expect(plans.map(({ action }) => action?.safety)).toEqual([
+    "read-only",
+    "read-only",
+    "read-only",
+    "read-only",
+    "read-only",
+  ]);
+});
