@@ -409,28 +409,14 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-draft-actions.ts::12:1::react-doctor/no-barrel-import::f45386d7068fe64026fb344b34ceb49b80e25e6c589a72f7341079d0c42544d7",
+      "id": "src/features/report-pages/ui/lead-form-draft-actions.ts::13:1::react-doctor/no-barrel-import::f45386d7068fe64026fb344b34ceb49b80e25e6c589a72f7341079d0c42544d7",
       "file": "src/features/report-pages/ui/lead-form-draft-actions.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-draft-merge-helpers.ts::6:1::react-doctor/no-barrel-import::16f74c0e698fc454bfa82e4eb8f064156215bc341595456ca6009ba1031fe1ac",
-      "file": "src/features/report-pages/ui/lead-form-draft-merge-helpers.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/lead-form-draft-reconcile.ts::3:1::react-doctor/no-barrel-import::f1bf40e45fb6a441163ee1c8c6df9b4c9a75c82360a6c219153d992806078341",
-      "file": "src/features/report-pages/ui/lead-form-draft-reconcile.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/lead-form-edit-sections.tsx::6:1::react-doctor/no-barrel-import::f5106b1f7ca70a364e374ddad6c67bb20b7bab9e0e93ca5a03dd40bde07de894",
+      "id": "src/features/report-pages/ui/lead-form-edit-sections.tsx::7:1::react-doctor/no-barrel-import::f5106b1f7ca70a364e374ddad6c67bb20b7bab9e0e93ca5a03dd40bde07de894",
       "file": "src/features/report-pages/ui/lead-form-edit-sections.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -458,36 +444,15 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-loaded-view-model-helpers.ts::3:1::react-doctor/no-barrel-import::98d042f002658e61e6d6ee46a6b98e19d7e4484a4f615c81aefbcbbc5cf6e25c",
-      "file": "src/features/report-pages/ui/lead-form-loaded-view-model-helpers.ts",
+      "id": "src/features/report-pages/ui/lead-form-loaded-inputs.ts::13:1::react-doctor/no-barrel-import::672c9f1b611efd7d12f702321b1e8324db920e675709cb53bdae323f68c1f55e",
+      "file": "src/features/report-pages/ui/lead-form-loaded-inputs.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
+      "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-loaded-view-model.ts::6:1::react-doctor/no-barrel-import::b67a76d25f5e6851a4df20e1a60a95adf6ae751c35134f09c64661325c920e03",
-      "file": "src/features/report-pages/ui/lead-form-loaded-view-model.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/lead-form-loaded.tsx::12:1::react-doctor/no-barrel-import::52b758a88b0bdf6a358186f0339ad1f90926d31a7ea2fee555376f8bfc56e7d7",
+      "id": "src/features/report-pages/ui/lead-form-loaded.tsx::13:1::react-doctor/no-barrel-import::52b758a88b0bdf6a358186f0339ad1f90926d31a7ea2fee555376f8bfc56e7d7",
       "file": "src/features/report-pages/ui/lead-form-loaded.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/lead-form-risk-coverage.ts::2:1::react-doctor/no-barrel-import::7757fd46d9a04a106b4f5c1edc8aab1fa5cba20a8dce9c07b11275ee9e205537",
-      "file": "src/features/report-pages/ui/lead-form-risk-coverage.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/lead-form-submit-context.ts::3:1::react-doctor/no-barrel-import::f9df51b3cf041b2861fdbb6bf34a327efd060299e71e8f3f3ba11222bb15efa1",
-      "file": "src/features/report-pages/ui/lead-form-submit-context.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
@@ -500,14 +465,14 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-sync-bridge.tsx::122:5::react-doctor/no-derived-state::af95efebf24c0989551c964ca11299d0a78cd88bc3c95631b40b314736041a69",
+      "id": "src/features/report-pages/ui/lead-form-sync-bridge.tsx::113:5::react-doctor/no-derived-state::af95efebf24c0989551c964ca11299d0a78cd88bc3c95631b40b314736041a69",
       "file": "src/features/report-pages/ui/lead-form-sync-bridge.tsx",
       "rule": "no-derived-state",
       "verdict": "overturn",
       "rationale": "This state is the bridge's one-shot risk-prefill signal: an effect consumes a monotonically increasing external value, opens the risk dialog once, and then records the consumed value. It is intentional event synchronization, not render-derived state; removing it would drop a requested prefill."
     },
     {
-      "id": "src/features/report-pages/ui/lead-form-sync-bridge.tsx::297:14::react-doctor/only-export-components::2250ae2734dad0c4548ff83697c84ff88478b16b0dc2815efe4d90ff71757bef",
+      "id": "src/features/report-pages/ui/lead-form-sync-bridge.tsx::288:14::react-doctor/only-export-components::2250ae2734dad0c4548ff83697c84ff88478b16b0dc2815efe4d90ff71757bef",
       "file": "src/features/report-pages/ui/lead-form-sync-bridge.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",
@@ -519,6 +484,13 @@
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
+    },
+    {
+      "id": "src/features/report-pages/ui/lead-form.tsx::3:1::react-doctor/no-barrel-import::a788d4b984587a2901cfc2962b76fa7c3b5132a0d3081a016a8469b881cd3a0d",
+      "file": "src/features/report-pages/ui/lead-form.tsx",
+      "rule": "no-barrel-import",
+      "verdict": "overturn",
+      "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
       "id": "src/features/report-pages/ui/next-week-board-grid.tsx::8:1::react-doctor/no-barrel-import::3e76a108564b70b221812f42c27c3eb0996f80b1e4aa46efbd27a559f58f695a",
@@ -563,13 +535,6 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/use-lead-form-draft-core.ts::14:1::react-doctor/no-barrel-import::f1bf40e45fb6a441163ee1c8c6df9b4c9a75c82360a6c219153d992806078341",
-      "file": "src/features/report-pages/ui/use-lead-form-draft-core.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
       "id": "src/features/report-pages/ui/use-lead-form-queries.ts::9:1::react-doctor/no-barrel-import::7404ef695dbc96d68f8ec013a8166cf73a8a083e903c827d1cdec9c7bdb29e92",
       "file": "src/features/report-pages/ui/use-lead-form-queries.ts",
       "rule": "no-barrel-import",
@@ -589,55 +554,6 @@
       "rule": "nextjs-no-client-side-redirect",
       "verdict": "overturn",
       "rationale": "This redirect is guarded and data-dependent (canonical report/lead recovery), with loading or not-found handling before navigation. The app currently performs authenticated browser tRPC reads, so a server redirect would require a different data boundary; the generic client-redirect warning is not a present flash bug."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::13:1::react-doctor/no-barrel-import::f1bf40e45fb6a441163ee1c8c6df9b4c9a75c82360a6c219153d992806078341",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::131:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-pass-live-state-to-parent",
-      "verdict": "overturn",
-      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::132:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-pass-live-state-to-parent",
-      "verdict": "overturn",
-      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::148:7::react-doctor/no-pass-data-to-parent::f9a337f15a58a63835a2dfa409b9f3cc5e142f61a51153dfbe94d0c4ece3edf2",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-pass-data-to-parent",
-      "verdict": "overturn",
-      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::148:7::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-pass-live-state-to-parent",
-      "verdict": "overturn",
-      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-server-sync.ts::152:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
-      "file": "src/features/report-pages/ui/use-lead-form-server-sync.ts",
-      "rule": "no-pass-live-state-to-parent",
-      "verdict": "overturn",
-      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
-    },
-    {
-      "id": "src/features/report-pages/ui/use-lead-form-submit.ts::13:1::react-doctor/no-barrel-import::082d39a8c04decb4806c6622936e0e0cf94a27b23dc48eb11e35ea7d3a8b2a44",
-      "file": "src/features/report-pages/ui/use-lead-form-submit.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
       "id": "src/features/report-pages/ui/use-unified-activity-editing.ts::24:10::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
@@ -694,6 +610,41 @@
       "rule": "no-pass-live-state-to-parent",
       "verdict": "overturn",
       "rationale": "The autosave ref synchronizes a child’s live draft signal to the parent autosave coordinator through a guarded effect. That bridge is the ownership boundary for autosave state, not accidental derived state; removing it would break coordination."
+    },
+    {
+      "id": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts::131:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
+      "file": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts",
+      "rule": "no-pass-live-state-to-parent",
+      "verdict": "overturn",
+      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
+    },
+    {
+      "id": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts::132:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
+      "file": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts",
+      "rule": "no-pass-live-state-to-parent",
+      "verdict": "overturn",
+      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
+    },
+    {
+      "id": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts::148:7::react-doctor/no-pass-data-to-parent::f9a337f15a58a63835a2dfa409b9f3cc5e142f61a51153dfbe94d0c4ece3edf2",
+      "file": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts",
+      "rule": "no-pass-data-to-parent",
+      "verdict": "overturn",
+      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
+    },
+    {
+      "id": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts::148:7::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
+      "file": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts",
+      "rule": "no-pass-live-state-to-parent",
+      "verdict": "overturn",
+      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
+    },
+    {
+      "id": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts::152:5::react-doctor/no-pass-live-state-to-parent::b4ca677c4f4ac350ed4e36aab18c8d11638b2b00a18f93465d1a2907b3298aa7",
+      "file": "src/features/report-sections/model/autosave/use-lead-form-server-sync.ts",
+      "rule": "no-pass-live-state-to-parent",
+      "verdict": "overturn",
+      "rationale": "The effect reconciles externally refreshed section data with local draft/version/submitted state and handles save echoes/conflicts. It is an intentional synchronization boundary, not render-derived state; removing the effect would reintroduce stale or clobbered edits."
     },
     {
       "id": "src/features/report-sections/model/lead-cross-author-content.ts::96:12::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",

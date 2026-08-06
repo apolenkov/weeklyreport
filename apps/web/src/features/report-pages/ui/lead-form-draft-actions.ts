@@ -9,17 +9,16 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
+import type { DraftPatch, RiskPrefillRequest } from "../../report-sections";
 import {
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
   pauseItemPatch,
 } from "../../report-sections";
-import type { DraftPatch } from "./lead-form-draft-patch";
-import type { RiskPrefillRequest } from "./lead-form-sync-bridge";
+import type { QuickAddItem } from "../../report-sections/client";
 import type { QuickAddKind } from "./quick-add-button";
 import type { LeadFormAddSignals } from "./use-lead-form-add-signals";
-import type { QuickAddItem } from "./use-lead-form-quick-add";
 
 // Declared draft-module seam — not the hook's raw return type.
 export interface LeadFormDraftHandle {

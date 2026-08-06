@@ -10,17 +10,17 @@ import {
   useRef,
 } from "react";
 
-import { sectionToDraftPayload } from "../../report-sections";
-import {
-  type DraftSaveContent,
-  encodeAutosaveComparisonKey,
-  useLeadFormAutosave,
-} from "../../report-sections/client";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {
   classifyReseed,
   type PendingSaveEcho,
   reconcileSavedIdentities,
 } from "./lead-form-draft-reconcile";
+import {
+  type DraftSaveContent,
+  encodeAutosaveComparisonKey,
+  useLeadFormAutosave,
+} from "./use-lead-form-autosave";
 
 type SetDraftSection = Dispatch<SetStateAction<ReportSectionReadModel | null>>;
 

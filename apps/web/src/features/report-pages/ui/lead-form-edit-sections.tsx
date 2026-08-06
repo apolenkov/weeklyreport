@@ -3,6 +3,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type { CrossAuthorEntry } from "../../period";
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import {
   mapLeadReviewFeedback,
   ownedStagesForProject,
@@ -17,7 +18,6 @@ import {
   LeadFormEditBridgeSections,
   type LeadFormEditBridgeSectionsActions,
 } from "./lead-form-edit-bridge-sections";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import type { StagesForProduct } from "./lead-form-sync-bridge";
 
 export type LeadFormEditSectionsActions = LeadFormEditBridgeSectionsActions &

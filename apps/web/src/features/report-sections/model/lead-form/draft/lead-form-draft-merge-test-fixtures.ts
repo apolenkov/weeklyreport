@@ -4,7 +4,7 @@ import {
   type ActivityFixture,
   makeReportSectionFixture,
   type ProjectFixture,
-} from "../../../test-utils/report-section-fixtures";
+} from "../../../../../test-utils/report-section-fixtures";
 
 const REPORT_SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";

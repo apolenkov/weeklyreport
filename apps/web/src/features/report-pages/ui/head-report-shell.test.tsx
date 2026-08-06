@@ -20,11 +20,15 @@ vi.mock("../../slides", () => ({
 }));
 
 // Shell test only verifies Publish & Lock is mounted, not its internals.
-vi.mock("../../period", () => ({
-  HeadPublishLockAction: () => (
-    <div data-testid="head-publish-lock-action-stub" />
-  ),
-}));
+vi.mock("../../period", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../period")>();
+  return {
+    ...actual,
+    HeadPublishLockAction: () => (
+      <div data-testid="head-publish-lock-action-stub" />
+    ),
+  };
+});
 
 vi.mock("./weekly-report-page", () => ({
   // Synthesize header + Document/Context toolbar groups so routing is pinable.

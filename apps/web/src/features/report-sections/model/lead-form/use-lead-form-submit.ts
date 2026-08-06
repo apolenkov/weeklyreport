@@ -9,13 +9,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { isConflictError } from "../../../shared/lib/trpc/trpc";
+import { isConflictError } from "../../../../shared/lib/trpc/trpc";
+import { mapLeadRisks } from "../lead-form";
+import type { DraftSaveContent } from "../lead-section-draft-payload";
 import {
   buildLeadSubmitPayload,
   deriveLeadSubmitReadiness,
-  mapLeadRisks,
-} from "../../report-sections";
-import type { DraftSaveContent } from "../../report-sections/client";
+} from "../lead-submit-readiness";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import {
   buildSubmitStages,

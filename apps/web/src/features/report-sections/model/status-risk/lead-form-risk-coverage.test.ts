@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Product, RiskEntry } from "../../report-sections";
+import type { Product, RiskEntry } from "../types";
 import {
   annotateOwnRiskCoverage,
   coveringRisksForStage,

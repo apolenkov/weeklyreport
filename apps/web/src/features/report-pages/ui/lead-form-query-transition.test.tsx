@@ -24,6 +24,35 @@ vi.mock("../../report-sections/client", () => ({
     hydrated: true,
     setVisibility: vi.fn(),
   }),
+  useLeadFormDraftSeam: () => ({
+    submitSection: vi.fn(),
+    submitPending: false,
+    onSubmitSuccess: vi.fn(),
+  }),
+  useLeadFormDraft: ({ serverSection }: { serverSection?: unknown }) => ({
+    generation: serverSection ? "report-a:section-a" : null,
+    draft: serverSection ?? null,
+    draftPayload: null,
+    dirty: false,
+    autosave: {},
+    version: 1,
+    isSubmitted: false,
+    setIsSubmitted: vi.fn(),
+    save: vi.fn(),
+    submit: vi.fn(),
+    submitReadiness: READINESS,
+    apply: vi.fn(),
+    handleConflict: vi.fn(),
+  }),
+  useLeadFormQuickAdd: () => ({
+    quickAdd: vi.fn(),
+    pendingQuickAdd: null,
+    quickAddSave: vi.fn(),
+    clearQuickAdd: vi.fn(),
+    routeToBlocker: vi.fn(),
+    pendingRiskPrefill: null,
+    clearRiskPrefill: vi.fn(),
+  }),
 }));
 
 vi.mock("../../../shared/hooks/browser/use-fullscreen", () => ({
@@ -47,14 +76,6 @@ const READINESS = {
   canOpenConfirmation: true,
 };
 
-vi.mock("./lead-form-draft-seam", () => ({
-  useLeadFormDraftSeam: () => ({
-    submitSection: vi.fn(),
-    submitPending: false,
-    onSubmitSuccess: vi.fn(),
-  }),
-}));
-
 vi.mock("./use-lead-form-add-signals", () => ({
   useLeadFormAddSignals: () => ({
     currentWeekAddSignal: 0,
@@ -65,24 +86,6 @@ vi.mock("./use-lead-form-add-signals", () => ({
     addNextWeekItem: vi.fn(),
     addRisk: vi.fn(),
     addDecision: vi.fn(),
-  }),
-}));
-
-vi.mock("./use-lead-form-draft", () => ({
-  useLeadFormDraft: ({ serverSection }: { serverSection?: unknown }) => ({
-    generation: serverSection ? "report-a:section-a" : null,
-    draft: serverSection ?? null,
-    draftPayload: null,
-    dirty: false,
-    autosave: {},
-    version: 1,
-    isSubmitted: false,
-    setIsSubmitted: vi.fn(),
-    save: vi.fn(),
-    submit: vi.fn(),
-    submitReadiness: READINESS,
-    apply: vi.fn(),
-    handleConflict: vi.fn(),
   }),
 }));
 
@@ -98,19 +101,25 @@ vi.mock("./use-lead-form-chrome", () => ({
   }),
 }));
 
-vi.mock("./lead-form-loaded-view-model", () => ({
-  buildLeadFormLoadedViewModel: ({
-    draftSection,
-  }: {
-    draftSection: { marker: string };
-  }) => ({
-    marker: draftSection.marker,
-    products: [],
-    ownRisks: [],
-    currentWeekItems: [],
-    nextWeekItems: [],
-  }),
-}));
+vi.mock("../../report-sections", async () => {
+  const actual = await vi.importActual<typeof import("../../report-sections")>(
+    "../../report-sections",
+  );
+  return {
+    ...actual,
+    buildLeadFormLoadedViewModel: ({
+      draftSection,
+    }: {
+      draftSection: { marker: string };
+    }) => ({
+      marker: draftSection.marker,
+      products: [],
+      ownRisks: [],
+      currentWeekItems: [],
+      nextWeekItems: [],
+    }),
+  };
+});
 
 vi.mock("./lead-form-header-actions", () => ({
   LeadFormHeaderActions: ({ viewModel }: { viewModel: { marker: string } }) => (

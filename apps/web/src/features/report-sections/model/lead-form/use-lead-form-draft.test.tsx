@@ -4,9 +4,9 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
-import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
+import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
+import { createMockTRPC } from "../../../../test-utils/mock-trpc";
+import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { useLeadFormDraft } from "./use-lead-form-draft";

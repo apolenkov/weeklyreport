@@ -1,14 +1,13 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import type { CrossAuthorRow } from "../lead-cross-author";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
-  type CrossAuthorRow,
-  type KanbanItem,
-  mapLeadProducts,
-  type Product,
-} from "../../report-sections";
-import type { DraftSaveContent } from "../../report-sections/client";
+} from "../lead-cross-author";
+import { mapLeadProducts } from "../lead-form";
+import type { DraftSaveContent } from "../lead-section-draft-payload";
+import type { KanbanItem, Product } from "../types";
 
 // Plain per-render args for draft callbacks; readiness stays on the live draft.
 export interface LeadFormLoadedContext {

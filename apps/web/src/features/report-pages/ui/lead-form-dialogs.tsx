@@ -6,14 +6,14 @@ import type { ComponentProps } from "react";
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import { RequestReopenDialog } from "../../period";
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import {
   ItemEditDialog,
   type KanbanItem,
   ownedStagesForProject,
 } from "../../report-sections";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
+import type { QuickAddItem } from "../../report-sections/client";
 import { SubmitConfirmDialog } from "./submit-confirm-dialog";
-import type { QuickAddItem } from "./use-lead-form-quick-add";
 
 export interface LeadFormDialogsQuickAdd {
   readonly quickAddItem: QuickAddItem | null;

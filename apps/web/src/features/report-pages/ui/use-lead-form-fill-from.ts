@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
 import { isConflictError } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import type { LeadFormGeneration } from "./lead-form-generation";
-import { useGenerationState } from "./use-generation-state";
+import type { LeadFormGeneration } from "../../report-sections";
+import { useGenerationState } from "../../report-sections/client";
 
 interface FillFromInput {
   readonly targetSectionId: string;

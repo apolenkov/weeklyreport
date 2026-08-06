@@ -7,6 +7,7 @@ import type { FullscreenHandle } from "../../../shared/hooks/browser/use-fullscr
 import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
 import type { CrossAuthorEntry } from "../../period";
 import type { LeadSubmitReadiness } from "../../report-sections";
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import type { AutosaveSnapshot } from "../../report-sections/client";
 import type { RecordVisibility } from "../../report-sections/client";
 import { LeadSlidesClient } from "../../slides";
@@ -23,7 +24,6 @@ import {
   LeadFormHeaderActions,
   type LeadFormHeaderWriteActions,
 } from "./lead-form-header-actions";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormPastPeriodBanner } from "./lead-form-past-period-banner";
 import { LeadFormToolbarControls } from "./lead-form-toolbar-controls";
 import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";

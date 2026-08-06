@@ -36,10 +36,40 @@ vi.mock("../../report-sections/client", async () => {
   >("../../report-sections/client");
   return {
     ...actual,
+    useLeadFormDraftSeam: () => ({
+      submitSection: vi.fn(),
+      submitPending: false,
+      onSubmitSuccess: vi.fn(),
+    }),
     useRecordVisibility: () => ({
       visibility: "mine",
       hydrated: true,
       setVisibility: vi.fn(),
+    }),
+  };
+});
+vi.mock("../../report-sections", async () => {
+  const actual = await vi.importActual<typeof import("../../report-sections")>(
+    "../../report-sections",
+  );
+  return {
+    ...actual,
+    buildLeadFormLoadedViewModel: ({
+      draftSection,
+    }: {
+      draftSection: ReportSectionReadModel;
+    }) => ({
+      products: [
+        {
+          id: "33333333-3333-4333-8333-333333333333",
+          name: "Test Product",
+          overallStatus: "on-track",
+          stages: [],
+        },
+      ],
+      currentWeekItems: [],
+      nextWeekItems: [],
+      reportId: draftSection.reportId,
     }),
   };
 });
@@ -52,13 +82,6 @@ vi.mock("./use-lead-form-foreign-content-purge", () => ({
 vi.mock("./use-lead-form-redirects", () => ({
   useLeadFormRedirects: () => undefined,
 }));
-vi.mock("./lead-form-draft-seam", () => ({
-  useLeadFormDraftSeam: () => ({
-    submitSection: vi.fn(),
-    submitPending: false,
-    onSubmitSuccess: vi.fn(),
-  }),
-}));
 vi.mock("./use-lead-form-write-actions", () => ({
   useLeadFormWriteActions: () => ({ handleSubmit: vi.fn() }),
 }));
@@ -67,25 +90,6 @@ vi.mock("./use-lead-form-chrome", () => ({
     selectedPeriodId: pinnedReportId,
     showArchivePeriods: false,
     setShowArchivePeriods: vi.fn(),
-  }),
-}));
-vi.mock("./lead-form-loaded-view-model", () => ({
-  buildLeadFormLoadedViewModel: ({
-    draftSection,
-  }: {
-    draftSection: ReportSectionReadModel;
-  }) => ({
-    products: [
-      {
-        id: "33333333-3333-4333-8333-333333333333",
-        name: "Test Product",
-        overallStatus: "on-track",
-        stages: [],
-      },
-    ],
-    currentWeekItems: [],
-    nextWeekItems: [],
-    reportId: draftSection.reportId,
   }),
 }));
 vi.mock("./lead-form-loaded", () => ({

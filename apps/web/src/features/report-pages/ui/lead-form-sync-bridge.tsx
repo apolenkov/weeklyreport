@@ -15,17 +15,17 @@ import { toast } from "sonner";
 import type { CrossAuthorEntry } from "../../period";
 import { SdlcPipeline } from "../../period";
 import {
-  type Product,
-  type RiskEntry,
-  type StageStatus,
-} from "../../report-sections";
-import { useStatusRiskSync } from "../../report-sections/client";
-import { RisksSection } from "../../review";
-import {
   annotateOwnRiskCoverage,
   applyRiskSeverityFloor,
   coveringRisksForStage,
-} from "./lead-form-risk-coverage";
+  type Product,
+  type RiskEntry,
+  type RiskPrefillRequest,
+  type StageStatus,
+} from "../../report-sections";
+export type { RiskPrefillRequest } from "../../report-sections";
+import { useStatusRiskSync } from "../../report-sections/client";
+import { RisksSection } from "../../review";
 
 // A chip whose displayed severity is floored by a covering risk cannot author
 // or lower that status. The lead changes an at-risk or blocked stage by editing
@@ -38,15 +38,6 @@ const COVERED_STAGE_HINT_MESSAGE =
 
 // Chip-raise payload routed into RisksSection: each `signal` increment opens
 // exactly one prefilled RiskEditDialog.
-export interface RiskPrefillRequest {
-  signal: number;
-  productId: string;
-  stageNames: readonly string[];
-  severity: "at-risk" | "blocked";
-  // Activity-pill raise — XOR with the product fields, which are "" and [] here.
-  activityId?: string;
-}
-
 export type StagesForProduct = (productId: string) => readonly string[];
 
 interface BridgeContextValue {

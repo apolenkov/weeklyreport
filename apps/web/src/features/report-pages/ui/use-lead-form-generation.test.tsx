@@ -6,11 +6,15 @@ import { describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
-import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
-import type { LeadFormGeneration } from "./lead-form-generation";
-import type { LeadFormLoadedContext } from "./lead-form-submit-context";
-import { useLeadFormDraft } from "./use-lead-form-draft";
-import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
+import type {
+  LeadFormGeneration,
+  LeadFormLoadedContext,
+} from "../../report-sections";
+import type { LeadFormDraftSeam } from "../../report-sections/client";
+import {
+  useLeadFormDraft,
+  useLeadFormQuickAdd,
+} from "../../report-sections/client";
 
 const AUTHOR = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
