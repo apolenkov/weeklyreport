@@ -135,6 +135,27 @@ const fakeInput = (page: object): FrozenPhaseInput =>
     },
   }) as unknown as FrozenPhaseInput;
 
+const navigationPage = (pageState: { url: string }, mainFrame: object) => ({
+  url: () => pageState.url,
+  mainFrame: () => mainFrame,
+  waitForURL: vi.fn(
+    (predicate: (url: URL) => boolean) =>
+      new Promise<void>((resolve) => {
+        harness.events.push("observer-armed");
+        harness.resolveNavigation = (frame) => {
+          if (frame !== mainFrame) return;
+          pageState.url = `http://127.0.0.1:3105${harness.navigationPath}`;
+          if (predicate(new URL(pageState.url))) resolve();
+        };
+      }),
+  ),
+  waitForLoadState: vi.fn(() => {
+    harness.events.push("settled");
+    return Promise.resolve();
+  }),
+  waitForFunction: vi.fn(() => Promise.resolve()),
+});
+
 describe("frozen action evidence capture", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
@@ -163,38 +184,7 @@ describe("frozen action evidence capture", () => {
     const mainFrame = {};
     harness.frame = mainFrame;
     const pageState = { url: "http://127.0.0.1:3105/head/report" };
-    const page = {
-      url: () => pageState.url,
-      mainFrame: () => mainFrame,
-      waitForEvent: vi.fn(
-        (
-          _event: string,
-          options: {
-            readonly predicate?: (frame: object) => boolean;
-            readonly signal?: AbortSignal;
-          },
-        ) =>
-          new Promise<object>((resolve, reject) => {
-            harness.events.push("observer-armed");
-            harness.resolveNavigation = (frame) => {
-              if (options.predicate?.(frame) === true) {
-                pageState.url = `http://127.0.0.1:3105${harness.navigationPath}`;
-                resolve(frame);
-              }
-            };
-            options.signal?.addEventListener(
-              "abort",
-              () => reject(new Error("observer cancelled")),
-              { once: true },
-            );
-          }),
-      ),
-      waitForLoadState: vi.fn(() => {
-        harness.events.push("settled");
-        return Promise.resolve();
-      }),
-      waitForFunction: vi.fn(() => Promise.resolve()),
-    };
+    const page = navigationPage(pageState, mainFrame);
 
     const capture = captureFrozenPhase(fakeInput(page));
     await vi.advanceTimersByTimeAsync(harness.delayMs);
@@ -202,8 +192,8 @@ describe("frozen action evidence capture", () => {
     expect(result.action).toHaveLength(1);
 
     expect(harness.events).toEqual([
-      "observer-armed",
       "action-result",
+      "observer-armed",
       "navigation-start",
       "settled",
       "inventory",
@@ -222,37 +212,7 @@ describe("frozen action evidence capture", () => {
     const mainFrame = {};
     harness.frame = mainFrame;
     const pageState = { url: "http://127.0.0.1:3105/head/report" };
-    const page = {
-      url: () => pageState.url,
-      mainFrame: () => mainFrame,
-      waitForEvent: vi.fn(
-        (
-          _event: string,
-          options: {
-            readonly predicate?: (frame: object) => boolean;
-            readonly signal?: AbortSignal;
-          },
-        ) =>
-          new Promise<object>((resolve, reject) => {
-            harness.resolveNavigation = (frame) => {
-              if (options.predicate?.(frame) === true) {
-                pageState.url = `http://127.0.0.1:3105${harness.navigationPath}`;
-                resolve(frame);
-              }
-            };
-            options.signal?.addEventListener(
-              "abort",
-              () => reject(new Error("observer cancelled")),
-              { once: true },
-            );
-          }),
-      ),
-      waitForLoadState: vi.fn(() => {
-        harness.events.push("settled");
-        return Promise.resolve();
-      }),
-      waitForFunction: vi.fn(() => Promise.resolve()),
-    };
+    const page = navigationPage(pageState, mainFrame);
 
     const capture = captureFrozenPhase(fakeInput(page));
     await vi.advanceTimersByTimeAsync(harness.delayMs);
