@@ -92,6 +92,43 @@ const runFormCase = async (page: Page, testCase: FormCase): Promise<void> => {
   expect(events).toEqual(["reset", "oracle"]);
 };
 
+test("waits for a frozen control during a transient route render", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <main id="app"></main><output id="result"></output>
+    <script>
+      window.setTimeout(() => {
+        document.querySelector('#app').innerHTML =
+          '<button type="button">Jobs</button>';
+        document.querySelector('button').addEventListener('click', () => {
+          document.querySelector('#result').textContent = 'opened';
+        });
+      }, 1200);
+    </script>
+  `);
+
+  const result = await executeControlAction({
+    page,
+    control: {
+      controlKey: "button:Jobs:1",
+      ariaRole: "button",
+      accessibleName: "Jobs",
+      enabled: true,
+    },
+    action: {
+      controlKey: "button:Jobs:1",
+      operation: "click",
+      safety: "read-only",
+      transition: "none",
+    },
+    timeoutMs: 3000,
+  });
+
+  expect(result).toMatchObject({ status: "pass", operation: "click" });
+  await expect(page.locator("#result")).toHaveText("opened");
+});
+
 test.describe("runtime bounded form actions", () => {
   test("resets and re-seeds every potentially mutating form action", async ({
     page,
