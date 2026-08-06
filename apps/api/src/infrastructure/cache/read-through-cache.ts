@@ -2,7 +2,7 @@ import { Logger } from "@nestjs/common";
 import Redis from "ioredis";
 
 import type { EnvConfig } from "../config/env.schema";
-import { buildRedisConnectionOptions } from "../config/redis-connection";
+import { buildFailOpenRedisConnectionOptions } from "../config/redis-connection";
 import { redisCacheErrorsTotal } from "../metrics/metrics.registry.js";
 
 const SCAN_BATCH_SIZE = 100;
@@ -123,10 +123,7 @@ export function createRedisReadThroughCache(
   const { connection, loggerName, ttlSeconds, keyPrefix } = options;
   const logger = new Logger(loggerName);
   const redis = new Redis({
-    ...buildRedisConnectionOptions(connection),
-    lazyConnect: true,
-    maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
+    ...buildFailOpenRedisConnectionOptions(connection),
   });
   // A Redis blip must not crash the process, but it also must not pass
   // unseen: log every connection-level error event.
