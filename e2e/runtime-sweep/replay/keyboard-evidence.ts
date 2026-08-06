@@ -16,6 +16,8 @@ const MENU_ITEM_ROLES = new Set([
   "menuitemcheckbox",
   "menuitemradio",
 ]);
+const DISCLOSURE_FOCUSABLE =
+  ":is(a[href],button,input,select,textarea,summary,[contenteditable]:not([contenteditable='false']),[tabindex]):not(:disabled):not([aria-disabled='true']):not([tabindex='-1'])";
 
 type FocusedControl = Readonly<{
   controlKey: string;
@@ -196,17 +198,25 @@ const tabSequence = async (
 
 const expandedDisclosureSequence = async (
   page: Page,
-  controls: readonly DomControlObservation[],
-): Promise<readonly FocusedControl[]> =>
-  (await page.evaluate(() => {
+): Promise<readonly FocusedControl[]> => {
+  const steps = await page.evaluate((focusableSelector) => {
     const active = document.activeElement;
-    return (
-      active instanceof HTMLElement &&
-      active.getAttribute("aria-expanded")?.toLowerCase() === "true"
-    );
-  }))
-    ? tabSequence(page, Math.max(1, controls.length + 1))
-    : [];
+    if (
+      !(active instanceof HTMLElement) ||
+      active.getAttribute("aria-expanded")?.toLowerCase() !== "true"
+    )
+      return 0;
+    const controlledId = active.getAttribute("aria-controls")?.trim();
+    const target = controlledId
+      ? document.getElementById(controlledId)
+      : active.nextElementSibling;
+    if (!(target instanceof HTMLElement)) return 0;
+    return Array.from(
+      target.querySelectorAll<HTMLElement>(focusableSelector),
+    ).filter((element) => element.checkVisibility()).length;
+  }, DISCLOSURE_FOCUSABLE);
+  return tabSequence(page, steps);
+};
 
 const menuSequence = async (
   page: Page,
@@ -257,10 +267,7 @@ export async function captureKeyboardTrace(
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
   const menuFocusSequence = await menuSequence(page, resolvedControls);
-  const disclosureFocusSequence = await expandedDisclosureSequence(
-    page,
-    resolvedControls,
-  );
+  const disclosureFocusSequence = await expandedDisclosureSequence(page);
   await blurActiveElement(page);
   await focusDocumentStart(page);
   try {

@@ -34,7 +34,6 @@ test("captures an expanded disclosure before document-start traversal replaces i
   page,
 }) => {
   await page.setContent(`
-    <button type="button">Before</button>
     <div>
       <button type="button" aria-expanded="true">Quick add</button>
       <div role="group" aria-label="Record type">
@@ -43,20 +42,17 @@ test("captures an expanded disclosure before document-start traversal replaces i
         <button type="button">Risk</button>
       </div>
     </div>
-    <button type="button">After</button>
+    <button type="button" onfocus="if (!document.getElementById('runtime-sweep-keyboard-start')) document.body.dataset.disclosureEscapedBeforeReset = 'true'">After</button>
   `);
   await page.getByRole("button", { name: "Quick add" }).focus();
   await page.evaluate(() => {
     const removeDisclosureAtDocumentStart = (event: FocusEvent) => {
-      const target = event.target;
       if (
-        !(target instanceof HTMLElement) ||
-        target.id !== "runtime-sweep-keyboard-start"
+        !(event.target instanceof HTMLElement) ||
+        event.target.id !== "runtime-sweep-keyboard-start"
       )
         return;
-      document
-        .querySelector('[role="group"][aria-label="Record type"]')
-        ?.remove();
+      document.querySelector('[aria-label="Record type"]')?.remove();
       document.removeEventListener("focusin", removeDisclosureAtDocumentStart);
     };
     document.addEventListener("focusin", removeDisclosureAtDocumentStart);
@@ -72,6 +68,10 @@ test("captures an expanded disclosure before document-start traversal replaces i
       .map(({ outcome }) => outcome),
   ).toEqual(["pass", "pass", "pass"]);
   expect(trace.focusGaps).toEqual([]);
+  const escaped = await page.evaluate(
+    () => document.body.dataset.disclosureEscapedBeforeReset,
+  );
+  expect(escaped).toBeUndefined();
 });
 
 test("matches focused controls by their rendered accessible text", async ({
