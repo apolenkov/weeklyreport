@@ -96,6 +96,41 @@ export const titleTargetLocator = (
     .nth(occurrenceFrom(control.controlKey) - 1);
 };
 
+export const innerTextTargetLocator = async (
+  page: Page,
+  control: ControlActionTarget,
+): Promise<Locator | undefined> => {
+  if (!isSupportedRole(control.ariaRole))
+    throw new ControlActionPolicyError(`Unsupported role ${control.ariaRole}`);
+  const candidates = page.locator(titleSelectorFor(control.ariaRole));
+  const matchingIndexes = await candidates.evaluateAll(
+    (elements, expectedName) => {
+      const normalize = (value: string): string =>
+        value.replaceAll(/\s+/gu, " ").trim();
+      return elements.flatMap((element, index) => {
+        if (!(element instanceof HTMLElement)) return [];
+        const bounds = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        const visible =
+          element.closest("[hidden],[aria-hidden='true']") === null &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          style.visibility !== "collapse" &&
+          Number(style.opacity) !== 0 &&
+          bounds.width > 0 &&
+          bounds.height > 0;
+        return visible &&
+          normalize(element.innerText) === normalize(expectedName)
+          ? [index]
+          : [];
+      });
+    },
+    control.accessibleName,
+  );
+  const index = matchingIndexes[occurrenceFrom(control.controlKey) - 1];
+  return index === undefined ? undefined : candidates.nth(index);
+};
+
 export const hrefTargetLocator = (
   page: Page,
   control: ControlActionTarget,

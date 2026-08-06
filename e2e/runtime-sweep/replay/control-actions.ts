@@ -2,6 +2,7 @@ import {
   type ControlActionAttempt,
   executeControlAttempt,
   hrefTargetLocator,
+  innerTextTargetLocator,
   targetLocator,
   titleTargetLocator,
   waitForVisible,
@@ -96,8 +97,13 @@ const candidateLocator = async (
   const primary = targetLocator(input.page, input.control);
   const titled = titleTargetLocator(input.page, input.control);
   const href = hrefTargetLocator(input.page, input.control);
-  const candidates =
-    href === undefined ? [primary, titled] : [primary, titled, href];
+  const innerText = await innerTextTargetLocator(input.page, input.control);
+  const candidates = [
+    primary,
+    titled,
+    ...(href === undefined ? [] : [href]),
+    ...(innerText === undefined ? [] : [innerText]),
+  ];
   const resolveVisible = async (
     remaining: readonly (typeof primary)[],
   ): Promise<typeof primary | undefined> => {
