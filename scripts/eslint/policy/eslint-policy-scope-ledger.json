@@ -151,7 +151,7 @@
       "classification": "policy",
       "files": ["apps/web/**/*.{ts,tsx}"],
       "ignores": [],
-      "positive": "apps/web/src/lib/trpc.ts",
+      "positive": "apps/web/src/shared/lib/trpc/trpc.ts",
       "negative": "apps/api/src/main.ts",
       "marker": {
         "kind": "rule",
@@ -399,7 +399,7 @@
       "files": ["**/*.config.ts", "eslint-config/*.ts"],
       "ignores": [],
       "positive": "apps/web/next.config.ts",
-      "negative": "apps/web/src/lib/trpc.ts",
+      "negative": "apps/web/src/shared/lib/trpc/trpc.ts",
       "marker": {
         "kind": "rule",
         "name": "max-lines",

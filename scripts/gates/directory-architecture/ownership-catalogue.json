@@ -49,18 +49,18 @@
       "allowedTargetPrefixes": ["apps/web/src/features/report-pages/"]
     },
     {
-      "id": "web-lib",
-      "prefix": "apps/web/src/lib/",
+      "id": "web-shared-lib",
+      "prefix": "apps/web/src/shared/lib/",
       "allowedTargetPrefixes": ["apps/web/src/shared/lib/"]
     },
     {
-      "id": "web-hooks",
-      "prefix": "apps/web/src/hooks/",
+      "id": "web-shared-hooks",
+      "prefix": "apps/web/src/shared/hooks/",
       "allowedTargetPrefixes": ["apps/web/src/shared/hooks/"]
     },
     {
-      "id": "web-server",
-      "prefix": "apps/web/src/server/",
+      "id": "web-shared-server",
+      "prefix": "apps/web/src/shared/server/",
       "allowedTargetPrefixes": ["apps/web/src/shared/server/"]
     },
     {
@@ -740,25 +740,76 @@
       "target": "apps/web/src/features/report-pages/$1"
     },
     {
-      "id": "web-shared-library",
-      "scope": "web-lib",
-      "pattern": "^apps/web/src/lib/(.+)$",
+      "id": "web-shared-lib-tests",
+      "scope": "web-shared-lib",
+      "pattern": "^apps/web/src/shared/lib/(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+      "concern": "shared-library",
+      "role": "test",
+      "target": "apps/web/src/shared/lib/$1"
+    },
+    {
+      "id": "web-shared-lib-facades",
+      "scope": "web-shared-lib",
+      "pattern": "^apps/web/src/shared/lib/((?:.+/)?index\\.[cm]?[jt]sx?)$",
+      "concern": "shared-library-facade",
+      "role": "facade",
+      "target": "apps/web/src/shared/lib/$1",
+      "optional": true
+    },
+    {
+      "id": "web-shared-lib-implementation",
+      "scope": "web-shared-lib",
+      "pattern": "^apps/web/src/shared/lib/((?!(?:.+\\.(?:test|spec)\\.[cm]?[jt]sx?|(?:.+/)?index\\.[cm]?[jt]sx?)$).+)$",
       "concern": "shared-library",
       "role": "implementation",
       "target": "apps/web/src/shared/lib/$1"
     },
     {
-      "id": "web-shared-hooks",
-      "scope": "web-hooks",
-      "pattern": "^apps/web/src/hooks/(.+)$",
+      "id": "web-shared-hooks-tests",
+      "scope": "web-shared-hooks",
+      "pattern": "^apps/web/src/shared/hooks/(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+      "concern": "shared-hooks-or-domain-hook-review",
+      "role": "test",
+      "target": "apps/web/src/shared/hooks/$1"
+    },
+    {
+      "id": "web-shared-hooks-facades",
+      "scope": "web-shared-hooks",
+      "pattern": "^apps/web/src/shared/hooks/((?:.+/)?index\\.[cm]?[jt]sx?)$",
+      "concern": "shared-hooks-facade",
+      "role": "facade",
+      "target": "apps/web/src/shared/hooks/$1",
+      "optional": true
+    },
+    {
+      "id": "web-shared-hooks-implementation",
+      "scope": "web-shared-hooks",
+      "pattern": "^apps/web/src/shared/hooks/((?!(?:.+\\.(?:test|spec)\\.[cm]?[jt]sx?|(?:.+/)?index\\.[cm]?[jt]sx?)$).+)$",
       "concern": "shared-hooks-or-domain-hook-review",
       "role": "implementation",
       "target": "apps/web/src/shared/hooks/$1"
     },
     {
-      "id": "web-shared-server",
-      "scope": "web-server",
-      "pattern": "^apps/web/src/server/(.+)$",
+      "id": "web-shared-server-tests",
+      "scope": "web-shared-server",
+      "pattern": "^apps/web/src/shared/server/(.+\\.(?:test|spec)\\.[cm]?[jt]sx?)$",
+      "concern": "shared-server",
+      "role": "test",
+      "target": "apps/web/src/shared/server/$1"
+    },
+    {
+      "id": "web-shared-server-facades",
+      "scope": "web-shared-server",
+      "pattern": "^apps/web/src/shared/server/((?:.+/)?index\\.[cm]?[jt]sx?)$",
+      "concern": "shared-server-facade",
+      "role": "facade",
+      "target": "apps/web/src/shared/server/$1",
+      "optional": true
+    },
+    {
+      "id": "web-shared-server-implementation",
+      "scope": "web-shared-server",
+      "pattern": "^apps/web/src/shared/server/((?!(?:.+\\.(?:test|spec)\\.[cm]?[jt]sx?|(?:.+/)?index\\.[cm]?[jt]sx?)$).+)$",
       "concern": "shared-server",
       "role": "implementation",
       "target": "apps/web/src/shared/server/$1"

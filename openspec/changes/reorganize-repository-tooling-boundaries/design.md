@@ -99,6 +99,14 @@ report-sections, period, or review behind existing barrels. Root `lib`, hooks,
 and server files split by consumer ownership; domain-specific hooks do not get
 dumped into shared.
 
+The surviving page composition is not allowed to remain a second flat bucket.
+Lead page composition is grouped into `lead/shell`, `lead/bridges`, and
+`lead/chrome`; assembled weekly, head, and product composition use `weekly`,
+`head`, and `product`. Source and tests move together, the public facade keeps
+its six existing exports, and every direct directory stays at or below 30 files.
+Client-only cross-slice hooks use an explicit `client.ts` entrypoint so the pure
+`index.ts` facade never acquires a transitive client boundary.
+
 Tool-owned data follows the same rule. ESLint policy and suppression ledgers
 remain inside their respective concern directories; exemplary, React Doctor,
 type-cycle, and Vitest baselines remain beside the validator that owns them.

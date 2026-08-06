@@ -1,7 +1,7 @@
 ## 1. Structural Baseline and Enforcement
 
 - [x] 1.1 Freeze HEAD/status, direct-file counts, import edges, command consumers, and per-root digests in the external campaign archive.
-- [ ] 1.2 Add the machine-readable ownership catalogue and schema for `scripts`, runtime-sweep, Prisma, web transitional roots, and API test seams.
+- [x] 1.2 Add the machine-readable ownership catalogue and schema for `scripts`, runtime-sweep, Prisma, web transitional roots, and API test seams.
 - [x] 1.3 Add the catalogue validator proving exactly one owner/target per tracked in-scope file and no stale or duplicate target.
 - [x] 1.4 Add the structural density ratchet with a 30-direct-file threshold and exact non-increasing bounded-flat exceptions.
 - [x] 1.5 Add repository-test discovery ownership and register the four currently orphaned Node tests; prove all 16 assertions run through the aggregate gate.
