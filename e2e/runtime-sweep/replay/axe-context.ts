@@ -134,7 +134,14 @@ export const settleEvidenceAnimations = async (page: Page): Promise<void> => {
       );
     });
     const settled = Promise.all(
-      finiteRunning.map((animation) => animation.finished),
+      finiteRunning.map(async (animation) => {
+        try {
+          await animation.finished;
+        } catch (error: unknown) {
+          if (!(error instanceof DOMException && error.name === "AbortError"))
+            throw error;
+        }
+      }),
     );
     const deadline = new Promise<"timeout">((resolve) => {
       window.setTimeout(() => resolve("timeout"), timeoutMs);

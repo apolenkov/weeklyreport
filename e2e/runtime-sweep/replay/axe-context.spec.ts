@@ -28,6 +28,22 @@ test("settles CSS transitions before sampling a control state", async ({
   await expect(page.locator("#tab")).toHaveCSS("color", "rgb(0, 98, 65)");
 });
 
+test("treats a cancelled browser animation as settled", async ({ page }) => {
+  await page.setContent(`
+    <style>
+      #panel { animation: enter 10s linear; }
+      @keyframes enter { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+    <section id="panel">Report</section>
+  `);
+
+  await page.evaluate(() => {
+    window.setTimeout(() => document.getAnimations()[0]?.cancel(), 10);
+  });
+
+  await expect(settleEvidenceAnimations(page)).resolves.toBeUndefined();
+});
+
 test("scans an active portal and then a full page after it closes", async ({
   page,
 }) => {
