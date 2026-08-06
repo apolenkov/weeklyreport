@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import Redis from "ioredis";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
+import { buildFailOpenRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import { sessionRevocationFailuresTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import type { AppLogger } from "../../lib/logger.js";
 
@@ -29,10 +29,7 @@ export class SessionRevocationService implements OnModuleDestroy {
       this.redis = deps.redis;
     } else {
       this.redis = new Redis({
-        ...buildRedisConnectionOptions(deps.env),
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-        enableOfflineQueue: false,
+        ...buildFailOpenRedisConnectionOptions(deps.env),
       });
       // Suppress unhandled error events on transient Redis blips.
       this.redis.on("error", () => undefined);
