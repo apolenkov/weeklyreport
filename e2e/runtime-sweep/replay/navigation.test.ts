@@ -204,6 +204,10 @@ describe("runtime navigation recovery", () => {
     ).toBeUndefined();
   });
 
+  it("does not infer navigation from a button's accessible name", () => {
+    expect(expectedActionNavigationFor("button:Document:1")).toBeUndefined();
+  });
+
   it("waits for delayed navigation from generic router controls", async () => {
     vi.useFakeTimers();
     const frame = {};

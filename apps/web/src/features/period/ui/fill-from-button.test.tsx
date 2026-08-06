@@ -80,6 +80,10 @@ describe("FillFromButton", () => {
     });
     fireEvent.click(chevron);
 
+    const panel = screen.getByRole("region", { name: "Past reports" });
+    expect(chevron).toHaveAttribute("aria-expanded", "true");
+    expect(chevron).toHaveAttribute("aria-controls", panel.id);
+
     expect(
       screen.getByText("No submitted past reports found."),
     ).toBeInTheDocument();
@@ -89,6 +93,17 @@ describe("FillFromButton", () => {
       name: "Fill from most recent submitted period",
     });
     expect(fillButton).toBeDisabled();
+  });
+
+  it("exposes the closed picker state without rendering an orphan region", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).not.toHaveAttribute("aria-controls");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
   it("uses the most recent submitted period when input order is unsorted", () => {
