@@ -30,6 +30,50 @@ test("starts the tab trace at the document start after a mid-page focus", async 
   });
 });
 
+test("captures an expanded disclosure before document-start traversal replaces it", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">Before</button>
+    <div>
+      <button type="button" aria-expanded="true">Quick add</button>
+      <div role="group" aria-label="Record type">
+        <button type="button">Current item</button>
+        <button type="button">Next item</button>
+        <button type="button">Risk</button>
+      </div>
+    </div>
+    <button type="button">After</button>
+  `);
+  await page.getByRole("button", { name: "Quick add" }).focus();
+  await page.evaluate(() => {
+    const removeDisclosureAtDocumentStart = (event: FocusEvent) => {
+      const target = event.target;
+      if (
+        !(target instanceof HTMLElement) ||
+        target.id !== "runtime-sweep-keyboard-start"
+      )
+        return;
+      document
+        .querySelector('[role="group"][aria-label="Record type"]')
+        ?.remove();
+      document.removeEventListener("focusin", removeDisclosureAtDocumentStart);
+    };
+    document.addEventListener("focusin", removeDisclosureAtDocumentStart);
+  });
+
+  const trace = await captureKeyboardTrace(page);
+
+  expect(
+    trace.controls
+      .filter(({ accessibleName }) =>
+        ["Current item", "Next item", "Risk"].includes(accessibleName),
+      )
+      .map(({ outcome }) => outcome),
+  ).toEqual(["pass", "pass", "pass"]);
+  expect(trace.focusGaps).toEqual([]);
+});
+
 test("matches focused controls by their rendered accessible text", async ({
   page,
 }) => {

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { QuickAddButton } from "./quick-add-button";
@@ -28,6 +29,27 @@ describe("QuickAddButton", () => {
       "Risk",
       "Decision",
     ]);
+  });
+
+  it("moves keyboard focus through every disclosed option", async () => {
+    const user = userEvent.setup();
+    render(<QuickAddButton onPick={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Current week item" }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Next week item" }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Blocker" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Risk" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Decision" })).toHaveFocus();
   });
 
   it("fires onPick with the chosen kind and closes the menu", () => {

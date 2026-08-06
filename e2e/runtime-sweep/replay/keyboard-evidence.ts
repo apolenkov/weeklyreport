@@ -17,6 +17,12 @@ const MENU_ITEM_ROLES = new Set([
   "menuitemradio",
 ]);
 
+type FocusedControl = Readonly<{
+  controlKey: string;
+  role: string;
+  accessibleName: string;
+}>;
+
 export type KeyboardControlEvidence = Readonly<{
   controlKey: string;
   role: string;
@@ -35,12 +41,6 @@ export interface KeyboardTrace {
   readonly controls: readonly KeyboardControlEvidence[];
   readonly focusGaps: readonly KeyboardControlEvidence[];
 }
-
-type FocusedControl = Readonly<{
-  controlKey: string;
-  role: string;
-  accessibleName: string;
-}>;
 
 const FOCUSED_CONTROL_SCRIPT = String.raw`(() => {
   const active = document.activeElement;
@@ -194,6 +194,20 @@ const tabSequence = async (
     Promise.resolve<readonly FocusedControl[]>([]),
   );
 
+const expandedDisclosureSequence = async (
+  page: Page,
+  controls: readonly DomControlObservation[],
+): Promise<readonly FocusedControl[]> =>
+  (await page.evaluate(() => {
+    const active = document.activeElement;
+    return (
+      active instanceof HTMLElement &&
+      active.getAttribute("aria-expanded")?.toLowerCase() === "true"
+    );
+  }))
+    ? tabSequence(page, Math.max(1, controls.length + 1))
+    : [];
+
 const menuSequence = async (
   page: Page,
   controls: readonly DomControlObservation[],
@@ -243,6 +257,10 @@ export async function captureKeyboardTrace(
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
   const menuFocusSequence = await menuSequence(page, resolvedControls);
+  const disclosureFocusSequence = await expandedDisclosureSequence(
+    page,
+    resolvedControls,
+  );
   await blurActiveElement(page);
   await focusDocumentStart(page);
   try {
@@ -255,7 +273,9 @@ export async function captureKeyboardTrace(
         ? await activeElement(page)
         : `${sequence[0].role}:${sequence[0].accessibleName}`;
     const focusedKeys = new Set(
-      [...menuFocusSequence, ...sequence].map(({ controlKey }) => controlKey),
+      [...menuFocusSequence, ...disclosureFocusSequence, ...sequence].map(
+        ({ controlKey }) => controlKey,
+      ),
     );
     const evidence = controlsEvidence(resolvedControls, focusedKeys);
     return {
