@@ -17,6 +17,7 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     process.env.RUNTIME_SWEEP_PROFILE = "full";
     process.env.RUNTIME_SWEEP_SOURCE_SHA = SOURCE_SHA;
     const { default: config } = await import("./playwright.config.ts");
+    expect(config.testDir).toBe(path.resolve(import.meta.dirname, ".."));
     const configured = config.projects ?? [];
     expect(configured.map(({ name }) => name)).toEqual([
       "runtime-prerequisites",
