@@ -61,7 +61,7 @@
 ## 8. Repository-Wide Verification and Runtime Restart
 
 - [ ] 8.1 Regenerate the structural inventory and require zero uncatalogued files, zero orphan tests, zero unexplained over-threshold directories, and no new deep import edge.
-- [ ] 8.2 Run `pnpm prettier:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and required single-worker integration suites; record exact commands/exits.
+- [ ] 8.2 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and required single-worker integration suites; record exact commands/exits.
 - [ ] 8.3 Run `openspec validate reorganize-repository-tooling-boundaries --strict` and `openspec validate establish-exhaustive-runtime-sweep --strict`.
 - [ ] 8.4 Commit behavior-neutral slices, independently review exact-final-SHA moves, and require a clean worktree with preserved branch refs.
 - [ ] 8.5 Freeze a new immutable runtime SOURCE/PREFLIGHT/MATRIX/MANIFEST at the final SHA; classify r29 as superseded diagnostic evidence.
