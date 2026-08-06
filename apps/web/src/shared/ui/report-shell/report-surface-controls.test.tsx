@@ -39,13 +39,16 @@ vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
-vi.mock("../../../features/report-pages/ui/lead-section-preview-auth", () => ({
-  LeadSectionPreviewAuth: () => (
-    <div data-testid="lead-section-preview-auth-stub" />
-  ),
-}));
+vi.mock(
+  "../../../features/report-pages/ui/lead/shell/lead-section-preview-auth",
+  () => ({
+    LeadSectionPreviewAuth: () => (
+      <div data-testid="lead-section-preview-auth-stub" />
+    ),
+  }),
+);
 
-vi.mock("../../../features/report-pages/ui/weekly-report-page", () => ({
+vi.mock("../../../features/report-pages/ui/weekly/weekly-report-page", () => ({
   // Render the context-controls slot so viewer controls remain observable in
   // the surface audit.
   WeeklyReportPage: ({ contextControls }: { contextControls?: ReactNode }) => (
@@ -56,9 +59,14 @@ vi.mock("../../../features/report-pages/ui/weekly-report-page", () => ({
   ),
 }));
 
-vi.mock("../../../features/report-pages/ui/weekly-report-skeleton", () => ({
-  WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton-stub" />,
-}));
+vi.mock(
+  "../../../features/report-pages/ui/weekly/weekly-report-skeleton",
+  () => ({
+    WeeklyReportSkeleton: () => (
+      <div data-testid="weekly-report-skeleton-stub" />
+    ),
+  }),
+);
 
 // RoleGate: pass children straight through for the lead preview test.
 vi.mock("../auth-runtime/role-gate", () => ({
