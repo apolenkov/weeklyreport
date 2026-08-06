@@ -3,11 +3,11 @@
 import { shortName } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import type { AdminUserView, StageName } from "../model/admin-types";
+import type { AdminUserView, StageName } from "../../model/admin-types";
 import {
   useStageAssignmentData,
   useStageAssignmentMutations,
-} from "../model/use-stage-assignments";
+} from "../../model/use-stage-assignments";
 
 const STAGE_COLORS: Record<StageName, string> = {
   Planning: "var(--color-starbucks-green)",
@@ -79,9 +79,13 @@ function StageCell({
     <div className="space-y-1">
       <label
         htmlFor={selectId}
-        className="block text-center text-[11px] font-semibold uppercase tracking-wider"
-        style={{ color: stageColorOf(stageName) }}
+        className="flex items-center justify-center gap-1 text-center text-[11px] font-semibold uppercase tracking-wider text-[var(--color-foreground)]"
       >
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: stageColorOf(stageName) }}
+        />
         {stageName}
       </label>
       <select

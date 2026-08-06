@@ -190,7 +190,7 @@ describe("runtime state preparation mutations", () => {
     );
   });
 
-  it("carries denied lead-form surface semantics without changing ownership targets", () => {
+  it("keeps the non-owner route reachable without changing ownership targets", () => {
     const plan = buildStatePreparationPlan({
       ...request,
       axes: { ...axes, permission: "non-owner" },
@@ -198,8 +198,8 @@ describe("runtime state preparation mutations", () => {
 
     expect(plan.targets.ownerId).not.toBe(plan.permission.actorId);
     expect(plan.surface).toMatchObject({
-      productContent: "denied",
-      productActions: "inapplicable",
+      productContent: "available",
+      productActions: "exercise",
       shell: "required",
     });
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { runtimeSurfaceExpectation } from "../preflight/runtime-surface-expectation.ts";
+import { REACHABLE_ROUTE_SURFACE_EXPECTATION } from "../preflight/runtime-surface-expectation.ts";
 import {
   buildRuntimeDomainOracle,
   lifecycleExpectation,
@@ -56,25 +56,13 @@ describe("runtime state oracle", () => {
     expect(permissionExpectation("forbidden").allowed).toBe(false);
   });
 
-  it("marks denied lead-form content inapplicable while requiring the shell", () => {
-    expect(
-      runtimeSurfaceExpectation({
-        route: "lead:/lead/report/[reportId]",
-        permission: "non-owner",
-      }),
-    ).toEqual({
-      productContent: "denied",
-      productActions: "inapplicable",
-      productActionsReason:
-        "The lead report form has no section for the current account.",
+  it("keeps reachable route controls executable across applicable states", () => {
+    expect(REACHABLE_ROUTE_SURFACE_EXPECTATION).toEqual({
+      productContent: "available",
+      productActions: "exercise",
+      productActionsReason: null,
       shell: "required",
     });
-    expect(
-      runtimeSurfaceExpectation({
-        route: "lead:/lead/report/[reportId]/preview",
-        permission: "non-owner",
-      }).productContent,
-    ).toBe("available");
   });
 
   it("reports every dual-state mismatch instead of collapsing the tuple", () => {

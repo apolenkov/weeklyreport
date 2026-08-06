@@ -5,6 +5,7 @@ import {
   parseSeedProfile,
   type SeedProfile,
 } from "../../prisma/seeds/profiles/seed-profile-contract.js";
+import type { E2eDatabaseSetupMode } from "../helpers/e2e-database-setup.js";
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.js";
 
 export function findRepoRoot(startDir: string): string {
@@ -39,12 +40,25 @@ export function selectedSeedProfile(
   return parseSeedProfile(runtimeProfile ?? integrationProfile ?? "full");
 }
 
+export function runtimeDatabaseSetupMode(
+  environment: Readonly<{
+    readonly RUNTIME_SWEEP_REUSE_DATABASE?: string;
+  }> = process.env,
+): E2eDatabaseSetupMode {
+  const value = environment.RUNTIME_SWEEP_REUSE_DATABASE;
+  if (value === undefined || value === "false") return "schema+seed";
+  if (value === "true") return "profile-reseed";
+  throw new Error("RUNTIME_SWEEP_REUSE_DATABASE must be true or false");
+}
+
 /**
  * Runs ONCE before any integration test.
  *
  * - `prisma migrate reset --force` drops + recreates the guarded E2E schema
  * - the selected named profile is seeded and validated (`full` by default)
  *   against E2E_DATABASE_URL
+ * - runtime diagnostics may set `RUNTIME_SWEEP_REUSE_DATABASE=true` to keep
+ *   the schema and perform only the deterministic profile reseed
  *
  * MUST run against E2E_DATABASE_URL — never the dev DATABASE_URL. The
  * playwright.integration.config.ts already throws if E2E_DATABASE_URL is unset,
@@ -60,6 +74,6 @@ export default function globalSetup(): void {
     databaseUrl: dbUrl,
     profile,
     repoRoot,
-    mode: "schema+seed",
+    mode: runtimeDatabaseSetupMode(),
   });
 }

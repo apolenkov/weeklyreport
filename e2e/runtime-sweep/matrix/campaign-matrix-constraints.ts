@@ -10,7 +10,7 @@ import { stateCapabilities } from "./matrix-coverage.ts";
 const ROLE_PERMISSIONS: Readonly<
   Record<Role, ReadonlySet<PermissionBoundary>>
 > = {
-  lead: new Set(["allowed", "owner", "non-owner", "anonymous", "forbidden"]),
+  lead: new Set(["allowed", "owner", "non-owner", "anonymous"]),
   head: new Set(["allowed", "head", "anonymous"]),
   admin: new Set(["allowed", "admin", "anonymous"]),
   viewer: new Set(["allowed", "viewer", "anonymous"]),

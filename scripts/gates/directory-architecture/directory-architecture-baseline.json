@@ -9,8 +9,8 @@
     },
     "e2e/runtime-sweep": {
       "gitTree": "c70932f49d42dc5f9d99543c7e3086877a9ecfa9",
-      "pathDigest": "8960ec0066b97adec489ce27f1fbca7bfac0ea5a73de8682d2c43d56ffb37ff0",
-      "trackedFiles": 198
+      "pathDigest": "f06743a3c12379750c7280cefabf498ef96b0a36bb2a9956ce3fbbe6648c4e1d",
+      "trackedFiles": 200
     },
     "prisma": {
       "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
@@ -59,7 +59,7 @@
     "apps/api/src/modules/admin": 60,
     "apps/api/src/modules/reminders": 47,
     "apps/api/src/modules/report-sections/infrastructure": 42,
-    "apps/web/src/features/admin/ui": 74,
+    "apps/web/src/features/admin/ui": 73,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
     "apps/web/src/features/report-sections/model": 47,
@@ -97,7 +97,7 @@
     },
     {
       "directory": "apps/web/src/features/admin/ui",
-      "baseline": 74,
+      "baseline": 73,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     },
     {

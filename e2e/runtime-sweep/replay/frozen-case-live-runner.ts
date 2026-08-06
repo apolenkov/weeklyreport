@@ -145,7 +145,7 @@ const runFrozenCase = async (
     runtime,
     reuseProfileBaseline,
   );
-  await loginForCase(page, matrixCase);
+  await loginForCase(page, matrixCase, runtime.baseURL);
   const route = routeForState(source, stateForCase(matrixCase));
   const navigation = await initialNavigation(page, route.resolvedRoute);
   const cell = await captureFrozenCase(

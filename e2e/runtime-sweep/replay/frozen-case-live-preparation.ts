@@ -16,6 +16,7 @@ import {
   type RuntimeStateResetter,
   type StatePreparationRequest,
 } from "../support/state-preparation.ts";
+import { clearClientStorage } from "./browser-state/client-storage.ts";
 
 export interface FrozenCaseLiveRuntime {
   readonly archiveRoot: string;
@@ -43,13 +44,15 @@ export const stateForCase = (matrixCase: MatrixExecutableCase): MatrixState => {
 export const loginForCase = async (
   page: Page,
   matrixCase: MatrixExecutableCase,
+  baseURL: string,
 ): Promise<void> => {
+  await page.context().clearCookies();
+  await clearClientStorage(page, baseURL);
   const actor = actorForPermission(
     matrixCase.state.permission,
     matrixCase.role,
   );
   if (actor.role === null) {
-    await page.context().clearCookies();
     return;
   }
   await loginByCookie(page, {

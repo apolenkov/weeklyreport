@@ -4,7 +4,11 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { findRepoRoot, selectedSeedProfile } from "./global-setup.js";
+import {
+  findRepoRoot,
+  runtimeDatabaseSetupMode,
+  selectedSeedProfile,
+} from "./global-setup.js";
 
 describe("findRepoRoot", () => {
   it("walks up from e2e/integration to the repo root", () => {
@@ -47,5 +51,23 @@ describe("integration global setup profile selection", () => {
 
   it("defaults to full for the integration configuration", () => {
     expect(selectedSeedProfile({})).toBe("full");
+  });
+});
+
+describe("runtime database reuse", () => {
+  it("requires explicit true before using data-only profile reseeding", () => {
+    expect(runtimeDatabaseSetupMode({})).toBe("schema+seed");
+    expect(
+      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "false" }),
+    ).toBe("schema+seed");
+    expect(
+      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "true" }),
+    ).toBe("profile-reseed");
+  });
+
+  it("rejects a misspelled reuse value", () => {
+    expect(() =>
+      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "yes" }),
+    ).toThrow(/must be true or false/iu);
   });
 });

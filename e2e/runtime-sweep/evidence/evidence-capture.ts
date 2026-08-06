@@ -1,8 +1,8 @@
 import { mkdir } from "node:fs/promises";
 
-import { z } from "zod";
-
 import {
+  type AxeContextResults,
+  axeEvidenceFor,
   finalizeAxeContext,
   prepareAxeContext,
 } from "../replay/axe-context.ts";
@@ -50,7 +50,7 @@ const DEFAULT_PHASE: EvidencePhase = "before";
 const captureJson = async (
   input: EvidenceCaptureInput,
   directory: string,
-  axe: unknown,
+  axe: AxeContextResults,
   keyboard: KeyboardTrace,
   geometrySnapshot: GeometrySnapshot,
 ): Promise<CapturedJson> => {
@@ -80,7 +80,7 @@ const captureJson = async (
       "url",
       RUNTIME_DIMENSION,
     ],
-    ["axe.json", axe, "axe", "accessibility"],
+    ["axe.json", axeEvidenceFor(axe), "axe", "accessibility"],
     ["keyboard.json", keyboard, "keyboard", "accessibility"],
     ["geometry.json", geometrySnapshot, "geometry", "visual"],
     ...functionalSpec,
@@ -90,8 +90,7 @@ const captureJson = async (
   );
   return {
     refs,
-    violations: z.object({ violations: z.array(z.unknown()) }).parse(axe)
-      .violations,
+    violations: axe.violations,
   };
 };
 
