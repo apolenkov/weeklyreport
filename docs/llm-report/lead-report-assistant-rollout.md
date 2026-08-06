@@ -53,7 +53,7 @@ REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET
 The reviewed development values are in `.env.example`; test values use a
 placeholder key and deterministic fakes and never contact Mistral. For the
 provider facts and links to the primary sources, see
-[`mistral-report-assistant-integration-2026-08-04.md`](../research/mistral-report-assistant-integration-2026-08-04.md).
+[`mistral-report-assistant-integration-2026-08-04.md`](./mistral-report-assistant-integration-2026-08-04.md).
 
 ## 1. Config before code
 

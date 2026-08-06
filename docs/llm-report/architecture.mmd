@@ -1,0 +1,68 @@
+flowchart LR
+    lead["Lead в браузере"]
+
+    subgraph web["apps/web — Next.js / React"]
+        toolbar["Lead toolbar\nКнопка Report chat"]
+        sheet["LeadReportAssistant Sheet\nформа, outcomes, citations"]
+        state["Локальное состояние\nпоследний exchange + resolution tokens"]
+        toolbar --> sheet --> state
+    end
+
+    subgraph api["apps/api — NestJS + tRPC"]
+        router["leadForm.assistant\nleadProcedure + shared Zod contracts"]
+        service["ReportAssistantService\nоркестрация и telemetry"]
+        plannerPort["Planner port"]
+        answerPort["Answer port"]
+        retrieval["Authorized retrieval\nperiod source + ACL + entity resolution\n+ candidate projection/filtering"]
+        grounding["ContextBuilder\naggregates + compact evidence + citations"]
+        semantic["SemanticRetrievalService\ncache completeness + ranking"]
+        router --> service
+        service --> plannerPort
+        service --> retrieval
+        retrieval --> semantic
+        retrieval --> grounding
+        semantic --> grounding
+        grounding --> answerPort
+    end
+
+    subgraph db["PostgreSQL 15 + pgvector"]
+        live["Live report tables\nТолько current open/reopened"]
+        snapshots["Report.publishedSnapshot\nНеизменяемая история"]
+        embeddings["SemanticEmbedding\nhash + vector + model scope\nБез текста, ACL и record IDs"]
+    end
+
+    subgraph async["Redis + BullMQ"]
+        queue["semantic-index queue\nlocators + expected hash"]
+        worker["SemanticIndexProcessor\nreload canonical source\nverify hash + idempotent upsert"]
+        queue --> worker
+    end
+
+    subgraph external["Mistral API — явный регион и models"]
+        planModel["Planner\nfunction calling"]
+        answerModel["Answer\nstructured output"]
+        embedModel["Embeddings\nmistral-embed"]
+    end
+
+    subgraph shared["packages/shared"]
+        schemas["Zod: SearchPlan, request,\noutcome, citations"]
+    end
+
+    subgraph operations["Наблюдаемость"]
+        metrics["Prometheus metrics\nlatency, outcome, bounded counts,\ncache, repairs, token usage"]
+    end
+
+    lead --> toolbar
+    state -->|"tRPC mutation"| router
+    router --> schemas
+    plannerPort -->|"adapter"| planModel
+    answerPort -->|"adapter"| answerModel
+    retrieval --> live
+    retrieval --> snapshots
+    semantic --> embeddings
+    semantic -->|"query/document vectors"| embedModel
+    semantic -->|"large missing cache set"| queue
+    worker --> live
+    worker --> snapshots
+    worker -->|"embed canonical text"| embedModel
+    worker --> embeddings
+    service --> metrics
