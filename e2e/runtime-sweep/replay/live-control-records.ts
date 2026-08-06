@@ -26,7 +26,7 @@ const STATEFUL_SUCCESS: Readonly<Record<StatefulOperation, RegExp>> = {
   restore: /restored|unarchived/i,
 };
 const MAX_OBSERVATION_WAIT_MS = 2000;
-export type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
+type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
 
 const nextAnimationFrame = async (page: Page): Promise<void> => {
   await page.evaluate(
