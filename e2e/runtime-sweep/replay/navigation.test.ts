@@ -157,45 +157,29 @@ describe("runtime navigation recovery", () => {
 
   it("propagates non-timeout errors from an armed action observer", async () => {
     const error = new Error("browser disconnected");
-    const frame = {};
     const page = {
       url: () => "http://127.0.0.1:3105/report",
-      mainFrame: () => frame,
-      waitForEvent: () => Promise.reject(error),
+      waitForURL: () => Promise.reject(error),
     } satisfies ActionNavigationPage;
     const observer = observeActionNavigation(page);
 
     await expect(observer.waitForNavigation()).rejects.toBe(error);
   });
 
-  it("cancels the sign-out observer at its deterministic timeout", async () => {
-    vi.useFakeTimers();
-    const frame = {};
-    let signal: AbortSignal | undefined;
+  it("uses the deterministic sign-out timeout", async () => {
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const waitForURL = vi.fn(() => Promise.reject(timeout));
     const page = {
       url: () => "http://127.0.0.1:3105/report",
-      mainFrame: () => frame,
-      waitForEvent: (
-        _event: string,
-        options: { readonly signal?: AbortSignal },
-      ) => {
-        signal = options.signal;
-        return new Promise((_resolve, reject) =>
-          options.signal?.addEventListener("abort", () => reject(), {
-            once: true,
-          }),
-        );
-      },
+      waitForURL,
     } satisfies ActionNavigationPage;
     const expectation = expectedActionNavigationFor("button:Sign%20out:1");
     const observer = observeActionNavigation(page, expectation);
-    const waiting = observer.waitForNavigation();
-
-    await vi.advanceTimersByTimeAsync(expectation?.timeoutMs ?? 0);
-
-    await expect(waiting).resolves.toBe(false);
-    expect(signal?.aborted).toBe(true);
-    expect(vi.getTimerCount()).toBe(0);
+    await expect(observer.waitForNavigation()).resolves.toBe(false);
+    expect(waitForURL).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: expectation?.timeoutMs,
+    });
   });
 
   it("does not require frame navigation for a same-document skip link", () => {
@@ -209,56 +193,25 @@ describe("runtime navigation recovery", () => {
   });
 
   it("waits for delayed navigation from generic router controls", async () => {
-    vi.useFakeTimers();
-    const frame = {};
-    let resolveNavigation: (() => void) | undefined;
+    const navigation = Promise.withResolvers<void>();
     const pageState = { url: "http://127.0.0.1:3105/report" };
     const page = {
       url: () => pageState.url,
-      mainFrame: () => frame,
-      waitForEvent: vi.fn(
-        (
-          _event: string,
-          options: {
-            readonly predicate?: (candidate: object) => boolean;
-            readonly signal?: AbortSignal;
-          },
-        ) =>
-          new Promise<object>((resolve, reject) => {
-            resolveNavigation = () => {
-              if (options.predicate?.(frame) === true) {
-                pageState.url = "http://127.0.0.1:3105/status";
-                resolve(frame);
-              }
-            };
-            options.signal?.addEventListener(
-              "abort",
-              () => reject(new Error("observer cancelled")),
-              { once: true },
-            );
-          }),
-      ),
+      waitForURL: vi.fn(async (predicate: (url: URL) => boolean) => {
+        await navigation.promise;
+        pageState.url = "http://127.0.0.1:3105/status";
+        if (!predicate(new URL(pageState.url))) {
+          throw new Error("Navigation predicate rejected the new URL");
+        }
+      }),
     } satisfies ActionNavigationPage;
     const expectation = expectedActionNavigationFor("link:Status:1");
     if (expectation === undefined)
       throw new Error("Generic router links must arm navigation observation");
     const observer = observeActionNavigation(page, expectation);
     const waiting = observer.waitForNavigation();
-    let settled = false;
-    const completion = waiting.then(
-      () => {
-        settled = true;
-      },
-      () => {
-        settled = true;
-      },
-    );
-
-    await vi.advanceTimersByTimeAsync(100);
-    expect(settled).toBe(false);
-    resolveNavigation?.();
+    navigation.resolve();
     await expect(waiting).resolves.toBe(true);
-    await completion;
     expect(page.url()).toContain("/status");
   });
 });
