@@ -3,19 +3,21 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import {
   type ActivityBucket,
   deriveActivityBucket,
-} from "../../report-sections";
+} from "../activity/activity-buckets";
 import {
   type CrossAuthorContentRow,
-  type DecisionEntry,
-  type KanbanItem,
   mapForeignDecisions,
   mapForeignItems,
   mapForeignRisks,
-  type Product,
-  type ReportPeriod,
-  type RiskEntry,
-} from "../../report-sections";
-import type { UnifiedActivityEntry } from "./unified-activity-section";
+} from "../lead-cross-author-content";
+import type { DecisionEntry, KanbanItem, Product, RiskEntry } from "../types";
+import type { ReportPeriod } from "../types";
+
+export interface UnifiedActivityEntry {
+  readonly item: KanbanItem;
+  readonly bucket: ActivityBucket;
+  readonly week: "current" | "next";
+}
 
 type SectionItem = ReportSectionReadModel["items"][number];
 

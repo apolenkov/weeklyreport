@@ -1,9 +1,6 @@
-import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
-import {
-  type Product,
-  riskCoversStage,
-  type RiskEntry,
-} from "../../report-sections";
+import { deriveEffectiveStageStatus } from "../../../../shared/lib/status/stage-status";
+import { riskCoversStage } from "../stage-tags";
+import type { Product, RiskEntry } from "../types";
 
 // Own non-empty risks covering the stage (same predicate as computeUnbackedStages).
 export function coveringRisksForStage(

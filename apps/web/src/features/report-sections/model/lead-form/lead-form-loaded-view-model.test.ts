@@ -4,17 +4,15 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type {
-  CrossAuthorContentRow,
-  CrossAuthorRow,
-} from "../../report-sections";
+import type { CrossAuthorRow } from "../lead-cross-author";
+import type { CrossAuthorContentRow } from "../lead-cross-author-content";
 import {
   ACTIVITY_ID,
   CURRENT_ITEM_ID,
   DECISION_ID,
   makeDraftMergeSection,
   PROJECT_ID,
-} from "./lead-form-draft-merge-test-fixtures";
+} from "./draft/lead-form-draft-merge-test-fixtures";
 import {
   buildLeadFormLoadedViewModel,
   type LeadFormLoadedInput,

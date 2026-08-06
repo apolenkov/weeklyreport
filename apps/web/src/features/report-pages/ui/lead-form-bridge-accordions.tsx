@@ -7,7 +7,10 @@ import type {
 
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { ActivityStatusSection } from "../../period";
-import type { LeadActivityCard } from "../../report-sections";
+import type {
+  LeadActivityCard,
+  LeadFormLoadedViewModel,
+} from "../../report-sections";
 import { LeadFormAddButton } from "./lead-form-add-button";
 import { NO_PRODUCTS_ASSIGNED_MESSAGE } from "./lead-form-add-item-button";
 import { AlertIcon, GridIcon } from "./lead-form-icons";
@@ -15,7 +18,6 @@ import {
   LeadFormItemSections,
   type LeadFormItemSectionsActions,
 } from "./lead-form-item-sections";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import {
   LeadFormSyncBridge,
   type StagesForProduct,

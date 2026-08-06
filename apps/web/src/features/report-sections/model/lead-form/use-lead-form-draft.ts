@@ -3,7 +3,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { useMemo } from "react";
 
-import type { CrossAuthorRow } from "../../report-sections";
+import type { CrossAuthorRow } from "../lead-cross-author";
 import type { LeadFormDraftSeam } from "./lead-form-draft-seam";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import { buildReadinessProducts } from "./lead-form-submit-context";

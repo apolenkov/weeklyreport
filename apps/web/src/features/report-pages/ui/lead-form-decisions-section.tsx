@@ -2,10 +2,12 @@
 
 import { AccordionSection } from "../../../shared/ui/report-shell/accordion-section";
 import { DecisionsSection } from "../../period";
-import type { DecisionEntry } from "../../report-sections";
+import type {
+  DecisionEntry,
+  LeadFormLoadedViewModel,
+} from "../../report-sections";
 import { LeadFormAddButton } from "./lead-form-add-button";
 import { ChatIcon } from "./lead-form-icons";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import type { StagesForProduct } from "./lead-form-sync-bridge";
 
 export interface LeadFormDecisionsActions {

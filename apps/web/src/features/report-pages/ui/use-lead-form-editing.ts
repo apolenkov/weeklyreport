@@ -7,12 +7,14 @@ import type {
 import { useState } from "react";
 
 import type { CrossAuthorRow } from "../../report-sections";
+import type { LeadFormGeneration } from "../../report-sections";
 import type { DraftSaveContent } from "../../report-sections/client";
-import { useLeadFormDraftSeam } from "./lead-form-draft-seam";
-import type { LeadFormGeneration } from "./lead-form-generation";
+import {
+  useLeadFormDraft,
+  useLeadFormDraftSeam,
+} from "../../report-sections/client";
 import { useLeadFormAddSignals } from "./use-lead-form-add-signals";
 import { useLeadFormChrome } from "./use-lead-form-chrome";
-import { useLeadFormDraft } from "./use-lead-form-draft";
 import { useLeadFormWriteActions } from "./use-lead-form-write-actions";
 
 interface LeadFormEditingData {

@@ -2,10 +2,10 @@
 
 import { useCallback } from "react";
 
-import type { DraftPatch } from "./lead-form-draft-patch";
+import type { DraftPatch } from "./draft/lead-form-draft-patch";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
-import type { RiskPrefillRequest } from "./lead-form-sync-bridge";
+import type { RiskPrefillRequest } from "./risk-prefill";
 import { useGenerationState } from "./use-generation-state";
 
 export interface QuickAddItem {

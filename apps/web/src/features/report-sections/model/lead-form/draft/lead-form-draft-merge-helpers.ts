@@ -3,15 +3,15 @@ import type {
   TrafficLightStatus,
 } from "@customreport/shared";
 
-import {
-  type DecisionEntry,
-  type KanbanItem,
-  normalizeStageName,
-  persistableItemStatusToWorkflow,
-  type Product,
-  type RiskEntry,
-  stageStatusToTraffic,
-} from "../../report-sections";
+import { persistableItemStatusToWorkflow } from "../../item-status";
+import { normalizeStageName } from "../../lead-form";
+import { stageStatusToTraffic } from "../../traffic-light";
+import type {
+  DecisionEntry,
+  KanbanItem,
+  Product,
+  RiskEntry,
+} from "../../types";
 
 type DraftSection = ReportSectionReadModel;
 type StageStatusValue = TrafficLightStatus | null;

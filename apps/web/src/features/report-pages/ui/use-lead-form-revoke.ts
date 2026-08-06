@@ -9,8 +9,8 @@ import {
   invalidateLeadHistory,
 } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import type { LeadFormGeneration } from "./lead-form-generation";
-import { useGenerationState } from "./use-generation-state";
+import type { LeadFormGeneration } from "../../report-sections";
+import { useGenerationState } from "../../report-sections/client";
 
 export function useLeadFormRevoke({
   generation,

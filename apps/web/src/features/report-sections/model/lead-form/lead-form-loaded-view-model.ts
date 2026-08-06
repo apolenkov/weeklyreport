@@ -3,30 +3,34 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
-import { deriveActivityAlarmFloor } from "../../report-sections";
+import { deriveActivityAlarmFloor } from "../alarms/activity-alarm";
+import type { CrossAuthorRow } from "../lead-cross-author";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
-  type CrossAuthorContentRow,
-  type CrossAuthorRow,
-  type DecisionEntry,
-  type KanbanItem,
+} from "../lead-cross-author";
+import type { CrossAuthorContentRow } from "../lead-cross-author-content";
+import {
   type LeadActivityCard,
   type LeadCurrentUser,
   mapLeadFormData,
   type MappedLeadForm,
-  type Product,
-  type ReportPeriod,
-  type RiskEntry,
-} from "../../report-sections";
+} from "../lead-form";
+import type {
+  DecisionEntry,
+  KanbanItem,
+  Product,
+  ReportPeriod,
+  RiskEntry,
+} from "../types";
 import {
   buildUnifiedEntries,
   filterVisiblePeriods,
   type ForeignMergeResult,
   mergeForeignDisplayRecords,
   publishedLockedIds,
+  type UnifiedActivityEntry,
 } from "./lead-form-loaded-view-model-helpers";
-import type { UnifiedActivityEntry } from "./unified-activity-section";
 
 // Pure projection input; LeadForm supplies settled query/draft data after its
 // skeleton guard, so this boundary owns no React state, effects, or routing.

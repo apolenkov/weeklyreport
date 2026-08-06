@@ -3,9 +3,8 @@
 import { toast } from "sonner";
 
 import type { LeadSubmitReadiness } from "../../report-sections";
-import type { LeadFormGeneration } from "./lead-form-generation";
-import type { SubmitOutcome } from "./lead-form-submit-context";
-import { useGenerationState } from "./use-generation-state";
+import type { LeadFormGeneration, SubmitOutcome } from "../../report-sections";
+import { useGenerationState } from "../../report-sections/client";
 import { useLeadFormFillFrom } from "./use-lead-form-fill-from";
 import { useLeadFormReopenRequest } from "./use-lead-form-reopen-request";
 import { useLeadFormRevoke } from "./use-lead-form-revoke";

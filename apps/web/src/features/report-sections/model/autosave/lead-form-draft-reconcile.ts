@@ -1,10 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import { sectionToDraftPayload } from "../../report-sections";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {
   type DraftSaveContent,
   encodeAutosaveComparisonKey,
-} from "../../report-sections/client";
+} from "./use-lead-form-autosave";
 
 type DraftRecord = Readonly<{
   id?: string | undefined;

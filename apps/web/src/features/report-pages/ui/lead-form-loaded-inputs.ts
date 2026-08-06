@@ -6,12 +6,12 @@ import type {
 import type {
   CrossAuthorContentRow,
   CrossAuthorRow,
+  LeadFormLoadedContext,
+  LeadFormLoadedInput,
+  PublishedLineage,
 } from "../../report-sections";
-import { leadFormGenerationOf } from "./lead-form-generation";
+import { leadFormGenerationOf } from "../../report-sections";
 import type { LeadFormLoadedData } from "./lead-form-loaded";
-import type { PublishedLineage } from "./lead-form-loaded-record-builders";
-import type { LeadFormLoadedInput } from "./lead-form-loaded-view-model";
-import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 
 interface LeadFormByPeriodLoaded {
   readonly section: ReportSectionReadModel;

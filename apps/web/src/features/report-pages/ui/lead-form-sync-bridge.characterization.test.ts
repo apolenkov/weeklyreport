@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Product, RiskEntry } from "../../report-sections";
-import { applyRiskSeverityFloor } from "./lead-form-risk-coverage";
+import { applyRiskSeverityFloor } from "../../report-sections";
 
 // Frozen severity × status grid for applyRiskSeverityFloor.
 function makeProduct(

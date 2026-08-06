@@ -9,10 +9,10 @@ import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { PeriodNavigator } from "../../period";
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import type { RecordVisibility } from "../../report-sections/client";
 import { SlideFullscreenButton } from "../../slides";
 import { CollapseIcon } from "./lead-form-icons";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { RecordVisibilityToggle } from "./record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;

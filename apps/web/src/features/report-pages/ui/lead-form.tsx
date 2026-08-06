@@ -1,7 +1,12 @@
 "use client";
 
+import {
+  buildLeadFormLoadedViewModel,
+  leadFormGenerationOf,
+  type LeadFormLoadedContext,
+} from "../../report-sections";
+import { useLeadFormQuickAdd } from "../../report-sections/client";
 import { buildDraftActions } from "./lead-form-draft-actions";
-import { leadFormGenerationOf } from "./lead-form-generation";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import {
   buildLeadFormLoadedData,
@@ -9,11 +14,8 @@ import {
   loadedContextOf,
   resolveLeadFormLoaded,
 } from "./lead-form-loaded-inputs";
-import { buildLeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
-import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { useLeadFormEditing } from "./use-lead-form-editing";
-import { useLeadFormQuickAdd } from "./use-lead-form-quick-add";
 import { useLeadFormShell } from "./use-lead-form-shell";
 
 interface LeadFormProps {

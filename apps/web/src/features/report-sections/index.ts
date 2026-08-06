@@ -2,9 +2,7 @@ export type { ActivityBucket } from "./model/activity/activity-buckets";
 export {
   ACTIVITY_BUCKET_LABELS,
   ACTIVITY_BUCKET_ORDER,
-  deriveActivityBucket,
 } from "./model/activity/activity-buckets";
-export { deriveActivityAlarmFloor } from "./model/alarms/activity-alarm";
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
@@ -15,19 +13,9 @@ export {
   pauseItemPatch,
 } from "./model/lead-actions/lead-item-actions";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
-export {
-  applyCrossAuthorStageOverrides,
-  buildCrossAuthorStageMap,
-} from "./model/lead-cross-author";
 export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
-export {
-  mapForeignDecisions,
-  mapForeignItems,
-  mapForeignRisks,
-} from "./model/lead-cross-author-content";
 export type {
   LeadActivityCard,
-  LeadCurrentUser,
   LeadDecisionEntry,
   LeadKanbanItem,
   LeadReviewFeedbackRecord,
@@ -36,12 +24,23 @@ export type {
 } from "./model/lead-form";
 export {
   mapLeadFormData,
-  mapLeadProducts,
   mapLeadReviewFeedback,
-  mapLeadRisks,
-  normalizeStageName,
   ownedStagesForProject,
 } from "./model/lead-form";
+export type { DraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
+export type { LeadFormGeneration } from "./model/lead-form/lead-form-generation";
+export { leadFormGenerationOf } from "./model/lead-form/lead-form-generation";
+export type { PublishedLineage } from "./model/lead-form/lead-form-loaded-record-builders";
+export type {
+  LeadFormLoadedInput,
+  LeadFormLoadedViewModel,
+} from "./model/lead-form/lead-form-loaded-view-model";
+export { buildLeadFormLoadedViewModel } from "./model/lead-form/lead-form-loaded-view-model";
+export type {
+  LeadFormLoadedContext,
+  SubmitOutcome,
+} from "./model/lead-form/lead-form-submit-context";
+export type { RiskPrefillRequest } from "./model/lead-form/risk-prefill";
 export type { HistoryEntry } from "./model/lead-history";
 export {
   mapCompiledHistoryEntries,
@@ -51,10 +50,6 @@ export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
 export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
-export {
-  buildLeadSubmitPayload,
-  deriveLeadSubmitReadiness,
-} from "./model/lead-submit-readiness";
 export {
   isBoardEmpty,
   type ItemColumn,
@@ -79,6 +74,11 @@ export {
   riskCoversStage,
   splitStageNames,
 } from "./model/stage-tags";
+export {
+  annotateOwnRiskCoverage,
+  applyRiskSeverityFloor,
+  coveringRisksForStage,
+} from "./model/status-risk/lead-form-risk-coverage";
 export {
   stageStatusToTraffic,
   trafficToStageStatus,

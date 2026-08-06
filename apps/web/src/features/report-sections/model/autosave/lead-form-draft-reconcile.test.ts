@@ -1,8 +1,8 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
-import { sectionToDraftPayload } from "../../report-sections";
+import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {
   classifyReseed,
   reconcileSavedIdentities,

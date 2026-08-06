@@ -7,11 +7,11 @@ import { DocumentActionGroup } from "../../../shared/ui/report-shell/report-tool
 import { VersionComingSoonControl } from "../../admin";
 import { PdfExportComingSoonControl } from "../../pdf-export";
 import { FillFromButton } from "../../period";
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import {
   type LeadCompletionActionContract,
   LeadCompletionActions,
 } from "./lead-completion-actions";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 
 export interface LeadFormHeaderWriteActions {
   readonly fillFromMut: { readonly isPending: boolean };

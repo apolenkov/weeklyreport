@@ -23,9 +23,9 @@
       "trackedFiles": 83
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "4e573fdda2bf0f2ae3d54a566268466cd1db1006",
-      "pathDigest": "562d70d40dca2ca8bac05916f47afb251ad7c7d9dffe24da956d44397d14f106",
-      "trackedFiles": 146
+      "gitTree": "b95ed9e38afaafd92823bc4578c3aa2d4a86d207",
+      "pathDigest": "dcafd3d8476b5bdf24a90a9b9f814f8f9d0502062a884df747a2260dac128347",
+      "trackedFiles": 122
     },
     "apps/web/src/shared/lib": {
       "gitTree": "e9d57ed0a4ab75be69b7021bf4b9279a72feffbe",
@@ -62,7 +62,7 @@
     "apps/web/src/features/admin/ui": 74,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
-    "apps/web/src/features/report-pages/ui": 143,
+    "apps/web/src/features/report-pages/ui": 119,
     "apps/web/src/features/report-sections/model": 47,
     "apps/web/src/features/report-sections/ui": 35,
     "apps/web/src/features/review/ui": 33,

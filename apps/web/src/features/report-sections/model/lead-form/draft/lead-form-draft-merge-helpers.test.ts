@@ -5,7 +5,7 @@ import type {
   KanbanItem,
   Product,
   RiskEntry,
-} from "../../report-sections";
+} from "../../types";
 import {
   mergeActivityStatusDraft,
   mergeDecisionDraft,

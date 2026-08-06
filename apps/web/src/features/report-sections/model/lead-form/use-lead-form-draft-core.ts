@@ -11,14 +11,17 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { sectionToDraftPayload } from "../../report-sections";
-import { encodeAutosaveComparisonKey } from "../../report-sections/client";
-import { applyDraftPatch, type DraftPatch } from "./lead-form-draft-patch";
+import { encodeAutosaveComparisonKey } from "../autosave/use-lead-form-autosave";
+import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
+import {
+  applyDraftPatch,
+  type DraftPatch,
+} from "./draft/lead-form-draft-patch";
 import {
   type LeadFormGeneration,
   leadFormGenerationOf,
 } from "./lead-form-generation";
-import { useDraftServerSync } from "./use-lead-form-server-sync";
 
 // Ref mirror of the optimistic-lock version so submit reads the current value
 // without re-creating itself on every autosave bump.

@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import type { LeadFormLoadedViewModel } from "../../report-sections";
 import { LeadFormAddButton } from "./lead-form-add-button";
-import type { LeadFormLoadedViewModel } from "./lead-form-loaded-view-model";
 
 export const NO_PRODUCTS_ASSIGNED_MESSAGE =
   "No products assigned — contact admin";

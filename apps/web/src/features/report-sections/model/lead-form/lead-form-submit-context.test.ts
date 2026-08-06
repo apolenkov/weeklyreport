@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { Product } from "../../report-sections";
-import type { DraftSaveContent } from "../../report-sections/client";
+import type { DraftSaveContent } from "../lead-section-draft-payload";
+import type { Product } from "../types";
 import { buildSubmitStages } from "./lead-form-submit-context";
 
 const DRAFT: DraftSaveContent = {
