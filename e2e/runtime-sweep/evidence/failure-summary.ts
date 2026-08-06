@@ -36,6 +36,22 @@ const isScaffoldControl = (
   actionResult.reason === NAVIGATION_SCAFFOLD_REASON &&
   controlKey !== cell.action.controlKey;
 
+const isFailureControl = (
+  cell: Extract<FailureCell, { readonly controls: readonly unknown[] }>,
+  control: Extract<CoverageCell["controls"][number], object>,
+): boolean => {
+  const { actionResult, controlKey, enabled } = control;
+  if (actionResult.kind === "exercised") return actionResult.result === "fail";
+  if (!enabled || isScaffoldControl(cell, controlKey, actionResult))
+    return false;
+  return "action" in cell && controlKey === cell.action.controlKey;
+};
+
+const failureReasonFor = (control: CoverageCell["controls"][number]): string =>
+  control.actionResult.kind === "exercised"
+    ? `${control.controlKey}: exercised action failed`
+    : `${control.controlKey}: ${control.actionResult.reason}`;
+
 const renderEntries = (
   entries: readonly FailureSummaryEntry[],
   total: number,
@@ -68,12 +84,9 @@ const reasonsFor = (cell: FailureCell): readonly string[] =>
         ...cell.evidence.observations
           .filter(({ outcome }) => outcome === "fail")
           .map(({ observationId, message }) => `${observationId}: ${message}`),
-        ...cell.controls.flatMap(({ controlKey, actionResult }) =>
-          actionResult.kind === "not-exercised" &&
-          !isScaffoldControl(cell, controlKey, actionResult)
-            ? [`${controlKey}: ${actionResult.reason}`]
-            : [],
-        ),
+        ...cell.controls
+          .filter((control) => isFailureControl(cell, control))
+          .map(failureReasonFor),
         ...cell.evidence.inapplicable.map(
           ({ dimension, reason }) => `${dimension}: ${reason}`,
         ),

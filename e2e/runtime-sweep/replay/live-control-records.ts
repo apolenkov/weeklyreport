@@ -7,6 +7,7 @@ import type {
 import type { DomControlObservation } from "./dom-inventory.ts";
 import {
   controlAlreadyActive,
+  controlCountDecreased,
   observationFor,
   type PageSnapshot,
   snapshotPage,
@@ -27,13 +28,22 @@ const STATEFUL_SUCCESS: Readonly<Record<StatefulOperation, RegExp>> = {
 const MAX_OBSERVATION_WAIT_MS = 2000;
 export type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
 
+const nextAnimationFrame = async (page: Page): Promise<void> => {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      }),
+  );
+};
+
 const stateful = (operation: string): operation is StatefulOperation =>
   operation === "publish" ||
   operation === "delete" ||
   operation === "revoke" ||
   operation === "restore";
 
-const outcomeObserver =
+const textOutcomeObserver =
   (
     page: Page,
     operation: StatefulOperation,
@@ -45,6 +55,23 @@ const outcomeObserver =
       .last()
       .waitFor({ state: "visible", timeout: timeoutMs });
     return "pass";
+  };
+
+const deleteOutcomeObserver =
+  (
+    page: Page,
+    before: PageSnapshot,
+    control: ControlActionTarget,
+    timeoutMs: number,
+  ): (() => Promise<"pass">) =>
+  async () => {
+    const deadline = Date.now() + Math.min(timeoutMs, MAX_OBSERVATION_WAIT_MS);
+    while (Date.now() < deadline) {
+      await nextAnimationFrame(page);
+      if (controlCountDecreased(before, await snapshotPage(page), control))
+        return "pass";
+    }
+    throw new Error("Delete target count did not decrease after confirmation");
   };
 
 export const targetFor = (
@@ -117,26 +144,28 @@ export const observerFor = (
     readonly allowIdempotent?: boolean;
     readonly requireMeaningfulFocus?: boolean;
   }> = {},
-): (() => Promise<"pass" | "fail">) =>
-  stateful(operation)
-    ? outcomeObserver(page, operation, timeoutMs)
-    : async (): Promise<"pass" | "fail"> => {
-        const alreadyActive =
-          options.allowIdempotent === true &&
-          options.control !== undefined &&
-          controlAlreadyActive(before, options.control);
-        if (alreadyActive) return "pass";
-        const observed = await waitForObservation(
-          page,
-          before,
-          Math.min(timeoutMs, MAX_OBSERVATION_WAIT_MS),
-          options.requireMeaningfulFocus === true
-            ? { requireMeaningfulFocus: true }
-            : {},
-        );
-        if (observed !== undefined) return "pass";
-        return "fail";
-      };
+): (() => Promise<"pass" | "fail">) => {
+  if (operation === "delete" && options.control !== undefined)
+    return deleteOutcomeObserver(page, before, options.control, timeoutMs);
+  if (stateful(operation))
+    return textOutcomeObserver(page, operation, timeoutMs);
+  return async (): Promise<"pass" | "fail"> => {
+    const alreadyActive =
+      options.allowIdempotent === true &&
+      options.control !== undefined &&
+      controlAlreadyActive(before, options.control);
+    if (alreadyActive) return "pass";
+    const observed = await waitForObservation(
+      page,
+      before,
+      Math.min(timeoutMs, MAX_OBSERVATION_WAIT_MS),
+      options.requireMeaningfulFocus === true
+        ? { requireMeaningfulFocus: true }
+        : {},
+    );
+    return observed === undefined ? "fail" : "pass";
+  };
+};
 
 export const observationAfter = async (
   page: Page,

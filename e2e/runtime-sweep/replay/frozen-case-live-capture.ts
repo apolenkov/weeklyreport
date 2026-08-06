@@ -150,8 +150,8 @@ const publishActionTarget = (
   input: FrozenPhaseInput,
   outcome: ActionOutcome | undefined,
 ): void => {
-  if (input.phase !== "action" || outcome?.status !== "pass") return;
-  const target = outcome.target;
+  if (input.phase !== "action") return;
+  const target = outcome?.target;
   if (target !== undefined) input.onActionTarget?.(target);
 };
 
