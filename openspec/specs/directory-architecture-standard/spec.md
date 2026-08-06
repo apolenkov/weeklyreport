@@ -368,8 +368,8 @@ output change).
 - **WHEN** `lock-badge.tsx` and `save-now-button.tsx` are relocated
 - **THEN** `lock-badge.tsx` imports `sdlc-tooltip` from
   `../feedback/sdlc-tooltip`
-- **AND** `save-now-button.tsx` imports the `AutosaveSnapshot` type from
-  `features/report-sections/client`
+- **AND** `save-now-button.tsx` declares the minimal structural state contract
+  required by the shared primitive instead of importing a feature-owned type
 - **AND** intra-folder `./`-relative imports between the moved files stay valid
   unchanged
 

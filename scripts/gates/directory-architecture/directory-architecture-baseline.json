@@ -3,52 +3,52 @@
   "threshold": 30,
   "sourceIdentity": {
     "scripts": {
-      "gitTree": "8c0f6bd51c4fa3a481a947685bd3cf8a57245591",
+      "gitTree": "9013679097688c52dcfa23c1b49d7a34d4ef26f5",
       "pathDigest": "ed27ded385b4380fa1d6c266275c83c06abe329281bd3c38aa3b1c464babf991",
       "trackedFiles": 71
     },
     "e2e/runtime-sweep": {
-      "gitTree": "c42e56ed49519775e8ccc379b38547471a1e0a5b",
+      "gitTree": "984ddd74a21543c88baeee0ca10805d0bb0e4de1",
       "pathDigest": "21a72a6ec78a6e102d8cec375b13130235179cbf6679bceed8537cf520f5d58f",
       "trackedFiles": 180
     },
     "prisma": {
-      "gitTree": "7030a120d8c90dc14470995fc9407d8b4ad77517",
+      "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
       "pathDigest": "b914d4b7a6f140235e6962042313470868353122ef5d248b1893d4aa611d7704",
       "trackedFiles": 114
     },
     "apps/web/src/shared/ui": {
-      "gitTree": "b65468d405566b0c261ff93723c26210884aebb3",
-      "pathDigest": "eb5b7c68d5b21697578139c6671df2ad062021347e71ddfe79fdba2a23c9f57a",
-      "trackedFiles": 82
+      "gitTree": "0f2b9caceb3164c5703cb319511cd42aa1b91d3f",
+      "pathDigest": "19fcf584540b2cd8ccde4f905c32e0527dbb3543bf9e9cda8a9caefde4fead5b",
+      "trackedFiles": 83
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "504567074c2b67e806bad2161771c91f107f3a1a",
+      "gitTree": "4e573fdda2bf0f2ae3d54a566268466cd1db1006",
       "pathDigest": "562d70d40dca2ca8bac05916f47afb251ad7c7d9dffe24da956d44397d14f106",
       "trackedFiles": 146
     },
-    "apps/web/src/lib": {
-      "gitTree": "8fec91cd9a567600179c15e976b2f9742d75d22e",
-      "pathDigest": "55eebf86094964e8d4477d5dcf5203cfa1ad9ecbefd5bab3a4cc6b6eccf35e16",
-      "trackedFiles": 76
+    "apps/web/src/shared/lib": {
+      "gitTree": "e9d57ed0a4ab75be69b7021bf4b9279a72feffbe",
+      "pathDigest": "fcddbeb3df59090556d1610bd4d9239f686103481464c8c244b4f6296740c727",
+      "trackedFiles": 40
     },
-    "apps/web/src/hooks": {
-      "gitTree": "0d86ec0879ce077ee20d157f14f81cfbc2053ae4",
-      "pathDigest": "0815c628481557480cd92ab32deb8d167c105a8d150accea35316c638da6b514",
-      "trackedFiles": 26
+    "apps/web/src/shared/hooks": {
+      "gitTree": "52f086201c7026faa3cf7469e259526ff06bb944",
+      "pathDigest": "c0d28b5997e6c128858b28a8f6b23865a313c0590d428f7ad640877d2c0193a6",
+      "trackedFiles": 12
     },
-    "apps/web/src/server": {
-      "gitTree": "e4cdb404542bcea82d6346ba3313d2b4943e6988",
-      "pathDigest": "ec9072170ee22aacfc1bfadf8e50893bf2edde4fa64d323e059a1dd13008874c",
-      "trackedFiles": 1
+    "apps/web/src/shared/server": {
+      "gitTree": "a2c30614f1942089b6f7c2a33ad56290d07950eb",
+      "pathDigest": "7f5ba9daceea075c581c6267fcb213ab4850d51139384cfebcd9597b1783f2b6",
+      "trackedFiles": 8
     },
     "packages/shared/src/schemas": {
-      "gitTree": "77bd34608fc3aa7bc7253df62669ad6ef3513123",
+      "gitTree": "6ea7aa4c8d5023d7e7a10bb394db81f9d86e793e",
       "pathDigest": "4fa8950f3fdc7d63cfbe95f28794e385998a189d218b4599f7888b3a77d8b953",
       "trackedFiles": 56
     },
     "apps/api/src/modules": {
-      "gitTree": "4f1b5db791ab38130ea72f941ab63a3710b47a8f",
+      "gitTree": "4ebb5132cde854d204b8bf9381b2e888d463ad69",
       "pathDigest": "9b1dc1395f1ed5c5e6a08ff6af504b6cdc1bf0015dadc88d23f3b911e1600f95",
       "trackedFiles": 427
     }
@@ -68,7 +68,6 @@
     "apps/web/src/features/review/ui": 33,
     "apps/web/src/features/slides/model": 34,
     "apps/web/src/features/slides/ui": 37,
-    "apps/web/src/lib": 65,
     "e2e/runtime-sweep/replay": 58
   },
   "boundedFlatExceptions": [
@@ -140,11 +139,6 @@
     {
       "directory": "apps/web/src/features/slides/ui",
       "baseline": 37,
-      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "apps/web/src/lib",
-      "baseline": 65,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     },
     {

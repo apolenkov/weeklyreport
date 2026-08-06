@@ -84,7 +84,9 @@ Report-section, period, and review behavior MUST live in their canonical feature
 segments behind existing facades. Root `src/lib`, `src/hooks`, and `src/server`
 files MUST move by consumer ownership to `features/<domain>/{model,api}` or
 `shared/{lib,hooks,server}`. The migration MUST introduce zero production deep
-cross-slice imports.
+cross-slice imports. Remaining page composition MUST be grouped into cohesive
+`lead/{shell,bridges,chrome}`, `weekly`, `head`, and `product` families; no
+`report-pages/ui` directory may retain more than 30 direct files.
 
 #### Scenario: A report-specific hook is classified
 
@@ -97,3 +99,16 @@ cross-slice imports.
 - **WHEN** the web migration completes
 - **THEN** production deep cross-slice import count remains zero
 - **AND** the prior test-only viewer deep import is removed rather than grandfathered
+
+#### Scenario: Page composition remains readable after domain extraction
+
+- **WHEN** domain-owned report-page files have moved to their canonical slices
+- **THEN** the remaining source and co-located tests are grouped by page-composition family
+- **AND** the flat `report-pages/ui` root contains no production implementation files
+- **AND** every direct report-pages directory is at or below the 30-file density floor
+
+#### Scenario: A client-only cross-slice dependency is required
+
+- **WHEN** one feature consumes a hook from another feature
+- **THEN** it imports the hook through that feature's explicit `client.ts` entrypoint
+- **AND** the pure `index.ts` facade remains free of client-only exports

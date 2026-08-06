@@ -153,7 +153,7 @@ void test("malformed ledger entries fail closed", () => {
 void test("all accepted rules are enabled in the production test config", async () => {
   const eslint = new ESLint({ cwd: REPO_ROOT });
   const config = (await eslint.calculateConfigForFile(
-    "apps/web/src/lib/trpc.test.ts",
+    "apps/web/src/shared/lib/trpc/trpc.test.ts",
   )) as ResolvedConfig | undefined;
   for (const entry of adopted)
     assert.equal(config?.rules?.[`vitest/${entry.rule}`]?.[0], 2, entry.rule);
@@ -172,7 +172,7 @@ void test("planted violations prove every accepted rule fires", async () => {
     (mock as Mock).mockReset();
   `;
   const [result] = await eslint.lintText(source, {
-    filePath: "apps/web/src/lib/trpc.test.ts",
+    filePath: "apps/web/src/shared/lib/trpc/trpc.test.ts",
   });
   const fired = new Set(
     result?.messages

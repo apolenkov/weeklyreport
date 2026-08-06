@@ -10,7 +10,7 @@
  *   decides where it tattles.
  * - `connect-src 'self'` is faithful here even though web and api listen on
  *   different ports: the tRPC client calls the relative `/trpc`
- *   (apps/web/src/lib/trpc.ts), which Next rewrites server-side, exactly as
+ *   (apps/web/src/shared/lib/trpc/trpc.ts), which Next rewrites server-side, exactly as
  *   caddy does in production.
  */
 import * as fs from "node:fs";
