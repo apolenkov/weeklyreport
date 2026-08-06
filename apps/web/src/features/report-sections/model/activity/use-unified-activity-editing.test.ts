@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KanbanItem } from "../../report-sections";
+import type { KanbanItem } from "../types";
 import {
   type UnifiedActivityEntry,
   useUnifiedActivityEditing,

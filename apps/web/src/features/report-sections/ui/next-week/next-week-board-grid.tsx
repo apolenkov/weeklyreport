@@ -2,10 +2,12 @@
 
 import type { ReactNode } from "react";
 
-import type { CreateSeed } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
-import { responsiveBoardGridClassName } from "../../../shared/ui/layout/responsive-board-grid";
-import type { ItemColumn, KanbanItem } from "../../report-sections";
-import { ActivityLanesBlock, BoardColumnHeader } from "../../report-sections";
+import type { CreateSeed } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
+import { responsiveBoardGridClassName } from "../../../../shared/ui/layout/responsive-board-grid";
+import type { ItemColumn } from "../../model/next-week-columns";
+import type { KanbanItem } from "../../model/types";
+import { ActivityLanesBlock } from "../activity-lanes-block";
+import { BoardColumnHeader } from "../board-column-header";
 
 // Keeps an empty column as tall as a column holding a couple of item cards, so
 // a board with a mix of empty and filled columns stays visually balanced.

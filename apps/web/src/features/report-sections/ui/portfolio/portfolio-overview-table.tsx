@@ -1,11 +1,11 @@
 "use client";
 
-import { pluralize } from "../../../shared/lib/format/pluralize";
+import { pluralize } from "../../../../shared/lib/format/pluralize";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
   WeeklyProductStatus,
-} from "../../report-sections";
+} from "../../model/weekly-report-types";
 import {
   LeadOverviewCard,
   ProductOverviewCard,

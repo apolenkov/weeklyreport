@@ -2,22 +2,18 @@
 
 import type { ReactNode } from "react";
 
-import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
-import {
-  isBoardEmpty,
-  ItemCard,
-  type KanbanItem,
-  type Product,
-  splitItemBoard,
-} from "../../report-sections";
-import { NextWeekBoardGrid } from "./next-week-board-grid";
-import { NextWeekDialogs } from "./next-week-dialogs";
+import { useEditableListDialog } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
 import {
   buildDialogsProps,
   createItemHandlers,
   type NextWeekItemHandlers,
   type NextWeekSectionProps,
-} from "./next-week-section-model";
+} from "../../model/next-week/next-week-section-model";
+import { isBoardEmpty, splitItemBoard } from "../../model/next-week-columns";
+import type { KanbanItem, Product } from "../../model/types";
+import { ItemCard } from "../item-card";
+import { NextWeekBoardGrid } from "./next-week-board-grid";
+import { NextWeekDialogs } from "./next-week-dialogs";
 
 // Stand-alone CTA seeded from the first product. Disabled (with an explanatory
 // title) for a lead who owns no product, since an item needs a product column.

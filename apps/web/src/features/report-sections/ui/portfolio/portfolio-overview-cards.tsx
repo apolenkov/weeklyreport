@@ -6,7 +6,7 @@ import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
   WeeklyProductStatus,
-} from "../../report-sections";
+} from "../../model/weekly-report-types";
 
 const CSS_PRIMARY = "var(--color-primary)";
 

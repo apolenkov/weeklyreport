@@ -2,11 +2,11 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { createDemoSection } from "../../../test-utils/fixtures";
+import { createDemoSection } from "../../../../test-utils/fixtures";
 import {
   makeReportSectionFixture,
   type ReportSectionFixture,
-} from "../../../test-utils/report-section-fixtures";
+} from "../../../../test-utils/report-section-fixtures";
 import { ActivityStatusStrip } from "./activity-status-strip";
 
 const ACTIVITY_ID_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";

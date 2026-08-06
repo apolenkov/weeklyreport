@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { UseEditableListDialogResult } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
-import type { KanbanItem } from "../../report-sections";
+import type { UseEditableListDialogResult } from "../../../../shared/hooks/dialogs/use-editable-list-dialog";
+import type { KanbanItem } from "../types";
 import {
   createItemHandlers,
   type NextWeekDialog,

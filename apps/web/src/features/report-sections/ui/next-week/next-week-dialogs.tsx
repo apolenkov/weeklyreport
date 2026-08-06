@@ -1,8 +1,8 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
-import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
-import { ItemEditDialog } from "../../report-sections";
+import { ConfirmDeleteDialog } from "../../../../shared/ui/dialogs/confirm-delete-dialog";
+import type { KanbanItem, Product, RiskEntry } from "../../model/types";
+import { ItemEditDialog } from "../item-edit-dialog";
 
 interface NextWeekDialogsProps {
   readonly dialogKey: string;

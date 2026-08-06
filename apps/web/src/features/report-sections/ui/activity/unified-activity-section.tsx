@@ -1,17 +1,17 @@
 "use client";
 
-import type { KanbanItem, Product, RiskEntry } from "../../report-sections";
+import {
+  type UnifiedActivityEntry,
+  useUnifiedActivityEditing,
+} from "../../model/activity/use-unified-activity-editing";
+import type { KanbanItem, Product, RiskEntry } from "../../model/types";
 import {
   ActivityBucketList,
   EmptyActivityPlaceholder,
 } from "./activity-bucket-list";
 import { UnifiedActivityDialogs } from "./unified-activity-dialogs";
-import {
-  type UnifiedActivityEntry,
-  useUnifiedActivityEditing,
-} from "./use-unified-activity-editing";
 
-export type { UnifiedActivityEntry } from "./use-unified-activity-editing";
+export type { UnifiedActivityEntry } from "../../model/activity/use-unified-activity-editing";
 
 interface UnifiedActivitySectionProps {
   readonly entries: readonly UnifiedActivityEntry[];

@@ -325,50 +325,43 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/activity-bucket-list.tsx::3:1::react-doctor/no-barrel-import::98d042f002658e61e6d6ee46a6b98e19d7e4484a4f615c81aefbcbbc5cf6e25c",
-      "file": "src/features/report-pages/ui/activity-bucket-list.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/activity-bucket-list.tsx::100:10::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
-      "file": "src/features/report-pages/ui/activity-bucket-list.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-bucket-list.tsx::101:10::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
+      "file": "src/features/report-sections/ui/activity/activity-bucket-list.tsx",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "This immutable filter/map projection is readable and runs over per-report records rather than an unbounded collection. A one-pass rewrite could be a small optimization, but there is no measured hot path or record-volume evidence here; defer until profiling justifies changing the clear pipeline."
     },
     {
-      "id": "src/features/report-pages/ui/activity-status-strip.tsx::80:19::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/report-pages/ui/activity-status-strip.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-status-strip.tsx::80:19::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/report-sections/ui/activity/activity-status-strip.tsx",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/report-pages/ui/activity-status-strip.tsx::81:16::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/report-pages/ui/activity-status-strip.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-status-strip.tsx::81:16::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/report-sections/ui/activity/activity-status-strip.tsx",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/report-pages/ui/activity-status-strip.tsx::82:12::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/report-pages/ui/activity-status-strip.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-status-strip.tsx::82:12::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/report-sections/ui/activity/activity-status-strip.tsx",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/report-pages/ui/activity-status-strip.tsx::85:16::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/report-pages/ui/activity-status-strip.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-status-strip.tsx::85:16::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/report-sections/ui/activity/activity-status-strip.tsx",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/report-pages/ui/activity-status-strip.tsx::123:13::react-doctor/no-array-index-as-key::c66686de82ec2c11c1f830cdc96f59bf1f9beb079a3d8cfb51da447937851447",
-      "file": "src/features/report-pages/ui/activity-status-strip.tsx",
+      "id": "src/features/report-sections/ui/activity/activity-status-strip.tsx::123:13::react-doctor/no-array-index-as-key::c66686de82ec2c11c1f830cdc96f59bf1f9beb079a3d8cfb51da447937851447",
+      "file": "src/features/report-sections/ui/activity/activity-status-strip.tsx",
       "rule": "no-array-index-as-key",
       "verdict": "overturn",
       "rationale": "The list uses a fixed four-value activity bucket order and filters/maps those known buckets. It is a bounded presentation projection, so combining iterations would add machinery without meaningful user impact."
@@ -493,27 +486,6 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/next-week-board-grid.tsx::8:1::react-doctor/no-barrel-import::3e76a108564b70b221812f42c27c3eb0996f80b1e4aa46efbd27a559f58f695a",
-      "file": "src/features/report-pages/ui/next-week-board-grid.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/next-week-dialogs.tsx::5:1::react-doctor/no-barrel-import::d2214252b346793ba29d7ff619fe6292f6933dc7ddc39bb3b83836598afb55b7",
-      "file": "src/features/report-pages/ui/next-week-dialogs.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/next-week-section.tsx::6:1::react-doctor/no-barrel-import::50be41fbab9bd77264ce0277368203ab61df5dc4ba82ed64f4f154b73bbeb7ff",
-      "file": "src/features/report-pages/ui/next-week-section.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
       "id": "src/features/report-pages/ui/product-accordion.tsx::5:1::react-doctor/no-barrel-import::433608485cdf53a20813d8dcf7bdcb195da5e97ffef4247c02873512a4a6bad1",
       "file": "src/features/report-pages/ui/product-accordion.tsx",
       "rule": "no-barrel-import",
@@ -523,13 +495,6 @@
     {
       "id": "src/features/report-pages/ui/reviewed-row.tsx::5:1::react-doctor/no-barrel-import::5dd8aa3ce53b0703e73134c9f336a3bc8681ca1be4ecc748a61b5d0bbc9f8794",
       "file": "src/features/report-pages/ui/reviewed-row.tsx",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
-    },
-    {
-      "id": "src/features/report-pages/ui/unified-activity-dialogs.tsx::4:1::react-doctor/no-barrel-import::d2214252b346793ba29d7ff619fe6292f6933dc7ddc39bb3b83836598afb55b7",
-      "file": "src/features/report-pages/ui/unified-activity-dialogs.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
@@ -556,8 +521,8 @@
       "rationale": "This redirect is guarded and data-dependent (canonical report/lead recovery), with loading or not-found handling before navigation. The app currently performs authenticated browser tRPC reads, so a server redirect would require a different data boundary; the generic client-redirect warning is not a present flash bug."
     },
     {
-      "id": "src/features/report-pages/ui/use-unified-activity-editing.ts::24:10::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/report-pages/ui/use-unified-activity-editing.ts",
+      "id": "src/features/report-sections/model/activity/use-unified-activity-editing.ts::24:10::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/report-sections/model/activity/use-unified-activity-editing.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "This filter/map extracts the current week’s editable activity records from a bounded section. The two operations communicate selection then projection clearly, and no hot-path evidence justifies a reducer rewrite."
@@ -570,14 +535,14 @@
       "rationale": "This redirect is guarded and data-dependent (canonical report/lead recovery), with loading or not-found handling before navigation. The app currently performs authenticated browser tRPC reads, so a server redirect would require a different data boundary; the generic client-redirect warning is not a present flash bug."
     },
     {
-      "id": "src/features/report-pages/ui/weekly-report-content.tsx::12:1::react-doctor/no-barrel-import::ecd91f989871f7de70668d07f5da8cd2be7f108fb7f2eade8fae1123b38a1b68",
+      "id": "src/features/report-pages/ui/weekly-report-content.tsx::11:1::react-doctor/no-barrel-import::17039205bd08a920752f3b35e1812190de50b05846e760e2ee4fbb8405cb2d66",
       "file": "src/features/report-pages/ui/weekly-report-content.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/weekly-report-page-content.tsx::12:1::react-doctor/no-barrel-import::378c2ddda7960aa1d55ed27004a9d2ac03127556a8bb1ee015fe2bea0277ff86",
+      "id": "src/features/report-pages/ui/weekly-report-page-content.tsx::11:1::react-doctor/no-barrel-import::5539ca33aedf0e7d396e0c4399996313fd6842f620fb8126ffbebf899ea8959c",
       "file": "src/features/report-pages/ui/weekly-report-page-content.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",

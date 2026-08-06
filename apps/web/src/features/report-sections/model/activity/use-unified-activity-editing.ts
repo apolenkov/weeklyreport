@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import type { ActivityBucket } from "../../report-sections";
-import type { KanbanItem } from "../../report-sections";
+import type { KanbanItem } from "../types";
+import type { ActivityBucket } from "./activity-buckets";
 
 // Bucket is a projection; week is persisted Item.type and never changes here (ADR 0011).
 export interface UnifiedActivityEntry {

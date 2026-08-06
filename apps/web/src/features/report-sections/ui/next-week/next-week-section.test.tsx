@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { MOCK_PRODUCTS } from "../../../test-utils/mock-products";
+import { MOCK_PRODUCTS } from "../../../../test-utils/mock-products";
 import { NextWeekSection } from "./next-week-section";
 
 describe("NextWeekSection — compact touch floor (responsive-compact-layout)", () => {
