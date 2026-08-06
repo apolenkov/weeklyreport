@@ -18,6 +18,7 @@ type PortfolioOverviewTableProps =
   | {
       readonly scope?: "product";
       readonly products: WeeklyPortfolioProduct[];
+      readonly mountedProductIds?: ReadonlySet<string>;
       readonly onNavigate: (productId: string) => void;
     }
   | {
@@ -107,6 +108,9 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
                 <ProductOverviewCard
                   key={product.id}
                   product={product}
+                  controlsDetails={
+                    props.mountedProductIds?.has(product.id) === true
+                  }
                   onNavigate={props.onNavigate}
                 />
               ))}
