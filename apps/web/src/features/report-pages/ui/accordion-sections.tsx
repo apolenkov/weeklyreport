@@ -6,10 +6,10 @@ import type {
   WeeklyReportRisk,
 } from "../../report-sections";
 import { sortByPriorityRank } from "../../report-sections";
+import { type AccordionReviewContext, ReviewedRow } from "../../review";
 import { SectionHeader } from "./accordion-row-primitives";
 import { DecisionRow, EscalationRow, ItemRow, RiskRow } from "./accordion-rows";
 import { SECTION_DIVIDER } from "./accordion-tokens";
-import { type AccordionReviewContext, ReviewedRow } from "./reviewed-row";
 
 function ItemsSection({
   title,

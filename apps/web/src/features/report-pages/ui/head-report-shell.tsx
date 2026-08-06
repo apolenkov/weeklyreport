@@ -20,10 +20,13 @@ import {
 } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
 import { ExportPdfButton } from "../../pdf-export";
-import { HeadPublishLockAction, PeriodNavigator } from "../../period";
+import {
+  deriveHeadPeriods,
+  HeadPublishLockAction,
+  PeriodNavigator,
+} from "../../period";
 import type { ReportPeriod } from "../../report-sections";
 import { HeadSlidesClient } from "../../slides";
-import { deriveHeadPeriods } from "./head-report-periods";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 // Module-scope so the reference is stable across renders — a fresh literal would

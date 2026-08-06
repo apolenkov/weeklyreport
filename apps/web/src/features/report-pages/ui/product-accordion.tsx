@@ -6,6 +6,7 @@ import {
   reportHasContent,
   type WeeklyProductReport,
 } from "../../report-sections";
+import type { AccordionReviewContext } from "../../review";
 import { AccordionHeader } from "./accordion-header";
 import { AccordionSections } from "./accordion-sections";
 import {
@@ -14,9 +15,6 @@ import {
   shouldShowNeedsAttention,
   useScrollIntoViewOnHighlight,
 } from "./product-accordion-state";
-import type { AccordionReviewContext } from "./reviewed-row";
-
-export type { AccordionReviewContext } from "./reviewed-row";
 
 interface ProductAccordionProps {
   readonly report: WeeklyProductReport;

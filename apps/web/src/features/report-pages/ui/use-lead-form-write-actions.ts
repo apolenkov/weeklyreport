@@ -2,12 +2,16 @@
 
 import { toast } from "sonner";
 
+import {
+  useLeadFormFillFrom,
+  useLeadFormReopenRequest,
+} from "../../period/client";
 import type { LeadSubmitReadiness } from "../../report-sections";
 import type { LeadFormGeneration, SubmitOutcome } from "../../report-sections";
-import { useGenerationState } from "../../report-sections/client";
-import { useLeadFormFillFrom } from "./use-lead-form-fill-from";
-import { useLeadFormReopenRequest } from "./use-lead-form-reopen-request";
-import { useLeadFormRevoke } from "./use-lead-form-revoke";
+import {
+  useGenerationState,
+  useLeadFormRevoke,
+} from "../../report-sections/client";
 
 interface UseLeadFormWriteActionsArgs {
   readonly generation: LeadFormGeneration | null;

@@ -1,16 +1,9 @@
 import type { RecordCommentView } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import type { RecordCommentAnchor } from "../../review";
-import { RecordComments } from "../../review";
-
-// Live review surfaces supply this context; print/PDF omits it so reviewer UI
-// cannot leak into exports.
-export interface AccordionReviewContext {
-  readonly currentUserId: string;
-  readonly isAdmin: boolean;
-  readonly onMutated: () => void;
-}
+import type { AccordionReviewContext } from "../../model/report-review-model";
+import type { RecordCommentAnchor } from "./record-comments";
+import { RecordComments } from "./record-comments";
 
 export function ReviewedRow({
   review,

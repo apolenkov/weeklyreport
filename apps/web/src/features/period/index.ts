@@ -1,3 +1,4 @@
+export { deriveHeadPeriods } from "./model/head-report-periods";
 export { historySubtitle } from "./model/report-history-role";
 export type { CrossAuthorEntry } from "./model/sdlc-cross-author";
 export { useHistoryData } from "./model/use-report-history-data";

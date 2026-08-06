@@ -12,13 +12,15 @@ import {
   type WeeklyPortfolioProduct,
 } from "../../report-sections";
 import {
-  type AccordionModel,
-  buildAccordionModel,
   buildReviewModel,
   type CurrentRole,
   isReviewEnabled,
-  type LeadGroup,
   type ReviewModel,
+} from "../../review";
+import {
+  type AccordionModel,
+  buildAccordionModel,
+  type LeadGroup,
 } from "./weekly-report-page-helpers";
 
 export interface WeeklyReportPageView {
