@@ -115,7 +115,7 @@
 
 ## 8. Verification, review, and closeout
 
-- [ ] 8.1 Run `pnpm prettier:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`,
+- [ ] 8.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`,
       `pnpm build`, `pnpm test:e2e:integration`, `pnpm test:uat`, the runtime-sweep
       command, and `openspec validate --all --strict`; record exact exits/artifacts.
 - [ ] 8.2 Perform exact-final-SHA goal/constraint, code-quality, security, and

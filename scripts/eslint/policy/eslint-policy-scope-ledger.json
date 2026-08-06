@@ -135,7 +135,7 @@
       "classification": "enforcement",
       "files": ["apps/web/**/*.{ts,tsx}"],
       "ignores": [],
-      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "positive": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx",
       "negative": "packages/ui/src/components/ui/card.tsx",
       "marker": {
         "kind": "rule",
@@ -207,8 +207,8 @@
         "**/*.spec.{ts,tsx}",
         "**/__tests__/**"
       ],
-      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
-      "negative": "apps/web/src/features/report-pages/ui/lead-form.test.tsx",
+      "positive": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx",
+      "negative": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.test.tsx",
       "marker": {
         "kind": "rule",
         "name": "import-x/no-restricted-paths",
@@ -315,7 +315,7 @@
         "**/__tests__/**",
         "apps/*/src/test-utils/**"
       ],
-      "positive": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "positive": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx",
       "negative": "apps/web/src/features/organization/ui/settings-identity-sub-tab.tsx",
       "marker": {
         "kind": "rule-options",
@@ -485,7 +485,7 @@
       "files": ["e2e/**/*.ts"],
       "ignores": [],
       "positive": "e2e/integration/fixtures.ts",
-      "negative": "apps/web/src/features/report-pages/ui/lead-form.tsx",
+      "negative": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx",
       "marker": {
         "kind": "rule",
         "name": "react-hooks/rules-of-hooks",

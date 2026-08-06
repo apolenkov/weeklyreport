@@ -85,38 +85,38 @@
       "id": "STATE-STALE-001",
       "resolved": true,
       "owner": "web-lead-form-generation",
-      "implementation": "apps/web/src/features/report-pages/ui/use-generation-state.ts",
+      "implementation": "apps/web/src/features/report-sections/model/lead-form/use-generation-state.ts",
       "spec": "openspec/specs/lead-form-draft-orchestration/spec.md",
       "tests": [
         {
-          "path": "apps/web/src/features/report-pages/ui/lead-form-generation-navigation.test.tsx",
+          "path": "apps/web/src/features/report-pages/ui/lead/shell/lead-form-generation-navigation.test.tsx",
           "needle": "cannot merge report A quick-add into either report after report B loads"
         },
         {
-          "path": "apps/web/src/features/report-pages/ui/use-generation-state.test.tsx",
+          "path": "apps/web/src/features/report-sections/model/lead-form/use-generation-state.test.tsx",
           "needle": "hides prior state immediately and isolates stale setters"
         },
         {
-          "path": "apps/web/src/features/report-pages/ui/use-lead-form-generation.test.tsx",
+          "path": "apps/web/src/features/report-pages/ui/lead/chrome/use-lead-form-generation.test.tsx",
           "needle": "rejects a stale quick-add callback before draft mutation or autosave"
         },
         {
-          "path": "apps/web/src/features/report-pages/ui/lead-form-loaded-inputs.test.ts",
+          "path": "apps/web/src/features/report-pages/ui/lead/shell/lead-form-loaded-inputs.test.ts",
           "needle": "rejects a previous-generation draft on the first report B render"
         }
       ],
       "probes": [
         {
-          "path": "apps/web/src/features/report-pages/ui/use-lead-form-generation.test.tsx",
+          "path": "apps/web/src/features/report-pages/ui/lead/chrome/use-lead-form-generation.test.tsx",
           "needle": "rejects a stale quick-add callback before draft mutation or autosave"
         },
         {
-          "path": "apps/web/src/features/report-pages/ui/lead-form-loaded-inputs.test.ts",
+          "path": "apps/web/src/features/report-pages/ui/lead/shell/lead-form-loaded-inputs.test.ts",
           "needle": "rejects a previous-generation draft on the first report B render"
         }
       ],
       "commands": [
-        "pnpm --filter @customreport/web exec vitest run src/features/report-pages/ui/lead-form-generation-navigation.test.tsx src/features/report-pages/ui/use-generation-state.test.tsx src/features/report-pages/ui/use-lead-form-generation.test.tsx src/features/report-pages/ui/lead-form-loaded-inputs.test.ts"
+        "pnpm --filter @customreport/web exec vitest run src/features/report-pages/ui/lead/shell/lead-form-generation-navigation.test.tsx src/features/report-sections/model/lead-form/use-generation-state.test.tsx src/features/report-pages/ui/lead/chrome/use-lead-form-generation.test.tsx src/features/report-pages/ui/lead/shell/lead-form-loaded-inputs.test.ts"
       ]
     },
     {

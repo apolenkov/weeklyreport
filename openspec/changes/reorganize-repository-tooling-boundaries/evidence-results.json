@@ -24,11 +24,11 @@
       "rerunAt": "2026-08-04T06:06:07.148Z"
     },
     {
-      "command": "pnpm --filter @customreport/web exec vitest run src/features/report-pages/ui/lead-form-generation-navigation.test.tsx src/features/report-pages/ui/use-generation-state.test.tsx src/features/report-pages/ui/use-lead-form-generation.test.tsx src/features/report-pages/ui/lead-form-loaded-inputs.test.ts",
+      "command": "pnpm --filter @customreport/web exec vitest run src/features/report-pages/ui/lead/shell/lead-form-generation-navigation.test.tsx src/features/report-sections/model/lead-form/use-generation-state.test.tsx src/features/report-pages/ui/lead/chrome/use-lead-form-generation.test.tsx src/features/report-pages/ui/lead/shell/lead-form-loaded-inputs.test.ts",
       "exitCode": 0,
-      "sourceDigest": "384d133355509278b65c8a4eb8f847efa0e00a02367158f3cd10a284dc9a8b48",
+      "sourceDigest": "59b0aaf2d5847eb3f9b686b7dc05743e9c3bef9dffa20717cd83cf81109c2f56",
       "summary": "4 files and 6 LeadForm generation-isolation tests passed",
-      "rerunAt": "2026-08-05T08:21:12.000Z"
+      "rerunAt": "2026-08-06T02:49:46.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/period/application/period-factory.test.ts",
@@ -96,9 +96,9 @@
     {
       "command": "node --test scripts/gates/operations/restore-guard.test.ts",
       "exitCode": 0,
-      "sourceDigest": "dd44b078f8c5ae91164f26a4b42616688a48595e3dbc72fb3c0395ac52e3ccab",
+      "sourceDigest": "d5565fbf5c4b4b4f653e5a775e5a695a6fb5b3394cbad69ace0a11282e3d0599",
       "summary": "8 destructive restore guard shell tests passed",
-      "rerunAt": "2026-08-05T21:15:36.000Z"
+      "rerunAt": "2026-08-06T02:49:46.000Z"
     }
   ]
 }

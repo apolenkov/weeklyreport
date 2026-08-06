@@ -48,7 +48,10 @@ void test("environment example references current maintained paths and version",
     true,
   );
   assert.match(source, /e2e\/playwright[.]integration[.]config[.]ts/u);
-  assert.match(source, /apps\/web\/src\/shared\/ui\/role-switcher[.]tsx/u);
+  assert.match(
+    source,
+    /apps\/web\/src\/shared\/ui\/auth-runtime\/role-switcher[.]tsx/u,
+  );
   assert.doesNotMatch(
     source,
     /apps\/web\/playwright[.]integration[.]config[.]ts/u,
