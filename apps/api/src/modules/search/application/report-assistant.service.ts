@@ -5,22 +5,22 @@ import {
   reportAssistantRequestSchema,
 } from "@customreport/shared";
 
-import { limitCandidates, sortCandidates } from "../domain/candidate-filter.js";
 import { buildGroundingBundle } from "../domain/context-builder.js";
 import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
+import {
+  type CandidatePreparation,
+  prepareReportAssistantCandidates,
+} from "./report-assistant.candidate-preparation.js";
 import {
   type AnswerPort,
   answerWithCitationRepair,
   type PlannerPort,
   planWithOneRepair,
-  semanticCandidates,
-  semanticQuery,
 } from "./report-assistant.orchestration.js";
 import {
   type GroundedAnswerInput,
   ReportAssistantProviderError,
 } from "./report-assistant.ports.js";
-import { resolveReportAssistantCandidates } from "./report-assistant.retrieval.js";
 import {
   EMPTY_REPORT_ASSISTANT_TRACE,
   NOOP_REPORT_ASSISTANT_TELEMETRY,
@@ -48,16 +48,15 @@ type AssistantExecution = Readonly<{
   trace: ReportAssistantTrace;
 }>;
 
+type ReadyCandidatePreparation = Extract<
+  CandidatePreparation,
+  { kind: "ready" }
+>;
+
 const complete = (
   result: ReportAssistantOutcome,
   trace: ReportAssistantTrace,
 ): AssistantExecution => ({ outcome: outcome(result), trace });
-
-const emptyCache = {
-  hitCount: 0,
-  missCount: 0,
-  readThrough: false,
-} as const;
 
 export class ReportAssistantService {
   constructor(
@@ -113,77 +112,48 @@ export class ReportAssistantService {
     }
 
     const plan = planAttempt.parsed.data;
-    const trace = {
-      ...EMPTY_REPORT_ASSISTANT_TRACE,
-      mode: plan.retrieval.mode,
-      plannerRepairCount,
-    } as const;
-    const resolved = await resolveReportAssistantCandidates(
-      this.repository,
+    const preparation = await prepareReportAssistantCandidates({
       plan,
       actorId,
-      parsedRequest.resolutionTokens,
-      this.tokenCodec,
-      this.clock,
-      this.config.timeZone,
-    );
-    if (resolved.kind !== "resolved") {
-      return complete(
-        resolved.kind === "clarification_required"
-          ? { kind: resolved.kind, options: [...resolved.options] }
-          : resolved,
-        { ...trace, candidateCount: 0 },
-      );
+      resolutionTokens: parsedRequest.resolutionTokens,
+      trace: {
+        ...EMPTY_REPORT_ASSISTANT_TRACE,
+        mode: plan.retrieval.mode,
+        plannerRepairCount,
+      },
+      dependencies: {
+        repository: this.repository,
+        tokenCodec: this.tokenCodec,
+        clock: this.clock,
+        semanticRetrieval: this.semanticRetrieval,
+        timeZone: this.config.timeZone,
+        candidateLimits: {
+          candidateLimit: this.config.candidateLimit,
+          exhaustiveLimit: this.config.exhaustiveLimit,
+        },
+      },
+    });
+    if (preparation.kind === "terminal") {
+      return complete(preparation.outcome, preparation.trace);
     }
+    return this.answerGroundedCandidates(parsedRequest.question, preparation);
+  }
 
-    const candidateTrace = {
-      ...trace,
-      candidateCount: resolved.candidates.length,
-    };
-    const semantic =
-      plan.retrieval.mode === "semantic_ranked"
-        ? await semanticCandidates(
-            this.semanticRetrieval,
-            semanticQuery(plan),
-            resolved.candidates,
-          )
-        : {
-            kind: "ranked" as const,
-            candidates: resolved.candidates,
-            scores: new Map<string, number>(),
-            cache: emptyCache,
-          };
-    const cacheTrace = {
-      ...candidateTrace,
-      cacheHitCount: semantic.cache.hitCount,
-      cacheMissCount: semantic.cache.missCount,
-      readThrough: semantic.cache.readThrough,
-    };
-    if (semantic.kind !== "ranked") {
-      return complete({ kind: semantic.kind }, cacheTrace);
-    }
-
-    const sorted = sortCandidates(
-      semantic.candidates,
-      plan.retrieval.mode,
-      semantic.scores,
-    );
-    const limited = limitCandidates(sorted, resolved.plan, this.config);
-    if (limited.kind === "result_set_too_large") {
-      return complete({ kind: limited.kind }, cacheTrace);
-    }
-
+  private async answerGroundedCandidates(
+    question: string,
+    preparation: ReadyCandidatePreparation,
+  ): Promise<AssistantExecution> {
     const grounding = buildGroundingBundle(
-      sorted,
-      resolved.plan,
+      preparation.sorted,
+      preparation.plan,
       this.config.contextTokenBudget,
-      limited.candidates,
+      preparation.limited.candidates,
     );
     const answered = await answerWithCitationRepair(this.answerer, {
-      question: parsedRequest.question,
+      question,
       grounding: {
         ...grounding,
-        truncated: grounding.truncated || limited.truncated,
+        truncated: grounding.truncated || preparation.limited.truncated,
       },
     } satisfies GroundedAnswerInput);
     return complete(
@@ -192,12 +162,12 @@ export class ReportAssistantService {
         answerMarkdown: answered.answer.answerMarkdown,
         citations: [...answered.citations],
         metadata: {
-          truncated: grounding.truncated || limited.truncated,
+          truncated: grounding.truncated || preparation.limited.truncated,
           insufficientEvidence: answered.answer.insufficientEvidence,
         },
       },
       {
-        ...cacheTrace,
+        ...preparation.trace,
         evidenceCount: grounding.evidence.length,
         citationRepairCount: Number(answered.repaired),
         usage: answered.answer.usage,
