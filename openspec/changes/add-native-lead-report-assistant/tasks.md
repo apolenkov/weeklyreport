@@ -1,6 +1,6 @@
 ## 1. Shared contracts and snapshot compatibility
 
-- [x] 1.1 Implement the exact strict shared `SearchPlan` and tool-input wire shape from `docs/architecture/lead-report-assistant-search-plan-contract.md`, plus output/grouping, assistant request, product-outcome union, clarification options, answer metadata, and citations; add the colocated canonical-status Zod schema, compose every existing canonical enum, and add only the documented assistant-owned derived Decision schemas.
+- [x] 1.1 Implement the exact strict shared `SearchPlan` and tool-input wire shape from `docs/llm-report/lead-report-assistant-search-plan-contract.md`, plus output/grouping, assistant request, product-outcome union, clarification options, answer metadata, and citations; add the colocated canonical-status Zod schema, compose every existing canonical enum, and add only the documented assistant-owned derived Decision schemas.
 - [x] 1.2 Implement every documented SearchPlan bound and cross-field refinement for period/author modes, subject expansion, filter-to-record-kind compatibility, structured/semantic residuals, priority combinations, comparison grouping, requested limits, exhaustive intent, and explicit empty/null semantics, with no field defaults.
 - [x] 1.3 Add exhaustive shared schema tests covering valid plans, every invalid combination, strict unknown-field rejection, safe-text bounds, and generated JSON Schema required fields.
 - [x] 1.4 Extend `sectionActivitySchema` with backward-compatible `jiraAccounts`, update snapshot/shared fixtures, and prove both new alias round-trips and old snapshot parsing.
@@ -37,7 +37,7 @@
 
 ## 5. Mistral and semantic embedding infrastructure
 
-- [x] 5.1 Re-verify the official Mistral contracts recorded in `docs/research/mistral-report-assistant-integration-2026-08-04.md`; add `@mistralai/mistralai` v2 through pnpm and use explicit server/model configuration without SDK fallbacks or `-latest` aliases.
+- [x] 5.1 Re-verify the official Mistral contracts recorded in `docs/llm-report/mistral-report-assistant-integration-2026-08-04.md`; add `@mistralai/mistralai` v2 through pnpm and use explicit server/model configuration without SDK fallbacks or `-latest` aliases.
 - [x] 5.2 Define minimal application-owned `ReportLanguageModelPort` and `EmbeddingPort` interfaces plus deterministic fake adapters for planner repair, answer repair, provider failure, and reproducible vectors.
 - [x] 5.3 Implement canonical semantic text/version/hash creation for Item, Risk, Decision, and noted Activity status; test that product/stage/note-less status facts are non-embeddable and metadata names do not affect hashes.
 - [x] 5.4 Implement the parameterized pgvector repository that validates finite query vectors, filters active provider/model/version/dimensions and allowed hashes, performs exact cosine ranking, and applies the configured threshold with stable tie-breakers.
@@ -48,7 +48,7 @@
 
 ## 6. Assistant orchestration, tRPC, and observability
 
-- [x] 6.1 Implement versioned planner and planner-repair prompt builders exactly from `docs/architecture/lead-report-assistant-prompt-contract.md`, with the generated `search_report_entries` schema, one tool, `toolChoice: "any"`, `parallelToolCalls: false`, minimal trusted context, strict response parsing, bounded timeout/transport handling, and one validation-repair attempt.
+- [x] 6.1 Implement versioned planner and planner-repair prompt builders exactly from `docs/llm-report/lead-report-assistant-prompt-contract.md`, with the generated `search_report_entries` schema, one tool, `toolChoice: "any"`, `parallelToolCalls: false`, minimal trusted context, strict response parsing, bounded timeout/transport handling, and one validation-repair attempt.
 - [x] 6.2 Implement versioned grounded-answer and citation-repair prompt builders exactly from the prompt contract, using Custom Structured Outputs, isolated untrusted evidence data, token usage capture, one citation-repair attempt, and no unknown-source acceptance.
 - [x] 6.3 Complete `ReportAssistantService.answer` orchestration across planning, resolution, canonical retrieval, exact filtering, optional complete-set ranking, aggregates/context, grounded answer, and every explicit product outcome.
 - [x] 6.4 Add service-interface tests with fakes for structured/semantic success, ambiguity, no match, invalid-plan repair/failure, indexing pending, oversized sets, truncation, citation repair/failure, provider failure, and prompt-injection records.

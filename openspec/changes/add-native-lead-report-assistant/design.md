@@ -26,7 +26,7 @@ lead Chat sheet -> leadProcedure -> ReportAssistantService
 existing search.query -> unchanged public contract and behavior
 ```
 
-The owner-facing summary and infrastructure explanation are maintained separately at `docs/architecture/lead-report-assistant-decision-summary.md`.
+The owner-facing summary and infrastructure explanation are maintained separately at `docs/llm-report/lead-report-assistant-decision-summary.md`.
 
 ## Goals / Non-Goals
 
@@ -97,7 +97,7 @@ Alternative rejected: browser or server persistence. The requested continuity is
 
 ### 3. Define one strict external SearchPlan in `packages/shared`
 
-The tool input is the exact strict shared Zod object fixed in `docs/architecture/lead-report-assistant-search-plan-contract.md`. Its field names, enum literals, requiredness, empty/null semantics, derived Decision classifications, cross-field refinements and examples are normative. The plan covers:
+The tool input is the exact strict shared Zod object fixed in `docs/llm-report/lead-report-assistant-search-plan-contract.md`. Its field names, enum literals, requiredness, empty/null semantics, derived Decision classifications, cross-field refinements and examples are normative. The plan covers:
 
 - periods: include current, published mode (`none/latest/all/named`), count, references;
 - authors: `self/all_visible/selected`, names, include self;
@@ -172,7 +172,7 @@ Indexing is retrieval-triggered in v1; no autosave hook or scheduled prewarm is 
 
 Planner context contains question, actor role, trusted server date/timezone and tool semantics only. Resolution tokens stay in the validated application request and are applied after planning. Answer context contains question plus the authorization-filtered GroundingBundle. Provider transport retry/timeouts are bounded in the adapter and distinct from the one semantic repair attempt.
 
-The prompts are versioned product code, not environment text. Implement the four exact contracts documented in `docs/architecture/lead-report-assistant-prompt-contract.md`: planner, planner repair, grounded answer and citation repair. Trusted instructions and untrusted report data remain in separate messages; report content is serialized as data and is never interpolated into the system instruction. Prompt versions participate in tests and observability but prompt text is never logged.
+The prompts are versioned product code, not environment text. Implement the four exact contracts documented in `docs/llm-report/lead-report-assistant-prompt-contract.md`: planner, planner repair, grounded answer and citation repair. Trusted instructions and untrusted report data remain in separate messages; report content is serialized as data and is never interpolated into the system instruction. Prompt versions participate in tests and observability but prompt text is never logged.
 
 The owner-selected initial UAT baseline is `mistral-medium-3-5` for planning and answers, and `mistral-embed` with 1,024 dimensions for embeddings. These are pinned IDs rather than `-latest` aliases. `mistral-small-2603` is a cost-oriented replacement only after it passes the same Russian/English planner, citation and prompt-injection evaluation suite. Production uses the explicit EU API server unless the owner approves another data region.
 

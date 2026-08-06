@@ -2,7 +2,7 @@
 
 ### Requirement: A strict SearchPlan expresses user intent without internal controls
 
-`@customreport/shared` MUST implement the exact strict `SearchPlan` wire contract in `docs/architecture/lead-report-assistant-search-plan-contract.md`, including its field names, enum literals, requiredness, explicit no-filter values, bounds and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Every tool field MUST be explicit; no SearchPlan field MUST use a silent default. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
+`@customreport/shared` MUST implement the exact strict `SearchPlan` wire contract in `docs/llm-report/lead-report-assistant-search-plan-contract.md`, including its field names, enum literals, requiredness, explicit no-filter values, bounds and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Every tool field MUST be explicit; no SearchPlan field MUST use a silent default. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
 
 #### Scenario: Planner emits the documented no-filter shape
 

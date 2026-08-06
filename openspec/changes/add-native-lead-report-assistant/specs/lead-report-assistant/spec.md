@@ -48,7 +48,7 @@ The Lead assistant tRPC procedure MUST validate a shared Zod input containing on
 
 ### Requirement: Mistral planning uses one forced typed search tool
 
-The language-model adapter MUST require Mistral to call exactly one `search_report_entries` tool whose JSON Schema is generated from the canonical shared `SearchPlan` Zod schema. It MUST implement the versioned planner and planner-repair contracts in `docs/architecture/lead-report-assistant-prompt-contract.md`, expose one tool with forced tool choice, and disable parallel tool calls. The planner MUST NOT answer the user before tool execution and MUST NOT receive report records, database IDs, the unrestricted organization catalog, SQL controls, vector limits, or authorization policy decisions.
+The language-model adapter MUST require Mistral to call exactly one `search_report_entries` tool whose JSON Schema is generated from the canonical shared `SearchPlan` Zod schema. It MUST implement the versioned planner and planner-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, expose one tool with forced tool choice, and disable parallel tool calls. The planner MUST NOT answer the user before tool execution and MUST NOT receive report records, database IDs, the unrestricted organization catalog, SQL controls, vector limits, or authorization policy decisions.
 
 #### Scenario: Planner produces a valid tool call
 
@@ -78,7 +78,7 @@ The shared assistant output MUST be a discriminated union covering `ok`, `clarif
 
 ### Requirement: Answers are grounded in server-prepared evidence
 
-The answer adapter MUST receive only the original question, deterministic server aggregates, and an authorization-filtered `GroundingBundle`. It MUST implement the versioned grounded-answer and citation-repair contracts in `docs/architecture/lead-report-assistant-prompt-contract.md`, keep trusted instructions separate from serialized untrusted evidence, and use a schema-constrained structured response. It MUST return structured Markdown, cited local source IDs, and an insufficient-evidence flag. The server MUST verify every cited ID, allow one bounded citation repair, and MUST NOT publish an answer containing unknown citations.
+The answer adapter MUST receive only the original question, deterministic server aggregates, and an authorization-filtered `GroundingBundle`. It MUST implement the versioned grounded-answer and citation-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, keep trusted instructions separate from serialized untrusted evidence, and use a schema-constrained structured response. It MUST return structured Markdown, cited local source IDs, and an insufficient-evidence flag. The server MUST verify every cited ID, allow one bounded citation repair, and MUST NOT publish an answer containing unknown citations.
 
 #### Scenario: Answer cites valid report evidence
 
