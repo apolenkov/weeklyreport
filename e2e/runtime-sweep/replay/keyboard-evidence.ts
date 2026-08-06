@@ -11,6 +11,11 @@ const NON_TAB_FOCUS_ROLES = new Set([
   "tabpanel",
 ]);
 const MAX_TAB_STEPS = 2;
+const MENU_ITEM_ROLES = new Set([
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+]);
 
 export type KeyboardControlEvidence = Readonly<{
   controlKey: string;
@@ -189,6 +194,29 @@ const tabSequence = async (
     Promise.resolve<readonly FocusedControl[]>([]),
   );
 
+const menuSequence = async (
+  page: Page,
+  controls: readonly DomControlObservation[],
+): Promise<readonly FocusedControl[]> => {
+  const active = await focusedControl(page);
+  if (
+    active === null ||
+    (active.role !== "menu" && !MENU_ITEM_ROLES.has(active.role))
+  )
+    return [];
+  const menuItems = controls.filter(({ role }) => MENU_ITEM_ROLES.has(role));
+  const initial = MENU_ITEM_ROLES.has(active.role) ? [active] : [];
+  return Array.from({ length: menuItems.length }, (_, index) => index).reduce(
+    async (promise, _step) => {
+      const sequence = await promise;
+      await page.keyboard.press("ArrowDown");
+      const control = await focusedControl(page);
+      return control ? [...sequence, control] : sequence;
+    },
+    Promise.resolve<readonly FocusedControl[]>(initial),
+  );
+};
+
 const controlsEvidence = (
   controls: readonly DomControlObservation[],
   focusedKeys: ReadonlySet<string>,
@@ -214,6 +242,7 @@ export async function captureKeyboardTrace(
 ): Promise<KeyboardTrace> {
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
+  const menuFocusSequence = await menuSequence(page, resolvedControls);
   await blurActiveElement(page);
   await focusDocumentStart(page);
   try {
@@ -225,7 +254,9 @@ export async function captureKeyboardTrace(
       sequence[0] === undefined
         ? await activeElement(page)
         : `${sequence[0].role}:${sequence[0].accessibleName}`;
-    const focusedKeys = new Set(sequence.map(({ controlKey }) => controlKey));
+    const focusedKeys = new Set(
+      [...menuFocusSequence, ...sequence].map(({ controlKey }) => controlKey),
+    );
     const evidence = controlsEvidence(resolvedControls, focusedKeys);
     return {
       after,

@@ -1,6 +1,7 @@
 import {
   type ControlActionAttempt,
   executeControlAttempt,
+  hrefTargetLocator,
   targetLocator,
   titleTargetLocator,
   waitForVisible,
@@ -93,16 +94,29 @@ const candidateLocator = async (
     TARGET_RESOLUTION_TIMEOUT_MS,
   );
   const primary = targetLocator(input.page, input.control);
-  if ((await primary.count()) > 0)
-    return (await waitForVisible(primary, timeoutMs)) ? primary : undefined;
   const titled = titleTargetLocator(input.page, input.control);
-  if ((await titled.count()) > 0)
-    return (await waitForVisible(titled, timeoutMs)) ? titled : undefined;
-  const [primaryVisible, titledVisible] = await Promise.all([
-    waitForVisible(primary, timeoutMs),
-    waitForVisible(titled, timeoutMs),
-  ]);
-  return primaryVisible ? primary : titledVisible ? titled : undefined;
+  const href = hrefTargetLocator(input.page, input.control);
+  const candidates =
+    href === undefined ? [primary, titled] : [primary, titled, href];
+  const resolveVisible = async (
+    remaining: readonly (typeof primary)[],
+  ): Promise<typeof primary | undefined> => {
+    const [candidate, ...rest] = remaining;
+    if (candidate === undefined) return undefined;
+    if (
+      (await candidate.count()) > 0 &&
+      (await waitForVisible(candidate, timeoutMs))
+    )
+      return candidate;
+    return resolveVisible(rest);
+  };
+  const visible = await resolveVisible(candidates);
+  if (visible !== undefined) return visible;
+  const delayedVisibility = await Promise.all(
+    candidates.map((candidate) => waitForVisible(candidate, timeoutMs)),
+  );
+  const delayedIndex = delayedVisibility.findIndex(Boolean);
+  return delayedIndex === -1 ? undefined : candidates[delayedIndex];
 };
 
 const locateControl = async (
