@@ -48,8 +48,8 @@ const recoveryFor = (
   source: RuntimeMatrixSource,
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
-) =>
-  createE2eControlRecovery({
+) => {
+  const recovery = createE2eControlRecovery({
     databaseUrl: runtime.databaseUrl,
     profile: matrixCase.profile,
     repoRoot: runtime.repoRoot,
@@ -60,6 +60,14 @@ const recoveryFor = (
       await page.goto(route.resolvedRoute);
     },
   });
+  return {
+    ...recovery,
+    resetAndReseed: async (): Promise<void> => {
+      await page.goto("about:blank");
+      await recovery.resetAndReseed();
+    },
+  };
+};
 
 const targetForAction = (
   inventory: DomInventory,
