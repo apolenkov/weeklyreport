@@ -9,11 +9,11 @@ import type {
   WeeklyProductReport,
 } from "../../report-sections";
 import { PortfolioOverviewTable } from "../../report-sections";
-import type { ReviewMode } from "../../review";
+import type { ReviewMode, ReviewModel } from "../../review";
 import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../review";
 import { SCROLL_INTO_VIEW_DELAY_MS } from "./accordion-tokens";
 import { ProductAccordion } from "./product-accordion";
-import type { LeadGroup, ReviewModel } from "./weekly-report-page-helpers";
+import type { LeadGroup } from "./weekly-report-page-helpers";
 
 // Shared layout for terminal page states (invalid-link, no active period).
 export function CenteredNotice({

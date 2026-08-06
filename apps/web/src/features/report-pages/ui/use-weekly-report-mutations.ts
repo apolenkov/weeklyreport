@@ -2,11 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
-import {
-  invalidateDashboard,
-  invalidatePeriodLifecycle,
-} from "../../../shared/lib/query/cache-keys";
+import { invalidateDashboard } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { usePeriodReportMutations } from "../../period/client";
 
 function toastMutationError(fallbackMessage: string) {
   return (err: unknown) => {
@@ -24,7 +22,7 @@ export interface WeeklyReportMutations {
   readonly isRestorePending: boolean;
 }
 
-// Archive and its inverse bust the same caches: both only move a report
+// Archive and its inverse belong to the page adapter: they move a report
 // between the live dashboard and the archive list.
 function useArchiveMutations() {
   const trpc = useTRPC();
@@ -51,38 +49,17 @@ function useArchiveMutations() {
   };
 }
 
-// Publish/reopen/archive/restore with cascading invalidation on success.
+// Compose page archive actions with the period-owned publish/reopen seam.
 export function useWeeklyReportMutations(): WeeklyReportMutations {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
+  const periodMutations = usePeriodReportMutations();
   const { archiveMut, restoreMut } = useArchiveMutations();
 
-  const publishMut = useMutation(
-    trpc.period.publish.mutationOptions({
-      onSuccess: () => {
-        invalidatePeriodLifecycle(qc, trpc);
-        toast.success("Period published & locked");
-      },
-      onError: toastMutationError("Failed to publish period"),
-    }),
-  );
-
-  const reopenMut = useMutation(
-    trpc.period.reopen.mutationOptions({
-      onSuccess: () => {
-        invalidatePeriodLifecycle(qc, trpc);
-        toast.success("Period reopened");
-      },
-      onError: toastMutationError("Failed to reopen period"),
-    }),
-  );
-
   return {
-    publish: (reportId) => publishMut.mutate({ reportId }),
-    reopen: (reportId) => reopenMut.mutate({ reportId }),
+    publish: periodMutations.publish,
+    reopen: periodMutations.reopen,
     archive: (reportId) => archiveMut.mutate({ reportId }),
     restore: (reportId) => restoreMut.mutate({ reportId }),
-    isPublishOrReopenPending: publishMut.isPending || reopenMut.isPending,
+    isPublishOrReopenPending: periodMutations.isPublishOrReopenPending,
     isArchivePending: archiveMut.isPending,
     isRestorePending: restoreMut.isPending,
   };

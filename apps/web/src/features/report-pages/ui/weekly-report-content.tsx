@@ -9,7 +9,7 @@ import type {
   WeeklyPortfolioProduct,
 } from "../../report-sections";
 import { ActivityStatusStrip } from "../../report-sections";
-import type { ReviewMode, SubmissionFilter } from "../../review";
+import type { ReviewMode, ReviewModel, SubmissionFilter } from "../../review";
 import {
   DraftHiddenSignal,
   ReviewModeToggle,
@@ -21,7 +21,7 @@ import {
   ReportOverviewBand,
   ReviewModeVerdictSurface,
 } from "./weekly-report-page-content";
-import type { AccordionModel, ReviewModel } from "./weekly-report-page-helpers";
+import type { AccordionModel } from "./weekly-report-page-helpers";
 import { isSubmittedSection } from "./weekly-report-page-helpers";
 
 export interface ReportContentProps {
