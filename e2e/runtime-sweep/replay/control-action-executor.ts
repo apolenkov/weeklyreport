@@ -143,8 +143,20 @@ const fillOrSelect = async (
     });
     return;
   }
-  if (input.action.operation === "select")
-    await locator.selectOption({ index: 0 }, { timeout: timeoutMs });
+  if (input.action.operation !== "select") return;
+  const alternative = locator
+    .locator("option:not(:checked):not(:disabled)")
+    .first();
+  if ((await alternative.count()) === 0)
+    throw new ControlActionPolicyError(
+      "Native select has no enabled alternative option",
+    );
+  const index = await alternative.evaluate((option) => {
+    if (!(option instanceof HTMLOptionElement))
+      throw new TypeError("Native select alternative is not an option");
+    return option.index;
+  });
+  await locator.selectOption({ index }, { timeout: timeoutMs });
 };
 
 const confirmStatefulAction = async (

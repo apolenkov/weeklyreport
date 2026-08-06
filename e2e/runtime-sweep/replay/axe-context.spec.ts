@@ -127,3 +127,33 @@ test("keeps rich toast content in the active portal scan", async ({ page }) => {
     expect.arrayContaining([expect.objectContaining({ id: "color-contrast" })]),
   );
 });
+
+test("uses the final full-page scan when no portal requires an earlier snapshot", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <html lang="en">
+      <head><title>Settling fixture</title></head>
+      <body><main id="main-content"></main></body>
+    </html>
+  `);
+  const prepared = await prepareAxeContext(page);
+  expect(prepared.activePortalSelectors).toEqual([]);
+  expect(prepared.active.violations).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "page-has-heading-one" }),
+    ]),
+  );
+
+  await page.locator("#main-content").evaluate((main) => {
+    main.innerHTML = "<h1>Status Report</h1>";
+  });
+  const result = await finalizeAxeContext(page, prepared);
+
+  expect(result.violations).not.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "page-has-heading-one" }),
+    ]),
+  );
+  expect(result.fullPageAfterPortalClose.violations).toEqual([]);
+});

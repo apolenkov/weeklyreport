@@ -19,6 +19,7 @@ import {
 import {
   createFrozenCaseLiveShardPlan,
   type FrozenCaseLiveShard,
+  selectFrozenCasesForReplay,
 } from "./frozen-case-live-shards.ts";
 
 const requiredEnv = (name: string): string => {
@@ -45,7 +46,11 @@ const MAX_CELLS = Math.min(
 const frozenProfileCases = parseFrozenMatrix(
   JSON.parse(readFileSync(path.join(ARCHIVE_ROOT, "MATRIX.json"), "utf8")),
 ).cases.filter(({ profile }) => profile === PROFILE);
-const replayShards = createFrozenCaseLiveShardPlan(frozenProfileCases);
+const replayCases = selectFrozenCasesForReplay(
+  frozenProfileCases,
+  process.env.RUNTIME_SWEEP_CASE_IDS,
+);
+const replayShards = createFrozenCaseLiveShardPlan(replayCases);
 const profileCaseIds = frozenProfileCases.map(({ caseId }) => caseId);
 const sourceHolder: { value?: RuntimeMatrixSource } = {};
 

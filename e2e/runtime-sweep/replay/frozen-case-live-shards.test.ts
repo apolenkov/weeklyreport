@@ -5,6 +5,7 @@ import {
   createFrozenCaseLiveShardPlan,
   groupFrozenCases,
   MAX_FROZEN_CASE_LIVE_SHARD_CASES,
+  selectFrozenCasesForReplay,
 } from "./frozen-case-live-shards.ts";
 
 const makeCase = (index: number): MatrixExecutableCase => ({
@@ -80,6 +81,24 @@ describe("frozen live replay shards", () => {
     );
     expect(new Set(plan.flatMap(({ caseIds }) => caseIds)).size).toBe(
       cases.length,
+    );
+  });
+
+  it("selects explicit resume cases in frozen matrix order", () => {
+    const cases = Array.from({ length: 4 }, (_, index) => makeCase(index));
+
+    expect(
+      ids(selectFrozenCasesForReplay(cases, "case-000003,case-000001")),
+    ).toEqual(["case-000001", "case-000003"]);
+  });
+
+  it.each([
+    ["empty", "case-000001,"],
+    ["duplicate", "case-000001,case-000001"],
+    ["unknown", "case-999999"],
+  ])("rejects %s explicit resume identities", (_label, requested) => {
+    expect(() => selectFrozenCasesForReplay([makeCase(1)], requested)).toThrow(
+      /RUNTIME_SWEEP_CASE_IDS/u,
     );
   });
 

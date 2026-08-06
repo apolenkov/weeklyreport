@@ -228,7 +228,10 @@ export const finalizeAxeContext = async (
 ): Promise<AxeContextResults> => {
   await closeInteractivePortals(page, prepared.activePortalSelectors);
   const fullPageAfterPortalClose = await new AxeBuilder({ page }).analyze();
-  const merged = mergeResults([prepared.active, fullPageAfterPortalClose]);
+  const merged =
+    prepared.activePortalSelectors.length === 0
+      ? fullPageAfterPortalClose
+      : mergeResults([prepared.active, fullPageAfterPortalClose]);
   return {
     ...merged,
     activePortalSelectors: prepared.activePortalSelectors,
