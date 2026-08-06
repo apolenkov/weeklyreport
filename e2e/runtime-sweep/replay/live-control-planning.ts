@@ -117,6 +117,13 @@ const isSubmitControl = (control: DomControlObservation): boolean =>
       return name === prefix || name.startsWith(`${prefix} `);
     }));
 
+const asyncSideEffectReason = (
+  control: DomControlObservation,
+): string | null =>
+  normalizedName(control.accessibleName) === "export pdf"
+    ? "Async PDF export requires a dedicated job-completion and queue-cleanup oracle"
+    : null;
+
 const transitionForName = (
   name: string,
 ): Extract<Action["transition"], "open" | "cancel"> | undefined => {
@@ -238,6 +245,9 @@ const planFor = (
     );
   if (!control.enabled)
     return unsupportedPlan(control, "unavailable", "Control is disabled");
+  const sideEffectReason = asyncSideEffectReason(control);
+  if (sideEffectReason !== null)
+    return unsupportedPlan(control, "unsafe", sideEffectReason);
   const stateful = statefulOperationFor(control.accessibleName);
   if (stateful !== undefined)
     return { control, action: statefulAction(stateful, control.controlKey) };
