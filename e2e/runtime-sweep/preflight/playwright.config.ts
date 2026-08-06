@@ -51,7 +51,7 @@ const webEnv = {
 };
 
 export default defineConfig({
-  testDir: import.meta.dirname,
+  testDir: path.resolve(import.meta.dirname, ".."),
   testMatch:
     /(?:concurrency|fault-recovery|runtime-matrix|runtime-sweep|z-runtime-sweep-live-lane)\.spec\.ts/,
   outputDir: path.join(ARCHIVE_ROOT, "playwright", PROFILE),
