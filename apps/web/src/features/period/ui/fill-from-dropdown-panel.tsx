@@ -93,6 +93,7 @@ function PeriodRowButton({
 
 interface FillFromDropdownPanelProps {
   readonly open: boolean;
+  readonly id: string;
   readonly pos: { top: number; right: number } | null;
   readonly panelRef: RefObject<HTMLDivElement | null>;
   readonly pastPeriods: readonly ReportPeriod[];
@@ -107,6 +108,7 @@ interface FillFromDropdownPanelProps {
 
 export function FillFromDropdownPanel({
   open,
+  id,
   pos,
   panelRef,
   pastPeriods,
@@ -120,7 +122,10 @@ export function FillFromDropdownPanel({
   return (
     <DocumentBodyPortal>
       <div
+        id={id}
         ref={panelRef}
+        role="region"
+        aria-label="Past reports"
         className="fixed z-50 w-[340px] rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
         style={{ top: pos.top, right: pos.right }}
       >
