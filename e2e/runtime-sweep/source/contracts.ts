@@ -137,22 +137,41 @@ export const stateAxesSchema = z.object({ profileCapability: seedCapabilitySchem
 // prettier-ignore
 export const matrixAxesSchema = z.object({ role: roleSchema, route: z.string().min(1), ...stateAxesSchema.shape }).strict();
 // prettier-ignore
-export const actionSchema = z.object({ intentId: z.string().min(1).optional(), controlKey: z.string().min(1), operation: actionOperationSchema, safety: actionSafetySchema, transition: controlTransitionSchema }).strict();
+export const actionTargetSchema = z.object({ role: z.literal("link"), href: z.string().min(1) }).strict();
+const actionShape = {
+  intentId: z.string().min(1).optional(),
+  controlKey: z.string().min(1),
+  operation: actionOperationSchema,
+  safety: actionSafetySchema,
+  transition: controlTransitionSchema,
+  target: actionTargetSchema.optional(),
+} as const;
+// prettier-ignore
+export const actionSchema = z.object(actionShape).strict().superRefine((action, context) => {
+  if (action.target !== undefined && action.operation !== "click") context.addIssue({ code: "custom", path: ["target"], message: "Stable link targets are valid only for click actions" });
+});
 export const matrixObservationSchema = z
   .object({
     observationId: stableIdentifierSchema,
     kind: z.enum(OBSERVATION_KINDS),
   })
   .strict();
-const navigationActionSchema = actionSchema
-  .extend({
+const navigationActionSchema = z
+  .object({
+    ...actionShape,
     operation: z.literal("navigate"),
     safety: z.literal("read-only"),
     transition: z.literal("none"),
+    target: z.never().optional(),
   })
   .strict();
-const recoveryActionSchema = actionSchema
-  .extend({ operation: z.literal("retry"), transition: z.literal("retry") })
+const recoveryActionSchema = z
+  .object({
+    ...actionShape,
+    operation: z.literal("retry"),
+    transition: z.literal("retry"),
+    target: z.never().optional(),
+  })
   .strict();
 const faultExecutionBaseSchema = z.object({ faultId: faultIdSchema });
 const navigationExecutionSchema = z
@@ -255,6 +274,7 @@ export type {
   Action,
   ActionOperation,
   ActionSafety,
+  ActionTarget,
   CampaignManifest,
   Candidate,
   ControlTransition,

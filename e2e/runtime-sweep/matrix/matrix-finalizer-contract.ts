@@ -112,6 +112,7 @@ export interface MatrixPreflightControl {
     readonly enabled: boolean;
     readonly order: number;
     readonly domOrderKey: string;
+    readonly href: string | null;
   }>;
   readonly action?: Action | undefined;
   readonly execution?: MatrixExecution | undefined;

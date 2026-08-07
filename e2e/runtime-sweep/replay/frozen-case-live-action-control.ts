@@ -15,6 +15,10 @@ import { FAULT_DECLARATIONS } from "../scenarios/faults/fault-declarations.ts";
 import { withFault } from "../scenarios/faults/fault-injection.ts";
 import { type DOMControl, type MatrixExecution } from "../source/contracts.ts";
 import { createE2eControlRecovery } from "./control-recovery.ts";
+import {
+  canonicalFrozenTargetControl,
+  selectFrozenActionTarget,
+} from "./control-target/frozen-action-target.ts";
 import { type DomInventory, inventoryDom } from "./dom-inventory.ts";
 import {
   type FrozenCaseLiveRuntime,
@@ -72,8 +76,7 @@ const recoveryFor = (
 const targetForAction = (
   inventory: DomInventory,
   action: NonNullable<ReturnType<typeof executionAction>>,
-) =>
-  inventory.controls.find(({ controlKey }) => controlKey === action.controlKey);
+) => selectFrozenActionTarget(inventory.controls, action);
 
 const waitForActionTargetUntil = async (
   page: Page,
@@ -246,7 +249,11 @@ export const controlsForCase = (
     return frozenTarget !== undefined
       ? orderControls([
           ...controls,
-          actionControlFor(frozenTarget, actionResult, matrixCase),
+          actionControlFor(
+            canonicalFrozenTargetControl(frozenTarget, action),
+            actionResult,
+            matrixCase,
+          ),
         ])
       : controls;
   }

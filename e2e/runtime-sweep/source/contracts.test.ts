@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  actionSchema,
   campaignManifestSchema,
   coverageCellSchema,
   dispositionSchema,
@@ -213,6 +214,21 @@ describe("runtime sweep execution contracts", () => {
         action,
         observation: { observationId: "settled", kind: "geometry" },
       }).success,
+    ).toBe(false);
+  });
+
+  it("allows a stable link target only for click actions", () => {
+    const target = { role: "link" as const, href: "/reports/stable" };
+    const base = {
+      controlKey: "link:Report:1",
+      safety: "read-only" as const,
+      transition: "none" as const,
+    };
+    expect(
+      actionSchema.safeParse({ ...base, operation: "click", target }).success,
+    ).toBe(true);
+    expect(
+      actionSchema.safeParse({ ...base, operation: "fill", target }).success,
     ).toBe(false);
   });
 });

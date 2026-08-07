@@ -106,6 +106,7 @@ const controlsFor = (count: number): readonly MatrixPreflightControl[] =>
         enabled: true,
         order: index,
         domOrderKey: `${String(index).padStart(4, "0")}:${controlKey}`,
+        href: null,
       },
       action: {
         controlKey,
@@ -157,6 +158,7 @@ function bindsInventoryDigest(): void {
       enabled: true,
       order: 1,
       domOrderKey: "0001:button:Save:1",
+      href: null,
     },
     action: {
       controlKey: "button:Save:1",
@@ -295,24 +297,9 @@ function acceptsObservedPreflightScale(): void {
 }
 
 describe("campaign matrix finalizer", () => {
-  it(
-    "freezes deterministic rows and typed inapplicable omissions",
-    freezesDeterministicRows,
-  );
-  it(
-    "rejects changed preflight payloads and total-case overflow",
-    rejectsChangedPreflight,
-  );
-  it(
-    "binds semantic control inventory into the matrix digest",
-    bindsInventoryDigest,
-  );
-  it(
-    "preserves every full-axis plan inapplicable row",
-    preservesFullAxisPlanRows,
-  );
-  it(
-    "accepts the observed preflight scale with finite defaults",
-    acceptsObservedPreflightScale,
-  );
+  it("freezes deterministic rows", freezesDeterministicRows);
+  it("rejects changed preflight", rejectsChangedPreflight);
+  it("binds inventory into the digest", bindsInventoryDigest);
+  it("preserves inapplicable rows", preservesFullAxisPlanRows);
+  it("accepts observed scale", acceptsObservedPreflightScale);
 });

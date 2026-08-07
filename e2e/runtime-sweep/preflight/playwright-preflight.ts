@@ -77,13 +77,16 @@ const routeForState = (
   };
 };
 
-const actionForPlan = (plan: LiveControlPlan): MatrixPreflightControl => {
+export const preflightControlForPlan = (
+  plan: LiveControlPlan,
+): MatrixPreflightControl => {
   const inventory = {
     ariaRole: plan.control.role,
     accessibleName: plan.control.accessibleName,
     enabled: plan.control.enabled,
     order: plan.control.order,
     domOrderKey: plan.control.domOrderKey,
+    href: plan.control.href,
   } as const;
   if (plan.action !== undefined)
     return {
@@ -109,7 +112,7 @@ const controlsFor = (
   inventory: DomInventory,
 ): readonly MatrixPreflightControl[] =>
   planLiveControlActions(inventory.controls, { formSafety: "disposable-reset" })
-    .map(actionForPlan)
+    .map(preflightControlForPlan)
     .toSorted((left, right) => left.controlKey.localeCompare(right.controlKey));
 
 const nominalStateFor = (

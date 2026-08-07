@@ -45,6 +45,16 @@ const persistFrozenCaseCell = async (
   await writeCell(runtime.archiveRoot, cell);
 };
 
+const requirePassingPersistedCell = (
+  cell: FrozenCaseCoverageCell,
+): FrozenCaseCoverageCell => {
+  if (cell.verdict !== "pass")
+    throw new Error(
+      `Frozen case ${cell.cellId} stopped the lane with verdict=${cell.verdict}`,
+    );
+  return cell;
+};
+
 const reuseProfileBaseline = (): void => undefined;
 
 const groupKeyFor = (
@@ -153,7 +163,7 @@ const runFrozenCase = async (
   });
   if (specialized !== undefined) {
     await persistFrozenCaseCell(runtime, specialized.cell);
-    return specialized.cell;
+    return requirePassingPersistedCell(specialized.cell);
   }
   const { prepared } = await prepareCase(
     source,
@@ -174,7 +184,7 @@ const runFrozenCase = async (
     navigation,
   );
   await persistFrozenCaseCell(runtime, cell);
-  return cell;
+  return requirePassingPersistedCell(cell);
 };
 
 const runFrozenCaseRange = async (
