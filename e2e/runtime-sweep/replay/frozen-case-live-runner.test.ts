@@ -36,8 +36,8 @@ const harness = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock("../../helpers/e2e-database-setup.ts", () => ({
-  reseedE2eDatabase: harness.reseed,
+vi.mock("../../helpers/e2e-runtime-state-setup.ts", () => ({
+  reseedE2eRuntimeState: harness.reseed,
 }));
 
 vi.mock("./dom-inventory.ts", () => ({

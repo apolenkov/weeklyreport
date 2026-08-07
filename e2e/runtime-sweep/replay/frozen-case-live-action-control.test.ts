@@ -6,7 +6,7 @@ import { runAction } from "./frozen-case-live-action-control.ts";
 import type { FrozenCaseLiveRuntime } from "./frozen-case-live-preparation.ts";
 
 const harness = vi.hoisted(() => ({
-  reseed: vi.fn(() => undefined),
+  reseed: vi.fn(() => Promise.resolve()),
   execute: vi.fn(
     async (input: {
       readonly recovery?: {
@@ -58,8 +58,8 @@ const harness = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../helpers/e2e-database-setup.js", () => ({
-  reseedE2eDatabase: harness.reseed,
+vi.mock("../../helpers/e2e-runtime-state-setup.js", () => ({
+  reseedE2eRuntimeState: harness.reseed,
 }));
 vi.mock("./dom-inventory.ts", () => ({
   inventoryDom: vi.fn(() => Promise.resolve(harness.inventory)),
