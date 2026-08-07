@@ -1,6 +1,6 @@
 import type { Page, TestInfo } from "@playwright/test";
 
-import { reseedE2eDatabase } from "../../helpers/e2e-database-setup.ts";
+import { reseedE2eRuntimeState } from "../../helpers/e2e-runtime-state-setup.ts";
 import type { EvidencePhase } from "../evidence/evidence-types.ts";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import {
@@ -230,7 +230,7 @@ const runFrozenCaseGroups = async (
     throw new Error(`Frozen case group ${index} is empty`);
   if (index > 0) {
     await page.goto("about:blank");
-    reseedE2eDatabase({
+    await reseedE2eRuntimeState({
       databaseUrl: runtime.databaseUrl,
       profile: firstCase.profile,
       repoRoot: runtime.repoRoot,

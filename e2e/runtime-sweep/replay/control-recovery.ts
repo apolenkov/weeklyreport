@@ -1,5 +1,5 @@
 import { assertNonProdDestructiveTarget } from "../../../prisma/guards/_destructive-guard.js";
-import { reseedE2eDatabase } from "../../helpers/e2e-database-setup.js";
+import { reseedE2eRuntimeState } from "../../helpers/e2e-runtime-state-setup.js";
 import type { SeedProfile } from "../source/contracts.ts";
 
 export interface ControlActionRecovery {
@@ -52,14 +52,12 @@ export function createE2eControlRecovery(
   assertDisposableE2eDatabase(input.databaseUrl);
   return Object.freeze({
     databaseUrl: input.databaseUrl,
-    resetAndReseed: (): Promise<void> => {
-      reseedE2eDatabase({
+    resetAndReseed: (): Promise<void> =>
+      reseedE2eRuntimeState({
         databaseUrl: input.databaseUrl,
         profile: input.profile,
         repoRoot: input.repoRoot,
-      });
-      return Promise.resolve();
-    },
+      }),
     assertBaseline: input.assertBaseline,
   });
 }
