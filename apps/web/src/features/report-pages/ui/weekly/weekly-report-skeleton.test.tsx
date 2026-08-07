@@ -108,6 +108,15 @@ describe("WeeklyReportSkeleton", () => {
     ).toHaveAttribute("data-layout-key", "report-context-toolbar");
   });
 
+  it("reserves the responsive two-line header context height", () => {
+    render(<WeeklyReportSkeleton />);
+
+    expect(screen.getByTestId("weekly-skeleton-header-context")).toHaveClass(
+      "h-10",
+      "sm:h-5",
+    );
+  });
+
   it("exposes the loading status contract", () => {
     render(<WeeklyReportSkeleton />);
 

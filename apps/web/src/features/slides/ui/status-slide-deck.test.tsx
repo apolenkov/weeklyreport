@@ -96,6 +96,25 @@ function renderDeck(
 }
 
 describe("StatusSlideDeck — by-product grid article", () => {
+  it("keeps the lead carousel slot for a single slide", () => {
+    renderDeck(makeSection());
+
+    expect(
+      screen.getByRole("group", { name: "Slide carousel controls" }),
+    ).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Previous slide" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next slide" })).toBeDisabled();
+  });
+
+  it("keeps the head selector slot for a single slide", () => {
+    renderDeck(makeSection(), "head");
+
+    expect(screen.getByTestId("head-slide-carousel")).toBeVisible();
+  });
+
   it("renders one column-header row and one card per product", () => {
     renderDeck(
       makeSection({

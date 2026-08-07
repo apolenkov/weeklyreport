@@ -11,10 +11,16 @@ function HeaderTitleSkeleton() {
 
 function HeaderContextSkeleton() {
   return (
-    <div className="min-w-0 space-y-1 sm:flex sm:items-center sm:gap-2 sm:space-y-0">
+    <div
+      data-testid="weekly-skeleton-header-context"
+      className="flex h-10 min-w-0 items-start gap-2 sm:h-5 sm:items-center"
+    >
       <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-4 w-28" />
-      <Skeleton className="h-4 w-20 sm:hidden" />
+      <Skeleton className="mt-1 h-2 w-2 sm:mt-0" />
+      <div className="space-y-1 sm:space-y-0">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-4 w-20 sm:hidden" />
+      </div>
     </div>
   );
 }

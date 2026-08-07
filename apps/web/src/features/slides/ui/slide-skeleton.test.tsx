@@ -47,6 +47,12 @@ describe("SlideSkeleton", () => {
     expect(container.innerHTML).not.toContain(
       "lg:grid-cols-[minmax(220px,300px)_1fr]",
     );
+    const selectorLines = screen
+      .getByTestId("slide-skeleton-head-carousel")
+      .querySelectorAll('[data-slot="skeleton"]');
+    expect(selectorLines[0]).toHaveClass("h-5");
+    expect(selectorLines[1]).toHaveClass("h-4");
+    expect(selectorLines[2]).toHaveClass("h-4");
   });
 
   it("renders lead carousel controls instead of head selector cards", () => {
