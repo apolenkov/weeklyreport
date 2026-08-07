@@ -3,6 +3,7 @@ import "dotenv/config";
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
+  Prisma,
   PrismaClient,
   Role,
   ReportSectionStatus,
@@ -39,7 +40,7 @@ import {
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
+import { assertSeedCoverage } from "./seed-coverage-check.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -324,7 +325,7 @@ async function main() {
     stageId: string;
     projectId: string;
   }[] = [
-    // Igor on Маркетинговый портал (product 201) — Testing stage (sortOrder 4)
+    // Igor on Marketing Portal (product 201) — Testing stage (sortOrder 4)
     // LEAD_1 owns Planning/Analysis/Design (0–2), so Testing/DevOps are free.
     {
       id: "a0000000-0000-4000-8000-00000000ca01",
@@ -332,21 +333,21 @@ async function main() {
       stageId: "a0000000-0000-4000-8000-000000000705",
       projectId: "a0000000-0000-4000-8000-000000000201",
     },
-    // Maria on Маркетинговый портал (product 201) — DevOps stage (sortOrder 5)
+    // Maria on Marketing Portal (product 201) — DevOps stage (sortOrder 5)
     {
       id: "a0000000-0000-4000-8000-00000000ca02",
       userId: LEAD_MARIA_ID,
       stageId: "a0000000-0000-4000-8000-000000000706",
       projectId: "a0000000-0000-4000-8000-000000000201",
     },
-    // LEAD_1 on Платёжный шлюз (209) — Support stage → locked+blocked chip for Olga
+    // LEAD_1 on Payment Gateway (209) — Support stage → locked+blocked chip for Olga
     {
       id: "a0000000-0000-4000-8000-00000000ca03",
       userId: LEAD_1_ID,
       stageId: "a0000000-0000-4000-8000-000000000707",
       projectId: "a0000000-0000-4000-8000-000000000209",
     },
-    // LEAD_1 on Платёжный шлюз (209) — Planning stage → locked+at-risk chip for Olga
+    // LEAD_1 on Payment Gateway (209) — Planning stage → locked+at-risk chip for Olga
     {
       id: "a0000000-0000-4000-8000-00000000ca04",
       userId: LEAD_1_ID,
@@ -431,6 +432,7 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
+      publishedSnapshot: Prisma.DbNull,
     },
     create: {
       id: publishedReport.id,
@@ -444,12 +446,13 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
+      publishedSnapshot: Prisma.DbNull,
     },
   });
 
   // ----- Active report (Week 16) sections -----
   // Section status plan: submitted: 4, total: 6, pendingCount: 2.
-  //   Василий И. -> submitted (Apr 14 10:00)
+  //   Vasily I. -> submitted (Apr 14 10:00)
   //   Maria K.    -> submitted (Apr 14 14:00)
   //   Igor V.     -> submitted (Apr 15 09:30)
   //   Dmitry S.   -> submitted (Apr 16 11:15)
@@ -965,7 +968,7 @@ async function main() {
     });
   }
 
-  // Olga's DevOps item on Платёжный шлюз. record-status-derived-from-risk:
+  // Olga's DevOps item on Payment Gateway. record-status-derived-from-risk:
   // the item is stored `in_progress` — its blocked pill DERIVES at render from the
   // covering blocked-severity risk riskId(6) on the same section/product/stage
   // (single source of truth). No bare stored `blocked` without a backing risk.
@@ -1432,7 +1435,7 @@ async function main() {
       `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
 
-  await stabilizeSeedRecordIdentities(prisma);
+  await assertSeedCoverage(prisma, "seed");
 }
 
 void main()

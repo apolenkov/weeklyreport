@@ -29,7 +29,7 @@ export type SeedReadinessSummary = Readonly<{
   candidateCount: number;
 }>;
 
-export class SeedReadinessError extends Error {
+class SeedReadinessError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SeedReadinessError";
@@ -113,7 +113,7 @@ const latestFutureStart = (
   now: Date,
 ): Date | null => {
   const future = sources
-    .filter((source) => source.source === "live" && source.periodStart > now)
+    .filter((source) => source.source === "live" && source.periodStart >= now)
     .map((source) => source.periodStart.getTime());
   const latest = Math.max(...future);
   return Number.isFinite(latest) ? new Date(latest) : null;
@@ -137,10 +137,12 @@ export async function assertSeedAssistantReadiness(
   input: SeedReadinessInput,
 ): Promise<SeedReadinessSummary> {
   const sources = await repository.listSources();
+  const clocks = [input.now, latestFutureStart(sources, input.now)].filter(
+    (clock): clock is Date => clock !== null,
+  );
   const currentClocks = [
-    input.now,
-    latestFutureStart(sources, input.now),
-  ].filter((clock): clock is Date => clock !== null);
+    ...new Map(clocks.map((clock) => [clock.getTime(), clock])).values(),
+  ];
   const currentSources = currentClocks.map((clock) => {
     const selected = selectPeriodSources(sources, currentIntent, clock);
     return selected[0] ?? fail(input, "current_source", "none", "missing");

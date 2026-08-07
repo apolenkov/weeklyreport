@@ -59,7 +59,10 @@ export type PlannerPrompt = Readonly<{
   system: string;
   data: string;
   tool: typeof searchReportEntriesTool;
-  toolChoice: "any";
+  toolChoice: Readonly<{
+    type: "function";
+    function: Readonly<{ name: typeof SEARCH_REPORT_ENTRIES_TOOL_NAME }>;
+  }>;
   parallelToolCalls: false;
 }>;
 
@@ -111,7 +114,10 @@ const plannerPrompt = (
   system,
   data: dataMessage(data),
   tool: searchReportEntriesTool,
-  toolChoice: "any",
+  toolChoice: {
+    type: "function",
+    function: { name: SEARCH_REPORT_ENTRIES_TOOL_NAME },
+  },
   parallelToolCalls: false,
 });
 

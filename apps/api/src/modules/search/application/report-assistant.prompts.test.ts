@@ -25,7 +25,10 @@ describe("report assistant planner prompts", () => {
     const data = JSON.parse(prompt.data) as Record<string, unknown>;
 
     expect(prompt.version).toBe(REPORT_SEARCH_PLANNER_PROMPT_VERSION);
-    expect(prompt.toolChoice).toBe("any");
+    expect(prompt.toolChoice).toEqual({
+      type: "function",
+      function: { name: "search_report_entries" },
+    });
     expect(prompt.parallelToolCalls).toBe(false);
     expect(prompt.tool.function.name).toBe(SEARCH_REPORT_ENTRIES_TOOL_NAME);
     expect(prompt.tool.function.strict).toBe(true);

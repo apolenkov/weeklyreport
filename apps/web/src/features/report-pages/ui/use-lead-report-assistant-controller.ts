@@ -32,7 +32,13 @@ export interface LeadReportAssistantController {
 export function useLeadReportAssistantController(): LeadReportAssistantController {
   const trpc = useTRPC();
   const { exchange, setExchange } = useLeadReportAssistantStore();
-  const { question, submittedQuestion, resolutionTokens, outcome } = exchange;
+  const {
+    question,
+    submittedQuestion,
+    resolutionTokens,
+    requestState,
+    outcome,
+  } = exchange;
   const updateExchange = (changes: Partial<typeof exchange>) =>
     setExchange({ ...exchange, ...changes });
   const setQuestion = (nextQuestion: string) =>
@@ -43,12 +49,14 @@ export function useLeadReportAssistantController(): LeadReportAssistantControlle
     }>
   ).assistant;
   const onSuccess = (nextOutcome: ReportAssistantOutcome) =>
-    updateExchange({ outcome: nextOutcome });
+    updateExchange({ outcome: nextOutcome, requestState: "idle" });
+  const onError = () => updateExchange({ requestState: "error" });
   const mutationOptions: AssistantMutationOptions =
-    assistantProcedure?.mutationOptions({ onSuccess }) ?? {
+    assistantProcedure?.mutationOptions({ onSuccess, onError }) ?? {
       mutationFn: (_input: ReportAssistantRequest) =>
         Promise.reject(new Error("Report assistant procedure is unavailable")),
       onSuccess,
+      onError,
     };
   const mutation = useMutation(mutationOptions);
 
@@ -61,6 +69,7 @@ export function useLeadReportAssistantController(): LeadReportAssistantControlle
     updateExchange({
       submittedQuestion: trimmedQuestion,
       resolutionTokens: nextTokens,
+      requestState: "pending",
       outcome: null,
     });
     mutation.reset();
@@ -89,9 +98,12 @@ export function useLeadReportAssistantController(): LeadReportAssistantControlle
   return {
     question,
     outcome,
-    isBusy: mutation.isPending,
-    isError: mutation.isError,
-    showResult: !mutation.isPending && (outcome !== null || mutation.isError),
+    isBusy: requestState === "pending" || mutation.isPending,
+    isError: requestState === "error" || mutation.isError,
+    showResult:
+      requestState !== "pending" &&
+      !mutation.isPending &&
+      (outcome !== null || requestState === "error" || mutation.isError),
     setQuestion,
     handleSubmit,
     handleClarification,

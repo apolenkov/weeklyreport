@@ -114,7 +114,7 @@ interface RouterDeps {
   reportAssistantService?: ReportAssistantService;
   /**
    * Live activity feed for the head/admin dashboard
-   * "Активность за текущий период" panel. One row per lead's section in
+   * "Current-period activity" panel. One row per lead's section in
    * the open period, with section-level counts + last-edit timestamp.
    * Polled every 15s by the dashboard.
    */

@@ -483,7 +483,7 @@ async function main() {
       },
       {
         // Finance group lead — Olga and Sergey are in Finance so the
-        // Core Development head (Антон К.) does NOT see them in their
+        // Core Development head (Anton K.) does NOT see them in their
         // dashboard. This proves group-scope isolation end-to-end.
         id: LEAD_OLGA,
         email: "olga@customreport.local",
@@ -1656,7 +1656,7 @@ async function main() {
     },
   });
   // fix-lead-surface-name-resolution: cross-stage reproducer. Boris owns
-  // NO StageAssignment on PROD_PAYMENTS («Платёжный шлюз»), so this risk
+  // NO StageAssignment on PROD_PAYMENTS ("Payment Gateway"), so this risk
   // and decision reference a project outside his stage-owned `projects`.
   // Pre-fix these rendered "Unknown" (risk) / "Group" (decision) on
   // /lead/report; post-fix they must show the real product name via the
@@ -1947,7 +1947,7 @@ async function main() {
   });
 
   // Activity-parented records on Maria's SUBMITTED section (402), attached to her
-  // first activity ("Дежурство по инцидентам", ...ca10 — already lead-linked,
+  // first activity ("Incident Duty", ...ca10 — already lead-linked,
   // status-carrying, and product-labelled from the loop above). XOR parent shape:
   // the product FK is null, `activityId` is set, and `stageNames` is [] because an
   // activity has no SDLC stage. This makes the activity render POPULATED (records +

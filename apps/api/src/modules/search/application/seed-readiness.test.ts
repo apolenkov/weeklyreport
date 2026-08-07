@@ -130,6 +130,15 @@ describe("seed assistant readiness", () => {
     });
   });
 
+  it("treats a future period at its exact start as the current source", async () => {
+    const result = await assertSeedAssistantReadiness(
+      repository(),
+      input({ now: new Date("2026-08-08T00:00:00.000Z") }),
+    );
+
+    expect(result.currentReportIds).toEqual([FUTURE_ID]);
+  });
+
   it.each([
     ["missing caller section", { ownSection: false }, "caller_section"],
     ["zero candidates", { candidates: false }, "candidate_projection"],

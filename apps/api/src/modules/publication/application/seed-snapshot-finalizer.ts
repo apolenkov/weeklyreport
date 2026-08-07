@@ -9,7 +9,7 @@ import {
 
 export type SeedSnapshotDatabase = Pick<PrismaClient, "report">;
 
-export class SeedSnapshotFinalizationError extends Error {
+class SeedSnapshotFinalizationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SeedSnapshotFinalizationError";

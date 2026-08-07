@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SessionContext } from "../../../lib/session-provider";
 import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadReportAssistant } from "./lead-report-assistant";
@@ -43,9 +44,23 @@ function renderAssistant() {
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={proxy}>
-          <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "lead-1",
+              name: "Lead",
+              email: "lead@example.com",
+              role: "lead",
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={proxy}>
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }

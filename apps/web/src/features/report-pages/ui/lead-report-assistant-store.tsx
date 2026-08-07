@@ -1,12 +1,22 @@
 "use client";
 
 import type { ReportAssistantOutcome } from "@customreport/shared";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import { useSession } from "../../../lib/session-provider";
 
 type AssistantExchange = Readonly<{
   question: string;
   submittedQuestion: string;
   resolutionTokens: readonly string[];
+  requestState: "idle" | "pending" | "error";
   outcome: ReportAssistantOutcome | null;
 }>;
 
@@ -19,6 +29,7 @@ const emptyExchange: AssistantExchange = {
   question: "",
   submittedQuestion: "",
   resolutionTokens: [],
+  requestState: "idle",
   outcome: null,
 };
 
@@ -30,6 +41,17 @@ export function LeadReportAssistantStore({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const [exchange, setExchange] = useState<AssistantExchange>(emptyExchange);
+  const { user } = useSession();
+  const previousUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    if (previousUserId.current !== null && previousUserId.current !== userId) {
+      setExchange(emptyExchange);
+    }
+    previousUserId.current = userId;
+  }, [user?.id]);
+
   return (
     <LeadReportAssistantStoreContext.Provider value={{ exchange, setExchange }}>
       {children}
