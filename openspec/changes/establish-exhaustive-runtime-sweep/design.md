@@ -227,6 +227,10 @@ completion-write failure exits non-zero and leaves no valid completion. The
 merger additionally requires completion time to follow the actual local
 barrier record and remain inside the profile window.
 
+The shutdown coordinator is the sole owner of `SIGTERM` and `SIGINT`. Nest does
+not install a parallel signal hook; racing termination signals reuse one
+shutdown promise and produce one application close and one process exit.
+
 The browser uses one event collector and one advancing cursor from initial
 navigation through before, action, after, and a final tail. Each phase consumes
 exactly the records between the prior cursor and its atomic current end. The
