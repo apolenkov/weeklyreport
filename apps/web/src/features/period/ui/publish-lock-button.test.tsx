@@ -233,10 +233,8 @@ describe("PublishLockButton", () => {
       // Dialog is open.
       expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
 
-      // The backdrop is the role="presentation" div wrapping the dialog (rendered
-      // by ConfirmDeleteDialog into a portal). Click it to trigger onCancel.
-      const backdrop = document.querySelector("[role='presentation']");
-      if (!backdrop) throw new Error("backdrop [role=presentation] not found");
+      const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
+      if (!backdrop) throw new Error("dialog overlay not found");
       await userEvent.click(backdrop);
 
       // Dialog must be gone and onReopen must NOT have been called.
@@ -331,11 +329,11 @@ describe("PublishLockButton", () => {
       await userEvent.click(
         screen.getByRole("button", { name: /publish & lock/i }),
       );
-      const dialog = screen.getByRole("alertdialog", {
+      screen.getByRole("alertdialog", {
         name: /publish & lock report/i,
       });
-      const backdrop = dialog.parentElement;
-      if (!backdrop) throw new Error("publish backdrop not found");
+      const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
+      if (!backdrop) throw new Error("dialog overlay not found");
       await userEvent.click(backdrop);
 
       expect(

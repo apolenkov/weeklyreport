@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -444,7 +444,7 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
     expect(reopenAndReadSearch()).toBe("");
   });
 
-  it("clears the search on period selection", () => {
+  it("clears the search on period selection", async () => {
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();
     fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
@@ -452,6 +452,10 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
     });
 
     fireEvent.click(screen.getByText(/Week 15/));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
 
     expect(reopenAndReadSearch()).toBe("");
   });
