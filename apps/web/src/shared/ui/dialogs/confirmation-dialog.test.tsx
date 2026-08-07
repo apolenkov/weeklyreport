@@ -1,7 +1,19 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@customreport/ui/components/ui/dialog";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmationDialog } from "./confirmation-dialog";
+
+const dialogOverlay = (): Element => {
+  const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+  if (!overlay) throw new Error("dialog overlay not found");
+  return overlay;
+};
 
 describe("ConfirmationDialog", () => {
   it("pressing Escape fires onClose when open=true", () => {
@@ -20,6 +32,7 @@ describe("ConfirmationDialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledOnce();
     expect(onConfirm).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 
   it("pressing Escape does NOT fire onClose when open=false", () => {
@@ -39,7 +52,8 @@ describe("ConfirmationDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("clicking the backdrop (target===currentTarget) fires onClose", () => {
+  it("clicking the backdrop fires onClose", async () => {
+    const user = userEvent.setup();
     const onClose = vi.fn();
     const onConfirm = vi.fn();
     render(
@@ -52,16 +66,12 @@ describe("ConfirmationDialog", () => {
       />,
     );
 
-    // The backdrop is the outermost element with role="presentation".
-    const backdrop = document.querySelector('[role="presentation"]');
-    if (!backdrop) throw new Error("backdrop [role=presentation] not found");
-    // Directly clicking the backdrop element fires target===currentTarget path.
-    fireEvent.click(backdrop);
-    expect(onClose).toHaveBeenCalledOnce();
+    await user.click(dialogOverlay());
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("clicking the inner alertdialog does NOT fire onClose (target !== currentTarget guard)", () => {
+  it("clicking inside the alertdialog does not fire onClose", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
     render(
@@ -74,7 +84,6 @@ describe("ConfirmationDialog", () => {
       />,
     );
 
-    // Clicking the inner dialog bubbles to the backdrop but target !== currentTarget.
     fireEvent.click(screen.getByRole("alertdialog"));
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -110,8 +119,6 @@ describe("ConfirmationDialog", () => {
       />,
     );
 
-    // The focus-trap effect (useEffect) focuses the first button (Cancel) synchronously
-    // in jsdom because cleanup and effects run before test assertions.
     const cancelBtn = screen.getByRole("button", { name: /cancel/i });
     expect(document.activeElement).toBe(cancelBtn);
   });
@@ -155,7 +162,7 @@ describe("ConfirmationDialog", () => {
     );
   });
 
-  it("Escape listener is removed when open transitions from true to false", () => {
+  it("ignores Escape after the dialog closes", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
     const { rerender } = render(
@@ -178,12 +185,12 @@ describe("ConfirmationDialog", () => {
       />,
     );
 
-    // Escape fired after close must not call onClose (listener cleaned up).
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("Tab from the last focusable wraps to the first (focus trap)", () => {
+  it("Tab from the last focusable wraps to the first", async () => {
+    const user = userEvent.setup();
     render(
       <ConfirmationDialog
         open={true}
@@ -197,11 +204,11 @@ describe("ConfirmationDialog", () => {
     const cancelBtn = screen.getByRole("button", { name: /cancel/i });
     const confirmBtn = screen.getByRole("button", { name: /confirm/i });
     confirmBtn.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
+    await user.tab();
     expect(cancelBtn).toHaveFocus();
   });
 
-  it("restores focus to the trigger when the dialog closes", () => {
+  it("restores focus to the trigger when the dialog closes", async () => {
     function Harness({ open }: { readonly open: boolean }) {
       return (
         <>
@@ -228,7 +235,56 @@ describe("ConfirmationDialog", () => {
     expect(trigger).not.toHaveFocus();
 
     rerender(<Harness open={false} />);
-    expect(trigger).toHaveFocus();
+    await vi.waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("refreshes the restore target before a consumer prevents open autofocus", async () => {
+    function PrimitiveHarness({
+      open,
+      preventOpenFocus,
+    }: {
+      readonly open: boolean;
+      readonly preventOpenFocus: boolean;
+    }) {
+      return (
+        <>
+          <button type="button" data-testid="first-trigger">
+            First trigger
+          </button>
+          <button type="button" data-testid="second-trigger">
+            Second trigger
+          </button>
+          <Dialog open={open}>
+            <DialogContent
+              restoreFocusToPrevious={true}
+              onOpenAutoFocus={(event) => {
+                if (preventOpenFocus) event.preventDefault();
+              }}
+            >
+              <DialogTitle>Primitive focus test</DialogTitle>
+              <button type="button">Inside dialog</button>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    }
+
+    const { rerender } = render(
+      <PrimitiveHarness open={false} preventOpenFocus={false} />,
+    );
+    const firstTrigger = screen.getByTestId("first-trigger");
+    const secondTrigger = screen.getByTestId("second-trigger");
+    firstTrigger.focus();
+    rerender(<PrimitiveHarness open={true} preventOpenFocus={false} />);
+    screen.getByRole("button", { name: "Inside dialog" }).focus();
+    rerender(<PrimitiveHarness open={false} preventOpenFocus={false} />);
+    await vi.waitFor(() => expect(firstTrigger).toHaveFocus());
+
+    secondTrigger.focus();
+    rerender(<PrimitiveHarness open={true} preventOpenFocus={true} />);
+    screen.getByRole("button", { name: "Inside dialog" }).focus();
+    rerender(<PrimitiveHarness open={false} preventOpenFocus={true} />);
+    await vi.waitFor(() => expect(secondTrigger).toHaveFocus());
   });
 
   it("renders rich context and disables both actions while pending", () => {
@@ -254,7 +310,8 @@ describe("ConfirmationDialog", () => {
     expect(screen.getByRole("button", { name: "Deleting…" })).toBeDisabled();
   });
 
-  it("blocks Escape and backdrop dismissal while pending", () => {
+  it("blocks Escape and backdrop dismissal while pending", async () => {
+    const user = userEvent.setup();
     const onClose = vi.fn();
     const onConfirm = vi.fn();
     render(
@@ -269,8 +326,7 @@ describe("ConfirmationDialog", () => {
     );
 
     fireEvent.keyDown(document, { key: "Escape" });
-    const backdrop = document.querySelector('[role="presentation"]');
-    if (backdrop) fireEvent.click(backdrop);
+    await user.click(dialogOverlay());
 
     expect(onClose).not.toHaveBeenCalled();
     expect(onConfirm).not.toHaveBeenCalled();

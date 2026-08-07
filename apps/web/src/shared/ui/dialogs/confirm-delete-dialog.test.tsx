@@ -1,8 +1,16 @@
+import { Dialog, DialogContent } from "@customreport/ui/components/ui/dialog";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
+import userEvent from "@testing-library/user-event";
+import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+
+const dialogOverlay = (): Element => {
+  const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+  if (!overlay) throw new Error("dialog overlay not found");
+  return overlay;
+};
 
 const defaultProps = {
   open: true,
@@ -19,7 +27,7 @@ function renderDialog(
 }
 
 describe("ConfirmDeleteDialog — a11y regression", () => {
-  it("calls onCancel when Escape is pressed (document-level keydown handler)", () => {
+  it("calls onCancel when Escape is pressed", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });
 
@@ -37,19 +45,17 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onCancel when the backdrop (role=presentation) is clicked", () => {
+  it("calls onCancel when the backdrop is clicked", async () => {
+    const user = userEvent.setup();
     const onCancel = vi.fn();
     renderDialog({ onCancel });
 
-    const backdrop = document.querySelector('[role="presentation"]');
-    expect(backdrop).not.toBeNull();
-    if (!backdrop) return;
-    fireEvent.click(backdrop);
+    await user.click(dialogOverlay());
 
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
   });
 
-  it("does NOT call onCancel when clicking inside the dialog container (stopPropagation)", () => {
+  it("does not call onCancel when clicking inside the dialog", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });
 
@@ -58,12 +64,11 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it("backdrop div has role='presentation'", () => {
+  it("renders one primitive-owned backdrop", () => {
     renderDialog();
 
-    const backdrop = document.querySelector('[role="presentation"]');
-    expect(backdrop).not.toBeNull();
-    expect(backdrop).toHaveAttribute("role", "presentation");
+    const backdrop = dialogOverlay();
+    expect(backdrop).toHaveAttribute("data-state", "open");
   });
 
   it("inner dialog div has correct ARIA attributes", () => {
@@ -71,11 +76,46 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
 
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-labelledby", "confirm-delete-title");
-    expect(dialog).toHaveAttribute(
-      "aria-describedby",
-      "confirm-delete-preview",
+    const labelId = dialog.getAttribute("aria-labelledby");
+    const descriptionId = dialog.getAttribute("aria-describedby");
+    expect(labelId).toBeTruthy();
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(labelId ?? "")).toHaveTextContent(
+      "Delete item?",
     );
+    expect(document.getElementById(descriptionId ?? "")).toHaveTextContent(
+      "Quarterly planning item",
+    );
+  });
+
+  it("keeps title and description IDREFs unique across mounted dialogs", () => {
+    render(
+      <>
+        <ConfirmDeleteDialog {...defaultProps} />
+        <ConfirmDeleteDialog
+          {...defaultProps}
+          title="Delete second item?"
+          preview="Second planning item"
+        />
+      </>,
+    );
+
+    const dialogs = [
+      ...document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
+    ];
+    expect(dialogs).toHaveLength(2);
+    const labelIds = dialogs.map((dialog) =>
+      dialog.getAttribute("aria-labelledby"),
+    );
+    const descriptionIds = dialogs.map((dialog) =>
+      dialog.getAttribute("aria-describedby"),
+    );
+    expect(new Set(labelIds).size).toBe(dialogs.length);
+    expect(new Set(descriptionIds).size).toBe(dialogs.length);
+    for (const id of [...labelIds, ...descriptionIds]) {
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id ?? "")).not.toBeNull();
+    }
   });
 
   it("both dialog actions floor at the touch target below md", () => {
@@ -99,6 +139,7 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
   });
 
   it("traps Tab: Shift+Tab from the first control wraps to the last", async () => {
+    const user = userEvent.setup();
     renderDialog({ confirmLabel: "Delete" });
 
     const cancel = screen.getByRole("button", { name: /cancel/i });
@@ -107,7 +148,7 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
       expect(cancel).toHaveFocus();
     });
 
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    await user.tab({ shift: true });
 
     expect(confirm).toHaveFocus();
   });
@@ -145,12 +186,14 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
 
-    expect(trigger).toHaveFocus();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
-  it("does NOT call onConfirm when Enter is pressed while focus is elsewhere (reflexive-Enter guard)", async () => {
+  it("does not confirm when Enter activates the focused Cancel button", async () => {
+    const user = userEvent.setup();
     const onConfirm = vi.fn();
-    renderDialog({ onConfirm });
+    const onCancel = vi.fn();
+    renderDialog({ onConfirm, onCancel });
 
     // Focus lands on Cancel by default (least-destructive-first); Enter here
     // must not confirm the delete.
@@ -158,12 +201,14 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
       expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
     });
 
-    fireEvent.keyDown(document, { key: "Enter" });
+    await user.keyboard("{Enter}");
 
     expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it("calls onConfirm exactly once when Enter is pressed while the Confirm button holds focus", async () => {
+    const user = userEvent.setup();
     const onConfirm = vi.fn();
     renderDialog({ onConfirm, confirmLabel: "Delete" });
 
@@ -171,18 +216,18 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
     });
-    // Mirrors the tab-trap test above: Shift+Tab from Cancel wraps to Confirm.
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    await user.tab({ shift: true });
     await waitFor(() => {
       expect(confirm).toHaveFocus();
     });
 
-    fireEvent.keyDown(document, { key: "Enter" });
+    await user.keyboard("{Enter}");
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks confirm, Enter, and dismissal while pending", () => {
+  it("blocks confirm, Enter, and dismissal while pending", async () => {
+    const user = userEvent.setup();
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
     renderDialog({
@@ -199,8 +244,50 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     expect(onConfirm).not.toHaveBeenCalled();
 
     fireEvent.keyDown(document, { key: "Escape" });
-    const backdrop = document.querySelector('[role="presentation"]');
-    if (backdrop) fireEvent.click(backdrop);
+    await user.keyboard("{Enter}");
+    await user.click(dialogOverlay());
     expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("restores the opener after a consumer overrides open autofocus", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      const customFocusRef = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open seam
+          </button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent
+              aria-label="Focus seam"
+              restoreFocusToPrevious={true}
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                customFocusRef.current?.focus();
+              }}
+            >
+              <button
+                ref={customFocusRef}
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Close seam
+              </button>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByRole("button", { name: "Open seam" });
+    await user.click(opener);
+    const closer = screen.getByRole("button", { name: "Close seam" });
+    await waitFor(() => expect(closer).toHaveFocus());
+    await user.click(closer);
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 });
