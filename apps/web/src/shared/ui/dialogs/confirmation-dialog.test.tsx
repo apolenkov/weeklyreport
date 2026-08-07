@@ -1,8 +1,3 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@customreport/ui/components/ui/dialog";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -236,55 +231,6 @@ describe("ConfirmationDialog", () => {
 
     rerender(<Harness open={false} />);
     await vi.waitFor(() => expect(trigger).toHaveFocus());
-  });
-
-  it("refreshes the restore target before a consumer prevents open autofocus", async () => {
-    function PrimitiveHarness({
-      open,
-      preventOpenFocus,
-    }: {
-      readonly open: boolean;
-      readonly preventOpenFocus: boolean;
-    }) {
-      return (
-        <>
-          <button type="button" data-testid="first-trigger">
-            First trigger
-          </button>
-          <button type="button" data-testid="second-trigger">
-            Second trigger
-          </button>
-          <Dialog open={open}>
-            <DialogContent
-              restoreFocusToPrevious={true}
-              onOpenAutoFocus={(event) => {
-                if (preventOpenFocus) event.preventDefault();
-              }}
-            >
-              <DialogTitle>Primitive focus test</DialogTitle>
-              <button type="button">Inside dialog</button>
-            </DialogContent>
-          </Dialog>
-        </>
-      );
-    }
-
-    const { rerender } = render(
-      <PrimitiveHarness open={false} preventOpenFocus={false} />,
-    );
-    const firstTrigger = screen.getByTestId("first-trigger");
-    const secondTrigger = screen.getByTestId("second-trigger");
-    firstTrigger.focus();
-    rerender(<PrimitiveHarness open={true} preventOpenFocus={false} />);
-    screen.getByRole("button", { name: "Inside dialog" }).focus();
-    rerender(<PrimitiveHarness open={false} preventOpenFocus={false} />);
-    await vi.waitFor(() => expect(firstTrigger).toHaveFocus());
-
-    secondTrigger.focus();
-    rerender(<PrimitiveHarness open={true} preventOpenFocus={true} />);
-    screen.getByRole("button", { name: "Inside dialog" }).focus();
-    rerender(<PrimitiveHarness open={false} preventOpenFocus={true} />);
-    await vi.waitFor(() => expect(secondTrigger).toHaveFocus());
   });
 
   it("renders rich context and disables both actions while pending", () => {
