@@ -428,6 +428,14 @@
       "target": "scripts/gates/environment/$1"
     },
     {
+      "id": "scripts-gates-configuration-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/configuration/(workflow-policy\\.ts)$",
+      "concern": "configuration-gate",
+      "role": "implementation",
+      "target": "scripts/gates/configuration/$1"
+    },
+    {
       "id": "scripts-gates-configuration-test",
       "scope": "scripts",
       "pattern": "^scripts/(?:gates/configuration/)?(config-hygiene-gate\\.test\\.ts)$",
