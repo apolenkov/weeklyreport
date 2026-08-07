@@ -8,10 +8,11 @@ import type {
 import { useMutation } from "@tanstack/react-query";
 import type { SyntheticEvent } from "react";
 
+import type { TRPCProxy } from "../../../lib/trpc";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useLeadReportAssistantStore } from "./lead-report-assistant-store";
 
-type AssistantProcedure = ReturnType<typeof useTRPC>["leadForm"]["assistant"];
+type AssistantProcedure = TRPCProxy["leadForm"]["assistant"];
 type AssistantMutationOptions = Omit<
   ReturnType<AssistantProcedure["mutationOptions"]>,
   "mutationKey" | "trpc"
