@@ -36,6 +36,7 @@ import { TRPCProxyContext } from "../../../lib/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
+import { LeadReportAssistantStore } from "./lead-report-assistant-store";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -290,7 +291,7 @@ function buildHarness(opts: BuildOpts = {}) {
               isAuthenticated: true,
             }}
           >
-            {children}
+            <LeadReportAssistantStore>{children}</LeadReportAssistantStore>
           </SessionContext.Provider>
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -609,7 +610,9 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report (7d.7)
                 isAuthenticated: true,
               }}
             >
-              <LeadForm />
+              <LeadReportAssistantStore>
+                <LeadForm />
+              </LeadReportAssistantStore>
             </SessionContext.Provider>
           </TRPCProxyContext.Provider>
         </QueryClientProvider>
