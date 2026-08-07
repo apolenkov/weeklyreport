@@ -41,7 +41,12 @@ function HeaderSkeleton({
     >
       <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-auto">
         <HeaderTitleSkeleton />
-        <Skeleton className="h-6 w-32 rounded-[var(--radius-pill)]" />
+        {mode === "form" ? (
+          <Skeleton
+            data-testid="weekly-skeleton-status"
+            className="h-6 w-32 rounded-[var(--radius-pill)]"
+          />
+        ) : null}
         <HeaderContextSkeleton />
       </div>
       <div
