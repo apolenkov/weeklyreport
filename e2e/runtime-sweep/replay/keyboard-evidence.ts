@@ -266,6 +266,7 @@ export async function captureKeyboardTrace(
 ): Promise<KeyboardTrace> {
   const resolvedControls = controls ?? (await inventoryDom(page)).controls;
   const before = await activeElement(page);
+  const initialFocusedControl = await focusedControl(page);
   const menuFocusSequence = await menuSequence(page, resolvedControls);
   const disclosureFocusSequence = await expandedDisclosureSequence(page);
   await blurActiveElement(page);
@@ -279,16 +280,24 @@ export async function captureKeyboardTrace(
       sequence[0] === undefined
         ? await activeElement(page)
         : `${sequence[0].role}:${sequence[0].accessibleName}`;
+    const observedFocusSequence = [
+      ...menuFocusSequence,
+      ...disclosureFocusSequence,
+      ...sequence,
+    ];
     const focusedKeys = new Set(
-      [...menuFocusSequence, ...disclosureFocusSequence, ...sequence].map(
-        ({ controlKey }) => controlKey,
-      ),
+      observedFocusSequence.map(({ controlKey }) => controlKey),
     );
     const evidence = controlsEvidence(resolvedControls, focusedKeys);
     return {
       after,
       before,
-      focusMoved: before !== after && after !== "none",
+      focusMoved:
+        observedFocusSequence.length > 0 &&
+        (initialFocusedControl === null ||
+          observedFocusSequence.some(
+            ({ controlKey }) => controlKey !== initialFocusedControl.controlKey,
+          )),
       controls: evidence,
       focusGaps: evidence.filter(({ outcome }) => outcome === "fail"),
     };

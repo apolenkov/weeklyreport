@@ -30,6 +30,36 @@ test("starts the tab trace at the document start after a mid-page focus", async 
   });
 });
 
+test("records movement when a modal starts on its first tab stop", async ({
+  page,
+}) => {
+  await page.setContent(
+    '<div role="alertdialog" aria-modal="true" aria-label="Archive product?"><button type="button">Cancel</button><button type="button">Archive</button></div>',
+  );
+  await page.getByRole("button", { name: "Cancel" }).focus();
+
+  const trace = await captureKeyboardTrace(page);
+
+  expect(trace).toMatchObject({
+    before: "button:Cancel",
+    after: "button:Cancel",
+    focusMoved: true,
+    focusGaps: [],
+  });
+  expect(
+    trace.controls
+      .filter(({ role }) => role === "button")
+      .map(({ accessibleName, focusable, outcome }) => [
+        accessibleName,
+        focusable,
+        outcome,
+      ]),
+  ).toEqual([
+    ["Cancel", true, "pass"],
+    ["Archive", true, "pass"],
+  ]);
+});
+
 test("captures an expanded disclosure before document-start traversal replaces it", async ({
   page,
 }) => {
@@ -116,11 +146,9 @@ test("fails closed when the keyboard start marker already belongs to the page", 
 test("requires one reachable tab stop for a native radio group", async ({
   page,
 }) => {
-  await page.setContent(`
-    <label><input type="radio" name="choice" aria-label="First">First</label>
-    <label><input type="radio" name="choice" aria-label="Second" checked>Second</label>
-    <button type="button">Continue</button>
-  `);
+  await page.setContent(
+    '<label><input type="radio" name="choice" aria-label="First">First</label><label><input type="radio" name="choice" aria-label="Second" checked>Second</label><button type="button">Continue</button>',
+  );
 
   const trace = await captureKeyboardTrace(page);
   const radios = trace.controls.filter(({ role }) => role === "radio");
@@ -137,12 +165,9 @@ test("requires one reachable tab stop for a native radio group", async ({
 test("keeps the roving radio member as the group's tab stop", async ({
   page,
 }) => {
-  await page.setContent(`
-    <div role="radiogroup" aria-label="Scope">
-      <button type="button" role="radio" aria-checked="true" tabindex="0">Summary</button>
-      <button type="button" role="radio" aria-checked="false" tabindex="-1">Product</button>
-    </div>
-  `);
+  await page.setContent(
+    '<div role="radiogroup" aria-label="Scope"><button type="button" role="radio" aria-checked="true" tabindex="0">Summary</button><button type="button" role="radio" aria-checked="false" tabindex="-1">Product</button></div>',
+  );
 
   const trace = await captureKeyboardTrace(page);
   const radios = trace.controls.filter(({ role }) => role === "radio");
@@ -156,12 +181,9 @@ test("keeps the roving radio member as the group's tab stop", async ({
 });
 
 test("requires only the active roving tab as a tab stop", async ({ page }) => {
-  await page.setContent(`
-    <div role="tablist" aria-label="Sections">
-      <button type="button" role="tab" aria-selected="true" tabindex="0">Overview</button>
-      <button type="button" role="tab" aria-selected="false" tabindex="-1">Settings</button>
-    </div>
-  `);
+  await page.setContent(
+    '<div role="tablist" aria-label="Sections"><button type="button" role="tab" aria-selected="true" tabindex="0">Overview</button><button type="button" role="tab" aria-selected="false" tabindex="-1">Settings</button></div>',
+  );
 
   const trace = await captureKeyboardTrace(page);
   const tabs = trace.controls.filter(({ role }) => role === "tab");
@@ -224,12 +246,9 @@ test("does not require a non-tabbable listbox panel", async ({ page }) => {
 });
 
 test("fails when an extra ARIA radio member is tabbable", async ({ page }) => {
-  await page.setContent(`
-    <div role="radiogroup" aria-label="Scope">
-      <button type="button" role="radio" aria-checked="true">Summary</button>
-      <button type="button" role="radio" aria-checked="false">Product</button>
-    </div>
-  `);
+  await page.setContent(
+    '<div role="radiogroup" aria-label="Scope"><button type="button" role="radio" aria-checked="true">Summary</button><button type="button" role="radio" aria-checked="false">Product</button></div>',
+  );
 
   const trace = await captureKeyboardTrace(page);
   const product = trace.controls.find(
@@ -248,10 +267,7 @@ test("fails when an extra ARIA radio member is tabbable", async ({ page }) => {
 test("keeps a standalone tabindex-minus-one button as a keyboard gap", async ({
   page,
 }) => {
-  await page.setContent(`
-    <button type="button" tabindex="-1">Skip</button>
-    <button type="button">Continue</button>
-  `);
+  await page.setContent('<button tabindex="-1">Skip</button>');
 
   const trace = await captureKeyboardTrace(page);
   const skip = trace.controls.find(
@@ -266,13 +282,9 @@ test("keeps a standalone tabindex-minus-one button as a keyboard gap", async ({
 });
 
 test("fails when focus escapes an active modal", async ({ page }) => {
-  await page.setContent(`
-    <button type="button">Background</button>
-    <div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px">
-      <button type="button">Confirm</button>
-      <button type="button">Cancel</button>
-    </div>
-  `);
+  await page.setContent(
+    '<button type="button">Background</button><div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px"><button type="button">Confirm</button><button type="button">Cancel</button></div>',
+  );
   await page.getByRole("button", { name: "Confirm" }).focus();
 
   const trace = await captureKeyboardTrace(page);
@@ -300,15 +312,9 @@ test("fails when focus escapes an active modal", async ({ page }) => {
 test("keeps unreachable modal background controls not-applicable", async ({
   page,
 }) => {
-  await page.setContent(`
-    <main inert>
-      <button type="button">Background</button>
-    </main>
-    <div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px">
-      <button type="button">Confirm</button>
-      <button type="button">Cancel</button>
-    </div>
-  `);
+  await page.setContent(
+    '<main inert><button type="button">Background</button></main><div role="dialog" aria-modal="true" aria-label="Confirm" style="width:240px;height:120px"><button type="button">Confirm</button><button type="button">Cancel</button></div>',
+  );
   await page.getByRole("button", { name: "Confirm" }).focus();
 
   const trace = await captureKeyboardTrace(page);
