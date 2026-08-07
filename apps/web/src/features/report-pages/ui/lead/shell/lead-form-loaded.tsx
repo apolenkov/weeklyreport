@@ -224,6 +224,8 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
       <form
         className={`space-y-6 ${completion.showStickyCompletion ? "pb-28" : ""}`}
         data-testid="lead-report-form"
+        data-layout-key="report-page"
+        data-layout-stability="position-width"
       >
         <LoadedChrome
           props={props}

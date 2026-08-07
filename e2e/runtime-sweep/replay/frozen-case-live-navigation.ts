@@ -10,19 +10,22 @@ export const initialNavigation = async (
 ): Promise<
   Readonly<{ responseStatus: number | null; events: RuntimeEventWindow }>
 > => {
+  const startedAt = new Date().toISOString();
   const listeners = eventsFor(page);
+  const cursor = listeners.cursor();
   try {
     const response = await page.goto(route);
     await settleNavigation(page);
     return {
       responseStatus: response?.status() ?? null,
       events: {
-        consoleMessages: [...listeners.consoleMessages],
-        pageErrors: [...listeners.pageErrors],
-        requestFailures: [...listeners.requestFailures],
+        startedAt,
+        cursor,
+        collector: listeners,
       },
     };
-  } finally {
+  } catch (error: unknown) {
     listeners.detach();
+    throw error;
   }
 };

@@ -87,9 +87,12 @@ runtime-live-controls`. The required supplemental native Codex Luna review
    optional pair: leave both unset for an unauthenticated local Loki, or set
    both for an authenticated Loki. Keep values in the shell; never write
    credentials, API tokens, or DSNs to campaign artifacts.
-   The live runtime API receives `LOG_DIR=$RUNTIME_SWEEP_ARCHIVE/api-log` and
-   writes JSONL to `app.log`; export the matching observer path explicitly:
-   `export RUNTIME_SWEEP_API_LOG="$RUNTIME_SWEEP_ARCHIVE/api-log/app.log"`.
+   The live runtime API receives
+   `LOG_DIR=$RUNTIME_SWEEP_ARCHIVE/api-log/$RUNTIME_SWEEP_PROFILE` and writes
+   JSONL to `app.log`; export the exact same-run profile path explicitly:
+   `export RUNTIME_SWEEP_API_LOG="$RUNTIME_SWEEP_ARCHIVE/api-log/$RUNTIME_SWEEP_PROFILE/app.log"`.
+   Before import, require that file to exist inside the current campaign
+   archive; never reuse a log path from another profile or run.
 3. Freeze the campaign inputs before starting any browser work:
 
    ```bash

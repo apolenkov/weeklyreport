@@ -131,6 +131,7 @@ const captureFaultPhases = async (
   }>,
 ): Promise<FrozenCaseReplayResult> =>
   captureFrozenCasePhases({
+    archiveRoot: input.archiveRoot,
     matrixCase: input.matrixCase,
     oracle: input.oracle,
     controls,

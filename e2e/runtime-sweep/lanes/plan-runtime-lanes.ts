@@ -13,9 +13,9 @@ import {
 } from "../source/contracts.ts";
 import {
   createRuntimeLaneAssignment,
-  RUNTIME_LANE_IDS,
   type RuntimeLaneAssignment,
   type RuntimeLaneMode,
+  runtimeLaneResources,
 } from "./runtime-lane-contract.ts";
 
 const SOURCE_ARTIFACTS = [
@@ -25,30 +25,6 @@ const SOURCE_ARTIFACTS = [
   "MANIFEST.json",
 ] as const;
 const MANIFEST_CONTENT_INDEX = SOURCE_ARTIFACTS.length - 1;
-
-const LANE_RESOURCES = [
-  {
-    laneId: "a",
-    databaseName: "customreport_e2e_lane_a_test",
-    redisPort: 6381,
-    apiPort: 3112,
-    webPort: 3115,
-  },
-  {
-    laneId: "b",
-    databaseName: "customreport_e2e_lane_b_test",
-    redisPort: 6382,
-    apiPort: 3122,
-    webPort: 3125,
-  },
-  {
-    laneId: "c",
-    databaseName: "customreport_e2e_lane_c_test",
-    redisPort: 6383,
-    apiPort: 3132,
-    webPort: 3135,
-  },
-] as const;
 
 type AssignmentGroup = Readonly<{
   readonly profile: SeedProfile;
@@ -96,13 +72,16 @@ const groupsForProfile = (
 const canaryGroups = (
   groups: readonly AssignmentGroup[],
   mode: Exclude<RuntimeLaneMode, "full">,
+  laneCount: number,
 ): readonly AssignmentGroup[] => {
-  const firstThree = groups.slice(0, RUNTIME_LANE_IDS.length);
-  if (firstThree.length !== RUNTIME_LANE_IDS.length)
-    throw new Error(`Runtime lane ${mode} canary requires three frozen shards`);
+  const selected = groups.slice(0, laneCount);
+  if (selected.length !== laneCount)
+    throw new Error(
+      `Runtime lane ${mode} canary requires ${laneCount} frozen shards`,
+    );
   return mode === "one-shard"
-    ? firstThree
-    : firstThree.map(({ profile, caseIds }) => {
+    ? selected
+    : selected.map(({ profile, caseIds }) => {
         const first = caseIds[0];
         if (first === undefined)
           throw new Error("Runtime lane canary shard is empty");
@@ -119,7 +98,10 @@ const targetLaneIndex = (lanes: readonly LaneWork[]): number =>
     0,
   );
 
-const distribute = (groups: readonly AssignmentGroup[]): readonly LaneWork[] =>
+const distribute = (
+  groups: readonly AssignmentGroup[],
+  laneCount: number,
+): readonly LaneWork[] =>
   groups.reduce<readonly LaneWork[]>(
     (lanes, group) => {
       const index = targetLaneIndex(lanes);
@@ -132,7 +114,7 @@ const distribute = (groups: readonly AssignmentGroup[]): readonly LaneWork[] =>
           : lane,
       );
     },
-    RUNTIME_LANE_IDS.map(() => ({ groups: [], caseCount: 0 })),
+    runtimeLaneResources(laneCount).map(() => ({ groups: [], caseCount: 0 })),
   );
 
 export async function planRuntimeLanes(
@@ -141,6 +123,7 @@ export async function planRuntimeLanes(
     readonly laneRoot: string;
     readonly profiles: readonly SeedProfile[];
     readonly mode: RuntimeLaneMode;
+    readonly laneCount: number;
   }>,
 ): Promise<RuntimeLaneAssignment> {
   const archiveRoot = path.resolve(input.archiveRoot);
@@ -160,8 +143,10 @@ export async function planRuntimeLanes(
     groupsForProfile(matrix, profile),
   );
   const selectedGroups =
-    input.mode === "full" ? allGroups : canaryGroups(allGroups, input.mode);
-  const work = distribute(selectedGroups);
+    input.mode === "full"
+      ? allGroups
+      : canaryGroups(allGroups, input.mode, input.laneCount);
+  const work = distribute(selectedGroups, input.laneCount);
   return createRuntimeLaneAssignment({
     artifact: "RUNTIME_LANE_ASSIGNMENT",
     version: 1,
@@ -171,7 +156,7 @@ export async function planRuntimeLanes(
     sourceArchiveRoot: archiveRoot,
     sourceArtifacts: await sourceArtifactDigests(archiveRoot),
     profiles: input.profiles,
-    lanes: LANE_RESOURCES.map((resource, index) => ({
+    lanes: runtimeLaneResources(input.laneCount).map((resource, index) => ({
       ...resource,
       archiveRoot: path.join(laneRoot, resource.laneId),
       groups: work[index]?.groups ?? [],

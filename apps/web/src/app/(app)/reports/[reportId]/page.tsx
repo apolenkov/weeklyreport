@@ -28,7 +28,9 @@ export default async function PublishedReportPage({
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-        <Suspense fallback={<WeeklyReportSkeleton />}>
+        <Suspense
+          fallback={<WeeklyReportSkeleton mode={mode} audience="viewer" />}
+        >
           <ViewerReportShell
             reportId={reportId}
             mode={mode}

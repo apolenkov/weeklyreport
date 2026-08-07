@@ -97,7 +97,7 @@ export default defineConfig({
       // @swc-node/register, not tsx: esbuild does not implement
       // emitDecoratorMetadata, so Nest cannot resolve type-injected providers
       // and the api never finishes booting.
-      command: `node --env-file=${REPO_ROOT}/.env --import @swc-node/register/esm-register src/main.ts`,
+      command: "node --import @swc-node/register/esm-register src/main.ts",
       cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
       reuseExistingServer: false,
@@ -107,9 +107,18 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         PORT: String(API_PORT),
         AUTH_DEV_MODE: "true",
+        AUTH_JWT_SECRET: "uat-secret-must-be-32-chars-or-more!!",
         NODE_ENV: "test",
         FRONTEND_URL: WEB_URL,
+        APP_BASE_URL: WEB_URL,
+        PDF_BASE_URL: WEB_URL,
+        PDF_OUTPUT_DIR: path.join(REPO_ROOT, "e2e/sweep/.results/pdfs"),
+        PDF_EXPORT_JWT_SECRET: "uat-pdf-export-secret-32-chars-minimum!!",
         LOG_DIR: ".logs/sweep",
+        LOG_LEVEL: "warn",
+        OTEL_SDK_DISABLED: "true",
+        OTEL_TRACES_SAMPLER_ARG: "0",
+        HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
       },
     },
     {

@@ -106,6 +106,14 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(screen.getAllByTestId("slide-product-card")).toHaveLength(2);
     expect(screen.getByText("own item")).toBeInTheDocument();
     expect(screen.getByText("portal item")).toBeInTheDocument();
+    expect(screen.getByTestId("lead-slides-deck")).toHaveAttribute(
+      "data-layout-key",
+      "status-slide-deck",
+    );
+    expect(screen.getByTestId("slide-article")).toHaveAttribute(
+      "data-layout-key",
+      "slide-article",
+    );
   });
 
   it("renders every row without count-based truncation", () => {
@@ -148,6 +156,39 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
     const card = expectDefined(screen.getAllByTestId("slide-product-card")[0]);
     expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
+  });
+
+  it("omits the already-selected owner badge in a Mine slide model", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({ items: [item({ text: "mine row" })] }),
+      { showOwnerBadges: false },
+    );
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="lead"
+      />,
+    );
+
+    expect(screen.getByText("mine row")).toBeInTheDocument();
+    expect(screen.queryByTestId("slide-author-badge")).not.toBeInTheDocument();
+  });
+
+  it("keeps the wide lead canvas inside a local horizontal scroll host", () => {
+    renderDeck(makeSection({ items: [item()] }));
+
+    expect(screen.getByTestId("lead-slides-deck")).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+    );
+    expect(screen.getByTestId("lead-slide-scroll-host")).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "relative",
+      "overflow-x-auto",
+    );
   });
 
   it("plays status via marks and highlights, never words", () => {

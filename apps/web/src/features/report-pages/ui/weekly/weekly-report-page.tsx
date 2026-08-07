@@ -43,6 +43,8 @@ interface WeeklyReportPageProps {
   readonly contextControlsLeading?: ReactNode | undefined;
   // Header-line label (not a control) — stays out of the two action rows.
   readonly headerContextLabel?: ReactNode | undefined;
+  // Keeps the client-query loading chrome aligned with the owning shell.
+  readonly loadingAudience?: "head" | "viewer" | undefined;
 }
 
 function PeriodLifecycleActions({
@@ -96,8 +98,12 @@ function WeeklyReportHeader({
   readonly headerContextLabel?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+    <header
+      data-layout-key="weekly-report-header"
+      data-layout-stability="position-size"
+      className="flex flex-wrap items-center justify-between gap-4"
+    >
+      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-auto">
         <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
           Status Report
         </h1>
@@ -137,6 +143,7 @@ function WeeklyReportContextToolbar({
 }) {
   return (
     <ReportToolbar
+      layoutKey="report-context-toolbar"
       contextControls={
         contextControls ?? (
           <>
@@ -210,6 +217,7 @@ export function WeeklyReportPage({
   contextControls,
   contextControlsLeading,
   headerContextLabel,
+  loadingAudience = "head",
 }: WeeklyReportPageProps) {
   const page = useWeeklyReportPage({
     reportId,
@@ -220,7 +228,7 @@ export function WeeklyReportPage({
   });
 
   if (page.kind === "loading") {
-    return <WeeklyReportSkeleton />;
+    return <WeeklyReportSkeleton audience={loadingAudience} />;
   }
   if (page.kind === "notice") {
     return <CenteredNotice title={page.notice.title} body={page.notice.body} />;
@@ -230,7 +238,11 @@ export function WeeklyReportPage({
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      data-layout-key="report-page"
+      data-layout-stability="position-width"
+    >
       <WeeklyReportHeader
         page={page}
         documentActionsLeading={documentActionsLeading}

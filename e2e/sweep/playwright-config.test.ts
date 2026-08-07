@@ -22,7 +22,10 @@ test("starts current-source servers against the dedicated UAT database", async (
   expect(apiServer.reuseExistingServer).toBe(false);
   expect(webServer.reuseExistingServer).toBe(false);
   expect(apiServer.command).toContain("src/main.ts");
+  expect(apiServer.command).not.toContain("--env-file");
   expect(apiServer.env?.DATABASE_URL).toBe(databaseUrl);
+  expect(apiServer.env?.APP_BASE_URL).toBe("http://127.0.0.1:3110");
+  expect(apiServer.env?.OTEL_SDK_DISABLED).toBe("true");
   expect(apiServer.url).toBe("http://127.0.0.1:3111/health/live");
   expect(webServer.command).toMatch(/next dev --webpack -p 3110$/);
   expect(webServer.url).toBe("http://127.0.0.1:3110");

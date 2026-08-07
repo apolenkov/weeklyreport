@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AiDriverReport } from "../driver/driver-results-contract.ts";
+import type { AiDriverReport } from "../../driver/driver-results-contract.ts";
 import { probeBugsinkChannel } from "./environment-observer-bugsink.ts";
 
 const DSN = "http://public@example.test/1";

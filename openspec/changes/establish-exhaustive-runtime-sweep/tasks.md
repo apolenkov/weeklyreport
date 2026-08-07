@@ -52,6 +52,21 @@
       `PREFLIGHT.json`, then require that artifact to finalize frozen
       `MATRIX.json` cases, typed inapplicable records, total-case limits, and
       digest before immutable baseline execution.
+- [x] 3.7 Make observability evidence fail closed: persist browser request
+      timelines plus API/worker logs, query Bugsink and Loki by correlation id
+      and cell time window, detect undeclared failures, repeated requests,
+      retry storms, cache-contract misses, and slow outliers, and reject a green
+      browser assertion when telemetry is dirty or correlation evidence is
+      missing.
+- [x] 3.8 Capture stable before/after screenshots for every bounded transition
+      and adjudicate geometry, overflow, loading replacement, and unexpected
+      visual movement from the paired evidence.
+- [x] 3.9 Reject runtime lane execution when the live worktree is dirty or HEAD
+      differs from the frozen source SHA.
+- [x] 3.10 Bind strict observability completion manifests to source, matrix,
+      assignment, run, lane, and profile identities; await file/OTel/Sentry
+      shutdown, settle late browser/log events, and allow only the exact declared
+      controlled fault while every additional failure remains blocking.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 
@@ -85,6 +100,12 @@
       exact resume procedure without claiming unbounded coverage.
 - [x] 5.3 Add archive bootstrap/report builders under the campaign archive,
       update its `INDEX.md` entry, and keep all session artifacts outside `docs/`.
+- [x] 5.4 Generalize deterministic replay to a requested bounded lane count;
+      require exclusive database/Redis/API/web/browser/output resources, one
+      serial worker per lane, bounded DB pools, fail-closed process cleanup, and
+      exact source/evidence/coverage validation in the merger. Benchmark
+      increasing lane counts with one-cell and full-group canaries before the
+      immutable full run.
 
 ## 6. Immutable baseline and adjudication
 
@@ -112,6 +133,10 @@
       the explicit import/verifier path; require every final cell to pass with
       complete function/a11y/visual evidence and zero unresolved or confirmed
       gaps.
+- [ ] 7.4 Adjudicate the final request/log/correlation timelines and transition
+      screenshot pairs; publish request/cache/performance findings and prove
+      zero undeclared Bugsink/Loki/API/worker/browser errors before the stop
+      gate may pass.
 
 ## 8. Verification, review, and closeout
 

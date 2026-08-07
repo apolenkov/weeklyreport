@@ -129,7 +129,7 @@ export function PeriodNavigator({
 
   return (
     <div
-      className="flex min-w-0 max-w-full flex-1 basis-full items-center gap-1.5 md:basis-auto"
+      className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto"
       onTouchStart={listbox.handleTouchStart}
       onTouchEnd={listbox.handleTouchEnd}
       role="group"

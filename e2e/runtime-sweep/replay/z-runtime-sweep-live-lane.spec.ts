@@ -114,6 +114,7 @@ test.describe("replays every frozen runtime case in matrix order", () => {
       if (!source) throw new Error("Runtime matrix was not prepared");
       const runtime: FrozenCaseLiveRuntime = {
         archiveRoot: ARCHIVE_ROOT,
+        apiLogPath: path.join(ARCHIVE_ROOT, "api-log", PROFILE, "app.log"),
         baseURL: BASE_URL,
         databaseUrl: DATABASE_URL,
         repoRoot: REPO_ROOT,

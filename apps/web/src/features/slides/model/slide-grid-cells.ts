@@ -190,9 +190,10 @@ export function collectCells(input: {
 export function finalizeColumns(
   cells: CellBuckets,
   authorOrder: ReadonlyMap<string, number>,
+  hiddenAuthorId?: string,
 ): GridColumns {
   const finalize = (rows: readonly GridRow[]): readonly GridRow[] =>
-    collapseAuthorSeries(sortCellRows(rows, authorOrder));
+    collapseAuthorSeries(sortCellRows(rows, authorOrder), hiddenAuthorId);
   return {
     current: finalize(cells.current),
     next: finalize(cells.next),

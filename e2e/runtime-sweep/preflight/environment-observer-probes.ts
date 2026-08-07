@@ -172,18 +172,44 @@ const queryUntilDeadline = async (
   );
 };
 
-export async function probeLokiChannel(
+type LokiTarget = Readonly<{
+  pushUrl: string;
+  queryUrl: string;
+  headers: Record<string, string>;
+}>;
+
+type LokiContext = Readonly<{
+  now: () => number;
+  sleep: (milliseconds: number) => Promise<void>;
+  deadline: number;
+  pollInterval: number;
+  attempts: number;
+}>;
+
+const lokiTargetFor = (
   config: LokiProbeConfig | undefined,
-  report: AiDriverReport,
-  fetcher: typeof fetch,
-  options: LokiProbeOptions = {},
-): Promise<EnvironmentChannelInput> {
-  if (!config?.pushUrl || !config.queryUrl) return blind("loki");
+  probeTime: number,
+): LokiTarget | null => {
+  if (!config?.pushUrl || !config.queryUrl || !Number.isFinite(probeTime))
+    return null;
   const headers = headersFor(config.username, config.password);
-  if (!headers) return blind("loki");
-  const probeId = randomUUID();
-  const probeTime = timestamp(report.timeline.endedAt);
-  if (probeTime === null) return blind("loki");
+  return headers === null
+    ? null
+    : { pushUrl: config.pushUrl, queryUrl: config.queryUrl, headers };
+};
+
+const validContextValues = (
+  deadlineDuration: number,
+  pollInterval: number,
+  startedAt: number,
+): boolean =>
+  Number.isFinite(deadlineDuration) &&
+  deadlineDuration > 0 &&
+  Number.isFinite(pollInterval) &&
+  pollInterval > 0 &&
+  Number.isFinite(startedAt);
+
+const lokiContextFor = (options: LokiProbeOptions): LokiContext | null => {
   const now = options.now ?? Date.now;
   const sleep =
     options.sleep ??
@@ -192,38 +218,86 @@ export async function probeLokiChannel(
   const deadlineDuration = options.deadlineMs ?? REQUEST_TIMEOUT_MS;
   const pollInterval = options.pollIntervalMs ?? LOKI_POLL_INTERVAL_MS;
   const startedAt = now();
-  if (
-    !Number.isFinite(deadlineDuration) ||
-    deadlineDuration <= 0 ||
-    !Number.isFinite(pollInterval) ||
-    pollInterval <= 0 ||
-    !Number.isFinite(startedAt)
-  )
-    return blind("loki");
+  if (!validContextValues(deadlineDuration, pollInterval, startedAt))
+    return null;
   const deadline = startedAt + deadlineDuration;
-  if (!Number.isFinite(deadline)) return blind("loki");
-  const attempts = Math.min(
-    MAX_LOKI_POLL_ATTEMPTS,
-    Math.ceil(deadlineDuration / pollInterval) + 1,
+  if (!Number.isFinite(deadline)) return null;
+  return {
+    now,
+    sleep,
+    deadline,
+    pollInterval,
+    attempts: Math.min(
+      MAX_LOKI_POLL_ATTEMPTS,
+      Math.ceil(deadlineDuration / pollInterval) + 1,
+    ),
+  };
+};
+
+const executeLokiProbe = async (
+  target: LokiTarget,
+  context: LokiContext,
+  probeId: string,
+  probeTime: number,
+  fetcher: typeof fetch,
+): Promise<boolean> => {
+  await pushLokiProbe(
+    target.pushUrl,
+    target.headers,
+    probeId,
+    probeTime,
+    fetcher,
+    context.deadline,
+    context.now,
   );
+  const query = queryUrlFor(target.queryUrl, probeId, probeTime);
+  return queryUntilDeadline(
+    () =>
+      queryLokiProbe(
+        query,
+        target.headers,
+        probeId,
+        fetcher,
+        context.deadline,
+        context.now,
+      ),
+    context.deadline,
+    context.now,
+    context.sleep,
+    context.pollInterval,
+    context.attempts,
+  );
+};
+
+export async function probeLokiChannel(
+  config: LokiProbeConfig | undefined,
+  report: AiDriverReport,
+  fetcher: typeof fetch,
+  options: LokiProbeOptions = {},
+): Promise<EnvironmentChannelInput> {
+  const probeTime = timestamp(report.timeline.endedAt);
+  if (probeTime === null) return blind("loki");
+  return probeLokiAt(config, probeTime, fetcher, options);
+}
+
+export async function probeLokiAt(
+  config: LokiProbeConfig | undefined,
+  probeTime: number,
+  fetcher: typeof fetch,
+  options: LokiProbeOptions = {},
+): Promise<EnvironmentChannelInput> {
+  const target = lokiTargetFor(config, probeTime);
+  if (target === null) return blind("loki");
+  const context = lokiContextFor(options);
+  if (context === null) return blind("loki");
+  const probeId = randomUUID();
   try {
-    await pushLokiProbe(
-      config.pushUrl,
-      headers,
+    const hasProbe = await executeLokiProbe(
+      target,
+      context,
       probeId,
       probeTime,
       fetcher,
-      deadline,
-      now,
-    );
-    const query = queryUrlFor(config.queryUrl, probeId, probeTime);
-    const hasProbe = await queryUntilDeadline(
-      () => queryLokiProbe(query, headers, probeId, fetcher, deadline, now),
-      deadline,
-      now,
-      sleep,
-      pollInterval,
-      attempts,
     );
     return {
       channel: "loki",

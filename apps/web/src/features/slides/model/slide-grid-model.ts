@@ -56,6 +56,8 @@ export interface SlideGridInput {
   readonly productStatuses?: ReadonlyMap<string, SlideTrafficStatus>;
   // Everyone-mode rows retain co-owner identity; they are never anonymized.
   readonly foreign?: readonly CrossAuthorContentRow[];
+  // Mine already names the selected owner in the slide header.
+  readonly showOwnerBadges?: boolean;
 }
 
 function uniqueProducts(
@@ -168,6 +170,9 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     activityHomeById,
     authorOrder,
     sharedCardId: SHARED_CARD_ID,
+    ...(input.showOwnerBadges === false
+      ? { hiddenAuthorId: roster.owner.id }
+      : {}),
   });
   const { realCards, products } = deriveProductCards({
     realProducts,

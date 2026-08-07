@@ -14,6 +14,7 @@ import { buildSlideGridModel } from "./slide-grid-model";
 interface BuildSectionSlideOptions {
   readonly foreign?: readonly CrossAuthorContentRow[];
   readonly foreignHealth?: Parameters<typeof applyForeignProductHealth>[1];
+  readonly showOwnerBadges?: boolean;
 }
 
 function projectActivities(
@@ -73,6 +74,9 @@ export function buildSectionSlideModel(
         productSlides.map((product) => [product.id, product.status]),
       ),
       ...(options.foreign === undefined ? {} : { foreign: options.foreign }),
+      ...(options.showOwnerBadges === undefined
+        ? {}
+        : { showOwnerBadges: options.showOwnerBadges }),
     }),
   };
 }

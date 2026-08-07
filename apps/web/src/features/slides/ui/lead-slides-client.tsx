@@ -43,7 +43,7 @@ function deckPlaceholder(state: {
   readonly hasTargetReport: boolean;
 }): ReactElement | null {
   if (state.isLoading) {
-    return <SlideSkeleton />;
+    return <SlideSkeleton mode="lead" />;
   }
   if (state.isError) {
     return (
@@ -73,7 +73,7 @@ function clampSelectedIndex(raw: number, slideCount: number): number {
 function deckSurfaceClass(isFullscreen: boolean): string | undefined {
   return isFullscreen
     ? "h-screen overflow-auto bg-[var(--color-background)] p-4"
-    : undefined;
+    : "min-w-0 max-w-full";
 }
 
 // Standalone decks own the fullscreen hook; a host that threads its own state wins.

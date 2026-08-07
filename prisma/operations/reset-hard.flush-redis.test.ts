@@ -5,17 +5,20 @@ import {
   settlePromptly,
   startMockRedisServer,
 } from "../guards/_mock-redis-server.js";
-import { quotePgIdentifier } from "./reset-hard.js";
 
 // Loads the reset script without depending on a developer database setting.
-async function loadFlushRedis(): Promise<
-  typeof import("./reset-hard.js").flushRedis
-> {
+async function loadResetHard(): Promise<typeof import("./reset-hard.js")> {
   vi.stubEnv(
     "DATABASE_URL",
     "postgresql://test:test@127.0.0.1:5432/customreport_test",
   );
-  const { flushRedis } = await import("./reset-hard.js");
+  return import("./reset-hard.js");
+}
+
+async function loadFlushRedis(): Promise<
+  typeof import("./reset-hard.js").flushRedis
+> {
+  const { flushRedis } = await loadResetHard();
   return flushRedis;
 }
 
@@ -103,15 +106,18 @@ describe("flushRedis", () => {
 });
 
 describe("quotePgIdentifier", () => {
-  it("doubles embedded quotes", () => {
+  it("doubles embedded quotes", async () => {
+    const { quotePgIdentifier } = await loadResetHard();
     expect(quotePgIdentifier('we"ird')).toBe('"we""ird"');
   });
 
-  it("wraps plain identifiers unchanged", () => {
+  it("wraps plain identifiers unchanged", async () => {
+    const { quotePgIdentifier } = await loadResetHard();
     expect(quotePgIdentifier("report_section")).toBe('"report_section"');
   });
 
-  it("escapes hostile catalog names", () => {
+  it("escapes hostile catalog names", async () => {
+    const { quotePgIdentifier } = await loadResetHard();
     expect(quotePgIdentifier('x"); DROP TABLE users; --')).toBe(
       '"x""); DROP TABLE users; --"',
     );

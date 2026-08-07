@@ -54,6 +54,7 @@ export function LeadFormToolbarControls({
   return (
     <ReportToolbar
       sticky
+      layoutKey="report-context-toolbar"
       contextControls={
         <>
           <ToolbarPeriodCluster

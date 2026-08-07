@@ -16,7 +16,7 @@ const REQUIRED_PHASE_KINDS: Readonly<
   function: ["api"],
   accessibility: ["dom", "axe", "keyboard"],
   visual: ["screenshot", "geometry"],
-  runtime: [CONSOLE_KIND, PAGE_ERROR_KIND, REQUEST_KIND, "url"],
+  runtime: [CONSOLE_KIND, PAGE_ERROR_KIND, REQUEST_KIND, "url", "log"],
 };
 const REQUIRED_OBSERVATIONS: readonly Readonly<{
   readonly observationId: string;
@@ -28,6 +28,7 @@ const REQUIRED_OBSERVATIONS: readonly Readonly<{
   { observationId: "console", evidenceKinds: [CONSOLE_KIND] },
   { observationId: "page-error", evidenceKinds: [PAGE_ERROR_KIND] },
   { observationId: "network", evidenceKinds: [REQUEST_KIND] },
+  { observationId: "server-log", evidenceKinds: ["log"] },
   { observationId: "visual", evidenceKinds: ["screenshot", "geometry"] },
 ];
 const EMPTY_BUNDLE: EvidenceBundle = {
@@ -108,11 +109,7 @@ const observationIssues = (
         );
     });
     const failed = observations
-      .filter(
-        ({ outcome }) =>
-          outcome === "fail" &&
-          ["functional", "keyboard", "axe", "visual"].includes(observationId),
-      )
+      .filter(({ outcome }) => outcome === "fail")
       .map(
         ({ message }) =>
           `${caseId} ${phase.phase} observation ${observationId} failed: ${message}`,

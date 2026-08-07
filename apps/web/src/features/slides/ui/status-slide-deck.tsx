@@ -169,7 +169,10 @@ function DeckArticle(props: DeckArticleProps) {
   // Keying by slide id + page remounts the article on navigation, resetting
   // any article-local state for the next page.
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="relative min-w-0 max-w-full overflow-x-auto"
+      data-testid="lead-slide-scroll-host"
+    >
       <SlideArticle
         key={`${props.slide.id}:${String(props.slide.pageIndex ?? 0)}`}
         slide={props.slide}
@@ -229,8 +232,10 @@ export function StatusSlideDeck(props: StatusSlideDeckProps) {
 
   return (
     <section
-      className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+      className="min-w-0 max-w-full space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
       data-testid={`${props.mode}-slides-deck`}
+      data-layout-key="status-slide-deck"
+      data-layout-stability="position-width"
       aria-label="Status slide deck (use arrow keys to navigate slides)"
       role="group"
       tabIndex={0}
