@@ -540,6 +540,14 @@
       "target": "e2e/runtime-sweep/replay/$1"
     },
     {
+      "id": "runtime-control-target",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/(rendered-control-(?:action-guard|generation|state|target(?:-safety)?)(?:\\.spec)?\\.ts)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/control-target/$1"
+    },
+    {
       "id": "runtime-browser-state",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/replay/browser-state/(client-storage(?:\\.spec)?\\.ts)$",

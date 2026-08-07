@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { type ActionOperation } from "../source/contracts.ts";
 import {
@@ -6,18 +6,21 @@ import {
   STATEFUL_CONTROL_OPERATIONS,
   type StatefulControlOperation,
 } from "./control-action-policy.ts";
-import {
-  SUPPORTED_CONTROL_ROLES,
-  type SupportedControlRole,
-} from "./control-action-roles.ts";
 import type {
   ControlActionInput,
   ControlActionObservation,
   ControlActionTarget,
+  ResolvedActionControl,
 } from "./control-action-types.ts";
 import { ControlActionPolicyError } from "./control-recovery.ts";
+import {
+  armRenderedNameHandle,
+  beginRenderedNameAction,
+  cleanupRenderedNameGuard,
+  completeRenderedNameAction,
+  type RenderedNameActionLease,
+} from "./control-target/rendered-control-target.ts";
 
-const DEFAULT_OCCURRENCE = 1;
 const CONFIRMATION_NAMES: Readonly<Record<StatefulControlOperation, RegExp>> = {
   publish: /publish/i,
   delete: /delete/i,
@@ -42,120 +45,24 @@ const isStateful = (
 ): operation is StatefulControlOperation =>
   (STATEFUL_CONTROL_OPERATIONS as readonly string[]).includes(operation);
 
-const isSupportedRole = (role: string): role is SupportedControlRole =>
-  (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(role);
-
-const occurrenceFrom = (controlKey: string): number => {
-  const match = /:(\d+)$/u.exec(controlKey);
-  const value = Number(match?.[1] ?? DEFAULT_OCCURRENCE);
-  return Number.isInteger(value) && value > 0 ? value : DEFAULT_OCCURRENCE;
-};
-
-const TITLE_ROLE_SELECTORS: Readonly<
-  Partial<Record<SupportedControlRole, string>>
-> = {
-  link: "a",
-  button:
-    "button,[role='button'],input[type='button'],input[type='submit'],input[type='reset']",
-  checkbox: "input[type='checkbox'],[role='checkbox']",
-  radio: "input[type='radio'],[role='radio']",
-  switch: "[role='switch']",
-};
-
-const titleSelectorFor = (role: SupportedControlRole): string =>
-  TITLE_ROLE_SELECTORS[role] ?? `[role='${role}']`;
-
 const isSkipToContentLink = (control: ControlActionTarget): boolean =>
   control.ariaRole === "link" &&
   control.accessibleName.trim().toLocaleLowerCase() === "skip to content";
 
-export const targetLocator = (
-  page: Page,
-  control: ControlActionTarget,
-): Locator => {
-  if (!isSupportedRole(control.ariaRole))
-    throw new ControlActionPolicyError(`Unsupported role ${control.ariaRole}`);
-  return page
-    .getByRole(control.ariaRole, {
-      name: control.accessibleName,
-      exact: true,
-    })
-    .nth(occurrenceFrom(control.controlKey) - 1);
-};
-
-export const titleTargetLocator = (
-  page: Page,
-  control: ControlActionTarget,
-): Locator => {
-  if (!isSupportedRole(control.ariaRole))
-    throw new ControlActionPolicyError(`Unsupported role ${control.ariaRole}`);
-  return page
-    .locator(
-      `:is(${titleSelectorFor(control.ariaRole)})[title=${JSON.stringify(control.accessibleName)}]`,
-    )
-    .nth(occurrenceFrom(control.controlKey) - 1);
-};
-
-export const innerTextTargetLocator = async (
-  page: Page,
-  control: ControlActionTarget,
-): Promise<Locator | undefined> => {
-  if (!isSupportedRole(control.ariaRole))
-    throw new ControlActionPolicyError(`Unsupported role ${control.ariaRole}`);
-  const candidates = page.locator(titleSelectorFor(control.ariaRole));
-  const matchingIndexes = await candidates.evaluateAll(
-    (elements, expectedName) => {
-      const normalize = (value: string): string =>
-        value.replaceAll(/\s+/gu, " ").trim();
-      return elements.flatMap((element, index) => {
-        if (!(element instanceof HTMLElement)) return [];
-        const bounds = element.getBoundingClientRect();
-        const style = window.getComputedStyle(element);
-        const visible =
-          element.closest("[hidden],[aria-hidden='true']") === null &&
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          style.visibility !== "collapse" &&
-          Number(style.opacity) !== 0 &&
-          bounds.width > 0 &&
-          bounds.height > 0;
-        return visible &&
-          normalize(element.innerText) === normalize(expectedName)
-          ? [index]
-          : [];
-      });
-    },
-    control.accessibleName,
+const documentWasDestroyed = (error: unknown): boolean =>
+  error instanceof Error &&
+  /(?:Execution context was destroyed|Cannot find context with specified id)/u.test(
+    error.message,
   );
-  const index = matchingIndexes[occurrenceFrom(control.controlKey) - 1];
-  return index === undefined ? undefined : candidates.nth(index);
-};
 
-export const hrefTargetLocator = (
-  page: Page,
-  control: ControlActionTarget,
-): Locator | undefined => {
-  if (
-    control.ariaRole !== "link" ||
-    control.href === null ||
-    control.href === undefined
-  )
-    return undefined;
-  return page
-    .locator(`a[href=${JSON.stringify(control.href)}]`)
-    .nth(occurrenceFrom(control.controlKey) - 1);
-};
-
-export const waitForVisible = async (
-  locator: Locator,
-  timeoutMs: number,
-): Promise<boolean> => {
+const cleanupRenderedTarget = async (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
+  lease: RenderedNameActionLease,
+): Promise<void> => {
   try {
-    await locator.waitFor({ state: "visible", timeout: timeoutMs });
-    return true;
+    await cleanupRenderedNameGuard(resolved.target, lease);
   } catch (error: unknown) {
-    if (error instanceof Error && error.name === "TimeoutError") return false;
-    throw error;
+    if (!documentWasDestroyed(error)) throw error;
   }
 };
 
@@ -168,10 +75,15 @@ const representativeValueFor = (control: ControlActionTarget): string => {
 };
 
 const fillOrSelect = async (
-  locator: Locator,
+  resolved: ResolvedActionControl,
   input: ControlActionInput,
   timeoutMs: number,
 ): Promise<void> => {
+  if (resolved.kind !== "locator")
+    throw new ControlActionPolicyError(
+      "Rendered-name fallback is not valid for form controls",
+    );
+  const locator = resolved.target;
   if (input.action.operation === "fill") {
     await locator.fill(input.value ?? representativeValueFor(input.control), {
       timeout: timeoutMs,
@@ -214,34 +126,130 @@ const confirmStatefulAction = async (
   await confirm.click({ timeout: timeoutMs });
 };
 
-const activateControl = async (
-  page: Page,
-  locator: Locator,
+const renderedActionCompleted = async (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
+  lease: RenderedNameActionLease,
+): Promise<boolean> => {
+  try {
+    return await completeRenderedNameAction(resolved.target, lease);
+  } catch (error: unknown) {
+    if (documentWasDestroyed(error)) return true;
+    throw error;
+  }
+};
+
+const timeoutErrorFor = (timeoutMs: number): ControlActionTimeoutError =>
+  new ControlActionTimeoutError(`Control action exceeded ${timeoutMs}ms`);
+
+const remainingUntil = (deadline: number): number =>
+  Math.max(1, deadline - Date.now());
+
+const cleanupRenderedWithinDeadline = (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
+  lease: RenderedNameActionLease,
+  timeoutMs: number,
+): Promise<void> =>
+  bounded(
+    cleanupRenderedTarget(resolved, lease),
+    remainingUntil(lease.deadline),
+    timeoutMs,
+  );
+
+const performRenderedInput = (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
+  control: ControlActionTarget,
+  signal: AbortSignal,
+): Promise<void> =>
+  isSkipToContentLink(control)
+    ? resolved.target.press("Enter", { signal, timeout: 0 })
+    : resolved.target.click({ signal, timeout: 0 });
+
+const cleanupRenderedFailure = async (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
+  lease: RenderedNameActionLease,
+  timeoutMs: number,
+  signal: AbortSignal,
+  error: unknown,
+): Promise<never> => {
+  if (signal.aborted || Date.now() >= lease.deadline)
+    throw timeoutErrorFor(timeoutMs);
+  await cleanupRenderedWithinDeadline(resolved, lease, timeoutMs);
+  throw error;
+};
+
+const activateRenderedControl = async (
+  resolved: Extract<ResolvedActionControl, { readonly kind: "handle" }>,
   control: ControlActionTarget,
   timeoutMs: number,
 ): Promise<void> => {
-  if (!isSkipToContentLink(control)) {
-    await locator.click({ timeout: timeoutMs });
+  const deadline = Date.now() + timeoutMs;
+  const lease = await bounded(
+    armRenderedNameHandle(resolved.target, deadline),
+    timeoutMs,
+  );
+  if (lease === undefined)
+    throw new ControlActionPolicyError("Rendered-name target changed");
+  const remainingBeforeBegin = remainingUntil(lease.deadline);
+  const began = await bounded(
+    beginRenderedNameAction(resolved.target, lease),
+    remainingBeforeBegin,
+    timeoutMs,
+  );
+  if (!began) {
+    await cleanupRenderedWithinDeadline(resolved, lease, timeoutMs);
+    throw new ControlActionPolicyError("Rendered-name target changed");
+  }
+  const signal = AbortSignal.timeout(remainingUntil(lease.deadline));
+  try {
+    await bounded(
+      performRenderedInput(resolved, control, signal),
+      remainingUntil(lease.deadline),
+      timeoutMs,
+    );
+    const completed = await bounded(
+      renderedActionCompleted(resolved, lease),
+      remainingUntil(lease.deadline),
+      timeoutMs,
+    );
+    if (!completed)
+      throw new ControlActionPolicyError(
+        "Rendered-name action was invalidated",
+      );
+    await cleanupRenderedWithinDeadline(resolved, lease, timeoutMs);
+  } catch (error: unknown) {
+    return cleanupRenderedFailure(resolved, lease, timeoutMs, signal, error);
+  }
+};
+
+const activateControl = async (
+  page: Page,
+  resolved: ResolvedActionControl,
+  control: ControlActionTarget,
+  timeoutMs: number,
+): Promise<void> => {
+  if (resolved.kind === "handle") {
+    await activateRenderedControl(resolved, control, timeoutMs);
     return;
   }
-  await locator.focus({ timeout: timeoutMs });
+  const { target } = resolved;
+  if (!isSkipToContentLink(control)) {
+    await target.click({ timeout: timeoutMs });
+    return;
+  }
+  await target.focus({ timeout: timeoutMs });
   await page.keyboard.press("Enter");
 };
 
 const bounded = async <T>(
   operation: Promise<T>,
   timeoutMs: number,
+  reportedTimeoutMs = timeoutMs,
 ): Promise<T> => {
   const timeout = new Promise<never>((_, reject) => {
     const signal = AbortSignal.timeout(timeoutMs);
     signal.addEventListener(
       "abort",
-      () =>
-        reject(
-          new ControlActionTimeoutError(
-            `Control action exceeded ${timeoutMs}ms`,
-          ),
-        ),
+      () => reject(timeoutErrorFor(reportedTimeoutMs)),
       { once: true },
     );
   });
@@ -258,14 +266,14 @@ const failedAttemptFor = (
 
 export const executeControlAttempt = async (
   input: ControlActionInput,
-  locator: Locator,
+  resolved: ResolvedActionControl,
   timeoutMs: number,
 ): Promise<ControlActionAttempt> => {
   const { action, page, observeOutcome } = input;
   try {
     if (action.operation === "fill" || action.operation === "select")
-      await fillOrSelect(locator, input, timeoutMs);
-    else await activateControl(page, locator, input.control, timeoutMs);
+      await fillOrSelect(resolved, input, timeoutMs);
+    else await activateControl(page, resolved, input.control, timeoutMs);
     if (isStateful(action.operation))
       await confirmStatefulAction(page, action.operation, timeoutMs);
     if (observeOutcome === undefined)

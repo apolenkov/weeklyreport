@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { ElementHandle, Locator, Page } from "@playwright/test";
 
 import type {
   Action,
@@ -18,6 +18,21 @@ export type ControlActionTarget = Pick<
   }>;
 
 export type ControlActionObservation = "pass" | "fail";
+
+export interface RenderedNameActionLease {
+  readonly deadline: number;
+  readonly generation: string;
+}
+
+export type RenderedTargetValidator = (() => boolean) &
+  Readonly<{ generation: string }>;
+
+export type ResolvedActionControl =
+  | Readonly<{ readonly kind: "locator"; readonly target: Locator }>
+  | Readonly<{
+      readonly kind: "handle";
+      readonly target: ElementHandle<HTMLElement>;
+    }>;
 
 export interface ControlActionInput {
   readonly page: Page;
