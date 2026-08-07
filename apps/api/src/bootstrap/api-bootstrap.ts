@@ -59,6 +59,8 @@ export async function bootstrapApi(
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);
+  // This coordinator exclusively owns process signals so Nest lifecycle hooks,
+  // logs, and telemetry drain exactly once in one observable sequence.
   registerApiShutdown({
     app,
     logger,

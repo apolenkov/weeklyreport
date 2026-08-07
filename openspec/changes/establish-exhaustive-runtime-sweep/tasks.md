@@ -67,6 +67,9 @@
       assignment, run, lane, and profile identities; await file/OTel/Sentry
       shutdown, settle late browser/log events, and allow only the exact declared
       controlled fault while every additional failure remains blocking.
+- [x] 3.11 Keep the coordinated API shutdown as the sole process-signal owner
+      and prove racing termination signals close the Nest application and exit
+      exactly once.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 

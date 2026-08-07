@@ -252,6 +252,8 @@ The browser ledger SHALL stay attached until tracked API requests settle, log
 collection SHALL wait a bounded interval for late correlated writes, and API
 termination SHALL await app close, process-wide file-log flush, OpenTelemetry
 shutdown, and Sentry close with a bounded attempt for every step.
+The coordinated shutdown sequence SHALL be the sole process-signal owner and
+SHALL close the Nest application exactly once when termination signals race.
 The browser ledger SHALL use one advancing cursor across initial navigation,
 before, action, after, and a final tail so every event is adjudicated exactly
 once. The final tail SHALL update the owning cell before persistence and SHALL
@@ -318,6 +320,8 @@ consistent.
 - **THEN** the API still attempts every remaining drain but does not publish a
   valid completion artifact
 - **AND** a successful parent runner exit cannot satisfy the completion gate
+- **AND** racing termination signals cannot close the application or exit the
+  process more than once
 
 #### Scenario: a transition has stable before and after evidence
 

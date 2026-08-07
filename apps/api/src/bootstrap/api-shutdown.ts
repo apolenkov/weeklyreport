@@ -111,7 +111,8 @@ export const registerApiShutdown = (
 ): void => {
   const state: { promise: Promise<void> | null } = { promise: null };
   const shutdown = (): void => {
-    state.promise ??= shutdownApi(dependencies);
+    if (state.promise) return;
+    state.promise = shutdownApi(dependencies);
     void state.promise.then(
       () => exit(0),
       (error: unknown) => {

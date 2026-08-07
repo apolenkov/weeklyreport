@@ -65,7 +65,7 @@ pnpm uat:audit:update    # adds the new black-hole entry with a TODO reason
   port collides, kill both: `pkill -f 'turbo run dev'`.
 - **Prisma migrations on a fresh dev DB:** run
   `pnpm exec prisma migrate deploy`, then `pnpm exec tsx prisma/seed.ts`.
-- **Deterministic seed profiles:** use `pnpm db:seed:profile -- <profile>` with
+- **Deterministic seed profiles:** use `pnpm db:seed:profile <profile>` with
   `minimal`, `demo`, `full`, or `stress` only against a verified disposable
   database.
 - **Reset the dev DB:** the in-app DEV switcher offers `minimal`, `demo`, `full`,

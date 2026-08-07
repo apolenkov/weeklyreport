@@ -31,7 +31,6 @@ export async function configureHttpPipeline(deps: {
 }): Promise<DeferredIngressLimiters> {
   const { app, env, logger } = deps;
 
-  app.enableShutdownHooks();
   app.use(helmet());
   app.use(cookieParser());
 

@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../lib/logger.js";
-import { type ApiShutdownDependencies, shutdownApi } from "./api-shutdown.js";
+import {
+  type ApiShutdownDependencies,
+  registerApiShutdown,
+  shutdownApi,
+} from "./api-shutdown.js";
 
 const dependenciesFor = (
   order: string[],
@@ -43,7 +47,33 @@ const dependenciesFor = (
 };
 
 describe("API shutdown", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("closes the application once when termination signals race", async () => {
+    const order: string[] = [];
+    const signalHandlers = new Map<
+      NodeJS.Signals,
+      (signal: NodeJS.Signals) => void
+    >();
+    vi.spyOn(process, "once").mockImplementation((event, listener) => {
+      if (event === "SIGTERM" || event === "SIGINT") {
+        signalHandlers.set(event, listener as (signal: NodeJS.Signals) => void);
+      }
+      return process;
+    });
+    const exit = vi.fn<(code: number) => never>();
+
+    registerApiShutdown(dependenciesFor(order), exit);
+    signalHandlers.get("SIGTERM")?.("SIGTERM");
+    signalHandlers.get("SIGINT")?.("SIGINT");
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledOnce());
+
+    expect(order.filter((step) => step === "app-close")).toHaveLength(1);
+    expect(exit).toHaveBeenCalledWith(0);
+  });
 
   it("drains application, file logs, OTel, and Sentry in order", async () => {
     const order: string[] = [];
