@@ -1,0 +1,22 @@
+# The repository owner is the initial accountable reviewer. Replace these
+# entries with team owners before production support becomes shared.
+* @apolenkov
+
+# Repository policy and automation
+/.github/CODEOWNERS @apolenkov
+/.github/workflows/ @apolenkov
+/.github/SECURITY.md @apolenkov
+
+# Data model, release topology, and operational controls
+/prisma/schema.prisma @apolenkov
+/prisma/migrations/ @apolenkov
+/Dockerfile.api @apolenkov
+/Dockerfile.web @apolenkov
+/docker-compose*.yml @apolenkov
+/deploy/ @apolenkov
+/docs/operations.md @apolenkov
+/docs/sdlc.md @apolenkov
+
+# Public contracts copied by downstream code
+/packages/shared/ @apolenkov
+/packages/ui/ @apolenkov

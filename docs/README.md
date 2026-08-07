@@ -13,6 +13,7 @@ pre-commit guard enforces this; the policy lives in `CLAUDE.md`.
 | `onboarding.md`                               | New-contributor guide: setup, development, testing, workflows.                                   |
 | `operations.md`                               | Production runbook: first deploy, health triage, backups and restore, secret rotation, rollback. |
 | `quality-program.md`                          | The quality system in one page: enforced gates, measured outcomes, ongoing rollout.              |
+| `sdlc.md`                                     | Lifecycle control map and fail-closed prerequisites for the first production point.              |
 | `research/`                                   | Evidence-backed research underpinning standing standards.                                        |
 | `reviews/`                                    | Consolidated review reports that still drive open work; superseded reports move to the archive.  |
 | `ui-atlas/`                                   | Visual baseline: capture manifest, console baseline, role screenshots.                           |

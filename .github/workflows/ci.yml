@@ -1,51 +1,41 @@
 name: CI
 
-# The "no runners" premise this workflow sat on for months was wrong: the
-# repository is on github.com and uses GitHub-hosted runners, which never
-# appear in actions/runners — that endpoint lists self-hosted only. Dispatched
-# runs execute normally, so the dispatch-only posture bought nothing.
-#
-# Still missing for openspec/specs/ci-merge-gate: required status checks on
-# main. That one is deliberate — enforcing it ends the MVP direct-push
-# workflow CLAUDE.md pre-authorises, so it waits for the first production
-# point rather than for a green run.
+# GitHub-hosted CI runs on pull requests, pushes to main, and manual dispatch.
+# Main remains unprotected during the authorized pre-production MVP phase;
+# required checks and branch protection are first-production prerequisites.
 on:
   workflow_dispatch:
   pull_request:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ------------------------------------------------------------------
-  # Job 1: Lint + Typecheck + Unit Tests
-  # ------------------------------------------------------------------
   quality:
     name: Lint, Typecheck & Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     env:
-      # prisma.config.ts resolves the datasource eagerly via env(), so EVERY
-      # prisma invocation needs this — including `generate`, which never opens
-      # a connection. No database exists in this job; the value only has to
-      # parse.
+      # Prisma resolves the datasource before generate, so this parseable URL
+      # is required even though the quality job opens no database connection.
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
-      # Type-aware ESLint holds the whole monorepo's type graph in memory and
-      # aborts (SIGABRT/134) against Node's default heap cap on a hosted
-      # runner. The runner has 16 GB; half of it is headroom for the ~1.5 GB
-      # the pass actually peaks at locally.
+      # Type-aware monorepo ESLint can exceed Node's default heap cap on hosted
+      # runners; this stays within the runner's available memory.
       NODE_OPTIONS: --max-old-space-size=8192
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The exemplary-floor ratchet verifies that its committed baseline
-          # did not weaken relative to the first parent.
+          persist-credentials: false
+          # The exemplary-floor ratchet compares against the first parent.
           fetch-depth: 2
 
       - name: Setup Node.js
@@ -62,10 +52,7 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
-      # scripts/lint-gate.ts runs all static-analysis checks (ESLint,
-      # stylelint, three tsc projects, SSOT test + sweep, runtime-node drift,
-      # depcruise, knip) and reports every failure. No `--fail-fast` on
-      # purpose: one CI run must show every broken check, not only the first.
+      # The lint gate reports every static failure in one run.
       - name: Lint
         run: pnpm lint
 
@@ -75,27 +62,17 @@ jobs:
       - name: Typecheck
         run: pnpm turbo typecheck
 
-      # The same command the pre-push hook runs, so CI and the local gate cannot
-      # disagree. It also covers the root prisma-script suite, which a bare
-      # `turbo test` skips.
-      #
-      # No `-- --coverage`: turbo forwards it to every workspace, and
-      # packages/ui's `test` is `tsc --noEmit`, which dies on the unknown flag.
-      # Coverage was collected but never thresholded, so nothing enforced it —
-      # reinstate it behind a filter and a minimum if it is to mean anything.
+      # This matches pre-push and includes the root Prisma-script suite that a
+      # bare `turbo test` omits.
       - name: Unit Tests
         run: pnpm test
 
-      # 34-03: mutation-audit gate. Catches new tRPC mutations that ship
-      # without a consumer query (the reopen-request black-hole pattern).
-      # Allowlist at apps/web/uat-suite/mutation-audit.allowlist.json carves
-      # out intentional cron-only handlers.
+      # Rejects tRPC mutations without a consumer query, except the reviewed
+      # cron-only allowlist.
       - name: Mutation Consumer Audit
         run: pnpm uat:audit
 
-      # establish-scenario-catalog SC-6/SC-7: catalog drift gate. Fails when a
-      # new App Router page route has no scenario in any e2e/catalog/<role>.yaml
-      # (or a catalog route went stale). Pure Node, no DB/build needed.
+      # Rejects missing or stale App Router scenarios in the role catalogs.
       - name: Catalog Drift Gate
         run: pnpm catalog:check
 
@@ -107,9 +84,6 @@ jobs:
           path: apps/web/uat-suite/mutation-audit.md
           retention-days: 14
 
-  # ------------------------------------------------------------------
-  # Job 2: E2E Tests with Playwright
-  # ------------------------------------------------------------------
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -141,11 +115,8 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-    # No FRONTEND_URL/PDF_BASE_URL/PORT/NEXT_PUBLIC_API_URL here on purpose:
-    # playwright.integration.config.ts pins every URL/port for both webServers
-    # itself and only SEEDS NEXT_PUBLIC_API_URL when unset — a job-level value
-    # would leak into the test process and point the login fixtures at a port
-    # nothing listens on.
+    # Playwright owns all Web/API URLs. Job-level URL values would leak into
+    # login fixtures and bypass its isolated port contract.
     env:
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_test
       REDIS_HOST: localhost
@@ -160,6 +131,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -184,18 +157,14 @@ jobs:
       - name: Integration Tests
         run: pnpm --filter=@customreport/api test:integration
 
-      # @playwright/test is a devDependency of apps/web only; with pnpm's
-      # isolated node-linker the root has no playwright bin, so the install
-      # must run in that workspace (same as the test script itself).
+      # Playwright belongs to apps/web under pnpm's isolated node linker.
       - name: Install Playwright browsers
         run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
 
       - name: Build shared packages
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
-      # The integration suite refuses to run against the dev/test DATABASE_URL:
-      # its global-setup migrate-resets + seeds E2E_DATABASE_URL itself, so it
-      # gets a dedicated database in the same service container.
+      # Global setup destructively resets only its dedicated E2E database.
       - name: Create E2E database
         run: PGPASSWORD=localdev psql -h localhost -U customreport -d postgres -c "CREATE DATABASE customreport_e2e"
 
@@ -204,9 +173,7 @@ jobs:
           E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
         run: pnpm test:e2e:integration
 
-      # In CI the integration config reports via the `github` reporter (no HTML
-      # report dir) and writes traces/screenshots/videos to its outputDir —
-      # upload that, not the default playwright-report/ path it never creates.
+      # The GitHub reporter writes traces, screenshots, and videos here.
       - name: Upload Playwright failure artifacts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -215,14 +182,8 @@ jobs:
           path: e2e/integration/.results/
           retention-days: 14
 
-  # ------------------------------------------------------------------
-  # Job 2b: Prisma migrate-reset gate (34-04)
-  # ------------------------------------------------------------------
-  # Catches schema-vs-migration drift that `migrate deploy` doesn't see:
-  # `migrate reset --force` rebuilds from scratch and fails if any migration's
-  # SQL is invalid against the current schema.prisma.
-  # No `--skip-seed`: Prisma 7 dropped the flag, and its reset does not seed
-  # anyway — passing it aborts the command outright.
+  # A clean rebuild catches schema/migration drift that deploy cannot detect.
+  # Prisma 7 reset does not seed and no longer accepts `--skip-seed`.
   migrate-reset:
     name: Prisma migrate-reset gate
     runs-on: ubuntu-latest
@@ -250,6 +211,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -268,13 +231,8 @@ jobs:
       - name: prisma generate (post-reset)
         run: pnpm exec prisma generate
 
-  # ------------------------------------------------------------------
-  # Job 3: Docker Build Verification
-  # ------------------------------------------------------------------
-  # Builds the PRODUCTION compose file: the dev images share most layers
-  # with it, but only the prod runner stages exercise the standalone
-  # Next.js copy steps and the migrator target (a missing build artifact
-  # there ships a broken deploy while dev keeps working).
+  # Production stages exercise standalone Next.js copies and the migrator
+  # target that development images do not cover.
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -282,8 +240,7 @@ jobs:
     needs: quality
 
     env:
-      # Build-time values only; interpolation of docker-compose.prod.yml
-      # requires every :?-guarded var to be present even for `build`.
+      # Compose requires all guarded values before it can render a build.
       DB_PASSWORD: ci-build-only
       FRONTEND_URL: http://localhost
       APP_BASE_URL: http://localhost
@@ -302,12 +259,10 @@ jobs:
       KEYCLOAK_SAML_CERT: ci-build-only
       CADDY_SITE_ADDRESS: http://localhost
       CADDY_CSP_REPORT_URI: http://localhost/csp-report
-      # The backup service declares its cadence and retention required, so
-      # compose cannot render the model without them — even for `build`.
+      # Backup policy is required while rendering Compose.
       BACKUP_INTERVAL_SECONDS: "3600"
       BACKUP_RETENTION_DAYS: "14"
-      # Operational policy inputs are :?-guarded in docker-compose.prod.yml
-      # (no silent defaults); CI supplies the build-time values.
+      # Operational policy has no silent defaults.
       PGBOUNCER_MAX_CLIENT_CONN: "100"
       PGBOUNCER_POOL_SIZE: "20"
       PGBOUNCER_RESERVE_POOL_SIZE: "5"
@@ -321,6 +276,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Verify production Docker Compose builds
         run: docker compose -f docker-compose.prod.yml build

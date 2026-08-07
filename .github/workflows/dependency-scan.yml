@@ -1,18 +1,16 @@
 name: Dependency Vulnerability Scan
 
-# The schedule is the only automatic trigger: CI remains dispatch-only while
-# its pull-request and push expansion is pending under
-# openspec/specs/ci-merge-gate. This workflow runs independently of that gap
-# and needs no runner-provisioning decision tied to the merge gate.
-#
-# The scan runs every Monday at 06:00 UTC. Manual dispatch exists only for
-# verification without waiting for the weekly schedule. pnpm audit exits
-# nonzero when it finds vulnerabilities, so job failure already makes findings
-# visible in the Actions run summary and logs without a separate annotation.
+# The weekly schedule is independent of CI triggers and branch protection.
+# Manual dispatch permits verification without waiting for Monday 06:00 UTC.
+# pnpm audit exits nonzero for advisories, so the Actions run exposes findings
+# in its summary and logs instead of silently reporting success.
 on:
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 jobs:
   audit:
@@ -23,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
