@@ -163,6 +163,14 @@ const clickAction = (
   transition: "none",
 });
 
+const bindStableTarget = (
+  control: DomControlObservation,
+  action: Action,
+): Action =>
+  control.role === "link" && control.href !== null && control.href !== ""
+    ? { ...action, target: { role: "link", href: control.href } }
+    : action;
+
 const isDirectMutationName = (name: string): boolean => {
   const normalized = normalizedName(name);
   return (
@@ -181,9 +189,11 @@ const interactiveAction = (control: DomControlObservation): Action => {
     return retryAction(control.controlKey);
   const safety = isDirectMutationButton(control) ? "irreversible" : "read-only";
   const transition = transitionForName(control.accessibleName);
-  return transition === undefined
-    ? clickAction(control.controlKey, safety)
-    : { ...clickAction(control.controlKey, safety), transition };
+  const action =
+    transition === undefined
+      ? clickAction(control.controlKey, safety)
+      : { ...clickAction(control.controlKey, safety), transition };
+  return bindStableTarget(control, action);
 };
 
 const formAction = (

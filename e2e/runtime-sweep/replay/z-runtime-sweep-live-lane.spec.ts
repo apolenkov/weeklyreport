@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { compactFailedCellSummary } from "../evidence/failure-summary.ts";
+import { loadRuntimeLaneSelection } from "../lanes/runtime-lane-selection.ts";
 import { parseFrozenMatrix } from "../matrix/matrix-finalizer.ts";
 import {
   assertFreshRuntimeManifest,
@@ -46,9 +47,36 @@ const MAX_CELLS = Math.min(
 const frozenProfileCases = parseFrozenMatrix(
   JSON.parse(readFileSync(path.join(ARCHIVE_ROOT, "MATRIX.json"), "utf8")),
 ).cases.filter(({ profile }) => profile === PROFILE);
+const laneAssignmentPath = process.env.RUNTIME_SWEEP_LANE_ASSIGNMENT?.trim();
+const laneSelection =
+  laneAssignmentPath === undefined
+    ? undefined
+    : loadRuntimeLaneSelection(
+        path.resolve(laneAssignmentPath),
+        requiredEnv("RUNTIME_SWEEP_LANE_ID"),
+        PROFILE,
+      );
+if (
+  laneSelection !== undefined &&
+  process.env.RUNTIME_SWEEP_CASE_IDS !== undefined
+)
+  throw new Error(
+    "RUNTIME_SWEEP_LANE_ASSIGNMENT and RUNTIME_SWEEP_CASE_IDS are mutually exclusive",
+  );
+if (
+  laneSelection !== undefined &&
+  (laneSelection.assignment.sourceSha !== SOURCE_SHA ||
+    laneSelection.assignment.matrixDigest !==
+      parseFrozenMatrix(
+        JSON.parse(
+          readFileSync(path.join(ARCHIVE_ROOT, "MATRIX.json"), "utf8"),
+        ),
+      ).digest)
+)
+  throw new Error("Runtime lane assignment does not match the frozen source");
 const replayCases = selectFrozenCasesForReplay(
   frozenProfileCases,
-  process.env.RUNTIME_SWEEP_CASE_IDS,
+  laneSelection?.caseIds ?? process.env.RUNTIME_SWEEP_CASE_IDS,
 );
 const replayShards = createFrozenCaseLiveShardPlan(replayCases);
 const profileCaseIds = frozenProfileCases.map(({ caseId }) => caseId);

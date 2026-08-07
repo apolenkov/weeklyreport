@@ -31,6 +31,7 @@ const inventorySchema = z
     enabled: z.boolean(),
     order: z.number().int().nonnegative(),
     domOrderKey: z.string().min(1),
+    href: z.string().nullable(),
   })
   .strict();
 

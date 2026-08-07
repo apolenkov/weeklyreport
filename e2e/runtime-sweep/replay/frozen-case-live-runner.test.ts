@@ -13,6 +13,8 @@ import {
 
 const harness = vi.hoisted(() => ({
   inventories: [] as DomInventory[],
+  capturedCaseIds: [] as string[],
+  verdict: ((): "pass" | "fail" => "pass")(),
   reseed: vi.fn(),
   prepareCase: vi.fn(
     (
@@ -64,8 +66,13 @@ vi.mock("./frozen-case-evidence.ts", () => ({
       const matrixCase = input as typeof input & {
         readonly matrixCase: MatrixExecutableCase;
       };
+      harness.capturedCaseIds.push(matrixCase.matrixCase.caseId);
       return {
-        cell: { cellId: matrixCase.matrixCase.caseId, controls },
+        cell: {
+          cellId: matrixCase.matrixCase.caseId,
+          controls,
+          verdict: harness.verdict,
+        },
         issues: [],
       };
     },
@@ -192,6 +199,8 @@ describe("frozen case live runner", () => {
   it("persists the action-phase inventory after a rerender", async () => {
     harness.reseed.mockClear();
     harness.prepareCase.mockClear();
+    harness.capturedCaseIds = [];
+    harness.verdict = "pass";
     harness.inventories = [
       inventory("Before"),
       inventory("After"),
@@ -221,6 +230,8 @@ describe("frozen case live runner", () => {
   it("reseeds once between target groups and restores matrix order", async () => {
     harness.reseed.mockClear();
     harness.prepareCase.mockClear();
+    harness.capturedCaseIds = [];
+    harness.verdict = "pass";
     harness.inventories = Array.from({ length: 9 }, (_, index) =>
       inventory(`Control ${index}`),
     );
@@ -274,5 +285,36 @@ describe("frozen case live runner", () => {
     expect(goto.mock.invocationCallOrder[0]).toBeLessThan(
       harness.reseed.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
     );
+  });
+
+  it("stops the lane immediately after a persisted non-pass cell", async () => {
+    harness.reseed.mockClear();
+    harness.prepareCase.mockClear();
+    harness.capturedCaseIds = [];
+    harness.verdict = "fail";
+    harness.inventories = [
+      inventory("Before"),
+      inventory("Action"),
+      inventory("After"),
+    ];
+    const second = {
+      ...matrixCase,
+      caseId: "case-never-started",
+      stateId: "state-never-started",
+    } satisfies MatrixExecutableCase;
+
+    await expect(
+      runFrozenCases(
+        {
+          context: () => ({ browser: () => ({}) }),
+          goto: vi.fn(() => Promise.resolve(null)),
+        } as unknown as Page,
+        {} as RuntimeMatrixSource,
+        [matrixCase, second],
+        {} as FrozenCaseLiveRuntime,
+        {} as TestInfo,
+      ),
+    ).rejects.toThrow(/stopped the lane with verdict=fail/u);
+    expect(harness.capturedCaseIds).toEqual([matrixCase.caseId]);
   });
 });

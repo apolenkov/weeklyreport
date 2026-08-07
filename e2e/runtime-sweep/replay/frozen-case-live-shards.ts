@@ -14,10 +14,13 @@ export type FrozenCaseGroup = readonly MatrixExecutableCase[];
 
 export const selectFrozenCasesForReplay = (
   cases: readonly MatrixExecutableCase[],
-  requestedCaseIds: string | undefined,
+  requestedCaseIds: string | readonly string[] | undefined,
 ): readonly MatrixExecutableCase[] => {
   if (requestedCaseIds === undefined) return cases;
-  const ids = requestedCaseIds.split(",").map((caseId) => caseId.trim());
+  const ids =
+    typeof requestedCaseIds === "string"
+      ? requestedCaseIds.split(",").map((caseId) => caseId.trim())
+      : [...requestedCaseIds];
   if (ids.includes(""))
     throw new Error("RUNTIME_SWEEP_CASE_IDS contains an empty case id");
   if (new Set(ids).size !== ids.length)

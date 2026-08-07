@@ -39,7 +39,17 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     ]);
     const webServers = config.webServer;
     if (!Array.isArray(webServers)) throw new Error("web servers missing");
-    expect(webServers[0]?.env?.LOG_DIR).toBe(path.join(archive, "api-log"));
+    expect(webServers[0]?.env?.LOG_DIR).toBe(
+      path.join(archive, "api-log", "full"),
+    );
+    expect(webServers[0]?.env?.PDF_OUTPUT_DIR).toBe(
+      path.join(archive, "pdfs", "full"),
+    );
+    expect(webServers[0]?.env).not.toHaveProperty("SMTP_HOST");
+    expect(webServers[0]?.env).not.toHaveProperty("SMTP_PORT");
+    expect(webServers[0]?.env).not.toHaveProperty("SMTP_USER");
+    expect(webServers[0]?.env).not.toHaveProperty("SMTP_PASS");
+    expect(webServers[0]?.env).not.toHaveProperty("SMTP_FROM");
     expect(webServers[1]?.cwd).toBe(
       path.resolve(import.meta.dirname, "..", "..", ".."),
     );

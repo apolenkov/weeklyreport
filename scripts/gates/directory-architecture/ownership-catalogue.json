@@ -484,6 +484,30 @@
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {
+      "id": "runtime-preflight-target-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/target/(.+\\.test\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/target/$1"
+    },
+    {
+      "id": "runtime-lanes-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/lanes/(.+\\.test\\.ts)$",
+      "concern": "lane-orchestration",
+      "role": "test",
+      "target": "e2e/runtime-sweep/lanes/$1"
+    },
+    {
+      "id": "runtime-lanes-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/lanes/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "lane-orchestration",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/lanes/$1"
+    },
+    {
       "id": "runtime-concurrency",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:scenarios/concurrency/)?((?:concurrency(?:[-.])[^/]+))$",
@@ -542,7 +566,7 @@
     {
       "id": "runtime-control-target",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-target/(rendered-control-(?:action-guard|generation|state|target(?:-safety)?)(?:\\.spec)?\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/((?:frozen-action-target(?:\\.test)?|rendered-control-(?:action-guard|generation|state|target(?:-safety)?)(?:\\.spec)?)\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/control-target/$1"

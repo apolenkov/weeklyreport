@@ -4,6 +4,7 @@ import type {
   actionOperationSchema,
   actionSafetySchema,
   actionSchema,
+  actionTargetSchema,
   campaignManifestSchema,
   candidateSchema,
   controlTransitionSchema,
@@ -76,6 +77,7 @@ export type Viewport = z.infer<typeof viewportSchema>;
 export type StateAxes = z.infer<typeof stateAxesSchema>;
 export type MatrixAxes = z.infer<typeof matrixAxesSchema>;
 export type Action = z.infer<typeof actionSchema>;
+export type ActionTarget = z.infer<typeof actionTargetSchema>;
 export type MatrixObservation = z.infer<typeof matrixObservationSchema>;
 export type MatrixExecution = z.infer<typeof matrixExecutionSchema>;
 export type MatrixExecutionInapplicable = z.infer<
