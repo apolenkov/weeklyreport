@@ -206,9 +206,12 @@ export function sortCellRows(
 // Show a badge only on the first row of each consecutive author series.
 export function collapseAuthorSeries(
   rows: readonly GridRow[],
+  hiddenAuthorId?: string,
 ): readonly GridRow[] {
   return rows.map((row, index) => ({
     ...row,
-    showAuthorBadge: index === 0 || rows[index - 1]?.authorId !== row.authorId,
+    showAuthorBadge:
+      row.authorId !== hiddenAuthorId &&
+      (index === 0 || rows[index - 1]?.authorId !== row.authorId),
   }));
 }

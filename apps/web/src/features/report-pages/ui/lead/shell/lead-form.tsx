@@ -103,7 +103,9 @@ export function LeadForm(props: LeadFormProps) {
   const state = useLeadFormState(props);
   const { data, draft, editing, loaded, shell, viewModel } = state;
   if (data.sectionUnavailable) return <LeadFormUnavailable />;
-  if (loaded === null || viewModel === null) return <LeadFormSkeleton />;
+  if (loaded === null || viewModel === null) {
+    return <LeadFormSkeleton mode={state.isSlidesMode ? "slides" : "edit"} />;
+  }
 
   const actions = buildDraftActions(draft, editing.addSignals, viewModel);
 

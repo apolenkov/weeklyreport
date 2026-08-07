@@ -30,7 +30,9 @@ import type {
   EvidenceCaptureResult,
   EvidencePhase,
   GeometrySnapshot,
+  ServerLogEvidence,
 } from "./evidence-types.ts";
+import { collectServerLogEvidence } from "./server-log-evidence.ts";
 
 type ArtifactSpec = readonly [
   string,
@@ -53,6 +55,7 @@ const captureJson = async (
   axe: AxeContextResults,
   keyboard: KeyboardTrace,
   geometrySnapshot: GeometrySnapshot,
+  serverLogs: ServerLogEvidence | null,
 ): Promise<CapturedJson> => {
   const functionalSpec: readonly ArtifactSpec[] = input.functionalAssertion
     ? [
@@ -75,6 +78,12 @@ const captureJson = async (
       RUNTIME_DIMENSION,
     ],
     [
+      "response-ledger.json",
+      input.responses ?? [],
+      "request",
+      RUNTIME_DIMENSION,
+    ],
+    [
       "url.json",
       { url: input.page.url(), status: input.responseStatus },
       "url",
@@ -83,6 +92,11 @@ const captureJson = async (
     ["axe.json", axeEvidenceFor(axe), "axe", "accessibility"],
     ["keyboard.json", keyboard, "keyboard", "accessibility"],
     ["geometry.json", geometrySnapshot, "geometry", "visual"],
+    ...(serverLogs === null
+      ? []
+      : ([
+          ["server-logs.json", serverLogs, "log", RUNTIME_DIMENSION],
+        ] as const)),
     ...functionalSpec,
   ];
   const refs = await Promise.all(
@@ -114,27 +128,44 @@ const inventoryFor = (
     ? inventoryDom(input.page)
     : Promise.resolve(input.inventory);
 
+const keyboardFor = (input: EvidenceCaptureInput): Promise<KeyboardTrace> =>
+  captureKeyboardTrace(input.page, input.inventory.controls);
+
+const serverLogsFor = (
+  input: EvidenceCaptureInput,
+): Promise<ServerLogEvidence | null> =>
+  input.serverLogPath === undefined
+    ? Promise.resolve(null)
+    : collectServerLogEvidence({
+        path: input.serverLogPath,
+        responses: input.responses ?? [],
+        startedAt: input.phaseStartedAt ?? input.capturedAt,
+        endedAt: new Date().toISOString(),
+      });
+
 export async function captureRouteEvidence(
   input: EvidenceCaptureInput,
 ): Promise<EvidenceCaptureResult> {
   const directory = routeDirectory(input);
   await mkdir(directory, { recursive: true });
   const baseline = await readVisualBaseline(input, directory);
+  // Freeze the transition boundary before keyboard traversal, focus changes,
+  // axe injection, or any other evidence instrumentation can alter the page.
+  const screenshot = await captureScreenshot(input, directory);
   const axeContext = await prepareAxeContext(input.page);
   const captureInput = { ...input, inventory: await inventoryFor(input) };
-  const keyboard = await captureKeyboardTrace(
-    input.page,
-    captureInput.inventory.controls,
-  );
+  const keyboard = await keyboardFor(captureInput);
   const geometrySnapshot = await captureGeometry(input.page);
-  const screenshot = await captureScreenshot(input, directory);
   const axe = await finalizeAxeContext(input.page, axeContext);
+  await input.settleRuntimeEvents?.();
+  const serverLogs = await serverLogsFor(input);
   const captured = await captureJson(
     captureInput,
     directory,
     axe,
     keyboard,
     geometrySnapshot,
+    serverLogs,
   );
   const visual = evaluateVisual(
     screenshot,
@@ -169,6 +200,7 @@ export async function captureRouteEvidence(
       captured.violations,
       keyboard,
       functional,
+      serverLogs,
     ),
     inapplicable: functional
       ? []

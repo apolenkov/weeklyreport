@@ -48,6 +48,18 @@ const DEFAULT_TRACES_SAMPLING_RATIO = 1.0;
 const DEFAULT_SERVICE_NAME = "customreport-api";
 const DEFAULT_SERVICE_VERSION = "dev";
 
+const samplingRatioFor = (rawRatio: string | undefined): number => {
+  if (rawRatio?.trim().length === 0)
+    throw new Error("OTEL_TRACES_SAMPLER_ARG must not be blank");
+  const samplingRatio =
+    rawRatio === undefined ? DEFAULT_TRACES_SAMPLING_RATIO : Number(rawRatio);
+  if (!Number.isFinite(samplingRatio) || samplingRatio < 0 || samplingRatio > 1)
+    throw new Error(
+      `OTEL_TRACES_SAMPLER_ARG must be a number between 0 and 1; received ${JSON.stringify(rawRatio)}`,
+    );
+  return samplingRatio;
+};
+
 export function decideOtelBootstrap(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
@@ -58,21 +70,7 @@ export function decideOtelBootstrap(
   if (!endpoint) {
     return { started: false, reason: "no-endpoint" };
   }
-  const rawRatio = env.OTEL_TRACES_SAMPLER_ARG;
-  if (rawRatio?.trim().length === 0) {
-    throw new Error("OTEL_TRACES_SAMPLER_ARG must not be blank");
-  }
-  const samplingRatio =
-    rawRatio === undefined ? DEFAULT_TRACES_SAMPLING_RATIO : Number(rawRatio);
-  if (
-    !Number.isFinite(samplingRatio) ||
-    samplingRatio < 0 ||
-    samplingRatio > 1
-  ) {
-    throw new Error(
-      `OTEL_TRACES_SAMPLER_ARG must be a number between 0 and 1; received ${JSON.stringify(rawRatio)}`,
-    );
-  }
+  const samplingRatio = samplingRatioFor(env.OTEL_TRACES_SAMPLER_ARG);
   return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 
@@ -94,8 +92,8 @@ class OtelLifecycle {
     this.handles = { sdk, loggerProvider };
   }
 
-  shutdown(): Promise<unknown[]> {
-    return Promise.all([
+  async shutdown(): Promise<void> {
+    await Promise.all([
       this.handles.sdk?.shutdown(),
       this.handles.loggerProvider?.shutdown(),
     ]);
@@ -104,17 +102,7 @@ class OtelLifecycle {
 
 const otelLifecycle = new OtelLifecycle();
 
-function shutdownOtel(): void {
-  void otelLifecycle.shutdown().catch((error: unknown) => {
-    process.stderr.write(`[otel] shutdown error: ${errorMessage(error)}\n`);
-  });
-}
-
-function registerShutdownHandler(signal: NodeJS.Signals): void {
-  if (!process.listeners(signal).includes(shutdownOtel)) {
-    process.once(signal, shutdownOtel);
-  }
-}
+export const shutdownOtel = (): Promise<void> => otelLifecycle.shutdown();
 
 // Starts the OpenTelemetry SDK, or records why it stayed off.
 export function startOtel(
@@ -174,10 +162,6 @@ export function startOtel(
   });
   logs.setGlobalLoggerProvider(loggerProvider);
   otelLifecycle.install(sdk, loggerProvider);
-
-  // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
-  registerShutdownHandler("SIGTERM");
-  registerShutdownHandler("SIGINT");
 
   return decision;
 }

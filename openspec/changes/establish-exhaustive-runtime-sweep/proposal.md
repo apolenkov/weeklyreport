@@ -15,6 +15,10 @@ inside each page. The gap is visible in `e2e/sweep/catalog-sweep.spec.ts`,
   route, viewport, action, oracle, and terminal verdict.
 - Exercise deterministic nominal, boundary, lifecycle, permission, and
   controlled-failure states against a disposable E2E database.
+- Allow the frozen deterministic matrix to run through bounded parallel lanes.
+  Every lane owns a distinct disposable database, Redis instance, API/web
+  ports, browser process, and archive subtree; only the validated merger may
+  publish canonical coverage.
 - Keep the immutable baseline separate from fixes; rerun affected cells after
   each fix and the full matrix before completion.
 - Keep native Codex `gpt-5.6-luna` Max reviews bounded to canonical role/profile

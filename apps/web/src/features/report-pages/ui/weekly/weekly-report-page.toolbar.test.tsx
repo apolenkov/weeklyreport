@@ -181,6 +181,15 @@ describe("WeeklyReportPage — shared period toolbar", () => {
     const toolbar = screen.getByTestId("report-toolbar");
     expect(toolbar).toBeInTheDocument();
     expect(toolbar).toHaveAttribute("aria-label", "Context controls");
+    expect(toolbar).toHaveAttribute(
+      "data-layout-key",
+      "report-context-toolbar",
+    );
+    expect(heading.closest("header")).toHaveAttribute(
+      "data-layout-key",
+      "weekly-report-header",
+    );
+    expect(heading.closest("[data-layout-key='report-page']")).not.toBeNull();
     // Document actions live on the header line, NOT inside the toolbar.
     const docGroup = screen.getByRole("group", { name: "Document actions" });
     expect(

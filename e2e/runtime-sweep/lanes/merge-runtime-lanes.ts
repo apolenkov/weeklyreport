@@ -11,6 +11,7 @@ import {
   verifyRuntimeLaneCells,
   verifyRuntimeLaneInputs,
 } from "./runtime-lane-merge-validation.ts";
+import { verifyRuntimeLaneObservability } from "./runtime-lane-observability-validation.ts";
 
 const compareStrings = (left: string, right: string): number =>
   left.localeCompare(right);
@@ -39,6 +40,7 @@ export async function mergeRuntimeLanes(
   }>,
 ): Promise<Readonly<{ readonly cells: number; readonly digest: string }>> {
   await verifyRuntimeLaneInputs(input.assignment);
+  const observability = await verifyRuntimeLaneObservability(input.assignment);
   const matrix = parseFrozenMatrix(
     JSON.parse(
       await readFile(
@@ -69,6 +71,8 @@ export async function mergeRuntimeLanes(
     sourceSha: input.assignment.sourceSha,
     matrixDigest: input.assignment.matrixDigest,
     assignmentDigest: input.assignment.assignmentDigest,
+    runId: observability.runId,
+    observabilityDigest: observability.digest,
     mode: input.assignment.mode,
     cells: verified.length,
     cellDigest: sha256Hex(

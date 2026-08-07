@@ -350,6 +350,15 @@ describe("UsersTab — delete modal focus management", () => {
 });
 
 describe("UsersTab — role label rendering", () => {
+  it("contains the wide table in its local horizontal scroll surface", () => {
+    renderTab();
+
+    expect(screen.getByTestId("users-table").parentElement).toHaveClass(
+      "relative",
+      "overflow-x-auto",
+    );
+  });
+
   it("renders the head role's badge with the shared label, not the raw token", () => {
     const headUser: AdminUserView = { ...USER, id: "u2", role: "head" };
     renderTab([headUser]);

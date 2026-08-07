@@ -3,19 +3,24 @@ import type { Express } from "express";
 import { mountBullBoard } from "../infrastructure/bullmq/bull-board.module.js";
 import { validateEnv } from "../infrastructure/config/env.schema.js";
 import type { OtelBootstrapResult } from "../infrastructure/otel/otel.bootstrap.js";
+import { shutdownOtel } from "../infrastructure/otel/otel.bootstrap.js";
 import { mountApiIngress } from "./api-ingress.js";
+import { registerApiShutdown } from "./api-shutdown.js";
 import { createAppServices } from "./app-services.js";
 import { mountAuthIngress } from "./auth-ingress.js";
 import { configureHttpPipeline } from "./http-pipeline.js";
 import { createNestApp } from "./nest-app.js";
 import { registerProcessErrorHandlers } from "./process-error-handlers.js";
-
-const FLUSH_TIMEOUT_MS = 1000;
+import { runtimeShutdownCompletionWriter } from "./runtime-shutdown-completion.js";
+import { shutdownSentry } from "./sentry-bootstrap.js";
 
 export async function bootstrapApi(
   otelDecision: OtelBootstrapResult,
 ): Promise<void> {
   const env = validateEnv();
+  const writeCompletion = runtimeShutdownCompletionWriter(
+    env.RUNTIME_SWEEP_SHUTDOWN_COMPLETION,
+  );
   const { app, logger } = await createNestApp({ env, otelDecision });
   const { authLimiter, trpcLimiter, vitalsLimiter } =
     await configureHttpPipeline({
@@ -54,12 +59,11 @@ export async function bootstrapApi(
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);
-  for (const signal of ["SIGTERM", "SIGINT"] as const) {
-    process.once(signal, () => {
-      void Promise.race([
-        logger.flush?.(),
-        new Promise((resolve) => setTimeout(resolve, FLUSH_TIMEOUT_MS).unref()),
-      ]);
-    });
-  }
+  registerApiShutdown({
+    app,
+    logger,
+    shutdownOtel,
+    shutdownSentry,
+    ...(writeCompletion === undefined ? {} : { writeCompletion }),
+  });
 }

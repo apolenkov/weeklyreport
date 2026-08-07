@@ -50,7 +50,7 @@ export const EVIDENCE_DIMENSIONS = tuple(
   "runtime",
 );
 // prettier-ignore
-export const EVIDENCE_KINDS = tuple("dom", "url", "console", "page-error", "request", "api", "db", "axe", "keyboard", "screenshot", "geometry", "control-action", "driver-report");
+export const EVIDENCE_KINDS = tuple("dom", "url", "console", "page-error", "request", "api", "db", "log", "axe", "keyboard", "screenshot", "geometry", "control-action", "driver-report");
 export const CANDIDATE_KINDS = tuple(
   "functional",
   "accessibility",

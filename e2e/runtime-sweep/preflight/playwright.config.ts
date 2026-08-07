@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../../playwright.integration.config.ts";
+import { runtimeApiServerCommand } from "../../runtime-api-server-command.ts";
 import { assertSourceSha } from "../support/ids.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
@@ -54,7 +55,13 @@ const apiEnv = {
   APP_BASE_URL: WEB_URL,
   PDF_BASE_URL: WEB_URL,
   LOG_DIR: API_LOG_DIR,
+  LOG_LEVEL: requiredEnv("LOG_LEVEL"),
   PDF_OUTPUT_DIR,
+  OTEL_EXPORTER_OTLP_ENDPOINT: requiredEnv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+  OTEL_SDK_DISABLED: "false",
+  OTEL_SERVICE_NAME: requiredEnv("OTEL_SERVICE_NAME"),
+  OTEL_SERVICE_VERSION: requiredEnv("OTEL_SERVICE_VERSION"),
+  SENTRY_DSN: requiredEnv("RUNTIME_SWEEP_BUGSINK_DSN"),
 };
 const webEnv = {
   ...runtimeSweepWebEnvironment(webServer.env),
@@ -138,9 +145,10 @@ export default defineConfig({
   webServer: [
     {
       ...apiServer,
-      command: "pnpm --filter @customreport/api dev",
+      command: runtimeApiServerCommand,
       url: `http://127.0.0.1:${API_PORT}/health/ready`,
       reuseExistingServer: false,
+      gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
       env: apiEnv,
     },
     {

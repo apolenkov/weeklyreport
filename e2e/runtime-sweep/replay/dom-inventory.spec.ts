@@ -11,7 +11,15 @@ async function captureHarnessEvidence(
   input: Readonly<{
     capturePhase?: "before" | "after";
     consoleMessages?: readonly { type: string; text: string }[];
-    requestFailures?: readonly { url: string; failure: string | null }[];
+    requestFailures?: readonly {
+      url: string;
+      method: string;
+      resourceType: string;
+      failure: string | null;
+      startedAt: string;
+      endedAt: string;
+      durationMs: number;
+    }[];
   }> = {},
 ) {
   return captureRouteEvidence({
@@ -27,6 +35,7 @@ async function captureHarnessEvidence(
     consoleMessages: input.consoleMessages ?? [],
     pageErrors: [],
     requestFailures: input.requestFailures ?? [],
+    responses: [],
     responseStatus: 200,
     capturedAt: "2026-08-04T00:00:00.000Z",
     ...(input.capturePhase === undefined
@@ -247,7 +256,15 @@ test("fails the owning observations for console and network errors", async ({
   const { bundle } = await captureHarnessEvidence(page, testInfo, {
     consoleMessages: [{ type: "error", text: "planted console failure" }],
     requestFailures: [
-      { url: "http://example.invalid/trpc/report", failure: "net::ERR_FAILED" },
+      {
+        url: "http://example.invalid/trpc/report",
+        method: "POST",
+        resourceType: "fetch",
+        failure: "net::ERR_FAILED",
+        startedAt: "2026-08-07T00:00:00.000Z",
+        endedAt: "2026-08-07T00:00:00.100Z",
+        durationMs: 100,
+      },
     ],
   });
   const outcomes = new Map(

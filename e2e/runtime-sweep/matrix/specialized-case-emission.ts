@@ -7,6 +7,7 @@ import type {
   EvidencePhase,
   FunctionalAssertion,
 } from "../evidence/evidence-types.ts";
+import { expectedFaultFor } from "../evidence/expected-fault.ts";
 import { inventoryDom } from "../replay/dom-inventory.ts";
 import type { FrozenCaseReplayResult } from "../replay/frozen-case-evidence.ts";
 import {
@@ -40,7 +41,7 @@ const DESKTOP_ORACLE = {
 
 export type SpecializedRuntimeEventWindow = Pick<
   RuntimeEvents,
-  "consoleMessages" | "pageErrors" | "requestFailures"
+  "consoleMessages" | "pageErrors" | "requestFailures" | "responses"
 >;
 
 const eventWindow = (
@@ -49,6 +50,7 @@ const eventWindow = (
   consoleMessages: [...listeners.consoleMessages],
   pageErrors: [...listeners.pageErrors],
   requestFailures: [...listeners.requestFailures],
+  responses: [...listeners.responses],
 });
 
 export async function captureSpecializedEventWindow<T>(
@@ -63,7 +65,8 @@ export async function captureSpecializedEventWindow<T>(
   const listeners = eventsFor(page);
   try {
     const result = await operation();
-    return { result, events: eventWindow(listeners) };
+    await listeners.waitForIdle();
+    return { result, events: eventWindow(listeners.snapshot()) };
   } finally {
     listeners.detach();
   }
@@ -78,12 +81,13 @@ export async function captureSpecializedEventWindows<T>(
     readonly events: readonly SpecializedRuntimeEventWindow[];
   }>
 > {
-  const listeners = pages.map(eventsFor);
+  const listeners = pages.map((page) => eventsFor(page));
   try {
     const result = await operation();
+    await Promise.all(listeners.map(({ waitForIdle }) => waitForIdle()));
     return {
       result,
-      events: listeners.map(eventWindow),
+      events: listeners.map(({ snapshot }) => eventWindow(snapshot())),
     };
   } finally {
     listeners.forEach(({ detach }) => detach());
@@ -201,28 +205,12 @@ export async function captureSpecializedPagePhase(
   input: SpecializedPagePhaseInput,
 ): Promise<EvidenceBundle> {
   assertSpecializedCaseBinding(input.matrixCase);
-  const listeners = eventsFor(input.page);
+  const listeners = eventsFor(input.page, input.initialEvents);
   try {
     const action =
       input.perform === undefined ? undefined : await input.perform();
     const inventory = await inventoryDom(input.page);
-    const phaseEvents =
-      input.initialEvents === undefined
-        ? listeners
-        : {
-            consoleMessages: [
-              ...input.initialEvents.consoleMessages,
-              ...listeners.consoleMessages,
-            ],
-            pageErrors: [
-              ...input.initialEvents.pageErrors,
-              ...listeners.pageErrors,
-            ],
-            requestFailures: [
-              ...input.initialEvents.requestFailures,
-              ...listeners.requestFailures,
-            ],
-          };
+    const expectedFault = expectedFaultFor(input.matrixCase, input.phase);
     const captured = (
       await captureRouteEvidence({
         page: input.page,
@@ -234,9 +222,12 @@ export async function captureSpecializedPagePhase(
         resolvedRoute: input.matrixCase.resolvedRoute,
         cellId: input.matrixCase.caseId,
         inventory,
-        consoleMessages: phaseEvents.consoleMessages,
-        pageErrors: phaseEvents.pageErrors,
-        requestFailures: phaseEvents.requestFailures,
+        consoleMessages: listeners.consoleMessages,
+        pageErrors: listeners.pageErrors,
+        requestFailures: listeners.requestFailures,
+        responses: listeners.responses,
+        ...(expectedFault === undefined ? {} : { expectedFault }),
+        settleRuntimeEvents: listeners.waitForIdle,
         responseStatus: action?.responseStatus ?? input.responseStatus,
         capturedAt: input.capturedAt,
         capturePhase: input.phase,

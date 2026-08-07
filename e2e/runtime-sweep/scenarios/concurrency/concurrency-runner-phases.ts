@@ -241,6 +241,7 @@ export const runConcurrencyPhases = async (
     faultId: "period-stale-version",
   });
   return captureFrozenCasePhases({
+    archiveRoot: input.archiveRoot,
     matrixCase: input.matrixCase,
     oracle: input.oracle,
     controls: input.controls,

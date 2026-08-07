@@ -211,7 +211,11 @@ export function LeadFormHeaderActions({
   ...header
 }: LeadFormHeaderActionsProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4">
+    <header
+      data-layout-key="lead-report-header"
+      data-layout-stability="position-size"
+      className="flex flex-wrap items-center justify-between gap-4"
+    >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReportTitleBlock />
         {!isSlidesMode && (

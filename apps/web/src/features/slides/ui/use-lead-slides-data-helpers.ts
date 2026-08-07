@@ -197,7 +197,15 @@ export function useLeadDeckSlides({
       byPeriodData.section,
       isOwnDeck ? (crossAuthors ?? []) : [],
       foreignContentRows,
+      isEveryone && visibilityHydrated,
     );
-  }, [byPeriodData, crossAuthors, foreignContentRows, isOwnDeck]);
+  }, [
+    byPeriodData,
+    crossAuthors,
+    foreignContentRows,
+    isEveryone,
+    isOwnDeck,
+    visibilityHydrated,
+  ]);
   return useMemo(() => (sectionModel ? [sectionModel] : []), [sectionModel]);
 }

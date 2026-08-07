@@ -20,6 +20,7 @@ import { clearClientStorage } from "./browser-state/client-storage.ts";
 
 export interface FrozenCaseLiveRuntime {
   readonly archiveRoot: string;
+  readonly apiLogPath: string;
   readonly baseURL: string;
   readonly databaseUrl: string;
   readonly repoRoot: string;

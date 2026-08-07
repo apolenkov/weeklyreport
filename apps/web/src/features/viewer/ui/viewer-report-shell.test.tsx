@@ -315,6 +315,16 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     const deck = screen.getByTestId("slides-client-stub");
     expect(deck).toBeInTheDocument();
     expect(deck).toHaveAttribute("data-enable-activity", "false");
+    expect(deck.closest("[data-layout-key]")).toHaveAttribute(
+      "data-layout-key",
+      "report-page",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveAttribute("data-layout-key", "weekly-report-header");
+    expect(
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toHaveAttribute("data-layout-key", "report-context-toolbar");
     // Still no mutation affordance on the slides surface.
     expect(
       screen.queryByRole("button", { name: /publish|lock|reopen/i }),

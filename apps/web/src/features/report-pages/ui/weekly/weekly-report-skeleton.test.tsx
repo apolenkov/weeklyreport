@@ -1,63 +1,106 @@
+// @vitest-environment jsdom
+
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
-// DOM-parity for skeleton structure; structural drift vs the real page fails here.
 describe("WeeklyReportSkeleton", () => {
-  function getRoot(container: HTMLElement): HTMLElement {
-    const root = container.querySelector<HTMLElement>(
-      '[data-testid="weekly-report-skeleton"]',
+  it("follows the loaded form surface order", () => {
+    render(<WeeklyReportSkeleton mode="form" />);
+
+    const root = screen.getByTestId("weekly-report-skeleton");
+    expect(
+      Array.from(
+        root.children,
+        (child) => (child as HTMLElement).dataset.testid,
+      ),
+    ).toEqual([
+      "weekly-skeleton-header",
+      "weekly-skeleton-context-toolbar",
+      "weekly-skeleton-overview",
+      "weekly-skeleton-project-activities",
+      "weekly-skeleton-sections-toolbar",
+      "weekly-skeleton-accordions",
+    ]);
+  });
+
+  it("uses the slide deck topology for a slides route", () => {
+    render(<WeeklyReportSkeleton mode="slides" />);
+
+    expect(screen.getByTestId("slide-skeleton-head-carousel")).toBeVisible();
+    expect(screen.getByTestId("slide-skeleton-article")).toBeVisible();
+    expect(
+      screen.queryByTestId("weekly-skeleton-overview"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reserves audience- and mode-specific document actions", () => {
+    const { rerender } = render(
+      <WeeklyReportSkeleton audience="head" mode="form" />,
     );
-    if (!root) throw new Error("skeleton root not found");
-    return root;
-  }
+    expect(
+      screen
+        .getByTestId("weekly-skeleton-document-actions")
+        .querySelectorAll('[data-slot="skeleton"]'),
+    ).toHaveLength(3);
 
-  it("renders exactly two action-button placeholders in the header (Export + Publish)", () => {
-    const { container } = render(<WeeklyReportSkeleton />);
-    const root = getRoot(container);
-    const headerRow = root.firstElementChild as HTMLElement;
-    const rightCluster = headerRow.children[1] as HTMLElement;
-    // Two button placeholders, not three. Real page renders
-    // ExportPdfButton + PublishLockButton only.
-    expect(rightCluster.children).toHaveLength(2);
+    rerender(<WeeklyReportSkeleton audience="head" mode="slides" />);
+    expect(
+      screen
+        .getByTestId("weekly-skeleton-document-actions")
+        .querySelectorAll('[data-slot="skeleton"]'),
+    ).toHaveLength(2);
+
+    rerender(<WeeklyReportSkeleton audience="viewer" mode="form" />);
+    expect(
+      screen
+        .getByTestId("weekly-skeleton-document-actions")
+        .querySelectorAll('[data-slot="skeleton"]'),
+    ).toHaveLength(1);
+
+    rerender(<WeeklyReportSkeleton audience="viewer" mode="slides" />);
+    expect(
+      screen
+        .getByTestId("weekly-skeleton-document-actions")
+        .querySelectorAll('[data-slot="skeleton"]'),
+    ).toHaveLength(1);
   });
 
-  it("renders a 6-card portfolio grid (sm:grid-cols-2)", () => {
-    const { container } = render(<WeeklyReportSkeleton />);
-    const root = getRoot(container);
-    // Root children: [header, period-nav, portfolio, accordion list]; the
-    // portfolio grid is the second child of its card.
-    const portfolioCard = root.children[2] as HTMLElement;
-    const grid = portfolioCard.children[1] as HTMLElement;
-    expect(grid.children).toHaveLength(6);
+  it("keeps one loading status when the slide skeleton is composed", () => {
+    render(<WeeklyReportSkeleton mode="slides" />);
+
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
-  it("renders 6 accordion placeholders for the fixed skeleton shape", () => {
-    const { container } = render(<WeeklyReportSkeleton />);
-    const root = getRoot(container);
-    // The last top-level child is the `space-y-3` list of accordion cards.
-    const accordionList = root.lastElementChild as HTMLElement;
-    expect(accordionList.children).toHaveLength(6);
-  });
-
-  it("root element exposes the pinned accessibility attributes", () => {
+  it("keeps the compact report-toolbar geometry", () => {
     render(<WeeklyReportSkeleton />);
+
+    expect(screen.getByTestId("weekly-skeleton-context-toolbar")).toHaveClass(
+      "px-2",
+      "py-1.5",
+      "gap-1.5",
+    );
+    expect(screen.getByTestId("weekly-report-skeleton")).toHaveAttribute(
+      "data-layout-key",
+      "report-page",
+    );
+    expect(screen.getByTestId("weekly-skeleton-header")).toHaveAttribute(
+      "data-layout-key",
+      "weekly-report-header",
+    );
+    expect(
+      screen.getByTestId("weekly-skeleton-context-toolbar"),
+    ).toHaveAttribute("data-layout-key", "report-context-toolbar");
+  });
+
+  it("exposes the loading status contract", () => {
+    render(<WeeklyReportSkeleton />);
+
     const root = screen.getByRole("status", {
-      name: /loading status report/i,
+      name: "Loading status report",
     });
-    // Pin the attributes that constitute the a11y contract; class/structure
-    // changes that don't affect role/aria attributes will still pass.
-    expect({
-      role: root.getAttribute("role"),
-      ariaBusy: root.getAttribute("aria-busy"),
-      ariaLabel: root.getAttribute("aria-label"),
-      testId: root.dataset.testid,
-    }).toEqual({
-      role: "status",
-      ariaBusy: "true",
-      ariaLabel: "Loading status report",
-      testId: "weekly-report-skeleton",
-    });
+    expect(root).toHaveAttribute("aria-busy", "true");
+    expect(root).toHaveAttribute("data-testid", "weekly-report-skeleton");
   });
 });

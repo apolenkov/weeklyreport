@@ -1,3 +1,5 @@
+import { writeFile } from "node:fs/promises";
+
 import { expect, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture.ts";
@@ -87,6 +89,8 @@ const captureHarnessPhase = async (input: {
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
+    serverLogPath: input.testInfo.outputPath("app.log"),
+    phaseStartedAt: "2026-08-04T00:00:00.000Z",
     responseStatus: 200,
     capturedAt: "2026-08-04T00:00:00.000Z",
     capturePhase: input.phase,
@@ -136,7 +140,10 @@ test("replays a frozen control through before/action/after evidence", async ({
   page,
 }, testInfo) => {
   await page.setContent(`
-    <html lang="en"><head><title>Harness</title></head><body><main>
+    <html lang="en"><head><title>Harness</title></head><body><main
+      data-layout-key="runtime-harness-page"
+      data-layout-stability="position-width"
+    >
       <h1>Harness</h1>
       <button type="button">Submit</button>
       <output id="status">Idle</output>
@@ -148,11 +155,22 @@ test("replays a frozen control through before/action/after evidence", async ({
     </main></body></html>
   `);
   const inventory = await inventoryDom(page);
+  await writeFile(
+    testInfo.outputPath("app.log"),
+    `${JSON.stringify({
+      timestamp: "2026-08-04T00:00:00.000Z",
+      level: "info",
+      message: "runtime harness live",
+      correlationId: "runtime-harness",
+    })}\n`,
+    "utf8",
+  );
   const control = inventory.controls[0];
   if (control === undefined)
     throw new Error("Harness button inventory is empty");
   const matrixCase = frozenHarnessCase(control.controlKey);
   const result = await captureFrozenCasePhases({
+    archiveRoot: testInfo.outputPath("archive"),
     matrixCase,
     oracle: HARNESS_ORACLE,
     controls: (evidence) => {

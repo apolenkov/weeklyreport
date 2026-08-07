@@ -97,7 +97,7 @@ interface SlideDeckState {
 // The non-deck states, in the order they must win: the weekly report gates
 // everything, and the activity fallback only gates when it is the source.
 function slideDeckFallback(state: SlideDeckState): ReactElement | null {
-  if (state.isWeeklyLoading) return <SlideSkeleton />;
+  if (state.isWeeklyLoading) return <SlideSkeleton mode="head" />;
 
   if (state.isWeeklyError) {
     return (
@@ -119,7 +119,7 @@ function slideDeckFallback(state: SlideDeckState): ReactElement | null {
 
   if (!state.needsActivityFallback) return null;
 
-  if (state.isActivityLoading) return <SlideSkeleton />;
+  if (state.isActivityLoading) return <SlideSkeleton mode="head" />;
 
   if (state.isActivityError) {
     return (

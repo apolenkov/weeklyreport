@@ -74,6 +74,7 @@
     "test:runtime-coverage": "tsx e2e/runtime-sweep/evidence/finalize-runtime-coverage-cli.ts",
     "test:runtime-driver": "tsx e2e/runtime-sweep/driver/import-ai-driver-cli.ts",
     "test:runtime-lane-plan": "tsx e2e/runtime-sweep/lanes/plan-runtime-lanes-cli.ts",
+    "test:runtime-lane-prepare": "tsx e2e/runtime-sweep/lanes/prepare-runtime-lane-infrastructure-cli.ts",
     "test:runtime-lanes": "tsx e2e/runtime-sweep/lanes/run-runtime-lanes-cli.ts",
     "test:runtime-lane-merge": "tsx e2e/runtime-sweep/lanes/merge-runtime-lanes-cli.ts",
     "catalog:check": "node e2e/sweep/catalog-check.ts",

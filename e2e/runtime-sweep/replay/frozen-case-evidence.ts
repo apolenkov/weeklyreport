@@ -1,4 +1,5 @@
 import type { EvidencePhase } from "../evidence/evidence-types.ts";
+import { attachTransitionVisualEvidence } from "../evidence/transition-visual-evidence.ts";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import type { RuntimeSurfaceExpectation } from "../preflight/runtime-surface-expectation.ts";
 import {
@@ -38,6 +39,7 @@ export interface FrozenCaseReplayResult {
 }
 
 export interface FrozenCasePhaseCaptureInput {
+  readonly archiveRoot: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly oracle: Oracle;
   readonly controls:
@@ -47,6 +49,11 @@ export interface FrozenCasePhaseCaptureInput {
   readonly surface?: RuntimeSurfaceExpectation;
   readonly capturePhase: (phase: EvidencePhase) => Promise<EvidenceBundle>;
 }
+
+export type FrozenCaseEvidenceFinalizationInput = Omit<
+  FrozenCasePhaseCaptureInput,
+  "capturePhase"
+>;
 
 const frozenCaseCoverageCellSchema = coverageCellSchema;
 
@@ -80,29 +87,38 @@ const actionFor = (matrixCase: MatrixExecutableCase): Action => {
 const unique = (issues: readonly string[]): readonly string[] =>
   issues.filter((issue, index) => issues.indexOf(issue) === index);
 
-export function replayFrozenCase(
+const replayIssues = (
   matrixCase: MatrixExecutableCase,
   input: FrozenCaseReplayInput,
-): FrozenCaseReplayResult {
-  const phases = phaseEvidence(input.evidence);
+  phases: ReturnType<typeof phaseEvidence>,
+  action: Action,
+): readonly string[] => {
   const refs = allRefs(phases);
-  const action = actionFor(matrixCase);
-  const issues = unique([
-    ...(input.caseId !== matrixCase.caseId
-      ? [
+  return unique([
+    ...(input.caseId === matrixCase.caseId
+      ? []
+      : [
           `supplied case id ${input.caseId} does not equal frozen case ${matrixCase.caseId}`,
-        ]
-      : []),
-    ...(input.cellId !== undefined && input.cellId !== matrixCase.caseId
-      ? [
+        ]),
+    ...(input.cellId === undefined || input.cellId === matrixCase.caseId
+      ? []
+      : [
           `supplied cell id ${input.cellId} does not equal frozen case ${matrixCase.caseId}`,
-        ]
-      : []),
+        ]),
     ...phases.flatMap((phase) => [...phaseIssues(matrixCase.caseId, phase)]),
     ...identityIssues(matrixCase, refs),
     ...controlIssues(matrixCase, input.controls, refs, input.surface),
     ...caseSpecificIssues(matrixCase, phases, action.transition),
   ]);
+};
+
+export function replayFrozenCase(
+  matrixCase: MatrixExecutableCase,
+  input: FrozenCaseReplayInput,
+): FrozenCaseReplayResult {
+  const phases = phaseEvidence(input.evidence);
+  const action = actionFor(matrixCase);
+  const issues = replayIssues(matrixCase, input, phases, action);
   const faultId =
     "faultId" in matrixCase.execution
       ? { faultId: matrixCase.execution.faultId }
@@ -133,13 +149,17 @@ export function replayFrozenCase(
   return { cell, issues };
 }
 
-export async function captureFrozenCasePhases(
-  input: FrozenCasePhaseCaptureInput,
+export async function finalizeFrozenCaseEvidence(
+  input: FrozenCaseEvidenceFinalizationInput,
+  captured: CompleteFrozenCaseEvidence,
 ): Promise<FrozenCaseReplayResult> {
-  const before = await input.capturePhase("before");
-  const action = await input.capturePhase("action");
-  const after = await input.capturePhase("after");
-  const evidence: CompleteFrozenCaseEvidence = { before, action, after };
+  const after = await attachTransitionVisualEvidence({
+    archiveRoot: input.archiveRoot,
+    matrixCase: input.matrixCase,
+    before: captured.before,
+    after: captured.after,
+  });
+  const evidence: CompleteFrozenCaseEvidence = { ...captured, after };
   const controls =
     typeof input.controls === "function"
       ? input.controls(evidence)
@@ -152,6 +172,15 @@ export async function captureFrozenCasePhases(
     evidence,
     ...(input.surface === undefined ? {} : { surface: input.surface }),
   });
+}
+
+export async function captureFrozenCasePhases(
+  input: FrozenCasePhaseCaptureInput,
+): Promise<FrozenCaseReplayResult> {
+  const before = await input.capturePhase("before");
+  const action = await input.capturePhase("action");
+  const after = await input.capturePhase("after");
+  return finalizeFrozenCaseEvidence(input, { before, action, after });
 }
 
 export function replayFrozenCases(

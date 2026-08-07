@@ -35,8 +35,11 @@ legacy tuple together). It adds no production API or database contract.
   exhaustive cell sweep. Native Codex `gpt-5.6-luna` Max reviews consume each
   canonical role/profile evidence batch sequentially, emit candidates only, and
   require an explicit verifier import before merge. `gpt-5.6-sol` owns
-  architecture, planning, and final synthesis.
-  Parallelism is limited to read-only candidate verification and evidence review.
+  architecture, planning, and final synthesis. Deterministic replay may use
+  bounded parallel lanes only when every lane has exclusive database, Redis,
+  API/web, browser, and archive resources and one validated merger proves exact
+  full-matrix coverage. Native review parallelism remains limited to read-only
+  candidate verification and evidence review.
 - Make completion a blocking verdict with zero confirmed or unresolved functional, accessibility, or visual gaps.
 
 **Non-Goals:**
@@ -118,11 +121,30 @@ may carry a reviewed exclusion.
 
 ### Browser, database, and process ownership
 
-The Playwright project is pinned to Chromium Desktop Chrome `1440x900`, reduced
-motion, one worker, and sequential role/profile drives. One browser context does
-normal work; a second is only for two-context concurrency cells. Reset/reseed
-the browser/database before each stateful segment or ambiguous interruption;
-retain loopback bypass, dev-auth, API/web isolation, and report preservation.
+The Playwright project is pinned to Chromium Desktop Chrome `1440x900` and
+reduced motion. Each runtime lane has one worker and executes its assigned
+frozen cells sequentially. Multiple lanes may run concurrently only when each
+owns a distinct disposable database, Redis instance, API port, web port,
+browser process, Next.js dist directory, queue prefix, log/PDF directory, and
+archive subtree. One browser context does normal work; a second is only for
+two-context concurrency cells. Reset/reseed the owning lane before each
+stateful segment or ambiguous interruption; retain loopback bypass, dev-auth,
+API/web isolation, and report preservation.
+
+The planner assigns complete frozen groups to the least-loaded lane; role-only
+or URL-only partitioning is not authoritative because those axes are uneven.
+Every case id belongs to exactly one lane. The runner fails all lanes closed on
+the first non-pass or infrastructure failure and terminates their full process
+groups. The merger validates assignment/source digests, byte-identical source
+artifacts, exclusive resources, evidence references, verdicts, and exact
+full-matrix coverage in staging before publishing canonical final evidence.
+Changing the requested lane count changes the assignment digest, not the
+frozen matrix or cell identities.
+
+The diagnostic R1 capacity benchmark selected four lanes for the 14-core,
+36 GB target Mac. Four lanes merged 128/128 full-group cells in 277.63 seconds.
+Five, six, and ten lanes were rejected after resource-induced failures; failed
+lane orchestration waited for every sibling and left no owned process or port.
 
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
 `prisma migrate reset`/profile seed; Prisma's destructive guard remains final
@@ -147,6 +169,11 @@ and declared infrastructure-unavailable. HTTP/network uses Playwright route
 interception; concurrency uses two contexts and the real optimistic path;
 infrastructure uses only existing test seams, never a production hook. Scope and
 tear down each injector; its failure is infrastructure, never product pass.
+An expected fault is an exact declaration of operation, method, status or
+transport failure, and count. Only the matching event is excluded from the
+unexpected-error total. A second HTTP response, transport failure, or server
+error remains blocking. Request grouping uses method plus URL pathname so a
+changing query payload cannot hide a retry storm.
 
 Environment feedback requires `RUNTIME_SWEEP_API_LOG`,
 `RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_BUGSINK_API_TOKEN`,
@@ -158,6 +185,54 @@ writers use that project while counters are polled; this is not a generic
 concurrent liveness proof. Loki authentication is optional only as a pair: both
 `RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are absent for
 unauthenticated local Loki or both are present for authenticated Loki.
+
+Every completed lane/profile writes one immutable observability report. It
+compares the exact local `correlationId × level` counts in the canonical
+`app.log` window with an aggregated Loki query for the lane/profile service
+name; malformed local lines, missing counts, or extra Loki counts fail the
+profile. The dedicated Bugsink project is shared by the bounded parallel lanes,
+so one run-level artifact snapshots its digested/stored counters after the live
+probe and again after every lane process exits. Any counter delta fails the
+entire assignment. The merger requires all profile reports, live readiness,
+and the zero-delta Bugsink artifact before it reads cell verdicts.
+The merger does not trust the counts copied into a profile report. It re-reads
+the canonical local logs and performs a fresh bounded Loki count and shutdown-
+marker query for the identity-bound service and profile window. Declared local
+counts, declared Loki counts, and live Loki counts must match exactly.
+
+The parent creates one immutable run identity before starting any lane. The
+identity binds source SHA, matrix digest, assignment digest, run UUID, lane ids,
+and profiles. Each profile uses a run-scoped service name. Each lane then writes
+a completion manifest with content digests for its strict readiness/profile
+artifacts; the merger reads files without following symlinks and rejects stale,
+foreign-run, loose, digest-mismatched, or incomplete evidence.
+
+The cell binding is compositional and keeps the full sweep tractable. Each
+phase first binds browser responses to API/worker records by correlation id
+inside the phase window. The event ledger remains attached until tracked API
+requests settle, and file-log collection polls for late correlated writes
+before closing that window. The profile query then batches those correlation ids
+over the enclosing profile window and requires exact `correlationId × level`
+counts in Loki; batching does not remove the per-cell correlation key. Bugsink
+has no passing event to assign to a cell: the dedicated-project counter must
+remain at zero for the complete assignment. Any non-zero Bugsink delta blocks
+all cells before merge.
+
+API shutdown is one awaited sequence. It attempts app close, the process-wide
+file-log barrier and flush, OpenTelemetry shutdown, and Sentry close with
+bounded per-step deadlines; a timeout in one step does not skip the remaining
+drains. Only the API process may then create the immutable profile completion
+artifact, using an identity-bound contract supplied before boot. Any drain or
+completion-write failure exits non-zero and leaves no valid completion. The
+merger additionally requires completion time to follow the actual local
+barrier record and remain inside the profile window.
+
+The browser uses one event collector and one advancing cursor from initial
+navigation through before, action, after, and a final tail. Each phase consumes
+exactly the records between the prior cursor and its atomic current end. The
+collector waits for tracked requests that span a phase boundary; after the last
+phase it drains once more, attaches late events to after evidence, and detaches
+in `finally`. A late console/page/transport/HTTP failure makes the cell non-pass.
 
 Function evidence follows the domain `Given/When/Then`; accessibility combines
 axe with keyboard/focus/name/role checks. Visual evidence is settled Chromium
@@ -186,15 +261,17 @@ The new flow is:
    the clean HEAD/tree, and compiles final ordered executable cases, typed
    inapplicable combinations, total limits, and digest into `MATRIX.json`;
    abort before baseline work if limits are exceeded.
-3. **Prepare and drive:** replay only frozen cases. Capture route-level `before`
-   evidence after login and settle (URL, shallow DOM, console/network state,
-   axe baseline, and visual capture). For each cell, execute one bounded
-   action/fault (including an authorized
-   irreversible action when declared) and capture `after` function,
-   axe/keyboard, visual, console/network/API, and relevant DB/period
-   assertions. Stateful cells reset/reseed and verify the DB oracle before the
-   next action. Append the cell and artifact digests to the Codex-owned
-   baseline ledger.
+3. **Prepare and drive:** replay only frozen cases. A source-bound assignment
+   distributes complete groups across the requested isolated lanes without
+   changing matrix order or cell identity. Each lane captures route-level
+   `before` evidence after login and settle (URL, shallow DOM, console/network
+   state, axe baseline, and visual capture). For each cell, execute one bounded
+   action/fault (including an authorized irreversible action when declared)
+   and capture `after` function, axe/keyboard, visual, console/network/API, and
+   relevant DB/period assertions. Stateful cells reset/reseed only their owning
+   database and verify its oracle before the next action. The validated merger
+   stages and publishes the exact union of lane cells and artifact digests to
+   the Codex-owned baseline ledger.
 4. **Collect and verify:** correlate browser, API, Bugsink/Loki, and other
    environment channels with the Driver timeline. A blind/unreachable channel
    is recorded as blind, not clean. Read-only verifiers try to refute every
@@ -258,8 +335,13 @@ as covered.
   stable semantic keys from role/name/route/intent and retain the raw DOM
   artifact; never use source line numbers as identity.
 - **[Shared-state flakiness]** Sequential drivers can leave a dirty session or
-  database → reset/reseed at profile boundaries and after ambiguous failures;
-  never resume a cell on an unverified state.
+  database → give every concurrent lane exclusive state, reset/reseed at
+  profile boundaries and after ambiguous failures, and never resume a cell on
+  an unverified state. More workers against one seeded database are forbidden.
+- **[Resource saturation]** Extra lanes can exhaust CPU, memory, PostgreSQL
+  connections, ports, or file descriptors → cap API pools, benchmark increasing
+  lane counts with full-group canaries, and select the fastest stable count
+  rather than assuming linear scaling.
 - **[False positives]** AI observations and visual diffs can over-report → keep
   domain specs as the oracle, require compact evidence, and use independent
   read-only adversarial verification before a finding is confirmed.
@@ -298,9 +380,11 @@ baseline collection or candidate adjudication.
    fault seams, and function/a11y/visual evidence adapters. Add only the
    campaign command and archive plumbing; do not alter product routes or API
    middleware.
-3. Run a pilot on one clean SHA and the dedicated E2E database. Verify that the
-   manifest, canary, seed digest, cell schema, environment feedback, and
-   adversarial dispositions are complete before enabling the blocking stop gate.
+3. Run a pilot on one clean SHA and dedicated E2E databases. Verify the
+   manifest, one-cell and full-group lane canaries, resource exclusivity,
+   assignment/merge digests, seed digest, cell schema, environment feedback,
+   and adversarial dispositions before enabling the blocking stop gate. Increase
+   lane count only while measured total throughput improves without instability.
 4. Execute the immutable baseline, adjudicate all candidates, apply approved
    fixes, and run affected cells followed by the full final matrix at the fix
    SHA. Publish the archive report and update the durable capability specs.

@@ -23,15 +23,40 @@ test("preserves an initial-navigation console error and detaches listeners", asy
       type: () => "error",
       text: () => "initial navigation console error",
     });
+    emitter.emit("response", {
+      url: () => "http://127.0.0.1:3102/trpc/report.get",
+      status: () => 503,
+      ok: () => false,
+      headers: () => ({ "x-request-id": "request-1" }),
+      request: () => ({
+        method: () => "GET",
+        resourceType: () => "fetch",
+      }),
+    });
     return Promise.resolve("navigated");
   });
   expect(captured.result).toBe("navigated");
   expect(captured.events.consoleMessages).toEqual([
     { type: "error", text: "initial navigation console error" },
   ]);
+  expect(captured.events.responses).toEqual([
+    {
+      url: "/trpc/report.get",
+      method: "GET",
+      resourceType: "fetch",
+      status: 503,
+      ok: false,
+      correlationId: "request-1",
+      startedAt: expect.any(String) as string,
+      endedAt: expect.any(String) as string,
+      durationMs: 0,
+    },
+  ]);
+  expect(emitter.listenerCount("request")).toBe(0);
   expect(emitter.listenerCount("console")).toBe(0);
   expect(emitter.listenerCount("pageerror")).toBe(0);
   expect(emitter.listenerCount("requestfailed")).toBe(0);
+  expect(emitter.listenerCount("response")).toBe(0);
 });
 
 const SOURCE_SHA = "a".repeat(40);

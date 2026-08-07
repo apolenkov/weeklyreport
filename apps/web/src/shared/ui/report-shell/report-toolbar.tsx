@@ -19,11 +19,13 @@ interface ReportToolbarProps {
   readonly contextControls?: ReactNode;
   // Opt-in pin to viewport top (lead context bar). Default false elsewhere.
   readonly sticky?: boolean;
+  readonly layoutKey?: string;
 }
 
 export function ReportToolbar({
   contextControls,
   sticky = false,
+  layoutKey,
 }: ReportToolbarProps) {
   if (contextControls === undefined) return null;
   const frameClass = sticky
@@ -32,6 +34,8 @@ export function ReportToolbar({
   return (
     <div
       data-testid="report-toolbar"
+      data-layout-key={layoutKey}
+      data-layout-stability={layoutKey ? "position-size" : undefined}
       role="group"
       aria-label="Context controls"
       className={`${frameClass} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}

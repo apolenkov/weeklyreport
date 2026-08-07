@@ -84,15 +84,6 @@ vi.mock("./frozen-case-live-actions.ts", () => ({
   }),
 }));
 
-vi.mock("../matrix/runtime-matrix-evidence.ts", () => ({
-  eventsFor: () => ({
-    consoleMessages: [],
-    pageErrors: [],
-    requestFailures: [],
-    detach: vi.fn(),
-  }),
-}));
-
 const fakeInput = (page: object): FrozenPhaseInput =>
   ({
     page,
@@ -128,10 +119,49 @@ const fakeInput = (page: object): FrozenPhaseInput =>
     route: "/head/report",
     responseStatus: 200,
     phase: "action",
+    eventCursor: {
+      consoleMessages: 0,
+      pageErrors: 0,
+      requestFailures: 0,
+      responses: 0,
+    },
     initialEvents: {
-      consoleMessages: [],
-      pageErrors: [],
-      requestFailures: [],
+      startedAt: "2026-08-07T00:00:00.000Z",
+      cursor: {
+        consoleMessages: 0,
+        pageErrors: 0,
+        requestFailures: 0,
+        responses: 0,
+      },
+      collector: {
+        cursor: () => ({
+          consoleMessages: 0,
+          pageErrors: 0,
+          requestFailures: 0,
+          responses: 0,
+        }),
+        waitForIdle: () => Promise.resolve(),
+        consumeSince: () => ({
+          records: {
+            consoleMessages: [],
+            pageErrors: [],
+            requestFailures: [],
+            responses: [],
+          },
+          cursor: {
+            consoleMessages: 0,
+            pageErrors: 0,
+            requestFailures: 0,
+            responses: 0,
+          },
+        }),
+        snapshotSince: () => ({
+          consoleMessages: [],
+          pageErrors: [],
+          requestFailures: [],
+          responses: [],
+        }),
+      },
     },
   }) as unknown as FrozenPhaseInput;
 
@@ -189,7 +219,7 @@ describe("frozen action evidence capture", () => {
     const capture = captureFrozenPhase(fakeInput(page));
     await vi.advanceTimersByTimeAsync(harness.delayMs);
     const result = await capture;
-    expect(result.action).toHaveLength(1);
+    expect(result.bundle.action).toHaveLength(1);
 
     expect(harness.events).toEqual([
       "action-result",
@@ -218,7 +248,7 @@ describe("frozen action evidence capture", () => {
     await vi.advanceTimersByTimeAsync(harness.delayMs);
     const result = await capture;
 
-    expect(result.action).toHaveLength(1);
+    expect(result.bundle.action).toHaveLength(1);
     expect(harness.actionSucceeded).toBe(false);
   });
 });

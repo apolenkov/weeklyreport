@@ -1,5 +1,9 @@
 import { captureRouteEvidence } from "../evidence/evidence-capture.ts";
-import type { RuntimeEvents } from "../matrix/runtime-matrix-evidence.ts";
+import { expectedFaultFor } from "../evidence/expected-fault.ts";
+import type {
+  RuntimeEventCursor,
+  RuntimeEvents,
+} from "../matrix/runtime-matrix-evidence.ts";
 import type { RuntimeSurfaceObservation } from "../preflight/runtime-surface-expectation.ts";
 import { EXPECTED_LEAD_FORM_UNAVAILABLE_SURFACE } from "../preflight/runtime-surface-expectation.ts";
 import { type EvidenceBundle } from "../source/contracts.ts";
@@ -8,16 +12,26 @@ import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
 
 const HTTP_OK_LIMIT = 400;
 
+export type CapturedPhaseEvidence = Readonly<{
+  readonly bundle: EvidenceBundle;
+  readonly cursor: RuntimeEventCursor;
+}>;
+
 export const captureEvidence = async (
   input: FrozenPhaseInput,
   listeners: RuntimeEvents,
+  eventCursor: RuntimeEventCursor,
   inventory: DomInventory,
   phaseStatus: number | null,
   actionSucceeded: boolean,
   unavailableSurfaceExpected: boolean,
   surfaceObservation: RuntimeSurfaceObservation | undefined,
-): Promise<EvidenceBundle> =>
-  (
+  phaseStartedAt: string,
+): Promise<CapturedPhaseEvidence> => {
+  await listeners.waitForIdle();
+  const events = listeners.consumeSince(eventCursor);
+  const expectedFault = expectedFaultFor(input.matrixCase, input.phase);
+  const bundle = (
     await captureRouteEvidence({
       page: input.page,
       archiveRoot: input.runtime.archiveRoot,
@@ -28,9 +42,14 @@ export const captureEvidence = async (
       resolvedRoute: input.matrixCase.resolvedRoute,
       cellId: input.matrixCase.caseId,
       inventory,
-      consoleMessages: listeners.consoleMessages,
-      pageErrors: listeners.pageErrors,
-      requestFailures: listeners.requestFailures,
+      consoleMessages: events.records.consoleMessages,
+      pageErrors: events.records.pageErrors,
+      requestFailures: events.records.requestFailures,
+      responses: events.records.responses,
+      ...(expectedFault === undefined ? {} : { expectedFault }),
+      settleRuntimeEvents: () => Promise.resolve(),
+      serverLogPath: input.runtime.apiLogPath,
+      phaseStartedAt,
       responseStatus: phaseStatus,
       capturedAt: new Date().toISOString(),
       capturePhase: input.phase,
@@ -59,3 +78,5 @@ export const captureEvidence = async (
       },
     })
   ).bundle;
+  return { bundle, cursor: events.cursor };
+};

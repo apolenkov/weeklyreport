@@ -8,18 +8,18 @@ import {
   type EnvironmentFeedbackDocument,
 } from "./environment-feedback.ts";
 import { apiLogChannel } from "./environment-observer-api-log.ts";
-import {
-  type BugsinkProbeConfig,
-  probeBugsinkChannel,
-} from "./environment-observer-bugsink.ts";
 import { driverChannel } from "./environment-observer-events.ts";
 import {
   type LokiProbeConfig,
   probeLokiChannel,
 } from "./environment-observer-probes.ts";
+import {
+  type BugsinkProbeConfig,
+  probeBugsinkChannel,
+} from "./observability/environment-observer-bugsink.ts";
 
-export type { BugsinkProbeConfig } from "./environment-observer-bugsink.ts";
 export type { LokiProbeConfig } from "./environment-observer-probes.ts";
+export type { BugsinkProbeConfig } from "./observability/environment-observer-bugsink.ts";
 
 const NETWORK_KIND = "network" as const;
 

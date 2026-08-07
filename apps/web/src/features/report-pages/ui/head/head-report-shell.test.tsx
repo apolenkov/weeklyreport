@@ -162,6 +162,17 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
       ).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId("head-slides-client-stub")
+        .closest("[data-layout-key]"),
+    ).toHaveAttribute("data-layout-key", "report-page");
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveAttribute("data-layout-key", "weekly-report-header");
+    expect(
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toHaveAttribute("data-layout-key", "report-context-toolbar");
   });
 
   it("slides mode drops the Open focused report link and hosts Publish & Lock", () => {
@@ -175,6 +186,30 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
         screen.getByRole("group", { name: "Document actions" }),
       ).getByTestId("head-publish-lock-action-stub"),
     ).toBeInTheDocument();
+  });
+
+  it("reserves period navigation and document-action geometry while slides load", () => {
+    vi.mocked(useQuery).mockImplementation(() =>
+      makeQueryState({ data: undefined, isLoading: true }),
+    );
+
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveClass("min-h-36", "sm:min-h-0");
+
+    expect(
+      screen.getByTestId("head-period-navigation-skeleton"),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("group", { name: "Document actions" })
+        .querySelectorAll('[data-slot="skeleton"]'),
+    ).toHaveLength(2);
+    expect(
+      screen.queryByTestId("head-publish-lock-action-stub"),
+    ).not.toBeInTheDocument();
   });
 });
 

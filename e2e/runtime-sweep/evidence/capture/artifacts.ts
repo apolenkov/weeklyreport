@@ -8,6 +8,7 @@ import { type EvidenceRef, evidenceRefSchema } from "../../source/contracts.ts";
 import { makeArtifactId } from "../../support/ids.ts";
 import type {
   EvidenceCaptureInput,
+  GeometryElement,
   GeometrySnapshot,
 } from "../evidence-types.ts";
 
@@ -17,6 +18,26 @@ export type ArtifactSpec = readonly [
   EvidenceRef["kind"],
   EvidenceRef["dimension"],
 ];
+
+type RawGeometryElement = Readonly<{
+  index: number;
+  tagName: string;
+  role: string | null;
+  textContent: string;
+  ariaLabel: string | null;
+  layoutKey: string | null;
+  layoutStability: string | null;
+  bounds: Readonly<{ x: number; y: number; width: number; height: number }>;
+  style: Readonly<{
+    display: string;
+    visibility: string;
+    opacity: string;
+  }>;
+  hiddenByAncestor: boolean;
+}>;
+
+const GEOMETRY_SELECTOR =
+  "a[href],button,input,select,textarea,option,summary,main,header,nav,aside,[contenteditable]:not([contenteditable='false']),[role],[data-layout-key],[aria-busy='true']";
 
 export const digest = (content: Uint8Array): string =>
   createHash("sha256").update(content).digest("hex");
@@ -81,57 +102,107 @@ export const writeJson = async (
   });
 };
 
-export const captureGeometry = (page: Page): Promise<GeometrySnapshot> =>
-  page.evaluate(() => {
-    const elements = Array.from(
-      document.querySelectorAll(
-        "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]",
-      ),
-    ).map((element, index) => {
+const rawGeometry = (page: Page): Promise<readonly RawGeometryElement[]> =>
+  page.locator(GEOMETRY_SELECTOR).evaluateAll((elements) =>
+    elements.map((element, index) => {
       const bounds = element.getBoundingClientRect();
       const style = window.getComputedStyle(element);
-      const layoutVisible =
-        !element.closest("[hidden],[aria-hidden='true']") &&
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        style.visibility !== "collapse" &&
-        Number(style.opacity) !== 0;
-      const values = [bounds.x, bounds.y, bounds.width, bounds.height];
-      const malformed = values.some((value) => !Number.isFinite(value));
-      const zeroSize =
-        layoutVisible && (bounds.width <= 0 || bounds.height <= 0);
-      const ariaLabel = element.getAttribute("aria-label");
+      const dataset =
+        element instanceof HTMLElement || element instanceof SVGElement
+          ? element.dataset
+          : undefined;
       return {
         index,
         tagName: element.tagName.toLowerCase(),
         role: element.getAttribute("role"),
-        name: ariaLabel ?? element.textContent.replaceAll(/\s+/g, " ").trim(),
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height,
-        layoutVisible,
-        visible: layoutVisible && !malformed && !zeroSize,
-        issue: malformed
-          ? `element ${index} has malformed geometry`
-          : zeroSize
-            ? `element ${index} has zero-size layout`
-            : null,
+        textContent: element.textContent,
+        ariaLabel: element.getAttribute("aria-label"),
+        layoutKey: dataset?.layoutKey ?? null,
+        layoutStability: dataset?.layoutStability ?? null,
+        bounds: {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+        },
+        style: {
+          display: style.display,
+          visibility: style.visibility,
+          opacity: style.opacity,
+        },
+        hiddenByAncestor:
+          element.closest("[hidden],[aria-hidden='true']") !== null,
       };
-    });
-    const issues = elements.flatMap(({ issue }) =>
-      issue === null ? [] : [issue],
-    );
-    return {
-      viewport: { width: innerWidth, height: innerHeight },
-      document: {
-        scrollWidth: document.documentElement.scrollWidth,
-        scrollHeight: document.documentElement.scrollHeight,
-      },
-      elements: elements.map(({ issue: _issue, ...element }) => element),
-      issues,
-    };
-  });
+    }),
+  );
+
+const stableLayoutFor = (
+  value: string | null,
+): GeometryElement["layoutStability"] =>
+  value === "position-size" || value === "position-width" ? value : null;
+
+const layoutVisibleFor = (raw: RawGeometryElement): boolean =>
+  !raw.hiddenByAncestor &&
+  raw.style.display !== "none" &&
+  raw.style.visibility !== "hidden" &&
+  raw.style.visibility !== "collapse" &&
+  Number(raw.style.opacity) !== 0;
+
+const geometryElementFor = (
+  raw: RawGeometryElement,
+): GeometryElement & Readonly<{ issue: string | null }> => {
+  const layoutVisible = layoutVisibleFor(raw);
+  const malformed = Object.values(raw.bounds).some(
+    (value) => !Number.isFinite(value),
+  );
+  const zeroSize =
+    layoutVisible && (raw.bounds.width <= 0 || raw.bounds.height <= 0);
+  const issue = malformed
+    ? `element ${raw.index} has malformed geometry`
+    : zeroSize
+      ? `element ${raw.index} has zero-size layout`
+      : null;
+  return {
+    index: raw.index,
+    tagName: raw.tagName,
+    role: raw.role,
+    name: raw.ariaLabel ?? raw.textContent.replaceAll(/\s+/g, " ").trim(),
+    layoutKey: raw.layoutKey,
+    layoutStability: stableLayoutFor(raw.layoutStability),
+    ...raw.bounds,
+    layoutVisible,
+    visible: layoutVisible && !malformed && !zeroSize,
+    issue,
+  };
+};
+
+const pageGeometry = (page: Page) =>
+  page.evaluate(() => ({
+    viewport: { width: innerWidth, height: innerHeight },
+    document: {
+      scrollWidth: document.documentElement.scrollWidth,
+      scrollHeight: document.documentElement.scrollHeight,
+    },
+    loading: {
+      busyCount: document.querySelectorAll('[aria-busy="true"]').length,
+      skeletonCount: document.querySelectorAll('[data-slot="skeleton"]').length,
+    },
+  }));
+
+export const captureGeometry = async (
+  page: Page,
+): Promise<GeometrySnapshot> => {
+  const [rawElements, geometry] = await Promise.all([
+    rawGeometry(page),
+    pageGeometry(page),
+  ]);
+  const elements = rawElements.map(geometryElementFor);
+  return {
+    ...geometry,
+    elements: elements.map(({ issue: _issue, ...element }) => element),
+    issues: elements.flatMap(({ issue }) => (issue === null ? [] : [issue])),
+  };
+};
 
 export const captureScreenshot = async (
   input: EvidenceCaptureInput,

@@ -101,11 +101,13 @@ export async function runConcurrencyCase(
           consoleMessages: [],
           pageErrors: [],
           requestFailures: [],
+          responses: [],
         },
         concurrentEvents: prepared.events[1] ?? {
           consoleMessages: [],
           pageErrors: [],
           requestFailures: [],
+          responses: [],
         },
       });
     } finally {

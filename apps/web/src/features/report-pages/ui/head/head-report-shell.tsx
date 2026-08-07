@@ -1,6 +1,7 @@
 "use client";
 
 import type { WeeklyReportGetResponse } from "@customreport/shared";
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useContext, useMemo } from "react";
 
@@ -73,12 +74,14 @@ function HeadContextControls({
   mode,
   urlState,
   historyError,
+  historyLoading,
 }: {
   readonly periods: readonly ReportPeriod[];
   readonly reportId: string;
   readonly mode: HeadReportShellProps["mode"];
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
+  readonly historyLoading: boolean;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     urlState;
@@ -98,6 +101,8 @@ function HeadContextControls({
         >
           Period history unavailable
         </span>
+      ) : historyLoading ? (
+        <HeadPeriodNavigatorSkeleton />
       ) : periods.length > 0 ? (
         <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
       ) : null}
@@ -118,17 +123,46 @@ function HeadContextControls({
   );
 }
 
+function HeadPeriodNavigatorSkeleton() {
+  return (
+    <div
+      data-testid="head-period-navigation-skeleton"
+      className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto"
+      aria-hidden="true"
+    >
+      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-[var(--toolbar-control-h)] w-64 max-w-[55vw] rounded-lg" />
+      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+    </div>
+  );
+}
+
+function HeadDocumentActionsSkeleton() {
+  return (
+    <>
+      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-[var(--toolbar-control-h)] w-36 rounded-[var(--radius-pill)]" />
+    </>
+  );
+}
+
 function SlidesModeHeader({
   reportId,
   headerContextLabel,
   exportPdf,
+  isLoading,
 }: {
   readonly reportId: string;
   readonly headerContextLabel: React.ReactNode;
   readonly exportPdf: React.ReactNode;
+  readonly isLoading: boolean;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4">
+    <header
+      data-layout-key="weekly-report-header"
+      data-layout-stability="position-size"
+      className="flex min-h-36 flex-wrap items-center justify-between gap-4 sm:min-h-0"
+    >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="min-w-0">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
@@ -139,8 +173,14 @@ function SlidesModeHeader({
       </div>
       {/* Header hosts document actions; deck already covers slide nav. */}
       <DocumentActionGroup>
-        {exportPdf}
-        <HeadPublishLockAction reportId={reportId} />
+        {isLoading ? (
+          <HeadDocumentActionsSkeleton />
+        ) : (
+          <>
+            {exportPdf}
+            <HeadPublishLockAction reportId={reportId} />
+          </>
+        )}
       </DocumentActionGroup>
     </header>
   );
@@ -151,6 +191,7 @@ interface HeadPeriodData {
   readonly periods: readonly ReportPeriod[];
   readonly displayed: WeeklyReportGetResponse | undefined;
   readonly historyError: boolean;
+  readonly isLoading: boolean;
 }
 
 // History omits the active week, so the displayed and active periods are fetched
@@ -182,6 +223,7 @@ function useHeadPeriodData(
     periods,
     displayed: displayedQ.data,
     historyError: historyQ.isError,
+    isLoading: historyQ.isLoading || displayedQ.isLoading || activeQ.isLoading,
   };
 }
 
@@ -205,7 +247,7 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   // Scope + archive filter in the URL so refresh/shared links restore them.
   const urlState = useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
-  const { periods, displayed, historyError } = useHeadPeriodData(
+  const { periods, displayed, historyError, isLoading } = useHeadPeriodData(
     reportId,
     urlState.includeArchive,
   );
@@ -219,20 +261,29 @@ export function HeadReportShell({
       mode={mode}
       urlState={urlState}
       historyError={historyError}
+      historyLoading={isLoading}
     />
   );
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      data-layout-key={mode === "slides" ? "report-page" : undefined}
+      data-layout-stability={mode === "slides" ? "position-width" : undefined}
+    >
       {mode === "slides" ? (
         <>
           <SlidesModeHeader
             reportId={reportId}
             headerContextLabel={headerContextLabel}
             exportPdf={exportPdf}
+            isLoading={isLoading}
           />
           {/* Slides has no WeeklyReportPage; the shell owns the toolbar. */}
-          <ReportToolbar contextControls={contextControls} />
+          <ReportToolbar
+            contextControls={contextControls}
+            layoutKey="report-context-toolbar"
+          />
           <HeadSlidesClient reportId={reportId} scope={urlState.scope} />
         </>
       ) : (
@@ -244,6 +295,7 @@ export function HeadReportShell({
             documentActionsLeading={exportPdf}
             contextControls={contextControls}
             headerContextLabel={headerContextLabel}
+            loadingAudience="head"
           />
         </div>
       )}

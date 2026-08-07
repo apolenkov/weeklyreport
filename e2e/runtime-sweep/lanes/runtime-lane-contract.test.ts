@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   createRuntimeLaneAssignment,
   type RuntimeLaneAssignment,
+  runtimeLaneResources,
 } from "./runtime-lane-contract.ts";
 
 const DIGEST = "a".repeat(64);
 const SOURCE_SHA = "b".repeat(40);
 const ROOT = "/Users/runtime-test/customreport-runtime-r57";
 
-const body = (): Omit<RuntimeLaneAssignment, "assignmentDigest"> => ({
+const body = (
+  laneCount = 3,
+): Omit<RuntimeLaneAssignment, "assignmentDigest"> => ({
   artifact: "RUNTIME_LANE_ASSIGNMENT",
   version: 1,
   sourceSha: SOURCE_SHA,
@@ -23,35 +26,13 @@ const body = (): Omit<RuntimeLaneAssignment, "assignmentDigest"> => ({
     MANIFEST: DIGEST,
   },
   profiles: ["minimal"],
-  lanes: [
-    {
-      laneId: "a",
-      databaseName: "customreport_e2e_lane_a_test",
-      redisPort: 6381,
-      apiPort: 3112,
-      webPort: 3115,
-      archiveRoot: `${ROOT}/lanes/one-cell/a`,
-      groups: [{ profile: "minimal", caseIds: ["case-a"] }],
-    },
-    {
-      laneId: "b",
-      databaseName: "customreport_e2e_lane_b_test",
-      redisPort: 6382,
-      apiPort: 3122,
-      webPort: 3125,
-      archiveRoot: `${ROOT}/lanes/one-cell/b`,
-      groups: [{ profile: "minimal", caseIds: ["case-b"] }],
-    },
-    {
-      laneId: "c",
-      databaseName: "customreport_e2e_lane_c_test",
-      redisPort: 6383,
-      apiPort: 3132,
-      webPort: 3135,
-      archiveRoot: `${ROOT}/lanes/one-cell/c`,
-      groups: [{ profile: "minimal", caseIds: ["case-c"] }],
-    },
-  ],
+  lanes: runtimeLaneResources(laneCount).map((resource) => ({
+    ...resource,
+    archiveRoot: `${ROOT}/lanes/one-cell/${resource.laneId}`,
+    groups: [
+      { profile: "minimal" as const, caseIds: [`case-${resource.laneId}`] },
+    ],
+  })),
 });
 
 describe("runtime lane assignment contract", () => {
@@ -64,6 +45,23 @@ describe("runtime lane assignment contract", () => {
       "c",
     ]);
     expect(assignment.assignmentDigest).toHaveLength(DIGEST.length);
+  });
+
+  it.each([10, 15])(
+    "freezes %i contiguous canonical isolated resource tuples",
+    (laneCount) => {
+      const assignment = createRuntimeLaneAssignment(body(laneCount));
+      const last = assignment.lanes.at(-1);
+
+      expect(assignment.lanes).toHaveLength(laneCount);
+      expect(last).toMatchObject(runtimeLaneResources(laneCount).at(-1) ?? {});
+    },
+  );
+
+  it("rejects lane counts outside the supported range", () => {
+    expect(() => runtimeLaneResources(0)).toThrow(/integer from 1 to 15/u);
+    expect(() => runtimeLaneResources(16)).toThrow(/integer from 1 to 15/u);
+    expect(() => runtimeLaneResources(1.5)).toThrow(/integer from 1 to 15/u);
   });
 
   it("rejects a lane resource tuple mismatch", () => {

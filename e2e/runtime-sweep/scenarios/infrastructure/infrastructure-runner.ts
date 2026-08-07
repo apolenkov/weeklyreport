@@ -251,6 +251,7 @@ const captureInfrastructurePhases = async (
   controls: ReturnType<typeof controlEvidence>,
 ): Promise<FrozenCaseReplayResult> =>
   captureFrozenCasePhases({
+    archiveRoot: input.archiveRoot,
     matrixCase: input.matrixCase,
     oracle: input.oracle,
     controls,

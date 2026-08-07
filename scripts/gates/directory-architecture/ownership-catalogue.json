@@ -484,6 +484,22 @@
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {
+      "id": "runtime-preflight-observability",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/observability/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "preflight-observability",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/observability/$1"
+    },
+    {
+      "id": "runtime-preflight-observability-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/observability/(.+\\.test\\.ts)$",
+      "concern": "preflight-observability",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/observability/$1"
+    },
+    {
       "id": "runtime-preflight-target-tests",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/target/(.+\\.test\\.ts)$",
@@ -542,7 +558,7 @@
     {
       "id": "runtime-evidence",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:evidence/)?((?:evidence-|failure-summary|ledger|runtime-event-summary|finalize-runtime-coverage)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:evidence/)?((?:evidence-|expected-fault|failure-summary|ledger|runtime-event-summary|server-log-evidence|transition-visual|finalize-runtime-coverage)[^/]*)$",
       "concern": "evidence",
       "role": "implementation",
       "target": "e2e/runtime-sweep/evidence/$1"
@@ -562,6 +578,30 @@
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/$1"
+    },
+    {
+      "id": "runtime-live-control-evidence",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/evidence/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "live-replay-evidence",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/evidence/$1"
+    },
+    {
+      "id": "runtime-live-control-evidence-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/evidence/(.+\\.test\\.ts)$",
+      "concern": "live-replay-evidence",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/evidence/$1"
+    },
+    {
+      "id": "runtime-live-control-test-fixtures",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/test-fixtures/(.+\\.test-fixture\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/test-fixtures/$1"
     },
     {
       "id": "runtime-control-target",

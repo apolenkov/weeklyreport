@@ -33,6 +33,7 @@ const envObjectSchema = z.object({
   CUSTOMREPORT_REPO_ROOT: z.string().optional(),
   LOG_LEVEL: logLevelSchema,
   LOG_DIR: z.string().optional(),
+  RUNTIME_SWEEP_SHUTDOWN_COMPLETION: z.string().optional(),
 
   // Auth / JWT. Required (min 32): the JWT signer is built at boot in EVERY
   // mode — dev-login still issues a session JWT — so a config without it

@@ -35,7 +35,7 @@ const currentDatabase = async (databaseUrl: string): Promise<string> => {
   }
 };
 
-const redisRunId = (port: number): Promise<string> =>
+export const runtimeLaneRedisRunId = (port: number): Promise<string> =>
   new Promise((resolve, reject) => {
     const socket = net.createConnection({ host: "127.0.0.1", port });
     const chunks: Buffer[] = [];
@@ -78,7 +78,7 @@ export async function assertRuntimeLaneReadiness(
     readonly assignment: RuntimeLaneAssignment;
     readonly baseDatabaseUrl: string;
   }>,
-): Promise<void> {
+): Promise<ReadonlyMap<string, string>> {
   const databases = await Promise.all(
     input.assignment.lanes.map(({ databaseName }) =>
       currentDatabase(
@@ -93,14 +93,24 @@ export async function assertRuntimeLaneReadiness(
       );
   });
   const redisRunIds = await Promise.all(
-    input.assignment.lanes.map(({ redisPort }) => redisRunId(redisPort)),
+    input.assignment.lanes.map(({ redisPort }) =>
+      runtimeLaneRedisRunId(redisPort),
+    ),
   );
   if (new Set(redisRunIds).size !== redisRunIds.length)
-    throw new Error("Runtime lanes must use three distinct Redis instances");
+    throw new Error("Runtime lanes must use distinct Redis instances");
   await Promise.all(
     input.assignment.lanes.flatMap(({ apiPort, webPort }) => [
       assertPortFree(apiPort),
       assertPortFree(webPort),
     ]),
+  );
+  return new Map(
+    input.assignment.lanes.map(({ laneId }, index) => {
+      const runId = redisRunIds[index];
+      if (runId === undefined)
+        throw new Error(`Runtime lane ${laneId} Redis identity is missing`);
+      return [laneId, runId] as const;
+    }),
   );
 }

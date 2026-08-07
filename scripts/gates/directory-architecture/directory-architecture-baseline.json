@@ -9,8 +9,8 @@
     },
     "e2e/runtime-sweep": {
       "gitTree": "fb6a68ebcf79344a59977630086f8e2220bbf866",
-      "pathDigest": "4506e94fc9f8e200d999d03db3ec42d2889f3b0c0ff9712000d9611218c7bfd9",
-      "trackedFiles": 224
+      "pathDigest": "c03fbf09a92e6d3d00551b984c5b5095d77aafa3630245813a3b0010b46103ca",
+      "trackedFiles": 265
     },
     "prisma": {
       "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
@@ -67,6 +67,7 @@
     "apps/web/src/features/review/ui": 33,
     "apps/web/src/features/slides/model": 34,
     "apps/web/src/features/slides/ui": 37,
+    "e2e/runtime-sweep/lanes": 32,
     "e2e/runtime-sweep/replay": 58
   },
   "boundedFlatExceptions": [
@@ -134,6 +135,11 @@
       "directory": "apps/web/src/features/slides/ui",
       "baseline": 37,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "e2e/runtime-sweep/lanes",
+      "baseline": 32,
+      "reason": "The runtime lane files share one bounded resource, lease, process, and observability lifecycle; the count may only shrink."
     },
     {
       "directory": "e2e/runtime-sweep/replay",

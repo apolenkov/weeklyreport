@@ -61,7 +61,11 @@ function ViewerSlidesView({
 }) {
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header
+        data-layout-key="weekly-report-header"
+        data-layout-stability="position-size"
+        className="flex flex-wrap items-center justify-between gap-4"
+      >
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
@@ -70,7 +74,10 @@ function ViewerSlidesView({
         </div>
         {chrome.exportPdf}
       </header>
-      <ReportToolbar contextControls={chrome.contextControls} />
+      <ReportToolbar
+        contextControls={chrome.contextControls}
+        layoutKey="report-context-toolbar"
+      />
       <HeadSlidesClient
         reportId={reportId}
         scope={reportScope}
@@ -94,7 +101,11 @@ function ViewerReportBody({
   readonly chrome: ViewerChrome;
 }) {
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      data-layout-key={mode === "slides" ? "report-page" : undefined}
+      data-layout-stability={mode === "slides" ? "position-width" : undefined}
+    >
       {mode === "slides" ? (
         <ViewerSlidesView
           reportId={reportId}
@@ -110,6 +121,7 @@ function ViewerReportBody({
             documentActionsLeading={chrome.exportPdf}
             contextControls={chrome.contextControls}
             headerContextLabel={chrome.headerContextLabel}
+            loadingAudience="viewer"
           />
         </div>
       )}

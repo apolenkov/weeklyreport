@@ -7,9 +7,9 @@ import { z } from "zod";
 
 import { NO_CORRELATION_ID } from "./actor-sentinels.js";
 import {
-  createFileSink,
   enqueueWrite,
   type FileSink,
+  processFileSink,
 } from "./logger-file-sink.js";
 
 // Single source of truth for the log-level domain: the env schema validates
@@ -154,7 +154,7 @@ class AppLoggerImpl implements AppLogger {
     if (inheritedSink) {
       this.fileSink = inheritedSink;
     } else if (this.logDir) {
-      this.fileSink = createFileSink(this.logDir, {
+      this.fileSink = processFileSink(this.logDir, {
         maxBytes: this.maxBytes,
         maxAgeDays: this.maxAgeDays,
       });

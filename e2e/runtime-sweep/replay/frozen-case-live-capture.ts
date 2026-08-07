@@ -1,8 +1,4 @@
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
-import {
-  eventsFor,
-  type RuntimeEvents,
-} from "../matrix/runtime-matrix-evidence.ts";
 import { type EvidenceBundle, type EvidenceRef } from "../source/contracts.ts";
 import type { PreparedRuntimeState } from "../support/state-preparation.ts";
 import { inventoryDom } from "./dom-inventory.ts";
@@ -19,6 +15,7 @@ import {
   runAction,
 } from "./frozen-case-live-actions.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
+import type { CapturedPhaseEvidence } from "./frozen-case-live-phase-evidence.ts";
 import { captureEvidence } from "./frozen-case-live-phase-evidence.ts";
 import { navigate } from "./navigation.ts";
 
@@ -104,28 +101,6 @@ const actionOutcomeForPhase = async (
     : settleFrozenActionNavigation(input.page, boundary, outcome);
 };
 
-const phaseListenersFor = (
-  input: FrozenPhaseInput,
-  listeners: RuntimeEvents,
-): RuntimeEvents =>
-  input.phase === "before"
-    ? {
-        ...listeners,
-        consoleMessages: [
-          ...input.initialEvents.consoleMessages,
-          ...listeners.consoleMessages,
-        ],
-        pageErrors: [
-          ...input.initialEvents.pageErrors,
-          ...listeners.pageErrors,
-        ],
-        requestFailures: [
-          ...input.initialEvents.requestFailures,
-          ...listeners.requestFailures,
-        ],
-      }
-    : listeners;
-
 const actionSucceededFor = (
   input: FrozenPhaseInput,
   action: ReturnType<typeof actionFor>,
@@ -155,24 +130,60 @@ const publishActionTarget = (
   if (target !== undefined) input.onActionTarget?.(target);
 };
 
+const phaseStartedAtFor = (input: FrozenPhaseInput): string =>
+  input.phase === "before"
+    ? input.initialEvents.startedAt
+    : new Date().toISOString();
+
+const navigationBoundaryFor = (
+  input: FrozenPhaseInput,
+  action: ReturnType<typeof actionFor>,
+): FrozenActionNavigationBoundary | undefined =>
+  input.phase === "action" &&
+  action !== undefined &&
+  action.operation !== "navigate"
+    ? beginFrozenActionNavigation(input.page, action.controlKey)
+    : undefined;
+
+const navigationStatusFor = async (
+  input: FrozenPhaseInput,
+  action: ReturnType<typeof actionFor>,
+): Promise<number | null | undefined> =>
+  input.phase === "action" && action?.operation === "navigate"
+    ? navigate(input.page, input.route)
+    : undefined;
+
+const withActionEvidence = async (
+  input: FrozenPhaseInput,
+  captured: EvidenceBundle,
+  outcome: ActionOutcome | undefined,
+): Promise<EvidenceBundle> => {
+  if (input.phase !== "action") return captured;
+  const [controlRef, database] = await Promise.all([
+    actionRef(input.matrixCase, outcome, input.runtime),
+    databaseRef(input.matrixCase, input.prepared, input.runtime),
+  ]);
+  return {
+    ...captured,
+    action: [
+      ...captured.action,
+      ...(controlRef === undefined ? [] : [controlRef]),
+      ...(database === undefined ? [] : [database]),
+    ],
+  };
+};
+
 export const captureFrozenPhase = async (
   input: FrozenPhaseInput,
-): Promise<EvidenceBundle> => {
-  const listeners = eventsFor(input.page);
+): Promise<CapturedPhaseEvidence> => {
+  const phaseStartedAt = phaseStartedAtFor(input);
+  const listeners = input.initialEvents.collector;
   const action = actionFor(input.matrixCase.execution);
-  const navigationBoundary =
-    input.phase === "action" &&
-    action !== undefined &&
-    action.operation !== "navigate"
-      ? beginFrozenActionNavigation(input.page, action.controlKey)
-      : undefined;
+  const navigationBoundary = navigationBoundaryFor(input, action);
   try {
     const outcome = await actionOutcomeForPhase(input, navigationBoundary);
     publishActionTarget(input, outcome);
-    const navigationStatus =
-      input.phase === "action" && action?.operation === "navigate"
-        ? await navigate(input.page, input.route)
-        : undefined;
+    const navigationStatus = await navigationStatusFor(input, action);
     const inventory = await inventoryDom(input.page);
     input.onInventory?.(inventory);
     const phaseStatus = navigationStatus ?? input.responseStatus;
@@ -181,31 +192,22 @@ export const captureFrozenPhase = async (
       input,
       outcome,
     );
-    const phaseListeners = phaseListenersFor(input, listeners);
     const captured = await captureEvidence(
       input,
-      phaseListeners,
+      listeners,
+      input.eventCursor,
       inventory,
       phaseStatus,
       actionSucceeded,
       unavailableSurfaceExpected,
       outcome?.surfaceObservation,
+      phaseStartedAt,
     );
-    if (input.phase !== "action") return captured;
-    const [controlRef, database] = await Promise.all([
-      actionRef(input.matrixCase, outcome, input.runtime),
-      databaseRef(input.matrixCase, input.prepared, input.runtime),
-    ]);
     return {
-      ...captured,
-      action: [
-        ...captured.action,
-        ...(controlRef === undefined ? [] : [controlRef]),
-        ...(database === undefined ? [] : [database]),
-      ],
+      bundle: await withActionEvidence(input, captured.bundle, outcome),
+      cursor: captured.cursor,
     };
   } finally {
     navigationBoundary?.observer.cancel();
-    listeners.detach();
   }
 };

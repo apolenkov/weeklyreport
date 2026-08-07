@@ -148,6 +148,45 @@ unseeded randomness MUST NOT alter the matrix.
 - **AND** a route is not counted as exhaustive while any declared boundary
   cell is pending or omitted
 
+### Requirement: Parallel deterministic replay uses exclusive lanes
+
+The frozen executable matrix MAY be replayed through bounded parallel lanes.
+Every active lane SHALL own a distinct disposable E2E database, Redis instance,
+API port, web port, browser process, Next.js dist directory, queue namespace,
+log/PDF directory, and archive subtree. Each lane SHALL use exactly one
+Playwright worker and execute its assigned cells sequentially. A database or
+mutable browser/server resource MUST NOT be shared by concurrent lanes.
+
+The planner SHALL assign every selected frozen case to exactly one lane without
+changing its cell identity. The canonical merger SHALL reject duplicate,
+missing, extra, stale-SHA, non-pass, digest-mismatched, or cross-lane evidence
+before publishing. A full run SHALL prove that the merged union equals the
+complete executable matrix. Lane count and assignment digest MAY change without
+changing `MATRIX.json` or its digest.
+
+#### Scenario: isolated lanes replay one frozen matrix
+
+- **WHEN** the operator requests more than one deterministic lane
+- **THEN** readiness proves distinct databases, Redis identities, service ports,
+  output roots, and source-bound assignments before any reset or browser starts
+- **AND** every lane runs serially against only its own resources
+
+#### Scenario: the merger fails closed on incomplete parallel output
+
+- **WHEN** a lane fails, exits without an assigned cell, writes an unexpected
+  cell, references stale or missing evidence, or duplicates another lane's cell
+- **THEN** all owned processes are terminated and canonical publication is
+  refused
+- **AND** the partial lane archives remain available for diagnosis
+
+#### Scenario: the selected lane count is benchmarked rather than assumed
+
+- **WHEN** the operator increases the lane count for a machine
+- **THEN** one-cell and full-group canaries prove correctness, clean teardown,
+  and positive measured throughput scaling before the full run
+- **AND** a slower or resource-unstable count is rejected in favor of the
+  fastest stable measured count
+
 ### Requirement: Controlled faults have explicit recovery or non-mutation oracles
 
 Fault injection for the sweep SHALL be deterministic, disposable, and scoped to
@@ -174,23 +213,68 @@ uncaught error, mutation, or missing recovery signal is a failed cell.
 - **THEN** the cell receives a `fail` verdict with the failure evidence
 - **AND** the event cannot be dismissed as a passing fault case
 
-### Requirement: Function, accessibility, and visual evidence is SHA-bound
+#### Scenario: a controlled fault allows only its exact event
+
+- **WHEN** a fault phase observes the declared operation, method, status or
+  transport failure, and exact count
+- **THEN** only that matching event is classified as expected
+- **AND** an additional HTTP response, transport failure, server error, or the
+  wrong count fails the cell
+
+### Requirement: Function, accessibility, observability, and visual evidence is SHA-bound
 
 Every terminal cell SHALL attach evidence for each applicable oracle dimension:
 functional behavior (action plus machine-checkable state/response assertion),
-accessibility (axe result plus relevant role/name/status observations), and
-visual outcome (a screenshot at Chromium 1440x900 compared with the immutable
-baseline or an explicit visual oracle). Each artifact SHALL include the cell
-id, source SHA, profile, role, route, state, action, and capture timestamp; the
-ledger SHALL reject an artifact that is missing its binding or whose SHA differs
-from the campaign.
+accessibility (axe result plus relevant role/name/status observations),
+observability (browser console/page errors, request timeline, API and worker
+logs, and correlated Bugsink/Loki events), and visual outcome. Visual evidence
+SHALL include stable screenshots immediately before and after every bounded
+transition at Chromium 1440x900, compared with the immutable baseline or an
+explicit visual oracle. Each artifact SHALL include the cell id, source SHA,
+profile, role, route, state, action, and capture timestamp; the ledger SHALL
+reject an artifact that is missing its binding or whose SHA differs from the
+campaign.
+
+Run-level observability artifacts SHALL also bind the matrix digest, assignment
+digest, run id, lane id, profile, run-scoped service name, and content digests
+of every required raw artifact. The merger SHALL reject stale, foreign-run,
+loose, symlink-substituted, digest-mismatched, or incomplete evidence before it
+reads cell verdicts.
+
+The observability adjudicator SHALL identify undeclared failures, repeated or
+unbounded requests, retry storms, missing or ineffective cache behavior where
+the route declares a cache expectation, slow-request outliers, queue failures,
+and Bugsink/Loki events correlated to the cell time window and correlation id.
+A green browser assertion MUST NOT override an observability failure or a
+missing correlation query. Expected requests and controlled faults SHALL be
+declared so the adjudicator can distinguish intended behavior from noise.
+The browser ledger SHALL stay attached until tracked API requests settle, log
+collection SHALL wait a bounded interval for late correlated writes, and API
+termination SHALL await app close, process-wide file-log flush, OpenTelemetry
+shutdown, and Sentry close with a bounded attempt for every step.
+The browser ledger SHALL use one advancing cursor across initial navigation,
+before, action, after, and a final tail so every event is adjudicated exactly
+once. The final tail SHALL update the owning cell before persistence and SHALL
+fail the cell for any undeclared console, page, transport, or HTTP error.
+
+After all API drains succeed, the API process SHALL create one immutable
+identity-bound completion artifact. A parent test runner exit SHALL NOT
+substitute for this artifact. Drain failure, timeout, completion-write failure,
+missing completion, completion before the actual local shutdown barrier, or
+completion outside the profile window SHALL block merge.
+
+At merge time, the observability validator SHALL re-read canonical local logs
+and perform a fresh bounded Loki query for counts and the shutdown marker. A
+profile report or regenerated manifest whose declared counts do not equal the
+live result SHALL be rejected even when its local files are internally
+consistent.
 
 #### Scenario: a passing cell has complete evidence
 
 - **WHEN** a cell reaches `pass`
-- **THEN** its ledger record links the required function, accessibility, and
-  visual evidence (or a typed inapplicable reason) and each link resolves to an
-  artifact with matching identity fields
+- **THEN** its ledger record links the required function, accessibility,
+  observability, and before/after visual evidence (or a typed inapplicable
+  reason) and each link resolves to an artifact with matching identity fields
 - **AND** the cell is not considered terminal if any required evidence is
   absent
 
@@ -201,6 +285,48 @@ from the campaign.
 - **THEN** the cell receives a `fail` verdict with the before/after evidence
 - **AND** a matching functional or accessibility pass cannot hide the visual
   gap
+
+#### Scenario: a green browser action has dirty runtime telemetry
+
+- **WHEN** the browser assertion passes but the cell window contains an
+  undeclared console/page/API/worker error, a correlated Bugsink event, a
+  missing required Loki query, an unexpected repeated request, or an exceeded
+  request-duration threshold
+- **THEN** the cell receives a `fail` verdict with the relevant timeline and
+  log evidence
+- **AND** local fallback behavior cannot convert the cell to `pass`
+
+#### Scenario: terminal evidence waits for late runtime events
+
+- **WHEN** an API request or correlated file-log record begins before the cell
+  evidence window closes but completes shortly afterward
+- **THEN** the bounded settle/drain sequence includes it in adjudication
+- **AND** a timeout or failed telemetry drain is blocking and cannot produce a
+  terminal `pass`
+
+#### Scenario: a profile report cannot fabricate Loki delivery
+
+- **WHEN** local logs, a profile report, and its manifest declare matching clean
+  counts but the merge-time Loki query returns no matching records
+- **THEN** the profile is rejected before cell verdicts are merged
+- **AND** regenerated digests cannot convert the missing live evidence to pass
+
+#### Scenario: API completion proves every shutdown drain
+
+- **WHEN** app close, the shutdown barrier, file-log flush, OpenTelemetry, or
+  Sentry fails or exceeds its deadline
+- **THEN** the API still attempts every remaining drain but does not publish a
+  valid completion artifact
+- **AND** a successful parent runner exit cannot satisfy the completion gate
+
+#### Scenario: a transition has stable before and after evidence
+
+- **WHEN** a bounded action changes route, mode, disclosure, dialog, filter,
+  period, scope, or persisted state
+- **THEN** the cell stores screenshots immediately before the action and after
+  the declared settled state using the same viewport and masking policy
+- **AND** geometry, overflow, loading-state replacement, and unexpected visual
+  movement are adjudicated from that pair
 
 ### Requirement: The baseline is immutable and reruns are explicit
 
@@ -230,8 +356,8 @@ separate and MUST NOT be merged into one verdict.
 The campaign stop gate SHALL pass only when every declared coverage cell is
 terminal at one source SHA, every control and transition has a result or an
 allowed typed disposition, all controlled faults have their declared oracle
-outcomes, and no functional, accessibility, or visual gap remains unresolved
-or confirmed. The final report SHALL include the matrix and exclusion digests,
+outcomes, and no functional, accessibility, observability, or visual gap remains
+unresolved or confirmed. The final report SHALL include the matrix and exclusion digests,
 cell counts by verdict, finding dispositions, and links to the immutable
 baseline and final rerun ledgers. Excluded engines and viewports SHALL be
 listed as excluded and SHALL never contribute to covered counts.
@@ -239,7 +365,8 @@ listed as excluded and SHALL never contribute to covered counts.
 #### Scenario: a pending or confirmed gap blocks completion
 
 - **WHEN** any cell is pending/blocked, any inventory item is unreasoned, or a
-  functional, accessibility, or visual finding is unresolved or confirmed
+  functional, accessibility, observability, or visual finding is unresolved or
+  confirmed
 - **THEN** the stop gate returns a non-zero failure verdict and names the gap
 - **AND** no completion report is published
 

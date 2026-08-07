@@ -10,7 +10,34 @@ import {
 import { freezeDeep } from "../source/manifest-source.ts";
 import { sha256Hex } from "../support/ids.ts";
 
-export const RUNTIME_LANE_IDS = ["a", "b", "c"] as const;
+const RUNTIME_LANE_IDS = [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+  "k",
+  "l",
+  "m",
+  "n",
+  "o",
+] as const;
+export const DEFAULT_RUNTIME_LANE_COUNT = 3;
+export const MIN_RUNTIME_LANE_COUNT = 1;
+export const MAX_RUNTIME_LANE_COUNT = RUNTIME_LANE_IDS.length;
+export type RuntimeLaneId = (typeof RUNTIME_LANE_IDS)[number];
+export interface RuntimeLaneResource {
+  readonly laneId: RuntimeLaneId;
+  readonly databaseName: string;
+  readonly redisPort: number;
+  readonly apiPort: number;
+  readonly webPort: number;
+}
 
 const MIN_SERVICE_PORT = 1024;
 const MAX_TCP_PORT = 65_535;
@@ -26,7 +53,7 @@ const caseGroupSchema = z
 const laneSchema = z
   .object({
     laneId: laneIdSchema,
-    databaseName: z.string().regex(/^customreport_e2e_lane_[abc]_test$/u),
+    databaseName: z.string().regex(/^customreport_e2e_lane_[a-o]_test$/u),
     redisPort: portSchema,
     apiPort: portSchema,
     webPort: portSchema,
@@ -52,7 +79,11 @@ const assignmentBodySchema = z
     sourceArchiveRoot: z.string().min(1),
     sourceArtifacts: sourceArtifactsSchema,
     profiles: z.array(seedProfileSchema).min(1).readonly(),
-    lanes: z.array(laneSchema).length(RUNTIME_LANE_IDS.length).readonly(),
+    lanes: z
+      .array(laneSchema)
+      .min(MIN_RUNTIME_LANE_COUNT)
+      .max(MAX_RUNTIME_LANE_COUNT)
+      .readonly(),
   })
   .strict();
 const runtimeLaneAssignmentSchema = assignmentBodySchema
@@ -79,26 +110,30 @@ const allCaseIds = (assignment: RuntimeLaneAssignment): readonly string[] =>
     groups.flatMap(({ caseIds }) => caseIds),
   );
 
-const EXPECTED_RESOURCES = {
-  a: {
-    databaseName: "customreport_e2e_lane_a_test",
-    redisPort: 6381,
-    apiPort: 3112,
-    webPort: 3115,
-  },
-  b: {
-    databaseName: "customreport_e2e_lane_b_test",
-    redisPort: 6382,
-    apiPort: 3122,
-    webPort: 3125,
-  },
-  c: {
-    databaseName: "customreport_e2e_lane_c_test",
-    redisPort: 6383,
-    apiPort: 3132,
-    webPort: 3135,
-  },
-} as const;
+const FIRST_REDIS_PORT = 6381;
+const FIRST_API_PORT = 3112;
+const FIRST_WEB_PORT = 3115;
+const LANE_PORT_STEP = 10;
+
+export const runtimeLaneResources = (
+  laneCount: number,
+): readonly RuntimeLaneResource[] => {
+  if (
+    !Number.isInteger(laneCount) ||
+    laneCount < MIN_RUNTIME_LANE_COUNT ||
+    laneCount > MAX_RUNTIME_LANE_COUNT
+  )
+    throw new RuntimeLaneAssignmentError(
+      `Runtime lane count must be an integer from ${MIN_RUNTIME_LANE_COUNT} to ${MAX_RUNTIME_LANE_COUNT}`,
+    );
+  return RUNTIME_LANE_IDS.slice(0, laneCount).map((laneId, index) => ({
+    laneId,
+    databaseName: `customreport_e2e_lane_${laneId}_test`,
+    redisPort: FIRST_REDIS_PORT + index,
+    apiPort: FIRST_API_PORT + index * LANE_PORT_STEP,
+    webPort: FIRST_WEB_PORT + index * LANE_PORT_STEP,
+  }));
+};
 
 const inside = (root: string, candidate: string): boolean =>
   candidate !== root && candidate.startsWith(`${root}${path.sep}`);
@@ -163,9 +198,15 @@ const assertUniqueResources = (assignment: RuntimeLaneAssignment): void => {
 };
 
 const assertCanonicalResources = (assignment: RuntimeLaneAssignment): void => {
-  assignment.lanes.forEach((lane) => {
-    const expected = EXPECTED_RESOURCES[lane.laneId];
+  const expectedResources = runtimeLaneResources(assignment.lanes.length);
+  assignment.lanes.forEach((lane, index) => {
+    const expected = expectedResources[index];
+    if (expected === undefined)
+      throw new RuntimeLaneAssignmentError(
+        `Lane ${lane.laneId} has no canonical resource tuple`,
+      );
     if (
+      lane.laneId !== expected.laneId ||
       lane.databaseName !== expected.databaseName ||
       lane.redisPort !== expected.redisPort ||
       lane.apiPort !== expected.apiPort ||
@@ -181,7 +222,7 @@ const assertCanonicalResources = (assignment: RuntimeLaneAssignment): void => {
     )
   )
     throw new RuntimeLaneAssignmentError(
-      "Runtime lanes must use canonical a, b, c order",
+      "Runtime lanes must use a contiguous canonical order starting at a",
     );
   if (!unique(assignment.profiles))
     throw new RuntimeLaneAssignmentError("Assignment profiles must be unique");
