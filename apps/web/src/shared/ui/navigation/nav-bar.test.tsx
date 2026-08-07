@@ -327,6 +327,15 @@ describe("NavBar — role-aware visibility", () => {
     ).toBeNull();
   });
 
+  it("renders exactly one navigation accent", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    expect(
+      container.querySelectorAll('[data-testid="nav-accent"]'),
+    ).toHaveLength(1);
+  });
+
   it("renders the head role's identity label from the shared ROLE_LABEL map", () => {
     setRole("head");
     const { container } = render(<NavBar />);

@@ -48,7 +48,10 @@ export function NavBar() {
 
       {/* Teal bottom accent — 3px tealA, rounded top corners. */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]" />
+        <div
+          className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]"
+          data-testid="nav-accent"
+        />
       </div>
 
       <MobileNav

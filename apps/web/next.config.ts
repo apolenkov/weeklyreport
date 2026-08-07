@@ -14,6 +14,7 @@ const API_URL = requireApiUrl();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   output: "standalone",
   reactCompiler: true,
   transpilePackages: ["@customreport/ui"],
