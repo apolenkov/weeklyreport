@@ -45,7 +45,7 @@ stripe from framework overlays without weakening error reporting.
 
 ### Mirror layout ownership in skeletons, not live data volume
 
-Skeletons reuse the loaded surfaces' outer spacing, header split, compact context toolbar, and primary content containers. They intentionally use a bounded placeholder count because loading state cannot know the final data volume. Slide loading uses the current full-width article hierarchy and does not recreate the retired sidebar layout.
+Skeletons reuse the loaded surfaces' outer spacing, header split, compact context toolbar, and primary content containers. They intentionally use a bounded placeholder count because loading state cannot know the final data volume. Slide loading uses the current full-width article hierarchy and does not recreate the retired sidebar layout. The viewer slide shell remains mounted during its own queries, so it reserves the authority, document-action, and period-navigation rows inside the real shell instead of relying only on the route fallback.
 
 Alternative: measure and reserve the exact seeded page height. Rejected because skeleton behavior must remain stable for arbitrary report sizes and must not depend on seed fixtures.
 

@@ -330,6 +330,25 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
       screen.queryByRole("button", { name: /publish|lock|reopen/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("reserves the loaded compact chrome while slides data is pending", () => {
+    vi.mocked(useQuery).mockImplementation(() =>
+      makeQueryState({ data: undefined, isLoading: true }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveClass("min-h-32", "sm:min-h-0");
+    expect(screen.getByTestId("viewer-authority-skeleton")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("viewer-document-action-skeleton"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeInTheDocument();
+  });
 });
 
 // Recovery is limited to the report route because a rejected stale link

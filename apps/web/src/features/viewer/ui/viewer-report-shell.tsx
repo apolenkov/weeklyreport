@@ -1,6 +1,7 @@
 "use client";
 
 import type { WeeklyReportGetResponse } from "@customreport/shared";
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
@@ -8,7 +9,10 @@ import { useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
+import {
+  DocumentActionGroup,
+  ReportToolbar,
+} from "../../../shared/ui/report-shell/report-toolbar";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ExportPdfButton } from "../../pdf-export";
 import { WeeklyReportPage } from "../../report-pages";
@@ -48,6 +52,20 @@ interface ViewerChrome {
   readonly headerContextLabel: ReactNode;
   readonly exportPdf: ReactNode;
   readonly contextControls: ReactNode;
+  readonly isLoading: boolean;
+}
+
+function ViewerAuthoritySkeleton() {
+  return (
+    <div
+      data-testid="viewer-authority-skeleton"
+      className="flex min-w-0 flex-wrap items-center gap-2"
+      aria-hidden="true"
+    >
+      <Skeleton className="h-4 w-52" />
+      <Skeleton className="h-6 w-20 rounded-[var(--radius-pill)]" />
+    </div>
+  );
 }
 
 function ViewerSlidesView({
@@ -64,15 +82,28 @@ function ViewerSlidesView({
       <header
         data-layout-key="weekly-report-header"
         data-layout-stability="position-size"
-        className="flex flex-wrap items-center justify-between gap-4"
+        className="flex min-h-32 flex-wrap items-center justify-between gap-4 sm:min-h-0"
       >
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
           </h1>
-          {chrome.headerContextLabel}
+          {chrome.isLoading ? (
+            <ViewerAuthoritySkeleton />
+          ) : (
+            chrome.headerContextLabel
+          )}
         </div>
-        {chrome.exportPdf}
+        <DocumentActionGroup>
+          {chrome.isLoading ? (
+            <Skeleton
+              data-testid="viewer-document-action-skeleton"
+              className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]"
+            />
+          ) : (
+            chrome.exportPdf
+          )}
+        </DocumentActionGroup>
       </header>
       <ReportToolbar
         contextControls={chrome.contextControls}
@@ -212,6 +243,7 @@ export function ViewerReportShell({
 
   const chrome: ViewerChrome = {
     ...deriveViewerDisplay(displayedQ.data),
+    isLoading: historyQ.isLoading || displayedQ.isLoading,
     contextControls: (
       <ViewerShellControls
         reportId={reportId}
@@ -219,6 +251,7 @@ export function ViewerReportShell({
         periods={periods}
         urlState={urlState}
         historyError={historyQ.isError}
+        historyLoading={historyQ.isLoading}
       />
     ),
   };

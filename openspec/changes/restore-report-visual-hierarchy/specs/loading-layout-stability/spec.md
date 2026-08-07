@@ -25,6 +25,12 @@ The lead, head, and viewer report loading skeletons MUST preserve the loaded sur
 - **THEN** its header omits the form-only report status placeholder
 - **AND** resolving the slide route does not remove an extra header landmark or change compact header wrapping
 
+#### Scenario: viewer slide data resolves after the shell renders
+
+- **WHEN** the viewer slide shell is visible while authority, export, and period data remain pending
+- **THEN** the shell reserves the same compact header rows and period-navigation row as the loaded slide surface
+- **AND** the context bar, slide deck, and slide article keep their vertical positions when the data resolves
+
 ### Requirement: Slide skeletons mirror the current full-width article
 
 The lead and head slide loading skeleton MUST represent the current full-width slide article with its hero, summary strip, four-column headings, and product-card body. It MUST NOT render the retired sidebar-plus-canvas layout. At compact widths, the placeholder MUST remain contained without horizontal page overflow.

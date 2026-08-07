@@ -1,5 +1,6 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
+import { PeriodNavigationSkeleton } from "../../../period";
 import { SlideSkeleton } from "../../../slides";
 
 const PORTFOLIO_CARD_COUNT = 4;
@@ -9,7 +10,23 @@ function HeaderTitleSkeleton() {
   return <Skeleton className="h-8 w-40" />;
 }
 
-function HeaderContextSkeleton() {
+function HeaderContextSkeleton({
+  audience,
+}: {
+  readonly audience: "head" | "viewer";
+}) {
+  if (audience === "viewer") {
+    return (
+      <div
+        data-testid="weekly-skeleton-header-context"
+        className="flex h-6 min-w-0 items-center gap-2"
+      >
+        <Skeleton className="h-4 w-44" />
+        <Skeleton className="h-6 w-20 rounded-[var(--radius-pill)]" />
+      </div>
+    );
+  }
+
   return (
     <div
       data-testid="weekly-skeleton-header-context"
@@ -53,7 +70,7 @@ function HeaderSkeleton({
             className="h-6 w-32 rounded-[var(--radius-pill)]"
           />
         ) : null}
-        <HeaderContextSkeleton />
+        <HeaderContextSkeleton audience={audience} />
       </div>
       <div
         data-testid="weekly-skeleton-document-actions"
@@ -78,11 +95,7 @@ function ContextToolbarSkeleton() {
       data-layout-stability="position-size"
       className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5"
     >
-      <div className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto">
-        <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-56 max-w-[55vw] rounded-lg" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-      </div>
+      <PeriodNavigationSkeleton testId="weekly-period-navigation-skeleton" />
       <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
       <div className="grow" aria-hidden="true" />
       <div className="contents">
