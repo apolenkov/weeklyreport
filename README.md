@@ -38,23 +38,23 @@ customreport
 - pnpm **10.11** (`corepack enable` подтянет нужную версию)
 - Docker (для Postgres, Redis, почты и наблюдаемости)
 
-## Быстрый старт
+## Локальный запуск
 
 ```bash
 # 1. Зависимости
 pnpm install
 
-# 2. Окружение: скопировать пример и при необходимости поправить
+# 2. Окружение: скопировать пример и вставить выданный Mistral API key
 cp .env.example .env
 
-# 3. Поднять инфраструктуру в Docker (Postgres, Redis, Mailpit, Grafana, Bugsink)
-pnpm observability:up
+# 3. Поднять только зависимости приложения
+docker compose up -d postgres redis mailhog
 
-# 4. Залить схему и демо-данные в базу
-pnpm db:fresh:simple      # быстрый минимальный сид
-# pnpm db:fresh:advanced  # объёмный сид, ближе к реальным данным
+# 4. Применить миграции и залить демо-данные
+pnpm db:fresh:simple      # минимальный middle-tier seed
+# pnpm db:fresh:advanced  # объёмный canonical seed
 
-# 5. Запустить web + api локально (в одном процессе, параллельно)
+# 5. Запустить web + api из исходников
 pnpm dev
 ```
 
@@ -63,8 +63,88 @@ pnpm dev
 - Веб — http://localhost:3000
 - API — http://localhost:3002
 - Почта (Mailpit) — http://localhost:8025
-- Grafana (трейсы/логи/метрики) — http://localhost:3003 (`admin` / `admin`)
-- Bugsink (ошибки) — http://localhost:8000
+
+Наблюдаемость запускается отдельно и не должна выполняться одновременно с
+`pnpm dev`, потому что полный observability Compose-layer также поднимает Docker
+версии `api` и `web`:
+
+```bash
+pnpm observability:up
+```
+
+После этого Grafana доступна на http://localhost:3003, а Bugsink — на
+http://localhost:8000. Для остановки используй `pnpm observability:down`.
+
+Если запускаешь приложение полностью в Docker, используй Compose-layer напрямую
+вместо `pnpm dev`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+```
+
+В этом режиме seed-команды всё равно запускаются с хоста после готовности
+Postgres и Redis.
+
+## Production Docker deployment
+
+Production требует больше, чем один Mistral API key: публичный домен, DB secret,
+JWT secret, Keycloak SAML, SMTP и TLS/reverse-proxy settings. Создай untracked
+`.env.prod` и заполни обязательные значения из `.env.example`:
+
+```env
+DB_PASSWORD=<strong-database-password>
+FRONTEND_URL=https://reports.example.com
+APP_BASE_URL=https://reports.example.com
+NEXT_PUBLIC_API_URL=https://reports.example.com
+AUTH_JWT_SECRET=<at-least-32-characters>
+PDF_EXPORT_JWT_SECRET=<at-least-32-characters>
+PDF_BASE_URL=https://reports.example.com
+HEAP_HEALTH_THRESHOLD_BYTES=1610612736
+
+KEYCLOAK_SAML_CALLBACK_URL=https://reports.example.com/auth/saml/callback
+KEYCLOAK_SAML_ENTRY_POINT=<keycloak-saml-entry-point>
+KEYCLOAK_SAML_ISSUER=<keycloak-issuer>
+KEYCLOAK_SAML_CERT=<keycloak-certificate>
+
+SMTP_HOST=<smtp-host>
+SMTP_PORT=587
+SMTP_FROM=noreply@example.com
+
+MISTRAL_API_KEY=<provided-key>
+MISTRAL_PLANNER_MODEL=mistral-medium-3-5
+MISTRAL_ANSWER_MODEL=mistral-medium-3-5
+MISTRAL_EMBEDDING_MODEL=mistral-embed
+MISTRAL_EMBEDDING_DIMENSIONS=1024
+MISTRAL_API_SERVER=eu
+REPORT_ASSISTANT_INPUT_VERSION=1
+REPORT_ASSISTANT_SIMILARITY_THRESHOLD=0.55
+REPORT_ASSISTANT_CANDIDATE_LIMIT=500
+REPORT_ASSISTANT_READ_THROUGH_LIMIT=16
+REPORT_ASSISTANT_EXHAUSTIVE_LIMIT=200
+REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET=8000
+REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS=30000
+REPORT_ASSISTANT_PLANNER_MAX_TOKENS=1500
+REPORT_ASSISTANT_ANSWER_MAX_TOKENS=2000
+REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE=32
+REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET=8000
+
+CADDY_SITE_ADDRESS=reports.example.com
+CADDY_ACME_EMAIL=ops@example.com
+CADDY_CSP_REPORT_URI=<csp-report-collector-url>
+```
+
+Проверь конфигурацию и запусти production stack:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+После успешного запуска проверь `https://reports.example.com/health/live`.
+Production database не сбрасывается и не пересеивается: миграции применяются
+init-контейнером `migrate`, а seed выполняется только для явно подготовленной
+непродакшеновой базы. Подробности reverse proxy — в
+[`deploy/caddy/README.md`](./deploy/caddy/README.md).
 
 ### Вход без реального SSO (dev)
 
