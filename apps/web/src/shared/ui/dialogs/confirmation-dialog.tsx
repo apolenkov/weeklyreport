@@ -1,10 +1,12 @@
 "use client";
 
-import { useId, useRef } from "react";
-
-import { useDialogFocus } from "../../hooks/dialogs/use-dialog-focus";
-import { DialogSurface } from "./dialog-surface";
-import { DocumentBodyPortal } from "./document-body-portal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@customreport/ui/components/ui/dialog";
+import { useRef } from "react";
 
 type ConfirmationDialogVariant = "default" | "destructive";
 
@@ -29,6 +31,7 @@ function DialogActions({
   cancelLabel,
   isDestructive,
   isPending,
+  cancelRef,
 }: {
   readonly onClose: () => void;
   readonly onConfirm: () => void;
@@ -36,10 +39,12 @@ function DialogActions({
   readonly cancelLabel: string;
   readonly isDestructive: boolean;
   readonly isPending: boolean;
+  readonly cancelRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <div className="mt-6 flex justify-end gap-3">
       <button
+        ref={cancelRef}
         type="button"
         onClick={onClose}
         disabled={isPending}
@@ -71,26 +76,27 @@ type ConfirmationBodyProps = Omit<
   readonly cancelLabel: string;
   readonly isDestructive: boolean;
   readonly isPending: boolean;
+  readonly cancelRef: React.RefObject<HTMLButtonElement | null>;
 };
 
 function ConfirmationBody({
   title,
   description,
-  descriptionId,
   children,
   ...actions
-}: ConfirmationBodyProps & { readonly descriptionId: string }) {
+}: ConfirmationBodyProps) {
   return (
     <>
-      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-        {title}
-      </h3>
-      <p
-        id={descriptionId}
-        className="mt-2 text-sm text-[var(--color-muted-foreground)]"
-      >
-        {description}
-      </p>
+      <DialogTitle asChild>
+        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          {title}
+        </h3>
+      </DialogTitle>
+      <DialogDescription asChild>
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+          {description}
+        </p>
+      </DialogDescription>
 
       {children && <div className="mt-3">{children}</div>}
 
@@ -112,43 +118,51 @@ export function ConfirmationDialog({
   testId,
   children,
 }: ConfirmationDialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const descriptionId = useId();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   // While the action is in flight the dialog stays put: Escape and backdrop
   // dismissal are suppressed so the submit cannot be abandoned mid-flight.
   const guardedClose = isPending ? () => undefined : onClose;
   const guardedConfirm = isPending ? () => undefined : onConfirm;
 
-  useDialogFocus({ open, onClose: guardedClose, containerRef: dialogRef });
-
-  if (!open) return null;
-
   return (
-    <DocumentBodyPortal>
-      <DialogSurface
-        surfaceRef={dialogRef}
-        onDismiss={guardedClose}
-        surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) guardedClose();
+      }}
+    >
+      <DialogContent
+        showCloseButton={false}
+        className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
+        overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"
+        overlayTestId={testId}
+        initialFocusRef={isPending ? undefined : cancelRef}
+        restoreFocusToPrevious={true}
         role="alertdialog"
-        ariaLabel={title}
-        ariaDescribedBy={descriptionId}
-        testId={testId}
+        aria-modal="true"
+        aria-label={title}
+        onEscapeKeyDown={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (isPending) event.preventDefault();
+        }}
       >
         <ConfirmationBody
           title={title}
           description={description}
-          descriptionId={descriptionId}
           onClose={guardedClose}
           onConfirm={guardedConfirm}
           confirmLabel={confirmLabel}
           cancelLabel={cancelLabel}
           isDestructive={variant === "destructive"}
           isPending={isPending}
+          cancelRef={cancelRef}
         >
           {children}
         </ConfirmationBody>
-      </DialogSurface>
-    </DocumentBodyPortal>
+      </DialogContent>
+    </Dialog>
   );
 }

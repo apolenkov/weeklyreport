@@ -1,10 +1,12 @@
 "use client";
 
-import { type ReactNode, type RefObject, useEffect, useRef } from "react";
-
-import { useDialogFocus } from "../../hooks/dialogs/use-dialog-focus";
-import { DialogSurface } from "./dialog-surface";
-import { DocumentBodyPortal } from "./document-body-portal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@customreport/ui/components/ui/dialog";
+import { type RefObject, useId, useRef } from "react";
 
 interface ConfirmDeleteDialogProps {
   readonly open: boolean;
@@ -37,92 +39,58 @@ export function ConfirmDeleteDialog({
   onCancel,
   triggerRef,
 }: ConfirmDeleteDialogProps) {
-  const confirmRef = useRef<HTMLButtonElement | null>(null);
-  const surfaceRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const titleId = useId();
+  const previewId = useId();
 
-  // While the destructive action is in flight the dialog stays put: no Enter
-  // re-submit, no Escape/backdrop dismissal — the action cannot be abandoned
-  // or double-fired mid-flight.
   const guardedCancel = isPending ? () => undefined : onCancel;
   const guardedConfirm = isPending ? () => undefined : onConfirm;
 
-  useDialogFocus({
-    open,
-    onClose: guardedCancel,
-    containerRef: surfaceRef,
-    triggerRef,
-  });
-  useConfirmOnEnter(open, guardedConfirm, confirmRef);
-
-  if (!open) return null;
-
   return (
-    <DocumentBodyPortal>
-      <ConfirmDialogShell surfaceRef={surfaceRef} onDismiss={guardedCancel}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) guardedCancel();
+      }}
+    >
+      <DialogContent
+        showCloseButton={false}
+        className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
+        overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"
+        initialFocusRef={isPending ? undefined : cancelRef}
+        restoreFocusRef={triggerRef}
+        restoreFocusToPrevious={true}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={previewId}
+        onEscapeKeyDown={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+      >
         <ConfirmDeleteBody
           title={title}
           preview={preview}
           subtitle={subtitle}
           consequence={consequence}
           reversible={reversible}
+          titleId={titleId}
+          previewId={previewId}
         />
         <ConfirmDeleteActions
-          confirmRef={confirmRef}
+          cancelRef={cancelRef}
           confirmLabel={confirmLabel}
           tone={tone}
           isPending={isPending}
           onConfirm={guardedConfirm}
           onCancel={guardedCancel}
         />
-      </ConfirmDialogShell>
-    </DocumentBodyPortal>
+      </DialogContent>
+    </Dialog>
   );
-}
-
-// Backdrop + centred surface. Clicking the backdrop dismisses; clicks inside
-// the surface are stopped so they never reach it.
-function ConfirmDialogShell({
-  surfaceRef,
-  onDismiss,
-  children,
-}: {
-  readonly surfaceRef: RefObject<HTMLDivElement | null>;
-  readonly onDismiss: () => void;
-  readonly children: ReactNode;
-}) {
-  return (
-    <DialogSurface
-      surfaceRef={surfaceRef}
-      onDismiss={onDismiss}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
-      role="alertdialog"
-      ariaLabelledBy="confirm-delete-title"
-      ariaDescribedBy="confirm-delete-preview"
-    >
-      {children}
-    </DialogSurface>
-  );
-}
-
-// Confirm on Enter only while the destructive button holds focus — otherwise
-// the same key in the underlying form would confirm a delete the user didn't
-// mean.
-function useConfirmOnEnter(
-  open: boolean,
-  onConfirm: () => void,
-  confirmRef: RefObject<HTMLButtonElement | null>,
-) {
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Enter" && document.activeElement === confirmRef.current) {
-        e.preventDefault();
-        onConfirm();
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onConfirm, confirmRef]);
 }
 
 type ConfirmDeleteBodyProps = Pick<
@@ -136,23 +104,32 @@ function ConfirmDeleteBody({
   subtitle,
   consequence,
   reversible,
-}: ConfirmDeleteBodyProps) {
+  titleId,
+  previewId,
+}: ConfirmDeleteBodyProps & {
+  readonly titleId: string;
+  readonly previewId: string;
+}) {
   return (
     <>
-      <h3
-        id="confirm-delete-title"
-        className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
-      >
-        {title}
-      </h3>
+      <DialogTitle asChild>
+        <h3
+          id={titleId}
+          className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+        >
+          {title}
+        </h3>
+      </DialogTitle>
 
-      <p
-        id="confirm-delete-preview"
-        className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
-        title={preview}
-      >
-        {preview}
-      </p>
+      <DialogDescription asChild>
+        <p
+          id={previewId}
+          className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
+          title={preview}
+        >
+          {preview}
+        </p>
+      </DialogDescription>
 
       {subtitle && (
         <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
@@ -183,7 +160,7 @@ const CONFIRM_PRIMARY_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-starb
 const CONFIRM_DESTRUCTIVE_CLASS = `${CONFIRM_BUTTON_CLASS} border-[var(--color-destructive)] bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]`;
 
 interface ConfirmDeleteActionsProps {
-  readonly confirmRef: RefObject<HTMLButtonElement | null>;
+  readonly cancelRef: RefObject<HTMLButtonElement | null>;
   readonly confirmLabel: string;
   readonly tone: "destructive" | "primary";
   readonly isPending: boolean;
@@ -192,7 +169,7 @@ interface ConfirmDeleteActionsProps {
 }
 
 function ConfirmDeleteActions({
-  confirmRef,
+  cancelRef,
   confirmLabel,
   tone,
   isPending,
@@ -202,6 +179,7 @@ function ConfirmDeleteActions({
   return (
     <div className="mt-5 flex justify-end gap-2">
       <button
+        ref={cancelRef}
         type="button"
         className={CANCEL_BUTTON_CLASS}
         onClick={onCancel}
@@ -210,7 +188,6 @@ function ConfirmDeleteActions({
         Cancel
       </button>
       <button
-        ref={confirmRef}
         type="button"
         className={
           tone === "primary" ? CONFIRM_PRIMARY_CLASS : CONFIRM_DESTRUCTIVE_CLASS
