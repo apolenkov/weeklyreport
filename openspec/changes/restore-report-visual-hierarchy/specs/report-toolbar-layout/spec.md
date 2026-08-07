@@ -19,6 +19,11 @@ The lead, head, and viewer report context bars MUST keep controls that answer th
 
 Report UI changes MUST be accepted against clean browser screenshots for lead, head, admin, and viewer roles at desktop and compact widths. The evidence MUST include report edit and slides where the role supports them, MUST identify the tested source SHA, and MUST NOT classify browser inspector overlays or browser chrome as product rendering.
 
+The capture runtime MUST suppress the Next.js on-screen development indicator and
+application inspection tools while retaining compile and runtime error reporting.
+The application navigation MUST expose exactly one stable product-owned accent
+landmark for visual evidence.
+
 #### Scenario: a suspected navigation stripe is reviewed
 
 - **WHEN** a screenshot contains a line or highlight not reproduced in a clean browser capture at the same route and viewport
@@ -28,3 +33,10 @@ Report UI changes MUST be accepted against clean browser screenshots for lead, h
 
 - **WHEN** a change affects shared report chrome or slide presentation
 - **THEN** the review set contains source-bound screenshots for every affected role, mode, and required viewport before the change is accepted
+
+#### Scenario: development capture distinguishes product chrome from tooling
+
+- **WHEN** the source-bound capture runs against a development server
+- **THEN** the Next.js development indicator and application inspection tools are absent
+- **AND** exactly one application-owned navigation accent landmark remains visible
+- **AND** compile and runtime errors remain enabled

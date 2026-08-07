@@ -38,6 +38,11 @@ Alternative: hide badges with CSS in the lead client. Rejected because it would 
 
 Capture a source-bound matrix into `customreport-archive` and record route, role, mode, viewport, and source SHA. Compare old and new evidence only after reproducing both in clean browser contexts. Unit tests assert structural contracts; screenshots expose spacing and hierarchy gaps that DOM tests cannot judge.
 
+The development runtime keeps compile and runtime errors visible but disables the
+Next.js on-screen development indicator. The application-owned navigation accent
+has a stable test identity, so capture evidence can distinguish the one product
+stripe from framework overlays without weakening error reporting.
+
 ### Mirror layout ownership in skeletons, not live data volume
 
 Skeletons reuse the loaded surfaces' outer spacing, header split, compact context toolbar, and primary content containers. They intentionally use a bounded placeholder count because loading state cannot know the final data volume. Slide loading uses the current full-width article hierarchy and does not recreate the retired sidebar layout.
@@ -56,6 +61,7 @@ Alternative: shrink tables and the four-column slide below their readable minimu
 - [Risk] Mine/Everyone state could be unavailable while hydration is pending. → Mitigation: use the same effective visibility gate that controls foreign content and default to the privacy-preserving single-author presentation until hydrated.
 - [Risk] Old screenshots may come from different data or SHA. → Mitigation: treat them as design references, not pixel baselines; final evidence is bound to the tested SHA.
 - [Risk] Visual review expands the runtime-sweep critical path. → Mitigation: capture the small role/viewport matrix in parallel with focused tests and keep artifacts outside git.
+- [Risk] Hiding the framework development indicator could also hide actionable errors. → Mitigation: disable only `devIndicators`; Next.js continues to surface compile and runtime errors.
 - [Risk] A bounded skeleton cannot prevent height changes for unusually large reports. → Mitigation: preserve the first-viewport landmarks and widths, which are the dominant source of perceived layout shift, while avoiding false data-dependent heights.
 - [Risk] Local horizontal scrolling can be overlooked on compact screens. → Mitigation: keep every wide surface inside the visible card boundary and verify that document width stays equal to viewport width while the local host retains a larger scroll width.
 
