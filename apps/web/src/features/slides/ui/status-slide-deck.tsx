@@ -76,6 +76,7 @@ function HeadSlideFrame({
       ref={frameRef}
       tabIndex={-1}
       className="relative overflow-auto bg-[var(--color-background)]"
+      data-testid="head-slide-scroll-host"
     >
       <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
       <SlideArticle

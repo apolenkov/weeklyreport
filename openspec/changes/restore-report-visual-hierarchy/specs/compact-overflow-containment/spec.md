@@ -14,6 +14,12 @@ An intrinsically wide slide canvas or admin data table MUST remain inside a visi
 - **THEN** the lead deck owns the horizontal scroll range locally
 - **AND** the document does not widen beyond the viewport
 
+#### Scenario: a head or viewer opens slides on a compact viewport
+
+- **WHEN** the shared report slide keeps its readable minimum canvas width
+- **THEN** the head slide frame owns the horizontal scroll range locally
+- **AND** the document does not widen beyond the viewport
+
 #### Scenario: an admin opens the users table on a compact viewport
 
 - **WHEN** all user-table columns require more width than the viewport provides

@@ -51,7 +51,7 @@ Alternative: measure and reserve the exact seeded page height. Rejected because 
 
 ### Make each wide surface own its horizontal overflow
 
-Keep the slide canvas and admin users table at their readable intrinsic widths, but make their immediate local scroll hosts positioned overflow containers. The positioning boundary prevents Chromium from propagating a wide descendant into the document scroll width while preserving keyboard and pointer access to the host's horizontal scroll range.
+Keep the lead and shared report slide canvases and admin users table at their readable intrinsic widths, but make their immediate local scroll hosts positioned overflow containers. The positioning boundary prevents Chromium from propagating a wide descendant into the document scroll width while preserving keyboard and pointer access to the host's horizontal scroll range.
 
 Alternative: shrink tables and the four-column slide below their readable minimum width. Rejected because it would hide information density instead of assigning overflow to the component that owns it.
 
