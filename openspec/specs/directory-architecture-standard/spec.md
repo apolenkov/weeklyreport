@@ -58,10 +58,14 @@ consumer, because two api modules may lawfully meet through a facade barrel.
 `apps/api` MUST keep the `modules/<domain>/` plus top-level `infrastructure/`
 shape. The `domain/`, `application/`, and `infrastructure/` sub-split MUST appear
 only inside invariant-bearing modules (`period`, `report-sections`, `review`,
-`publication`) or a module exceeding roughly six files. Moderate modules
+`publication`) or a module exceeding roughly six files. `search` is
+invariant-bearing once the report assistant lands because it owns Lead ACL
+parity, mutually exclusive live/snapshot selection, and structured-before-vector
+retrieval; its pre-existing full-text `search.query` use case remains inside the
+same canonical domain. Moderate modules
 (`admin`, `auth`, `carry-over`, `weekly-report`, `archive`, `reminders`,
 `pdf-export`) MUST stay flat with an explicit port where a repository exists. Thin
-CRUD modules (`activity`, `project-activity`, `email`, `observability`, `search`,
+CRUD modules (`activity`, `project-activity`, `email`, `observability`,
 `telemetry`, `organization`, `analytics`, `telegram`) MUST stay flat with
 `X.service.ts` and `X.prisma-repository.ts` at the module root.
 
@@ -82,6 +86,16 @@ two packages.
 - **THEN** pure `period-transition.ts` lands in `domain/`, `period.service.ts` and
   its `PeriodRepository` port land in `application/`, and
   `period.prisma-repository.ts` lands in `infrastructure/`
+
+#### Scenario: Search gains report-assistant invariants
+
+- **GIVEN** the `search` module owns authorization-first live/snapshot retrieval
+  and semantic ranking that may never widen the structured candidate set
+- **WHEN** its report-assistant files are placed
+- **THEN** pure planning/projection/filtering rules land in `domain/`, the use-case
+  service and owned ports land in `application/`, and Prisma/Mistral/pgvector/
+  BullMQ adapters land in `infrastructure/`
+- **AND** no sibling top-level `ai` or `assistant` domain is created
 
 #### Scenario: A thin module stays flat
 

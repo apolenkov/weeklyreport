@@ -21,8 +21,9 @@ The lead report toolbar and slide hero MUST present their controls with consiste
    other elements of that row, at every status and product count.
 4. Every report-toolbar control — the document-action icon buttons and pill
    actions (Submit Section, Publish & Lock, reversal actions), period
-   navigation, the segmented toggles, the Agent-review placeholder, and the
-   mode-adaptive collapse/fullscreen control — MUST sit on one shared height
+   navigation, the segmented toggles, the Agent-review placeholder, the active
+   Lead Chat control, and the mode-adaptive collapse/fullscreen control — MUST
+   sit on one shared height
    token (`--toolbar-control-h`), so the toolbar reads as a single row of
    equal-height controls.
 5. The lead Mine/Everyone visibility toggle MUST render icon-only (one-person /
@@ -67,6 +68,14 @@ The lead report toolbar and slide hero MUST present their controls with consiste
   and the context bar)
 - **THEN** every control resolves to the same `--toolbar-control-h` height, so no
   control is visibly taller or shorter than its neighbours
+
+#### Scenario: Lead Chat is native and adjacent to Agent review
+
+- **WHEN** the Lead context toolbar renders in edit or slides mode
+- **THEN** an active Chat control appears immediately beside Agent review with an
+  accessible English name and established active-control styling
+- **AND** activating it opens the assistant without reordering or shifting the
+  visibility, view-mode, and collapse/fullscreen controls
 
 #### Scenario: the trailing control adapts by mode without shifting the row
 
