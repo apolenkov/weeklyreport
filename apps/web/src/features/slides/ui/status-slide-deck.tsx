@@ -187,7 +187,6 @@ function DeckArticle(props: DeckArticleProps) {
 function DeckBody(props: DeckBodyProps) {
   const slide = selectedSlide(props.slides, props.selectedIndex);
   const isLead = props.mode === "lead";
-  const hasSiblings = props.slides.length > 1;
 
   return (
     <>
@@ -197,7 +196,7 @@ function DeckBody(props: DeckBodyProps) {
         <EmptyDeckState />
       ) : (
         <>
-          {isLead && hasSiblings ? (
+          {isLead ? (
             <LeadCarouselControls
               selectedIndex={props.selectedIndex}
               total={props.slides.length}
@@ -206,7 +205,7 @@ function DeckBody(props: DeckBodyProps) {
           ) : null}
 
           <div className="space-y-3">
-            {!isLead && hasSiblings ? (
+            {!isLead ? (
               <HeadSlideCarousel
                 slides={props.slides}
                 selectedIndex={props.selectedIndex}

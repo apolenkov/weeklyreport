@@ -26,9 +26,9 @@ function HeadCarouselSkeleton() {
           key={index}
           className="flex w-[180px] shrink-0 flex-col gap-1 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 py-2.5"
         >
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-20" />
         </div>
       ))}
     </div>
