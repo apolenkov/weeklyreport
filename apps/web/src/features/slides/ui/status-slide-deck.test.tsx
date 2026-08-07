@@ -210,6 +210,14 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
   });
 
+  it("keeps the wide head canvas inside an identified local scroll host", () => {
+    renderDeck(makeSection({ items: [item()] }), "head");
+
+    const host = screen.getByTestId("head-slide-scroll-host");
+    expect(host).toHaveClass("relative", "overflow-auto");
+    expect(host).toContainElement(screen.getByTestId("slide-article"));
+  });
+
   it("plays status via marks and highlights, never words", () => {
     renderDeck(
       makeSection({
