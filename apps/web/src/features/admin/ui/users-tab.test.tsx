@@ -284,7 +284,7 @@ describe("UsersTab — delete modal focus management", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(trigger);
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("closes on backdrop click and restores focus to the overflow trigger", async () => {
@@ -292,13 +292,13 @@ describe("UsersTab — delete modal focus management", () => {
     const trigger = await openDeleteModal();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
-    const backdrop = document.querySelector('[role="presentation"]');
+    const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
     expect(backdrop).not.toBeNull();
     if (!backdrop) return;
-    fireEvent.click(backdrop);
+    await userEvent.click(backdrop);
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(trigger);
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("does NOT close when clicking inside the modal (stopPropagation)", async () => {
