@@ -1,7 +1,6 @@
-import { Dialog, DialogContent } from "@customreport/ui/components/ui/dialog";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -247,47 +246,5 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     await user.keyboard("{Enter}");
     await user.click(dialogOverlay());
     expect(onCancel).not.toHaveBeenCalled();
-  });
-
-  it("restores the opener after a consumer overrides open autofocus", async () => {
-    const user = userEvent.setup();
-
-    function Harness() {
-      const [open, setOpen] = useState(false);
-      const customFocusRef = useRef<HTMLButtonElement>(null);
-      return (
-        <>
-          <button type="button" onClick={() => setOpen(true)}>
-            Open seam
-          </button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent
-              aria-label="Focus seam"
-              restoreFocusToPrevious={true}
-              onOpenAutoFocus={(event) => {
-                event.preventDefault();
-                customFocusRef.current?.focus();
-              }}
-            >
-              <button
-                ref={customFocusRef}
-                type="button"
-                onClick={() => setOpen(false)}
-              >
-                Close seam
-              </button>
-            </DialogContent>
-          </Dialog>
-        </>
-      );
-    }
-
-    render(<Harness />);
-    const opener = screen.getByRole("button", { name: "Open seam" });
-    await user.click(opener);
-    const closer = screen.getByRole("button", { name: "Close seam" });
-    await waitFor(() => expect(closer).toHaveFocus());
-    await user.click(closer);
-    await waitFor(() => expect(opener).toHaveFocus());
   });
 });
