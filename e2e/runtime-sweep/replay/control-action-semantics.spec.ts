@@ -63,7 +63,7 @@ test("uses rendered inner text when CSS transforms the role name", async ({
 }) => {
   await page.setContent(`
     <button type="button">
-      <div>MP</div>
+      <div aria-hidden="true">MP</div>
       <div>Marketing portal</div>
       <div style="text-transform: uppercase">No status</div>
       <div>unassigned</div>
