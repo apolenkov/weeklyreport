@@ -11,6 +11,21 @@ const clickAction = (controlKey: string): Action => ({
   transition: "none",
 });
 
+const expectCleanRenderedState = async (
+  page: Parameters<typeof inventoryDom>[0],
+): Promise<void> => {
+  const state = await page.locator("button").evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const guarded = button as HTMLElement & Record<string, unknown>;
+      return {
+        guard: "__runtimeSweepActionGuard" in guarded,
+        validator: "__runtimeSweepActionValidator" in guarded,
+      };
+    }),
+  );
+  expect(state).toEqual(state.map(() => ({ guard: false, validator: false })));
+};
+
 test("locates a title-labelled control when its visible name differs", async ({
   page,
 }) => {
@@ -98,6 +113,80 @@ test("uses rendered inner text when CSS transforms the role name", async ({
   });
 
   expect(result).toMatchObject({ status: "pass" });
+});
+
+test("rejects a synchronous same-node mutation during arm validation", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button"><span style="text-transform: uppercase">Open</span></button>
+    <output></output>
+  `);
+  const frozenControl = (await inventoryDom(page)).controls[0];
+  if (frozenControl === undefined)
+    throw new Error("Rendered control is missing");
+  const control = { ...frozenControl, ariaRole: "button" as const };
+  await page.locator("button").evaluate((button) => {
+    if (!(button instanceof HTMLElement)) return;
+    const originalText = button.innerText;
+    let reads = 0;
+    Object.defineProperty(button, "innerText", {
+      configurable: true,
+      get() {
+        reads += 1;
+        if (reads === 3) {
+          button.textContent = "Different";
+          button.onclick = () => {
+            const output = document.querySelector("output");
+            if (output !== null) output.textContent = "mutated";
+          };
+        }
+        return originalText;
+      },
+    });
+  });
+
+  const result = await executeControlAction({
+    page,
+    control,
+    action: clickAction(control.controlKey),
+    timeoutMs: 250,
+  });
+
+  expect(result).toMatchObject({ status: "fail" });
+  await expect(page.locator("output")).toBeEmpty();
+  await expect(page.getByRole("button")).toHaveText("Different");
+  await expectCleanRenderedState(page);
+});
+
+test("cleans a rendered target that becomes disabled before execution", async ({
+  page,
+}) => {
+  await page.setContent(
+    '<button type="button"><span style="text-transform: uppercase">Open</span></button><output></output>',
+  );
+  const frozenControl = (await inventoryDom(page)).controls[0];
+  if (frozenControl === undefined)
+    throw new Error("Rendered control is missing");
+  const control = { ...frozenControl, ariaRole: "button" as const };
+  await page.locator("button").evaluate((button) => {
+    if (button instanceof HTMLButtonElement) button.disabled = true;
+  });
+
+  const result = await executeControlAction({
+    page,
+    control,
+    action: clickAction(control.controlKey),
+    timeoutMs: 250,
+  });
+
+  expect(result).toMatchObject({
+    status: "not-exercised",
+    policy: "unavailable",
+    reason: "Control is disabled",
+  });
+  await expect(page.locator("output")).toBeEmpty();
+  await expectCleanRenderedState(page);
 });
 
 test("waits for a transient control before exercising it", async ({ page }) => {

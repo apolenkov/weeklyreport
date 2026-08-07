@@ -1,11 +1,6 @@
 import {
   type ControlActionAttempt,
   executeControlAttempt,
-  hrefTargetLocator,
-  innerTextTargetLocator,
-  targetLocator,
-  titleTargetLocator,
-  waitForVisible,
 } from "./control-action-executor.ts";
 import {
   requiresControlRecovery,
@@ -14,9 +9,17 @@ import {
 import type {
   ControlActionExecution,
   ControlActionInput,
+  ResolvedActionControl,
 } from "./control-action-types.ts";
 import type { ControlActionRecovery } from "./control-recovery.ts";
 import { recoverControlAction } from "./control-recovery.ts";
+import {
+  hrefTargetLocator,
+  releaseRenderedNameTarget,
+  renderedNameTargetHandle,
+  targetLocator,
+  titleTargetLocator,
+} from "./control-target/rendered-control-target.ts";
 
 export {
   STATEFUL_CONTROL_OPERATIONS,
@@ -41,6 +44,7 @@ export {
 
 const DEFAULT_ACTION_TIMEOUT_MS = 10_000;
 const TARGET_RESOLUTION_TIMEOUT_MS = 5000;
+const TARGET_POLL_INTERVAL_MS = 25;
 
 const unsupported = (
   input: ControlActionInput,
@@ -87,9 +91,53 @@ const attemptStatus = (
 const attemptReason = (attempt: ControlActionAttempt): string | undefined =>
   typeof attempt === "string" ? undefined : attempt.reason;
 
-const candidateLocator = async (
-  input: ControlActionInput,
+const visibleLocator = async (
+  locators: readonly ReturnType<typeof targetLocator>[],
 ): Promise<ReturnType<typeof targetLocator> | undefined> => {
+  for (const locator of locators)
+    if ((await locator.count()) > 0 && (await locator.isVisible()))
+      return locator;
+  return undefined;
+};
+
+const allowsRenderedNameFallback = (input: ControlActionInput): boolean =>
+  input.action.operation !== "fill" && input.action.operation !== "select";
+
+const renderedControl = async (
+  input: ControlActionInput,
+  signal: AbortSignal,
+): Promise<ResolvedActionControl | undefined> => {
+  if (!allowsRenderedNameFallback(input)) return undefined;
+  const target = await renderedNameTargetHandle(
+    input.page,
+    input.control,
+    signal,
+  );
+  return target === undefined ? undefined : { kind: "handle", target };
+};
+
+const waitForCandidate = async (
+  input: ControlActionInput,
+  candidates: readonly ReturnType<typeof targetLocator>[],
+  signal: AbortSignal,
+): Promise<ResolvedActionControl | undefined> => {
+  if (signal.aborted) return undefined;
+  const semantic = await visibleLocator(candidates);
+  if (semantic !== undefined) return { kind: "locator", target: semantic };
+  const rendered = await renderedControl(input, signal);
+  if (rendered !== undefined) return rendered;
+  await input.page.waitForTimeout(TARGET_POLL_INTERVAL_MS);
+  return waitForCandidate(input, candidates, signal);
+};
+
+const timeoutResult = (signal: AbortSignal): Promise<undefined> =>
+  new Promise((resolve) => {
+    signal.addEventListener("abort", () => resolve(undefined), { once: true });
+  });
+
+const candidateControl = async (
+  input: ControlActionInput,
+): Promise<ResolvedActionControl | undefined> => {
   const timeoutMs = Math.min(
     input.timeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS,
     TARGET_RESOLUTION_TIMEOUT_MS,
@@ -97,44 +145,50 @@ const candidateLocator = async (
   const primary = targetLocator(input.page, input.control);
   const titled = titleTargetLocator(input.page, input.control);
   const href = hrefTargetLocator(input.page, input.control);
-  const innerText = await innerTextTargetLocator(input.page, input.control);
-  const candidates = [
-    primary,
-    titled,
-    ...(href === undefined ? [] : [href]),
-    ...(innerText === undefined ? [] : [innerText]),
-  ];
-  const resolveVisible = async (
-    remaining: readonly (typeof primary)[],
-  ): Promise<typeof primary | undefined> => {
-    const [candidate, ...rest] = remaining;
-    if (candidate === undefined) return undefined;
-    if (
-      (await candidate.count()) > 0 &&
-      (await waitForVisible(candidate, timeoutMs))
-    )
-      return candidate;
-    return resolveVisible(rest);
-  };
-  const visible = await resolveVisible(candidates);
-  if (visible !== undefined) return visible;
-  const delayedVisibility = await Promise.all(
-    candidates.map((candidate) => waitForVisible(candidate, timeoutMs)),
-  );
-  const delayedIndex = delayedVisibility.findIndex(Boolean);
-  return delayedIndex === -1 ? undefined : candidates[delayedIndex];
+  const candidates = [primary, titled, ...(href === undefined ? [] : [href])];
+  const signal = AbortSignal.timeout(timeoutMs);
+  return Promise.race([
+    waitForCandidate(input, candidates, signal),
+    timeoutResult(signal),
+  ]);
+};
+
+const disposeResolvedHandle = async (
+  resolved: ResolvedActionControl,
+): Promise<void> => {
+  if (resolved.kind === "handle") await resolved.target.dispose();
+};
+
+const releasePreArmHandle = async (
+  resolved: ResolvedActionControl,
+): Promise<void> => {
+  if (resolved.kind !== "handle") return;
+  await releaseRenderedNameTarget(resolved.target);
+};
+
+const enabledControl = async (
+  input: ControlActionInput,
+  resolved: ResolvedActionControl,
+): Promise<ResolvedActionControl | ControlActionExecution> => {
+  const isEnabled = await resolved.target
+    .isEnabled()
+    .catch(async (error: unknown) => {
+      await releasePreArmHandle(resolved);
+      throw error;
+    });
+  if (isEnabled) return resolved;
+  await releasePreArmHandle(resolved);
+  return unsupported(input, "Control is disabled");
 };
 
 const locateControl = async (
   input: ControlActionInput,
-): Promise<ReturnType<typeof targetLocator> | ControlActionExecution> => {
+): Promise<ResolvedActionControl | ControlActionExecution> => {
   try {
-    const locator = await candidateLocator(input);
-    if (locator === undefined)
+    const resolved = await candidateControl(input);
+    if (resolved === undefined)
       return unsupported(input, "Control is not present in the live DOM");
-    if (!(await locator.isEnabled()))
-      return unsupported(input, "Control is disabled");
-    return locator;
+    return await enabledControl(input, resolved);
   } catch (error: unknown) {
     return failed(
       input,
@@ -144,7 +198,7 @@ const locateControl = async (
 };
 
 const isExecution = (
-  value: ReturnType<typeof targetLocator> | ControlActionExecution,
+  value: ResolvedActionControl | ControlActionExecution,
 ): value is ControlActionExecution => "status" in value;
 
 const recoveryResult = async (
@@ -189,7 +243,13 @@ export async function executeControlAction(
   const timeoutMs = input.timeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
   const located = await locateControl(input);
   if (isExecution(located)) return located;
-  const attempt = await executeControlAttempt(input, located, timeoutMs);
+  const attempt = await (async (): Promise<ControlActionAttempt> => {
+    try {
+      return await executeControlAttempt(input, located, timeoutMs);
+    } finally {
+      await disposeResolvedHandle(located);
+    }
+  })();
   const operation = attemptStatus(attempt);
   const reason = attemptReason(attempt);
   if (!requiresControlRecovery(input)) {
