@@ -117,6 +117,17 @@ describe("WeeklyReportSkeleton", () => {
     );
   });
 
+  it("matches the compact viewer authority row height", () => {
+    render(<WeeklyReportSkeleton audience="viewer" />);
+
+    expect(screen.getByTestId("weekly-skeleton-header-context")).toHaveClass(
+      "h-6",
+    );
+    expect(
+      screen.getByTestId("weekly-skeleton-header-context"),
+    ).not.toHaveClass("h-10");
+  });
+
   it("exposes the loading status contract", () => {
     render(<WeeklyReportSkeleton />);
 

@@ -5,6 +5,7 @@
 - [x] 1.3 Rebuild lead, weekly-report, and slide skeletons around the loaded surfaces' header, compact toolbar, and content hierarchy without data-dependent placeholder counts.
 - [x] 1.4 Contain the wide lead and shared report slide canvases and admin users table in positioned local scroll hosts so compact pages retain viewport width.
 - [x] 1.5 Disable only the Next.js on-screen development indicator and expose one stable application-owned navigation accent landmark.
+- [x] 1.6 Reserve the compact viewer authority, document-action, and period-navigation rows while form or slide data resolves.
 
 ## 2. Focused regression coverage
 
@@ -13,6 +14,7 @@
 - [x] 2.3 Add structural skeleton tests that pin header, toolbar-cluster, and full-width article parity at desktop and compact layouts.
 - [x] 2.4 Add regression tests for lead/shared report slides and admin table local overflow ownership.
 - [x] 2.5 Add a navigation regression assertion that exactly one application-owned accent landmark is rendered.
+- [x] 2.6 Add viewer loading regressions for audience-specific header height and pending slide-chrome geometry.
 
 ## 3. Source-bound visual review
 

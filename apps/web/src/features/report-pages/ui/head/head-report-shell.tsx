@@ -24,6 +24,7 @@ import { ExportPdfButton } from "../../../pdf-export";
 import {
   deriveHeadPeriods,
   HeadPublishLockAction,
+  PeriodNavigationSkeleton,
   PeriodNavigator,
 } from "../../../period";
 import type { ReportPeriod } from "../../../report-sections";
@@ -102,7 +103,7 @@ function HeadContextControls({
           Period history unavailable
         </span>
       ) : historyLoading ? (
-        <HeadPeriodNavigatorSkeleton />
+        <PeriodNavigationSkeleton testId="head-period-navigation-skeleton" />
       ) : periods.length > 0 ? (
         <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
       ) : null}
@@ -120,20 +121,6 @@ function HeadContextControls({
         mode={mode === "slides" ? "slides" : "edit"}
       />
     </>
-  );
-}
-
-function HeadPeriodNavigatorSkeleton() {
-  return (
-    <div
-      data-testid="head-period-navigation-skeleton"
-      className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto"
-      aria-hidden="true"
-    >
-      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
-      <Skeleton className="h-[var(--toolbar-control-h)] w-64 max-w-[55vw] rounded-lg" />
-      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
-    </div>
   );
 }
 
