@@ -161,9 +161,9 @@ function stageId(name: StageName): string {
 // SMALL tier — hand-authored, the demo opener.
 // ---------------------------------------------------------------------------
 
-const PROD_PORTAL = SEED_PRODUCTS[0]!.id; // Маркетинговый портал → Vasily
-const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Платформа интеграций → Vasily
-const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Vasily
+const PROD_PORTAL = SEED_PRODUCTS[0]!.id; // Marketing Portal → Vasily
+const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Integration Platform → Vasily
+const PROD_BI = SEED_PRODUCTS[4]!.id; // Internal BI → Vasily
 
 // SMALL tier cast — role-shaped co-ownership across Vasily's three products.
 // Vasily owns Development everywhere (+ Planning on BI); Maria owns Testing;
@@ -1152,7 +1152,7 @@ async function seedSmallActivities(): Promise<void> {
     }),
   );
 
-  // «Исследование новых интеграций» carries a full set (current + next item,
+  // "New Integrations Research" carries a full set (current + next item,
   // risk, decision) so the slide shows a fully-populated activity row.
   await prisma.item.createMany({
     data: [
@@ -1204,7 +1204,7 @@ async function seedSmallActivities(): Promise<void> {
     },
   });
 
-  // «Поддержка и сопровождение» carries one current item — a status-only
+  // "Support and Maintenance" carries one current item — a status-only
   // header row with a single live record, no next item/risk/decision.
   await prisma.item.create({
     data: {
@@ -1220,7 +1220,7 @@ async function seedSmallActivities(): Promise<void> {
     },
   });
 
-  // «Технический долг и рефакторинг» (BI) carries a full set too.
+  // "Technical Debt and Refactoring" (BI) carries a full set too.
   await prisma.item.createMany({
     data: [
       {

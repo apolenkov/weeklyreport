@@ -28,7 +28,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:?POSTGRES_HOST_PORT must be set}:5432"
 
   # Phase 33-04: migrated mailhog (amd64-only via Rosetta) → mailpit. Mailpit
   # is a multi-arch fork by axllent — same SMTP :1025 + Web UI :8025 contract,

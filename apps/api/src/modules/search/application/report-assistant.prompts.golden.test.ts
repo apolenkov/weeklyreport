@@ -18,7 +18,7 @@ const plannerCases = [
     timeZone: "UTC",
   },
   {
-    question: "Какие риски релиза просрочены и изменились на этой неделе?",
+    question: "Which overdue release risks changed this week?",
     now: new Date("2026-08-04T12:00:00.000Z"),
     timeZone: "Asia/Almaty",
   },
@@ -47,7 +47,10 @@ describe("report assistant prompt goldens", () => {
       expect(prompt.version).toBe(REPORT_SEARCH_PLANNER_PROMPT_VERSION);
       expect(prompt.tool.function.name).toBe(SEARCH_REPORT_ENTRIES_TOOL_NAME);
       expect(prompt.tool.function.strict).toBe(true);
-      expect(prompt.toolChoice).toBe("any");
+      expect(prompt.toolChoice).toEqual({
+        type: "function",
+        function: { name: "search_report_entries" },
+      });
       expect(prompt.parallelToolCalls).toBe(false);
       expect(data).toMatchObject({
         question: input.question,
@@ -165,7 +168,7 @@ describe("report assistant prompt goldens", () => {
   it("keeps citation repair bounded and versioned", () => {
     const answerText = "The release remains blocked. [S1]";
     const prompt = buildCitationRepairPrompt({
-      original: { question: "Что изменилось?", grounding: emptyGrounding },
+      original: { question: "What changed?", grounding: emptyGrounding },
       previousAnswer: {
         answerMarkdown: answerText,
         sourceIds: ["S1", "S1", "S99"],

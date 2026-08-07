@@ -74,7 +74,10 @@ describe("MistralPlannerAdapter", () => {
       expect.objectContaining({
         model: config.model,
         maxTokens: config.maxTokens,
-        toolChoice: "any",
+        toolChoice: {
+          type: "function",
+          function: { name: "search_report_entries" },
+        },
         parallelToolCalls: false,
       }),
       { timeoutMs: config.providerTimeoutMs },
