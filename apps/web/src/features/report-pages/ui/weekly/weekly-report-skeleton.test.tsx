@@ -31,7 +31,21 @@ describe("WeeklyReportSkeleton", () => {
     expect(screen.getByTestId("slide-skeleton-head-carousel")).toBeVisible();
     expect(screen.getByTestId("slide-skeleton-article")).toBeVisible();
     expect(
+      screen.queryByTestId("weekly-skeleton-status"),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByTestId("weekly-skeleton-overview"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reserves the report status only for the loaded form header", () => {
+    const { rerender } = render(<WeeklyReportSkeleton mode="form" />);
+
+    expect(screen.getByTestId("weekly-skeleton-status")).toBeVisible();
+
+    rerender(<WeeklyReportSkeleton mode="slides" />);
+    expect(
+      screen.queryByTestId("weekly-skeleton-status"),
     ).not.toBeInTheDocument();
   });
 

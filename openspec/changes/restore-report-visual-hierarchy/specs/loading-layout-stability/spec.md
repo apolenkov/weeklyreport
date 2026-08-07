@@ -19,6 +19,12 @@ The lead, head, and viewer report loading skeletons MUST preserve the loaded sur
 - **WHEN** the shared weekly report changes from its skeleton to loaded content
 - **THEN** the header, context bar, portfolio overview, and section list retain the same order and width allocation
 
+#### Scenario: a head or viewer slide route renders its outer fallback
+
+- **WHEN** the shared weekly report skeleton renders in slides mode
+- **THEN** its header omits the form-only report status placeholder
+- **AND** resolving the slide route does not remove an extra header landmark or change compact header wrapping
+
 ### Requirement: Slide skeletons mirror the current full-width article
 
 The lead and head slide loading skeleton MUST represent the current full-width slide article with its hero, summary strip, four-column headings, and product-card body. It MUST NOT render the retired sidebar-plus-canvas layout. At compact widths, the placeholder MUST remain contained without horizontal page overflow.
