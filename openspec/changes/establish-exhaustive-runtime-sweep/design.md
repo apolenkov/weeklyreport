@@ -242,6 +242,12 @@ Function evidence follows the domain `Given/When/Then`; accessibility combines
 axe with keyboard/focus/name/role checks. Visual evidence is settled Chromium
 `1440x900`; baseline/final pass evidence is content-addressed, zero diffs are
 allowed except declared reviewed masks, and all failure traces are retained.
+Screenshot and geometry freeze the same boundary before keyboard or axe
+instrumentation. Stable landmark topology and movement remain strict within a
+route. Cross-route topology comparison is masked only for a successful
+same-origin read-only link whose immutable URL pair proves the declared target
+path or its redirected descendant; every snapshot-local visual oracle remains
+blocking.
 
 ### Before/after evidence flow
 

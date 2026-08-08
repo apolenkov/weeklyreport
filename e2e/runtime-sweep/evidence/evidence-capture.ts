@@ -152,10 +152,10 @@ export async function captureRouteEvidence(
   // Freeze the transition boundary before keyboard traversal, focus changes,
   // axe injection, or any other evidence instrumentation can alter the page.
   const screenshot = await captureScreenshot(input, directory);
+  const geometrySnapshot = await captureGeometry(input.page);
   const axeContext = await prepareAxeContext(input.page);
   const captureInput = { ...input, inventory: await inventoryFor(input) };
   const keyboard = await keyboardFor(captureInput);
-  const geometrySnapshot = await captureGeometry(input.page);
   const axe = await finalizeAxeContext(input.page, axeContext);
   await input.settleRuntimeEvents?.();
   const serverLogs = await serverLogsFor(input);

@@ -242,6 +242,15 @@ profile, role, route, state, action, and capture timestamp; the ledger SHALL
 reject an artifact that is missing its binding or whose SHA differs from the
 campaign.
 
+The screenshot and its paired geometry SHALL be captured at the same settled
+boundary before keyboard traversal, axe injection, or other evidence
+instrumentation can change focus or scroll position. Same-route transitions
+SHALL compare stable landmark topology and movement. A read-only link may mask
+cross-route landmark topology and movement only when immutable successful URL
+artifacts prove a same-origin transition to the declared target path or its
+redirected descendant. Viewport, overflow, loading, duplicate-key, malformed,
+and keyed zero-size checks SHALL remain blocking on both route snapshots.
+
 Run-level observability artifacts SHALL also bind the matrix digest, assignment
 digest, run id, lane id, profile, run-scoped service name, and content digests
 of every required raw artifact. The merger SHALL reject stale, foreign-run,
@@ -336,8 +345,12 @@ consistent.
   period, scope, or persisted state
 - **THEN** the cell stores screenshots immediately before the action and after
   the declared settled state using the same viewport and masking policy
-- **AND** geometry, overflow, loading-state replacement, and unexpected visual
-  movement are adjudicated from that pair
+- **AND** screenshot and geometry capture precede keyboard and axe
+  instrumentation at each settled boundary
+- **AND** same-route geometry, overflow, loading-state replacement, and
+  unexpected visual movement are adjudicated from that pair
+- **AND** a proven cross-route read-only link may mask only landmark topology
+  and movement comparison while snapshot-local visual failures remain blocking
 
 ### Requirement: The baseline is immutable and reruns are explicit
 

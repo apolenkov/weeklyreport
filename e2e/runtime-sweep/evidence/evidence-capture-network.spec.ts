@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "@playwright/test";
 
 import { eventsFor } from "../matrix/runtime-matrix-evidence.ts";
@@ -266,4 +268,33 @@ test("keeps the response ledger open until delayed API work settles", async ({
   } finally {
     events.detach();
   }
+});
+
+test("freezes geometry before keyboard traversal scrolls the page", async ({
+  page,
+}, testInfo) => {
+  await page.setContent(`
+    <main data-layout-key="report-page" style="min-height:2200px">
+      <button type="button">Top</button>
+      <button type="button" style="position:absolute;top:2000px"
+        onfocus="document.querySelector('main').style.transform='translateY(-500px)'">Bottom</button>
+    </main>
+  `);
+  const result = await captureNetwork(page, testInfo, []);
+  const ref = result.all.find(({ kind }) => kind === "geometry");
+  if (ref === undefined) throw new Error("Geometry evidence is missing");
+  const geometry = JSON.parse(await readFile(ref.archivePath, "utf8")) as {
+    readonly elements: readonly {
+      readonly layoutKey: string | null;
+      readonly y: number;
+    }[];
+  };
+  const pageGeometry = geometry.elements.find(
+    ({ layoutKey }) => layoutKey === "report-page",
+  );
+  const liveY = await page
+    .locator("main")
+    .evaluate((element) => element.getBoundingClientRect().y);
+  expect(pageGeometry?.y).toBeGreaterThanOrEqual(0);
+  expect(liveY).toBeLessThan(0);
 });

@@ -8,6 +8,7 @@ interface PageControlSnapshot {
   readonly title: string | null;
   readonly checked: boolean | undefined;
   readonly ariaChecked: string | null;
+  readonly ariaCurrent?: string | null;
   readonly ariaExpanded: string | null;
   readonly ariaPressed: string | null;
   readonly controlledExpanded?: boolean | undefined;
@@ -65,6 +66,7 @@ export const snapshotPage = async (page: Page): Promise<PageSnapshot> =>
       checked:
         element instanceof HTMLInputElement ? element.checked : undefined,
       ariaChecked: element.getAttribute("aria-checked"),
+      ariaCurrent: element.getAttribute("aria-current"),
       ariaExpanded: element.getAttribute("aria-expanded"),
       ariaPressed: element.getAttribute("aria-pressed"),
       controlledExpanded: controlledExpanded(element),
@@ -152,6 +154,9 @@ export const controlAlreadyActive = (
     control?.ariaPressed === "true" ||
     control?.selected === "true" ||
     control?.controlledExpanded === true ||
+    (control?.ariaCurrent !== null &&
+      control?.ariaCurrent !== undefined &&
+      control.ariaCurrent.toLocaleLowerCase() !== "false") ||
     (IDENTITY_ACTIVE_ROLES.has(target.ariaRole) &&
       (control?.checked === true || control?.ariaChecked === "true"))
   );

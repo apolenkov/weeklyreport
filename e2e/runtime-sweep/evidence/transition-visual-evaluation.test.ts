@@ -206,6 +206,7 @@ describe("transition visual evaluation", () => {
       {
         requireNoZeroSize: false,
         allowNoSharedStableLayoutLandmarks: false,
+        allowCrossRouteStableLayoutChange: false,
       },
     );
 
@@ -269,5 +270,29 @@ describe("transition visual evaluation", () => {
     expect(result.issues).toContain(
       "stable layout key after-only appeared after",
     );
+  });
+
+  it("masks stable topology only for a proven cross-route policy", () => {
+    const policy = {
+      ...FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+      allowCrossRouteStableLayoutChange: true,
+    };
+    const result = evaluateTransitionVisualPair(
+      snapshot(),
+      snapshot({ layoutKey: "lead-report-body", y: 500 }),
+      "none",
+      policy,
+    );
+    const overflow = evaluateTransitionVisualPair(
+      snapshot(),
+      snapshot({ layoutKey: "lead-report-body", scrollWidth: 1600 }),
+      "none",
+      policy,
+    );
+
+    expect(result.outcome).toBe("pass");
+    expect(result.comparison).toBe("cross-route-snapshots");
+    expect(result.reviewedMasks.join(" ")).toContain("cross-route navigation");
+    expect(overflow.issues).toContain("after horizontal overflow is 160px");
   });
 });

@@ -119,6 +119,34 @@ describe("live control observations", () => {
     ).toBe(true);
   });
 
+  it("recognizes an aria-current read-only button as already active", () => {
+    const before: PageSnapshot = {
+      ...snapshot(),
+      controls: [
+        {
+          role: "button",
+          name: "Shared context Ivanov V.P. 40% ready",
+          title: null,
+          checked: undefined,
+          ariaChecked: null,
+          ariaCurrent: "true",
+          ariaExpanded: null,
+          ariaPressed: null,
+          selected: null,
+          value: undefined,
+        },
+      ],
+    };
+
+    expect(
+      controlAlreadyActive(before, {
+        controlKey: "button:Shared%20context:1",
+        ariaRole: "button",
+        accessibleName: "Shared context Ivanov V.P. 40% ready",
+      }),
+    ).toBe(true);
+  });
+
   it("does not accept a control whose semantic target is still collapsed", () => {
     const before: PageSnapshot = {
       ...snapshot(),

@@ -6,8 +6,15 @@ const DOM_ORDER_WIDTH = 4;
 const exactControl = (
   controls: readonly DomControlObservation[],
   action: Action,
-): DomControlObservation | undefined =>
-  controls.find(({ controlKey }) => controlKey === action.controlKey);
+): DomControlObservation | undefined => {
+  const exact = controls.find(
+    ({ controlKey }) => controlKey === action.controlKey,
+  );
+  if (exact === undefined || action.target === undefined) return exact;
+  return exact.role === action.target.role && exact.href === action.target.href
+    ? exact
+    : undefined;
+};
 
 const uniqueStableTarget = (
   controls: readonly DomControlObservation[],
