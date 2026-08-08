@@ -40,7 +40,7 @@ const OVERRIDE_CONFIG_MODULES = [
   "eslint-config/immutability.ts",
   "eslint-config/overrides.ts",
 ] as const;
-// Harness/session outputs default to the external archive (CLAUDE.md), never
+// Harness/session outputs default to the external archive (AGENTS.md), never
 // to the source tree; CI overrides with CATALOGUE_OUTPUT_DIR.
 const ARCHIVE_CATALOGUE_DIR = join(
   homedir(),
@@ -303,7 +303,7 @@ const checkRatchet = (rows: readonly Row[]): void => {
 
 // Check mode is read-only: it must not mutate workspace state, so the full
 // catalogue dump is not written anywhere. A non-check run writes it to the
-// external archive (CLAUDE.md) by default, with CATALOGUE_OUTPUT_DIR as the
+// external archive (AGENTS.md) by default, with CATALOGUE_OUTPUT_DIR as the
 // CI override where the archive is unavailable.
 export function catalogueOutputPath(
   checkMode: boolean,
