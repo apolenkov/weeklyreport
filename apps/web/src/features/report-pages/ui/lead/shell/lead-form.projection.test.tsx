@@ -228,6 +228,14 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("exposes a stable landmark for the loaded edit body", async () => {
+    const container = await renderAndSettle();
+
+    expect(
+      container.querySelector('[data-layout-key="lead-report-body"]'),
+    ).not.toBeNull();
+  });
+
   it("snapshot: all icon SVGs rendered in LeadForm have aria-hidden=true", async () => {
     const container = await renderAndSettle();
     const allSvgs = Array.from(container.querySelectorAll("svg"));
