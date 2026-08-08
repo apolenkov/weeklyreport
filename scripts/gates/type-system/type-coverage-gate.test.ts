@@ -22,7 +22,11 @@ const EXPECTED_THRESHOLDS = [
   { project: "packages/shared", threshold: 100 },
   { project: "packages/ui", threshold: 100 },
   { project: "apps/api", threshold: 99.98 },
-  { project: "apps/web", threshold: 99.8 },
+  {
+    ignoreFiles: "apps/web/.next/**",
+    project: "apps/web",
+    threshold: 99.8,
+  },
 ] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -64,12 +68,67 @@ const runTypeCoverage = (
   return result;
 };
 
+const runProjectTypeCoverage = (directory: string, ignoreFiles?: string) => {
+  const ignoreArguments = ignoreFiles ? ["--ignore-files", ignoreFiles] : [];
+  const result = spawnSync(
+    process.execPath,
+    [
+      TYPE_COVERAGE_ENTRY,
+      "-p",
+      "apps/web",
+      "--at-least",
+      "100",
+      ...ignoreArguments,
+    ],
+    { cwd: directory, encoding: "utf8" },
+  );
+  assert.equal(result.error, undefined);
+  return result;
+};
+
 void test("the canonical type-coverage command keeps package thresholds", () => {
   const expected = EXPECTED_THRESHOLDS.map(
-    ({ project, threshold }) =>
-      `type-coverage -p ${project} --at-least ${threshold}`,
+    ({ project, threshold, ...entry }) => {
+      const ignoreArgument =
+        "ignoreFiles" in entry ? ` --ignore-files '${entry.ignoreFiles}'` : "";
+      return `type-coverage -p ${project} --at-least ${threshold}${ignoreArgument}`;
+    },
   ).join(" && ");
   assert.equal(canonicalTypeCoverageCommand(), expected);
+});
+
+void test("generated Next.js types stay outside the product threshold", () => {
+  const directory = mkdtempSync(join(tmpdir(), "customreport-typecov-next-"));
+  const projectDirectory = join(directory, "apps/web");
+  const sourceDirectory = join(projectDirectory, "src");
+  const generatedDirectory = join(projectDirectory, ".next/types");
+  mkdirSync(sourceDirectory, { recursive: true });
+  mkdirSync(generatedDirectory, { recursive: true });
+  writeFileSync(
+    join(projectDirectory, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { strict: true },
+      include: ["src/**/*.ts", ".next/types/**/*.ts"],
+    }),
+  );
+  writeFileSync(
+    join(sourceDirectory, "control.ts"),
+    "export const value = 1;\n",
+  );
+  writeFileSync(
+    join(generatedDirectory, "generated.ts"),
+    'export const generated: any = "framework-owned";\n',
+  );
+
+  try {
+    const withoutIgnore = runProjectTypeCoverage(directory);
+    assert.notEqual(withoutIgnore.status, 0);
+
+    const withIgnore = runProjectTypeCoverage(directory, "apps/web/.next/**");
+    assert.equal(withIgnore.status, 0, withIgnore.stdout + withIgnore.stderr);
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
 });
 
 void test("each threshold rejects a planted escape but accepts typed control", () => {
