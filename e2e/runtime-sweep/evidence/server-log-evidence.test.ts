@@ -21,7 +21,7 @@ const response = (correlationId: string | null): ResponseRecord => ({
 
 const record = (
   timestamp: string,
-  level: "info" | "warn",
+  level: "debug" | "info" | "warn" | "error",
   message: string,
   correlationId: string,
   service = "customreport-api",
@@ -130,5 +130,91 @@ describe("server log evidence", () => {
       available: true,
       missingCorrelationIds: [],
     });
+  });
+
+  it("keeps a pre-phase unmatched warning out of the cell", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "runtime-log-"));
+    const logPath = path.join(directory, "app.log");
+    await writeFile(
+      logPath,
+      [
+        record(
+          "2026-08-07T00:00:00.000Z",
+          "warn",
+          "late worker warning",
+          "unrelated",
+          "pdf-export-worker",
+        ),
+        record("2026-08-07T00:00:00.550Z", "info", "trpc request", "corr-a"),
+      ].join("\n"),
+      "utf8",
+    );
+    const evidence = await collectServerLogEvidence({
+      path: logPath,
+      responses: [response("corr-a")],
+      startedAt: "2026-08-07T00:00:00.500Z",
+      endedAt: "2026-08-07T00:00:00.600Z",
+    });
+
+    // runtime-profile-observability-validation.ts rereads the full canonical
+    // app.log; this collector owns cell attribution only, so exclusion cannot
+    // erase the warning from campaign-level adjudication.
+    expect(evidence.records).toHaveLength(1);
+    expect(evidence.records[0]?.correlationId).toBe("corr-a");
+    expect(evidence.warningCount).toBe(0);
+  });
+
+  it("keeps an exact correlated warning at the one-second skew boundary", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "runtime-log-"));
+    const logPath = path.join(directory, "app.log");
+    await writeFile(
+      logPath,
+      record(
+        "2026-08-06T23:59:59.500Z",
+        "warn",
+        "slow correlated request",
+        "corr-a",
+      ),
+      "utf8",
+    );
+
+    const evidence = await collectServerLogEvidence({
+      path: logPath,
+      responses: [response("corr-a")],
+      startedAt: "2026-08-07T00:00:00.500Z",
+      endedAt: "2026-08-07T00:00:00.600Z",
+    });
+
+    expect(evidence.records).toHaveLength(1);
+    expect(evidence.records[0]?.correlationId).toBe("corr-a");
+  });
+
+  it("attaches an unmatched worker error inside the strict phase interval", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "runtime-log-"));
+    const logPath = path.join(directory, "app.log");
+    await writeFile(
+      logPath,
+      [
+        record("2026-08-07T00:00:00.050Z", "info", "trpc request", "corr-a"),
+        record(
+          "2026-08-07T00:00:00.070Z",
+          "error",
+          "worker failed",
+          "worker-only",
+          "pdf-export-worker",
+        ),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const evidence = await collectServerLogEvidence({
+      path: logPath,
+      responses: [response("corr-a")],
+      startedAt: "2026-08-07T00:00:00.000Z",
+      endedAt: "2026-08-07T00:00:00.100Z",
+    });
+
+    expect(evidence.records).toHaveLength(2);
+    expect(evidence.errorCount).toBe(1);
   });
 });

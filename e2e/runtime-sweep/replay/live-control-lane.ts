@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 
-import type { ControlActionRecovery } from "./control-actions.ts";
+import type {
+  ControlActionRecovery,
+  ControlActionRecoveryBoundary,
+} from "./control-actions.ts";
 import { executeControlAction } from "./control-actions.ts";
 import type { DomControlObservation } from "./dom-inventory.ts";
 import { type PageSnapshot, snapshotPage } from "./live-control-observation.ts";
@@ -19,6 +22,7 @@ import {
   recordFor,
   targetFor,
 } from "./live-control-records.ts";
+import { createRecoveryObservationBoundary } from "./recovery/live-control-recovery-observation.ts";
 
 export type {
   LiveControlActionRecord,
@@ -35,6 +39,7 @@ export interface LiveControlExecutionInput {
   readonly page: Page;
   readonly plans: readonly LiveControlPlan[];
   readonly recovery?: ControlActionRecovery;
+  readonly recoveryBoundary?: ControlActionRecoveryBoundary;
   readonly preparePage: () => Promise<void>;
   readonly reinventory?: () => Promise<readonly DomControlObservation[]>;
   readonly planningOptions?: LiveControlPlanningOptions;
@@ -46,6 +51,50 @@ interface PendingPlan {
   readonly plan: LiveControlPlan;
   readonly prepare: boolean;
 }
+
+const recoveryOptionsFor = (
+  input: LiveControlExecutionInput,
+  boundary = input.recoveryBoundary,
+): Pick<LiveControlExecutionInput, "recovery" | "recoveryBoundary"> => ({
+  ...(input.recovery === undefined ? {} : { recovery: input.recovery }),
+  ...(boundary === undefined ? {} : { recoveryBoundary: boundary }),
+});
+
+type ObservationOptions = Parameters<typeof observationAfter>[4];
+type RecoveryObservation = ReturnType<typeof createRecoveryObservationBoundary>;
+
+const recoveryObservationFor = (
+  input: LiveControlExecutionInput,
+  operation: string,
+  before: PageSnapshot,
+  options: ObservationOptions,
+): RecoveryObservation | undefined =>
+  input.recoveryBoundary === undefined
+    ? undefined
+    : createRecoveryObservationBoundary(input.recoveryBoundary, (outcome) =>
+        observationAfter(
+          input.page,
+          operation,
+          before,
+          outcome.status,
+          options,
+        ),
+      );
+
+const finalObservation = async (
+  input: LiveControlExecutionInput,
+  operation: string,
+  before: PageSnapshot,
+  status: Parameters<typeof observationAfter>[3],
+  options: ObservationOptions,
+  recovery: RecoveryObservation | undefined,
+) => {
+  recovery?.finalize();
+  const result = await recovery?.result;
+  return result?.captured === true
+    ? result.observation
+    : observationAfter(input.page, operation, before, status, options);
+};
 
 const executePlan = async (
   input: LiveControlExecutionInput,
@@ -71,22 +120,29 @@ const executePlan = async (
     timeoutMs,
     observationOptions,
   );
+  const recoveryObservation = recoveryObservationFor(
+    input,
+    operation,
+    before,
+    observationOptions,
+  );
   try {
     const execution = await executeControlAction({
       page: input.page,
       control,
       action: plan.action,
-      ...(input.recovery === undefined ? {} : { recovery: input.recovery }),
+      ...recoveryOptionsFor(input, recoveryObservation?.boundary),
       observeOutcome,
       ...(operation === "fill" ? { value: "Runtime sweep" } : {}),
       timeoutMs,
     });
-    const observation = await observationAfter(
-      input.page,
+    const observation = await finalObservation(
+      input,
       operation,
       before,
       execution.status,
       observationOptions,
+      recoveryObservation,
     );
     if (execution.status === "pass" && observation === undefined)
       return actionFailureRecord(

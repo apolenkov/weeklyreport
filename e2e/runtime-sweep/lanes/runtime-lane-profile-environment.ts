@@ -70,6 +70,7 @@ export const runtimeLaneProfileEnvironment = (
   OTEL_SERVICE_VERSION: input.assignment.sourceSha,
   LOG_LEVEL: "debug",
   SENTRY_DSN: input.observability.bugsink.dsn,
+  NEXT_PUBLIC_SENTRY_DSN: input.observability.bugsink.dsn,
   BULLMQ_PREFIX: `customreport-runtime-${input.lane.laneId}-${input.profile}`,
   DB_POOL_MAX: RUNTIME_LANE_DB_POOL_MAX,
 });

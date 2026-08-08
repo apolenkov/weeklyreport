@@ -9,6 +9,7 @@ import { EXPECTED_LEAD_FORM_UNAVAILABLE_SURFACE } from "../preflight/runtime-sur
 import { type EvidenceBundle } from "../source/contracts.ts";
 import type { DomInventory } from "./dom-inventory.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
+import type { FrozenRuntimeEvidenceWindow } from "./recovery/frozen-case-recovery-boundary.ts";
 
 const HTTP_OK_LIMIT = 400;
 
@@ -16,6 +17,21 @@ export type CapturedPhaseEvidence = Readonly<{
   readonly bundle: EvidenceBundle;
   readonly cursor: RuntimeEventCursor;
 }>;
+
+export type FrozenPhaseEventBoundary = Readonly<{
+  readonly evidence: FrozenRuntimeEvidenceWindow;
+  readonly outputCursor: RuntimeEventCursor;
+}>;
+
+const eventsForCapture = async (
+  listeners: RuntimeEvents,
+  eventCursor: RuntimeEventCursor,
+  boundary: FrozenPhaseEventBoundary | undefined,
+) => {
+  if (boundary !== undefined) return boundary.evidence;
+  await listeners.waitForIdle();
+  return listeners.consumeSince(eventCursor);
+};
 
 export const captureEvidence = async (
   input: FrozenPhaseInput,
@@ -27,9 +43,9 @@ export const captureEvidence = async (
   unavailableSurfaceExpected: boolean,
   surfaceObservation: RuntimeSurfaceObservation | undefined,
   phaseStartedAt: string,
+  eventBoundary?: FrozenPhaseEventBoundary,
 ): Promise<CapturedPhaseEvidence> => {
-  await listeners.waitForIdle();
-  const events = listeners.consumeSince(eventCursor);
+  const events = await eventsForCapture(listeners, eventCursor, eventBoundary);
   const expectedFault = expectedFaultFor(input.matrixCase, input.phase);
   const bundle = (
     await captureRouteEvidence({
@@ -50,6 +66,9 @@ export const captureEvidence = async (
       settleRuntimeEvents: () => Promise.resolve(),
       serverLogPath: input.runtime.apiLogPath,
       phaseStartedAt,
+      ...(eventBoundary === undefined
+        ? {}
+        : { phaseEndedAt: eventBoundary.evidence.endedAt }),
       responseStatus: phaseStatus,
       capturedAt: new Date().toISOString(),
       capturePhase: input.phase,
@@ -78,5 +97,8 @@ export const captureEvidence = async (
       },
     })
   ).bundle;
-  return { bundle, cursor: events.cursor };
+  return {
+    bundle,
+    cursor: eventBoundary?.outputCursor ?? events.cursor,
+  };
 };

@@ -124,16 +124,29 @@ const collectUntilBarrier = async (
       }
       return unavailable(correlationIds, parsed.malformedCount);
     }
-    const windowStart = startedAt - CORRELATION_WINDOW_SKEW_MS;
-    const windowEnd = endedAt + CORRELATION_WINDOW_SKEW_MS;
-    const records = parsed.records.filter(
-      (record) =>
-        recordInWindow(record, windowStart, windowEnd) &&
-        (correlationIds.includes(record.correlationId) ||
-          record.level === "warn" ||
-          record.level === "error"),
+    const strictRecords = new Set(
+      parsed.records.filter((record) =>
+        recordInWindow(record, startedAt, endedAt),
+      ),
     );
-    const matched = new Set(records.map(({ correlationId }) => correlationId));
+    const skewRecords = parsed.records.filter((record) =>
+      recordInWindow(
+        record,
+        startedAt - CORRELATION_WINDOW_SKEW_MS,
+        endedAt + CORRELATION_WINDOW_SKEW_MS,
+      ),
+    );
+    const records = skewRecords.filter(
+      (record) =>
+        correlationIds.includes(record.correlationId) ||
+        (strictRecords.has(record) &&
+          (record.level === "warn" || record.level === "error")),
+    );
+    const matched = new Set(
+      records
+        .filter(({ correlationId }) => correlationIds.includes(correlationId))
+        .map(({ correlationId }) => correlationId),
+    );
     const missingCorrelationIds = correlationIds.filter(
       (id) => !matched.has(id),
     );

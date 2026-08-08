@@ -140,7 +140,7 @@ const serverLogsFor = (
         path: input.serverLogPath,
         responses: input.responses ?? [],
         startedAt: input.phaseStartedAt ?? input.capturedAt,
-        endedAt: new Date().toISOString(),
+        endedAt: input.phaseEndedAt ?? new Date().toISOString(),
       });
 
 export async function captureRouteEvidence(

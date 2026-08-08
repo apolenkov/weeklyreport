@@ -14,6 +14,7 @@ import {
 import { FAULT_DECLARATIONS } from "../scenarios/faults/fault-declarations.ts";
 import { withFault } from "../scenarios/faults/fault-injection.ts";
 import { type DOMControl, type MatrixExecution } from "../source/contracts.ts";
+import type { ControlActionRecoveryBoundary } from "./control-actions.ts";
 import { createE2eControlRecovery } from "./control-recovery.ts";
 import {
   canonicalFrozenTargetControl,
@@ -164,6 +165,7 @@ export const runAction = async (
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
   surface?: RuntimeSurfaceExpectation,
+  recoveryBoundary?: ControlActionRecoveryBoundary,
 ): Promise<ActionOutcome | undefined> => {
   const action = executionAction(matrixCase.execution);
   if (action === undefined || action.operation === "navigate") return undefined;
@@ -187,6 +189,7 @@ export const runAction = async (
         page,
         plans: [plan],
         recovery: recoveryFor(page, source, matrixCase, runtime),
+        ...(recoveryBoundary === undefined ? {} : { recoveryBoundary }),
         preparePage: () => Promise.resolve(),
         planningOptions: { formSafety: "disposable-reset" },
       })

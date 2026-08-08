@@ -182,7 +182,13 @@ unreachable values are blind and fail the drive closed. Bugsink requires both
 credentials, a 40-character lowercase-hex API token, and its dedicated
 `runtime-sweep` project. The harness is sequential and assumes no other
 writers use that project while counters are polled; this is not a generic
-concurrent liveness proof. Loki authentication is optional only as a pair: both
+concurrent liveness proof. The direct Sentry-protocol probe proves the endpoint;
+a separate API canary initialized through `@sentry/nestjs` and a browser canary
+initialized through the web application's installed `@sentry/browser`
+dependency must both flush and appear in that project before the product
+telemetry channel is live. The canonical DSN is supplied to both `SENTRY_DSN`
+and `NEXT_PUBLIC_SENTRY_DSN`. An SDK DSN parse warning, rejected flush, or
+absent tagged event is blind even when the direct protocol probe passes. Loki authentication is optional only as a pair: both
 `RUNTIME_SWEEP_LOKI_USERNAME` and `RUNTIME_SWEEP_LOKI_PASSWORD` are absent for
 unauthenticated local Loki or both are present for authenticated Loki.
 
@@ -200,6 +206,11 @@ the canonical local logs and performs a fresh bounded Loki count and shutdown-
 marker query for the identity-bound service and profile window. Declared local
 counts, declared Loki counts, and live Loki counts must match exactly.
 
+For recovery-backed controls, the visual transition pair is `before -> action
+result`. The action screenshot, geometry, DOM and logs are complete before
+reset/reseed starts. The later `after` phase is post-recovery baseline evidence
+and is not substituted for the product action result in visual adjudication.
+
 The parent creates one immutable run identity before starting any lane. The
 identity binds source SHA, matrix digest, assignment digest, run UUID, lane ids,
 and profiles. Each profile uses a run-scoped service name. Each lane then writes
@@ -209,14 +220,25 @@ foreign-run, loose, digest-mismatched, or incomplete evidence.
 
 The cell binding is compositional and keeps the full sweep tractable. Each
 phase first binds browser responses to API/worker records by correlation id
-inside the phase window. The event ledger remains attached until tracked API
-requests settle, and file-log collection polls for late correlated writes
-before closing that window. The profile query then batches those correlation ids
-over the enclosing profile window and requires exact `correlationId × level`
-counts in Loki; batching does not remove the per-cell correlation key. Bugsink
-has no passing event to assign to a cell: the dedicated-project counter must
-remain at zero for the complete assignment. Any non-zero Bugsink delta blocks
+inside the phase window. A bounded clock-skew allowance applies only to an
+exact response correlation id. An unmatched warning or error belongs to a cell
+only when its timestamp is inside the strict phase interval; unmatched events
+outside every strict cell interval remain in the immutable profile-wide
+canonical API log and block the campaign until dispositioned. The event ledger remains
+attached until tracked API requests settle, and file-log collection polls for
+late correlated writes before closing that window. The profile query then
+batches those correlation ids over the enclosing profile window and requires
+exact `correlationId × level` counts in Loki; batching does not remove the
+per-cell correlation key or the profile-wide canonical API log. Bugsink has no
+passing product event to assign to a cell: the dedicated-project counter must
+remain at zero for the complete assignment. Any non-canary Bugsink delta blocks
 all cells before merge.
+
+A stateful control has two evidence windows. The action-attempt window ends
+after the bounded functional outcome and before destructive recovery starts.
+Reset, reseed, login, route reload, and state-oracle checks write a separate
+recovery window. A recovery failure still blocks the campaign, but its requests
+and logs are never relabelled as evidence that the product action itself failed.
 
 API shutdown is one awaited sequence. It attempts app close, the process-wide
 file-log barrier and flush, OpenTelemetry shutdown, and Sentry close with

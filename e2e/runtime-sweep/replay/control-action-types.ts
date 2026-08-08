@@ -19,6 +19,24 @@ export type ControlActionTarget = Pick<
 
 export type ControlActionObservation = "pass" | "fail";
 
+export type ControlActionAttemptOutcome = Readonly<{
+  readonly status: "pass" | "fail" | "ambiguous";
+  readonly reason?: string;
+}>;
+
+export type ControlActionRecoveryOutcome =
+  | Readonly<{ readonly status: "pass" }>
+  | Readonly<{ readonly status: "fail"; readonly reason: string }>;
+
+export interface ControlActionRecoveryBoundary {
+  readonly beforeRecovery: (
+    outcome: ControlActionAttemptOutcome,
+  ) => Promise<void>;
+  readonly afterRecovery: (
+    outcome: ControlActionRecoveryOutcome,
+  ) => Promise<void>;
+}
+
 export interface RenderedNameActionLease {
   readonly deadline: number;
   readonly generation: string;
@@ -39,6 +57,7 @@ export interface ControlActionInput {
   readonly control: ControlActionTarget;
   readonly action: Action;
   readonly recovery?: ControlActionRecovery;
+  readonly recoveryBoundary?: ControlActionRecoveryBoundary;
   readonly observeOutcome?: () => Promise<ControlActionObservation>;
   readonly value?: string;
   readonly timeoutMs?: number;
@@ -56,7 +75,7 @@ export type ControlActionExecution =
       readonly status: "ambiguous";
       readonly controlKey: string;
       readonly operation: ActionOperation;
-      readonly resetPerformed: true;
+      readonly resetPerformed: boolean;
       readonly reason: string;
     }>
   | Readonly<{

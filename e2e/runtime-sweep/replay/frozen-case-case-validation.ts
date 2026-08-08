@@ -1,5 +1,6 @@
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import type { EvidenceRef } from "../source/contracts.ts";
+import { isRecoveryBackedAction } from "./control-action-policy.ts";
 import type { PhaseEvidence } from "./frozen-case-phase-validation.ts";
 import { allRefs } from "./frozen-case-phase-validation.ts";
 
@@ -28,6 +29,35 @@ const controlActionIssues = (
     !refs.some(({ kind }) => kind === "control-action")
     ? [`${matrixCase.caseId} action evidence is missing control-action`]
     : [];
+};
+
+const actionRequiresRecovery = (matrixCase: MatrixExecutableCase): boolean =>
+  "action" in matrixCase.execution &&
+  isRecoveryBackedAction(matrixCase.execution.action);
+
+const recoveryEvidenceIssues = (
+  matrixCase: MatrixExecutableCase,
+  phases: readonly PhaseEvidence[],
+): readonly string[] => {
+  if (!actionRequiresRecovery(matrixCase)) return [];
+  const action = phases.find(({ phase }) => phase === "action");
+  const observations = action?.bundle.observations.filter(
+    ({ observationId }) => observationId === "action-recovery",
+  );
+  if (observations?.length !== 1)
+    return [
+      `${matrixCase.caseId} action requires exactly one recovery observation`,
+    ];
+  const evidenceIds = observations[0]?.evidenceIds ?? [];
+  const recoveryRefs = (action?.refs ?? []).filter(
+    (ref) =>
+      evidenceIds.includes(ref.artifactId) &&
+      ref.kind === "log" &&
+      ref.archivePath.endsWith("/recovery-evidence.json"),
+  );
+  return recoveryRefs.length === 1
+    ? []
+    : [`${matrixCase.caseId} action recovery evidence is missing`];
 };
 
 const oracleIssues = (
@@ -132,6 +162,7 @@ export const caseSpecificIssues = (
   const oracle = oracleForExecution(matrixCase);
   return [
     ...controlActionIssues(matrixCase, refs),
+    ...recoveryEvidenceIssues(matrixCase, phases),
     ...oracleIssues(matrixCase, refs, oracle),
     ...cleanupIssues(matrixCase.caseId, refs, oracle),
     ...transitionIssues(matrixCase, actionTransition),

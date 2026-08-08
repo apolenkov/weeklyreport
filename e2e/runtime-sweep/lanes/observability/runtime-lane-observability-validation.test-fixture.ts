@@ -128,6 +128,10 @@ const readiness = (assignment: RuntimeLaneAssignment) => ({
   checkedAt: STARTED_AT,
   otel: "live",
   bugsink: "live",
+  bugsinkProtocol: "live",
+  bugsinkSdk: "live",
+  bugsinkApiSdk: "live",
+  bugsinkBrowserSdk: "live",
   loki: "live",
 });
 

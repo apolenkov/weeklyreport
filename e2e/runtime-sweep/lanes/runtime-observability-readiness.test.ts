@@ -35,6 +35,22 @@ const storeResponse = (init: RequestInit | undefined): Response => {
   return response({ id: eventId.event_id });
 };
 
+const envelopeEventId = (init: RequestInit | undefined): string | null => {
+  const body = typeof init?.body === "string" ? init.body : "";
+  const eventId = body
+    .split("\n")
+    .map((line) => {
+      try {
+        return JSON.parse(line) as { event_id?: unknown };
+      } catch {
+        return null;
+      }
+    })
+    .map((line) => line?.event_id)
+    .find((value): value is string => typeof value === "string");
+  return eventId ?? null;
+};
+
 const projectResponse = (projectReads: { count: number }): Response => {
   projectReads.count += 1;
   const count = projectReads.count > 1 ? 1 : 0;
@@ -61,6 +77,7 @@ const lokiResponse = (url: URL): Response => {
 
 const successfulFetcher = (): typeof fetch => {
   const projectReads = { count: 0 };
+  const sdkEvents: string[] = [];
   const implementation = (
     input: RequestInfo | URL,
     init?: RequestInit,
@@ -69,8 +86,19 @@ const successfulFetcher = (): typeof fetch => {
     if (url.hostname === "otel.test") return Promise.resolve(response({}));
     if (url.pathname.endsWith("/store/"))
       return Promise.resolve(storeResponse(init));
+    if (url.pathname.endsWith("/envelope/")) {
+      const eventId = envelopeEventId(init);
+      if (eventId) sdkEvents.push(eventId);
+      return Promise.resolve(response(null));
+    }
     if (url.pathname.includes("/projects/"))
       return Promise.resolve(projectResponse(projectReads));
+    if (url.pathname.endsWith("/issues/"))
+      return Promise.resolve(response({ results: [{ id: "issue-1" }] }));
+    if (url.pathname.endsWith("/events/"))
+      return Promise.resolve(
+        response({ results: sdkEvents.map((event_id) => ({ event_id })) }),
+      );
     if (url.pathname.endsWith("/push"))
       return Promise.resolve(new Response(null, { status: 204 }));
     return Promise.resolve(lokiResponse(url));
@@ -91,6 +119,10 @@ describe("runtime observability readiness", () => {
     ).resolves.toMatchObject({
       otel: "live",
       bugsink: "live",
+      bugsinkProtocol: "live",
+      bugsinkSdk: "live",
+      bugsinkApiSdk: "live",
+      bugsinkBrowserSdk: "live",
       loki: "live",
     });
   });
@@ -99,6 +131,6 @@ describe("runtime observability readiness", () => {
     const fetcher = vi.fn(() => Promise.reject(new Error("offline")));
     await expect(
       assertRuntimeObservabilityReadiness(config, fetcher),
-    ).rejects.toThrow("offline");
+    ).rejects.toThrow("Bugsink protocol probe was not stored");
   });
 });

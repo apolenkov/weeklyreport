@@ -36,7 +36,9 @@ export interface TransitionVisualEvidenceInput {
   readonly archiveRoot: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly before: EvidenceBundle;
-  readonly after: EvidenceBundle;
+  readonly result: EvidenceBundle;
+  readonly resultPhase: "action" | "after";
+  readonly attachTo: EvidenceBundle;
   readonly policy?: TransitionVisualPolicy;
 }
 
@@ -108,18 +110,21 @@ const loadUrl = async (
     ),
   );
 
-const pairRefsFor = (input: TransitionVisualEvidenceInput): PairRefs => ({
-  beforeScreenshot: phaseRef(
-    input.before.before,
-    "screenshot",
-    "screenshot.png",
-  ),
-  afterScreenshot: phaseRef(input.after.after, "screenshot", "screenshot.png"),
-  beforeGeometry: phaseRef(input.before.before, "geometry", "geometry.json"),
-  afterGeometry: phaseRef(input.after.after, "geometry", "geometry.json"),
-  beforeUrl: phaseRef(input.before.before, "url", "url.json"),
-  afterUrl: phaseRef(input.after.after, "url", "url.json"),
-});
+const pairRefsFor = (input: TransitionVisualEvidenceInput): PairRefs => {
+  const resultRefs = input.result[input.resultPhase];
+  return {
+    beforeScreenshot: phaseRef(
+      input.before.before,
+      "screenshot",
+      "screenshot.png",
+    ),
+    afterScreenshot: phaseRef(resultRefs, "screenshot", "screenshot.png"),
+    beforeGeometry: phaseRef(input.before.before, "geometry", "geometry.json"),
+    afterGeometry: phaseRef(resultRefs, "geometry", "geometry.json"),
+    beforeUrl: phaseRef(input.before.before, "url", "url.json"),
+    afterUrl: phaseRef(resultRefs, "url", "url.json"),
+  };
+};
 
 const loadPair = async (
   archiveRoot: string,
@@ -264,8 +269,8 @@ export async function attachTransitionVisualEvidence(
   ];
   const observation = transitionObservation(evaluation, evidence);
   return evidenceBundleSchema.parse({
-    ...input.after,
-    after: [...input.after.after, pairRef],
-    observations: [...input.after.observations, observation],
+    ...input.attachTo,
+    after: [...input.attachTo.after, pairRef],
+    observations: [...input.attachTo.observations, observation],
   });
 }
