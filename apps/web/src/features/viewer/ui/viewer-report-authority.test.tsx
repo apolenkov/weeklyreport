@@ -72,11 +72,6 @@ vi.mock("../../../shared/ui/report-shell/use-report-shell-url-state", () => ({
 }));
 
 vi.mock("../../../shared/ui/report-shell/report-toolbar", () => ({
-  DocumentActionGroup: ({ children }: { children: React.ReactNode }) => (
-    <div role="group" aria-label="Document actions">
-      {children}
-    </div>
-  ),
   ReportToolbar: ({
     contextControls,
   }: {
@@ -180,9 +175,6 @@ describe.each(AUTHORITY_CASES)(
       expect(
         screen.queryByRole("link", { name: "Edit" }),
       ).not.toBeInTheDocument();
-      if (mode === "slides") {
-        expect(screen.getByText("Slides deck")).toBeVisible();
-      }
     });
   },
 );

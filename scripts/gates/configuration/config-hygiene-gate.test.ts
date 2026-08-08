@@ -7,6 +7,9 @@ import { workflowFiles, workflowHygieneFindings } from "./workflow-policy.ts";
 
 const ARCHAEOLOGY =
   /(?:tasks[.]md|HEAD-CONSOLIDATE|Phase\s+\d|fix-report-surface-integrity|\(task\s+\d)/u;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const hygieneFindings = (source: string): readonly string[] =>
   source
     .split("\n")
@@ -72,6 +75,20 @@ void test("environment example references current maintained paths and version",
       new RegExp(`OTEL_SERVICE_VERSION=${packageVersion.version}`, "u"),
     );
   }
+});
+
+void test("Knip does not load the environment-dependent Prisma config", () => {
+  const config: unknown = JSON.parse(readFileSync("knip.json", "utf8"));
+  const packageJson: unknown = JSON.parse(readFileSync("package.json", "utf8"));
+  const workspaces = isRecord(config) ? config.workspaces : undefined;
+  const rootWorkspace = isRecord(workspaces) ? workspaces["."] : undefined;
+  const prisma = isRecord(rootWorkspace) ? rootWorkspace.prisma : undefined;
+  const scripts = isRecord(packageJson) ? packageJson.scripts : undefined;
+  assert.deepEqual(isRecord(prisma) ? prisma.config : undefined, []);
+  assert.equal(
+    isRecord(scripts) ? scripts.knip : undefined,
+    "knip --treat-config-hints-as-errors",
+  );
 });
 
 const readOnlyWorkflow = (permissions: string): string =>
