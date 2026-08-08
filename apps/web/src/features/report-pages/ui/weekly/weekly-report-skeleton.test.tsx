@@ -40,6 +40,26 @@ describe("WeeklyReportSkeleton", () => {
     expect(
       screen.queryByTestId("weekly-skeleton-overview"),
     ).not.toBeInTheDocument();
+    expect(screen.getByTestId("weekly-skeleton-header")).toHaveClass(
+      "min-h-36",
+      "sm:min-h-0",
+    );
+    expect(screen.getByTestId("weekly-skeleton-header-context")).toHaveClass(
+      "w-96",
+      "max-w-full",
+    );
+  });
+
+  it("reserves the viewer slides shell height at compact widths", () => {
+    render(<WeeklyReportSkeleton audience="viewer" mode="slides" />);
+
+    expect(screen.getByTestId("weekly-skeleton-header")).toHaveClass(
+      "min-h-32",
+      "sm:min-h-0",
+    );
+    expect(
+      screen.getByTestId("weekly-skeleton-header-context"),
+    ).not.toHaveClass("w-96");
   });
 
   it("reserves the report status only for the loaded form header", () => {
@@ -51,6 +71,14 @@ describe("WeeklyReportSkeleton", () => {
     expect(
       screen.queryByTestId("weekly-skeleton-status"),
     ).not.toBeInTheDocument();
+  });
+
+  it("reserves the loaded form header height through the 640px wrap", () => {
+    render(<WeeklyReportSkeleton audience="head" mode="form" />);
+
+    expect(screen.getByTestId("weekly-skeleton-header")).toHaveClass(
+      "max-[641px]:min-h-32",
+    );
   });
 
   it("reserves audience- and mode-specific document actions", () => {
@@ -94,6 +122,11 @@ describe("WeeklyReportSkeleton", () => {
 
     expect(acknowledge.nextElementSibling).toBe(overview);
     expect(root).toContainElement(acknowledge);
+    for (const control of acknowledge.querySelectorAll(
+      '[data-slot="skeleton"]',
+    )) {
+      expect(control).toHaveClass("max-md:h-[var(--touch-target-min)]");
+    }
   });
 
   it("pins the overview to the loaded surface geometry contract", () => {
@@ -113,6 +146,10 @@ describe("WeeklyReportSkeleton", () => {
     expect(
       screen.getByTestId("weekly-skeleton-body-continuation"),
     ).toHaveAttribute("data-layout-stability", "position-width");
+    for (const card of screen.getByTestId("weekly-skeleton-overview-grid")
+      .children) {
+      expect(card).toHaveClass("min-h-[88px]");
+    }
   });
 
   it("keeps one loading status when the slide skeleton is composed", () => {

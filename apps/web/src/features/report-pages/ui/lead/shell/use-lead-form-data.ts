@@ -127,7 +127,8 @@ export function useLeadFormData({
   return {
     ...view,
     ...visibility,
-    foreignContent,
+    foreignContent: foreignContent.data,
+    foreignContentPending: foreignContent.isPending,
     awaitingRoleRedirect: shouldRouteHeadLikeAwayFromLeadForm,
     awaitingCanonicalRedirect:
       !!redirectToCanonical && !pinnedReportId && view.activeReportId !== null,

@@ -118,6 +118,8 @@ export function buildLeadFormLoadedData(
     unifiedView: data.unifiedView,
     recordVisibility: data.recordVisibility,
     crossAuthors: data.crossAuthors,
+    foreignContent: data.foreignContent,
+    foreignContentPending: data.foreignContentPending,
   };
 }
 

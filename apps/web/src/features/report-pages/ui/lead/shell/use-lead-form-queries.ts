@@ -205,16 +205,17 @@ export function useCrossAuthorContent({
   readonly isForeignSlidesDeck: boolean;
 }) {
   const trpc = useTRPC();
+  const enabled = crossAuthorContentFetchEnabled({
+    hasReport: targetReportId !== null,
+    visibilityHydrated,
+    isEveryone,
+    isOwnDeck: !isForeignSlidesDeck,
+  });
   const query = useQuery({
     ...trpc.leadForm.crossAuthorContent.queryOptions({
       reportId: targetReportId ?? "",
     }),
-    enabled: crossAuthorContentFetchEnabled({
-      hasReport: targetReportId !== null,
-      visibilityHydrated,
-      isEveryone,
-      isOwnDeck: !isForeignSlidesDeck,
-    }),
+    enabled,
   });
   // Foreign rows are auxiliary content, but a failed read must still surface
   // instead of silently reading as "no co-owner content".
@@ -225,5 +226,8 @@ export function useCrossAuthorContent({
     context: { reportId: targetReportId || null },
     toastPrefix: "Failed to load co-owner content",
   });
-  return query.data;
+  return {
+    data: query.data,
+    isPending: enabled && query.isPending,
+  };
 }

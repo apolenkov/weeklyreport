@@ -1,3 +1,4 @@
+import type { MyHistoryEntry } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -154,7 +155,7 @@ const FULL_CONTENT_ROW = {
       type: "current",
       text: FOREIGN_ITEM_TEXT,
       workflowStatus: "in_progress",
-      stageNames: ["Development"],
+      stageNames: [FOREIGN_STAGE],
     },
   ],
   risks: [
@@ -165,7 +166,7 @@ const FULL_CONTENT_ROW = {
       impact: "Foreign impact",
       mitigation: "Foreign mitigation",
       severity: "blocked",
-      stageNames: ["Development"],
+      stageNames: [FOREIGN_STAGE],
     },
   ],
   decisions: [
@@ -176,13 +177,33 @@ const FULL_CONTENT_ROW = {
       owner: CO_OWNER_NAME,
       impact: "Foreign decision impact",
       deadline: null,
-      stageNames: ["Development"],
+      stageNames: [FOREIGN_STAGE],
     },
   ],
 };
 
 interface BuildOpts {
   seedEveryone?: boolean;
+  seedHistory?: boolean;
+}
+
+function makeHistoryEntry(): MyHistoryEntry {
+  return {
+    sectionId: SECTION_ID,
+    reportId: REPORT_ID,
+    periodStart: new Date("2026-08-03T00:00:00.000Z"),
+    periodEnd: new Date("2026-08-09T00:00:00.000Z"),
+    reportStatus: "draft",
+    sectionStatus: "draft",
+    archived: false,
+    submittedAt: null,
+    publishedAt: null,
+    itemCount: 1,
+    riskCount: 0,
+    decisionCount: 1,
+    priorityCount: 0,
+    productCount: 1,
+  };
 }
 
 function buildHarness(opts: BuildOpts = {}) {
@@ -201,7 +222,10 @@ function buildHarness(opts: BuildOpts = {}) {
         authorRole: "lead" as const,
       },
     },
-    { path: ["reports", "myHistory"], query: [] },
+    {
+      path: ["reports", "myHistory"],
+      query: () => (opts.seedHistory ? [makeHistoryEntry()] : []),
+    },
     { path: ["reports", "saveDraft"], mutation: true },
     { path: ["reports", "submit"], mutation: true },
     {
@@ -582,18 +606,22 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report", () =
 });
 
 describe("LeadForm — Record visibility: publish/export independence", () => {
-  it("the lead export control is inert (ComingSoon) and slides preview issues no content fetch", async () => {
-    // Seed Everyone: even a stored Everyone must not surface foreign content
-    // into the slides path beyond the always-honest status read.
-    const { Wrapper } = buildHarness({ seedEveryone: true });
+  it("the lead export control is inert and slides reuse the loaded Everyone content", async () => {
+    // The form owns the privileged read. Slides receive its settled result;
+    // they must not issue a second cross-author query or hide the rows.
+    const { Wrapper, contentFetch } = buildHarness({
+      seedEveryone: true,
+      seedHistory: true,
+    });
     render(
       <Wrapper>
         <LeadForm mode="slides" />
       </Wrapper>,
     );
-    await waitFor(() => {
-      expect(screen.queryByText(FOREIGN_DECISION_TEXT)).toBeNull();
-    });
+    expect(await screen.findByText(FOREIGN_DECISION_TEXT)).toBeInTheDocument();
+    expect(screen.getByText(FOREIGN_ITEM_TEXT)).toBeInTheDocument();
+    expect(screen.getByText(FOREIGN_RISK_TEXT)).toBeInTheDocument();
+    expect(contentFetch).toHaveBeenCalledTimes(1);
   });
 
   it("foreign slides deck (?authorId) fires NO crossAuthorContent read even with persisted Everyone", async () => {
