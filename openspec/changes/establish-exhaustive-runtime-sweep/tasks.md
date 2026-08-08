@@ -70,6 +70,9 @@
 - [x] 3.11 Keep the coordinated API shutdown as the sole process-signal owner
       and prove racing termination signals close the Nest application and exit
       exactly once.
+- [x] 3.12 Quiesce the prior browser document before profile reseed, run the
+      preflight API without a source watcher, and persist its API log so a
+      structured 500 remains diagnosable.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 

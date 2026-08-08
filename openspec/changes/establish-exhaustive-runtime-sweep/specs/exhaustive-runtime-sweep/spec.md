@@ -59,6 +59,13 @@ before baseline execution rather than trimming cells.
 - **THEN** matrix finalization fails before baseline execution
 - **AND** a `none` value or silently trimmed row cannot satisfy the gap
 
+#### Scenario: preflight changes destructive state groups
+
+- **WHEN** preflight moves to a state group that requires a profile reseed
+- **THEN** it quiesces the prior browser document before replacing database rows
+- **AND** the API runs as a one-shot process without source-watch restarts
+- **AND** the campaign persists the preflight API log before navigation so an internal error can be adjudicated from server evidence
+
 ### Requirement: Every coverage cell has a typed identity and one source SHA
 
 The canonical evidence ledger owned by the primary orchestrator SHALL represent

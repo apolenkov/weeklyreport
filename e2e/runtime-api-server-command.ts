@@ -1,2 +1,2 @@
 export const runtimeApiServerCommand =
-  "pnpm --filter @customreport/api dev:e2e" as const;
+  "pnpm --filter @customreport/api start:e2e" as const;
