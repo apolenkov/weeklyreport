@@ -6,6 +6,7 @@ import { SlideGridHeader } from "./slide-article-header";
 
 const offTrackGrid: SlideGridModel = {
   authors: [],
+  showOwnerMarks: true,
   worstStatus: "red",
   counters: { current: 1, risks: 1, priorities: 0 },
   onTrack: { on: 0, total: 1 },
