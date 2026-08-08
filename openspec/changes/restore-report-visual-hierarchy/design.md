@@ -45,7 +45,7 @@ stripe from framework overlays without weakening error reporting.
 
 ### Mirror layout ownership in skeletons, not live data volume
 
-Skeletons reuse the loaded surfaces' outer spacing, header split, compact context toolbar, and primary content containers. They intentionally use a bounded placeholder count because loading state cannot know the final data volume. Slide loading uses the current full-width article hierarchy and does not recreate the retired sidebar layout. The viewer slide shell remains mounted during its own queries, so it reserves the authority, document-action, and period-navigation rows inside the real shell instead of relying only on the route fallback.
+Skeletons reuse the loaded surfaces' outer spacing, header split, compact context toolbar, and primary content containers. The weekly form reserves the complete bounded 15-card MVP overview, then exposes an empty position-width continuation landmark instead of inventing activity, filter, or accordion rows whose count and height are unknown before data loads. The lead form pairs its loaded and loading bodies through the same position-width landmark. Slide loading uses the current full-width article hierarchy and does not recreate the retired sidebar layout. The viewer slide shell remains mounted during its own queries, so it reserves the authority, document-action, and period-navigation rows inside the real shell instead of relying only on the route fallback.
 
 Alternative: measure and reserve the exact seeded page height. Rejected because skeleton behavior must remain stable for arbitrary report sizes and must not depend on seed fixtures.
 
@@ -62,7 +62,7 @@ Alternative: shrink tables and the four-column slide below their readable minimu
 - [Risk] Old screenshots may come from different data or SHA. → Mitigation: treat them as design references, not pixel baselines; final evidence is bound to the tested SHA.
 - [Risk] Visual review expands the runtime-sweep critical path. → Mitigation: capture the small role/viewport matrix in parallel with focused tests and keep artifacts outside git.
 - [Risk] Hiding the framework development indicator could also hide actionable errors. → Mitigation: disable only `devIndicators`; Next.js continues to surface compile and runtime errors.
-- [Risk] A bounded skeleton cannot prevent height changes for unusually large reports. → Mitigation: preserve the first-viewport landmarks and widths, which are the dominant source of perceived layout shift, while avoiding false data-dependent heights.
+- [Risk] The bounded 15-card MVP overview cannot prevent height changes for reports with a different product count. → Mitigation: preserve the first-viewport landmarks and widths, expose the dynamic body boundary explicitly, and avoid fabricated data-dependent activity or section heights.
 - [Risk] Local horizontal scrolling can be overlooked on compact screens. → Mitigation: keep every wide surface inside the visible card boundary and verify that document width stays equal to viewport width while the local host retains a larger scroll width.
 
 ## Migration Plan
