@@ -243,7 +243,7 @@ export function ViewerReportShell({
 
   const chrome: ViewerChrome = {
     ...deriveViewerDisplay(displayedQ.data),
-    isLoading: historyQ.isLoading || displayedQ.isLoading,
+    isLoading: displayedQ.isLoading,
     contextControls: (
       <ViewerShellControls
         reportId={reportId}
