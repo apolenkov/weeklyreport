@@ -13,7 +13,7 @@ const CAPTURED_AT = "2026-08-08T00:00:00.000Z";
 const SOURCE_SHA = "a".repeat(40);
 const BUGSINK_DSN = "http://runtime@bugsink.test/1";
 const ENVELOPE_URL =
-  "http://bugsink.test/api/1/envelope/?sentry_version=7&sentry_key=runtime&sentry_client=sentry.javascript.browser%2F10.22.0";
+  "http://bugsink.test/api/1/envelope/?sentry_version=7&sentry_key=runtime&sentry_client=sentry.javascript.nextjs%2F10.68.0";
 
 const requestFailure = (url: string): RequestFailureRecord => ({
   requestId: "sentry-envelope-request",
