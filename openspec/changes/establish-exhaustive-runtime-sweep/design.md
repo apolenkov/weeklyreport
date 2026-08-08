@@ -179,11 +179,13 @@ Browser observability delivery has one narrower non-product exception. A Sentry
 envelope request aborted by Chromium during document navigation remains in the
 raw ledger but is excluded from the unexpected-failure count only when its
 method, resource type, failure text, origin, numeric project path, public key,
-protocol version, and browser SDK client all match the configured Bugsink DSN
-and declared SDK signature. The collector retains the absolute URL so the
-adjudicator can prove that identity, and the exception applies only when the
-same ledger also contains the successful HTTP response with the same immutable,
-collector-assigned request id. A response for another request cannot qualify.
+protocol version, and browser-capable SDK client all match the configured
+Bugsink DSN and the explicit `sentry.javascript.browser/` or
+`sentry.javascript.nextjs/` signature allowlist. The collector retains the
+absolute URL so the adjudicator can prove that identity, and the exception
+applies only when the same ledger also contains the successful HTTP response
+with the same immutable, collector-assigned request id. A response for another
+request cannot qualify.
 The evidence message records the ignored count. A missing or failed matching
 response, empty marker, or near miss, including a product API abort, remains
 blocking. The same policy applies to initial, action, recovery, and final-tail

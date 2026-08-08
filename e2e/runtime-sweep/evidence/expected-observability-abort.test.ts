@@ -38,6 +38,24 @@ describe("expected observability abort", () => {
     ).toBe(true);
   });
 
+  it("recognizes the Next.js browser Sentry envelope abort", () => {
+    const nextjsRecord = {
+      ...BASE_RECORD,
+      url: BASE_RECORD.url.replace(
+        "sentry.javascript.browser%2F10.22.0",
+        "sentry.javascript.nextjs%2F10.68.0",
+      ),
+    };
+
+    expect(
+      isExpectedObservabilityAbort(
+        nextjsRecord,
+        [{ ...SUCCESSFUL_RESPONSE, url: nextjsRecord.url }],
+        BUGSINK_DSN,
+      ),
+    ).toBe(true);
+  });
+
   it.each([
     ["connection refused", { failure: "net::ERR_CONNECTION_REFUSED" }],
     ["extended abort text", { failure: "net::ERR_ABORTED: cancelled" }],
@@ -81,6 +99,12 @@ describe("expected observability abort", () => {
       "wrong client",
       {
         url: "http://bugsink.test/api/1/envelope/?sentry_version=7&sentry_key=runtime&sentry_client=product-client%2F1.0.0",
+      },
+    ],
+    [
+      "server Sentry client",
+      {
+        url: "http://bugsink.test/api/1/envelope/?sentry_version=7&sentry_key=runtime&sentry_client=sentry.javascript.node%2F10.68.0",
       },
     ],
     [

@@ -270,15 +270,17 @@ transport-failure count only when the request is `POST`, the resource type is
 `fetch`, the failure text is exactly `net::ERR_ABORTED`, the path is
 `/api/<numeric-project>/envelope/`, its origin, numeric project, and public key
 match the configured Bugsink DSN, `sentry_version` is exactly `7`, and the
-single non-empty `sentry_client` identifies the browser Sentry SDK. The raw
-record SHALL retain its absolute URL so this binding remains auditable. The
-same evidence window SHALL contain a matching successful HTTP response for the
-request. The request-failure and response records SHALL carry the same non-empty,
-immutable collector-assigned request id; a response for another request SHALL
-NOT qualify. The evidence message SHALL state the excluded count. This policy
+single non-empty `sentry_client` begins with an explicitly allowed
+browser-capable SDK signature: `sentry.javascript.browser/` or
+`sentry.javascript.nextjs/`. The raw record SHALL retain its absolute URL so
+this binding remains auditable. The same evidence window SHALL contain a
+matching successful HTTP response for the request. The request-failure and
+response records SHALL carry the same non-empty, immutable collector-assigned
+request id; a response for another request SHALL NOT qualify. The evidence
+message SHALL state the excluded count. This policy
 SHALL apply to initial, action, recovery, and final-tail windows. A missing or
-failed matching response, empty, duplicate, foreign, or otherwise mismatched
-marker or a product API abort SHALL remain blocking.
+failed matching response, empty, duplicate, foreign, server-only, or otherwise
+mismatched marker or a product API abort SHALL remain blocking.
 The browser ledger SHALL stay attached until tracked API requests settle, log
 collection SHALL wait a bounded interval for late correlated writes, and API
 termination SHALL await app close, process-wide file-log flush, OpenTelemetry

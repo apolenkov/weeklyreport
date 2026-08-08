@@ -75,9 +75,9 @@
       preflight API without a source watcher, and persist its API log so a
       structured 500 remains diagnosable.
 - [x] 3.13 Preserve exact Sentry envelope navigation aborts as raw evidence while
-      excluding only their strict SDK signature from failure counts, and require
-      a frozen submit transition to execute the scoped confirmation action
-      before recovery.
+      excluding only the explicit browser/Next.js SDK signature allowlist from
+      failure counts, and require a frozen submit transition to execute the
+      scoped confirmation action before recovery.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 

@@ -4,7 +4,10 @@ const EXPECTED_FAILURE = "net::ERR_ABORTED";
 const EXPECTED_METHOD = "POST";
 const EXPECTED_RESOURCE_TYPE = "fetch";
 const SENTRY_PROTOCOL_VERSION = "7";
-const SENTRY_BROWSER_CLIENT_PREFIX = "sentry.javascript.browser/";
+const SENTRY_BROWSER_CLIENT_PREFIXES = [
+  "sentry.javascript.browser/",
+  "sentry.javascript.nextjs/",
+] as const;
 
 type ObservabilityAbortRecord = Pick<
   RequestFailureRecord,
@@ -53,7 +56,10 @@ const hasExactMarkers = (
     publicKey.length === 1 &&
     publicKey[0] === expectedPublicKey &&
     clients.length === 1 &&
-    clients[0]?.startsWith(SENTRY_BROWSER_CLIENT_PREFIX) === true
+    clients[0] !== undefined &&
+    SENTRY_BROWSER_CLIENT_PREFIXES.some((prefix) =>
+      clients[0]?.startsWith(prefix),
+    )
   );
 };
 
