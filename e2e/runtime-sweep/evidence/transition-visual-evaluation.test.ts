@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { GeometrySnapshot } from "./evidence-types.ts";
-import { evaluateTransitionVisualPair } from "./transition-visual-evaluation.ts";
+import {
+  evaluateTransitionVisualPair,
+  FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+} from "./transition-visual-evaluation.ts";
 
 const snapshot = (
   overrides: Readonly<{
@@ -13,6 +16,10 @@ const snapshot = (
     busyCount?: number;
     skeletonCount?: number;
     layoutKey?: string | null;
+    extraLayoutKey?: string;
+    hiddenUnkeyedZeroSize?: boolean;
+    keyedZeroSize?: boolean;
+    issues?: readonly string[];
   }> = {},
 ): GeometrySnapshot => ({
   viewport: { width: 1440, height: 900 },
@@ -35,13 +42,49 @@ const snapshot = (
       layoutStability: "position-width",
       x: overrides.x ?? 100,
       y: overrides.y ?? 120,
-      width: overrides.width ?? 1240,
-      height: overrides.height ?? 900,
+      width: overrides.keyedZeroSize === true ? 0 : (overrides.width ?? 1240),
+      height: overrides.keyedZeroSize === true ? 0 : (overrides.height ?? 900),
       layoutVisible: true,
-      visible: true,
+      visible: overrides.keyedZeroSize !== true,
     },
+    ...(overrides.extraLayoutKey === undefined
+      ? []
+      : [
+          {
+            index: 1,
+            tagName: "aside",
+            role: null,
+            name: "Summary",
+            layoutKey: overrides.extraLayoutKey,
+            layoutStability: "position-width" as const,
+            x: 100,
+            y: 120,
+            width: 300,
+            height: 400,
+            layoutVisible: true,
+            visible: true,
+          },
+        ]),
+    ...(overrides.hiddenUnkeyedZeroSize === true
+      ? [
+          {
+            index: 2,
+            tagName: "button",
+            role: "button",
+            name: "Open navigation menu",
+            layoutKey: null,
+            layoutStability: null,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            layoutVisible: true,
+            visible: false,
+          },
+        ]
+      : []),
   ],
-  issues: [],
+  issues: overrides.issues ?? [],
 });
 
 describe("transition visual evaluation", () => {
@@ -135,6 +178,96 @@ describe("transition visual evaluation", () => {
     expect(result.outcome).toBe("fail");
     expect(result.issues).toContain(
       "transition has no shared stable layout landmarks",
+    );
+  });
+
+  it("blocks zero-size geometry under the strict default policy", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({ issues: ["element 0 has zero-size layout"] }),
+      snapshot(),
+      "none",
+    );
+
+    expect(result.outcome).toBe("fail");
+    expect(result.issues).toContain("before element 0 has zero-size layout");
+  });
+
+  it("filters zero-size geometry under an explicit policy", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({
+        hiddenUnkeyedZeroSize: true,
+        issues: ["element 2 has zero-size layout"],
+      }),
+      snapshot({
+        hiddenUnkeyedZeroSize: true,
+        issues: ["element 2 has zero-size layout"],
+      }),
+      "none",
+      {
+        requireNoZeroSize: false,
+        allowNoSharedStableLayoutLandmarks: false,
+      },
+    );
+
+    expect(result.outcome).toBe("pass");
+    expect(result.issues).toEqual([]);
+    expect(result.reviewedMasks).toContain(
+      "transition policy masks unkeyed invisible zero-size geometry issues",
+    );
+  });
+
+  it("blocks a zero-size stable landmark under the relaxed policy", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({
+        keyedZeroSize: true,
+        issues: ["element 0 has zero-size layout"],
+      }),
+      snapshot(),
+      "none",
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.outcome).toBe("fail");
+    expect(result.issues).toContain("before element 0 has zero-size layout");
+  });
+
+  it("blocks an unresolved zero-size issue under the relaxed policy", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({ issues: ["element 99 has zero-size layout"] }),
+      snapshot(),
+      "none",
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.outcome).toBe("fail");
+    expect(result.issues).toContain("before element 99 has zero-size layout");
+  });
+
+  it("passes an explicit no-landmark policy with a reviewed mask", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({ layoutKey: null }),
+      snapshot({ layoutKey: null }),
+      "none",
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.outcome).toBe("pass");
+    expect(result.issues).toEqual([]);
+    expect(result.reviewedMasks).toContain(
+      "transition policy allows no shared stable layout landmarks",
+    );
+  });
+
+  it("blocks a stable layout landmark that appears only after", () => {
+    const result = evaluateTransitionVisualPair(
+      snapshot({ layoutKey: null }),
+      snapshot({ layoutKey: null, extraLayoutKey: "after-only" }),
+      "none",
+    );
+
+    expect(result.outcome).toBe("fail");
+    expect(result.issues).toContain(
+      "stable layout key after-only appeared after",
     );
   });
 });

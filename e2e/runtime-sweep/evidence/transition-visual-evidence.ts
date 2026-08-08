@@ -15,6 +15,7 @@ import {
   evaluateTransitionVisualPair,
   parseGeometrySnapshot,
   type TransitionVisualEvaluation,
+  type TransitionVisualPolicy,
 } from "./transition-visual-evaluation.ts";
 
 export interface TransitionVisualEvidenceInput {
@@ -22,6 +23,7 @@ export interface TransitionVisualEvidenceInput {
   readonly matrixCase: MatrixExecutableCase;
   readonly before: EvidenceBundle;
   readonly after: EvidenceBundle;
+  readonly policy?: TransitionVisualPolicy;
 }
 
 const phaseRef = (
@@ -196,6 +198,7 @@ export async function attachTransitionVisualEvidence(
     beforeGeometry,
     afterGeometry,
     transition,
+    input.policy,
   );
   const capturedAt = new Date().toISOString();
   const pairRefs = {
