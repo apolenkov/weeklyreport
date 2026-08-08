@@ -423,7 +423,7 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/shell/lead-form-loaded.tsx::13:1::react-doctor/no-barrel-import::e209b7f3f19f36290d1a6ae3672363ba76dae27b39c244b23d39fccd591cf208",
+      "id": "src/features/report-pages/ui/lead/shell/lead-form-loaded.tsx::16:1::react-doctor/no-barrel-import::e209b7f3f19f36290d1a6ae3672363ba76dae27b39c244b23d39fccd591cf208",
       "file": "src/features/report-pages/ui/lead/shell/lead-form-loaded.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -995,13 +995,6 @@
       "rule": "only-export-components",
       "verdict": "overturn",
       "rationale": "The module intentionally exposes a small composition contract used by sibling components. Splitting it only for Fast Refresh would add API churn without an observed runtime defect."
-    },
-    {
-      "id": "src/features/slides/ui/use-lead-slides-data-helpers.ts::11:1::react-doctor/no-barrel-import::7404ef695dbc96d68f8ec013a8166cf73a8a083e903c827d1cdec9c7bdb29e92",
-      "file": "src/features/slides/ui/use-lead-slides-data-helpers.ts",
-      "rule": "no-barrel-import",
-      "verdict": "overturn",
-      "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
       "id": "src/features/slides/ui/use-lead-slides-data.ts::6:1::react-doctor/no-barrel-import::f5106b1f7ca70a364e374ddad6c67bb20b7bab9e0e93ca5a03dd40bde07de894",
