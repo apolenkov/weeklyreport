@@ -56,7 +56,7 @@
     "lint:critical-tests:test": "node --test scripts/gates/critical-tests/critical-test-marker-gate.test.ts scripts/gates/critical-tests/p0-evidence-verifier.test.ts",
     "lint:critical-tests": "tsx scripts/gates/critical-tests/p0-evidence-verifier.ts --markers-only",
     "lint:p0-evidence": "tsx scripts/gates/critical-tests/p0-evidence-verifier.ts",
-    "knip": "knip",
+    "knip": "knip --treat-config-hints-as-errors",
     "typecov": "type-coverage -p packages/shared --at-least 100 && type-coverage -p packages/ui --at-least 100 && type-coverage -p apps/api --at-least 99.98 && type-coverage -p apps/web --at-least 99.8 --ignore-files 'apps/web/.next/**'",
     "depcruise": "depcruise apps/api/src apps/web/src packages/shared/src packages/ui/src --config .dependency-cruiser.cjs",
     "typecheck": "turbo run typecheck",

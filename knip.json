@@ -4,6 +4,9 @@
   "ignoreDependencies": ["@trpc/server", "superjson"],
   "workspaces": {
     ".": {
+      "prisma": {
+        "config": []
+      },
       "entry": [
         "eslint-config/*.ts",
         "prisma/**/*.ts",
@@ -25,7 +28,7 @@
       ],
       "project": [
         "eslint-config/**/*.ts",
-        "prisma/**/*.ts",
+        "prisma/**/*.{ts,prisma}",
         "scripts/**/*.{ts,mjs}",
         "e2e/**/*.{ts,mjs}"
       ]
@@ -42,8 +45,8 @@
         "src/**/*.test.{ts,tsx}",
         "src/test-utils/**"
       ],
-      "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@axe-core/playwright", "tailwindcss"]
+      "project": ["src/**/*.{ts,tsx,css}"],
+      "ignoreDependencies": ["@axe-core/playwright"]
     },
     "packages/shared": {
       "entry": ["src/**/*.test.ts"],

@@ -53,6 +53,12 @@ and alias-bearing documents, and inspect the resulting jobs and steps. This
 makes the controls part of the existing 38-check lint gate without maintaining
 a partial YAML grammar. Fixtures prove both the accepted and rejected shapes.
 
+The Knip workspace disables only Prisma configuration-file loading while
+retaining Prisma schema discovery. Static analysis therefore cannot emit an
+environment-resolution error and still exit successfully when `DATABASE_URL`
+is absent. Configuration hints are fatal, and a configuration-hygiene probe
+pins that fail-closed boundary.
+
 ### Document production controls without simulating production
 
 `docs/sdlc.md` records lifecycle evidence and the first-production checklist.
@@ -77,6 +83,9 @@ can replace it when GitHub teams and delegated ownership exist.
   blocked or unverified and require external evidence before status changes.
 - **A future job may legitimately need a write token** -> Require job-local
   scope and a matching gate allowlist update with review.
+- **Tool plugins can hide configuration-load failures behind exit zero** ->
+  Disable environment-dependent plugin config loading when the static analysis
+  does not need it, and pin the exact override with a planted gate probe.
 
 ## Migration Plan
 

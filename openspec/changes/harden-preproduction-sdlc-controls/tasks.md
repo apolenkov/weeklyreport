@@ -6,6 +6,9 @@
       workflow job.
 - [x] 1.3 Extend the configuration-hygiene gate with positive and negative
       tests for permissions and checkout credential retention.
+- [x] 1.4 Prevent Knip from loading the environment-dependent Prisma config and
+      fail on configuration hints; pin both controls in the
+      configuration-hygiene gate.
 
 ## 2. Ownership And Security Response
 
@@ -27,7 +30,7 @@
 
 - [x] 4.1 Run the targeted configuration-hygiene tests and parse every workflow
       through the new policy checker.
-- [x] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
+- [ ] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
       `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and the
       repository build with its required explicit API URLs.
 - [ ] 4.3 Freeze a new source SHA and repeat source-bound preflight, visual,
