@@ -1,4 +1,5 @@
 import type { EvidencePhase } from "../evidence/evidence-types.ts";
+import { FROZEN_LIVE_TRANSITION_VISUAL_POLICY } from "../evidence/transition-visual-evaluation.ts";
 import { attachTransitionVisualEvidence } from "../evidence/transition-visual-evidence.ts";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import type { RuntimeSurfaceExpectation } from "../preflight/runtime-surface-expectation.ts";
@@ -158,6 +159,7 @@ export async function finalizeFrozenCaseEvidence(
     matrixCase: input.matrixCase,
     before: captured.before,
     after: captured.after,
+    policy: FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
   });
   const evidence: CompleteFrozenCaseEvidence = { ...captured, after };
   const controls =

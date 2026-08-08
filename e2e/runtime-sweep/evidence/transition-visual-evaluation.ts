@@ -4,6 +4,7 @@ import type { GeometryElement, GeometrySnapshot } from "./evidence-types.ts";
 
 const EXPECTED_VIEWPORT = { width: 1440, height: 900 } as const;
 const MOVEMENT_TOLERANCE_PX = 2;
+const ZERO_SIZE_ISSUE_PATTERN = /^element (?<index>\d+) has zero-size layout$/u;
 const VERTICAL_FLOW_TRANSITIONS = new Set([
   "open",
   "submit",
@@ -59,6 +60,21 @@ type Movement = Readonly<{
   deltas: Readonly<Record<Axis, number>>;
   outcome: "pass" | "fail";
 }>;
+
+export type TransitionVisualPolicy = Readonly<{
+  requireNoZeroSize: boolean;
+  allowNoSharedStableLayoutLandmarks: boolean;
+}>;
+
+const STRICT_TRANSITION_VISUAL_POLICY = {
+  requireNoZeroSize: true,
+  allowNoSharedStableLayoutLandmarks: false,
+} as const satisfies TransitionVisualPolicy;
+
+export const FROZEN_LIVE_TRANSITION_VISUAL_POLICY = {
+  requireNoZeroSize: false,
+  allowNoSharedStableLayoutLandmarks: true,
+} as const satisfies TransitionVisualPolicy;
 
 export type TransitionVisualEvaluation = Readonly<{
   outcome: "pass" | "fail";
@@ -124,6 +140,7 @@ const movementFor = (
 const viewportIssues = (
   label: string,
   snapshot: GeometrySnapshot,
+  policy: TransitionVisualPolicy,
 ): readonly string[] => [
   ...(snapshot.viewport.width === EXPECTED_VIEWPORT.width &&
   snapshot.viewport.height === EXPECTED_VIEWPORT.height
@@ -136,8 +153,30 @@ const viewportIssues = (
     : [
         `${label} horizontal overflow is ${snapshot.document.scrollWidth - snapshot.viewport.width}px`,
       ]),
-  ...snapshot.issues.map((issue) => `${label} ${issue}`),
+  ...snapshot.issues
+    .filter(
+      (issue) =>
+        policy.requireNoZeroSize || !isReviewedHiddenZeroSize(snapshot, issue),
+    )
+    .map((issue) => `${label} ${issue}`),
 ];
+
+const isReviewedHiddenZeroSize = (
+  snapshot: GeometrySnapshot,
+  issue: string,
+): boolean => {
+  const indexText = ZERO_SIZE_ISSUE_PATTERN.exec(issue)?.groups?.index;
+  if (indexText === undefined) return false;
+  const matchingElements = snapshot.elements.filter(
+    ({ index }) => index === Number(indexText),
+  );
+  const element = matchingElements[0];
+  return (
+    matchingElements.length === 1 &&
+    element?.layoutKey === null &&
+    !element.visible
+  );
+};
 
 const loadingIssues = (
   before: GeometrySnapshot,
@@ -167,6 +206,7 @@ export function evaluateTransitionVisualPair(
   before: GeometrySnapshot,
   after: GeometrySnapshot,
   transition: string,
+  policy: TransitionVisualPolicy = STRICT_TRANSITION_VISUAL_POLICY,
 ): TransitionVisualEvaluation {
   const beforeElements = uniqueLayoutElements(before);
   const afterElements = uniqueLayoutElements(after);
@@ -176,6 +216,11 @@ export function evaluateTransitionVisualPair(
   const missingKeys = [...beforeElements.keys()].filter(
     (key) => !afterElements.has(key),
   );
+  const addedKeys = [...afterElements.keys()].filter(
+    (key) => !beforeElements.has(key),
+  );
+  const hasNoDeclaredLandmarks =
+    beforeElements.size === 0 && afterElements.size === 0;
   const movements = sharedKeys.map((key) =>
     movementFor(
       elementFor(beforeElements, key),
@@ -184,8 +229,8 @@ export function evaluateTransitionVisualPair(
     ),
   );
   const issues = [
-    ...viewportIssues("before", before),
-    ...viewportIssues("after", after),
+    ...viewportIssues("before", before, policy),
+    ...viewportIssues("after", after, policy),
     ...loadingIssues(before, after),
     ...duplicateLayoutKeys(before).map(
       (key) => `before layout key ${key} is duplicated`,
@@ -193,10 +238,11 @@ export function evaluateTransitionVisualPair(
     ...duplicateLayoutKeys(after).map(
       (key) => `after layout key ${key} is duplicated`,
     ),
-    ...(sharedKeys.length === 0
+    ...(hasNoDeclaredLandmarks && !policy.allowNoSharedStableLayoutLandmarks
       ? ["transition has no shared stable layout landmarks"]
       : []),
     ...missingKeys.map((key) => `stable layout key ${key} disappeared`),
+    ...addedKeys.map((key) => `stable layout key ${key} appeared after`),
     ...movements
       .filter(({ outcome }) => outcome === "fail")
       .map(
@@ -208,8 +254,18 @@ export function evaluateTransitionVisualPair(
     outcome: issues.length === 0 ? "pass" : "fail",
     issues,
     movements,
-    reviewedMasks: VERTICAL_FLOW_TRANSITIONS.has(transition)
-      ? ["declared vertical-flow transition masks y and height movement"]
-      : [],
+    reviewedMasks: [
+      ...(VERTICAL_FLOW_TRANSITIONS.has(transition)
+        ? ["declared vertical-flow transition masks y and height movement"]
+        : []),
+      ...(policy.requireNoZeroSize
+        ? []
+        : [
+            "transition policy masks unkeyed invisible zero-size geometry issues",
+          ]),
+      ...(hasNoDeclaredLandmarks && policy.allowNoSharedStableLayoutLandmarks
+        ? ["transition policy allows no shared stable layout landmarks"]
+        : []),
+    ],
   };
 }
