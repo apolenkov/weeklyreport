@@ -66,6 +66,7 @@ const apiEnv = {
 const webEnv = {
   ...runtimeSweepWebEnvironment(webServer.env),
   NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
+  NEXT_PUBLIC_SENTRY_DSN: requiredEnv("RUNTIME_SWEEP_BUGSINK_DSN"),
 };
 
 export default defineConfig({

@@ -596,6 +596,22 @@
       "target": "e2e/runtime-sweep/replay/evidence/$1"
     },
     {
+      "id": "runtime-live-control-recovery",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/recovery/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "live-replay-recovery",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/recovery/$1"
+    },
+    {
+      "id": "runtime-live-control-recovery-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/recovery/(.+\\.test\\.ts)$",
+      "concern": "live-replay-recovery",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/recovery/$1"
+    },
+    {
       "id": "runtime-live-control-evidence-tests",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/replay/evidence/(.+\\.test\\.ts)$",

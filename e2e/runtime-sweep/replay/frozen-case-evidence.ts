@@ -11,6 +11,7 @@ import {
   type MatrixExecution,
   type Oracle,
 } from "../source/contracts.ts";
+import { isRecoveryBackedAction } from "./control-action-policy.ts";
 import {
   allRefs,
   caseSpecificIssues,
@@ -24,6 +25,11 @@ import {
 export type CompleteFrozenCaseEvidence = Readonly<
   Record<EvidencePhase, EvidenceBundle>
 >;
+
+export type TransitionEvidenceSelection = Readonly<{
+  readonly result: EvidenceBundle;
+  readonly resultPhase: "action" | "after";
+}>;
 
 export interface FrozenCaseReplayInput {
   readonly caseId: string;
@@ -69,6 +75,16 @@ class FrozenCaseReplayError extends Error {
 const executionAction = (execution: MatrixExecution): Action | undefined =>
   "action" in execution ? execution.action : undefined;
 
+export const transitionEvidenceSelection = (
+  matrixCase: MatrixExecutableCase,
+  captured: CompleteFrozenCaseEvidence,
+): TransitionEvidenceSelection => {
+  const action = executionAction(matrixCase.execution);
+  return action !== undefined && isRecoveryBackedAction(action)
+    ? { result: captured.action, resultPhase: "action" }
+    : { result: captured.after, resultPhase: "after" };
+};
+
 const actionFor = (matrixCase: MatrixExecutableCase): Action => {
   const declared = executionAction(matrixCase.execution);
   if (declared !== undefined) return declared;
@@ -106,7 +122,9 @@ const replayIssues = (
       : [
           `supplied cell id ${input.cellId} does not equal frozen case ${matrixCase.caseId}`,
         ]),
-    ...phases.flatMap((phase) => [...phaseIssues(matrixCase.caseId, phase)]),
+    ...phases.flatMap((phase) => [
+      ...phaseIssues(matrixCase.caseId, phase, refs),
+    ]),
     ...identityIssues(matrixCase, refs),
     ...controlIssues(matrixCase, input.controls, refs, input.surface),
     ...caseSpecificIssues(matrixCase, phases, action.transition),
@@ -154,11 +172,13 @@ export async function finalizeFrozenCaseEvidence(
   input: FrozenCaseEvidenceFinalizationInput,
   captured: CompleteFrozenCaseEvidence,
 ): Promise<FrozenCaseReplayResult> {
+  const selection = transitionEvidenceSelection(input.matrixCase, captured);
   const after = await attachTransitionVisualEvidence({
     archiveRoot: input.archiveRoot,
     matrixCase: input.matrixCase,
     before: captured.before,
-    after: captured.after,
+    ...selection,
+    attachTo: captured.after,
     policy: FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
   });
   const evidence: CompleteFrozenCaseEvidence = { ...captured, after };

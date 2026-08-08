@@ -11,8 +11,6 @@ import type {
   ControlActionInput,
   ResolvedActionControl,
 } from "./control-action-types.ts";
-import type { ControlActionRecovery } from "./control-recovery.ts";
-import { recoverControlAction } from "./control-recovery.ts";
 import {
   hrefTargetLocator,
   releaseRenderedNameTarget,
@@ -20,15 +18,19 @@ import {
   targetLocator,
   titleTargetLocator,
 } from "./control-target/rendered-control-target.ts";
+import { executeControlRecovery } from "./recovery/control-action-recovery-execution.ts";
 
 export {
   STATEFUL_CONTROL_OPERATIONS,
   type StatefulControlOperation,
 } from "./control-action-policy.ts";
 export type {
+  ControlActionAttemptOutcome,
   ControlActionExecution,
   ControlActionInput,
   ControlActionObservation,
+  ControlActionRecoveryBoundary,
+  ControlActionRecoveryOutcome,
   ControlActionTarget,
 } from "./control-action-types.ts";
 export type {
@@ -201,40 +203,6 @@ const isExecution = (
   value: ResolvedActionControl | ControlActionExecution,
 ): value is ControlActionExecution => "status" in value;
 
-const recoveryResult = async (
-  input: ControlActionInput,
-  attempt: ControlActionAttempt,
-  recovery: ControlActionRecovery,
-): Promise<ControlActionExecution> => {
-  try {
-    await recoverControlAction(recovery);
-  } catch (error: unknown) {
-    return failed(
-      input,
-      error instanceof Error ? error.message : "Control action recovery failed",
-    );
-  }
-  const operation = attemptStatus(attempt);
-  const reason = attemptReason(attempt);
-  if (operation === "ambiguous")
-    return {
-      status: "ambiguous",
-      controlKey: input.control.controlKey,
-      operation: input.action.operation,
-      resetPerformed: true,
-      reason: reason ?? "The stateful action did not produce a bounded outcome",
-    };
-  return {
-    status: operation,
-    controlKey: input.control.controlKey,
-    operation: input.action.operation,
-    resetPerformed: true,
-    ...(operation === "fail"
-      ? { reason: reason ?? "The control action did not complete successfully" }
-      : {}),
-  };
-};
-
 export async function executeControlAction(
   input: ControlActionInput,
 ): Promise<ControlActionExecution> {
@@ -263,5 +231,5 @@ export async function executeControlAction(
   const recovery = input.recovery;
   if (recovery === undefined)
     return failed(input, "Stateful action recovery disappeared");
-  return recoveryResult(input, attempt, recovery);
+  return executeControlRecovery(input, attempt, recovery);
 }

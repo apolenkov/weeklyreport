@@ -263,7 +263,7 @@ const serverLogObservation = (
     observationId: "server-log",
     kind: "api",
     outcome: failures === 0 ? "pass" : "fail",
-    message: `${serverLogs.records.length} correlated server/worker log record(s), ${serverLogs.malformedCount} malformed log line(s), ${serverLogs.missingCorrelationIds.length} missing correlation id(s), ${unexpectedErrors} unexpected error(s), ${serverLogs.warningCount} warning(s), ${serverLogs.slowCount} slow operation(s), ${serverLogs.workerCount} worker record(s)`,
+    message: `${serverLogs.records.length} server/worker log record(s) attached to cell, ${serverLogs.malformedCount} malformed log line(s), ${serverLogs.missingCorrelationIds.length} missing correlation id(s), ${unexpectedErrors} unexpected error(s), ${serverLogs.warningCount} warning(s), ${serverLogs.slowCount} slow operation(s), ${serverLogs.workerCount} worker record(s)`,
     evidenceIds: [byKind(refs, "log").artifactId],
   });
 };

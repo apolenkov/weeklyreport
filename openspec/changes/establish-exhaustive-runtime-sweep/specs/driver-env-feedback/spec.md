@@ -18,6 +18,24 @@ same explicit verifier disposition as any native-review candidate.
 - **AND** import rejects the report until an explicit verification record
   dispositions the generated `env` candidate
 
+#### Scenario: Correlation skew cannot claim a prior route event
+
+- **GIVEN** a warning or error whose correlation ID is not present in the
+  current cell's browser response ledger
+- **WHEN** its timestamp is outside the strict phase interval but inside the
+  bounded correlation-skew allowance
+- **THEN** the event SHALL NOT be attributed to that cell
+- **AND** it SHALL remain in immutable profile-wide canonical API-log evidence
+  that blocks campaign acceptance until dispositioned
+
+#### Scenario: Unmatched in-window worker error remains blocking
+
+- **GIVEN** a worker warning or error with no browser response correlation ID
+- **WHEN** its timestamp is inside the strict current phase interval
+- **THEN** the event SHALL be attributed to that cell and fail its environment
+  observation
+- **AND** the absence of an HTTP response match SHALL NOT hide it
+
 #### Scenario: Transcript capture is missing
 
 - **WHEN** import receives no transcript JSONL or cannot read a supplied
@@ -74,6 +92,20 @@ and SHALL NOT present an empty candidate list as clean evidence.
 - **AND** receipt-only, malformed, rejected, stagnant, wrong-slug, or
   missing-credential outcomes SHALL be blind
 - **AND** the DSN and API token SHALL never appear in feedback or error evidence
+
+#### Scenario: Bugsink product SDK path is live
+
+- **GIVEN** the direct Bugsink protocol probe succeeds
+- **WHEN** readiness initializes the installed API and browser Sentry SDKs with
+  the same canonical runtime DSN, emits one uniquely tagged canary through each
+  SDK, flushes, and polls the dedicated project
+- **THEN** readiness SHALL require both exact SDK canaries to be stored
+- **AND** the web runtime SHALL receive that DSN explicitly through
+  `NEXT_PUBLIC_SENTRY_DSN`
+- **AND** a DSN parse warning, SDK rejection, failed flush, or absent canary
+  SHALL keep the channel blind
+- **AND** the direct protocol probe alone SHALL NOT satisfy product telemetry
+  liveness
 
 #### Scenario: Every channel is live and clean
 

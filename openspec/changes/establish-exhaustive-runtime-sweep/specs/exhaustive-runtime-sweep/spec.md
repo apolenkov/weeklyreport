@@ -274,6 +274,21 @@ The browser ledger SHALL use one advancing cursor across initial navigation,
 before, action, after, and a final tail so every event is adjudicated exactly
 once. The final tail SHALL update the owning cell before persistence and SHALL
 fail the cell for any undeclared console, page, transport, or HTTP error.
+For API/worker logs, the bounded clock-skew allowance SHALL apply only to exact
+browser-response correlation IDs. An unmatched warning or error SHALL attach
+to a cell only inside the strict phase interval; an unmatched event outside all
+strict cell intervals SHALL remain in immutable profile-wide canonical API-log
+evidence and SHALL block campaign acceptance until dispositioned.
+
+For a stateful control, the action attempt and destructive recovery SHALL use
+separate evidence windows. The action window SHALL close after its bounded
+functional outcome and before reset/reseed/login/reload begins. Recovery SHALL
+persist its own request, log, and state-oracle evidence. A recovery failure
+SHALL block the campaign without being presented as a failure of the product
+control attempt. The transition visual oracle SHALL compare the `before` phase
+with the settled action-window result, never with the restored post-recovery
+`after` phase. The post-recovery `after` phase SHALL prove only that the
+deterministic baseline was restored.
 
 After all API drains succeed, the API process SHALL create one immutable
 identity-bound completion artifact. A parent test runner exit SHALL NOT
@@ -321,6 +336,14 @@ consistent.
 - **THEN** the bounded settle/drain sequence includes it in adjudication
 - **AND** a timeout or failed telemetry drain is blocking and cannot produce a
   terminal `pass`
+
+#### Scenario: stateful recovery does not contaminate action evidence
+
+- **WHEN** a stateful control reaches its bounded product outcome and the
+  subsequent reset, reseed, login, or route reload emits a warning or error
+- **THEN** the action evidence contains only the product-attempt interval
+- **AND** the recovery evidence records the later event and blocks the campaign
+- **AND** neither ledger may omit or duplicate the event
 
 #### Scenario: a profile report cannot fabricate Loki delivery
 

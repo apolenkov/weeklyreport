@@ -122,6 +122,7 @@ export type EvidenceCaptureInput = Readonly<{
   settleRuntimeEvents?: () => Promise<void>;
   serverLogPath?: string;
   phaseStartedAt?: string;
+  phaseEndedAt?: string;
   responseStatus: number | null;
   capturedAt: string;
   capturePhase?: EvidencePhase;

@@ -90,39 +90,55 @@ const referencedKinds = (
 const observationIssues = (
   caseId: string,
   phase: PhaseEvidence,
-): readonly string[] =>
-  REQUIRED_OBSERVATIONS.flatMap(({ observationId, evidenceKinds }) => {
-    const observations = phase.bundle.observations.filter(
-      ({ observationId: currentId }) => currentId === observationId,
-    );
-    const missingObservation =
-      observations.length === 0
-        ? [`${caseId} ${phase.phase} observation ${observationId} is missing`]
-        : [];
-    const observationEvidence = observations.flatMap((observation) => {
-      const kinds = referencedKinds(observation.evidenceIds, phase.refs);
-      return evidenceKinds
-        .filter((kind) => !kinds.has(kind))
-        .map(
-          (kind) =>
-            `${caseId} ${phase.phase} observation ${observationId} is missing ${kind} evidence link`,
-        );
-    });
-    const failed = observations
-      .filter(({ outcome }) => outcome === "fail")
-      .map(
-        ({ message }) =>
-          `${caseId} ${phase.phase} observation ${observationId} failed: ${message}`,
+  refs: readonly EvidenceRef[],
+): readonly string[] => {
+  const requiredIssues = REQUIRED_OBSERVATIONS.flatMap(
+    ({ observationId, evidenceKinds }) => {
+      const observations = phase.bundle.observations.filter(
+        ({ observationId: currentId }) => currentId === observationId,
       );
-    return [...missingObservation, ...observationEvidence, ...failed];
-  });
+      const missingObservation =
+        observations.length === 0
+          ? [`${caseId} ${phase.phase} observation ${observationId} is missing`]
+          : [];
+      const observationEvidence = observations.flatMap((observation) => {
+        const kinds = referencedKinds(observation.evidenceIds, phase.refs);
+        return evidenceKinds
+          .filter((kind) => !kinds.has(kind))
+          .map(
+            (kind) =>
+              `${caseId} ${phase.phase} observation ${observationId} is missing ${kind} evidence link`,
+          );
+      });
+      return [...missingObservation, ...observationEvidence];
+    },
+  );
+  const failed = phase.bundle.observations
+    .filter(({ outcome }) => outcome === "fail")
+    .map(
+      ({ observationId, message }) =>
+        `${caseId} ${phase.phase} observation ${observationId} failed: ${message}`,
+    );
+  const missingReferences = phase.bundle.observations.flatMap((observation) =>
+    observation.evidenceIds
+      .filter(
+        (artifactId) => !refs.some((ref) => ref.artifactId === artifactId),
+      )
+      .map(
+        (artifactId) =>
+          `${caseId} ${phase.phase} observation ${observation.observationId} references missing evidence ${artifactId}`,
+      ),
+  );
+  return [...requiredIssues, ...failed, ...missingReferences];
+};
 
 export const phaseIssues = (
   caseId: string,
   phase: PhaseEvidence,
+  refs: readonly EvidenceRef[] = phase.refs,
 ): readonly string[] => [
   ...phaseKindIssues(caseId, phase),
-  ...observationIssues(caseId, phase),
+  ...observationIssues(caseId, phase, refs),
 ];
 
 export const identityIssues = (

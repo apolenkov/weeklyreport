@@ -6,6 +6,10 @@ const PROBE_MESSAGE = "runtime-sweep-probe";
 const DEFAULT_DEADLINE_MS = 5000;
 const DEDICATED_PROJECT_SLUG = "runtime-sweep";
 const MILLIS_PER_SECOND = 1000;
+const INVALID_DSN = "invalid Bugsink DSN";
+const UUID_HEX_PATTERN = /^[0-9a-f]{32}$/u;
+const UUID_HYPHENATED_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 export const bugsinkApiTokenPattern = /^[0-9a-f]{40}$/u;
 const projectCountersSchema = z.looseObject({
   slug: z.literal(DEDICATED_PROJECT_SLUG),
@@ -33,11 +37,12 @@ export const bugsinkProjectUrls = (
 ): Readonly<{
   readonly projectUrl: URL;
   readonly ingestUrl: URL;
+  readonly projectId: string;
   readonly sentryKey: string;
 }> => {
   const parsed = new URL(dsn);
   const projectId = parsed.pathname.split("/").filter(Boolean).at(-1);
-  if (!parsed.username || !projectId) throw new Error("invalid Bugsink DSN");
+  if (!parsed.username || !projectId) throw new Error(INVALID_DSN);
   return {
     projectUrl: new URL(
       `/api/canonical/0/projects/${encodeURIComponent(projectId)}/`,
@@ -47,8 +52,32 @@ export const bugsinkProjectUrls = (
       `/api/${encodeURIComponent(projectId)}/store/`,
       parsed.origin,
     ),
+    projectId,
     sentryKey: decodeURIComponent(parsed.username),
   };
+};
+
+export const normalizeBugsinkDsn = (dsn: string): string => {
+  try {
+    const parsed = new URL(dsn);
+    const projectId = parsed.pathname.split("/").filter(Boolean).at(-1);
+    const sentryKey = decodeURIComponent(parsed.username);
+    const normalizedKey = UUID_HYPHENATED_PATTERN.test(sentryKey)
+      ? sentryKey.replaceAll("-", "").toLowerCase()
+      : sentryKey.toLowerCase();
+    if (
+      (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+      parsed.password ||
+      !projectId ||
+      !/^\d+$/u.test(projectId) ||
+      !UUID_HEX_PATTERN.test(normalizedKey)
+    )
+      throw new Error(INVALID_DSN);
+    parsed.username = normalizedKey;
+    return parsed.toString();
+  } catch {
+    throw new Error(INVALID_DSN);
+  }
 };
 
 export const readBugsinkProject = async (

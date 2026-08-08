@@ -11,6 +11,8 @@ import {
   type BugsinkProbeConfig,
   probeBugsinkAt,
 } from "../preflight/observability/environment-observer-bugsink.ts";
+import { normalizeBugsinkDsn } from "../preflight/observability/environment-observer-bugsink-client.ts";
+import { probeBugsinkSdkAt } from "../preflight/observability/environment-observer-bugsink-sdk.ts";
 import { sha256DigestSchema, sourceShaSchema } from "../source/contracts.ts";
 import type { RuntimeLaneAssignment } from "./runtime-lane-contract.ts";
 import type { RuntimeLaneRunIdentity } from "./runtime-lane-run-identity.ts";
@@ -27,6 +29,10 @@ export interface RuntimeObservabilityReadiness {
   readonly checkedAt: string;
   readonly otel: "live";
   readonly bugsink: "live";
+  readonly bugsinkProtocol: "live";
+  readonly bugsinkSdk: "live";
+  readonly bugsinkApiSdk: "live";
+  readonly bugsinkBrowserSdk: "live";
   readonly loki: "live";
 }
 
@@ -42,6 +48,10 @@ export const runtimeObservabilityReadinessReportSchema = z
     checkedAt: z.iso.datetime(),
     otel: z.literal("live"),
     bugsink: z.literal("live"),
+    bugsinkProtocol: z.literal("live"),
+    bugsinkSdk: z.literal("live"),
+    bugsinkApiSdk: z.literal("live"),
+    bugsinkBrowserSdk: z.literal("live"),
     loki: z.literal("live"),
   })
   .strict();
@@ -78,9 +88,8 @@ export function readRuntimeObservabilityConfig(
       "OTEL endpoint",
     ),
     bugsink: {
-      dsn: httpUrl(
-        requiredEnv(env, "RUNTIME_SWEEP_BUGSINK_DSN"),
-        "Bugsink DSN",
+      dsn: normalizeBugsinkDsn(
+        httpUrl(requiredEnv(env, "RUNTIME_SWEEP_BUGSINK_DSN"), "Bugsink DSN"),
       ),
       apiToken: requiredEnv(env, "RUNTIME_SWEEP_BUGSINK_API_TOKEN"),
     },
@@ -117,19 +126,28 @@ export async function assertRuntimeObservabilityReadiness(
   fetcher: typeof fetch = fetch,
 ): Promise<RuntimeObservabilityReadiness> {
   const probeTime = Date.now();
-  const [bugsink, loki] = await Promise.all([
-    probeBugsinkAt(config.bugsink, probeTime, fetcher),
-    probeLokiAt(config.loki, probeTime, fetcher),
-    assertOtel(config.otelEndpoint, fetcher),
-  ]);
+  const bugsink = await probeBugsinkAt(config.bugsink, probeTime, fetcher);
   if (!bugsink.reachable || !bugsink.hasStreams)
-    throw new Error("Runtime observability Bugsink probe was not stored");
+    throw new Error(
+      "Runtime observability Bugsink protocol probe was not stored",
+    );
+  const [sdkBugsink, loki] = await Promise.all([
+    probeBugsinkSdkAt(config.bugsink, fetcher),
+    probeLokiAt(config.loki, probeTime, fetcher),
+  ]);
+  await assertOtel(config.otelEndpoint, fetcher);
+  if (!sdkBugsink)
+    throw new Error("Runtime observability Bugsink SDK probe was not stored");
   if (!loki.reachable || !loki.hasStreams)
     throw new Error("Runtime observability Loki probe was not queryable");
   return {
     checkedAt: new Date(probeTime).toISOString(),
     otel: "live",
     bugsink: "live",
+    bugsinkProtocol: "live",
+    bugsinkSdk: "live",
+    bugsinkApiSdk: "live",
+    bugsinkBrowserSdk: "live",
     loki: "live",
   };
 }

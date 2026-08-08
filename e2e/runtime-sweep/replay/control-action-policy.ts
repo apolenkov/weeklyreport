@@ -1,4 +1,5 @@
 import {
+  type Action,
   type ActionOperation,
   type ActionSafety,
 } from "../source/contracts.ts";
@@ -36,15 +37,32 @@ const REQUIRED_SAFETY: Readonly<
   revoke: "irreversible",
   restore: "reversible",
 };
+const RECOVERY_SAFETY: Readonly<
+  Partial<Record<ActionOperation, ActionSafety>>
+> = {
+  ...REQUIRED_SAFETY,
+  retry: "reversible",
+  fill: "irreversible",
+  select: "irreversible",
+  submit: "irreversible",
+};
 const isStateful = (
   operation: ActionOperation,
 ): operation is StatefulControlOperation =>
   (STATEFUL_CONTROL_OPERATIONS as readonly string[]).includes(operation);
 
+export const isRecoveryBackedAction = (action: Action): boolean => {
+  if (action.operation === "click") return action.safety !== "read-only";
+  const requiredSafety = RECOVERY_SAFETY[action.operation];
+  if (requiredSafety === undefined || action.safety !== requiredSafety)
+    return false;
+  return ["fill", "select", "submit"].includes(action.operation)
+    ? true
+    : action.transition === action.operation;
+};
+
 export const requiresControlRecovery = (input: ControlActionInput): boolean =>
-  isStateful(input.action.operation) ||
-  input.action.operation === "retry" ||
-  input.action.safety !== "read-only";
+  isRecoveryBackedAction(input.action);
 
 const isSupportedRole = (role: string): role is SupportedControlRole =>
   (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(role);
