@@ -61,6 +61,7 @@ export const captureEvidence = async (
       consoleMessages: events.records.consoleMessages,
       pageErrors: events.records.pageErrors,
       requestFailures: events.records.requestFailures,
+      bugsinkDsn: input.runtime.bugsinkDsn,
       responses: events.records.responses,
       ...(expectedFault === undefined ? {} : { expectedFault }),
       settleRuntimeEvents: () => Promise.resolve(),

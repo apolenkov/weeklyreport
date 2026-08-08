@@ -12,6 +12,7 @@ import type {
   ControlActionTarget,
   ResolvedActionControl,
 } from "./control-action-types.ts";
+import { confirmStatefulAction } from "./control-actions/confirmation.ts";
 import { ControlActionPolicyError } from "./control-recovery.ts";
 import {
   armRenderedNameHandle,
@@ -20,13 +21,6 @@ import {
   completeRenderedNameAction,
   type RenderedNameActionLease,
 } from "./control-target/rendered-control-target.ts";
-
-const CONFIRMATION_NAMES: Readonly<Record<StatefulControlOperation, RegExp>> = {
-  publish: /publish/i,
-  delete: /delete/i,
-  revoke: /revoke/i,
-  restore: /restore|unarchive/i,
-};
 
 class ControlActionTimeoutError extends Error {
   override readonly name = "ControlActionTimeoutError";
@@ -104,26 +98,6 @@ const fillOrSelect = async (
     return option.index;
   });
   await locator.selectOption({ index }, { timeout: timeoutMs });
-};
-
-const confirmStatefulAction = async (
-  page: Page,
-  operation: StatefulControlOperation,
-  timeoutMs: number,
-): Promise<void> => {
-  const dialog = page.getByRole("alertdialog").last();
-  if ((await dialog.count()) === 0)
-    throw new ControlActionPolicyError(
-      `Destructive ${operation} action did not present a confirmation dialog`,
-    );
-  const confirm = dialog
-    .getByRole("button", { name: CONFIRMATION_NAMES[operation] })
-    .first();
-  if ((await confirm.count()) === 0)
-    throw new ControlActionPolicyError(
-      `Confirmation dialog for ${operation} has no matching button`,
-    );
-  await confirm.click({ timeout: timeoutMs });
 };
 
 const renderedActionCompleted = async (

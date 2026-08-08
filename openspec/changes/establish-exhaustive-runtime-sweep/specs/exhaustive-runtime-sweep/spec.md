@@ -264,6 +264,21 @@ and Bugsink/Loki events correlated to the cell time window and correlation id.
 A green browser assertion MUST NOT override an observability failure or a
 missing correlation query. Expected requests and controlled faults SHALL be
 declared so the adjudicator can distinguish intended behavior from noise.
+The raw browser ledger SHALL retain a Chromium navigation abort for an SDK
+Sentry envelope, but the adjudicator MAY exclude it from the unexpected
+transport-failure count only when the request is `POST`, the resource type is
+`fetch`, the failure text is exactly `net::ERR_ABORTED`, the path is
+`/api/<numeric-project>/envelope/`, its origin, numeric project, and public key
+match the configured Bugsink DSN, `sentry_version` is exactly `7`, and the
+single non-empty `sentry_client` identifies the browser Sentry SDK. The raw
+record SHALL retain its absolute URL so this binding remains auditable. The
+same evidence window SHALL contain a matching successful HTTP response for the
+request. The request-failure and response records SHALL carry the same non-empty,
+immutable collector-assigned request id; a response for another request SHALL
+NOT qualify. The evidence message SHALL state the excluded count. This policy
+SHALL apply to initial, action, recovery, and final-tail windows. A missing or
+failed matching response, empty, duplicate, foreign, or otherwise mismatched
+marker or a product API abort SHALL remain blocking.
 The browser ledger SHALL stay attached until tracked API requests settle, log
 collection SHALL wait a bounded interval for late correlated writes, and API
 termination SHALL await app close, process-wide file-log flush, OpenTelemetry
@@ -289,6 +304,10 @@ control attempt. The transition visual oracle SHALL compare the `before` phase
 with the settled action-window result, never with the restored post-recovery
 `after` phase. The post-recovery `after` phase SHALL prove only that the
 deterministic baseline was restored.
+For a confirmation-backed submit transition, opening the confirmation surface
+SHALL NOT satisfy the functional outcome. The executor SHALL locate the
+`alertdialog` named `Confirm submission`, activate its scoped `Submit` action,
+and observe the declared mutation before the action window closes.
 
 After all API drains succeed, the API process SHALL create one immutable
 identity-bound completion artifact. A parent test runner exit SHALL NOT
@@ -329,6 +348,17 @@ consistent.
   log evidence
 - **AND** local fallback behavior cannot convert the cell to `pass`
 
+#### Scenario: an SDK envelope abort does not hide a product failure
+
+- **WHEN** Chromium aborts an exact Sentry envelope fetch during navigation
+- **THEN** the raw request failure remains attached and its excluded count is
+  reported without failing the cell only when its matching response succeeded
+- **AND** an abort with different method, resource type, failure text, path, or
+  configured origin, project, public key, protocol version, or browser-client
+  marker remains an unexpected transport failure
+- **AND** a product API abort remains blocking even when its failure text is
+  `net::ERR_ABORTED`
+
 #### Scenario: terminal evidence waits for late runtime events
 
 - **WHEN** an API request or correlated file-log record begins before the cell
@@ -344,6 +374,15 @@ consistent.
 - **THEN** the action evidence contains only the product-attempt interval
 - **AND** the recovery evidence records the later event and blocks the campaign
 - **AND** neither ledger may omit or duplicate the event
+
+#### Scenario: submit transition includes the scoped confirmation action
+
+- **WHEN** a frozen `submit` control opens the `Confirm submission`
+  `alertdialog`
+- **THEN** the executor activates the dialog's scoped `Submit` action and
+  proves the mutation before recovery
+- **AND** a native form submit, missing dialog, or missing scoped confirmation
+  remains ambiguous and cannot produce a passing submit transition
 
 #### Scenario: a profile report cannot fabricate Loki delivery
 

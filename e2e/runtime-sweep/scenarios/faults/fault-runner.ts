@@ -40,6 +40,7 @@ import {
 export interface FaultCaseRunInput {
   readonly page: Page;
   readonly archiveRoot: string;
+  readonly bugsinkDsn: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly oracle: Oracle;
   readonly testInfo: TestInfo;
@@ -140,6 +141,7 @@ const captureFaultPhases = async (
         return captureSpecializedPagePhase({
           page: input.page,
           archiveRoot: input.archiveRoot,
+          bugsinkDsn: input.bugsinkDsn,
           matrixCase: input.matrixCase,
           phase,
           capturedAt: input.capturedAt,
@@ -166,6 +168,7 @@ const captureFaultAction = async (
   captureSpecializedPagePhase({
     page: input.page,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "action",
     capturedAt: input.capturedAt,
@@ -217,6 +220,7 @@ const captureFaultRecovery = async (
   captureSpecializedPagePhase({
     page: input.page,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "after",
     capturedAt: input.capturedAt,

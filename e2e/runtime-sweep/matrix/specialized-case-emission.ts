@@ -115,6 +115,7 @@ export const initialSpecializedNavigation = async (
 export interface SpecializedPagePhaseInput {
   readonly page: Page;
   readonly archiveRoot: string;
+  readonly bugsinkDsn: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly phase: EvidencePhase;
   readonly capturedAt: string;
@@ -225,6 +226,7 @@ export async function captureSpecializedPagePhase(
         consoleMessages: listeners.consoleMessages,
         pageErrors: listeners.pageErrors,
         requestFailures: listeners.requestFailures,
+        bugsinkDsn: input.bugsinkDsn,
         responses: listeners.responses,
         ...(expectedFault === undefined ? {} : { expectedFault }),
         settleRuntimeEvents: listeners.waitForIdle,

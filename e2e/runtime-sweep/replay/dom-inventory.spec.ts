@@ -1,6 +1,7 @@
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture";
+import type { RequestFailureRecord } from "../evidence/evidence-types.ts";
 import { inventoryDom } from "./dom-inventory";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -11,15 +12,7 @@ async function captureHarnessEvidence(
   input: Readonly<{
     capturePhase?: "before" | "after";
     consoleMessages?: readonly { type: string; text: string }[];
-    requestFailures?: readonly {
-      url: string;
-      method: string;
-      resourceType: string;
-      failure: string | null;
-      startedAt: string;
-      endedAt: string;
-      durationMs: number;
-    }[];
+    requestFailures?: readonly RequestFailureRecord[];
   }> = {},
 ) {
   return captureRouteEvidence({
@@ -257,6 +250,7 @@ test("fails the owning observations for console and network errors", async ({
     consoleMessages: [{ type: "error", text: "planted console failure" }],
     requestFailures: [
       {
+        requestId: "planted-network-failure",
         url: "http://example.invalid/trpc/report",
         method: "POST",
         resourceType: "fetch",

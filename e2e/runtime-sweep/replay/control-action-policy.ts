@@ -20,6 +20,7 @@ export const STATEFUL_CONTROL_OPERATIONS = [
   "delete",
   "revoke",
   "restore",
+  "submit",
 ] as const;
 export type StatefulControlOperation =
   (typeof STATEFUL_CONTROL_OPERATIONS)[number];
@@ -36,6 +37,7 @@ const REQUIRED_SAFETY: Readonly<
   delete: "irreversible",
   revoke: "irreversible",
   restore: "reversible",
+  submit: "irreversible",
 };
 const RECOVERY_SAFETY: Readonly<
   Partial<Record<ActionOperation, ActionSafety>>
@@ -56,7 +58,7 @@ export const isRecoveryBackedAction = (action: Action): boolean => {
   const requiredSafety = RECOVERY_SAFETY[action.operation];
   if (requiredSafety === undefined || action.safety !== requiredSafety)
     return false;
-  return ["fill", "select", "submit"].includes(action.operation)
+  return ["fill", "select"].includes(action.operation)
     ? true
     : action.transition === action.operation;
 };
@@ -194,7 +196,6 @@ const validateOperation = (
           input,
           "click may mutate or autosave and requires a disposable E2E recovery",
         );
-  if (action.operation === "submit") return validateFormMutationPolicy(input);
   if (action.operation === "fill" || action.operation === "select")
     return validateFormOperation(input, action.operation);
   return unsupported(

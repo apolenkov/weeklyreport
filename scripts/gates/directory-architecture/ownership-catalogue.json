@@ -566,7 +566,7 @@
     {
       "id": "runtime-evidence",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:evidence/)?((?:evidence-|expected-fault|failure-summary|ledger|runtime-event-summary|server-log-evidence|transition-visual|finalize-runtime-coverage)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:evidence/)?((?:evidence-|expected-(?:fault|observability-abort)|failure-summary|ledger|runtime-event-summary|server-log-evidence|transition-visual|finalize-runtime-coverage)[^/]*)$",
       "concern": "evidence",
       "role": "implementation",
       "target": "e2e/runtime-sweep/evidence/$1"
@@ -586,6 +586,22 @@
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/$1"
+    },
+    {
+      "id": "runtime-live-control-actions-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/(.+\\.spec\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/control-actions/$1"
+    },
+    {
+      "id": "runtime-live-control-actions-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/((?!.*\\.spec\\.ts$).+\\.ts)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/control-actions/$1"
     },
     {
       "id": "runtime-live-control-evidence",

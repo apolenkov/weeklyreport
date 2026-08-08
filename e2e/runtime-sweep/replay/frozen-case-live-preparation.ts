@@ -22,6 +22,7 @@ export interface FrozenCaseLiveRuntime {
   readonly archiveRoot: string;
   readonly apiLogPath: string;
   readonly baseURL: string;
+  readonly bugsinkDsn: string;
   readonly databaseUrl: string;
   readonly repoRoot: string;
 }

@@ -11,6 +11,7 @@ import type {
 export type ConsoleRecord = Readonly<{ type: string; text: string }>;
 export type PageErrorRecord = Readonly<{ message: string }>;
 export type RequestFailureRecord = Readonly<{
+  requestId: string;
   url: string;
   method: string;
   resourceType: string;
@@ -20,6 +21,7 @@ export type RequestFailureRecord = Readonly<{
   durationMs: number;
 }>;
 export type ResponseRecord = Readonly<{
+  requestId: string;
   url: string;
   method: string;
   resourceType: string;
@@ -116,6 +118,7 @@ export type EvidenceCaptureInput = Readonly<{
   consoleMessages: readonly ConsoleRecord[];
   pageErrors: readonly PageErrorRecord[];
   requestFailures: readonly RequestFailureRecord[];
+  bugsinkDsn?: string;
   responses?: readonly ResponseRecord[];
   expectedFault?: ExpectedFault;
   networkPolicy?: NetworkEvidencePolicy;

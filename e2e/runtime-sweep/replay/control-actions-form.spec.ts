@@ -53,15 +53,6 @@ const FORM_CASES = [
     tagName: "select",
     inputType: null,
   },
-  {
-    operation: "submit" as const,
-    markup:
-      '<form><button type="submit">Submit</button><output id="result"></output></form><script>document.querySelector("form").addEventListener("submit", (event) => { event.preventDefault(); document.getElementById("result").textContent = "done"; });</script>',
-    role: "button" as const,
-    accessibleName: "Submit",
-    tagName: "button",
-    inputType: "submit",
-  },
 ] as const;
 
 type FormCase = (typeof FORM_CASES)[number];

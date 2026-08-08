@@ -1,3 +1,4 @@
+import { isExpectedObservabilityAbort } from "../../evidence/expected-observability-abort.ts";
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import type { RuntimeEventRecords } from "../../matrix/runtime-matrix-evidence.ts";
 import {
@@ -9,6 +10,7 @@ import type { FrozenCaseLiveRuntime } from "../frozen-case-live-actions.ts";
 
 type TailFailures = Readonly<{
   console: boolean;
+  expectedObservabilityAbortCount: number;
   pageError: boolean;
   network: boolean;
 }>;
@@ -19,12 +21,20 @@ const recordCount = (records: RuntimeEventRecords): number =>
   records.requestFailures.length +
   records.responses.length;
 
-const failuresFor = (records: RuntimeEventRecords): TailFailures => ({
+const failuresFor = (
+  records: RuntimeEventRecords,
+  bugsinkDsn: string,
+): TailFailures => ({
   console: records.consoleMessages.length > 0,
+  expectedObservabilityAbortCount: records.requestFailures.filter((failure) =>
+    isExpectedObservabilityAbort(failure, records.responses, bugsinkDsn),
+  ).length,
   pageError: records.pageErrors.length > 0,
   network:
-    records.requestFailures.length > 0 ||
-    records.responses.some(({ ok }) => !ok),
+    records.requestFailures.some(
+      (failure) =>
+        !isExpectedObservabilityAbort(failure, records.responses, bugsinkDsn),
+    ) || records.responses.some(({ ok }) => !ok),
 });
 
 const observationAffected = (
@@ -43,6 +53,15 @@ const observationFailed = (
   (observationId === "console" && failures.console) ||
   (observationId === "page-error" && failures.pageError) ||
   (observationId === "network" && failures.network);
+
+const passingMessage = (
+  observationId: string,
+  message: string,
+  failures: TailFailures,
+): string =>
+  observationId === "network" && failures.expectedObservabilityAbortCount > 0
+    ? `${message}; ${failures.expectedObservabilityAbortCount} late expected observability abort(s) ignored`
+    : message;
 
 export const attachLateRuntimeEvents = async (
   input: Readonly<{
@@ -70,7 +89,7 @@ export const attachLateRuntimeEvents = async (
     capturedAt,
     value: input.records,
   });
-  const failures = failuresFor(input.records);
+  const failures = failuresFor(input.records, input.runtime.bugsinkDsn);
   const observations = input.bundle.observations.map((observation) => {
     if (!observationAffected(observation.observationId, input.records))
       return observation;
@@ -80,7 +99,11 @@ export const attachLateRuntimeEvents = async (
       outcome: failed ? ("fail" as const) : observation.outcome,
       message: failed
         ? `Late ${observation.observationId} event detected after the after-phase snapshot`
-        : observation.message,
+        : passingMessage(
+            observation.observationId,
+            observation.message,
+            failures,
+          ),
       evidenceIds: [...observation.evidenceIds, ref.artifactId],
     };
   });

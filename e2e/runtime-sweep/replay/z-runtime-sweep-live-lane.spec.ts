@@ -116,6 +116,7 @@ test.describe("replays every frozen runtime case in matrix order", () => {
         archiveRoot: ARCHIVE_ROOT,
         apiLogPath: path.join(ARCHIVE_ROOT, "api-log", PROFILE, "app.log"),
         baseURL: BASE_URL,
+        bugsinkDsn: requiredEnv("RUNTIME_SWEEP_BUGSINK_DSN"),
         databaseUrl: DATABASE_URL,
         repoRoot: REPO_ROOT,
       };

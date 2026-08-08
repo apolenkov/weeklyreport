@@ -24,9 +24,10 @@ const STATEFUL_SUCCESS: Readonly<Record<StatefulOperation, RegExp>> = {
   delete: /deleted|removed|successfully/i,
   revoke: /submission revoked|revoked|returned to draft|draft status/i,
   restore: /restored|unarchived/i,
+  submit: /report submitted|✓ submitted/i,
 };
 const MAX_OBSERVATION_WAIT_MS = 2000;
-type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
+type StatefulOperation = "publish" | "delete" | "revoke" | "restore" | "submit";
 
 const nextAnimationFrame = async (page: Page): Promise<void> => {
   await page.evaluate(
@@ -41,7 +42,8 @@ const stateful = (operation: string): operation is StatefulOperation =>
   operation === "publish" ||
   operation === "delete" ||
   operation === "revoke" ||
-  operation === "restore";
+  operation === "restore" ||
+  operation === "submit";
 
 const textOutcomeObserver =
   (

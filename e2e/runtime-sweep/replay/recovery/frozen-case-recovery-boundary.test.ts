@@ -19,6 +19,7 @@ const records = (correlationId: string): RuntimeEventRecords => ({
   requestFailures: [],
   responses: [
     {
+      requestId: `recovery-${correlationId}`,
       url: "/trpc/report.get",
       method: "GET",
       resourceType: "fetch",
