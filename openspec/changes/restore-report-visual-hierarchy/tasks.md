@@ -19,8 +19,8 @@
 ## 3. Source-bound visual review
 
 - [x] 3.1 Locate and catalogue relevant pre-refactor screenshot references with their source SHA or mark them as design-only evidence when the SHA cannot be proven.
-- [ ] 3.2 Capture clean lead, head, admin, and viewer screenshots at desktop and compact widths, including lead edit/slides Mine/Everyone, into `customreport-archive` with a manifest.
-- [ ] 3.3 Complete an independent visual review of toolbar hierarchy, navigation stripes, author marks, clipping, spacing, and control consistency; fix confirmed findings and repeat affected captures.
+- [x] 3.2 Capture clean lead, head, admin, and viewer screenshots at desktop and compact widths, including lead edit/slides Mine/Everyone, into `customreport-archive` with a manifest.
+- [x] 3.3 Complete an independent visual review of toolbar hierarchy, navigation stripes, author marks, clipping, spacing, and control consistency; fix confirmed findings and repeat affected captures.
 
 ## 4. Verification
 
