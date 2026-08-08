@@ -155,7 +155,7 @@ const pairArtifactValue = (
   evaluation: TransitionVisualEvaluation,
   capturedAt: string,
 ): unknown => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   identity: {
     cellId: input.matrixCase.caseId,
     sourceSha: input.matrixCase.sourceSha,
@@ -215,8 +215,8 @@ export const transitionObservationMessage = (
   evaluation: TransitionVisualEvaluation,
 ): string =>
   evaluation.outcome === "pass"
-    ? evaluation.comparison === "cross-route-snapshots"
-      ? "Snapshot-local geometry passed; proven cross-route navigation masked stable landmark topology comparison"
+    ? evaluation.comparison === "navigation-boundary-snapshots"
+      ? "Snapshot-local geometry passed; proven navigation boundary masked stable landmark topology comparison"
       : `Before/after geometry matched ${evaluation.movements.length} stable layout landmark(s)`
     : evaluation.issues.join("; ");
 

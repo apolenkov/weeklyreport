@@ -7,49 +7,55 @@ import { policyForNavigationPair } from "./transition-visual-navigation-policy.t
 
 const SOURCE_SHA = "a".repeat(40);
 
-const matrixCase = (
-  href = "/lead/report",
-  safety: "read-only" | "irreversible" = "read-only",
-): MatrixExecutableCase => ({
-  caseId: "case-cross-route-link",
-  stateId: "state-cross-route-link",
-  sourceSha: SOURCE_SHA,
-  profile: "minimal",
-  role: "lead",
-  catalogRoute: "/lead/report/[reportId]/preview",
-  resolvedRoute: "/lead/report/report-id/preview",
-  state: {
-    profileCapability: "editable-active-report",
-    lifecycle: "open",
-    submission: "draft",
-    ownershipDensity: "single",
-    permission: "allowed",
-    fault: "none",
-    controlTransition: "none",
-  },
-  kind: "executable",
-  execution: {
-    kind: "control",
-    action: {
-      controlKey: "link:Lead%20home:1",
-      operation: "click",
-      safety,
-      transition: "none",
-      target: { role: "link", href },
-    },
-  },
-});
+interface CaseOptions {
+  readonly controlKey?: string;
+  readonly href?: string | null;
+  readonly safety?: "read-only" | "irreversible";
+}
 
-const url = (pathname: string, status = 200) => ({
+const matrixCase = (options: CaseOptions = {}): MatrixExecutableCase => {
+  const href = options.href === undefined ? "/lead/report" : options.href;
+  return {
+    caseId: "case-cross-route-link",
+    stateId: "state-cross-route-link",
+    sourceSha: SOURCE_SHA,
+    profile: "minimal",
+    role: "lead",
+    catalogRoute: "/lead/report/[reportId]/preview",
+    resolvedRoute: "/lead/report/report-id/preview",
+    state: {
+      profileCapability: "editable-active-report",
+      lifecycle: "open",
+      submission: "draft",
+      ownershipDensity: "single",
+      permission: "allowed",
+      fault: "none",
+      controlTransition: "none",
+    },
+    kind: "executable",
+    execution: {
+      kind: "control",
+      action: {
+        controlKey: options.controlKey ?? "link:Lead%20home:1",
+        operation: "click",
+        safety: options.safety ?? "read-only",
+        transition: "none",
+        ...(href === null ? {} : { target: { role: "link", href } }),
+      },
+    },
+  };
+};
+
+const url = (pathname: string, status: number | null = 200) => ({
   url: `http://127.0.0.1:3135${pathname}`,
   status,
 });
 
 describe("transition visual navigation policy", () => {
-  it("reports cross-route masking without claiming landmark matches", () => {
+  it("reports boundary masking without claiming landmark matches", () => {
     const message = transitionObservationMessage({
       outcome: "pass",
-      comparison: "cross-route-snapshots",
+      comparison: "navigation-boundary-snapshots",
       issues: [],
       movements: [],
       reviewedMasks: [],
@@ -67,21 +73,77 @@ describe("transition visual navigation policy", () => {
       FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
     );
 
-    expect(result.allowCrossRouteStableLayoutChange).toBe(true);
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(true);
+  });
+
+  it("recognizes successful sign-out navigation to the exact root", () => {
+    const result = policyForNavigationPair(
+      matrixCase({
+        controlKey: "button:Sign%20out:1",
+        href: null,
+      }),
+      url("/lead/report/report-id/preview"),
+      url("/"),
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(true);
+  });
+
+  it.each([
+    ["form to slides", "/lead/report/report-id", "?mode=slides"],
+    ["slides to form", "/lead/report/report-id?mode=slides", ""],
+  ])("recognizes the canonical %s view boundary", (_label, before, query) => {
+    const result = policyForNavigationPair(
+      matrixCase({
+        controlKey: query === "" ? "link:Edit:1" : "link:Slides:1",
+        href: `/lead/report/report-id${query}`,
+      }),
+      url(before),
+      url(`/lead/report/report-id${query}`),
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(true);
   });
 
   it.each([
     ["same route", matrixCase(), url("/lead/report/report-id/preview")],
+    [
+      "arbitrary href-less button route change",
+      matrixCase({ controlKey: "button:Open:1", href: null }),
+      url("/"),
+    ],
+    [
+      "sign out to the wrong route",
+      matrixCase({ controlKey: "button:Sign%20out:1", href: null }),
+      url("/login"),
+    ],
+    [
+      "same-route sign out",
+      matrixCase({ controlKey: "button:Sign%20out:1", href: null }),
+      url("/lead/report/report-id/preview"),
+    ],
+    [
+      "query-only button change",
+      matrixCase({ controlKey: "button:Open:1", href: null }),
+      url("/lead/report/report-id/preview?mode=slides"),
+    ],
+    [
+      "cross-origin sign out",
+      matrixCase({ controlKey: "button:Sign%20out:1", href: null }),
+      { url: "https://example.invalid/", status: 200 },
+    ],
     ["wrong route", matrixCase(), url("/admin")],
     [
       "cross origin",
-      matrixCase("https://example.invalid/lead/report"),
+      matrixCase({ href: "https://example.invalid/lead/report" }),
       url("/lead/report"),
     ],
     ["failed response", matrixCase(), url("/lead/report/report-id", 500)],
     [
       "mutating action",
-      matrixCase("/lead/report", "irreversible"),
+      matrixCase({ href: "/lead/report", safety: "irreversible" }),
       url("/lead/report/report-id"),
     ],
   ])("keeps topology comparison strict for %s", (_label, candidate, after) => {
@@ -92,6 +154,64 @@ describe("transition visual navigation policy", () => {
       FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
     );
 
-    expect(result.allowCrossRouteStableLayoutChange).toBe(false);
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(false);
+  });
+
+  it.each([
+    ["failed before URL", url("/lead/report/report-id/preview", 400), url("/")],
+    [
+      "missing after status",
+      url("/lead/report/report-id/preview"),
+      url("/", null),
+    ],
+  ])("keeps sign-out topology strict for %s", (_label, before, after) => {
+    const result = policyForNavigationPair(
+      matrixCase({ controlKey: "button:Sign%20out:1", href: null }),
+      before,
+      after,
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(false);
+  });
+
+  it.each([
+    ["unrecognized view mode", "link:Grid:1", "?mode=grid"],
+    ["duplicate view mode", "link:Slides:1", "?mode=slides&mode=slides"],
+    ["ordinary query change", "link:All:1", "?scope=all"],
+  ])("keeps topology strict for %s", (_label, controlKey, query) => {
+    const target = `/lead/report/report-id${query}`;
+    const result = policyForNavigationPair(
+      matrixCase({ controlKey, href: target }),
+      url("/lead/report/report-id"),
+      url(target),
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(false);
+  });
+
+  it("compares non-mode query names and values without tuple collisions", () => {
+    const target = "/lead/report/report-id?a=b%3Dc&mode=slides";
+    const result = policyForNavigationPair(
+      matrixCase({ controlKey: "link:Slides:1", href: target }),
+      url("/lead/report/report-id?a%3Db=c"),
+      url(target),
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(false);
+  });
+
+  it("keeps topology strict when a mode link changes the fragment", () => {
+    const target = "/lead/report/report-id?mode=slides#deck";
+    const result = policyForNavigationPair(
+      matrixCase({ controlKey: "link:Slides:1", href: target }),
+      url("/lead/report/report-id#report"),
+      url(target),
+      FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
+    );
+
+    expect(result.allowNavigationBoundaryStableLayoutChange).toBe(false);
   });
 });
