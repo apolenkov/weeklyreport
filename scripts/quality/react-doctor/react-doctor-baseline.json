@@ -906,7 +906,7 @@
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/slides/model/slide-grid-model.ts::205:17::react-doctor/js-combine-iterations::4270a485c38abd64e093527a976c374511e405e8fe41fdee10657f1fc4998fd0",
+      "id": "src/features/slides/model/slide-grid-model.ts::208:17::react-doctor/js-combine-iterations::4270a485c38abd64e093527a976c374511e405e8fe41fdee10657f1fc4998fd0",
       "file": "src/features/slides/model/slide-grid-model.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
@@ -934,7 +934,7 @@
       "rationale": "The explicit role=list/listitem structure is intentional: grouped status clusters need direct listitem children and the source comment documents why native ul/li would create the wrong accessibility tree. The tag heuristic is a false positive for this composition."
     },
     {
-      "id": "src/features/slides/ui/slide-article-header.tsx::147:11::react-doctor/no-array-index-as-key::4355749737c20ecca42e88a124407ac8602be73048f4c3deb95ffd199427279c",
+      "id": "src/features/slides/ui/slide-article-header.tsx::153:13::react-doctor/no-array-index-as-key::4355749737c20ecca42e88a124407ac8602be73048f4c3deb95ffd199427279c",
       "file": "src/features/slides/ui/slide-article-header.tsx",
       "rule": "no-array-index-as-key",
       "verdict": "overturn",
