@@ -8,6 +8,7 @@ import {
   type PreflightCookieContext,
   preflightGroupNeedsReset,
   type PreflightSessionCache,
+  quiescePreflightPage,
 } from "./preflight-session.ts";
 
 const cookieFor = (role: string): Cookie => ({
@@ -126,6 +127,12 @@ describe("preflight session cache", () => {
       return Promise.resolve();
     });
 
+    await quiescePreflightPage({
+      goto: vi.fn(() => {
+        events.push("quiesce");
+        return Promise.resolve();
+      }),
+    });
     events.push("reset");
     await cache.authenticate([lead]);
     events.push("state-prepared");
@@ -133,6 +140,7 @@ describe("preflight session cache", () => {
     events.push("navigation");
 
     expect(events).toEqual([
+      "quiesce",
       "reset",
       "authenticate:lead",
       "state-prepared",

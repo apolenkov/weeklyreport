@@ -27,3 +27,4 @@
 - [x] 4.1 Run focused Vitest files for period navigation, report toolbar, slide grid/model, and status slide deck.
 - [x] 4.2 Run `pnpm lint:e2e:typecheck`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`, then record exact results in the runtime-sweep report and OpenSpec closeout.
 - [x] 4.3 Run `openspec validate restore-report-visual-hierarchy --strict` and verify every completed task against the final source-bound evidence.
+- [ ] 4.4 Preserve the viewer acknowledgement row and loaded overview landmark in the shared weekly-report skeleton, then repeat the affected source-bound loading transition captures.

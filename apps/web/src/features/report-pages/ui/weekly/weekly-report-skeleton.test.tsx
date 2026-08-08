@@ -81,6 +81,30 @@ describe("WeeklyReportSkeleton", () => {
     ).toHaveLength(1);
   });
 
+  it("reserves the viewer acknowledge row before the overview", () => {
+    render(<WeeklyReportSkeleton audience="viewer" mode="form" />);
+
+    const root = screen.getByTestId("weekly-report-skeleton");
+    const acknowledge = screen.getByTestId("weekly-skeleton-acknowledge");
+    const overview = screen.getByTestId("weekly-skeleton-overview");
+
+    expect(acknowledge.nextElementSibling).toBe(overview);
+    expect(root).toContainElement(acknowledge);
+  });
+
+  it("pins the overview to the loaded surface geometry contract", () => {
+    render(<WeeklyReportSkeleton audience="viewer" mode="form" />);
+
+    expect(screen.getByTestId("weekly-skeleton-overview")).toHaveClass(
+      "card-surface",
+      "mt-4",
+    );
+    expect(screen.getByTestId("weekly-skeleton-overview")).toHaveAttribute(
+      "data-layout-key",
+      "report-overview-band",
+    );
+  });
+
   it("keeps one loading status when the slide skeleton is composed", () => {
     render(<WeeklyReportSkeleton mode="slides" />);
 
