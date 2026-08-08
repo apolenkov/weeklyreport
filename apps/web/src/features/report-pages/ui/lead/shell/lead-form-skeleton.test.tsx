@@ -104,7 +104,7 @@ describe("LeadFormSkeleton", () => {
     );
   });
 
-  it("reserves the loaded document-action wrap and submitted action width", () => {
+  it("reserves the edit document-action wrap and submitted action width", () => {
     render(<LeadFormSkeleton />);
 
     const actions = screen
@@ -115,6 +115,14 @@ describe("LeadFormSkeleton", () => {
     );
     expect(actions).toHaveLength(3);
     expect(actions[2]).toHaveClass("w-36");
+  });
+
+  it("does not reserve the edit-only document-action wrap in slides mode", () => {
+    render(<LeadFormSkeleton mode="slides" />);
+
+    const actions = screen.getByTestId("lead-skeleton-document-actions");
+    expect(actions).not.toHaveClass("max-[641px]:basis-full");
+    expect(actions.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
   });
 
   it("pairs the loaded edit body with the skeleton layout contract", () => {
