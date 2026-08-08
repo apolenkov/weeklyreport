@@ -44,9 +44,11 @@ export default defineConfig({
   webServer: [
     {
       ...apiServer,
+      gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
       env: {
         ...apiServer.env,
         LOG_DIR: preflightApiLogDir,
+        LOG_LEVEL: "info",
       },
     },
     {
