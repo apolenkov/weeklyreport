@@ -14,7 +14,6 @@ import {
 import {
   LEAD_SLOT_DMITRY,
   LEAD_SLOT_IGOR,
-  LEAD_SLOT_MARIA,
   LEAD_SLOT_OLGA,
   LEAD_SLOT_PRIMARY,
 } from "./seed-advanced.anchors.js";
@@ -28,6 +27,7 @@ export interface LeadConfig {
   readonly products: readonly SeedProduct[];
 }
 
+const LEAD_SLOT_MARIA = 2;
 const LEAD_SLOT_SERGEY = 6;
 
 // Days after the period's Monday, and the times of day the submissions land on.

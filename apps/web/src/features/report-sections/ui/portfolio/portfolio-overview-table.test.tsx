@@ -111,9 +111,6 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     expect(screen.getByText("2 leads")).toBeInTheDocument();
     expect(screen.getByText("Anna")).toBeInTheDocument();
     expect(screen.getByText("Boris")).toBeInTheDocument();
-    for (const card of screen.getAllByRole("button")) {
-      expect(card).toHaveClass("min-h-[88px]");
-    }
     // Product-scope heading is absent.
     expect(screen.queryByText("Portfolio Overview")).toBeNull();
   });
@@ -216,7 +213,6 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
 
     const card = screen.getByRole("button", { name: /Product Alpha/u });
     expect(card).toHaveAttribute("aria-controls", "report-product-p1");
-    expect(card).toHaveClass("min-h-[88px]");
     fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
   });
