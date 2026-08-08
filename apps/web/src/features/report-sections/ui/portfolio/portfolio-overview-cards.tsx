@@ -46,7 +46,7 @@ const EMPTY_BADGE_BORDER = "var(--color-border-strong)";
 // Class strings are const-lifted verbatim so the emitted `class` attribute
 // stays byte-identical to the inline templates they replaced.
 const PRODUCT_CARD_BASE =
-  "group grid min-h-[88px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
+  "group grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
 const PRODUCT_CARD_EMPTY =
   "cursor-default text-[var(--color-muted-foreground)]";
 const PRODUCT_CARD_INTERACTIVE =
@@ -91,7 +91,7 @@ export function LeadOverviewCard({
   return (
     <button
       type="button"
-      className="group grid min-h-[88px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[var(--shadow-portfolio-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+      className="group grid min-h-[76px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[var(--shadow-portfolio-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
       style={{ background: STATUS_BG[lead.worstStatus] }}
       title={`Jump to ${lead.name}'s section`}
       onClick={() => onNavigate(lead.id)}
@@ -104,7 +104,7 @@ export function LeadOverviewCard({
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{lead.name}</div>
-        <div className="min-h-8 text-xs text-[var(--color-muted-foreground)]">
+        <div className="text-xs text-[var(--color-muted-foreground)]">
           {STATUS_LABEL[lead.worstStatus]}
         </div>
         <span className="text-[11px] text-[var(--color-muted-foreground)]">
@@ -131,10 +131,7 @@ function ProductCardBody({
   return (
     <div className="min-w-0 flex-1">
       <div className="truncate text-sm font-medium">{product.name}</div>
-      <div
-        className="min-h-8 text-xs text-[var(--color-muted-foreground)]"
-        title={isEmpty ? "No updates" : product.statusLabel}
-      >
+      <div className="text-xs text-[var(--color-muted-foreground)]">
         {isEmpty ? "No updates" : product.statusLabel}
       </div>
       <span className="text-[11px] text-[var(--color-muted-foreground)]">

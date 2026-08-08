@@ -24,7 +24,6 @@ export const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 // Lead slots in the generated-id scheme (1..6), shared by the section, item and
 // status generators so a hand-written row lands in the right lead's section.
 export const LEAD_SLOT_PRIMARY = 1;
-export const LEAD_SLOT_MARIA = 2;
 export const LEAD_SLOT_IGOR = 3;
 export const LEAD_SLOT_DMITRY = 4;
 export const LEAD_SLOT_OLGA = 5;
