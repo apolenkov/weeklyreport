@@ -142,7 +142,7 @@ serialized only as diagnostic metadata.
 ### Requirement: `apps/*` comments carry WHY, not restated names, and are `//`, not JSDoc
 
 `apps/*` MUST carry rationale as a `//` comment, not a JSDoc block — this is
-the existing `CLAUDE.md` JSDoc policy (public-API-only, `packages/shared`
+the existing `AGENTS.md` JSDoc policy (public-API-only, `packages/shared`
 and `packages/ui`); it is unenforced in `apps/*` because
 `jsdoc/require-jsdoc` is `publicOnly` and armed only for `packages/*` (no
 gate exists to catch violations mechanically). Until a gate exists, the
@@ -204,7 +204,7 @@ updated to point at the durable spec before a hygiene sweep can pass.
 
 A mechanical or LLM sweep MUST dereference each reference before acting on
 it. A reference that resolves to a live `openspec/specs/` requirement is
-kept, per the existing `CLAUDE.md` allowance for a `<=2`-line pointer. A
+kept, per the existing `AGENTS.md` allowance for a `<=2`-line pointer. A
 reference that resolves to nothing is deleted. A sweep that pattern-matches
 the shape of a reference without dereferencing it MUST NOT delete or keep
 references in bulk. A reference with more than one live durable match is

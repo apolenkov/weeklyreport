@@ -9,7 +9,7 @@
 
 > Это MVP. Продакшена пока нет — локальная, dev, test и UAT базы данных
 > одноразовые: их сброс и пересборка с нуля ожидаемы и безопасны. Подробности —
-> в [`CLAUDE.md`](./CLAUDE.md), раздел «MVP Phase: Database Is Disposable».
+> в [`AGENTS.md`](./AGENTS.md), раздел «MVP Phase — current».
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/lifecycle-dark.svg">

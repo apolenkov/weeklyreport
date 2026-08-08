@@ -41,7 +41,7 @@ protection details, Actions permission settings, and several security settings.
 Those settings are **unverified**, not assumed absent or enabled.
 
 The pre-production MVP may continue with the explicit direct-push authorization
-in `CLAUDE.md`, but it MUST NOT call current CI an enforced merge gate. The local
+in `AGENTS.md`, but it MUST NOT call current CI an enforced merge gate. The local
 pre-push hook is defense in depth, not server-side enforcement.
 
 ## First-production stop condition

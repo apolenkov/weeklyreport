@@ -344,11 +344,12 @@ The standard MUST enable `@typescript-eslint/no-magic-numbers` as `error` (the
 TS-aware variant, which understands enums, numeric-literal types, and `readonly`
 class fields), and MUST enforce a documented magic-string policy: a literal
 carrying meaning in logic is lifted to a named `const`, `enum`, or config value.
-The numeric rule MUST be configured with the repo's established exemptions from
-`~/.claude/rules/code-style.md`: `ignore: [-1, 0, 1, 2]` (the obvious-arithmetic
-set), `enforceConst: true`, `ignoreArrayIndexes: true`, `ignoreEnums: true`,
-`ignoreReadonlyClassProperties: true`, `ignoreTypeIndexes: true`, and
-`ignoreNumericLiteralTypes: true`. The rule MUST reuse the standard's existing
+The numeric rule MUST match the live configuration in `eslint-config/core.ts`
+and its scoped exemptions in `eslint-config/overrides.ts`: `ignore: [-1, 0, 1, 2]`
+(the obvious-arithmetic set), `enforceConst: true`, `ignoreArrayIndexes: true`,
+`ignoreEnums: true`, `ignoreReadonlyClassProperties: true`,
+`ignoreTypeIndexes: true`, and `ignoreNumericLiteralTypes: true`. The rule MUST
+reuse the standard's existing
 exempt set — tests (`*.test.*`, e2e), generated (`prisma/generated`), seeds
 (`prisma/seed*.ts`), config (`*.config.ts`) — plus one-off operational scripts.
 

@@ -8,8 +8,6 @@ coverage
 prisma/generated
 pnpm-lock.yaml
 scheduled_tasks.lock
-# Agent worktrees are full repo copies — they format themselves.
-.claude/worktrees/
 # Codex rescue runtime — machine-local tool artifacts, not repo source.
 .agents/
 openspec/changes/archive/2026-07-21-all-green-exemplary-rollout/mass-review-artifact.html
