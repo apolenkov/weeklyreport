@@ -34,6 +34,19 @@ function ancestorChain(node: HTMLElement | null): HTMLElement[] {
 }
 
 describe("PortfolioOverviewTable — a11y regression", () => {
+  it("exposes the loaded overview geometry landmark", () => {
+    render(
+      <PortfolioOverviewTable
+        products={ONE_PRODUCT}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    expect(
+      screen.getByText("Portfolio Overview").closest(".card-surface"),
+    ).toHaveAttribute("data-layout-key", "report-overview-band");
+  });
+
   it("GridIcon SVG has aria-hidden='true'", () => {
     const { container } = render(
       <PortfolioOverviewTable

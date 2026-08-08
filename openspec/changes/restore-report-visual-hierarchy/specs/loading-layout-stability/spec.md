@@ -6,7 +6,7 @@ Keep loading feedback visually faithful to the report surface it replaces so use
 
 ### Requirement: Report skeletons preserve the loaded surface hierarchy
 
-The lead, head, and viewer report loading skeletons MUST preserve the loaded surface's outer width, vertical spacing, header title/action split, compact single context bar, and primary content-card order. A skeleton MAY use a bounded data-independent placeholder count, but it MUST NOT introduce a center label, oversized toolbar, or control grouping absent from the loaded page.
+The lead, head, and viewer report loading skeletons MUST preserve the loaded surface's outer width, vertical spacing, header title/action split, compact single context bar, audience-specific interstitial rows, and primary content-card order. A skeleton MAY use a bounded data-independent placeholder count, but it MUST NOT introduce a center label, oversized toolbar, or control grouping absent from the loaded page.
 
 #### Scenario: a lead report finishes loading
 
@@ -17,7 +17,8 @@ The lead, head, and viewer report loading skeletons MUST preserve the loaded sur
 #### Scenario: a head or viewer report finishes loading
 
 - **WHEN** the shared weekly report changes from its skeleton to loaded content
-- **THEN** the header, context bar, portfolio overview, and section list retain the same order and width allocation
+- **THEN** the header, context bar, viewer acknowledgement row when applicable, portfolio overview, and section list retain the same order and width allocation
+- **AND** the portfolio overview begins at the same horizontal and vertical landmark within the bounded placeholder-count contract
 
 #### Scenario: a head or viewer slide route renders its outer fallback
 

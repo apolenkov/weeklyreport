@@ -73,7 +73,11 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
     : "Products with content open detailed sections. Empty products stay muted.";
 
   return (
-    <div className="card-surface mt-4">
+    <div
+      className="card-surface mt-4"
+      data-layout-key="report-overview-band"
+      data-layout-stability="position-width"
+    >
       <div className="flex w-full items-center justify-between p-4">
         <div>
           <div className="flex items-center gap-3">

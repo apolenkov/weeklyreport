@@ -23,6 +23,7 @@ import {
   createProfileSessionCacheRegistry,
   preflightGroupNeedsReset,
   preflightStateGroupKey,
+  quiescePreflightPage,
 } from "./preflight-session.ts";
 import { createPrismaRuntimeStateDatabase } from "./prisma-state-database.ts";
 
@@ -87,6 +88,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
       );
       const actors = actorsForProfile(source, state.profile);
       if (resetRequired) {
+        await quiescePreflightPage(page);
         reseedE2eDatabase({
           databaseUrl,
           profile: state.profile,

@@ -36,6 +36,13 @@ export interface PreflightCookieContext {
   readonly addCookies: (cookies: readonly Cookie[]) => Promise<void>;
 }
 
+export interface PreflightPageQuiescer {
+  readonly goto: (
+    url: "about:blank",
+    options: Readonly<{ waitUntil: "domcontentloaded" }>,
+  ) => Promise<unknown>;
+}
+
 type AuthenticatedActor = RuntimeMatrixActor &
   Readonly<{ readonly role: NonNullable<RuntimeMatrixActor["role"]> }>;
 
@@ -63,6 +70,12 @@ export const preflightGroupNeedsReset = (
   nextGroup: string,
   sessionsCreated: boolean,
 ): boolean => sessionsCreated || preparedGroup !== nextGroup;
+
+export async function quiescePreflightPage(
+  page: PreflightPageQuiescer,
+): Promise<void> {
+  await page.goto("about:blank", { waitUntil: "domcontentloaded" });
+}
 
 class PreflightSessionError extends Error {
   override readonly name = "PreflightSessionError";

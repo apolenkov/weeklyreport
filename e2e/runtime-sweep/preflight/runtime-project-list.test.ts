@@ -103,6 +103,9 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     const preflightServers = preflightConfig.webServer;
     if (!Array.isArray(preflightServers))
       throw new Error("preflight web servers missing");
+    expect(preflightServers[0]?.env?.LOG_DIR).toBe(
+      path.join(archive, "api-log", "preflight"),
+    );
     expect(preflightServers[1]?.cwd).toBe(
       path.resolve(import.meta.dirname, "..", "..", ".."),
     );

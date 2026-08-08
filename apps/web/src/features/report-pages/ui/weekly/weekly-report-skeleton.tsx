@@ -107,6 +107,19 @@ function ContextToolbarSkeleton() {
   );
 }
 
+function ViewerAcknowledgeSkeleton() {
+  return (
+    <div
+      data-testid="weekly-skeleton-acknowledge"
+      className="flex flex-wrap items-center gap-3"
+      aria-hidden="true"
+    >
+      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)]" />
+    </div>
+  );
+}
+
 function PortfolioCardSkeleton() {
   return (
     <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[var(--color-surface-skeleton)] p-2.5">
@@ -123,7 +136,12 @@ function PortfolioCardSkeleton() {
 
 function PortfolioSkeleton() {
   return (
-    <section data-testid="weekly-skeleton-overview" className="card-surface">
+    <section
+      data-testid="weekly-skeleton-overview"
+      data-layout-key="report-overview-band"
+      data-layout-stability="position-width"
+      className="card-surface mt-4"
+    >
       <div className="flex w-full items-center justify-between p-4">
         <div className="w-full">
           <div className="flex items-center gap-3">
@@ -225,7 +243,10 @@ export function WeeklyReportSkeleton({
       {mode === "slides" ? (
         <SlideSkeleton mode="head" announce={false} />
       ) : (
-        <FormBodySkeleton />
+        <>
+          {audience === "viewer" ? <ViewerAcknowledgeSkeleton /> : null}
+          <FormBodySkeleton />
+        </>
       )}
     </div>
   );
