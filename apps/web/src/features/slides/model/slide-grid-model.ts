@@ -38,6 +38,8 @@ export const SHARED_CARD_NAME = "Shared context";
 export interface SlideGridModel {
   // Legend order is owner first, then foreign authors by name.
   readonly authors: readonly GridAuthor[];
+  // Mine already identifies the selected owner in the slide header.
+  readonly showOwnerMarks: boolean;
   readonly worstStatus: SlideTrafficStatus;
   readonly counters: {
     readonly current: number;
@@ -193,6 +195,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
 
   return {
     authors: roster.authors,
+    showOwnerMarks: input.showOwnerBadges !== false,
     priorityStrip,
     products,
     ...buildHeaderSummary(realCards, products, priorityStrip),

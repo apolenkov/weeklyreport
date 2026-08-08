@@ -8,6 +8,7 @@ import {
   makeReportSectionFixture,
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildSectionSlideModel } from "../model/section-slide-model";
 import { StatusSlideDeck } from "./status-slide-deck";
 
@@ -77,6 +78,24 @@ const makeSection = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
     activities: [],
     ...over,
   });
+
+const foreignContributor = (): CrossAuthorContentRow => ({
+  authorId: "lead-2",
+  authorName: "Петров Пётр Павлович",
+  authorRole: "lead",
+  items: [
+    {
+      id: "foreign-current",
+      projectId: "p1",
+      type: "current",
+      text: "foreign row",
+      workflowStatus: "in_progress",
+      stageNames: ["Testing"],
+    },
+  ],
+  risks: [],
+  decisions: [],
+});
 
 function renderDeck(
   section: ReportSectionReadModel,
@@ -177,9 +196,11 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
   });
 
-  it("omits the already-selected owner badge in a Mine slide model", () => {
+  it("omits the already-selected owner marks across a Mine slide model", () => {
     const slide = buildSectionSlideModel(
-      makeSection({ items: [item({ text: "mine row" })] }),
+      makeSection({
+        items: [item({ text: "mine row", priorityRank: 1 })],
+      }),
       { showOwnerBadges: false },
     );
     render(
@@ -191,8 +212,93 @@ describe("StatusSlideDeck — by-product grid article", () => {
       />,
     );
 
-    expect(screen.getByText("mine row")).toBeInTheDocument();
+    expect(screen.getAllByText("mine row")).toHaveLength(2);
     expect(screen.queryByTestId("slide-author-badge")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("slide-priority-author-badge"),
+    ).not.toBeInTheDocument();
+    const mineRankBadge = screen.getByTestId("slide-priority-rank-badge");
+    expect(mineRankBadge).toHaveStyle({
+      background: "var(--color-priority-row-bg)",
+    });
+    expect(mineRankBadge).not.toHaveStyle({
+      background: "var(--slide-author-0)",
+    });
+    expect(screen.queryByTestId("slide-legend")).not.toBeInTheDocument();
+  });
+
+  it("keeps owner and contributor attribution across an Everyone slide model", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [item({ text: "everyone row", priorityRank: 1 })],
+      }),
+      { foreign: [foreignContributor()], showOwnerBadges: true },
+    );
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="lead"
+      />,
+    );
+
+    const authorBadges = screen.getAllByTestId("slide-author-badge");
+    expect(authorBadges).toHaveLength(2);
+    const ownerBadge = expectDefined(
+      authorBadges.find((badge) => badge.textContent.includes("ИВ")),
+    );
+    expect(ownerBadge).toHaveStyle({
+      background: "var(--slide-author-0)",
+    });
+    expect(ownerBadge).toHaveTextContent("ИВ");
+    const contributorBadge = expectDefined(
+      authorBadges.find((badge) => badge.textContent.includes("ПП")),
+    );
+    expect(contributorBadge).toHaveStyle({
+      background: "var(--slide-author-1)",
+    });
+    expect(contributorBadge).toHaveTextContent("ПП");
+
+    const priorityAuthorBadge = screen.getByTestId(
+      "slide-priority-author-badge",
+    );
+    expect(priorityAuthorBadge).toHaveStyle({
+      background: "var(--slide-author-0)",
+    });
+    expect(priorityAuthorBadge).toHaveTextContent("ИВ");
+    expect(screen.getByTestId("slide-priority-rank-badge")).toHaveStyle({
+      background: "var(--slide-author-0)",
+    });
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
+      "Иванов Василий Петрович",
+    );
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
+      "Петров Пётр Павлович",
+    );
+  });
+
+  it("keeps multi-author attribution in the shared Head/Viewer deck", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({ items: [item({ text: "owner row" })] }),
+      { foreign: [foreignContributor()] },
+    );
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={vi.fn()}
+        mode="head"
+      />,
+    );
+
+    expect(screen.getAllByTestId("slide-author-badge")).toHaveLength(2);
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
+      "Иванов Василий Петрович",
+    );
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent(
+      "Петров Пётр Павлович",
+    );
   });
 
   it("keeps the wide lead canvas inside a local horizontal scroll host", () => {

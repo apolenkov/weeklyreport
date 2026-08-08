@@ -163,6 +163,7 @@ describe("SlideCell row hover", () => {
 describe("SlidePriorityStrip rank badge", () => {
   const grid: SlideGridModel = {
     authors: [AUTHOR],
+    showOwnerMarks: true,
     worstStatus: "green",
     counters: { current: 0, risks: 0, priorities: 1 },
     onTrack: { on: 1, total: 1 },

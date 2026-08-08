@@ -102,7 +102,13 @@ export function SlideArticle({
         authorsById={authorsById}
         onRowActivate={onRowActivate}
       />
-      <SlideLegend authors={grid.authors} />
+      <SlideLegend
+        authors={
+          grid.showOwnerMarks
+            ? grid.authors
+            : grid.authors.filter(({ isOwner }) => !isOwner)
+        }
+      />
       <StageLegend stageNames={collectStageNames(grid)} />
     </article>
   );

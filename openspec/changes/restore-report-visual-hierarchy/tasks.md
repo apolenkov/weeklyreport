@@ -1,7 +1,7 @@
 ## 1. Web layout and model behavior
 
 - [x] 1.1 Restore compact desktop sizing for period navigation while preserving compact-width reflow and archive-filter adjacency.
-- [x] 1.2 Thread explicit owner-badge visibility through the lead slide model so Mine suppresses the selected owner and Everyone preserves every author series mark.
+- [x] 1.2 Thread explicit owner-badge visibility through the lead slide model so Mine suppresses the selected owner across rows, priority cards, and the legend while Everyone preserves every author mark.
 - [x] 1.3 Rebuild lead, weekly-report, and slide skeletons around the loaded surfaces' header, compact toolbar, and content hierarchy without data-dependent placeholder counts.
 - [x] 1.4 Contain the wide lead and shared report slide canvases and admin users table in positioned local scroll hosts so compact pages retain viewport width.
 - [x] 1.5 Disable only the Next.js on-screen development indicator and expose one stable application-owned navigation accent landmark.

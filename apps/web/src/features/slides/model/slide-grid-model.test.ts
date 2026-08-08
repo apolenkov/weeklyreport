@@ -260,6 +260,7 @@ describe("buildSlideGridModel — sorting and author series", () => {
     });
     const rows = productLevelOf(cardOf(model, "p1")).columns.current;
 
+    expect(model.showOwnerMarks).toBe(false);
     expect(rows.map((row) => [row.authorId, row.showAuthorBadge])).toEqual([
       ["lead-1", false],
       ["co-1", true],
@@ -282,6 +283,7 @@ describe("buildSlideGridModel — priority strip", () => {
       [1, "Beta"],
       [2, "Alpha"],
     ]);
+    expect(model.showOwnerMarks).toBe(true);
     expect(model.counters.priorities).toBe(2);
   });
 
