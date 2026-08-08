@@ -349,6 +349,81 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
       screen.getByTestId("viewer-period-navigation-skeleton"),
     ).toBeInTheDocument();
   });
+
+  it("keeps loaded authority and document actions while history loads", () => {
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        makeQueryState({ data: undefined, isLoading: true }),
+      ],
+      [
+        "weeklyReport.get",
+        makeQueryState({
+          data: {
+            status: "active",
+            reportId: REPORT_ID,
+            periodStart: "2026-06-08T00:00:00.000Z",
+            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStatus: "published",
+          },
+        }),
+      ],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
+    ]);
+    vi.mocked(useQuery).mockImplementation(
+      (options) =>
+        resultsByQuery.get(options.queryKey[0]) ??
+        makeQueryState({ data: undefined }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeEnabled();
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("viewer-authority-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show document placeholders for a terminal display error", () => {
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        makeQueryState({ data: undefined, isLoading: true }),
+      ],
+      [
+        "weeklyReport.get",
+        makeQueryState({ data: undefined, error: new Error("display failed") }),
+      ],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
+    ]);
+    vi.mocked(useQuery).mockImplementation(
+      (options) =>
+        resultsByQuery.get(options.queryKey[0]) ??
+        makeQueryState({ data: undefined }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("viewer-authority-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Export PDF" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 // Recovery is limited to the report route because a rejected stale link
