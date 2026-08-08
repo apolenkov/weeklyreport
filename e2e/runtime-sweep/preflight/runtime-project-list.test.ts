@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { expect, test } from "vitest";
 
-import { runtimeApiServerCommand } from "../../runtime-api-server-command.ts";
+import {
+  runtimeApiServerCommand,
+  runtimeApiServerCwd,
+} from "../../runtime-api-server-command.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const ENV_KEYS = [
@@ -106,6 +109,7 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     if (!Array.isArray(preflightServers))
       throw new Error("preflight web servers missing");
     expect(preflightServers[0]?.command).toBe(runtimeApiServerCommand);
+    expect(preflightServers[0]?.cwd).toBe(runtimeApiServerCwd);
     expect(preflightServers[0]?.env?.LOG_DIR).toBe(
       path.join(archive, "api-log", "preflight"),
     );

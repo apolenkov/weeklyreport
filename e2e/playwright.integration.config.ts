@@ -6,7 +6,10 @@ import * as path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { runtimeApiServerCommand } from "./runtime-api-server-command.ts";
+import {
+  runtimeApiServerCommand,
+  runtimeApiServerCwd,
+} from "./runtime-api-server-command.ts";
 
 // Exported so the prodbuild config guards against ports diverging from the
 // values baked into its client bundle instead of restating the literals.
@@ -90,6 +93,7 @@ export default defineConfig({
   webServer: [
     {
       command: runtimeApiServerCommand,
+      cwd: runtimeApiServerCwd,
       url: `${API_URL}/health/ready`,
       reuseExistingServer: false,
       timeout: 360_000,
