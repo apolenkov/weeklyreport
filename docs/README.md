@@ -3,7 +3,7 @@
 Curated durable documentation only. Session artifacts (handoffs, review data
 dumps, run plans, pipeline scripts) do NOT live here — they go to
 `~/work/customreport-archive/` (outside git, see its `INDEX.md`). The
-pre-commit guard enforces this; the policy lives in `CLAUDE.md`.
+pre-commit guard enforces this; the policy lives in `AGENTS.md`.
 
 | Path                                          | What it is                                                                                       |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |

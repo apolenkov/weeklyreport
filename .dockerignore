@@ -46,6 +46,5 @@ apps/web/.tmp
 **/.env.*
 .env.local
 **/.env.local
-.claude/
 *.png
 **/*.png

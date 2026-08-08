@@ -22,9 +22,6 @@ export const coreConfig: Linter.Config[] = [
     // Any alternate Next dist dir (NEXT_DIST_DIR — e2e, sweep, ad-hoc source
     // runs) is a build artifact, never lintable source.
     "**/.next*/**",
-    // Agent worktrees are full repo copies; linting them triples the file set
-    // and OOMs eslint. Each worktree lints itself.
-    ".claude/worktrees/**",
     // Codex/agent-council runtime artifacts are machine-local tools, not repo
     // source; linting them would make local assistant state a product gate.
     ".agents/**",
@@ -40,7 +37,6 @@ export const coreConfig: Linter.Config[] = [
     // top-level return/await and are not standalone modules — linting them as
     // such only produces false "return outside of function" parse errors.
     "**/*.workflow.mjs",
-    ".claude/workflows/**",
   ]),
   // A disable directive that no longer suppresses anything asserts a constraint
   // the code already satisfies. ESLint reports these at `warn` by default, which
@@ -454,7 +450,7 @@ export const coreConfig: Linter.Config[] = [
     },
   },
   // Comment archaeology (change-log / ticket / phase refs) is banned by
-  // CLAUDE.md; git history holds that. Scoped to product source only —
+  // AGENTS.md; git history holds that. Scoped to product source only —
   // `scripts/`, `tools/` and root configs legitimately carry plan-shaped labels.
   {
     files: [
