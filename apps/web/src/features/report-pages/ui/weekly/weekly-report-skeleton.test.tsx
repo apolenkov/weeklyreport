@@ -19,10 +19,14 @@ describe("WeeklyReportSkeleton", () => {
       "weekly-skeleton-header",
       "weekly-skeleton-context-toolbar",
       "weekly-skeleton-overview",
-      "weekly-skeleton-project-activities",
-      "weekly-skeleton-sections-toolbar",
-      "weekly-skeleton-accordions",
+      "weekly-skeleton-body-continuation",
     ]);
+    expect(screen.getByTestId("weekly-skeleton-body-continuation")).toHaveClass(
+      "min-h-px",
+    );
+    expect(
+      screen.getByTestId("weekly-skeleton-overview-grid").children,
+    ).toHaveLength(15);
   });
 
   it("uses the slide deck topology for a slides route", () => {
@@ -103,6 +107,12 @@ describe("WeeklyReportSkeleton", () => {
       "data-layout-key",
       "report-overview-band",
     );
+    expect(
+      screen.getByTestId("weekly-skeleton-body-continuation"),
+    ).toHaveAttribute("data-layout-key", "report-body-continuation");
+    expect(
+      screen.getByTestId("weekly-skeleton-body-continuation"),
+    ).toHaveAttribute("data-layout-stability", "position-width");
   });
 
   it("keeps one loading status when the slide skeleton is composed", () => {

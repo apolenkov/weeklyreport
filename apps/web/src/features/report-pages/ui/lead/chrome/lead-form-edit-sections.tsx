@@ -56,7 +56,11 @@ export function LeadFormEditSections({
   const stagesForProduct: StagesForProduct = (productId) =>
     ownedStagesForProject(draftSection, productId);
   return (
-    <div className="min-w-0 space-y-6">
+    <div
+      className="min-w-0 space-y-6"
+      data-layout-key="lead-report-body"
+      data-layout-stability="position-width"
+    >
       {/* Reviewer feedback on a returned section surfaces read-only above
           the editable content, so the lead sees what to fix before
           resubmitting. Self-suppresses when there is none. */}

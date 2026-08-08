@@ -89,8 +89,6 @@ type ReportTopSurfacesProps = Pick<
   | "portfolio"
   | "leadOverviewRows"
   | "accordion"
-  | "activitySections"
-  | "submittedOnly"
   | "onNavigateOverview"
 >;
 
@@ -101,8 +99,6 @@ function ReportTopSurfaces({
   portfolio,
   leadOverviewRows,
   accordion,
-  activitySections,
-  submittedOnly,
   onNavigateOverview,
 }: ReportTopSurfacesProps) {
   return (
@@ -123,15 +119,6 @@ function ReportTopSurfaces({
         leadOverviewRows={leadOverviewRows}
         mountedProductIds={new Set(accordion.products.map(({ id }) => id))}
         onNavigate={onNavigateOverview}
-      />
-
-      {/* Display-only; same submitted-only filter as the accordion body. */}
-      <ActivityStatusStrip
-        sections={
-          submittedOnly
-            ? activitySections.filter(isSubmittedSection)
-            : activitySections
-        }
       />
     </>
   );
@@ -241,26 +228,39 @@ export function ReportContent(props: ReportContentProps) {
         portfolio={props.portfolio}
         leadOverviewRows={props.leadOverviewRows}
         accordion={props.accordion}
-        activitySections={props.activitySections}
-        submittedOnly={props.submittedOnly}
         onNavigateOverview={props.onNavigateOverview}
       />
 
-      <ReportSectionsSurface
-        reviewEnabled={props.reviewEnabled}
-        reviewModel={props.reviewModel}
-        submittedOnly={props.submittedOnly}
-        accordion={props.accordion}
-        scope={props.scope}
-        focusedProductId={props.focusedProductId}
-        scrollTargetProductId={props.scrollTargetProductId}
-        focusedLeadId={props.focusedLeadId}
-        canReviewAny={props.canReviewAny}
-        reviewMode={props.reviewMode}
-        onReviewModeChange={props.onReviewModeChange}
-        submissionFilter={props.submissionFilter}
-        onFilterChange={props.onFilterChange}
-      />
+      <div
+        data-layout-key="report-body-continuation"
+        data-layout-stability="position-width"
+        className="space-y-4"
+      >
+        {/* Display-only; same submitted-only filter as the accordion body. */}
+        <ActivityStatusStrip
+          sections={
+            props.submittedOnly
+              ? props.activitySections.filter(isSubmittedSection)
+              : props.activitySections
+          }
+        />
+
+        <ReportSectionsSurface
+          reviewEnabled={props.reviewEnabled}
+          reviewModel={props.reviewModel}
+          submittedOnly={props.submittedOnly}
+          accordion={props.accordion}
+          scope={props.scope}
+          focusedProductId={props.focusedProductId}
+          scrollTargetProductId={props.scrollTargetProductId}
+          focusedLeadId={props.focusedLeadId}
+          canReviewAny={props.canReviewAny}
+          reviewMode={props.reviewMode}
+          onReviewModeChange={props.onReviewModeChange}
+          submissionFilter={props.submissionFilter}
+          onFilterChange={props.onFilterChange}
+        />
+      </div>
     </>
   );
 }

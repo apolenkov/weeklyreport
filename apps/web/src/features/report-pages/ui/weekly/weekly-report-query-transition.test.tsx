@@ -16,6 +16,8 @@ import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { ViewerReportShell } from "../../../viewer";
 import { HeadReportShell } from "../head/head-report-shell";
+import { makeWeeklyReportData } from "./__tests__/weekly-report-page-harness";
+import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
@@ -149,5 +151,22 @@ describe("report shell report-key transitions", () => {
     expect(
       screen.queryByRole("button", { name: /publish|reopen/i }),
     ).toBeNull();
+  });
+
+  it("exposes a stable landmark for the loaded report body", () => {
+    renderWeeklyReportPage(makeWeeklyReportData("open"));
+
+    const overview = document.querySelector(
+      '[data-layout-key="report-overview-band"]',
+    );
+    const continuation = document.querySelector(
+      '[data-layout-key="report-body-continuation"]',
+    );
+    expect(continuation).not.toBeNull();
+    expect(overview?.nextElementSibling).toBe(continuation);
+    expect(continuation).toHaveAttribute(
+      "data-layout-stability",
+      "position-width",
+    );
   });
 });

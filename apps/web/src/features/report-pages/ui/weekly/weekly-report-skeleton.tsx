@@ -3,8 +3,9 @@ import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { PeriodNavigationSkeleton } from "../../../period";
 import { SlideSkeleton } from "../../../slides";
 
-const PORTFOLIO_CARD_COUNT = 4;
-const ACCORDION_COUNT = 4;
+// The initial request has no data-derived layout shape. Reserve the complete
+// MVP full-report overview and do not speculate about dynamic sections below.
+const PORTFOLIO_CARD_COUNT = 15;
 
 function HeaderTitleSkeleton() {
   return <Skeleton className="h-8 w-40" />;
@@ -147,12 +148,15 @@ function PortfolioSkeleton() {
           <div className="flex items-center gap-3">
             <Skeleton className="h-5 w-5 rounded-sm" />
             <Skeleton className="h-5 w-44" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-6 w-20 rounded-full" />
           </div>
-          <Skeleton className="mt-1 h-3 w-72 max-w-full" />
+          <Skeleton className="mt-1 h-4 w-72 max-w-full" />
         </div>
       </div>
-      <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
+      <div
+        data-testid="weekly-skeleton-overview-grid"
+        className="grid gap-2 px-4 pb-4 sm:grid-cols-2"
+      >
         {Array.from({ length: PORTFOLIO_CARD_COUNT }, (_, index) => (
           <PortfolioCardSkeleton key={index} />
         ))}
@@ -161,62 +165,16 @@ function PortfolioSkeleton() {
   );
 }
 
-function ActivitySkeleton() {
-  return (
-    <section
-      data-testid="weekly-skeleton-project-activities"
-      className="rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--card-surface-gradient)] p-4 shadow-[0_1px_2px_var(--color-border-subtle)]"
-    >
-      <Skeleton className="h-4 w-32" />
-      <div className="mt-3 space-y-2">
-        <Skeleton className="h-16 w-full rounded-lg" />
-        <Skeleton className="h-16 w-full rounded-lg" />
-      </div>
-    </section>
-  );
-}
-
-function SectionsToolbarSkeleton() {
-  return (
-    <div
-      data-testid="weekly-skeleton-sections-toolbar"
-      className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <Skeleton className="h-4 w-20" />
-      <div className="flex max-w-full flex-wrap items-center gap-2">
-        <Skeleton className="h-[var(--toolbar-control-h)] w-24 rounded-[var(--radius-pill)]" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-24 rounded-[var(--radius-pill)]" />
-      </div>
-    </div>
-  );
-}
-
-function AccordionSkeleton() {
-  return (
-    <div className="card-surface p-5">
-      <div className="flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-5 w-44 max-w-[50vw]" />
-          <Skeleton className="h-6 w-20 rounded-[var(--radius-pill)]" />
-        </div>
-        <Skeleton className="h-4 w-4" />
-      </div>
-    </div>
-  );
-}
-
 function FormBodySkeleton() {
   return (
     <>
       <PortfolioSkeleton />
-      <ActivitySkeleton />
-      <SectionsToolbarSkeleton />
-      <div className="space-y-3" data-testid="weekly-skeleton-accordions">
-        {Array.from({ length: ACCORDION_COUNT }, (_, index) => (
-          <AccordionSkeleton key={index} />
-        ))}
-      </div>
+      <div
+        data-testid="weekly-skeleton-body-continuation"
+        data-layout-key="report-body-continuation"
+        data-layout-stability="position-width"
+        className="min-h-px space-y-4"
+      />
     </>
   );
 }

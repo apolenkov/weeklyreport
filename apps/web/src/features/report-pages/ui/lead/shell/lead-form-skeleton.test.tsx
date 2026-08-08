@@ -1,9 +1,22 @@
 // @vitest-environment jsdom
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { LeadFormEditSections } from "../chrome/lead-form-edit-sections";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
+
+vi.mock("../../../../report-sections", () => ({
+  mapLeadReviewFeedback: () => [],
+  ownedStagesForProject: () => [],
+}));
+vi.mock("../../../../review", () => ({ LeadReviewFeedback: () => null }));
+vi.mock("../bridges/lead-form-edit-bridge-sections", () => ({
+  LeadFormEditBridgeSections: () => null,
+}));
+vi.mock("../chrome/lead-form-decisions-section", () => ({
+  LeadFormDecisionsSection: () => null,
+}));
 
 describe("LeadFormSkeleton", () => {
   it("exposes the loading status region with busy state and label", () => {
@@ -25,6 +38,14 @@ describe("LeadFormSkeleton", () => {
     ).toEqual([
       "lead-skeleton-header",
       "lead-skeleton-context-toolbar",
+      "lead-skeleton-body",
+    ]);
+    expect(
+      Array.from(
+        screen.getByTestId("lead-skeleton-body").children,
+        (child) => (child as HTMLElement).dataset.testid,
+      ),
+    ).toEqual([
       "lead-skeleton-section-product-status",
       "lead-skeleton-section-project-activities",
       "lead-skeleton-section-current-week",
@@ -72,6 +93,39 @@ describe("LeadFormSkeleton", () => {
     expect(screen.getByTestId("lead-skeleton-context-toolbar")).toHaveAttribute(
       "data-layout-key",
       "report-context-toolbar",
+    );
+    expect(screen.getByTestId("lead-skeleton-body")).toHaveAttribute(
+      "data-layout-key",
+      "lead-report-body",
+    );
+    expect(screen.getByTestId("lead-skeleton-body")).toHaveAttribute(
+      "data-layout-stability",
+      "position-width",
+    );
+  });
+
+  it("pairs the loaded edit body with the skeleton layout contract", () => {
+    const { container } = render(
+      <LeadFormEditSections
+        viewModel={{} as never}
+        actions={{} as never}
+        draftSection={{} as never}
+        serverSection={{} as never}
+        groupExpanded={false}
+        unifiedView={false}
+        recordVisibility="mine"
+        visibilityHydrated
+        crossAuthorEntries={[]}
+      />,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute(
+      "data-layout-key",
+      "lead-report-body",
+    );
+    expect(container.firstElementChild).toHaveAttribute(
+      "data-layout-stability",
+      "position-width",
     );
   });
 });

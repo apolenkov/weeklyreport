@@ -115,9 +115,16 @@ export function LeadFormSkeleton({
       {isSlidesMode ? (
         <SlideSkeleton mode="lead" announce={false} />
       ) : (
-        EDIT_SECTION_PLACEHOLDERS.map((placeholder) => (
-          <EditSectionSkeleton key={placeholder.id} {...placeholder} />
-        ))
+        <div
+          data-testid="lead-skeleton-body"
+          data-layout-key="lead-report-body"
+          data-layout-stability="position-width"
+          className="space-y-6"
+        >
+          {EDIT_SECTION_PLACEHOLDERS.map((placeholder) => (
+            <EditSectionSkeleton key={placeholder.id} {...placeholder} />
+          ))}
+        </div>
       )}
     </div>
   );
