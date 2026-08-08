@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -173,6 +173,15 @@ describe("stateful transition evidence", () => {
       const transition = attached.observations.find(
         ({ observationId }) => observationId === "transition-visual",
       );
+      const transitionRef = attached.after.find(
+        ({ archivePath }) =>
+          path.basename(archivePath) === "transition-visual.json",
+      );
+      if (transitionRef === undefined)
+        throw new Error("Transition visual artifact is missing");
+      const transitionArtifact: unknown = JSON.parse(
+        await readFile(transitionRef.archivePath, "utf8"),
+      );
       const refs = [
         ...captured.before.before,
         ...captured.action.action,
@@ -185,6 +194,10 @@ describe("stateful transition evidence", () => {
       );
 
       expect(transition?.outcome).toBe("fail");
+      expect(transitionArtifact).toMatchObject({
+        schemaVersion: 2,
+        evaluation: { comparison: "same-view-landmarks" },
+      });
       expect(transition?.message).toContain(
         "stable layout key report-page moved outside",
       );

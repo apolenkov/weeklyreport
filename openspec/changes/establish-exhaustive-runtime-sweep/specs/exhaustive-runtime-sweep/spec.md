@@ -244,12 +244,22 @@ campaign.
 
 The screenshot and its paired geometry SHALL be captured at the same settled
 boundary before keyboard traversal, axe injection, or other evidence
-instrumentation can change focus or scroll position. Same-route transitions
-SHALL compare stable landmark topology and movement. A read-only link may mask
-cross-route landmark topology and movement only when immutable successful URL
-artifacts prove a same-origin transition to the declared target path or its
-redirected descendant. Viewport, overflow, loading, duplicate-key, malformed,
-and keyed zero-size checks SHALL remain blocking on both route snapshots.
+instrumentation can change focus or scroll position. Same-view transitions
+SHALL compare stable landmark topology and movement. A read-only control may
+mask landmark topology and movement only when immutable successful URL
+artifacts prove one of these same-origin navigation boundaries: a link to a
+different declared target path or redirected descendant; the canonical
+form/slides link where the single `mode` query parameter changes only between
+absent and `slides`; or the exact Sign out button settling at `/`. Arbitrary
+href-less buttons, other query changes, duplicate or unknown modes, failed URL
+artifacts, and target mismatches SHALL remain strict. Viewport, overflow,
+loading, duplicate-key, malformed, and keyed zero-size checks SHALL remain
+blocking on both snapshots.
+
+Transition visual evidence schema version 2 SHALL label the comparison as
+`same-view-landmarks` or `navigation-boundary-snapshots`. Existing schema
+version 1 artifacts and their `same-route-landmarks` or
+`cross-route-snapshots` labels SHALL remain immutable.
 
 Run-level observability artifacts SHALL also bind the matrix digest, assignment
 digest, run id, lane id, profile, run-scoped service name, and content digests
@@ -415,10 +425,11 @@ consistent.
   the declared settled state using the same viewport and masking policy
 - **AND** screenshot and geometry capture precede keyboard and axe
   instrumentation at each settled boundary
-- **AND** same-route geometry, overflow, loading-state replacement, and
+- **AND** same-view geometry, overflow, loading-state replacement, and
   unexpected visual movement are adjudicated from that pair
-- **AND** a proven cross-route read-only link may mask only landmark topology
-  and movement comparison while snapshot-local visual failures remain blocking
+- **AND** only a proven cross-route link, canonical form/slides mode link, or
+  exact Sign out boundary may mask landmark topology and movement comparison
+  while snapshot-local visual failures remain blocking
 
 ### Requirement: The baseline is immutable and reruns are explicit
 

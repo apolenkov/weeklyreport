@@ -290,10 +290,19 @@ axe with keyboard/focus/name/role checks. Visual evidence is settled Chromium
 allowed except declared reviewed masks, and all failure traces are retained.
 Screenshot and geometry freeze the same boundary before keyboard or axe
 instrumentation. Stable landmark topology and movement remain strict within a
-route. Cross-route topology comparison is masked only for a successful
-same-origin read-only link whose immutable URL pair proves the declared target
-path or its redirected descendant; every snapshot-local visual oracle remains
-blocking.
+view. Topology comparison is masked only for one of three URL-proven,
+same-origin, read-only navigation boundaries: a link to a different declared
+path or redirected descendant; the canonical form/slides mode link where the
+single `mode` parameter changes only between absent and `slides`; or the exact
+Sign out button settling at `/`. An arbitrary href-less button, query change,
+duplicate/unknown mode, failed URL, or target mismatch remains strict. Every
+snapshot-local visual oracle remains blocking.
+
+Transition visual evidence version 2 records `same-view-landmarks` or
+`navigation-boundary-snapshots` so a canonical form/slides query boundary is
+never mislabeled as a cross-route comparison. Version 1 artifacts retain their
+original `same-route-landmarks` and `cross-route-snapshots` values and remain
+immutable.
 
 ### Before/after evidence flow
 

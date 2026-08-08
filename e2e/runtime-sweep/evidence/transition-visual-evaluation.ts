@@ -60,21 +60,21 @@ type Movement = Readonly<{
 export type TransitionVisualPolicy = Readonly<{
   requireNoZeroSize: boolean;
   allowNoSharedStableLayoutLandmarks: boolean;
-  allowCrossRouteStableLayoutChange: boolean;
+  allowNavigationBoundaryStableLayoutChange: boolean;
 }>;
 const STRICT_TRANSITION_VISUAL_POLICY = {
   requireNoZeroSize: true,
   allowNoSharedStableLayoutLandmarks: false,
-  allowCrossRouteStableLayoutChange: false,
+  allowNavigationBoundaryStableLayoutChange: false,
 } as const satisfies TransitionVisualPolicy;
 export const FROZEN_LIVE_TRANSITION_VISUAL_POLICY = {
   requireNoZeroSize: false,
   allowNoSharedStableLayoutLandmarks: true,
-  allowCrossRouteStableLayoutChange: false,
+  allowNavigationBoundaryStableLayoutChange: false,
 } as const satisfies TransitionVisualPolicy;
 export type TransitionVisualEvaluation = Readonly<{
   outcome: "pass" | "fail";
-  comparison: "same-route-landmarks" | "cross-route-snapshots";
+  comparison: "same-view-landmarks" | "navigation-boundary-snapshots";
   issues: readonly string[];
   movements: readonly Movement[];
   reviewedMasks: readonly string[];
@@ -204,7 +204,7 @@ const stableLayoutIssues = (
   movements: readonly Movement[],
   policy: TransitionVisualPolicy,
 ): readonly string[] => {
-  if (policy.allowCrossRouteStableLayoutChange) return [];
+  if (policy.allowNavigationBoundaryStableLayoutChange) return [];
   return [
     ...(hasNoDeclaredLandmarks && !policy.allowNoSharedStableLayoutLandmarks
       ? ["transition has no shared stable layout landmarks"]
@@ -234,9 +234,9 @@ const reviewedMasksFor = (
   ...(hasNoDeclaredLandmarks && policy.allowNoSharedStableLayoutLandmarks
     ? ["transition policy allows no shared stable layout landmarks"]
     : []),
-  ...(policy.allowCrossRouteStableLayoutChange
+  ...(policy.allowNavigationBoundaryStableLayoutChange
     ? [
-        "proven cross-route navigation masks stable landmark topology and movement comparison",
+        "proven navigation boundary masks stable landmark topology and movement comparison",
       ]
     : []),
 ];
@@ -287,9 +287,9 @@ export function evaluateTransitionVisualPair(
   ];
   return {
     outcome: issues.length === 0 ? "pass" : "fail",
-    comparison: policy.allowCrossRouteStableLayoutChange
-      ? "cross-route-snapshots"
-      : "same-route-landmarks",
+    comparison: policy.allowNavigationBoundaryStableLayoutChange
+      ? "navigation-boundary-snapshots"
+      : "same-view-landmarks",
     issues,
     movements,
     reviewedMasks: reviewedMasksFor(transition, hasNoDeclaredLandmarks, policy),

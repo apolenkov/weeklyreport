@@ -1,9 +1,9 @@
+import { expectedActionPathnameFor } from "../support/action-navigation-contract.ts";
 import { type NavigationPage, settleNavigation } from "./navigation.ts";
 
 const ACTION_NAVIGATION_GRACE_MS = 100;
 const ACTION_NAVIGATION_TIMEOUT_MS = 10_000;
 const SIGN_OUT_NAVIGATION_TIMEOUT_MS = 10_000;
-const SIGN_OUT_CONTROL_KEY = /^button:Sign(?:%20|\s)out:\d+$/u;
 const GENERIC_NAVIGATION_ROLES = new Set(["link"]);
 const SAME_DOCUMENT_LINK_NAMES = new Set(["skip to content"]);
 
@@ -45,8 +45,9 @@ const controlParts = (
 export const expectedActionNavigationFor = (
   controlKey: string,
 ): ActionNavigationExpectation | undefined => {
-  if (SIGN_OUT_CONTROL_KEY.test(controlKey))
-    return { expectedPathname: "/", timeoutMs: SIGN_OUT_NAVIGATION_TIMEOUT_MS };
+  const expectedPathname = expectedActionPathnameFor(controlKey);
+  if (expectedPathname !== undefined)
+    return { expectedPathname, timeoutMs: SIGN_OUT_NAVIGATION_TIMEOUT_MS };
   const parts = controlParts(controlKey);
   if (parts?.role === "link" && SAME_DOCUMENT_LINK_NAMES.has(parts.name))
     return undefined;

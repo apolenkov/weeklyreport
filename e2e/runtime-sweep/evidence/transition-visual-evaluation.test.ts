@@ -206,7 +206,7 @@ describe("transition visual evaluation", () => {
       {
         requireNoZeroSize: false,
         allowNoSharedStableLayoutLandmarks: false,
-        allowCrossRouteStableLayoutChange: false,
+        allowNavigationBoundaryStableLayoutChange: false,
       },
     );
 
@@ -272,10 +272,10 @@ describe("transition visual evaluation", () => {
     );
   });
 
-  it("masks stable topology only for a proven cross-route policy", () => {
+  it("masks stable topology only for a proven navigation boundary", () => {
     const policy = {
       ...FROZEN_LIVE_TRANSITION_VISUAL_POLICY,
-      allowCrossRouteStableLayoutChange: true,
+      allowNavigationBoundaryStableLayoutChange: true,
     };
     const result = evaluateTransitionVisualPair(
       snapshot(),
@@ -291,8 +291,8 @@ describe("transition visual evaluation", () => {
     );
 
     expect(result.outcome).toBe("pass");
-    expect(result.comparison).toBe("cross-route-snapshots");
-    expect(result.reviewedMasks.join(" ")).toContain("cross-route navigation");
+    expect(result.comparison).toBe("navigation-boundary-snapshots");
+    expect(result.reviewedMasks.join(" ")).toContain("navigation boundary");
     expect(overflow.issues).toContain("after horizontal overflow is 160px");
   });
 });

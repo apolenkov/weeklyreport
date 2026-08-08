@@ -660,6 +660,14 @@
       "target": "e2e/runtime-sweep/replay/browser-state/$1"
     },
     {
+      "id": "runtime-action-navigation-support",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/support/(action-navigation-contract\\.ts)$",
+      "concern": "support",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/support/$1"
+    },
+    {
       "id": "runtime-state-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:support/)?((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
