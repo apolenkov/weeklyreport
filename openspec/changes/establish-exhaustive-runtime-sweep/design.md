@@ -175,6 +175,20 @@ unexpected-error total. A second HTTP response, transport failure, or server
 error remains blocking. Request grouping uses method plus URL pathname so a
 changing query payload cannot hide a retry storm.
 
+Browser observability delivery has one narrower non-product exception. A Sentry
+envelope request aborted by Chromium during document navigation remains in the
+raw ledger but is excluded from the unexpected-failure count only when its
+method, resource type, failure text, origin, numeric project path, public key,
+protocol version, and browser SDK client all match the configured Bugsink DSN
+and declared SDK signature. The collector retains the absolute URL so the
+adjudicator can prove that identity, and the exception applies only when the
+same ledger also contains the successful HTTP response with the same immutable,
+collector-assigned request id. A response for another request cannot qualify.
+The evidence message records the ignored count. A missing or failed matching
+response, empty marker, or near miss, including a product API abort, remains
+blocking. The same policy applies to initial, action, recovery, and final-tail
+windows.
+
 Environment feedback requires `RUNTIME_SWEEP_API_LOG`,
 `RUNTIME_SWEEP_BUGSINK_DSN`, `RUNTIME_SWEEP_BUGSINK_API_TOKEN`,
 `RUNTIME_SWEEP_LOKI_PUSH_URL`, and `RUNTIME_SWEEP_LOKI_QUERY_URL`; missing or
@@ -239,6 +253,10 @@ after the bounded functional outcome and before destructive recovery starts.
 Reset, reseed, login, route reload, and state-oracle checks write a separate
 recovery window. A recovery failure still blocks the campaign, but its requests
 and logs are never relabelled as evidence that the product action itself failed.
+For confirmation-backed submission, opening the dialog is not the functional
+outcome. The executor must locate `Confirm submission` by its accessibility
+contract, activate the scoped `Submit` control, and observe the mutation before
+recovery starts.
 
 API shutdown is one awaited sequence. It attempts app close, the process-wide
 file-log barrier and flush, OpenTelemetry shutdown, and Sentry close with

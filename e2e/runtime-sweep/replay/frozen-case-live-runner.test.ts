@@ -247,6 +247,7 @@ describe("frozen case live runner", () => {
         archiveRoot: "/archive",
         apiLogPath: "/archive/api-log/full/app.log",
         baseURL: "http://127.0.0.1:3105",
+        bugsinkDsn: "http://runtime@bugsink.test/1",
         databaseUrl: "postgresql://runtime",
         repoRoot: "/repo",
       },

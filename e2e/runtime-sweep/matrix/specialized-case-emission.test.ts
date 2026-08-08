@@ -41,7 +41,8 @@ test("preserves an initial-navigation console error and detaches listeners", asy
   ]);
   expect(captured.events.responses).toEqual([
     {
-      url: "/trpc/report.get",
+      requestId: expect.any(String) as string,
+      url: "http://127.0.0.1:3102/trpc/report.get",
       method: "GET",
       resourceType: "fetch",
       status: 503,

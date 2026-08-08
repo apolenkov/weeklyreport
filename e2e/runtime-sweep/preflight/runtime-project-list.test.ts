@@ -129,3 +129,15 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     await rm(archive, { recursive: true, force: true });
   }
 });
+
+test("registers focused observability and submit harness specs", async () => {
+  const { default: config } = await import("./playwright.harness.config.ts");
+  const configured = config.testMatch;
+  const patterns = Array.isArray(configured) ? configured : [configured];
+  const matches = (file: string): boolean =>
+    patterns.some((pattern) => pattern instanceof RegExp && pattern.test(file));
+
+  expect(matches("replay/control-actions/submit.spec.ts")).toBe(true);
+  expect(matches("evidence/capture/observability-abort.spec.ts")).toBe(true);
+  expect(matches("matrix/specialized-observability.spec.ts")).toBe(true);
+});

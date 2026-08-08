@@ -37,6 +37,7 @@ export interface InfrastructureCaseRunInput {
   readonly page: Page;
   readonly repoRoot: string;
   readonly archiveRoot: string;
+  readonly bugsinkDsn: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly oracle: Oracle;
   readonly capturedAt: string;
@@ -183,6 +184,7 @@ const captureInfrastructureBefore = (
   captureSpecializedPagePhase({
     page: input.page,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "before",
     capturedAt: input.capturedAt,
@@ -201,6 +203,7 @@ const captureInfrastructureAfter = (
   captureSpecializedPagePhase({
     page: input.page,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "after",
     capturedAt: input.capturedAt,
@@ -223,6 +226,7 @@ const captureInfrastructureAction = (
   captureSpecializedPagePhase({
     page: input.page,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "action",
     capturedAt: input.capturedAt,

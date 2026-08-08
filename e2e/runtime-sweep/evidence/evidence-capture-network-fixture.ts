@@ -7,11 +7,13 @@ import { captureRouteEvidence } from "./evidence-capture.ts";
 import type {
   ExpectedFault,
   NetworkEvidencePolicy,
+  RequestFailureRecord,
   ResponseRecord,
 } from "./evidence-types.ts";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
 const CAPTURED_AT = "2026-08-07T00:00:00.000Z";
+const BUGSINK_DSN = "http://runtime@bugsink.test/1";
 
 export const captureNetwork = async (
   page: Parameters<typeof inventoryDom>[0],
@@ -21,6 +23,7 @@ export const captureNetwork = async (
   networkPolicy?: NetworkEvidencePolicy,
   serverLogPath?: string,
   settleRuntimeEvents?: () => Promise<void>,
+  requestFailures: readonly RequestFailureRecord[] = [],
 ) =>
   captureRouteEvidence({
     page,
@@ -34,7 +37,8 @@ export const captureNetwork = async (
     inventory: await inventoryDom(page),
     consoleMessages: [],
     pageErrors: [],
-    requestFailures: [],
+    requestFailures,
+    bugsinkDsn: BUGSINK_DSN,
     responses,
     ...(expectedFault === undefined ? {} : { expectedFault }),
     ...(networkPolicy === undefined ? {} : { networkPolicy }),
@@ -49,10 +53,28 @@ export const captureNetwork = async (
     capturedAt: CAPTURED_AT,
   });
 
+export const captureNetworkWithFailures = (
+  page: Parameters<typeof inventoryDom>[0],
+  testInfo: TestInfo,
+  requestFailures: readonly RequestFailureRecord[],
+  responses: readonly ResponseRecord[] = [],
+) =>
+  captureNetwork(
+    page,
+    testInfo,
+    responses,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    requestFailures,
+  );
+
 export const responseRecord = (
   operation: string,
   overrides: Partial<ResponseRecord> = {},
 ): ResponseRecord => ({
+  requestId: `request-${operation}`,
   url: `/trpc/${operation}`,
   method: "POST",
   resourceType: "fetch",

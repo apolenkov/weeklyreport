@@ -22,6 +22,7 @@ export interface ConcurrencyCaseRunInput {
   readonly browser: Browser;
   readonly baseURL: string | undefined;
   readonly archiveRoot: string;
+  readonly bugsinkDsn: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly oracle: Oracle;
   readonly testInfo: TestInfo;

@@ -71,6 +71,7 @@ const runFrozenCase = async (
     baseURL: runtime.baseURL,
     repoRoot: runtime.repoRoot,
     archiveRoot: runtime.archiveRoot,
+    bugsinkDsn: runtime.bugsinkDsn,
     matrixCase,
     oracle: RUNTIME_MATRIX_ORACLE,
     testInfo,

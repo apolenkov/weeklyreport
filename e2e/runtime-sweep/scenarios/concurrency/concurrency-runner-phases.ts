@@ -44,6 +44,7 @@ type ConcurrencyExecution = Extract<
 
 export interface ConcurrencyPhaseRunInput {
   readonly archiveRoot: string;
+  readonly bugsinkDsn: string;
   readonly matrixCase: MatrixExecutableCase;
   readonly oracle: Oracle;
   readonly testInfo: TestInfo;
@@ -78,6 +79,7 @@ const captureBefore = async (
   return captureSpecializedPagePhase({
     page: input.pages.first,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "before",
     capturedAt: input.capturedAt,
@@ -180,6 +182,7 @@ const captureAction = async (
   captureSpecializedPagePhase({
     page: input.pages.second,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "action",
     capturedAt: input.capturedAt,
@@ -210,6 +213,7 @@ const captureAfter = async (
   return captureSpecializedPagePhase({
     page: input.pages.first,
     archiveRoot: input.archiveRoot,
+    bugsinkDsn: input.bugsinkDsn,
     matrixCase: input.matrixCase,
     phase: "after",
     capturedAt: input.capturedAt,

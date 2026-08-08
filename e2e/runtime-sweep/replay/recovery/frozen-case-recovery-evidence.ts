@@ -1,3 +1,4 @@
+import { isExpectedObservabilityAbort } from "../../evidence/expected-observability-abort.ts";
 import { collectServerLogEvidence } from "../../evidence/server-log-evidence.ts";
 import {
   type EvidenceBundle,
@@ -27,10 +28,11 @@ const failureCount = (
   window: FrozenRuntimeEvidenceWindow,
   outcome: ControlActionRecoveryOutcome,
   serverLogs: Awaited<ReturnType<typeof collectServerLogEvidence>>,
+  unexpectedRequestFailureCount: number,
 ): number =>
   window.records.consoleMessages.length +
   window.records.pageErrors.length +
-  window.records.requestFailures.length +
+  unexpectedRequestFailureCount +
   window.records.responses.filter(({ ok }) => !ok).length +
   Number(!serverLogs.available) +
   serverLogs.malformedCount +
@@ -51,7 +53,22 @@ export const captureFrozenRecoveryEvidence = async (
     startedAt: window.startedAt,
     endedAt: window.endedAt,
   });
-  const failures = failureCount(window, outcome, serverLogs);
+  const expectedObservabilityAbortCount = window.records.requestFailures.filter(
+    (failure) =>
+      isExpectedObservabilityAbort(
+        failure,
+        window.records.responses,
+        input.runtime.bugsinkDsn,
+      ),
+  ).length;
+  const unexpectedRequestFailureCount =
+    window.records.requestFailures.length - expectedObservabilityAbortCount;
+  const failures = failureCount(
+    window,
+    outcome,
+    serverLogs,
+    unexpectedRequestFailureCount,
+  );
   const ref = await writeFrozenCaseArtifact({
     archiveRoot: input.runtime.archiveRoot,
     sourceSha: input.matrixCase.sourceSha,
@@ -78,7 +95,7 @@ export const captureFrozenRecoveryEvidence = async (
       observationId: "action-recovery",
       kind: "api",
       outcome: failures === 0 ? "pass" : "fail",
-      message: `Recovery ${outcome.status}; ${window.records.responses.length} response(s), ${window.records.requestFailures.length} request failure(s), ${serverLogs.warningCount} server warning(s), ${serverLogs.errorCount} server error(s), ${serverLogs.slowCount} slow recovery operation(s)`,
+      message: `Recovery ${outcome.status}; ${window.records.responses.length} response(s), ${unexpectedRequestFailureCount} unexpected request failure(s), ${expectedObservabilityAbortCount} expected observability abort(s) ignored, ${serverLogs.warningCount} server warning(s), ${serverLogs.errorCount} server error(s), ${serverLogs.slowCount} slow recovery operation(s)`,
       evidenceIds: [ref.artifactId],
     }),
   };

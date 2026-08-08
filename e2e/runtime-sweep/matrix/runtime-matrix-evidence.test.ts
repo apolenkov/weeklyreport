@@ -16,6 +16,7 @@ describe("runtime matrix event evidence", () => {
       pageErrors: [],
       requestFailures: [
         {
+          requestId: "failed-request",
           url: "/trpc/report",
           method: "POST",
           resourceType: "fetch",
@@ -27,6 +28,7 @@ describe("runtime matrix event evidence", () => {
       ],
       responses: [
         {
+          requestId: "error-response",
           url: "/trpc/report",
           method: "POST",
           resourceType: "fetch",
@@ -77,13 +79,30 @@ describe("runtime matrix event evidence", () => {
       method: () => "POST",
       failure: () => ({ errorText: "net::ERR_ABORTED" }),
     } as unknown as Request;
+    const response = {
+      request: () => request,
+      url: () => request.url(),
+      status: () => 200,
+      ok: () => true,
+      headers: () => ({}),
+    } as unknown as Response;
 
     emitter.emit("request", request);
+    emitter.emit("response", response);
     emitter.emit("requestfailed", request);
     const actionPhase = events.consumeSince(beforePhase);
     const afterPhase = events.consumeSince(actionPhase.cursor);
 
     expect(actionPhase.records.requestFailures).toHaveLength(1);
+    expect(actionPhase.records.requestFailures[0]?.url).toBe(
+      "https://runtime.invalid/trpc/report.read",
+    );
+    expect(actionPhase.records.requestFailures[0]?.requestId).toMatch(
+      /^[0-9a-f-]{36}$/u,
+    );
+    expect(actionPhase.records.responses[0]?.requestId).toBe(
+      actionPhase.records.requestFailures[0]?.requestId,
+    );
     expect(hasRuntimeFailures(actionPhase.records)).toBe(true);
     expect(afterPhase.records.requestFailures).toHaveLength(0);
     expect(afterPhase.cursor).toEqual(actionPhase.cursor);

@@ -16,6 +16,12 @@ import type {
 } from "../evidence/evidence-types.ts";
 import { inventoryDom } from "../replay/dom-inventory.ts";
 import type { CoverageCell } from "../source/contracts.ts";
+import {
+  normalizedRuntimeRequestUrl,
+  registerRuntimeRequest,
+  type RuntimeRequestStart,
+  runtimeRequestTiming,
+} from "./runtime-matrix-request-evidence.ts";
 export type RuntimeEventRecords = Readonly<{
   readonly consoleMessages: readonly ConsoleRecord[];
   readonly pageErrors: readonly PageErrorRecord[];
@@ -42,34 +48,6 @@ export type RuntimeEvents = RuntimeEventRecords &
     readonly detach: () => void;
   }>;
 
-type RequestStart = Readonly<{
-  readonly timestamp: string;
-  readonly milliseconds: number;
-}>;
-
-const timingFor = (
-  requestStarts: WeakMap<Request, RequestStart>,
-  request: Request,
-): Readonly<{ startedAt: string; endedAt: string; durationMs: number }> => {
-  const endedMilliseconds = Date.now();
-  const start = requestStarts.get(request) ?? {
-    timestamp: new Date(endedMilliseconds).toISOString(),
-    milliseconds: endedMilliseconds,
-  };
-  return {
-    startedAt: start.timestamp,
-    endedAt: new Date(endedMilliseconds).toISOString(),
-    durationMs: Math.max(0, endedMilliseconds - start.milliseconds),
-  };
-};
-
-const normalizedRequestUrl = (value: string): string => {
-  const url = new URL(value);
-  return url.protocol === "http:" || url.protocol === "https:"
-    ? `${url.pathname}${url.search}`
-    : url.protocol;
-};
-
 const APP_REQUEST_IDLE_MS = 50;
 const APP_REQUEST_TIMEOUT_MS = 5000;
 const POLL_MS = 20;
@@ -87,14 +65,10 @@ const eventHandlersFor = (
     responses: ResponseRecord[];
   }>,
 ) => {
-  const requestStarts = new WeakMap<Request, RequestStart>();
+  const requestStarts = new WeakMap<Request, RuntimeRequestStart>();
   const pendingRequests = new Set<Request>();
   const onRequest = (request: Request): void => {
-    const milliseconds = Date.now();
-    requestStarts.set(request, {
-      timestamp: new Date(milliseconds).toISOString(),
-      milliseconds,
-    });
+    registerRuntimeRequest(requestStarts, request);
     if (isApplicationRequest(request)) pendingRequests.add(request);
   };
   const onConsole = (message: ConsoleMessage): void => {
@@ -110,11 +84,11 @@ const eventHandlersFor = (
   const onRequestFailed = (request: Request): void => {
     pendingRequests.delete(request);
     records.requestFailures.push({
-      url: normalizedRequestUrl(request.url()),
+      url: normalizedRuntimeRequestUrl(request.url()),
       method: request.method(),
       resourceType: request.resourceType(),
       failure: request.failure()?.errorText ?? null,
-      ...timingFor(requestStarts, request),
+      ...runtimeRequestTiming(requestStarts, request),
     });
   };
   const onRequestFinished = (request: Request): void => {
@@ -123,13 +97,13 @@ const eventHandlersFor = (
   const onResponse = (response: Response): void => {
     const request = response.request();
     records.responses.push({
-      url: normalizedRequestUrl(response.url()),
+      url: normalizedRuntimeRequestUrl(response.url()),
       method: request.method(),
       resourceType: request.resourceType(),
       status: response.status(),
       ok: response.ok(),
       correlationId: response.headers()["x-request-id"] ?? null,
-      ...timingFor(requestStarts, request),
+      ...runtimeRequestTiming(requestStarts, request),
     });
   };
   return {

@@ -48,17 +48,23 @@ const ORACLE: Oracle = {
   accessibility: { required: true, expectation: "controls are usable" },
   visual: { required: true, expectation: "geometry is stable" },
 };
+const BUGSINK_DSN = "http://runtime@bugsink.test/1";
+const runtime = {
+  archiveRoot: "/archive",
+  bugsinkDsn: BUGSINK_DSN,
+} as FrozenCaseLiveRuntime;
 
 test("turns a delayed after-phase transport failure into a non-pass cell", async () => {
   const after = await attachLateRuntimeEvents({
     matrixCase,
-    runtime: { archiveRoot: "/archive" } as FrozenCaseLiveRuntime,
+    runtime,
     bundle: cleanBundle(),
     records: {
       consoleMessages: [],
       pageErrors: [],
       requestFailures: [
         {
+          requestId: "late-product-request",
           url: "/trpc/report.read",
           method: "POST",
           resourceType: "fetch",
@@ -88,5 +94,55 @@ test("turns a delayed after-phase transport failure into a non-pass cell", async
   expect(result.cell.verdict).toBe("fail");
   expect(result.issues).toContain(
     `${matrixCase.caseId} after observation network failed: Late network event detected after the after-phase snapshot`,
+  );
+});
+
+test("keeps an exact late Sentry abort with a successful response as passing raw evidence", async () => {
+  const url =
+    "http://bugsink.test/api/1/envelope/?sentry_version=7&sentry_key=runtime&sentry_client=sentry.javascript.browser%2F10.22.0";
+  const after = await attachLateRuntimeEvents({
+    matrixCase,
+    runtime,
+    bundle: cleanBundle(),
+    records: {
+      consoleMessages: [],
+      pageErrors: [],
+      requestFailures: [
+        {
+          requestId: "late-sentry-request",
+          url,
+          method: "POST",
+          resourceType: "fetch",
+          failure: "net::ERR_ABORTED",
+          startedAt: "2026-08-07T00:00:00.000Z",
+          endedAt: "2026-08-07T00:00:01.000Z",
+          durationMs: 1000,
+        },
+      ],
+      responses: [
+        {
+          requestId: "late-sentry-request",
+          url,
+          method: "POST",
+          resourceType: "fetch",
+          status: 200,
+          ok: true,
+          startedAt: "2026-08-07T00:00:00.000Z",
+          endedAt: "2026-08-07T00:00:01.000Z",
+          durationMs: 1000,
+          correlationId: null,
+        },
+      ],
+    },
+  });
+
+  expect(after.after).toContainEqual(
+    expect.objectContaining({ artifactId: "late-runtime-events" }),
+  );
+  expect(after.observations).toContainEqual(
+    expect.objectContaining({ observationId: "network", outcome: "pass" }),
+  );
+  expect(after.observations[0]?.message).toContain(
+    "1 late expected observability abort(s) ignored",
   );
 });

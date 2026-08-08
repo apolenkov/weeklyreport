@@ -11,6 +11,7 @@ describe("runtime control-action safety boundary", () => {
       "delete",
       "revoke",
       "restore",
+      "submit",
     ]);
   });
 

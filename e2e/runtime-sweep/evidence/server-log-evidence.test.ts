@@ -8,6 +8,7 @@ import type { ResponseRecord } from "./evidence-types.ts";
 import { collectServerLogEvidence } from "./server-log-evidence.ts";
 
 const response = (correlationId: string | null): ResponseRecord => ({
+  requestId: "server-log-response",
   url: "/trpc/report.get",
   method: "GET",
   resourceType: "fetch",
