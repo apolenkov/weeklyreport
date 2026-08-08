@@ -36,7 +36,7 @@ const frozenAction = (href?: string): Action => ({
 });
 
 describe("frozen action target selection", () => {
-  it("prefers the exact frozen control key", () => {
+  it("rejects exact-key href drift and uses the stable target", () => {
     const exact = link(frozenAction().controlKey, "/reports/exact");
     const semantic = link("link:Renamed:1", "/reports/stable");
 
@@ -45,7 +45,7 @@ describe("frozen action target selection", () => {
         [exact, semantic],
         frozenAction("/reports/stable"),
       ),
-    ).toBe(exact);
+    ).toBe(semantic);
   });
 
   it("resolves volatile accessible text by one exact role and href match", () => {

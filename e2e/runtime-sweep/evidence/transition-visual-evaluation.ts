@@ -15,7 +15,6 @@ const VERTICAL_FLOW_TRANSITIONS = new Set([
   "retry",
   "cancel",
 ]);
-
 const geometryElementSchema = z
   .object({
     index: z.number().int().nonnegative(),
@@ -32,7 +31,6 @@ const geometryElementSchema = z
     visible: z.boolean(),
   })
   .strict();
-
 const geometrySnapshotSchema = z
   .object({
     viewport: z.object({ width: z.number(), height: z.number() }).strict(),
@@ -52,7 +50,6 @@ const geometrySnapshotSchema = z
     issues: z.array(z.string()).readonly(),
   })
   .strict();
-
 type Axis = "x" | "y" | "width" | "height";
 type Movement = Readonly<{
   layoutKey: string;
@@ -60,29 +57,28 @@ type Movement = Readonly<{
   deltas: Readonly<Record<Axis, number>>;
   outcome: "pass" | "fail";
 }>;
-
 export type TransitionVisualPolicy = Readonly<{
   requireNoZeroSize: boolean;
   allowNoSharedStableLayoutLandmarks: boolean;
+  allowCrossRouteStableLayoutChange: boolean;
 }>;
-
 const STRICT_TRANSITION_VISUAL_POLICY = {
   requireNoZeroSize: true,
   allowNoSharedStableLayoutLandmarks: false,
+  allowCrossRouteStableLayoutChange: false,
 } as const satisfies TransitionVisualPolicy;
-
 export const FROZEN_LIVE_TRANSITION_VISUAL_POLICY = {
   requireNoZeroSize: false,
   allowNoSharedStableLayoutLandmarks: true,
+  allowCrossRouteStableLayoutChange: false,
 } as const satisfies TransitionVisualPolicy;
-
 export type TransitionVisualEvaluation = Readonly<{
   outcome: "pass" | "fail";
+  comparison: "same-route-landmarks" | "cross-route-snapshots";
   issues: readonly string[];
   movements: readonly Movement[];
   reviewedMasks: readonly string[];
 }>;
-
 export const parseGeometrySnapshot = (value: unknown): GeometrySnapshot =>
   geometrySnapshotSchema.parse(value);
 
@@ -94,7 +90,6 @@ const uniqueLayoutElements = (
       element.layoutKey === null ? [] : [[element.layoutKey, element] as const],
     ),
   );
-
 const duplicateLayoutKeys = (snapshot: GeometrySnapshot): readonly string[] => {
   const keys = snapshot.elements.flatMap(({ layoutKey }) =>
     layoutKey === null ? [] : [layoutKey],
@@ -202,6 +197,50 @@ const elementFor = (
   return element;
 };
 
+const stableLayoutIssues = (
+  hasNoDeclaredLandmarks: boolean,
+  missingKeys: readonly string[],
+  addedKeys: readonly string[],
+  movements: readonly Movement[],
+  policy: TransitionVisualPolicy,
+): readonly string[] => {
+  if (policy.allowCrossRouteStableLayoutChange) return [];
+  return [
+    ...(hasNoDeclaredLandmarks && !policy.allowNoSharedStableLayoutLandmarks
+      ? ["transition has no shared stable layout landmarks"]
+      : []),
+    ...missingKeys.map((key) => `stable layout key ${key} disappeared`),
+    ...addedKeys.map((key) => `stable layout key ${key} appeared after`),
+    ...movements
+      .filter(({ outcome }) => outcome === "fail")
+      .map(
+        ({ layoutKey, axes }) =>
+          `stable layout key ${layoutKey} moved outside ${axes.join(",")} tolerance`,
+      ),
+  ];
+};
+
+const reviewedMasksFor = (
+  transition: string,
+  hasNoDeclaredLandmarks: boolean,
+  policy: TransitionVisualPolicy,
+): readonly string[] => [
+  ...(VERTICAL_FLOW_TRANSITIONS.has(transition)
+    ? ["declared vertical-flow transition masks y and height movement"]
+    : []),
+  ...(policy.requireNoZeroSize
+    ? []
+    : ["transition policy masks unkeyed invisible zero-size geometry issues"]),
+  ...(hasNoDeclaredLandmarks && policy.allowNoSharedStableLayoutLandmarks
+    ? ["transition policy allows no shared stable layout landmarks"]
+    : []),
+  ...(policy.allowCrossRouteStableLayoutChange
+    ? [
+        "proven cross-route navigation masks stable landmark topology and movement comparison",
+      ]
+    : []),
+];
+
 export function evaluateTransitionVisualPair(
   before: GeometrySnapshot,
   after: GeometrySnapshot,
@@ -238,34 +277,21 @@ export function evaluateTransitionVisualPair(
     ...duplicateLayoutKeys(after).map(
       (key) => `after layout key ${key} is duplicated`,
     ),
-    ...(hasNoDeclaredLandmarks && !policy.allowNoSharedStableLayoutLandmarks
-      ? ["transition has no shared stable layout landmarks"]
-      : []),
-    ...missingKeys.map((key) => `stable layout key ${key} disappeared`),
-    ...addedKeys.map((key) => `stable layout key ${key} appeared after`),
-    ...movements
-      .filter(({ outcome }) => outcome === "fail")
-      .map(
-        ({ layoutKey, axes }) =>
-          `stable layout key ${layoutKey} moved outside ${axes.join(",")} tolerance`,
-      ),
+    ...stableLayoutIssues(
+      hasNoDeclaredLandmarks,
+      missingKeys,
+      addedKeys,
+      movements,
+      policy,
+    ),
   ];
   return {
     outcome: issues.length === 0 ? "pass" : "fail",
+    comparison: policy.allowCrossRouteStableLayoutChange
+      ? "cross-route-snapshots"
+      : "same-route-landmarks",
     issues,
     movements,
-    reviewedMasks: [
-      ...(VERTICAL_FLOW_TRANSITIONS.has(transition)
-        ? ["declared vertical-flow transition masks y and height movement"]
-        : []),
-      ...(policy.requireNoZeroSize
-        ? []
-        : [
-            "transition policy masks unkeyed invisible zero-size geometry issues",
-          ]),
-      ...(hasNoDeclaredLandmarks && policy.allowNoSharedStableLayoutLandmarks
-        ? ["transition policy allows no shared stable layout landmarks"]
-        : []),
-    ],
+    reviewedMasks: reviewedMasksFor(transition, hasNoDeclaredLandmarks, policy),
   };
 }

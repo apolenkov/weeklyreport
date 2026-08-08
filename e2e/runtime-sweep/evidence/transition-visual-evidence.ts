@@ -17,6 +17,20 @@ import {
   type TransitionVisualEvaluation,
   type TransitionVisualPolicy,
 } from "./transition-visual-evaluation.ts";
+import {
+  policyForNavigationPair,
+  type TransitionUrlArtifact,
+  transitionUrlArtifactSchema,
+} from "./transition-visual-navigation-policy.ts";
+
+type PairRefs = Readonly<{
+  beforeScreenshot: EvidenceRef;
+  afterScreenshot: EvidenceRef;
+  beforeGeometry: EvidenceRef;
+  afterGeometry: EvidenceRef;
+  beforeUrl: EvidenceRef;
+  afterUrl: EvidenceRef;
+}>;
 
 export interface TransitionVisualEvidenceInput {
   readonly archiveRoot: string;
@@ -84,14 +98,55 @@ const loadGeometry = async (
     ),
   );
 
+const loadUrl = async (
+  archiveRoot: string,
+  ref: EvidenceRef,
+): Promise<TransitionUrlArtifact> =>
+  transitionUrlArtifactSchema.parse(
+    JSON.parse(
+      (await readImmutableArtifact(archiveRoot, ref)).toString("utf8"),
+    ),
+  );
+
+const pairRefsFor = (input: TransitionVisualEvidenceInput): PairRefs => ({
+  beforeScreenshot: phaseRef(
+    input.before.before,
+    "screenshot",
+    "screenshot.png",
+  ),
+  afterScreenshot: phaseRef(input.after.after, "screenshot", "screenshot.png"),
+  beforeGeometry: phaseRef(input.before.before, "geometry", "geometry.json"),
+  afterGeometry: phaseRef(input.after.after, "geometry", "geometry.json"),
+  beforeUrl: phaseRef(input.before.before, "url", "url.json"),
+  afterUrl: phaseRef(input.after.after, "url", "url.json"),
+});
+
+const loadPair = async (
+  archiveRoot: string,
+  refs: PairRefs,
+): Promise<
+  readonly [
+    GeometrySnapshot,
+    GeometrySnapshot,
+    TransitionUrlArtifact,
+    TransitionUrlArtifact,
+  ]
+> => {
+  await Promise.all([
+    readImmutableArtifact(archiveRoot, refs.beforeScreenshot),
+    readImmutableArtifact(archiveRoot, refs.afterScreenshot),
+  ]);
+  return Promise.all([
+    loadGeometry(archiveRoot, refs.beforeGeometry),
+    loadGeometry(archiveRoot, refs.afterGeometry),
+    loadUrl(archiveRoot, refs.beforeUrl),
+    loadUrl(archiveRoot, refs.afterUrl),
+  ]);
+};
+
 const pairArtifactValue = (
   input: TransitionVisualEvidenceInput,
-  refs: Readonly<{
-    beforeScreenshot: EvidenceRef;
-    afterScreenshot: EvidenceRef;
-    beforeGeometry: EvidenceRef;
-    afterGeometry: EvidenceRef;
-  }>,
+  refs: PairRefs,
   evaluation: TransitionVisualEvaluation,
   capturedAt: string,
 ): unknown => ({
@@ -122,6 +177,10 @@ const pairArtifactValue = (
     before: refs.beforeGeometry.artifactId,
     after: refs.afterGeometry.artifactId,
   },
+  urls: {
+    before: refs.beforeUrl.artifactId,
+    after: refs.afterUrl.artifactId,
+  },
   evaluation,
 });
 
@@ -147,6 +206,15 @@ const writePairRef = (
     value: pairArtifactValue(input, refs, evaluation, capturedAt),
   });
 
+export const transitionObservationMessage = (
+  evaluation: TransitionVisualEvaluation,
+): string =>
+  evaluation.outcome === "pass"
+    ? evaluation.comparison === "cross-route-snapshots"
+      ? "Snapshot-local geometry passed; proven cross-route navigation masked stable landmark topology comparison"
+      : `Before/after geometry matched ${evaluation.movements.length} stable layout landmark(s)`
+    : evaluation.issues.join("; ");
+
 const transitionObservation = (
   evaluation: TransitionVisualEvaluation,
   refs: readonly EvidenceRef[],
@@ -155,64 +223,43 @@ const transitionObservation = (
     observationId: "transition-visual",
     kind: "geometry",
     outcome: evaluation.outcome,
-    message:
-      evaluation.outcome === "pass"
-        ? `Before/after geometry matched ${evaluation.movements.length} stable layout landmark(s)`
-        : evaluation.issues.join("; "),
+    message: transitionObservationMessage(evaluation),
     evidenceIds: refs.map(({ artifactId }) => artifactId),
   });
 
 export async function attachTransitionVisualEvidence(
   input: TransitionVisualEvidenceInput,
 ): Promise<EvidenceBundle> {
-  const beforeScreenshot = phaseRef(
-    input.before.before,
-    "screenshot",
-    "screenshot.png",
+  const pairRefs = pairRefsFor(input);
+  const [beforeGeometry, afterGeometry, beforeUrl, afterUrl] = await loadPair(
+    input.archiveRoot,
+    pairRefs,
   );
-  const afterScreenshot = phaseRef(
-    input.after.after,
-    "screenshot",
-    "screenshot.png",
-  );
-  const beforeGeometryRef = phaseRef(
-    input.before.before,
-    "geometry",
-    "geometry.json",
-  );
-  const afterGeometryRef = phaseRef(
-    input.after.after,
-    "geometry",
-    "geometry.json",
-  );
-  await Promise.all([
-    readImmutableArtifact(input.archiveRoot, beforeScreenshot),
-    readImmutableArtifact(input.archiveRoot, afterScreenshot),
-  ]);
-  const [beforeGeometry, afterGeometry] = await Promise.all([
-    loadGeometry(input.archiveRoot, beforeGeometryRef),
-    loadGeometry(input.archiveRoot, afterGeometryRef),
-  ]);
   const transition = input.matrixCase.state.controlTransition;
+  const policy =
+    input.policy === undefined
+      ? undefined
+      : policyForNavigationPair(
+          input.matrixCase,
+          beforeUrl,
+          afterUrl,
+          input.policy,
+        );
   const evaluation = evaluateTransitionVisualPair(
     beforeGeometry,
     afterGeometry,
     transition,
-    input.policy,
+    policy,
   );
   const capturedAt = new Date().toISOString();
-  const pairRefs = {
-    beforeScreenshot,
-    afterScreenshot,
-    beforeGeometry: beforeGeometryRef,
-    afterGeometry: afterGeometryRef,
-  };
   const pairRef = await writePairRef(input, pairRefs, evaluation, capturedAt);
   const evidence = [
-    beforeScreenshot,
-    beforeGeometryRef,
-    afterScreenshot,
-    afterGeometryRef,
+    pairRefs.beforeScreenshot,
+    pairRefs.beforeGeometry,
+    pairRefs.afterScreenshot,
+    pairRefs.afterGeometry,
+    pairRefs.beforeUrl,
+    pairRefs.afterUrl,
     pairRef,
   ];
   const observation = transitionObservation(evaluation, evidence);

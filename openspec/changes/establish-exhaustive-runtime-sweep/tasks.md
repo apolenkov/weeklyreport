@@ -58,9 +58,10 @@
       retry storms, cache-contract misses, and slow outliers, and reject a green
       browser assertion when telemetry is dirty or correlation evidence is
       missing.
-- [x] 3.8 Capture stable before/after screenshots for every bounded transition
-      and adjudicate geometry, overflow, loading replacement, and unexpected
-      visual movement from the paired evidence.
+- [x] 3.8 Freeze screenshot and geometry before keyboard/axe instrumentation for
+      every bounded transition; keep same-route landmark comparison strict and
+      allow only URL-proven cross-route topology masks while snapshot-local
+      overflow, loading, and geometry failures remain blocking.
 - [x] 3.9 Reject runtime lane execution when the live worktree is dirty or HEAD
       differs from the frozen source SHA.
 - [x] 3.10 Bind strict observability completion manifests to source, matrix,
