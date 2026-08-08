@@ -291,6 +291,10 @@ The browser ledger SHALL use one advancing cursor across initial navigation,
 before, action, after, and a final tail so every event is adjudicated exactly
 once. The final tail SHALL update the owning cell before persistence and SHALL
 fail the cell for any undeclared console, page, transport, or HTTP error.
+An HTTP response SHALL count as an HTTP error only when its status is `>=400`;
+informational, successful, and normal redirection responses, including `304`
+cache revalidation, SHALL NOT fail the cell. This threshold SHALL apply to
+initial, action, recovery, and final-tail evidence windows.
 For API/worker logs, the bounded clock-skew allowance SHALL apply only to exact
 browser-response correlation IDs. An unmatched warning or error SHALL attach
 to a cell only inside the strict phase interval; an unmatched event outside all

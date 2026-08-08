@@ -99,6 +99,21 @@ const successfulResponseFor = (
   correlationId: null,
 });
 
+const responseFor = (
+  status: number,
+): FrozenRuntimeEvidenceWindow["records"]["responses"][number] => ({
+  requestId: `recovery-response-${status}`,
+  url: "http://runtime.test/trpc/report.get",
+  method: "GET",
+  resourceType: "fetch",
+  status,
+  ok: status >= 200 && status < 300,
+  startedAt: "2026-08-08T00:00:00.000Z",
+  endedAt: "2026-08-08T00:00:00.001Z",
+  durationMs: 1,
+  correlationId: null,
+});
+
 const cleanServerLogs = {
   available: true,
   records: [],
@@ -189,6 +204,40 @@ describe("frozen recovery evidence", () => {
     expect(evidence.observation).toMatchObject({ outcome: "fail" });
     expect(evidence.observation.message).toContain(
       "1 unexpected request failure(s)",
+    );
+  });
+
+  it("allows a 304 cache revalidation response during recovery", async () => {
+    harness.collect.mockResolvedValueOnce(cleanServerLogs);
+    const evidence = await captureFrozenRecoveryEvidence(
+      input,
+      {
+        ...window,
+        records: { ...window.records, responses: [responseFor(304)] },
+      },
+      { status: "pass" },
+    );
+
+    expect(evidence.observation).toMatchObject({ outcome: "pass" });
+    expect(evidence.observation.message).toContain(
+      "0 unexpected HTTP error response(s)",
+    );
+  });
+
+  it("fails recovery for an HTTP error response", async () => {
+    harness.collect.mockResolvedValueOnce(cleanServerLogs);
+    const evidence = await captureFrozenRecoveryEvidence(
+      input,
+      {
+        ...window,
+        records: { ...window.records, responses: [responseFor(400)] },
+      },
+      { status: "pass" },
+    );
+
+    expect(evidence.observation).toMatchObject({ outcome: "fail" });
+    expect(evidence.observation.message).toContain(
+      "1 unexpected HTTP error response(s)",
     );
   });
 });

@@ -54,6 +54,19 @@ const runtime = {
   bugsinkDsn: BUGSINK_DSN,
 } as FrozenCaseLiveRuntime;
 
+const lateResponse = (status: number) => ({
+  requestId: `late-response-${status}`,
+  url: "http://runtime.test/static/runtime.js",
+  method: "GET",
+  resourceType: "script",
+  status,
+  ok: status >= 200 && status < 300,
+  startedAt: "2026-08-07T00:00:00.000Z",
+  endedAt: "2026-08-07T00:00:01.000Z",
+  durationMs: 1000,
+  correlationId: null,
+});
+
 test("turns a delayed after-phase transport failure into a non-pass cell", async () => {
   const after = await attachLateRuntimeEvents({
     matrixCase,
@@ -144,5 +157,41 @@ test("keeps an exact late Sentry abort with a successful response as passing raw
   );
   expect(after.observations[0]?.message).toContain(
     "1 late expected observability abort(s) ignored",
+  );
+});
+
+test("keeps a late 304 cache revalidation response as passing evidence", async () => {
+  const after = await attachLateRuntimeEvents({
+    matrixCase,
+    runtime,
+    bundle: cleanBundle(),
+    records: {
+      consoleMessages: [],
+      pageErrors: [],
+      requestFailures: [],
+      responses: [lateResponse(304)],
+    },
+  });
+
+  expect(after.observations).toContainEqual(
+    expect.objectContaining({ observationId: "network", outcome: "pass" }),
+  );
+});
+
+test("fails a late HTTP error response", async () => {
+  const after = await attachLateRuntimeEvents({
+    matrixCase,
+    runtime,
+    bundle: cleanBundle(),
+    records: {
+      consoleMessages: [],
+      pageErrors: [],
+      requestFailures: [],
+      responses: [lateResponse(400)],
+    },
+  });
+
+  expect(after.observations).toContainEqual(
+    expect.objectContaining({ observationId: "network", outcome: "fail" }),
   );
 });

@@ -174,6 +174,10 @@ transport failure, and count. Only the matching event is excluded from the
 unexpected-error total. A second HTTP response, transport failure, or server
 error remains blocking. Request grouping uses method plus URL pathname so a
 changing query payload cannot hide a retry storm.
+HTTP response semantics use the same fail-closed threshold in every evidence
+window: status `>=400` is an unexpected HTTP error, while informational,
+successful, and normal redirection responses, including `304` cache
+revalidation, are not HTTP errors. This threshold also governs recovery.
 
 Browser observability delivery has one narrower non-product exception. A Sentry
 envelope request aborted by Chromium during document navigation remains in the

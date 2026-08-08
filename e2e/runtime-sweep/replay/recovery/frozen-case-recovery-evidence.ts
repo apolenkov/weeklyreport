@@ -1,4 +1,5 @@
 import { isExpectedObservabilityAbort } from "../../evidence/expected-observability-abort.ts";
+import { eventCounts } from "../../evidence/runtime-event-summary.ts";
 import { collectServerLogEvidence } from "../../evidence/server-log-evidence.ts";
 import {
   type EvidenceBundle,
@@ -29,11 +30,12 @@ const failureCount = (
   outcome: ControlActionRecoveryOutcome,
   serverLogs: Awaited<ReturnType<typeof collectServerLogEvidence>>,
   unexpectedRequestFailureCount: number,
+  unexpectedHttpErrorCount: number,
 ): number =>
   window.records.consoleMessages.length +
   window.records.pageErrors.length +
   unexpectedRequestFailureCount +
-  window.records.responses.filter(({ ok }) => !ok).length +
+  unexpectedHttpErrorCount +
   Number(!serverLogs.available) +
   serverLogs.malformedCount +
   serverLogs.missingCorrelationIds.length +
@@ -63,11 +65,15 @@ export const captureFrozenRecoveryEvidence = async (
   ).length;
   const unexpectedRequestFailureCount =
     window.records.requestFailures.length - expectedObservabilityAbortCount;
+  const unexpectedHttpErrorCount = eventCounts(
+    window.records,
+  ).httpErrorResponses;
   const failures = failureCount(
     window,
     outcome,
     serverLogs,
     unexpectedRequestFailureCount,
+    unexpectedHttpErrorCount,
   );
   const ref = await writeFrozenCaseArtifact({
     archiveRoot: input.runtime.archiveRoot,
@@ -95,7 +101,7 @@ export const captureFrozenRecoveryEvidence = async (
       observationId: "action-recovery",
       kind: "api",
       outcome: failures === 0 ? "pass" : "fail",
-      message: `Recovery ${outcome.status}; ${window.records.responses.length} response(s), ${unexpectedRequestFailureCount} unexpected request failure(s), ${expectedObservabilityAbortCount} expected observability abort(s) ignored, ${serverLogs.warningCount} server warning(s), ${serverLogs.errorCount} server error(s), ${serverLogs.slowCount} slow recovery operation(s)`,
+      message: `Recovery ${outcome.status}; ${window.records.responses.length} response(s), ${unexpectedRequestFailureCount} unexpected request failure(s), ${unexpectedHttpErrorCount} unexpected HTTP error response(s), ${expectedObservabilityAbortCount} expected observability abort(s) ignored, ${serverLogs.warningCount} server warning(s), ${serverLogs.errorCount} server error(s), ${serverLogs.slowCount} slow recovery operation(s)`,
       evidenceIds: [ref.artifactId],
     }),
   };

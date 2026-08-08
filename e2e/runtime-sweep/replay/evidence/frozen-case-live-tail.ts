@@ -1,4 +1,5 @@
 import { isExpectedObservabilityAbort } from "../../evidence/expected-observability-abort.ts";
+import { eventCounts } from "../../evidence/runtime-event-summary.ts";
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import type { RuntimeEventRecords } from "../../matrix/runtime-matrix-evidence.ts";
 import {
@@ -34,7 +35,7 @@ const failuresFor = (
     records.requestFailures.some(
       (failure) =>
         !isExpectedObservabilityAbort(failure, records.responses, bugsinkDsn),
-    ) || records.responses.some(({ ok }) => !ok),
+    ) || eventCounts(records).httpErrorResponses > 0,
 });
 
 const observationAffected = (
