@@ -12,6 +12,7 @@ const EDIT_SECTION_PLACEHOLDERS = [
 ] as const;
 
 function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
+  const documentActionsWrapClass = isSlidesMode ? "" : "max-[641px]:basis-full";
   return (
     <header
       data-testid="lead-skeleton-header"
@@ -30,7 +31,7 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
       </div>
       <div
         data-testid="lead-skeleton-document-actions"
-        className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 max-[641px]:basis-full"
+        className={`flex min-w-0 flex-wrap items-center justify-end gap-1.5 ${documentActionsWrapClass}`}
       >
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
