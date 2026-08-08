@@ -28,10 +28,13 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
           <Skeleton className="h-6 w-24 rounded-[var(--radius-pill)]" />
         ) : null}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+      <div
+        data-testid="lead-skeleton-document-actions"
+        className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 max-[641px]:basis-full"
+      >
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-28 rounded-[var(--radius-pill)]" />
+        <Skeleton className="h-[var(--toolbar-control-h)] w-36 rounded-[var(--radius-pill)]" />
       </div>
     </header>
   );

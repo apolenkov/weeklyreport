@@ -245,7 +245,6 @@ function renderHarness({
       }),
     },
     { path: ["leadForm", "crossAuthors"], query: [] },
-    { path: ["leadForm", "crossAuthorContent"], query: [] },
   ]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -265,7 +264,11 @@ function renderHarness({
 
   render(
     <Wrapper>
-      <LeadSlidesClient initialReportId={REPORT_ID} />
+      <LeadSlidesClient
+        initialReportId={REPORT_ID}
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />
     </Wrapper>,
   );
   return { captured, queryClient };

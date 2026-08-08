@@ -104,6 +104,19 @@ describe("LeadFormSkeleton", () => {
     );
   });
 
+  it("reserves the loaded document-action wrap and submitted action width", () => {
+    render(<LeadFormSkeleton />);
+
+    const actions = screen
+      .getByTestId("lead-skeleton-document-actions")
+      .querySelectorAll('[data-slot="skeleton"]');
+    expect(screen.getByTestId("lead-skeleton-document-actions")).toHaveClass(
+      "max-[641px]:basis-full",
+    );
+    expect(actions).toHaveLength(3);
+    expect(actions[2]).toHaveClass("w-36");
+  });
+
   it("pairs the loaded edit body with the skeleton layout contract", () => {
     const { container } = render(
       <LeadFormEditSections

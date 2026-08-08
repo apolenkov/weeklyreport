@@ -13,8 +13,10 @@ function HeaderTitleSkeleton() {
 
 function HeaderContextSkeleton({
   audience,
+  mode,
 }: {
   readonly audience: "head" | "viewer";
+  readonly mode: "form" | "slides";
 }) {
   if (audience === "viewer") {
     return (
@@ -31,7 +33,7 @@ function HeaderContextSkeleton({
   return (
     <div
       data-testid="weekly-skeleton-header-context"
-      className="flex h-10 min-w-0 items-start gap-2 sm:h-5 sm:items-center"
+      className={`flex h-10 min-w-0 items-start gap-2 sm:h-5 sm:items-center ${mode === "slides" ? "w-96 max-w-full" : ""}`}
     >
       <Skeleton className="h-4 w-24" />
       <Skeleton className="mt-1 h-2 w-2 sm:mt-0" />
@@ -56,12 +58,18 @@ function HeaderSkeleton({
       : mode === "slides"
         ? ["w-11", "w-36"]
         : ["w-11", "w-28", "w-36"];
+  const slidesHeight =
+    mode === "slides"
+      ? audience === "head"
+        ? "min-h-36 sm:min-h-0"
+        : "min-h-32 sm:min-h-0"
+      : "max-[641px]:min-h-32";
   return (
     <header
       data-testid="weekly-skeleton-header"
       data-layout-key="weekly-report-header"
       data-layout-stability="position-size"
-      className="flex flex-wrap items-center justify-between gap-4"
+      className={`flex flex-wrap items-center justify-between gap-4 ${slidesHeight}`}
     >
       <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-auto">
         <HeaderTitleSkeleton />
@@ -71,7 +79,7 @@ function HeaderSkeleton({
             className="h-6 w-32 rounded-[var(--radius-pill)]"
           />
         ) : null}
-        <HeaderContextSkeleton audience={audience} />
+        <HeaderContextSkeleton audience={audience} mode={mode} />
       </div>
       <div
         data-testid="weekly-skeleton-document-actions"
@@ -115,15 +123,15 @@ function ViewerAcknowledgeSkeleton() {
       className="flex flex-wrap items-center gap-3"
       aria-hidden="true"
     >
-      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)]" />
-      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)]" />
+      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)] max-md:h-[var(--touch-target-min)]" />
+      <Skeleton className="h-7 w-24 rounded-[var(--radius-pill)] max-md:h-[var(--touch-target-min)]" />
     </div>
   );
 }
 
 function PortfolioCardSkeleton() {
   return (
-    <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[var(--color-surface-skeleton)] p-2.5">
+    <div className="grid min-h-[88px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[var(--color-surface-skeleton)] p-2.5">
       <Skeleton className="h-7 w-7 rounded-full" />
       <div className="min-w-0 flex-1 space-y-1">
         <Skeleton className="h-4 w-32" />

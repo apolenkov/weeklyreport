@@ -26,9 +26,15 @@ describe("SlideSkeleton", () => {
       "min-w-[var(--slide-canvas-min-w)]",
       "max-w-[var(--slide-canvas-max-w)]",
     );
-    expect(screen.getByTestId("slide-skeleton-column-headers")).toHaveClass(
+    const columnHeaders = screen.getByTestId("slide-skeleton-column-headers");
+    expect(columnHeaders).toHaveClass(
       "grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]",
     );
+    expect(columnHeaders.children).toHaveLength(4);
+    for (const cell of columnHeaders.children) {
+      expect(cell).toHaveAttribute("data-slot", "skeleton");
+      expect(cell).toHaveClass("w-full", "max-w-full");
+    }
     expect(screen.getByTestId("slide-skeleton")).toHaveAttribute(
       "data-layout-key",
       "status-slide-deck",

@@ -96,7 +96,7 @@ function ArticleSkeleton() {
           className={ARTICLE_GRID_CLASS}
         >
           {Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="h-4 w-20" />
+            <Skeleton key={index} className="h-4 w-full max-w-full" />
           ))}
         </div>
 

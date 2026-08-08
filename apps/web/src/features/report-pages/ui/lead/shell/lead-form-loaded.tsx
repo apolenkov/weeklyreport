@@ -6,8 +6,11 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import type { CrossAuthorEntry } from "../../../../period";
-import type { LeadSubmitReadiness } from "../../../../report-sections";
-import type { LeadFormLoadedViewModel } from "../../../../report-sections";
+import type {
+  CrossAuthorContentRow,
+  LeadFormLoadedViewModel,
+  LeadSubmitReadiness,
+} from "../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
 import type { RecordVisibility } from "../../../../report-sections/client";
 import { LeadSlidesClient } from "../../../../slides";
@@ -51,6 +54,8 @@ export interface LeadFormLoadedData {
   readonly unifiedView: boolean;
   readonly recordVisibility: RecordVisibility;
   readonly crossAuthors: CrossAuthorEntry[];
+  readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
+  readonly foreignContentPending: boolean;
 }
 
 export interface LeadFormLoadedProps {
@@ -183,6 +188,8 @@ function LoadedReportContent({
     return (
       <LeadSlidesClient
         initialReportId={data.targetReportId || props.pinnedReportId || null}
+        foreignContent={data.foreignContent}
+        foreignContentPending={data.foreignContentPending}
         deckRef={props.deckRef}
         isFullscreen={props.slidesFullscreen.isFullscreen}
         onToggle={props.slidesFullscreen.toggle}

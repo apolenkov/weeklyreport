@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
+import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   type SlideDensity,
   slidesForDensity,
@@ -26,6 +27,8 @@ import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
+  readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
+  readonly foreignContentPending: boolean;
   // Caller (lead-form header) can host the fullscreen button on the deck root.
   readonly deckRef?: RefObject<HTMLDivElement | null>;
   // Lead-form-hosted path owns useFullscreen and threads state; standalone owns the hook.
@@ -104,17 +107,23 @@ type DeckFullscreen = ReturnType<typeof useDeckFullscreen>;
 // Slides, inline-edit dialogs and the placeholder that replaces the deck.
 function useLeadSlidesDeck({
   initialReportId,
+  foreignContent,
+  foreignContentPending,
   visibilityMode,
   visibilityHydrated,
   density,
 }: {
   readonly initialReportId: string | null;
+  readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
+  readonly foreignContentPending: boolean;
   readonly visibilityMode: "mine" | "everyone";
   readonly visibilityHydrated: boolean;
   readonly density: SlideDensity;
 }) {
   const leadSlides = useLeadSlidesData({
     initialReportId,
+    foreignContent,
+    foreignContentPending,
     visibilityMode,
     visibilityHydrated,
   });
@@ -219,6 +228,8 @@ function LeadSlidesDeckView({
 
 export function LeadSlidesClient({
   initialReportId = null,
+  foreignContent,
+  foreignContentPending,
   deckRef: externalDeckRef,
   isFullscreen: externalIsFullscreen,
   onToggle: externalOnToggle,
@@ -237,6 +248,8 @@ export function LeadSlidesClient({
   });
   const deck = useLeadSlidesDeck({
     initialReportId,
+    foreignContent,
+    foreignContentPending,
     visibilityMode,
     visibilityHydrated,
     density,
