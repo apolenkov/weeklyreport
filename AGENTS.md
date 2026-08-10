@@ -36,11 +36,24 @@ pnpm build              # turbo run build
   PASS/FAIL table and exits 1 if any failed. Each is runnable alone
   (`pnpm lint:eslint`, …). `pnpm lint --fail-fast` restores stop-at-first.
 - Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
-  (same in `apps/api`). Do NOT wrap `vitest` in `rtk` — it mis-parses TSX and reports 0 tests.
+  (same in `apps/api`). Do NOT wrap `vitest` in `rtk`. RTK 0.45.0 preserves
+  the non-zero exit code for a no-tests failure but renders the result as
+  `PASS (0) FAIL (0)`, which hides the actual Vitest diagnostic.
 - If TS errors reference a known Prisma model (e.g. TS2339), run
   `pnpm --filter @customreport/api db:generate` — pnpm ops wipe the `.prisma` client.
 - E2E (Playwright, single-worker shared seed): `pnpm test:e2e:integration`.
   Needs `E2E_DATABASE_URL` distinct from `DATABASE_URL`.
+
+## RTK usage
+
+- RTK is optional output compression, not an acceptance gate. Use it only for
+  supported read-only commands when losing formatting or long-line detail does
+  not remove decision-critical evidence.
+- Suitable commands: large `git status`, `git log`, `git diff`, `rg`, directory,
+  and dependency-listing output. Re-run the original command for exact paths,
+  complete lines, or evidence artifacts.
+- Never wrap Vitest, Playwright, runtime-sweep, acceptance-evidence, database,
+  migration, or aggregate `pnpm lint` commands in RTK.
 
 ## Runtime
 
