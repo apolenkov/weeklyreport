@@ -7,7 +7,7 @@ import {
   groupScopeFilter,
   type GroupScopeOptions,
 } from "../../lib/group-scope.js";
-import { computeWorstStatus } from "../published-report-snapshot.js";
+import { computeWorstStatus } from "../report-sections/index.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
 
 // Raw statuses at this boundary are untrusted; only the three domain values

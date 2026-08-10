@@ -1,4 +1,4 @@
-import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
+import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
 import type { ItemStatus } from "../model/types";
 
 const CSS_PRIMARY = "var(--color-primary)";

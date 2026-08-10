@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 
-import { latestPeriodPair } from "../../../../lib/analytics-periods";
-import { deriveTrendsWindow } from "../../../../lib/trends-window";
-import { useTRPC } from "../../../../lib/trpc-context";
+import {
+  deriveTrendsWindow,
+  latestPeriodPair,
+} from "../../../../features/analytics";
+import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 
 // Charts load with ssr:false — Recharts needs ResizeObserver (browser-only).
 const TrafficLightHistoryChart = dynamic(
@@ -92,6 +94,7 @@ export default function TrendsPage() {
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
     >
       <h1 className="text-2xl font-semibold">Trends</h1>

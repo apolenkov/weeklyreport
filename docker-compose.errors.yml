@@ -4,8 +4,8 @@
 #     -f docker-compose.observability.yml -f docker-compose.errors.yml up -d
 # Or via: pnpm observability:up (root package.json script)
 #
-# Bugsink UI: http://localhost:8000  (admin / admin)
-# After first start, create admin user (BUGSINK_CREATE_SUPERUSER does NOT exist in bugsink):
+# Bugsink UI: http://localhost:8000 (no default credentials).
+# After first start, create an admin user interactively:
 #   docker exec <bugsink-container> bugsink-manage createsuperuser
 # Then create a project and copy the DSN to SENTRY_DSN in .env
 
@@ -20,8 +20,8 @@ services:
       SECRET_KEY: ${BUGSINK_SECRET_KEY:-localdev-insecure-key-for-local-dev-only-change-in-prod-2025}
       BASE_URL: http://localhost:${BUGSINK_PORT:-8000}
       BUGSINK_SINGLE_USER_MODE: "true"
-      # BUGSINK_CREATE_SUPERUSER does not exist — bugsink has no auto-user env var.
-      # Run: docker exec <container> bugsink-manage createsuperuser
+      # The pinned image supports CREATE_SUPERUSER=email:password, but Compose
+      # deliberately does not persist bootstrap credentials. Use the command above.
     restart: unless-stopped
 
 volumes:

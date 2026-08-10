@@ -1,19 +1,16 @@
-export { FOREIGN_ENTRY_OPACITY } from "./model/item-card-style";
+export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
+export { FOREIGN_ENTRY_OPACITY, STATUS_BADGE } from "./model/item-card-style";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
+export {
+  markCompletePatch,
+  moveToCurrentWeekPatch,
+  moveToNextWeekPatch,
+  pauseItemPatch,
+} from "./model/lead-actions/lead-item-actions";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
-export {
-  applyCrossAuthorStageOverrides,
-  buildCrossAuthorStageMap,
-} from "./model/lead-cross-author";
 export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
-export {
-  mapForeignDecisions,
-  mapForeignItems,
-  mapForeignRisks,
-} from "./model/lead-cross-author-content";
 export type {
   LeadActivityCard,
-  LeadCurrentUser,
   LeadDecisionEntry,
   LeadKanbanItem,
   LeadReviewFeedbackRecord,
@@ -22,26 +19,38 @@ export type {
 } from "./model/lead-form";
 export {
   mapLeadFormData,
-  mapLeadProducts,
   mapLeadReviewFeedback,
-  mapLeadRisks,
-  normalizeStageName,
   ownedStagesForProject,
 } from "./model/lead-form";
+export type { DraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
+export type { LeadFormGeneration } from "./model/lead-form/lead-form-generation";
+export { leadFormGenerationOf } from "./model/lead-form/lead-form-generation";
+export type { PublishedLineage } from "./model/lead-form/lead-form-loaded-record-builders";
+export type {
+  LeadFormLoadedInput,
+  LeadFormLoadedViewModel,
+} from "./model/lead-form/lead-form-loaded-view-model";
+export { buildLeadFormLoadedViewModel } from "./model/lead-form/lead-form-loaded-view-model";
+export type {
+  LeadFormLoadedContext,
+  SubmitOutcome,
+} from "./model/lead-form/lead-form-submit-context";
+export type { RiskPrefillRequest } from "./model/lead-form/risk-prefill";
 export type { HistoryEntry } from "./model/lead-history";
+export {
+  mapCompiledHistoryEntries,
+  mapHistoryEntries,
+} from "./model/lead-history";
 export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
 export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
 export {
-  buildLeadSubmitPayload,
-  deriveLeadSubmitReadiness,
-} from "./model/lead-submit-readiness";
-export {
   isBoardEmpty,
   type ItemColumn,
   splitItemBoard,
 } from "./model/next-week-columns";
+export { sortByPriorityRank } from "./model/priority/priority-sort";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";
 export { toNavigationPeriod } from "./model/report-period";
@@ -61,6 +70,11 @@ export {
   splitStageNames,
 } from "./model/stage-tags";
 export {
+  annotateOwnRiskCoverage,
+  applyRiskSeverityFloor,
+  coveringRisksForStage,
+} from "./model/status-risk/lead-form-risk-coverage";
+export {
   stageStatusToTraffic,
   trafficToStageStatus,
 } from "./model/traffic-light";
@@ -68,7 +82,6 @@ export type {
   DecisionEntry,
   KanbanItem,
   Product,
-  ProductKanbanItem,
   ReportPeriod,
   RiskEntry,
   StageAssignment,
@@ -81,6 +94,7 @@ export {
 } from "./model/weekly-report";
 export type {
   LeadOverviewRow,
+  MapWeeklyReportResult,
   WeeklyPortfolioProduct,
   WeeklyProductReport,
   WeeklyProductStatus,
@@ -88,6 +102,8 @@ export type {
   WeeklyReportItem,
   WeeklyReportRisk,
 } from "./model/weekly-report-types";
+export { ActivityStatusStrip } from "./ui/activity/activity-status-strip";
+export { UnifiedActivitySection } from "./ui/activity/unified-activity-section";
 export { ActivityLanesBlock } from "./ui/activity-lanes-block";
 export { BoardColumnHeader } from "./ui/board-column-header";
 export { BoardEmptyState } from "./ui/board-empty-state";
@@ -95,7 +111,9 @@ export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
 export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
+export { NextWeekSection } from "./ui/next-week/next-week-section";
 export type { ParentActivityOption, RecordParent } from "./ui/parent-picker";
 export { ParentPicker } from "./ui/parent-picker";
+export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";

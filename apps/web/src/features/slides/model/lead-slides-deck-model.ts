@@ -15,6 +15,7 @@ export function buildLeadDeckModel(
   section: ReportSectionReadModel,
   foreignHealth: Parameters<typeof applyForeignProductHealth>[1],
   foreignContentRows: readonly CrossAuthorContentRow[],
+  showOwnerBadges = true,
 ): SectionSlideModel {
   // The grid gets the foreign rows WITH author identity and the health fold
   // pre-applied (both inside buildSectionSlideModel), so its cards, legend and
@@ -22,6 +23,7 @@ export function buildLeadDeckModel(
   const base = buildSectionSlideModel(section, {
     foreign: foreignContentRows,
     foreignHealth,
+    showOwnerBadges,
   });
   if (foreignContentRows.length === 0) return base;
   // Legacy string-list merge keeps the deck-chrome aggregates (carousel counts,

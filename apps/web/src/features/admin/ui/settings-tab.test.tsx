@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
@@ -639,5 +639,20 @@ describe("SettingsTab — Integrations sub-tab", () => {
     expect(screen.getByTestId("integration-ai-rag").textContent).toMatch(
       /empty/i,
     );
+  });
+
+  it("keeps deferred integration content at full opacity", async () => {
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+
+    for (const testId of ["integration-row-telegram", "integration-row-ai"]) {
+      const row = await screen.findByTestId(testId);
+      expect(row.className.split(/\s+/u)).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/^opacity-/u)]),
+      );
+    }
   });
 });

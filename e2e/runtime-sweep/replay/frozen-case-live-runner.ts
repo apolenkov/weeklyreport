@@ -1,0 +1,201 @@
+import type { Page, TestInfo } from "@playwright/test";
+
+import { reseedE2eRuntimeState } from "../../helpers/e2e-runtime-state-setup.ts";
+import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
+import {
+  routeForState,
+  RUNTIME_MATRIX_ORACLE,
+  type RuntimeMatrixSource,
+  runtimeStateGroupKey,
+} from "../matrix/runtime-matrix.ts";
+import { writeCell } from "../matrix/runtime-matrix-evidence.ts";
+import { runSpecializedCase } from "../matrix/specialized-case-runner.ts";
+import { captureAndFinalizeFrozenCase } from "./evidence/frozen-case-live-evidence.ts";
+import type { FrozenCaseCoverageCell } from "./frozen-case-evidence.ts";
+import {
+  type FrozenCaseLiveRuntime,
+  loginForCase,
+  prepareCase,
+  stateForCase,
+} from "./frozen-case-live-actions.ts";
+import { initialNavigation } from "./frozen-case-live-capture.ts";
+import {
+  type FrozenCaseGroup,
+  groupFrozenCases,
+  restoreFrozenCaseOrder,
+} from "./frozen-case-live-shards.ts";
+
+export type { FrozenCaseLiveRuntime } from "./frozen-case-live-actions.ts";
+
+const persistFrozenCaseCell = async (
+  runtime: FrozenCaseLiveRuntime,
+  cell: FrozenCaseCoverageCell,
+): Promise<void> => {
+  await writeCell(runtime.archiveRoot, cell);
+};
+
+const requirePassingPersistedCell = (
+  cell: FrozenCaseCoverageCell,
+): FrozenCaseCoverageCell => {
+  if (cell.verdict !== "pass")
+    throw new Error(
+      `Frozen case ${cell.cellId} stopped the lane with verdict=${cell.verdict}`,
+    );
+  return cell;
+};
+
+const reuseProfileBaseline = (): void => undefined;
+
+const groupKeyFor = (
+  source: RuntimeMatrixSource,
+  matrixCase: MatrixExecutableCase,
+): string =>
+  runtimeStateGroupKey(
+    matrixCase.profile,
+    routeForState(source, stateForCase(matrixCase)).target,
+  );
+
+const runFrozenCase = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  matrixCase: MatrixExecutableCase,
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+): Promise<FrozenCaseCoverageCell> => {
+  const browser = page.context().browser();
+  if (browser === null)
+    throw new Error(`Frozen case ${matrixCase.caseId} has no browser context`);
+  const specialized = await runSpecializedCase({
+    page,
+    browser,
+    baseURL: runtime.baseURL,
+    repoRoot: runtime.repoRoot,
+    archiveRoot: runtime.archiveRoot,
+    bugsinkDsn: runtime.bugsinkDsn,
+    matrixCase,
+    oracle: RUNTIME_MATRIX_ORACLE,
+    testInfo,
+    capturedAt: new Date().toISOString(),
+  });
+  if (specialized !== undefined) {
+    await persistFrozenCaseCell(runtime, specialized.cell);
+    return requirePassingPersistedCell(specialized.cell);
+  }
+  const { prepared } = await prepareCase(
+    source,
+    matrixCase,
+    runtime,
+    reuseProfileBaseline,
+  );
+  await loginForCase(page, matrixCase, runtime.baseURL);
+  const route = routeForState(source, stateForCase(matrixCase));
+  const navigation = await initialNavigation(page, route.resolvedRoute);
+  const cell = await captureAndFinalizeFrozenCase(
+    page,
+    source,
+    matrixCase,
+    runtime,
+    prepared,
+    route.resolvedRoute,
+    navigation,
+  );
+  await persistFrozenCaseCell(runtime, cell);
+  return requirePassingPersistedCell(cell);
+};
+
+const runFrozenCaseRange = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  cases: readonly MatrixExecutableCase[],
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+  start: number,
+  end: number,
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  if (start >= end) return [];
+  if (end - start === 1) {
+    const matrixCase = cases[start];
+    if (matrixCase === undefined)
+      throw new Error(`Frozen case range has no case at index ${start}`);
+    return [await runFrozenCase(page, source, matrixCase, runtime, testInfo)];
+  }
+  const middle = start + Math.floor((end - start) / 2);
+  const left = await runFrozenCaseRange(
+    page,
+    source,
+    cases,
+    runtime,
+    testInfo,
+    start,
+    middle,
+  );
+  const right = await runFrozenCaseRange(
+    page,
+    source,
+    cases,
+    runtime,
+    testInfo,
+    middle,
+    end,
+  );
+  return [...left, ...right];
+};
+
+const runFrozenCaseGroups = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  groups: readonly FrozenCaseGroup[],
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+  index: number,
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  const group = groups[index];
+  if (group === undefined) return [];
+  const firstCase = group[0];
+  if (firstCase === undefined)
+    throw new Error(`Frozen case group ${index} is empty`);
+  if (index > 0) {
+    await page.goto("about:blank");
+    await reseedE2eRuntimeState({
+      databaseUrl: runtime.databaseUrl,
+      profile: firstCase.profile,
+      repoRoot: runtime.repoRoot,
+    });
+  }
+  const current = await runFrozenCaseRange(
+    page,
+    source,
+    group,
+    runtime,
+    testInfo,
+    0,
+    group.length,
+  );
+  const remaining = await runFrozenCaseGroups(
+    page,
+    source,
+    groups,
+    runtime,
+    testInfo,
+    index + 1,
+  );
+  return [...current, ...remaining];
+};
+
+export const runFrozenCases = async (
+  page: Page,
+  source: RuntimeMatrixSource,
+  cases: readonly MatrixExecutableCase[],
+  runtime: FrozenCaseLiveRuntime,
+  testInfo: TestInfo,
+): Promise<readonly FrozenCaseCoverageCell[]> => {
+  const cells = await runFrozenCaseGroups(
+    page,
+    source,
+    groupFrozenCases(cases, (matrixCase) => groupKeyFor(source, matrixCase)),
+    runtime,
+    testInfo,
+    0,
+  );
+  return restoreFrozenCaseOrder(cases, cells);
+};

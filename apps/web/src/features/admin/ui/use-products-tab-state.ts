@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { toAdminProjectInput } from "../model/admin";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import {

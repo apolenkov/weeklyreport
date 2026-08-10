@@ -5,7 +5,7 @@ const useQueryMock = vi.fn();
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (opts: unknown): unknown => useQueryMock(opts) as unknown,
 }));
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     admin: {
       dlqCount: {

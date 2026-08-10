@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { useTRPC } from "../../../lib/trpc-context";
+import type { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 type TRPCContext = ReturnType<typeof useTRPC>;
 

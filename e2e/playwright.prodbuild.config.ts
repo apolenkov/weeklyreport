@@ -87,8 +87,11 @@ const withoutSamlEnv = (
     ),
   );
 
-const toProdServer = (entry: WebServerEntry): WebServerEntry =>
-  entry.command.includes("@customreport/api")
+const toProdServer = (
+  entry: WebServerEntry,
+  serverIndex: number,
+): WebServerEntry =>
+  serverIndex === 0
     ? {
         ...entry,
         cwd: path.join(repoRoot, "apps/api"),
@@ -109,5 +112,7 @@ const toProdServer = (entry: WebServerEntry): WebServerEntry =>
 
 export default {
   ...baseConfig,
-  webServer: baseServers.map(toProdServer),
+  webServer: baseServers.map((entry, serverIndex) =>
+    toProdServer(entry, serverIndex),
+  ),
 };

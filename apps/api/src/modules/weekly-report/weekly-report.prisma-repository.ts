@@ -2,9 +2,9 @@ import { type ReportSectionReadModel } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { parsePublishedSnapshot } from "../published-report-snapshot.js";
 import {
   mapPrismaToReportSection,
+  parsePublishedSnapshot,
   reportSectionFullInclude,
 } from "../report-sections/index.js";
 import { isDesignatedReviewer } from "../review/index.js";

@@ -2,7 +2,7 @@
 
 import type { PeriodListItem } from "@customreport/shared";
 
-import { ConfirmationDialog } from "../../../shared/ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import type { CreatePeriodValues } from "./periods-tab-dialog";
 import { CreatePeriodDialog } from "./periods-tab-dialog";
 

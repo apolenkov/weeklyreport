@@ -25,7 +25,6 @@ export function ComingSoonTooltip({
           side="bottom"
           align="center"
           sideOffset={6}
-          aria-label=" "
           className="border-0 bg-transparent p-0 shadow-none"
         >
           <ComingSoonBadge />

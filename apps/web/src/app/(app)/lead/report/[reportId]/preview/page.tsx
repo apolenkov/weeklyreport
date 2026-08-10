@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { LeadSectionPreviewAuth } from "../../../../../../features/report-pages";
 import { LEAD_PREVIEW_ROUTE_ROLES } from "../../../../../../shared/model/route-role-policy";
+import { RoleGate } from "../../../../../../shared/ui/auth-runtime/role-gate";
 import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
-import { RoleGate } from "../../../../../../shared/ui/role-gate";
 
 interface Props {
   params: Promise<{ reportId: string }>;
@@ -17,6 +17,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
     <RoleGate allowedRoles={LEAD_PREVIEW_ROUTE_ROLES}>
       <main
         id="main-content"
+        tabIndex={-1}
         className="min-h-screen bg-[var(--color-background)]"
       >
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">

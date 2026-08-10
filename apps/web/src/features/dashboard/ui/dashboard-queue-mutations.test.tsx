@@ -25,11 +25,11 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
-vi.mock("../../../lib/cache-keys", () => ({
+vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateReview,
   invalidateSubmissionDashboard,
 }));
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     activity: {
       live: { queryOptions: () => ({ queryKey: ["activity.live"] }) },
@@ -55,7 +55,7 @@ vi.mock("../../../lib/trpc-context", () => ({
     },
   }),
 }));
-vi.mock("../../../shared/ui/confirmation-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirmation-dialog", () => ({
   ConfirmationDialog: ({
     open,
     onConfirm,

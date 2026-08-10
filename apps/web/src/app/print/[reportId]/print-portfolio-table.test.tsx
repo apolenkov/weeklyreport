@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { WeeklyPortfolioProduct } from "../../../features/report-sections/model/weekly-report-types";
+import type { WeeklyPortfolioProduct } from "../../../features/report-sections";
 import { PrintPortfolioTable } from "./print-portfolio-table";
 
 function makeProduct(

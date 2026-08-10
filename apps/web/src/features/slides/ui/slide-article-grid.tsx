@@ -11,7 +11,7 @@ import {
 import {
   statusDotClassName,
   statusLabel,
-} from "../../../lib/status-presentation";
+} from "../../../shared/lib/status/status-presentation";
 import { columnsRowCount } from "../model/slide-grid-cells";
 import type { GridAuthor, SlideTrafficStatus } from "../model/slide-grid-model";
 import type {

@@ -64,7 +64,7 @@ export function SlideGridHeader({
           data-testid="slide-on-track-chip"
           className={`rounded-[var(--radius-pill)] px-2.5 py-1 text-xs font-semibold ${
             short
-              ? "bg-[var(--color-chip-blocked-bg)] text-[var(--color-destructive)]"
+              ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
               : "bg-[var(--color-chip-on-track-bg)] text-[var(--color-chip-on-track-text)]"
           }`}
         >
@@ -79,21 +79,23 @@ export function SlideGridHeader({
 function PriorityCard({
   card,
   author,
+  showAuthorBadge,
 }: {
   readonly card: GridPriorityCard;
   readonly author: GridAuthor | undefined;
+  readonly showAuthorBadge: boolean;
 }) {
   return (
     <div className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5">
       <div className="flex items-start gap-1.5">
-        {/* The rank badge wears its author's identity color, answering
-            "whose priority" at a glance; pastel backgrounds need the
-            dark foreground text, never white. */}
+        {/* The rank badge uses the author's color when attribution is visible;
+            Mine hides the selected owner, so its tint stays neutral. */}
         <span
+          data-testid="slide-priority-rank-badge"
           className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-[var(--color-foreground)]"
           style={
-            author === undefined
-              ? undefined
+            author === undefined || !showAuthorBadge
+              ? { background: "var(--color-priority-row-bg)" }
               : { background: authorSlotBackground(author) }
           }
         >
@@ -107,8 +109,9 @@ function PriorityCard({
         <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
           {card.productName}
         </span>
-        {author !== undefined ? (
+        {showAuthorBadge && author !== undefined ? (
           <span
+            data-testid="slide-priority-author-badge"
             title={author.name}
             className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
             style={{ background: authorSlotBackground(author) }}
@@ -116,8 +119,9 @@ function PriorityCard({
             <span aria-hidden="true">{author.initials}</span>
             <span className="sr-only">{author.name}</span>
           </span>
-        ) : (
+        ) : showAuthorBadge ? (
           <span
+            data-testid="slide-priority-author-badge"
             title="Unknown author"
             className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
             style={{ background: "var(--color-muted)" }}
@@ -125,7 +129,7 @@ function PriorityCard({
             <span aria-hidden="true">?</span>
             <span className="sr-only">Unknown author</span>
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -142,13 +146,17 @@ export function SlidePriorityStrip({
   if (grid.priorityStrip.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2" data-testid="slide-priority-strip">
-      {grid.priorityStrip.map((card, index) => (
-        <PriorityCard
-          key={card.id ?? index}
-          card={card}
-          author={authorsById.get(card.authorId)}
-        />
-      ))}
+      {grid.priorityStrip.map((card, index) => {
+        const author = authorsById.get(card.authorId);
+        return (
+          <PriorityCard
+            key={card.id ?? index}
+            card={card}
+            author={author}
+            showAuthorBadge={grid.showOwnerMarks || author?.isOwner !== true}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -160,6 +168,7 @@ export function SlideLegend({
 }: {
   readonly authors: readonly GridAuthor[];
 }) {
+  if (authors.length === 0) return null;
   return (
     <div
       data-testid="slide-legend"

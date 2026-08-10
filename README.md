@@ -7,9 +7,9 @@
 (`head`) просматривает, публикует и экспортирует единый сводный отчёт. Есть ещё
 роли `admin` (администрирование) и `viewer` (только чтение).
 
-> Это MVP. Продакшена пока нет — локальная, dev, test и UAT базы данных
-> одноразовые: их сброс и пересборка с нуля ожидаемы и безопасны. Подробности —
-> в [`CLAUDE.md`](./CLAUDE.md), раздел «MVP Phase: Database Is Disposable».
+> Разрушительные операции с БД не считаются безопасными по умолчанию. Точный
+> список одноразовых целей и обязательный guard описаны в
+> [`AGENTS.md`](./AGENTS.md), раздел «Database safety».
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/lifecycle-dark.svg">

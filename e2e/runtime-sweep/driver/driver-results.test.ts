@@ -1,0 +1,299 @@
+import { describe, expect, it } from "vitest";
+
+import type {
+  Action,
+  CoverageCell,
+  EvidenceBundle,
+  Oracle,
+  StateAxes,
+} from "../source/contracts.ts";
+import {
+  type DriverMergeOptions,
+  mergeDriverResults,
+} from "./driver-results.ts";
+import type { AiDriverReport } from "./driver-results-contract.ts";
+
+const SOURCE_SHA = "a".repeat(40);
+const OTHER_SOURCE_SHA = "b".repeat(40);
+const state: StateAxes = {
+  profileCapability: "canonical-identities",
+  lifecycle: "open",
+  submission: "draft",
+  ownershipDensity: "single",
+  permission: "allowed",
+  fault: "none",
+  controlTransition: "none",
+};
+const action: Action = {
+  controlKey: "save",
+  operation: "click",
+  safety: "reversible",
+  transition: "none",
+};
+const oracle: Oracle = {
+  domainSpecRefs: ["exhaustive-runtime-sweep"],
+  function: { required: true, expectation: "the action succeeds" },
+  accessibility: { required: true, expectation: "status is announced" },
+  visual: { required: true, expectation: "settled screenshot matches" },
+};
+const evidence: EvidenceBundle = {
+  before: [],
+  action: [],
+  after: [],
+  observations: [],
+  inapplicable: [],
+};
+
+function makeCell(cellId = "cell-a"): CoverageCell {
+  return {
+    cellId,
+    sourceSha: SOURCE_SHA,
+    profile: "minimal",
+    role: "lead",
+    catalogRoute: "/lead/report",
+    resolvedRoute: "/lead/report",
+    viewport: { browser: "chromium", width: 1440, height: 900 },
+    state,
+    action,
+    execution: { kind: "control", action },
+    faultId: null,
+    oracle,
+    controls: [
+      {
+        controlKey: "save",
+        cellId,
+        ariaRole: "button",
+        accessibleName: "Save",
+        enabled: true,
+        order: 0,
+        actionResult: {
+          kind: "not-exercised",
+          policy: "unavailable",
+          reason: "The driver has not run this cell yet",
+        },
+      },
+      {
+        controlKey: "cancel",
+        cellId,
+        ariaRole: "button",
+        accessibleName: "Cancel",
+        enabled: true,
+        order: 1,
+        actionResult: {
+          kind: "not-exercised",
+          policy: "unavailable",
+          reason: "The driver has not run this cell yet",
+        },
+      },
+    ],
+    evidence,
+    verdict: "pending",
+  };
+}
+
+const baseTimeline: AiDriverReport["timeline"] = {
+  startedAt: "2026-08-04T00:00:00.000Z",
+  endedAt: "2026-08-04T00:01:00.000Z",
+  routes: [
+    {
+      route: "/lead/report",
+      enteredAt: "2026-08-04T00:00:01.000Z",
+      leftAt: "2026-08-04T00:00:59.000Z",
+    },
+  ],
+};
+
+function report(
+  controls: readonly string[],
+  sourceSha = SOURCE_SHA,
+  blockedControls: readonly string[] = [],
+  timeline = baseTimeline,
+): string {
+  return JSON.stringify({
+    provider: "native-codex",
+    model: "gpt-5.6-luna",
+    reasoning: "max",
+    attemptId: "attempt-1",
+    transcriptEvidence: {
+      status: "captured",
+      evidenceRefs: ["transcript:attempt-1"],
+      digest: "a".repeat(64),
+    },
+    roleDriven: "lead",
+    profile: "minimal",
+    sourceSha,
+    assignedCells: [
+      {
+        cellId: "cell-a",
+        catalogRoute: "/lead/report",
+        resolvedRoute: "/lead/report",
+        actionKey: "save",
+      },
+    ],
+    routesVisited: 1,
+    routesPlanned: 1,
+    canary: { injected: true, detected: true },
+    timeline,
+    controlResults: controls.map((controlKey) =>
+      blockedControls.includes(controlKey)
+        ? {
+            cellId: "cell-a",
+            controlKey,
+            status: "blocked",
+            evidenceRefs: [`${controlKey}-evidence`],
+            reason: "The dialog was not reachable",
+          }
+        : {
+            cellId: "cell-a",
+            controlKey,
+            status: "covered",
+            result: "pass",
+            evidenceRefs: [`${controlKey}-evidence`],
+          },
+    ),
+    candidates: [],
+  });
+}
+
+function options(reportText: string): DriverMergeOptions {
+  return {
+    sourceSha: SOURCE_SHA,
+    profile: "minimal",
+    role: "lead",
+    cells: [makeCell()],
+    reportText,
+    reportArchivePath: "/archive/driver/a/lead.json",
+  };
+}
+
+describe("AI driver result contract", () => {
+  it("rejects a report from a stale source SHA", () => {
+    const stale = report(["save"], OTHER_SOURCE_SHA);
+
+    expect(() =>
+      mergeDriverResults([makeCell()], stale, options(stale)),
+    ).toThrow(/source SHA/iu);
+  });
+
+  it("rejects reports from a non-native provider or model", () => {
+    const reportText = report(["save"]);
+    const wrongProvider = reportText.replace(
+      '"provider":"native-codex"',
+      '"provider":"openai"',
+    );
+
+    expect(() =>
+      mergeDriverResults([makeCell()], wrongProvider, options(wrongProvider)),
+    ).toThrow(/native-codex/iu);
+  });
+
+  it("rejects missing and duplicate control results", () => {
+    const missing = report(["cancel"]);
+    expect(() =>
+      mergeDriverResults([makeCell()], missing, options(missing)),
+    ).toThrow(/missing control result/iu);
+
+    const duplicate = report(["save", "save"]);
+    expect(() =>
+      mergeDriverResults([makeCell()], duplicate, options(duplicate)),
+    ).toThrow(/duplicate control result/iu);
+  });
+
+  it("keeps a blocked control and cell blocked", () => {
+    const blockedReport = report(["save"], SOURCE_SHA, ["save"]);
+
+    const [merged] = mergeDriverResults(
+      [makeCell()],
+      blockedReport,
+      options(blockedReport),
+    );
+    expect(merged?.verdict).toBe("blocked");
+    expect(
+      merged?.controls.every(
+        (control) => control.actionResult.kind === "not-exercised",
+      ),
+    ).toBe(true);
+  });
+
+  it("binds route evidence without claiming observed controls were exercised", () => {
+    const reportText = report(["save"]);
+    const [merged] = mergeDriverResults(
+      [makeCell()],
+      reportText,
+      options(reportText),
+    );
+
+    expect(merged?.verdict).toBe("pass");
+    expect(
+      merged?.controls.every(
+        (control) => control.actionResult.kind === "not-exercised",
+      ),
+    ).toBe(true);
+    expect(merged?.evidence.action).toHaveLength(1);
+    expect(merged?.evidence.action[0]?.kind).toBe("driver-report");
+    expect(merged?.evidence.action[0]?.digest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it("rejects a reversed report timeline", () => {
+    const reportText = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:01:00.000Z",
+      endedAt: "2026-08-04T00:00:00.000Z",
+      routes: [],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], reportText, options(reportText)),
+    ).toThrow(/endedAt is before startedAt/iu);
+  });
+
+  it("requires one known route interval for every assigned route", () => {
+    const baseRoute = {
+      route: "/lead/report",
+      enteredAt: "2026-08-04T00:00:01.000Z",
+      leftAt: "2026-08-04T00:00:59.000Z",
+    };
+    const missing = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [],
+    });
+    const duplicate = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [baseRoute, baseRoute],
+    });
+    const unknown = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [{ ...baseRoute, route: "/unknown" }],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], missing, options(missing)),
+    ).toThrow(/missing driver timeline route/iu);
+    expect(() =>
+      mergeDriverResults([makeCell()], duplicate, options(duplicate)),
+    ).toThrow(/duplicate driver timeline route/iu);
+    expect(() =>
+      mergeDriverResults([makeCell()], unknown, options(unknown)),
+    ).toThrow(/unknown/iu);
+  });
+
+  it("rejects malformed or out-of-window route intervals", () => {
+    const reportText = report(["save"], SOURCE_SHA, [], {
+      startedAt: "2026-08-04T00:00:00.000Z",
+      endedAt: "2026-08-04T00:01:00.000Z",
+      routes: [
+        {
+          route: "/lead/report",
+          enteredAt: "2026-08-03T23:59:00.000Z",
+          leftAt: "2026-08-04T00:02:00.000Z",
+        },
+      ],
+    });
+
+    expect(() =>
+      mergeDriverResults([makeCell()], reportText, options(reportText)),
+    ).toThrow(/starts before report/iu);
+  });
+});

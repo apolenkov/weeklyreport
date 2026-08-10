@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
+import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import {
   DashboardPanelIssue,
   type DashboardPanelKind,

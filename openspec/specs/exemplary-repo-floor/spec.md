@@ -13,7 +13,7 @@ passes the full rule set (`pnpm typecheck && pnpm lint && pnpm test`), is
 named in **no** `eslint.config.ts` `files:` override block, and carries
 **no** bare or file-scope `eslint-disable` directive. This is exactly
 `catalogue.json` classification `cls: "A"` for `kind: "product"`, produced by
-`pnpm catalogue` (`scripts/exemplary-catalogue.ts`).
+`pnpm catalogue` (`scripts/quality/exemplary/exemplary-catalogue.ts`).
 
 A single-line `eslint-disable-next-line` carrying a reason that explains why
 compliance is architecturally impossible is tolerated in review, but it MUST
@@ -107,7 +107,7 @@ commit.
 #### Scenario: `catalogue.json` is stale
 
 - **WHEN** `catalogue.json`'s mtime predates the latest commit to
-  `scripts/exemplary-catalogue.ts`
+  `scripts/quality/exemplary/exemplary-catalogue.ts`
 - **THEN** any counter read from it MUST be treated as unverified
 - **AND** `pnpm catalogue` MUST be re-run before the counter is cited in a
   proposal or report
@@ -142,7 +142,7 @@ serialized only as diagnostic metadata.
 ### Requirement: `apps/*` comments carry WHY, not restated names, and are `//`, not JSDoc
 
 `apps/*` MUST carry rationale as a `//` comment, not a JSDoc block — this is
-the existing `CLAUDE.md` JSDoc policy (public-API-only, `packages/shared`
+the existing `AGENTS.md` JSDoc policy (public-API-only, `packages/shared`
 and `packages/ui`); it is unenforced in `apps/*` because
 `jsdoc/require-jsdoc` is `publicOnly` and armed only for `packages/*` (no
 gate exists to catch violations mechanically). Until a gate exists, the
@@ -204,7 +204,7 @@ updated to point at the durable spec before a hygiene sweep can pass.
 
 A mechanical or LLM sweep MUST dereference each reference before acting on
 it. A reference that resolves to a live `openspec/specs/` requirement is
-kept, per the existing `CLAUDE.md` allowance for a `<=2`-line pointer. A
+kept, per the existing `AGENTS.md` allowance for a `<=2`-line pointer. A
 reference that resolves to nothing is deleted. A sweep that pattern-matches
 the shape of a reference without dereferencing it MUST NOT delete or keep
 references in bulk. A reference with more than one live durable match is
@@ -279,7 +279,7 @@ owner according to the criteria below.
    `no-circular` violations under `--ts-pre-compilation-deps`; the target remains
    zero. The command captures its own exit status without a pipeline. The
    unrelated unresolved import from
-   `apps/web/src/lib/trpc.ts` is fixed or separately recorded, never counted as
+   `apps/web/src/shared/lib/trpc/trpc.ts` is fixed or separately recorded, never counted as
    a cycle.
 4. **Local test-harness repetition after a `max-lines` split is allowed.** It
    is allowed only inside one test family when the harness is small, stable,

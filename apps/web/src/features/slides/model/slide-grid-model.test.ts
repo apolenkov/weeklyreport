@@ -239,6 +239,33 @@ describe("buildSlideGridModel — sorting and author series", () => {
       ["co-1", false],
     ]);
   });
+
+  it("suppresses only the selected owner when the single-author scope is explicit", () => {
+    const foreign = foreignRow({
+      items: [
+        {
+          id: "f1",
+          projectId: "p1",
+          type: "current",
+          text: "foreign",
+          workflowStatus: "in_progress",
+          stageNames: ["Support"],
+        },
+      ],
+    });
+    const model = buildSlideGridModel({
+      section: section({ items: [item({ stageNames: ["Support"] })] }),
+      foreign: [foreign],
+      showOwnerBadges: false,
+    });
+    const rows = productLevelOf(cardOf(model, "p1")).columns.current;
+
+    expect(model.showOwnerMarks).toBe(false);
+    expect(rows.map((row) => [row.authorId, row.showAuthorBadge])).toEqual([
+      ["lead-1", false],
+      ["co-1", true],
+    ]);
+  });
 });
 
 describe("buildSlideGridModel — priority strip", () => {
@@ -256,6 +283,7 @@ describe("buildSlideGridModel — priority strip", () => {
       [1, "Beta"],
       [2, "Alpha"],
     ]);
+    expect(model.showOwnerMarks).toBe(true);
     expect(model.counters.priorities).toBe(2);
   });
 

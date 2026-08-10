@@ -21,7 +21,11 @@ import {
 // the identity line and the activity pill lane only.
 function ActivityFeedSlide({ slide }: { readonly slide: SectionSlideModel }) {
   return (
-    <article className="slide-canvas mx-auto w-full min-h-[var(--slide-canvas-min-h)] min-w-[var(--slide-canvas-min-w)] max-w-[var(--slide-canvas-max-w)] rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)]">
+    <article
+      data-layout-key="slide-article"
+      data-layout-stability="position-width"
+      className="slide-canvas mx-auto w-full min-h-[var(--slide-canvas-min-h)] min-w-[var(--slide-canvas-min-w)] max-w-[var(--slide-canvas-max-w)] rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)]"
+    >
       <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
         {slide.ownerName}
       </h2>
@@ -81,6 +85,8 @@ export function SlideArticle({
   return (
     <article
       data-testid="slide-article"
+      data-layout-key="slide-article"
+      data-layout-stability="position-width"
       className="slide-canvas mx-auto flex w-full min-h-[var(--slide-canvas-min-h)] min-w-[var(--slide-canvas-min-w)] max-w-[var(--slide-canvas-max-w)] flex-col gap-3 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)]"
     >
       <SlideGridHeader
@@ -96,7 +102,13 @@ export function SlideArticle({
         authorsById={authorsById}
         onRowActivate={onRowActivate}
       />
-      <SlideLegend authors={grid.authors} />
+      <SlideLegend
+        authors={
+          grid.showOwnerMarks
+            ? grid.authors
+            : grid.authors.filter(({ isOwner }) => !isOwner)
+        }
+      />
       <StageLegend stageNames={collectStageNames(grid)} />
     </article>
   );

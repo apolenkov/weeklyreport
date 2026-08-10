@@ -1,0 +1,26 @@
+{
+  "filesOnFloor": 972,
+  "productTotal": 972,
+  "overrideBlocks": 23,
+  "liveSuppressions": 5,
+  "justifiedRegressions": [
+    {
+      "counter": "filesOnFloor",
+      "from": 829,
+      "to": 828,
+      "reason": "Moved an A-class product-only fixture into test utilities."
+    },
+    {
+      "counter": "filesOnFloor",
+      "from": 843,
+      "to": 842,
+      "reason": "Merged the A-class reopen-request-card-parts product module into its A-class card owner."
+    },
+    {
+      "counter": "filesOnFloor",
+      "from": 842,
+      "to": 841,
+      "reason": "Merged the A-class record-comment mutation hook into its A-class feature owner."
+    }
+  ]
+}

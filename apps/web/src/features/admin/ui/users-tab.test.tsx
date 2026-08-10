@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
@@ -265,6 +265,10 @@ describe("UsersTab — delete modal focus management", () => {
     });
     trigger.focus();
     await user.click(trigger);
+    expect(screen.getByRole("menu", { name: /more actions/i })).toHaveAttribute(
+      "aria-label",
+      "User actions",
+    );
     await user.click(screen.getByRole("menuitem", { name: /delete user/i }));
     return trigger;
   }
@@ -280,7 +284,7 @@ describe("UsersTab — delete modal focus management", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(trigger);
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("closes on backdrop click and restores focus to the overflow trigger", async () => {
@@ -288,13 +292,13 @@ describe("UsersTab — delete modal focus management", () => {
     const trigger = await openDeleteModal();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
-    const backdrop = document.querySelector('[role="presentation"]');
+    const backdrop = document.querySelector('[data-slot="dialog-overlay"]');
     expect(backdrop).not.toBeNull();
     if (!backdrop) return;
-    fireEvent.click(backdrop);
+    await userEvent.click(backdrop);
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(document.activeElement).toBe(trigger);
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it("does NOT close when clicking inside the modal (stopPropagation)", async () => {
@@ -346,6 +350,15 @@ describe("UsersTab — delete modal focus management", () => {
 });
 
 describe("UsersTab — role label rendering", () => {
+  it("contains the wide table in its local horizontal scroll surface", () => {
+    renderTab();
+
+    expect(screen.getByTestId("users-table").parentElement).toHaveClass(
+      "relative",
+      "overflow-x-auto",
+    );
+  });
+
   it("renders the head role's badge with the shared label, not the raw token", () => {
     const headUser: AdminUserView = { ...USER, id: "u2", role: "head" };
     renderTab([headUser]);

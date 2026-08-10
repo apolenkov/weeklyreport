@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import { worstTrafficStatus } from "../../../lib/status-presentation";
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildAuthorRoster } from "./slide-grid-authors";
 import { activityHomeProduct, collectCells } from "./slide-grid-cells";
@@ -38,6 +38,8 @@ export const SHARED_CARD_NAME = "Shared context";
 export interface SlideGridModel {
   // Legend order is owner first, then foreign authors by name.
   readonly authors: readonly GridAuthor[];
+  // Mine already identifies the selected owner in the slide header.
+  readonly showOwnerMarks: boolean;
   readonly worstStatus: SlideTrafficStatus;
   readonly counters: {
     readonly current: number;
@@ -56,6 +58,8 @@ export interface SlideGridInput {
   readonly productStatuses?: ReadonlyMap<string, SlideTrafficStatus>;
   // Everyone-mode rows retain co-owner identity; they are never anonymized.
   readonly foreign?: readonly CrossAuthorContentRow[];
+  // Mine already names the selected owner in the slide header.
+  readonly showOwnerBadges?: boolean;
 }
 
 function uniqueProducts(
@@ -168,6 +172,9 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     activityHomeById,
     authorOrder,
     sharedCardId: SHARED_CARD_ID,
+    ...(input.showOwnerBadges === false
+      ? { hiddenAuthorId: roster.owner.id }
+      : {}),
   });
   const { realCards, products } = deriveProductCards({
     realProducts,
@@ -188,6 +195,7 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
 
   return {
     authors: roster.authors,
+    showOwnerMarks: input.showOwnerBadges !== false,
     priorityStrip,
     products,
     ...buildHeaderSummary(realCards, products, priorityStrip),

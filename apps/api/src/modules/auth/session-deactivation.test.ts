@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { SessionRevocationService } from "../admin/session-revocation.service";
+import type { SessionRevocationService } from "../admin/index.js";
 import { isUserAccessBarred } from "./session-deactivation";
 
 const USER_ID = "a0000000-0000-4000-8000-0000000000b1";

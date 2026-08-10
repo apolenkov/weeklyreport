@@ -6,7 +6,7 @@ import {
 import type { Page } from "@playwright/test";
 
 // Use relative URL so the request goes through the Playwright baseURL
-// (http://127.0.0.1:3100 in E2E mode) instead of hardcoded localhost:3000.
+// (the configured UAT web origin in E2E mode) instead of hardcoded localhost:3000.
 // Cookies set via localhost domain are not sent to 127.0.0.1 and the tRPC
 // context DEV_SESSION fallback would return role=head for any unauthenticated
 // request, causing false "role mismatch" failures.
@@ -38,9 +38,10 @@ interface AuthMeEntry {
   error?: unknown;
   message?: unknown;
 }
-type SessionRoleResult = "rate_limited" | Role | null;
+type SessionIdentity = Readonly<{ role: Role; email: string | null }>;
+type SessionIdentityResult = "rate_limited" | SessionIdentity | null;
 
-function parseAuthMeRole(payload: unknown): SessionRoleResult {
+function parseAuthMeIdentity(payload: unknown): SessionIdentity | null {
   const entry = (Array.isArray(payload) ? payload[0] : payload) as
     AuthMeEntry | undefined;
   if (!entry) {
@@ -53,17 +54,22 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
 
   const resultData = entry.result?.data as { json?: unknown } | undefined;
   const rawSession = resultData?.json ?? resultData;
-  const session = rawSession as { role?: string } | null;
+  const session = rawSession as { role?: string; email?: unknown } | null;
 
   if (!session || typeof session !== "object") {
     return null;
   }
 
   const parsed = sessionRoleSchema.safeParse(session.role);
-  return parsed.success ? parsed.data : null;
+  return parsed.success
+    ? {
+        role: parsed.data,
+        email: typeof session.email === "string" ? session.email : null,
+      }
+    : null;
 }
 
-async function getSessionRole(page: Page): Promise<SessionRoleResult> {
+async function getSessionIdentity(page: Page): Promise<SessionIdentityResult> {
   const response = await page.request.get("/trpc/auth.me", {
     maxRedirects: 0,
   });
@@ -77,7 +83,7 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
   }
 
   const payload = (await response.json().catch(() => null)) as unknown;
-  return parseAuthMeRole(payload);
+  return parseAuthMeIdentity(payload);
 }
 
 async function navigateAfterLogin(
@@ -136,26 +142,46 @@ async function establishSession(
   }
 }
 
-async function verifySessionRole(
+async function verifySessionIdentity(
   page: Page,
   expectedRole: Role,
+  expectedEmail: string | undefined,
   attempts: number,
   attempt: number,
-): Promise<Role | null> {
-  const actualRole = await getSessionRole(page);
-  if (actualRole !== "rate_limited") {
-    return actualRole;
+): Promise<SessionIdentity | null> {
+  const actual = await getSessionIdentity(page);
+  if (actual !== "rate_limited") {
+    return actual;
   }
 
   if (attempt >= attempts) {
     throw new Error(
-      `dev-login role verification remained rate-limited after ${attempts} attempts; expected ${expectedRole}`,
+      `dev-login identity verification remained rate-limited after ${attempts} attempts; expected role=${expectedRole} email=${expectedEmail ?? "any"}`,
     );
   }
 
   await page.waitForTimeout(RETRY_BASE_MS + attempt * RETRY_STEP_MS);
-  return verifySessionRole(page, expectedRole, attempts, attempt + 1);
+  return verifySessionIdentity(
+    page,
+    expectedRole,
+    expectedEmail,
+    attempts,
+    attempt + 1,
+  );
 }
+
+const sessionMatches = (
+  actual: SessionIdentity | null,
+  expectedRole: Role,
+  expectedEmail: string | undefined,
+): boolean =>
+  actual?.role === expectedRole &&
+  (expectedEmail === undefined || actual.email === expectedEmail);
+
+const observedSession = (actual: SessionIdentity | null): string =>
+  actual === null
+    ? "role=null email=null"
+    : `role=${actual.role} email=${actual.email ?? "null"}`;
 
 async function attemptLogin(
   page: Page,
@@ -166,16 +192,22 @@ async function attemptLogin(
 ): Promise<void> {
   await establishSession(page, identity, attempt);
 
-  const actualRole = await verifySessionRole(page, expectedRole, attempts, 1);
+  const actual = await verifySessionIdentity(
+    page,
+    expectedRole,
+    identity.email,
+    attempts,
+    1,
+  );
   const isLast = attempt >= attempts;
 
-  if (actualRole === expectedRole) {
+  if (sessionMatches(actual, expectedRole, identity.email)) {
     return navigateAfterLogin(page, identity.redirect);
   }
 
   if (isLast) {
     throw new Error(
-      `dev-login role mismatch for ${identity.role}: expected ${expectedRole}, got ${actualRole ?? "null"}`,
+      `dev-login identity mismatch for ${identity.role}: expected role=${expectedRole} email=${identity.email ?? "any"}, got ${observedSession(actual)}`,
     );
   }
 

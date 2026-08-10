@@ -78,7 +78,7 @@ non-URL DSN) rejects the build.
 
 The web app MUST read the seven in-scope client vars through one typed accessor
 module (a `web-env` seam sibling to `requireApiUrl` in
-`apps/web/src/lib/server/api-url.ts`) rather than reaching for raw
+`apps/web/src/shared/server/transport/api-url.ts`) rather than reaching for raw
 `process.env`. Because Next replaces each `process.env.NEXT_PUBLIC_X` occurrence
 with a string literal at build time, the accessor MUST build an explicit object
 literal of full literal references
@@ -139,10 +139,10 @@ The web app MUST replace every current raw `process.env.NEXT_PUBLIC_*` read of
 an in-scope var with a call to the typed accessor, at each named consumer site:
 `apps/web/src/app/login-page.client.tsx` (`NEXT_PUBLIC_AUTH_STUB`,
 `NEXT_PUBLIC_APP_VERSION`), `apps/web/src/shared/ui/navigation/nav-right-rail.tsx`
-and `apps/web/src/shared/ui/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
-`apps/web/src/lib/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
-`apps/web/src/lib/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
-`apps/web/src/shared/ui/agentation-devtools.tsx`
+and `apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` (`NEXT_PUBLIC_DEV_ROLE_SWITCHER`),
+`apps/web/src/shared/lib/telemetry/client-logger.ts` (`NEXT_PUBLIC_CLIENT_LOG_FORWARDING`),
+`apps/web/src/features/telemetry/model/vitals/web-vitals.ts` (`NEXT_PUBLIC_WEB_VITALS`),
+`apps/web/src/shared/ui/auth-runtime/agentation-devtools.tsx`
 (`NEXT_PUBLIC_DISABLE_DEVTOOLS`), and
 `apps/web/instrumentation-client.ts` (`NEXT_PUBLIC_SENTRY_DSN`). After the
 change a grep of `apps/web/src` and the web root for a literal
@@ -156,7 +156,7 @@ sibling requirement leaves that server-runtime (non-inlined) surface out of scop
 
 #### Scenario: A consumer reads the toggle through the accessor
 
-- **GIVEN** `apps/web/src/lib/web-vitals.ts` needs to know whether web-vitals
+- **GIVEN** `apps/web/src/features/telemetry/model/vitals/web-vitals.ts` needs to know whether web-vitals
   reporting is enabled
 - **WHEN** it checks the toggle
 - **THEN** it calls the accessor's boolean getter instead of comparing

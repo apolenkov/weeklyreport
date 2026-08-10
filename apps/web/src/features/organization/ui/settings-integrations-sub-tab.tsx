@@ -3,8 +3,8 @@
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import type { ReactNode } from "react";
 
-// Every row is inert until its rollout phase lands, so the card is dashed,
-// dimmed and badged rather than switchable.
+// Every row is inert until its rollout phase lands, so the card is dashed and
+// badged rather than switchable. Whole-card opacity would reduce text contrast.
 function IntegrationCard({
   name,
   description,
@@ -20,7 +20,7 @@ function IntegrationCard({
 }) {
   return (
     <div
-      className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
+      className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4"
       data-testid={rowTestId}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

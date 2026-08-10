@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import type { RefObject } from "react";
+import { type RefObject, useId } from "react";
 
 import type { ReportPeriod } from "../../report-sections";
 import { sortMostRecentFirst } from "./fill-from-button-helpers";
@@ -56,6 +56,8 @@ function SplitButton({
   copyDisabled,
   chevronDisabled,
   chevronRef,
+  dropdownId,
+  dropdownOpen,
   onCopy,
   onToggleDropdown,
 }: {
@@ -64,6 +66,8 @@ function SplitButton({
   readonly copyDisabled: boolean;
   readonly chevronDisabled: boolean;
   readonly chevronRef: RefObject<HTMLButtonElement | null>;
+  readonly dropdownId: string;
+  readonly dropdownOpen: boolean;
   readonly onCopy: () => void;
   readonly onToggleDropdown: () => void;
 }) {
@@ -85,6 +89,8 @@ function SplitButton({
           ref={chevronRef}
           type="button"
           aria-label="Choose past report to fill from"
+          aria-controls={dropdownOpen ? dropdownId : undefined}
+          aria-expanded={dropdownOpen}
           title={lockedReason ?? "Choose past report to fill from"}
           onClick={onToggleDropdown}
           disabled={chevronDisabled}
@@ -120,6 +126,7 @@ export function FillFromButton({
 }: FillFromButtonProps) {
   const locked = lockedReason !== undefined;
   const dropdown = useFillFromDropdown();
+  const dropdownId = useId();
   const fill = useFillFromConfirmation(onFillFrom);
   const pastPeriods = submittedPastPeriods(periods);
   const previousPeriod = pastPeriods.at(0);
@@ -136,12 +143,15 @@ export function FillFromButton({
         copyDisabled={disabled || locked || !previousPeriod}
         chevronDisabled={disabled || locked}
         chevronRef={dropdown.triggerRef}
+        dropdownId={dropdownId}
+        dropdownOpen={dropdown.open}
         onCopy={() => fill.request(previousPeriod)}
         onToggleDropdown={dropdown.toggle}
       />
 
       <FillFromDropdownPanel
         open={dropdown.open}
+        id={dropdownId}
         pos={dropdown.pos}
         panelRef={dropdown.panelRef}
         pastPeriods={pastPeriods}

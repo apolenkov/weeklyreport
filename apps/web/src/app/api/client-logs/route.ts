@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { requireApiUrl } from "../../../lib/server/api-url";
-import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../lib/server/client-logs-policy";
+import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../features/telemetry/server";
+import { requireApiUrl } from "../../../shared/server/transport/api-url";
 
 function declaredBodyIsOversized(req: NextRequest): boolean {
   const contentLength = req.headers.get("content-length");

@@ -1,7 +1,7 @@
 import {
   coveringRisksForItem,
   highestAlarmSeverity,
-} from "../../../lib/item-alarm";
+} from "./alarms/item-alarm";
 import type {
   ItemStatus,
   KanbanItem,

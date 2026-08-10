@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon } from "../../../shared/ui/icons";
+import { PlusIcon } from "../../../shared/ui/icons/action-icons";
 
 interface RemindersEmptyStateProps {
   readonly hasNoPolicies: boolean;

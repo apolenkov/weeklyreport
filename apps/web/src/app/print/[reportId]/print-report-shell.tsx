@@ -33,6 +33,8 @@ interface PrintReportShellProps {
 export function LoadingShell({ reportId }: PrintReportShellProps) {
   return (
     <main
+      id="main-content"
+      tabIndex={-1}
       data-print-state={PRINT_STATE.loading}
       style={SHELL_STYLE}
       aria-busy="true"
@@ -44,7 +46,13 @@ export function LoadingShell({ reportId }: PrintReportShellProps) {
 
 export function ErrorShell({ reportId }: PrintReportShellProps) {
   return (
-    <main data-print-state={PRINT_STATE.error} style={SHELL_STYLE} role="alert">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      data-print-state={PRINT_STATE.error}
+      style={SHELL_STYLE}
+      role="alert"
+    >
       <h1
         style={{
           margin: "0 0 8px",

@@ -4,3 +4,5 @@ e2e/.auth/
 .next-e2e/
 # Behavioral UI sweep web server distDir (coexists with `pnpm dev`).
 .next-sweep/
+# Runtime-sweep builds are disposable and must stay outside source analyzers.
+.next-runtime-*/

@@ -28,7 +28,7 @@ vi.mock("./use-slide-inline-editor", () => ({
   useSlideInlineEditor: () => ({ onRowActivate: undefined, dialogs: null }),
 }));
 
-vi.mock("../../../hooks/use-fullscreen", () => ({
+vi.mock("../../../shared/hooks/browser/use-fullscreen", () => ({
   useFullscreen: () => ({ isFullscreen: false, toggle: () => undefined }),
 }));
 
@@ -70,7 +70,12 @@ afterEach(() => {
 describe("LeadSlidesClient selected-index clamp", () => {
   it("resets to slide 0 when the slide list shrinks below the viewed index", async () => {
     holder.slides = [{ id: "s0" }, { id: "s1" }];
-    const { rerender } = render(<LeadSlidesClient />);
+    const { rerender } = render(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     fireEvent.click(screen.getByTestId("select-1"));
     expect(screen.getByTestId("deck")).toHaveAttribute(
@@ -80,7 +85,12 @@ describe("LeadSlidesClient selected-index clamp", () => {
 
     // A refresh drops the second page: index 1 no longer exists.
     holder.slides = [{ id: "s0" }];
-    rerender(<LeadSlidesClient />);
+    rerender(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("deck")).toHaveAttribute(
@@ -94,12 +104,22 @@ describe("LeadSlidesClient selected-index clamp", () => {
     // status-slide-deck stores Math.min(length - 1, next) — on an empty deck
     // an ArrowRight lands at -1, which an upper-bound-only clamp accepts.
     holder.slides = [];
-    const { rerender } = render(<LeadSlidesClient />);
+    const { rerender } = render(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     fireEvent.click(screen.getByTestId("select-negative"));
 
     holder.slides = [{ id: "s0" }];
-    rerender(<LeadSlidesClient />);
+    rerender(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("deck")).toHaveAttribute(
@@ -111,7 +131,12 @@ describe("LeadSlidesClient selected-index clamp", () => {
 
   it("leaves the selected index unchanged when the refresh stays in range", async () => {
     holder.slides = [{ id: "s0" }, { id: "s1" }, { id: "s2" }];
-    const { rerender } = render(<LeadSlidesClient />);
+    const { rerender } = render(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     fireEvent.click(screen.getByTestId("select-1"));
     expect(screen.getByTestId("deck")).toHaveAttribute(
@@ -121,7 +146,12 @@ describe("LeadSlidesClient selected-index clamp", () => {
 
     // A refresh that still contains index 1 must not move the selection.
     holder.slides = [{ id: "s0" }, { id: "s1" }, { id: "s2" }];
-    rerender(<LeadSlidesClient />);
+    rerender(
+      <LeadSlidesClient
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />,
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("deck")).toHaveAttribute(

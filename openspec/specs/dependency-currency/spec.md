@@ -213,7 +213,7 @@ types.
 - **WHEN** `pnpm typecheck` runs after `@types/cookie` is removed
 - **THEN** the `cookie` imports in
   `apps/api/src/modules/auth/auth.controller.ts` and
-  `apps/web/src/server/auth/session.ts` resolve against the `cookie` package's
+  `apps/web/src/shared/server/auth/session.ts` resolve against the `cookie` package's
   bundled types with no new errors
 - **AND** `@types/cookie-parser` usage in `apps/api` still typechecks, since it
   does not depend on the removed stub
@@ -608,7 +608,7 @@ all declarations MUST share that same major.
 
 #### Scenario: Every declaration agrees with the images
 
-- **WHEN** `scripts/check-runtime-node-sync.ts` runs as part of `pnpm lint`
+- **WHEN** `scripts/gates/environment/check-runtime-node-sync.ts` runs as part of `pnpm lint`
 - **THEN** `.nvmrc`, `engines.node`, the `FROM node:<major>` tag in
   `Dockerfile.api`, the same tag in `Dockerfile.web`, and the `@types/node`
   major in the workspace catalog all resolve to one major

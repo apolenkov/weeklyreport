@@ -1,29 +1,34 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreBinaries": ["tail"],
-  "ignoreDependencies": ["@playwright/test", "@axe-core/playwright"],
+  "ignoreDependencies": ["@trpc/server", "superjson"],
   "workspaces": {
     ".": {
+      "prisma": {
+        "config": []
+      },
       "entry": [
-        "eslint.config.ts",
         "eslint-config/*.ts",
-        "prisma/*.ts",
-        "scripts/*.{ts,mjs}",
+        "prisma/**/*.ts",
         "e2e/playwright.integration.config.ts",
         "e2e/playwright.seed-profiles.config.ts",
         "e2e/playwright.prodbuild.config.ts",
         "e2e/playwright.csp.config.ts",
         "e2e/sweep/playwright.config.ts",
         "e2e/sweep/render-checklist.ts",
+        "e2e/runtime-sweep/index.ts",
+        "e2e/runtime-sweep/preflight/playwright.config.ts",
+        "e2e/runtime-sweep/preflight/playwright.harness.config.ts",
+        "e2e/runtime-sweep/preflight/playwright.preflight.config.ts",
+        "e2e/runtime-sweep/**/*.test.ts",
         "e2e/**/*.spec.ts",
         "e2e/integration/global-setup.ts",
         "e2e/integration/global-teardown.ts",
         "e2e/seed-profiles/global-setup.ts"
       ],
       "project": [
-        "eslint.config.ts",
         "eslint-config/**/*.ts",
-        "prisma/**/*.ts",
+        "prisma/**/*.{ts,prisma}",
         "scripts/**/*.{ts,mjs}",
         "e2e/**/*.{ts,mjs}"
       ]
@@ -40,8 +45,8 @@
         "src/**/*.test.{ts,tsx}",
         "src/test-utils/**"
       ],
-      "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@axe-core/playwright", "tailwindcss"]
+      "project": ["src/**/*.{ts,tsx,css}"],
+      "ignoreDependencies": ["@axe-core/playwright"]
     },
     "packages/shared": {
       "entry": ["src/**/*.test.ts"],

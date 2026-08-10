@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../../lib/format-date";
+import { formatDateTime } from "../../../shared/lib/format/format-date";
 
 // The guard stays here: `formatDateTime` renders an unparseable value as
 // "Invalid Date", while the log table shows a hyphen for a missing timestamp.

@@ -21,7 +21,7 @@ interface ForeignRisk {
   readonly stageNames: string[];
 }
 
-// Mirrors `deriveEffectiveStageStatus` (apps/web/src/lib/stage-status.ts) with
+// Mirrors `deriveEffectiveStageStatus` (apps/web/src/shared/lib/status/stage-status.ts) with
 // `items: []` — the foreign blocked-item path is intentionally NOT consulted
 // here, so only covering risks colour the stage.
 export function deriveForeignStageStatus(

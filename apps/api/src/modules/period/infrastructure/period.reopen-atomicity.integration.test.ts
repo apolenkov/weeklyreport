@@ -6,9 +6,9 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper";
-import { archivePeriod } from "../../admin/admin-period-lifecycle";
-import { AdminPeriodAlreadyArchivedError } from "../../admin/admin-shared";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
+import { AdminPeriodAlreadyArchivedError } from "../../admin/index.js";
+import { archivePeriod } from "../../admin/test-seams/index.js";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
 import { PeriodScopeError } from "../application/period.service";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 

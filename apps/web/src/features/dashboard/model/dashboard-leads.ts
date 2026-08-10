@@ -9,8 +9,8 @@ import type {
 } from "@customreport/shared";
 import { MS_PER_DAY, shortNameFromName } from "@customreport/shared";
 
-import { toIsoDateString } from "../../../lib/format-date";
-import { initialsFromName } from "../../../lib/user-initials";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
+import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import type { LeadStatus } from "../../report-sections";
 import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";
 import {

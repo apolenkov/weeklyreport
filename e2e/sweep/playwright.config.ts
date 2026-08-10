@@ -1,6 +1,6 @@
 // Side-effect import: ensure loopback health probes bypass any corporate proxy
 // (see e2e/no-proxy-localhost.ts) before the webServer probes run.
-import "../no-proxy-localhost";
+import "../no-proxy-localhost.js";
 
 import * as path from "node:path";
 
@@ -10,10 +10,47 @@ import { defineConfig, devices } from "@playwright/test";
 // anomalies after preserving the complete per-role report.
 // See openspec/specs/behavioral-ui-regression-gate/spec.md.
 
-const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3100);
-const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3101);
+// Keep the UAT pair clear of local Loki (3100) and the integration pair
+// (3102/3105) so the documented observability stack can stay online.
+const WEB_PORT = Number(process.env.SWEEP_WEB_PORT ?? 3110);
+const API_PORT = Number(process.env.SWEEP_API_PORT ?? 3111);
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
+const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL;
+
+if (!E2E_DATABASE_URL) {
+  throw new Error(
+    "E2E_DATABASE_URL must be set to a disposable database for the UAT sweep.",
+  );
+}
+
+const databaseTarget = (databaseUrl: string): string => {
+  try {
+    const parsed = new URL(databaseUrl);
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      throw new TypeError("Unsupported database protocol");
+    }
+    const databaseName = decodeURIComponent(parsed.pathname.slice(1));
+    if (!parsed.hostname || !databaseName || databaseName.includes("/")) {
+      throw new TypeError("Incomplete database target");
+    }
+    const port = parsed.port || "5432";
+    return `${parsed.hostname.toLocaleLowerCase()}:${port}/${databaseName}`;
+  } catch {
+    throw new Error("UAT database URLs must be valid PostgreSQL URLs.");
+  }
+};
+
+const developmentDatabaseUrl = process.env.DATABASE_URL;
+const e2eDatabaseTarget = databaseTarget(E2E_DATABASE_URL);
+if (
+  developmentDatabaseUrl &&
+  e2eDatabaseTarget === databaseTarget(developmentDatabaseUrl)
+) {
+  throw new Error(
+    "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
+  );
+}
 
 // Repo root (e2e/sweep/playwright.config.ts → ../..).
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -60,24 +97,34 @@ export default defineConfig({
       // @swc-node/register, not tsx: esbuild does not implement
       // emitDecoratorMetadata, so Nest cannot resolve type-injected providers
       // and the api never finishes booting.
-      command: `node --env-file=${REPO_ROOT}/.env --import @swc-node/register/esm-register src/main.ts`,
+      command: "node --import @swc-node/register/esm-register src/main.ts",
       cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 240_000,
       env: {
         ...process.env,
+        DATABASE_URL: E2E_DATABASE_URL,
         PORT: String(API_PORT),
         AUTH_DEV_MODE: "true",
+        AUTH_JWT_SECRET: "uat-secret-must-be-32-chars-or-more!!",
         NODE_ENV: "test",
         FRONTEND_URL: WEB_URL,
+        APP_BASE_URL: WEB_URL,
+        PDF_BASE_URL: WEB_URL,
+        PDF_OUTPUT_DIR: path.join(REPO_ROOT, "e2e/sweep/.results/pdfs"),
+        PDF_EXPORT_JWT_SECRET: "uat-pdf-export-secret-32-chars-minimum!!",
         LOG_DIR: ".logs/sweep",
+        LOG_LEVEL: "warn",
+        OTEL_SDK_DISABLED: "true",
+        OTEL_TRACES_SAMPLER_ARG: "0",
+        HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
       },
     },
     {
-      command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+      command: `pnpm --filter @customreport/web exec next dev --webpack -p ${WEB_PORT}`,
       url: WEB_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 240_000,
       env: {
         ...process.env,

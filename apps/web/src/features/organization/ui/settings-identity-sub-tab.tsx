@@ -8,12 +8,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../lib/cache-keys";
-import { useTRPC } from "../../../lib/trpc-context";
+import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   CheckIcon,
   revalidateOrgLandingPage,
-} from "../../../shared/ui/settings-tab-shared";
+} from "../../../shared/ui/settings/settings-tab";
 
 function useSaveOrgIdentity(onSaved: () => void) {
   const trpc = useTRPC();

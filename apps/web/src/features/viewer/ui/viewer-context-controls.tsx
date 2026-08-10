@@ -3,7 +3,7 @@ import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import type { ReportShellScopeValue } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
-import { PeriodNavigator } from "../../period";
+import { PeriodNavigationSkeleton, PeriodNavigator } from "../../period";
 import type { ReportPeriod } from "../../report-sections";
 
 interface ViewerContextControlsProps {
@@ -18,6 +18,7 @@ interface ViewerContextControlsProps {
   readonly slidesHref: string;
   readonly mode: "form" | "slides";
   readonly historyError: boolean;
+  readonly historyLoading: boolean;
 }
 
 // Shared by both viewer render paths (page and slides).
@@ -33,6 +34,7 @@ export function ViewerContextControls({
   slidesHref,
   mode,
   historyError,
+  historyLoading,
 }: ViewerContextControlsProps) {
   return (
     <>
@@ -44,6 +46,8 @@ export function ViewerContextControls({
         >
           Period history unavailable
         </span>
+      ) : historyLoading ? (
+        <PeriodNavigationSkeleton testId="viewer-period-navigation-skeleton" />
       ) : periods.length > 0 ? (
         <PeriodNavigator
           periods={periods}

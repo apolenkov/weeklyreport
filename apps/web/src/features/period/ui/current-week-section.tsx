@@ -2,9 +2,7 @@
 
 import { useRef } from "react";
 
-import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
-import { usePauseReason } from "../../../hooks/use-pause-reason";
-import { useScrollFade } from "../../../hooks/use-scroll-fade";
+import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
 import type { KanbanItem, Product } from "../../report-sections";
 import {
   BoardEmptyState,
@@ -12,6 +10,8 @@ import {
   ItemCard,
   splitItemBoard,
 } from "../../report-sections";
+import { usePauseReason } from "../model/controls/use-pause-reason";
+import { useScrollFade } from "../model/controls/use-scroll-fade";
 import { AddItemButton } from "./current-week-add-button";
 import { CurrentWeekBoardGrid } from "./current-week-board-grid";
 import { CurrentWeekDialogs } from "./current-week-dialogs";

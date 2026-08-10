@@ -7,13 +7,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
 const push = vi.fn();
-let mockSearchParams = new URLSearchParams();
-let mockPathname = "/lead/report";
+const navigationState: { searchParams: URLSearchParams; pathname: string } = {
+  searchParams: new URLSearchParams(),
+  pathname: "/lead/report",
+};
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, push }),
-  useSearchParams: () => mockSearchParams,
-  usePathname: () => mockPathname,
+  useSearchParams: () => navigationState.searchParams,
+  usePathname: () => navigationState.pathname,
 }));
 
 import type { ReportPeriod } from "../../report-sections";
@@ -58,8 +60,8 @@ describe("PeriodNavigator (lead)", () => {
   beforeEach(() => {
     replace.mockReset();
     push.mockReset();
-    mockSearchParams = new URLSearchParams();
-    mockPathname = "/lead/report";
+    navigationState.searchParams = new URLSearchParams();
+    navigationState.pathname = "/lead/report";
   });
 
   describe("a11y — decorative SVG aria-hidden", () => {
@@ -110,7 +112,7 @@ describe("PeriodNavigator (lead)", () => {
     ).toBeInTheDocument();
   });
 
-  it("allows the period trigger to shrink inside a narrow toolbar", () => {
+  it("uses a full compact row without growing across the desktop toolbar", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const navigation = screen.getByRole("group", {
       name: "Period navigation (swipe left/right or use arrows)",
@@ -118,8 +120,9 @@ describe("PeriodNavigator (lead)", () => {
     const triggerContainer = getTrigger().parentElement;
 
     expect(navigation.className).toContain("max-w-full");
-    expect(navigation.className).toContain("flex-1");
+    expect(navigation.className).not.toContain("flex-1");
     expect(navigation.className).toContain("basis-full");
+    expect(navigation.className).toContain("md:basis-auto");
     expect(triggerContainer?.className).toContain("min-w-0");
     expect(triggerContainer?.className).toContain("flex-1");
   });
@@ -266,13 +269,13 @@ describe("PeriodNavigator (lead)", () => {
   });
 
   it("trigger shows the bare date range for a past period (no suffix)", () => {
-    mockPathname = "/lead/report/2026-W16";
+    navigationState.pathname = "/lead/report/2026-W16";
     render(<PeriodNavigator periods={PERIODS} />);
     expect(getTrigger()).toHaveTextContent("Apr 14–20, 2026");
   });
 
   it("trigger shows the Archived badge when the selected period is archived", () => {
-    mockPathname = "/lead/report/2026-W15";
+    navigationState.pathname = "/lead/report/2026-W15";
     render(<PeriodNavigator periods={PERIODS} />);
     const trigger = getTrigger();
     expect(within(trigger).getByText("Archived")).toBeInTheDocument();
@@ -280,13 +283,13 @@ describe("PeriodNavigator (lead)", () => {
   });
 
   it("initial render reflects the path-segment reportId", () => {
-    mockPathname = "/lead/report/2026-W15";
+    navigationState.pathname = "/lead/report/2026-W15";
     render(<PeriodNavigator periods={PERIODS} />);
     expect(getTrigger()).toHaveTextContent("Apr 7–13, 2026");
   });
 
   it("uses currentPeriodId on a viewer pathname for selection and adjacent navigation", () => {
-    mockPathname = "/reports/2026-W16";
+    navigationState.pathname = "/reports/2026-W16";
     render(
       <PeriodNavigator
         periods={PERIODS}
@@ -316,7 +319,7 @@ describe("PeriodNavigator (lead)", () => {
   });
 
   it("resolves the same period when currentPeriodId agrees with the pathname", () => {
-    mockPathname = "/lead/report/2026-W16";
+    navigationState.pathname = "/lead/report/2026-W16";
     render(<PeriodNavigator periods={PERIODS} currentPeriodId="2026-W16" />);
 
     expect(getTrigger()).toHaveTextContent("Apr 14–20, 2026");
@@ -328,8 +331,8 @@ describe("PeriodNavigator (lead)", () => {
   });
 
   it("ignores a stale ?period= query (retired) and defaults to the current period", () => {
-    mockPathname = "/lead/report";
-    mockSearchParams = new URLSearchParams("period=2026-W15");
+    navigationState.pathname = "/lead/report";
+    navigationState.searchParams = new URLSearchParams("period=2026-W15");
     render(<PeriodNavigator periods={PERIODS} />);
     // No path-segment id → defaults to PERIODS[0] (2026-W17, the current week).
     expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
@@ -373,7 +376,7 @@ describe("PeriodNavigator (lead)", () => {
     });
 
     it("Home and End move the active option to the first and last period", () => {
-      mockPathname = "/lead/report/2026-W16";
+      navigationState.pathname = "/lead/report/2026-W16";
       render(<PeriodNavigator periods={PERIODS} />);
       const trigger = getTrigger();
       fireEvent.click(trigger);

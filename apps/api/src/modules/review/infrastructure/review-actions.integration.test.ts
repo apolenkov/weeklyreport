@@ -10,10 +10,12 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
-import { CarryOverPrismaRepository } from "../../carry-over/carry-over.prisma-repository.js";
-import { CarryOverService } from "../../carry-over/carry-over.service.js";
-import { applyRevokeTransition } from "../../report-sections/application/revoke-transition.js";
-import { ReportSectionsPrismaRepository } from "../../report-sections/infrastructure/report-sections.prisma-repository.js";
+import {
+  CarryOverPrismaRepository,
+  CarryOverService,
+} from "../../carry-over/index.js";
+import { applyRevokeTransition } from "../../report-sections/index.js";
+import { ReportSectionsPrismaRepository } from "../../report-sections/test-seams/index.js";
 import { ReviewNotFoundError } from "../application/review.service.js";
 import { ReviewActionsService } from "../application/review-actions.service";
 import { ReviewActionsPrismaRepository } from "./review-actions.prisma-repository";

@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "threshold": 30,
+  "sourceIdentity": {
+    "scripts": {
+      "gitTree": "d32ea7084045800d0d484f13f2022c1103dde7a8",
+      "pathDigest": "24b89ae7c3d07d3946ddb37de7059cbc888416ae123ea1adf3887cde7c1a3f34",
+      "trackedFiles": 72
+    },
+    "e2e/runtime-sweep": {
+      "gitTree": "fb919151857407e2f21a81545faa3f809b44ca8f",
+      "pathDigest": "a86fa7ab0370bb9631179d8b06283132f687fbaff275c72410d0b744a01761aa",
+      "trackedFiles": 287
+    },
+    "prisma": {
+      "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
+      "pathDigest": "b914d4b7a6f140235e6962042313470868353122ef5d248b1893d4aa611d7704",
+      "trackedFiles": 114
+    },
+    "apps/web/src/shared/ui": {
+      "gitTree": "bf167d940dcaa71f63e1823c90ed645781f5adcb",
+      "pathDigest": "9f26e7368cf9480221fbfd08431b26f808a530309a2ebaecbc0bacd2a172f3db",
+      "trackedFiles": 84
+    },
+    "apps/web/src/features/report-pages": {
+      "gitTree": "a040c0a0b2225f0cd275adffa5c3d05b0ae936fd",
+      "pathDigest": "2f7c574f634661984770dc0eae223e17e834190c6e5073352f2a58515704b3c9",
+      "trackedFiles": 98
+    },
+    "apps/web/src/shared/lib": {
+      "gitTree": "e9d57ed0a4ab75be69b7021bf4b9279a72feffbe",
+      "pathDigest": "fcddbeb3df59090556d1610bd4d9239f686103481464c8c244b4f6296740c727",
+      "trackedFiles": 40
+    },
+    "apps/web/src/shared/hooks": {
+      "gitTree": "52f086201c7026faa3cf7469e259526ff06bb944",
+      "pathDigest": "c0d28b5997e6c128858b28a8f6b23865a313c0590d428f7ad640877d2c0193a6",
+      "trackedFiles": 12
+    },
+    "apps/web/src/shared/server": {
+      "gitTree": "a2c30614f1942089b6f7c2a33ad56290d07950eb",
+      "pathDigest": "7f5ba9daceea075c581c6267fcb213ab4850d51139384cfebcd9597b1783f2b6",
+      "trackedFiles": 8
+    },
+    "packages/shared/src/schemas": {
+      "gitTree": "6ea7aa4c8d5023d7e7a10bb394db81f9d86e793e",
+      "pathDigest": "4fa8950f3fdc7d63cfbe95f28794e385998a189d218b4599f7888b3a77d8b953",
+      "trackedFiles": 56
+    },
+    "apps/api/src/modules": {
+      "gitTree": "4ebb5132cde854d204b8bf9381b2e888d463ad69",
+      "pathDigest": "9b1dc1395f1ed5c5e6a08ff6af504b6cdc1bf0015dadc88d23f3b911e1600f95",
+      "trackedFiles": 427
+    }
+  },
+  "directCounts": {
+    ".": 41,
+    "apps/api/src/lib": 31,
+    "apps/api/src/modules/admin": 60,
+    "apps/api/src/modules/reminders": 47,
+    "apps/api/src/modules/report-sections/infrastructure": 42,
+    "apps/web/src/features/admin/ui": 73,
+    "apps/web/src/features/dashboard/ui": 32,
+    "apps/web/src/features/period/ui": 72,
+    "apps/web/src/features/report-sections/model": 47,
+    "apps/web/src/features/report-sections/ui": 35,
+    "apps/web/src/features/review/ui": 33,
+    "apps/web/src/features/slides/model": 34,
+    "apps/web/src/features/slides/ui": 37,
+    "e2e/runtime-sweep/lanes": 32,
+    "e2e/runtime-sweep/replay": 58
+  },
+  "boundedFlatExceptions": [
+    {
+      "directory": ".",
+      "baseline": 41,
+      "reason": "Repository-root ecosystem and toolchain entrypoints require conventional root paths; the count may only shrink."
+    },
+    {
+      "directory": "apps/api/src/lib",
+      "baseline": 31,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/api/src/modules/admin",
+      "baseline": 60,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/api/src/modules/reminders",
+      "baseline": 47,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/api/src/modules/report-sections/infrastructure",
+      "baseline": 42,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/admin/ui",
+      "baseline": 73,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/dashboard/ui",
+      "baseline": 32,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/period/ui",
+      "baseline": 72,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/report-sections/model",
+      "baseline": 47,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/report-sections/ui",
+      "baseline": 35,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/review/ui",
+      "baseline": 33,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/slides/model",
+      "baseline": 34,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/slides/ui",
+      "baseline": 37,
+      "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "e2e/runtime-sweep/lanes",
+      "baseline": 32,
+      "reason": "The runtime lane files share one bounded resource, lease, process, and observability lifecycle; the count may only shrink."
+    },
+    {
+      "directory": "e2e/runtime-sweep/replay",
+      "baseline": 58,
+      "reason": "The reviewed runtime replay concern remains a single cohesive stateful-control boundary; the count may only shrink."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /**
  * Single source of truth for seed identifiers used by integration specs.
  *
- * Re-exports from prisma/seed-constants.ts so spec files NEVER hardcode UUIDs
+ * Re-exports from prisma/seeds/support/seed-constants.ts so spec files NEVER hardcode UUIDs
  * or emails. If the seed changes, this file changes — specs stay stable.
  *
  * Why a relative `../../../prisma/...` path: the integration suite has
@@ -11,7 +11,7 @@
  * least magical choice here.
  */
 
-import { SEED_USERS } from "../../../prisma/seed-constants.js";
+import { SEED_USERS } from "../../../prisma/seeds/support/seed-constants.js";
 export { SEED_USERS };
 
 export {
@@ -23,7 +23,7 @@ export {
   LEAD_SERGEY_ID,
   PUBLISHED_REPORT_ID,
   SEED_PRODUCTS,
-} from "../../../prisma/seed-constants.js";
+} from "../../../prisma/seeds/support/seed-constants.js";
 
 const emailFor = (email: string): string => {
   const user = SEED_USERS.find((candidate) => candidate.email === email);

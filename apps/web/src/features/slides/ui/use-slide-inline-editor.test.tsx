@@ -9,8 +9,8 @@ import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { makeQueryClient } from "../../../lib/query-client";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import {
   makeReportSectionFixture,
@@ -31,36 +31,42 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("../../report-sections/ui/item-edit-dialog", () => ({
-  ItemEditDialog: ({
-    open,
-    item,
-    onSave,
-    onDelete,
-  }: {
-    open: boolean;
-    item: KanbanItem | null;
-    onSave: (item: KanbanItem) => void;
-    onDelete?: () => void;
-  }) =>
-    open && item ? (
-      <div data-testid="item-dialog">
-        <span>{item.text}</span>
-        <button
-          type="button"
-          data-testid="save-item"
-          onClick={() => onSave({ ...item, text: "Edited item" })}
-        >
-          save
-        </button>
-        <button type="button" data-testid="delete-item" onClick={onDelete}>
-          delete
-        </button>
-      </div>
-    ) : null,
-}));
+vi.mock("../../report-sections", async () => {
+  const actual = await vi.importActual<typeof import("../../report-sections")>(
+    "../../report-sections",
+  );
+  return {
+    ...actual,
+    ItemEditDialog: ({
+      open,
+      item,
+      onSave,
+      onDelete,
+    }: {
+      open: boolean;
+      item: KanbanItem | null;
+      onSave: (item: KanbanItem) => void;
+      onDelete?: () => void;
+    }) =>
+      open && item ? (
+        <div data-testid="item-dialog">
+          <span>{item.text}</span>
+          <button
+            type="button"
+            data-testid="save-item"
+            onClick={() => onSave({ ...item, text: "Edited item" })}
+          >
+            save
+          </button>
+          <button type="button" data-testid="delete-item" onClick={onDelete}>
+            delete
+          </button>
+        </div>
+      ) : null,
+  };
+});
 
-vi.mock("../../review/ui/risk-edit-dialog", () => ({
+vi.mock("../../review", () => ({
   RiskEditDialog: ({
     open,
     risk,
@@ -84,7 +90,7 @@ vi.mock("../../review/ui/risk-edit-dialog", () => ({
     ) : null,
 }));
 
-vi.mock("../../period/ui/decision-edit-dialog", () => ({
+vi.mock("../../period", () => ({
   DecisionEditDialog: ({
     open,
     decision,
@@ -108,7 +114,7 @@ vi.mock("../../period/ui/decision-edit-dialog", () => ({
     ) : null,
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     title,

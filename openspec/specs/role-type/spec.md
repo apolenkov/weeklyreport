@@ -71,7 +71,7 @@ guard parity with `sessionRoleSchema.options` is pinned by tests instead.
 ### Requirement: Role labels have one presentation source
 
 Every UI surface that renders a human-readable role name MUST look it up
-from `ROLE_LABEL` (`packages/shared/src/schemas/auth.ts`, re-exported at
+from `ROLE_LABEL` (`packages/shared/src/schemas/auth/auth.ts`, re-exported at
 `apps/web/src/app/login-page-roles.ts`) rather than declaring its own
 role→label mapping or rendering the raw role token styled to look like a
 label (e.g. CSS `text-transform`/`capitalize` on the literal value).

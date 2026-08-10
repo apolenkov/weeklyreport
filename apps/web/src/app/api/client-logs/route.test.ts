@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/server/api-url", () => ({
+vi.mock("../../../shared/server/transport/api-url", () => ({
   requireApiUrl: () => "http://api.test:3002",
 }));
 
-import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../lib/server/client-logs-policy";
+import { CLIENT_LOGS_MAX_BODY_BYTES } from "../../../features/telemetry/server";
 import { POST } from "./route";
 
 function makeRequest(

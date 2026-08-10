@@ -5,7 +5,7 @@
 import type { DbRole, RiskSeverity } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
-import { toIsoDateString } from "../../../lib/format-date";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import {
   applyBlockedRiskOverlay,
   type ItemWorkflowStatus,

@@ -6,7 +6,7 @@ import type { Role } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PrintRouteContext } from "../../../lib/server/get-print-route-context";
+import type { PrintRouteContext } from "../../../features/pdf-export/server";
 
 const redirectMock = vi.hoisted(() =>
   vi.fn((url: string) => {
@@ -20,7 +20,7 @@ const getPrintRouteContextMock = vi.hoisted(() =>
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
-vi.mock("../../../lib/server/get-print-route-context", () => ({
+vi.mock("../../../features/pdf-export/server", () => ({
   getPrintRouteContext: getPrintRouteContextMock,
 }));
 vi.mock("./print-report-template", () => ({

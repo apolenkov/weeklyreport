@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { WeeklyReportSkeleton } from "../../../../features/report-pages";
-import { ViewerReportShell } from "../../../../features/viewer/ui/viewer-report-shell";
+import { ViewerReportShell } from "../../../../features/viewer";
 
 interface Props {
   params: Promise<{ reportId: string }>;
@@ -24,10 +24,13 @@ export default async function PublishedReportPage({
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-        <Suspense fallback={<WeeklyReportSkeleton />}>
+        <Suspense
+          fallback={<WeeklyReportSkeleton mode={mode} audience="viewer" />}
+        >
           <ViewerReportShell
             reportId={reportId}
             mode={mode}

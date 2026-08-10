@@ -14,8 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SessionContext,
   type SessionState,
-} from "../../../lib/session-provider";
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+} from "../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import {
@@ -50,7 +50,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
-vi.mock("../../../lib/use-query-error-handler", () => ({
+vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
@@ -78,44 +78,50 @@ vi.mock("./status-slide-deck", () => ({
   ),
 }));
 
-vi.mock("../../report-sections/ui/item-edit-dialog", () => ({
-  ItemEditDialog: ({
-    open,
-    item,
-    onSave,
-    onDelete,
-  }: {
-    open: boolean;
-    item: KanbanItem | null;
-    onSave: (item: KanbanItem) => void;
-    onDelete?: () => void;
-  }) =>
-    open && item ? (
-      <div data-testid="item-dialog">
-        <span>{item.text}</span>
-        <button
-          type="button"
-          data-testid="save-item"
-          onClick={() => onSave({ ...item, text: "Edited from slide" })}
-        >
-          save
-        </button>
-        <button type="button" data-testid="delete-item" onClick={onDelete}>
-          delete
-        </button>
-      </div>
-    ) : null,
-}));
+vi.mock("../../report-sections", async () => {
+  const actual = await vi.importActual<typeof import("../../report-sections")>(
+    "../../report-sections",
+  );
+  return {
+    ...actual,
+    ItemEditDialog: ({
+      open,
+      item,
+      onSave,
+      onDelete,
+    }: {
+      open: boolean;
+      item: KanbanItem | null;
+      onSave: (item: KanbanItem) => void;
+      onDelete?: () => void;
+    }) =>
+      open && item ? (
+        <div data-testid="item-dialog">
+          <span>{item.text}</span>
+          <button
+            type="button"
+            data-testid="save-item"
+            onClick={() => onSave({ ...item, text: "Edited from slide" })}
+          >
+            save
+          </button>
+          <button type="button" data-testid="delete-item" onClick={onDelete}>
+            delete
+          </button>
+        </div>
+      ) : null,
+  };
+});
 
-vi.mock("../../review/ui/risk-edit-dialog", () => ({
+vi.mock("../../review", () => ({
   RiskEditDialog: () => null,
 }));
 
-vi.mock("../../period/ui/decision-edit-dialog", () => ({
+vi.mock("../../period", () => ({
   DecisionEditDialog: () => null,
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     title,
@@ -239,7 +245,6 @@ function renderHarness({
       }),
     },
     { path: ["leadForm", "crossAuthors"], query: [] },
-    { path: ["leadForm", "crossAuthorContent"], query: [] },
   ]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -259,7 +264,11 @@ function renderHarness({
 
   render(
     <Wrapper>
-      <LeadSlidesClient initialReportId={REPORT_ID} />
+      <LeadSlidesClient
+        initialReportId={REPORT_ID}
+        foreignContent={undefined}
+        foreignContentPending={false}
+      />
     </Wrapper>,
   );
   return { captured, queryClient };

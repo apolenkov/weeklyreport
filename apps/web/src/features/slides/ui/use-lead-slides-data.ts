@@ -3,11 +3,13 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { useMemo } from "react";
 
-import { mapLeadFormData } from "../../report-sections";
+import {
+  type CrossAuthorContentRow,
+  mapLeadFormData,
+} from "../../report-sections";
 import { type SectionSlideModel } from "../model/section-slide-contracts";
 import type { LeadSlideFormData } from "./lead-slide-form-data";
 import {
-  useCrossAuthorContentEviction,
   useLeadDeckPeriod,
   useLeadDeckRequest,
   useLeadDeckSlides,
@@ -16,6 +18,8 @@ import {
 
 interface UseLeadSlidesDataArgs {
   readonly initialReportId: string | null;
+  readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
+  readonly foreignContentPending: boolean;
   readonly visibilityMode: "mine" | "everyone";
   readonly visibilityHydrated: boolean;
 }
@@ -65,6 +69,8 @@ function useLeadSlideFormData(
 
 export function useLeadSlidesData({
   initialReportId,
+  foreignContent,
+  foreignContentPending,
   visibilityMode,
   visibilityHydrated,
 }: UseLeadSlidesDataArgs): LeadSlidesData {
@@ -72,22 +78,12 @@ export function useLeadSlidesData({
   const period = useLeadDeckPeriod(request.requestedReportId);
   const { targetReportId } = period;
 
-  const queries = useLeadSlideSectionQueries(
-    request,
-    targetReportId,
-    visibilityHydrated,
-  );
-  useCrossAuthorContentEviction({
-    isEveryone: request.isEveryone,
-    visibilityHydrated,
-    targetReportId,
-    currentUserId: request.currentUserId,
-  });
+  const queries = useLeadSlideSectionQueries(request, targetReportId);
 
   const slides = useLeadDeckSlides({
     byPeriodData: queries.byPeriodQ.data,
     crossAuthors: queries.crossAuthorsQ.data,
-    crossAuthorContent: queries.crossAuthorContentQ.data,
+    foreignContent,
     isOwnDeck: request.isOwnDeck,
     isEveryone: request.isEveryone,
     visibilityHydrated,
@@ -97,7 +93,8 @@ export function useLeadSlidesData({
   return {
     inReportMode: request.inReportMode,
     targetReportId,
-    isLoading: period.isLoading || queries.byPeriodQ.isLoading,
+    isLoading:
+      period.isLoading || queries.byPeriodQ.isLoading || foreignContentPending,
     isError: period.isError || queries.byPeriodQ.isError,
     slides,
     section: queries.byPeriodQ.data?.section ?? null,

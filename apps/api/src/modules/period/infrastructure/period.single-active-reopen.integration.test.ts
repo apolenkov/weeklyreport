@@ -7,7 +7,7 @@ import {
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper";
-import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository";
+import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
 import {
   type AnalyticsCacheInvalidator,
   PeriodScopeError,

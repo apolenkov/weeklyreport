@@ -42,9 +42,6 @@ describe("VersionComingSoonControl", () => {
     fireEvent.focus(screen.getByTestId("version-coming-soon"));
 
     await screen.findByRole("tooltip");
-    // The visible amber badge lives in the Radix content; the sr-only
-    // `role="tooltip"` description is intentionally blanked so the control's
-    // own aria-label is the single coming-soon source (no double-announce).
     const content = document.querySelector('[data-slot="tooltip-content"]');
     expect(content?.textContent).toMatch(/coming soon/i);
   });

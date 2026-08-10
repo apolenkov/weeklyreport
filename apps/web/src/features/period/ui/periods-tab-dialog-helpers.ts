@@ -1,6 +1,6 @@
 import { DAYS_PER_WEEK } from "@customreport/shared";
 
-import { toIsoDateString } from "../../../lib/format-date";
+import { toIsoDateString } from "../../../shared/lib/format/format-date";
 
 const ISO_DATETIME_LOCAL_LENGTH = 16;
 const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;

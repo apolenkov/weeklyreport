@@ -2,8 +2,8 @@
 
 import { Fragment } from "react";
 
-import { useEditableListDialog } from "../../../hooks/use-editable-list-dialog";
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { useEditableListDialog } from "../../../shared/hooks/dialogs/use-editable-list-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import type {
   DecisionEntry,
   ParentActivityOption,

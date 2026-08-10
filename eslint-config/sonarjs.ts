@@ -31,7 +31,7 @@ export const sonarjsConfig: Linter.Config = {
   rules: {
     ...sonarjsRecommended.rules,
     // — PRUNE (permanent off, with reason) —
-    "sonarjs/todo-tag": "off", // fights the repo-mandated TODO(<ref>) deferred-feature convention (CLAUDE.md)
+    "sonarjs/todo-tag": "off", // fights the repo-mandated TODO(<ref>) deferred-feature convention (AGENTS.md)
     "sonarjs/no-unused-vars": "off", // duplicate of unused-imports/no-unused-vars (already error)
     "sonarjs/deprecation": "off", // duplicate of @typescript-eslint/no-deprecated (already error)
     "sonarjs/prefer-read-only-props": "off", // aggressive React-prop-immutability churn (49 sites), suggestion-only, not standard practice

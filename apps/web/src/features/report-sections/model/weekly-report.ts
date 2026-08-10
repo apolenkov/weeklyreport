@@ -5,8 +5,8 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
-} from "../../../lib/format-date";
-import { statusLabel } from "../../../lib/status-presentation";
+} from "../../../shared/lib/format/format-date";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
   buildProjectNameMap,

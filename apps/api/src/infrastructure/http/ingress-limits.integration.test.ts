@@ -94,7 +94,7 @@ async function floodPost(
   return responses;
 }
 
-function buildClientLogsApp(): express.Express {
+async function buildClientLogsApp(): Promise<express.Express> {
   // Mirror main.ts via mountClientLogsIngress so limiter→parser→handler order
   // and the byte limit cannot drift here without failing in production too.
   const app = express();
@@ -102,7 +102,7 @@ function buildClientLogsApp(): express.Express {
   app.set("trust proxy", 1);
   // Production-budget run (isTest=false) needs a store now that a missing one
   // fails loud; the fake redis backs the real RedisStore without a live Redis.
-  const { clientLogsLimiter } = createRateLimits({
+  const { clientLogsLimiter } = await createRateLimits({
     logger: silentLogger,
     isTest: false,
     redis: createFakeRedisCall() as unknown as Redis,
@@ -122,7 +122,7 @@ function buildClientLogsApp(): express.Express {
 describe("public ingress limits — /api/client-logs flood", () => {
   it("accepts traffic under the limit and returns 429 over it", async () => {
     // Production budget (isTest=false) is 60/min/IP; fire one past it.
-    const server = await listen(buildClientLogsApp());
+    const server = await listen(await buildClientLogsApp());
     const { port } = server.address() as AddressInfo;
 
     try {

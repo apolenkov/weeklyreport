@@ -26,28 +26,11 @@ const apiModules = [
   "weekly-report",
 ] as const;
 
-// Loose cross-module files that still live at modules/ ROOT rather than inside a
-// module — published-report-snapshot.ts and report-escalations.ts. Until they
-// relocate into an owning module (a later slice), the modules that import them
-// keep a path exception here, keyed by CONSUMING module. This is the ONLY
-// path-based cross-module exception left: every module→module edge now goes
-// through a sibling index.ts facade barrel (generated below), and any deep
-// internal path errors. (published-report-snapshot.ts itself imports
-// report-sections, but it is not under modules/M/** so no zone targets it.)
-const apiCrossModuleLooseFiles: Record<string, readonly string[]> = {
-  archive: ["published-report-snapshot.ts"],
-  "pdf-export": ["published-report-snapshot.ts"],
-  period: ["published-report-snapshot.ts"],
-  publication: ["published-report-snapshot.ts"],
-  "weekly-report": ["published-report-snapshot.ts", "report-escalations.ts"],
-};
-
 // One zone per module: files under modules/M may import from modules/ ONLY within
-// their own module (except: [M]), through a sibling's index.ts facade barrel, or
-// via a still-loose root file the module already depends on. Any other sibling
-// internal path errors. The barrel allowlist is GENERATED (every sibling's
-// index.ts), so a new module→module edge is legal the moment it targets the
-// facade — no per-edge grandfathering to maintain.
+// their own module (except: [M]), or through a sibling's index.ts facade barrel.
+// Any other sibling internal path errors. The barrel allowlist is GENERATED
+// (every sibling's index.ts), so a new module→module edge is legal the moment it
+// targets the facade — no per-edge grandfathering to maintain.
 const apiCrossModuleZones = apiModules.map((moduleName) => ({
   target: `${apiModulesDir}/${moduleName}`,
   from: apiModulesDir,
@@ -56,7 +39,6 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
     ...apiModules
       .filter((sibling) => sibling !== moduleName)
       .map((sibling) => `${sibling}/index.ts`),
-    ...(apiCrossModuleLooseFiles[moduleName] ?? []),
   ],
   message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture).`,
 }));
@@ -80,7 +62,7 @@ const apiInfrastructureModuleZones = [
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice or through a sibling's index.ts barrel. ALL populated
+// within their own slice or through a sibling's public index.ts/client.ts entrypoint. ALL populated
 // slices are enforced (boundaries flip #33); any slice-to-slice coupling not
 // through a barrel is a lint error.
 const webFeaturesDir = "apps/web/src/features";
@@ -106,14 +88,14 @@ const webCrossSliceZones = webSlices.map((sliceName) => ({
     sliceName,
     ...webSlices
       .filter((sibling) => sibling !== sliceName)
-      .map((sibling) => `${sibling}/index.ts`),
+      .flatMap((sibling) => [`${sibling}/index.ts`, `${sibling}/client.ts`]),
   ],
-  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its index.ts barrel (restructure-directory-architecture).`,
+  message: `web slice boundary: '${sliceName}' may reach a sibling slice only through its public index.ts or client.ts entrypoint (restructure-directory-architecture).`,
 }));
 
 export const boundaryConfig: Linter.Config[] = [
   // import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
-  // client legitimately needs the AppRouter *type* (apps/web/src/lib/trpc.ts), so
+  // client legitimately needs the AppRouter *type* (apps/web/src/shared/lib/trpc/trpc.ts), so
   // type-only imports are allowed via allowTypeImports; a VALUE import would pull
   // the Nest/Prisma server graph into the browser bundle. Currently 0 violations.
   {

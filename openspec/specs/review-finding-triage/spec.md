@@ -33,7 +33,7 @@ change: 513 minors across 422 good files, 16 named classes plus a residual
 - **WHEN** a class is ruled **ratify-as-norm**
 - **THEN** its findings are closed as by-design, a reject-list entry is added
   to the mass-review rubric so the pattern is not re-flagged on the next
-  whole-repo review, and any contradicting rule in `CLAUDE.md` /
+  whole-repo review, and any contradicting rule in `AGENTS.md` /
   `docs/exemplary-code-standard.md` is reconciled in the same change
 
 #### Scenario: A file is promoted to exemplary

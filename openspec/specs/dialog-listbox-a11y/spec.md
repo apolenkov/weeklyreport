@@ -9,10 +9,10 @@ Keep hand-rolled dialogs, the period listbox, and popup/expander controls access
 ### Requirement: Hand-rolled confirmation dialogs MUST share one focus-trap/restore primitive
 
 Every hand-rolled (non-Radix) confirmation dialog SHALL integrate with the
-shared `useDialogFocus` primitive (`apps/web/src/lib/use-dialog-focus.ts`)
+shared `useDialogFocus` primitive (`apps/web/src/shared/hooks/dialogs/use-dialog-focus.ts`)
 instead of re-implementing Escape handling, Tab trapping, or focus restore
 per component. This governs `ConfirmDeleteDialog`
-(`apps/web/src/shared/ui/confirm-delete-dialog.tsx`), the inline
+(`apps/web/src/shared/ui/dialogs/confirm-delete-dialog.tsx`), the inline
 delete-confirmation modal in `UsersTab`
 (`apps/web/src/features/admin/ui/users-tab.tsx`),
 `FillFromConfirmDialog`

@@ -7,8 +7,8 @@ import {
   useEffect,
 } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
-import { useDismissOnOutsidePointer } from "../../../lib/use-dismiss-on-outside-pointer";
+import { useDismissOnOutsidePointer } from "../../../shared/hooks/browser/use-dismiss-on-outside-pointer";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import {
   ANCHORED_PANEL_GAP_PX,
   useAnchoredPanelPosition,

@@ -11,18 +11,29 @@ const FIXTURE_PATH = resolve(
   REPOSITORY_ROOT,
   "apps/api/src/infrastructure/module-public-api-boundary.fixture.ts",
 );
+const MODULE_FIXTURE_PATH = resolve(
+  REPOSITORY_ROOT,
+  "apps/api/src/modules/weekly-report/weekly-report-portfolio.ts",
+);
 const PUBLIC_ENTRYPOINT = "../modules/admin/index.js";
 const INTERNAL_MODULE_PATH = "../modules/admin/snapshot-admin.service.js";
+const REPORT_SECTIONS_PUBLIC_ENTRYPOINT = "../report-sections/index.js";
+const REPORT_SECTIONS_INTERNAL_PATH =
+  "../report-sections/infrastructure/published-report-snapshot.js";
+const MODULE_BOUNDARY_SOURCE = `import type { buildAssembledReportFromPrismaRow } from "${REPORT_SECTIONS_PUBLIC_ENTRYPOINT}";
 
-function runEslint(source?: string): Promise<string> {
+export type ModuleBoundaryFixture = typeof buildAssembledReportFromPrismaRow;
+`;
+
+function runEslint(source?: string, filename = FIXTURE_PATH): Promise<string> {
   return new Promise((resolveOutput, reject) => {
     const child = execFile(
       process.execPath,
       [
         resolve(REPOSITORY_ROOT, "node_modules/eslint/bin/eslint.js"),
         ...(source === undefined
-          ? [FIXTURE_PATH]
-          : ["--stdin", "--stdin-filename", FIXTURE_PATH]),
+          ? [filename]
+          : ["--stdin", "--stdin-filename", filename]),
         "--format",
         "json",
       ],
@@ -96,6 +107,35 @@ describe("API module public boundary", () => {
           ruleId: "import-x/no-restricted-paths",
           message: expect.stringContaining(
             "through an owning public entrypoint",
+          ) as unknown as string,
+        }),
+      ]);
+    },
+    ESLINT_RUN_BUDGET_MS,
+  );
+
+  it(
+    "allows report-sections facade imports but rejects projection internals",
+    async () => {
+      const publicMessages = parseMessages(
+        await runEslint(MODULE_BOUNDARY_SOURCE, MODULE_FIXTURE_PATH),
+      );
+      expect(publicMessages).toEqual([]);
+
+      const internalMessages = parseMessages(
+        await runEslint(
+          MODULE_BOUNDARY_SOURCE.replace(
+            REPORT_SECTIONS_PUBLIC_ENTRYPOINT,
+            REPORT_SECTIONS_INTERNAL_PATH,
+          ),
+          MODULE_FIXTURE_PATH,
+        ),
+      );
+      expect(internalMessages).toEqual([
+        expect.objectContaining({
+          ruleId: "import-x/no-restricted-paths",
+          message: expect.stringContaining(
+            "api module boundary",
           ) as unknown as string,
         }),
       ]);

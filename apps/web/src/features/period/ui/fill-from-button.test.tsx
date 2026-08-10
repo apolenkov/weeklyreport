@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -80,6 +80,10 @@ describe("FillFromButton", () => {
     });
     fireEvent.click(chevron);
 
+    const panel = screen.getByRole("region", { name: "Past reports" });
+    expect(chevron).toHaveAttribute("aria-expanded", "true");
+    expect(chevron).toHaveAttribute("aria-controls", panel.id);
+
     expect(
       screen.getByText("No submitted past reports found."),
     ).toBeInTheDocument();
@@ -89,6 +93,17 @@ describe("FillFromButton", () => {
       name: "Fill from most recent submitted period",
     });
     expect(fillButton).toBeDisabled();
+  });
+
+  it("exposes the closed picker state without rendering an orphan region", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).not.toHaveAttribute("aria-controls");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
   it("uses the most recent submitted period when input order is unsorted", () => {
@@ -429,7 +444,7 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
     expect(reopenAndReadSearch()).toBe("");
   });
 
-  it("clears the search on period selection", () => {
+  it("clears the search on period selection", async () => {
     render(<FillFromButton periods={[week16, week15]} />);
     openDropdown();
     fireEvent.change(screen.getByPlaceholderText("Search reports…"), {
@@ -437,6 +452,10 @@ describe("FillFromButton — dropdown search resets on every close path", () => 
     });
 
     fireEvent.click(screen.getByText(/Week 15/));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
 
     expect(reopenAndReadSearch()).toBe("");
   });
