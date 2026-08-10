@@ -20,7 +20,9 @@ jobs:
   quality:
     name: Lint, Typecheck & Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The complete quality gate currently takes more than 15 minutes on a
+    # cold hosted runner. Keep enough headroom for cleanup after the unit suite.
+    timeout-minutes: 30
 
     env:
       # Prisma resolves the datasource before generate, so this parseable URL
