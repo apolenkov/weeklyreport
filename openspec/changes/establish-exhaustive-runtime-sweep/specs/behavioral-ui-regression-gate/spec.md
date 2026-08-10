@@ -15,7 +15,7 @@ owning cell for any reported functional, accessibility, or visual anomaly. A
 role passes only when all of its declared cells are terminal and clean; the
 final campaign gate remains blocking.
 
-#### Scenario: Report names the anomaly with its complete context
+#### Scenario: Report names the anomaly with its context
 
 - **WHEN** a role sweep finds a console error, broken flow, axe violation, or
   visual mismatch
@@ -23,7 +23,7 @@ final campaign gate remains blocking.
   anomaly kind, rule, and offending target
 - **AND** the role cell fails after the evidence is written
 
-#### Scenario: Within-route exhaustiveness is measured at run time
+#### Scenario: Within-route exhaustiveness is the Driver's run-time job
 
 - **WHEN** the Driver runs a role's scenario on a route
 - **THEN** it inventories every reachable interactive element and transition
@@ -33,7 +33,7 @@ final campaign gate remains blocking.
   function, accessibility, or visual oracle evidence, or an allowed typed
   `not-exercised` disposition
 
-#### Scenario: A boot or load failure is surfaced loudly
+#### Scenario: A boot/load failure is surfaced loudly
 
 - **WHEN** a route fails to load, the app fails to boot, or a required state
   cannot be established
@@ -41,7 +41,7 @@ final campaign gate remains blocking.
   and its source SHA
 - **AND** the role test fails after preserving the report and ledger
 
-#### Scenario: Blocking verdict covers all required dimensions
+#### Scenario: Blocking verdict supersedes phase-1 reporting
 
 - **WHEN** the exhaustive runtime campaign evaluates a role
 - **THEN** console, load, network, page, functional, accessibility, and visual
@@ -49,7 +49,7 @@ final campaign gate remains blocking.
 - **AND** the campaign does not add a frozen per-element BDD suite or claim
   coverage for excluded browsers or viewports
 
-#### Scenario: A clean role passes only after all declared cells pass
+#### Scenario: A clean role passes
 
 - **WHEN** every declared cell for a role has terminal `pass` evidence and no
   unresolved or confirmed finding remains
