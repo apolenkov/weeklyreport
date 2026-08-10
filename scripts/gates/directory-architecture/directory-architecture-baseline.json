@@ -54,7 +54,7 @@
     }
   },
   "directCounts": {
-    ".": 42,
+    ".": 41,
     "apps/api/src/lib": 31,
     "apps/api/src/modules/admin": 60,
     "apps/api/src/modules/reminders": 47,
@@ -73,7 +73,7 @@
   "boundedFlatExceptions": [
     {
       "directory": ".",
-      "baseline": 42,
+      "baseline": 41,
       "reason": "Repository-root ecosystem and toolchain entrypoints require conventional root paths; the count may only shrink."
     },
     {
