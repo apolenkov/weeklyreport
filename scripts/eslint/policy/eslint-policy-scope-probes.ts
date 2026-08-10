@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { ESLint, type Linter } from "eslint";
+import { ESLint, Linter } from "eslint";
 
 import { plantedScopeProbes } from "./eslint-policy-scope-cases.ts";
 import { parseScopeLedger } from "./eslint-policy-scope-ledger-schema.ts";
@@ -9,7 +9,9 @@ interface EffectiveConfig {
   readonly languageOptions?: {
     readonly parserOptions?: Record<string, unknown>;
   };
+  readonly plugins?: Linter.Config["plugins"];
   readonly rules?: Partial<Record<string, Linter.RuleEntry>>;
+  readonly settings?: Linter.Config["settings"];
 }
 
 const ledger = parseScopeLedger(
@@ -23,19 +25,6 @@ const configModule = (await import(configModulePath)) as {
 };
 const config = configModule.default;
 const eslint = new ESLint({ cwd: process.cwd() });
-// Planted snippets exercise one explicitly named policy rule. Import sorting
-// is unrelated and can combine the snippet SourceCode with project-service
-// comments from the real representative path on Linux, producing invalid
-// ranges inside the third-party rule.
-const probeEslint = new ESLint({
-  cwd: process.cwd(),
-  overrideConfig: {
-    rules: {
-      "simple-import-sort/exports": "off",
-      "simple-import-sort/imports": "off",
-    },
-  },
-});
 const failures: string[] = [];
 const effectiveConfig = async (
   path: string,
@@ -50,6 +39,53 @@ const severity = (value: Linter.RuleEntry | undefined): string => {
   if (raw === 0 || raw === "off") return "off";
   if (raw === 1 || raw === "warn") return "warn";
   return "error";
+};
+
+// Preserve the path's real parser, plugin, settings, and rule options, but run
+// only the rule the planted snippet is designed to prove. Project-backed
+// parsers otherwise combine the virtual snippet with the representative file's
+// cached AST on Linux, and unrelated rules receive impossible source ranges.
+const reportsProbeRule = async (
+  code: string,
+  path: string,
+  rule: string,
+): Promise<boolean> => {
+  const effective = await effectiveConfig(path);
+  const ruleEntry = effective?.rules?.[rule];
+  if (severity(ruleEntry) === "absent" || severity(ruleEntry) === "off")
+    return false;
+
+  const parserOptions = effective?.languageOptions?.parserOptions ?? {};
+  const {
+    programs: _programs,
+    project: _project,
+    projectService: _projectService,
+    ...syntaxParserOptions
+  } = parserOptions;
+  const isolatedConfig: Linter.Config = {
+    files: ["**/*.{js,jsx,mjs,ts,tsx}"],
+    ...(effective?.languageOptions === undefined
+      ? {}
+      : {
+          languageOptions: {
+            ...effective.languageOptions,
+            parserOptions: {
+              ...syntaxParserOptions,
+              project: false,
+              projectService: false,
+            },
+          },
+        }),
+    ...(effective?.plugins === undefined ? {} : { plugins: effective.plugins }),
+    ...(effective?.settings === undefined
+      ? {}
+      : { settings: effective.settings }),
+    rules: { [rule]: ruleEntry },
+  };
+  const probeLinter = new Linter({ configType: "flat" });
+  return probeLinter
+    .verify(code, [isolatedConfig], { filename: path })
+    .some((message) => message.ruleId === rule);
 };
 
 const stable = (value: unknown): string =>
@@ -166,10 +202,7 @@ for (const probe of plantedScopeProbes) {
     ["positive", probe.positive, probe.positiveReports],
     ["negative", probe.negative, probe.negativeReports],
   ] as const) {
-    const [result] = await probeEslint.lintText(probe.code, { filePath: path });
-    const reports = (result?.messages ?? []).some(
-      (message) => message.ruleId === probe.rule,
-    );
+    const reports = await reportsProbeRule(probe.code, path, probe.rule);
     if (reports !== expected) {
       failures.push(
         `${probe.id}: ${side} ${probe.rule} expectedReports=${expected} actual=${reports}`,
