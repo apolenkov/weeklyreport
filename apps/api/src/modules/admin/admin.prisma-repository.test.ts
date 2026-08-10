@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import type { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import {
   AdminGroupProductConflictError,

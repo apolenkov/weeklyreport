@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SessionState } from "../../../lib/session-provider";
+import type { SessionState } from "../../../shared/lib/auth/session-provider";
 import ReportsPage from "./page";
 
 const navigationMock = vi.hoisted(() => ({
@@ -36,7 +36,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn() },
 }));
 
-vi.mock("../../../shared/ui/search-input", () => ({
+vi.mock("../../../shared/ui/search/search-input", () => ({
   SearchInput: ({
     placeholder,
     scope,
@@ -52,11 +52,11 @@ vi.mock("../../../shared/ui/search-input", () => ({
   ),
 }));
 
-vi.mock("../../../lib/session-provider", () => ({
+vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: (): SessionState => sessionMock() as SessionState,
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       myHistory: {

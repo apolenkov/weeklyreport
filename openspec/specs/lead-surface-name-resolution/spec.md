@@ -17,7 +17,7 @@ only when the referenced project id is absent from the entire resolved name
 source — never for a project the system can name.
 
 The consumer surface is the lead-surface mappers in
-`apps/web/src/lib/mappers/lead-form.ts` (`mapLeadRisks`, `mapLeadDecisions`,
+`apps/web/src/features/report-sections/model/lead-form.ts` (`mapLeadRisks`, `mapLeadDecisions`,
 `mapLeadItems`, `mapLeadPriorities`), fed by the
 `reports.getActive` / `leadForm.byPeriod` read model from
 `apps/api/src/modules/report-sections/`.

@@ -15,8 +15,8 @@ import {
   buildAssembledReportFromPrismaRow,
   filterSnapshotSections,
   parsePublishedSnapshot,
-} from "../published-report-snapshot.js";
-import { reportSectionFullInclude } from "../report-sections/index.js";
+  reportSectionFullInclude,
+} from "../report-sections/index.js";
 import type {
   ArchiveDetailRead,
   ArchiveReadFilter,

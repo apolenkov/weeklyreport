@@ -19,6 +19,7 @@ export default async function AuthErrorPage({ searchParams }: Props) {
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="flex min-h-svh items-center justify-center bg-[var(--color-background)]"
     >
       <div className="w-full max-w-sm space-y-6 text-center">

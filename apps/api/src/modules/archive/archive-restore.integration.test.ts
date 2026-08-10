@@ -7,9 +7,8 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
-import { AdminPrismaRepository } from "../admin/admin.prisma-repository.js";
-import { PeriodAdminService } from "../admin/period-admin.service.js";
-import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
+import { AdminPrismaRepository, PeriodAdminService } from "../admin/index.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/index.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 
 // The pair behind the head's Archive / Restore toolbar controls: the same

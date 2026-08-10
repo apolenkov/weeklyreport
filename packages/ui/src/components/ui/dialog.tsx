@@ -4,7 +4,7 @@ import { Button } from "@customreport/ui/components/ui/button";
 import { cn } from "@customreport/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import type * as React from "react";
+import * as React from "react";
 
 /** Owns open state shared by a dialog trigger and content panel. */
 function Dialog({
@@ -34,16 +34,22 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-/**
- * Full-screen dimming overlay behind dialog content.
- */
+type DialogOverlayProps = React.ComponentProps<
+  typeof DialogPrimitive.Overlay
+> & {
+  readonly testId?: string | undefined;
+};
+
+/** Full-screen dimming overlay behind dialog content. */
 function DialogOverlay({
   className,
+  testId,
   ...props
-}: Readonly<React.ComponentProps<typeof DialogPrimitive.Overlay>>) {
+}: Readonly<DialogOverlayProps>) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
+      data-testid={testId}
       className={cn(
         "fixed inset-0 z-(--layer-overlay) bg-overlay data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
         className,
@@ -53,28 +59,67 @@ function DialogOverlay({
   );
 }
 
+type DialogContentProps = React.ComponentProps<
+  typeof DialogPrimitive.Content
+> & {
+  readonly showCloseButton?: boolean | undefined;
+  readonly overlayClassName?: string | undefined;
+  readonly overlayTestId?: string | undefined;
+  readonly initialFocusRef?: React.RefObject<HTMLElement | null> | undefined;
+  readonly restoreFocusRef?: React.RefObject<HTMLElement | null> | undefined;
+  readonly restoreFocusToPrevious?: boolean | undefined;
+};
+
+const focusedElement = (): HTMLElement | null =>
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
 /**
- * Dialog panel with portal + overlay; optional corner close control (default on).
+ * Dialog panel with owned portal, overlay, focus targets, and optional close control.
  */
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayClassName,
+  overlayTestId,
+  initialFocusRef,
+  restoreFocusRef,
+  restoreFocusToPrevious = false,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
-}: Readonly<
-  React.ComponentProps<typeof DialogPrimitive.Content> & {
-    showCloseButton?: boolean;
-  }
->) {
+}: Readonly<DialogContentProps>) {
+  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} testId={overlayTestId} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-(--layer-overlay) grid w-full max-w-[calc(100%-var(--spacing)*8)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className,
         )}
+        onOpenAutoFocus={(event) => {
+          previousFocusRef.current = restoreFocusToPrevious
+            ? focusedElement()
+            : null;
+          onOpenAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+          if (!initialFocusRef?.current) return;
+          event.preventDefault();
+          initialFocusRef.current.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+          const target =
+            restoreFocusRef?.current ??
+            (restoreFocusToPrevious ? previousFocusRef.current : null);
+          if (!target) return;
+          event.preventDefault();
+          target.focus();
+        }}
         {...props}
       >
         {children}

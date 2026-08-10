@@ -9,7 +9,7 @@ import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "../../published-report-snapshot.js";
+} from "../../report-sections/index.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
 import type {
   PeriodRepository,

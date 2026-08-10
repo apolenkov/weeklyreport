@@ -3,7 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useState } from "react";
 
-import { logClientError } from "../../../lib/client-error-reporting";
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
 
 export const DASHBOARD_LOAD_STALL_MS = 8000;
 

@@ -3,7 +3,7 @@ import type {
   WeeklyReportReadModel,
 } from "@customreport/shared";
 
-import { statusLabel } from "../../../lib/status-presentation";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import {
   buildProjectNameMap,
   groupItemsByProject,

@@ -6,7 +6,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import { statusLabel } from "../../../lib/status-presentation";
+import { statusLabel } from "../../../shared/lib/status/status-presentation";
 
 interface SlideProductStatusPresentation {
   readonly Icon: LucideIcon;

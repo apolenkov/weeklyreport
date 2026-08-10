@@ -1,5 +1,6 @@
 import { createReadStream, createWriteStream, promises as fs } from "node:fs";
 import { join } from "node:path";
+import { resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
@@ -25,6 +26,11 @@ export interface FileSink {
   // writes failed, so a lost line is never silent to a flushing caller.
   readonly flush: () => Promise<void>;
 }
+
+const processFileSinks = new Map<
+  string,
+  Readonly<{ opts: ResolvedFileOpts; sink: FileSink }>
+>();
 
 async function pruneOldArchives(
   logDir: string,
@@ -98,10 +104,7 @@ async function rotateIfNeeded(
   return prunedAt;
 }
 
-export function createFileSink(
-  logDir: string,
-  opts: ResolvedFileOpts,
-): FileSink {
+function createFileSink(logDir: string, opts: ResolvedFileOpts): FileSink {
   const activePath = join(logDir, ACTIVE_LOG_FILENAME);
   // The sink's whole mutable state: writes serialize on `queue`,
   // `lastPruneAt` (0 = never pruned) carries the prune clock between writes,
@@ -140,6 +143,27 @@ export function createFileSink(
       }
     },
   };
+}
+
+export function processFileSink(
+  logDir: string,
+  opts: ResolvedFileOpts,
+): FileSink {
+  const key = resolve(logDir);
+  const existing = processFileSinks.get(key);
+  if (existing !== undefined) {
+    if (
+      existing.opts.maxBytes !== opts.maxBytes ||
+      existing.opts.maxAgeDays !== opts.maxAgeDays
+    )
+      throw new Error(
+        `Logger file sink ${key} was requested with conflicting rotation options`,
+      );
+    return existing.sink;
+  }
+  const sink = createFileSink(key, opts);
+  processFileSinks.set(key, { opts: { ...opts }, sink });
+  return sink;
 }
 
 // Free-function façade over the sink closure that owns the write state, so

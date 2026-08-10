@@ -1,7 +1,7 @@
 "use client";
 
-import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
-import { RecordTextareaField } from "../../../shared/ui/record-textarea-field";
+import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
+import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 import type { ItemStatus, Product } from "../model/types";
 import type { StatusSlot } from "./item-edit-dialog-helpers";
 import { PausedReasonField } from "./item-paused-reason-field";

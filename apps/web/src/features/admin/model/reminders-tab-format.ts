@@ -4,8 +4,11 @@ import {
   MINUTES_PER_HOUR,
 } from "@customreport/shared";
 
-import { formatDateWithYear, toIsoDateString } from "../../../lib/format-date";
-import { pluralize } from "../../../lib/pluralize";
+import {
+  formatDateWithYear,
+  toIsoDateString,
+} from "../../../shared/lib/format/format-date";
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type { AdminReminderPolicyView, AdminReminderView } from "./admin-types";
 
 const MAX_HOUR_OFFSET_DAYS = 2;

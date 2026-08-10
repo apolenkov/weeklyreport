@@ -106,7 +106,7 @@ The standard MUST declare these import boundaries (verified clean in code at
 declaration time): `packages/*` MUST NOT import from `apps/*`; `packages/shared`
 and `packages/ui` MUST NOT import each other; `apps/api` MUST NOT import
 `packages/ui` or `apps/web`; `apps/web` MUST NOT import `apps/api` **except via
-`import type`** (the AppRouter tRPC contract at `apps/web/src/lib/trpc.ts`). The
+`import type`** (the AppRouter tRPC contract at `apps/web/src/shared/lib/trpc/trpc.ts`). The
 type-only carve-out MUST be rule-enforced (e.g.
 `@typescript-eslint/no-restricted-imports` with `allowTypeImports: true`), not a
 per-site disable.
@@ -344,11 +344,12 @@ The standard MUST enable `@typescript-eslint/no-magic-numbers` as `error` (the
 TS-aware variant, which understands enums, numeric-literal types, and `readonly`
 class fields), and MUST enforce a documented magic-string policy: a literal
 carrying meaning in logic is lifted to a named `const`, `enum`, or config value.
-The numeric rule MUST be configured with the repo's established exemptions from
-`~/.claude/rules/code-style.md`: `ignore: [-1, 0, 1, 2]` (the obvious-arithmetic
-set), `enforceConst: true`, `ignoreArrayIndexes: true`, `ignoreEnums: true`,
-`ignoreReadonlyClassProperties: true`, `ignoreTypeIndexes: true`, and
-`ignoreNumericLiteralTypes: true`. The rule MUST reuse the standard's existing
+The numeric rule MUST match the live configuration in `eslint-config/core.ts`
+and its scoped exemptions in `eslint-config/overrides.ts`: `ignore: [-1, 0, 1, 2]`
+(the obvious-arithmetic set), `enforceConst: true`, `ignoreArrayIndexes: true`,
+`ignoreEnums: true`, `ignoreReadonlyClassProperties: true`,
+`ignoreTypeIndexes: true`, and `ignoreNumericLiteralTypes: true`. The rule MUST
+reuse the standard's existing
 exempt set — tests (`*.test.*`, e2e), generated (`prisma/generated`), seeds
 (`prisma/seed*.ts`), config (`*.config.ts`) — plus one-off operational scripts.
 

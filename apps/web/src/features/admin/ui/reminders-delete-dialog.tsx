@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import type { AdminReminderPolicyView } from "../model/admin-types";
 import {
   describeRecipient,

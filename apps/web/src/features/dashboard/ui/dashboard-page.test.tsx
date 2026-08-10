@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { logClientError } from "../../../lib/client-error-reporting";
-import { SessionContext } from "../../../lib/session-provider";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
 import { DashboardPage } from "./dashboard-page";
 import {
   ACTIVE_ACTIVITY,
@@ -23,13 +23,13 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("../../../lib/client-error-reporting", () => ({
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
   formatClientErrorMessage: vi.fn((prefix: string, error: unknown) =>
     error instanceof Error ? `${prefix}: ${error.message}` : prefix,
   ),
   logClientError: vi.fn(),
 }));
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     activity: {
       live: { queryOptions: () => ({ queryKey: ["activity.live"] }) },
@@ -64,7 +64,7 @@ vi.mock("./reopen-requests-card", () => ({
 vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));
-vi.mock("../../../shared/ui/confirmation-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 

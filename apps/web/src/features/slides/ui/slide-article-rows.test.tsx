@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
+import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
 import type {
   GridAuthor,
   GridRow,
@@ -163,6 +163,7 @@ describe("SlideCell row hover", () => {
 describe("SlidePriorityStrip rank badge", () => {
   const grid: SlideGridModel = {
     authors: [AUTHOR],
+    showOwnerMarks: true,
     worstStatus: "green",
     counters: { current: 0, risks: 0, priorities: 1 },
     onTrack: { on: 1, total: 1 },

@@ -159,7 +159,7 @@ this pass by running `pnpm lint` (no separate Prisma CI step is required).
 
 #### Scenario: a Prisma seed has a type error
 
-- **WHEN** a contributor introduces a type error in `prisma/seed-simple.ts`
+- **WHEN** a contributor introduces a type error in `prisma/seeds/simple/seed-simple.ts`
   and runs `pnpm lint`
 - **THEN** the aggregate task exits non-zero with the Prisma typecheck
   error surfaced
@@ -188,7 +188,7 @@ crash a destructive wipe at runtime.
 
 #### Scenario: a wipe script references a dropped model
 
-- **WHEN** `prisma/wipe-manual-uat.ts` calls
+- **WHEN** `prisma/operations/wipe-manual-uat.ts` calls
   `tx.nonExistentModel.deleteMany({})` for a model absent from the schema
 - **THEN** `pnpm lint:prisma:typecheck` exits non-zero with a TypeScript
   `error TS2339` naming the missing property

@@ -2,6 +2,8 @@ node_modules
 **/node_modules
 .next
 **/.next
+.next-*
+**/.next-*
 .next-e2e
 **/.next-e2e
 dist
@@ -44,6 +46,5 @@ apps/web/.tmp
 **/.env.*
 .env.local
 **/.env.local
-.claude/
 *.png
 **/*.png

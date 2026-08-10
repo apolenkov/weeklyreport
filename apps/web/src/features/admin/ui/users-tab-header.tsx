@@ -1,7 +1,11 @@
 "use client";
 
-import { PlusIcon } from "../../../shared/ui/icons";
-import { TabFilter, TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { PlusIcon } from "../../../shared/ui/icons/action-icons";
+import {
+  TabFilter,
+  TabHeader,
+  TabSearch,
+} from "../../../shared/ui/tabs/tab-header";
 import {
   USER_ROLE_FILTER_OPTIONS,
   USER_STATUS_FILTER_OPTIONS,

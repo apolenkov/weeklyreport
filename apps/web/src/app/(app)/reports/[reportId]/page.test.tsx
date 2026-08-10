@@ -16,7 +16,7 @@ const viewerReportShellMock = vi.hoisted(() =>
   )),
 );
 
-vi.mock("../../../../features/viewer/ui/viewer-report-shell", () => ({
+vi.mock("../../../../features/viewer", () => ({
   ViewerReportShell: viewerReportShellMock,
 }));
 

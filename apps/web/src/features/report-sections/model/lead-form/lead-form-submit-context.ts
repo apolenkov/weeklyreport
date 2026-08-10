@@ -1,0 +1,61 @@
+import type { ReportSectionReadModel } from "@customreport/shared";
+
+import type { CrossAuthorRow } from "../lead-cross-author";
+import {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+} from "../lead-cross-author";
+import { mapLeadProducts } from "../lead-form";
+import type { DraftSaveContent } from "../lead-section-draft-payload";
+import type { KanbanItem, Product } from "../types";
+
+// Plain per-render args for draft callbacks; readiness stays on the live draft.
+export interface LeadFormLoadedContext {
+  readonly products: readonly Product[];
+  readonly currentWeekItems: readonly KanbanItem[];
+  readonly nextWeekItems: readonly KanbanItem[];
+}
+
+// Live-draft products for the submit gate; re-apply cross-author overrides
+// in Everyone so the coupling gate matches the loaded view model.
+export function buildReadinessProducts(
+  section: ReportSectionReadModel,
+  isEveryone: boolean,
+  crossAuthors: readonly CrossAuthorRow[],
+): Product[] {
+  const base = mapLeadProducts(section);
+  return isEveryone
+    ? applyCrossAuthorStageOverrides(
+        base,
+        buildCrossAuthorStageMap(crossAuthors),
+      )
+    : base;
+}
+
+export type SubmitOutcome =
+  "submitted" | "conflict" | "error" | "not-ready" | "no-draft";
+
+// Locked stages never appear in the draft payload — exclude them from the
+// positional label lookup so owned-stage names stay aligned. A stage whose
+// label cannot be resolved is null (never the raw stage id dressed as copy).
+export function buildSubmitStages(
+  draftPayload: DraftSaveContent | null,
+  products: readonly Product[],
+): { projectId: string; stageId: string; name: string | null }[] {
+  return (draftPayload?.stageStatuses ?? []).map((status, index, statuses) => {
+    const product = products.find(
+      (candidate) => candidate.id === status.projectId,
+    );
+    const stageIndex = statuses
+      .slice(0, index)
+      .filter((candidate) => candidate.projectId === status.projectId).length;
+    const ownedStages = product?.stages.filter(
+      (stage) => stage.ownership === "mine",
+    );
+    return {
+      projectId: status.projectId,
+      stageId: status.stageId,
+      name: ownedStages?.[stageIndex]?.stageName ?? null,
+    };
+  });
+}

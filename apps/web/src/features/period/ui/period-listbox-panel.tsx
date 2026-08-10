@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
+import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import { periodLabel } from "../model/use-period-navigator";
 
 // Portals to document.body so the toolbar's overflow clip cannot truncate it

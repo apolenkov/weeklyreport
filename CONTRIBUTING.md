@@ -6,7 +6,7 @@
 docker compose up -d postgres redis mailpit
 pnpm install                         # auto-installs husky hooks via `prepare`
 pnpm exec prisma migrate deploy
-pnpm db:seed:advanced
+pnpm exec tsx prisma/seed.ts          # full local development dataset
 pnpm dev                             # web on :3000, api on :3002
 ```
 
@@ -25,30 +25,21 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 
 ## Local quality gate (husky hooks)
 
-| Hook         | Runs                                                                                                       | Bypass                                       |
-| ------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `pre-commit` | `lint-staged` → `eslint --fix --max-warnings=0` on staged TS/JS, `prettier --write` on staged JSON/MD/YAML | `git commit --no-verify`                     |
-| `commit-msg` | `commitlint` on subject line                                                                               | `git commit --no-verify`                     |
-| `pre-push`   | `pnpm test` (full unit suite)                                                                              | `SKIP_PREPUSH=1 git push` (or set `CI=true`) |
+| Hook         | Runs                                                                                                                        | Bypass                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `pre-commit` | `lint-staged`: strict ESLint and Prettier for staged TS/JS, Stylelint and Prettier for CSS, Prettier for JSON/Markdown/YAML | `git commit --no-verify`  |
+| `commit-msg` | `commitlint` on the subject line                                                                                            | `git commit --no-verify`  |
+| `pre-push`   | typecheck, full lint gate, format check, catalog drift, mutation-consumer audit, and the full unit suite                    | `SKIP_PREPUSH=1 git push` |
 
-If you see `lint-staged` failing on a file you didn't touch, it's because
-the warning floor is currently above zero (REQ Q-06 will close this). Fix
-the warning or `--no-verify` is OK as a temporary measure.
+The lint floor is zero warnings. Use hook bypasses only for an explicit recovery
+or diagnostic workflow; a bypass is not completion evidence.
 
 ## Pushing to `origin/main`
 
-The corporate GitHub (`ghe.example.org`) requires VPN. If a `git push`
-fails with a DNS error or `could not resolve host`, the cause is almost
-always:
-
-- **VPN not connected** — connect, retry.
-- **Proxy env vars routing through an unreachable proxy** — clear them.
-
-The recurring workaround is:
-
-```bash
-https_proxy="" http_proxy="" git push origin main
-```
+The canonical remote is `https://github.com/apolenkov/weeklyreport.git`.
+Before relying on a push, verify the configured remote, authenticated private
+read access, the pushed commit, and the remote SHA. A successful local hook does
+not prove that GitHub accepted the update or ran CI.
 
 ## Mutation Consumer Audit
 
@@ -72,7 +63,11 @@ pnpm uat:audit:update    # adds the new black-hole entry with a TODO reason
   bring up `docker compose up -d postgres` first.
 - **`pnpm dev` starts both web (3000) + api (3002) in parallel** — if a
   port collides, kill both: `pkill -f 'turbo run dev'`.
-- **Prisma migrations on a fresh dev DB:** `pnpm exec prisma migrate deploy`
-  - `pnpm db:seed:advanced` (or `pnpm db:seed:simple` for a minimal seed).
-- **Reset the dev DB:** the in-app DEV switcher has a "Wipe + Reseed
-  (advanced)" menu item — it calls `dev.wipeAndReseed` and reloads.
+- **Prisma migrations on a fresh dev DB:** run
+  `pnpm exec prisma migrate deploy`, then `pnpm exec tsx prisma/seed.ts`.
+- **Deterministic seed profiles:** use `pnpm db:seed:profile <profile>` with
+  `minimal`, `demo`, `full`, or `stress` only against a verified disposable
+  database.
+- **Reset the dev DB:** the in-app DEV switcher offers `minimal`, `demo`, `full`,
+  and `stress` wipe-and-reseed actions. Select the intended profile; each action
+  calls `dev.wipeAndReseed` and reloads.

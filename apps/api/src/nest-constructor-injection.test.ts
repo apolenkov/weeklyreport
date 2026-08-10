@@ -17,6 +17,7 @@ interface ConstructorInventoryEntry {
 
 const apiSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)));
 const nestPackagePrefixes = ["@nestjs/", "nestjs-"] as const;
+const CONSTRUCTOR_INVENTORY_TIMEOUT_MS = 15_000;
 
 const collectSourceFiles = (directory: string): readonly string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -120,24 +121,31 @@ const constructorInventory = async (): Promise<
 };
 
 describe("Nest constructor injection", () => {
-  it("declares an explicit token for every decorated constructor parameter", async () => {
-    const entries = await constructorInventory();
-    const missing = entries.flatMap((entry) => {
-      const metadata = Reflect.getMetadata("self:paramtypes", entry.target) as
-        | readonly { readonly index: number; readonly param: unknown }[]
-        | undefined;
-      const explicitIndexes = new Set(
-        metadata?.map((item) => item.index) ?? [],
-      );
-      return Array.from({ length: entry.parameterCount }, (_, index) =>
-        explicitIndexes.has(index)
-          ? []
-          : [
-              `${relative(process.cwd(), entry.file)}:${entry.className}[${index}]`,
-            ],
-      ).flat();
-    });
+  it(
+    "declares an explicit token for every decorated constructor parameter",
+    async () => {
+      const entries = await constructorInventory();
+      const missing = entries.flatMap((entry) => {
+        const metadata = Reflect.getMetadata(
+          "self:paramtypes",
+          entry.target,
+        ) as
+          | readonly { readonly index: number; readonly param: unknown }[]
+          | undefined;
+        const explicitIndexes = new Set(
+          metadata?.map((item) => item.index) ?? [],
+        );
+        return Array.from({ length: entry.parameterCount }, (_, index) =>
+          explicitIndexes.has(index)
+            ? []
+            : [
+                `${relative(process.cwd(), entry.file)}:${entry.className}[${index}]`,
+              ],
+        ).flat();
+      });
 
-    expect(missing).toEqual([]);
-  });
+      expect(missing).toEqual([]);
+    },
+    CONSTRUCTOR_INVENTORY_TIMEOUT_MS,
+  );
 });

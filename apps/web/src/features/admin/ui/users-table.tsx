@@ -53,7 +53,7 @@ export function UsersTable({
   onDelete,
 }: UsersTableProps) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
+    <div className="relative overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
       <table className="w-full text-left text-sm" data-testid="users-table">
         <thead>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">

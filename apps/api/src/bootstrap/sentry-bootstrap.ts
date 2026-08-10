@@ -22,3 +22,9 @@ export function initializeSentry(): void {
     beforeSendTransaction: () => null,
   });
 }
+
+export async function shutdownSentry(timeoutMs: number): Promise<void> {
+  if (!Sentry.isInitialized()) return;
+  if (!(await Sentry.close(timeoutMs)))
+    throw new Error("Sentry did not flush before the shutdown deadline");
+}

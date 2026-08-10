@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductsTab } from "./products-tab";
@@ -24,17 +24,17 @@ vi.mock("./product-group-chips", () => ({
   ProductGroupChips: () => <div data-testid="product-group-chips-stub" />,
 }));
 
-vi.mock("./stage-assignment-editor", () => ({
+vi.mock("./stage-assignments/stage-assignment-editor", () => ({
   StageAssignmentEditor: () => (
     <div data-testid="stage-assignment-editor-stub" />
   ),
 }));
 
-vi.mock("../../../shared/ui/search-input", () => ({
+vi.mock("../../../shared/ui/search/search-input", () => ({
   SearchInput: () => <div data-testid="search-input-stub" />,
 }));
 
-vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/dialogs/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     onCancel,

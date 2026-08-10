@@ -1,6 +1,6 @@
 import type { FailedJob } from "@customreport/shared";
 
-import { formatDateTime } from "../../../lib/format-date";
+import { formatDateTime } from "../../../shared/lib/format/format-date";
 import { truncate } from "../model/action-log-format";
 
 const MAX_ERROR_REASON_LENGTH = 80;

@@ -8,7 +8,7 @@ Prevent re-declaration of canonical status and role literal vocabularies with a 
 
 ### Requirement: Status literal-union re-declarations are gated
 
-The repository MUST run a gate (`scripts/status-ssot-gate.ts`) that fails when
+The repository MUST run a gate (`scripts/gates/status-ssot/status-ssot-gate.ts`) that fails when
 a TypeScript union type or zod literal list outside the allowlisted files
 re-declares any of four vocabularies: a literal set containing all three of
 `"green"`, `"yellow"`, `"red"` (extras allowed — the three colors only ever
@@ -26,11 +26,11 @@ typing from shared, the Prisma seed toolchain's one commented literal
 mirror, the plain-Node catalog parser mirror, and catalog YAML).
 
 The gate MUST cover test files. The only exemptions are the SSOT files
-themselves (`packages/shared/src/schemas/report-primitives.schema.ts`,
-`packages/shared/src/schemas/canonical-status.ts`,
-`packages/shared/src/schemas/auth.ts`), the documented literal mirror
-`prisma/seed-constants.ts`, the presentation-order list
-`apps/web/src/shared/ui/role-switcher.tsx`, and the plain-Node catalog mirror
+themselves (`packages/shared/src/schemas/primitives/report-primitives.schema.ts`,
+`packages/shared/src/schemas/status/canonical-status.ts`,
+`packages/shared/src/schemas/auth/auth.ts`), the documented literal mirror
+`prisma/seeds/support/seed-constants.ts`, the presentation-order list
+`apps/web/src/shared/ui/auth-runtime/role-switcher.tsx`, and the plain-Node catalog mirror
 `e2e/sweep/catalog-parser.ts` — all hardcoded centrally in the gate, with no
 inline annotation escape.
 
@@ -58,21 +58,21 @@ declarations, which a text scan cannot distinguish.
 #### Scenario: an exact report-status union is re-declared
 
 - **WHEN** a staged file declares a union whose status-literal set is exactly
-  `{"draft", "published"}` outside the SSOT file and `prisma/seed-constants.ts`
+  `{"draft", "published"}` outside the SSOT file and `prisma/seeds/support/seed-constants.ts`
 - **THEN** the gate exits non-zero naming the file and line
 
 #### Scenario: the canonical presentation vocabulary is re-declared
 
 - **WHEN** a staged file declares a union or zod literal list containing
   `"blocked"`, `"at-risk"`, `"on-track"`, and `"empty"` outside
-  `packages/shared/src/schemas/canonical-status.ts`
+  `packages/shared/src/schemas/status/canonical-status.ts`
 - **THEN** the gate exits non-zero naming the file and line
 
 #### Scenario: the role vocabulary is re-declared
 
 - **WHEN** a staged file declares a union or zod literal list containing
   `"lead"`, `"head"`, `"admin"`, and `"viewer"` outside
-  `packages/shared/src/schemas/auth.ts` or the `role-type` spec's other
+  `packages/shared/src/schemas/auth/auth.ts` or the `role-type` spec's other
   named exemptions
 - **THEN** the gate exits non-zero naming the file and line
 

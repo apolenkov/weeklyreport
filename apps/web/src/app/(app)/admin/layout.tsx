@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ADMIN_ROUTE_ROLES } from "../../../shared/model/route-role-policy";
-import { RoleGate } from "../../../shared/ui/role-gate";
+import { RoleGate } from "../../../shared/ui/auth-runtime/role-gate";
 
 type Props = Readonly<{ children: ReactNode }>;
 

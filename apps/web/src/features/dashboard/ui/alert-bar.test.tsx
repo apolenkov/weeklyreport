@@ -32,7 +32,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     auth: {
       me: {

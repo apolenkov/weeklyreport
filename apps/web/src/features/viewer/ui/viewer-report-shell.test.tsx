@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../test-utils/query-state";
 
-vi.mock("../../slides/ui/head-slides-client", () => ({
+vi.mock("../../slides", () => ({
   HeadSlidesClient: (props: { enableActivity?: boolean }) => (
     <div
       data-testid="slides-client-stub"
@@ -19,7 +19,7 @@ vi.mock("../../slides/ui/head-slides-client", () => ({
   ),
 }));
 
-vi.mock("../../report-pages/ui/weekly-report-page", () => ({
+vi.mock("../../report-pages", () => ({
   WeeklyReportPage: ({
     documentActionsLeading,
     contextControls,
@@ -101,7 +101,7 @@ vi.mock("@tanstack/react-query", async () => {
 // The shell is the only consumer of getClientErrorDetails in this render tree
 // (WeeklyReportPage is stubbed). Mock it so the recovery tests can flag an
 // invalid-link NOT_FOUND without constructing a real TRPCClientError.
-vi.mock("../../../lib/client-error-reporting", () => ({
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
   getClientErrorDetails: (error: unknown) => ({
     isInvalidLink:
       (error as { data?: { code?: string } } | null)?.data?.code ===
@@ -109,7 +109,7 @@ vi.mock("../../../lib/client-error-reporting", () => ({
   }),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {
@@ -315,9 +315,113 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     const deck = screen.getByTestId("slides-client-stub");
     expect(deck).toBeInTheDocument();
     expect(deck).toHaveAttribute("data-enable-activity", "false");
+    expect(deck.closest("[data-layout-key]")).toHaveAttribute(
+      "data-layout-key",
+      "report-page",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveAttribute("data-layout-key", "weekly-report-header");
+    expect(
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toHaveAttribute("data-layout-key", "report-context-toolbar");
     // Still no mutation affordance on the slides surface.
     expect(
       screen.queryByRole("button", { name: /publish|lock|reopen/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reserves the loaded compact chrome while slides data is pending", () => {
+    vi.mocked(useQuery).mockImplementation(() =>
+      makeQueryState({ data: undefined, isLoading: true }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.getByRole("heading", { name: "Status Report" }).closest("header"),
+    ).toHaveClass("min-h-32", "sm:min-h-0");
+    expect(screen.getByTestId("viewer-authority-skeleton")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("viewer-document-action-skeleton"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps loaded authority and document actions while history loads", () => {
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        makeQueryState({ data: undefined, isLoading: true }),
+      ],
+      [
+        "weeklyReport.get",
+        makeQueryState({
+          data: {
+            status: "active",
+            reportId: REPORT_ID,
+            periodStart: "2026-06-08T00:00:00.000Z",
+            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStatus: "published",
+          },
+        }),
+      ],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
+    ]);
+    vi.mocked(useQuery).mockImplementation(
+      (options) =>
+        resultsByQuery.get(options.queryKey[0]) ??
+        makeQueryState({ data: undefined }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeEnabled();
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("viewer-authority-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show document placeholders for a terminal display error", () => {
+    const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
+      [
+        "reports.compiledHistory",
+        makeQueryState({ data: undefined, isLoading: true }),
+      ],
+      [
+        "weeklyReport.get",
+        makeQueryState({ data: undefined, error: new Error("display failed") }),
+      ],
+      ["pdfExport.status", makeQueryState({ data: undefined })],
+    ]);
+    vi.mocked(useQuery).mockImplementation(
+      (options) =>
+        resultsByQuery.get(options.queryKey[0]) ??
+        makeQueryState({ data: undefined }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.getByTestId("viewer-period-navigation-skeleton"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("viewer-authority-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Export PDF" }),
     ).not.toBeInTheDocument();
   });
 });

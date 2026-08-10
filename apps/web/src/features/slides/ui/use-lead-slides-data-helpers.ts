@@ -1,14 +1,13 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useMemo } from "react";
+import { useContext, useMemo } from "react";
 
-import { crossAuthorContentFetchEnabled } from "../../../lib/cross-author-content-gate";
-import { SessionContext } from "../../../lib/session-provider";
-import { useTRPC } from "../../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { SessionContext } from "../../../shared/lib/auth/session-provider";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
@@ -94,12 +93,11 @@ export function useLeadDeckPeriod(requestedReportId: string | null) {
   };
 }
 
-// The three section reads for the target report. Cross-author reads are
-// privileged, so each carries its own enablement gate.
+// The slide reads for the target report. The cross-author status read is
+// privileged, so it carries its own enablement gate.
 export function useLeadSlideSectionQueries(
-  { authorId, isOwnDeck, isEveryone }: LeadDeckRequest,
+  { authorId, isOwnDeck }: LeadDeckRequest,
   targetReportId: string,
-  visibilityHydrated: boolean,
 ) {
   const trpc = useTRPC();
 
@@ -114,17 +112,6 @@ export function useLeadSlideSectionQueries(
     ...trpc.leadForm.crossAuthors.queryOptions({ reportId: targetReportId }),
     enabled: targetReportId !== "" && isOwnDeck,
   });
-  const crossAuthorContentQ = useQuery({
-    ...trpc.leadForm.crossAuthorContent.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: crossAuthorContentFetchEnabled({
-      hasReport: targetReportId !== "",
-      visibilityHydrated,
-      isEveryone,
-      isOwnDeck,
-    }),
-  });
 
   useQueryErrorHandler(byPeriodQ, {
     event: "leadSlides.byPeriod.load_failed",
@@ -133,45 +120,14 @@ export function useLeadSlideSectionQueries(
     context: { reportId: targetReportId || null },
   });
 
-  return { byPeriodQ, crossAuthorsQ, crossAuthorContentQ };
-}
-
-// Cross-author content is a privileged read: drop it from the cache the moment
-// the "everyone" toggle is off (or unhydrated), and whenever the viewer changes.
-export function useCrossAuthorContentEviction({
-  isEveryone,
-  visibilityHydrated,
-  targetReportId,
-  currentUserId,
-}: {
-  readonly isEveryone: boolean;
-  readonly visibilityHydrated: boolean;
-  readonly targetReportId: string;
-  readonly currentUserId: string | null;
-}): void {
-  const qc = useQueryClient();
-  const trpc = useTRPC();
-
-  useEffect(() => {
-    if (isEveryone && visibilityHydrated) return;
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
-
-  useEffect(() => {
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [currentUserId, qc, trpc]);
+  return { byPeriodQ, crossAuthorsQ };
 }
 
 interface LeadDeckSourceData {
   readonly byPeriodData:
     { section?: ReportSectionReadModel | null } | undefined;
   readonly crossAuthors: Parameters<typeof buildLeadDeckModel>[1] | undefined;
-  readonly crossAuthorContent:
-    Parameters<typeof buildLeadDeckModel>[2] | undefined;
+  readonly foreignContent: Parameters<typeof buildLeadDeckModel>[2] | undefined;
   readonly isOwnDeck: boolean;
   readonly isEveryone: boolean;
   readonly visibilityHydrated: boolean;
@@ -182,14 +138,17 @@ interface LeadDeckSourceData {
 export function useLeadDeckSlides({
   byPeriodData,
   crossAuthors,
-  crossAuthorContent,
+  foreignContent,
   isOwnDeck,
   isEveryone,
   visibilityHydrated,
 }: LeadDeckSourceData) {
   const foreignContentRows = useMemo(
-    () => (isEveryone && visibilityHydrated ? (crossAuthorContent ?? []) : []),
-    [isEveryone, visibilityHydrated, crossAuthorContent],
+    () =>
+      isOwnDeck && isEveryone && visibilityHydrated
+        ? (foreignContent ?? [])
+        : [],
+    [foreignContent, isEveryone, isOwnDeck, visibilityHydrated],
   );
   const sectionModel = useMemo(() => {
     if (!byPeriodData?.section) return null;
@@ -197,7 +156,15 @@ export function useLeadDeckSlides({
       byPeriodData.section,
       isOwnDeck ? (crossAuthors ?? []) : [],
       foreignContentRows,
+      isEveryone && visibilityHydrated,
     );
-  }, [byPeriodData, crossAuthors, foreignContentRows, isOwnDeck]);
+  }, [
+    byPeriodData,
+    crossAuthors,
+    foreignContentRows,
+    isEveryone,
+    isOwnDeck,
+    visibilityHydrated,
+  ]);
   return useMemo(() => (sectionModel ? [sectionModel] : []), [sectionModel]);
 }

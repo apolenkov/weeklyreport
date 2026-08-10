@@ -28,7 +28,11 @@ import {
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from "../../prisma/seed-constants";
+} from "../../prisma/seeds/support/seed-constants";
+import {
+  isExpectedNavigationAbort,
+  navigate,
+} from "../runtime-sweep/replay/navigation.ts";
 import {
   CANONICAL_ROLES,
   type Catalog,
@@ -213,6 +217,12 @@ for (const catalog of catalogs) {
       // URL is a real product defect.
       const onRequestFailed = (request: Request): void => {
         const failure = request.failure();
+        if (
+          request.isNavigationRequest() &&
+          isExpectedNavigationAbort(new Error(failure?.errorText ?? ""))
+        ) {
+          return;
+        }
         const cause = failure ? ` (${failure.errorText})` : "";
         anomalies.push({
           kind: "network",
@@ -225,24 +235,13 @@ for (const catalog of catalogs) {
 
       let status: number | null = null;
       try {
-        const response = await page.goto(resolved, {
-          waitUntil: "domcontentloaded",
-        });
-        status = response?.status() ?? null;
+        status = await navigate(page, resolved);
         if (status !== null && status >= 400) {
           anomalies.push({
             kind: "load",
             detail: `navigation returned HTTP ${status}`,
           });
         }
-        // Let client-side render + hydration settle so console/page errors and
-        // late-mounting content surface before axe runs.
-        // Cap the settle wait: an external resource that hangs (e.g. the Google
-        // Fonts CDN, unreachable in the sweep env) must not consume the whole
-        // per-test budget. The page is already domcontentloaded from goto().
-        await page
-          .waitForLoadState("networkidle", { timeout: 3000 })
-          .catch(() => undefined);
       } catch (error) {
         anomalies.push({
           kind: "load",

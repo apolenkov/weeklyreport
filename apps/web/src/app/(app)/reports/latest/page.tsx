@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, Suspense, useEffect } from "react";
 
-import { useTRPC } from "../../../../lib/trpc-context";
+import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 
 // A client redirect rather than a server `redirect()`: the web app has no
 // server-side data path — every authenticated read goes through the browser
@@ -13,6 +13,7 @@ function ReportsLatestShell({ children }: { readonly children: ReactNode }) {
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">

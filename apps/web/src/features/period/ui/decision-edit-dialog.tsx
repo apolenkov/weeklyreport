@@ -2,9 +2,9 @@
 
 import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
 
-import { DialogSurface } from "../../../shared/ui/dialog-surface";
-import { DocumentBodyPortal } from "../../../shared/ui/document-body-portal";
-import { RecordDialogFooter } from "../../../shared/ui/record-dialog-footer";
+import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
+import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
+import { RecordDialogFooter } from "../../../shared/ui/forms/record-dialog-footer";
 import type {
   DecisionEntry,
   ParentActivityOption,

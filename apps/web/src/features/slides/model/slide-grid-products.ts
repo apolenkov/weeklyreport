@@ -36,6 +36,7 @@ interface BuildProductSubsectionsInput {
   readonly activityHomeById: ReadonlyMap<string, string>;
   readonly authorOrder: ReadonlyMap<string, number>;
   readonly sharedCardId: string;
+  readonly hiddenAuthorId?: string | undefined;
 }
 
 interface HomedSubsection {
@@ -55,6 +56,7 @@ function buildActivityEntries(
     activityHomeById,
     authorOrder,
     sharedCardId,
+    hiddenAuthorId,
   } = input;
   const recordOnlyActivityIds = [...activityCells.keys()].filter(
     (activityId) => !activityMeta.has(activityId),
@@ -76,6 +78,7 @@ function buildActivityEntries(
           columns: finalizeColumns(
             activityCells.get(activityId) ?? emptyBuckets(),
             authorOrder,
+            hiddenAuthorId,
           ),
         },
       };
@@ -89,7 +92,7 @@ function buildActivityEntries(
 export function buildProductSubsections(
   input: BuildProductSubsectionsInput,
 ): ReadonlyMap<string, readonly GridSubsection[]> {
-  const { section, productLevel, authorOrder } = input;
+  const { section, productLevel, authorOrder, hiddenAuthorId } = input;
   const activityMeta = new Map(
     section.activities.map((activity) => [activity.activityId, activity]),
   );
@@ -103,7 +106,7 @@ export function buildProductSubsections(
         name: "Product-level",
         status: null,
         showStages: true,
-        columns: finalizeColumns(cells, authorOrder),
+        columns: finalizeColumns(cells, authorOrder, hiddenAuthorId),
       },
     }),
   );

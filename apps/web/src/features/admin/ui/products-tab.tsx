@@ -1,9 +1,9 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
-import { PlusIcon } from "../../../shared/ui/icons";
-import { SearchInput } from "../../../shared/ui/search-input";
-import { TabHeader, TabSearch } from "../../../shared/ui/tab-header";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
+import { PlusIcon } from "../../../shared/ui/icons/action-icons";
+import { SearchInput } from "../../../shared/ui/search/search-input";
+import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 import { ProductEditDialog } from "./product-edit-dialog";

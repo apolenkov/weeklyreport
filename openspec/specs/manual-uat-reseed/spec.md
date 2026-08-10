@@ -8,7 +8,7 @@ Manual UAT wipe-and-reseed keeps a non-prod database resettable to a known basel
 
 ### Requirement: Manual-UAT wipe MUST delete all FK-dependent tables in FK-safe order
 
-The `prisma/wipe-manual-uat.ts` transactional wipe MUST delete every table that
+The `prisma/operations/wipe-manual-uat.ts` transactional wipe MUST delete every table that
 a foreign key can restrict — including the project-activity tables
 `activityStatus`, `projectActivityLead`, `projectActivityProduct`, and
 `projectActivity` — in an order that clears each `ON DELETE RESTRICT` child

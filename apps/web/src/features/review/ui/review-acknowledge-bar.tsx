@@ -4,7 +4,7 @@ import type { ReviewAcknowledgementView } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../../lib/trpc-context";
+import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export interface AcknowledgeGroup {
   readonly groupId: string;

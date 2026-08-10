@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Mock server-side dependencies before importing the component.
 // getOrgPublic is a server-only helper; the `server-only` guard is already
 // stubbed out by the vitest alias in vitest.config.ts.
-vi.mock("../lib/server/get-org-public", () => ({
+vi.mock("../shared/server/organization/get-org-public", () => ({
   getOrgPublic: vi.fn(),
 }));
 vi.mock("next/font/google", () => ({
@@ -27,24 +27,24 @@ vi.mock("next/script", () => ({
 
 // Stub client-only components that would fail in a jsdom render of the
 // full RSC tree (they are not under test here).
-vi.mock("../shared/ui/agentation-devtools", () => ({
+vi.mock("../shared/ui/auth-runtime/agentation-devtools", () => ({
   AgentationDevtools: () => null,
 }));
-vi.mock("../shared/ui/error-boundary", () => ({
+vi.mock("../shared/ui/auth-runtime/error-boundary", () => ({
   QueryErrorBoundary: ({ children }: { readonly children: React.ReactNode }) =>
     children,
 }));
 vi.mock("../features/telemetry/ui/web-vitals-reporter", () => ({
   WebVitalsReporter: () => null,
 }));
-vi.mock("../lib/trpc-provider", () => ({
+vi.mock("../shared/lib/trpc/trpc-provider", () => ({
   TRPCProvider: ({ children }: { readonly children: React.ReactNode }) =>
     children,
 }));
 // Next.js CSS import — vitest cannot process it, stub it out.
 vi.mock("../styles/app.css", () => ({}));
 
-import { getOrgPublic } from "../lib/server/get-org-public";
+import { getOrgPublic } from "../shared/server/organization/get-org-public";
 import RootLayout, { generateMetadata } from "./layout";
 
 const STUB_ORG: OrganizationPublic = {

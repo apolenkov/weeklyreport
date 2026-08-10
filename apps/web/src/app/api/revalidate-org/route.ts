@@ -1,8 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { isAdmin } from "../../../lib/role-predicates";
-import { getServerSession } from "../../../lib/server/get-server-session";
+import { isAdmin } from "../../../shared/lib/auth/role-predicates";
+import { getServerSession } from "../../../shared/server/auth/get-server-session";
 
 // Admin-only cache invalidation; reject cross-origin browser requests while
 // allowing session-gated server-to-server calls without an Origin header.

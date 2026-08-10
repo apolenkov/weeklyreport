@@ -3,7 +3,7 @@
 import type { PeriodStatus } from "@customreport/shared";
 import { useState } from "react";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
+import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 
 interface PublishLockButtonProps {
   readonly pendingCount: number;

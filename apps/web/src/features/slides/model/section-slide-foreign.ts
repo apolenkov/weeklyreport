@@ -1,4 +1,4 @@
-import { worstTrafficStatus } from "../../../lib/status-presentation";
+import { worstTrafficStatus } from "../../../shared/lib/status/status-presentation";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import type {
   SectionSlideModel,

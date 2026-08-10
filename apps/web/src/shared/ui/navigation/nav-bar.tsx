@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-import { useSession } from "../../../lib/session-provider";
-import { useHydratedClient } from "../../lib/use-hydrated-client";
+import { useHydratedClient } from "../../hooks/browser/use-hydrated-client";
+import { useSession } from "../../lib/auth/session-provider";
 import { DesktopNav } from "./desktop-nav";
 import { MobileNav } from "./mobile-nav";
 import { buildNavBarModel } from "./nav-bar-model";
@@ -48,7 +48,10 @@ export function NavBar() {
 
       {/* Teal bottom accent — 3px tealA, rounded top corners. */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]" />
+        <div
+          className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]"
+          data-testid="nav-accent"
+        />
       </div>
 
       <MobileNav

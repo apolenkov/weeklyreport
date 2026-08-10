@@ -2,7 +2,7 @@
 
 import type { ReactNode, RefObject } from "react";
 
-import { DialogSurface } from "../../../shared/ui/dialog-surface";
+import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 
 interface UserEditDialogShellProps {
   readonly surfaceRef: RefObject<HTMLDivElement | null>;

@@ -10,7 +10,7 @@ import {
   formatPeriodRangeWithYear,
   formatRelativePast,
   formatWeekLabel,
-} from "../../../lib/format-date";
+} from "../../../shared/lib/format/format-date";
 
 // Self-contained presentation type so consumers don't depend on mock-data.ts.
 export interface HistoryEntry {

@@ -5,7 +5,7 @@ import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
 import {
   statusDotClassName,
   statusLabel,
-} from "../../../lib/status-presentation";
+} from "../../../shared/lib/status/status-presentation";
 import type { SlideActivityPill } from "../model/section-slide-contracts";
 
 type PillStatus = TrafficLightStatus | "empty";

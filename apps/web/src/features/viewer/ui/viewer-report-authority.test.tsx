@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {
@@ -56,7 +56,7 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../../lib/client-error-reporting", () => ({
+vi.mock("../../../shared/lib/errors/client-error-reporting", () => ({
   getClientErrorDetails: () => ({ isInvalidLink: false }),
 }));
 
@@ -72,6 +72,11 @@ vi.mock("../../../shared/ui/report-shell/use-report-shell-url-state", () => ({
 }));
 
 vi.mock("../../../shared/ui/report-shell/report-toolbar", () => ({
+  DocumentActionGroup: ({ children }: { children: React.ReactNode }) => (
+    <div role="group" aria-label="Document actions">
+      {children}
+    </div>
+  ),
   ReportToolbar: ({
     contextControls,
   }: {
@@ -175,6 +180,9 @@ describe.each(AUTHORITY_CASES)(
       expect(
         screen.queryByRole("link", { name: "Edit" }),
       ).not.toBeInTheDocument();
+      if (mode === "slides") {
+        expect(screen.getByText("Slides deck")).toBeVisible();
+      }
     });
   },
 );

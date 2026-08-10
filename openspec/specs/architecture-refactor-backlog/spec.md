@@ -16,7 +16,7 @@ historical slices below originated under the former `report-sections` feature
 path and are retained as a record; each was captured as its own grilled
 refactor change before work started. The first slice
 is `refactor-lead-mappers`: the pure cross-author and snapshot derivations
-moved to tested adapters in `apps/web/src/lib/mappers/` (landed at 1658 LOC on
+moved to tested adapters now owned by `apps/web/src/features/report-sections/model/` (landed at 1658 LOC on
 2026-06-11; the file stood at 1930 when the slice started). The second slice is
 `refactor-lead-form-draft-orchestration`: the draft mirror, stable draft payload
 baseline, autosave handoff, stale-version conflict handler, and optimistic-lock
@@ -93,7 +93,7 @@ of their own.
 
 The backlog MUST record that the web client's role-identity checks are
 centralized behind the pure predicate module
-`apps/web/src/lib/role-predicates.ts` (`isHead` / `isAdmin` / `isLead` /
+`apps/web/src/shared/lib/auth/role-predicates.ts` (`isHead` / `isAdmin` / `isLead` /
 `isViewer` / `isHeadLike`, all `false` for `null`), landed by
 `centralize-client-role-predicates` on 2026-07-10 and pinned by the
 `client-role-predicates` spec. The layer is UX affordance only — enforcement
@@ -219,7 +219,7 @@ The backlog MUST record that the dead and orphaned code surfaced by the
 orphaned duplicate `apps/api/src/modules/reminders/reminders.router.ts`
 (the scope-checked procedures inline in `trpc.router.ts` are the only
 production reminder-execution surface), the two dead session validators in
-`apps/web/src/server/auth/session.ts`, the dead `isoWeekLabel` helper and its
+`apps/web/src/shared/server/auth/session.ts`, the dead `isoWeekLabel` helper and its
 two supporting constants in `apps/web/src/features/admin/model/admin.ts`, the
 always-false `blocked` check in `section-slide-utils.ts`'s
 `crossAuthorContentToSlideForeign` (the shared `itemWorkflowStatusSchema`
@@ -237,7 +237,7 @@ removed. The two `computeFireAt` implementations MUST stay separate
 functions, cross-referencing each other by file path, because the prisma
 toolchain's isolated `tsconfig.prisma.json` cannot resolve `apps/api` or
 `packages/shared` imports — the same constraint already carved out for
-`prisma/seed-constants.ts`.
+`prisma/seeds/support/seed-constants.ts`.
 
 #### Scenario: the dead-code cleanup is discoverable
 
@@ -254,7 +254,7 @@ toolchain's isolated `tsconfig.prisma.json` cannot resolve `apps/api` or
 - **WHEN** an agent or maintainer considers importing workspace code into a
   `prisma/*.ts` script
 - **THEN** the backlog's carve-out (first established for
-  `prisma/seed-constants.ts`, reaffirmed here for `computeFireAt`) applies:
+  `prisma/seeds/support/seed-constants.ts`, reaffirmed here for `computeFireAt`) applies:
   the isolated `tsconfig.prisma.json` cannot resolve those imports, so the
   logic is kept as an intentionally cross-referenced literal mirror instead
 
@@ -331,9 +331,9 @@ rather than kept: `stageNameMatches`
 `visibleLeadSlidePeriodOptions`
 (`features/slides/model/lead-slide-periods.ts`), the
 `applyStatusSuggestion`/`syncSource()` half of `useStatusRiskSync`
-(`hooks/use-status-risk.ts`), the ignored `source?: SyncSource` parameter
+(`features/report-sections/model/status-risk/use-status-risk.ts`), the ignored `source?: SyncSource` parameter
 contract on `handleStageStatusChange`, and `getDialogPreset`
-(`shared/ui/confirmation-dialog.tsx`).
+(`shared/ui/dialogs/confirmation-dialog.tsx`).
 
 #### Scenario: Reviewer re-encounters one of the removed symbols
 

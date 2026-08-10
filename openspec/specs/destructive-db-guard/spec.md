@@ -1,13 +1,13 @@
 ## Purpose
 
-`prisma/_destructive-guard.ts` exports `assertNonProdDestructive(scriptName)`, called
+`prisma/guards/_destructive-guard.ts` exports `assertNonProdDestructive(scriptName)`, called
 at the top of every destructive Prisma script (seed, wipe, reset). It inspects the
 runtime environment and MUST throw before executing any destructive SQL if the target
 looks like production. The guard reads `DATABASE_URL`; env examples and Compose files
 MUST keep `POSTGRES_DB` and `DATABASE_URL` in sync so the guard sees the correct
 database name.
 
-Consumer surface: `prisma/_destructive-guard.ts` — `assertNonProdDestructive`.
+Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
 
 ## Requirements
 

@@ -13,7 +13,7 @@ import { AdminPanel } from "./admin-panel";
 
 vi.mock("@tanstack/react-query", () => ({ useQuery: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
-vi.mock("../../../lib/trpc-context", () => ({
+vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     admin: {
       snapshot: {

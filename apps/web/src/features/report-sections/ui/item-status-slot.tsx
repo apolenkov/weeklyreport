@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 
-import type { ChipChoice } from "../../../shared/ui/choice-chip-row";
-import { ChoiceChipRow } from "../../../shared/ui/choice-chip-row";
+import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";
+import { ChoiceChipRow } from "../../../shared/ui/forms/choice-chip-row";
 import type { ItemStatus } from "../model/types";
 import type { StatusSlot } from "./item-edit-dialog-helpers";
 

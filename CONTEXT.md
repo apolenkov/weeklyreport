@@ -42,6 +42,15 @@ tool in phase 1, NOT a blocking gate; it becomes a gate only once critical paths
 are frozen into deterministic specs.
 _Avoid_: smoke test, e2e run (too generic).
 
+**Exhaustive Runtime Sweep**:
+A verification campaign that dynamically covers every role-reachable route,
+deterministic domain state, interactive control, intent, boundary, and pairwise
+transition inside its declared browser, viewport, and environment matrix. The
+Scenario Catalog remains the durable oracle; the sweep is a reproducible
+evidence snapshot, not an unbounded claim about every theoretically possible
+input or event sequence.
+_Avoid_: all possible cases, exhaustive Scenario Catalog.
+
 **Coverage Catalog**:
 A generated map binding each scenario to the `file:line` of the code it
 exercises, to detect uncovered entry-point surface. Brittle on an unstable

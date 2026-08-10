@@ -75,7 +75,7 @@ preservation; it MUST instead import `lucide-react`'s `ChevronDown` directly at
 
 ### Requirement: Short date and timestamp formatting has one home
 
-`apps/web/src/lib/format-date.ts` SHALL export `MONTHS_SHORT` and a
+`apps/web/src/shared/lib/format/format-date.ts` SHALL export `MONTHS_SHORT` and a
 `formatTimestampShort` function, and the three external local month/timestamp
 formatter copies MUST import them instead of redefining their own month arrays or
 timestamp logic. No web file outside `format-date.ts` MUST declare a private

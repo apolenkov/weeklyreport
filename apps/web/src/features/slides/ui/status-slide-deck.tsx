@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
 
-import { useFullscreen } from "../../../hooks/use-fullscreen";
+import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";
@@ -76,6 +76,7 @@ function HeadSlideFrame({
       ref={frameRef}
       tabIndex={-1}
       className="relative overflow-auto bg-[var(--color-background)]"
+      data-testid="head-slide-scroll-host"
     >
       <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
       <SlideArticle
@@ -169,7 +170,10 @@ function DeckArticle(props: DeckArticleProps) {
   // Keying by slide id + page remounts the article on navigation, resetting
   // any article-local state for the next page.
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="relative min-w-0 max-w-full overflow-x-auto"
+      data-testid="lead-slide-scroll-host"
+    >
       <SlideArticle
         key={`${props.slide.id}:${String(props.slide.pageIndex ?? 0)}`}
         slide={props.slide}
@@ -184,7 +188,6 @@ function DeckArticle(props: DeckArticleProps) {
 function DeckBody(props: DeckBodyProps) {
   const slide = selectedSlide(props.slides, props.selectedIndex);
   const isLead = props.mode === "lead";
-  const hasSiblings = props.slides.length > 1;
 
   return (
     <>
@@ -194,7 +197,7 @@ function DeckBody(props: DeckBodyProps) {
         <EmptyDeckState />
       ) : (
         <>
-          {isLead && hasSiblings ? (
+          {isLead ? (
             <LeadCarouselControls
               selectedIndex={props.selectedIndex}
               total={props.slides.length}
@@ -203,7 +206,7 @@ function DeckBody(props: DeckBodyProps) {
           ) : null}
 
           <div className="space-y-3">
-            {!isLead && hasSiblings ? (
+            {!isLead ? (
               <HeadSlideCarousel
                 slides={props.slides}
                 selectedIndex={props.selectedIndex}
@@ -229,8 +232,10 @@ export function StatusSlideDeck(props: StatusSlideDeckProps) {
 
   return (
     <section
-      className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+      className="min-w-0 max-w-full space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
       data-testid={`${props.mode}-slides-deck`}
+      data-layout-key="status-slide-deck"
+      data-layout-stability="position-width"
       aria-label="Status slide deck (use arrow keys to navigate slides)"
       role="group"
       tabIndex={0}

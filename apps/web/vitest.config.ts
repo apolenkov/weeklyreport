@@ -14,7 +14,7 @@ const webConfig = defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
-    setupFiles: ["./vitest.setup.ts"],
+    setupFiles: ["./vitest.setup"],
     globals: false,
     // Restore every spy/mock to its original after each test so an installed
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.

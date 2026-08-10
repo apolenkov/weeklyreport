@@ -6,12 +6,7 @@ import Redis from "ioredis";
 
 import { ENV_CONFIG } from "../config/config.module";
 import type { EnvConfig } from "../config/env.schema";
-import { buildRedisConnectionOptions } from "../config/redis-connection";
-
-// Fail-fast via this timeout + maxRetriesPerRequest:1 — not by disabling the
-// offline queue: with lazyConnect a disabled queue rejects the first ping while
-// still connecting (measured false "down" at boot against healthy Redis).
-const PING_TIMEOUT_MS = 2000;
+import { buildFailOpenRedisConnectionOptions } from "../config/redis-connection";
 
 @Injectable()
 export class RedisHealthIndicator implements OnModuleDestroy {
@@ -23,10 +18,7 @@ export class RedisHealthIndicator implements OnModuleDestroy {
     @Inject(ENV_CONFIG) env: EnvConfig,
   ) {
     this.redis = new Redis({
-      ...buildRedisConnectionOptions(env),
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      commandTimeout: PING_TIMEOUT_MS,
+      ...buildFailOpenRedisConnectionOptions(env),
     });
     // Suppress unhandled error events so a Redis blip cannot crash the process.
     this.redis.on("error", () => undefined);

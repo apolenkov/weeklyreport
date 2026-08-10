@@ -2,7 +2,7 @@
 # glibc (Debian) rather than alpine: Chromium needs it for PDF export, and the
 # native node modules must be built for the same libc the runner uses.
 # node:26 no longer ships corepack, so pnpm is installed with npm — the pin is
-# held against package.json's packageManager by scripts/check-runtime-node-sync.ts.
+# held against package.json's packageManager by scripts/gates/environment/check-runtime-node-sync.ts.
 FROM node:26-bookworm@sha256:219fc9da91e7f29a9f32290ff598cdf8886fd68f421ff515c8f93434da39a271 AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN npm install -g pnpm@11.17.0 turbo@2.10.6

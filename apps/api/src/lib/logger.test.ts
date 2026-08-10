@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ClsService } from "nestjs-cls";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { createAppLogger, createNullLogger } from "./logger.js";
@@ -21,21 +21,20 @@ import { createAppLogger, createNullLogger } from "./logger.js";
 // promise, so we poll the in-flight queue via setImmediate to give pipeline
 // streams (gzip/createReadStream) time to finish their async work.
 async function flush(times = 30): Promise<void> {
-  for (let i = 0; i < times; i++) {
-    await new Promise((r) => setImmediate(r));
-    await new Promise((r) => setTimeout(r, 5));
-  }
+  if (times <= 0) return;
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await flush(times - 1);
 }
 
+const createLogDir = (): string => {
+  const directory = mkdtempSync(join(tmpdir(), "logger-test-"));
+  onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
+  return directory;
+};
+
 describe("createAppLogger", () => {
-  let logDir: string;
-
-  beforeEach(() => {
-    logDir = mkdtempSync(join(tmpdir(), "logger-test-"));
-  });
-
   afterEach(() => {
-    rmSync(logDir, { recursive: true, force: true });
     vi.restoreAllMocks();
   });
 
@@ -109,6 +108,7 @@ describe("createAppLogger", () => {
   });
 
   it("redacts PII-shaped context keys at every sink", async () => {
+    const logDir = createLogDir();
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir, service: "redact-test" });
 
@@ -148,6 +148,7 @@ describe("createAppLogger", () => {
   });
 
   it("redacts person-name and generic-email context keys at every sink", async () => {
+    const logDir = createLogDir();
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir });
 
@@ -210,6 +211,7 @@ describe("createAppLogger", () => {
   });
 
   it("flush drains pending file writes before resolving", async () => {
+    const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir, service: "flush-test" });
 
@@ -223,7 +225,26 @@ describe("createAppLogger", () => {
     expect(lines[0]).toContain("before-flush");
   });
 
+  it("shares one process-scoped sink across loggers for the same directory", async () => {
+    const logDir = createLogDir();
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const bootstrap = createAppLogger({ logDir, service: "bootstrap" });
+    const worker = createAppLogger({ logDir, service: "worker" });
+
+    bootstrap.info("bootstrap-line");
+    worker.info("worker-line");
+    await expectDefined(bootstrap.flush)();
+
+    const lines = readFileSync(join(logDir, "app.log"), "utf-8")
+      .trim()
+      .split("\n");
+    expect(lines).toHaveLength(2);
+    expect(lines.join("\n")).toContain("bootstrap-line");
+    expect(lines.join("\n")).toContain("worker-line");
+  });
+
   it("flush rejects when a pending file write failed", async () => {
+    const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir });
@@ -238,6 +259,7 @@ describe("createAppLogger", () => {
   });
 
   it("writes log entries asynchronously to <logDir>/app.log", async () => {
+    const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const logger = createAppLogger({ logDir, service: "file-test" });
 
@@ -272,6 +294,7 @@ describe("createAppLogger", () => {
     "rotates when active log exceeds maxBytes (creates gzip archive)",
     { retry: 2 },
     async () => {
+      const logDir = createLogDir();
       vi.spyOn(process.stdout, "write").mockReturnValue(true);
       const logger = createAppLogger({
         logDir,
@@ -282,9 +305,9 @@ describe("createAppLogger", () => {
 
       // Write enough lines that the active file exceeds 200 bytes before rotation
       // is checked on the NEXT write. A typical entry here is ~140 bytes.
-      for (let i = 0; i < 6; i++) {
-        logger.info(`line-${i}`, { padding: "x".repeat(40) });
-      }
+      Array.from({ length: 6 }, (_, index) => index).forEach((index) =>
+        logger.info(`line-${index}`, { padding: "x".repeat(40) }),
+      );
 
       await flush(8);
 
@@ -310,6 +333,7 @@ describe("createAppLogger", () => {
   );
 
   it("does not prune (readdir) the log directory on every log line", async () => {
+    const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const readdirSpy = vi.spyOn(fsp, "readdir");
 
@@ -317,9 +341,9 @@ describe("createAppLogger", () => {
     // touch the directory, and it must run at most once across many lines.
     const logger = createAppLogger({ logDir, maxBytes: 50 * 1024 * 1024 });
 
-    for (let i = 0; i < 12; i++) {
-      logger.info(`line-${i}`);
-    }
+    Array.from({ length: 12 }, (_, index) => index).forEach((index) =>
+      logger.info(`line-${index}`),
+    );
     await flush(8);
 
     expect(readdirSpy.mock.calls.length).toBeLessThanOrEqual(1);
@@ -330,6 +354,7 @@ describe("createAppLogger", () => {
     "prunes archives older than maxAgeDays during rotation",
     { retry: 2 },
     async () => {
+      const logDir = createLogDir();
       vi.spyOn(process.stdout, "write").mockReturnValue(true);
 
       // Pre-create a stale archive whose mtime is 2 days old.
@@ -345,9 +370,9 @@ describe("createAppLogger", () => {
       });
 
       // Trigger writes large enough to force rotation, which calls pruneOldArchives.
-      for (let i = 0; i < 5; i++) {
-        logger.info(`prune-${i}`, { padding: "y".repeat(40) });
-      }
+      Array.from({ length: 5 }, (_, index) => index).forEach((index) =>
+        logger.info(`prune-${index}`, { padding: "y".repeat(40) }),
+      );
 
       await flush(8);
 
@@ -401,6 +426,7 @@ describe("createAppLogger", () => {
   });
 
   it("creates logDir if it does not exist", async () => {
+    const logDir = createLogDir();
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const nestedDir = join(logDir, "nested", "deep");
 

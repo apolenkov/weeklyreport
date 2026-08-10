@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParamsValue,
 }));
 
-vi.mock("../../../../lib/trpc-context", () => ({
+vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       latestForViewer: {

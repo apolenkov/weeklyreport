@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { resolveDecisionFormSeed } from "./decision-edit-dialog-helpers";
 import {
   deriveDecisionDialogModel,

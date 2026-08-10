@@ -16,12 +16,14 @@ export function ViewerShellControls({
   periods,
   urlState,
   historyError,
+  historyLoading,
 }: {
   readonly reportId: string;
   readonly mode: "form" | "slides";
   readonly periods: readonly ReportPeriod[];
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
+  readonly historyLoading: boolean;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     urlState;
@@ -45,6 +47,7 @@ export function ViewerShellControls({
       slidesHref={`/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
       mode={mode}
       historyError={historyError}
+      historyLoading={historyLoading}
     />
   );
 }

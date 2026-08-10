@@ -161,8 +161,7 @@ and on error alike.
 The snapshot view MUST render empty item, risk, and decision lists when
 the snapshot payload is null in snapshot mode (still loading, or no data
 for the selected version) — it never falls back to the current draft.
-The extracted snapshot mappers
-(`apps/web/src/lib/mappers/lead-snapshot.ts`) encode this rule: with a
+The snapshot-mode projection seam MUST encode this rule: with a
 null payload all four snapshot projections return `[]`. The snapshot
 view never misrepresents historical state.
 
