@@ -21,7 +21,26 @@ function resolveExecutable(command: string): string {
   return executable;
 }
 
-const dockerComposeExecutable = resolveExecutable("docker-compose");
+interface ComposeCommand {
+  readonly executable: string;
+  readonly leadingArguments: readonly string[];
+}
+
+const resolveComposeCommand = (): ComposeCommand => {
+  try {
+    return {
+      executable: resolveExecutable("docker-compose"),
+      leadingArguments: [],
+    };
+  } catch {
+    return {
+      executable: resolveExecutable("docker"),
+      leadingArguments: ["compose"],
+    };
+  }
+};
+
+const composeCommand = resolveComposeCommand();
 
 // Operational policy inputs that docker-compose.prod.yml must require with
 // `${VAR:?...}` — a `:-` silent default here would invent resource,
@@ -83,10 +102,14 @@ void test("production compose has no silent `:-` defaults on policy inputs", () 
 // A real render check: with the policy matrix supplied the model renders;
 // with every required var blank it must fail to render.
 const renderCompose = (env: NodeJS.ProcessEnv) =>
-  spawnSync(dockerComposeExecutable, ["-f", prodCompose, "config"], {
-    env,
-    encoding: "utf8",
-  });
+  spawnSync(
+    composeCommand.executable,
+    [...composeCommand.leadingArguments, "-f", prodCompose, "config"],
+    {
+      env,
+      encoding: "utf8",
+    },
+  );
 
 const FULL_POLICY_ENV: NodeJS.ProcessEnv = {
   PATH: process.env.PATH,

@@ -25,21 +25,17 @@ const retained = readSuppressionInventory().directives.filter((directive) =>
 );
 
 const byPath = Map.groupBy(retained, (directive) => directive.path);
-const eslint = new ESLint({ cwd: process.cwd() });
+// Keep the source byte-identical to the checked-in file while disabling every
+// inline directive. Rewriting a type-aware lintText input can make the parser
+// service and ESLint disagree about source ranges on another platform.
+const eslint = new ESLint({
+  allowInlineConfig: false,
+  cwd: process.cwd(),
+});
 const failures: string[] = [];
 
 for (const [path, directives] of byPath) {
-  const lines = readFileSync(path, "utf8").split("\n");
-  for (const line of new Set(directives.map((directive) => directive.line))) {
-    const sourceLine = lines[line - 1] ?? "";
-    const lineComment = sourceLine.indexOf("// eslint-disable");
-    if (lineComment !== -1) {
-      lines[line - 1] = sourceLine.slice(0, lineComment);
-      continue;
-    }
-    lines[line - 1] = sourceLine.replace(/\/\*\s*eslint-disable.*?\*\//u, "");
-  }
-  const [result] = await eslint.lintText(lines.join("\n"), { filePath: path });
+  const [result] = await eslint.lintFiles([path]);
   const actualCounts = new Map<string, number>();
   for (const message of result?.messages ?? []) {
     if (message.ruleId === null) continue;
