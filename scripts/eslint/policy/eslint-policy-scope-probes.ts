@@ -23,6 +23,19 @@ const configModule = (await import(configModulePath)) as {
 };
 const config = configModule.default;
 const eslint = new ESLint({ cwd: process.cwd() });
+// Planted snippets exercise one explicitly named policy rule. Import sorting
+// is unrelated and can combine the snippet SourceCode with project-service
+// comments from the real representative path on Linux, producing invalid
+// ranges inside the third-party rule.
+const probeEslint = new ESLint({
+  cwd: process.cwd(),
+  overrideConfig: {
+    rules: {
+      "simple-import-sort/exports": "off",
+      "simple-import-sort/imports": "off",
+    },
+  },
+});
 const failures: string[] = [];
 const effectiveConfig = async (
   path: string,
@@ -153,7 +166,7 @@ for (const probe of plantedScopeProbes) {
     ["positive", probe.positive, probe.positiveReports],
     ["negative", probe.negative, probe.negativeReports],
   ] as const) {
-    const [result] = await eslint.lintText(probe.code, { filePath: path });
+    const [result] = await probeEslint.lintText(probe.code, { filePath: path });
     const reports = (result?.messages ?? []).some(
       (message) => message.ruleId === probe.rule,
     );
