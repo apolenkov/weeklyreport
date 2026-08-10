@@ -150,11 +150,11 @@ build time and a restart will not pick them up.
 `migrate` runs `prisma migrate deploy` on every `up`, applying only pending
 migrations. It never resets.
 
-Until the first production point the databases are disposable and the schema
-may be reshaped in place (`AGENTS.md`, MVP section). **After** that point
-migrations become append-only: forward-only, never edited once shipped.
-`prisma/guards/_destructive-guard.ts` blocks destructive Prisma commands against a
-production database unless `ALLOW_PROD_DESTRUCTIVE` is set — leave it unset.
+Treat committed migrations as append-only. A pre-production schema-history
+rewrite still requires an explicit reviewed task and is permitted only for the
+exact disposable targets listed in `AGENTS.md`, section **Database safety**.
+`prisma/guards/_destructive-guard.ts` must accept the resolved target before any
+destructive command. Leave `ALLOW_PROD_DESTRUCTIVE` unset.
 
 ## Rollback
 

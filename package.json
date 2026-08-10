@@ -101,7 +101,7 @@
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.7.2",
     "@next/eslint-plugin-next": "^16.2.12",
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
     "@types/react": "catalog:",

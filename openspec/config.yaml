@@ -7,11 +7,11 @@ context: |
   next week items, risks, decisions, top priorities); the head reviews,
   publishes, and exports a unified PDF report.
 
-  Current shipped baseline: v8.2 (2026-05-18). Active work: v8.4 versioning
-  UX + stage/save toolbar polish.
+  Resolve active work from `openspec list`; do not duplicate a release snapshot
+  in this long-lived agent context.
 
   # Stack
-  - Monorepo: pnpm 10.11 workspaces + Turborepo 2.5
+  - Monorepo: pnpm 11.17 workspaces + Turborepo 2.5
   - Frontend: Next.js 16 (App Router, React Compiler), React 19, Tailwind 4,
     shadcn/ui via `@customreport/ui`, TanStack Query 5, tRPC 11 client
   - Backend: NestJS 11, Express 5, tRPC 11 server, Prisma 7 with
@@ -20,16 +20,15 @@ context: |
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
   - Validation: Zod 4 shared schemas in `@customreport/shared`
-  - Testing: Vitest 4 (unit), Playwright 1.59 (E2E), Testing Library, MSW 2
-  - Node: >=20.19 (Docker pins `node:20-alpine`; API runner uses
-    Playwright noble image for PDF gen)
+  - Testing: Vitest 4 (unit), Playwright 1.62 (E2E), Testing Library, MSW 2
+  - Node: >=26 (Docker pins Node 26 images; API installs Chromium explicitly)
 
   # Workspace layout
   apps/web         — Next.js frontend (`@customreport/web`)
   apps/api         — NestJS backend (`@customreport/api`)
   packages/shared  — Zod schemas + tRPC router types (`@customreport/shared`)
   packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
-  prisma/          — schema, migrations (append-only), seeds, destructive
+  prisma/          — schema, migrations, seeds, destructive
                      guard
 
   # Roles
@@ -72,15 +71,12 @@ context: |
   - Non-prod `POSTGRES_DB` and the database name inside `DATABASE_URL` must
     suffix with `_uat`, `_dev`, or `_test` when the host is not truly local;
     `prisma/guards/_destructive-guard.ts` parses `DATABASE_URL`
-  - Prisma migrations are append-only; review destructive migrations
-    against the guard
-  - In MVP phase schema and interfaces can change freely (`migrate reset`
-    is preferred over alter-table migrations); openspec proposals should
-    state explicitly when this freedom is being used
+  - Treat committed Prisma migrations as append-only. A history rewrite needs
+    an explicit reviewed task and is allowed only for the exact disposable DB
+    targets in `AGENTS.md`; the destructive guard and per-run consent still apply
 
   # Quality gates (must stay green)
   pnpm typecheck && pnpm lint && pnpm test && pnpm build
-  OpenSpec markdown: pnpm lint:md
 
   # Sources of truth (read before proposing)
   - `prisma/schema.prisma` — current data model
