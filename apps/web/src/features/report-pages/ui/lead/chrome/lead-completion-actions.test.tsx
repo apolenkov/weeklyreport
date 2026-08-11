@@ -88,4 +88,29 @@ describe("LeadCompletionActions", () => {
         .className,
     ).toContain("[&_button]:min-h-10");
   });
+
+  it("floors every sticky action at the mobile touch target without changing desktop density", () => {
+    render(
+      <LeadStickyCompletionActions
+        actions={{
+          autosave,
+          onAdd: vi.fn(),
+          addDisabled: false,
+          onSubmit: vi.fn(),
+          submitDisabled: false,
+        }}
+      />,
+    );
+
+    const group = screen.getByRole("group", {
+      name: "Sticky completion actions",
+    });
+    expect(group.className).toContain(
+      "max-md:[&_button]:min-h-[var(--touch-target-min)]",
+    );
+    expect(group.className).toContain(
+      "max-md:[&_button]:min-w-[var(--touch-target-min)]",
+    );
+    expect(group.className).toContain("[&_button]:min-h-10");
+  });
 });

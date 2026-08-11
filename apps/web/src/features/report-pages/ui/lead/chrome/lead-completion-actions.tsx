@@ -36,7 +36,7 @@ export function LeadCompletionActions({
       aria-label={label}
       className={`flex flex-wrap items-center justify-end gap-2 [&_button]:min-h-10 ${
         compact
-          ? "max-sm:w-full max-sm:justify-stretch max-sm:[&_button]:flex-1"
+          ? "max-sm:w-full max-sm:justify-stretch max-sm:[&_button]:flex-1 max-md:[&_button]:min-h-[var(--touch-target-min)] max-md:[&_button]:min-w-[var(--touch-target-min)]"
           : ""
       }`}
     >
