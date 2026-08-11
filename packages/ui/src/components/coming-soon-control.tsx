@@ -10,7 +10,7 @@ const INERT_CHROME =
 const ICON_SHAPE = {
   toolbar:
     "h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] shrink-0 rounded-full",
-  nav: "h-8 w-10 rounded-[var(--radius-pill)] px-0",
+  nav: "h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] px-0",
 } as const;
 
 /**
