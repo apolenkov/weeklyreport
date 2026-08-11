@@ -1,9 +1,19 @@
 "use client";
 
 import type { PeriodStatus } from "@customreport/shared";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@customreport/ui/components/ui/tooltip";
 
 import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-button";
 import { usePdfExportJob } from "./use-pdf-export-job";
+
+const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
+const DISABLED_TRIGGER_CLASS =
+  "inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1";
 
 interface ExportPdfButtonProps {
   readonly reportId: string;
@@ -20,27 +30,55 @@ export function ExportPdfButton({
     usePdfExportJob({ reportId, periodStatus });
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
-  // Unpublished reason goes on aria-describedby/sr-only — disabled controls
-  // cannot reveal a tooltip on hover/focus.
   const buttonClassName = isGenerating
     ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] disabled:opacity-100"
     : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
   return (
     <>
-      <ToolbarIconButton
-        aria-label="Export PDF"
-        onClick={handleExport}
-        disabled={disabled}
-        aria-busy={isGenerating}
-        aria-describedby={!isExportable ? disabledReasonId : undefined}
-        className={buttonClassName}
-      >
-        {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
-      </ToolbarIconButton>
+      {!isExportable ? (
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                data-testid="export-pdf-disabled-trigger"
+                role="group"
+                aria-label="Export PDF unavailable"
+                aria-describedby={disabledReasonId}
+                tabIndex={0}
+                className={DISABLED_TRIGGER_CLASS}
+              >
+                <ToolbarIconButton
+                  aria-label="Export PDF"
+                  onClick={handleExport}
+                  disabled={disabled}
+                  aria-busy={isGenerating}
+                  aria-describedby={disabledReasonId}
+                  className={buttonClassName}
+                >
+                  {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
+                </ToolbarIconButton>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center" sideOffset={6}>
+              {DISABLED_REASON}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        <ToolbarIconButton
+          aria-label="Export PDF"
+          onClick={handleExport}
+          disabled={disabled}
+          aria-busy={isGenerating}
+          className={buttonClassName}
+        >
+          {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
+        </ToolbarIconButton>
+      )}
       {!isExportable ? (
         <span id={disabledReasonId} className="sr-only">
-          Publish or re-publish the report to export PDF.
+          {DISABLED_REASON}
         </span>
       ) : null}
       {fallbackUrl !== null ? (
