@@ -30,6 +30,7 @@ import { ExportPdfButton } from "./export-pdf-button";
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const ARTIFACT_URL = "https://example.test/artifact.pdf";
+const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
 
 const COMPLETED_STATUS = {
   jobId: JOB_ID,
@@ -100,18 +101,78 @@ describe("ExportPdfButton", () => {
       "aria-describedby",
       `${REPORT_ID}-export-pdf-disabled-reason`,
     );
-    expect(
-      screen.getByText("Publish or re-publish the report to export PDF."),
-    ).toHaveClass("sr-only");
+    expect(button).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(screen.getByText(DISABLED_REASON)).toHaveClass("sr-only");
   });
 
   it("stays disabled while the report is reopened", () => {
     renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "reopened" });
 
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled();
+    expect(screen.getByText(DISABLED_REASON)).toHaveClass("sr-only");
+  });
+
+  it("reveals the exact prerequisite on pointer hover without enabling export", async () => {
+    const { captured } = renderButton({
+      statusQuery: COMPLETED_STATUS,
+      periodStatus: "open",
+    });
+    const trigger = screen.getByTestId("export-pdf-disabled-trigger");
+    const button = screen.getByRole("button", { name: "Export PDF" });
+
+    expect(trigger).toHaveAttribute("tabindex", "0");
+    expect(trigger).toHaveAttribute("role", "group");
+    expect(trigger).not.toHaveAttribute("role", "button");
+    expect(trigger).toHaveAccessibleName("Export PDF unavailable");
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(button).toBeDisabled();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    await userEvent.hover(trigger);
+
     expect(
-      screen.getByText("Publish or re-publish the report to export PDF."),
-    ).toHaveClass("sr-only");
+      await screen.findByRole("tooltip", { name: DISABLED_REASON }),
+    ).toBeVisible();
+    expect(button).toBeDisabled();
+    expect(
+      expectDefined(captured["pdfExport.request"]).mutationFn,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("reveals the exact prerequisite on keyboard focus without activation", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderButton({
+      statusQuery: COMPLETED_STATUS,
+      periodStatus: "reopened",
+    });
+    const trigger = screen.getByTestId("export-pdf-disabled-trigger");
+    const button = screen.getByRole("button", { name: "Export PDF" });
+
+    await user.tab();
+
+    expect(trigger).toHaveFocus();
+    expect(
+      await screen.findByRole("tooltip", { name: DISABLED_REASON }),
+    ).toBeVisible();
+    expect(button).toBeDisabled();
+
+    await user.keyboard("{Enter}");
+
+    expect(button).toBeDisabled();
+    expect(
+      expectDefined(captured["pdfExport.request"]).mutationFn,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("keeps the disabled tooltip trigger geometry neutral and non-button", () => {
+    renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "open" });
+
+    const trigger = screen.getByTestId("export-pdf-disabled-trigger");
+    expect(trigger).toHaveClass("inline-flex", "shrink-0");
+    expect(trigger).not.toHaveClass("h-[var(--toolbar-control-h)]");
+    expect(trigger).not.toHaveClass("w-[var(--toolbar-control-h)]");
+    expect(trigger).not.toHaveAttribute("role", "button");
+    expect(trigger).not.toHaveAttribute("aria-disabled");
   });
 
   it("calls window.open synchronously in the click handler before the mutation", async () => {
