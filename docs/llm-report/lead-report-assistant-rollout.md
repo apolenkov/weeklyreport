@@ -94,30 +94,14 @@ the reset workflow described in the pgvector rollout inventory.
 
 ## 2. Network and provider preflight
 
-Verify TLS/443 reachability for the selected allowlisted origin and confirm that
-the configured planner, answer, and embedding models are available. Providers
-may expose different model-discovery APIs, so use the provider's documented
-model check or its approved control plane; do not send report content. Then run
-the admin capability test, which uses synthetic non-report payloads and verifies
-forced tool calling, strict structured output, usage, ordered finite embeddings,
-and configured dimensions.
-
-For the historical Mistral bootstrap profile, the equivalent model check is:
-
-```bash
-models_file="$(mktemp)"
-trap 'rm -f "$models_file"' EXIT
-curl --fail --silent --show-error --connect-timeout 5 --max-time 20 \
-  -H "Authorization: Bearer ${MISTRAL_API_KEY}" \
-  "https://api.eu.mistral.ai/v1/models" > "$models_file"
-for model in "$MISTRAL_PLANNER_MODEL" "$MISTRAL_ANSWER_MODEL" "$MISTRAL_EMBEDDING_MODEL"; do
-  jq -e --arg model "$model" '.data | any(.[]; .id == $model)' "$models_file" > /dev/null
-done
-```
-
-A failed request, missing model, unexpected region, or blocked egress is a
-preflight failure. Fix the workspace or allow-listed destination before
-starting the API; do not test by sending report text.
+Verify TLS/443 reachability for the selected allowlisted origin. After the API
+is running, an administrator configures the provider credential and three model
+roles in **Settings → Integrations**, then runs the synthetic capability test.
+The test verifies authentication, forced tool calling, strict structured output,
+usage, and ordered finite embeddings; it measures dimensions from the response.
+Do not put the credential, model IDs, or dimensions into deployment environment
+files. A failed test, missing model, unexpected region, or blocked egress is a
+preflight failure; do not test by sending report text.
 
 ## 3. Database and service order
 
@@ -163,7 +147,7 @@ authorized report sources, and open one source link. Confirm the panel's error
 state is actionable if the provider is unavailable.
 
 Automated tests must continue to use deterministic fakes or Playwright route
-interception. They must never contact Mistral. Review the bounded metrics
+interception. They must never contact a real provider. Review the bounded metrics
 without inspecting payloads:
 
 ```text

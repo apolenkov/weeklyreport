@@ -114,14 +114,6 @@ SMTP_FROM=noreply@example.com
 AI_PROVIDER_CONFIG_ENCRYPTION_KEY=<base64-or-hex-32-byte-key>
 AI_PROVIDER_CONFIG_KEY_VERSION=1
 AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai
-# Optional one-shot import for an existing Mistral deployment. These are not
-# runtime fallbacks and should be removed after `pnpm db:bootstrap-ai-provider`.
-# MISTRAL_API_KEY=<provided-key>
-# MISTRAL_PLANNER_MODEL=mistral-medium-3-5
-# MISTRAL_ANSWER_MODEL=mistral-medium-3-5
-# MISTRAL_EMBEDDING_MODEL=mistral-embed
-# MISTRAL_EMBEDDING_DIMENSIONS=1024
-# MISTRAL_API_SERVER=eu
 REPORT_ASSISTANT_INPUT_VERSION=1
 REPORT_ASSISTANT_SIMILARITY_THRESHOLD=0.55
 REPORT_ASSISTANT_CANDIDATE_LIMIT=500
@@ -146,16 +138,10 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
-For an existing deployment, run the explicit one-shot Mistral import after the
-migration and before the assistant smoke test:
-
-```bash
-pnpm db:bootstrap-ai-provider
-```
-
-The command prints only availability and revision state. It is idempotent and
-does nothing once an AI control or configuration row exists. Fresh installations
-remain unconfigured until an admin saves and tests a provider in Integrations.
+After deployment, an administrator opens **Settings → Integrations**, enters
+the provider credential and the three model IDs, runs the synthetic capability
+test, and activates the tested revision. The provider credential, model IDs,
+and measured embedding dimensions do not belong in `.env.prod`.
 
 После успешного запуска проверь `https://reports.example.com/health/live`.
 Production database не сбрасывается и не пересеивается: миграции применяются

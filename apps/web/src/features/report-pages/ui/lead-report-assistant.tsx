@@ -45,7 +45,7 @@ export function LeadReportAssistant() {
       queryFn: () => Promise.resolve({ availability: "available" as const }),
     },
   );
-  const isAvailable = availability.data?.availability !== "not_configured";
+  const isAvailable = availability.data?.availability === "available";
   const {
     question,
     outcome,

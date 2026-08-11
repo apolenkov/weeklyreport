@@ -118,7 +118,6 @@ export const envSchema = z
     MISTRAL_ANSWER_MODEL: z.string().min(1).optional(),
     MISTRAL_EMBEDDING_MODEL: z.string().min(1).optional(),
     MISTRAL_EMBEDDING_DIMENSIONS: positiveIntegerEnv.optional(),
-    MISTRAL_API_SERVER: z.string().min(1).optional(),
     REPORT_ASSISTANT_INPUT_VERSION: z.string().min(1),
     REPORT_ASSISTANT_SIMILARITY_THRESHOLD: z.coerce
       .number()

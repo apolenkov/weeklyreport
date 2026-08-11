@@ -224,13 +224,13 @@ MISTRAL_PLANNER_MODEL=mistral-medium-3-5
 MISTRAL_ANSWER_MODEL=mistral-medium-3-5
 MISTRAL_EMBEDDING_MODEL=mistral-embed
 MISTRAL_EMBEDDING_DIMENSIONS=1024
-MISTRAL_API_SERVER=eu
 ```
 
 The exact environment variable names may be aligned with the accepted OpenSpec, but
 their values must remain explicit, required, validated at boot, and documented per
-environment. No `-latest` alias, hidden SDK default, or free-plan privacy assumption
-should enter the production configuration.
+environment. The built-in Mistral profile uses the approved global endpoint. No
+`-latest` alias, hidden SDK default, or free-plan privacy assumption should enter
+the production configuration.
 
 Method note: researched on 2026-08-04. Mistral model availability, pricing, API limits,
 and legal terms are changeable external facts; re-check the linked primary sources and

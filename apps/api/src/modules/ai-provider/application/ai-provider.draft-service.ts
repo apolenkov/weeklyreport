@@ -5,7 +5,7 @@ import {
   aiProviderDraftSchema,
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
-import { AiProviderProfile } from "@prisma/client";
+import { AiProviderLifecycle, AiProviderProfile } from "@prisma/client";
 
 import { resolveProviderProfile } from "../domain/provider-profile.js";
 import type { NewAiProviderRevision } from "../infrastructure/ai-provider.repository.js";
@@ -111,6 +111,7 @@ export class AiProviderDraftService {
       passed,
       test.embeddingDimensions,
       now(),
+      revision.lifecycle,
     );
     this.dependencies.audit.record({
       event: "ai_provider.tested",
@@ -170,6 +171,7 @@ export class AiProviderDraftService {
       true,
       legacy.embeddingDimensions,
       testedAt,
+      AiProviderLifecycle.draft,
     );
     await this.dependencies.repository.activateRevision(revision.id, now());
     this.dependencies.metrics.recordCapabilityTest({
@@ -202,14 +204,12 @@ export class AiProviderDraftService {
       MISTRAL_ANSWER_MODEL: answerModel,
       MISTRAL_EMBEDDING_MODEL: embeddingModel,
       MISTRAL_EMBEDDING_DIMENSIONS: embeddingDimensions,
-      MISTRAL_API_SERVER: server,
     } = this.dependencies.env;
     return apiKey &&
       plannerModel &&
       answerModel &&
       embeddingModel &&
-      embeddingDimensions !== undefined &&
-      server
+      embeddingDimensions !== undefined
       ? {
           apiKey,
           plannerModel,

@@ -193,6 +193,31 @@ describe("AiProviderConfigurationRepository", () => {
     });
   });
 
+  it("preserves active lifecycle while recording a failed capability retest", async () => {
+    const harness = buildHarness();
+    const testedAt = new Date("2026-08-10T01:00:00.000Z");
+
+    await harness.repository.setTestResult(
+      "revision-active",
+      { status: "failed" },
+      false,
+      null,
+      testedAt,
+      AiProviderLifecycle.active,
+    );
+
+    expect(harness.configurationUpdate).toHaveBeenCalledWith({
+      where: { id: "revision-active" },
+      data: expect.objectContaining({
+        lifecycle: AiProviderLifecycle.active,
+        testResult: { status: "failed" },
+        embeddingDimensions: null,
+        testedAt,
+      }),
+      select: expect.anything(),
+    });
+  });
+
   it("disables the singleton without deleting retained revisions", async () => {
     const harness = buildHarness();
 
