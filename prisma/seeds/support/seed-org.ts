@@ -64,7 +64,7 @@ async function seedReportingGroups(prisma: PrismaClient): Promise<void> {
   });
 }
 
-function groupIdForUser(user: SeedUser): string | null {
+export function effectiveReportingGroupForUser(user: SeedUser): string | null {
   return user.id === LEAD_OLGA_ID || user.id === LEAD_SERGEY_ID
     ? ADVANCED_FINANCE_GROUP_ID
     : user.reportingGroupId;
@@ -82,7 +82,7 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       position: user.position,
       role: toRole(user.role),
       samlId: user.samlId,
-      reportingGroupId: groupIdForUser(user),
+      reportingGroupId: effectiveReportingGroupForUser(user),
     };
 
     await prisma.user.upsert({
@@ -137,11 +137,10 @@ export function reportingGroupForProduct(
 // seeded lead's reporting group so seed data satisfies the UAT invariant.
 async function seedProducts(prisma: PrismaClient): Promise<void> {
   const groupByLeadId = new Map<string, string>(
-    SEED_USERS.flatMap((user) =>
-      user.reportingGroupId === null
-        ? []
-        : [[user.id, user.reportingGroupId] as const],
-    ),
+    SEED_USERS.flatMap((user) => {
+      const groupId = effectiveReportingGroupForUser(user);
+      return groupId === null ? [] : [[user.id, groupId] as const];
+    }),
   );
 
   for (const product of SEED_PRODUCTS) {

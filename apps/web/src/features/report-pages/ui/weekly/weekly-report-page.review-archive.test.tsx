@@ -280,6 +280,7 @@ function makeAcknowledgeableData(): ReturnType<typeof makeWeeklyReportData> {
     leadSections: base.leadSections.map((section) => ({
       ...section,
       groupId: "99999999-9999-4999-8999-999999999901",
+      groupName: "Core Development",
     })),
   };
 }

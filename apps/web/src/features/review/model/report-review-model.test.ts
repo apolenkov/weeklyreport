@@ -31,24 +31,43 @@ describe("distinctReviewGroups", () => {
   it("drops missing ids and keeps the first occurrence order", () => {
     const report = makeWeeklyReportFixture({
       leadSections: [
-        { groupId: GROUP_A },
+        { groupId: GROUP_A, groupName: "Core Development" },
         { groupId: null },
-        { groupId: GROUP_B },
-        { groupId: GROUP_A },
+        { groupId: GROUP_B, groupName: "Finance Platforms" },
+        { groupId: GROUP_A, groupName: "Core Development" },
       ],
     });
 
     expect(distinctReviewGroups(report.leadSections)).toEqual([
-      { groupId: GROUP_A },
-      { groupId: GROUP_B },
+      { groupId: GROUP_A, label: "Core Development" },
+      { groupId: GROUP_B, label: "Finance Platforms" },
     ]);
+  });
+
+  it("rejects missing or conflicting labels", () => {
+    const missing = makeWeeklyReportFixture({
+      leadSections: [{ groupId: GROUP_A }],
+    });
+    expect(() => distinctReviewGroups(missing.leadSections)).toThrow(
+      /has no label/u,
+    );
+
+    const conflicting = makeWeeklyReportFixture({
+      leadSections: [
+        { groupId: GROUP_A, groupName: "Core Development" },
+        { groupId: GROUP_A, groupName: "Finance Platforms" },
+      ],
+    });
+    expect(() => distinctReviewGroups(conflicting.leadSections)).toThrow(
+      /conflicting labels/u,
+    );
   });
 });
 
 describe("buildReviewModel", () => {
   it("returns an empty model when the live review surface is disabled", () => {
     const report = makeWeeklyReportFixture({
-      leadSections: [{ groupId: GROUP_A }],
+      leadSections: [{ groupId: GROUP_A, groupName: "Core Development" }],
     });
     const onMutated = vi.fn();
 
@@ -72,16 +91,19 @@ describe("buildReviewModel", () => {
       leadSections: [
         {
           groupId: GROUP_A,
+          groupName: "Core Development",
           status: "submitted",
           canReview: true,
         },
         {
           groupId: GROUP_A,
+          groupName: "Core Development",
           status: "draft",
           canReview: false,
         },
         {
           groupId: GROUP_B,
+          groupName: "Finance Platforms",
           status: "submitted",
           canReview: true,
         },
@@ -100,7 +122,10 @@ describe("buildReviewModel", () => {
       isAdmin: true,
       onMutated,
     });
-    expect(model.groups).toEqual([{ groupId: GROUP_A }, { groupId: GROUP_B }]);
+    expect(model.groups).toEqual([
+      { groupId: GROUP_A, label: "Core Development" },
+      { groupId: GROUP_B, label: "Finance Platforms" },
+    ]);
     expect(
       model.sections.map((section) => ({
         reportSectionId: section.reportSectionId,

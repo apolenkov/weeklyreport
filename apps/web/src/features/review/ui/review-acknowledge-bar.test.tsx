@@ -25,6 +25,8 @@ import { ReviewAcknowledgeBar } from "./review-acknowledge-bar";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const GROUP_ID = "44444444-4444-4444-8444-444444444444";
+const GROUP_LABEL = "Core Development";
+const OTHER_GROUP_ID = "55555555-5555-4555-8555-555555555555";
 const CURRENT_USER_ID = "22222222-2222-4222-8222-222222222222";
 
 const CURRENT_USER_ACK: ReviewAcknowledgementView = {
@@ -77,7 +79,7 @@ function renderBar(options: {
   render(
     <ReviewAcknowledgeBar
       reportId={REPORT_ID}
-      groups={[{ groupId: GROUP_ID }]}
+      groups={[{ groupId: GROUP_ID, label: GROUP_LABEL }]}
       currentUserId={CURRENT_USER_ID}
       isHeadOrAdmin={options.isHeadOrAdmin ?? false}
     />,
@@ -108,7 +110,9 @@ describe("ReviewAcknowledgeBar", () => {
   it("disables the control once the current user is already on the roster", async () => {
     renderBar({ acks: [CURRENT_USER_ACK] });
 
-    const button = await screen.findByRole("button", { name: "Acknowledged" });
+    const button = await screen.findByRole("button", {
+      name: `Acknowledged · ${GROUP_LABEL}`,
+    });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-pressed", "true");
   });
@@ -121,7 +125,9 @@ describe("ReviewAcknowledgeBar", () => {
       return Promise.resolve(undefined);
     });
 
-    const button = await screen.findByRole("button", { name: "Acknowledge" });
+    const button = await screen.findByRole("button", {
+      name: `Acknowledge · ${GROUP_LABEL}`,
+    });
     expect(button).toBeEnabled();
     expect(button).toHaveAttribute("aria-pressed", "false");
 
@@ -140,7 +146,9 @@ describe("ReviewAcknowledgeBar", () => {
     });
 
     await waitFor(() => {
-      const locked = screen.getByRole("button", { name: "Acknowledged" });
+      const locked = screen.getByRole("button", {
+        name: `Acknowledged · ${GROUP_LABEL}`,
+      });
       expect(locked).toBeDisabled();
       expect(locked).toHaveAttribute("aria-pressed", "true");
     });
@@ -153,6 +161,42 @@ describe("ReviewAcknowledgeBar", () => {
     });
 
     expect(await screen.findByText("Seen by Current User")).toBeInTheDocument();
+  });
+
+  it("gives two group actions distinct visible and accessible names", async () => {
+    const { proxy } = createMockTRPC([
+      {
+        path: ["review", "acknowledgements"],
+        queryByInput: () => Promise.resolve([]),
+      },
+      { path: ["review", "acknowledge"], mutation: true },
+    ]);
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <TRPCProxyContext.Provider value={proxy}>
+          <ReviewAcknowledgeBar
+            reportId={REPORT_ID}
+            groups={[
+              { groupId: GROUP_ID, label: GROUP_LABEL },
+              { groupId: OTHER_GROUP_ID, label: "Finance Platforms" },
+            ]}
+            currentUserId={CURRENT_USER_ID}
+            isHeadOrAdmin={false}
+          />
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: `Acknowledge · ${GROUP_LABEL}`,
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Acknowledge · Finance Platforms",
+      }),
+    ).toBeVisible();
   });
 
   it("keeps the control inert and shows an error when the roster query fails", async () => {
