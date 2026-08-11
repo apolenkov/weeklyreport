@@ -271,6 +271,41 @@ describe("FillFromButton — a11y regression: aria-hidden decorative SVGs", () =
   });
 });
 
+describe("FillFromButton — responsive touch-target geometry", () => {
+  it("floors both mobile segments without changing the compact desktop contract", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const main = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const chevron = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+
+    // jsdom does not evaluate media queries; the responsive utility classes
+    // are the regression teeth for the mobile 44px floor.
+    for (const button of [main, chevron]) {
+      expect(button.className.split(/\s+/)).toContain(
+        "max-md:min-h-[var(--touch-target-min)]",
+      );
+      expect(button.className.split(/\s+/)).toContain(
+        "max-md:min-w-[var(--touch-target-min)]",
+      );
+      expect(button.className.split(/\s+/)).toContain("h-full");
+    }
+
+    // The shared toolbar token remains the desktop sizing contract; the
+    // mobile-only floor must not become an unconditional desktop min-height.
+    const container = main.parentElement;
+    expect(container?.className.split(/\s+/)).toContain(
+      "h-[var(--toolbar-control-h)]",
+    );
+    expect(main.className.split(/\s+/)).not.toContain(
+      "min-h-[var(--touch-target-min)]",
+    );
+  });
+});
+
 describe("FillFromButton — locked on a reopened period", () => {
   // On a reopened period the section carries published-lineage records, so the
   // server's fillFrom guard rejects every source. Disable both segments and

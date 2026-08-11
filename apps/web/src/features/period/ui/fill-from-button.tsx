@@ -18,9 +18,9 @@ import { useFillFromDropdown } from "./use-fill-from-dropdown";
 const SPLIT_BUTTON_CONTAINER_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] text-[var(--color-foreground)]";
 const SPLIT_BUTTON_SEGMENT_CLASS =
-  "btn-press inline-flex h-full items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
-// Below `md` both segments floor their WIDTH at the touch target; the shared
-// container already floors the height via --toolbar-control-h.
+  "btn-press inline-flex h-full max-md:min-h-[var(--touch-target-min)] items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+// The container border consumes 2px from `h-full`; below `md`, each
+// actionable segment therefore floors its own box at the touch target.
 const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5 max-md:min-w-[var(--touch-target-min)]`;
 const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l border-[var(--color-border)] px-1.5 max-md:min-w-[var(--touch-target-min)]`;
 

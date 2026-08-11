@@ -137,6 +137,36 @@ describe("ItemCard — compact touch floor", () => {
   );
 });
 
+describe("ItemCard — narrow action reflow", () => {
+  it("wraps the header and action row without shrinking touch targets", () => {
+    render(
+      <ItemCard
+        item={BASE_ITEM}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMarkComplete={vi.fn()}
+        onMoveToNextWeek={vi.fn()}
+        onPause={vi.fn()}
+      />,
+    );
+
+    const card = screen.getByTestId("item-card");
+    const header = card.firstElementChild;
+    const editButton = screen.getByRole("button", { name: "Edit" });
+    const actionRow = editButton.parentElement;
+
+    expect(card).toHaveClass("min-w-0");
+    expect(header).toHaveClass("min-w-0", "flex-wrap", "md:flex-nowrap");
+    expect(actionRow).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "flex-wrap",
+      "md:flex-nowrap",
+    );
+    expect(editButton).toHaveClass("shrink-0");
+  });
+});
+
 describe("ItemCard — uniform height", () => {
   // Same fixed height as the section-level empty-state placeholder ("No
   // items yet" in current-week-section.tsx / next-week-section.tsx) — the
