@@ -135,4 +135,72 @@ test.describe("Admin CRUD (integration)", () => {
     const html = await adminPage.content();
     expect(html).toContain(firstSeededProduct);
   });
+
+  test("admin can save a global AI provider draft without activating it", async ({
+    adminPage,
+  }) => {
+    const suffix = `${Date.now()}`;
+    const plannerModel = `e2e-planner-${suffix}`;
+    const answerModel = `e2e-answer-${suffix}`;
+    const embeddingModel = `e2e-embedding-${suffix}`;
+
+    try {
+      await adminPage.goto("/admin/settings");
+      await adminPage.getByRole("tab", { name: "Integrations" }).click();
+
+      await expect(
+        adminPage.getByTestId("integration-row-ai"),
+      ).toBeVisible({ timeout: 15_000 });
+      await adminPage
+        .getByLabel("AI provider profile")
+        .selectOption("custom-openai-compatible");
+      await adminPage
+        .getByLabel("AI provider endpoint")
+        .fill("https://ai.example.com/v1");
+      await adminPage.getByLabel("Planner model").fill(plannerModel);
+      await adminPage.getByLabel("Answer model").fill(answerModel);
+      await adminPage.getByLabel("Embedding model").fill(embeddingModel);
+      await adminPage.getByLabel("Embedding dimensions").fill("3");
+      await adminPage
+        .getByLabel("AI provider credential")
+        .fill("e2e-provider-secret");
+
+      const saveResponse = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes("admin.aiProvider.save") &&
+          response.request().method() === "POST",
+        { timeout: 15_000 },
+      );
+      await adminPage.getByRole("button", { name: "Save draft" }).click();
+      await saveResponse;
+
+      const stored = await prisma.aiProviderConfiguration.findFirst({
+        where: { plannerModel },
+      });
+      expect(stored).toMatchObject({
+        answerModel,
+        embeddingModel,
+        embeddingDimensions: 3,
+        lifecycle: "draft",
+      });
+      expect(stored?.credentialCiphertext).not.toContain(
+        "e2e-provider-secret",
+      );
+      const control = await prisma.aiProviderControl.findUnique({
+        where: { id: "singleton" },
+      });
+      expect(control).toMatchObject({
+        activeConfigurationId: null,
+        enabled: false,
+      });
+    } finally {
+      await prisma.aiProviderControl.update({
+        where: { id: "singleton" },
+        data: { activeConfigurationId: null, enabled: false },
+      });
+      await prisma.aiProviderConfiguration.deleteMany({
+        where: { plannerModel },
+      });
+    }
+  });
 });

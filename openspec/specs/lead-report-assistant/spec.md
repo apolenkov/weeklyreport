@@ -8,13 +8,19 @@ TBD - created by syncing add-native-lead-report-assistant.
 
 ### Requirement: The Lead report surface exposes a native Chat entry point
 
-The Lead report context toolbar MUST render an active **Chat** control immediately beside the existing **Agent review** placeholder. The control and the chat surface MUST reuse the repository's existing report-toolbar, dialog/sheet/layout, typography, spacing, color, focus, busy, empty, and error patterns; production UI copy MUST remain English. Head, admin, viewer, print, and unrelated report surfaces MUST NOT gain an active assistant control in this change.
+The Lead report context toolbar MUST render **Chat** immediately beside the existing **Agent review** placeholder. When global AI availability is `available`, Chat MUST be active and open the existing assistant surface. When availability is `not_configured`, Chat MUST remain visible but disabled and MUST explain in English that AI is not configured by an administrator. The control and chat surface MUST reuse the repository's existing report-toolbar, dialog/sheet/layout, typography, spacing, color, focus, busy, empty, and error patterns. Head, admin, viewer, print, and unrelated report surfaces MUST NOT gain an active assistant control in this change.
 
-#### Scenario: Lead opens Chat from the report toolbar
+#### Scenario: Lead opens configured Chat from the report toolbar
 
-- **WHEN** a Lead activates Chat beside Agent review
+- **WHEN** a Lead activates Chat while global AI availability is `available`
 - **THEN** the report assistant surface opens without navigating to an unrelated application or losing the current report context
 - **AND** the toolbar controls retain their established height and alignment
+
+#### Scenario: Lead reaches Chat while AI is unconfigured
+
+- **WHEN** global AI availability is `not_configured`
+- **THEN** Chat remains visible but disabled with explanatory copy
+- **AND** the web client sends no assistant request
 
 #### Scenario: A non-Lead reaches the assistant procedure
 
@@ -50,18 +56,18 @@ The Lead assistant tRPC procedure MUST validate a shared Zod input containing on
 #### Scenario: Input contains unknown or malformed fields
 
 - **WHEN** the caller submits an unknown field, invisible-only question, null byte, invalid token shape, or over-limit input
-- **THEN** shared strict Zod validation rejects the request before any Mistral call
+- **THEN** shared strict Zod validation rejects the request before any configured provider call
 
-### Requirement: Mistral planning uses one forced typed search tool
+### Requirement: Configured planning uses one forced typed search tool
 
-The language-model adapter MUST require Mistral to call exactly one `search_report_entries` tool whose JSON Schema is generated from the canonical shared `SearchPlan` Zod schema. It MUST implement the versioned planner and planner-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, expose one tool with forced tool choice, and disable parallel tool calls. The planner MUST NOT answer the user before tool execution and MUST NOT receive report records, database IDs, the unrestricted organization catalog, SQL controls, vector limits, or authorization policy decisions.
+The active language-model adapter MUST require the configured planner model to call exactly one `search_report_entries` tool whose JSON Schema is generated from the canonical shared `SearchPlan` Zod schema. It MUST implement the versioned planner and planner-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, force that tool, and disable parallel tool calls. The planner MUST NOT answer before tool execution and MUST NOT receive report records, database IDs, the unrestricted organization catalog, SQL controls, vector limits, authorization decisions, or provider credentials.
 
-#### Scenario: Planner produces a valid tool call
+#### Scenario: Configured planner produces a valid tool call
 
-- **WHEN** Mistral returns a tool call that satisfies the shared schema and cross-field refinements
+- **WHEN** the active planner returns exactly one tool call that satisfies the shared schema and cross-field refinements
 - **THEN** the server passes the validated plan to entity resolution
 
-#### Scenario: Planner produces an invalid tool call twice
+#### Scenario: Configured planner produces an invalid tool call twice
 
 - **WHEN** the first plan is invalid and remains invalid after one bounded repair request containing field-level validation issues
 - **THEN** the assistant returns `invalid_plan`
@@ -69,7 +75,7 @@ The language-model adapter MUST require Mistral to call exactly one `search_repo
 
 ### Requirement: The assistant exposes explicit product outcomes
 
-The shared assistant output MUST be a discriminated union covering `ok`, `clarification_required`, `no_results`, `semantic_index_pending`, `result_set_too_large`, and `invalid_plan`. Provider, database, and invariant failures MUST remain technical errors mapped by the existing tRPC error boundary and MUST NOT masquerade as `no_results`.
+The shared assistant output MUST be a discriminated union covering `ok`, `clarification_required`, `no_results`, `semantic_index_pending`, `result_set_too_large`, `invalid_plan`, and `ai_not_configured`. Transient supported-provider failures MUST use the separately specified `provider_unavailable` outcome. Other provider, database, and invariant failures MUST remain technical errors mapped by the existing tRPC error boundary and MUST NOT masquerade as `no_results`.
 
 #### Scenario: Search needs user disambiguation
 
@@ -81,6 +87,11 @@ The shared assistant output MUST be a discriminated union covering `ok`, `clarif
 - **WHEN** the complete structured candidate set cannot be ranked until queued embeddings finish
 - **THEN** the procedure returns `semantic_index_pending`
 - **AND** it returns no partial semantic answer
+
+#### Scenario: Direct call has no active configuration
+
+- **WHEN** an authorized Lead invokes the assistant while global AI availability is `not_configured`
+- **THEN** the procedure returns `{ "kind": "ai_not_configured" }` without retrieval or provider work
 
 ### Requirement: Answers are grounded in server-prepared evidence
 

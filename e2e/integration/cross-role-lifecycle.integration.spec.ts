@@ -16,6 +16,11 @@ import {
   SEED_EMAILS,
 } from "./helpers/seed-ids";
 
+// These lifecycle checks open and close multiple authenticated contexts. They
+// assert database and UI state, not visual output; disabling optional artifact
+// capture keeps context teardown independent from screenshot/video packaging.
+test.use({ screenshot: "off", trace: "off", video: "off" });
+
 test.describe("Cross-role lifecycle (integration)", () => {
   test.afterEach(async () => {
     await resetMutations();

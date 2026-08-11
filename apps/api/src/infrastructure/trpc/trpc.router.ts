@@ -12,6 +12,7 @@ import type {
   SnapshotAdminService,
 } from "../../modules/admin/index.js";
 import type { SessionRevocationService } from "../../modules/admin/index.js";
+import type { AiProviderConfigurationService } from "../../modules/ai-provider/index.js";
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
 import { OrganizationService } from "../../modules/organization/index.js";
@@ -31,6 +32,7 @@ import type { WeeklyReportService } from "../../modules/weekly-report/index.js";
 import type { EnvConfig } from "../config/env.schema";
 import { createActivityRouter } from "./routers/activity.router.js";
 import { createAdminRouter } from "./routers/admin/admin.router.js";
+import { createAiRouter } from "./routers/ai.router.js";
 import { createAnalyticsRouter } from "./routers/analytics.router.js";
 import { createArchiveRouter } from "./routers/archive.router.js";
 import { createAuthRouter } from "./routers/auth.router.js";
@@ -173,6 +175,8 @@ interface RouterDeps {
    * `requireActionLogService` below).
    */
   actionLogService?: ActionLogService;
+  /** Admin-only database-backed AI control plane. */
+  aiProviderService?: AiProviderConfigurationService;
 }
 
 export function createAppRouter(deps: RouterDeps) {
@@ -221,6 +225,10 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Activity namespace ===
     activity: createActivityRouter(deps),
+
+    // Minimal authenticated read used by AI product surfaces. It intentionally
+    // returns availability only; admin metadata stays under admin.aiProvider.
+    ai: createAiRouter(deps),
 
     // === Project Activity namespace ===
     projectActivity: createProjectActivityRouter(deps),

@@ -16,6 +16,8 @@ const scope = {
   dimensions: 3,
 } as const;
 
+const revisionId = "revision-2026-08-10";
+
 const candidate = (text: string): SearchCandidate => ({
   kind: "item",
   identity: {
@@ -48,6 +50,7 @@ type Harness = Readonly<{
   load: Mock<SemanticIndexSourceLoader["load"]>;
   embedDocuments: Mock<EmbeddingPort["embedDocuments"]>;
   upsert: Mock<SemanticEmbeddingRepository["upsert"]>;
+  resolveRuntime: Mock;
 }>;
 
 class TestableSemanticIndexProcessor extends SemanticIndexProcessor {
@@ -77,14 +80,20 @@ const createHarness = (
   const upsert = vi
     .fn<SemanticEmbeddingRepository["upsert"]>()
     .mockResolvedValue(undefined);
+  const resolveRuntime = vi.fn().mockResolvedValue({
+    embeddings: {
+      embedQuery: vi.fn().mockResolvedValue([1, 0, 0]),
+      embedDocuments,
+    },
+    scope,
+  });
   const processor = new TestableSemanticIndexProcessor(
     { load },
-    { embedQuery: vi.fn().mockResolvedValue([1, 0, 0]), embedDocuments },
     { findCachedHashes: vi.fn(), upsert, rank: vi.fn() },
-    { scope },
+    { resolveRuntime },
     {} as never,
   );
-  return { processor, load, embedDocuments, upsert };
+  return { processor, load, embedDocuments, upsert, resolveRuntime };
 };
 
 const jobData = (expectedContentHash: string): SemanticIndexJobData => ({
@@ -95,6 +104,8 @@ const jobData = (expectedContentHash: string): SemanticIndexJobData => ({
   recordKind: "item",
   recordId: "item-1",
   expectedContentHash,
+  configurationRevisionId: revisionId,
+  scope,
 });
 
 describe("SemanticIndexProcessor", () => {
@@ -147,5 +158,42 @@ describe("SemanticIndexProcessor", () => {
 
     await expect(harness.processor.run(jobData(hash))).rejects.toBe(failure);
     expect(harness.upsert).not.toHaveBeenCalled();
+  });
+
+  it("resolves the exact revision named by a runtime job", async () => {
+    const loaded = candidate("Revision-bound content");
+    const hash =
+      buildSemanticInput(loaded, scope.inputVersion)?.contentHash ?? "";
+    const harness = createHarness(loaded);
+    const data = {
+      ...jobData(hash),
+      configurationRevisionId: revisionId,
+      scope,
+    };
+
+    await harness.processor.run(data);
+
+    expect(harness.resolveRuntime).toHaveBeenCalledWith(revisionId);
+    expect(harness.upsert).toHaveBeenCalledWith({
+      ...scope,
+      contentHash: hash,
+      vector: [1, 0, 0],
+    });
+  });
+
+  it("rejects a job whose stored scope differs from its resolved revision", async () => {
+    const loaded = candidate("Scope mismatch");
+    const hash =
+      buildSemanticInput(loaded, scope.inputVersion)?.contentHash ?? "";
+    const harness = createHarness(loaded);
+
+    await expect(
+      harness.processor.run({
+        ...jobData(hash),
+        configurationRevisionId: revisionId,
+        scope: { ...scope, dimensions: 4 },
+      }),
+    ).rejects.toThrow("scope does not match");
+    expect(harness.load).not.toHaveBeenCalled();
   });
 });

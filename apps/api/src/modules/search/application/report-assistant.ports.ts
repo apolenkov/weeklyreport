@@ -1,9 +1,5 @@
 import type { GroundingBundle } from "../domain/context-builder.js";
 
-export const REPORT_ASSISTANT_PLANNER = Symbol("ReportAssistantPlanner");
-export const REPORT_ASSISTANT_ANSWERER = Symbol("ReportAssistantAnswerer");
-export const REPORT_ASSISTANT_EMBEDDINGS = Symbol("ReportAssistantEmbeddings");
-
 export type ReportAssistantProviderOperation =
   "planner" | "planner repair" | "answer" | "citation repair" | "embedding";
 

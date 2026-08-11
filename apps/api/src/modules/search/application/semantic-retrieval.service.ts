@@ -10,9 +10,11 @@ import type {
   SemanticEmbeddingScope,
 } from "./semantic-embedding.repository.js";
 import type { SemanticIndexEnqueuer } from "./semantic-index.enqueuer.js";
+import type { SemanticIndexRuntimeContext } from "./semantic-index.enqueuer.js";
 import type { SemanticIndexLocator } from "./semantic-index.source-loader.js";
 
 export type SemanticRetrievalConfig = Readonly<{
+  configurationRevisionId: string;
   scope: SemanticEmbeddingScope;
   similarityThreshold: number;
   readThroughLimit: number;
@@ -111,12 +113,16 @@ const indexLocator = (
 
 const enqueueMissing = async (
   groups: readonly SemanticGroup[],
-  enqueuer: SemanticIndexEnqueuer,
+  config: SemanticRetrievalConfig,
 ): Promise<void> => {
+  const context: SemanticIndexRuntimeContext = {
+    configurationRevisionId: config.configurationRevisionId,
+    scope: config.scope,
+  };
   await Promise.all(
     groups.flatMap(({ input, candidates }) =>
       candidates.map((candidate) =>
-        enqueuer.enqueue(indexLocator(candidate, input)),
+        config.enqueuer.enqueue(indexLocator(candidate, input), context),
       ),
     ),
   );
@@ -213,7 +219,7 @@ export class SemanticRetrievalService {
       missing.length > 0 && missing.length <= this.config.readThroughLimit,
     );
     if (missing.length > this.config.readThroughLimit) {
-      await enqueueMissing(missing, this.config.enqueuer);
+      await enqueueMissing(missing, this.config);
       return {
         kind: "semantic_index_pending",
         missingHashes: missing.map(({ input }) => input.contentHash),

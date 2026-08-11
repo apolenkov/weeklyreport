@@ -54,8 +54,8 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          {/* external-integrations badges. Surfaces Element (roadmapped
-              messaging, Coming-Soon label) and AI (Coming-Soon). */}
+          {/* External integrations: Element remains roadmapped while the AI
+              provider has a live admin control plane. */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="holidays">
             <HolidaysComingSoonControl />

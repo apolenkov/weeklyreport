@@ -7,6 +7,12 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TYPE "Role" AS ENUM ('lead', 'head', 'viewer', 'admin');
 
 -- CreateEnum
+CREATE TYPE "AiProviderProfile" AS ENUM ('mistral', 'openrouter', 'custom_openai_compatible');
+
+-- CreateEnum
+CREATE TYPE "AiProviderLifecycle" AS ENUM ('draft', 'validated', 'preparing', 'active', 'failed', 'superseded');
+
+-- CreateEnum
 CREATE TYPE "UserActionStatus" AS ENUM ('success', 'fail');
 
 -- CreateEnum
@@ -984,6 +990,65 @@ ALTER TABLE "Decision"
   ADD CONSTRAINT "Decision_parent_xor_check"
   CHECK ((("productId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
 
+-- Immutable provider revisions and the singleton active pointer. Product
+-- credentials are ciphertext only; the table deliberately has no plaintext
+-- secret column.
+CREATE TABLE "AiProviderConfiguration" (
+    "id" TEXT NOT NULL,
+    "profile" "AiProviderProfile" NOT NULL,
+    "baseUrl" TEXT NOT NULL,
+    "endpointIdentity" TEXT NOT NULL,
+    "plannerModel" TEXT NOT NULL,
+    "answerModel" TEXT NOT NULL,
+    "embeddingModel" TEXT NOT NULL,
+    "embeddingDimensions" INTEGER,
+    "semanticInputVersion" TEXT NOT NULL,
+    "credentialCiphertext" TEXT NOT NULL,
+    "credentialNonce" TEXT NOT NULL,
+    "credentialTag" TEXT NOT NULL,
+    "credentialKeyVersion" INTEGER NOT NULL,
+    "credentialMaskedSuffix" TEXT NOT NULL,
+    "lifecycle" "AiProviderLifecycle" NOT NULL DEFAULT 'draft',
+    "testResult" JSONB,
+    "testedAt" TIMESTAMP(3),
+    "preparationCompleted" INTEGER NOT NULL DEFAULT 0,
+    "preparationTotal" INTEGER NOT NULL DEFAULT 0,
+    "preparationFailed" INTEGER NOT NULL DEFAULT 0,
+    "preparationStartedAt" TIMESTAMP(3),
+    "preparationFinishedAt" TIMESTAMP(3),
+    "preparationElapsedMs" INTEGER NOT NULL DEFAULT 0,
+    "activatedAt" TIMESTAMP(3),
+    "supersededAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiProviderConfiguration_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiProviderControl" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "activeConfigurationId" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiProviderControl_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "AiProviderConfiguration_lifecycle_updatedAt_idx"
+  ON "AiProviderConfiguration"("lifecycle", "updatedAt" DESC);
+CREATE INDEX "AiProviderConfiguration_embedding_scope_idx"
+  ON "AiProviderConfiguration"("endpointIdentity", "embeddingModel", "semanticInputVersion", "embeddingDimensions");
+CREATE INDEX "AiProviderControl_activeConfigurationId_idx"
+  ON "AiProviderControl"("activeConfigurationId");
+CREATE UNIQUE INDEX "AiProviderControl_activeConfigurationId_key"
+  ON "AiProviderControl"("activeConfigurationId");
+
+ALTER TABLE "AiProviderControl"
+  ADD CONSTRAINT "AiProviderControl_activeConfigurationId_fkey"
+  FOREIGN KEY ("activeConfigurationId") REFERENCES "AiProviderConfiguration"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;
+
 -- Content-addressed semantic cache. It stores no report text, report/record
 -- IDs, authorization data, or generated answers. `vector` is intentionally
 -- unbounded so model dimensions can be partitioned by the CHECK below.
@@ -997,7 +1062,7 @@ CREATE TABLE "SemanticEmbedding" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "SemanticEmbedding_pkey" PRIMARY KEY ("contentHash", "provider", "model", "inputVersion"),
+    CONSTRAINT "SemanticEmbedding_pkey" PRIMARY KEY ("contentHash", "provider", "model", "inputVersion", "dimensions"),
     CONSTRAINT "SemanticEmbedding_vector_dimensions_check" CHECK (vector_dims("vector") = "dimensions")
 );
 

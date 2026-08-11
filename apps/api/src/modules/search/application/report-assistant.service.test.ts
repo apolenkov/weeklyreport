@@ -4,6 +4,7 @@ import { describe, expect, it, type Mock, vi } from "vitest";
 
 import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
+import type { AiRuntimeResolverPort } from "./ai-runtime.resolver.js";
 import type {
   CitationRepairInput,
   GroundedAnswer,
@@ -132,6 +133,7 @@ type Harness = Readonly<{
   plannerRepair: Mock<(input: PlannerRepairInput) => Promise<unknown>>;
   answerer: Mock<ReportAssistantAnswerPort["answer"]>;
   answerRepair: Mock<(input: CitationRepairInput) => Promise<GroundedAnswer>>;
+  resolveActive: Mock;
 }>;
 
 type HarnessOptions = Readonly<{
@@ -145,6 +147,8 @@ type HarnessOptions = Readonly<{
   sharedProductIds?: readonly string[];
   semanticRetrieval?: SemanticRetrievalService;
   telemetry?: ReportAssistantTelemetry;
+  runtimeModel?: string;
+  runtimeUnavailable?: boolean;
 }>;
 
 const citationText = (sourceIds: readonly string[]): string =>
@@ -198,6 +202,31 @@ const createHarness = (
     options.repairedAnswer === undefined
       ? { answer: answerer }
       : { answer: answerer, repairAnswer: answerRepair };
+  const resolveActive = vi.fn().mockResolvedValue(
+    options.runtimeUnavailable
+      ? null
+      : {
+          revisionId: "runtime-revision",
+          planner: plannerPort,
+          answerer: answererPort,
+          embeddings: {
+            embedQuery: vi.fn().mockResolvedValue([1]),
+            embedDocuments: vi.fn().mockResolvedValue([]),
+          },
+          semanticRetrieval: options.semanticRetrieval,
+          scope: {
+            provider: "runtime-provider",
+            model: "runtime-embedding",
+            inputVersion: "report-assistant/v1",
+            dimensions: 1,
+          },
+          model: options.runtimeModel ?? "runtime-provider:answer",
+        },
+  );
+  const runtimeResolver =
+    options.runtimeModel !== undefined || options.runtimeUnavailable
+      ? ({ resolveActive } as unknown as AiRuntimeResolverPort)
+      : undefined;
   const repository: ReportSearchRepository = {
     listSources: vi.fn().mockResolvedValue([source]),
     loadOccurrences: vi
@@ -234,17 +263,45 @@ const createHarness = (
       { now: new Date("2026-08-04T12:00:00.000Z") },
       options.semanticRetrieval,
       options.telemetry,
+      runtimeResolver,
     ),
     planner,
     plannerRepair,
     answerer,
     answerRepair,
+    resolveActive,
   };
 };
 
 const request = { question: "What changed?", resolutionTokens: [] };
 
 describe("ReportAssistantService", () => {
+  it("returns ai_not_configured before planner or retrieval work", async () => {
+    const harness = createHarness(basePlan, { runtimeUnavailable: true });
+
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "ai_not_configured",
+    });
+    expect(harness.resolveActive).toHaveBeenCalledOnce();
+    expect(harness.planner).not.toHaveBeenCalled();
+  });
+
+  it("uses one active runtime snapshot and its model identity for the request", async () => {
+    const harness = createHarness(basePlan, {
+      runtimeModel: "custom-openai-compatible:answer-1",
+    });
+
+    await expect(
+      harness.service.answer(request, ACTOR_ID),
+    ).resolves.toMatchObject({
+      kind: "ok",
+    });
+
+    expect(harness.resolveActive).toHaveBeenCalledOnce();
+    expect(harness.planner).toHaveBeenCalledOnce();
+    expect(harness.answerer).toHaveBeenCalledOnce();
+  });
+
   it("grounds count answers on complete exact-kind aggregates before limiting evidence", async () => {
     const harness = createHarness({
       ...basePlan,

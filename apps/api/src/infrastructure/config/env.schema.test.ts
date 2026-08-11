@@ -29,6 +29,11 @@ const COMPLETE = {
   KEYCLOAK_SAML_ISSUER: "customreport",
   KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
+  AI_PROVIDER_CONFIG_ENCRYPTION_KEY:
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  AI_PROVIDER_CONFIG_KEY_VERSION: "1",
+  AI_PROVIDER_ALLOWED_ORIGINS:
+    "https://api.mistral.ai,https://openrouter.ai,https://ai.example.com",
   MISTRAL_API_KEY: "test-only-placeholder",
   MISTRAL_PLANNER_MODEL: "mistral-medium-3-5",
   MISTRAL_ANSWER_MODEL: "mistral-medium-3-5",
@@ -72,12 +77,9 @@ describe("envSchema — no defaults, every product var required", () => {
     "PDF_OUTPUT_DIR",
     "PDF_EXPORT_JWT_SECRET",
     "HEAP_HEALTH_THRESHOLD_BYTES",
-    "MISTRAL_API_KEY",
-    "MISTRAL_PLANNER_MODEL",
-    "MISTRAL_ANSWER_MODEL",
-    "MISTRAL_EMBEDDING_MODEL",
-    "MISTRAL_EMBEDDING_DIMENSIONS",
-    "MISTRAL_API_SERVER",
+    "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+    "AI_PROVIDER_CONFIG_KEY_VERSION",
+    "AI_PROVIDER_ALLOWED_ORIGINS",
     "REPORT_ASSISTANT_INPUT_VERSION",
     "REPORT_ASSISTANT_SIMILARITY_THRESHOLD",
     "REPORT_ASSISTANT_CANDIDATE_LIMIT",
@@ -92,6 +94,19 @@ describe("envSchema — no defaults, every product var required", () => {
   ] as const)("rejects a config missing %s", (key) => {
     const { [key]: _omit, ...without } = COMPLETE;
     expect(envSchema.safeParse(without).success).toBe(false);
+  });
+
+  it("allows legacy Mistral bootstrap inputs to be absent", () => {
+    const {
+      MISTRAL_API_KEY: _apiKey,
+      MISTRAL_PLANNER_MODEL: _planner,
+      MISTRAL_ANSWER_MODEL: _answer,
+      MISTRAL_EMBEDDING_MODEL: _embedding,
+      MISTRAL_EMBEDDING_DIMENSIONS: _dimensions,
+      MISTRAL_API_SERVER: _server,
+      ...withoutLegacy
+    } = COMPLETE;
+    expect(envSchema.safeParse(withoutLegacy).success).toBe(true);
   });
 
   it("rejects an AUTH_JWT_SECRET shorter than 32 chars", () => {

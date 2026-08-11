@@ -28,19 +28,19 @@ flowchart LR
     subgraph db["PostgreSQL 15 + pgvector"]
         live["Live report tables\nТолько current open/reopened"]
         snapshots["Report.publishedSnapshot\nНеизменяемая история"]
-        embeddings["SemanticEmbedding\nhash + vector + model scope\nБез текста, ACL и record IDs"]
+        embeddings["SemanticEmbedding\nhash + vector + provider scope\nБез текста, ACL и record IDs"]
     end
 
     subgraph async["Redis + BullMQ"]
-        queue["semantic-index queue\nlocators + expected hash"]
-        worker["SemanticIndexProcessor\nreload canonical source\nverify hash + idempotent upsert"]
+        queue["semantic-index queue\nrevision + scope + locator + hash"]
+        worker["SemanticIndexProcessor\nresolve exact revision\nverify hash + idempotent upsert"]
         queue --> worker
     end
 
-    subgraph external["Mistral API — явный регион и models"]
+    subgraph external["Active provider API — allowlisted origin"]
         planModel["Planner\nfunction calling"]
         answerModel["Answer\nstructured output"]
-        embedModel["Embeddings\nmistral-embed"]
+        embedModel["Embeddings\nconfigured model"]
     end
 
     subgraph shared["packages/shared"]

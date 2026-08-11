@@ -8,16 +8,44 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui";
+import { useQuery } from "@tanstack/react-query";
 import { MessageCircle, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+import { useTRPC } from "../../../lib/trpc-context";
 import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-button";
 import { LeadReportAssistantBody } from "./lead-report-assistant-body";
 import { LeadReportAssistantForm } from "./lead-report-assistant-form";
 import { useLeadReportAssistantController } from "./use-lead-report-assistant-controller";
 
 export function LeadReportAssistant() {
+  const trpc = useTRPC();
   const [open, setOpen] = useState(false);
+  const availabilityProcedure = (
+    trpc as unknown as Readonly<{
+      ai?: Readonly<{
+        availability?: Readonly<{
+          queryOptions: () => {
+            queryKey: readonly unknown[];
+            queryFn: () => Promise<{
+              availability: "available" | "not_configured";
+            }>;
+          };
+        }>;
+      }>;
+    }>
+  ).ai?.availability;
+  const availability = useQuery(
+    availabilityProcedure?.queryOptions() ?? {
+      queryKey: ["ai", "availability", "legacy-test-proxy"],
+      // Older isolated UI fixtures omit the optional availability procedure.
+      // The production proxy always exposes it; treating the absent fixture
+      // as available keeps this component's existing interaction tests focused
+      // on the chat surface itself.
+      queryFn: () => Promise.resolve({ availability: "available" as const }),
+    },
+  );
+  const isAvailable = availability.data?.availability !== "not_configured";
   const {
     question,
     outcome,
@@ -38,8 +66,16 @@ export function LeadReportAssistant() {
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <ToolbarIconButton
-          aria-label="Open report chat"
+          aria-label={
+            isAvailable ? "Open report chat" : "Report chat unavailable"
+          }
           data-testid="lead-report-assistant-trigger"
+          disabled={!isAvailable}
+          title={
+            isAvailable
+              ? "Open report chat"
+              : "Report chat is unavailable until an administrator configures AI"
+          }
           className="border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >
           <MessageCircle className="size-4" aria-hidden="true" />

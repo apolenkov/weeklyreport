@@ -393,6 +393,11 @@ async function main() {
       reopenWindowHours: 72,
     },
   });
+  await prisma.aiProviderControl.upsert({
+    where: { id: "singleton" },
+    update: { activeConfigurationId: null, enabled: false },
+    create: { id: "singleton", activeConfigurationId: null, enabled: false },
+  });
 
   console.log("[seed-simple] Creating users (RU names)...");
   await prisma.user.createMany({

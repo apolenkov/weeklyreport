@@ -15,28 +15,23 @@ logs, traces, metrics labels, deployment output, or screenshots.
 Complete these approvals before placing report traffic in the production
 workspace:
 
-- Use separate Mistral development/UAT and production workspaces and keys.
-- Use a paid production workspace with a recorded spending limit and an owner
-  for usage review.
-- Record approval that API data is not used for training, the retention posture
-  is acceptable, and Zero Data Retention is enabled when required by policy.
-- Record approval for the EU endpoint/data-region decision. This repository's
-  reviewed setting is `MISTRAL_API_SERVER=eu`.
-- Use these pinned model IDs; do not replace them with `-latest` aliases:
-  `mistral-medium-3-5` for planning and answers, and `mistral-embed` for
-  embeddings.
+- Record the selected provider profile, endpoint destination, data region, and
+  approved retention/ZDR posture before report traffic is enabled.
+- Record model availability, spending limits, rate limits, and an owner for
+  usage review for every selected provider.
+- Keep the deployment origin allowlist exact. It must contain only approved
+  HTTPS origins; it is not a general outbound proxy policy.
+- Use pinned model IDs where the provider supports them. Planner, answer, and
+  embedding models are provider configuration, not application constants.
 
 The following values are required by `envSchema` and must be supplied by the
 deployment secret/configuration system. Never commit a real key or put one in
 an OpenSpec artifact:
 
 ```text
-MISTRAL_API_KEY
-MISTRAL_PLANNER_MODEL=mistral-medium-3-5
-MISTRAL_ANSWER_MODEL=mistral-medium-3-5
-MISTRAL_EMBEDDING_MODEL=mistral-embed
-MISTRAL_EMBEDDING_DIMENSIONS=1024
-MISTRAL_API_SERVER=eu
+AI_PROVIDER_CONFIG_ENCRYPTION_KEY
+AI_PROVIDER_CONFIG_KEY_VERSION
+AI_PROVIDER_ALLOWED_ORIGINS
 REPORT_ASSISTANT_INPUT_VERSION
 REPORT_ASSISTANT_SIMILARITY_THRESHOLD
 REPORT_ASSISTANT_CANDIDATE_LIMIT
@@ -49,6 +44,18 @@ REPORT_ASSISTANT_ANSWER_MAX_TOKENS
 REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE
 REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET
 ```
+
+The legacy `MISTRAL_*` values are optional one-shot bootstrap inputs only. For an
+existing deployment, supply the complete set temporarily and run:
+
+```bash
+pnpm db:bootstrap-ai-provider
+```
+
+The operation encrypts the credential, creates a tested active revision, and
+prints only safe state. It is a no-op when any AI control or configuration row
+already exists. Remove the legacy values after verifying the imported revision;
+normal runtime resolution never reads them.
 
 The reviewed development values are in `.env.example`; test values use a
 placeholder key and deterministic fakes and never contact Mistral. For the
@@ -87,9 +94,15 @@ the reset workflow described in the pgvector rollout inventory.
 
 ## 2. Network and provider preflight
 
-The selected SDK server is `https://api.eu.mistral.ai`. Verify TLS, port 443,
-the production key, and all three configured model IDs using only
-`GET /v1/models`; this sends no report content:
+Verify TLS/443 reachability for the selected allowlisted origin and confirm that
+the configured planner, answer, and embedding models are available. Providers
+may expose different model-discovery APIs, so use the provider's documented
+model check or its approved control plane; do not send report content. Then run
+the admin capability test, which uses synthetic non-report payloads and verifies
+forced tool calling, strict structured output, usage, ordered finite embeddings,
+and configured dimensions.
+
+For the historical Mistral bootstrap profile, the equivalent model check is:
 
 ```bash
 models_file="$(mktemp)"
@@ -160,6 +173,13 @@ customreport_assistant_candidate_count
 customreport_assistant_cache_events_total
 customreport_assistant_repairs_total
 customreport_assistant_tokens_total
+customreport_ai_provider_state
+customreport_ai_provider_capability_tests_total
+customreport_ai_provider_preparation_completed
+customreport_ai_provider_preparation_total
+customreport_ai_provider_preparation_failed
+customreport_ai_provider_preparation_elapsed_seconds
+customreport_ai_provider_activations_total
 ```
 
 Check provider spend, request/token rate, 429s, timeouts, and error outcomes
@@ -175,10 +195,15 @@ previous application image only after its readiness and existing report-write
 smoke checks pass.
 
 If the provider is unavailable, preserve report writes and let the assistant
-surface its explicit error state. Check egress, workspace billing, model
-availability, rate limits, and the provider status before changing code or
-configuration. A temporary provider outage is not permission to log prompts or
-send report data to another endpoint.
+surface its explicit error state. Check egress, billing, model availability,
+rate limits, retention/region approvals, and provider status before changing
+code or configuration. A temporary provider outage is not permission to log
+prompts or send report data to another endpoint.
+
+To roll back a successful provider activation, use the admin Restore control on
+the retained tested revision. The old active pointer remains available until
+the replacement is ready; old embedding scopes are retained for rollback and
+are not deleted as part of restoration.
 
 Record the deployment config version, migration decision, image digests,
 preflight result, smoke result, metric review, and rollback decision in the

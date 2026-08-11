@@ -1,14 +1,17 @@
 import { z } from "zod";
 
+import { aiProviderAvailabilitySchema } from "./ai-provider-configuration";
+
 /**
  * Payload shape for `admin.integrationsStatus`.
  *
  * The Integrations sub-tab in /admin?tab=settings reads this to render a
- * status badge for every external integration. The payload covers only
- * Telegram (the one integration with a real backend); the AI card on the
- * sub-tab is UI-only Coming-Soon and reads no field here. A future
- * integration with real status would extend the same envelope with a sibling
- * key so the UI never has to branch on missing sections.
+ * status badge for every external integration. Telegram keeps its operational
+ * status here; AI exposes only an availability value to authorized product
+ * surfaces while its admin configuration uses the dedicated control-plane
+ * contract. A future integration with real status would extend the same
+ * envelope with a sibling key so the UI never has to branch on missing
+ * sections.
  *
  * Field semantics for the Telegram surface:
  *
@@ -28,6 +31,10 @@ export const telegramIntegrationStatusSchema = z.object({
 
 export const integrationsStatusSchema = z.object({
   telegram: telegramIntegrationStatusSchema,
+  ai: z
+    .object({ availability: aiProviderAvailabilitySchema })
+    .strict()
+    .optional(),
 });
 
 export type TelegramIntegrationStatus = z.infer<

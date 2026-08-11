@@ -18,7 +18,11 @@ import {
 } from "./semantic-index.queue.js";
 
 export type SemanticIndexProcessorConfig = Readonly<{
-  scope: SemanticEmbeddingScope;
+  resolveRuntime: (
+    revisionId: string,
+  ) => Promise<
+    Readonly<{ embeddings: EmbeddingPort; scope: SemanticEmbeddingScope }>
+  >;
 }>;
 
 const embeddingFor = async (
@@ -41,7 +45,6 @@ export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobD
 
   constructor(
     private readonly sourceLoader: SemanticIndexSourceLoader,
-    private readonly embeddings: EmbeddingPort,
     private readonly repository: SemanticEmbeddingRepository,
     private readonly config: SemanticIndexProcessorConfig,
     env: EnvConfig,
@@ -62,17 +65,29 @@ export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobD
   }
 
   protected async processJob(job: Job<SemanticIndexJobData>): Promise<void> {
+    const runtime = await this.config.resolveRuntime(
+      job.data.configurationRevisionId,
+    );
+    const scope = runtime.scope;
+    if (
+      job.data.scope.provider !== scope.provider ||
+      job.data.scope.model !== scope.model ||
+      job.data.scope.inputVersion !== scope.inputVersion ||
+      job.data.scope.dimensions !== scope.dimensions
+    ) {
+      throw new Error("Semantic index job scope does not match its runtime");
+    }
     const candidate = await this.sourceLoader.load(job.data);
     if (!candidate) return;
-    const input = buildSemanticInput(candidate, this.config.scope.inputVersion);
+    const input = buildSemanticInput(candidate, scope.inputVersion);
     if (input?.contentHash !== job.data.expectedContentHash) return;
     const vector = await embeddingFor(
-      this.embeddings,
+      runtime.embeddings,
       input.contentHash,
       input.text,
     );
     await this.repository.upsert({
-      ...this.config.scope,
+      ...scope,
       contentHash: input.contentHash,
       vector,
     });
