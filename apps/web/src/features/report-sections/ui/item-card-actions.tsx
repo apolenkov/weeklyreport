@@ -15,7 +15,7 @@ import {
 
 // Shared square icon-button shell; the two variants differ only in hover state.
 const ACTION_BUTTON_BASE =
-  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] transition-colors";
+  "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] shrink-0 items-center justify-center rounded border border-[var(--color-muted)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] transition-colors";
 const NEUTRAL_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]`;
 const DESTRUCTIVE_ACTION_CLASS = `${ACTION_BUTTON_BASE} hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]`;
 
@@ -176,7 +176,7 @@ export function ItemCardActions(props: ItemCardActionsProps) {
     ) : null;
   }
   return (
-    <div className="flex shrink-0 gap-1">
+    <div className="flex min-w-0 max-w-full shrink-0 flex-wrap justify-end gap-1 md:flex-nowrap">
       <StatusActions {...props} />
       <EditDeleteActions {...props} />
     </div>
