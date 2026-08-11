@@ -8,7 +8,7 @@ import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export interface AcknowledgeGroup {
   readonly groupId: string;
-  readonly label?: string;
+  readonly label: string;
 }
 
 // Per-group Acknowledge on the live report — any access-holder, NOT gated by
@@ -93,7 +93,7 @@ function AcknowledgeGroupControl({
   readonly currentUserId: string;
   readonly isHeadOrAdmin: boolean;
 }) {
-  const suffix = group.label ? ` · ${group.label}` : "";
+  const suffix = ` · ${group.label}`;
   const { acks, acknowledged, rosterUnavailable, ackMut } = useAcknowledgeGroup(
     reportId,
     group.groupId,

@@ -21,6 +21,44 @@ export interface SeedProfileSnapshot {
   readonly stableText: readonly string[];
 }
 
+interface ScopedUserGroup {
+  readonly id: string;
+  readonly reportingGroupId: string | null;
+}
+
+interface ScopedProjectGroup {
+  readonly id: string;
+  readonly leadId: string;
+  readonly groupProducts: readonly { readonly groupId: string }[];
+}
+
+export function assertProjectGroupIntegrity(
+  profile: SeedProfile,
+  users: readonly ScopedUserGroup[],
+  projects: readonly ScopedProjectGroup[],
+): void {
+  const groupByUserId = new Map(
+    users.map((user) => [user.id, user.reportingGroupId] as const),
+  );
+  const problems = projects.flatMap((project) => {
+    const expectedGroupId = groupByUserId.get(project.leadId);
+    const actualGroupIds = project.groupProducts.map(({ groupId }) => groupId);
+    return expectedGroupId !== undefined &&
+      expectedGroupId !== null &&
+      actualGroupIds.length === 1 &&
+      actualGroupIds[0] === expectedGroupId
+      ? []
+      : [
+          `${project.id}: lead ${project.leadId} expects ${expectedGroupId ?? "no group"}, got ${actualGroupIds.join(",") || "no product group"}`,
+        ];
+  });
+  if (problems.length > 0) {
+    throw new Error(
+      `Seed profile ${profile} product-group integrity failed: ${problems.join("; ")}`,
+    );
+  }
+}
+
 const COUNT_DIMENSIONS = [
   "users",
   "projects",
@@ -58,12 +96,22 @@ export async function validateSeedProfile(
     prisma.user.findMany({
       where: { id: { in: [...scope.userIds] } },
       orderBy: { id: "asc" },
-      select: { id: true, email: true, name: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        reportingGroupId: true,
+      },
     }),
     prisma.project.findMany({
       where: { id: { in: [...scope.projectIds] } },
       orderBy: { id: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        leadId: true,
+        groupProducts: { select: { groupId: true } },
+      },
     }),
     prisma.report.findMany({
       where: { id: { in: [...scope.reportIds] } },
@@ -73,6 +121,7 @@ export async function validateSeedProfile(
   ]);
 
   assertCountBounds(profile, counts);
+  assertProjectGroupIntegrity(profile, users, projects);
   await runProfileJourney(prisma, profile);
 
   return {

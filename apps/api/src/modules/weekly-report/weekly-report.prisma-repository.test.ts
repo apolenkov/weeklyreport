@@ -241,8 +241,9 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
   const OWNED_PRODUCT = "a4444444-4444-4444-8444-444444444444";
   const UNTOUCHED_PRODUCT = "a5555555-5555-4555-8555-555555555555";
   const STAGE_DEV = "a6666666-6666-4666-8666-666666666666";
+  const GROUP_ID = "a7777777-7777-4777-8777-777777777777";
 
-  function makeReportRow() {
+  function makeReportRow(reportingGroupId: string | null = null) {
     return {
       id: REPORT_ID,
       periodStart: new Date("2026-04-14"),
@@ -265,6 +266,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
             id: AUTHOR_ID,
             name: "Alice Lead",
             role: "lead",
+            reportingGroupId,
             stageAssignments: [
               {
                 userId: AUTHOR_ID,
@@ -396,6 +398,32 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     // Membership: a group-owned product no lead touched still gets a card.
     expect(untouched).toBeDefined();
     expect(untouched?.worstStatus).toBeNull();
+  });
+
+  it("batches live group metadata and stamps the section with its name", async () => {
+    const report = makeReportRow(GROUP_ID);
+    const groupFindMany = vi
+      .fn()
+      .mockResolvedValue([{ id: GROUP_ID, name: "Finance Platforms" }]);
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(report) },
+      user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+      reportingGroup: { findMany: groupFindMany },
+    } as unknown as PrismaService;
+
+    const result = await new WeeklyReportPrismaRepository(
+      prisma,
+    ).getWeeklyReport(REPORT_ID);
+
+    expect(result?.readModel.leadSections[0]?.groupName).toBe(
+      "Finance Platforms",
+    );
+    expect(groupFindMany).toHaveBeenCalledWith({
+      where: { id: { in: [GROUP_ID] } },
+      select: { id: true, name: true },
+    });
   });
 
   it("dispatches leadUsers, projects, and the reminder-policy count concurrently", async () => {

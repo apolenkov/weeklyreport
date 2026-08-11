@@ -188,4 +188,24 @@ describe("record write stage requirements", () => {
     expect(parsed.risks).toHaveLength(1);
     expect(parsed.decisions).toHaveLength(1);
   });
+
+  it("carries an optional human-readable live reporting-group label", () => {
+    const parsed = reportSectionReadModelSchema.parse({
+      reportSectionId: uuid(),
+      reportId: uuid(),
+      authorId: uuid(),
+      authorName: "Test Lead",
+      version: 1,
+      status: "draft",
+      submittedAt: null,
+      projects: [],
+      items: [],
+      risks: [],
+      decisions: [],
+      groupId: uuid(),
+      groupName: "Finance Platforms",
+    });
+
+    expect(parsed.groupName).toBe("Finance Platforms");
+  });
 });

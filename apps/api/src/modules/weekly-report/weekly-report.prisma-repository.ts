@@ -28,6 +28,7 @@ import {
   buildLiveResult,
   buildSnapshotResult,
   deriveScopeFilters,
+  requireLiveGroupName,
   type WeeklyReportLiveSection,
   type WeeklyReportProjectRow,
   type WeeklyReportRow,
@@ -188,7 +189,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     const sectionGroupIds = new Map<string, string | null>(
       report.sections.map((section) => [
         section.id,
-        section.author.reportingGroupId,
+        section.author.reportingGroupId ?? null,
       ]),
     );
     const distinctGroupIds = [
@@ -198,10 +199,10 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         ),
       ),
     ];
-    const viewerReviewGroupIds = await this.resolveViewerReviewGroupIds(
-      session,
-      distinctGroupIds,
-    );
+    const [viewerReviewGroupIds, namesByGroupId] = await Promise.all([
+      this.resolveViewerReviewGroupIds(session, distinctGroupIds),
+      this.resolveGroupNames(distinctGroupIds),
+    ]);
 
     const mappedSections: ReportSectionReadModel[] = report.sections.map(
       mapPrismaToReportSection,
@@ -211,6 +212,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       return {
         ...section,
         groupId,
+        groupName: requireLiveGroupName(groupId, namesByGroupId),
         canReview:
           groupId !== null && session
             ? isDesignatedReviewer(
@@ -221,6 +223,17 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
             : false,
       };
     });
+  }
+
+  private async resolveGroupNames(
+    distinctGroupIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    if (distinctGroupIds.length === 0) return new Map();
+    const rows = await this.prisma.reportingGroup.findMany({
+      where: { id: { in: [...distinctGroupIds] } },
+      select: { id: true, name: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.name] as const));
   }
 
   // Head/admin designation is decided by `isDesignatedReviewer` without a

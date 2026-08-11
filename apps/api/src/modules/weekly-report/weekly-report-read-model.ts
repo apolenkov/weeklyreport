@@ -47,8 +47,21 @@ export interface WeeklyReportScopeFilters {
 // review affordance — see `buildLiveSections` in the repository.
 export type WeeklyReportLiveSection = ReportSectionReadModel & {
   readonly groupId: string | null;
+  readonly groupName: string | null;
   readonly canReview: boolean;
 };
+
+export function requireLiveGroupName(
+  groupId: string | null,
+  namesByGroupId: ReadonlyMap<string, string>,
+): string | null {
+  if (groupId === null) return null;
+  const groupName = namesByGroupId.get(groupId);
+  if (!groupName) {
+    throw new Error(`Live weekly report group ${groupId} has no name`);
+  }
+  return groupName;
+}
 
 export function deriveScopeFilters(
   session: WeeklyReportScopeSession | undefined,
