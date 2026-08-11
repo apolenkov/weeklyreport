@@ -157,13 +157,17 @@ export class AiProviderConfigurationRepository {
     passed: boolean,
     embeddingDimensions: number | null,
     testedAt: Date,
+    currentLifecycle: AiProviderLifecycle,
   ): Promise<StoredAiProviderRevision> {
     const revision = await this.prisma.aiProviderConfiguration.update({
       where: { id },
       data: {
-        lifecycle: passed
-          ? AiProviderLifecycle.validated
-          : AiProviderLifecycle.failed,
+        lifecycle:
+          currentLifecycle === AiProviderLifecycle.active
+            ? AiProviderLifecycle.active
+            : passed
+              ? AiProviderLifecycle.validated
+              : AiProviderLifecycle.failed,
         testResult: result,
         embeddingDimensions,
         testedAt,

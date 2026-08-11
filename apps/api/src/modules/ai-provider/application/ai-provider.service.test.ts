@@ -76,7 +76,6 @@ const env = {
   MISTRAL_ANSWER_MODEL: undefined,
   MISTRAL_EMBEDDING_MODEL: undefined,
   MISTRAL_EMBEDDING_DIMENSIONS: undefined,
-  MISTRAL_API_SERVER: undefined,
 } as const;
 
 const bootstrapEnv = {
@@ -86,7 +85,6 @@ const bootstrapEnv = {
   MISTRAL_ANSWER_MODEL: "legacy-answer",
   MISTRAL_EMBEDDING_MODEL: "legacy-embed",
   MISTRAL_EMBEDDING_DIMENSIONS: 1024,
-  MISTRAL_API_SERVER: "https://api.mistral.ai",
 } as const;
 
 const passedResult = {
@@ -113,7 +111,9 @@ interface RepositoryHarness {
       id: string,
       result: Prisma.InputJsonValue,
       passed: boolean,
+      embeddingDimensions: number | null,
       testedAt: Date,
+      currentLifecycle: AiProviderLifecycle,
     ) => Promise<StoredAiProviderRevision>
   >;
   updateProgress: Mock<
@@ -150,7 +150,9 @@ const repositoryFor = (values: {
           id: string,
           result: Prisma.InputJsonValue,
           passed: boolean,
+          embeddingDimensions: number | null,
           testedAt: Date,
+          currentLifecycle: AiProviderLifecycle,
         ) => Promise<StoredAiProviderRevision>
       >()
       .mockResolvedValue(
@@ -247,6 +249,73 @@ describe("AiProviderConfigurationService", () => {
       true,
       1024,
       expect.any(Date),
+      AiProviderLifecycle.draft,
+    );
+  });
+
+  it("keeps an active revision active when its capability retest passes", async () => {
+    const active = revision(activeId, {
+      lifecycle: AiProviderLifecycle.active,
+    });
+    const repository = repositoryFor({
+      control: control(active),
+      draft: active,
+    });
+    repository.getRevision.mockResolvedValue(active);
+    const service = new AiProviderConfigurationService(
+      repository as never,
+      codec,
+      env,
+      tester,
+    );
+
+    await service.test(activeId, "admin-1");
+
+    expect(repository.setTestResult).toHaveBeenCalledWith(
+      activeId,
+      passedResult,
+      true,
+      1024,
+      expect.any(Date),
+      AiProviderLifecycle.active,
+    );
+  });
+
+  it("keeps an active revision active when its capability retest fails", async () => {
+    const active = revision(activeId, {
+      lifecycle: AiProviderLifecycle.active,
+    });
+    const repository = repositoryFor({
+      control: control(active),
+      draft: active,
+    });
+    repository.getRevision.mockResolvedValue(active);
+    const failedTester: AiProviderCapabilityTester = {
+      test: vi.fn().mockResolvedValue({
+        result: {
+          status: "failed",
+          capabilities: [],
+          testedAt: now.toISOString(),
+        },
+        embeddingDimensions: null,
+      }),
+    };
+    const service = new AiProviderConfigurationService(
+      repository as never,
+      codec,
+      env,
+      failedTester,
+    );
+
+    await service.test(activeId, "admin-1");
+
+    expect(repository.setTestResult).toHaveBeenCalledWith(
+      activeId,
+      expect.objectContaining({ status: "failed" }),
+      false,
+      null,
+      expect.any(Date),
+      AiProviderLifecycle.active,
     );
   });
 

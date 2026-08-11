@@ -25,7 +25,6 @@ export type AiProviderEnvironment = Pick<
   | "MISTRAL_ANSWER_MODEL"
   | "MISTRAL_EMBEDDING_MODEL"
   | "MISTRAL_EMBEDDING_DIMENSIONS"
-  | "MISTRAL_API_SERVER"
 >;
 
 export type AiProviderCapabilityTester = Readonly<{

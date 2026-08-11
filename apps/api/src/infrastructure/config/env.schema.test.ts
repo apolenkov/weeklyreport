@@ -39,7 +39,6 @@ const COMPLETE = {
   MISTRAL_ANSWER_MODEL: "mistral-medium-3-5",
   MISTRAL_EMBEDDING_MODEL: "mistral-embed",
   MISTRAL_EMBEDDING_DIMENSIONS: "1024",
-  MISTRAL_API_SERVER: "eu",
   REPORT_ASSISTANT_INPUT_VERSION: "1",
   REPORT_ASSISTANT_SIMILARITY_THRESHOLD: "0.55",
   REPORT_ASSISTANT_CANDIDATE_LIMIT: "500",
@@ -103,7 +102,6 @@ describe("envSchema — no defaults, every product var required", () => {
       MISTRAL_ANSWER_MODEL: _answer,
       MISTRAL_EMBEDDING_MODEL: _embedding,
       MISTRAL_EMBEDDING_DIMENSIONS: _dimensions,
-      MISTRAL_API_SERVER: _server,
       ...withoutLegacy
     } = COMPLETE;
     expect(envSchema.safeParse(withoutLegacy).success).toBe(true);

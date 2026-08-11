@@ -35,11 +35,22 @@ const successOutcome = {
 };
 
 function renderAssistant(
-  availability: "available" | "not_configured" = "available",
+  availability:
+    "available" | "not_configured" | "pending" | "error" = "available",
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["leadForm", "assistant"], mutation: true },
-    { path: ["ai", "availability"], query: { availability } },
+    {
+      path: ["ai", "availability"],
+      query:
+        availability === "error"
+          ? () => {
+              throw new Error("availability failed");
+            }
+          : availability === "pending"
+            ? "pending"
+            : { availability },
+    },
   ]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -77,8 +88,11 @@ function renderAssistant(
   return mutation;
 }
 
-function openAssistant() {
-  fireEvent.click(screen.getByRole("button", { name: "Open report chat" }));
+async function openAssistant() {
+  const trigger = await screen.findByRole("button", {
+    name: "Open report chat",
+  });
+  fireEvent.click(trigger);
   return screen.getByRole("dialog", { name: "Report chat" });
 }
 
@@ -106,9 +120,21 @@ describe("LeadReportAssistant", () => {
     );
   });
 
+  it.each(["pending", "error"] as const)(
+    "keeps Chat disabled while availability is %s",
+    async (availability) => {
+      renderAssistant(availability);
+
+      const trigger = await screen.findByRole("button", {
+        name: "Report chat unavailable",
+      });
+      expect(trigger).toBeDisabled();
+    },
+  );
+
   it("opens a focus-safe Sheet and retains transient state on close", async () => {
     renderAssistant();
-    openAssistant();
+    await openAssistant();
     const question = screen.getByRole("textbox", { name: "Your question" });
     fireEvent.change(question, { target: { value: "A temporary question" } });
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
@@ -116,7 +142,7 @@ describe("LeadReportAssistant", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "Report chat" })).toBeNull(),
     );
-    openAssistant();
+    await openAssistant();
     expect(screen.getByRole("textbox", { name: "Your question" })).toHaveValue(
       "A temporary question",
     );
@@ -125,7 +151,7 @@ describe("LeadReportAssistant", () => {
   it("renders grounded Markdown safely and links only authorized sources", async () => {
     const mutation = renderAssistant();
     mutation.mutationFn.mockResolvedValue(successOutcome);
-    openAssistant();
+    await openAssistant();
     submitQuestion();
 
     expect(
@@ -150,7 +176,7 @@ describe("LeadReportAssistant", () => {
         options: [{ label: "CRM Portal", token: "token-crm" }],
       })
       .mockResolvedValueOnce(successOutcome);
-    openAssistant();
+    await openAssistant();
     submitQuestion("What changed in CRM?");
 
     fireEvent.click(await screen.findByRole("button", { name: "CRM Portal" }));
@@ -168,7 +194,7 @@ describe("LeadReportAssistant", () => {
       resolveFirst = resolve;
     });
     mutation.mutationFn.mockReturnValueOnce(pending);
-    openAssistant();
+    await openAssistant();
     submitQuestion();
     expect(screen.getByRole("status")).toHaveTextContent("Reviewing");
     expect(
@@ -204,7 +230,7 @@ describe("LeadReportAssistant", () => {
   ] as const)("renders the %s product state", async (kind, message) => {
     const mutation = renderAssistant();
     mutation.mutationFn.mockResolvedValue({ kind });
-    openAssistant();
+    await openAssistant();
     submitQuestion();
     expect(
       await screen.findByText(new RegExp(message, "u")),
