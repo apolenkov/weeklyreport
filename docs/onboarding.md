@@ -75,24 +75,23 @@ web, чтобы заработала корреляция ошибок с тре
 
 ### Native Lead Chat
 
-Для Lead Chat нужны отдельные Mistral workspaces и ключи для development/UAT и
-production. Ключ хранится только в untracked `.env` или secret manager; в Git,
-OpenSpec, логах и скриншотах его не бывает. Production rollout требует paid
-workspace, отдельного spending limit, подтверждения режима обучения и
-retention/ZDR, а также одобрения EU data region. Настройки фиксированы и не
-используют `-latest`: `mistral-medium-3-5` для planner/answer,
-`mistral-embed` с `1024` dimensions и `MISTRAL_API_SERVER=eu`.
+Для Lead Chat нужны отдельные provider profiles, credentials и model choices для
+development/UAT и production. Credential хранится только в untracked `.env` или
+secret manager; в Git, OpenSpec, логах и скриншотах его не бывает. Production
+rollout требует одобрения endpoint/data region, retention/ZDR, model availability,
+spending limit и rate-limit posture. Внешний origin должен быть явно добавлен в
+`AI_PROVIDER_ALLOWED_ORIGINS`; автоматического failover нет.
 
-Сначала выкатывают и проверяют полную конфигурацию, затем код: `GET
-/v1/models` на `api.eu.mistral.ai` проверяет доступность моделей и HTTPS/443
-без report content. Для PostgreSQL сначала проверяют initialized-database
-ledger через `pnpm db:check-init-target`, затем применяют DDL через прямой
-`DIRECT_URL` connection, а не PgBouncer; production database никогда не
-reset-ят. После этого smoke-проверка идёт в порядке save → submit → publish →
-search → PDF → Chat, а расходы, token/request rate, 429 и timeout смотрят по
-workspace billing и bounded `customreport_assistant_*` metrics. При проблеме
-откатывают application image, не удаляя additive DB objects. Полный порядок
-команд — в [`operations/lead-report-assistant-rollout.md`](./operations/lead-report-assistant-rollout.md).
+Сначала проверяют полную конфигурацию и запускают синтетический capability test в
+Settings → Integrations, затем делают smoke-проверку save → submit → publish →
+search → PDF → Chat. Для существующего Mistral deployment legacy `MISTRAL_*`
+values передают только на один запуск `pnpm db:bootstrap-ai-provider`; после
+проверки активной revision их удаляют. Для PostgreSQL сначала проверяют
+initialized-database ledger через `pnpm db:check-init-target`, затем применяют
+DDL через прямой `DIRECT_URL` connection, а production database никогда не
+reset-ят. Расходы, token/request rate, 429, timeout и provider lifecycle смотрят
+по billing и bounded `customreport_*` metrics. Полный порядок команд — в
+[`lead-report-assistant-rollout.md`](./llm-report/lead-report-assistant-rollout.md).
 
 Аутентификация локально:
 

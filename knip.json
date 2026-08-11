@@ -18,9 +18,9 @@
       "project": ["prisma/**/*.ts", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"]
     },
     "apps/api": {
-      "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts"],
+      "entry": ["src/main.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["tsx"]
+      "ignoreDependencies": ["@swc-node/register", "@swc/core"]
     },
     "apps/web": {
       "entry": [

@@ -17,6 +17,7 @@ const OUTCOME_RETRY_LABEL: Readonly<Record<AssistantOutcome["kind"], string>> =
     result_set_too_large: "Try a narrower question",
     semantic_index_pending: "Check again",
     provider_unavailable: "Try again",
+    ai_not_configured: "Ask an administrator to configure AI",
     clarification_required: "Choose an option",
   };
 
@@ -35,6 +36,9 @@ const outcomeMessage = (outcome: AssistantOutcome): string => {
   }
   if (outcome.kind === "provider_unavailable") {
     return "The AI service is temporarily unavailable. Try the same question again in a moment.";
+  }
+  if (outcome.kind === "ai_not_configured") {
+    return "The report assistant is not configured yet. Ask an administrator to configure an AI provider.";
   }
   return "The semantic index is still catching up. Try again in a moment.";
 };

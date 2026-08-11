@@ -838,8 +838,60 @@ model SemanticEmbedding {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@id([contentHash, provider, model, inputVersion])
+  // `provider` stores the stable, non-secret endpoint identity derived from
+  // profile + normalized base URL. Dimensions are part of the identity so a
+  // staged embedding scope can coexist with the active scope.
+  @@id([contentHash, provider, model, inputVersion, dimensions])
   @@index([provider, model, inputVersion, dimensions])
+}
+
+// Immutable, organization-wide provider revisions. Credentials are encrypted
+// application data; only the masked suffix is safe to return from reads.
+model AiProviderConfiguration {
+  id                    String                         @id
+  profile               AiProviderProfile
+  baseUrl               String
+  endpointIdentity      String
+  plannerModel          String
+  answerModel           String
+  embeddingModel        String
+  embeddingDimensions   Int?
+  semanticInputVersion  String
+  credentialCiphertext  String
+  credentialNonce       String
+  credentialTag         String
+  credentialKeyVersion  Int
+  credentialMaskedSuffix String
+  lifecycle             AiProviderLifecycle           @default(draft)
+  testResult            Json?
+  testedAt              DateTime?
+  preparationCompleted  Int                            @default(0)
+  preparationTotal      Int                            @default(0)
+  preparationFailed     Int                            @default(0)
+  preparationStartedAt  DateTime?
+  preparationFinishedAt DateTime?
+  preparationElapsedMs  Int                            @default(0)
+  activatedAt           DateTime?
+  supersededAt          DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  activeControl         AiProviderControl?             @relation("AiProviderControlActive")
+
+  @@index([lifecycle, updatedAt(sort: Desc)])
+  @@index([endpointIdentity, embeddingModel, semanticInputVersion, embeddingDimensions])
+}
+
+// Singleton control row. The active pointer is the only source of runtime
+// availability; retained revisions remain addressable for explicit restore.
+model AiProviderControl {
+  id                   String                    @id @default("singleton")
+  activeConfigurationId String? @unique
+  enabled              Boolean                   @default(false)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  activeConfiguration  AiProviderConfiguration? @relation("AiProviderControlActive", fields: [activeConfigurationId], references: [id], onDelete: SetNull)
+
+  @@index([activeConfigurationId])
 }
 
 enum ReviewVerdict {
@@ -852,6 +904,21 @@ enum Role {
   head
   viewer
   admin
+}
+
+enum AiProviderProfile {
+  mistral
+  openrouter
+  custom_openai_compatible
+}
+
+enum AiProviderLifecycle {
+  draft
+  validated
+  preparing
+  active
+  failed
+  superseded
 }
 
 enum UserActionStatus {

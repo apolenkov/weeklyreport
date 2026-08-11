@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { PrismaClient } from "@prisma/client";
 
 const DEFAULT_PRIMARY_LEAD_ID = "a0000000-0000-4000-8000-000000000011";
@@ -5,9 +7,12 @@ const DEFAULT_PRIMARY_LEAD_ID = "a0000000-0000-4000-8000-000000000011";
 export type SeedCoverageOptions = Readonly<{
   primaryLeadId?: string;
   now?: Date;
+  requirePublishedSnapshots?: boolean;
 }>;
 
 type SeedRecordIdentity = Readonly<{ id: string; stableId: string }>;
+type SeedRecord = Readonly<{ id: string }>;
+type StableIdWriter = (id: string, stableId: string) => PromiseLike<unknown>;
 
 const hasPopulatedSnapshot = (
   value: unknown,
@@ -116,6 +121,14 @@ async function assertAssistantFixtureCoverage(
     prisma.decision.findMany({ select: { id: true, stableId: true } }),
   ]);
   const stable = [...items, ...risks, ...decisions];
+  const publishedSnapshotProblems =
+    options.requirePublishedSnapshots === false
+      ? []
+      : published.flatMap(({ id, publishedSnapshot }) =>
+          hasPopulatedSnapshot(publishedSnapshot, primaryLeadId)
+            ? []
+            : [`published report ${id} has no populated primary-Lead snapshot`],
+        );
   const problems = [
     ...(!current || !currentSection
       ? [`current report ${current?.id ?? "none"} has no primary-Lead section`]
@@ -129,11 +142,7 @@ async function assertAssistantFixtureCoverage(
         ? []
         : [`future report ${id} has no primary-Lead candidate rows`];
     }),
-    ...published.flatMap(({ id, publishedSnapshot }) =>
-      hasPopulatedSnapshot(publishedSnapshot, primaryLeadId)
-        ? []
-        : [`published report ${id} has no populated primary-Lead snapshot`],
-    ),
+    ...publishedSnapshotProblems,
     ...(recordsAreStable(stable) ? [] : ["record stable identifiers drift"]),
   ];
   if (problems.length > 0) {
@@ -154,15 +163,25 @@ export async function stabilizeSeedRecordIdentities(
     prisma.risk.findMany({ select: { id: true } }),
     prisma.decision.findMany({ select: { id: true } }),
   ]);
+  const temporaryPrefix = `__seed_stabilize__${randomUUID()}__`;
+  const stabilizeRecords = async (
+    records: readonly SeedRecord[],
+    writer: StableIdWriter,
+  ): Promise<void> => {
+    await Promise.all(
+      records.map(({ id }) => writer(id, `${temporaryPrefix}${id}`)),
+    );
+    await Promise.all(records.map(({ id }) => writer(id, id)));
+  };
   await Promise.all([
-    ...items.map(({ id }) =>
-      prisma.item.update({ where: { id }, data: { stableId: id } }),
+    stabilizeRecords(items, (id, stableId) =>
+      prisma.item.update({ where: { id }, data: { stableId } }),
     ),
-    ...risks.map(({ id }) =>
-      prisma.risk.update({ where: { id }, data: { stableId: id } }),
+    stabilizeRecords(risks, (id, stableId) =>
+      prisma.risk.update({ where: { id }, data: { stableId } }),
     ),
-    ...decisions.map(({ id }) =>
-      prisma.decision.update({ where: { id }, data: { stableId: id } }),
+    stabilizeRecords(decisions, (id, stableId) =>
+      prisma.decision.update({ where: { id }, data: { stableId } }),
     ),
   ]);
 }

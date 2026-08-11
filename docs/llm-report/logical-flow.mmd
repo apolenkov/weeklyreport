@@ -1,7 +1,7 @@
 flowchart TD
     user["Lead: задаёт вопрос в Report chat"] --> ui["Web: отправляет question и resolution tokens"]
     ui --> api["tRPC leadForm.assistant\nТолько canonical leadProcedure"]
-    api --> planner["Mistral planner\nВызов единственного tool: search_report_entries"]
+    api --> planner["Active provider planner\nВызов единственного tool: search_report_entries"]
     planner --> valid{"SearchPlan\nпрошёл Zod-проверку?"}
     valid -- "Нет, первая ошибка" --> planRepair["Mistral: одна попытка исправить план"]
     planRepair --> valid
@@ -22,12 +22,12 @@ flowchart TD
     semantic -- "Нет" --> context["Сервер считает aggregate\nи собирает компактный GroundingBundle"]
     semantic -- "Да" --> cache{"Все нужные embeddings\nесть в semantic cache?"}
     cache -- "Да" --> rank["pgvector: ранжировать\nтолько разрешённый exact-набор"]
-    cache -- "Нет, небольшой gap" --> readThrough["Mistral embeddings + upsert cache"]
+    cache -- "Нет, небольшой gap" --> readThrough["Active provider embeddings + upsert cache"]
     readThrough --> rank
     cache -- "Нет, большой gap" --> queue["Поставить BullMQ jobs\nбез текста отчёта в payload"]
     queue --> pending["Исход: semantic_index_pending"]
     rank --> context
-    context --> answer["Mistral answer\nТолько вопрос + GroundingBundle"]
+    context --> answer["Active provider answer\nТолько вопрос + GroundingBundle"]
     answer --> citations{"Все citations\nвалидны?"}
     citations -- "Нет, первая ошибка" --> citationRepair["Mistral: одна попытка\nисправить citations"]
     citationRepair --> citations

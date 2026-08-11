@@ -7,6 +7,7 @@ import {
 
 import { buildGroundingBundle } from "../domain/context-builder.js";
 import type { ClarificationTokenCodec } from "../domain/entity-resolver.types.js";
+import type { AiRuntimeResolverPort } from "./ai-runtime.resolver.js";
 import {
   type CandidatePreparation,
   prepareReportAssistantCandidates,
@@ -46,6 +47,7 @@ const outcome = (value: ReportAssistantOutcome): ReportAssistantOutcome =>
 type AssistantExecution = Readonly<{
   outcome: ReportAssistantOutcome;
   trace: ReportAssistantTrace;
+  model: string;
 }>;
 
 type ReadyCandidatePreparation = Extract<
@@ -56,7 +58,8 @@ type ReadyCandidatePreparation = Extract<
 const complete = (
   result: ReportAssistantOutcome,
   trace: ReportAssistantTrace,
-): AssistantExecution => ({ outcome: outcome(result), trace });
+  model: string,
+): AssistantExecution => ({ outcome: outcome(result), trace, model });
 
 export class ReportAssistantService {
   constructor(
@@ -68,6 +71,7 @@ export class ReportAssistantService {
     private readonly clock: ReportAssistantClock,
     private readonly semanticRetrieval?: SemanticRetrievalService,
     private readonly telemetry: ReportAssistantTelemetry = NOOP_REPORT_ASSISTANT_TELEMETRY,
+    private readonly runtimeResolver?: AiRuntimeResolverPort,
   ) {}
 
   async answer(
@@ -77,18 +81,29 @@ export class ReportAssistantService {
     const startedAt = Date.now();
     try {
       const execution = await this.answerInternal(request, actorId);
-      this.recordTelemetry(execution.outcome.kind, execution.trace, startedAt);
+      this.recordTelemetry(
+        execution.outcome.kind,
+        execution.trace,
+        execution.model,
+        startedAt,
+      );
       return execution.outcome;
     } catch (error) {
       if (error instanceof ReportAssistantProviderError && error.retryable) {
         this.recordTelemetry(
           "provider_unavailable",
           EMPTY_REPORT_ASSISTANT_TRACE,
+          this.config.model,
           startedAt,
         );
         return outcome({ kind: "provider_unavailable" });
       }
-      this.recordTelemetry("error", EMPTY_REPORT_ASSISTANT_TRACE, startedAt);
+      this.recordTelemetry(
+        "error",
+        EMPTY_REPORT_ASSISTANT_TRACE,
+        this.config.model,
+        startedAt,
+      );
       throw error;
     }
   }
@@ -98,7 +113,22 @@ export class ReportAssistantService {
     actorId: string,
   ): Promise<AssistantExecution> {
     const parsedRequest = reportAssistantRequestSchema.parse(request);
-    const planAttempt = await planWithOneRepair(this.planner, {
+    const runtime = this.runtimeResolver
+      ? await this.runtimeResolver.resolveActive()
+      : undefined;
+    if (this.runtimeResolver && !runtime) {
+      return complete(
+        { kind: "ai_not_configured" },
+        EMPTY_REPORT_ASSISTANT_TRACE,
+        this.config.model,
+      );
+    }
+    const planner = runtime?.planner ?? this.planner;
+    const answerer = runtime?.answerer ?? this.answerer;
+    const model = runtime?.model ?? this.config.model;
+    const semanticRetrieval =
+      runtime?.semanticRetrieval ?? this.semanticRetrieval;
+    const planAttempt = await planWithOneRepair(planner, {
       question: parsedRequest.question,
       now: this.clock.now,
       timeZone: this.config.timeZone,
@@ -108,6 +138,7 @@ export class ReportAssistantService {
       return complete(
         { kind: "invalid_plan" },
         { ...EMPTY_REPORT_ASSISTANT_TRACE, plannerRepairCount },
+        model,
       );
     }
 
@@ -125,7 +156,7 @@ export class ReportAssistantService {
         repository: this.repository,
         tokenCodec: this.tokenCodec,
         clock: this.clock,
-        semanticRetrieval: this.semanticRetrieval,
+        semanticRetrieval,
         timeZone: this.config.timeZone,
         candidateLimits: {
           candidateLimit: this.config.candidateLimit,
@@ -134,14 +165,21 @@ export class ReportAssistantService {
       },
     });
     if (preparation.kind === "terminal") {
-      return complete(preparation.outcome, preparation.trace);
+      return complete(preparation.outcome, preparation.trace, model);
     }
-    return this.answerGroundedCandidates(parsedRequest.question, preparation);
+    return this.answerGroundedCandidates(
+      parsedRequest.question,
+      preparation,
+      answerer,
+      model,
+    );
   }
 
   private async answerGroundedCandidates(
     question: string,
     preparation: ReadyCandidatePreparation,
+    answerer: AnswerPort,
+    model: string,
   ): Promise<AssistantExecution> {
     const grounding = buildGroundingBundle(
       preparation.sorted,
@@ -149,7 +187,7 @@ export class ReportAssistantService {
       this.config.contextTokenBudget,
       preparation.limited.candidates,
     );
-    const answered = await answerWithCitationRepair(this.answerer, {
+    const answered = await answerWithCitationRepair(answerer, {
       question,
       grounding: {
         ...grounding,
@@ -172,18 +210,20 @@ export class ReportAssistantService {
         citationRepairCount: Number(answered.repaired),
         usage: answered.answer.usage,
       },
+      model,
     );
   }
 
   private recordTelemetry(
     outcomeKind: string,
     trace: ReportAssistantTrace,
+    model: string,
     startedAt: number,
   ): void {
     this.telemetry.record({
       outcome: outcomeKind,
       latencyMs: Math.max(0, Date.now() - startedAt),
-      model: this.config.model,
+      model,
       trace,
     });
   }

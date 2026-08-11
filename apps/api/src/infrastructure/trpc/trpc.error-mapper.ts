@@ -10,6 +10,12 @@ import {
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
 } from "../../modules/admin/index.js";
+import {
+  AiProviderConfigurationError,
+  AiProviderNotFoundError,
+  CredentialCodecError,
+  ProviderUrlPolicyError,
+} from "../../modules/ai-provider/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
@@ -64,6 +70,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   DomainErrorCtor,
   TRPCError["code"],
 ])[] = [
+  [AiProviderConfigurationError, "BAD_REQUEST"],
+  [AiProviderNotFoundError, "NOT_FOUND"],
+  [CredentialCodecError, "BAD_REQUEST"],
+  [ProviderUrlPolicyError, "BAD_REQUEST"],
   // A section-write version conflict is a concurrency clash, not a validation
   // failure — CONFLICT (409) so the client reloads and retries, distinct from
   // the ReportSectionDomainError BAD_REQUEST below.

@@ -105,16 +105,20 @@ export const envSchema = z
     // configured-check is centralised in `isTelegramConfigured`.
     TG_BOT_TOKEN: z.string().optional(),
 
-    // Native Lead report assistant. These values are required in every
-    // environment, including tests; test environments use placeholders and
-    // deterministic fakes, never a real provider call. No model, server,
-    // dimension, or budget is selected in code.
-    MISTRAL_API_KEY: z.string().min(1),
-    MISTRAL_PLANNER_MODEL: z.string().min(1),
-    MISTRAL_ANSWER_MODEL: z.string().min(1),
-    MISTRAL_EMBEDDING_MODEL: z.string().min(1),
-    MISTRAL_EMBEDDING_DIMENSIONS: positiveIntegerEnv,
-    MISTRAL_API_SERVER: z.string().min(1),
+    // AI control-plane deployment requirements. Product provider/model values
+    // live in the database; these values protect the control plane itself.
+    AI_PROVIDER_CONFIG_ENCRYPTION_KEY: z.string().min(1),
+    AI_PROVIDER_CONFIG_KEY_VERSION: positiveIntegerEnv,
+    AI_PROVIDER_ALLOWED_ORIGINS: z.string().trim().min(1),
+
+    // One-shot rollout inputs retained only for the explicit legacy bootstrap
+    // operation. Runtime resolution never reads these values as a fallback.
+    MISTRAL_API_KEY: z.string().min(1).optional(),
+    MISTRAL_PLANNER_MODEL: z.string().min(1).optional(),
+    MISTRAL_ANSWER_MODEL: z.string().min(1).optional(),
+    MISTRAL_EMBEDDING_MODEL: z.string().min(1).optional(),
+    MISTRAL_EMBEDDING_DIMENSIONS: positiveIntegerEnv.optional(),
+    MISTRAL_API_SERVER: z.string().min(1).optional(),
     REPORT_ASSISTANT_INPUT_VERSION: z.string().min(1),
     REPORT_ASSISTANT_SIMILARITY_THRESHOLD: z.coerce
       .number()

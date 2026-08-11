@@ -17,6 +17,8 @@ const scope: SemanticEmbeddingScope = {
   dimensions: 3,
 };
 
+const configurationRevisionId = "revision-2026-08-10";
+
 const item = (recordId: string, text: string): SearchCandidate => ({
   kind: "item",
   identity: {
@@ -106,6 +108,7 @@ const service = (
   },
 ): SemanticRetrievalService =>
   new SemanticRetrievalService(embeddings, repositoryPort, {
+    configurationRevisionId,
     scope,
     similarityThreshold: 0.55,
     readThroughLimit,
@@ -180,6 +183,7 @@ describe("SemanticRetrievalService", () => {
       embeddings,
       repositoryHarness.port,
       {
+        configurationRevisionId,
         scope: activeScope,
         similarityThreshold: 0.55,
         readThroughLimit: 1,
@@ -225,6 +229,10 @@ describe("SemanticRetrievalService", () => {
       reportId: "report-1",
       sectionId: "section-1",
       recordKind: "item",
+    });
+    expect(enqueue.mock.calls[0]?.[1]).toEqual({
+      configurationRevisionId,
+      scope,
     });
     expect(enqueue.mock.calls[0]?.[0]).not.toHaveProperty("text");
   });

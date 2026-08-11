@@ -95,9 +95,8 @@ export class SemanticEmbeddingPrismaRepository implements SemanticEmbeddingRepos
       VALUES
         (${input.contentHash}, ${input.provider}, ${input.model}, ${input.inputVersion},
          ${input.dimensions}, CAST(${vectorLiteral(input.vector)} AS vector), CURRENT_TIMESTAMP)
-      ON CONFLICT ("contentHash", "provider", "model", "inputVersion")
+      ON CONFLICT ("contentHash", "provider", "model", "inputVersion", "dimensions")
       DO UPDATE SET
-        "dimensions" = EXCLUDED."dimensions",
         "vector" = EXCLUDED."vector",
         "updatedAt" = CURRENT_TIMESTAMP
     `;

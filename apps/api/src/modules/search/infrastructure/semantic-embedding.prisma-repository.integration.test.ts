@@ -43,9 +43,8 @@ const upsertEmbedding = async (input: EmbeddingInput): Promise<void> => {
     VALUES
       (${input.contentHash}, ${input.provider}, ${input.model}, ${input.inputVersion},
        ${input.dimensions}, ${input.vector}::vector, CURRENT_TIMESTAMP)
-    ON CONFLICT ("contentHash", "provider", "model", "inputVersion")
+    ON CONFLICT ("contentHash", "provider", "model", "inputVersion", "dimensions")
     DO UPDATE SET
-      "dimensions" = EXCLUDED."dimensions",
       "vector" = EXCLUDED."vector",
       "updatedAt" = CURRENT_TIMESTAMP
   `;
@@ -128,6 +127,40 @@ describe("SemanticEmbedding migration contract", () => {
     expect(rows).toEqual([
       { model: MODEL, inputVersion: INPUT_VERSION, vector: "[1,2,3]" },
     ]);
+  });
+
+  it("keeps endpoint identities and dimensions isolated", async () => {
+    await insertEmbedding(embedding());
+    await insertEmbedding(
+      embedding({
+        provider: "custom:approved-gateway",
+        vector: "[1,2]",
+        dimensions: 2,
+      }),
+    );
+
+    await expect(
+      repository.findCachedHashes(
+        {
+          provider: "custom:approved-gateway",
+          model: MODEL,
+          inputVersion: INPUT_VERSION,
+          dimensions: 2,
+        },
+        [HASH],
+      ),
+    ).resolves.toEqual([HASH]);
+    await expect(
+      repository.findCachedHashes(
+        {
+          provider: PROVIDER,
+          model: MODEL,
+          inputVersion: INPUT_VERSION,
+          dimensions: 2,
+        },
+        [HASH],
+      ),
+    ).resolves.toEqual([]);
   });
 
   it("upserts one row for a repeated content key", async () => {

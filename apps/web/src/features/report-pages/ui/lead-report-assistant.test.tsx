@@ -34,9 +34,12 @@ const successOutcome = {
   metadata: { truncated: false, insufficientEvidence: false },
 };
 
-function renderAssistant() {
+function renderAssistant(
+  availability: "available" | "not_configured" = "available",
+) {
   const { proxy, captured } = createMockTRPC([
     { path: ["leadForm", "assistant"], mutation: true },
+    { path: ["ai", "availability"], query: { availability } },
   ]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -90,6 +93,19 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.useRealTimers());
 
 describe("LeadReportAssistant", () => {
+  it("keeps Chat visible but disabled when AI is not configured", async () => {
+    renderAssistant("not_configured");
+
+    const trigger = await screen.findByRole("button", {
+      name: "Report chat unavailable",
+    });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute(
+      "title",
+      "Report chat is unavailable until an administrator configures AI",
+    );
+  });
+
   it("opens a focus-safe Sheet and retains transient state on close", async () => {
     renderAssistant();
     openAssistant();
@@ -184,6 +200,7 @@ describe("LeadReportAssistant", () => {
     ["no_results", "No matching report records were found"],
     ["result_set_too_large", "matches too many records"],
     ["invalid_plan", "safe report search"],
+    ["ai_not_configured", "not configured yet"],
   ] as const)("renders the %s product state", async (kind, message) => {
     const mutation = renderAssistant();
     mutation.mutationFn.mockResolvedValue({ kind });

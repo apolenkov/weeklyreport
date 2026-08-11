@@ -61,6 +61,7 @@ import type { AppLogger } from "./lib/logger";
 import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/index.js";
+import { AiProviderConfigurationService } from "./modules/ai-provider/index.js";
 import { ActionLogService } from "./modules/admin/index.js";
 import { JobsService } from "./modules/admin/index.js";
 import { PeriodAdminService } from "./modules/admin/index.js";
@@ -397,6 +398,7 @@ async function bootstrap() {
     periodAdminService: app.get(PeriodAdminService),
     reopenRequestAdminService: app.get(ReopenRequestAdminService),
     actionLogService: app.get(ActionLogService),
+    aiProviderService: app.get(AiProviderConfigurationService),
     // Without this the deactivate/activate revoked-set fast path is dead code:
     // the procedures call `deps.sessionRevocationService?.` and silently no-op.
     // The DI instance shares the Redis revoked set with the context factory's

@@ -721,6 +721,11 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
     update: {},
     create: { id: "singleton" },
   });
+  await prisma.aiProviderControl.upsert({
+    where: { id: "singleton" },
+    update: { activeConfigurationId: null, enabled: false },
+    create: { id: "singleton", activeConfigurationId: null, enabled: false },
+  });
 
   await prisma.user.createMany({
     data: [

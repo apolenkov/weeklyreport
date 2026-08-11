@@ -1,4 +1,3 @@
-import type { Mistral } from "@mistralai/mistralai";
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -129,31 +128,6 @@ const validateConfig = (config: MistralPlannerAdapterConfig): void => {
   if (!Number.isInteger(config.maxTokens) || config.maxTokens < 1) {
     throw new Error("MISTRAL_PLANNER_MAX_TOKENS must be positive");
   }
-};
-
-export const createMistralChatClient = async (
-  config: MistralPlannerAdapterConfig,
-): Promise<MistralChatClient> => {
-  validateConfig(config);
-  return (await createMistralClient(config)).chat;
-};
-
-export const createMistralClient = async (
-  config: MistralClientConfig,
-): Promise<Mistral> => {
-  validateMistralClientConfig(config);
-  const { Mistral } = await import("@mistralai/mistralai");
-  return new Mistral({
-    apiKey: config.apiKey,
-    server: serverFromConfig(config.server),
-    timeoutMs: config.providerTimeoutMs,
-  });
-};
-
-export const createMistralStructuredChatClient = async (
-  config: MistralClientConfig,
-): Promise<MistralStructuredChatClient> => {
-  return (await createMistralClient(config)).chat;
 };
 
 const toolCallArguments = (response: ChatCompletionResponse): unknown => {

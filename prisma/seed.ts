@@ -40,7 +40,10 @@ import {
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
-import { assertSeedCoverage } from "./seed-coverage-check.js";
+import {
+  assertSeedCoverage,
+  stabilizeSeedRecordIdentities,
+} from "./seed-coverage-check.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -1404,6 +1407,14 @@ async function main() {
     },
   });
 
+  // AI starts explicitly unconfigured. Rollout bootstrap is the only seed
+  // path that may create an active provider revision.
+  await prisma.aiProviderControl.upsert({
+    where: { id: "singleton" },
+    update: { activeConfigurationId: null, enabled: false },
+    create: { id: "singleton", activeConfigurationId: null, enabled: false },
+  });
+
   // --- 9. Organization singleton ---
   // The migration seeds this row on first apply with ON CONFLICT DO NOTHING.
   // On a `prisma migrate reset` the table is recreated and re-seeded by the
@@ -1435,7 +1446,13 @@ async function main() {
       `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
 
-  await assertSeedCoverage(prisma, "seed");
+  // The orchestrator freezes published snapshots in the next phase; this
+  // relational phase validates live fixture rows first and leaves snapshot
+  // validation to the post-finalization readiness check.
+  await stabilizeSeedRecordIdentities(prisma);
+  await assertSeedCoverage(prisma, "seed", {
+    requirePublishedSnapshots: false,
+  });
 }
 
 void main()

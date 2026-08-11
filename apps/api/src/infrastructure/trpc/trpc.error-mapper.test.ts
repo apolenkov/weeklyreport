@@ -11,6 +11,12 @@ import {
   AdminReopenRequestNotFoundError,
   AdminUserConflictError,
 } from "../../modules/admin/index.js";
+import {
+  AiProviderConfigurationError,
+  AiProviderNotFoundError,
+  CredentialCodecError,
+  ProviderUrlPolicyError,
+} from "../../modules/ai-provider/index.js";
 import { ArchiveDomainError } from "../../modules/archive/index.js";
 import {
   CarryOverConflictError,
@@ -362,6 +368,27 @@ describe("mapDomainError", () => {
 describe("mapDomainError — exhaustive domain-error → code coverage", () => {
   const cases = [
     {
+      name: "AiProviderConfigurationError",
+      make: () => new AiProviderConfigurationError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AiProviderNotFoundError",
+      make: () => new AiProviderNotFoundError(),
+      code: "NOT_FOUND",
+      message: "AI provider configuration was not found",
+    },
+    {
+      name: "CredentialCodecError",
+      make: () => new CredentialCodecError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "ProviderUrlPolicyError",
+      make: () => new ProviderUrlPolicyError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
       name: "SectionVersionConflictError",
       make: () => new SectionVersionConflictError("m"),
       code: "CONFLICT",
@@ -518,13 +545,14 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
     },
   ] as const;
 
-  it.each(cases)("maps $name → $code", ({ make, code }) => {
-    const error = make();
+  it.each(cases)("maps $name → $code", (entry) => {
+    const error = entry.make();
     const mapped = mapDomainError(error);
+    const expectedMessage = "message" in entry ? entry.message : "m";
 
     expect(mapped).toBeInstanceOf(TRPCError);
-    expect(mapped.code).toBe(code);
-    expect(mapped.message).toBe("m");
+    expect(mapped.code).toBe(entry.code);
+    expect(mapped.message).toBe(expectedMessage);
     expect(mapped.cause).toBe(error);
   });
 

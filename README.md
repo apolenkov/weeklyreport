@@ -44,7 +44,7 @@ customreport
 # 1. Зависимости
 pnpm install
 
-# 2. Окружение: скопировать пример и вставить выданный Mistral API key
+# 2. Окружение: скопировать пример и задать обязательные AI control-plane values
 cp .env.example .env
 
 # 3. Поднять только зависимости приложения
@@ -87,8 +87,9 @@ Postgres и Redis.
 
 ## Production Docker deployment
 
-Production требует больше, чем один Mistral API key: публичный домен, DB secret,
-JWT secret, Keycloak SAML, SMTP и TLS/reverse-proxy settings. Создай untracked
+Production requires an encryption key and an explicit provider-origin allowlist;
+the active provider credential and model choices are stored by an administrator
+in Settings → Integrations. Create an untracked
 `.env.prod` и заполни обязательные значения из `.env.example`:
 
 ```env
@@ -110,12 +111,17 @@ SMTP_HOST=<smtp-host>
 SMTP_PORT=587
 SMTP_FROM=noreply@example.com
 
-MISTRAL_API_KEY=<provided-key>
-MISTRAL_PLANNER_MODEL=mistral-medium-3-5
-MISTRAL_ANSWER_MODEL=mistral-medium-3-5
-MISTRAL_EMBEDDING_MODEL=mistral-embed
-MISTRAL_EMBEDDING_DIMENSIONS=1024
-MISTRAL_API_SERVER=eu
+AI_PROVIDER_CONFIG_ENCRYPTION_KEY=<base64-or-hex-32-byte-key>
+AI_PROVIDER_CONFIG_KEY_VERSION=1
+AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai
+# Optional one-shot import for an existing Mistral deployment. These are not
+# runtime fallbacks and should be removed after `pnpm db:bootstrap-ai-provider`.
+# MISTRAL_API_KEY=<provided-key>
+# MISTRAL_PLANNER_MODEL=mistral-medium-3-5
+# MISTRAL_ANSWER_MODEL=mistral-medium-3-5
+# MISTRAL_EMBEDDING_MODEL=mistral-embed
+# MISTRAL_EMBEDDING_DIMENSIONS=1024
+# MISTRAL_API_SERVER=eu
 REPORT_ASSISTANT_INPUT_VERSION=1
 REPORT_ASSISTANT_SIMILARITY_THRESHOLD=0.55
 REPORT_ASSISTANT_CANDIDATE_LIMIT=500
@@ -139,6 +145,17 @@ CADDY_CSP_REPORT_URI=<csp-report-collector-url>
 docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
+
+For an existing deployment, run the explicit one-shot Mistral import after the
+migration and before the assistant smoke test:
+
+```bash
+pnpm db:bootstrap-ai-provider
+```
+
+The command prints only availability and revision state. It is idempotent and
+does nothing once an AI control or configuration row exists. Fresh installations
+remain unconfigured until an admin saves and tests a provider in Integrations.
 
 После успешного запуска проверь `https://reports.example.com/health/live`.
 Production database не сбрасывается и не пересеивается: миграции применяются

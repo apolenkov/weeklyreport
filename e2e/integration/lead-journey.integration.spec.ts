@@ -255,6 +255,15 @@ test.describe("Lead journey (integration)", () => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
     page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.route("**/trpc/ai.availability*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          { result: { data: { json: { availability: "available" } } } },
+        ]),
+      });
+    });
     await page.route("**/trpc/leadForm.assistant*", async (route) => {
       assistantRequests.push(route.request().postDataJSON());
       const response = assistantResponses.shift();

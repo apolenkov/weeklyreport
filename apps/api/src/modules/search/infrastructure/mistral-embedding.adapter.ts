@@ -10,7 +10,6 @@ import type {
   EmbeddingVector,
 } from "../application/report-assistant.ports.js";
 import {
-  createMistralClient,
   type MistralClientConfig,
   MistralProtocolError,
   MistralProviderError,
@@ -32,8 +31,6 @@ export type MistralEmbeddingAdapterConfig = MistralClientConfig &
   }>;
 
 const CHARS_PER_ESTIMATED_TOKEN = 4;
-export const MISTRAL_PROVIDER_NAME = "mistral" as const;
-
 const validateConfig = (config: MistralEmbeddingAdapterConfig): void => {
   if (config.model.trim().length === 0) {
     throw new Error("MISTRAL_EMBEDDING_MODEL must be non-empty");
@@ -155,11 +152,6 @@ const requestBatch = async (
     return vector;
   });
 };
-
-export const createMistralEmbeddingClient = async (
-  config: MistralEmbeddingAdapterConfig,
-): Promise<MistralEmbeddingClient> =>
-  (await createMistralClient(config)).embeddings;
 
 export class MistralEmbeddingAdapter implements EmbeddingPort {
   constructor(

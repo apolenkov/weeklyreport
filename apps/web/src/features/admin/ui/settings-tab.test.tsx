@@ -8,6 +8,10 @@
  * the form values and the success toast fires.
  */
 
+import type {
+  AiProviderConfigurationRead,
+  AiProviderControlRead,
+} from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -50,6 +54,53 @@ const DEFAULT_INTEGRATIONS: IntegrationStub = {
   telegram: { configured: false, bindings: 0 },
 };
 
+const DEFAULT_AI_PROVIDER = {
+  enabled: false,
+  availability: "not_configured" as const,
+  activeRevisionId: null,
+  active: null,
+  revisions: [],
+};
+
+const AI_REVISION: AiProviderConfigurationRead = {
+  id: "11111111-1111-4111-8111-111111111111",
+  profile: "mistral",
+  lifecycle: "active",
+  baseUrl: "https://api.mistral.ai/v1",
+  plannerModel: "planner",
+  answerModel: "answer",
+  embeddingModel: "embed",
+  embeddingDimensions: 1024,
+  semanticInputVersion: "report-assistant/v1",
+  credentialConfigured: true,
+  credentialMaskedSuffix: "••••abcd",
+  testResult: {
+    status: "passed",
+    capabilities: (
+      [
+        "authentication",
+        "planner_tool_call",
+        "structured_answer",
+        "token_usage",
+        "batch_embeddings",
+      ] as const
+    ).map((capability) => ({ capability, status: "passed" as const })),
+    testedAt: new Date("2026-08-10T00:00:00.000Z"),
+  },
+  progress: { completed: 8, total: 8, failed: 0, elapsedMs: 2500 },
+  createdAt: new Date("2026-08-10T00:00:00.000Z"),
+  updatedAt: new Date("2026-08-10T00:00:00.000Z"),
+  activatedAt: new Date("2026-08-10T00:00:00.000Z"),
+};
+
+const CONFIGURED_AI_PROVIDER: AiProviderControlRead = {
+  enabled: true,
+  availability: "available",
+  activeRevisionId: AI_REVISION.id,
+  active: AI_REVISION,
+  revisions: [AI_REVISION],
+};
+
 // Org data returned by admin.getOrganization.
 const ORG_DATA = {
   id: "singleton",
@@ -64,7 +115,10 @@ const ORG_DATA = {
  * Returns both the proxy and the captured mutation registry so tests can
  * assert against specific mutation calls.
  */
-function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
+function buildProxy(
+  integrations: IntegrationStub = DEFAULT_INTEGRATIONS,
+  aiProvider: AiProviderControlRead = DEFAULT_AI_PROVIDER,
+) {
   return createMockTRPC([
     { path: ["admin", "getOrganization"], query: ORG_DATA },
     { path: ["admin", "updateOrganization"], mutation: true },
@@ -72,6 +126,12 @@ function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
     { path: ["admin", "integrationsStatus"], query: integrations },
+    { path: ["admin", "aiProvider", "get"], query: aiProvider },
+    { path: ["admin", "aiProvider", "save"], mutation: true },
+    { path: ["admin", "aiProvider", "test"], mutation: true },
+    { path: ["admin", "aiProvider", "activate"], mutation: true },
+    { path: ["admin", "aiProvider", "disable"], mutation: true },
+    { path: ["admin", "aiProvider", "restore"], mutation: true },
     { path: ["auth", "me"] },
     { path: ["org", "getPublic"] },
     { path: ["weeklyReport", "get"] },
@@ -565,7 +625,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
   // status — the configured/bindings rows were removed because they read live
   // Telegram state and would be a false claim under an "Element" heading.
   // admin-settings-surface-cleanup removed the Slack and CI cards; the AI card
-  // is a general "AI" integration (still Coming Soon).
+  // is the live database-backed control plane.
   it("names the messaging card Element with a Coming Soon badge", async () => {
     const { proxy } = buildProxy({
       telegram: { configured: false, bindings: 0 },
@@ -622,23 +682,213 @@ describe("SettingsTab — Integrations sub-tab", () => {
     expect(screen.queryByTestId("integration-row-ci")).toBeNull();
   });
 
-  it("renders the AI Coming Soon card", async () => {
+  it("renders the admin AI configuration form", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
 
-    const aiBadge = await screen.findByTestId("integration-badge-ai");
-    await waitFor(() => expect(aiBadge.dataset.state).toBe("coming-soon"));
-    expect(aiBadge.textContent).toMatch(/coming soon/i);
-
-    expect(screen.getByTestId("integration-ai-provider").textContent).toMatch(
+    expect(await screen.findByLabelText("AI provider profile")).toBeTruthy();
+    expect(screen.getByLabelText("AI provider credential")).toBeTruthy();
+    expect(screen.queryByLabelText("Embedding dimensions")).toBeNull();
+    expect(screen.getByRole("button", { name: /save draft/i })).toBeTruthy();
+    expect(screen.queryByTestId("integration-badge-ai")).toBeNull();
+    expect(screen.getByTestId("integration-ai-status").textContent).toMatch(
       /not configured/i,
     );
-    expect(screen.getByTestId("integration-ai-rag").textContent).toMatch(
-      /empty/i,
+  });
+
+  it("shows the masked credential and provider-specific endpoint fields", async () => {
+    const { proxy, captured } = buildProxy(
+      DEFAULT_INTEGRATIONS,
+      CONFIGURED_AI_PROVIDER,
     );
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+
+    const credential = screen.getByLabelText(
+      "AI provider credential",
+    ) as HTMLInputElement;
+    expect(credential).toHaveValue("");
+    expect(credential).toHaveAttribute("placeholder", "••••abcd");
+    await user.selectOptions(
+      screen.getByLabelText("AI provider profile"),
+      "custom-openai-compatible",
+    );
+    const endpoint = screen.getByLabelText(
+      "AI provider endpoint",
+    ) as HTMLInputElement;
+    expect(endpoint).not.toBeDisabled();
+    await user.type(endpoint, "https://approved.example.com/v1");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(captured["admin.aiProvider.save"]?.calls[0]).toMatchObject({
+      profile: "custom-openai-compatible",
+      baseUrl: "https://approved.example.com/v1",
+    });
+    expect(captured["admin.aiProvider.save"]?.calls[0]).not.toHaveProperty(
+      "credential",
+    );
+  });
+
+  it("keeps the active provider visible over an older validated draft", async () => {
+    const active: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      plannerModel: "poolside/laguna-xs-2.1:free",
+      answerModel: "poolside/laguna-xs-2.1:free",
+      updatedAt: new Date("2026-08-11T10:00:00.000Z"),
+    };
+    const staleDraft: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      id: "22222222-2222-4222-8222-222222222222",
+      lifecycle: "validated",
+      plannerModel: "openrouter/free",
+      answerModel: "openrouter/free",
+      updatedAt: new Date("2026-08-11T09:00:00.000Z"),
+      activatedAt: null,
+    };
+    const { proxy } = buildProxy(DEFAULT_INTEGRATIONS, {
+      enabled: true,
+      availability: "available",
+      activeRevisionId: active.id,
+      active,
+      revisions: [active, staleDraft],
+    });
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+
+    expect(screen.getByLabelText("Planner model")).toHaveValue(
+      "poolside/laguna-xs-2.1:free",
+    );
+  });
+
+  it("runs test, activation, and disable actions with confirmation", async () => {
+    const candidate: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      lifecycle: "validated",
+      activatedAt: null,
+    };
+    const control: AiProviderControlRead = {
+      enabled: true,
+      availability: "available",
+      activeRevisionId: candidate.id,
+      active: candidate,
+      revisions: [candidate],
+    };
+    const { proxy, captured } = buildProxy(DEFAULT_INTEGRATIONS, control);
+    captured["admin.aiProvider.test"]?.mutationFn.mockResolvedValue(candidate);
+    captured["admin.aiProvider.activate"]?.mutationFn.mockResolvedValue(
+      control,
+    );
+    captured["admin.aiProvider.disable"]?.mutationFn.mockResolvedValue(control);
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    await user.click(
+      screen.getByRole("button", { name: /test capabilities/i }),
+    );
+    await waitFor(() =>
+      expect(captured["admin.aiProvider.test"]?.calls).toHaveLength(1),
+    );
+    await user.click(screen.getByRole("button", { name: /^activate$/i }));
+    await waitFor(() =>
+      expect(captured["admin.aiProvider.activate"]?.calls).toHaveLength(1),
+    );
+    await user.click(screen.getByRole("button", { name: /^disable$/i }));
+    await waitFor(() =>
+      expect(captured["admin.aiProvider.disable"]?.calls).toHaveLength(1),
+    );
+
+    expect(captured["admin.aiProvider.test"]?.calls[0]).toEqual({
+      revisionId: candidate.id,
+    });
+    expect(captured["admin.aiProvider.activate"]?.calls[0]).toEqual({
+      revisionId: candidate.id,
+    });
+    confirm.mockRestore();
+  });
+
+  it("explains the failed capability without exposing provider response details", async () => {
+    const failed: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      lifecycle: "failed",
+      testResult: {
+        status: "failed",
+        capabilities: [
+          {
+            capability: "planner_tool_call",
+            status: "failed",
+            failureCode: "OpenAiCompatibleProtocolError",
+          },
+        ],
+        testedAt: new Date("2026-08-11T00:00:00.000Z"),
+      },
+    };
+    const { proxy, captured } = buildProxy(DEFAULT_INTEGRATIONS, {
+      ...DEFAULT_AI_PROVIDER,
+      revisions: [failed],
+    });
+    captured["admin.aiProvider.test"]?.mutationFn.mockResolvedValue(failed);
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(
+      screen.getByRole("button", { name: /test capabilities/i }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Planner tool call: The provider response is incompatible.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("OpenAiCompatibleProtocolError")).toBeNull();
+  });
+
+  it("exposes capability, activation, disable, progress, and restore controls", async () => {
+    const preparingRevision: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      lifecycle: "preparing",
+      progress: { completed: 3, total: 10, failed: 1, elapsedMs: 4200 },
+      activatedAt: null,
+    };
+    const retainedRevision: AiProviderConfigurationRead = {
+      ...AI_REVISION,
+      id: "22222222-2222-4222-8222-222222222222",
+      lifecycle: "superseded",
+      activatedAt: new Date("2026-08-09T00:00:00.000Z"),
+    };
+    const { proxy, captured } = buildProxy(DEFAULT_INTEGRATIONS, {
+      enabled: false,
+      availability: "not_configured",
+      activeRevisionId: null,
+      active: null,
+      revisions: [preparingRevision, retainedRevision],
+    });
+    captured["admin.aiProvider.restore"]?.mutationFn.mockResolvedValue({
+      ...DEFAULT_AI_PROVIDER,
+    });
+    renderSettings(proxy);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    expect(screen.getByTestId("ai-preparation-progress")).toHaveTextContent(
+      "3/10 complete; 1 failed; elapsed 4200 ms",
+    );
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: "Restore" }));
+    expect(captured["admin.aiProvider.restore"]?.calls[0]).toEqual({
+      revisionId: retainedRevision.id,
+    });
+    confirm.mockRestore();
   });
 });
 
