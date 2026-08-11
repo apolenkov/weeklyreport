@@ -6,6 +6,9 @@ import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignments/stage-assignment-editor";
 
+const PRODUCT_ROW_TOUCH_TARGET_CLASS =
+  "max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)]";
+
 interface ActiveProductRowProps {
   readonly product: AdminProductView;
   readonly owner: AdminUserView | undefined;
@@ -75,7 +78,7 @@ function ProductSummary({
       <button
         type="button"
         onClick={() => onToggleExpand(product.id)}
-        className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+        className={`flex h-7 w-7 ${PRODUCT_ROW_TOUCH_TARGET_CLASS} items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]`}
         aria-label={`${isExpanded ? "Collapse" : "Expand"} stage assignments for ${product.name}`}
         aria-expanded={isExpanded}
       >
@@ -124,7 +127,7 @@ function ProductRowActions({
       <button
         type="button"
         onClick={() => onEdit(product)}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]"
+        className={`btn-press inline-flex min-h-[34px] ${PRODUCT_ROW_TOUCH_TARGET_CLASS} items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]`}
         aria-label={`Edit ${product.name}`}
       >
         Edit
@@ -133,7 +136,7 @@ function ProductRowActions({
         type="button"
         onClick={() => onArchive(product)}
         disabled={isArchiving}
-        className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+        className={`btn-press inline-flex min-h-[34px] ${PRODUCT_ROW_TOUCH_TARGET_CLASS} items-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50`}
         aria-label={`Archive ${product.name}`}
       >
         Archive
