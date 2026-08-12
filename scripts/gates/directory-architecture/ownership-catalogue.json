@@ -492,6 +492,22 @@
       "target": "e2e/runtime-sweep/matrix/$1"
     },
     {
+      "id": "runtime-matrix-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/((?:coverage-model|finalization|policy|runtime|specialized))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "matrix",
+      "role": "test",
+      "target": "e2e/runtime-sweep/matrix/$1/$2"
+    },
+    {
+      "id": "runtime-matrix-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/((?:coverage-model|finalization|policy|runtime|specialized))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "matrix",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/matrix/$1/$2"
+    },
+    {
       "id": "runtime-preflight",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
@@ -546,6 +562,22 @@
       "concern": "preflight",
       "role": "test",
       "target": "e2e/runtime-sweep/preflight/target/$1"
+    },
+    {
+      "id": "runtime-preflight-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|reveal/(?:guards|interaction|paths)))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1/$2"
     },
     {
       "id": "runtime-lanes-tests",
@@ -652,25 +684,9 @@
       "target": "e2e/runtime-sweep/replay/$1"
     },
     {
-      "id": "runtime-live-control-replay-tests",
-      "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/((?:frozen-action-transition-validation|frozen-reveal-replay|representative-form-input)\\.test\\.ts)$",
-      "concern": "live-replay",
-      "role": "test",
-      "target": "e2e/runtime-sweep/replay/$1"
-    },
-    {
-      "id": "runtime-live-control-replay-implementation",
-      "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/((?:focused-control|frozen-action-transition-validation|frozen-reveal-replay(?:-(?:adapter|error))?|frozen-reveal-target|representative-form-input)\\.ts)$",
-      "concern": "live-replay",
-      "role": "implementation",
-      "target": "e2e/runtime-sweep/replay/$1"
-    },
-    {
       "id": "runtime-live-control-actions-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-actions/(.+\\.spec\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/(.+(?:\\.test|\\.spec)\\.ts)$",
       "concern": "live-replay",
       "role": "test",
       "target": "e2e/runtime-sweep/replay/control-actions/$1"
@@ -678,10 +694,26 @@
     {
       "id": "runtime-live-control-actions-implementation",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-actions/((?!.*\\.spec\\.ts$).+\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/control-actions/$1"
+    },
+    {
+      "id": "runtime-live-control-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:dom|frozen-case/(?:live|validation)|frozen-reveal|keyboard|live-control))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/$1/$2"
+    },
+    {
+      "id": "runtime-live-control-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:dom|frozen-case/(?:live|validation)|frozen-reveal|keyboard|live-control))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/$1/$2"
     },
     {
       "id": "runtime-live-control-evidence",
