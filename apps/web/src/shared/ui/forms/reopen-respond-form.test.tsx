@@ -38,6 +38,22 @@ describe("ReopenRespondForm", () => {
     expect(screen.getByRole("textbox")).toHaveAttribute("maxLength", "500");
   });
 
+  it("marks decision buttons as mutating while keeping cancel client-only", () => {
+    renderForm();
+
+    expect(screen.getByRole("button", { name: "Reject" })).toHaveAttribute(
+      "data-interaction-effect",
+      "mutation-required",
+    );
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveAttribute(
+      "data-interaction-effect",
+      "mutation-required",
+    );
+    expect(screen.getByRole("button", { name: "Cancel" })).not.toHaveAttribute(
+      "data-interaction-effect",
+    );
+  });
+
   it.each([
     ["approved", "Reject"],
     ["rejected", "Approve"],

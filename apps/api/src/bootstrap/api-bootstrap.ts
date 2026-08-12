@@ -22,7 +22,7 @@ export async function bootstrapApi(
     env.RUNTIME_SWEEP_SHUTDOWN_COMPLETION,
   );
   const { app, logger } = await createNestApp({ env, otelDecision });
-  const { authLimiter, trpcLimiter, vitalsLimiter } =
+  const { authLimiter, trpcLimiter, vitalsLimiter, shutdownRateLimitStore } =
     await configureHttpPipeline({
       app,
       env,
@@ -64,6 +64,7 @@ export async function bootstrapApi(
   registerApiShutdown({
     app,
     logger,
+    shutdownRateLimitStore,
     shutdownOtel,
     shutdownSentry,
     ...(writeCompletion === undefined ? {} : { writeCompletion }),

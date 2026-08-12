@@ -149,7 +149,7 @@ function GroupField({
         value={form.groupId ?? ""}
         onChange={(e) => onFormChange({ ...form, groupId: e.target.value })}
         className={CONTROL_CLASS}
-        disabled={form.role === "viewer" || groupOptions.length === 0}
+        disabled={form.role === "viewer" || groupOptions.length <= 1}
       >
         {form.role === "viewer" && <option value="">No owning group</option>}
         {form.groupId === null && form.role !== "viewer" && (

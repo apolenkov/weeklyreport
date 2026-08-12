@@ -14,13 +14,22 @@ export default defineConfig({
         import.meta.dirname,
         "packages/shared/src/index.ts",
       ),
+      "@playwright/test": path.resolve(
+        import.meta.dirname,
+        "apps/web/node_modules/@playwright/test/index.mjs",
+      ),
+      "@axe-core/playwright": path.resolve(
+        import.meta.dirname,
+        "apps/web/node_modules/@axe-core/playwright/dist/index.mjs",
+      ),
     },
   },
   test: {
     include: [
       "prisma/**/*.test.ts",
-      "e2e/*.test.ts",
+      "e2e/helpers/*.test.ts",
       "e2e/integration/*.test.ts",
+      "e2e/runtime-api-server-command.test.ts",
       "e2e/runtime-sweep/**/*.test.ts",
       "e2e/sweep/*.test.ts",
       "e2e/sweep/helpers/*.test.ts",

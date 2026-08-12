@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -166,6 +166,17 @@ describe("GroupsTab — a11y regression", () => {
 
       expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
     });
+  });
+
+  it("marks the save button as mutation-required for runtime discovery", () => {
+    renderTab();
+    openAddDialog();
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Add Group",
+      }),
+    ).toHaveAttribute("data-interaction-effect", "mutation-required");
   });
 
   describe("backdrop click closes the dialog", () => {

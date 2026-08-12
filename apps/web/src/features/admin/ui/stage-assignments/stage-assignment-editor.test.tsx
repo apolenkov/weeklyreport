@@ -48,5 +48,13 @@ describe("StageAssignmentEditor", () => {
             : "var(--color-muted-foreground)",
       });
     }
+
+    expect(screen.getAllByRole("combobox")).toHaveLength(2);
+    for (const stageSelect of screen.getAllByRole("combobox")) {
+      expect(stageSelect).toHaveAttribute(
+        "data-interaction-effect",
+        "mutation-required",
+      );
+    }
   });
 });

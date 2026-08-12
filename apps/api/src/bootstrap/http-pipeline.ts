@@ -22,6 +22,7 @@ export interface DeferredIngressLimiters {
   readonly authLimiter: RequestHandler;
   readonly trpcLimiter: RequestHandler;
   readonly vitalsLimiter: RequestHandler;
+  readonly shutdownRateLimitStore: () => Promise<void>;
 }
 
 export async function configureHttpPipeline(deps: {
@@ -52,12 +53,17 @@ export async function configureHttpPipeline(deps: {
 
   // Per-IP limiters for every public ingress surface. Built once here so the
   // client-logs forwarder below is guarded ahead of its terminating handler.
-  const { authLimiter, trpcLimiter, vitalsLimiter, clientLogsLimiter } =
-    await createRateLimits({
-      logger,
-      isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
-      env,
-    });
+  const {
+    authLimiter,
+    trpcLimiter,
+    vitalsLimiter,
+    clientLogsLimiter,
+    shutdownRateLimitStore,
+  } = await createRateLimits({
+    logger,
+    isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
+    env,
+  });
 
   const clientLogsEnabled =
     env.NODE_ENV === "development" || env.CLIENT_LOG_FORWARDING === "true";
@@ -71,5 +77,10 @@ export async function configureHttpPipeline(deps: {
     createClientLogsHandler({ logger, enabled: clientLogsEnabled }),
   );
 
-  return { authLimiter, trpcLimiter, vitalsLimiter };
+  return {
+    authLimiter,
+    trpcLimiter,
+    vitalsLimiter,
+    shutdownRateLimitStore,
+  };
 }

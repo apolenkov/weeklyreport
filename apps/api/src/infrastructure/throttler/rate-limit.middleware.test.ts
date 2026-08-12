@@ -247,6 +247,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
     const connect = vi
       .spyOn(Redis.prototype, "connect")
       .mockRejectedValue(new Error("redis unavailable"));
+    const disconnect = vi.spyOn(Redis.prototype, "disconnect");
 
     try {
       await expect(
@@ -256,8 +257,43 @@ describe("rate-limit middleware — fail-loud store policy", () => {
           env: { REDIS_HOST: "redis.example.com", REDIS_PORT: 6379 },
         }),
       ).rejects.toThrow("redis unavailable");
+      expect(disconnect).toHaveBeenCalledOnce();
     } finally {
       connect.mockRestore();
+      disconnect.mockRestore();
+    }
+  });
+
+  it("closes an owned client exactly once and leaves an injected client untouched", async () => {
+    const connect = vi
+      .spyOn(Redis.prototype, "connect")
+      .mockResolvedValue(undefined);
+    const disconnect = vi.spyOn(Redis.prototype, "disconnect");
+
+    try {
+      const owned = await createRateLimits({
+        logger: silentLogger,
+        isTest: false,
+        env: { REDIS_HOST: "redis.example.com", REDIS_PORT: 6379 },
+      });
+      const disconnectsBeforeShutdown = disconnect.mock.calls.length;
+
+      await owned.shutdownRateLimitStore();
+      await owned.shutdownRateLimitStore();
+
+      expect(disconnect).toHaveBeenCalledTimes(disconnectsBeforeShutdown + 1);
+
+      const injected = await createRateLimits({
+        logger: silentLogger,
+        isTest: false,
+        redis: createFakeRedisCall() as unknown as Redis,
+      });
+      await injected.shutdownRateLimitStore();
+
+      expect(disconnect).toHaveBeenCalledTimes(disconnectsBeforeShutdown + 1);
+    } finally {
+      connect.mockRestore();
+      disconnect.mockRestore();
     }
   });
 

@@ -79,6 +79,7 @@ routes:
         note: "Published-period action gates are derived from the same server-backed weekly and review models."
   - route: /head/history
     access: [head]
+    landing: "/reports"
     intents:
       - id: head-history-redirect
         intent: "Redirect from legacy history page to merged reports page"
@@ -88,6 +89,7 @@ routes:
         note: "Pure 307 redirect stub. No user-initiated action required. Unifies /head/history and /reports/history into single /reports surface with role-aware default tabs."
   - route: /head/slides
     access: [head]
+    landing: "/reports"
     intents:
       - id: head-slides-history-alias
         intent: "View compiled group report history via legacy slides alias"
@@ -97,6 +99,7 @@ routes:
         note: "/head/slides is a legacy alias that chains through /head/history?mode=slides (discarding mode param) and lands on the shared /reports surface. The canonical path is /reports?tab=published. This route exists only to preserve old bookmarks."
   - route: /head/report
     access: [head]
+    landing: "/head/report/[reportId]"
     intents:
       - id: head-report-redirect-canonical
         intent: "Navigate to the addressed report URL"
@@ -157,6 +160,7 @@ routes:
         note: "Navigation action via PeriodNavigator. urlBuilder preserves ?mode=slides or ?authorId query params across period navigation."
   - route: /head/report/[reportId]/present
     access: [head]
+    landing: "/head/report/[reportId]?mode=slides"
     intents:
       - id: head-present-redirects-to-slides
         intent: "Legacy head presentation deep link resolves to inline slides mode"
@@ -166,6 +170,7 @@ routes:
         note: "The standalone slide deck (section next/prev, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /lead/history
     access: [head]
+    landing: "/reports"
     intents:
       - id: head-redirect-to-drafts
         intent: "Redirect from legacy history page to merged reports page"
@@ -175,6 +180,7 @@ routes:
         note: "Pure 307 redirect stub. No user-initiated action required. Unifies /lead/history and /reports/history into single /reports surface with role-aware default tabs."
   - route: /lead/report
     access: [lead, head, admin]
+    landing: "/head/dashboard"
     intents:
       - id: head-routed-away-from-lead-form
         intent: "HEAD user accesses bare lead report form"
@@ -184,6 +190,7 @@ routes:
         note: "This route is exclusively for LEAD users. HEAD and ADMIN roles are routed away immediately via client-side redirect. No user-facing actions or intents exist for HEAD on this route — the redirect is the only behavior."
   - route: /lead/report/[reportId]
     access: [head]
+    landing: "/head/report/[reportId]"
     intents:
       - id: head-lead-report-redirect-to-head-view
         intent: "Head user routed to their own report view when accessing a lead's addressed report"
@@ -247,6 +254,7 @@ routes:
         note: "This is a simple link navigation. The archive list displays all published (and archived) reports the head has access to."
   - route: /reports/[reportId]/present
     access: [head]
+    landing: "/reports/[reportId]?mode=slides"
     intents:
       - id: head-published-present-redirects-to-slides
         intent: "Legacy published presentation deep link resolves to inline slides mode"
@@ -256,6 +264,7 @@ routes:
         note: "The standalone slide deck (section nav, fullscreen) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [head]
+    landing: "/reports"
     intents:
       - id: head-reports-history-redirect
         intent: "View published reports archive via legacy route"
