@@ -1,10 +1,11 @@
 import type { Page } from "@playwright/test";
 
+import { INVENTORY_SCRIPT } from "./dom-inventory-script.ts";
 import {
-  KEYBOARD_FOCUS_POLICY_SCRIPT,
   type KeyboardFocusPolicy,
   type KeyboardFocusScope,
 } from "./keyboard-focus-policy.ts";
+export { SOURCE_TEXT_HELPER_SCRIPT } from "./dom-inventory-script.ts";
 
 const LANDMARK_ROLES: ReadonlySet<string> = new Set([
   "alertdialog",
@@ -15,6 +16,14 @@ const LANDMARK_ROLES: ReadonlySet<string> = new Set([
 
 const ORDER_WIDTH = 4;
 const INVENTORY_CONTEXT_ATTEMPTS = 3;
+
+export const RUNTIME_INTERACTION_EFFECTS = [
+  "client-only",
+  "mutation-required",
+] as const;
+
+export type RuntimeInteractionEffect =
+  (typeof RUNTIME_INTERACTION_EFFECTS)[number];
 
 export interface DomControlObservation {
   readonly controlKey: string;
@@ -28,6 +37,7 @@ export interface DomControlObservation {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly interactionEffect?: RuntimeInteractionEffect;
   readonly keyboardExpectedFocusable?: boolean;
   readonly keyboardFocusPolicy?: KeyboardFocusPolicy;
   readonly keyboardFocusScope?: KeyboardFocusScope;
@@ -42,6 +52,7 @@ export interface DomInventoryIssue {
 export interface DomInventory {
   readonly controls: readonly DomControlObservation[];
   readonly issues: readonly DomInventoryIssue[];
+  readonly visibleText?: string | undefined;
 }
 
 interface RawDomElement {
@@ -49,6 +60,7 @@ interface RawDomElement {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly interactionEffect: string | null;
   readonly ariaLabel: string | null;
   readonly labelledByText: string | null;
   readonly labelText: string | null;
@@ -63,82 +75,22 @@ interface RawDomElement {
   readonly keyboardFocusScope?: KeyboardFocusScope;
 }
 
+type RawInventoryResult =
+  | readonly RawDomElement[]
+  | Readonly<{
+      readonly elements: readonly RawDomElement[];
+      readonly visibleText: string;
+    }>;
+
+const isRawInventoryObject = (
+  value: RawInventoryResult,
+): value is Readonly<{
+  readonly elements: readonly RawDomElement[];
+  readonly visibleText: string;
+}> => !Array.isArray(value);
+
 const normalizeText = (value: string | null): string =>
   (value ?? "").replaceAll(/\s+/g, " ").trim();
-
-const INVENTORY_SCRIPT = String.raw`(() => {
-  const interactive = ["button","checkbox","combobox","gridcell","link","listbox",
-    "menuitem","menuitemcheckbox","menuitemradio","option","radio","scrollbar",
-    "searchbox","slider","spinbutton","switch","tab","textbox","treeitem"];
-  const landmarks = ["alertdialog","dialog","menu","tabpanel"];
-  const roleFor = (element) => {
-    const explicit = element.getAttribute("role")?.trim().split(/\s+/).at(0);
-    if (explicit) return explicit;
-    const tag = element.tagName.toLowerCase();
-    const type = element instanceof HTMLInputElement ? element.type.toLowerCase() : "";
-    if (tag === "a" && element.hasAttribute("href")) return "link";
-    if (tag === "button" || tag === "summary") return "button";
-    if (tag === "input") return type === "hidden" ? "" :
-      ["button","image","reset","submit"].includes(type) ? "button" :
-      type === "checkbox" ? "checkbox" : type === "radio" ? "radio" :
-      type === "range" ? "slider" : type === "number" ? "spinbutton" :
-      type === "search" ? "searchbox" : "textbox";
-    if (tag === "select") return element.multiple ? "listbox" : "combobox";
-    if (tag === "textarea" || element.isContentEditable) return "textbox";
-    return tag === "option" ? "option" : "";
-  };
-  const labels = Array.from(document.querySelectorAll("label"));
-  const readableText = (node) =>
-    node instanceof HTMLElement && node.innerText ? node.innerText : node.textContent || "";
-  const formElements = Array.from(document.querySelectorAll("form"));
-  const radioGroups = Array.from(document.querySelectorAll('[role="radiogroup"]'));
-  const candidates = Array.from(document.querySelectorAll(
-    "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]"
-  )).map((element) => {
-    const tagName = element.tagName.toLowerCase();
-    const inputType = element instanceof HTMLInputElement ? element.type.toLowerCase() : null;
-    const role = roleFor(element);
-    const style = window.getComputedStyle(element);
-    const bounds = element.getBoundingClientRect();
-    const closedDetails = element.closest("details:not([open])");
-    const visibleSummary =
-      element.matches("summary") && element.parentElement === closedDetails;
-    const visible = (closedDetails === null || visibleSummary) &&
-      !element.closest("[hidden],[aria-hidden='true']") &&
-      style.display !== "none" && style.visibility !== "hidden" &&
-      style.visibility !== "collapse" && Number(style.opacity) !== 0 &&
-      bounds.width > 0 && bounds.height > 0;
-    const labelledBy = element.getAttribute("aria-labelledby");
-    const labelledByText = labelledBy ? labelledBy.split(/\s+/)
-      .map((id) => {
-        const label = document.getElementById(id);
-        return label ? readableText(label) : "";
-      }).join(" ") : null;
-    const explicitLabel = element.id ? labels.find((label) => label.htmlFor === element.id) : null;
-    const wrappingLabel = element.closest("label");
-    const labelText = explicitLabel ? readableText(explicitLabel) :
-      wrappingLabel ? readableText(wrappingLabel) : null;
-    const imageAlt = element.querySelector("img[alt]")?.getAttribute("alt") || null;
-    const value = element instanceof HTMLInputElement &&
-      ["button","image","reset","submit"].includes(inputType || "")
-      ? element.value || element.alt : null;
-    return { element, role, tagName, inputType,
-      href: element instanceof HTMLAnchorElement ? element.getAttribute("href") : null,
-      ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,
-      title: element.getAttribute("title"), imageAlt, value,
-      text: readableText(element), visible,
-      disabled: element.matches(":disabled") || element.getAttribute("aria-disabled") === "true",
-      inert: Boolean(element.closest("[inert]")),
-      tabIndex: element.tabIndex,
-      explicitTabIndex: element.hasAttribute("tabindex"),
-      selected: element.getAttribute("aria-selected")?.toLowerCase() === "true",
-      checked: element instanceof HTMLInputElement
-        ? element.checked
-        : element.getAttribute("aria-checked")?.toLowerCase() === "true" };
-  }).filter((element) => element.visible &&
-    (interactive.includes(element.role) || landmarks.includes(element.role)));
-${KEYBOARD_FOCUS_POLICY_SCRIPT}
-})()`;
 
 const accessibleNameFor = (element: RawDomElement): string => {
   if (element.labelledByText !== null) {
@@ -158,12 +110,22 @@ const accessibleNameFor = (element: RawDomElement): string => {
   return LANDMARK_ROLES.has(element.role) ? "" : normalizeText(element.text);
 };
 
+const interactionEffectFor = (
+  value: string | null,
+): RuntimeInteractionEffect | undefined => {
+  if (value === null) return undefined;
+  const effect = RUNTIME_INTERACTION_EFFECTS.find((entry) => entry === value);
+  if (effect !== undefined) return effect;
+  throw new Error(`Unsupported data-interaction-effect value: ${value}`);
+};
+
 const controlFrom = (
   element: RawDomElement,
   order: number,
   occurrence: number,
 ): DomControlObservation => {
   const accessibleName = accessibleNameFor(element);
+  const interactionEffect = interactionEffectFor(element.interactionEffect);
   const controlKey = [
     element.role,
     encodeURIComponent(accessibleName || "(unnamed)"),
@@ -181,6 +143,7 @@ const controlFrom = (
     tagName: element.tagName,
     inputType: element.inputType,
     href: element.href,
+    ...(interactionEffect === undefined ? {} : { interactionEffect }),
     ...(element.keyboardExpectedFocusable === undefined
       ? {}
       : { keyboardExpectedFocusable: element.keyboardExpectedFocusable }),
@@ -211,9 +174,9 @@ const isNavigationContextLoss = (error: unknown): boolean =>
 const inventoryElements = async (
   page: Page,
   attempts = INVENTORY_CONTEXT_ATTEMPTS,
-): Promise<readonly RawDomElement[]> => {
+): Promise<RawInventoryResult> => {
   try {
-    return await page.evaluate<readonly RawDomElement[]>(INVENTORY_SCRIPT);
+    return await page.evaluate<RawInventoryResult>(INVENTORY_SCRIPT);
   } catch (error: unknown) {
     if (attempts <= 1 || !isNavigationContextLoss(error)) {
       throw error;
@@ -224,7 +187,10 @@ const inventoryElements = async (
 };
 
 export async function inventoryDom(page: Page): Promise<DomInventory> {
-  const rawElements = await inventoryElements(page);
+  const rawResult = await inventoryElements(page);
+  const rawElements = isRawInventoryObject(rawResult)
+    ? rawResult.elements
+    : rawResult;
   const controls = rawElements.map((element, index) => {
     const occurrence =
       rawElements
@@ -236,5 +202,11 @@ export async function inventoryDom(page: Page): Promise<DomInventory> {
         ).length + 1;
     return controlFrom(element, index + 1, occurrence);
   });
-  return { controls, issues: issuesFor(controls) };
+  return {
+    controls,
+    issues: issuesFor(controls),
+    ...(isRawInventoryObject(rawResult)
+      ? { visibleText: normalizeText(rawResult.visibleText) }
+      : {}),
+  };
 }

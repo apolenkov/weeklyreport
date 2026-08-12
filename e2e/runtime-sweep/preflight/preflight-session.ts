@@ -13,7 +13,7 @@ type PreflightGroupRoute = Readonly<{
   readonly target: RouteBindingTarget;
 }>;
 
-export const preflightStateGroupKey = (
+const preflightStateGroupKey = (
   state: CampaignMatrixState,
   route: PreflightGroupRoute,
 ): string => runtimeStateGroupKey(state.profile, route.target);
@@ -36,11 +36,15 @@ export interface PreflightCookieContext {
   readonly addCookies: (cookies: readonly Cookie[]) => Promise<void>;
 }
 
-export interface PreflightPageQuiescer {
+interface PreflightPageQuiescer {
   readonly goto: (
     url: "about:blank",
     options: Readonly<{ waitUntil: "domcontentloaded" }>,
   ) => Promise<unknown>;
+}
+
+export interface PreflightStatePageQuiescer extends PreflightPageQuiescer {
+  readonly url: () => string;
 }
 
 type AuthenticatedActor = RuntimeMatrixActor &
@@ -71,10 +75,20 @@ export const preflightGroupNeedsReset = (
   sessionsCreated: boolean,
 ): boolean => sessionsCreated || preparedGroup !== nextGroup;
 
-export async function quiescePreflightPage(
+async function quiescePreflightPage(
   page: PreflightPageQuiescer,
 ): Promise<void> {
   await page.goto("about:blank", { waitUntil: "domcontentloaded" });
+}
+
+export async function quiescePreflightStatePage(
+  page: PreflightStatePageQuiescer,
+  clearClientStorage: () => Promise<void>,
+  awaitApiDrain: () => Promise<void>,
+): Promise<void> {
+  if (page.url() !== "about:blank") await clearClientStorage();
+  await quiescePreflightPage(page);
+  await awaitApiDrain();
 }
 
 class PreflightSessionError extends Error {

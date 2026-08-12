@@ -33,6 +33,7 @@ const harness = vi.hoisted(() => ({
 }));
 
 vi.mock("../replay/dom-inventory.ts", () => ({
+  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
   inventoryDom: vi.fn(),
 }));
 
@@ -100,10 +101,12 @@ describe("frozen-case initial navigation", () => {
     const settlement = new Promise<void>((resolve) => {
       harness.resolveSettlement = resolve;
     });
+    let currentUrl = "about:blank";
     const page = {
-      url: () => "about:blank",
+      url: () => currentUrl,
       goto: vi.fn(() => {
         harness.events.push("goto");
+        currentUrl = "http://127.0.0.1:3105/head/report";
         return Promise.resolve({ status: () => 201 });
       }),
       waitForLoadState: vi.fn(async (state: string) => {
@@ -116,7 +119,12 @@ describe("frozen-case initial navigation", () => {
       waitForFunction: vi.fn(() => Promise.resolve()),
     } as unknown as Page;
 
-    const navigation = initialNavigation(page, "/head/report");
+    const navigation = initialNavigation(
+      page,
+      "/head/report",
+      "/head/report",
+      "http://127.0.0.1:3105",
+    );
     await settlementStarted;
 
     harness.runtimeEvents.consoleMessages.push({

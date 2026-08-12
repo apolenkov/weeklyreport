@@ -1,39 +1,60 @@
 import { z } from "zod";
 
 import {
-  type Action,
+  revealPathSchema,
+  revealSurfaceSchema,
+} from "../preflight/reveal-path.ts";
+import {
   type CampaignManifest,
   type MatrixExecution,
-  type MatrixExecutionInapplicable,
   matrixExecutionSchema,
   matrixInapplicableSchema,
+  networkEvidencePolicySchema,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
+  type ResolverOutcomeKind,
   roleSchema,
+  routeNetworkPolicySchema,
   seedProfileSchema,
   sha256DigestSchema,
+  sourceBoundResolverOutcomeSchema,
   sourceShaSchema,
   stableIdentifierSchema,
-  type StateAxes,
   stateAxesSchema,
   viewportSchema,
 } from "../source/contracts.ts";
 import { sha256Hex, stableId } from "../support/ids.ts";
-import type {
-  CampaignMatrixPlan,
-  CampaignMatrixState,
-} from "./campaign-matrix.ts";
-import { validateLegalMatrixRow } from "./matrix-execution-policy.ts";
-
-export const DEFAULT_MAX_CONTROLS = 1024;
-export const DEFAULT_MAX_CASES = 100_000;
+import type { ResolverOutcomeExpectation } from "../support/resolver-outcome-expectations.ts";
+import { resolverOutcomeExpectationFor } from "../support/resolver-outcome-expectations.ts";
+import type { CampaignMatrixState } from "./campaign-matrix.ts";
+import {
+  type MatrixPreflightControl,
+  matrixPreparationSchema,
+} from "./matrix-finalizer-preflight-contract.ts";
+import { revealTransitionSchema } from "./reveal-transition.ts";
+export {
+  type MatrixFinalizationInput,
+  type MatrixPreflightControl,
+  type MatrixPreflightEntry,
+  type MatrixPreflightSegment,
+  type MatrixPreparation,
+  matrixPreparationSchema,
+} from "./matrix-finalizer-preflight-contract.ts";
+export { DEFAULT_MAX_CASES, DEFAULT_MAX_CONTROLS } from "./matrix-limits.ts";
 export const DESKTOP_WIDTH = 1440;
 export const DESKTOP_HEIGHT = 900;
-
 type Route = CampaignManifest["routes"][number];
 type AssignedBinding = Extract<
   NonNullable<Route["bindings"]>[number],
   { readonly status: "assigned" }
 >;
-
+const resolverOutcomeExpectationSchema = z
+  .object({
+    identity: sourceBoundResolverOutcomeSchema,
+    expectedTarget: z.string().min(1),
+    expectedUi: z.string().min(1),
+  })
+  .strict();
+export type MatrixResolverOutcomeExpectation = ResolverOutcomeExpectation;
 const matrixIdentitySchema = z
   .object({
     caseId: stableIdentifierSchema,
@@ -43,24 +64,35 @@ const matrixIdentitySchema = z
     role: roleSchema,
     catalogRoute: z.string().min(1),
     resolvedRoute: z.string().min(1),
+    networkPolicy: networkEvidencePolicySchema,
     state: stateAxesSchema,
+    controlKey: z.string().min(1).optional(),
+    declarationId: stableIdentifierSchema.optional(),
+    resolverRecoveryOutcome: z
+      .enum(["empty", "visible-current"])
+      .nullable()
+      .optional(),
+    expectedOutcome: resolverOutcomeExpectationSchema.optional(),
   })
   .strict();
-
 export const matrixExecutableCaseSchema = matrixIdentitySchema
-  .extend({ kind: z.literal("executable"), execution: matrixExecutionSchema })
+  .extend({
+    kind: z.literal("executable"),
+    execution: matrixExecutionSchema,
+    preparation: matrixPreparationSchema.optional(),
+  })
   .strict();
 export const matrixInapplicableCaseSchema = matrixIdentitySchema
   .extend({
     kind: z.literal("inapplicable"),
     inapplicable: matrixInapplicableSchema,
+    preparation: matrixPreparationSchema.optional(),
   })
   .strict();
 export const matrixRowSchema = z.union([
   matrixExecutableCaseSchema,
   matrixInapplicableCaseSchema,
 ]);
-
 const matrixCountsSchema = z
   .object({
     executable: z.number().int().nonnegative(),
@@ -88,6 +120,9 @@ const matrixBodySchema = z
     rows: z.array(matrixRowSchema).readonly(),
     cases: z.array(matrixExecutableCaseSchema).readonly(),
     inapplicable: z.array(matrixInapplicableCaseSchema).readonly(),
+    revealPaths: z.array(revealPathSchema).readonly(),
+    revealSurfaces: z.array(revealSurfaceSchema).readonly(),
+    revealTransitions: z.array(revealTransitionSchema).readonly(),
     coveredPairs: z.array(z.string().min(1)).readonly(),
     counts: matrixCountsSchema,
     limits: matrixLimitsSchema,
@@ -96,64 +131,49 @@ const matrixBodySchema = z
 export const frozenMatrixSchema = matrixBodySchema
   .extend({ digest: sha256DigestSchema })
   .strict();
-
 export type MatrixExecutableCase = z.infer<typeof matrixExecutableCaseSchema>;
 export type MatrixInapplicableCase = z.infer<
   typeof matrixInapplicableCaseSchema
 >;
 export type MatrixRow = z.infer<typeof matrixRowSchema>;
 export type FrozenMatrix = z.infer<typeof frozenMatrixSchema>;
-
-export interface MatrixPreflightControl {
-  readonly controlKey: string;
-  readonly inventory: Readonly<{
-    readonly ariaRole: string;
-    readonly accessibleName: string;
-    readonly enabled: boolean;
-    readonly order: number;
-    readonly domOrderKey: string;
-    readonly href: string | null;
-  }>;
-  readonly action?: Action | undefined;
-  readonly execution?: MatrixExecution | undefined;
-  readonly inapplicable?: MatrixExecutionInapplicable | undefined;
-}
-
-export interface MatrixPreflightEntry {
-  readonly declarationId?: string | undefined;
-  readonly state: CampaignMatrixState;
-  readonly execution?: MatrixExecution | undefined;
-  readonly inapplicable?: MatrixExecutionInapplicable | undefined;
-}
-
-export interface MatrixPreflightSegment {
-  readonly state: CampaignMatrixState;
-  readonly controls: readonly MatrixPreflightControl[];
-  readonly specialized?: readonly MatrixPreflightEntry[] | undefined;
-}
-
-export interface MatrixFinalizationInput {
-  readonly sourceSha: string;
-  readonly declaration: CampaignManifest["matrixDeclaration"];
-  readonly plan: CampaignMatrixPlan;
-  readonly routes: readonly Route[];
-  readonly preflight: readonly MatrixPreflightSegment[];
-  readonly maxCases?: number;
-  readonly maxControlsPerSegment?: number;
-}
-
 export class MatrixFinalizationError extends Error {
   override readonly name = "MatrixFinalizationError";
 }
 
+const expectedOutcomeFor = (
+  route: Route,
+  binding: AssignedBinding | undefined,
+  state: CampaignMatrixState,
+  sourceDigest: string | undefined,
+  resolverOutcome: ResolverOutcomeKind | undefined,
+  routeLabel: string,
+): ResolverOutcomeExpectation | undefined => {
+  if (route.kind !== "resolver" || binding === undefined) return undefined;
+  if (sourceDigest === undefined)
+    throw new MatrixFinalizationError(
+      `Resolver route ${routeLabel} requires source digest`,
+    );
+  return resolverOutcomeExpectationFor({
+    route,
+    state,
+    sourceDigest,
+    ...(resolverOutcome === undefined ? {} : { outcome: resolverOutcome }),
+  });
+};
+
 export const routeFor = (
   routes: readonly Route[],
   state: CampaignMatrixState,
+  sourceDigest?: string,
+  resolverOutcome?: ResolverOutcomeKind,
 ): Readonly<{
   readonly role: CampaignMatrixState["axes"]["role"];
   readonly catalogRoute: string;
   readonly resolvedRoute: string;
+  readonly networkPolicy: z.infer<typeof networkEvidencePolicySchema>;
   readonly binding?: AssignedBinding;
+  readonly expectedOutcome?: ResolverOutcomeExpectation;
 }> => {
   const separator = state.axes.route.indexOf(":");
   const role =
@@ -164,19 +184,46 @@ export const routeFor = (
     (candidate) =>
       candidate.role === role && candidate.catalogRoute === catalogRoute,
   );
-  const binding = route?.bindings?.find(
+  if (route === undefined)
+    throw new MatrixFinalizationError(
+      `No route declaration for ${role}:${catalogRoute}`,
+    );
+  const routeRecord = route as unknown as Record<string, unknown>;
+  if (
+    !Object.hasOwn(routeRecord, "networkPolicy") ||
+    routeRecord.networkPolicy === undefined
+  )
+    throw new MatrixFinalizationError(
+      `Route declaration ${role}:${catalogRoute} has no network policy`,
+    );
+  const parsedNetworkPolicy = routeNetworkPolicySchema.safeParse(
+    routeRecord.networkPolicy,
+  );
+  if (!parsedNetworkPolicy.success)
+    throw new MatrixFinalizationError(
+      `Route declaration ${role}:${catalogRoute} has invalid network policy`,
+    );
+  const binding = route.bindings?.find(
     (candidate): candidate is AssignedBinding =>
       candidate.profile === state.profile && candidate.status === "assigned",
+  );
+  const expectedOutcome = expectedOutcomeFor(
+    route,
+    binding,
+    state,
+    sourceDigest,
+    resolverOutcome,
+    `${role}:${catalogRoute}`,
   );
   return {
     role: state.axes.role,
     catalogRoute,
-    resolvedRoute:
-      binding?.resolvedRoute ?? route?.resolvedRoute ?? catalogRoute,
+    resolvedRoute: binding?.resolvedRoute ?? route.resolvedRoute,
+    networkPolicy: parsedNetworkPolicy.data ?? NO_ROUTE_CACHE_CONTRACT_POLICY,
     ...(binding === undefined ? {} : { binding }),
+    ...(expectedOutcome === undefined ? {} : { expectedOutcome }),
   };
 };
-
 export const navigationExecution = (
   state: CampaignMatrixState,
 ): MatrixExecution => ({
@@ -188,7 +235,6 @@ export const navigationExecution = (
     transition: "none",
   },
 });
-
 export const executionFor = (
   control: MatrixPreflightControl,
 ): MatrixExecution => {
@@ -203,7 +249,6 @@ export const executionFor = (
     `Control ${control.controlKey} has no bounded action or inapplicable reason`,
   );
 };
-
 export const stateForControl = (
   state: CampaignMatrixState,
   execution: MatrixExecution,
@@ -226,72 +271,3 @@ export const stateForControl = (
     pairwiseDigest: sha256Hex(axes),
   };
 };
-
-const identityFor = (
-  input: Pick<MatrixFinalizationInput, "sourceSha" | "routes">,
-  state: CampaignMatrixState,
-  work: unknown,
-) => {
-  const route = routeFor(input.routes, state);
-  return {
-    kind: "executable" as const,
-    caseId: stableId("matrix-case", {
-      sourceSha: input.sourceSha,
-      profile: state.profile,
-      state: state.axes,
-      work,
-    }),
-    stateId: state.stateId,
-    sourceSha: input.sourceSha,
-    profile: state.profile,
-    role: route.role,
-    catalogRoute: route.catalogRoute,
-    resolvedRoute: route.resolvedRoute,
-    state: executionStateFor(state.axes),
-  };
-};
-
-const executionStateFor = ({
-  role: _role,
-  route: _route,
-  ...state
-}: CampaignMatrixState["axes"]): StateAxes => state;
-
-export const executable = (
-  input: Pick<MatrixFinalizationInput, "sourceSha" | "routes">,
-  state: CampaignMatrixState,
-  execution: MatrixExecution,
-  identity?: unknown,
-): MatrixExecutableCase => {
-  const route = routeFor(input.routes, state);
-  if (route.binding === undefined)
-    throw new MatrixFinalizationError(
-      `Executable state is not assigned to a route: ${state.axes.route}:${state.profile}`,
-    );
-  const policy = validateLegalMatrixRow({
-    state: executionStateFor(state.axes),
-    execution,
-  });
-  if (!policy.ok)
-    throw new MatrixFinalizationError(
-      policy.issues
-        .map(({ code, message }) => `${code}: ${message}`)
-        .join("; "),
-    );
-  return matrixExecutableCaseSchema.parse({
-    ...identityFor(input, state, identity ?? execution),
-    execution,
-  });
-};
-
-export const inapplicable = (
-  input: Pick<MatrixFinalizationInput, "sourceSha" | "routes">,
-  state: CampaignMatrixState,
-  reason: MatrixExecutionInapplicable,
-  identity?: unknown,
-): MatrixInapplicableCase =>
-  matrixInapplicableCaseSchema.parse({
-    ...identityFor(input, state, identity ?? reason),
-    kind: "inapplicable",
-    inapplicable: reason,
-  });

@@ -14,11 +14,25 @@ import {
   matrixCase,
 } from "./test-fixtures/frozen-case-live-runner.test-fixture.ts";
 
+const isolatedMatrixCase = {
+  ...matrixCase,
+  execution: {
+    kind: "control",
+    action: {
+      controlKey: "button:After:1",
+      operation: "click",
+      safety: "irreversible",
+      transition: "none",
+    },
+  },
+} satisfies MatrixExecutableCase;
+
 const harness = vi.hoisted(() => ({
   inventories: [] as DomInventory[],
   capturedCaseIds: [] as string[],
   verdict: ((): "pass" | "fail" => "pass")(),
   reseed: vi.fn(),
+  drain: vi.fn(() => Promise.resolve()),
   prepareCase: vi.fn(
     (
       _source: unknown,
@@ -45,7 +59,12 @@ vi.mock("../../helpers/e2e-runtime-state-setup.ts", () => ({
   reseedE2eRuntimeState: harness.reseed,
 }));
 
+vi.mock("../support/runtime-api-drain.ts", () => ({
+  awaitRuntimeApiDrain: harness.drain,
+}));
+
 vi.mock("./dom-inventory.ts", () => ({
+  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
   inventoryDom: vi.fn(() => {
     throw new Error("runner must not re-inventory after phase capture");
   }),
@@ -96,11 +115,17 @@ vi.mock("./frozen-case-live-actions.ts", () => ({
 
 vi.mock("./frozen-case-live-capture.ts", () => ({
   captureFrozenPhase: vi.fn(
-    (input: { readonly onInventory?: (inventory: DomInventory) => void }) => {
+    (input: {
+      readonly onInventory?: (inventory: DomInventory) => void;
+      readonly onActionTarget?: (
+        target: DomInventory["controls"][number] | undefined,
+      ) => void;
+    }) => {
       const inventory = harness.inventories.shift();
       if (inventory === undefined)
         throw new Error("phase inventory fixture is exhausted");
       input.onInventory?.(inventory);
+      input.onActionTarget?.(undefined);
       return Promise.resolve({
         bundle: {
           before: [],
@@ -179,6 +204,7 @@ const resetHarness = (
   inventories: readonly DomInventory[],
 ): void => {
   harness.reseed.mockClear();
+  harness.drain.mockClear();
   harness.prepareCase.mockClear();
   harness.capturedCaseIds = [];
   harness.verdict = verdict;
@@ -197,9 +223,10 @@ describe("frozen case live runner", () => {
       {
         context: () => ({ browser: () => ({}) }),
         goto: vi.fn(() => Promise.resolve(null)),
+        url: () => "/lead/report",
       } as unknown as Page,
       {} as RuntimeMatrixSource,
-      [matrixCase],
+      [isolatedMatrixCase],
       {} as FrozenCaseLiveRuntime,
       {} as TestInfo,
     );
@@ -213,64 +240,6 @@ describe("frozen case live runner", () => {
     expect(harness.reseed).not.toHaveBeenCalled();
   });
 
-  it("reseeds once between target groups and restores matrix order", async () => {
-    resetHarness(
-      "pass",
-      Array.from({ length: 9 }, (_, index) => inventory(`Control ${index}`)),
-    );
-    const published = {
-      ...matrixCase,
-      caseId: "case-published",
-      stateId: "state-published",
-      catalogRoute: "/reports/published",
-      resolvedRoute: "/reports/published",
-    } satisfies MatrixExecutableCase;
-    const active = {
-      ...matrixCase,
-      caseId: "case-active",
-      stateId: "state-active",
-    } satisfies MatrixExecutableCase;
-    const publishedSecond = {
-      ...published,
-      caseId: "case-published-second",
-    } satisfies MatrixExecutableCase;
-
-    const goto = vi.fn(() => Promise.resolve(null));
-    const cells = await runFrozenCases(
-      {
-        context: () => ({ browser: () => ({}) }),
-        goto,
-      } as unknown as Page,
-      {} as RuntimeMatrixSource,
-      [published, active, publishedSecond],
-      {
-        archiveRoot: "/archive",
-        apiLogPath: "/archive/api-log/full/app.log",
-        baseURL: "http://127.0.0.1:3105",
-        bugsinkDsn: "http://runtime@bugsink.test/1",
-        databaseUrl: "postgresql://runtime",
-        repoRoot: "/repo",
-      },
-      {} as TestInfo,
-    );
-
-    expect(cells.map(({ cellId }) => cellId)).toEqual([
-      "case-published",
-      "case-active",
-      "case-published-second",
-    ]);
-    expect(harness.reseed).toHaveBeenCalledWith({
-      databaseUrl: "postgresql://runtime",
-      profile: "minimal",
-      repoRoot: "/repo",
-    });
-    expect(goto).toHaveBeenCalledOnce();
-    expect(goto).toHaveBeenCalledWith("about:blank");
-    expect(goto.mock.invocationCallOrder[0]).toBeLessThan(
-      harness.reseed.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
-    );
-  });
-
   it("stops the lane immediately after a persisted non-pass cell", async () => {
     resetHarness("fail", [
       inventory("Before"),
@@ -278,7 +247,7 @@ describe("frozen case live runner", () => {
       inventory("After"),
     ]);
     const second = {
-      ...matrixCase,
+      ...isolatedMatrixCase,
       caseId: "case-never-started",
       stateId: "state-never-started",
     } satisfies MatrixExecutableCase;
@@ -288,13 +257,14 @@ describe("frozen case live runner", () => {
         {
           context: () => ({ browser: () => ({}) }),
           goto: vi.fn(() => Promise.resolve(null)),
+          url: () => "/lead/report",
         } as unknown as Page,
         {} as RuntimeMatrixSource,
-        [matrixCase, second],
+        [isolatedMatrixCase, second],
         {} as FrozenCaseLiveRuntime,
         {} as TestInfo,
       ),
     ).rejects.toThrow(/stopped the lane with verdict=fail/u);
-    expect(harness.capturedCaseIds).toEqual([matrixCase.caseId]);
+    expect(harness.capturedCaseIds).toEqual([isolatedMatrixCase.caseId]);
   });
 });

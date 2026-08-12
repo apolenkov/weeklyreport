@@ -12,16 +12,18 @@ import {
   type PreflightArtifact,
   readPreflightArtifact,
 } from "../preflight/preflight-artifact.ts";
+import { inflatePreflightRevealData } from "../preflight/preflight-artifact-reveal.ts";
 import {
   type CampaignManifest,
   campaignManifestSchema,
   matrixDeclarationSchema,
   SEED_PROFILES,
+  type SourceTree,
   STATE_KINDS,
 } from "../source/contracts.ts";
 import {
   type CampaignManifestInput,
-  cleanTreeDigest,
+  cleanSourceIdentity,
   digestFiles,
   freezeDeep,
   type ManifestCommandRunner,
@@ -67,6 +69,7 @@ export {
 
 const sourceBody = (input: {
   readonly manifest: CampaignManifestInput;
+  readonly sourceTree: SourceTree;
   readonly treeDigest: string;
   readonly catalogDigest: string;
   readonly domainSpecDigest: string;
@@ -79,6 +82,7 @@ const sourceBody = (input: {
   version: 1 as const,
   campaignId: input.manifest.campaignId,
   sourceSha: input.manifest.sourceSha,
+  sourceTree: input.sourceTree,
   treeDigest: input.treeDigest,
   browser: input.manifest.browser,
   viewport: input.manifest.viewport,
@@ -114,7 +118,10 @@ export async function buildCampaignSource(
   requirePath(input.outputPath, "outputPath");
   if (input.campaignId.trim() === "")
     throw new ManifestInputError("campaignId is required");
-  const treeDigest = await cleanTreeDigest({ ...input, repoRoot }, runCommand);
+  const { sourceTree, treeDigest } = await cleanSourceIdentity(
+    { ...input, repoRoot },
+    runCommand,
+  );
   const [catalogDigest, domainSpecDigest] = await Promise.all([
     digestFiles(repoRoot, input.catalogPaths, "Catalog"),
     digestFiles(repoRoot, input.domainSpecPaths, "Durable spec"),
@@ -131,6 +138,7 @@ export async function buildCampaignSource(
   });
   const body = sourceBody({
     manifest: input,
+    sourceTree,
     treeDigest,
     catalogDigest,
     domainSpecDigest,
@@ -149,10 +157,11 @@ const matrixFor = (
   assertPreflightMatchesSource(source, preflight);
   return finalizeCampaignMatrix({
     sourceSha: source.sourceSha,
+    sourceDigest: source.sourceDigest,
     declaration: source.matrixDeclaration,
     plan: source.plan,
     routes: source.routes,
-    preflight: preflight.segments,
+    preflight: inflatePreflightRevealData(preflight),
     maxCases: source.matrixLimits.maxCases,
     maxControlsPerSegment: source.matrixLimits.maxControlsPerSegment,
   });
@@ -229,11 +238,15 @@ const sourceForStageB = async (
     source.campaignId !== input.campaignId
   )
     throw new ManifestInputError("SOURCE.json does not match manifest inputs");
-  const currentTreeDigest = await cleanTreeDigest(
+  const { sourceTree, treeDigest } = await cleanSourceIdentity(
     { ...input, sourceSha: source.sourceSha },
     runCommand,
   );
-  if (currentTreeDigest !== source.treeDigest)
+  if (sourceTree !== source.sourceTree)
+    throw new ManifestInputError(
+      "SOURCE.json source tree does not match the current clean HEAD",
+    );
+  if (treeDigest !== source.treeDigest)
     throw new ManifestInputError(
       "SOURCE.json tree digest does not match the current clean HEAD",
     );

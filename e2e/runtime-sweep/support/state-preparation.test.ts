@@ -6,6 +6,7 @@ import {
   buildStatePreparationPlan,
   ImpossibleRuntimeStateError,
   prepareRuntimeState,
+  type RuntimeMutationSentinel,
   type RuntimeStateAxes,
   type RuntimeStateDatabase,
   RuntimeStateTargetError,
@@ -58,6 +59,7 @@ function fakeDatabase(
   events: string[],
   snapshot: RuntimeDatabaseSnapshot,
   capturedTarget?: { value?: Pick<StateTarget, "reportId" | "sectionId"> },
+  mutationSentinel: RuntimeMutationSentinel = [],
 ): RuntimeStateDatabase {
   const transaction: RuntimeStateTransaction = {
     updateReport: () =>
@@ -83,6 +85,9 @@ function fakeDatabase(
         }
         return snapshot;
       }),
+    readMutationSentinel: () => Promise.resolve(mutationSentinel),
+    readViewerGroupAccess: () => Promise.resolve([]),
+    removeViewerGroupAccess: () => Promise.resolve(0),
   };
   return {
     transaction: async (work) => {
@@ -227,6 +232,7 @@ describe("runtime state preparation mutations", () => {
       "read",
     ]);
     expect(result.observation.matches).toBe(true);
+    expect(result.mutationSentinel).toEqual([]);
   });
 
   it("fails closed when profile reseeding fails before the transaction", async () => {

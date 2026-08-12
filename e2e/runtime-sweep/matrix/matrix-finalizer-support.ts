@@ -1,3 +1,10 @@
+import {
+  assertRevealSegmentPreparations,
+  compareRevealControlIdentity,
+  revealControlPreparationIdentityFor,
+  type RevealSurfaceControl,
+} from "../preflight/reveal-path.ts";
+import type { RuntimeInteractionEffect } from "../replay/dom-inventory.ts";
 import { freezeDeep } from "../source/manifest-source.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
 import type {
@@ -12,8 +19,11 @@ import {
   type MatrixExecutableCase,
   MatrixFinalizationError,
   type MatrixInapplicableCase,
+  type MatrixPreflightControl,
   type MatrixPreflightSegment,
 } from "./matrix-finalizer-contract.ts";
+import { assertMatrixRevealConsistency } from "./matrix-finalizer-reveal-validation.ts";
+import { assertControlTransition } from "./matrix-preflight-transition-validation.ts";
 
 const assertInvariant = (condition: boolean, message: string): void => {
   if (!condition) {
@@ -39,6 +49,50 @@ export const preflightNavigationStates = (
 ): readonly MatrixPreflightSegment[] =>
   plan.states.map((state) => ({ state, controls: [], specialized: [] }));
 
+type PreflightControl = MatrixPreflightSegment["controls"][number];
+
+const expectedControlMapsFor = (
+  controls: readonly PreflightControl[],
+): ReadonlyMap<string, ReadonlyMap<string, RevealSurfaceControl>> => {
+  const surfaces = [
+    ...new Map(
+      controls.map(
+        ({ expectedSurface }) =>
+          [expectedSurface.digest, expectedSurface] as const,
+      ),
+    ).values(),
+  ];
+  return new Map(
+    surfaces.map(
+      (surface) =>
+        [
+          surface.digest,
+          new Map(
+            surface.controls.map(
+              (control) => [control.controlKey, control] as const,
+            ),
+          ),
+        ] as const,
+    ),
+  );
+};
+
+type InventoryWithOptionalInteractionEffect =
+  MatrixPreflightControl["inventory"] & {
+    readonly interactionEffect?: RuntimeInteractionEffect | null;
+  };
+
+const actualSurfaceControlFor = (
+  control: Pick<PreflightControl, "controlKey" | "inventory">,
+): RevealSurfaceControl => {
+  const inventory = control.inventory as InventoryWithOptionalInteractionEffect;
+  return {
+    controlKey: control.controlKey,
+    ...inventory,
+    interactionEffect: inventory.interactionEffect ?? null,
+  };
+};
+
 const validateSegment = (
   limit: number,
   segment: MatrixPreflightSegment,
@@ -49,10 +103,39 @@ const validateSegment = (
     `Preflight has too many controls for ${state.stateId}; max is ${limit}`,
   );
   assertInvariant(
-    new Set(controls.map(({ controlKey }) => controlKey)).size ===
-      controls.length,
+    new Set(
+      controls.map(({ controlKey, revealPath, expectedSurface }) =>
+        revealControlPreparationIdentityFor(
+          controlKey,
+          revealPath,
+          expectedSurface,
+        ),
+      ),
+    ).size === controls.length,
     `Preflight contains duplicate controls for ${state.stateId}`,
   );
+  try {
+    assertRevealSegmentPreparations(controls);
+  } catch (error: unknown) {
+    throw new MatrixFinalizationError(
+      `Invalid reveal preparation for ${state.stateId}: ${
+        error instanceof Error ? error.message : "invalid reveal metadata"
+      }`,
+    );
+  }
+  const expectedControlsBySurface = expectedControlMapsFor(controls);
+  controls.forEach((control) => {
+    const expected = expectedControlsBySurface
+      .get(control.expectedSurface.digest)
+      ?.get(control.controlKey);
+    const actual = actualSurfaceControlFor(control);
+    assertInvariant(
+      expected !== undefined &&
+        stableSerialize(expected) === stableSerialize(actual),
+      `Reveal target ${control.controlKey} does not match its expected surface`,
+    );
+    assertControlTransition(control);
+  });
   controls.forEach((control) => {
     const outcomes = [
       control.action,
@@ -125,8 +208,19 @@ export function freezeCampaignPreflight(input: {
     input.segments
       .map((segment) => ({
         ...segment,
-        controls: segment.controls.toSorted((a, b) =>
-          a.controlKey.localeCompare(b.controlKey),
+        controls: segment.controls.toSorted((left, right) =>
+          compareRevealControlIdentity(
+            {
+              controlKey: left.controlKey,
+              revealPathDigest: left.revealPath.digest,
+              expectedSurfaceDigest: left.expectedSurface.digest,
+            },
+            {
+              controlKey: right.controlKey,
+              revealPathDigest: right.revealPath.digest,
+              expectedSurfaceDigest: right.expectedSurface.digest,
+            },
+          ),
         ),
         specialized: [...(segment.specialized ?? [])].toSorted((a, b) =>
           a.state.stateId.localeCompare(b.state.stateId),
@@ -157,7 +251,7 @@ export const pairKeys = (row: MatrixExecutableCase): readonly string[] =>
 const digestFor = (matrix: Omit<FrozenMatrix, "digest">): string =>
   sha256Hex(matrix);
 
-const assertMatrixConsistency = (matrix: FrozenMatrix): void => {
+const assertMatrixPartitions = (matrix: FrozenMatrix): void => {
   const executableRows = matrix.rows.filter(
     (row): row is MatrixExecutableCase => row.kind === "executable",
   );
@@ -188,6 +282,11 @@ const assertMatrixConsistency = (matrix: FrozenMatrix): void => {
     stableSerialize(pairs) === stableSerialize(matrix.coveredPairs),
     "Frozen MATRIX.json pair coverage is not derived from executable rows",
   );
+};
+
+const assertMatrixConsistency = (matrix: FrozenMatrix): void => {
+  assertMatrixPartitions(matrix);
+  assertMatrixRevealConsistency(matrix);
 };
 
 export function parseFrozenMatrix(value: unknown): FrozenMatrix {

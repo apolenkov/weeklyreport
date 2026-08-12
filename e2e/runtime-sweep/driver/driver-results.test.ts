@@ -35,6 +35,7 @@ const oracle: Oracle = {
   function: { required: true, expectation: "the action succeeds" },
   accessibility: { required: true, expectation: "status is announced" },
   visual: { required: true, expectation: "settled screenshot matches" },
+  runtime: { required: true, expectation: "runtime telemetry is clean" },
 };
 const evidence: EvidenceBundle = {
   before: [],

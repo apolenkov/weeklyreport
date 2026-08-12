@@ -3,11 +3,16 @@ import { expect, test } from "@playwright/test";
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import type { SpecializedRuntimeEventWindow } from "../../matrix/specialized-case-emission.ts";
 import { captureSpecializedPagePhase } from "../../matrix/specialized-case-emission.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
 import {
   captureNetworkWithFailures,
   responseRecord,
 } from "../evidence-capture-network-fixture.ts";
-import type { RequestFailureRecord } from "../evidence-types.ts";
+import type {
+  NetworkEvidencePolicy,
+  RequestFailureRecord,
+  ResponseRecord,
+} from "../evidence-types.ts";
 
 const CAPTURED_AT = "2026-08-08T00:00:00.000Z";
 const SOURCE_SHA = "a".repeat(40);
@@ -76,7 +81,10 @@ test("fails a product transport abort with the same failure text", async ({
   expect(observation.message).toContain("1 unexpected transport failure(s)");
 });
 
-const matrixCase = (suffix: string): MatrixExecutableCase => ({
+const matrixCase = (
+  suffix: string,
+  networkPolicy: NetworkEvidencePolicy,
+): MatrixExecutableCase => ({
   caseId: `case-specialized-observability-${suffix}`,
   stateId: `state-specialized-observability-${suffix}`,
   sourceSha: SOURCE_SHA,
@@ -84,6 +92,7 @@ const matrixCase = (suffix: string): MatrixExecutableCase => ({
   role: "head",
   catalogRoute: "/head/report/[reportId]",
   resolvedRoute: "/head/report/active",
+  networkPolicy,
   state: {
     profileCapability: "publish-flow",
     lifecycle: "open",
@@ -108,11 +117,13 @@ const matrixCase = (suffix: string): MatrixExecutableCase => ({
 
 const initialEvents = (
   responseRequestId: string,
+  extraResponses: readonly ResponseRecord[] = [],
 ): SpecializedRuntimeEventWindow => ({
   consoleMessages: [],
   pageErrors: [],
   requestFailures: [requestFailure(ENVELOPE_URL)],
   responses: [
+    ...extraResponses,
     responseRecord("specialized-envelope", {
       requestId: responseRequestId,
       url: ENVELOPE_URL,
@@ -126,16 +137,18 @@ const captureSpecialized = async (
   archiveRoot: string,
   suffix: string,
   responseRequestId: string,
+  networkPolicy: NetworkEvidencePolicy,
+  extraResponses: readonly ResponseRecord[] = [],
 ) =>
   captureSpecializedPagePhase({
     page,
     archiveRoot,
     bugsinkDsn: BUGSINK_DSN,
-    matrixCase: matrixCase(suffix),
+    matrixCase: matrixCase(suffix, networkPolicy),
     phase: "before",
     capturedAt: CAPTURED_AT,
     responseStatus: 200,
-    initialEvents: initialEvents(responseRequestId),
+    initialEvents: initialEvents(responseRequestId, extraResponses),
     functionalAssertion: {
       assertionId: `specialized-observability-${suffix}`,
       expected: { reachable: true },
@@ -160,6 +173,7 @@ test("accepts an exact specialized initial-navigation abort with the same reques
     testInfo.outputPath("exact"),
     "exact",
     "sentry-envelope-request",
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
   );
 
   expect(specializedNetworkOutcome(bundle)).toBe("pass");
@@ -175,7 +189,35 @@ test("rejects an unrelated specialized envelope response", async ({
     testInfo.outputPath("foreign"),
     "foreign",
     "different-envelope-request",
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
   );
 
   expect(specializedNetworkOutcome(bundle)).toBe("fail");
+});
+
+test("propagates the matrix cache policy through specialized capture", async ({
+  page,
+}, testInfo) => {
+  await page.setContent('<main><button type="button">Continue</button></main>');
+  const policy: NetworkEvidencePolicy = {
+    ...NO_ROUTE_CACHE_CONTRACT_POLICY,
+    cacheExpectedOperations: ["report.get"],
+  };
+  const bundle = await captureSpecialized(
+    page,
+    testInfo.outputPath("policy"),
+    "policy",
+    "sentry-envelope-request",
+    policy,
+    [
+      responseRecord("report.get"),
+      responseRecord("report.get", { requestId: "request-report-get-2" }),
+    ],
+  );
+  const network = bundle.observations.find(
+    ({ observationId }) => observationId === "network",
+  );
+
+  expect(network?.outcome).toBe("fail");
+  expect(network?.message).toContain("1 cache contract miss(es)");
 });

@@ -11,6 +11,7 @@ import type {
   EvidenceBundle,
   Oracle,
 } from "../source/contracts.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { inventoryDom } from "./dom-inventory.ts";
 import { writeFrozenCaseArtifact } from "./frozen-case-artifacts.ts";
 import { captureFrozenCasePhases } from "./frozen-case-evidence.ts";
@@ -24,6 +25,7 @@ const HARNESS_ORACLE: Oracle = {
     expectation: "controls are keyboard usable",
   },
   visual: { required: true, expectation: "desktop geometry has no overflow" },
+  runtime: { required: true, expectation: "runtime telemetry is clean" },
 };
 
 const exercisedActionResult = (
@@ -42,6 +44,7 @@ const frozenHarnessCase = (controlKey: string): MatrixExecutableCase => ({
   role: "viewer",
   catalogRoute: "/harness",
   resolvedRoute: "/harness",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "canonical-identities",
     lifecycle: "open",
@@ -89,6 +92,7 @@ const captureHarnessPhase = async (input: {
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
+    networkPolicy: input.matrixCase.networkPolicy,
     serverLogPath: input.testInfo.outputPath("app.log"),
     phaseStartedAt: "2026-08-04T00:00:00.000Z",
     responseStatus: 200,

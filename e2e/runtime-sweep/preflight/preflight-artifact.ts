@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { z } from "zod";
 
 import type { MatrixPreflightSegment } from "../matrix/matrix-finalizer-contract.ts";
+import { revealTransitionSchema } from "../matrix/reveal-transition.ts";
 import {
   assertSpecializedDeclarations,
   SPECIALIZED_DECLARATION_COUNT,
@@ -12,6 +13,7 @@ import {
   matrixAxesSchema,
   matrixExecutionSchema,
   matrixInapplicableSchema,
+  resolverOutcomeKindSchema,
   seedProfileSchema,
   sha256DigestSchema,
   sourceShaSchema,
@@ -23,6 +25,17 @@ import {
   specializedDeclarationSchema,
 } from "../source/source-artifact.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
+import { assertPreflightArchivePath } from "./preflight-archive-path.ts";
+import {
+  assertCompactPreflightRevealData,
+  compactPreflightRevealData,
+} from "./preflight-artifact-reveal.ts";
+import { assertSpecializedPreflightCoverage } from "./preflight-artifact-specialized.ts";
+import {
+  compareRevealControlIdentity,
+  revealPathSchema,
+  revealSurfaceSchema,
+} from "./reveal-path.ts";
 
 const inventorySchema = z
   .object({
@@ -42,6 +55,10 @@ export const preflightControlSchema = z
     action: actionSchema.optional(),
     execution: matrixExecutionSchema.optional(),
     inapplicable: matrixInapplicableSchema.optional(),
+    revealPathDigest: sha256DigestSchema,
+    expectedSurfaceDigest: sha256DigestSchema,
+    expectedActionTransitionDigest: sha256DigestSchema.nullable(),
+    expectedActionSurfaceDigest: sha256DigestSchema.nullable(),
   })
   .strict()
   .refine(
@@ -56,6 +73,8 @@ export const preflightControlSchema = z
 export const preflightEntrySchema = z
   .object({
     declarationId: stableIdentifierSchema.optional(),
+    resolverOutcome: resolverOutcomeKindSchema.optional(),
+    resolverRecoveryOutcome: resolverOutcomeKindSchema.nullable().optional(),
     state: z
       .object({
         stateId: stableIdentifierSchema,
@@ -91,6 +110,9 @@ export const preflightArtifactSchema = z
     sourceDigest: sha256DigestSchema,
     planDigest: sha256DigestSchema,
     segments: z.array(preflightSegmentSchema).readonly(),
+    revealPaths: z.array(revealPathSchema).readonly(),
+    revealSurfaces: z.array(revealSurfaceSchema).readonly(),
+    revealTransitions: z.array(revealTransitionSchema).readonly(),
     specializedDeclarations: z
       .array(specializedDeclarationSchema)
       .length(SPECIALIZED_DECLARATION_COUNT)
@@ -101,53 +123,67 @@ export const preflightArtifactSchema = z
 
 export type PreflightArtifact = z.infer<typeof preflightArtifactSchema>;
 export type PreflightSegment = z.infer<typeof preflightSegmentSchema>;
-export type PreflightControl = z.infer<typeof preflightControlSchema>;
-
 export class PreflightArtifactError extends Error {
   override readonly name = "PreflightArtifactError";
 }
-
-const digestBody = (
-  artifact: PreflightArtifact,
-): Omit<PreflightArtifact, "preflightDigest"> => {
-  const { preflightDigest: _preflightDigest, ...body } = artifact;
-  return body;
-};
-
+const digestBody = ({
+  preflightDigest: _preflightDigest,
+  ...body
+}: PreflightArtifact): Omit<PreflightArtifact, "preflightDigest"> => body;
 const controlsForSegment = (
   segment: PreflightSegment,
-): readonly PreflightControl[] =>
+): PreflightSegment["controls"] =>
   segment.controls.toSorted((left, right) =>
-    left.controlKey.localeCompare(right.controlKey),
+    compareRevealControlIdentity(left, right),
   );
 
 const sortedSegments = (
   segments: readonly PreflightSegment[],
 ): readonly PreflightSegment[] =>
-  segments
-    .map((segment) => ({
-      ...segment,
-      controls: controlsForSegment(segment),
-      ...(segment.specialized === undefined
-        ? {}
-        : {
-            specialized: segment.specialized.toSorted((left, right) =>
-              (left.declarationId ?? "").localeCompare(
-                right.declarationId ?? "",
-              ),
-            ),
-          }),
-    }))
-    .toSorted((left, right) =>
-      left.state.stateId.localeCompare(right.state.stateId),
+  segments.map((segment) => ({
+    ...segment,
+    controls: controlsForSegment(segment),
+    ...(segment.specialized === undefined
+      ? {}
+      : {
+          specialized: segment.specialized.toSorted((left, right) =>
+            (left.declarationId ?? "").localeCompare(right.declarationId ?? ""),
+          ),
+        }),
+  }));
+
+const segmentsInSourceOrder = (input: {
+  readonly source: SourceArtifact;
+  readonly segments: readonly MatrixPreflightSegment[];
+}): readonly MatrixPreflightSegment[] => {
+  const byStateId = new Map<string, MatrixPreflightSegment>();
+  const duplicates = new Set<string>();
+  input.segments.forEach((segment) => {
+    const stateId = segment.state.stateId;
+    if (byStateId.has(stateId)) duplicates.add(stateId);
+    byStateId.set(stateId, segment);
+  });
+  const expected = input.source.plan.states.map(({ stateId }) => stateId);
+  const expectedSet = new Set(expected);
+  const extra = [...byStateId.keys()].filter(
+    (stateId) => !expectedSet.has(stateId),
+  );
+  const missing = expected.filter((stateId) => !byStateId.has(stateId));
+  if (duplicates.size > 0 || extra.length > 0 || missing.length > 0)
+    throw new PreflightArtifactError(
+      [
+        ...[...duplicates].map((stateId) => `duplicate state ${stateId}`),
+        ...extra.map((stateId) => `foreign state ${stateId}`),
+        ...missing.map((stateId) => `missing state ${stateId}`),
+      ].join("; "),
     );
-
-const declarationIdsFor = (
-  declarations: readonly Readonly<{ readonly declarationId: string }>[],
-): readonly string[] => declarations.map(({ declarationId }) => declarationId);
-
-const compareStrings = (left: string, right: string): number =>
-  left.localeCompare(right);
+  return expected.map((stateId) => {
+    const segment = byStateId.get(stateId);
+    if (segment === undefined)
+      throw new PreflightArtifactError(`Missing source state ${stateId}`);
+    return segment;
+  });
+};
 
 export function createPreflightArtifact(input: {
   readonly source: SourceArtifact;
@@ -155,22 +191,8 @@ export function createPreflightArtifact(input: {
 }): PreflightArtifact {
   const declarations = input.source.specializedDeclarations;
   assertSpecializedDeclarations(declarations);
-  const segments = sortedSegments(input.segments);
-  const expectedStates = input.source.plan.states
-    .map(({ stateId }) => stateId)
-    .toSorted(compareStrings);
-  const actualStates = segments
-    .map(({ state }) => state.stateId)
-    .toSorted(compareStrings);
-  if (
-    expectedStates.length !== actualStates.length ||
-    new Set(actualStates).size !== actualStates.length ||
-    stableSerialize(expectedStates) !== stableSerialize(actualStates)
-  ) {
-    throw new PreflightArtifactError(
-      "PREFLIGHT.json must contain every nominal source segment exactly once",
-    );
-  }
+  const compact = compactPreflightRevealData(segmentsInSourceOrder(input));
+  const segments = sortedSegments(compact.segments);
   const body = {
     artifact: "PREFLIGHT" as const,
     version: 1 as const,
@@ -178,6 +200,9 @@ export function createPreflightArtifact(input: {
     sourceDigest: input.source.sourceDigest,
     planDigest: input.source.plan.digest,
     segments,
+    revealPaths: compact.revealPaths,
+    revealSurfaces: compact.revealSurfaces,
+    revealTransitions: compact.revealTransitions,
     specializedDeclarations: declarations,
   };
   return parsePreflightArtifact({
@@ -189,6 +214,15 @@ export function createPreflightArtifact(input: {
 export function parsePreflightArtifact(value: unknown): PreflightArtifact {
   const parsed = preflightArtifactSchema.parse(value);
   assertSpecializedDeclarations(parsed.specializedDeclarations);
+  try {
+    assertCompactPreflightRevealData(parsed);
+  } catch (error: unknown) {
+    throw new PreflightArtifactError(
+      `Invalid reveal preparation: ${
+        error instanceof Error ? error.message : "invalid reveal metadata"
+      }`,
+    );
+  }
   if (sha256Hex(digestBody(parsed)) !== parsed.preflightDigest)
     throw new PreflightArtifactError(
       "PREFLIGHT.json digest does not match contents",
@@ -218,38 +252,14 @@ export function assertPreflightMatchesSource(
       "PREFLIGHT.json does not match SOURCE.json",
     );
   }
-  const expected = declarationIdsFor(source.specializedDeclarations).toSorted(
-    compareStrings,
-  );
-  const actual = preflight.specializedDeclarations
-    .map(({ declarationId }) => declarationId)
-    .toSorted(compareStrings);
-  if (stableSerialize(expected) !== stableSerialize(actual))
-    throw new PreflightArtifactError(
-      "PREFLIGHT.json specialized declaration coverage is incomplete",
-    );
-  const segmentIds = preflight.segments.flatMap((segment) =>
-    (segment.specialized ?? []).map(({ declarationId }) => declarationId ?? ""),
-  );
-  if (
-    segmentIds.length !== expected.length ||
-    new Set(segmentIds).size !== segmentIds.length ||
-    stableSerialize(segmentIds.toSorted(compareStrings)) !==
-      stableSerialize(expected)
-  ) {
-    throw new PreflightArtifactError(
-      "PREFLIGHT.json specialized segment coverage is incomplete",
-    );
-  }
-  const expectedStates = source.plan.states
-    .map(({ stateId }) => stateId)
-    .toSorted(compareStrings);
-  const actualStates = preflight.segments
-    .map(({ state }) => state.stateId)
-    .toSorted(compareStrings);
+  assertSpecializedPreflightCoverage(source, preflight, (message) => {
+    throw new PreflightArtifactError(message);
+  });
+  const expectedStates = source.plan.states.map(({ stateId }) => stateId);
+  const actualStates = preflight.segments.map(({ state }) => state.stateId);
   if (stableSerialize(expectedStates) !== stableSerialize(actualStates))
     throw new PreflightArtifactError(
-      "PREFLIGHT.json nominal segment coverage does not match SOURCE.json",
+      "PREFLIGHT.json nominal segment order or coverage does not match SOURCE.json",
     );
 }
 
@@ -266,12 +276,15 @@ export async function readPreflightArtifact(
   }
 }
 
-export async function writePreflightArtifact(
+export const writePreflightArtifact = async (
   filePath: string,
   artifact: PreflightArtifact,
-): Promise<void> {
+  archiveRoot?: string,
+): Promise<void> => {
+  if (archiveRoot !== undefined)
+    await assertPreflightArchivePath(archiveRoot, filePath);
   await writeManifestFile(
     filePath,
     `${stableSerialize(parsePreflightArtifact(artifact))}\n`,
   );
-}
+};

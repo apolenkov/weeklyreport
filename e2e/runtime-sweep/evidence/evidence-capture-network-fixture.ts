@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import type { TestInfo } from "@playwright/test";
 
 import { inventoryDom } from "../replay/dom-inventory.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { captureRouteEvidence } from "./evidence-capture.ts";
 import type {
   ExpectedFault,
@@ -19,8 +20,8 @@ export const captureNetwork = async (
   page: Parameters<typeof inventoryDom>[0],
   testInfo: TestInfo,
   responses: readonly ResponseRecord[],
+  networkPolicy: NetworkEvidencePolicy,
   expectedFault?: ExpectedFault,
-  networkPolicy?: NetworkEvidencePolicy,
   serverLogPath?: string,
   settleRuntimeEvents?: () => Promise<void>,
   requestFailures: readonly RequestFailureRecord[] = [],
@@ -40,8 +41,8 @@ export const captureNetwork = async (
     requestFailures,
     bugsinkDsn: BUGSINK_DSN,
     responses,
+    networkPolicy,
     ...(expectedFault === undefined ? {} : { expectedFault }),
-    ...(networkPolicy === undefined ? {} : { networkPolicy }),
     ...(serverLogPath === undefined
       ? {}
       : {
@@ -63,7 +64,7 @@ export const captureNetworkWithFailures = (
     page,
     testInfo,
     responses,
-    undefined,
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
     undefined,
     undefined,
     undefined,

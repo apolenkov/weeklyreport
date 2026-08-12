@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type {
   RuntimeLane,
@@ -10,6 +10,14 @@ import type {
 } from "./runtime-lane-contract.ts";
 import { runRuntimeLaneProfile } from "./runtime-lane-profile-run.ts";
 import type { RuntimeLaneRunIdentity } from "./runtime-lane-run-identity.ts";
+
+const observabilityHarness = vi.hoisted(() => ({
+  reconcile: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("./observability/runtime-profile-observability.ts", () => ({
+  reconcileRuntimeProfileObservability: observabilityHarness.reconcile,
+}));
 
 const SOURCE_SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
@@ -88,7 +96,41 @@ describe("runtime lane profile run", () => {
         ...identity,
         observability: config,
         execute: () => Promise.reject(),
+        abortExecution: vi.fn(),
       }),
     ).rejects.toThrow("rejected without a reason");
+  });
+
+  it("aborts siblings before observability reconciliation begins", async () => {
+    const archiveRoot = await mkdtemp(
+      path.join(os.tmpdir(), "runtime-profile-abort-"),
+    );
+    const lane = laneFor(archiveRoot);
+    const identity = identityFor(lane);
+    const events: string[] = [];
+    observabilityHarness.reconcile.mockImplementationOnce(() => {
+      events.push("telemetry");
+      return Promise.resolve();
+    });
+
+    await expect(
+      runRuntimeLaneProfile({
+        lane,
+        profile: "minimal",
+        ...identity,
+        observability: config,
+        execute: () => {
+          events.push("execution-failed");
+          return Promise.reject(new Error("child failed"));
+        },
+        abortExecution: () => events.push("siblings-aborted"),
+      }),
+    ).rejects.toThrow("child failed");
+
+    expect(events).toEqual([
+      "execution-failed",
+      "siblings-aborted",
+      "telemetry",
+    ]);
   });
 });

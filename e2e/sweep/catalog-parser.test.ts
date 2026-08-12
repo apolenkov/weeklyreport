@@ -6,6 +6,7 @@ const VALID_CATALOG = `role: lead
 routes:
   - route: /lead/report
     access: [lead, head, admin]
+    landing: "/lead/report/[reportId]"
     intents:
       - id: lead-report-bare-redirect
         intent: "Legacy bare report route redirects to canonical addressed form"
@@ -15,11 +16,49 @@ routes:
         note: "No console errors"
 `;
 
+const REDIRECT_CATALOG = `role: admin
+routes:
+  - route: /admin/activities
+    access: [admin]
+    landing: "/admin?tab=activities"
+    intents:
+      - id: admin-activities-redirect
+        intent: "Legacy activities alias"
+        given: "The admin opens the alias"
+        when: "The page loads"
+        then: "The browser lands on the activities tab"
+`;
+
+const RESOLVER_CATALOG = `role: viewer
+routes:
+  - route: /reports/latest
+    access: [viewer]
+    intents:
+      - id: viewer-status-resolver
+        intent: "Resolve the viewer's current or published status report"
+        given: "The viewer has a prepared report state"
+        when: "the viewer opens the status entry"
+        then: "the resolver returns the state-bound landing outcome"
+        note: "The route may also produce an empty or query-error outcome"
+`;
+
 describe("catalog parser integrity", () => {
   it("parses a well-formed catalog", () => {
     const parsed = parseCatalog(VALID_CATALOG);
     expect(parsed?.routes).toHaveLength(1);
     expect(parsed?.routes[0]?.intents).toHaveLength(1);
+  });
+
+  it("parses an exact route-level landing URL including its query", () => {
+    expect(parseCatalog(REDIRECT_CATALOG)?.routes[0]?.landing).toBe(
+      "/admin?tab=activities",
+    );
+  });
+
+  it("allows a state-bound resolver route without an exact landing declaration", () => {
+    const parsed = parseCatalog(RESOLVER_CATALOG);
+    expect(parsed?.routes[0]?.route).toBe("/reports/latest");
+    expect(parsed?.routes[0]?.landing).toBeUndefined();
   });
 
   it("returns null for a file without a role line (not a catalog)", () => {
@@ -81,5 +120,67 @@ routes:
       '        note: "No console errors"\n        frobnicate: "nope"',
     );
     expect(() => parseCatalog(unknown)).toThrow(/Unknown intent field/);
+  });
+
+  it("rejects duplicate route-level landing declarations", () => {
+    const duplicated = REDIRECT_CATALOG.replace(
+      '    landing: "/admin?tab=activities"',
+      '    landing: "/admin?tab=activities"\n    landing: "/admin?tab=activities"',
+    );
+    expect(() => parseCatalog(duplicated)).toThrow(/Duplicate route field/);
+  });
+
+  it("rejects a blank landing declaration", () => {
+    expect(() =>
+      parseCatalog(
+        REDIRECT_CATALOG.replace(
+          '    landing: "/admin?tab=activities"',
+          "    landing:",
+        ),
+      ),
+    ).toThrow(/Blank landing URL/);
+    expect(() =>
+      parseCatalog(
+        REDIRECT_CATALOG.replace(
+          '    landing: "/admin?tab=activities"',
+          '    landing: ""',
+        ),
+      ),
+    ).toThrow(/Blank landing URL/);
+  });
+
+  it("rejects a landing field outside route-level placement", () => {
+    const nested = REDIRECT_CATALOG.replace(
+      '    landing: "/admin?tab=activities"',
+      '      landing: "/admin?tab=activities"',
+    );
+    expect(() => parseCatalog(nested)).toThrow(/Malformed landing placement/);
+  });
+
+  it("rejects a known redirect alias without a landing declaration", () => {
+    expect(() =>
+      parseCatalog(
+        REDIRECT_CATALOG.replace('    landing: "/admin?tab=activities"\n', ""),
+      ),
+    ).toThrow(/requires an exact landing URL/);
+  });
+
+  it("rejects an absolute, fragment, or non-canonical landing URL", () => {
+    expect(() =>
+      parseCatalog(
+        REDIRECT_CATALOG.replace(
+          '    landing: "/admin?tab=activities"',
+          '    landing: "https://outside.example/admin"',
+        ),
+      ),
+    ).toThrow(/Malformed landing URL/);
+    expect(() =>
+      parseCatalog(
+        REDIRECT_CATALOG.replace(
+          '    landing: "/admin?tab=activities"',
+          '    landing: "/admin?tab=activities#main"',
+        ),
+      ),
+    ).toThrow(/Malformed landing URL/);
   });
 });

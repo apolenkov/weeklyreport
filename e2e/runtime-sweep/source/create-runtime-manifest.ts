@@ -30,6 +30,10 @@ import {
   STATE_KINDS,
   SUBMISSION_STATES,
 } from "./contracts.ts";
+import {
+  assertRouteNetworkPolicyCoverage,
+  networkPolicyForRoute,
+} from "./route-network-policy.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const CATALOG_ROOT = path.join(REPO_ROOT, "e2e", "catalog");
@@ -119,13 +123,23 @@ const seedProfiles = () =>
     };
   });
 
-const routeDeclarations = (catalogs: readonly Catalog[]) =>
-  catalogs.flatMap((catalog) => {
+const routeDeclarations = (catalogs: readonly Catalog[]) => {
+  const routeKeys = catalogs.flatMap((catalog) => {
+    const role = roleSchema.parse(catalog.role);
+    return catalog.routes.map((route) => `${role}:${route.route}`);
+  });
+  assertRouteNetworkPolicyCoverage(routeKeys);
+  return catalogs.flatMap((catalog) => {
     const role = roleSchema.parse(catalog.role);
     return catalog.routes.map((route) =>
-      routeDeclarationFromCatalog(route, role),
+      routeDeclarationFromCatalog(
+        route,
+        role,
+        networkPolicyForRoute(role, route.route),
+      ),
     );
   });
+};
 
 const toolVersions = () => ({
   node: process.version,

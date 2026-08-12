@@ -191,6 +191,53 @@ test.describe("runtime bounded form actions", () => {
     expect(events).toEqual(["reset", "oracle"]);
   });
 
+  test("applies the exact frozen select option and rejects option drift", async ({
+    page,
+  }) => {
+    const control = {
+      controlKey: "combobox:Status:1",
+      ariaRole: "combobox",
+      accessibleName: "Status",
+      enabled: true,
+      inputType: null,
+      tagName: "select",
+    } as const;
+    const representativeInput = {
+      kind: "select" as const,
+      value: "active",
+      index: 1,
+    };
+    await page.setContent(
+      '<select aria-label="Status"><option value="draft">Draft</option><option value="active">Active</option></select>',
+    );
+    const exact = await executeControlAction({
+      page,
+      control,
+      action: actionFor("select", "irreversible"),
+      recovery: recoveryFixture([]),
+      representativeInput,
+      observeOutcome: (): Promise<"pass"> => Promise.resolve("pass"),
+    });
+    expect(exact.status).toBe("pass");
+
+    const recoveryEvents: string[] = [];
+    await page.setContent(
+      '<select aria-label="Status"><option value="draft">Draft</option><option value="archived">Archived</option></select>',
+    );
+    const drifted = await executeControlAction({
+      page,
+      control,
+      action: actionFor("select", "irreversible"),
+      recovery: recoveryFixture(recoveryEvents),
+      representativeInput,
+    });
+    expect(drifted).toMatchObject({
+      status: "fail",
+      reason: "Native select representative option drifted",
+    });
+    expect(recoveryEvents).toEqual(["reset", "oracle"]);
+  });
+
   test("does not exercise potentially mutating form actions without recovery", async ({
     page,
   }) => {

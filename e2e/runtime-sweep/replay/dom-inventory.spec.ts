@@ -2,6 +2,7 @@ import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture";
 import type { RequestFailureRecord } from "../evidence/evidence-types.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { inventoryDom } from "./dom-inventory";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -29,6 +30,7 @@ async function captureHarnessEvidence(
     pageErrors: [],
     requestFailures: input.requestFailures ?? [],
     responses: [],
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     responseStatus: 200,
     capturedAt: "2026-08-04T00:00:00.000Z",
     ...(input.capturePhase === undefined
@@ -46,7 +48,7 @@ test("inventories visible semantic controls and their metadata", async ({
       <button type="button">Save</button>
       <label for="title">Title</label><input id="title" type="text">
       <label><input type="checkbox">Agree</label>
-      <select aria-label="Status"><option>Open</option></select>
+      <select aria-label="Status" data-interaction-effect="mutation-required"><option>Open</option></select>
       <textarea aria-label="Notes"></textarea>
       <details open><summary>More</summary></details>
       <div contenteditable="true" aria-label="Editor">Text</div>
@@ -72,8 +74,33 @@ test("inventories visible semantic controls and their metadata", async ({
   ]);
   expect(inventory.controls[0]?.href).toBe("/reports");
   expect(inventory.controls[2]?.inputType).toBe("text");
+  expect(inventory.controls[4]?.interactionEffect).toBe("mutation-required");
+  expect(inventory.controls[2]?.interactionEffect).toBeUndefined();
   expect(inventory.controls.every((control) => control.visible)).toBe(true);
   expect(inventory.issues).toHaveLength(0);
+});
+
+test("preserves mutation metadata for reopen decision buttons", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button">Cancel</button>
+    <button type="button" data-interaction-effect="mutation-required">Reject</button>
+    <button type="button" data-interaction-effect="mutation-required">Approve</button>
+  `);
+
+  const controls = (await inventoryDom(page)).controls;
+
+  expect(
+    controls.map(({ accessibleName, interactionEffect }) => ({
+      accessibleName,
+      interactionEffect,
+    })),
+  ).toEqual([
+    { accessibleName: "Cancel", interactionEffect: undefined },
+    { accessibleName: "Reject", interactionEffect: "mutation-required" },
+    { accessibleName: "Approve", interactionEffect: "mutation-required" },
+  ]);
 });
 
 test("keeps visible disabled controls and omits hidden controls", async ({

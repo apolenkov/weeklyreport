@@ -4,7 +4,7 @@ import type {
   RuntimeLane,
   RuntimeLaneAssignment,
 } from "./runtime-lane-contract.ts";
-import { runtimeLaneDatabaseUrl } from "./runtime-lane-readiness.ts";
+import { runtimeLaneDatabaseUrl } from "./runtime-lane-database-url.ts";
 import {
   type RuntimeLaneRunIdentity,
   runtimeProfileServiceName,

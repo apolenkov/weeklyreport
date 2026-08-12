@@ -16,6 +16,9 @@
 - [x] 1.6 Add the discriminated execution contract and one centralized legal-row
       policy; reject transition/action mismatch, missing fault ids, fabricated
       `none` witnesses, and unreasoned specialized-axis omissions.
+- [x] 1.7 Bind the canonical source to both the raw 40-character Git tree object
+      id and the existing tree digest; reject legacy or tampered source artifacts
+      instead of backfilling identity from the live worktree.
 
 ## 2. API, database, and deterministic state preparation
 
@@ -78,6 +81,23 @@
       excluding only the explicit browser/Next.js SDK signature allowlist from
       failure counts, and require a frozen submit transition to execute the
       scoped confirmation action before recovery.
+- [x] 3.14 Freeze every deterministically reachable post-transition control and
+      its canonical reveal path plus exact semantic surface into
+      `PREFLIGHT.json` before finalizing `MATRIX.json`; prove each preparation
+      step is database-non-mutating, replay the path before the target action,
+      reject ambiguous paths, and fail a cell on any unknown, missing, or
+      signature-drifted post-freeze control instead of appending discovery
+      drift as passing evidence.
+- [x] 3.15 Bind read-only preparation reuse to the exact canonical state-plan
+      digest and full route identity, prove every preparation axis changes the
+      key while case/action identity alone may reuse, and stop the whole
+      campaign when any executor resolves a non-pass cell.
+- [x] 3.16 Require an explicit runtime oracle for every coverage cell and make
+      terminal ledger validation reject missing runtime evidence unless the
+      cell carries the typed reasoned inapplicable entry allowed by the spec.
+- [x] 3.17 Bind an explicit route network policy or reviewed `null` declaration
+      into source, case identity, and matrix digest; propagate the effective
+      policy into ordinary and specialized capture without a permissive default.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 
@@ -117,6 +137,44 @@
       exact source/evidence/coverage validation in the merger. Benchmark
       increasing lane counts with one-cell and full-group canaries before the
       immutable full run.
+- [x] 5.5 Require one non-forgeable, exact-environment Redis mutation
+      authorization across every public preparation and replay entrypoint; bind
+      create/start/remove to immutable container IDs and re-prove the complete
+      identity after each bounded readiness wait with mocked fail-before-mutation
+      controls.
+- [x] 5.6 Add separate guard-only PostgreSQL and Redis target-plan commands that
+      derive every canonical lane target, reject unsafe/equal/ambiguous inputs,
+      emit typed `destructiveOperationsAllowed=false` evidence, and prove by
+      source-level controls that no mutation-capable primitive is reachable.
+- [x] 5.7 Bind immediate product effects into the frozen semantic control
+      surface, exclude `mutation-required` controls only from reveal
+      preparation, and retain their ordinary runtime matrix coverage.
+- [x] 5.8 Mark reopen decision buttons as `mutation-required`, preserve Cancel as
+      client-only, and cover the metadata and classification in product and
+      Chromium tests.
+- [ ] 5.9 Bind every intentional catalog redirect alias to one exact landing URL
+      in `SOURCE.json`; make preflight prove the initial landing and use only its
+      pathname as the reveal boundary, with negative tests for missing, wrong,
+      and later cross-path navigation.
+- [ ] 5.10 Add an immutable exact-state preflight canary that reuses the full
+      preparation/navigation/inventory/reveal/non-mutation implementation and
+      blocks repair/resweep full preflight until the failed segment passes at
+      the current clean source identity.
+- [ ] 5.11 Model resolver-route outcomes as state-bound, source-digest-bound
+      expectations: visible current, published fallback, empty, query error,
+      and anonymous. Cover the minimum applicable profile, record typed
+      inapplicable role-permission boundaries (including minimal where the
+      capability is absent), keep the resolver outcome model explicit rather
+      than assigning one unconditional exact landing route, and implement
+      `viewer-status-empty` plus `viewer-status-query-error` as frozen
+      route-local specialized resolver scenarios with guarded disposable-state
+      preparation, exact retry/non-mutation proof, and end-to-end artifact
+      identity.
+- [x] 5.12 Add a source/plan/assignment-bound append-only preflight journal and
+      exact state-boundary resume. Reject stale, foreign, duplicate, reordered,
+      truncated, tampered, started-only, failed, ambiguous, or digest-drifted
+      entries; never resume inside a state; publish canonical `PREFLIGHT.json`
+      only after the validated ordered union exactly covers the full source plan.
 
 ## 6. Immutable baseline and adjudication
 
@@ -142,8 +200,8 @@
 - [ ] 7.3 Run the entire declared deterministic Playwright matrix again at one
       final SHA, then run bounded native Codex Luna Max review batches through
       the explicit import/verifier path; require every final cell to pass with
-      complete function/a11y/visual evidence and zero unresolved or confirmed
-      gaps.
+      complete function/a11y/visual/runtime evidence and zero unresolved or
+      confirmed gaps.
 - [ ] 7.4 Adjudicate the final request/log/correlation timelines and transition
       screenshot pairs; publish request/cache/performance findings and prove
       zero undeclared Bugsink/Loki/API/worker/browser errors before the stop

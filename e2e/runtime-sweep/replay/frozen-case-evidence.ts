@@ -38,6 +38,7 @@ export interface FrozenCaseReplayInput {
   readonly evidence: FrozenCaseEvidence;
   readonly cellId?: string;
   readonly surface?: RuntimeSurfaceExpectation;
+  readonly runtimeIssues?: readonly string[];
 }
 
 export interface FrozenCaseReplayResult {
@@ -54,6 +55,7 @@ export interface FrozenCasePhaseCaptureInput {
     | ((evidence: CompleteFrozenCaseEvidence) => readonly DOMControl[]);
   readonly cellId?: string;
   readonly surface?: RuntimeSurfaceExpectation;
+  readonly runtimeIssues?: readonly string[];
   readonly capturePhase: (phase: EvidencePhase) => Promise<EvidenceBundle>;
 }
 
@@ -126,6 +128,7 @@ const replayIssues = (
       ...phaseIssues(matrixCase.caseId, phase, refs),
     ]),
     ...identityIssues(matrixCase, refs),
+    ...(input.runtimeIssues ?? []),
     ...controlIssues(matrixCase, input.controls, refs, input.surface),
     ...caseSpecificIssues(matrixCase, phases, action.transition),
   ]);
@@ -154,6 +157,15 @@ export function replayFrozenCase(
     action,
     execution: matrixCase.execution,
     ...faultId,
+    ...(matrixCase.declarationId === undefined
+      ? {}
+      : { declarationId: matrixCase.declarationId }),
+    ...(matrixCase.expectedOutcome === undefined
+      ? {}
+      : { resolverOutcome: matrixCase.expectedOutcome.identity.outcome }),
+    ...(matrixCase.resolverRecoveryOutcome === undefined
+      ? {}
+      : { resolverRecoveryOutcome: matrixCase.resolverRecoveryOutcome }),
     oracle: input.oracle,
     controls: input.controls,
     evidence: {
@@ -193,6 +205,9 @@ export async function finalizeFrozenCaseEvidence(
     controls,
     evidence,
     ...(input.surface === undefined ? {} : { surface: input.surface }),
+    ...(input.runtimeIssues === undefined
+      ? {}
+      : { runtimeIssues: input.runtimeIssues }),
   });
 }
 

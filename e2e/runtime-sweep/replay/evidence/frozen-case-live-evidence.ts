@@ -8,8 +8,13 @@ import {
 } from "../../matrix/runtime-matrix.ts";
 import type { RuntimeEventCursor } from "../../matrix/runtime-matrix-evidence.ts";
 import type { DOMControl } from "../../source/contracts.ts";
+import type { ResolverOutcomeExpectation } from "../../support/resolver-outcome-expectations.ts";
 import type { PreparedRuntimeState } from "../../support/state-preparation.ts";
 import type { DomInventory } from "../dom-inventory.ts";
+import {
+  frozenActionTransitionIssues,
+  resolveFrozenActionTransition,
+} from "../frozen-action-transition-validation.ts";
 import {
   type CompleteFrozenCaseEvidence,
   finalizeFrozenCaseEvidence,
@@ -33,31 +38,61 @@ type LivePhaseCaptureInput = Readonly<{
   runtime: FrozenCaseLiveRuntime;
   prepared: PreparedRuntimeState;
   route: string;
+  landingRoute?: string;
+  expectedOutcome?: ResolverOutcomeExpectation;
   responseStatus: number | null;
   initialEvents: RuntimeEventWindow;
-  phaseInventories: Map<EvidencePhase, DomInventory>;
-  actionTargets: Map<EvidencePhase, DomInventory["controls"][number]>;
+}>;
+
+type LivePhaseCapture = Readonly<{
+  evidence: Awaited<ReturnType<typeof captureFrozenPhase>>;
+  inventory: DomInventory;
+  url: string;
+  actionTarget: DomInventory["controls"][number] | undefined;
+}>;
+
+type CapturedLiveEvidence = Readonly<{
+  evidence: CompleteFrozenCaseEvidence;
+  before: LivePhaseCapture;
+  action: LivePhaseCapture;
+  after: LivePhaseCapture;
 }>;
 
 const captureLivePhase = (
   input: LivePhaseCaptureInput,
   phase: EvidencePhase,
   eventCursor: RuntimeEventCursor,
-) =>
-  captureFrozenPhase({
+): Promise<LivePhaseCapture> => {
+  const inventory = Promise.withResolvers<DomInventory>();
+  const actionTarget = Promise.withResolvers<
+    DomInventory["controls"][number] | undefined
+  >();
+  return captureFrozenPhase({
     page: input.page,
     source: input.source,
     matrixCase: input.matrixCase,
     runtime: input.runtime,
     prepared: input.prepared,
     route: input.route,
+    ...(input.landingRoute === undefined
+      ? {}
+      : { landingRoute: input.landingRoute }),
+    ...(input.expectedOutcome === undefined
+      ? {}
+      : { expectedOutcome: input.expectedOutcome }),
     responseStatus: input.responseStatus,
     initialEvents: input.initialEvents,
     phase,
     eventCursor,
-    onInventory: (inventory) => input.phaseInventories.set(phase, inventory),
-    onActionTarget: (target) => input.actionTargets.set("action", target),
-  });
+    onInventory: inventory.resolve,
+    ...(phase === "action" ? { onActionTarget: actionTarget.resolve } : {}),
+  }).then(async (evidence) => ({
+    evidence,
+    inventory: await inventory.promise,
+    url: input.page.url(),
+    actionTarget: phase === "action" ? await actionTarget.promise : undefined,
+  }));
+};
 
 const actionResultFor = (
   evidence: CompleteFrozenCaseEvidence,
@@ -82,70 +117,89 @@ const actionResultFor = (
 };
 
 const controlsForLiveCase = (
+  source: RuntimeMatrixSource,
   matrixCase: MatrixExecutableCase,
   prepared: PreparedRuntimeState,
-  phaseInventories: Map<EvidencePhase, DomInventory>,
-  actionTargets: Map<EvidencePhase, DomInventory["controls"][number]>,
+  actionCapture: LivePhaseCapture,
   evidence: CompleteFrozenCaseEvidence,
 ): readonly DOMControl[] => {
-  const actionInventory = phaseInventories.get("action");
-  if (actionInventory === undefined)
-    throw new Error(
-      `Frozen case ${matrixCase.caseId} has no action-phase inventory`,
-    );
-  return controlsForCase(
-    actionInventory,
+  const controls = controlsForCase(
+    actionCapture.inventory,
     matrixCase,
     actionResultFor(evidence),
     prepared.plan.surface,
-    actionTargets.get("action"),
+    actionCapture.actionTarget,
   );
+  const transition = resolveFrozenActionTransition(source, matrixCase);
+  if (transition === undefined) return controls;
+  const frozenKeys = new Set(
+    transition.after.controls.map(({ controlKey }) => controlKey),
+  );
+  return controls.filter(({ controlKey }) => frozenKeys.has(controlKey));
 };
 
 const finalizeLiveCase = (
+  source: RuntimeMatrixSource,
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
   prepared: PreparedRuntimeState,
-  phaseInventories: Map<EvidencePhase, DomInventory>,
-  actionTargets: Map<EvidencePhase, DomInventory["controls"][number]>,
-  evidence: CompleteFrozenCaseEvidence,
-) =>
-  finalizeFrozenCaseEvidence(
+  captured: CapturedLiveEvidence,
+) => {
+  const runtimeIssues = frozenActionTransitionIssues({
+    source,
+    matrixCase,
+    before: { inventory: captured.before.inventory, url: captured.before.url },
+    after: { inventory: captured.action.inventory, url: captured.action.url },
+  });
+  return finalizeFrozenCaseEvidence(
     {
       archiveRoot: runtime.archiveRoot,
       matrixCase,
       oracle: RUNTIME_MATRIX_ORACLE,
       surface: prepared.plan.surface,
       controls: controlsForLiveCase(
+        source,
         matrixCase,
         prepared,
-        phaseInventories,
-        actionTargets,
-        evidence,
+        captured.action,
+        captured.evidence,
       ),
+      runtimeIssues,
     },
-    evidence,
+    captured.evidence,
   );
+};
 
 const capturedEvidence = async (
   input: LivePhaseCaptureInput,
   initialCursor: RuntimeEventCursor,
-): Promise<CompleteFrozenCaseEvidence> => {
+): Promise<CapturedLiveEvidence> => {
   const before = await captureLivePhase(input, "before", initialCursor);
-  const action = await captureLivePhase(input, "action", before.cursor);
-  const after = await captureLivePhase(input, "after", action.cursor);
+  const action = await captureLivePhase(
+    input,
+    "action",
+    before.evidence.cursor,
+  );
+  const after = await captureLivePhase(input, "after", action.evidence.cursor);
   await input.initialEvents.collector.waitForIdle();
-  const tail = input.initialEvents.collector.consumeSince(after.cursor);
+  const tail = input.initialEvents.collector.consumeSince(
+    after.evidence.cursor,
+  );
   input.initialEvents.collector.detach();
   return {
-    before: before.bundle,
-    action: action.bundle,
-    after: await attachLateRuntimeEvents({
-      matrixCase: input.matrixCase,
-      runtime: input.runtime,
-      bundle: after.bundle,
-      records: tail.records,
-    }),
+    before,
+    action,
+    after,
+    evidence: {
+      before: before.evidence.bundle,
+      action: action.evidence.bundle,
+      after: await attachLateRuntimeEvents({
+        matrixCase: input.matrixCase,
+        runtime: input.runtime,
+        bundle: after.evidence.bundle,
+        records: tail.records,
+      }),
+    },
   };
 };
 
@@ -155,37 +209,39 @@ export const captureAndFinalizeFrozenCase = async (
   matrixCase: MatrixExecutableCase,
   runtime: FrozenCaseLiveRuntime,
   prepared: PreparedRuntimeState,
-  route: string,
+  route: Readonly<{
+    readonly resolvedRoute: string;
+    readonly landingRoute?: string;
+    readonly expectedOutcome?: ResolverOutcomeExpectation;
+  }>,
   navigation: Awaited<ReturnType<typeof initialNavigation>>,
 ): Promise<FrozenCaseCoverageCell> => {
-  const phaseInventories = new Map<EvidencePhase, DomInventory>();
-  const actionTargets = new Map<
-    EvidencePhase,
-    DomInventory["controls"][number]
-  >();
   try {
-    const evidence = await capturedEvidence(
+    const captured = await capturedEvidence(
       {
         page,
         source,
         matrixCase,
         runtime,
         prepared,
-        route,
+        route: route.resolvedRoute,
+        ...(route.landingRoute === undefined
+          ? {}
+          : { landingRoute: route.landingRoute }),
+        ...(route.expectedOutcome === undefined
+          ? {}
+          : { expectedOutcome: route.expectedOutcome }),
         responseStatus: navigation.responseStatus,
         initialEvents: navigation.events,
-        phaseInventories,
-        actionTargets,
       },
       navigation.events.cursor,
     );
     const result = await finalizeLiveCase(
+      source,
       matrixCase,
       runtime,
       prepared,
-      phaseInventories,
-      actionTargets,
-      evidence,
+      captured,
     );
     return result.cell;
   } finally {

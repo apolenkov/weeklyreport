@@ -11,12 +11,18 @@
 // the catalog identically.
 // ============================================================================
 
+import {
+  assertRequiredLandings,
+  isLandingFieldLine,
+  parseLandingLine,
+} from "./catalog-parser-landing.ts";
+
 // Mirrors the shared `Role`/`DbRole` union (role-type spec), inline because
 // this is a plain-node entrypoint: `tsconfig.scripts.json` empties `paths`, no
 // workspace link reaches the root, so the shared import cannot resolve here.
 export const CANONICAL_ROLES = ["lead", "head", "admin", "viewer"] as const;
 
-type Role = (typeof CANONICAL_ROLES)[number];
+export type Role = (typeof CANONICAL_ROLES)[number];
 
 const INTENT_FIELDS = ["intent", "given", "when", "then", "note"] as const;
 
@@ -26,6 +32,8 @@ type Intent = { readonly id: string } & Record<IntentField, string>;
 
 export interface CatalogRoute {
   readonly route: string;
+  /** Exact canonical URL after an intentional redirect, including query. */
+  landing?: string | undefined;
   access: Role[];
   readonly intents: Intent[];
 }
@@ -103,6 +111,7 @@ interface Cursor {
   seenRoutes: ReadonlySet<string>;
   seenIntentIds: ReadonlySet<string>;
   seenFields: ReadonlySet<IntentField>;
+  seenRouteFields: ReadonlySet<"landing">;
 }
 
 // A structurally corrupt catalog must fail both consumers loudly, not parse
@@ -116,6 +125,25 @@ function assertFresh(
   if (seen.has(value)) {
     throw new Error(`Duplicate ${what}: "${value}"`);
   }
+}
+
+function beginIntent(id: string, cursor: Cursor): Cursor {
+  if (!cursor.route) throw new Error(`Intent ${id} has no route`);
+  assertFresh(
+    cursor.seenIntentIds,
+    id,
+    `intent id on route ${cursor.route.route}`,
+  );
+  const intent = emptyIntent(id);
+  cursor.route.intents.push(intent);
+  return {
+    route: cursor.route,
+    intent,
+    seenRoutes: cursor.seenRoutes,
+    seenIntentIds: new Set([...cursor.seenIntentIds, id]),
+    seenFields: new Set<IntentField>(),
+    seenRouteFields: cursor.seenRouteFields,
+  };
 }
 
 const consumeLine = (
@@ -150,6 +178,7 @@ const consumeLine = (
       seenRoutes: new Set([...cursor.seenRoutes, routeValue]),
       seenIntentIds: new Set<string>(),
       seenFields: new Set<IntentField>(),
+      seenRouteFields: new Set<"landing">(),
     };
   }
   if (!cursor.route) {
@@ -161,28 +190,30 @@ const consumeLine = (
     cursor.route.access = parseAccess(accessMatch[1], cursor.route.route);
     return cursor;
   }
+
+  const parsedLanding = parseLandingLine(
+    line,
+    cursor.route.route,
+    cursor.seenRouteFields,
+  );
+  if (parsedLanding !== null) {
+    cursor.route.landing = parsedLanding.landing;
+    return {
+      ...cursor,
+      seenRouteFields: parsedLanding.seenRouteFields,
+    };
+  }
+  if (isLandingFieldLine(line)) {
+    throw new Error(
+      `Malformed landing placement on route ${cursor.route.route}: "${line.trim()}"`,
+    );
+  }
   if (/^\s*intents:\s*$/.test(line)) {
     return cursor;
   }
 
   const idMatch = /^\s*-\s*id:\s*(\S+)\s*$/.exec(line);
-  if (idMatch?.[1]) {
-    const id = idMatch[1];
-    assertFresh(
-      cursor.seenIntentIds,
-      id,
-      `intent id on route ${cursor.route.route}`,
-    );
-    const intent = emptyIntent(id);
-    cursor.route.intents.push(intent);
-    return {
-      route: cursor.route,
-      intent,
-      seenRoutes: cursor.seenRoutes,
-      seenIntentIds: new Set([...cursor.seenIntentIds, id]),
-      seenFields: new Set<IntentField>(),
-    };
-  }
+  if (idMatch?.[1]) return beginIntent(idMatch[1], cursor);
 
   return applyField(line, cursor);
 };
@@ -255,6 +286,7 @@ export function parseCatalog(text: string): Catalog | null {
         seenRoutes: new Set<string>(),
         seenIntentIds: new Set<string>(),
         seenFields: new Set<IntentField>(),
+        seenRouteFields: new Set<"landing">(),
       },
       routes: [],
     },
@@ -262,5 +294,6 @@ export function parseCatalog(text: string): Catalog | null {
 
   if (routes.length === 0) return null;
   assertCompleteIntents(routes);
+  assertRequiredLandings(role, routes);
   return { role, routes };
 }

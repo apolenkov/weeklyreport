@@ -13,6 +13,7 @@ import {
   evidenceBundleSchema,
   type EvidenceRef,
   evidenceRefSchema,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
 } from "../../source/contracts.ts";
 import {
   type CompleteFrozenCaseEvidence,
@@ -32,6 +33,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",

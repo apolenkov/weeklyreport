@@ -4,13 +4,18 @@ import type {
   OwnershipStateMutation,
   PermissionSubject,
   ReportStateMutation,
+  RuntimeMutationSentinel,
   RuntimeStateDatabase,
   RuntimeStateTransaction,
   SectionStateMutation,
   StateTarget,
+  ViewerGroupAccessGrant,
 } from "../support/state-preparation.ts";
 
 type Transaction = Prisma.TransactionClient;
+
+const PREPARATION_TX_TIMEOUT_MS = 30_000;
+const PREPARATION_TX_MAX_WAIT_MS = 10_000;
 
 const updateReport = (
   transaction: Transaction,
@@ -186,12 +191,65 @@ const readSnapshot = async (
   } as const;
 };
 
+const readMutationSentinel = async (
+  transaction: Transaction,
+): Promise<RuntimeMutationSentinel> => {
+  const rows = await transaction.userActionLog.findMany({
+    select: {
+      id: true,
+      userId: true,
+      role: true,
+      procedure: true,
+      targetId: true,
+      status: true,
+      reason: true,
+      ip: true,
+      correlationId: true,
+      durationMs: true,
+      createdAt: true,
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return Object.freeze(
+    rows.map(({ createdAt, ...row }) =>
+      Object.freeze({ ...row, createdAt: createdAt.toISOString() }),
+    ),
+  );
+};
+
+const readViewerGroupAccess = async (
+  transaction: Transaction,
+  viewerUserId: string,
+): Promise<readonly ViewerGroupAccessGrant[]> => {
+  const rows = await transaction.viewerGroupAccess.findMany({
+    where: { viewerUserId },
+    select: { id: true, viewerUserId: true, groupId: true, canReview: true },
+    orderBy: [{ groupId: "asc" }, { id: "asc" }],
+  });
+  return Object.freeze(rows.map((row) => Object.freeze(row)));
+};
+
+const removeViewerGroupAccess = async (
+  transaction: Transaction,
+  viewerUserId: string,
+): Promise<number> => {
+  const result = await transaction.viewerGroupAccess.deleteMany({
+    where: { viewerUserId },
+  });
+  return result.count;
+};
+
 const adapter = (transaction: Transaction): RuntimeStateTransaction => ({
   updateReport: (mutation) => updateReport(transaction, mutation),
   updateSection: (mutation) => updateSection(transaction, mutation),
   replaceOwnership: (mutation) => replaceOwnership(transaction, mutation),
   readSnapshot: (targets, permission) =>
     readSnapshot(transaction, targets, permission),
+  readMutationSentinel: () => readMutationSentinel(transaction),
+  readViewerGroupAccess: (viewerUserId) =>
+    readViewerGroupAccess(transaction, viewerUserId),
+  removeViewerGroupAccess: (viewerUserId) =>
+    removeViewerGroupAccess(transaction, viewerUserId),
 });
 
 export function createPrismaRuntimeStateDatabase(
@@ -199,6 +257,9 @@ export function createPrismaRuntimeStateDatabase(
 ): RuntimeStateDatabase {
   return {
     transaction: (work) =>
-      prisma.$transaction((transaction) => work(adapter(transaction))),
+      prisma.$transaction((transaction) => work(adapter(transaction)), {
+        maxWait: PREPARATION_TX_MAX_WAIT_MS,
+        timeout: PREPARATION_TX_TIMEOUT_MS,
+      }),
   };
 }

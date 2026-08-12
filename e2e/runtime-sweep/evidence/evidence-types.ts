@@ -4,9 +4,12 @@ import type { DomInventory } from "../replay/dom-inventory.ts";
 import type {
   EvidenceBundle,
   EvidenceRef,
+  NetworkEvidencePolicy,
   Role,
   SeedProfile,
 } from "../source/contracts.ts";
+
+export type { NetworkEvidencePolicy } from "../source/contracts.ts";
 
 export type ConsoleRecord = Readonly<{ type: string; text: string }>;
 export type PageErrorRecord = Readonly<{ message: string }>;
@@ -31,12 +34,6 @@ export type ResponseRecord = Readonly<{
   endedAt: string;
   durationMs: number;
   correlationId: string | null;
-}>;
-export type NetworkEvidencePolicy = Readonly<{
-  maxRepeatedApiRequests: number;
-  retryStormThreshold: number;
-  slowRequestThresholdMs: number;
-  cacheExpectedOperations: readonly string[];
 }>;
 export type ExpectedFault = Readonly<{
   faultId: string;
@@ -121,7 +118,7 @@ export type EvidenceCaptureInput = Readonly<{
   bugsinkDsn?: string;
   responses?: readonly ResponseRecord[];
   expectedFault?: ExpectedFault;
-  networkPolicy?: NetworkEvidencePolicy;
+  networkPolicy: NetworkEvidencePolicy;
   settleRuntimeEvents?: () => Promise<void>;
   serverLogPath?: string;
   phaseStartedAt?: string;

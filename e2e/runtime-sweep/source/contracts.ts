@@ -1,9 +1,22 @@
 import { z } from "zod";
+
+import { createRuntimeRouteSchemas } from "./contracts-route-schemas.ts";
+import { routeNetworkPolicySchema } from "./network-policy-contracts.ts";
+export * from "./network-policy-contracts.ts";
 const tuple = <const T extends readonly [string, ...string[]]>(
   ...values: T
 ): Readonly<T> => Object.freeze(values);
 export const CANONICAL_ROLES = tuple("lead", "head", "admin", "viewer");
 export const SEED_PROFILES = tuple("minimal", "demo", "full", "stress");
+export const ROUTE_KINDS = tuple("unconditional", "resolver");
+export const RESOLVER_KEYS = tuple("viewer-status");
+export const RESOLVER_OUTCOME_KINDS = tuple(
+  "visible-current",
+  "published-fallback",
+  "empty",
+  "query-error",
+  "anonymous",
+);
 // prettier-ignore
 export const SEED_CAPABILITIES = tuple("admin-examples", "archive-flow", "canonical-identities", "deep-history", "editable-active-report", "foreign-content", "health-states", "multi-role-access", "ownership", "policy-examples", "project-activities", "publish-flow", "published-period", "reminders", "reopen-flow", "stress-volume", "submission-contrast");
 export const SEED_COUNT_DIMENSIONS = tuple(
@@ -89,17 +102,28 @@ export const NOT_EXERCISED_POLICIES = tuple(
 export const EXCLUSION_SCOPES = tuple("browser", "viewport", "matrix");
 const DESKTOP_WIDTH = 1440;
 const DESKTOP_HEIGHT = 900;
-const sourceShaPattern = /^[0-9a-f]{40}$/;
+const gitObjectShaPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^[0-9a-f]{64}$/;
 const stableIdentifierPattern = /^[a-z0-9][a-z0-9._-]*$/;
+const routeValuePattern = /^\/(?!\/)[^\s#]*$/u;
 const stableIdentifierSchemaFactory = () =>
   z
     .string()
     .regex(stableIdentifierPattern, "must be a lowercase stable identifier");
-export const sourceShaSchema = z.string().regex(sourceShaPattern);
+export const sourceShaSchema = z.string().regex(gitObjectShaPattern);
+export const sourceTreeSchema = z.string().regex(gitObjectShaPattern);
 export const sha256DigestSchema = z.string().regex(digestPattern);
+export const routeUrlSchema = z
+  .string()
+  .regex(routeValuePattern, "must be a relative path URL without a fragment");
+export const landingRouteSchema = z
+  .string()
+  .regex(routeValuePattern, "must be a relative path URL without a fragment");
 export const roleSchema = z.enum(CANONICAL_ROLES);
 export const seedProfileSchema = z.enum(SEED_PROFILES);
+export const routeKindSchema = z.enum(ROUTE_KINDS);
+export const resolverKeySchema = z.enum(RESOLVER_KEYS);
+export const resolverOutcomeKindSchema = z.enum(RESOLVER_OUTCOME_KINDS);
 export const seedCapabilitySchema = z.enum(SEED_CAPABILITIES);
 export const lifecycleStateSchema = z.enum(LIFECYCLE_STATES);
 export const submissionStateSchema = z.enum(SUBMISSION_STATES);
@@ -239,7 +263,7 @@ export const matrixInapplicableSchema = z
 // prettier-ignore
 export const oracleDimensionSchema = z.object({ required: z.boolean(), expectation: z.string().min(1) }).strict();
 // prettier-ignore
-export const oracleSchema = z.object({ domainSpecRefs: z.array(z.string().min(1)).min(1).readonly(), function: oracleDimensionSchema, accessibility: oracleDimensionSchema, visual: oracleDimensionSchema }).strict();
+export const oracleSchema = z.object({ domainSpecRefs: z.array(z.string().min(1)).min(1).readonly(), function: oracleDimensionSchema, accessibility: oracleDimensionSchema, visual: oracleDimensionSchema, runtime: oracleDimensionSchema }).strict();
 // prettier-ignore
 export const evidenceRefSchema = z.object({ artifactId: z.string().min(1), kind: evidenceKindSchema, dimension: evidenceDimensionSchema, archivePath: z.string().min(1), digest: sha256DigestSchema, capturedAt: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1) }).strict();
 // prettier-ignore
@@ -252,69 +276,41 @@ export const evidenceBundleSchema = z.object({ before: z.array(evidenceRefSchema
 export const controlActionResultSchema = z.union([z.object({ kind: z.literal("exercised"), result: z.enum(CONTROL_RESULT_VALUES), evidenceIds: z.array(z.string().min(1)).min(1).readonly() }).strict(), z.object({ kind: z.literal("not-exercised"), policy: z.enum(NOT_EXERCISED_POLICIES), reason: z.string().min(1) }).strict()]);
 // prettier-ignore
 export const domControlSchema = z.object({ controlKey: z.string().min(1), cellId: z.string().min(1), ariaRole: z.string().min(1), accessibleName: z.string(), enabled: z.boolean(), order: z.number().int().nonnegative(), actionResult: controlActionResultSchema }).strict();
-// prettier-ignore
 export const routeBindingTargetSchema = z.enum(["none", "active", "published"]);
-// prettier-ignore
-export const routeBindingSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("assigned"), profile: seedProfileSchema, target: routeBindingTargetSchema, requiredCapability: seedCapabilitySchema.nullable(), resolvedRoute: z.string().min(1), rationale: z.string().min(1) }).strict(), z.object({ status: z.literal("not-applicable"), profile: seedProfileSchema, target: routeBindingTargetSchema, requiredCapability: seedCapabilitySchema.nullable(), resolvedRoute: z.string().min(1), reason: z.string().min(1) }).strict()]);
-// prettier-ignore
-export const routeDeclarationSchema = z.object({ role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), allowsCurrentLive: z.boolean().optional(), bindings: z.array(routeBindingSchema).length(SEED_PROFILES.length).readonly().optional() }).strict();
+const runtimeRouteSchemas = createRuntimeRouteSchemas({
+  routeUrlSchema,
+  landingRouteSchema,
+  roleSchema,
+  seedProfileSchema,
+  routeBindingTargetSchema,
+  resolverKeySchema,
+  resolverOutcomeKindSchema,
+  stableIdentifierSchema,
+  sha256DigestSchema,
+  matrixConstraintIdSchema,
+  seedCapabilitySchema,
+  routeNetworkPolicySchema,
+  seedProfileCount: SEED_PROFILES.length,
+  resolverOutcomeKinds: RESOLVER_OUTCOME_KINDS,
+});
+export const {
+  resolverOutcomeIdentitySchema,
+  sourceBoundResolverOutcomeSchema,
+  resolverOutcomeInapplicableSchema,
+  resolverOutcomeKindsSchema,
+  routeBindingSchema,
+  routeDeclarationSchema,
+} = runtimeRouteSchemas;
 // prettier-ignore
 export const exclusionSchema = z.object({ id: z.string().min(1), scope: z.enum(EXCLUSION_SCOPES), target: z.string().min(1), reason: z.string().min(1) }).strict();
 // prettier-ignore
-export const campaignManifestSchema = z.object({ campaignId: z.string().min(1), sourceSha: sourceShaSchema, treeDigest: sha256DigestSchema, browser: z.literal("chromium"), viewport: viewportSchema, roles: z.array(roleSchema).length(CANONICAL_ROLES.length).readonly(), routes: z.array(routeDeclarationSchema).min(1).readonly(), profiles: z.array(seedProfileSchema).length(SEED_PROFILES.length).readonly(), seedProfiles: z.array(seedProfileBindingSchema).length(SEED_PROFILES.length).readonly(), stateKinds: z.array(stateKindSchema).length(STATE_KINDS.length).readonly(), actions: z.array(actionSchema).min(1).readonly(), toolVersions: toolVersionsSchema, catalogDigest: sha256DigestSchema, domainSpecDigest: sha256DigestSchema, matrixDeclaration: matrixDeclarationSchema, matrixDigest: sha256DigestSchema, exclusions: z.array(exclusionSchema).min(1).readonly() }).strict();
+export const campaignManifestSchema = z.object({ campaignId: z.string().min(1), sourceSha: sourceShaSchema, sourceTree: sourceTreeSchema, treeDigest: sha256DigestSchema, browser: z.literal("chromium"), viewport: viewportSchema, roles: z.array(roleSchema).length(CANONICAL_ROLES.length).readonly(), routes: z.array(routeDeclarationSchema).min(1).readonly(), profiles: z.array(seedProfileSchema).length(SEED_PROFILES.length).readonly(), seedProfiles: z.array(seedProfileBindingSchema).length(SEED_PROFILES.length).readonly(), stateKinds: z.array(stateKindSchema).length(STATE_KINDS.length).readonly(), actions: z.array(actionSchema).min(1).readonly(), toolVersions: toolVersionsSchema, catalogDigest: sha256DigestSchema, domainSpecDigest: sha256DigestSchema, matrixDeclaration: matrixDeclarationSchema, matrixDigest: sha256DigestSchema, exclusions: z.array(exclusionSchema).min(1).readonly() }).strict();
 // prettier-ignore
-const coverageCellBaseSchema = z.object({ cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), viewport: viewportSchema, state: stateAxesSchema, action: actionSchema, execution: matrixExecutionSchema, faultId: faultIdSchema.nullable(), oracle: oracleSchema, controls: z.array(domControlSchema).readonly(), evidence: evidenceBundleSchema, verdict: coverageVerdictSchema }).strict();
+const coverageCellBaseSchema = z.object({ cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), viewport: viewportSchema, state: stateAxesSchema, action: actionSchema, execution: matrixExecutionSchema, faultId: faultIdSchema.nullable(), declarationId: stableIdentifierSchema.optional(), resolverOutcome: resolverOutcomeKindSchema.optional(), resolverRecoveryOutcome: resolverOutcomeKindSchema.nullable().optional(), oracle: oracleSchema, controls: z.array(domControlSchema).readonly(), evidence: evidenceBundleSchema, verdict: coverageVerdictSchema }).strict();
 // prettier-ignore
 export const coverageCellSchema = coverageCellBaseSchema.refine(({ execution, faultId }) => faultId === ("faultId" in execution ? execution.faultId : null), { path: ["faultId"], message: "CoverageCell faultId must match execution faultId" });
 // prettier-ignore
 export const candidateSchema = z.object({ candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, profile: seedProfileSchema, role: roleSchema, catalogRoute: z.string().min(1), resolvedRoute: z.string().min(1), state: stateAxesSchema, action: actionSchema, oracle: oracleSchema, kind: candidateKindSchema, summary: z.string().min(1), evidence: z.array(evidenceRefSchema).min(1).readonly() }).strict();
 // prettier-ignore
 export const dispositionSchema = z.discriminatedUnion("status", [z.object({ status: z.literal("dismissed"), candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, verifierRefs: z.array(z.string().min(1)).min(1).readonly(), evidence: z.array(evidenceRefSchema).min(1).readonly(), rationale: z.string().min(1) }).strict(), z.object({ status: z.literal("fixed"), candidateId: z.string().min(1), cellId: z.string().min(1), sourceSha: sourceShaSchema, verifierRefs: z.array(z.string().min(1)).min(1).readonly(), evidence: z.array(evidenceRefSchema).min(1).readonly(), findingRef: z.string().min(1), fixSha: sourceShaSchema, rationale: z.string().min(1) }).strict()]);
-export type {
-  Action,
-  ActionOperation,
-  ActionSafety,
-  ActionTarget,
-  CampaignManifest,
-  Candidate,
-  ControlTransition,
-  CoverageCell,
-  CoverageVerdict,
-  Disposition,
-  DOMControl,
-  EvidenceBundle,
-  EvidenceDimension,
-  EvidenceKind,
-  EvidenceRef,
-  Exclusion,
-  FaultId,
-  FaultMode,
-  LifecycleState,
-  ManifestMatrixConstraint,
-  MatrixAxes,
-  MatrixDeclaration,
-  MatrixExecution,
-  MatrixExecutionInapplicable,
-  MatrixExecutionKind,
-  MatrixObservation,
-  Oracle,
-  OwnershipDensity,
-  PermissionBoundary,
-  Role,
-  RouteBinding,
-  RouteBindingTarget,
-  RouteDeclaration,
-  RouteDeclarationInput,
-  SeedCapability,
-  SeedCountBound,
-  SeedCountDimension,
-  SeedProfile,
-  SeedProfileBinding,
-  SeedProfileDefinition,
-  StableIdentifier,
-  StateAxes,
-  StateKind,
-  SubmissionState,
-  ToolVersions,
-  Viewport,
-} from "./contracts-types.ts";
+export type * from "./contracts-types.ts";

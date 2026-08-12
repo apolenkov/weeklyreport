@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   createFrozenCaseLiveShardPlan,
+  frozenCasePreparationKey,
+  type FrozenCasePreparationRoute,
   groupFrozenCases,
+  isReusableFrozenCase,
   MAX_FROZEN_CASE_LIVE_SHARD_CASES,
   selectFrozenCasesForReplay,
 } from "./frozen-case-live-shards.ts";
@@ -16,6 +20,7 @@ const makeCase = (index: number): MatrixExecutableCase => ({
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",
@@ -39,6 +44,22 @@ const makeCase = (index: number): MatrixExecutableCase => ({
 
 const ids = (cases: readonly MatrixExecutableCase[]): readonly string[] =>
   cases.map(({ caseId }) => caseId);
+
+const activeRoute = {
+  role: "lead",
+  catalogRoute: "/lead/report",
+  resolvedRoute: "/lead/report",
+  target: "active",
+} satisfies FrozenCasePreparationRoute;
+
+const publishedRoute = {
+  ...activeRoute,
+  catalogRoute: "/reports/published",
+  resolvedRoute: "/reports/published",
+  target: "published",
+} satisfies FrozenCasePreparationRoute;
+
+const REPO_ROOT = "/repo";
 
 describe("frozen live replay shards", () => {
   it("emits no shard for an empty immutable matrix selection", () => {
@@ -114,5 +135,153 @@ describe("frozen live replay shards", () => {
       ["case-000000", "case-000002"],
       ["case-000001", "case-000003"],
     ]);
+  });
+
+  it("reuses only no-fault navigation, idle, and read-only controls", () => {
+    const navigation = makeCase(0);
+    const readOnlyControl = {
+      ...makeCase(1),
+      execution: {
+        kind: "control",
+        action: {
+          controlKey: "button:inspect",
+          operation: "click",
+          safety: "read-only",
+          transition: "none",
+        },
+      },
+    } satisfies MatrixExecutableCase;
+    const mutatingControl = {
+      ...readOnlyControl,
+      execution: {
+        ...readOnlyControl.execution,
+        action: {
+          ...readOnlyControl.execution.action,
+          safety: "reversible",
+        },
+      },
+    } satisfies MatrixExecutableCase;
+    const faulted = {
+      ...navigation,
+      state: { ...navigation.state, fault: "network-timeout" },
+    } satisfies MatrixExecutableCase;
+
+    expect(isReusableFrozenCase(navigation)).toBe(true);
+    expect(isReusableFrozenCase(readOnlyControl)).toBe(true);
+    expect(isReusableFrozenCase(mutatingControl)).toBe(false);
+    expect(isReusableFrozenCase(faulted)).toBe(false);
+  });
+
+  it("keys reusable preparation by preparation, not case or action identity", () => {
+    const first = {
+      ...makeCase(1),
+      profile: "full",
+      execution: {
+        kind: "control",
+        action: {
+          controlKey: "button:inspect:1",
+          operation: "click",
+          safety: "read-only",
+          transition: "none",
+        },
+      },
+    } satisfies MatrixExecutableCase;
+    const samePreparation = {
+      ...first,
+      caseId: "another-case",
+      stateId: "another-state",
+      execution: {
+        ...first.execution,
+        action: { ...first.execution.action, controlKey: "button:other:1" },
+      },
+    } satisfies MatrixExecutableCase;
+
+    expect(frozenCasePreparationKey(first, activeRoute, REPO_ROOT)).toBe(
+      frozenCasePreparationKey(samePreparation, activeRoute, REPO_ROOT),
+    );
+    expect(frozenCasePreparationKey(first, activeRoute, REPO_ROOT)).not.toBe(
+      frozenCasePreparationKey(first, publishedRoute, REPO_ROOT),
+    );
+  });
+
+  const fullCase = {
+    ...makeCase(2),
+    profile: "full",
+  } satisfies MatrixExecutableCase;
+
+  const preparationKeyChanges: readonly (readonly [
+    string,
+    MatrixExecutableCase,
+  ])[] = [
+    ["sourceSha", { ...fullCase, sourceSha: "b".repeat(40) }],
+    ["profile", { ...fullCase, profile: "demo" }],
+    [
+      "profileCapability",
+      {
+        ...fullCase,
+        state: { ...fullCase.state, profileCapability: "canonical-identities" },
+      },
+    ],
+    [
+      "lifecycle",
+      { ...fullCase, state: { ...fullCase.state, lifecycle: "reopened" } },
+    ],
+    [
+      "submission",
+      { ...fullCase, state: { ...fullCase.state, submission: "submitted" } },
+    ],
+    [
+      "ownershipDensity",
+      {
+        ...fullCase,
+        state: { ...fullCase.state, ownershipDensity: "multiple" },
+      },
+    ],
+    [
+      "permission",
+      { ...fullCase, state: { ...fullCase.state, permission: "forbidden" } },
+    ],
+    ["fault", { ...fullCase, state: { ...fullCase.state, fault: "http-5xx" } }],
+    [
+      "controlTransition",
+      {
+        ...fullCase,
+        state: { ...fullCase.state, controlTransition: "submit" },
+      },
+    ],
+  ];
+
+  it.each(preparationKeyChanges)(
+    "changes the preparation key when %s changes",
+    (_label, changed) => {
+      expect(
+        frozenCasePreparationKey(fullCase, activeRoute, REPO_ROOT),
+      ).not.toBe(frozenCasePreparationKey(changed, activeRoute, REPO_ROOT));
+    },
+  );
+
+  const routeChanges: readonly (readonly [
+    string,
+    FrozenCasePreparationRoute,
+  ])[] = [
+    ["role", { ...activeRoute, role: "head" }],
+    ["catalogRoute", { ...activeRoute, catalogRoute: "/head/report" }],
+    ["resolvedRoute", { ...activeRoute, resolvedRoute: "/reports/active" }],
+    ["target", publishedRoute],
+  ];
+
+  it.each(routeChanges)(
+    "changes the preparation key when route %s changes",
+    (_label, route) => {
+      expect(
+        frozenCasePreparationKey(fullCase, activeRoute, REPO_ROOT),
+      ).not.toBe(frozenCasePreparationKey(fullCase, route, REPO_ROOT));
+    },
+  );
+
+  it("changes the preparation key when repoRoot changes", () => {
+    expect(frozenCasePreparationKey(fullCase, activeRoute, REPO_ROOT)).not.toBe(
+      frozenCasePreparationKey(fullCase, activeRoute, "/other-repo"),
+    );
   });
 });

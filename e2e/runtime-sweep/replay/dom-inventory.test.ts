@@ -8,6 +8,7 @@ const rawButton = {
   tagName: "button",
   inputType: null,
   href: null,
+  interactionEffect: null,
   ariaLabel: "Submit",
   labelledByText: null,
   labelText: null,
@@ -49,5 +50,21 @@ describe("runtime DOM inventory", () => {
     await expect(inventoryDom(page)).rejects.toThrow("Browser disconnected");
     expect(evaluate).toHaveBeenCalledOnce();
     expect(waitForLoadState).not.toHaveBeenCalled();
+  });
+
+  it("captures declared interaction effects and rejects unknown values", async () => {
+    const pageFor = (interactionEffect: string) =>
+      ({
+        evaluate: () => Promise.resolve([{ ...rawButton, interactionEffect }]),
+      }) as unknown as Page;
+
+    await expect(
+      inventoryDom(pageFor("mutation-required")),
+    ).resolves.toMatchObject({
+      controls: [{ interactionEffect: "mutation-required" }],
+    });
+    await expect(inventoryDom(pageFor("unreviewed"))).rejects.toThrow(
+      /unsupported data-interaction-effect/iu,
+    );
   });
 });

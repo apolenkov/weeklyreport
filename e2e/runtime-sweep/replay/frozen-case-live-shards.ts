@@ -1,4 +1,11 @@
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
+import type { RouteBindingTarget } from "../source/contracts.ts";
+import { stableSerialize } from "../support/ids.ts";
+import type { ResolverOutcomeExpectation } from "../support/resolver-outcome-expectations.ts";
+import {
+  buildStatePreparationPlan,
+  type StatePreparationPlan,
+} from "../support/state-preparation.ts";
 import type { FrozenCaseCoverageCell } from "./frozen-case-evidence.ts";
 
 export const MAX_FROZEN_CASE_LIVE_SHARD_CASES = 32;
@@ -11,6 +18,86 @@ export type FrozenCaseLiveShard = Readonly<{
 }>;
 
 export type FrozenCaseGroup = readonly MatrixExecutableCase[];
+
+export type FrozenCasePreparationRoute = Readonly<
+  | {
+      readonly kind?: "unconditional";
+      readonly role: MatrixExecutableCase["role"];
+      readonly catalogRoute: string;
+      readonly resolvedRoute: string;
+      readonly landingRoute?: string;
+      readonly target: RouteBindingTarget;
+      readonly expectedOutcome?: undefined;
+    }
+  | {
+      readonly kind: "resolver";
+      readonly role: MatrixExecutableCase["role"];
+      readonly catalogRoute: string;
+      readonly resolvedRoute: string;
+      readonly landingRoute?: never;
+      readonly target: RouteBindingTarget;
+      readonly expectedOutcome: ResolverOutcomeExpectation;
+    }
+>;
+
+export const isReusableFrozenCase = (
+  matrixCase: MatrixExecutableCase,
+): boolean => {
+  if (matrixCase.state.fault !== "none") return false;
+  if (matrixCase.execution.kind === "navigation") return true;
+  if (matrixCase.execution.kind === "idle") return true;
+  return (
+    matrixCase.execution.kind === "control" &&
+    matrixCase.execution.action.safety === "read-only"
+  );
+};
+
+export const buildFrozenCasePreparationPlan = (
+  matrixCase: MatrixExecutableCase,
+  route: FrozenCasePreparationRoute,
+  repoRoot: string,
+): StatePreparationPlan =>
+  buildStatePreparationPlan({
+    profile: matrixCase.profile,
+    routeRole: route.role,
+    routeTarget: route.target,
+    routeKey: `${route.role}:${route.catalogRoute}`,
+    axes: {
+      lifecycle: matrixCase.state.lifecycle,
+      submission: matrixCase.state.submission,
+      ownership: matrixCase.state.ownershipDensity,
+      permission: matrixCase.state.permission,
+    },
+    repoRoot,
+  });
+
+export const frozenCasePreparationKey = (
+  matrixCase: MatrixExecutableCase,
+  route: FrozenCasePreparationRoute,
+  repoRoot: string,
+): string =>
+  stableSerialize({
+    sourceSha: matrixCase.sourceSha,
+    profileCapability: matrixCase.state.profileCapability,
+    fault: matrixCase.state.fault,
+    controlTransition: matrixCase.state.controlTransition,
+    route: {
+      role: route.role,
+      catalogRoute: route.catalogRoute,
+      resolvedRoute: route.resolvedRoute,
+      ...(route.kind === undefined ? {} : { kind: route.kind }),
+      ...(route.landingRoute === undefined
+        ? {}
+        : { landingRoute: route.landingRoute }),
+      target: route.target,
+      ...(route.expectedOutcome === undefined
+        ? {}
+        : { expectedOutcome: route.expectedOutcome }),
+    },
+    repoRoot,
+    planDigest: buildFrozenCasePreparationPlan(matrixCase, route, repoRoot)
+      .digest,
+  });
 
 export const selectFrozenCasesForReplay = (
   cases: readonly MatrixExecutableCase[],

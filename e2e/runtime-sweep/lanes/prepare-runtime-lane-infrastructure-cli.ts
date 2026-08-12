@@ -4,6 +4,10 @@ import {
   MIN_RUNTIME_LANE_COUNT,
   runtimeLaneResources,
 } from "./runtime-lane-contract.ts";
+import {
+  consumeRuntimeLaneRedisRecreationAuthorization,
+  requireRuntimeLaneRedisRecreationAuthorization,
+} from "./runtime-lane-redis-authorization.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -25,6 +29,9 @@ const laneCountFrom = (value: string): number => {
 };
 
 async function main(): Promise<void> {
+  consumeRuntimeLaneRedisRecreationAuthorization(
+    requireRuntimeLaneRedisRecreationAuthorization(),
+  );
   const laneCount = laneCountFrom(requiredEnv("RUNTIME_SWEEP_LANE_COUNT"));
   const result = await prepareRuntimeLaneInfrastructure({
     resources: runtimeLaneResources(laneCount),

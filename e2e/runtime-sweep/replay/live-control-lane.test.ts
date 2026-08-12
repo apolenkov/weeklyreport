@@ -60,6 +60,23 @@ test("leaves disabled and unsupported controls explicitly unexercised", () => {
   ]);
 });
 
+test("does not plan a background control behind an active modal", () => {
+  const [plan] = planLiveControlActions([
+    {
+      ...control("button:Add%20new%20user:1", "Add new user"),
+      keyboardExpectedFocusable: false,
+      keyboardFocusPolicy: "forbidden",
+      keyboardFocusScope: "background",
+    },
+  ]);
+
+  expect(plan?.action).toBeUndefined();
+  expect(plan).toMatchObject({
+    policy: "unavailable",
+    reason: "Control is blocked by an active modal",
+  });
+});
+
 test("only plans bounded form values when a safety oracle is declared", () => {
   const controls = [
     control("query", "Search", "searchbox"),
@@ -179,6 +196,8 @@ test("requires disposable recovery after direct mutation buttons", () => {
   const directMutations = [
     "Acknowledge · Product group",
     "Activate Lead User",
+    "Archive period",
+    "Archive Portal",
     "Deactivate Admin User",
     "Downgrade risk for Portal to at risk",
     "Escalate risk for Portal to blocked",
@@ -186,10 +205,13 @@ test("requires disposable recovery after direct mutation buttons", () => {
     "Move this report to the archive",
     "Move to current week",
     "Move to next week",
+    "Reopen Period",
+    "Request Reopen",
     "Analysis: on-track — status set",
     "On Track",
     "At Risk",
     "Blocked",
+    "Unarchive period",
   ];
 
   expect(
@@ -199,12 +221,34 @@ test("requires disposable recovery after direct mutation buttons", () => {
   ).toEqual(directMutations.map(() => ["click", "irreversible"]));
 });
 
+test("classifies reminder switches as irreversible clicks independent of label", () => {
+  const plans = planLiveControlActions([
+    control(
+      "switch:Reminder%20active%3A%202%20hours%20after%20deadline:1",
+      "Reminder active: 2 hours after deadline",
+      "switch",
+    ),
+    control(
+      "switch:Reminder%20active%3A%2024%20hours%20before%20deadline:1",
+      "Reminder active: 24 hours before deadline",
+      "switch",
+    ),
+  ]);
+
+  expect(
+    plans.map(({ action }) => [action?.operation, action?.safety]),
+  ).toEqual([
+    ["click", "irreversible"],
+    ["click", "irreversible"],
+  ]);
+});
+
 test("keeps navigation and UI-only disclosure buttons read-only", () => {
   const plans = planLiveControlActions([
     control("sign-out", "Sign out"),
     control("respond", "Respond"),
-    control("reopen", "Reopen Period"),
-    control("archive", "Archive Portal"),
+    control("archive", "Archive"),
+    control("reopen-requests", "Reopen requests", "link"),
     control("link", "Settings", "link"),
   ]);
 

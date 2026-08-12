@@ -1,121 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import type { CampaignManifest } from "../source/contracts.ts";
-import type {
-  CampaignMatrixPlan,
-  CampaignMatrixState,
-} from "./campaign-matrix.ts";
+import { revealPathFor, revealSurfaceFor } from "../preflight/reveal-path.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
+import type { CampaignMatrixPlan } from "./campaign-matrix.ts";
 import {
-  DEFAULT_MAX_CASES,
-  DEFAULT_MAX_CONTROLS,
   finalizeCampaignMatrix,
+  MatrixFinalizationError,
   parseFrozenMatrix,
   preflightNavigationStates,
+  routeFor,
   serializeFrozenMatrix,
 } from "./matrix-finalizer.ts";
-import type { MatrixPreflightControl } from "./matrix-finalizer-contract.ts";
-
-const SOURCE_SHA = "a".repeat(40);
-const R9_PREFLIGHT_CONTROL_COUNT = 727;
-
-const state = (
-  profile: CampaignMatrixState["profile"] = "minimal",
-): CampaignMatrixState => ({
-  stateId: `state-${profile}`,
-  pairwiseDigest: "pairwise-digest",
-  profile,
-  axes: {
-    role: "lead",
-    route: "lead:/lead",
-    profileCapability: "canonical-identities",
-    lifecycle: "open",
-    submission: "draft",
-    ownershipDensity: "single",
-    permission: "allowed",
-    fault: "none",
-    controlTransition: "none",
-  },
-});
-
-const declaration: CampaignManifest["matrixDeclaration"] = {
-  generatorSeed: "fixture",
-  axes: {
-    role: ["lead", "head"],
-    route: ["lead:/lead", "head:/head"],
-    profileCapability: ["canonical-identities"],
-    lifecycle: ["open"],
-    submission: ["draft"],
-    ownershipDensity: ["single"],
-    permission: ["allowed"],
-    fault: ["none"],
-    controlTransition: ["none"],
-  },
-  constraints: [],
-};
-
-const routes: CampaignManifest["routes"] = [
-  {
-    role: "lead",
-    catalogRoute: "/lead",
-    resolvedRoute: "/lead",
-    bindings: [
-      {
-        status: "assigned",
-        profile: "minimal",
-        target: "none",
-        requiredCapability: "canonical-identities",
-        resolvedRoute: "/lead",
-        rationale: "fixture route",
-      },
-    ],
-  },
-];
-
-const plan: CampaignMatrixPlan = {
-  states: [state()],
-  inapplicable: [
-    {
-      profile: "demo",
-      axes: state("demo").axes,
-      constraintId: "profile-capability-boundary",
-      reason: "demo profile is intentionally omitted",
-    },
-  ],
-  digest: "plan-digest",
-};
-
-const input = (
-  overrides: Partial<Parameters<typeof finalizeCampaignMatrix>[0]> = {},
-) => ({
-  sourceSha: SOURCE_SHA,
-  declaration,
-  plan,
-  routes,
-  preflight: preflightNavigationStates(plan),
-  ...overrides,
-});
-
-const controlsFor = (count: number): readonly MatrixPreflightControl[] =>
-  Array.from({ length: count }, (_, index) => {
-    const controlKey = `button:fixture-${index}`;
-    return {
-      controlKey,
-      inventory: {
-        ariaRole: "button",
-        accessibleName: `Fixture ${index}`,
-        enabled: true,
-        order: index,
-        domOrderKey: `${String(index).padStart(4, "0")}:${controlKey}`,
-        href: null,
-      },
-      action: {
-        controlKey,
-        operation: "click" as const,
-        safety: "read-only" as const,
-        transition: "none" as const,
-      },
-    };
-  });
+import { input, plan, routes, state } from "./matrix-finalizer-fixtures.ts";
+import { revealTransitionFor } from "./reveal-transition.ts";
 
 function freezesDeterministicRows(): void {
   const matrix = finalizeCampaignMatrix(input());
@@ -150,23 +47,46 @@ function rejectsChangedPreflight(): void {
 }
 
 function bindsInventoryDigest(): void {
+  const inventory = {
+    ariaRole: "button",
+    accessibleName: "Save",
+    enabled: true,
+    order: 1,
+    domOrderKey: "0001:button:Save:1",
+    href: null,
+    interactionEffect: null,
+  } as const;
+  const action = {
+    controlKey: "button:Save:1",
+    operation: "click" as const,
+    safety: "read-only" as const,
+    transition: "none" as const,
+  };
+  const expectedSurface = revealSurfaceFor([
+    { controlKey: "button:Save:1", ...inventory },
+  ]);
+  const transitionFor = (surface: typeof expectedSurface) =>
+    revealTransitionFor(action, surface, surface, "/", "/", {
+      status: "unchanged",
+      beforeDigest: "a".repeat(64),
+      afterDigest: "a".repeat(64),
+    });
   const control = {
     controlKey: "button:Save:1",
-    inventory: {
-      ariaRole: "button",
-      accessibleName: "Save",
-      enabled: true,
-      order: 1,
-      domOrderKey: "0001:button:Save:1",
-      href: null,
-    },
-    action: {
-      controlKey: "button:Save:1",
-      operation: "click" as const,
-      safety: "read-only" as const,
-      transition: "none" as const,
-    },
+    inventory,
+    revealPath: revealPathFor(),
+    expectedSurface,
+    expectedActionSurface: expectedSurface,
+    expectedActionTransition: transitionFor(expectedSurface),
+    action,
   };
+  const driftedInventory = {
+    ...control.inventory,
+    accessibleName: "Save draft",
+  };
+  const driftedSurface = revealSurfaceFor([
+    { controlKey: control.controlKey, ...driftedInventory },
+  ]);
   const first = finalizeCampaignMatrix(
     input({
       preflight: [{ state: state(), controls: [control], specialized: [] }],
@@ -180,7 +100,10 @@ function bindsInventoryDigest(): void {
           controls: [
             {
               ...control,
-              inventory: { ...control.inventory, accessibleName: "Save draft" },
+              inventory: driftedInventory,
+              expectedSurface: driftedSurface,
+              expectedActionSurface: driftedSurface,
+              expectedActionTransition: transitionFor(driftedSurface),
             },
           ],
           specialized: [],
@@ -273,27 +196,65 @@ function preservesFullAxisPlanRows(): void {
   });
 }
 
-function acceptsObservedPreflightScale(): void {
-  const matrix = finalizeCampaignMatrix(
+function bindsNetworkPolicyIntoCaseIdentityAndDigest(): void {
+  const baseline = finalizeCampaignMatrix(input());
+  const networkPolicy = {
+    maxRepeatedApiRequests: 3,
+    retryStormThreshold: 5,
+    slowRequestThresholdMs: 5000,
+    cacheExpectedOperations: ["report.get"],
+  } as const;
+  const firstRoute = routes[0];
+  if (firstRoute === undefined) throw new Error("Fixture route is missing");
+  const changed = finalizeCampaignMatrix(
     input({
-      preflight: [
-        {
-          state: state(),
-          controls: controlsFor(R9_PREFLIGHT_CONTROL_COUNT),
-          specialized: [],
-        },
-      ],
+      routes: [{ ...firstRoute, networkPolicy }, ...routes.slice(1)],
     }),
   );
 
-  expect([DEFAULT_MAX_CONTROLS, DEFAULT_MAX_CASES]).toEqual([1024, 100_000]);
-  expect(Number.isFinite(DEFAULT_MAX_CONTROLS)).toBe(true);
-  expect(Number.isFinite(DEFAULT_MAX_CASES)).toBe(true);
-  expect(matrix.limits).toEqual({
-    maxCases: DEFAULT_MAX_CASES,
-    maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
-  });
-  expect(matrix.counts.executable).toBe(R9_PREFLIGHT_CONTROL_COUNT + 1);
+  expect(baseline.cases[0]?.networkPolicy.cacheExpectedOperations).toEqual([]);
+  expect(changed.cases[0]?.networkPolicy.cacheExpectedOperations).toEqual([
+    "report.get",
+  ]);
+  expect(changed.cases[0]?.caseId).not.toBe(baseline.cases[0]?.caseId);
+  expect(changed.digest).not.toBe(baseline.digest);
+}
+
+function preservesExplicitNullNetworkPolicy(): void {
+  const resolved = routeFor(routes, state());
+
+  expect(resolved.resolvedRoute).toBe("/lead");
+  expect(resolved.networkPolicy).toBe(NO_ROUTE_CACHE_CONTRACT_POLICY);
+}
+
+function rejectsUnknownRoutesDirectly(): void {
+  expect(() => routeFor([], state())).toThrow(MatrixFinalizationError);
+  expect(() => routeFor([], state())).toThrow(
+    "No route declaration for lead:/lead",
+  );
+}
+
+function rejectsUnknownRoutesInInapplicableRows(): void {
+  const [basePlanRow] = plan.inapplicable;
+  if (basePlanRow === undefined) throw new Error("Fixture plan row is missing");
+  const unknownPlan: CampaignMatrixPlan = {
+    ...plan,
+    inapplicable: [
+      {
+        ...basePlanRow,
+        axes: { ...basePlanRow.axes, route: "lead:/unknown" },
+      },
+    ],
+  };
+
+  expect(() =>
+    finalizeCampaignMatrix(
+      input({
+        plan: unknownPlan,
+        preflight: preflightNavigationStates(unknownPlan),
+      }),
+    ),
+  ).toThrow("No route declaration for lead:/unknown");
 }
 
 describe("campaign matrix finalizer", () => {
@@ -301,5 +262,17 @@ describe("campaign matrix finalizer", () => {
   it("rejects changed preflight", rejectsChangedPreflight);
   it("binds inventory into the digest", bindsInventoryDigest);
   it("preserves inapplicable rows", preservesFullAxisPlanRows);
-  it("accepts observed scale", acceptsObservedPreflightScale);
+  it(
+    "binds network policy into case identity and digest",
+    bindsNetworkPolicyIntoCaseIdentityAndDigest,
+  );
+  it(
+    "preserves explicit null as the named no-contract policy",
+    preservesExplicitNullNetworkPolicy,
+  );
+  it("rejects unknown routes directly", rejectsUnknownRoutesDirectly);
+  it(
+    "rejects unknown routes in inapplicable rows",
+    rejectsUnknownRoutesInInapplicableRows,
+  );
 });

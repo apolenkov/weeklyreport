@@ -5,10 +5,14 @@ import * as path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 import integrationConfig from "../../playwright.integration.config.ts";
-import { runtimeApiServerCommand } from "../../runtime-api-server-command.ts";
+import {
+  runtimeApiServerCommand,
+  runtimeApiServerCwd,
+} from "../../runtime-api-server-command.ts";
 import { assertSourceSha } from "../support/ids.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
+import { runtimeTraceSamplingEnvironment } from "./runtime-observability-policy.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -61,7 +65,9 @@ const apiEnv = {
   OTEL_SDK_DISABLED: "false",
   OTEL_SERVICE_NAME: requiredEnv("OTEL_SERVICE_NAME"),
   OTEL_SERVICE_VERSION: requiredEnv("OTEL_SERVICE_VERSION"),
+  ...runtimeTraceSamplingEnvironment,
   SENTRY_DSN: requiredEnv("RUNTIME_SWEEP_BUGSINK_DSN"),
+  RUNTIME_SWEEP_API_DRAIN: "true",
 };
 const webEnv = {
   ...runtimeSweepWebEnvironment(webServer.env),
@@ -147,6 +153,7 @@ export default defineConfig({
     {
       ...apiServer,
       command: runtimeApiServerCommand,
+      cwd: runtimeApiServerCwd,
       url: `http://127.0.0.1:${API_PORT}/health/ready`,
       reuseExistingServer: false,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import type { ControlActionRecovery } from "./control-recovery.ts";
 import { inventoryDom } from "./dom-inventory.ts";
 import { captureKeyboardTrace } from "./keyboard-evidence.ts";
 import {
@@ -7,6 +8,12 @@ import {
   planLiveControlActions,
 } from "./live-control-lane.ts";
 import { settleNavigation } from "./navigation.ts";
+
+const recovery: ControlActionRecovery = {
+  databaseUrl: "postgres://localhost/customreport_e2e",
+  resetAndReseed: (): Promise<void> => Promise.resolve(),
+  assertBaseline: (): Promise<void> => Promise.resolve(),
+};
 
 test.describe("runtime live-control lane", () => {
   test("waits for route app readiness beyond network idle", async ({
@@ -108,10 +115,12 @@ test.describe("runtime live-control lane", () => {
       page,
       plans: planLiveControlActions(inventory.controls),
       preparePage: () => Promise.resolve(),
+      recovery,
     });
 
     expect(records[0]).toMatchObject({
       status: "pass",
+      resetPerformed: true,
       observation: { kind: "dom" },
     });
   });

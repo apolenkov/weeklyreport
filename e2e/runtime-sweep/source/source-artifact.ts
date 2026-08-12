@@ -16,6 +16,7 @@ import {
   faultModeSchema,
   matrixAxesSchema,
   matrixConstraintIdSchema,
+  resolverOutcomeKindSchema,
   roleSchema,
   seedProfileSchema,
   sha256DigestSchema,
@@ -87,9 +88,63 @@ const specializedObservationDeclarationSchema = specializedDeclarationBaseSchema
   })
   .strict();
 
+const resolverSpecializedDeclarationSchema = z
+  .object({
+    declarationId: z.enum(["viewer-status-empty", "viewer-status-query-error"]),
+    kind: z.literal("resolver"),
+    outcome: resolverOutcomeKindSchema.refine(
+      (value) => value === "empty" || value === "query-error",
+    ),
+    recoveryOutcome: resolverOutcomeKindSchema
+      .refine((value) => value === "empty" || value === "visible-current")
+      .nullable(),
+    faultId: stableIdentifierSchema.nullable(),
+    faultMode: z.enum(["none", "api-error"]),
+    executionKind: z.enum(["navigation", "fault"]),
+    profile: z.literal("demo"),
+    role: z.literal("viewer"),
+    catalogRoute: z.literal("/reports/latest"),
+    operation: z.literal("navigate"),
+    safety: z.literal("read-only"),
+    transition: z.literal("none"),
+    resolverOperation: z.literal("reports.latestForViewer"),
+    proof: specializedProofSchema,
+  })
+  .strict()
+  .superRefine((declaration, context) => {
+    if (
+      declaration.outcome === "empty" &&
+      (declaration.faultId !== null ||
+        declaration.faultMode !== "none" ||
+        declaration.executionKind !== "navigation")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message:
+          "Empty resolver declarations are navigation-only and fault-free",
+      });
+    }
+    if (
+      declaration.outcome === "query-error" &&
+      (declaration.faultId === null ||
+        declaration.faultMode !== "api-error" ||
+        declaration.executionKind !== "fault" ||
+        declaration.recoveryOutcome !== "visible-current")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message:
+          "Query-error resolver declarations require one api-error fault",
+      });
+    }
+  });
+
 export const specializedDeclarationSchema = z.union([
   specializedActionDeclarationSchema,
   specializedObservationDeclarationSchema,
+  resolverSpecializedDeclarationSchema,
 ]);
 
 const sourceFieldsSchema = campaignManifestSchema.omit({ matrixDigest: true });

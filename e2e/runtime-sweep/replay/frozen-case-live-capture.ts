@@ -1,9 +1,11 @@
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import type { RuntimeEvents } from "../matrix/runtime-matrix-evidence.ts";
+import { assertInitialLanding } from "../preflight/preflight-reveal-guards.ts";
 import { type EvidenceBundle, type EvidenceRef } from "../source/contracts.ts";
 import type { PreparedRuntimeState } from "../support/state-preparation.ts";
 import type { ControlActionAttemptOutcome } from "./control-action-types.ts";
 import { inventoryDom } from "./dom-inventory.ts";
+import { frozenActionBoundaryOutcome } from "./frozen-case-action-boundary.ts";
 import {
   beginFrozenActionNavigation,
   type FrozenActionNavigationBoundary,
@@ -16,6 +18,10 @@ import {
   type FrozenCaseLiveRuntime,
   runAction,
 } from "./frozen-case-live-actions.ts";
+import {
+  phaseStartedAtFor,
+  publishActionTarget,
+} from "./frozen-case-live-capture-support.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
 import type { CapturedPhaseEvidence } from "./frozen-case-live-phase-evidence.ts";
 import { captureEvidence } from "./frozen-case-live-phase-evidence.ts";
@@ -28,12 +34,12 @@ import {
 } from "./recovery/frozen-case-recovery-boundary.ts";
 import { captureFrozenRecoveryEvidence } from "./recovery/frozen-case-recovery-evidence.ts";
 
-const INAPPLICABLE_ACTIONS = "inapplicable" as const;
-const NOT_EXERCISED_ACTION = "not-exercised" as const;
-
+const [INAPPLICABLE_ACTIONS, NOT_EXERCISED_ACTION] = [
+  "inapplicable",
+  "not-exercised",
+] as const;
 export type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
 export { initialNavigation } from "./frozen-case-live-navigation.ts";
-
 const databaseRef = async (
   matrixCase: MatrixExecutableCase,
   prepared: PreparedRuntimeState,
@@ -66,7 +72,6 @@ const databaseRef = async (
     },
   });
 };
-
 const actionRef = async (
   matrixCase: MatrixExecutableCase,
   outcome: ActionOutcome | undefined,
@@ -96,8 +101,11 @@ const actionOutcomeForPhase = async (
   boundary: FrozenActionNavigationBoundary | undefined,
   recoveryRecorder: FrozenRecoveryBoundaryRecorder | undefined,
 ): Promise<ActionOutcome | undefined> => {
+  const action = actionFor(input.matrixCase.execution);
+  const boundaryOutcome = await frozenActionBoundaryOutcome(input, action);
   const outcome =
-    input.phase === "action"
+    boundaryOutcome ??
+    (input.phase === "action"
       ? await runAction(
           input.page,
           input.source,
@@ -106,7 +114,7 @@ const actionOutcomeForPhase = async (
           input.prepared.plan.surface,
           recoveryRecorder?.boundary,
         )
-      : undefined;
+      : undefined);
   recoveryRecorder?.finalize();
   return boundary === undefined
     ? outcome
@@ -133,20 +141,6 @@ const unavailableSurfaceExpectedFor = (
   input.prepared.plan.surface.productActions === INAPPLICABLE_ACTIONS &&
   outcome?.status === NOT_EXERCISED_ACTION;
 
-const publishActionTarget = (
-  input: FrozenPhaseInput,
-  outcome: ActionOutcome | undefined,
-): void => {
-  if (input.phase !== "action") return;
-  const target = outcome?.target;
-  if (target !== undefined) input.onActionTarget?.(target);
-};
-
-const phaseStartedAtFor = (input: FrozenPhaseInput): string =>
-  input.phase === "before"
-    ? input.initialEvents.startedAt
-    : new Date().toISOString();
-
 const navigationBoundaryFor = (
   input: FrozenPhaseInput,
   action: ReturnType<typeof actionFor>,
@@ -162,7 +156,22 @@ const navigationStatusFor = async (
   action: ReturnType<typeof actionFor>,
 ): Promise<number | null | undefined> =>
   input.phase === "action" && action?.operation === "navigate"
-    ? navigate(input.page, input.route)
+    ? navigate(input.page, input.route).then((status) => {
+        assertInitialLanding(
+          {
+            resolvedRoute: input.route,
+            ...(input.landingRoute === undefined
+              ? {}
+              : { landingRoute: input.landingRoute }),
+            ...(input.expectedOutcome === undefined
+              ? {}
+              : { expectedOutcome: input.expectedOutcome }),
+          },
+          input.page.url(),
+          input.runtime.baseURL,
+        );
+        return status;
+      })
     : undefined;
 
 const withActionEvidence = async (

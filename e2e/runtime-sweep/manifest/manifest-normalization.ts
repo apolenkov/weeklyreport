@@ -55,9 +55,109 @@ export function completeSet<T extends string>(
   return [...expected];
 }
 
+type RouteBindingCapabilities = ReturnType<
+  typeof profileCapabilitiesFromDefinitions
+>;
+type BoundRoute = ReturnType<typeof bindRouteDeclaration>;
+
+const bindingForRoute = (
+  route: RouteDeclarationInput,
+  profileCapabilities: RouteBindingCapabilities,
+): BoundRoute =>
+  bindRouteDeclaration(
+    {
+      role: route.role,
+      catalogRoute: route.catalogRoute,
+      ...(route.kind === undefined ? {} : { kind: route.kind }),
+      ...(route.resolverKey === undefined
+        ? {}
+        : { resolverKey: route.resolverKey }),
+      ...(route.landingRoute === undefined
+        ? {}
+        : { landingRoute: route.landingRoute }),
+      ...(route.allowsCurrentLive === undefined
+        ? {}
+        : { allowsCurrentLive: route.allowsCurrentLive }),
+    },
+    profileCapabilities,
+  );
+
+const resolverRouteFor = (
+  route: RouteDeclarationInput,
+  binding: Extract<BoundRoute, { readonly kind: "resolver" }>,
+): RouteDeclaration => {
+  if (route.kind !== "resolver")
+    throw new ManifestInputError(
+      `Manifest route ${route.role} ${route.catalogRoute} must declare kind=resolver`,
+    );
+  if (route.resolverKey !== binding.resolverKey)
+    throw new ManifestInputError(
+      `Manifest route ${route.role} ${route.catalogRoute} has resolver key ${String(route.resolverKey)}; expected ${binding.resolverKey}`,
+    );
+  if (
+    route.resolverOutcomes?.join("\0") !== binding.resolverOutcomes.join("\0")
+  )
+    throw new ManifestInputError(
+      `Manifest route ${route.role} ${route.catalogRoute} must declare the complete resolver outcome set`,
+    );
+  const {
+    landingRoute: _landingRoute,
+    kind: _kind,
+    resolverKey: _resolverKey,
+    resolverOutcomes: _resolverOutcomes,
+    ...resolverRoute
+  } = route;
+  return {
+    ...resolverRoute,
+    kind: "resolver",
+    resolverKey: binding.resolverKey,
+    resolverOutcomes: binding.resolverOutcomes,
+    resolvedRoute: binding.resolvedRoute,
+    allowsCurrentLive: binding.allowsCurrentLive,
+    bindings: binding.bindings,
+  };
+};
+
+const unconditionalRouteFor = (
+  route: RouteDeclarationInput,
+  binding: Extract<BoundRoute, { readonly kind: "unconditional" }>,
+): RouteDeclaration => {
+  if ((route.landingRoute ?? route.resolvedRoute) !== binding.landingRoute)
+    throw new ManifestInputError(
+      `Manifest route ${route.role} ${route.catalogRoute} lands at ${route.landingRoute ?? route.resolvedRoute}; expected ${binding.landingRoute}`,
+    );
+  const {
+    resolverKey: _resolverKey,
+    resolverOutcomes: _resolverOutcomes,
+    kind: _kind,
+    ...unconditionalRoute
+  } = route;
+  return {
+    ...unconditionalRoute,
+    kind: route.kind === "unconditional" ? "unconditional" : undefined,
+    resolvedRoute: binding.resolvedRoute,
+    landingRoute: binding.landingRoute,
+    allowsCurrentLive: binding.allowsCurrentLive,
+    bindings: binding.bindings,
+  };
+};
+
+const normalizedRouteFor = (
+  route: RouteDeclarationInput,
+  binding: BoundRoute,
+): RouteDeclaration => {
+  if (route.resolvedRoute !== binding.resolvedRoute)
+    throw new ManifestInputError(
+      `Manifest route ${route.role} ${route.catalogRoute} resolves to ${route.resolvedRoute}; expected ${binding.resolvedRoute}`,
+    );
+  return binding.kind === "resolver"
+    ? resolverRouteFor(route, binding)
+    : unconditionalRouteFor(route, binding);
+};
+
 function sortRoutes(
   routes: readonly RouteDeclarationInput[],
-  profileCapabilities: ReturnType<typeof profileCapabilitiesFromDefinitions>,
+  profileCapabilities: RouteBindingCapabilities,
 ): readonly RouteDeclaration[] {
   const keys = routes.map(
     ({ role, catalogRoute, resolvedRoute }) =>
@@ -76,28 +176,9 @@ function sortRoutes(
         left.catalogRoute.localeCompare(right.catalogRoute) ||
         left.resolvedRoute.localeCompare(right.resolvedRoute),
     )
-    .map((route) => {
-      const binding = bindRouteDeclaration(
-        {
-          role: route.role,
-          catalogRoute: route.catalogRoute,
-          ...(route.allowsCurrentLive === undefined
-            ? {}
-            : { allowsCurrentLive: route.allowsCurrentLive }),
-        },
-        profileCapabilities,
-      );
-      if (route.resolvedRoute !== binding.resolvedRoute)
-        throw new ManifestInputError(
-          `Manifest route ${route.role} ${route.catalogRoute} resolves to ${route.resolvedRoute}; expected ${binding.resolvedRoute}`,
-        );
-      return {
-        ...route,
-        resolvedRoute: binding.resolvedRoute,
-        allowsCurrentLive: binding.allowsCurrentLive,
-        bindings: binding.bindings,
-      };
-    });
+    .map((route) =>
+      normalizedRouteFor(route, bindingForRoute(route, profileCapabilities)),
+    );
 }
 
 export function sortExclusions(

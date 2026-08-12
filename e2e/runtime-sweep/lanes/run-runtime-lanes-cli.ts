@@ -22,6 +22,8 @@ async function main(): Promise<void> {
     assignmentPath,
     assignment,
     baseDatabaseUrl: requiredEnv("E2E_DATABASE_URL"),
+    redisRecreationAuthorized:
+      requiredEnv("RUNTIME_SWEEP_REDIS_RECREATE") === "true",
   });
   console.log(
     `runtime-lanes PASS mode=${assignment.mode} digest=${assignment.assignmentDigest}`,

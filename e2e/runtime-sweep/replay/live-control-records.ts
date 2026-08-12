@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { stableSerialize } from "../support/ids.ts";
 import type {
   ControlActionExecution,
   ControlActionTarget,
@@ -210,4 +211,4 @@ export const observationAfter = async (
 };
 
 export const planSignature = (plan: LiveControlPlan): string =>
-  `${plan.control.enabled}:${plan.control.accessibleName}:${plan.action?.operation ?? "none"}:${plan.action?.safety ?? "none"}:${plan.action?.transition ?? "none"}`;
+  `${plan.control.enabled}:${plan.control.accessibleName}:${plan.action?.operation ?? "none"}:${plan.action?.safety ?? "none"}:${plan.action?.transition ?? "none"}:${stableSerialize(plan.representativeInput ?? null)}`;

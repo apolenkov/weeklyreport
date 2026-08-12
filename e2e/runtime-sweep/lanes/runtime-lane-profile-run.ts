@@ -34,12 +34,16 @@ export async function runRuntimeLaneProfile(
     readonly run: RuntimeLaneRunIdentity;
     readonly observability: RuntimeObservabilityConfig;
     readonly execute: (startedAt: string) => Promise<void>;
+    readonly abortExecution: (reason: unknown) => void;
   }>,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
   const [execution] = await Promise.allSettled([
     Promise.resolve().then(() => input.execute(startedAt)),
   ]);
+  if (execution.status === "rejected") {
+    input.abortExecution(execution.reason);
+  }
   const endedAt = new Date().toISOString();
   const [telemetry] = await Promise.allSettled([
     reconcileRuntimeProfileObservability({
@@ -63,6 +67,7 @@ export async function runRuntimeLaneProfiles(
     readonly run: RuntimeLaneRunIdentity;
     readonly observability: RuntimeObservabilityConfig;
     readonly abort: AbortSignal;
+    readonly abortExecution: (reason: unknown) => void;
     readonly execute: (
       profile: SeedProfile,
       startedAt: string,
@@ -81,6 +86,7 @@ export async function runRuntimeLaneProfiles(
       run: input.run,
       observability: input.observability,
       execute: (startedAt) => input.execute(profile, startedAt),
+      abortExecution: input.abortExecution,
     });
   }
 }
