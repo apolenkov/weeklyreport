@@ -48,7 +48,10 @@ function useOrgIdentityForm() {
     readonly baseIdentity: string;
     readonly value: IdentityDraft;
   }>();
-  const pendingSave = useRef<IdentityDraft | null>(null);
+  const pendingSave = useRef<{
+    readonly baseIdentity: string;
+    readonly value: IdentityDraft;
+  } | null>(null);
   const serverIdentity = orgQ.data
     ? JSON.stringify([orgQ.data.shortName, orgQ.data.fullName])
     : undefined;
@@ -62,11 +65,8 @@ function useOrgIdentityForm() {
   const shortName = values?.shortName ?? "";
   const fullName = values?.fullName ?? "";
   const updateOrgMut = useSaveOrgIdentity(() => {
-    if (pendingSave.current !== null && serverIdentity !== undefined) {
-      setSubmitted({
-        baseIdentity: serverIdentity,
-        value: pendingSave.current,
-      });
+    if (pendingSave.current !== null) {
+      setSubmitted(pendingSave.current);
     }
     setDraft(undefined);
   });
@@ -105,7 +105,9 @@ function useOrgIdentityForm() {
         shortName: shortName.trim(),
         fullName: fullName.trim(),
       };
-      pendingSave.current = input;
+      if (serverIdentity !== undefined) {
+        pendingSave.current = { baseIdentity: serverIdentity, value: input };
+      }
       updateOrgMut.mutate(input);
     },
   };
