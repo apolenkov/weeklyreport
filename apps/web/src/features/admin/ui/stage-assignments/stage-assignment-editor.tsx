@@ -118,12 +118,21 @@ const NOTICE_TONE_CLASS = {
 function StageEditorNotice({
   tone,
   children,
+  loadingLabel,
 }: {
   readonly tone: keyof typeof NOTICE_TONE_CLASS;
   readonly children: ReactNode;
+  readonly loadingLabel?: string;
 }) {
   return (
-    <p className={`mt-3 text-xs ${NOTICE_TONE_CLASS[tone]}`}>{children}</p>
+    <p
+      className={`mt-3 text-xs ${NOTICE_TONE_CLASS[tone]}`}
+      role={loadingLabel ? "status" : undefined}
+      aria-busy={loadingLabel ? "true" : undefined}
+      aria-label={loadingLabel}
+    >
+      {children}
+    </p>
   );
 }
 
@@ -144,7 +153,10 @@ export function StageAssignmentEditor({
 
   if (isLoading) {
     return (
-      <StageEditorNotice tone="muted">
+      <StageEditorNotice
+        tone="muted"
+        loadingLabel={`Loading stage assignments for ${projectName}`}
+      >
         Loading stages for {projectName}…
       </StageEditorNotice>
     );

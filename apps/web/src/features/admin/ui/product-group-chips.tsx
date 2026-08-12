@@ -19,6 +19,9 @@ function ProductGroupChipsMessage({
     <span
       className={`text-xs ${kind === "empty" ? "italic " : ""}${tone}`}
       data-testid={`product-group-chips-${kind}`}
+      role={kind === "loading" ? "status" : undefined}
+      aria-busy={kind === "loading" ? "true" : undefined}
+      aria-label={kind === "loading" ? "Loading product groups" : undefined}
     >
       {children}
     </span>

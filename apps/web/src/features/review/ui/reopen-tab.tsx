@@ -189,7 +189,12 @@ function ReopenListStatus({
 }) {
   if (isPending) {
     return (
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
+      <div
+        className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading reopen requests"
+      >
         Loading…
       </div>
     );
