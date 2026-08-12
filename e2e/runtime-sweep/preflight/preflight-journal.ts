@@ -45,7 +45,6 @@ export {
   PreflightJournalValidationError,
 } from "./preflight-journal-contract.ts";
 export {
-  appendPreflightJournalPass,
   appendPreflightJournalStarted,
   appendPreflightJournalTerminal,
   parsePreflightJournalText,
@@ -54,7 +53,6 @@ export {
 export {
   artifactReaderForFiles,
   assembleCanonicalPreflightSegments,
-  canonicalPreflightSegments,
   type PreflightJournalArtifactReader,
   type PreflightResumePlan,
   resolvePreflightResume,

@@ -188,7 +188,7 @@ export const assertResolverOutcomeExpectation = (
     );
 };
 
-export const resolverOutcomeNotApplicableFor = (
+const resolverOutcomeNotApplicableFor = (
   profile: SeedProfile,
   outcome: Extract<ResolverOutcomeKind, "empty" | "query-error">,
 ): ResolverOutcomeNotApplicable => ({

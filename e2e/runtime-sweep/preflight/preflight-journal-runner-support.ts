@@ -98,7 +98,7 @@ export const assignmentReaderFor = (input: {
   };
 };
 
-export const routeForAssignmentState = (
+const routeForAssignmentState = (
   source: SourceArtifact,
   assignment: PreflightAssignment,
   stateId: string,

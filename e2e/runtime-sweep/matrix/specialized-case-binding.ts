@@ -1,9 +1,8 @@
 import type { MatrixExecutionKind } from "../source/contracts.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
 
-export const VIEWER_STATUS_EMPTY_DECLARATION = "viewer-status-empty";
-export const VIEWER_STATUS_QUERY_ERROR_DECLARATION =
-  "viewer-status-query-error";
+const VIEWER_STATUS_EMPTY_DECLARATION = "viewer-status-empty";
+const VIEWER_STATUS_QUERY_ERROR_DECLARATION = "viewer-status-query-error";
 
 const RESOLVER_DECLARATION_IDS = new Set([
   VIEWER_STATUS_EMPTY_DECLARATION,
@@ -22,7 +21,7 @@ export const isResolverCase = (matrixCase: MatrixExecutableCase): boolean =>
   matrixCase.declarationId !== undefined &&
   RESOLVER_DECLARATION_IDS.has(matrixCase.declarationId);
 
-export class ResolverCaseBindingError extends Error {
+class ResolverCaseBindingError extends Error {
   override readonly name = "ResolverCaseBindingError";
 }
 

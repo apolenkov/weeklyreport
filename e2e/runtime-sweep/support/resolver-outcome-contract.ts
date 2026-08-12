@@ -7,7 +7,6 @@ import {
   type ResolverOutcomeInapplicable,
   resolverOutcomeInapplicableSchema,
   type ResolverOutcomeKind,
-  resolverOutcomeKindSchema,
   type Role,
   type RouteBinding,
   type RouteKind,
@@ -25,14 +24,11 @@ const RESOLVER_ROUTE_KIND = "resolver" as const;
 const UNCONDITIONAL_ROUTE_KIND = "unconditional" as const;
 const NOT_APPLICABLE_STATUS = "not-applicable" as const;
 
-export type ProfileCapabilities = Readonly<
+type ProfileCapabilities = Readonly<
   Record<SeedProfile, readonly SeedCapability[]>
 >;
 
-export function resolverKeyForRoute(
-  role: Role,
-  catalogRoute: string,
-): string | null {
+function resolverKeyForRoute(role: Role, catalogRoute: string): string | null {
   return role === "viewer" && catalogRoute === REPORT_LATEST_ROUTE
     ? VIEWER_STATUS_RESOLVER_KEY
     : null;
@@ -136,7 +132,7 @@ export type ResolverOutcomeExpectationExtension = Readonly<{
   expectedUi: string;
 }>;
 
-export function routeBindingForProfile(
+function routeBindingForProfile(
   input: RouteBindingForProfileInput,
 ): RouteBinding {
   const hasCapability = hasRequiredCapability(input);
@@ -282,6 +278,3 @@ export const bindResolverOutcomeSourceDigest = (
   sourceDigest: string,
 ): SourceBoundResolverOutcome =>
   sourceBoundResolverOutcomeSchema.parse({ ...identity, sourceDigest });
-
-export const parseResolverOutcomeKind = (value: unknown): ResolverOutcomeKind =>
-  resolverOutcomeKindSchema.parse(value);

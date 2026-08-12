@@ -182,5 +182,3 @@ export function assembleCanonicalPreflightSegments(input: {
     return segment;
   });
 }
-
-export const canonicalPreflightSegments = assembleCanonicalPreflightSegments;

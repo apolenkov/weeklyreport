@@ -19,7 +19,7 @@ export type ResolverRecoveryOutcome = Readonly<{
   readonly reportId: string | null;
 }>;
 
-export class ResolverPreparationMismatchError extends Error {
+class ResolverPreparationMismatchError extends Error {
   override readonly name = "ResolverPreparationMismatchError";
 }
 

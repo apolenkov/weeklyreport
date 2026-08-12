@@ -32,8 +32,6 @@ import {
   VIEWER_STATUS_PATH,
 } from "./resolver-query-fault.ts";
 
-export { REPORTS_LATEST };
-
 export const CLEANUP_MESSAGE = "canonical profile reseed completed" as const;
 
 export interface ResolverCaseRunInput {
@@ -50,7 +48,7 @@ export interface ResolverCaseRunInput {
 }
 
 export type ResolverOutcome = Readonly<{ readonly reportId: string | null }>;
-export type EmptyMutation = Readonly<{
+type EmptyMutation = Readonly<{
   readonly viewerUserId: string;
   readonly viewerAccessBefore: readonly ViewerGroupAccessGrant[];
   readonly viewerAccessAfter: readonly ViewerGroupAccessGrant[];
@@ -269,5 +267,4 @@ export {
   assertPreparedResolverState,
   assertResolverRecovery,
   assertResolverReportId,
-  ResolverPreparationMismatchError,
 } from "./resolver-runner-guards.ts";

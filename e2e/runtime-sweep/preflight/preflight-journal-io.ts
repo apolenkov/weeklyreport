@@ -259,5 +259,3 @@ export async function appendPreflightJournalTerminal(input: {
   });
   return appendRecord(input.filePath, record, input.archiveRoot);
 }
-
-export const appendPreflightJournalPass = appendPreflightJournalTerminal;
