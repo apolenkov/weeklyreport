@@ -8,6 +8,7 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
+import { settleNavigation } from "../../replay/navigation.ts";
 import {
   representativeInputForFill,
   type RevealRepresentativeInput,
@@ -153,6 +154,7 @@ const executeRevealAction = async (input: {
     throw new Error(
       `Reveal action did not reach terminal pass: ${input.actionInput.action.controlKey}`,
     );
+  if (input.page.url() !== before.url) await settleNavigation(input.page);
 };
 
 export const createPlaywrightRevealExecutor =
