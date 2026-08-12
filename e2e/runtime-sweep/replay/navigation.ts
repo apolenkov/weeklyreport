@@ -5,7 +5,7 @@ const NAVIGATION_ABORT_PATTERNS = [
 ] as const;
 const APP_READY_SELECTOR = "#main-content";
 const APP_LOADING_SELECTOR =
-  '[aria-busy="true"], [data-slot="skeleton"], .skeleton';
+  '[aria-busy="true"], [data-slot="skeleton"], .skeleton, .animate-pulse';
 const APP_READY_ARGUMENT = {
   rootSelector: APP_READY_SELECTOR,
   loadingSelector: APP_LOADING_SELECTOR,

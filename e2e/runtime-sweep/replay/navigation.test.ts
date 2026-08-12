@@ -18,7 +18,8 @@ import {
 
 const APP_READY_ARGUMENT: AppReadyArgument = {
   rootSelector: "#main-content",
-  loadingSelector: '[aria-busy="true"], [data-slot="skeleton"], .skeleton',
+  loadingSelector:
+    '[aria-busy="true"], [data-slot="skeleton"], .skeleton, .animate-pulse',
 };
 
 class FakeElement {
@@ -70,7 +71,10 @@ class FakeElement {
       (selector === '[data-slot="skeleton"]' &&
         this.getAttribute("data-slot") === "skeleton") ||
       (selector === ".skeleton" &&
-        (this.attributes.class?.split(/\s+/u).includes("skeleton") ?? false))
+        (this.attributes.class?.split(/\s+/u).includes("skeleton") ?? false)) ||
+      (selector === ".animate-pulse" &&
+        (this.attributes.class?.split(/\s+/u).includes("animate-pulse") ??
+          false))
     );
   }
 }
@@ -143,23 +147,7 @@ describe("runtime navigation recovery", () => {
   });
 
   it("requires the app heading to be inside main content", async () => {
-    const main = new FakeElement();
-    let predicate: ((argument: AppReadyArgument) => boolean) | undefined;
-    const page = {
-      waitForFunction: (candidate: (argument: AppReadyArgument) => boolean) => {
-        predicate = candidate;
-        return Promise.resolve();
-      },
-    } satisfies AppReadyPage;
-    vi.stubGlobal("HTMLElement", FakeElement);
-    vi.stubGlobal("document", {
-      querySelector: (selector: string) =>
-        selector === "#main-content" ? main : new FakeElement(),
-    });
-
-    await waitForAppReady(page);
-
-    expect(predicate?.(APP_READY_ARGUMENT)).toBe(false);
+    await expect(evaluateReady(new FakeElement())).resolves.toBe(false);
   });
 
   it.each([
@@ -175,11 +163,23 @@ describe("runtime navigation recovery", () => {
       name: "a visible descendant aria-busy marker",
       marker: new FakeElement({ "aria-busy": "true" }),
     },
+    {
+      name: "the production JobsSkeleton pulse markup",
+      marker: new FakeElement({
+        class: "h-4 w-20 animate-pulse rounded bg-[var(--color-border)]",
+      }),
+    },
+    {
+      name: "the production Trends ChartSkeleton pulse markup",
+      marker: new FakeElement({
+        class: "h-64 w-full animate-pulse rounded-md bg-muted/50",
+      }),
+    },
   ])("rejects ready state with $name", async ({ marker }) => {
     await expect(evaluateReady(headedMain([marker]))).resolves.toBe(false);
   });
 
-  it("ignores hidden, non-rendered, and aria-hidden loading markers", async () => {
+  it("accepts headed content with hidden loading markers", async () => {
     const markers = [
       new FakeElement({ "data-slot": "skeleton", "aria-hidden": "true" }),
       new FakeElement({ class: "skeleton" }, false, [], []),
@@ -188,17 +188,13 @@ describe("runtime navigation recovery", () => {
     await expect(evaluateReady(headedMain(markers))).resolves.toBe(true);
   });
 
-  it("accepts a normal headed surface without loading markers", async () => {
-    await expect(evaluateReady(headedMain())).resolves.toBe(true);
+  it("rejects busy and hidden main roots", async () => {
+    for (const attribute of ["aria-busy", "aria-hidden"] as const) {
+      await expect(
+        evaluateReady(new FakeElement({ [attribute]: "true" }, true)),
+      ).resolves.toBe(false);
+    }
   });
-
-  it.each(["aria-busy", "aria-hidden"] as const)(
-    "rejects a main root with %s=true",
-    async (attribute) => {
-      const main = new FakeElement({ [attribute]: "true" }, true);
-      await expect(evaluateReady(main)).resolves.toBe(false);
-    },
-  );
 
   it("requires two consecutive ready checks after a route settles", async () => {
     const waitForFunction = vi.fn(() => Promise.resolve());
@@ -222,8 +218,9 @@ describe("runtime navigation recovery", () => {
   });
 
   it("propagates readiness timeout errors without a retry", async () => {
-    const timeout = new Error("timed out");
-    timeout.name = "TimeoutError";
+    const timeout = Object.assign(new Error("timed out"), {
+      name: "TimeoutError",
+    });
     const waitForFunction = vi.fn(() => Promise.reject(timeout));
     const page = { waitForFunction } satisfies AppReadyPage;
 
