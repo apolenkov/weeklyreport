@@ -30,6 +30,9 @@ export function PeriodsActiveSection({
       {isLoading ? (
         <div
           className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
+          role="status"
+          aria-busy="true"
+          aria-label="Loading active periods"
           data-testid="periods-active-loading"
         >
           Loading…
