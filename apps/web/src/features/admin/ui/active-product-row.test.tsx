@@ -11,7 +11,7 @@ vi.mock("./product-group-chips", () => ({
   ProductGroupChips: () => <div data-testid="product-group-chips-stub" />,
 }));
 
-vi.mock("./stage-assignment-editor", () => ({
+vi.mock("./stage-assignments/stage-assignment-editor", () => ({
   StageAssignmentEditor: () => (
     <div data-testid="stage-assignment-editor-stub" />
   ),
