@@ -106,6 +106,14 @@ type RevealActionInput = Parameters<RevealExecutionHarness["executeReveal"]>[0];
 const isFormAction = (input: RevealActionInput): boolean =>
   input.action.operation === "fill" || input.action.operation === "select";
 
+const settleUnchangedReadOnlyClick = (
+  page: Page,
+  action: RevealActionInput["action"],
+): Promise<void> =>
+  action.operation === "click" && action.safety === "read-only"
+    ? waitForAppReady(page)
+    : Promise.resolve();
+
 const representativeInputForAction = async (
   input: RevealActionInput,
   locator: ReturnType<typeof targetLocator> | undefined,
@@ -149,12 +157,9 @@ const executeRevealAction = async (input: {
     input.actionInput.control.href !== null &&
     new URL(input.actionInput.control.href, before.url).toString() ===
       new URL(before.url).toString();
-  const navigationExpectation = currentLocation
-    ? undefined
-    : expectedNavigation;
   const navigationObserver = observeActionNavigation(
     input.page,
-    navigationExpectation,
+    currentLocation ? undefined : expectedNavigation,
   );
   const execution = await executeControlAction({
     page: input.page,
@@ -179,20 +184,21 @@ const executeRevealAction = async (input: {
     return;
   }
   if (
-    navigationExpectation !== undefined ||
+    expectedNavigation !== undefined ||
     input.page.url() !== navigationObserver.initialUrl
   ) {
     const navigation = await settleActionNavigation(
       input.page,
       navigationObserver,
       undefined,
-      navigationExpectation,
+      expectedNavigation,
     );
     if (navigation.status === "failed")
       throw new Error(`Reveal action navigation failed: ${navigation.reason}`);
     return;
   }
   navigationObserver.cancel();
+  await settleUnchangedReadOnlyClick(input.page, input.actionInput.action);
 };
 
 export const createPlaywrightRevealExecutor =
