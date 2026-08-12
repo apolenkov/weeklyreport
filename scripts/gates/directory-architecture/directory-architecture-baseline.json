@@ -3,13 +3,13 @@
   "threshold": 30,
   "sourceIdentity": {
     "scripts": {
-      "gitTree": "d32ea7084045800d0d484f13f2022c1103dde7a8",
+      "gitTree": "d5753df617140a42a5774c5c335ad470948b7567",
       "pathDigest": "24b89ae7c3d07d3946ddb37de7059cbc888416ae123ea1adf3887cde7c1a3f34",
       "trackedFiles": 72
     },
     "e2e/runtime-sweep": {
-      "gitTree": "f4c8bc02ba138caecb2c4b8eb6b5752836fb4f99",
-      "pathDigest": "f41eae149519875a20ad6708babf024db8ea8f0a9db7b369a79830392efd082d",
+      "gitTree": "e1ab8d1918116a85c0e54ba5eba39548a69e4c12",
+      "pathDigest": "f652004bd0376f47350cb5f4ad009b08ab07105963822ed91509928906a4d8bc",
       "trackedFiles": 438
     },
     "prisma": {
@@ -23,8 +23,8 @@
       "trackedFiles": 85
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "79d59e12d0d9ec5d1d6da0e0bc0446eeddadf994",
-      "pathDigest": "3f7783b4cd7f60ae71b9fcb8317ff5d7f4c35cb8c550d54d58393a275fd78201",
+      "gitTree": "869611ddb1b223d8b676de0a3242128f6ae76398",
+      "pathDigest": "bad0da0091be26a40e47609c7947dd2b1207d266cdd64d1e3623a4fac204e846",
       "trackedFiles": 101
     },
     "apps/web/src/shared/lib": {
@@ -43,7 +43,7 @@
       "trackedFiles": 8
     },
     "packages/shared/src/schemas": {
-      "gitTree": "6ea7aa4c8d5023d7e7a10bb394db81f9d86e793e",
+      "gitTree": "0a8d48c731919c4e1e49661bd41f8d21456ad772",
       "pathDigest": "4fa8950f3fdc7d63cfbe95f28794e385998a189d218b4599f7888b3a77d8b953",
       "trackedFiles": 56
     },
@@ -59,19 +59,14 @@
     "apps/api/src/modules/admin": 60,
     "apps/api/src/modules/reminders": 47,
     "apps/api/src/modules/report-sections/infrastructure": 42,
-    "apps/web/src/features/admin/ui": 74,
+    "apps/web/src/features/admin/ui": 60,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
     "apps/web/src/features/report-sections/model": 47,
     "apps/web/src/features/report-sections/ui": 35,
     "apps/web/src/features/review/ui": 33,
     "apps/web/src/features/slides/model": 34,
-    "apps/web/src/features/slides/ui": 37,
-    "apps/web/src/features/report-pages/ui/lead/chrome": 31,
-    "e2e/runtime-sweep/lanes": 51,
-    "e2e/runtime-sweep/matrix": 42,
-    "e2e/runtime-sweep/preflight": 96,
-    "e2e/runtime-sweep/replay": 76
+    "apps/web/src/features/slides/ui": 37
   },
   "boundedFlatExceptions": [
     {
@@ -101,13 +96,8 @@
     },
     {
       "directory": "apps/web/src/features/admin/ui",
-      "baseline": 74,
+      "baseline": 60,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "apps/web/src/features/report-pages/ui/lead/chrome",
-      "baseline": 31,
-      "reason": "The reviewed lead-page composition migration keeps chrome as one cohesive concern family; split only with a reviewed consumer map."
     },
     {
       "directory": "apps/web/src/features/dashboard/ui",
@@ -143,26 +133,6 @@
       "directory": "apps/web/src/features/slides/ui",
       "baseline": 37,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "e2e/runtime-sweep/lanes",
-      "baseline": 51,
-      "reason": "The runtime lane files share one bounded resource, lease, process, and observability lifecycle; the count may only shrink."
-    },
-    {
-      "directory": "e2e/runtime-sweep/matrix",
-      "baseline": 42,
-      "reason": "The reviewed runtime campaign integration keeps matrix compilation and validation in one bounded concern directory; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "e2e/runtime-sweep/preflight",
-      "baseline": 96,
-      "reason": "The reviewed runtime campaign integration keeps preflight preparation, reveal, and setup contracts in one bounded concern directory; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "e2e/runtime-sweep/replay",
-      "baseline": 76,
-      "reason": "The reviewed runtime replay concern remains a single cohesive stateful-control boundary; the count may only shrink."
     }
   ]
 }
