@@ -4,8 +4,8 @@ import type { PeriodListItem } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { PeriodsActiveSection } from "./periods-active-section";
-import { PeriodsArchiveSection } from "./periods-archive-section";
+import { PeriodsActiveSection } from "../periods-active-section";
+import { PeriodsArchiveSection } from "../periods-archive-section";
 
 const row: PeriodListItem = {
   id: "11111111-1111-4111-8111-111111111111",
