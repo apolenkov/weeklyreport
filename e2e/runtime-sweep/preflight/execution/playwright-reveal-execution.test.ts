@@ -221,8 +221,13 @@ describe("Playwright reveal execution", () => {
     expect(result.url).toBe("https://runtime.invalid/reports");
     expect(waitForURL).not.toHaveBeenCalled();
     expect(waitForLoadState).not.toHaveBeenCalled();
-    expect(waitForFunction).not.toHaveBeenCalled();
-    expect(harness.state.events).toEqual(["action", "inventory"]);
+    expect(waitForFunction).toHaveBeenCalledTimes(2);
+    expect(harness.state.events).toEqual([
+      "action",
+      "app-ready",
+      "app-ready",
+      "inventory",
+    ]);
   });
 
   it("fails closed when an expected link navigation never starts", async () => {

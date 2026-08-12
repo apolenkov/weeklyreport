@@ -13,6 +13,7 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
+import { waitForAppReady } from "../../replay/navigation.ts";
 import {
   representativeInputForFill,
   type RevealRepresentativeInput,
@@ -174,6 +175,7 @@ const executeRevealAction = async (input: {
     );
   if (currentLocation) {
     navigationObserver.cancel();
+    await waitForAppReady(input.page);
     return;
   }
   if (
