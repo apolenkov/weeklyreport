@@ -9,6 +9,7 @@ interface RemindersTabHeaderProps {
   readonly search: string;
   readonly onSearchChange: (next: string) => void;
   readonly onNewReminder: () => void;
+  readonly newReminderDisabled: boolean;
 }
 
 export function RemindersTabHeader({
@@ -16,6 +17,7 @@ export function RemindersTabHeader({
   search,
   onSearchChange,
   onNewReminder,
+  newReminderDisabled,
 }: RemindersTabHeaderProps) {
   return (
     <TabHeader
@@ -35,8 +37,9 @@ export function RemindersTabHeader({
         <button
           type="button"
           onClick={onNewReminder}
+          disabled={newReminderDisabled}
           data-testid="new-policy-button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <PlusIcon />
           New Reminder

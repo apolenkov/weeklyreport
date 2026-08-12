@@ -301,6 +301,7 @@ describe("RemindersTab — add / edit form", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
 
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+    expect(screen.getByTestId("new-policy-button")).toBeDisabled();
     expect(screen.queryByTestId("reminders-empty-state")).toBeNull();
     expect(
       screen.queryByRole("button", { name: /create first reminder/i }),
@@ -321,7 +322,9 @@ describe("RemindersTab — add / edit form", () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
 
-    await user.click(screen.getByTestId("new-policy-button"));
+    const newReminderButton = screen.getByTestId("new-policy-button");
+    expect(newReminderButton).not.toBeDisabled();
+    await user.click(newReminderButton);
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("policy-save-button"));
@@ -345,6 +348,25 @@ describe("RemindersTab — add / edit form", () => {
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith("Reminder created"),
     );
+  });
+
+  it("does not reset a modified auto-open draft from the disabled header action", async () => {
+    const user = userEvent.setup();
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+
+    const offsetInput = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    await user.clear(offsetInput);
+    await user.type(offsetInput, "3");
+    expect(offsetInput).toHaveValue(3);
+
+    const newReminderButton = screen.getByTestId("new-policy-button");
+    expect(newReminderButton).toBeDisabled();
+    await user.click(newReminderButton);
+
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+    expect(offsetInput).toHaveValue(3);
   });
 
   it("seeds the preset selector from the policy on Edit", async () => {

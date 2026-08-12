@@ -44,6 +44,7 @@ export function RemindersTab({
         search={state.search}
         onSearchChange={state.setSearch}
         onNewReminder={state.handleNewReminder}
+        newReminderDisabled={state.editor.mode === "add"}
       />
 
       {state.editor.mode === "add" && (
