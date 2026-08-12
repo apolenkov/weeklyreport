@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import type { Action } from "../../source/contracts.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
-import type { DomControlObservation } from "../dom-inventory.ts";
-import { controlIssues } from "../frozen-case-control-validation.ts";
+import type { DomControlObservation } from "../dom/dom-inventory.ts";
+import { controlIssues } from "../frozen-case/validation/frozen-case-control-validation.ts";
 import {
   canonicalFrozenTargetControl,
   selectFrozenActionTarget,

@@ -1,12 +1,12 @@
 import pg from "pg";
 
-import type { RuntimeLaneResource } from "./runtime-lane-contract.ts";
-import { runtimeLaneDatabaseUrl } from "./runtime-lane-database-url.ts";
+import type { RuntimeLaneResource } from "./contracts/runtime-lane-contract.ts";
 import {
   consumeRuntimeLaneRedisRecreationAuthorization,
   requireRuntimeLaneRedisRecreationAuthorization,
-} from "./runtime-lane-redis-authorization.ts";
-import { prepareRuntimeLaneRedisContainer } from "./runtime-lane-redis-container.ts";
+} from "./redis/runtime-lane-redis-authorization.ts";
+import { prepareRuntimeLaneRedisContainer } from "./redis/runtime-lane-redis-container.ts";
+import { runtimeLaneDatabaseUrl } from "./resources/runtime-lane-database-url.ts";
 
 const DATABASE_NAME = /^customreport_e2e_lane_[a-o]_test$/u;
 

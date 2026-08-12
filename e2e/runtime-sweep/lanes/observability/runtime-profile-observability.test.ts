@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   RuntimeLane,
   RuntimeLaneAssignment,
-} from "../runtime-lane-contract.ts";
-import type { RuntimeLaneRunIdentity } from "../runtime-lane-run-identity.ts";
+} from "../contracts/runtime-lane-contract.ts";
+import type { RuntimeLaneRunIdentity } from "../profiles/runtime-lane-run-identity.ts";
 import { reconcileRuntimeProfileObservability } from "./runtime-profile-observability.ts";
 
 const SOURCE_SHA = "a".repeat(40);

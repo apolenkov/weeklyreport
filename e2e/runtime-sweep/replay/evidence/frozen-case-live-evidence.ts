@@ -10,25 +10,25 @@ import type { RuntimeEventCursor } from "../../matrix/runtime-matrix-evidence.ts
 import type { DOMControl } from "../../source/contracts.ts";
 import type { ResolverOutcomeExpectation } from "../../support/resolver-outcome-expectations.ts";
 import type { PreparedRuntimeState } from "../../support/state-preparation.ts";
-import type { DomInventory } from "../dom-inventory.ts";
+import type { DomInventory } from "../dom/dom-inventory.ts";
+import {
+  controlsForCase,
+  type FrozenCaseLiveRuntime,
+} from "../frozen-case/live/frozen-case-live-actions.ts";
+import {
+  captureFrozenPhase,
+  initialNavigation,
+} from "../frozen-case/live/frozen-case-live-capture.ts";
+import type { RuntimeEventWindow } from "../frozen-case/live/frozen-case-live-capture-types.ts";
 import {
   frozenActionTransitionIssues,
   resolveFrozenActionTransition,
-} from "../frozen-action-transition-validation.ts";
+} from "../frozen-case/validation/frozen-action-transition-validation.ts";
 import {
   type CompleteFrozenCaseEvidence,
   finalizeFrozenCaseEvidence,
   type FrozenCaseCoverageCell,
-} from "../frozen-case-evidence.ts";
-import {
-  controlsForCase,
-  type FrozenCaseLiveRuntime,
-} from "../frozen-case-live-actions.ts";
-import {
-  captureFrozenPhase,
-  initialNavigation,
-} from "../frozen-case-live-capture.ts";
-import type { RuntimeEventWindow } from "../frozen-case-live-capture-types.ts";
+} from "./frozen-case-evidence.ts";
 import { attachLateRuntimeEvents } from "./frozen-case-live-tail.ts";
 
 type LivePhaseCaptureInput = Readonly<{

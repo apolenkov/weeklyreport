@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import type { DomInventory } from "../replay/dom-inventory.ts";
+import type { DomInventory } from "../replay/dom/dom-inventory.ts";
 import type {
   EvidenceBundle,
   EvidenceRef,

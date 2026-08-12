@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { executeControlAction } from "../control-actions.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
 
 const harness = vi.hoisted(() => ({
   events: [] as string[],
@@ -11,7 +11,7 @@ const harness = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../control-action-executor.ts", () => ({
+vi.mock("../control-actions/control-action-executor.ts", () => ({
   executeControlAttempt: vi.fn(() => {
     harness.events.push("attempt");
     return Promise.resolve("pass");

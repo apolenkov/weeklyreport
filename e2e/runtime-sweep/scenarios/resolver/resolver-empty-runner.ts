@@ -2,7 +2,7 @@ import type { FunctionalAssertion } from "../../evidence/evidence-types.ts";
 import {
   captureFrozenCasePhases,
   type FrozenCaseReplayResult,
-} from "../../replay/frozen-case-evidence.ts";
+} from "../../replay/evidence/frozen-case-evidence.ts";
 import type { EvidenceRef } from "../../source/contracts.ts";
 import type { EvidenceBundle } from "../../source/contracts.ts";
 import {

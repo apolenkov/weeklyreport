@@ -3,7 +3,6 @@ import * as path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { readSourceArtifact } from "../source/source-artifact.ts";
-import { runPlaywrightPreflightSegment } from "./playwright-preflight.ts";
 import {
   assertLivePreflightSourceIdentity,
   createPreflightCanaryBlocked,
@@ -13,8 +12,9 @@ import {
   resolvePreflightCampaignKind,
   resolvePreflightCanarySelection,
   writePreflightCanaryArtifact,
-} from "./preflight-canary.ts";
-import { createPreflightRuntimePreparation } from "./preflight-runtime-setup.ts";
+} from "./canary/preflight-canary.ts";
+import { runPlaywrightPreflightSegment } from "./execution/playwright-preflight.ts";
+import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

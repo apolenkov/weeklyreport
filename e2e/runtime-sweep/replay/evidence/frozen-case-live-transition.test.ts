@@ -7,8 +7,11 @@ import type { RuntimeMatrixSource } from "../../matrix/runtime-matrix.ts";
 import { revealSurfaceFor } from "../../preflight/reveal-path.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
 import type { PreparedRuntimeState } from "../../support/state-preparation.ts";
-import type { DomControlObservation, DomInventory } from "../dom-inventory.ts";
-import type { FrozenCaseLiveRuntime } from "../frozen-case-live-actions.ts";
+import type {
+  DomControlObservation,
+  DomInventory,
+} from "../dom/dom-inventory.ts";
+import type { FrozenCaseLiveRuntime } from "../frozen-case/live/frozen-case-live-actions.ts";
 import { captureAndFinalizeFrozenCase } from "./frozen-case-live-evidence.ts";
 
 type CaptureInput = Readonly<{
@@ -43,16 +46,16 @@ const finalizeFrozenCaseEvidenceMock = vi.hoisted(() =>
   vi.fn<(input: FinalizationInput, evidence: unknown) => unknown>(),
 );
 
-vi.mock("../frozen-case-live-capture.ts", () => ({
+vi.mock("../frozen-case/live/frozen-case-live-capture.ts", () => ({
   captureFrozenPhase: captureFrozenPhaseMock,
   initialNavigation: vi.fn(),
 }));
 
-vi.mock("../frozen-case-live-actions.ts", () => ({
+vi.mock("../frozen-case/live/frozen-case-live-actions.ts", () => ({
   controlsForCase: vi.fn(() => []),
 }));
 
-vi.mock("../frozen-case-evidence.ts", () => ({
+vi.mock("./frozen-case-evidence.ts", () => ({
   finalizeFrozenCaseEvidence: finalizeFrozenCaseEvidenceMock.mockImplementation(
     (input: FinalizationInput) => {
       return {

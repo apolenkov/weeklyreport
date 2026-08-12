@@ -1,7 +1,7 @@
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture.ts";
-import { inventoryDom } from "../replay/dom-inventory.ts";
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   LEAD_FORM_UNAVAILABLE_MARKER,

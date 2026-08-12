@@ -6,9 +6,9 @@ import {
   evidenceObservationSchema,
   type EvidenceRef,
 } from "../../source/contracts.ts";
-import type { ControlActionRecoveryOutcome } from "../control-action-types.ts";
-import { writeFrozenCaseArtifact } from "../frozen-case-artifacts.ts";
-import type { FrozenPhaseInput } from "../frozen-case-live-capture-types.ts";
+import type { ControlActionRecoveryOutcome } from "../control-actions/control-action-types.ts";
+import { writeFrozenCaseArtifact } from "../evidence/frozen-case-artifacts.ts";
+import type { FrozenPhaseInput } from "../frozen-case/live/frozen-case-live-capture-types.ts";
 import type { FrozenRuntimeEvidenceWindow } from "./frozen-case-recovery-boundary.ts";
 
 export type FrozenRecoveryEvidence = Readonly<{

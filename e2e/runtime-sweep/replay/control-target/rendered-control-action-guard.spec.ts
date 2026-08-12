@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
-import { executeControlAttempt } from "../control-action-executor.ts";
-import { executeControlAction } from "../control-actions.ts";
-import { inventoryDom } from "../dom-inventory.ts";
+import { executeControlAttempt } from "../control-actions/control-action-executor.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
+import { inventoryDom } from "../dom/dom-inventory.ts";
 import { renderedNameTargetHandle } from "./rendered-control-target.ts";
 
 const clickAction = (controlKey: string): Action => ({

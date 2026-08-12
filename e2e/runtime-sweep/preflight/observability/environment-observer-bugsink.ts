@@ -1,5 +1,5 @@
 import type { AiDriverReport } from "../../driver/driver-results-contract.ts";
-import type { EnvironmentChannelInput } from "../environment-feedback.ts";
+import type { EnvironmentChannelInput } from "./environment-feedback.ts";
 import {
   bugsinkApiTokenPattern,
   type BugsinkProbeConfig,

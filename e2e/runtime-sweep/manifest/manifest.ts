@@ -6,13 +6,13 @@ import {
   type FrozenMatrix,
   serializeFrozenMatrix,
 } from "../matrix/matrix-finalizer.ts";
-import { SPECIALIZED_DECLARATIONS } from "../matrix/specialized-declarations.ts";
+import { SPECIALIZED_DECLARATIONS } from "../matrix/specialized/specialized-declarations.ts";
 import {
   assertPreflightMatchesSource,
   type PreflightArtifact,
   readPreflightArtifact,
-} from "../preflight/preflight-artifact.ts";
-import { inflatePreflightRevealData } from "../preflight/preflight-artifact-reveal.ts";
+} from "../preflight/artifacts/preflight-artifact.ts";
+import { inflatePreflightRevealData } from "../preflight/artifacts/preflight-artifact-reveal.ts";
 import {
   type CampaignManifest,
   campaignManifestSchema,

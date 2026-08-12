@@ -2,7 +2,7 @@ import { stableSerialize } from "../support/ids.ts";
 import {
   runtimeLaneCountFrom,
   verifyRuntimeLaneRedisTargets,
-} from "./runtime-lane-target-verification.ts";
+} from "./resources/runtime-lane-target-verification.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

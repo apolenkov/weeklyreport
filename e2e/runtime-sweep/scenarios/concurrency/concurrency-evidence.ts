@@ -1,7 +1,7 @@
 import type { TestInfo } from "@playwright/test";
 
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
-import { writeFrozenCaseArtifact } from "../../replay/frozen-case-artifacts.ts";
+import { writeFrozenCaseArtifact } from "../../replay/evidence/frozen-case-artifacts.ts";
 import type { EvidenceRef } from "../../source/contracts.ts";
 import {
   assertPersisted,

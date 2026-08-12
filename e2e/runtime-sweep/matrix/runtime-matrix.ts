@@ -25,14 +25,14 @@ import { type CampaignMatrixState } from "./campaign-matrix.ts";
 export type {
   RuntimeMatrixSelection,
   RuntimeMatrixSource,
-} from "./runtime-matrix-manifest.ts";
+} from "./runtime/runtime-matrix-manifest.ts";
 export {
   assertFreshRuntimeManifest,
   DEFAULT_RUNTIME_MATRIX_MAX_CELLS,
   loadRuntimeMatrix,
   routeForState,
   selectRuntimeStates,
-} from "./runtime-matrix-manifest.ts";
+} from "./runtime/runtime-matrix-manifest.ts";
 
 export const RUNTIME_MATRIX_ORACLE: Oracle = {
   domainSpecRefs: [

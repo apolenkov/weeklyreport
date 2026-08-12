@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
-import { executeControlAction } from "../control-actions.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
 
 const clickAction = (controlKey: string): Action => ({
   controlKey,

@@ -1,4 +1,4 @@
-import type { FrozenCaseReplayResult } from "../../replay/frozen-case-evidence.ts";
+import type { FrozenCaseReplayResult } from "../../replay/evidence/frozen-case-evidence.ts";
 import type { EvidenceRef } from "../../source/contracts.ts";
 import { runEmptyResolverCase } from "./resolver-empty-runner.ts";
 import { runQueryErrorResolverCase } from "./resolver-query-error-runner.ts";

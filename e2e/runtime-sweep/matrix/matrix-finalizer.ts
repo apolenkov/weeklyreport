@@ -3,7 +3,6 @@ import type {
   CampaignMatrixPlan,
   CampaignMatrixState,
 } from "./campaign-matrix.ts";
-import { MATRIX_AXIS_NAMES } from "./matrix.ts";
 import {
   DEFAULT_MAX_CASES,
   DEFAULT_MAX_CONTROLS,
@@ -20,14 +19,15 @@ import {
   type MatrixRow,
   navigationExecution,
   stateForControl,
-} from "./matrix-finalizer-contract.ts";
-import { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
+} from "./finalization/matrix-finalizer-contract.ts";
 import {
   axisValue,
   freezeCampaignPreflight,
   pairKeys,
   parseFrozenMatrix,
-} from "./matrix-finalizer-support.ts";
+} from "./finalization/matrix-finalizer-support.ts";
+import { MATRIX_AXIS_NAMES } from "./matrix.ts";
+import { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
 
 type MatrixIdentityFields = "sourceSha" | "sourceDigest" | "routes";
 
@@ -47,14 +47,14 @@ const uniqueByDigest = <T extends Readonly<{ readonly digest: string }>>(
     ...new Map(values.map((value) => [value.digest, value] as const)).values(),
   ].toSorted((left, right) => left.digest.localeCompare(right.digest));
 
-export * from "./matrix-finalizer-contract.ts";
-export { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
+export * from "./finalization/matrix-finalizer-contract.ts";
 export {
   freezeCampaignPreflight,
   parseFrozenMatrix,
   preflightNavigationStates,
   serializeFrozenMatrix,
-} from "./matrix-finalizer-support.ts";
+} from "./finalization/matrix-finalizer-support.ts";
+export { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
 
 const omissionState = (
   input: MatrixFinalizationInput,

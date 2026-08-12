@@ -3,12 +3,12 @@ import * as path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { writePreflightArtifact } from "../preflight/artifacts/preflight-artifact.ts";
 import {
   assertSpecializedNominalTargets,
   runBrowserPreflight,
-} from "../preflight/playwright-preflight.ts";
-import { writePreflightArtifact } from "../preflight/preflight-artifact.ts";
-import { preflightSessionGroupKey } from "../preflight/preflight-session.ts";
+} from "../preflight/execution/playwright-preflight.ts";
+import { preflightSessionGroupKey } from "../preflight/runtime/preflight-session.ts";
 import { campaignManifestSchema } from "../source/contracts.ts";
 import { cleanSourceIdentity } from "../source/manifest-source.ts";
 import { sha256Hex } from "../support/ids.ts";

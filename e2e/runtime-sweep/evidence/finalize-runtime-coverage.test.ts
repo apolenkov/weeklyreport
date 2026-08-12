@@ -5,11 +5,11 @@ import path from "node:path";
 
 import { expect, test } from "vitest";
 
+import { pairKeys } from "../matrix/finalization/matrix-finalizer-support.ts";
 import type {
   FrozenMatrix,
   MatrixExecutableCase,
 } from "../matrix/matrix-finalizer.ts";
-import { pairKeys } from "../matrix/matrix-finalizer-support.ts";
 import {
   type CoverageCell,
   coverageCellSchema,

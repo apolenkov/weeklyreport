@@ -1,6 +1,6 @@
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
-import type { DomInventory } from "../dom-inventory.ts";
+import type { DomInventory } from "../dom/dom-inventory.ts";
 
 const SOURCE_SHA_LENGTH = 40;
 

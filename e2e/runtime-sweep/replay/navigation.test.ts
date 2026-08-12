@@ -4,7 +4,7 @@ import {
   type ActionNavigationPage,
   expectedActionNavigationFor,
   observeActionNavigation,
-} from "./action-navigation-boundary.ts";
+} from "./control-actions/action-navigation-boundary.ts";
 import {
   type AppReadyPage,
   isExpectedNavigationAbort,

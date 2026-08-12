@@ -11,11 +11,11 @@ import {
   captureSpecializedPagePhase,
   initialSpecializedNavigation,
   type SpecializedRuntimeEventWindow,
-} from "../../matrix/specialized-case-emission.ts";
-import { assertResolverOutcomeUi } from "../../preflight/preflight-reveal-guards.ts";
-import { createPrismaRuntimeStateDatabase } from "../../preflight/prisma-state-database.ts";
-import { inventoryDom } from "../../replay/dom-inventory.ts";
-import { writeFrozenCaseArtifact } from "../../replay/frozen-case-artifacts.ts";
+} from "../../matrix/specialized/specialized-case-emission.ts";
+import { assertResolverOutcomeUi } from "../../preflight/reveal/guards/preflight-reveal-guards.ts";
+import { createPrismaRuntimeStateDatabase } from "../../preflight/runtime/prisma-state-database.ts";
+import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
+import { writeFrozenCaseArtifact } from "../../replay/evidence/frozen-case-artifacts.ts";
 import type { EvidenceRef } from "../../source/contracts.ts";
 import type { Oracle } from "../../source/contracts.ts";
 import { resolverExpectedUiFor } from "../../support/resolver-outcome-expectations.ts";

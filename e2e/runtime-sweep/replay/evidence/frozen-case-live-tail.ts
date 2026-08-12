@@ -6,8 +6,8 @@ import {
   type EvidenceBundle,
   evidenceBundleSchema,
 } from "../../source/contracts.ts";
-import { writeFrozenCaseArtifact } from "../frozen-case-artifacts.ts";
-import type { FrozenCaseLiveRuntime } from "../frozen-case-live-actions.ts";
+import type { FrozenCaseLiveRuntime } from "../frozen-case/live/frozen-case-live-actions.ts";
+import { writeFrozenCaseArtifact } from "./frozen-case-artifacts.ts";
 
 type TailFailures = Readonly<{
   console: boolean;

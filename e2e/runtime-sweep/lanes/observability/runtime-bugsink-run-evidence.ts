@@ -5,9 +5,9 @@ import {
   type BugsinkProjectCounters,
   readBugsinkProjectCounters,
 } from "../../preflight/observability/environment-observer-bugsink.ts";
-import type { RuntimeLaneAssignment } from "../runtime-lane-contract.ts";
-import type { RuntimeLaneRunIdentity } from "../runtime-lane-run-identity.ts";
-import type { RuntimeObservabilityConfig } from "../runtime-observability-readiness.ts";
+import type { RuntimeLaneAssignment } from "../contracts/runtime-lane-contract.ts";
+import type { RuntimeLaneRunIdentity } from "../profiles/runtime-lane-run-identity.ts";
+import type { RuntimeObservabilityConfig } from "./runtime-observability-readiness.ts";
 
 const BUGSINK_POLL_MS = 250;
 const BUGSINK_STABLE_READS = 4;

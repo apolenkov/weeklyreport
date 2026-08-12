@@ -9,7 +9,7 @@ import {
   NO_ROUTE_CACHE_CONTRACT_POLICY,
   type Oracle,
 } from "../../source/contracts.ts";
-import { replayFrozenCase } from "../frozen-case-evidence.ts";
+import { replayFrozenCase } from "../evidence/frozen-case-evidence.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const CASE_ID = "case-recovery-verdict";

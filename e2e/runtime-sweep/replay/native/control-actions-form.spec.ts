@@ -1,8 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
-import { executeControlAction } from "../control-actions.ts";
-import type { ControlActionRecovery } from "../control-recovery.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
+import type { ControlActionRecovery } from "../recovery/control-recovery.ts";
 
 const recovery: ControlActionRecovery = {
   databaseUrl: "postgres://localhost/customreport_e2e",

@@ -3,25 +3,25 @@ import * as path from "node:path";
 
 import { readSourceArtifact } from "../source/source-artifact.ts";
 import {
-  assertPreflightArchivePath,
-  ensurePreflightArchiveRoot,
-} from "./preflight-archive-path.ts";
-import {
   assertLivePreflightSourceIdentity,
   assertPreflightCanaryPassForSource,
   preflightCanarySelectorFromEnvironment,
   readPreflightCanaryArtifact,
-} from "./preflight-canary.ts";
+} from "./canary/preflight-canary.ts";
 import {
   assertPreflightLaunchGate,
   type PreflightLaunchMode,
-} from "./preflight-launch-guard.ts";
+} from "./launch/preflight-launch-guard.ts";
 import {
   preflightChildEnvironment,
   type PreflightFullPaths,
   preparePreflightFullPaths,
-} from "./preflight-launcher-support.ts";
-import { runPreflightRepairChain } from "./preflight-repair-chain.ts";
+} from "./launch/preflight-launcher-support.ts";
+import { runPreflightRepairChain } from "./launch/preflight-repair-chain.ts";
+import {
+  assertPreflightArchivePath,
+  ensurePreflightArchiveRoot,
+} from "./preflight-archive-path.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

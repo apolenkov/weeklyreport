@@ -10,12 +10,12 @@ import {
   createManifestFixture,
   fakeManifestGit,
 } from "../manifest/manifest-fixture.ts";
-import { runBrowserPreflight } from "../preflight/playwright-preflight.ts";
 import {
   assertPreflightMatchesSource,
   readPreflightArtifact,
   writePreflightArtifact,
-} from "../preflight/preflight-artifact.ts";
+} from "../preflight/artifacts/preflight-artifact.ts";
+import { runBrowserPreflight } from "../preflight/execution/playwright-preflight.ts";
 import { sha256Hex } from "../support/ids.ts";
 
 const routeAwareNavigation = (): Readonly<{

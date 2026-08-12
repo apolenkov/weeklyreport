@@ -1,12 +1,12 @@
 import { expect, test, vi } from "vitest";
 
 import { evidenceBundleSchema, type Oracle } from "../../source/contracts.ts";
-import { replayFrozenCase } from "../frozen-case-evidence.ts";
-import type { FrozenCaseLiveRuntime } from "../frozen-case-live-actions.ts";
+import type { FrozenCaseLiveRuntime } from "../frozen-case/live/frozen-case-live-actions.ts";
 import { matrixCase } from "../test-fixtures/frozen-case-live-runner.test-fixture.ts";
+import { replayFrozenCase } from "./frozen-case-evidence.ts";
 import { attachLateRuntimeEvents } from "./frozen-case-live-tail.ts";
 
-vi.mock("../frozen-case-artifacts.ts", () => ({
+vi.mock("./frozen-case-artifacts.ts", () => ({
   writeFrozenCaseArtifact: vi.fn(() =>
     Promise.resolve({
       artifactId: "late-runtime-events",

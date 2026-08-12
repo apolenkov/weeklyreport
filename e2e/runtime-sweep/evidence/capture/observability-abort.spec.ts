@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
-import type { SpecializedRuntimeEventWindow } from "../../matrix/specialized-case-emission.ts";
-import { captureSpecializedPagePhase } from "../../matrix/specialized-case-emission.ts";
+import type { SpecializedRuntimeEventWindow } from "../../matrix/specialized/specialized-case-emission.ts";
+import { captureSpecializedPagePhase } from "../../matrix/specialized/specialized-case-emission.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
 import {
   captureNetworkWithFailures,

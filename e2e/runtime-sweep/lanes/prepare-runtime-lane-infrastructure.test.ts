@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { runtimeLaneResources } from "./contracts/runtime-lane-contract.ts";
 import { prepareRuntimeLaneInfrastructure } from "./prepare-runtime-lane-infrastructure.ts";
-import { runtimeLaneResources } from "./runtime-lane-contract.ts";
 import {
   assertRuntimeLaneRedisContainer,
   prepareRuntimeLaneRedisContainer,
   runtimeLaneRedisContainerName,
   runtimeLaneRedisRunArgs,
-} from "./runtime-lane-redis-container.ts";
+} from "./redis/runtime-lane-redis-container.ts";
 
 describe("runtime lane infrastructure contract", () => {
   beforeEach(() => {

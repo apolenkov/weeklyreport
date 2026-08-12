@@ -4,15 +4,15 @@ import type { CampaignMatrixState } from "../matrix/campaign-matrix.ts";
 import type {
   DomControlObservation,
   DomInventory,
-} from "../replay/dom-inventory.ts";
+} from "../replay/dom/dom-inventory.ts";
 import type { Action } from "../source/contracts.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
-import { preflightControlForPlan } from "./playwright-preflight.ts";
+import { preflightControlForPlan } from "./execution/playwright-preflight.ts";
 import {
   discoverRevealControls,
   type RevealExecution,
   type RevealExecutionHarness,
-} from "./preflight-reveal-discovery.ts";
+} from "./reveal/interaction/preflight-reveal-discovery.ts";
 import { revealPathFor, revealSurfaceFor } from "./reveal-path.ts";
 const route = { resolvedRoute: "/lead/report" } as const;
 const state: CampaignMatrixState = {

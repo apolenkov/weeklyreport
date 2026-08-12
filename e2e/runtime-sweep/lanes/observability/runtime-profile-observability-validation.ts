@@ -12,8 +12,8 @@ import { stableSerialize } from "../../support/ids.ts";
 import type {
   RuntimeLane,
   RuntimeLaneAssignment,
-} from "../runtime-lane-contract.ts";
-import type { RuntimeObservabilityConfig } from "../runtime-observability-readiness.ts";
+} from "../contracts/runtime-lane-contract.ts";
+import type { RuntimeObservabilityConfig } from "./runtime-observability-readiness.ts";
 import { readRuntimeProfileLog } from "./runtime-profile-log-reader.ts";
 import {
   countsFor,

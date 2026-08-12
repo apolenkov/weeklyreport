@@ -5,8 +5,8 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { BugsinkProjectCounters } from "../../preflight/observability/environment-observer-bugsink.ts";
-import type { RuntimeLaneAssignment } from "../runtime-lane-contract.ts";
-import type { RuntimeLaneRunIdentity } from "../runtime-lane-run-identity.ts";
+import type { RuntimeLaneAssignment } from "../contracts/runtime-lane-contract.ts";
+import type { RuntimeLaneRunIdentity } from "../profiles/runtime-lane-run-identity.ts";
 import { writeRuntimeBugsinkRunEvidence } from "./runtime-bugsink-run-evidence.ts";
 
 const SOURCE_SHA = "a".repeat(40);
