@@ -32,6 +32,7 @@ export async function queryLatestPublishedVisibleId(
   const report = await prisma.report.findFirst({
     where: {
       periodStatus: "published" as const,
+      archived: false,
       sections: { some: sectionScope },
     },
     orderBy: [{ periodStart: "desc" }, { id: "desc" }],
