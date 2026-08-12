@@ -43,6 +43,7 @@ describe("reports.latestForViewer (integration)", () => {
     status: ReportStatus,
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
+    archived = false,
   ): Promise<void> {
     await prisma.report.create({
       data: {
@@ -52,6 +53,12 @@ describe("reports.latestForViewer (integration)", () => {
         deadline: new Date(periodStart),
         status,
         periodStatus,
+        archived,
+        periodState: archived
+          ? "archived"
+          : periodStatus === "published"
+            ? "published"
+            : "open",
       },
     });
   }
@@ -197,6 +204,45 @@ describe("reports.latestForViewer (integration)", () => {
       GROUP_B_ID,
     ]).reports.latestForViewer();
     expect(result).toEqual({ reportId: REPORT_NEW_PUB_B });
+  });
+
+  it("skips a newer archived published report in favor of a visible fallback", async () => {
+    await prisma.reportSection.deleteMany();
+    await prisma.report.deleteMany();
+    await createReport(
+      REPORT_OLD_PUB_A,
+      "published",
+      "published",
+      "2026-05-04T00:00:00.000Z",
+    );
+    await createReport(
+      REPORT_NEW_PUB_B,
+      "published",
+      "published",
+      "2026-05-25T00:00:00.000Z",
+      true,
+    );
+    await createSection(REPORT_OLD_PUB_A, LEAD_A_ID);
+    await createSection(REPORT_NEW_PUB_B, LEAD_A_ID);
+
+    const result = await viewerCaller([GROUP_A_ID]).reports.latestForViewer();
+    expect(result).toEqual({ reportId: REPORT_OLD_PUB_A });
+  });
+
+  it("returns null when no non-archived visible published report exists", async () => {
+    await prisma.reportSection.deleteMany();
+    await prisma.report.deleteMany();
+    await createReport(
+      REPORT_NEW_PUB_B,
+      "published",
+      "published",
+      "2026-05-25T00:00:00.000Z",
+      true,
+    );
+    await createSection(REPORT_NEW_PUB_B, LEAD_A_ID);
+
+    const result = await viewerCaller([GROUP_A_ID]).reports.latestForViewer();
+    expect(result).toEqual({ reportId: null });
   });
 
   it("returns null when the only published report is out of the viewer's groups", async () => {

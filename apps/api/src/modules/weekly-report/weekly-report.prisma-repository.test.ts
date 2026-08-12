@@ -624,6 +624,7 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
       expect.objectContaining({
         where: {
           periodStatus: "published",
+          archived: false,
           sections: {
             some: { author: { reportingGroupId: { in: [GROUP_A] } } },
           },
@@ -647,6 +648,7 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
       expect.objectContaining({
         where: {
           periodStatus: "published",
+          archived: false,
           sections: { some: { id: { in: [] } } },
         },
       }),
@@ -668,6 +670,7 @@ describe("WeeklyReportPrismaRepository.getVisibleReportId / getLatestPublishedVi
       expect.objectContaining({
         where: {
           periodStatus: "published",
+          archived: false,
           sections: { some: { authorId: LEAD_ID } },
         },
       }),
