@@ -1,4 +1,10 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import {
   HealthCheck,
   HealthCheckService,
@@ -11,6 +17,10 @@ import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
+import {
+  RuntimeApiDrainTimeoutError,
+  runtimeApiWorkTracker,
+} from "./runtime-api-work-tracker.js";
 
 // The terminus surfaces this controller consumes; narrow so tests inject
 // stubs without erasing casts. The `@HealthCheck()` decorator reshapes the
@@ -65,5 +75,19 @@ export class HealthController {
           this.env.HEAP_HEALTH_THRESHOLD_BYTES,
         ),
     ]);
+  }
+
+  @Get("runtime-drain")
+  async runtimeDrain(): Promise<Readonly<{ active: 0; status: "idle" }>> {
+    if (this.env.RUNTIME_SWEEP_API_DRAIN !== true)
+      throw new NotFoundException();
+    try {
+      await runtimeApiWorkTracker.awaitIdle();
+    } catch (error: unknown) {
+      if (error instanceof RuntimeApiDrainTimeoutError)
+        throw new ServiceUnavailableException(error.message);
+      throw error;
+    }
+    return { active: 0, status: "idle" };
   }
 }

@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger, NotFoundException } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -40,7 +40,7 @@ describe("health provider composition", () => {
 describe("HealthController", () => {
   const threshold = 1_610_612_736;
 
-  function makeController() {
+  function makeController(runtimeDrain = false) {
     const check = vi.fn(
       async (indicators: (() => Promise<HealthIndicatorResult>)[]) => {
         const results = await Promise.all(indicators.map((run) => run()));
@@ -66,7 +66,10 @@ describe("HealthController", () => {
     const bullmqHealth = {
       isHealthy: vi.fn((key: string) => Promise.resolve(up(key))),
     };
-    const env = { HEAP_HEALTH_THRESHOLD_BYTES: threshold } as EnvConfig;
+    const env = {
+      HEAP_HEALTH_THRESHOLD_BYTES: threshold,
+      ...(runtimeDrain ? { RUNTIME_SWEEP_API_DRAIN: true as const } : {}),
+    } as EnvConfig;
     const controller = new HealthController(
       health,
       memory,
@@ -98,6 +101,23 @@ describe("HealthController", () => {
     expect(bullmqHealth.isHealthy).toHaveBeenCalledExactlyOnceWith("bullmq");
     expect(memory.checkHeap).toHaveBeenCalledWith("memory_heap", threshold);
     expect(result).toMatchObject({ memory_heap: { status: "up" } });
+  });
+
+  it("hides the runtime drain endpoint unless explicitly enabled", async () => {
+    const { controller } = makeController();
+
+    await expect(controller.runtimeDrain()).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it("acknowledges zero active work when explicitly enabled", async () => {
+    const { controller } = makeController(true);
+
+    await expect(controller.runtimeDrain()).resolves.toEqual({
+      active: 0,
+      status: "idle",
+    });
   });
 });
 
