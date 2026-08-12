@@ -7,8 +7,9 @@ The review-acknowledge control MUST be presented, for a publish-capable reviewer
 cluster on the report header line -- not as a separate standalone band above the
 report body (head HF1) -- so "review -> acknowledge -> publish & lock" reads as one
 sequence. The control is
-`apps/web/src/components/weekly-report/review/review-acknowledge-bar.tsx`, rendered
-by `weekly-report-page.tsx` via `AcknowledgeSurface`. Relocation MUST NOT turn
+`apps/web/src/features/review/ui/review-acknowledge-bar.tsx`, rendered by
+`apps/web/src/features/report-pages/ui/weekly/weekly-report-page-content.tsx` via
+`AcknowledgeSurface`. Relocation MUST NOT turn
 acknowledgement into a publish precondition: Publish & Lock MUST remain available
 regardless of whether the reviewer has acknowledged -- this is the plain reading of
 the walkthrough note, which asks to co-locate the control, not to add a new gate.

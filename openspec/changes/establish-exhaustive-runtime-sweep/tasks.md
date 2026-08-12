@@ -152,15 +152,15 @@
 - [x] 5.8 Mark reopen decision buttons as `mutation-required`, preserve Cancel as
       client-only, and cover the metadata and classification in product and
       Chromium tests.
-- [ ] 5.9 Bind every intentional catalog redirect alias to one exact landing URL
+- [x] 5.9 Bind every intentional catalog redirect alias to one exact landing URL
       in `SOURCE.json`; make preflight prove the initial landing and use only its
       pathname as the reveal boundary, with negative tests for missing, wrong,
       and later cross-path navigation.
-- [ ] 5.10 Add an immutable exact-state preflight canary that reuses the full
+- [x] 5.10 Add an immutable exact-state preflight canary that reuses the full
       preparation/navigation/inventory/reveal/non-mutation implementation and
       blocks repair/resweep full preflight until the failed segment passes at
       the current clean source identity.
-- [ ] 5.11 Model resolver-route outcomes as state-bound, source-digest-bound
+- [x] 5.11 Model resolver-route outcomes as state-bound, source-digest-bound
       expectations: visible current, published fallback, empty, query error,
       and anonymous. Cover the minimum applicable profile, record typed
       inapplicable role-permission boundaries (including minimal where the
