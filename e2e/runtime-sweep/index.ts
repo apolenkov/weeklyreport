@@ -16,6 +16,7 @@ export * from "./preflight/environment-observer-probes.ts";
 export * from "./preflight/observability/environment-observer-bugsink.ts";
 export * from "./preflight/playwright-preflight.ts";
 export * from "./preflight/preflight-artifact.ts";
+export * from "./preflight/preflight-journal.ts";
 export * from "./preflight/prisma-state-database.ts";
 export * from "./replay/control-action-types.ts";
 export * from "./replay/control-actions.ts";

@@ -9,17 +9,18 @@ import {
   type ControlTransition,
   type FaultMode,
   type MatrixExecutionKind,
+  type ResolverOutcomeKind,
   type Role,
   type SeedProfile,
 } from "../source/contracts.ts";
 import { stableSerialize } from "../support/ids.ts";
 
 export type SpecializedDeclarationKind =
-  "http-fault" | "stale-concurrency" | "infrastructure";
+  "http-fault" | "stale-concurrency" | "infrastructure" | "resolver";
 
 type SpecializedDeclarationBase = Readonly<{
   readonly declarationId: string;
-  readonly kind: SpecializedDeclarationKind;
+  readonly kind: Exclude<SpecializedDeclarationKind, "resolver">;
   readonly faultId: string;
   readonly faultMode: Exclude<FaultMode, "none">;
   readonly executionKind: Exclude<
@@ -50,11 +51,39 @@ type SpecializedObservationDeclaration = SpecializedDeclarationBase &
     readonly observationKind: "db" | "api";
   }>;
 
+type ResolverSpecializedDeclaration = Readonly<{
+  readonly declarationId: "viewer-status-empty" | "viewer-status-query-error";
+  readonly kind: "resolver";
+  readonly outcome: Extract<ResolverOutcomeKind, "empty" | "query-error">;
+  readonly recoveryOutcome: Extract<
+    ResolverOutcomeKind,
+    "empty" | "visible-current"
+  > | null;
+  readonly faultId: string | null;
+  readonly faultMode: Extract<FaultMode, "none" | "api-error">;
+  readonly executionKind: "navigation" | "fault";
+  readonly profile: "demo";
+  readonly role: "viewer";
+  readonly catalogRoute: "/reports/latest";
+  readonly operation: "navigate";
+  readonly safety: "read-only";
+  readonly transition: "none";
+  readonly resolverOperation: "reports.latestForViewer";
+  readonly proof: Readonly<{
+    readonly testFile: string;
+    readonly testName: string;
+    readonly target: string;
+  }>;
+}>;
+
 export type SpecializedDeclaration =
-  SpecializedActionDeclaration | SpecializedObservationDeclaration;
+  | SpecializedActionDeclaration
+  | SpecializedObservationDeclaration
+  | ResolverSpecializedDeclaration;
 
 const REPORT_ROUTE = "/head/report/[reportId]";
 const ACTIVE_PROFILE: SeedProfile = "full";
+const VIEWER_STATUS_OPERATION = "reports.latestForViewer";
 
 const httpDeclaration = (
   declaration: (typeof FAULT_DECLARATIONS)[number],
@@ -115,11 +144,62 @@ const infrastructureDeclaration = (
   },
 });
 
+const resolverDeclarations: readonly ResolverSpecializedDeclaration[] =
+  Object.freeze([
+    {
+      declarationId: "viewer-status-empty",
+      kind: "resolver",
+      outcome: "empty",
+      recoveryOutcome: null,
+      faultId: null,
+      faultMode: "none",
+      executionKind: "navigation",
+      profile: "demo",
+      role: "viewer",
+      catalogRoute: "/reports/latest",
+      operation: "navigate",
+      safety: "read-only",
+      transition: "none",
+      resolverOperation: VIEWER_STATUS_OPERATION,
+      proof: {
+        testFile:
+          "e2e/runtime-sweep/scenarios/resolver/resolver-runner.test.ts",
+        testName:
+          "viewer status empty runs phases then one reseed before cleanup binding",
+        target: VIEWER_STATUS_OPERATION,
+      },
+    },
+    {
+      declarationId: "viewer-status-query-error",
+      kind: "resolver",
+      outcome: "query-error",
+      recoveryOutcome: "visible-current",
+      faultId: "viewer-status-query-error",
+      faultMode: "api-error",
+      executionKind: "fault",
+      profile: "demo",
+      role: "viewer",
+      catalogRoute: "/reports/latest",
+      operation: "navigate",
+      safety: "read-only",
+      transition: "none",
+      resolverOperation: VIEWER_STATUS_OPERATION,
+      proof: {
+        testFile:
+          "e2e/runtime-sweep/scenarios/resolver/resolver-runner.test.ts",
+        testName:
+          "viewer status query error declares one fault and an explicit successful recovery",
+        target: VIEWER_STATUS_OPERATION,
+      },
+    },
+  ]);
+
 export const SPECIALIZED_DECLARATIONS: readonly SpecializedDeclaration[] =
   Object.freeze([
     ...FAULT_DECLARATIONS.map(httpDeclaration),
     concurrencyDeclaration,
     ...INFRASTRUCTURE_FAULT_DECLARATIONS.map(infrastructureDeclaration),
+    ...resolverDeclarations,
   ]);
 
 export const SPECIALIZED_DECLARATION_COUNT = SPECIALIZED_DECLARATIONS.length;
@@ -150,7 +230,7 @@ export function assertSpecializedDeclarations(
     stableSerialize(declarations) !== stableSerialize(SPECIALIZED_DECLARATIONS)
   ) {
     throw new SpecializedDeclarationError(
-      "Specialized declarations must match the canonical seven HTTP, one concurrency, and three infrastructure entries",
+      "Specialized declarations must match the canonical seven HTTP, one concurrency, three infrastructure, and two resolver entries",
     );
   }
 }

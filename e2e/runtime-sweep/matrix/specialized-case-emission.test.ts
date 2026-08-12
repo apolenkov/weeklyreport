@@ -5,7 +5,10 @@ import path from "node:path";
 
 import { expect, test } from "vitest";
 
-import type { CoverageCell } from "../source/contracts.ts";
+import {
+  type CoverageCell,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
+} from "../source/contracts.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
 import {
   assertSpecializedCaseBinding,
@@ -81,6 +84,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "head",
   catalogRoute: "/head/report/[reportId]",
   resolvedRoute: "/head/report/active",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "publish-flow",
     lifecycle: "open",
@@ -111,6 +115,7 @@ const cell = (): CoverageCell => ({
     function: { required: true, expectation: "publish is rejected" },
     accessibility: { required: true, expectation: "feedback is announced" },
     visual: { required: true, expectation: "desktop is stable" },
+    runtime: { required: true, expectation: "runtime telemetry is clean" },
   },
   controls: [],
   evidence: {

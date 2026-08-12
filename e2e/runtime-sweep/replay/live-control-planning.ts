@@ -1,3 +1,4 @@
+import type { RevealRepresentativeInput } from "../matrix/reveal-transition.ts";
 import type { Action } from "../source/contracts.ts";
 import type { ControlActionExecution } from "./control-actions.ts";
 import type { DomControlObservation } from "./dom-inventory.ts";
@@ -20,6 +21,8 @@ const INTERACTIVE_ROLES = new Set([
   "tab",
   "treeitem",
 ]);
+const STATE_CHANGING_ROLE =
+  /^(?:checkbox|radio|switch|menuitemcheckbox|menuitemradio|slider|option)$/u;
 const FORM_FILL_ROLES = new Set(["searchbox", "spinbutton", "textbox"]);
 const FORM_SELECT_ROLES = new Set(["combobox", "listbox"]);
 const DIRECT_MUTATION_BUTTON_NAMES = new Set([
@@ -32,7 +35,7 @@ const DIRECT_MUTATION_BUTTON_NAMES = new Set([
   "on track",
 ]);
 const DIRECT_MUTATION_BUTTON_PREFIX =
-  /^(?:acknowledge|activate|deactivate|downgrade risk|escalate risk)\b/u;
+  /^(?:(?:acknowledge|activate|deactivate|downgrade risk|escalate risk|request reopen)\b|(?:archive|reopen|unarchive)\s+\S)/u;
 const STAGE_STATUS_BUTTON_NAME =
   /^[^:]+: (?:empty|on-track|at-risk|blocked)(?: (?:by risk|— status set))?$/u;
 type NotExercisedPolicy = "inapplicable" | "unsafe" | "unavailable";
@@ -46,6 +49,7 @@ export interface LiveControlPlanningOptions {
 export interface LiveControlPlan {
   readonly control: DomControlObservation;
   readonly action?: Action;
+  readonly representativeInput?: RevealRepresentativeInput;
   readonly policy?: NotExercisedPolicy;
   readonly reason?: string;
 }
@@ -99,15 +103,12 @@ const isSearchInput = (control: DomControlObservation): boolean =>
   normalizedTagName(control) === "input" &&
   normalizedInputType(control) === "search";
 
-const isNativeSelect = (control: DomControlObservation): boolean =>
-  normalizedTagName(control) === "select" &&
-  FORM_SELECT_ROLES.has(control.role);
-
 const isFormFillControl = (control: DomControlObservation): boolean =>
   FORM_FILL_ROLES.has(control.role) || isSearchInput(control);
 
 const isFormSelectControl = (control: DomControlObservation): boolean =>
-  isNativeSelect(control);
+  normalizedTagName(control) === "select" &&
+  FORM_SELECT_ROLES.has(control.role);
 
 const isSubmitControl = (control: DomControlObservation): boolean =>
   control.role === "button" &&
@@ -247,6 +248,12 @@ const planFor = (
   control: DomControlObservation,
   options: LiveControlPlanningOptions,
 ): LiveControlPlan => {
+  if (control.keyboardFocusScope === "background")
+    return unsupportedPlan(
+      control,
+      "unavailable",
+      "Control is blocked by an active modal",
+    );
   if (control.accessibleName.trim() === "")
     return unsupportedPlan(
       control,
@@ -255,12 +262,19 @@ const planFor = (
     );
   if (!control.enabled)
     return unsupportedPlan(control, "unavailable", "Control is disabled");
+  if (STATE_CHANGING_ROLE.test(control.role))
+    return {
+      control,
+      action: clickAction(control.controlKey, "irreversible"),
+    };
   const sideEffectReason = asyncSideEffectReason(control);
   if (sideEffectReason !== null)
     return unsupportedPlan(control, "unsafe", sideEffectReason);
   const stateful = statefulOperationFor(control.accessibleName);
   if (stateful !== undefined)
     return { control, action: statefulAction(stateful, control.controlKey) };
+  if (isDirectMutationButton(control))
+    return { control, action: interactiveAction(control) };
   if (
     isFormFillControl(control) ||
     isFormSelectControl(control) ||

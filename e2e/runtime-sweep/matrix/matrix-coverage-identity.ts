@@ -67,6 +67,7 @@ export const coverageCellWitnessKey = (cell: CoverageCell): string =>
 export const isSpecializedCoverageCase = (
   matrixCase: MatrixExecutableCase,
 ): boolean =>
+  matrixCase.declarationId !== undefined ||
   !["navigation", "idle"].includes(matrixCase.execution.kind) ||
   matrixCase.state.fault !== "none" ||
   matrixCase.state.controlTransition !== "none";
@@ -99,6 +100,19 @@ const identityMismatches = (
       stableSerialize(cell.action) === stableSerialize(expectedAction),
     ],
     ["fault id", cell.faultId === expectedFault],
+    [
+      "declaration id",
+      cell.declarationId === (matrixCase.declarationId ?? undefined),
+    ],
+    [
+      "resolver outcome",
+      cell.resolverOutcome ===
+        (matrixCase.expectedOutcome?.identity.outcome ?? undefined),
+    ],
+    [
+      "resolver recovery outcome",
+      cell.resolverRecoveryOutcome === matrixCase.resolverRecoveryOutcome,
+    ],
     [
       "viewport",
       stableSerialize(cell.viewport) ===

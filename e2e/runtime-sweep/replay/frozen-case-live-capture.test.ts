@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EvidenceBundle } from "../source/contracts.ts";
+import {
+  type EvidenceBundle,
+  type NetworkEvidencePolicy,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
+} from "../source/contracts.ts";
 import type { DomInventory } from "./dom-inventory.ts";
 import type { FrozenPhaseInput } from "./frozen-case-live-capture.ts";
 import { captureFrozenPhase } from "./frozen-case-live-capture.ts";
@@ -12,9 +16,11 @@ const harness = vi.hoisted(() => ({
   delayMs: 10,
   navigationPath: "/",
   actionSucceeded: undefined as boolean | undefined,
+  networkPolicy: undefined as NetworkEvidencePolicy | undefined,
 }));
 
 vi.mock("./dom-inventory.ts", () => ({
+  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
   inventoryDom: vi.fn(() => {
     harness.events.push("inventory");
     return Promise.resolve({ controls: [], issues: [] });
@@ -27,10 +33,12 @@ vi.mock("../evidence/evidence-capture.ts", () => ({
       readonly functionalAssertion: {
         readonly actual: { readonly actionSucceeded: boolean };
       };
+      readonly networkPolicy: NetworkEvidencePolicy;
     }) => {
       harness.events.push("evidence");
       harness.actionSucceeded =
         input.functionalAssertion.actual.actionSucceeded;
+      harness.networkPolicy = input.networkPolicy;
       const bundle: EvidenceBundle = {
         before: [],
         action: [],
@@ -87,7 +95,7 @@ vi.mock("./frozen-case-live-actions.ts", () => ({
 const fakeInput = (page: object): FrozenPhaseInput =>
   ({
     page,
-    source: {},
+    source: { revealTransitionsByDigest: new Map() },
     matrixCase: {
       caseId: "case-sign-out",
       sourceSha: "a".repeat(40),
@@ -95,6 +103,7 @@ const fakeInput = (page: object): FrozenPhaseInput =>
       role: "admin",
       catalogRoute: "/head/report",
       resolvedRoute: "/head/report",
+      networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
       execution: {
         kind: "control",
         action: {
@@ -202,6 +211,7 @@ describe("frozen action evidence capture", () => {
     });
 
     expect(observed.value).toEqual({ controls: [], issues: [] });
+    expect(harness.networkPolicy).toBe(NO_ROUTE_CACHE_CONTRACT_POLICY);
   });
 
   it("waits for delayed sign-out navigation beyond the ordinary action grace", async () => {

@@ -6,6 +6,7 @@ import {
   type RuntimeMatrixSource,
 } from "../matrix/runtime-matrix.ts";
 import { controlEvidence } from "../matrix/runtime-matrix-evidence.ts";
+import { assertInitialLanding } from "../preflight/preflight-reveal-guards.ts";
 import {
   observeRuntimeSurface,
   type RuntimeSurfaceExpectation,
@@ -21,6 +22,7 @@ import {
   selectFrozenActionTarget,
 } from "./control-target/frozen-action-target.ts";
 import { type DomInventory, inventoryDom } from "./dom-inventory.ts";
+import { resolveFrozenActionTransition } from "./frozen-action-transition-validation.ts";
 import {
   type FrozenCaseLiveRuntime,
   loginForCase,
@@ -32,6 +34,7 @@ import {
   type LiveControlActionRecord,
   type LiveControlPlan,
 } from "./live-control-lane.ts";
+import { navigate } from "./navigation.ts";
 
 const ACTION_TARGET_WAIT_TIMEOUT_MS = 1000;
 
@@ -62,7 +65,8 @@ const recoveryFor = (
       await prepareCase(source, matrixCase, runtime, () => Promise.resolve());
       await loginForCase(page, matrixCase, runtime.baseURL);
       const route = routeForState(source, stateForCase(matrixCase));
-      await page.goto(route.resolvedRoute);
+      await navigate(page, route.resolvedRoute);
+      assertInitialLanding(route, page.url(), runtime.baseURL);
     },
   });
   return {
@@ -182,7 +186,15 @@ export const runAction = async (
       surfaceObservation,
     );
   }
-  const plan: LiveControlPlan = { control: target, action };
+  const representativeInput = resolveFrozenActionTransition(source, matrixCase)
+    ?.transition.representativeInput;
+  const plan: LiveControlPlan = {
+    control: target,
+    action,
+    ...(representativeInput === undefined || representativeInput === null
+      ? {}
+      : { representativeInput }),
+  };
   const execute = async (): Promise<LiveControlActionRecord | undefined> =>
     (
       await executeLiveControlPlans({

@@ -18,6 +18,8 @@ const route: RouteDeclaration = {
   role: "viewer",
   catalogRoute: "/reports/[reportId]/present",
   resolvedRoute: "/reports/published",
+  landingRoute: "/reports/published",
+  networkPolicy: null,
   bindings: [
     {
       status: "assigned",
@@ -25,6 +27,7 @@ const route: RouteDeclaration = {
       target: "published",
       requiredCapability: "published-period",
       resolvedRoute: "/reports/published",
+      landingRoute: "/reports/published",
       rationale: "fixture",
     },
   ],

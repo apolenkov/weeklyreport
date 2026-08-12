@@ -12,6 +12,11 @@ import type { FrozenPhaseInput } from "./frozen-case-live-capture-types.ts";
 import type { FrozenRuntimeEvidenceWindow } from "./recovery/frozen-case-recovery-boundary.ts";
 
 const HTTP_OK_LIMIT = 400;
+const GEOMETRY_ORACLE = {
+  viewport: { width: 1440, height: 900 },
+  maxHorizontalOverflow: 0,
+  requireNoZeroSize: false,
+} as const;
 
 export type CapturedPhaseEvidence = Readonly<{
   readonly bundle: EvidenceBundle;
@@ -63,6 +68,7 @@ export const captureEvidence = async (
       requestFailures: events.records.requestFailures,
       bugsinkDsn: input.runtime.bugsinkDsn,
       responses: events.records.responses,
+      networkPolicy: input.matrixCase.networkPolicy,
       ...(expectedFault === undefined ? {} : { expectedFault }),
       settleRuntimeEvents: () => Promise.resolve(),
       serverLogPath: input.runtime.apiLogPath,
@@ -91,11 +97,7 @@ export const captureEvidence = async (
           ? `Frozen ${input.phase} unavailable-surface evidence for ${input.matrixCase.caseId}`
           : `Frozen ${input.phase} evidence captured for ${input.matrixCase.caseId}`,
       },
-      geometryOracle: {
-        viewport: { width: 1440, height: 900 },
-        maxHorizontalOverflow: 0,
-        requireNoZeroSize: false,
-      },
+      geometryOracle: GEOMETRY_ORACLE,
     })
   ).bundle;
   return {

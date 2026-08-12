@@ -23,6 +23,11 @@ import {
   type RuntimeEvents,
   writeCell,
 } from "./runtime-matrix-evidence.ts";
+import {
+  assertResolverCaseBinding,
+  isResolverCase,
+  type SpecializedCaseBindingExpectation,
+} from "./specialized-case-binding.ts";
 
 const SPECIALIZED_KINDS: readonly MatrixExecutionKind[] = [
   "fault",
@@ -141,6 +146,19 @@ export class SpecializedCaseEmissionError extends Error {
   override readonly name = "SpecializedCaseEmissionError";
 }
 
+const assertResolverBinding = (
+  matrixCase: MatrixExecutableCase,
+  expected: SpecializedCaseBindingExpectation | undefined,
+): void => {
+  try {
+    assertResolverCaseBinding(matrixCase, expected);
+  } catch (error: unknown) {
+    if (error instanceof Error)
+      throw new SpecializedCaseEmissionError(error.message);
+    throw error;
+  }
+};
+
 const inside = (root: string, candidate: string): string => {
   const rootPath = path.resolve(root);
   const candidatePath = path.resolve(candidate);
@@ -171,15 +189,13 @@ export const specializedCoveragePath = (
 
 export function assertSpecializedCaseBinding(
   matrixCase: MatrixExecutableCase,
-  expected?: Readonly<{
-    readonly kind?: Exclude<
-      MatrixExecutionKind,
-      "navigation" | "idle" | "control" | "recovery"
-    >;
-    readonly faultId?: string;
-  }>,
+  expected?: SpecializedCaseBindingExpectation,
 ): void {
   const { execution } = matrixCase;
+  if (isResolverCase(matrixCase)) {
+    assertResolverBinding(matrixCase, expected);
+    return;
+  }
   if (!isSpecializedKind(execution.kind))
     throw new SpecializedCaseEmissionError(
       `Case ${matrixCase.caseId} is not a specialized execution row`,
@@ -228,6 +244,7 @@ export async function captureSpecializedPagePhase(
         requestFailures: listeners.requestFailures,
         bugsinkDsn: input.bugsinkDsn,
         responses: listeners.responses,
+        networkPolicy: input.matrixCase.networkPolicy,
         ...(expectedFault === undefined ? {} : { expectedFault }),
         settleRuntimeEvents: listeners.waitForIdle,
         responseStatus: action?.responseStatus ?? input.responseStatus,

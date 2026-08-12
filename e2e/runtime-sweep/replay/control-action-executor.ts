@@ -21,6 +21,7 @@ import {
   completeRenderedNameAction,
   type RenderedNameActionLease,
 } from "./control-target/rendered-control-target.ts";
+import { representativeFillValueForInputType } from "./representative-form-input.ts";
 
 class ControlActionTimeoutError extends Error {
   override readonly name = "ControlActionTimeoutError";
@@ -60,12 +61,44 @@ const cleanupRenderedTarget = async (
   }
 };
 
-const representativeValueFor = (control: ControlActionTarget): string => {
-  if (control.inputType === "email") return "runtime-sweep@example.invalid";
-  if (control.inputType === "number") return "1";
-  if (control.inputType === "date") return "2026-01-01";
-  if (control.inputType === "url") return "https://example.invalid";
-  return "Runtime sweep";
+const selectIndexFor = async (
+  locator: Extract<
+    ResolvedActionControl,
+    { readonly kind: "locator" }
+  >["target"],
+  input: ControlActionInput,
+): Promise<number> => {
+  const frozen =
+    input.representativeInput?.kind === "select"
+      ? input.representativeInput
+      : undefined;
+  const option =
+    frozen === undefined
+      ? locator.locator("option:not(:checked):not(:disabled)").first()
+      : locator.locator("option").nth(frozen.index);
+  if ((await option.count()) === 0)
+    throw new ControlActionPolicyError(
+      "Native select has no enabled alternative option",
+    );
+  const selected = await option.evaluate((element) => {
+    if (!(element instanceof HTMLOptionElement))
+      throw new TypeError("Native select alternative is not an option");
+    return {
+      disabled: element.disabled,
+      index: element.index,
+      value: element.value,
+    };
+  });
+  if (
+    frozen !== undefined &&
+    (selected.disabled ||
+      selected.index !== frozen.index ||
+      selected.value !== frozen.value)
+  )
+    throw new ControlActionPolicyError(
+      "Native select representative option drifted",
+    );
+  return selected.index;
 };
 
 const fillOrSelect = async (
@@ -79,24 +112,17 @@ const fillOrSelect = async (
     );
   const locator = resolved.target;
   if (input.action.operation === "fill") {
-    await locator.fill(input.value ?? representativeValueFor(input.control), {
-      timeout: timeoutMs,
-    });
+    const frozen = input.representativeInput;
+    const value =
+      frozen?.kind === "fill"
+        ? frozen.value
+        : (input.value ??
+          representativeFillValueForInputType(input.control.inputType));
+    await locator.fill(value, { timeout: timeoutMs });
     return;
   }
   if (input.action.operation !== "select") return;
-  const alternative = locator
-    .locator("option:not(:checked):not(:disabled)")
-    .first();
-  if ((await alternative.count()) === 0)
-    throw new ControlActionPolicyError(
-      "Native select has no enabled alternative option",
-    );
-  const index = await alternative.evaluate((option) => {
-    if (!(option instanceof HTMLOptionElement))
-      throw new TypeError("Native select alternative is not an option");
-    return option.index;
-  });
+  const index = await selectIndexFor(locator, input);
   await locator.selectOption({ index }, { timeout: timeoutMs });
 };
 

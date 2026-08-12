@@ -9,6 +9,7 @@ import {
   LEAD_FORM_UNAVAILABLE_MARKER,
   type RuntimeSurfaceObservation,
 } from "../preflight/runtime-surface-expectation.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { evidenceRefSchema } from "../source/contracts.ts";
 import { controlIssues } from "./frozen-case-evidence-validation.ts";
 import { controlsForCase } from "./frozen-case-live-actions.ts";
@@ -26,6 +27,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report/[reportId]",
   resolvedRoute: "/lead/report/report-id",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",

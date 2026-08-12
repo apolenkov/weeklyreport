@@ -1,5 +1,6 @@
 import type { ElementHandle, Locator, Page } from "@playwright/test";
 
+import type { RevealRepresentativeInput } from "../matrix/reveal-transition.ts";
 import type {
   Action,
   ActionOperation,
@@ -60,6 +61,7 @@ export interface ControlActionInput {
   readonly recoveryBoundary?: ControlActionRecoveryBoundary;
   readonly observeOutcome?: () => Promise<ControlActionObservation>;
   readonly value?: string;
+  readonly representativeInput?: RevealRepresentativeInput;
   readonly timeoutMs?: number;
 }
 

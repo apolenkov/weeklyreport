@@ -1,0 +1,2 @@
+export const DEFAULT_MAX_CONTROLS = 1024;
+export const DEFAULT_MAX_CASES = 100_000;

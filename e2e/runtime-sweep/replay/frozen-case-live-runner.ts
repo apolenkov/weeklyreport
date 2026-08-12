@@ -1,15 +1,15 @@
 import type { Page, TestInfo } from "@playwright/test";
 
-import { reseedE2eRuntimeState } from "../../helpers/e2e-runtime-state-setup.ts";
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
 import {
   routeForState,
   RUNTIME_MATRIX_ORACLE,
   type RuntimeMatrixSource,
-  runtimeStateGroupKey,
 } from "../matrix/runtime-matrix.ts";
 import { writeCell } from "../matrix/runtime-matrix-evidence.ts";
 import { runSpecializedCase } from "../matrix/specialized-case-runner.ts";
+import { assertResolverOutcomeExpectation } from "../support/resolver-outcome-expectations.ts";
+import { inventoryDom } from "./dom-inventory.ts";
 import { captureAndFinalizeFrozenCase } from "./evidence/frozen-case-live-evidence.ts";
 import type { FrozenCaseCoverageCell } from "./frozen-case-evidence.ts";
 import {
@@ -20,10 +20,16 @@ import {
 } from "./frozen-case-live-actions.ts";
 import { initialNavigation } from "./frozen-case-live-capture.ts";
 import {
-  type FrozenCaseGroup,
-  groupFrozenCases,
-  restoreFrozenCaseOrder,
-} from "./frozen-case-live-shards.ts";
+  quiesceFrozenCasePage,
+  runFrozenCaseCampaign,
+  type RuntimeFrozenCaseExecutor,
+} from "./frozen-case-live-group-runner.ts";
+import {
+  replayFrozenRevealPath,
+  resolveFrozenRevealPreparation,
+} from "./frozen-reveal-replay.ts";
+import { executeFrozenRevealControl } from "./frozen-reveal-replay-adapter.ts";
+import { settleNavigation } from "./navigation.ts";
 
 export type { FrozenCaseLiveRuntime } from "./frozen-case-live-actions.ts";
 
@@ -46,22 +52,59 @@ const requirePassingPersistedCell = (
 
 const reuseProfileBaseline = (): void => undefined;
 
-const groupKeyFor = (
-  source: RuntimeMatrixSource,
-  matrixCase: MatrixExecutableCase,
-): string =>
-  runtimeStateGroupKey(
-    matrixCase.profile,
-    routeForState(source, stateForCase(matrixCase)).target,
-  );
+const replayFrozenPreparation = async (input: {
+  readonly page: Page;
+  readonly source: RuntimeMatrixSource;
+  readonly matrixCase: MatrixExecutableCase;
+  readonly runtime: FrozenCaseLiveRuntime;
+  readonly prepared: Awaited<ReturnType<typeof prepareCase>>["prepared"];
+  readonly navigation: Awaited<ReturnType<typeof initialNavigation>>;
+}): Promise<void> => {
+  try {
+    const preparation = resolveFrozenRevealPreparation(
+      input.source,
+      input.matrixCase,
+    );
+    if (preparation === undefined) return;
+    const [dbModule, preflightModule, proofModule, drainModule] =
+      await Promise.all([
+        import("../../integration/helpers/db.ts"),
+        import("../preflight/prisma-state-database.ts"),
+        import("../support/state-preparation-nonmutation.ts"),
+        import("../support/runtime-api-drain.ts"),
+      ]);
+    const database = preflightModule.createPrismaRuntimeStateDatabase(
+      dbModule.prisma,
+    );
+    await replayFrozenRevealPath({
+      page: input.page,
+      preparation,
+      inventory: inventoryDom,
+      execute: executeFrozenRevealControl,
+      settle: () => settleNavigation(input.page),
+      proveNonMutation: (action) =>
+        proofModule.provePreparedStateNonMutation({
+          database,
+          prepared: input.prepared,
+          settle: () => drainModule.awaitRuntimeApiDrain(input.runtime.apiURL),
+          action,
+        }),
+      cleanup: () => undefined,
+    });
+  } catch (error: unknown) {
+    input.navigation.events.collector.detach();
+    throw error;
+  }
+};
 
-const runFrozenCase = async (
-  page: Page,
-  source: RuntimeMatrixSource,
-  matrixCase: MatrixExecutableCase,
-  runtime: FrozenCaseLiveRuntime,
-  testInfo: TestInfo,
-): Promise<FrozenCaseCoverageCell> => {
+const runFrozenCase: RuntimeFrozenCaseExecutor = async (
+  page,
+  source,
+  matrixCase,
+  runtime,
+  testInfo,
+  preparedCase,
+) => {
   const browser = page.context().browser();
   if (browser === null)
     throw new Error(`Frozen case ${matrixCase.caseId} has no browser context`);
@@ -76,110 +119,49 @@ const runFrozenCase = async (
     oracle: RUNTIME_MATRIX_ORACLE,
     testInfo,
     capturedAt: new Date().toISOString(),
+    databaseUrl: runtime.databaseUrl,
   });
   if (specialized !== undefined) {
     await persistFrozenCaseCell(runtime, specialized.cell);
     return requirePassingPersistedCell(specialized.cell);
   }
-  const { prepared } = await prepareCase(
+  if (preparedCase === undefined) await quiesceFrozenCasePage(page, runtime);
+  const prepared =
+    preparedCase ??
+    (await prepareCase(source, matrixCase, runtime, reuseProfileBaseline))
+      .prepared;
+  await loginForCase(page, matrixCase, runtime.baseURL);
+  const route = routeForState(source, stateForCase(matrixCase));
+  assertResolverOutcomeExpectation(
+    route.expectedOutcome,
+    matrixCase.expectedOutcome,
+  );
+  const navigation = await initialNavigation(
+    page,
+    route.resolvedRoute,
+    route.landingRoute,
+    runtime.baseURL,
+    route.expectedOutcome,
+  );
+  await replayFrozenPreparation({
+    page,
     source,
     matrixCase,
     runtime,
-    reuseProfileBaseline,
-  );
-  await loginForCase(page, matrixCase, runtime.baseURL);
-  const route = routeForState(source, stateForCase(matrixCase));
-  const navigation = await initialNavigation(page, route.resolvedRoute);
+    prepared,
+    navigation,
+  });
   const cell = await captureAndFinalizeFrozenCase(
     page,
     source,
     matrixCase,
     runtime,
     prepared,
-    route.resolvedRoute,
+    route,
     navigation,
   );
   await persistFrozenCaseCell(runtime, cell);
   return requirePassingPersistedCell(cell);
-};
-
-const runFrozenCaseRange = async (
-  page: Page,
-  source: RuntimeMatrixSource,
-  cases: readonly MatrixExecutableCase[],
-  runtime: FrozenCaseLiveRuntime,
-  testInfo: TestInfo,
-  start: number,
-  end: number,
-): Promise<readonly FrozenCaseCoverageCell[]> => {
-  if (start >= end) return [];
-  if (end - start === 1) {
-    const matrixCase = cases[start];
-    if (matrixCase === undefined)
-      throw new Error(`Frozen case range has no case at index ${start}`);
-    return [await runFrozenCase(page, source, matrixCase, runtime, testInfo)];
-  }
-  const middle = start + Math.floor((end - start) / 2);
-  const left = await runFrozenCaseRange(
-    page,
-    source,
-    cases,
-    runtime,
-    testInfo,
-    start,
-    middle,
-  );
-  const right = await runFrozenCaseRange(
-    page,
-    source,
-    cases,
-    runtime,
-    testInfo,
-    middle,
-    end,
-  );
-  return [...left, ...right];
-};
-
-const runFrozenCaseGroups = async (
-  page: Page,
-  source: RuntimeMatrixSource,
-  groups: readonly FrozenCaseGroup[],
-  runtime: FrozenCaseLiveRuntime,
-  testInfo: TestInfo,
-  index: number,
-): Promise<readonly FrozenCaseCoverageCell[]> => {
-  const group = groups[index];
-  if (group === undefined) return [];
-  const firstCase = group[0];
-  if (firstCase === undefined)
-    throw new Error(`Frozen case group ${index} is empty`);
-  if (index > 0) {
-    await page.goto("about:blank");
-    await reseedE2eRuntimeState({
-      databaseUrl: runtime.databaseUrl,
-      profile: firstCase.profile,
-      repoRoot: runtime.repoRoot,
-    });
-  }
-  const current = await runFrozenCaseRange(
-    page,
-    source,
-    group,
-    runtime,
-    testInfo,
-    0,
-    group.length,
-  );
-  const remaining = await runFrozenCaseGroups(
-    page,
-    source,
-    groups,
-    runtime,
-    testInfo,
-    index + 1,
-  );
-  return [...current, ...remaining];
 };
 
 export const runFrozenCases = async (
@@ -188,14 +170,12 @@ export const runFrozenCases = async (
   cases: readonly MatrixExecutableCase[],
   runtime: FrozenCaseLiveRuntime,
   testInfo: TestInfo,
-): Promise<readonly FrozenCaseCoverageCell[]> => {
-  const cells = await runFrozenCaseGroups(
+): Promise<readonly FrozenCaseCoverageCell[]> =>
+  runFrozenCaseCampaign({
     page,
     source,
-    groupFrozenCases(cases, (matrixCase) => groupKeyFor(source, matrixCase)),
+    cases,
     runtime,
     testInfo,
-    0,
-  );
-  return restoreFrozenCaseOrder(cases, cells);
-};
+    execute: runFrozenCase,
+  });

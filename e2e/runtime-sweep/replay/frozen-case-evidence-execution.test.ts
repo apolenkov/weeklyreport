@@ -6,6 +6,7 @@ import type {
   EvidenceRef,
   Oracle,
 } from "../source/contracts.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   evidenceBundleSchema,
   evidenceRefSchema,
@@ -22,6 +23,7 @@ const ORACLE: Oracle = {
   function: { required: true, expectation: "state matches" },
   accessibility: { required: true, expectation: "controls are usable" },
   visual: { required: true, expectation: "geometry is stable" },
+  runtime: { required: true, expectation: "runtime telemetry is clean" },
 };
 
 const state: MatrixExecutableCase["state"] = {
@@ -42,6 +44,7 @@ const matrixCase = (): MatrixExecutableCase => ({
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state,
   kind: "executable",
   execution: {
@@ -213,6 +216,7 @@ test("fails applicable fault cases without a database oracle", () => {
     role: "lead",
     catalogRoute: "/lead/report",
     resolvedRoute: "/lead/report",
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     state: { ...state, fault: "api-error" },
     kind: "executable",
     execution: {

@@ -2,10 +2,13 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import type { CoverageCell } from "../source/contracts.ts";
-import { writeLiveControlEvidence } from "./live-control-evidence.ts";
+import {
+  indexLiveControlRecords,
+  writeLiveControlEvidence,
+} from "./live-control-evidence.ts";
 import type { LiveControlActionRecord } from "./live-control-lane.ts";
 
 const SOURCE_SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -53,6 +56,7 @@ const cellFor = (
     function: { required: true, expectation: "route renders" },
     accessibility: { required: true, expectation: "controls are named" },
     visual: { required: true, expectation: "desktop is stable" },
+    runtime: { required: true, expectation: "runtime telemetry is clean" },
   },
   controls: controlKeys.map((controlKey, index) => ({
     controlKey,
@@ -143,7 +147,7 @@ test("fails action failures, ambiguous outcomes, and omitted baseline controls",
   expect(cellText).toContain("Baseline control has no live action result");
 });
 
-test("retains a newly revealed control in the cell", async () => {
+test("retains an unknown revealed control only in raw evidence and fails the cell", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "live-controls-"));
   const result = await write(root, cellFor(["button:Open:1"]), [
     recordFor("button:Open:1"),
@@ -152,8 +156,79 @@ test("retains a newly revealed control in the cell", async () => {
 
   expect(result.cell.controls.map(({ controlKey }) => controlKey)).toEqual([
     "button:Open:1",
+  ]);
+  expect(result.cell.verdict).toBe("fail");
+  expect(await readFile(result.evidence.archivePath, "utf8")).toContain(
+    "menuitem:Delete:1",
+  );
+});
+
+test("updates a known frozen dynamic control without appending a duplicate", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "live-controls-"));
+  const result = await write(
+    root,
+    cellFor(["button:Open:1", "menuitem:Delete:1"]),
+    [recordFor("button:Open:1"), recordFor("menuitem:Delete:1")],
+  );
+
+  expect(result.cell.verdict).toBe("pass");
+  expect(result.cell.controls.map(({ controlKey }) => controlKey)).toEqual([
+    "button:Open:1",
     "menuitem:Delete:1",
   ]);
+});
+
+test("indexes many unique controls and duplicates with one key read per record", () => {
+  const uniqueCount = 4096;
+  const duplicateKeys = [
+    "button:Unique:512",
+    "button:Unique:2048",
+    "button:Unique:3500",
+  ] as const;
+  const records = [
+    ...Array.from({ length: uniqueCount }, (_, index) =>
+      recordFor(`button:Unique:${index}`),
+    ),
+    ...duplicateKeys.flatMap((duplicateKey) => [
+      recordFor(duplicateKey, "pass"),
+      recordFor(duplicateKey, "fail"),
+    ]),
+  ];
+  const readControlKey = vi.fn(
+    (record: LiveControlActionRecord) => record.controlKey,
+  );
+  const instrumentedRecords = Object.freeze(
+    records.map((record) =>
+      Object.defineProperty({ ...record }, "controlKey", {
+        configurable: false,
+        enumerable: true,
+        get: () => readControlKey(record),
+      }),
+    ),
+  );
+
+  const index = indexLiveControlRecords(instrumentedRecords);
+
+  expect(readControlKey).toHaveBeenCalledTimes(records.length);
+  expect(index.lastRecordByControlKey.size).toBe(uniqueCount);
+  expect(index.duplicateControlKeys).toEqual(new Set(duplicateKeys));
+  duplicateKeys.forEach((duplicateKey) => {
+    expect(index.lastRecordByControlKey.get(duplicateKey)?.status).toBe("fail");
+  });
+});
+
+test("fails duplicate frozen records while retaining the final action result", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "live-controls-"));
+  const result = await write(root, cellFor(["button:Open:1"]), [
+    recordFor("button:Open:1"),
+    recordFor("button:Open:1", "fail"),
+  ]);
+
+  expect(result.cell.verdict).toBe("fail");
+  expect(result.cell.controls[0]?.actionResult).toMatchObject({
+    kind: "exercised",
+    result: "fail",
+  });
 });
 
 test("stores different state cells under distinct action artifacts", async () => {

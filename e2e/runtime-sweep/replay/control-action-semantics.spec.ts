@@ -73,9 +73,7 @@ test("uses the frozen href when a link accessible name changes", async ({
   expect(result).toMatchObject({ status: "pass" });
 });
 
-test("uses rendered inner text when CSS transforms the role name", async ({
-  page,
-}) => {
+test("uses source text when CSS transforms the role name", async ({ page }) => {
   await page.setContent(`
     <button type="button">
       <div aria-hidden="true">MP</div>
@@ -92,15 +90,13 @@ test("uses rendered inner text when CSS transforms the role name", async ({
   `);
   const control = (await inventoryDom(page)).controls[0];
   if (control === undefined) throw new Error("Composite control is missing");
-  expect(control.accessibleName).toBe(
-    "MP Marketing portal NO STATUS unassigned",
-  );
+  expect(control.accessibleName).toBe("Marketing portal No status unassigned");
   await expect(
     page.getByRole("button", {
       name: control.accessibleName,
       exact: true,
     }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
 
   const result = await executeControlAction({
     page,
@@ -125,7 +121,12 @@ test("rejects a synchronous same-node mutation during arm validation", async ({
   const frozenControl = (await inventoryDom(page)).controls[0];
   if (frozenControl === undefined)
     throw new Error("Rendered control is missing");
-  const control = { ...frozenControl, ariaRole: "button" as const };
+  const control = {
+    ...frozenControl,
+    accessibleName: "OPEN",
+    ariaRole: "button" as const,
+    controlKey: "button:OPEN:1",
+  };
   await page.locator("button").evaluate((button) => {
     if (!(button instanceof HTMLElement)) return;
     const originalText = button.innerText;

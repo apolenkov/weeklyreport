@@ -8,99 +8,32 @@ import {
   domControlSchema,
   evidenceKindSchema,
   matrixExecutionSchema,
+  networkEvidencePolicySchema,
+  oracleSchema,
+  routeDeclarationSchema,
   sourceShaSchema,
+  sourceTreeSchema,
 } from "./contracts.ts";
-
-const manifest = {
-  campaignId: "campaign",
-  sourceSha: "a".repeat(40),
-  treeDigest: "b".repeat(64),
-  browser: "chromium",
-  viewport: { browser: "chromium", width: 1440, height: 900 },
-  roles: ["lead", "head", "admin", "viewer"],
-  routes: [
-    { role: "lead", catalogRoute: "/lead", resolvedRoute: "/lead" },
-    { role: "head", catalogRoute: "/head", resolvedRoute: "/head" },
-    { role: "admin", catalogRoute: "/admin", resolvedRoute: "/admin" },
-    {
-      role: "viewer",
-      catalogRoute: "/reports",
-      resolvedRoute: "/reports",
-    },
-  ],
-  profiles: ["minimal", "demo", "full", "stress"],
-  seedProfiles: ["minimal", "demo", "full", "stress"].map((profile) => ({
-    profile,
-    definition: {
-      purpose: "fixture",
-      capabilities: ["canonical-identities"],
-      stableIds: { activeReport: "report" },
-      counts: {
-        users: { min: 1, max: 1 },
-        projects: { min: 1, max: 1 },
-        reports: { min: 1, max: 1 },
-        sections: { min: 1, max: 1 },
-        items: { min: 1, max: 1 },
-      },
-    },
-    digest: "f".repeat(64),
-  })),
-  stateKinds: ["nominal", "boundary", "lifecycle", "permission", "fault"],
-  actions: [
-    {
-      controlKey: "open",
-      operation: "click",
-      safety: "read-only",
-      transition: "open",
-    },
-  ],
-  toolVersions: { node: "26.0.0" },
-  catalogDigest: "c".repeat(64),
-  domainSpecDigest: "d".repeat(64),
-  matrixDeclaration: {
-    generatorSeed: "fixture",
-    axes: {
-      role: ["lead"],
-      route: ["/lead"],
-      profileCapability: ["canonical-identities"],
-      lifecycle: ["open"],
-      submission: ["draft"],
-      ownershipDensity: ["single"],
-      permission: ["allowed"],
-      fault: ["none"],
-      controlTransition: ["none"],
-    },
-    constraints: [],
-  },
-  matrixDigest: "e".repeat(64),
-  exclusions: [
-    {
-      id: "firefox",
-      scope: "browser",
-      target: "firefox",
-      reason: "fixture",
-    },
-    { id: "webkit", scope: "browser", target: "webkit", reason: "fixture" },
-    {
-      id: "mobile",
-      scope: "viewport",
-      target: "mobile",
-      reason: "fixture",
-    },
-    {
-      id: "tablet",
-      scope: "viewport",
-      target: "tablet",
-      reason: "fixture",
-    },
-  ],
-};
+import { manifest } from "./contracts-fixture.ts";
 
 describe("runtime sweep boundary contracts", () => {
   it("rejects malformed and uppercase source SHAs", () => {
     expect(sourceShaSchema.safeParse("a".repeat(39)).success).toBe(false);
     expect(sourceShaSchema.safeParse("A".repeat(40)).success).toBe(false);
     expect(sourceShaSchema.safeParse("a".repeat(40)).success).toBe(true);
+  });
+
+  it("requires a raw lowercase 40-hex source tree object ID", () => {
+    expect(sourceTreeSchema.safeParse("b".repeat(39)).success).toBe(false);
+    expect(sourceTreeSchema.safeParse("B".repeat(40)).success).toBe(false);
+    expect(sourceTreeSchema.safeParse("b".repeat(64)).success).toBe(false);
+    expect(sourceTreeSchema.safeParse("b".repeat(40)).success).toBe(true);
+    expect(
+      campaignManifestSchema.safeParse({
+        ...manifest,
+        sourceTree: undefined,
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects unknown fields instead of silently widening a manifest", () => {
@@ -112,8 +45,53 @@ describe("runtime sweep boundary contracts", () => {
     expect(result.success).toBe(false);
   });
 
+  it("requires an explicit route network policy", () => {
+    const firstRoute = manifest.routes[0];
+    if (firstRoute === undefined) throw new Error("Fixture route is missing");
+    const { networkPolicy: _networkPolicy, ...withoutPolicy } = firstRoute;
+    expect(routeDeclarationSchema.safeParse(withoutPolicy).success).toBe(false);
+    expect(routeDeclarationSchema.safeParse(firstRoute).success).toBe(true);
+    expect(
+      networkEvidencePolicySchema.safeParse({
+        maxRepeatedApiRequests: 3,
+        retryStormThreshold: 5,
+        slowRequestThresholdMs: 5000,
+        cacheExpectedOperations: ["report.get", "report.get"],
+      }).success,
+    ).toBe(false);
+    expect(
+      networkEvidencePolicySchema.safeParse({
+        maxRepeatedApiRequests: 0,
+        retryStormThreshold: 5,
+        slowRequestThresholdMs: 5000,
+        cacheExpectedOperations: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      networkEvidencePolicySchema.safeParse({
+        maxRepeatedApiRequests: 3,
+        retryStormThreshold: 5,
+        slowRequestThresholdMs: 5000,
+        cacheExpectedOperations: [" ".repeat(3)],
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts driver reports as a distinct evidence kind", () => {
     expect(evidenceKindSchema.safeParse("driver-report").success).toBe(true);
+  });
+
+  it("requires an explicit runtime oracle dimension", () => {
+    const completeOracle = {
+      domainSpecRefs: ["exhaustive-runtime-sweep"],
+      function: { required: true, expectation: "the action succeeds" },
+      accessibility: { required: true, expectation: "status is announced" },
+      visual: { required: true, expectation: "settled screenshot matches" },
+      runtime: { required: true, expectation: "runtime telemetry is clean" },
+    };
+    expect(oracleSchema.safeParse(completeOracle).success).toBe(true);
+    const { runtime: _runtime, ...withoutRuntime } = completeOracle;
+    expect(oracleSchema.safeParse(withoutRuntime).success).toBe(false);
   });
 
   it("keeps role and profile values closed at the cell boundary", () => {

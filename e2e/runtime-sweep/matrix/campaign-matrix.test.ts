@@ -37,6 +37,8 @@ const route: RouteDeclaration = {
   role: "head",
   catalogRoute: "/head/report",
   resolvedRoute: "/head/report",
+  landingRoute: "/head/report",
+  networkPolicy: null,
   bindings: [
     {
       status: "assigned",
@@ -44,6 +46,7 @@ const route: RouteDeclaration = {
       target: "none",
       requiredCapability: null,
       resolvedRoute: "/head/report",
+      landingRoute: "/head/report",
       rationale: "fixture",
     },
     ...(["demo", "full", "stress"] as const).map((profile) => ({
@@ -52,6 +55,7 @@ const route: RouteDeclaration = {
       target: "none" as const,
       requiredCapability: null,
       resolvedRoute: "/head/report",
+      landingRoute: "/head/report",
       reason: "fixture",
     })),
   ],
@@ -77,6 +81,8 @@ const activeRoute: RouteDeclaration = {
   role: "lead",
   catalogRoute: "/lead/report/[reportId]",
   resolvedRoute: "/lead/report/active",
+  landingRoute: "/lead/report/active",
+  networkPolicy: null,
   bindings: [
     {
       status: "assigned",
@@ -84,6 +90,7 @@ const activeRoute: RouteDeclaration = {
       target: "active",
       requiredCapability: "editable-active-report",
       resolvedRoute: "/lead/report/active",
+      landingRoute: "/lead/report/active",
       rationale: "fixture",
     },
     ...(["demo", "full", "stress"] as const).map((profile) => ({
@@ -92,6 +99,7 @@ const activeRoute: RouteDeclaration = {
       target: "active" as const,
       requiredCapability: "editable-active-report" as const,
       resolvedRoute: "/lead/report/active",
+      landingRoute: "/lead/report/active",
       reason: "fixture",
     })),
   ],

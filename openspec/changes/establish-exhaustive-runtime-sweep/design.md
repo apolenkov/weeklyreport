@@ -48,7 +48,9 @@ legacy tuple together). It adds no production API or database contract.
 - A frozen per-element BDD/coverage catalog, formal MBT model, or unbounded claim over arbitrary inputs/events.
 - A negative-authz grid for unreachable routes; unexpected denial of a reachable route remains a finding.
 - Actions against production or a shared development DB; stateful actions are only on the disposable guarded E2E DB.
-- Product implementation changes, migrations, feature flags, or a second database ledger.
+- User-visible product behavior changes, migrations, feature flags, or a second
+  database ledger. Behavior-neutral semantic interaction metadata is permitted
+  when it makes an existing immediate product effect fail closed in preflight.
 
 ## Decisions
 
@@ -70,6 +72,82 @@ semantic control inventory in immutable `PREFLIGHT.json`. Only then does one
 execution policy finalize `MATRIX.json`: navigation/idle,
 one exact control action per cell, and named fault/concurrency/infrastructure
 cells at their proven applicability targets.
+
+Preflight discovers post-transition controls before finalization. Each branch
+starts from the canonical prepared segment, replays an ordered reveal path,
+waits for the bounded outcome, and inventories the resulting surface. A
+reachable control is frozen with its canonical path and path digest; an
+ambiguous path is rejected rather than selected by timing or DOM object
+identity. `MATRIX.json` carries that preparation path into the control cell,
+and replay performs it before the cell's one evidence-bearing target action.
+Any post-freeze control that is absent from this inventory fails the cell and
+never expands the matrix during baseline or final execution.
+
+Unconditional catalog aliases declare two distinct route values: the entry route
+exercised by navigation and the exact canonical landing URL after the expected
+redirect. The landing URL is source-bound and includes its query string.
+Preflight first proves that the browser settled at that exact URL, then uses its
+pathname as the within-route reveal boundary. It never treats an arbitrary live
+redirect as the new boundary.
+
+A resolver route is not an unconditional alias. Its result depends on prepared
+domain state and request/authentication outcome, so `/reports/latest` remains an
+executable resolver entry with no route-level exact landing declaration. Its
+expected outcomes are state-bound and source-digest-bound: visible current,
+published fallback, empty, query error, and anonymous. The resolver contract
+MUST cover the minimum applicable profile and retain typed inapplicable
+role-permission boundaries, including a minimal profile that lacks the route's
+required capability. The larger outcome model is a separate implementation task;
+the route binding MUST NOT collapse these outcomes into one static landing URL.
+
+`empty` and `query error` are two frozen route-local specialized resolver
+scenarios, not new global pairwise axes. This avoids multiplying unrelated
+routes and does not reuse `forbidden`, ownership, lifecycle, or publish-only
+fault semantics. `viewer-status-empty` temporarily removes every seeded viewer
+group grant inside the guarded disposable database preparation transaction,
+records an exact no-visible-report oracle, and is restored by the next canonical
+profile reseed. `viewer-status-query-error` installs one bounded Playwright fault
+for the exact `reports.latestForViewer` tRPC operation, checks the error text and
+retry control, removes the fault, retries successfully, and compares mutation
+sentinels before and after. Both declarations, their derived states, expected
+outcomes, fault identity where applicable, and artifacts are source-bound and
+flow through preflight, matrix finalization, replay, evidence, and coverage.
+The existing generic publish fault runner remains publish-only.
+
+After a failed preflight identifies one canonical state, a repair campaign
+runs that exact state through the same preparation and browser segment runner
+before another full preflight. The supported repair launcher validates the
+canary in the same process that observed the canary child exit, rechecks the
+clean source identity, and only then starts full preflight. A standalone full
+launch cannot be authorized by a synthetic PASS file. The canary writes a
+separate immutable artifact; it does not create a partial `PREFLIGHT.json` and
+cannot satisfy full coverage. Its selector and evidence are bound to the
+current clean source identity.
+
+Full preflight may additionally persist an append-only progress journal as an
+execution optimization. The journal is not a partial `PREFLIGHT.json`, does not
+carry a campaign PASS, and cannot authorize matrix finalization. Every state has
+an explicit started record and at most one terminal PASS record bound to the
+source SHA/tree/digest, plan and assignment digests, complete state identity,
+and terminal segment digest. Resume always begins from a newly verified clean
+source and a recreated disposable state boundary. It may skip only exact
+terminal records whose segment artifacts revalidate; a failed, ambiguous,
+started-only, truncated, stale, foreign, reordered, duplicate, or digest-drifted
+record is rejected or rerun from the start of that state. Resume never restores
+mid-path browser state. Canonical publication remains one complete ordered
+`PREFLIGHT.json` whose state union exactly equals the frozen source plan.
+
+Every reveal-path step is a preparation activation, not a second product
+action. Preflight and replay compare the exact database oracle before and after
+each step and reject a path that mutates persisted state. A transition that
+requires mutation belongs to a separately prepared deterministic state; it
+cannot be smuggled into a control cell as preparation. Each path also freezes
+the complete stable-sorted semantic surface (control identity, role, name,
+enabled state, order, href, declared interaction effect, and digest), not only
+the target control. A control marked `mutation-required` remains in the runtime
+inventory and matrix but cannot be used as reveal preparation. Replay requires
+exact equality before the target action, so an unknown, missing, or signature-
+changed control is blocking discovery drift.
 
 Pairwise coverage is calculated over those legal executable rows, never a raw
 Cartesian crossing of every fault with every unrelated control. Every declared
@@ -138,6 +216,9 @@ the first non-pass or infrastructure failure and terminates their full process
 groups. The merger validates assignment/source digests, byte-identical source
 artifacts, exclusive resources, evidence references, verdicts, and exact
 full-matrix coverage in staging before publishing canonical final evidence.
+The final publication renames the one validated containing directory to
+`canonical`; `cells` and `baseline` never become visible through separate
+publication operations.
 Changing the requested lane count changes the assignment digest, not the
 frozen matrix or cell identities.
 
@@ -153,6 +234,18 @@ authority, with seed validation/stable IDs in the manifest. Native Codex
 deterministic browser/database state. Codex owns scheduling, reset/reseed,
 manifest, ledger, merge, adjudication, and gate; read-only verifiers may
 parallelize only through explicitly imported results.
+
+Before an integration or database/Redis gate may resolve its destructive
+execution input, two separate guard-only commands derive the complete canonical
+lane target plan. The database command proves a loopback base, canonical
+`*_test` lane names, and inequality with the developer `DATABASE_URL`. The Redis
+command proves the exact `127.0.0.1` host, canonical lane ports, and lowercase
+`true` flush/recreation declarations. Both emit typed
+`destructiveOperationsAllowed=false` evidence and have no database, Redis,
+Docker, process, socket, or filesystem-write capability. These commands prove
+configuration safety only; live ownership/readiness remains a later mandatory
+read-only check, and mutation still requires the single-use capability at the
+primitive boundary.
 
 The report metadata is fixed to `provider: native-codex`, `model:
 gpt-5.6-luna`, and `reasoning: max`; no provider executable or version is
@@ -318,7 +411,12 @@ The new flow is:
    environment identifiers, catalog digest, domain spec digest, profile set,
    compiled nominal plan, specialized declarations, and explicit exclusions.
    It refuses a dirty tree or SHA drift.
-2. **Preflight and finalize:** `pnpm test:runtime-preflight` consumes the
+2. **Preflight and finalize:** every operator declares
+   `RUNTIME_SWEEP_CAMPAIGN_KIND`. An initial baseline may proceed directly;
+   after a failure, `pnpm test:runtime-preflight-repair` must run and validate
+   the exact failed state at the current clean SHA in the same launcher process
+   before it starts another full preflight. `pnpm test:runtime-preflight`
+   handles initial campaigns and consumes the
    required `RUNTIME_SWEEP_SOURCE` and `RUNTIME_SWEEP_PREFLIGHT` paths, resets
    the disposable E2E database, runs each nominal route/state segment, validates
    its profile/journey, and freezes semantic control inventory into PREFLIGHT.
@@ -337,6 +435,14 @@ The new flow is:
    database and verify its oracle before the next action. The validated merger
    stages and publishes the exact union of lane cells and artifact digests to
    the Codex-owned baseline ledger.
+
+   Runtime preparation reuse is narrower than lane grouping. Navigation, idle,
+   and read-only controls with `fault=none` may share one prepared state only
+   when their complete preparation key is equal. Every such cell still receives
+   a browser quiescence boundary, a tracked API-work drain, auth/storage setup, navigation, action,
+   oracle, and evidence record. Mutating, recovery, specialized, and unknown
+   executions stay isolated. A failed cell stops the reuse group immediately.
+
 4. **Collect and verify:** correlate browser, API, Bugsink/Loki, and other
    environment channels with the Driver timeline. A blind/unreachable channel
    is recorded as blind, not clean. Read-only verifiers try to refute every
@@ -403,6 +509,13 @@ as covered.
   database → give every concurrent lane exclusive state, reset/reseed at
   profile boundaries and after ambiguous failures, and never resume a cell on
   an unverified state. More workers against one seeded database are forbidden.
+- **[Preflight request overlap]** A previous state page can keep API reads alive
+  while the next state mutates the database → clear origin storage, quiesce
+  the page, and require the runtime API idle acknowledgement before every state
+  mutation. A client abort stays owned until its tracked tRPC operation settles;
+  an untracked abort makes the bounded drain fail closed. Reseed only when the state group
+  changes; when authentication revisits the app after a reseed, clear origin
+  storage again before preparing the state.
 - **[Resource saturation]** Extra lanes can exhaust CPU, memory, PostgreSQL
   connections, ports, or file descriptors → cap API pools, benchmark increasing
   lane counts with full-group canaries, and select the fastest stable count

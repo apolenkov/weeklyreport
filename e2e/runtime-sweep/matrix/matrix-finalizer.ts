@@ -9,19 +9,19 @@ import {
   DEFAULT_MAX_CONTROLS,
   DESKTOP_HEIGHT,
   DESKTOP_WIDTH,
-  executable,
   executionFor,
   type FrozenMatrix,
-  inapplicable,
   type MatrixExecutableCase,
   MatrixFinalizationError,
   type MatrixFinalizationInput,
   type MatrixInapplicableCase,
   type MatrixPreflightSegment,
+  type MatrixPreparation,
   type MatrixRow,
   navigationExecution,
   stateForControl,
 } from "./matrix-finalizer-contract.ts";
+import { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
 import {
   axisValue,
   freezeCampaignPreflight,
@@ -29,7 +29,26 @@ import {
   parseFrozenMatrix,
 } from "./matrix-finalizer-support.ts";
 
+type MatrixIdentityFields = "sourceSha" | "sourceDigest" | "routes";
+
+const preparationFor = (
+  control: MatrixPreflightSegment["controls"][number],
+): MatrixPreparation => ({
+  revealPathDigest: control.revealPath.digest,
+  expectedSurfaceDigest: control.expectedSurface.digest,
+  expectedActionTransitionDigest:
+    control.expectedActionTransition?.digest ?? null,
+});
+
+const uniqueByDigest = <T extends Readonly<{ readonly digest: string }>>(
+  values: readonly T[],
+): readonly T[] =>
+  [
+    ...new Map(values.map((value) => [value.digest, value] as const)).values(),
+  ].toSorted((left, right) => left.digest.localeCompare(right.digest));
+
 export * from "./matrix-finalizer-contract.ts";
+export { executable, inapplicable } from "./matrix-finalizer-row-carrier.ts";
 export {
   freezeCampaignPreflight,
   parseFrozenMatrix,
@@ -115,7 +134,7 @@ const planRows = (
   );
 
 const rowsFor = (
-  identity: Pick<MatrixFinalizationInput, "sourceSha" | "routes">,
+  identity: Pick<MatrixFinalizationInput, MatrixIdentityFields>,
   segments: readonly MatrixPreflightSegment[],
 ): readonly MatrixExecutableCase[] =>
   segments.flatMap((segment) => [
@@ -128,7 +147,8 @@ const rowsFor = (
           identity,
           stateForControl(segment.state, execution),
           execution,
-          control.inventory,
+          { controlKey: control.controlKey, inventory: control.inventory },
+          preparationFor(control),
         ),
       ];
     }),
@@ -136,15 +156,31 @@ const rowsFor = (
       entry.execution === undefined
         ? []
         : [
-            executable(identity, entry.state, entry.execution, {
-              declarationId: entry.declarationId,
-            }),
+            executable(
+              identity,
+              entry.state,
+              entry.execution,
+              {
+                declarationId: entry.declarationId,
+                ...(entry.resolverOutcome === undefined
+                  ? {}
+                  : { resolverOutcome: entry.resolverOutcome }),
+                ...(entry.resolverRecoveryOutcome === undefined
+                  ? {}
+                  : { resolverRecoveryOutcome: entry.resolverRecoveryOutcome }),
+              },
+              undefined,
+              entry.resolverOutcome,
+            ),
           ],
     ),
   ]);
 
 const inapplicableRowsFor = (
-  identity: Pick<MatrixFinalizationInput, "sourceSha" | "routes">,
+  identity: Pick<
+    MatrixFinalizationInput,
+    "sourceSha" | "sourceDigest" | "routes"
+  >,
   input: MatrixFinalizationInput,
   segments: readonly MatrixPreflightSegment[],
   cases: readonly MatrixExecutableCase[],
@@ -158,7 +194,8 @@ const inapplicableRowsFor = (
               identity,
               segment.state,
               control.inapplicable,
-              control.inventory,
+              { controlKey: control.controlKey, inventory: control.inventory },
+              preparationFor(control),
             ),
           ],
     ),
@@ -183,26 +220,39 @@ const ordered = <T>(rows: readonly T[]): readonly T[] =>
     stableSerialize(left).localeCompare(stableSerialize(right)),
   );
 
+const assertLimits = (
+  maxCases: number,
+  maxControlsPerSegment: number,
+): void => {
+  if (!Number.isInteger(maxCases) || maxCases < 1)
+    throw new MatrixFinalizationError("Matrix maxCases must be positive");
+  if (!Number.isInteger(maxControlsPerSegment) || maxControlsPerSegment < 1)
+    throw new MatrixFinalizationError(
+      "Matrix maxControlsPerSegment must be positive",
+    );
+};
+
+const matrixIdentityFor = (
+  input: Pick<MatrixFinalizationInput, "sourceSha" | "sourceDigest" | "routes">,
+) => ({
+  sourceSha: input.sourceSha,
+  sourceDigest: input.sourceDigest,
+  routes: input.routes,
+});
+
 export function finalizeCampaignMatrix(
   input: MatrixFinalizationInput,
 ): FrozenMatrix {
   const maxCases = input.maxCases ?? DEFAULT_MAX_CASES;
   const maxControlsPerSegment =
     input.maxControlsPerSegment ?? DEFAULT_MAX_CONTROLS;
-  if (!Number.isInteger(maxCases) || maxCases < 1) {
-    throw new MatrixFinalizationError("Matrix maxCases must be positive");
-  }
-  if (!Number.isInteger(maxControlsPerSegment) || maxControlsPerSegment < 1) {
-    throw new MatrixFinalizationError(
-      "Matrix maxControlsPerSegment must be positive",
-    );
-  }
+  assertLimits(maxCases, maxControlsPerSegment);
   const segments = freezeCampaignPreflight({
     plan: input.plan,
     segments: input.preflight,
     maxControlsPerSegment,
   });
-  const identity = { sourceSha: input.sourceSha, routes: input.routes };
+  const identity = matrixIdentityFor(input);
   const cases = ordered(rowsFor(identity, segments));
   const inapplicable = ordered(
     inapplicableRowsFor(identity, input, segments, cases),
@@ -225,6 +275,26 @@ export function finalizeCampaignMatrix(
     rows,
     cases,
     inapplicable,
+    revealPaths: uniqueByDigest(
+      segments.flatMap(({ controls }) =>
+        controls.map(({ revealPath }) => revealPath),
+      ),
+    ),
+    revealSurfaces: uniqueByDigest(
+      segments.flatMap(({ controls }) =>
+        controls.flatMap(({ expectedSurface, expectedActionSurface }) => [
+          expectedSurface,
+          ...(expectedActionSurface === null ? [] : [expectedActionSurface]),
+        ]),
+      ),
+    ),
+    revealTransitions: uniqueByDigest(
+      segments.flatMap(({ controls }) =>
+        controls.flatMap(({ expectedActionTransition }) =>
+          expectedActionTransition === null ? [] : [expectedActionTransition],
+        ),
+      ),
+    ),
     coveredPairs: [...new Set(cases.flatMap(pairKeys))].toSorted((a, b) =>
       a.localeCompare(b),
     ),

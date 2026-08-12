@@ -13,6 +13,10 @@ import {
   type InfrastructureCaseRunInput,
   runInfrastructureCase,
 } from "../scenarios/infrastructure/infrastructure-runner.ts";
+import {
+  type ResolverCaseRunInput,
+  runResolverCase,
+} from "../scenarios/resolver/resolver-runner.ts";
 import type { Oracle } from "../source/contracts.ts";
 import type { MatrixExecutableCase } from "./matrix-finalizer.ts";
 
@@ -27,11 +31,19 @@ export interface SpecializedCaseRunInput {
   readonly oracle: Oracle;
   readonly testInfo: TestInfo;
   readonly capturedAt: string;
+  readonly databaseUrl: string;
 }
 
 export const runSpecializedCase = async (
   input: SpecializedCaseRunInput,
 ): Promise<FrozenCaseReplayResult | undefined> => {
+  if (
+    input.matrixCase.declarationId === "viewer-status-empty" ||
+    input.matrixCase.declarationId === "viewer-status-query-error"
+  ) {
+    const resolverInput: ResolverCaseRunInput = input;
+    return runResolverCase(resolverInput);
+  }
   switch (input.matrixCase.execution.kind) {
     case "fault": {
       const faultInput: FaultCaseRunInput = input;

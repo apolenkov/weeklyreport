@@ -133,7 +133,9 @@ const executePlan = async (
       action: plan.action,
       ...recoveryOptionsFor(input, recoveryObservation?.boundary),
       observeOutcome,
-      ...(operation === "fill" ? { value: "Runtime sweep" } : {}),
+      ...(plan.representativeInput === undefined
+        ? {}
+        : { representativeInput: plan.representativeInput }),
       timeoutMs,
     });
     const observation = await finalObservation(

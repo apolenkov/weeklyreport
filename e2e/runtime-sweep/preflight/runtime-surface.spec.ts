@@ -2,6 +2,7 @@ import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture.ts";
 import { inventoryDom } from "../replay/dom-inventory.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   LEAD_FORM_UNAVAILABLE_MARKER,
   observeRuntimeSurface,
@@ -37,6 +38,7 @@ const captureSurfaceEvidence = async (
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     responseStatus: 200,
     capturedAt: "2026-08-05T00:00:00.000Z",
     functionalAssertion: {

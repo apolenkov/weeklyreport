@@ -66,6 +66,19 @@ const prepareStaging = async (
   return staging;
 };
 
+export const runtimeLaneCanonicalRoot = (sourceArchiveRoot: string): string =>
+  path.join(sourceArchiveRoot, "canonical");
+
+export const publishRuntimeLaneStaging = async (
+  sourceArchiveRoot: string,
+  staging: string,
+): Promise<void> => {
+  const canonical = runtimeLaneCanonicalRoot(sourceArchiveRoot);
+  await assertArchiveChildBeforeCreate(sourceArchiveRoot, canonical);
+  await rename(staging, canonical);
+  await assertArchiveChildAfterCreate(sourceArchiveRoot, canonical);
+};
+
 export async function publishRuntimeLaneMerge(
   assignment: RuntimeLaneAssignment,
   verified: readonly VerifiedLaneCell[],
@@ -82,12 +95,5 @@ export async function publishRuntimeLaneMerge(
     expectedCellIds: expectedCaseIds,
     requireFinalPass: true,
   });
-  await rename(
-    path.join(staging, "cells"),
-    path.join(assignment.sourceArchiveRoot, "cells"),
-  );
-  await rename(
-    path.join(staging, "baseline"),
-    path.join(assignment.sourceArchiveRoot, "baseline"),
-  );
+  await publishRuntimeLaneStaging(assignment.sourceArchiveRoot, staging);
 }

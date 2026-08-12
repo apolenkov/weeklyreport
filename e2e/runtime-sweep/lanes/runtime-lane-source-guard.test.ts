@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertRuntimeLaneSource,
   type RuntimeLaneSourceCommand,
+  startRuntimeLaneSourceMonitor,
 } from "./runtime-lane-source-guard.ts";
 
 const SOURCE_SHA = "a".repeat(40);
@@ -38,5 +39,38 @@ describe("runtime lane source guard", () => {
         commandWith("", "b".repeat(40)),
       ),
     ).rejects.toThrow("does not match HEAD");
+  });
+
+  it("allows only owned Next output while monitoring an active run", async () => {
+    const monitor = startRuntimeLaneSourceMonitor(
+      {
+        repoRoot: "/repo",
+        sourceSha: SOURCE_SHA,
+        onDrift: () => {
+          throw new Error("unexpected source drift");
+        },
+      },
+      commandWith("?? apps/web/.next-runtime-sweep-123/\n"),
+      1000,
+    );
+
+    await expect(monitor.stop()).resolves.toBeUndefined();
+  });
+
+  it("reports tracked drift and fails the monitor", async () => {
+    const drift = Promise.withResolvers<Error>();
+    const monitor = startRuntimeLaneSourceMonitor(
+      {
+        repoRoot: "/repo",
+        sourceSha: SOURCE_SHA,
+        onDrift: drift.resolve,
+      },
+      commandWith(" M apps/web/src/app/page.tsx\n"),
+      1000,
+    );
+
+    const error = await drift.promise;
+    expect(error.message).toContain("drifted during execution");
+    await expect(monitor.stop()).rejects.toThrow("drifted during execution");
   });
 });

@@ -51,6 +51,94 @@ before baseline execution rather than trimming cells.
   and digest are written to `MATRIX.json`
 - **AND** the baseline replays that file without adding newly discovered cells
 
+#### Scenario: a catalog redirect has one exact landing route
+
+- **GIVEN** a catalog route is an intentional redirect alias
+- **WHEN** preflight or runtime replay navigates to its declared entry route
+- **THEN** the frozen route declaration names the exact canonical landing URL,
+  including its query string, and the browser must settle at that URL
+- **AND** reveal discovery uses that landing pathname as its route boundary
+- **AND** a missing declaration, a different redirect target, or a later action
+  leaving that pathname fails closed instead of accepting the live URL as a
+  fallback
+
+#### Scenario: a resolver route uses state-bound outcomes instead of one alias landing
+
+- **GIVEN** a catalog route resolves a target from prepared domain state or
+  authentication/query outcome rather than performing one unconditional redirect
+- **WHEN** preflight or runtime replay exercises the resolver entry
+- **THEN** the route declaration does not claim one unconditional exact landing
+  URL, while the entry route remains executable
+- **AND** each expected outcome is bound to the prepared state identity, its
+  state digest, and the campaign source digest
+- **AND** the outcome set covers visible current, published fallback, empty,
+  query error, and anonymous
+- **AND** `empty` and `query error` are explicit route-local resolver scenarios
+  in the frozen source rather than values inferred from lifecycle, ownership,
+  an unrelated permission boundary, or an observed browser result
+- **AND** the empty scenario removes every reporting-group grant for the seeded
+  viewer only inside the guarded disposable state boundary, proves the resolver
+  returned no report and the database oracle remained exact, and relies on the
+  next canonical reseed to restore the seeded grants
+- **AND** the query-error scenario injects one named fault scoped exactly to
+  `reports.latestForViewer`, proves the exact error and retry UI, proves a
+  successful fault-free retry, and proves no database mutation occurred
+- **AND** both route-local scenarios have immutable declaration ids, explicit
+  execution contracts, and source/state/fault evidence in preflight, matrix,
+  replay, and coverage artifacts
+- **AND** the minimum applicable profile is exercised and every inapplicable
+  role-permission boundary, including a minimal profile without the required
+  capability, is represented by a typed reason rather than silently omitted
+
+#### Scenario: a viewer status resolver keeps its executable entry binding
+
+- **GIVEN** the viewer catalog contains `/reports/latest` without a route-level
+  landing declaration
+- **WHEN** the route binding is compiled
+- **THEN** its resolved entry remains `/reports/latest`
+- **AND** profiles `demo`, `full`, and `stress` remain executable when they
+  provide the required viewer-visible capability
+- **AND** `minimal` is retained as an explicit typed inapplicable boundary when
+  that capability is absent
+- **AND** no static exact landing is invented to stand in for the resolver's
+  state-bound outcomes
+
+#### Scenario: a repair proves the exact failed segment before a full preflight
+
+- **GIVEN** a preflight failure identifies one canonical source state
+- **WHEN** the harness is repaired at a new clean source SHA
+- **THEN** an immutable exact-segment canary selects that one `stateId` and
+  executes the same preparation, navigation, inventory, reveal discovery, and
+  database non-mutation paths as the full preflight
+- **AND** the next full preflight is blocked until the matching canary passes at
+  that SHA
+- **AND** only the supported same-process repair chain may continue from that
+  PASS into full preflight; a standalone or synthetic PASS artifact cannot
+  authorize the full launch
+- **AND** unknown, duplicate, stale-SHA, role-mismatched, route-mismatched, or
+  profile-mismatched selectors fail before browser execution
+
+#### Scenario: preflight resumes only at a verified state boundary
+
+- **GIVEN** a full preflight was interrupted after one or more states reached a
+  terminal PASS
+- **WHEN** the operator resumes the same source-bound preflight assignment
+- **THEN** an append-only journal proves the exact source SHA, source tree,
+  source digest, plan digest, assignment digest, state identity, state digest,
+  profile, role, route, and terminal artifact digest for every skipped state
+- **AND** the runner re-proves a clean source, recreates the exact disposable
+  state boundary, and restarts every failed, started-only, ambiguous, or
+  incomplete state from its beginning
+- **AND** the runner never resumes within a reveal path, browser action, or
+  partially captured state
+- **AND** duplicate, missing, reordered, stale-SHA, foreign-assignment,
+  digest-mismatched, truncated, or tampered journal records fail closed
+- **AND** the journal cannot authorize full launch, matrix finalization, or a
+  PASS artifact by itself
+- **AND** canonical `PREFLIGHT.json` is published only when the validated union
+  of prior terminal states and newly completed states exactly equals the full
+  ordered source plan at one SHA with no gap or duplicate
+
 #### Scenario: an invalid specialized witness fails finalization
 
 - **WHEN** a transition disagrees with its action, a non-`none` fault lacks a
@@ -59,12 +147,23 @@ before baseline execution rather than trimming cells.
 - **THEN** matrix finalization fails before baseline execution
 - **AND** a `none` value or silently trimmed row cannot satisfy the gap
 
-#### Scenario: preflight changes destructive state groups
+#### Scenario: preflight changes deterministic states
 
-- **WHEN** preflight moves to a state group that requires a profile reseed
-- **THEN** it quiesces the prior browser document before replacing database rows
+- **WHEN** preflight moves from one deterministic state to the next
+- **THEN** it clears origin storage, quiesces the prior browser document, and receives the runtime API idle acknowledgement before any database mutation
+- **AND** an aborted client connection remains active until its tracked API operation settles; an untracked abort fails the bounded drain instead of permitting a reset race
+- **AND** it reseeds only when the state group changes
+- **AND** it clears origin storage again when authentication revisits the app after a reseed
 - **AND** the API runs as a one-shot process without source-watch restarts
 - **AND** the campaign persists the preflight API log before navigation so an internal error can be adjudicated from server evidence
+
+#### Scenario: runtime reuses only an exact read-only preparation group
+
+- **WHEN** multiple navigation, idle, or read-only control cells have no fault and share the exact source, profile, role, route target, route key, resolved route, profile capability, lifecycle, submission, ownership, permission, fault, and control-transition preparation key
+- **THEN** the runner MAY prepare their server state once
+- **AND** it still quiesces the browser, drains tracked API work, establishes the cell auth/storage boundary, navigates, executes, captures, and persists every cell independently
+- **AND** mutating, recovery, fault, concurrency, infrastructure, and unknown executions receive isolated preparation and never consume the shared prepared state
+- **AND** any non-pass cell stops the group without executing a later cell on uncertain state
 
 ### Requirement: Every coverage cell has a typed identity and one source SHA
 
@@ -113,12 +212,26 @@ reason is recorded in the ledger; an unreasoned omission is a gap.
 
 #### Scenario: a dynamically revealed control is covered
 
-- **WHEN** an action opens a menu, dialog, tab panel, or otherwise reveals a
-  control that was absent from the prior inventory
-- **THEN** the next inventory contains that control with a deterministic
-  identity
-- **AND** the ledger records its action, oracle observation, and terminal cell
+- **WHEN** preflight proves that an action opens a menu, dialog, tab panel, or
+  otherwise reveals a control that was absent from the prior inventory
+- **THEN** `PREFLIGHT.json` freezes that control with one deterministic reveal
+  path, the complete semantic surface reached by that path, and their digests
+  before `MATRIX.json` is finalized
+- **AND** the control receives its own frozen cell that replays the path before
+  its one bounded target action and records the oracle observation and terminal
   verdict
+- **AND** every reveal step proves the persisted database oracle is unchanged;
+  a mutation-requiring transition is represented by a separately prepared
+  deterministic state rather than hidden in the reveal path
+- **AND** an interactive control that declares an immediate product effect is
+  frozen as `mutation-required`, remains covered by the ordinary runtime
+  matrix, and is never executed as reveal preparation
+- **AND** the declared interaction effect is part of the frozen semantic
+  surface, so effect drift fails closed before the target action
+- **AND** an ambiguous reveal path or a control first observed after matrix
+  finalization fails closed instead of expanding a running campaign
+- **AND** an unknown, missing, reordered, renamed, or otherwise signature-
+  changed control on the replayed surface fails the owning cell
 
 #### Scenario: an unreasoned control omission fails coverage
 
@@ -169,14 +282,54 @@ changing its cell identity. The canonical merger SHALL reject duplicate,
 missing, extra, stale-SHA, non-pass, digest-mismatched, or cross-lane evidence
 before publishing. A full run SHALL prove that the merged union equals the
 complete executable matrix. Lane count and assignment digest MAY change without
-changing `MATRIX.json` or its digest.
+changing `MATRIX.json` or its digest. The merger SHALL publish the validated
+`cells` and `baseline` together through one rename of their containing canonical
+directory; two independently visible publication steps are forbidden.
 
 #### Scenario: isolated lanes replay one frozen matrix
 
 - **WHEN** the operator requests more than one deterministic lane
-- **THEN** readiness proves distinct databases, Redis identities, service ports,
-  output roots, and source-bound assignments before any reset or browser starts
+- **THEN** readiness proves distinct databases with no foreign client, empty
+  Redis instances with no foreign client, distinct Redis identities, service
+  ports, output roots, and source-bound assignments before any reset or browser starts
 - **AND** every lane runs serially against only its own resources
+
+#### Scenario: Redis mutation requires exact operator authorization
+
+- **WHEN** any public preparation or replay entrypoint could create, start, or
+  remove a lane Redis container
+- **THEN** it refuses before any Docker mutation unless
+  `RUNTIME_SWEEP_REDIS_RECREATE` is exactly `true`
+- **AND** every mutation consumes a freshly minted single-use authorization
+  immediately before the primitive
+- **AND** absent, empty, differently cased, reused, stale, or caller-fabricated
+  authorization cannot reach that primitive
+
+#### Scenario: target plans can be verified without mutation
+
+- **WHEN** the operator verifies the configured lane count before resolving the
+  integration or database/Redis execution inputs
+- **THEN** separate guard-only commands derive every canonical lane database
+  and Redis target, prove that each database differs from `DATABASE_URL`, and
+  require the exact loopback, non-production suffix, flush, and recreation
+  declarations
+- **AND** both typed results declare `destructiveOperationsAllowed=false`
+- **AND** the commands import no database, Redis, Docker, child-process, socket,
+  or filesystem-write primitive and cannot create, start, remove, connect,
+  reset, seed, or flush a resource
+- **AND** an unsafe, ambiguous, production, equal-database, non-canonical, or
+  incomplete target plan exits nonzero before runtime input resolution
+
+#### Scenario: Redis identity is re-proven after every mutation and readiness wait
+
+- **WHEN** a lane Redis container is created, started, recreated, or reused
+- **THEN** every Docker mutation targets the previously inspected immutable ID,
+  never a mutable name
+- **AND** after the bounded readiness wait the runner inspects that exact ID and
+  re-proves the complete canonical tuple, running state, and ID equality before
+  returning success
+- **AND** invalid creation output, name rebinding, missing inspection, foreign
+  configuration, ID mismatch, or a stopped post-wait state fails closed
 
 #### Scenario: the merger fails closed on incomplete parallel output
 
@@ -271,6 +424,14 @@ The observability adjudicator SHALL identify undeclared failures, repeated or
 unbounded requests, retry storms, missing or ineffective cache behavior where
 the route declares a cache expectation, slow-request outliers, queue failures,
 and Bugsink/Loki events correlated to the cell time window and correlation id.
+Every generated route SHALL carry either a strict machine-readable network
+policy or an explicit reviewed `null` declaration. The finalized matrix SHALL
+bind the effective policy into the case identity and matrix digest, and every
+ordinary or specialized browser capture SHALL receive that bound policy without
+a fallback. The current cache/performance claim is limited to duplicate-request
+cache-contract heuristics and per-request slow outliers; it SHALL NOT be reported
+as HTTP cache-header validation, a cache-hit proof, a percentile budget, or an
+end-to-end SLO.
 A green browser assertion MUST NOT override an observability failure or a
 missing correlation query. Expected requests and controlled faults SHALL be
 declared so the adjudicator can distinguish intended behavior from noise.

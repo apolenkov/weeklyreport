@@ -4,16 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  type Action,
-  type CoverageCell,
-  type CoverageVerdict,
-  type EvidenceDimension,
-  type EvidenceKind,
-  type EvidenceRef,
-  type Oracle,
-  type StateAxes,
-} from "../source/contracts.ts";
+import type { CoverageCell } from "../source/contracts.ts";
 import {
   appendCoverageCell,
   LedgerValidationError,
@@ -21,108 +12,7 @@ import {
   verifyCoverageLedger,
   writeOrderedCoverageLedger,
 } from "./ledger.ts";
-
-const SOURCE_SHA = "a".repeat(40);
-const DIGEST = "b".repeat(64);
-const state: StateAxes = {
-  profileCapability: "canonical-identities",
-  lifecycle: "open",
-  submission: "draft",
-  ownershipDensity: "single",
-  permission: "allowed",
-  fault: "none",
-  controlTransition: "none",
-};
-const action: Action = {
-  controlKey: "save",
-  operation: "click",
-  safety: "reversible",
-  transition: "none",
-};
-const oracle: Oracle = {
-  domainSpecRefs: ["exhaustive-runtime-sweep"],
-  function: { required: true, expectation: "the action succeeds" },
-  accessibility: { required: true, expectation: "status is announced" },
-  visual: { required: true, expectation: "settled screenshot matches" },
-};
-const control = {
-  controlKey: "save",
-  cellId: "cell-a",
-  ariaRole: "button",
-  accessibleName: "Save",
-  enabled: true,
-  order: 0,
-  actionResult: {
-    kind: "exercised" as const,
-    result: "pass" as const,
-    evidenceIds: ["function-artifact"],
-  },
-};
-
-function evidence(
-  dimension: EvidenceDimension,
-  kind: EvidenceKind,
-  artifactId: string,
-  cellId = "cell-a",
-): EvidenceRef {
-  return {
-    artifactId,
-    kind,
-    dimension,
-    archivePath: `baseline/${artifactId}`,
-    digest: DIGEST,
-    capturedAt: "2026-08-04T00:00:00Z",
-    cellId,
-    sourceSha: SOURCE_SHA,
-    profile: "minimal",
-    role: "lead",
-    catalogRoute: "/lead/report",
-    resolvedRoute: "/lead/report",
-  };
-}
-
-function makeCell(
-  cellId = "cell-a",
-  verdict: CoverageVerdict = "pass",
-): CoverageCell {
-  const functionRef = evidence("function", "api", "function-artifact", cellId);
-  const accessibilityRef = evidence(
-    "accessibility",
-    "axe",
-    "accessibility-artifact",
-    cellId,
-  );
-  const visualRef = evidence("visual", "screenshot", "visual-artifact", cellId);
-  return {
-    cellId,
-    sourceSha: SOURCE_SHA,
-    profile: "minimal",
-    role: "lead",
-    catalogRoute: "/lead/report",
-    resolvedRoute: "/lead/report",
-    viewport: { browser: "chromium", width: 1440, height: 900 },
-    state,
-    action,
-    execution: { kind: "control", action },
-    faultId: null,
-    oracle,
-    controls: [{ ...control, cellId }],
-    evidence: {
-      before: [functionRef],
-      action: [accessibilityRef],
-      after: [visualRef],
-      observations: [],
-      inapplicable: [],
-    },
-    verdict,
-  };
-}
-
-const options = {
-  sourceSha: SOURCE_SHA,
-  expectedCellIds: ["cell-a", "cell-b"],
-  requireFinalPass: true,
-};
+import { control, makeCell, options, SOURCE_SHA } from "./ledger-fixtures.ts";
 
 describe("runtime sweep ledger", () => {
   it("rejects duplicate cells and mixed source SHAs", () => {
@@ -149,6 +39,22 @@ describe("runtime sweep ledger", () => {
         expectedCellIds: ["cell-a"],
       }),
     ).toThrow(/visual evidence/);
+    const completeEvidence = makeCell().evidence;
+    const missingRuntime: CoverageCell = {
+      ...makeCell(),
+      evidence: {
+        ...completeEvidence,
+        after: completeEvidence.after.filter(
+          ({ dimension }) => dimension === "visual",
+        ),
+      },
+    };
+    expect(() =>
+      verifyCoverageLedger([missingRuntime], {
+        ...options,
+        expectedCellIds: ["cell-a"],
+      }),
+    ).toThrow(/runtime evidence/);
     const omitted: CoverageCell = {
       ...makeCell(),
       controls: [
@@ -195,6 +101,32 @@ describe("runtime sweep ledger", () => {
         expectedCellIds: ["cell-a"],
       }),
     ).toThrow(/final verdict/);
+  });
+
+  it("accepts a reasoned runtime inapplicable entry", () => {
+    const completeEvidence = makeCell().evidence;
+    const runtimeInapplicable: CoverageCell = {
+      ...makeCell(),
+      evidence: {
+        ...completeEvidence,
+        after: completeEvidence.after.filter(
+          ({ dimension }) => dimension !== "runtime",
+        ),
+        inapplicable: [
+          {
+            dimension: "runtime",
+            reason:
+              "This read-only fixture has no service-side runtime surface",
+          },
+        ],
+      },
+    };
+    expect(
+      verifyCoverageLedger([runtimeInapplicable], {
+        ...options,
+        expectedCellIds: ["cell-a"],
+      }),
+    ).toMatchObject({ counts: { pass: 1 } });
   });
 
   it("allows reasoned contextual controls on navigation cells", () => {

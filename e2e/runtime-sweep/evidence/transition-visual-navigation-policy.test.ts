@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { FROZEN_LIVE_TRANSITION_VISUAL_POLICY } from "./transition-visual-evaluation.ts";
 import { transitionObservationMessage } from "./transition-visual-evidence.ts";
 import { policyForNavigationPair } from "./transition-visual-navigation-policy.ts";
@@ -23,6 +24,7 @@ const matrixCase = (options: CaseOptions = {}): MatrixExecutableCase => {
     role: "lead",
     catalogRoute: "/lead/report/[reportId]/preview",
     resolvedRoute: "/lead/report/report-id/preview",
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     state: {
       profileCapability: "editable-active-report",
       lifecycle: "open",

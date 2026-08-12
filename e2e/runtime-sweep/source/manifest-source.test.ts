@@ -4,7 +4,15 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { writeAtomicManifestPair } from "./manifest-source.ts";
+import {
+  createManifestFixture,
+  fakeManifestGit,
+} from "../manifest/manifest-fixture.ts";
+import {
+  cleanSourceIdentity,
+  cleanTreeDigest,
+  writeAtomicManifestPair,
+} from "./manifest-source.ts";
 
 describe("atomic runtime artifact publication", () => {
   it("rolls back MATRIX when MANIFEST publication fails", async () => {
@@ -69,6 +77,23 @@ describe("atomic runtime artifact publication", () => {
       );
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("clean source identity", () => {
+  it("keeps cleanTreeDigest as a digest-only compatibility wrapper", async () => {
+    const fixture = await createManifestFixture();
+    try {
+      const identity = await cleanSourceIdentity(
+        fixture.input,
+        fakeManifestGit(),
+      );
+      await expect(
+        cleanTreeDigest(fixture.input, fakeManifestGit()),
+      ).resolves.toBe(identity.treeDigest);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
     }
   });
 });

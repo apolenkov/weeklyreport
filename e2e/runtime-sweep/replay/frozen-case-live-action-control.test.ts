@@ -62,6 +62,7 @@ vi.mock("../../helpers/e2e-runtime-state-setup.js", () => ({
   reseedE2eRuntimeState: harness.reseed,
 }));
 vi.mock("./dom-inventory.ts", () => ({
+  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
   inventoryDom: vi.fn(() => Promise.resolve(harness.inventory)),
 }));
 vi.mock("./frozen-case-live-preparation.ts", () => ({
@@ -73,7 +74,10 @@ vi.mock("./live-control-lane.ts", () => ({
   executeLiveControlPlans: harness.execute,
 }));
 vi.mock("../matrix/runtime-matrix.ts", () => ({
-  routeForState: vi.fn(() => ({ resolvedRoute: "/lead/report" })),
+  routeForState: vi.fn(() => ({
+    resolvedRoute: "/lead/report",
+    landingRoute: "/lead/report",
+  })),
 }));
 
 const matrixCase = {
@@ -106,6 +110,7 @@ const matrixCase = {
 } as MatrixExecutableCase;
 
 const runtime = {
+  baseURL: "http://127.0.0.1:3105",
   databaseUrl: "postgresql://localhost/customreport_e2e",
   repoRoot: "/workspace/customreport",
 } as FrozenCaseLiveRuntime;
@@ -120,13 +125,18 @@ afterEach(() => {
 describe("frozen stateful control recovery", () => {
   it("reseeds once and prepares the oracle without a second reseed", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
-    const goto = vi.fn(() => Promise.resolve());
-    const outcome = await runAction(
-      { goto } as unknown as Page,
-      {} as never,
-      matrixCase,
-      runtime,
-    );
+    const url = vi
+      .fn<() => string>()
+      .mockReturnValueOnce("about:blank")
+      .mockReturnValue("http://127.0.0.1:3105/lead/report");
+    const goto = vi.fn((_route: string) => Promise.resolve());
+    const page = {
+      goto,
+      url,
+      waitForLoadState: vi.fn(() => Promise.resolve()),
+      waitForFunction: vi.fn(() => Promise.resolve()),
+    } as unknown as Page;
+    const outcome = await runAction(page, {} as never, matrixCase, runtime);
 
     expect(outcome?.status).toBe("pass");
     expect(harness.reseed).toHaveBeenCalledOnce();
@@ -135,6 +145,10 @@ describe("frozen stateful control recovery", () => {
     expect(resetter).toEqual(expect.any(Function));
     if (typeof resetter === "function") await resetter();
     expect(harness.reseed).toHaveBeenCalledOnce();
-    expect(goto.mock.calls).toEqual([["about:blank"], ["/lead/report"]]);
+    expect(url).toHaveBeenCalledTimes(2);
+    expect(goto.mock.calls.map(([route]) => route)).toEqual([
+      "about:blank",
+      "/lead/report",
+    ]);
   });
 });

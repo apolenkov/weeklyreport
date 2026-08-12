@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import type {
   CampaignMatrixPlan,
   CampaignMatrixState,
@@ -48,6 +49,7 @@ const frozenCase = (candidate: CampaignMatrixState): MatrixExecutableCase => ({
     candidate.axes.route.indexOf(":") + 1,
   ),
   resolvedRoute: candidate.axes.route,
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: candidate.axes.profileCapability,
     lifecycle: candidate.axes.lifecycle,

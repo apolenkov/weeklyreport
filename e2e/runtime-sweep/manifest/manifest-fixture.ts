@@ -10,7 +10,7 @@ import {
 
 const SHA_LENGTH = 40;
 export const FIXTURE_SOURCE_SHA = "a".repeat(SHA_LENGTH);
-const FIXTURE_TREE_SHA = "b".repeat(SHA_LENGTH);
+export const FIXTURE_TREE_SHA = "b".repeat(SHA_LENGTH);
 
 export const fakeManifestGit = (): ManifestCommandRunner => (args) => {
   const command = args.join(" ");
@@ -41,23 +41,41 @@ const definition = () => ({
 });
 
 const fixtureRoutes = () => [
-  { role: "lead" as const, catalogRoute: "/lead", resolvedRoute: "/lead" },
+  {
+    role: "lead" as const,
+    catalogRoute: "/lead",
+    resolvedRoute: "/lead",
+    networkPolicy: null,
+  },
   {
     role: "lead" as const,
     catalogRoute: "/lead/report/[reportId]",
     resolvedRoute: `/lead/report/${ACTIVE_REPORT_ID}`,
+    networkPolicy: null,
   },
-  { role: "head" as const, catalogRoute: "/head", resolvedRoute: "/head" },
+  {
+    role: "head" as const,
+    catalogRoute: "/head",
+    resolvedRoute: "/head",
+    networkPolicy: null,
+  },
   {
     role: "head" as const,
     catalogRoute: "/head/report/[reportId]",
     resolvedRoute: `/head/report/${ACTIVE_REPORT_ID}`,
+    networkPolicy: null,
   },
-  { role: "admin" as const, catalogRoute: "/admin", resolvedRoute: "/admin" },
+  {
+    role: "admin" as const,
+    catalogRoute: "/admin",
+    resolvedRoute: "/admin",
+    networkPolicy: null,
+  },
   {
     role: "viewer" as const,
     catalogRoute: "/reports",
     resolvedRoute: "/reports",
+    networkPolicy: null,
   },
 ];
 

@@ -36,6 +36,11 @@ export interface LiveControlEvidenceResult {
   readonly evidence: EvidenceRef;
 }
 
+interface LiveControlRecordIndex {
+  readonly lastRecordByControlKey: ReadonlyMap<string, LiveControlActionRecord>;
+  readonly duplicateControlKeys: ReadonlySet<string>;
+}
+
 const slug = (value: string): string =>
   value.replaceAll(/[^a-zA-Z0-9]+/g, "-").replaceAll(/^-|-$/g, "") || "root";
 
@@ -73,19 +78,26 @@ const actionResultFor = (
   };
 };
 
-const controlForRecord = (
-  input: LiveControlEvidenceInput,
-  record: LiveControlActionRecord,
-  evidenceId: string,
-): DOMControl => ({
-  controlKey: record.controlKey,
-  cellId: input.cell.cellId,
-  ariaRole: record.ariaRole,
-  accessibleName: record.accessibleName,
-  enabled: record.enabled,
-  order: record.order,
-  actionResult: actionResultFor(record, evidenceId),
-});
+export const indexLiveControlRecords = (
+  records: readonly LiveControlActionRecord[],
+): LiveControlRecordIndex => {
+  const grouped = Map.groupBy(records, ({ controlKey }) => controlKey);
+  const entries = [...grouped.entries()];
+  const lastRecordByControlKey = new Map(
+    entries.map(([controlKey, controls]) => {
+      const last = controls.at(-1);
+      if (last === undefined)
+        throw new Error(`Control group is empty: ${controlKey}`);
+      return [controlKey, last] as const;
+    }),
+  );
+  const duplicateControlKeys = new Set(
+    entries
+      .filter(([, controls]) => controls.length > 1)
+      .map(([controlKey]) => controlKey),
+  );
+  return { lastRecordByControlKey, duplicateControlKeys };
+};
 
 const artifactDirectory = (input: LiveControlEvidenceInput): string =>
   inside(
@@ -156,28 +168,23 @@ const updateCell = async (
   input: LiveControlEvidenceInput,
   evidence: EvidenceRef,
 ): Promise<CoverageCell> => {
-  const byControlKey = new Map<string, LiveControlActionRecord>();
-  const duplicateKeys = input.records.filter((record) => {
-    if (byControlKey.has(record.controlKey)) return true;
-    byControlKey.set(record.controlKey, record);
-    return false;
-  });
+  const { lastRecordByControlKey, duplicateControlKeys } =
+    indexLiveControlRecords(input.records);
   const baselineControls = input.cell.controls.map((control) => ({
     ...control,
     actionResult: actionResultFor(
-      byControlKey.get(control.controlKey),
+      lastRecordByControlKey.get(control.controlKey),
       evidence.artifactId,
     ),
   }));
   const baselineKeys = new Set(
     input.cell.controls.map(({ controlKey }) => controlKey),
   );
-  const dynamicControls = input.records
-    .filter(({ controlKey }) => !baselineKeys.has(controlKey))
-    .map((record) => controlForRecord(input, record, evidence.artifactId));
-  const controls = [...baselineControls, ...dynamicControls];
+  const unknownControls = input.records.filter(
+    ({ controlKey }) => !baselineKeys.has(controlKey),
+  );
   const missingBaseline = input.cell.controls.some(
-    ({ controlKey }) => !byControlKey.has(controlKey),
+    ({ controlKey }) => !lastRecordByControlKey.has(controlKey),
   );
   const unnamedControl = input.cell.controls.some(
     ({ accessibleName }) => accessibleName.trim() === "",
@@ -201,10 +208,11 @@ const updateCell = async (
     enabledUnavailable ||
     missingBaseline ||
     unnamedControl ||
-    duplicateKeys.length > 0;
+    duplicateControlKeys.size > 0 ||
+    unknownControls.length > 0;
   const cell = coverageCellSchema.parse({
     ...input.cell,
-    controls,
+    controls: baselineControls,
     evidence: {
       ...input.cell.evidence,
       action: [...input.cell.evidence.action, evidence],

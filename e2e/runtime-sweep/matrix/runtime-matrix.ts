@@ -51,6 +51,10 @@ export const RUNTIME_MATRIX_ORACLE: Oracle = {
     required: true,
     expectation: "Chromium desktop geometry has no unbounded overflow",
   },
+  runtime: {
+    required: true,
+    expectation: "Browser and service telemetry is clean and correlated",
+  },
 };
 
 export type RuntimeMatrixActor = Readonly<{

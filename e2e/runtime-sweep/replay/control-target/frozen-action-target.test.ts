@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
 import type { Action } from "../../source/contracts.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
 import type { DomControlObservation } from "../dom-inventory.ts";
 import { controlIssues } from "../frozen-case-control-validation.ts";
 import {
@@ -118,6 +119,7 @@ describe("frozen action target selection", () => {
       role: "lead",
       catalogRoute: "/reports/history",
       resolvedRoute: "/reports/history",
+      networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
       state: {
         profileCapability: "canonical-identities",
         lifecycle: "open",

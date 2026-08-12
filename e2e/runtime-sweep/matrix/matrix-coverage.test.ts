@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { revealPathFor, revealSurfaceFor } from "../preflight/reveal-path.ts";
 import {
   type Action,
   type CoverageCell,
   coverageCellSchema,
   type MatrixAxes,
   type MatrixExecution,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
 } from "../source/contracts.ts";
 import { sha256Hex } from "../support/ids.ts";
 import {
@@ -22,6 +24,19 @@ import { pairKeys } from "./matrix-finalizer-support.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const VIEWPORT = { browser: "chromium" as const, width: 1440, height: 900 };
+const fixturePath = revealPathFor([], "/lead");
+const fixtureSurface = revealSurfaceFor(
+  ["publish", "submit"].map((controlKey, index) => ({
+    controlKey,
+    ariaRole: "button",
+    accessibleName: controlKey,
+    enabled: true,
+    order: index,
+    domOrderKey: `${String(index).padStart(4, "0")}:button:${controlKey}`,
+    href: null,
+    interactionEffect: null,
+  })),
+);
 const state = (
   overrides: Partial<MatrixAxes> = {},
 ): MatrixExecutableCase["state"] => ({
@@ -34,30 +49,44 @@ const state = (
   controlTransition: "none",
   ...overrides,
 });
-
 const action = (
   controlKey: string,
   operation: Action["operation"],
   transition: Action["transition"] = "none",
 ): Action => ({ controlKey, operation, safety: "reversible", transition });
-
 const matrixCase = (
   caseId: string,
   axes: MatrixExecutableCase["state"],
   execution: MatrixExecution,
-): MatrixExecutableCase => ({
-  kind: "executable",
-  caseId,
-  stateId: `${caseId}-state`,
-  sourceSha: SOURCE_SHA,
-  profile: "minimal",
-  role: "lead",
-  catalogRoute: "/lead",
-  resolvedRoute: "/lead",
-  state: axes,
-  execution,
-});
-
+): MatrixExecutableCase => {
+  const action =
+    "action" in execution && execution.kind !== "navigation"
+      ? execution.action
+      : undefined;
+  return {
+    kind: "executable",
+    caseId,
+    stateId: `${caseId}-state`,
+    sourceSha: SOURCE_SHA,
+    profile: "minimal",
+    role: "lead",
+    catalogRoute: "/lead",
+    resolvedRoute: "/lead",
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
+    state: axes,
+    execution,
+    ...(action === undefined
+      ? {}
+      : {
+          controlKey: action.controlKey,
+          preparation: {
+            revealPathDigest: fixturePath.digest,
+            expectedSurfaceDigest: fixtureSurface.digest,
+            expectedActionTransitionDigest: null,
+          },
+        }),
+  };
+};
 const navigation = (caseId: string, axes = state()): MatrixExecutableCase =>
   matrixCase(caseId, axes, {
     kind: "navigation",
@@ -68,13 +97,11 @@ const navigation = (caseId: string, axes = state()): MatrixExecutableCase =>
       transition: "none",
     },
   });
-
 const control = (caseId: string): MatrixExecutableCase =>
   matrixCase(caseId, state({ controlTransition: "submit" }), {
     kind: "control",
     action: action("submit", "submit", "submit"),
   });
-
 const fault = (caseId: string): MatrixExecutableCase =>
   matrixCase(
     caseId,
@@ -95,6 +122,7 @@ const inapplicable = (caseId: string) => ({
   role: "lead" as const,
   catalogRoute: "/lead",
   resolvedRoute: "/lead",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: state({ fault: "network-timeout" }),
   inapplicable: {
     constraintId: "fixture-boundary",
@@ -134,6 +162,7 @@ const cellFor = (
       function: { required: true, expectation: "fixture" },
       accessibility: { required: true, expectation: "fixture" },
       visual: { required: true, expectation: "fixture" },
+      runtime: { required: true, expectation: "fixture runtime is clean" },
     },
     controls: [],
     evidence: {
@@ -169,6 +198,9 @@ const frozen = (
       maxCases: Math.max(100, cases.length + inapplicableRows.length),
       maxControlsPerSegment: 10,
     },
+    revealPaths: [fixturePath],
+    revealSurfaces: [fixtureSurface],
+    revealTransitions: [],
   };
   return parseFrozenMatrix({ ...body, digest: sha256Hex(body) });
 };

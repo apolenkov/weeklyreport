@@ -61,7 +61,12 @@ test("aborts a near-deadline action before its target becomes actionable", async
         if (output !== null) output.textContent = "clicked";
       });
     });
-    const control = { ...frozenControl, ariaRole: "button" as const };
+    const control = {
+      ...frozenControl,
+      accessibleName: "OPEN",
+      ariaRole: "button" as const,
+      controlKey: "button:OPEN:1",
+    };
 
     const result = await executeControlAction({
       page,
@@ -104,7 +109,12 @@ test("bounds a renderer stall between revalidation and action ownership", async 
       },
     });
   });
-  const control = { ...frozenControl, ariaRole: "button" as const };
+  const control = {
+    ...frozenControl,
+    accessibleName: "OPEN",
+    ariaRole: "button" as const,
+    controlKey: "button:OPEN:1",
+  };
   const startedAt = performance.now();
 
   const result = await executeControlAction({
@@ -148,7 +158,12 @@ test("bounds an acting renderer stall and quarantines possible tail input", asyn
       if (output !== null) output.textContent = "clicked";
     });
   });
-  const control = { ...frozenControl, ariaRole: "button" as const };
+  const control = {
+    ...frozenControl,
+    accessibleName: "OPEN",
+    ariaRole: "button" as const,
+    controlKey: "button:OPEN:1",
+  };
   const target = await renderedNameTargetHandle(page, control);
   if (target === undefined) throw new Error("Rendered target is missing");
   const startedAt = performance.now();
@@ -220,9 +235,9 @@ test("blocks Enter when an invalidated skip link cannot take focus", async ({
     previous.focus();
   });
   const control = {
-    accessibleName: frozenControl.accessibleName,
+    accessibleName: "SKIP TO CONTENT",
     ariaRole: "link" as const,
-    controlKey: frozenControl.controlKey,
+    controlKey: "link:SKIP%20TO%20CONTENT:1",
     enabled: frozenControl.enabled,
   };
   await expect(
