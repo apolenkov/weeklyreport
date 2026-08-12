@@ -484,9 +484,41 @@
       "target": "e2e/runtime-sweep/matrix/$1"
     },
     {
+      "id": "runtime-matrix-reveal-transition",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/(reveal-transition\\.ts)$",
+      "concern": "matrix",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/matrix/$1"
+    },
+    {
       "id": "runtime-preflight",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(reveal-path(?:-(?:convergence|url))?\\.test\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(reveal-path(?:-validation)?\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-support-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:run-runtime-preflight|runtime-observability-policy)\\.ts)$",
       "concern": "preflight",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/$1"
@@ -556,12 +588,44 @@
       "target": "e2e/runtime-sweep/scenarios/infrastructure/$1"
     },
     {
+      "id": "runtime-resolver-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/scenarios/resolver/((?:resolver-empty-preparation|resolver-navigation|resolver-query-fault|resolver-runner(?:-support)?)\\.test\\.ts)$",
+      "concern": "resolver",
+      "role": "test",
+      "target": "e2e/runtime-sweep/scenarios/resolver/$1"
+    },
+    {
+      "id": "runtime-resolver-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/scenarios/resolver/((?:resolver-empty-runner|resolver-navigation|resolver-query-error-runner|resolver-query-fault|resolver-runner-(?:guards|lifecycle|support)|resolver-runner)\\.ts)$",
+      "concern": "resolver",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/scenarios/resolver/$1"
+    },
+    {
       "id": "runtime-driver",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:driver/)?((?:driver-|import-ai-driver-)[^/]*)$",
       "concern": "driver-import",
       "role": "implementation",
       "target": "e2e/runtime-sweep/driver/$1"
+    },
+    {
+      "id": "runtime-source-contract-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/((?:contracts-landing|route-network-policy|source-artifact)\\.test\\.ts)$",
+      "concern": "source-contracts",
+      "role": "test",
+      "target": "e2e/runtime-sweep/source/$1"
+    },
+    {
+      "id": "runtime-source-contract-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/((?:contracts-fixture|contracts-route-schemas|network-policy-contracts|route-network-policy)\\.ts)$",
+      "concern": "source-contracts",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/source/$1"
     },
     {
       "id": "runtime-evidence",
@@ -583,6 +647,22 @@
       "id": "runtime-live-control",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:replay/)?((?:frozen-case-|live-control-|control-|action-navigation|navigation|dom-inventory|axe-context|keyboard-|runtime-sweep|z-runtime-sweep)[^/]*)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/$1"
+    },
+    {
+      "id": "runtime-live-control-replay-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:frozen-action-transition-validation|frozen-reveal-replay|representative-form-input)\\.test\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/$1"
+    },
+    {
+      "id": "runtime-live-control-replay-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:focused-control|frozen-action-transition-validation|frozen-reveal-replay(?:-(?:adapter|error))?|frozen-reveal-target|representative-form-input)\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/$1"
@@ -660,6 +740,14 @@
       "target": "e2e/runtime-sweep/replay/browser-state/$1"
     },
     {
+      "id": "runtime-live-control-native-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/native/(control-actions-form\\.spec\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/native/$1"
+    },
+    {
       "id": "runtime-action-navigation-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/support/(action-navigation-contract\\.ts)$",
@@ -671,6 +759,22 @@
       "id": "runtime-state-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:support/)?((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
+      "concern": "support",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/support/$1"
+    },
+    {
+      "id": "runtime-resolver-support-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/support/(resolver-outcome-(?:contract|expectations)\\.test\\.ts)$",
+      "concern": "support",
+      "role": "test",
+      "target": "e2e/runtime-sweep/support/$1"
+    },
+    {
+      "id": "runtime-resolver-support-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/support/((?:resolver-outcome-(?:contract|expectations|matrix-state)|resolver-recovery-expectations|runtime-api-drain)\\.ts)$",
       "concern": "support",
       "role": "implementation",
       "target": "e2e/runtime-sweep/support/$1"

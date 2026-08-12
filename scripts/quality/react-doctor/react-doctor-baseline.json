@@ -444,7 +444,7 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts::9:1::react-doctor/no-barrel-import::db3ee6b9e7bb423b6f0aead3c0b3e9face99c7e9b1a5d2c994d72964afbf05b0",
+      "id": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts::10:1::react-doctor/no-barrel-import::db3ee6b9e7bb423b6f0aead3c0b3e9face99c7e9b1a5d2c994d72964afbf05b0",
       "file": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
