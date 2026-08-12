@@ -8,24 +8,24 @@
       "trackedFiles": 72
     },
     "e2e/runtime-sweep": {
-      "gitTree": "fb919151857407e2f21a81545faa3f809b44ca8f",
-      "pathDigest": "a86fa7ab0370bb9631179d8b06283132f687fbaff275c72410d0b744a01761aa",
-      "trackedFiles": 287
+      "gitTree": "f4c8bc02ba138caecb2c4b8eb6b5752836fb4f99",
+      "pathDigest": "f41eae149519875a20ad6708babf024db8ea8f0a9db7b369a79830392efd082d",
+      "trackedFiles": 438
     },
     "prisma": {
-      "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
-      "pathDigest": "b914d4b7a6f140235e6962042313470868353122ef5d248b1893d4aa611d7704",
-      "trackedFiles": 114
+      "gitTree": "4d78c05530c608cb991c71a9bd9876d962ab2668",
+      "pathDigest": "fdd6c417d00c5152c8cc1b1e252cfac224d7c2d6b41033687f999776d5176509",
+      "trackedFiles": 115
     },
     "apps/web/src/shared/ui": {
-      "gitTree": "bf167d940dcaa71f63e1823c90ed645781f5adcb",
-      "pathDigest": "9f26e7368cf9480221fbfd08431b26f808a530309a2ebaecbc0bacd2a172f3db",
-      "trackedFiles": 84
+      "gitTree": "b132faa804927daf5997060f706184b98fca8b7e",
+      "pathDigest": "054a258abafd0a3104f9ac225b7117c3b245f5e3b2b15f00c5ea60bfaa8f242a",
+      "trackedFiles": 85
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "a040c0a0b2225f0cd275adffa5c3d05b0ae936fd",
-      "pathDigest": "2f7c574f634661984770dc0eae223e17e834190c6e5073352f2a58515704b3c9",
-      "trackedFiles": 98
+      "gitTree": "79d59e12d0d9ec5d1d6da0e0bc0446eeddadf994",
+      "pathDigest": "3f7783b4cd7f60ae71b9fcb8317ff5d7f4c35cb8c550d54d58393a275fd78201",
+      "trackedFiles": 101
     },
     "apps/web/src/shared/lib": {
       "gitTree": "e9d57ed0a4ab75be69b7021bf4b9279a72feffbe",
@@ -48,9 +48,9 @@
       "trackedFiles": 56
     },
     "apps/api/src/modules": {
-      "gitTree": "4ebb5132cde854d204b8bf9381b2e888d463ad69",
-      "pathDigest": "9b1dc1395f1ed5c5e6a08ff6af504b6cdc1bf0015dadc88d23f3b911e1600f95",
-      "trackedFiles": 427
+      "gitTree": "efbcc9e1e05817e95e198086b46dabfde6881e92",
+      "pathDigest": "dca2ba814067dbb914d8b0e4cb1f9413aae933f4ed23aac6bd9239191ff38838",
+      "trackedFiles": 428
     }
   },
   "directCounts": {
@@ -59,7 +59,7 @@
     "apps/api/src/modules/admin": 60,
     "apps/api/src/modules/reminders": 47,
     "apps/api/src/modules/report-sections/infrastructure": 42,
-    "apps/web/src/features/admin/ui": 73,
+    "apps/web/src/features/admin/ui": 74,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
     "apps/web/src/features/report-sections/model": 47,
@@ -67,8 +67,11 @@
     "apps/web/src/features/review/ui": 33,
     "apps/web/src/features/slides/model": 34,
     "apps/web/src/features/slides/ui": 37,
-    "e2e/runtime-sweep/lanes": 32,
-    "e2e/runtime-sweep/replay": 58
+    "apps/web/src/features/report-pages/ui/lead/chrome": 31,
+    "e2e/runtime-sweep/lanes": 51,
+    "e2e/runtime-sweep/matrix": 42,
+    "e2e/runtime-sweep/preflight": 96,
+    "e2e/runtime-sweep/replay": 76
   },
   "boundedFlatExceptions": [
     {
@@ -98,8 +101,13 @@
     },
     {
       "directory": "apps/web/src/features/admin/ui",
-      "baseline": 73,
+      "baseline": 74,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "apps/web/src/features/report-pages/ui/lead/chrome",
+      "baseline": 31,
+      "reason": "The reviewed lead-page composition migration keeps chrome as one cohesive concern family; split only with a reviewed consumer map."
     },
     {
       "directory": "apps/web/src/features/dashboard/ui",
@@ -138,12 +146,22 @@
     },
     {
       "directory": "e2e/runtime-sweep/lanes",
-      "baseline": 32,
+      "baseline": 51,
       "reason": "The runtime lane files share one bounded resource, lease, process, and observability lifecycle; the count may only shrink."
     },
     {
+      "directory": "e2e/runtime-sweep/matrix",
+      "baseline": 42,
+      "reason": "The reviewed runtime campaign integration keeps matrix compilation and validation in one bounded concern directory; split only with a reviewed consumer map."
+    },
+    {
+      "directory": "e2e/runtime-sweep/preflight",
+      "baseline": 96,
+      "reason": "The reviewed runtime campaign integration keeps preflight preparation, reveal, and setup contracts in one bounded concern directory; split only with a reviewed consumer map."
+    },
+    {
       "directory": "e2e/runtime-sweep/replay",
-      "baseline": 58,
+      "baseline": 76,
       "reason": "The reviewed runtime replay concern remains a single cohesive stateful-control boundary; the count may only shrink."
     }
   ]
