@@ -15,11 +15,19 @@ export interface SearchResultsDropdownProps {
 }
 
 // Non-hit states (searching / failed / empty) share one polite live row.
-function StatusRow({ children }: { readonly children: string }) {
+function StatusRow({
+  children,
+  loading = false,
+}: {
+  readonly children: string;
+  readonly loading?: boolean;
+}) {
   return (
     <div
       role="status"
       aria-live="polite"
+      aria-busy={loading ? "true" : undefined}
+      aria-label={loading ? "Searching reports" : undefined}
       className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
     >
       {children}
@@ -123,7 +131,9 @@ export function SearchResultsDropdown({
       role="listbox"
       className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg"
     >
-      {isFetching && hits.length === 0 && <StatusRow>Searching…</StatusRow>}
+      {isFetching && hits.length === 0 && (
+        <StatusRow loading>Searching…</StatusRow>
+      )}
 
       {isError && <StatusRow>Search failed</StatusRow>}
 
