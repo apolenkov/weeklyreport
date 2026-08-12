@@ -11,6 +11,7 @@ import type { RevealNonMutationProof } from "../reveal-path.ts";
 const harness = vi.hoisted(() => {
   const state = {
     changedUrl: undefined as string | undefined,
+    delayedUrl: undefined as string | undefined,
     events: [] as string[],
     pageUrl: "https://runtime.invalid/reports",
   };
@@ -92,6 +93,7 @@ const pageFor = (): {
   readonly page: Page;
   readonly waitForFunction: ReturnType<typeof vi.fn>;
   readonly waitForLoadState: ReturnType<typeof vi.fn>;
+  readonly waitForURL: ReturnType<typeof vi.fn>;
 } => {
   const waitForLoadState = vi.fn(() => {
     harness.state.events.push("load-state");
@@ -99,27 +101,46 @@ const pageFor = (): {
   const waitForFunction = vi.fn(() => {
     harness.state.events.push("app-ready");
   });
+  const waitForURL = vi.fn((predicate: (url: URL) => boolean) => {
+    harness.state.events.push("wait-url");
+    if (harness.state.delayedUrl === undefined) {
+      const error = new Error("timed out");
+      error.name = "TimeoutError";
+      return Promise.reject(error);
+    }
+    harness.state.pageUrl = harness.state.delayedUrl;
+    if (!predicate(new URL(harness.state.pageUrl)))
+      return Promise.reject(new Error("Navigation predicate rejected URL"));
+    return Promise.resolve();
+  });
   return {
     page: {
       url: () => harness.state.pageUrl,
       waitForFunction,
       waitForLoadState,
+      waitForURL,
     } as unknown as Page,
     waitForFunction,
     waitForLoadState,
+    waitForURL,
   };
 };
 
-const runReveal = async (
-  changedUrl?: string,
-): Promise<{
+const runReveal = async (input?: {
+  readonly action?: Action;
+  readonly changedUrl?: string;
+  readonly control?: DomControlObservation;
+  readonly delayedUrl?: string;
+}): Promise<{
   readonly result: Awaited<
     ReturnType<ReturnType<typeof createPlaywrightRevealExecutor>>
   >;
   readonly waitForFunction: ReturnType<typeof vi.fn>;
   readonly waitForLoadState: ReturnType<typeof vi.fn>;
+  readonly waitForURL: ReturnType<typeof vi.fn>;
 }> => {
-  harness.state.changedUrl = changedUrl;
+  harness.state.changedUrl = input?.changedUrl;
+  harness.state.delayedUrl = input?.delayedUrl;
   harness.state.pageUrl = "https://runtime.invalid/reports";
   const page = pageFor();
   const executeReveal = createPlaywrightRevealExecutor({ page: page.page });
@@ -132,20 +153,22 @@ const runReveal = async (
     },
   };
   const result = await executeReveal({
-    action,
-    control,
+    action: input?.action ?? action,
+    control: input?.control ?? control,
     preparation,
   });
   return {
     result,
     waitForFunction: page.waitForFunction,
     waitForLoadState: page.waitForLoadState,
+    waitForURL: page.waitForURL,
   };
 };
 
 describe("Playwright reveal execution", () => {
   beforeEach(() => {
     harness.state.changedUrl = undefined;
+    harness.state.delayedUrl = undefined;
     harness.state.events.length = 0;
     harness.state.pageUrl = "https://runtime.invalid/reports";
     harness.executeControlAction.mockClear();
@@ -155,8 +178,9 @@ describe("Playwright reveal execution", () => {
 
   it("settles a changed URL before freezing the reveal inventory", async () => {
     const changedUrl = "https://runtime.invalid/admin";
-    const { result, waitForFunction, waitForLoadState } =
-      await runReveal(changedUrl);
+    const { result, waitForFunction, waitForLoadState } = await runReveal({
+      changedUrl,
+    });
 
     expect(result.url).toBe(changedUrl);
     expect(waitForLoadState).toHaveBeenCalledOnce();
@@ -173,10 +197,61 @@ describe("Playwright reveal execution", () => {
     ]);
   });
 
-  it("does not settle an unchanged URL before freezing the reveal inventory", async () => {
-    const { result, waitForFunction, waitForLoadState } = await runReveal();
+  it("observes delayed client navigation before freezing the reveal inventory", async () => {
+    const delayedUrl = "https://runtime.invalid/admin";
+    const { result, waitForURL } = await runReveal({ delayedUrl });
+
+    expect(result.url).toBe(delayedUrl);
+    expect(waitForURL).toHaveBeenCalledOnce();
+    expect(harness.state.events).toEqual([
+      "action",
+      "wait-url",
+      "load-state",
+      "app-ready",
+      "app-ready",
+      "inventory",
+    ]);
+  });
+
+  it("keeps an exact current-location link idempotent", async () => {
+    const currentControl = { ...control, href: "/reports" };
+    const { result, waitForFunction, waitForLoadState, waitForURL } =
+      await runReveal({ control: currentControl });
 
     expect(result.url).toBe("https://runtime.invalid/reports");
+    expect(waitForURL).not.toHaveBeenCalled();
+    expect(waitForLoadState).not.toHaveBeenCalled();
+    expect(waitForFunction).not.toHaveBeenCalled();
+    expect(harness.state.events).toEqual(["action", "inventory"]);
+  });
+
+  it("fails closed when an expected link navigation never starts", async () => {
+    await expect(runReveal()).rejects.toThrow(
+      "Reveal action navigation failed: Navigation was not observed within the bounded wait",
+    );
+    expect(harness.inventoryDom).not.toHaveBeenCalled();
+    expect(harness.state.events).toEqual(["action", "wait-url"]);
+  });
+
+  it("does not wait for navigation from an unchanged read-only button", async () => {
+    const buttonControl: DomControlObservation = {
+      ...control,
+      accessibleName: "Expand",
+      controlKey: "button:Expand:1",
+      href: null,
+      role: "button",
+      tagName: "button",
+    };
+    const buttonAction: Action = {
+      ...action,
+      controlKey: buttonControl.controlKey,
+    };
+    const { waitForFunction, waitForLoadState, waitForURL } = await runReveal({
+      action: buttonAction,
+      control: buttonControl,
+    });
+
+    expect(waitForURL).not.toHaveBeenCalled();
     expect(waitForLoadState).not.toHaveBeenCalled();
     expect(waitForFunction).not.toHaveBeenCalled();
     expect(harness.state.events).toEqual(["action", "inventory"]);

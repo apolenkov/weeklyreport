@@ -1,5 +1,10 @@
 import type { Page } from "@playwright/test";
 
+import {
+  expectedActionNavigationFor,
+  observeActionNavigation,
+  settleActionNavigation,
+} from "../../replay/control-actions/action-navigation-boundary.ts";
 import { executeControlAction } from "../../replay/control-actions/control-actions.ts";
 import { targetLocator } from "../../replay/control-target/rendered-control-target.ts";
 import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
@@ -8,7 +13,6 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
-import { settleNavigation } from "../../replay/navigation.ts";
 import {
   representativeInputForFill,
   type RevealRepresentativeInput,
@@ -137,6 +141,20 @@ const executeRevealAction = async (input: {
   }
   const before = await snapshotPage(input.page);
   const target = targetFor(input.actionInput.control);
+  const expectedNavigation = expectedActionNavigationFor(
+    input.actionInput.action.controlKey,
+  );
+  const currentLocation =
+    input.actionInput.control.href !== null &&
+    new URL(input.actionInput.control.href, before.url).toString() ===
+      new URL(before.url).toString();
+  const navigationExpectation = currentLocation
+    ? undefined
+    : expectedNavigation;
+  const navigationObserver = observeActionNavigation(
+    input.page,
+    navigationExpectation,
+  );
   const execution = await executeControlAction({
     page: input.page,
     control: target,
@@ -154,7 +172,25 @@ const executeRevealAction = async (input: {
     throw new Error(
       `Reveal action did not reach terminal pass: ${input.actionInput.action.controlKey}`,
     );
-  if (input.page.url() !== before.url) await settleNavigation(input.page);
+  if (currentLocation) {
+    navigationObserver.cancel();
+    return;
+  }
+  if (
+    navigationExpectation !== undefined ||
+    input.page.url() !== navigationObserver.initialUrl
+  ) {
+    const navigation = await settleActionNavigation(
+      input.page,
+      navigationObserver,
+      undefined,
+      navigationExpectation,
+    );
+    if (navigation.status === "failed")
+      throw new Error(`Reveal action navigation failed: ${navigation.reason}`);
+    return;
+  }
+  navigationObserver.cancel();
 };
 
 export const createPlaywrightRevealExecutor =
