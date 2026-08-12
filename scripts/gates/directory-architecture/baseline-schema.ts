@@ -131,6 +131,65 @@ export const parseDensityBaseline = (value: unknown): DensityBaseline => {
   };
 };
 
+const boundedFlatExceptionMap = (
+  baseline: DensityBaseline,
+): ReadonlyMap<string, number> =>
+  new Map(
+    baseline.boundedFlatExceptions.map((entry) => [
+      entry.directory,
+      entry.baseline,
+    ]),
+  );
+
+/**
+ * Compare a changed structural baseline with its accepted predecessor.
+ *
+ * The current-tree check proves that stored values describe the checked tree.
+ * This second check proves that editing those values cannot legalize a larger
+ * flat directory or introduce a new exception by itself. Exception baselines
+ * may stay unchanged or decrease, but a new exception requires an architecture
+ * decision outside this JSON file.
+ */
+export const densityBaselineRatchetViolations = (
+  baseline: DensityBaseline,
+  predecessor?: DensityBaseline,
+): readonly string[] => {
+  if (predecessor === undefined)
+    return baseline.boundedFlatExceptions
+      .map(
+        (entry) =>
+          `bounded-flat exception predecessor unavailable: ${entry.directory}=${entry.baseline}`,
+      )
+      .toSorted((left, right) => left.localeCompare(right));
+
+  const currentExceptions = boundedFlatExceptionMap(baseline);
+  const predecessorExceptions = boundedFlatExceptionMap(predecessor);
+
+  return [
+    ...[...currentExceptions.keys()]
+      .filter((directory) => !predecessorExceptions.has(directory))
+      .toSorted((left, right) => left.localeCompare(right))
+      .map(
+        (directory) =>
+          `bounded-flat exception added without predecessor: ${directory}=${currentExceptions.get(directory) ?? 0}`,
+      ),
+    ...[...currentExceptions.keys()]
+      .filter((directory) => {
+        const current = currentExceptions.get(directory);
+        const previous = predecessorExceptions.get(directory);
+        return (
+          current !== undefined && previous !== undefined && current > previous
+        );
+      })
+      .toSorted((left, right) => left.localeCompare(right))
+      .map((directory) => {
+        const current = currentExceptions.get(directory) ?? 0;
+        const previous = predecessorExceptions.get(directory) ?? 0;
+        return `bounded-flat exception increased: ${directory}=${current} > predecessor ${previous}`;
+      }),
+  ];
+};
+
 export const validateBaselineRoots = (
   baseline: DensityBaseline,
   roots: readonly CatalogueRoot[],
