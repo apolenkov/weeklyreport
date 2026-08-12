@@ -138,7 +138,9 @@ describe("GroupProductsEditor", () => {
         products={[PRODUCT_A, PRODUCT_B]}
       />,
     );
-    expect(screen.getByTestId("group-products-loading")).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Loading attached products" }),
+    ).toHaveAttribute("aria-busy", "true");
   });
 
   it("renders one checkbox per active product, hiding archived ones", () => {
@@ -153,6 +155,7 @@ describe("GroupProductsEditor", () => {
     const items = list.querySelectorAll("li");
     expect(items).toHaveLength(2);
     expect(screen.queryByLabelText(/Old retired product/)).toBeNull();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it("checks already-attached products and unchecks the rest", () => {

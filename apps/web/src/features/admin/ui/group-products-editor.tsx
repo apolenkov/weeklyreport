@@ -179,6 +179,9 @@ export function GroupProductsEditor({
         <div
           className="py-1 text-xs text-[var(--color-muted-foreground)]"
           data-testid="group-products-loading"
+          role="status"
+          aria-busy="true"
+          aria-label="Loading attached products"
         >
           Loading…
         </div>

@@ -13,6 +13,34 @@ vi.mock("../../model/use-stage-assignments", () => ({
 }));
 
 describe("StageAssignmentEditor", () => {
+  it("exposes the initial query as a busy status", () => {
+    vi.mocked(useStageAssignmentData).mockReturnValue({
+      stages: [],
+      assignments: [],
+      filteredLeads: [],
+      isLoading: true,
+      isError: false,
+    });
+    vi.mocked(useStageAssignmentMutations).mockReturnValue({
+      saveMut: { isPending: false, mutate: vi.fn() },
+      deleteMut: { isPending: false, mutate: vi.fn() },
+    } as unknown as ReturnType<typeof useStageAssignmentMutations>);
+
+    render(
+      <StageAssignmentEditor
+        projectId="product-1"
+        projectName="Reference product"
+        leads={[]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("status", {
+        name: "Loading stage assignments for Reference product",
+      }),
+    ).toHaveAttribute("aria-busy", "true");
+  });
+
   it("uses readable foreground text and keeps stage color decorative", () => {
     vi.mocked(useStageAssignmentData).mockReturnValue({
       stages: [
@@ -56,5 +84,6 @@ describe("StageAssignmentEditor", () => {
         "mutation-required",
       );
     }
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 });
