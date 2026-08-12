@@ -7,6 +7,7 @@ import {
 } from "../../../../report-sections";
 import { useLeadFormQuickAdd } from "../../../../report-sections/client";
 import { buildDraftActions } from "../chrome/lead-form-draft-actions";
+import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadFormLoaded } from "./lead-form-loaded";
 import {
   buildLeadFormLoadedData,
@@ -75,7 +76,12 @@ function useLeadFormState(props: LeadFormProps) {
     pinnedReportId,
     data,
   });
-  const loaded = resolveLeadFormLoaded(data, editing.draft.draft);
+  // A failed primary read can retain cached `byPeriodData`. Do not derive a
+  // loaded view model from that cache: the top-level error surface must hide
+  // every stale editable record until a successful retry arrives.
+  const loaded = data.byPeriodError
+    ? null
+    : resolveLeadFormLoaded(data, editing.draft.draft);
   const viewModel = loaded
     ? buildLeadFormLoadedViewModel(
         leadFormViewModelInput(data, loaded, editing),
@@ -103,6 +109,16 @@ export function LeadForm(props: LeadFormProps) {
   const state = useLeadFormState(props);
   const { data, draft, editing, loaded, shell, viewModel } = state;
   if (data.sectionUnavailable) return <LeadFormUnavailable />;
+  if (data.byPeriodError) {
+    return (
+      <LeadFormLoadError
+        isRetrying={data.byPeriodFetching}
+        onRetry={() => {
+          if (!data.byPeriodFetching) void data.retrySection();
+        }}
+      />
+    );
+  }
   if (loaded === null || viewModel === null) {
     return <LeadFormSkeleton mode={state.isSlidesMode ? "slides" : "edit"} />;
   }

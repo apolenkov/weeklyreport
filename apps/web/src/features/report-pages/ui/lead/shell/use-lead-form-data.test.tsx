@@ -108,6 +108,7 @@ function buildTRPC(
     authorName: "Test Lead",
   },
   failures: { viewSettings?: boolean; crossAuthors?: boolean } = {},
+  byPeriodQueryFn?: (input: unknown) => unknown,
 ) {
   const byPeriodSpy = vi.fn();
   const contentSpy = vi.fn();
@@ -124,6 +125,7 @@ function buildTRPC(
       path: ["leadForm", "byPeriod"],
       queryByInput: (input) => {
         byPeriodSpy(input);
+        if (byPeriodQueryFn) return byPeriodQueryFn(input);
         return {
           section: makeSection(),
           readOnly: false,
@@ -157,10 +159,15 @@ interface HarnessOptions {
   redirectToCanonical?: boolean;
   isSlidesMode?: boolean;
   queryFailures?: { viewSettings?: boolean; crossAuthors?: boolean };
+  byPeriodQueryFn?: (input: unknown) => unknown;
 }
 
 function renderData(options: HarnessOptions = {}) {
-  const trpc = buildTRPC(options.active, options.queryFailures);
+  const trpc = buildTRPC(
+    options.active,
+    options.queryFailures,
+    options.byPeriodQueryFn,
+  );
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -254,6 +261,71 @@ describe("useLeadFormData — query enablement", () => {
     await waitFor(() =>
       expect(result.current.sectionIdForActions).toBe(SECTION_ID),
     );
+  });
+
+  it("exposes the primary-read error and keeps it during an in-flight retry", async () => {
+    let shouldFail = true;
+    let resolveRetry!: (value: unknown) => void;
+    const retryPromise = new Promise<unknown>((resolve) => {
+      resolveRetry = resolve;
+    });
+    const { result, byPeriodSpy } = renderData({
+      byPeriodQueryFn: () => {
+        if (shouldFail) return Promise.reject(new Error("section unavailable"));
+        return retryPromise;
+      },
+    });
+
+    await waitFor(() => expect(result.current.byPeriodError).toBe(true));
+    expect(result.current.byPeriodData).toBeUndefined();
+    expect(result.current.byPeriodFetching).toBe(false);
+
+    shouldFail = false;
+    let retry!: Promise<unknown>;
+    let duplicateRetry!: Promise<unknown>;
+    act(() => {
+      retry = result.current.retrySection();
+      duplicateRetry = result.current.retrySection();
+    });
+    expect(duplicateRetry).toBe(retry);
+    await waitFor(() => {
+      expect(result.current.byPeriodError).toBe(true);
+      expect(result.current.byPeriodFetching).toBe(true);
+    });
+    expect(byPeriodSpy).toHaveBeenCalledTimes(2);
+
+    resolveRetry({
+      section: makeSection(),
+      readOnly: false,
+      canRequestReopen: false,
+      publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+    });
+    await act(async () => {
+      await retry;
+    });
+    await waitFor(() => {
+      expect(result.current.byPeriodError).toBe(false);
+      expect(result.current.byPeriodFetching).toBe(false);
+      expect(result.current.byPeriodData).toBeDefined();
+    });
+  });
+
+  it("keeps the primary-read error after a retry fails again", async () => {
+    const byPeriodQueryFn = vi.fn(() =>
+      Promise.reject(new Error("section still unavailable")),
+    );
+    const { result, byPeriodSpy } = renderData({ byPeriodQueryFn });
+
+    await waitFor(() => expect(result.current.byPeriodError).toBe(true));
+    await act(async () => {
+      await result.current.retrySection();
+    });
+
+    await waitFor(() => {
+      expect(result.current.byPeriodError).toBe(true);
+      expect(result.current.byPeriodFetching).toBe(false);
+    });
+    expect(byPeriodSpy).toHaveBeenCalledTimes(2);
   });
 });
 
