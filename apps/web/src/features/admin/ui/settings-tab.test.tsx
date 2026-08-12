@@ -179,6 +179,53 @@ describe("SettingsTab — Identity sub-tab", () => {
     await waitFor(() => expect(saveButton.disabled).toBe(false));
   });
 
+  it("keeps the Identity form busy until a deferred organization query hydrates it", async () => {
+    let resolveOrganization!: (organization: typeof ORG_DATA) => void;
+    const organizationQuery = new Promise<typeof ORG_DATA>((resolve) => {
+      resolveOrganization = resolve;
+    });
+    const proxy = createMockTRPC([
+      {
+        path: ["admin", "getOrganization"],
+        query: () => organizationQuery,
+      },
+      { path: ["admin", "updateOrganization"], mutation: true },
+      { path: ["admin", "updateSettings"], mutation: true },
+      { path: ["admin", "snapshot"] },
+      { path: ["admin", "getSettings"] },
+      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
+      { path: ["auth", "me"] },
+      { path: ["org", "getPublic"] },
+      { path: ["weeklyReport", "get"] },
+    ]);
+    renderSettings(proxy.proxy);
+
+    expect(
+      screen.getByRole("status", { name: "Loading organization identity" }),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByLabelText(/short name/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /save organization identity/i }),
+    ).not.toBeInTheDocument();
+
+    resolveOrganization(ORG_DATA);
+
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
+    expect(shortNameInput.value).toBe(ORG_DATA.shortName);
+    expect(screen.getByLabelText<HTMLInputElement>(/full name/i).value).toBe(
+      ORG_DATA.fullName,
+    );
+    expect(
+      screen.queryByRole("status", { name: "Loading organization identity" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: /save organization identity/i,
+      }),
+    ).toBeEnabled();
+  });
+
   it("surfaces an organization-query failure instead of a disabled blank form", async () => {
     const proxy = createMockTRPC([
       {
