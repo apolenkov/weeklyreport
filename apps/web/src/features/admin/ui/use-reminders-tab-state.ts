@@ -90,6 +90,7 @@ function useReminderEditor(
       setOffsetValid(true);
     },
     handleNewReminder: () => {
+      if (editor.mode === "add") return;
       setForm(emptyPolicyForm(defaultTimezone));
       setOffsetValid(true);
       setEditor({ mode: "add" });
