@@ -4,13 +4,24 @@ const NAVIGATION_ABORT_PATTERNS = [
   /\bis interrupted by another navigation to\b/u,
 ] as const;
 const APP_READY_SELECTOR = "#main-content";
+const APP_LOADING_SELECTOR =
+  '[aria-busy="true"], [data-slot="skeleton"], .skeleton';
+const APP_READY_ARGUMENT = {
+  rootSelector: APP_READY_SELECTOR,
+  loadingSelector: APP_LOADING_SELECTOR,
+} as const;
 const APP_READY_TIMEOUT_MS = 10_000;
 const APP_READY_STABILITY_PASSES = 2;
 
+export interface AppReadyArgument {
+  readonly rootSelector: string;
+  readonly loadingSelector: string;
+}
+
 export interface AppReadyPage {
   readonly waitForFunction: (
-    predicate: (selector: string) => boolean,
-    selector?: string,
+    predicate: (argument: AppReadyArgument) => boolean,
+    argument?: AppReadyArgument,
     options?: Readonly<{
       readonly polling?: "raf";
       readonly timeout?: number;
@@ -49,20 +60,29 @@ export function isExpectedNavigationAbort(error: unknown): boolean {
 
 const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
   page.waitForFunction(
-    (selector: string) => {
-      const main = document.querySelector(selector);
+    ({ rootSelector, loadingSelector }: AppReadyArgument) => {
+      const main = document.querySelector(rootSelector);
       if (!(main instanceof HTMLElement)) return false;
       const heading = main.querySelector("h1");
       const busy = main.getAttribute("aria-busy")?.toLocaleLowerCase();
       const hidden = main.getAttribute("aria-hidden")?.toLocaleLowerCase();
+      const hasVisibleLoadingMarker = Array.from(
+        main.querySelectorAll(loadingSelector),
+      ).some((marker) => {
+        const markerHidden = marker
+          .getAttribute("aria-hidden")
+          ?.toLocaleLowerCase();
+        return markerHidden !== "true" && marker.getClientRects().length > 0;
+      });
       return (
         heading !== null &&
         busy !== "true" &&
         hidden !== "true" &&
-        main.getClientRects().length > 0
+        main.getClientRects().length > 0 &&
+        !hasVisibleLoadingMarker
       );
     },
-    APP_READY_SELECTOR,
+    APP_READY_ARGUMENT,
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 

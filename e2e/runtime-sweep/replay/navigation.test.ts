@@ -6,6 +6,7 @@ import {
   observeActionNavigation,
 } from "./control-actions/action-navigation-boundary.ts";
 import {
+  type AppReadyArgument,
   type AppReadyPage,
   isExpectedNavigationAbort,
   navigate,
@@ -15,16 +16,27 @@ import {
   waitForAppReady,
 } from "./navigation.ts";
 
+const APP_READY_ARGUMENT: AppReadyArgument = {
+  rootSelector: "#main-content",
+  loadingSelector: '[aria-busy="true"], [data-slot="skeleton"], .skeleton',
+};
+
 class FakeElement {
   readonly attributes: Readonly<Record<string, string>>;
   readonly hasHeading: boolean;
+  readonly descendants: readonly FakeElement[];
+  readonly clientRects: readonly object[];
 
   constructor(
     attributes: Readonly<Record<string, string>> = {},
     hasHeading = false,
+    descendants: readonly FakeElement[] = [],
+    clientRects: readonly object[] = [{}],
   ) {
     this.attributes = attributes;
     this.hasHeading = hasHeading;
+    this.descendants = descendants;
+    this.clientRects = clientRects;
   }
 
   getAttribute(name: string): string | null {
@@ -32,12 +44,74 @@ class FakeElement {
   }
 
   getClientRects(): readonly object[] {
-    return [{}];
+    return this.clientRects;
   }
 
   querySelector(selector: string): FakeElement | null {
     return selector === "h1" && this.hasHeading ? new FakeElement() : null;
   }
+
+  querySelectorAll(selector: string): readonly FakeElement[] {
+    const selectors = selector.split(",").map((candidate) => candidate.trim());
+    return this.descendants
+      .flatMap((descendant) => [
+        descendant,
+        ...descendant.querySelectorAll(selector),
+      ])
+      .filter((descendant) =>
+        selectors.some((candidate) => descendant.matches(candidate)),
+      );
+  }
+
+  matches(selector: string): boolean {
+    return (
+      (selector === '[aria-busy="true"]' &&
+        this.getAttribute("aria-busy")?.toLocaleLowerCase() === "true") ||
+      (selector === '[data-slot="skeleton"]' &&
+        this.getAttribute("data-slot") === "skeleton") ||
+      (selector === ".skeleton" &&
+        (this.attributes.class?.split(/\s+/u).includes("skeleton") ?? false))
+    );
+  }
+}
+
+function headedMain(descendants: readonly FakeElement[] = []): FakeElement {
+  return new FakeElement(
+    {
+      "aria-busy": "false",
+      "aria-hidden": "false",
+    },
+    true,
+    descendants,
+  );
+}
+
+async function evaluateReady(main: FakeElement): Promise<boolean> {
+  let predicate: ((argument: AppReadyArgument) => boolean) | undefined;
+  let argument: AppReadyArgument | undefined;
+  const page = {
+    waitForFunction: (
+      candidate: (argument: AppReadyArgument) => boolean,
+      candidateArgument?: AppReadyArgument,
+    ) => {
+      predicate = candidate;
+      argument = candidateArgument;
+      return Promise.resolve();
+    },
+  } satisfies AppReadyPage;
+  vi.stubGlobal("HTMLElement", FakeElement);
+  vi.stubGlobal("document", {
+    querySelector: (selector: string) =>
+      selector === "#main-content" ? main : null,
+  });
+
+  await waitForAppReady(page);
+
+  if (predicate === undefined)
+    throw new Error("waitForAppReady did not provide a predicate");
+  if (argument === undefined)
+    throw new Error("waitForAppReady did not provide a predicate argument");
+  return predicate(argument);
 }
 
 function fakePage(
@@ -69,14 +143,10 @@ describe("runtime navigation recovery", () => {
   });
 
   it("requires the app heading to be inside main content", async () => {
-    const main = new FakeElement({
-      "aria-busy": "false",
-      "aria-hidden": "false",
-    });
-    const outsideHeading = new FakeElement();
-    let predicate: ((selector: string) => boolean) | undefined;
+    const main = new FakeElement();
+    let predicate: ((argument: AppReadyArgument) => boolean) | undefined;
     const page = {
-      waitForFunction: (candidate: (selector: string) => boolean) => {
+      waitForFunction: (candidate: (argument: AppReadyArgument) => boolean) => {
         predicate = candidate;
         return Promise.resolve();
       },
@@ -84,17 +154,51 @@ describe("runtime navigation recovery", () => {
     vi.stubGlobal("HTMLElement", FakeElement);
     vi.stubGlobal("document", {
       querySelector: (selector: string) =>
-        selector === "#main-content"
-          ? main
-          : selector === "h1"
-            ? outsideHeading
-            : null,
+        selector === "#main-content" ? main : new FakeElement(),
     });
 
     await waitForAppReady(page);
 
-    expect(predicate?.("#main-content")).toBe(false);
+    expect(predicate?.(APP_READY_ARGUMENT)).toBe(false);
   });
+
+  it.each([
+    {
+      name: "a visible data-slot skeleton",
+      marker: new FakeElement({ "data-slot": "skeleton" }),
+    },
+    {
+      name: "a visible class-only skeleton",
+      marker: new FakeElement({ class: "skeleton" }),
+    },
+    {
+      name: "a visible descendant aria-busy marker",
+      marker: new FakeElement({ "aria-busy": "true" }),
+    },
+  ])("rejects ready state with $name", async ({ marker }) => {
+    await expect(evaluateReady(headedMain([marker]))).resolves.toBe(false);
+  });
+
+  it("ignores hidden, non-rendered, and aria-hidden loading markers", async () => {
+    const markers = [
+      new FakeElement({ "data-slot": "skeleton", "aria-hidden": "true" }),
+      new FakeElement({ class: "skeleton" }, false, [], []),
+      new FakeElement({ "aria-busy": "true", "aria-hidden": "true" }),
+    ];
+    await expect(evaluateReady(headedMain(markers))).resolves.toBe(true);
+  });
+
+  it("accepts a normal headed surface without loading markers", async () => {
+    await expect(evaluateReady(headedMain())).resolves.toBe(true);
+  });
+
+  it.each(["aria-busy", "aria-hidden"] as const)(
+    "rejects a main root with %s=true",
+    async (attribute) => {
+      const main = new FakeElement({ [attribute]: "true" }, true);
+      await expect(evaluateReady(main)).resolves.toBe(false);
+    },
+  );
 
   it("requires two consecutive ready checks after a route settles", async () => {
     const waitForFunction = vi.fn(() => Promise.resolve());
@@ -103,6 +207,28 @@ describe("runtime navigation recovery", () => {
     await waitForAppReady(page);
 
     expect(waitForFunction).toHaveBeenCalledTimes(2);
+    expect(waitForFunction).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Function),
+      APP_READY_ARGUMENT,
+      { polling: "raf", timeout: 10_000 },
+    );
+    expect(waitForFunction).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Function),
+      APP_READY_ARGUMENT,
+      { polling: "raf", timeout: 10_000 },
+    );
+  });
+
+  it("propagates readiness timeout errors without a retry", async () => {
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const waitForFunction = vi.fn(() => Promise.reject(timeout));
+    const page = { waitForFunction } satisfies AppReadyPage;
+
+    await expect(waitForAppReady(page)).rejects.toBe(timeout);
+    expect(waitForFunction).toHaveBeenCalledTimes(1);
   });
 
   it("navigates a relative route from the initial blank page", async () => {
