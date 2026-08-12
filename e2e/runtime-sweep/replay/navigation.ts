@@ -6,6 +6,8 @@ const NAVIGATION_ABORT_PATTERNS = [
 const APP_READY_SELECTOR = "#main-content";
 const APP_LOADING_SELECTOR =
   '[aria-busy="true"], [data-slot="skeleton"], .skeleton, .animate-pulse';
+const REVEAL_OVERLAY_SELECTOR =
+  '[role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"]';
 const APP_READY_ARGUMENT = {
   rootSelector: APP_READY_SELECTOR,
   loadingSelector: APP_LOADING_SELECTOR,
@@ -86,11 +88,64 @@ const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 
+const waitForRevealReadyPass = (page: AppReadyPage): Promise<unknown> =>
+  page.waitForFunction(
+    ({ rootSelector, loadingSelector }: AppReadyArgument) => {
+      const main = document.querySelector(rootSelector);
+      if (!(main instanceof HTMLElement)) return false;
+      const heading = main.querySelector("h1");
+      const busy = main.getAttribute("aria-busy")?.toLocaleLowerCase();
+      const hidden = main.ariaHidden?.toLocaleLowerCase();
+      const isVisibleLoadingMarker = (marker: Element): boolean => {
+        const markerHidden = marker.ariaHidden?.toLocaleLowerCase();
+        return (
+          markerHidden !== String(true) && marker.getClientRects().length > 0
+        );
+      };
+      const overlays = Array.from(
+        document.querySelectorAll(REVEAL_OVERLAY_SELECTOR),
+      ).filter((overlay) => {
+        const overlayHidden = overlay.ariaHidden?.toLocaleLowerCase();
+        return (
+          overlayHidden !== String(true) && overlay.getClientRects().length > 0
+        );
+      });
+      const hasVisibleLoadingMarker = [main, ...overlays].some(
+        (container) =>
+          container.matches(loadingSelector) ||
+          Array.from(container.querySelectorAll(loadingSelector)).some(
+            isVisibleLoadingMarker,
+          ),
+      );
+      return (
+        heading !== null &&
+        busy !== String(true) &&
+        (hidden !== String(true) || overlays.length > 0) &&
+        main.getClientRects().length > 0 &&
+        !hasVisibleLoadingMarker
+      );
+    },
+    APP_READY_ARGUMENT,
+    { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
+  );
+
 export async function waitForAppReady(page: AppReadyPage): Promise<void> {
   await Array.from({ length: APP_READY_STABILITY_PASSES }).reduce(
     async (previous) => {
       await previous;
       return waitForReadyPass(page);
+    },
+    Promise.resolve(),
+  );
+}
+
+export async function waitForRevealSurfaceReady(
+  page: AppReadyPage,
+): Promise<void> {
+  await Array.from({ length: APP_READY_STABILITY_PASSES }).reduce(
+    async (previous) => {
+      await previous;
+      return waitForRevealReadyPass(page);
     },
     Promise.resolve(),
   );

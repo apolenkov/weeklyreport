@@ -4,6 +4,11 @@ import type {
   DomControlObservation,
   DomInventory,
 } from "../../../replay/dom/dom-inventory.ts";
+import {
+  type AppReadyArgument,
+  type AppReadyPage,
+  waitForRevealSurfaceReady,
+} from "../../../replay/navigation.ts";
 import type { Action } from "../../../source/contracts.ts";
 import { revealSurfaceFor } from "../../reveal-path.ts";
 import {
@@ -171,5 +176,127 @@ describe("preflight reveal action boundary", () => {
       /surface drifted immediately before execution/iu,
     );
     expect(executeReveal).not.toHaveBeenCalled();
+  });
+});
+
+class FakeReadyElement {
+  constructor(
+    readonly attributes: Record<string, string> = {},
+    readonly hasHeading = false,
+    readonly descendants: FakeReadyElement[] = [],
+    readonly clientRects: readonly object[] = [{}],
+  ) {}
+
+  get ariaHidden(): string | null {
+    return this.attributes["aria-hidden"] ?? null;
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes[name] ?? null;
+  }
+
+  getClientRects(): readonly object[] {
+    return this.clientRects;
+  }
+
+  querySelector(selector: string): FakeReadyElement | null {
+    return selector === "h1" && this.hasHeading ? new FakeReadyElement() : null;
+  }
+
+  querySelectorAll(selector: string): readonly FakeReadyElement[] {
+    return this.descendants.filter((element) => element.matches(selector));
+  }
+
+  matches(selector: string): boolean {
+    if (selector.includes(","))
+      return selector
+        .split(",")
+        .some((candidate) => this.matches(candidate.trim()));
+    const classes = this.attributes.class?.split(/\s+/u) ?? [];
+    return (
+      (selector === '[aria-busy="true"]' &&
+        this.attributes["aria-busy"] === "true") ||
+      (selector === '[data-slot="skeleton"]' &&
+        this.attributes["data-slot"] === "skeleton") ||
+      (selector === ".skeleton" && classes.includes("skeleton")) ||
+      (selector === ".animate-pulse" && classes.includes("animate-pulse"))
+    );
+  }
+}
+
+const revealReady = async (
+  main: FakeReadyElement,
+  overlays: readonly FakeReadyElement[],
+): Promise<Readonly<{ ready: boolean; passes: number }>> => {
+  let predicate: ((argument: AppReadyArgument) => boolean) | undefined;
+  let argument: AppReadyArgument | undefined;
+  const waitForFunction = vi.fn(
+    (
+      candidate: (value: AppReadyArgument) => boolean,
+      candidateArgument?: AppReadyArgument,
+    ) => {
+      predicate = candidate;
+      argument = candidateArgument;
+      return Promise.resolve();
+    },
+  );
+  vi.stubGlobal("HTMLElement", FakeReadyElement);
+  vi.stubGlobal("document", {
+    querySelector: () => main,
+    querySelectorAll: () => overlays,
+  });
+  try {
+    await waitForRevealSurfaceReady({
+      waitForFunction,
+    } satisfies AppReadyPage);
+    if (predicate === undefined || argument === undefined)
+      throw new Error("Reveal readiness predicate was not captured");
+    return {
+      ready: predicate(argument),
+      passes: waitForFunction.mock.calls.length,
+    };
+  } finally {
+    vi.unstubAllGlobals();
+  }
+};
+
+const hiddenMain = (descendants: FakeReadyElement[] = []): FakeReadyElement =>
+  new FakeReadyElement(
+    { "aria-busy": "false", "aria-hidden": "true" },
+    true,
+    descendants,
+  );
+
+describe("post-action reveal readiness", () => {
+  it("accepts a hidden main only with a visible semantic overlay", async () => {
+    const result = await revealReady(hiddenMain(), [
+      new FakeReadyElement({ role: "menu" }),
+    ]);
+
+    expect(result).toEqual({ ready: true, passes: 2 });
+    await expect(revealReady(hiddenMain(), [])).resolves.toMatchObject({
+      ready: false,
+    });
+    await expect(
+      revealReady(hiddenMain(), [
+        new FakeReadyElement({ role: "menu", "aria-hidden": "true" }),
+      ]),
+    ).resolves.toMatchObject({ ready: false });
+  });
+
+  it("waits for main and overlay loading markers to clear", async () => {
+    const marker = new FakeReadyElement({ class: "animate-pulse" });
+    const main = hiddenMain([marker]);
+    const overlayAttributes = { role: "menu", class: "animate-pulse" };
+    const overlay = new FakeReadyElement(overlayAttributes);
+
+    await expect(revealReady(main, [overlay])).resolves.toMatchObject({
+      ready: false,
+    });
+    main.descendants.splice(0);
+    overlayAttributes.class = "";
+    await expect(revealReady(main, [overlay])).resolves.toMatchObject({
+      ready: true,
+    });
   });
 });
