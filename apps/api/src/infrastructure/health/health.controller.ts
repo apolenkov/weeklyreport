@@ -78,7 +78,9 @@ export class HealthController {
   }
 
   @Get("runtime-drain")
-  async runtimeDrain(): Promise<Readonly<{ active: 0; status: "idle" }>> {
+  async runtimeDrain(): Promise<
+    Readonly<{ acknowledgement: "runtime-api-idle" }>
+  > {
     if (this.env.RUNTIME_SWEEP_API_DRAIN !== true)
       throw new NotFoundException();
     try {
@@ -88,6 +90,6 @@ export class HealthController {
         throw new ServiceUnavailableException(error.message);
       throw error;
     }
-    return { active: 0, status: "idle" };
+    return { acknowledgement: "runtime-api-idle" };
   }
 }

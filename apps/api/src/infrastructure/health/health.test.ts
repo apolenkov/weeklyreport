@@ -1,13 +1,31 @@
-import { Logger, NotFoundException } from "@nestjs/common";
+import type { AddressInfo } from "node:net";
+
+import {
+  type INestApplication,
+  Logger,
+  Module,
+  NotFoundException,
+} from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
-import { HealthIndicatorService } from "@nestjs/terminus";
+import {
+  HealthCheckService,
+  HealthIndicatorService,
+  MemoryHealthIndicator,
+} from "@nestjs/terminus";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { awaitRuntimeApiDrain } from "../../../../../e2e/runtime-sweep/support/runtime-api-drain";
+import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
+import {
+  RuntimeApiDrainTimeoutError,
+  runtimeApiWorkTracker,
+} from "./runtime-api-work-tracker.js";
 
 // lazyConnect keeps the constructed client from opening a socket; the tests
 // override the client anyway, so only the host/port shape is needed.
@@ -115,9 +133,66 @@ describe("HealthController", () => {
     const { controller } = makeController(true);
 
     await expect(controller.runtimeDrain()).resolves.toEqual({
-      active: 0,
-      status: "idle",
+      acknowledgement: "runtime-api-idle",
     });
+  });
+
+  it("matches the runtime-sweep caller contract over HTTP", async () => {
+    const runtimeEnv = {
+      ...STUB_ENV,
+      HEAP_HEALTH_THRESHOLD_BYTES: threshold,
+    } as EnvConfig & { RUNTIME_SWEEP_API_DRAIN?: true };
+    const health = { check: vi.fn().mockResolvedValue({}) };
+    const memory = { checkHeap: vi.fn().mockResolvedValue({}) };
+    const probe = { isHealthy: vi.fn().mockResolvedValue({}) };
+
+    @Module({
+      controllers: [HealthController],
+      providers: [
+        { provide: HealthCheckService, useValue: health },
+        { provide: MemoryHealthIndicator, useValue: memory },
+        { provide: PrismaHealthIndicator, useValue: probe },
+        { provide: RedisHealthIndicator, useValue: probe },
+        { provide: BullMQHealthIndicator, useValue: probe },
+        { provide: ENV_CONFIG, useValue: runtimeEnv },
+      ],
+    })
+    class RuntimeDrainContractModule {}
+
+    let app: INestApplication | undefined;
+    try {
+      app = await NestFactory.create(RuntimeDrainContractModule, {
+        logger: false,
+      });
+      await app.listen(0, "127.0.0.1");
+      const server = app.getHttpServer() as {
+        address: () => AddressInfo | string | null;
+      };
+      const address = server.address();
+      if (address === null || typeof address === "string")
+        throw new Error("Runtime drain contract server has no TCP address");
+      const apiUrl = `http://127.0.0.1:${String(address.port)}`;
+
+      await expect(awaitRuntimeApiDrain(apiUrl)).rejects.toThrow(
+        "Runtime API drain failed with HTTP 404",
+      );
+
+      runtimeEnv.RUNTIME_SWEEP_API_DRAIN = true;
+      await expect(awaitRuntimeApiDrain(apiUrl)).resolves.toBeUndefined();
+
+      const drainSpy = vi
+        .spyOn(runtimeApiWorkTracker, "awaitIdle")
+        .mockRejectedValueOnce(new RuntimeApiDrainTimeoutError());
+      try {
+        await expect(awaitRuntimeApiDrain(apiUrl)).rejects.toThrow(
+          "Runtime API drain failed with HTTP 503",
+        );
+      } finally {
+        drainSpy.mockRestore();
+      }
+    } finally {
+      await app?.close();
+    }
   });
 });
 

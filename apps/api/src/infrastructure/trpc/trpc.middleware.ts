@@ -39,7 +39,7 @@ const t = initTRPC.context<TrpcContext>().create({
   },
 });
 
-export const runtimeApiWorkMiddleware = t.middleware(({ next }) =>
+const runtimeApiWorkMiddleware = t.middleware(({ next }) =>
   runtimeApiWorkTracker.track(next),
 );
 
