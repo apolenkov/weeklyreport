@@ -1,31 +1,31 @@
 import path from "node:path";
 
+import type { RuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
+import { prepareRuntimeLaneArchives } from "./contracts/runtime-lane-files.ts";
+import {
+  assertRuntimeLaneSource,
+  startRuntimeLaneSourceMonitor,
+} from "./contracts/runtime-lane-source-guard.ts";
 import {
   readRuntimeBugsinkBaseline,
   writeRuntimeBugsinkRunEvidence,
 } from "./observability/runtime-bugsink-run-evidence.ts";
-import type { RuntimeLaneAssignment } from "./runtime-lane-contract.ts";
-import { prepareRuntimeLaneArchives } from "./runtime-lane-files.ts";
-import { acquireRuntimeLaneLease } from "./runtime-lane-lease.ts";
-import { writeRuntimeLaneObservabilityManifest } from "./runtime-lane-observability-manifest.ts";
-import { runRuntimeLaneProfileProcess } from "./runtime-lane-profile-process.ts";
-import { runRuntimeLaneProfiles } from "./runtime-lane-profile-run.ts";
-import { initializeRuntimeLaneResources } from "./runtime-lane-resource-initialization.ts";
-import {
-  createRuntimeLaneRunIdentity,
-  type RuntimeLaneRunIdentity,
-  writeRuntimeLaneRunIdentity,
-} from "./runtime-lane-run-identity.ts";
-import {
-  assertRuntimeLaneSource,
-  startRuntimeLaneSourceMonitor,
-} from "./runtime-lane-source-guard.ts";
+import { writeRuntimeLaneObservabilityManifest } from "./observability/runtime-lane-observability-manifest.ts";
 import {
   assertRuntimeObservabilityReadiness,
   readRuntimeObservabilityConfig,
   type RuntimeObservabilityConfig,
   writeRuntimeObservabilityReadiness,
-} from "./runtime-observability-readiness.ts";
+} from "./observability/runtime-observability-readiness.ts";
+import { runRuntimeLaneProfileProcess } from "./profiles/runtime-lane-profile-process.ts";
+import { runRuntimeLaneProfiles } from "./profiles/runtime-lane-profile-run.ts";
+import {
+  createRuntimeLaneRunIdentity,
+  type RuntimeLaneRunIdentity,
+  writeRuntimeLaneRunIdentity,
+} from "./profiles/runtime-lane-run-identity.ts";
+import { initializeRuntimeLaneResources } from "./resources/runtime-lane-resource-initialization.ts";
+import { acquireRuntimeLaneLease } from "./runtime-lane-lease.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 

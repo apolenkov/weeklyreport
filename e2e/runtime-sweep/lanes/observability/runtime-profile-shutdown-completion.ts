@@ -11,11 +11,11 @@ import {
 import type {
   RuntimeLane,
   RuntimeLaneAssignment,
-} from "../runtime-lane-contract.ts";
+} from "../contracts/runtime-lane-contract.ts";
 import {
   type RuntimeLaneRunIdentity,
   runtimeProfileServiceName,
-} from "../runtime-lane-run-identity.ts";
+} from "../profiles/runtime-lane-run-identity.ts";
 
 export const runtimeProfileShutdownCompletionSchema = z
   .object({

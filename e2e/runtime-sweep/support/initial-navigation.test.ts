@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { initialNavigation } from "../replay/frozen-case-live-capture.ts";
+import { initialNavigation } from "../replay/frozen-case/live/frozen-case-live-capture.ts";
 
 const harness = vi.hoisted(() => ({
   events: [] as string[],
@@ -32,7 +32,7 @@ const harness = vi.hoisted(() => ({
   resolveSettlement: undefined as (() => void) | undefined,
 }));
 
-vi.mock("../replay/dom-inventory.ts", () => ({
+vi.mock("../replay/dom/dom-inventory.ts", () => ({
   RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
   inventoryDom: vi.fn(),
 }));
@@ -41,11 +41,11 @@ vi.mock("../evidence/evidence-capture.ts", () => ({
   captureRouteEvidence: vi.fn(),
 }));
 
-vi.mock("../replay/frozen-case-artifacts.ts", () => ({
+vi.mock("../replay/evidence/frozen-case-artifacts.ts", () => ({
   writeFrozenCaseArtifact: vi.fn(),
 }));
 
-vi.mock("../replay/frozen-case-live-actions.ts", () => ({
+vi.mock("../replay/frozen-case/live/frozen-case-live-actions.ts", () => ({
   actionFor: vi.fn(() => undefined),
   runAction: vi.fn(),
 }));

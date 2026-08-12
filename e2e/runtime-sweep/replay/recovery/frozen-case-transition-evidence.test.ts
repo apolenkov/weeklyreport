@@ -18,8 +18,8 @@ import {
 import {
   type CompleteFrozenCaseEvidence,
   transitionEvidenceSelection,
-} from "../frozen-case-evidence.ts";
-import { phaseIssues } from "../frozen-case-phase-validation.ts";
+} from "../evidence/frozen-case-evidence.ts";
+import { phaseIssues } from "../frozen-case/validation/frozen-case-phase-validation.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const CASE_ID = "case-stateful-transition";

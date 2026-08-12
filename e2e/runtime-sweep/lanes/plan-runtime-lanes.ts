@@ -6,7 +6,7 @@ import {
   type FrozenMatrix,
   parseFrozenMatrix,
 } from "../matrix/matrix-finalizer.ts";
-import { createFrozenCaseLiveShardPlan } from "../replay/frozen-case-live-shards.ts";
+import { createFrozenCaseLiveShardPlan } from "../replay/frozen-case/live/frozen-case-live-shards.ts";
 import {
   campaignManifestSchema,
   type SeedProfile,
@@ -16,7 +16,7 @@ import {
   type RuntimeLaneAssignment,
   type RuntimeLaneMode,
   runtimeLaneResources,
-} from "./runtime-lane-contract.ts";
+} from "./contracts/runtime-lane-contract.ts";
 
 const SOURCE_ARTIFACTS = [
   "SOURCE.json",

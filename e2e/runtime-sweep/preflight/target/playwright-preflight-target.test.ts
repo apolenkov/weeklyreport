@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { planLiveControlActions } from "../../replay/live-control-planning.ts";
-import { preflightControlForPlan } from "../playwright-preflight.ts";
+import { planLiveControlActions } from "../../replay/live-control/live-control-planning.ts";
+import { preflightControlForPlan } from "../execution/playwright-preflight.ts";
 import { revealPathFor, revealSurfaceFor } from "../reveal-path.ts";
 
 describe("preflight stable link target", () => {

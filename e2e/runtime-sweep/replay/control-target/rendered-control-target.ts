@@ -5,20 +5,20 @@ import type { ElementHandle, Locator, Page } from "@playwright/test";
 import {
   SUPPORTED_CONTROL_ROLES,
   type SupportedControlRole,
-} from "../control-action-roles.ts";
+} from "../control-actions/control-action-roles.ts";
 import type {
   ControlActionTarget,
   RenderedNameActionLease,
   RenderedTargetValidator,
-} from "../control-action-types.ts";
-import { ControlActionPolicyError } from "../control-recovery.ts";
+} from "../control-actions/control-action-types.ts";
+import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
   RENDERED_TARGET_GUARD_PROPERTY,
   RENDERED_TARGET_VALIDATOR_PROPERTY,
 } from "./rendered-control-state.ts";
 
-export type { RenderedNameActionLease } from "../control-action-types.ts";
+export type { RenderedNameActionLease } from "../control-actions/control-action-types.ts";
 export {
   beginRenderedNameAction,
   cleanupRenderedNameGuard,

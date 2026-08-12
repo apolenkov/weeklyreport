@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { KeyboardTrace } from "../../replay/keyboard-evidence.ts";
+import type { KeyboardTrace } from "../../replay/keyboard/keyboard-evidence.ts";
 import {
   evidenceObservationSchema,
   type EvidenceRef,

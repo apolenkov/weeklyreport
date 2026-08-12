@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 
 import type { TestInfo } from "@playwright/test";
 
-import { inventoryDom } from "../replay/dom-inventory.ts";
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
 import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { captureRouteEvidence } from "./evidence-capture.ts";
 import type {

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   SPECIALIZED_DECLARATIONS,
   type SpecializedDeclaration,
-} from "../../matrix/specialized-declarations.ts";
+} from "../../matrix/specialized/specialized-declarations.ts";
 import { runWithCanonicalReseed } from "./resolver-runner-lifecycle.ts";
 
 const resolverDeclarationFor = (

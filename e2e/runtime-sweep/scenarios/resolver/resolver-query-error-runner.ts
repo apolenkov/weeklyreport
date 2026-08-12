@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test";
 
 import { prisma } from "../../../integration/helpers/db.ts";
-import { createPrismaRuntimeStateDatabase } from "../../preflight/prisma-state-database.ts";
 import { canonicalRevealUrlFor } from "../../preflight/reveal-path.ts";
+import { createPrismaRuntimeStateDatabase } from "../../preflight/runtime/prisma-state-database.ts";
 import {
   captureFrozenCasePhases,
   type FrozenCaseReplayResult,
-} from "../../replay/frozen-case-evidence.ts";
+} from "../../replay/evidence/frozen-case-evidence.ts";
 import type { EvidenceBundle, EvidenceRef } from "../../source/contracts.ts";
 import { resolverRecoveryExpectationFor } from "../../support/resolver-recovery-expectations.ts";
 import { prepareRuntimeState } from "../../support/state-preparation.ts";

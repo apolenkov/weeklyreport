@@ -5,11 +5,11 @@ import {
   type DomControlObservation,
   RUNTIME_INTERACTION_EFFECTS,
   type RuntimeInteractionEffect,
-} from "../replay/dom-inventory.ts";
+} from "../replay/dom/dom-inventory.ts";
 import type { Action } from "../source/contracts.ts";
 import { actionSchema, sha256DigestSchema } from "../source/contracts.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
-import type { RevealRepresentativeInput } from "./preflight-reveal-transition.ts";
+import type { RevealRepresentativeInput } from "./reveal/interaction/preflight-reveal-transition.ts";
 
 export const MAX_REVEAL_DEPTH = 4;
 export const MAX_REVEAL_BRANCHES = DEFAULT_MAX_CONTROLS;
@@ -303,4 +303,4 @@ export {
   assertRevealPath,
   assertRevealPathForControl,
   assertRevealSegmentPreparations,
-} from "./reveal-path-validation.ts";
+} from "./reveal/paths/reveal-path-validation.ts";

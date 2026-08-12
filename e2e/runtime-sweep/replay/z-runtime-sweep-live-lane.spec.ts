@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { compactFailedCellSummary } from "../evidence/failure-summary.ts";
-import { loadRuntimeLaneSelection } from "../lanes/runtime-lane-selection.ts";
+import { loadRuntimeLaneSelection } from "../lanes/resources/runtime-lane-selection.ts";
 import { parseFrozenMatrix } from "../matrix/matrix-finalizer.ts";
 import {
   assertFreshRuntimeManifest,
@@ -16,12 +16,12 @@ import { seedProfileSchema } from "../source/contracts.ts";
 import {
   type FrozenCaseLiveRuntime,
   runFrozenCases,
-} from "./frozen-case-live-runner.ts";
+} from "./frozen-case/live/frozen-case-live-runner.ts";
 import {
   createFrozenCaseLiveShardPlan,
   type FrozenCaseLiveShard,
   selectFrozenCasesForReplay,
-} from "./frozen-case-live-shards.ts";
+} from "./frozen-case/live/frozen-case-live-shards.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

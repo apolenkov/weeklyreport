@@ -8,7 +8,7 @@ import {
   prepareRuntimeNextDist,
   releaseRuntimeNextDist,
   type RuntimeNextLane,
-} from "./runtime-next-dist.ts";
+} from "./runtime/runtime-next-dist.ts";
 
 const MAX_PORT = 65_535;
 

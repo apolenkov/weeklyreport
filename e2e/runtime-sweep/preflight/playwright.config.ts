@@ -11,8 +11,8 @@ import {
 } from "../../runtime-api-server-command.ts";
 import { assertSourceSha } from "../support/ids.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
-import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
-import { runtimeTraceSamplingEnvironment } from "./runtime-observability-policy.ts";
+import { runtimeSweepWebEnvironment } from "./runtime/runtime-auth-env.ts";
+import { runtimeTraceSamplingEnvironment } from "./runtime/runtime-observability-policy.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

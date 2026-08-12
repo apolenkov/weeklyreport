@@ -4,7 +4,6 @@ import {
   type ResolverOutcomeKind,
 } from "../source/contracts.ts";
 import type { CampaignMatrixState } from "./campaign-matrix.ts";
-import { validateLegalMatrixRow } from "./matrix-execution-policy.ts";
 import {
   type MatrixExecutableCase,
   matrixExecutableCaseSchema,
@@ -12,12 +11,16 @@ import {
   type MatrixInapplicableCase,
   matrixInapplicableCaseSchema,
   routeFor,
-} from "./matrix-finalizer-contract.ts";
-import { executionStateFor, identityFor } from "./matrix-finalizer-identity.ts";
+} from "./finalization/matrix-finalizer-contract.ts";
+import {
+  executionStateFor,
+  identityFor,
+} from "./finalization/matrix-finalizer-identity.ts";
 import type {
   MatrixFinalizationInput,
   MatrixPreparation,
-} from "./matrix-finalizer-preflight-contract.ts";
+} from "./finalization/matrix-finalizer-preflight-contract.ts";
+import { validateLegalMatrixRow } from "./policy/matrix-execution-policy.ts";
 
 type MatrixIdentityFields = "sourceSha" | "sourceDigest" | "routes";
 

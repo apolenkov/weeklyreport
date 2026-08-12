@@ -6,7 +6,7 @@ import type { CampaignMatrixPlan } from "../matrix/campaign-matrix.ts";
 import {
   assertSpecializedDeclarations,
   SPECIALIZED_DECLARATION_COUNT,
-} from "../matrix/specialized-declarations.ts";
+} from "../matrix/specialized/specialized-declarations.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
 import {
   actionOperationSchema,

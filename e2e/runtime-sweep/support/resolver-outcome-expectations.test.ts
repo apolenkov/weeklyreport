@@ -6,13 +6,13 @@ import {
 } from "../../../prisma/seeds/support/seed-constants.ts";
 import type { CatalogRoute } from "../../sweep/catalog-parser.ts";
 import type { CampaignMatrixState } from "../matrix/campaign-matrix.ts";
-import { routeFor } from "../matrix/matrix-finalizer-contract.ts";
+import { routeFor } from "../matrix/finalization/matrix-finalizer-contract.ts";
 import {
   assertFreshRuntimeManifest,
   type RuntimeMatrixSource,
-} from "../matrix/runtime-matrix-manifest.ts";
-import { assertResolverOutcomeUi } from "../preflight/preflight-reveal-guards.ts";
-import type { DomInventory } from "../replay/dom-inventory.ts";
+} from "../matrix/runtime/runtime-matrix-manifest.ts";
+import { assertResolverOutcomeUi } from "../preflight/reveal/guards/preflight-reveal-guards.ts";
+import type { DomInventory } from "../replay/dom/dom-inventory.ts";
 import type { RouteDeclaration } from "../source/contracts.ts";
 import { sha256Hex } from "./ids.ts";
 import {

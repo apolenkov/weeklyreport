@@ -1,8 +1,8 @@
 import type { ElementHandle, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
-import { executeControlAttempt } from "../control-action-executor.ts";
-import { executeControlAction } from "../control-actions.ts";
+import { executeControlAttempt } from "../control-actions/control-action-executor.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
 import {
   armRenderedNameHandle,
   beginRenderedNameAction,

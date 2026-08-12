@@ -13,7 +13,7 @@ import {
 import {
   DEFAULT_MAX_CASES,
   DEFAULT_MAX_CONTROLS,
-} from "../matrix/matrix-finalizer-contract.ts";
+} from "../matrix/finalization/matrix-finalizer-contract.ts";
 import { routeDeclarationFromCatalog } from "../support/route-binding.ts";
 import {
   type Action,

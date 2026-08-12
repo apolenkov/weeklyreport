@@ -3,14 +3,14 @@ import * as path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { readSourceArtifact } from "../source/source-artifact.ts";
-import { runPlaywrightPreflightSegment } from "./playwright-preflight.ts";
 import {
   assertPreflightAssignmentMatchesSource,
   readPreflightAssignment,
-} from "./preflight-assignment.ts";
-import { assertLivePreflightSourceIdentity } from "./preflight-canary.ts";
-import { runJournaledPreflight } from "./preflight-journal-runner.ts";
-import { createPreflightRuntimePreparation } from "./preflight-runtime-setup.ts";
+} from "./artifacts/preflight-assignment.ts";
+import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary.ts";
+import { runPlaywrightPreflightSegment } from "./execution/playwright-preflight.ts";
+import { runJournaledPreflight } from "./journal/preflight-journal-runner.ts";
+import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

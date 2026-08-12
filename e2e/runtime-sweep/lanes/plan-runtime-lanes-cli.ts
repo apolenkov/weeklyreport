@@ -3,13 +3,13 @@ import path from "node:path";
 
 import { type SeedProfile, seedProfileSchema } from "../source/contracts.ts";
 import { stableSerialize } from "../support/ids.ts";
-import { planRuntimeLanes } from "./plan-runtime-lanes.ts";
 import {
   DEFAULT_RUNTIME_LANE_COUNT,
   MAX_RUNTIME_LANE_COUNT,
   MIN_RUNTIME_LANE_COUNT,
   type RuntimeLaneMode,
-} from "./runtime-lane-contract.ts";
+} from "./contracts/runtime-lane-contract.ts";
+import { planRuntimeLanes } from "./plan-runtime-lanes.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();

@@ -1,13 +1,13 @@
-import { prepareRuntimeLaneInfrastructure } from "./prepare-runtime-lane-infrastructure.ts";
 import {
   MAX_RUNTIME_LANE_COUNT,
   MIN_RUNTIME_LANE_COUNT,
   runtimeLaneResources,
-} from "./runtime-lane-contract.ts";
+} from "./contracts/runtime-lane-contract.ts";
+import { prepareRuntimeLaneInfrastructure } from "./prepare-runtime-lane-infrastructure.ts";
 import {
   consumeRuntimeLaneRedisRecreationAuthorization,
   requireRuntimeLaneRedisRecreationAuthorization,
-} from "./runtime-lane-redis-authorization.ts";
+} from "./redis/runtime-lane-redis-authorization.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
