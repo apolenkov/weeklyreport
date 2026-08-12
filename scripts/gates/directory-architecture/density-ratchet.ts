@@ -1,11 +1,29 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
 import {
   type DensityBaseline,
+  densityBaselineRatchetViolations,
   parseDensityBaseline,
   validateBaselineRoots,
 } from "./baseline-schema.ts";
 import type { OwnershipCatalogue } from "./catalogue-schema.ts";
 import { DIRECT_FILE_THRESHOLD } from "./constants.ts";
-import { sourceIdentityViolations } from "./source-identity.ts";
+import {
+  sourceIdentityOf,
+  sourceIdentityViolations,
+} from "./source-identity.ts";
+
+export { densityBaselineRatchetViolations } from "./baseline-schema.ts";
+
+const SCRIPTS_DIRECTORY = "scripts";
+const PREFLIGHT_DIRECTORY = "e2e/runtime-sweep/preflight";
+const FIXTURE_EXCEPTION_REASON = "fixture exception";
+const NEW_FIXTURE_EXCEPTION_REASON = "new fixture exception";
+const BASELINE_31 = 31;
+const BASELINE_32 = 32;
+const BASELINE_51 = 51;
+const BASELINE_96 = 96;
 
 interface DensityMeasurement {
   readonly directory: string;
@@ -168,3 +186,116 @@ export const validateDensity = (
 
 export const densityPasses = (validation: DensityValidation): boolean =>
   validation.errors.length === 0;
+
+const densityFiles = (count: number): readonly string[] =>
+  Array.from(
+    { length: count },
+    (_, index) => `${SCRIPTS_DIRECTORY}/fixture-${String(index + 1)}.ts`,
+  );
+
+const densityBaseline = (
+  files: readonly string[],
+  boundedFlatExceptions: readonly Record<string, unknown>[] = [],
+): DensityBaseline =>
+  parseDensityBaseline({
+    version: 1,
+    threshold: DIRECT_FILE_THRESHOLD,
+    sourceIdentity: { scripts: sourceIdentityOf(files, "fixture-tree") },
+    directCounts: Object.fromEntries(
+      files.length > DIRECT_FILE_THRESHOLD
+        ? [[SCRIPTS_DIRECTORY, files.length]]
+        : [],
+    ),
+    boundedFlatExceptions,
+  });
+
+void test("density baseline history rejects an existing exception raised from 32 to 51", () => {
+  const predecessor = densityBaseline(densityFiles(BASELINE_32), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_32,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+  const changed = densityBaseline(densityFiles(BASELINE_51), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_51,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+
+  assert.deepEqual(densityBaselineRatchetViolations(changed, predecessor), [
+    `bounded-flat exception increased: ${SCRIPTS_DIRECTORY}=${BASELINE_51} > predecessor ${BASELINE_32}`,
+  ]);
+});
+
+void test("density baseline history rejects adding a 96-file exception", () => {
+  const predecessor = densityBaseline(densityFiles(BASELINE_31), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_31,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+  const changed = densityBaseline(densityFiles(BASELINE_31), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_31,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+    {
+      directory: PREFLIGHT_DIRECTORY,
+      baseline: BASELINE_96,
+      reason: NEW_FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+
+  assert.deepEqual(densityBaselineRatchetViolations(changed, predecessor), [
+    `bounded-flat exception added without predecessor: ${PREFLIGHT_DIRECTORY}=${BASELINE_96}`,
+  ]);
+});
+
+void test("density baseline history accepts unchanged and lowered exceptions", () => {
+  const predecessor = densityBaseline(densityFiles(BASELINE_51), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_51,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+  const unchanged = densityBaseline(densityFiles(BASELINE_51), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_51,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+  const lowered = densityBaseline(densityFiles(BASELINE_32), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_32,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+
+  assert.deepEqual(
+    densityBaselineRatchetViolations(unchanged, predecessor),
+    [],
+  );
+  assert.deepEqual(densityBaselineRatchetViolations(lowered, predecessor), []);
+});
+
+void test("density baseline history fails closed when an exception predecessor is unavailable", () => {
+  const baseline = densityBaseline(densityFiles(BASELINE_96), [
+    {
+      directory: SCRIPTS_DIRECTORY,
+      baseline: BASELINE_96,
+      reason: FIXTURE_EXCEPTION_REASON,
+    },
+  ]);
+
+  assert.deepEqual(densityBaselineRatchetViolations(baseline), [
+    `bounded-flat exception predecessor unavailable: ${SCRIPTS_DIRECTORY}=${BASELINE_96}`,
+  ]);
+});

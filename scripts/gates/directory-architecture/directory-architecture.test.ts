@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { REPO_ROOT, resolveRepoPath } from "../../shared/repo-root.ts";
@@ -20,12 +19,15 @@ import {
 } from "./catalogue-schema.ts";
 import { ownershipPasses, validateOwnership } from "./catalogue-validator.ts";
 import {
+  densityBaselineRatchetViolations,
   densityPasses,
   directFileCounts,
   validateDensity,
 } from "./density-ratchet.ts";
 import {
+  currentBaseline,
   pathDigest,
+  predecessorBaseline,
   sourceIdentityOf,
   sourceIdentityViolations,
 } from "./source-identity.ts";
@@ -91,10 +93,7 @@ const currentSourceIdentity = (
     }),
   );
 
-const readBaseline = (): DensityBaseline =>
-  parseDensityBaseline(
-    JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as unknown,
-  );
+const readBaseline = (): DensityBaseline => currentBaseline(BASELINE_PATH);
 
 const catalogueFixture = (
   roots: readonly Record<string, unknown>[],
@@ -216,6 +215,13 @@ void test("the stored baseline has one identity for every catalogue root", () =>
     currentSourceIdentity(files),
   );
   assert.deepEqual(density.errors, []);
+});
+
+void test("the stored density baseline cannot relax its predecessor ratchet", () => {
+  assert.deepEqual(
+    densityBaselineRatchetViolations(readBaseline(), predecessorBaseline()),
+    [],
+  );
 });
 
 void test("catalogue schema rejects unsafe or ambiguous rules", () => {
