@@ -283,6 +283,69 @@ describe("SettingsTab — Identity sub-tab", () => {
     });
   });
 
+  it("shows a newer server identity that arrives while Save is pending", async () => {
+    let organization = ORG_DATA;
+    let resolveUpdate!: () => void;
+    const updatePending = new Promise<void>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    const { proxy, captured } = createMockTRPC([
+      {
+        path: ["admin", "getOrganization"],
+        query: () => organization,
+      },
+      { path: ["admin", "updateOrganization"], mutation: true },
+      { path: ["admin", "updateSettings"], mutation: true },
+      { path: ["admin", "snapshot"] },
+      { path: ["admin", "getSettings"] },
+      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
+      { path: ["auth", "me"] },
+      { path: ["org", "getPublic"] },
+      { path: ["weeklyReport", "get"] },
+    ]);
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockImplementation(() => updatePending);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    try {
+      const { qc } = renderSettings(proxy);
+      const shortNameInput =
+        await screen.findByLabelText<HTMLInputElement>(/short name/i);
+      await waitFor(() => expect(shortNameInput.value).toBe("PEO"));
+      fireEvent.change(shortNameInput, { target: { value: "SAVED" } });
+
+      await userEvent.setup().click(
+        screen.getByRole("button", {
+          name: /save organization identity/i,
+        }),
+      );
+      await waitFor(() =>
+        expect(
+          expectDefined(captured["admin.updateOrganization"]).mutationFn,
+        ).toHaveBeenCalled(),
+      );
+
+      organization = {
+        ...ORG_DATA,
+        shortName: "LIVE",
+        fullName: "Live server identity",
+      };
+      qc.setQueryData([["admin", "getOrganization"]], organization);
+      resolveUpdate();
+
+      await waitFor(() => expect(shortNameInput.value).toBe("LIVE"));
+      expect(screen.getByLabelText<HTMLInputElement>(/full name/i).value).toBe(
+        "Live server identity",
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("disables Save when shortName exceeds 16 chars, and re-enables at <=16", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
