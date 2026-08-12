@@ -1,10 +1,10 @@
 import type { Action, CoverageCell } from "../../source/contracts.ts";
 import { stableSerialize } from "../../support/ids.ts";
+import type { MatrixExecutableCase } from "../matrix-finalizer.ts";
 import type {
   MatrixCoverageGap,
   MatrixCoverageIssueKind,
 } from "./matrix-coverage.ts";
-import type { MatrixExecutableCase } from "../matrix-finalizer.ts";
 
 const IDENTITY_MISMATCH: MatrixCoverageIssueKind = "identity-mismatch";
 const issue = (

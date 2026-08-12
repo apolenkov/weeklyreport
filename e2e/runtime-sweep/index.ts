@@ -6,7 +6,7 @@ export * from "./evidence/finalize-runtime-coverage.ts";
 export * from "./evidence/ledger.ts";
 export * from "./manifest/manifest.ts";
 export * from "./matrix/campaign-matrix.ts";
-export * from "./matrix/coverage/matrix-coverage.ts";
+export * from "./matrix/coverage-model/matrix-coverage.ts";
 export * from "./matrix/matrix.ts";
 export * from "./matrix/matrix-finalizer.ts";
 export * from "./matrix/specialized/specialized-declarations.ts";

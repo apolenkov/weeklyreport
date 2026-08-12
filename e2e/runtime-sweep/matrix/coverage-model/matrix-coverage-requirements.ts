@@ -1,4 +1,8 @@
-import type { MatrixAxes, Role, SeedCapability } from "../../source/contracts.ts";
+import type {
+  MatrixAxes,
+  Role,
+  SeedCapability,
+} from "../../source/contracts.ts";
 import { matrixAxesSchema } from "../../source/contracts.ts";
 import { stableSerialize } from "../../support/ids.ts";
 import type { MatrixInapplicable } from "../matrix.ts";

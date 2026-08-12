@@ -1,13 +1,20 @@
-import type { CoverageCell, Role, SeedProfile } from "../../source/contracts.ts";
+import type {
+  CoverageCell,
+  Role,
+  SeedProfile,
+} from "../../source/contracts.ts";
 import { stableSerialize } from "../../support/ids.ts";
+import { pairKeys } from "../finalization/matrix-finalizer-support.ts";
+import type {
+  FrozenMatrix,
+  MatrixExecutableCase,
+} from "../matrix-finalizer.ts";
 import {
   coverageCellWitnessKey,
   coverageIdentityIssues,
   isSpecializedCoverageCase,
   matrixCoverageWitnessKey,
 } from "./matrix-coverage-identity.ts";
-import type { FrozenMatrix, MatrixExecutableCase } from "../matrix-finalizer.ts";
-import { pairKeys } from "../finalization/matrix-finalizer-support.ts";
 
 export {
   excludedStateCombinations,
