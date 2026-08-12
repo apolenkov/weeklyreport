@@ -1,8 +1,8 @@
 "use client";
 
-import { pluralize } from "../../../shared/lib/format/pluralize";
-import { PlusIcon } from "../../../shared/ui/icons/action-icons";
-import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
+import { pluralize } from "../../../../shared/lib/format/pluralize";
+import { PlusIcon } from "../../../../shared/ui/icons/action-icons";
+import { TabHeader, TabSearch } from "../../../../shared/ui/tabs/tab-header";
 
 interface RemindersTabHeaderProps {
   readonly policyCount: number;
