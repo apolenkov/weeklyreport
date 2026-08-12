@@ -328,6 +328,10 @@ describe("SettingsTab — Identity sub-tab", () => {
           expectDefined(captured["admin.updateOrganization"]).mutationFn,
         ).toHaveBeenCalled(),
       );
+      const pendingOptions = expectDefined(
+        captured["admin.updateOrganization"],
+      ).lastOptions;
+      const pendingOnSuccess = pendingOptions.onSuccess;
 
       organization = {
         ...ORG_DATA,
@@ -335,12 +339,19 @@ describe("SettingsTab — Identity sub-tab", () => {
         fullName: "Live server identity",
       };
       qc.setQueryData([["admin", "getOrganization"]], organization);
+      await waitFor(() => {
+        expect(
+          expectDefined(captured["admin.updateOrganization"]).lastOptions
+            .onSuccess,
+        ).not.toBe(pendingOnSuccess);
+      });
       resolveUpdate();
 
       await waitFor(() => expect(shortNameInput.value).toBe("LIVE"));
       expect(screen.getByLabelText<HTMLInputElement>(/full name/i).value).toBe(
         "Live server identity",
       );
+      expect(await screen.findByText(/identity saved/i)).toBeInTheDocument();
     } finally {
       globalThis.fetch = originalFetch;
     }
