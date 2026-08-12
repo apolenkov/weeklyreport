@@ -19,7 +19,6 @@ import {
 import {
   errorMessage,
   journalStateSchema,
-  type PreflightJournalState,
   preflightJournalStateDigest,
   routeIdentityFor,
 } from "./preflight-journal-contract.ts";
@@ -230,9 +229,3 @@ export const preflightAssignmentStateFor = (
     );
   return state;
 };
-
-export const preflightAssignmentStateDigest = (
-  state: PreflightAssignmentState,
-): string => state.stateDigest;
-
-export type { PreflightJournalState };

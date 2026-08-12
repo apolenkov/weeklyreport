@@ -4,8 +4,7 @@ export const VIEWER_STATUS_OPERATION = "reports.latestForViewer" as const;
 export const VIEWER_STATUS_PATH = "/trpc/reports.latestForViewer" as const;
 export const VIEWER_STATUS_FAULT_ID = "viewer-status-query-error" as const;
 export const VIEWER_STATUS_FAULT_STATUS = 503;
-export const VIEWER_STATUS_FAULT_MESSAGE =
-  "Status resolver temporarily unavailable";
+const VIEWER_STATUS_FAULT_MESSAGE = "Status resolver temporarily unavailable";
 export const VIEWER_STATUS_FAULT_BODY = JSON.stringify([
   {
     error: {
@@ -28,7 +27,7 @@ export type ResolverFaultObservation = Readonly<{
   readonly count: 1;
 }>;
 
-export class ResolverFaultError extends Error {
+class ResolverFaultError extends Error {
   override readonly name = "ResolverFaultError";
 }
 
