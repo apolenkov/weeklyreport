@@ -90,6 +90,7 @@ function StageCell({
       </label>
       <select
         id={selectId}
+        data-interaction-effect="mutation-required"
         value={currentAssignee}
         onChange={(e) => handleChange(e.target.value)}
         disabled={disabled}

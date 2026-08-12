@@ -176,23 +176,31 @@ const finalizationInputFor = (
   ],
 });
 
-test("accepts observed control scale without duplicating reveal data", () => {
-  const matrix = finalizeCampaignMatrix({
-    sourceSha: SOURCE_SHA,
-    declaration,
-    plan,
-    routes,
-    preflight: [{ state, controls: controls(), specialized: [] }],
-  });
-  expect(matrix.counts.executable).toBe(OBSERVED_CONTROL_COUNT + 1);
-  expect(matrix.revealPaths).toHaveLength(1);
-  expect(matrix.revealSurfaces).toHaveLength(1);
-  expect(matrix.revealTransitions).toHaveLength(OBSERVED_CONTROL_COUNT);
-  expect(matrix.limits).toEqual({
-    maxCases: DEFAULT_MAX_CASES,
-    maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
-  });
-});
+// Full-suite workers contend for CPU; the isolated production-scale case
+// completes in under two seconds but can exceed Vitest's default under load.
+const SCALE_TEST_TIMEOUT_MS = 15_000;
+
+test(
+  "accepts observed control scale without duplicating reveal data",
+  () => {
+    const matrix = finalizeCampaignMatrix({
+      sourceSha: SOURCE_SHA,
+      declaration,
+      plan,
+      routes,
+      preflight: [{ state, controls: controls(), specialized: [] }],
+    });
+    expect(matrix.counts.executable).toBe(OBSERVED_CONTROL_COUNT + 1);
+    expect(matrix.revealPaths).toHaveLength(1);
+    expect(matrix.revealSurfaces).toHaveLength(1);
+    expect(matrix.revealTransitions).toHaveLength(OBSERVED_CONTROL_COUNT);
+    expect(matrix.limits).toEqual({
+      maxCases: DEFAULT_MAX_CASES,
+      maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
+    });
+  },
+  SCALE_TEST_TIMEOUT_MS,
+);
 
 test("accepts an exact mutation-required button without a reveal transition", () => {
   const matrix = finalizeCampaignMatrix(
