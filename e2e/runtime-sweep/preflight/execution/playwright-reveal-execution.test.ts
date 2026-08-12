@@ -13,12 +13,15 @@ const harness = vi.hoisted(() => {
     changedUrl: undefined as string | undefined,
     delayedUrl: undefined as string | undefined,
     events: [] as string[],
+    loadingAfterAction: false,
+    loading: false,
     pageUrl: "https://runtime.invalid/reports",
   };
   const inventory: DomInventory = { controls: [], issues: [] };
   return {
     inventory,
     inventoryDom: vi.fn(() => {
+      if (state.loading) throw new Error("inventory observed loading DOM");
       state.events.push("inventory");
       return inventory;
     }),
@@ -32,6 +35,10 @@ const harness = vi.hoisted(() => {
     state,
     executeControlAction: vi.fn(() => {
       state.events.push("action");
+      if (state.loadingAfterAction) {
+        state.loading = true;
+        state.events.push("loading");
+      }
       if (state.changedUrl !== undefined) state.pageUrl = state.changedUrl;
       return {
         controlKey: "link:Home:1",
@@ -100,6 +107,7 @@ const pageFor = (): {
   });
   const waitForFunction = vi.fn(() => {
     harness.state.events.push("app-ready");
+    harness.state.loading = false;
   });
   const waitForURL = vi.fn((predicate: (url: URL) => boolean) => {
     harness.state.events.push("wait-url");
@@ -131,6 +139,7 @@ const runReveal = async (input?: {
   readonly changedUrl?: string;
   readonly control?: DomControlObservation;
   readonly delayedUrl?: string;
+  readonly loadingAfterAction?: boolean;
 }): Promise<{
   readonly result: Awaited<
     ReturnType<ReturnType<typeof createPlaywrightRevealExecutor>>
@@ -141,6 +150,8 @@ const runReveal = async (input?: {
 }> => {
   harness.state.changedUrl = input?.changedUrl;
   harness.state.delayedUrl = input?.delayedUrl;
+  harness.state.loadingAfterAction = input?.loadingAfterAction ?? false;
+  harness.state.loading = false;
   harness.state.pageUrl = "https://runtime.invalid/reports";
   const page = pageFor();
   const executeReveal = createPlaywrightRevealExecutor({ page: page.page });
@@ -170,6 +181,8 @@ describe("Playwright reveal execution", () => {
     harness.state.changedUrl = undefined;
     harness.state.delayedUrl = undefined;
     harness.state.events.length = 0;
+    harness.state.loadingAfterAction = false;
+    harness.state.loading = false;
     harness.state.pageUrl = "https://runtime.invalid/reports";
     harness.executeControlAction.mockClear();
     harness.inventoryDom.mockClear();
@@ -238,7 +251,7 @@ describe("Playwright reveal execution", () => {
     expect(harness.state.events).toEqual(["action", "wait-url"]);
   });
 
-  it("does not wait for navigation from an unchanged read-only button", async () => {
+  it("settles loading after an unchanged read-only click before inventory", async () => {
     const buttonControl: DomControlObservation = {
       ...control,
       accessibleName: "Expand",
@@ -254,11 +267,18 @@ describe("Playwright reveal execution", () => {
     const { waitForFunction, waitForLoadState, waitForURL } = await runReveal({
       action: buttonAction,
       control: buttonControl,
+      loadingAfterAction: true,
     });
 
     expect(waitForURL).not.toHaveBeenCalled();
     expect(waitForLoadState).not.toHaveBeenCalled();
-    expect(waitForFunction).not.toHaveBeenCalled();
-    expect(harness.state.events).toEqual(["action", "inventory"]);
+    expect(waitForFunction).toHaveBeenCalledTimes(2);
+    expect(harness.state.events).toEqual([
+      "action",
+      "loading",
+      "app-ready",
+      "app-ready",
+      "inventory",
+    ]);
   });
 });
