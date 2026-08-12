@@ -13,7 +13,10 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
-import { waitForAppReady } from "../../replay/navigation.ts";
+import {
+  waitForAppReady,
+  waitForRevealSurfaceReady,
+} from "../../replay/navigation.ts";
 import {
   representativeInputForFill,
   type RevealRepresentativeInput,
@@ -111,7 +114,7 @@ const settleUnchangedReadOnlyClick = (
   action: RevealActionInput["action"],
 ): Promise<void> =>
   action.operation === "click" && action.safety === "read-only"
-    ? waitForAppReady(page)
+    ? waitForRevealSurfaceReady(page)
     : Promise.resolve();
 
 const representativeInputForAction = async (
