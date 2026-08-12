@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import type { SessionUser } from "../../../../../shared/lib/auth/session-provider";
@@ -89,6 +90,22 @@ export function useLeadFormLoadErrors({
   });
 }
 
+function useLeadFormSectionRetry(refetchSection: () => Promise<unknown>) {
+  const [byPeriodRetrying, setByPeriodRetrying] = useState(false);
+  const retryPromiseRef = useRef<Promise<unknown> | null>(null);
+  const retrySection = useCallback(() => {
+    if (retryPromiseRef.current) return retryPromiseRef.current;
+    setByPeriodRetrying(true);
+    const retryPromise = refetchSection().finally(() => {
+      retryPromiseRef.current = null;
+      setByPeriodRetrying(false);
+    });
+    retryPromiseRef.current = retryPromise;
+    return retryPromise;
+  }, [refetchSection]);
+  return { byPeriodRetrying, retrySection };
+}
+
 // Owns every report-scoped read. `view` is plain data so no react-query type
 // reaches the lead-form UI seam; `errorSources` is the narrow failure slice.
 export function useLeadFormReports({
@@ -113,6 +130,12 @@ export function useLeadFormReports({
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
+  // A refetch of a query without data temporarily reports `isError: false`
+  // while it is pending. Keep the terminal state visible through a user retry
+  // so LeadForm never falls back to a skeleton or stale editable content.
+  const refetchSection = byPeriodQ.refetch;
+  const { byPeriodRetrying, retrySection } =
+    useLeadFormSectionRetry(refetchSection);
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
   const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
   const crossAuthorsQ = useQuery({
@@ -144,7 +167,14 @@ export function useLeadFormReports({
         byPeriodQ.data?.section.reportSectionId ?? activeSectionId,
       byPeriodData: byPeriodQ.data,
       sectionUnavailable,
-      refetchSection: byPeriodQ.refetch,
+      // Keep the primary read's terminal state separate from `byPeriodData`:
+      // TanStack Query can retain cached data after a failed refetch, but the
+      // lead form must fail closed until a later read succeeds.
+      byPeriodError:
+        (byPeriodQ.isError && !sectionUnavailable) || byPeriodRetrying,
+      byPeriodFetching: byPeriodQ.isFetching || byPeriodRetrying,
+      refetchSection,
+      retrySection,
       historyData: historyQ.data,
       unifiedView: viewSettingsQ.data?.unifiedActivityView === true,
       crossAuthors: crossAuthorsQ.data ?? [],
