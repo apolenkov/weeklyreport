@@ -1,4 +1,4 @@
-import type { PolicyFormState } from "../model/reminders-form-state";
+import type { PolicyFormState } from "../../model/reminders-form-state";
 
 interface PolicyFormFooterProps {
   readonly form: PolicyFormState;

@@ -17,7 +17,7 @@ import {
   NotificationsSubTab,
 } from "../../organization";
 import { PeriodsSubTab } from "../../period";
-import { RemindersSubTab } from "./settings-reminders-sub-tab";
+import { RemindersSubTab } from "./reminders/settings-reminders-sub-tab";
 
 interface SettingsTabProps {
   readonly settings: AppSettings;

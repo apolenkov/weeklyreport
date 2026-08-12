@@ -1,12 +1,12 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
-import type { AdminReminderPolicyView } from "../model/admin-types";
+import { ConfirmDeleteDialog } from "../../../../shared/ui/dialogs/confirm-delete-dialog";
+import type { AdminReminderPolicyView } from "../../model/admin-types";
 import {
   describeRecipient,
   formatPolicyTiming,
   formatValidityWindow,
-} from "../model/reminders-tab-format";
+} from "../../model/reminders-tab-format";
 
 interface RemindersDeleteDialogProps {
   readonly policy: AdminReminderPolicyView | null;

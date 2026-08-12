@@ -2,12 +2,12 @@
 
 import type { AppSettings } from "@customreport/shared";
 
-import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
+import { useServerSeededDraft } from "../../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
   CheckIcon,
   useUpdateSettingsMut,
-} from "../../../shared/ui/settings/settings-tab";
-import { TIMEZONE_OPTIONS } from "../model/timezone-options";
+} from "../../../../shared/ui/settings/settings-tab";
+import { TIMEZONE_OPTIONS } from "../../model/timezone-options";
 
 function DefaultTimezoneField({
   value,

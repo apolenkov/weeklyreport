@@ -3,21 +3,21 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { toReminderPolicyInput } from "../model/admin";
-import type { AdminReminderPolicyView } from "../model/admin-types";
+import { toReminderPolicyInput } from "../../model/admin";
+import type { AdminReminderPolicyView } from "../../model/admin-types";
 import {
   emptyPolicyForm,
   type PolicyFormState,
   policyToForm,
-} from "../model/reminders-form-state";
+} from "../../model/reminders-form-state";
 import {
   describeRecipient,
   formatPolicyTiming,
-} from "../model/reminders-tab-format";
+} from "../../model/reminders-tab-format";
 import {
   toggledPayload,
   useReminderPolicyMutations,
-} from "../model/reminders-tab-mutations";
+} from "../../model/reminders-tab-mutations";
 
 // The inline editor is mutually exclusive: add renders above the list, while
 // edit replaces one card in place.

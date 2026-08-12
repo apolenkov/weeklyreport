@@ -13,7 +13,7 @@ import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
 import { SlideFullscreenButton } from "../../../../slides";
 import { CollapseIcon } from "./lead-form-icons";
-import { RecordVisibilityToggle } from "./record-visibility-toggle";
+import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;
 type LeadSubmittedAt = ComponentProps<

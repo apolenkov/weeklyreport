@@ -3,7 +3,7 @@
 import type {
   AdminReminderPolicyView,
   AdminReminderView,
-} from "../model/admin-types";
+} from "../../model/admin-types";
 import { PolicyForm } from "./policy-form";
 import { RemindersDeleteDialog } from "./reminders-delete-dialog";
 import { RemindersPolicyList } from "./reminders-policy-list";

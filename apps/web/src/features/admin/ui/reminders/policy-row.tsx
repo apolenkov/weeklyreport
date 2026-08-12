@@ -3,12 +3,12 @@
 import type {
   AdminReminderPolicyView,
   AdminReminderView,
-} from "../model/admin-types";
+} from "../../model/admin-types";
 import {
   describeRecipient,
   formatPolicyTiming,
   nextSendDate,
-} from "../model/reminders-tab-format";
+} from "../../model/reminders-tab-format";
 
 interface PolicyRowProps {
   readonly policy: AdminReminderPolicyView;

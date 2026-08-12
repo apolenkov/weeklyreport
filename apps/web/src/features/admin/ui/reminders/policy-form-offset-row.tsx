@@ -1,13 +1,13 @@
 import { useState } from "react";
 
-import type { PolicyFormState } from "../model/reminders-form-state";
+import type { PolicyFormState } from "../../model/reminders-form-state";
 import {
   getOffsetAmount,
   getOffsetUnit,
   OFFSET_UNITS,
   type OffsetUnit,
   offsetUnitFactor,
-} from "../model/reminders-tab-format";
+} from "../../model/reminders-tab-format";
 import {
   POLICY_FORM_INPUT_CLASS,
   POLICY_FORM_LABEL_CLASS,

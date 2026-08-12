@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
-import type { PolicyFormState } from "../model/reminders-form-state";
+import type { PolicyFormState } from "../../model/reminders-form-state";
 import {
   CUSTOM_PRESET_LABEL,
   presetPairing,
   REMINDER_PRESETS,
   type ReminderPreset,
-} from "../model/reminders-tab-format";
+} from "../../model/reminders-tab-format";
 import { PolicyFormAdvancedFields } from "./policy-form-advanced-fields";
 import { PolicyFormFooter } from "./policy-form-footer";
 import { ReminderOffsetRow } from "./policy-form-offset-row";

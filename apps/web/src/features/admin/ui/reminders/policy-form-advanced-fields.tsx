@@ -1,5 +1,5 @@
-import type { PolicyFormState } from "../model/reminders-form-state";
-import { TIMEZONE_OPTIONS } from "../model/timezone-options";
+import type { PolicyFormState } from "../../model/reminders-form-state";
+import { TIMEZONE_OPTIONS } from "../../model/timezone-options";
 import {
   POLICY_FORM_INPUT_CLASS,
   POLICY_FORM_LABEL_CLASS,

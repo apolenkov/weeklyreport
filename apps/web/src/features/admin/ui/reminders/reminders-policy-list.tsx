@@ -3,8 +3,8 @@
 import type {
   AdminReminderPolicyView,
   AdminReminderView,
-} from "../model/admin-types";
-import type { PolicyFormState } from "../model/reminders-form-state";
+} from "../../model/admin-types";
+import type { PolicyFormState } from "../../model/reminders-form-state";
 import { PolicyForm } from "./policy-form";
 import { PolicyRow } from "./policy-row";
 import { RemindersEmptyState } from "./reminders-empty-state";
