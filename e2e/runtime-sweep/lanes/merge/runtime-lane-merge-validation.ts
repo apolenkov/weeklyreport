@@ -2,7 +2,7 @@ import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { verifyCoverageLedger } from "../../evidence/ledger.ts";
-import { coverageIdentityIssues } from "../../matrix/coverage/matrix-coverage-identity.ts";
+import { coverageIdentityIssues } from "../../matrix/coverage-model/matrix-coverage-identity.ts";
 import type {
   FrozenMatrix,
   MatrixExecutableCase,

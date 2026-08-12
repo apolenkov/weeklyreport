@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { revealPathFor, revealSurfaceFor } from "../../preflight/reveal-path.ts";
+import {
+  revealPathFor,
+  revealSurfaceFor,
+} from "../../preflight/reveal-path.ts";
 import {
   type Action,
   type CoverageCell,
@@ -10,17 +13,17 @@ import {
   NO_ROUTE_CACHE_CONTRACT_POLICY,
 } from "../../source/contracts.ts";
 import { sha256Hex } from "../../support/ids.ts";
-import {
-  assertFrozenMatrixCoverage,
-  FrozenMatrixCoverageError,
-  verifyFrozenMatrixCoverage,
-} from "./matrix-coverage.ts";
+import { pairKeys } from "../finalization/matrix-finalizer-support.ts";
 import {
   type FrozenMatrix,
   type MatrixExecutableCase,
   parseFrozenMatrix,
 } from "../matrix-finalizer.ts";
-import { pairKeys } from "../finalization/matrix-finalizer-support.ts";
+import {
+  assertFrozenMatrixCoverage,
+  FrozenMatrixCoverageError,
+  verifyFrozenMatrixCoverage,
+} from "./matrix-coverage.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const VIEWPORT = { browser: "chromium" as const, width: 1440, height: 900 };

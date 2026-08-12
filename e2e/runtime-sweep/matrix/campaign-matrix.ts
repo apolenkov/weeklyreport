@@ -13,11 +13,11 @@ import {
   campaignMatrixConstraints,
   nominalLifecycleForRoute,
   permissionsForRole,
-} from "./coverage/campaign-matrix-constraints.ts";
+} from "./coverage-model/campaign-matrix-constraints.ts";
 import {
   excludedStateCombinations,
   witnessCapability,
-} from "./coverage/matrix-coverage.ts";
+} from "./coverage-model/matrix-coverage.ts";
 import {
   compilePairwiseMatrix,
   type MatrixInapplicable,
