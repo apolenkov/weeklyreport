@@ -236,6 +236,12 @@ const resourceProofBodySchema = z
   })
   .strict()
   .superRefine((value, context) => {
+    if (value.browser.version === value.runtime.playwrightVersion)
+      context.addIssue({
+        code: "custom",
+        path: ["browser", "version"],
+        message: "must identify the browser, not the Playwright package",
+      });
     const revision = value.runtime.chromiumRevision.replace(/^chromium-/u, "");
     if (
       revision === String(value.browser.viewport.width) ||
