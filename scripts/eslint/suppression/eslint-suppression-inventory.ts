@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
+import { withoutLocalGitEnvironment } from "../../shared/git-environment.ts";
 import { parseComments } from "../shared/eslint-parser-comments.ts";
 
 type SuppressionScope = "file" | "next-line" | "line";
@@ -39,23 +40,6 @@ const DIRECTIVE_PREFIX = "eslint-disable";
 const REASON_SEPARATOR = " -- ";
 const FINGERPRINT_LENGTH = 16;
 const GIT = "/usr/bin/git";
-
-const gitLocalEnvironmentNames = new Set(
-  execFileSync(GIT, ["rev-parse", "--local-env-vars"], {
-    encoding: "utf8",
-  })
-    .trim()
-    .split("\n"),
-);
-
-export const withoutLocalGitEnvironment = (
-  environment: NodeJS.ProcessEnv,
-): NodeJS.ProcessEnv =>
-  Object.fromEntries(
-    Object.entries(environment).filter(
-      ([name]) => !gitLocalEnvironmentNames.has(name),
-    ),
-  );
 
 const scopedRemainder = (
   remainder: string,
