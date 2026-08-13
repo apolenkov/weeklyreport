@@ -18,6 +18,10 @@ describe("preflight shard completion", () => {
       expect(completion.stateEvidence).toHaveLength(
         fixture.context.shard.states.length,
       );
+      expect(completion.stateEvidence.length).toBeGreaterThanOrEqual(2);
+      expect(
+        completion.stateEvidence.map(({ planIndex }) => planIndex),
+      ).toEqual(fixture.context.shard.states.map(({ planIndex }) => planIndex));
       expect(completion.journalRecordCount).toBe(fixture.records.length);
       expect(completion.journalTailDigest).toBe(
         fixture.records.at(-1)?.recordDigest,
@@ -32,6 +36,14 @@ describe("preflight shard completion", () => {
       const variants = [
         { ...fixture.resume, authorizedSkipStateIds: ids.slice(1) },
         { ...fixture.resume, authorizedSkipStateIds: [...ids, "foreign"] },
+        {
+          ...fixture.resume,
+          authorizedSkipStateIds: [
+            ids[1] ?? "missing",
+            ids[0] ?? "missing",
+            ...ids.slice(2),
+          ],
+        },
         { ...fixture.resume, rerunStateIds: [ids[0] ?? "missing"] },
         { ...fixture.resume, interruptedStateId: ids[0] ?? "missing" },
         { ...fixture.resume, terminalPasses: new Map() },
@@ -58,7 +70,56 @@ describe("preflight shard completion", () => {
           ...fixture,
           resume: { ...fixture.resume, terminalPasses },
         }),
-      ).toThrow(/exact terminal evidence/u);
+      ).toThrow(/terminal evidence|receipt or segment drifted/u);
+    });
+  });
+
+  it("rejects forged receipt fields and segment drift", async () => {
+    await withCompletionFixture((fixture) => {
+      const firstId = fixture.resume.authorizedSkipStateIds[0];
+      const secondState = fixture.context.shard.states[1]?.state;
+      const pass =
+        firstId === undefined
+          ? undefined
+          : fixture.resume.terminalPasses.get(firstId);
+      if (
+        firstId === undefined ||
+        secondState === undefined ||
+        pass === undefined
+      )
+        throw new Error("multi-state fixture terminal pass missing");
+
+      const forgedReceipts = [
+        { ...pass.receipt, startedRecordDigest: "f".repeat(64) },
+        {
+          ...pass.receipt,
+          segmentArtifactPath: `${pass.receipt.segmentArtifactPath}.foreign`,
+        },
+        { ...pass.receipt, segmentArtifactDigest: "f".repeat(64) },
+        { ...pass.receipt, stateAttempt: pass.receipt.stateAttempt + 1 },
+      ];
+      for (const receipt of forgedReceipts) {
+        const terminalPasses = new Map(fixture.resume.terminalPasses);
+        terminalPasses.set(firstId, { ...pass, receipt });
+        expect(() =>
+          createPreflightShardCompletion({
+            ...fixture,
+            resume: { ...fixture.resume, terminalPasses },
+          }),
+        ).toThrow(/receipt or segment drifted/u);
+      }
+
+      const terminalPasses = new Map(fixture.resume.terminalPasses);
+      terminalPasses.set(firstId, {
+        ...pass,
+        segment: { ...pass.segment, state: secondState },
+      });
+      expect(() =>
+        createPreflightShardCompletion({
+          ...fixture,
+          resume: { ...fixture.resume, terminalPasses },
+        }),
+      ).toThrow(/receipt|segment/iu);
     });
   });
 
