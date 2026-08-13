@@ -7,7 +7,10 @@ import {
   createManifestFixture,
   fakeManifestGit,
 } from "../../../manifest/manifest-fixture.ts";
-import { routeForState } from "../../execution/playwright-preflight-support.ts";
+import {
+  attachSpecializedDeclarations,
+  routeForState,
+} from "../../execution/playwright-preflight-support.ts";
 import {
   createPreflightSegmentArtifact,
   writePreflightSegmentArtifact,
@@ -32,6 +35,7 @@ import {
   writePreflightShardStateReceipt,
 } from "../journal/preflight-shard-state-receipt.ts";
 import { createPreflightShardAssignment } from "../preflight-shard-assignment.ts";
+import { writePreflightShardResourceProof } from "../resources/preflight-shard-resource-proof-io.ts";
 import { createPreflightShardResourceProof } from "../resources/preflight-shard-resource-proof-planner.ts";
 import {
   defaultBrowser,
@@ -39,12 +43,17 @@ import {
   resourcesFor,
 } from "../resources/preflight-shard-resource-proof-test-support.ts";
 import type { PreflightShardCompletionReadRequest } from "./preflight-shard-merge.ts";
+import { preflightShardResourceProofPathFor } from "./preflight-shard-merge-assembly.ts";
 
 type CampaignSource = Awaited<ReturnType<typeof buildCampaignSource>>;
 
 export type PersistedMergeFixture = Readonly<{
   readonly source: CampaignSource;
   readonly assignment: ReturnType<typeof createPreflightShardAssignment>;
+  readonly donorRoots: readonly {
+    readonly donorId: string;
+    readonly root: string;
+  }[];
   readonly requests: readonly PreflightShardCompletionReadRequest[];
   readonly dispose: () => Promise<void>;
 }>;
@@ -54,6 +63,7 @@ const persistState = async (input: {
   readonly archiveRoot: string;
   readonly journalPath: string;
   readonly state: PreflightShardJournalContext["shard"]["states"][number];
+  readonly preexistingSpecialized?: boolean;
 }): Promise<void> => {
   const started = await appendPreflightShardJournalStarted({
     context: input.context,
@@ -61,12 +71,22 @@ const persistState = async (input: {
     filePath: input.journalPath,
     state: input.state,
   });
+  const nominalSegment = {
+    state: input.state.state,
+    controls: [],
+    specialized: [],
+  } as const;
+  const segment = input.preexistingSpecialized
+    ? (attachSpecializedDeclarations(input.context.source, [
+        nominalSegment,
+      ])[0] ?? nominalSegment)
+    : nominalSegment;
   const segmentArtifact = createPreflightSegmentArtifact({
     source: input.context.source,
     assignmentDigest: input.context.assignment.assignmentDigest,
     state: input.state.state,
     route: routeForState(input.context.source, input.state.state),
-    segment: { state: input.state.state, controls: [], specialized: [] },
+    segment,
   });
   const segmentArtifactPath = preflightShardSegmentPathFor({
     context: input.context,
@@ -105,69 +125,129 @@ const persistState = async (input: {
   });
 };
 
-export const createPersistedMergeFixture =
-  async (): Promise<PersistedMergeFixture> => {
-    const manifestFixture = await createManifestFixture();
-    const donorRoot = await realpath(
-      await mkdtemp(path.join(tmpdir(), "preflight-shard-merge-")),
-    );
-    try {
-      const source = await buildCampaignSource(
-        manifestFixture.input,
-        fakeManifestGit(),
-      );
-      const oneShard = createPreflightShardAssignment(source, 1);
-      const groupCount = new Set(
-        oneShard.states.map(({ groupKey }) => groupKey),
-      ).size;
-      if (groupCount < 2)
-        throw new Error("merge fixture requires at least two session groups");
-      const assignment = createPreflightShardAssignment(source, 2);
-      const requests: PreflightShardCompletionReadRequest[] = [];
-      for (const [shardIndex, shard] of assignment.shards.entries()) {
-        const resourceProof = createPreflightShardResourceProof({
-          source,
-          assignment,
-          shard,
-          donorId: "Pro",
-          donorRoot,
-          shardAttemptId: `attempt-${shardIndex + 1}`,
-          browser: defaultBrowser,
-          runtime: defaultRuntime,
-          resources: resourcesFor(donorRoot, shardIndex),
-        });
-        const context: PreflightShardJournalContext = {
-          source,
-          assignment,
-          shard,
-          resourceProof,
-        };
-        const archiveRoot = resourceProof.resources.archiveRoot;
-        await ensurePreflightArchiveRoot(archiveRoot);
-        const journalPath = preflightShardJournalPathFor(context);
-        for (const state of shard.states)
-          await persistState({ context, archiveRoot, journalPath, state });
-        const filePath = preflightShardCompletionPathFor(context);
-        await writePreflightShardCompletion({
-          context,
-          archiveRoot,
-          filePath,
-          journalPath,
-        });
-        requests.push({ context, archiveRoot, filePath, journalPath });
-      }
-      return {
-        source,
-        assignment,
-        requests,
-        dispose: async () => {
-          await rm(donorRoot, { recursive: true, force: true });
-          await rm(manifestFixture.root, { recursive: true, force: true });
-        },
-      };
-    } catch (error: unknown) {
-      await rm(donorRoot, { recursive: true, force: true });
-      await rm(manifestFixture.root, { recursive: true, force: true });
-      throw error;
-    }
+const persistShardCompletion = async (input: {
+  readonly source: CampaignSource;
+  readonly assignment: ReturnType<typeof createPreflightShardAssignment>;
+  readonly shard: ReturnType<
+    typeof createPreflightShardAssignment
+  >["shards"][number];
+  readonly donorRoot: string;
+  readonly shardIndex: number;
+  readonly preexistingSpecializedStateId: string | undefined;
+}): Promise<PreflightShardCompletionReadRequest> => {
+  const resourceProof = createPreflightShardResourceProof({
+    source: input.source,
+    assignment: input.assignment,
+    shard: input.shard,
+    donorId: "Pro",
+    donorRoot: input.donorRoot,
+    shardAttemptId: "attempt-1",
+    browser: defaultBrowser,
+    runtime: defaultRuntime,
+    resources: resourcesFor(input.donorRoot, input.shardIndex),
+  });
+  const context: PreflightShardJournalContext = {
+    source: input.source,
+    assignment: input.assignment,
+    shard: input.shard,
+    resourceProof,
   };
+  const archiveRoot = resourceProof.resources.archiveRoot;
+  await ensurePreflightArchiveRoot(archiveRoot);
+  const resourceProofPath = preflightShardResourceProofPathFor(context);
+  await writePreflightShardResourceProof({
+    archiveRoot,
+    filePath: resourceProofPath,
+    proof: resourceProof,
+  });
+  const journalPath = preflightShardJournalPathFor(context);
+  for (const state of input.shard.states)
+    await persistState({
+      context,
+      archiveRoot,
+      journalPath,
+      state,
+      preexistingSpecialized:
+        state.state.stateId === input.preexistingSpecializedStateId,
+    });
+  const filePath = preflightShardCompletionPathFor(context);
+  await writePreflightShardCompletion({
+    context,
+    archiveRoot,
+    filePath,
+    journalPath,
+  });
+  return {
+    context,
+    archiveRoot,
+    filePath,
+    journalPath,
+    resourceProofPath,
+  };
+};
+
+export const createPersistedMergeFixture = async (
+  options: Readonly<{ readonly preexistingSpecialized?: boolean }> = {},
+): Promise<PersistedMergeFixture> => {
+  const manifestFixture = await createManifestFixture();
+  const donorRoot = await realpath(
+    await mkdtemp(path.join(tmpdir(), "preflight-shard-merge-")),
+  );
+  try {
+    const source = await buildCampaignSource(
+      manifestFixture.input,
+      fakeManifestGit(),
+    );
+    const oneShard = createPreflightShardAssignment(source, 1);
+    const groupCount = new Set(oneShard.states.map(({ groupKey }) => groupKey))
+      .size;
+    if (groupCount < 2)
+      throw new Error("merge fixture requires at least two session groups");
+    const assignment = createPreflightShardAssignment(source, 2);
+    const declaration = source.specializedDeclarations[0];
+    const preexistingSpecializedStateId =
+      options.preexistingSpecialized === true && declaration !== undefined
+        ? source.plan.states.find(
+            (state) =>
+              state.profile === declaration.profile &&
+              state.axes.route ===
+                `${declaration.role}:${declaration.catalogRoute}` &&
+              state.axes.lifecycle === "open" &&
+              state.axes.submission === "draft" &&
+              state.axes.ownershipDensity === "single" &&
+              state.axes.permission === "allowed",
+          )?.stateId
+        : undefined;
+    if (
+      options.preexistingSpecialized === true &&
+      preexistingSpecializedStateId === undefined
+    )
+      throw new Error("merge fixture has no specialized nominal state");
+    const requests = await Promise.all(
+      assignment.shards.map((shard, shardIndex) =>
+        persistShardCompletion({
+          source,
+          assignment,
+          shard,
+          donorRoot,
+          shardIndex,
+          preexistingSpecializedStateId,
+        }),
+      ),
+    );
+    return {
+      source,
+      assignment,
+      donorRoots: [{ donorId: "Pro", root: donorRoot }],
+      requests,
+      dispose: async () => {
+        await rm(donorRoot, { recursive: true, force: true });
+        await rm(manifestFixture.root, { recursive: true, force: true });
+      },
+    };
+  } catch (error: unknown) {
+    await rm(donorRoot, { recursive: true, force: true });
+    await rm(manifestFixture.root, { recursive: true, force: true });
+    throw error;
+  }
+};
