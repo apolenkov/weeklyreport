@@ -14,6 +14,7 @@ import {
   PreflightShardResourceProofError,
   type PreflightShardResourceProofResources,
   preflightShardResourceProofSchema,
+  resourceProofPathIdentity,
 } from "./preflight-shard-resource-proof-contract.ts";
 
 const resourcePaths = (resources: PreflightShardResourceProofResources) =>
@@ -36,7 +37,10 @@ const isMissing = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === "ENOENT";
 
 const relativeChild = (root: string, candidate: string): string => {
-  const relative = path.relative(root, candidate);
+  const relative = path.relative(
+    resourceProofPathIdentity(root),
+    resourceProofPathIdentity(candidate),
+  );
   if (
     relative === "" ||
     relative === ".." ||
@@ -50,10 +54,12 @@ const relativeChild = (root: string, candidate: string): string => {
 };
 
 const overlaps = (left: string, right: string): boolean => {
-  const leftRelative = path.relative(left, right);
-  const rightRelative = path.relative(right, left);
+  const leftIdentity = resourceProofPathIdentity(left);
+  const rightIdentity = resourceProofPathIdentity(right);
+  const leftRelative = path.relative(leftIdentity, rightIdentity);
+  const rightRelative = path.relative(rightIdentity, leftIdentity);
   return (
-    left === right ||
+    leftIdentity === rightIdentity ||
     (leftRelative !== "" &&
       !leftRelative.startsWith(`..${path.sep}`) &&
       !path.isAbsolute(leftRelative)) ||

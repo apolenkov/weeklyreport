@@ -42,6 +42,13 @@ const MAX_DONOR_ID_LENGTH = 80;
 const donorIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._+:-]*$/u;
 const queuePrefixPattern = /^[a-z0-9][a-z0-9._:-]*$/u;
+const nodeVersionPattern =
+  /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
+const numericVersionPattern =
+  /^\d+(?:\.\d+){2,3}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
+const chromiumRevisionPattern = /^(?:\d{4,}|chromium-\d{4,})$/u;
+const nonZeroVersion = (value: string): boolean =>
+  !/^v?0+(?:\.0+){2,3}(?:$|[-+])/u.test(value);
 
 const portSchema = z.number().int().min(MIN_TCP_PORT).max(MAX_TCP_PORT);
 
@@ -51,6 +58,26 @@ const identifierSchema = z
   .min(1)
   .max(MAX_IDENTIFIER_LENGTH)
   .regex(identifierPattern, "must be a version or runtime identifier");
+
+const nodeVersionSchema = z
+  .string()
+  .regex(nodeVersionPattern, "must be a v-prefixed semantic version")
+  .refine(nonZeroVersion, "must not be a zero or placeholder version");
+
+const numericVersionSchema = z
+  .string()
+  .regex(numericVersionPattern, "must be a numeric semantic version")
+  .refine(nonZeroVersion, "must not be a zero or placeholder version");
+
+const chromiumRevisionSchema = z
+  .string()
+  .regex(
+    chromiumRevisionPattern,
+    "must be a numeric Chromium revision or chromium-<digits>",
+  )
+  .refine((value) => !/^0+(?:\.0+)*$/u.test(value.replace(/^chromium-/u, "")), {
+    message: "must not be a zero or placeholder Chromium revision",
+  });
 
 const browserNameSchema = z
   .string()
@@ -86,6 +113,10 @@ export const resourceProofDonorIdSchema = z
 export const resourceProofPathSchema = pathSchema;
 export const resourceProofPortSchema = portSchema;
 export const resourceProofIdentifierSchema = identifierSchema;
+
+/** Returns the conservative host-filesystem identity used for path collisions. */
+export const resourceProofPathIdentity = (value: string): string =>
+  path.resolve(value).normalize("NFC").toLowerCase();
 
 const databaseNameSchema = z
   .string()
@@ -156,17 +187,17 @@ const browserSchema = z
   .object({
     project: identifierSchema,
     name: browserNameSchema,
-    version: identifierSchema,
+    version: numericVersionSchema,
     viewport: viewportSchema,
   })
   .strict();
 
 const runtimeSchema = z
   .object({
-    nodeVersion: identifierSchema,
-    pnpmVersion: identifierSchema,
-    playwrightVersion: identifierSchema,
-    chromiumRevision: identifierSchema,
+    nodeVersion: nodeVersionSchema,
+    pnpmVersion: numericVersionSchema,
+    playwrightVersion: numericVersionSchema,
+    chromiumRevision: chromiumRevisionSchema,
   })
   .strict();
 
@@ -203,7 +234,19 @@ const resourceProofBodySchema = z
     resources: resourcesSchema,
     capabilities: capabilitiesSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const revision = value.runtime.chromiumRevision.replace(/^chromium-/u, "");
+    if (
+      revision === String(value.browser.viewport.width) ||
+      revision === String(value.browser.viewport.height)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["runtime", "chromiumRevision"],
+        message: "must not be derived from the browser viewport",
+      });
+  });
 
 export const preflightShardResourceProofSchema = resourceProofBodySchema
   .extend({ proofDigest: sha256DigestSchema })

@@ -40,14 +40,19 @@ const assertRegularImmutableFile = async (filePath: string): Promise<void> => {
 
 export async function readPreflightShardResourceProof(
   filePath: string,
-  archiveRoot?: string,
+  archiveRoot: string,
 ): Promise<PreflightShardResourceProof> {
   try {
-    if (archiveRoot !== undefined)
-      await assertPreflightArchivePath(archiveRoot, filePath);
+    // Proof files are required beneath the archive root; the root itself is
+    // intentionally not a valid file location.
+    await assertPreflightArchivePath(archiveRoot, filePath);
     await assertRegularImmutableFile(filePath);
     const text = await readFile(filePath, "utf8");
     const proof = parsePreflightShardResourceProof(JSON.parse(text) as unknown);
+    if (proof.resources.archiveRoot !== archiveRoot)
+      throw new PreflightShardResourceProofError(
+        "Resource proof archive root does not match the supplied read root",
+      );
     if (text !== serializePreflightShardResourceProof(proof))
       throw new PreflightShardResourceProofError(
         "PREFLIGHT_SHARD_RESOURCE_PROOF bytes are not canonical",

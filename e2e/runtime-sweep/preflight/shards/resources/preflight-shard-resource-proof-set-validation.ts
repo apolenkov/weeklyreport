@@ -8,6 +8,7 @@ import {
 import {
   type PreflightShardResourceProof,
   resourceProofDonorIdSchema,
+  resourceProofPathIdentity,
   resourceProofPathSchema,
 } from "./preflight-shard-resource-proof-contract.ts";
 import {
@@ -42,10 +43,12 @@ export const resourceProofPathsOverlap = (
   left: string,
   right: string,
 ): boolean => {
-  const leftRelative = path.relative(left, right);
-  const rightRelative = path.relative(right, left);
+  const leftIdentity = resourceProofPathIdentity(left);
+  const rightIdentity = resourceProofPathIdentity(right);
+  const leftRelative = path.relative(leftIdentity, rightIdentity);
+  const rightRelative = path.relative(rightIdentity, leftIdentity);
   return (
-    left === right ||
+    leftIdentity === rightIdentity ||
     (leftRelative !== "" &&
       !leftRelative.startsWith(`..${path.sep}`) &&
       !path.isAbsolute(leftRelative)) ||

@@ -32,7 +32,7 @@ export const DEFAULT_DONOR_ROOT = path.join(
 export const defaultBrowser = {
   project: "runtime-preflight",
   name: "DesktopChrome",
-  version: "1.62.1",
+  version: "142.0.7444.175",
   viewport: { browser: "chromium", width: 1440, height: 900 },
 } as const;
 
@@ -40,7 +40,7 @@ export const defaultRuntime = {
   nodeVersion: "v26.0.0",
   pnpmVersion: "11.17.0",
   playwrightVersion: "1.62.1",
-  chromiumRevision: "chromium-1440",
+  chromiumRevision: "chromium-1234",
 } as const;
 
 export const resourcesFor = (
