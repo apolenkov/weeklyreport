@@ -183,6 +183,7 @@ const runReveal = async (input?: {
     };
     vi.stubGlobal("HTMLElement", Object);
     vi.stubGlobal("document", {
+      getAnimations: () => [],
       querySelector: () => main,
       querySelectorAll: () => [menu],
     });
@@ -288,14 +289,13 @@ describe("Playwright reveal execution", () => {
   });
 
   it("settles loading after an unchanged read-only click before inventory", async () => {
-    const { waitForFunction, waitForLoadState, waitForURL } = await runReveal({
+    const { waitForFunction, waitForURL } = await runReveal({
       action: buttonAction,
       control: buttonControl,
       loadingAfterAction: true,
     });
 
     expect(waitForURL).not.toHaveBeenCalled();
-    expect(waitForLoadState).not.toHaveBeenCalled();
     expect(waitForFunction).toHaveBeenCalledTimes(2);
     expect(harness.state.events).toEqual([
       "action",

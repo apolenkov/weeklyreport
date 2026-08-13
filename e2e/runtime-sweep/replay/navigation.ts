@@ -23,6 +23,7 @@ export interface AppReadyArgument {
   readonly rootSelector: string;
   readonly loadingSelector: string;
   readonly overlaySelector?: string;
+  readonly requireAnimationsSettled?: boolean;
 }
 
 export interface AppReadyPage {
@@ -93,48 +94,84 @@ const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 
-const waitForRevealReadyPass = (page: AppReadyPage): Promise<unknown> =>
-  page.waitForFunction(
-    ({ rootSelector, loadingSelector, overlaySelector }: AppReadyArgument) => {
-      if (overlaySelector === undefined) return false;
-      const main = document.querySelector(rootSelector);
-      if (!(main instanceof HTMLElement)) return false;
-      const heading = main.querySelector("h1");
-      const busy = main.getAttribute("aria-busy")?.toLocaleLowerCase();
-      const hidden = main.ariaHidden?.toLocaleLowerCase();
-      const isVisibleLoadingMarker = (marker: Element): boolean => {
-        const markerHidden = marker.ariaHidden?.toLocaleLowerCase();
-        return (
-          markerHidden !== String(true) && marker.getClientRects().length > 0
-        );
-      };
-      const overlays = Array.from(
-        document.querySelectorAll(overlaySelector),
-      ).filter((overlay) => {
-        const overlayHidden = overlay.ariaHidden?.toLocaleLowerCase();
-        return (
-          overlayHidden !== String(true) &&
-          !main.contains(overlay) &&
-          overlay.closest('[aria-hidden="true"]') === null &&
-          overlay.getClientRects().length > 0
-        );
+function isRevealSurfaceReady({
+  rootSelector,
+  loadingSelector,
+  overlaySelector,
+  requireAnimationsSettled,
+}: AppReadyArgument): boolean {
+  if (overlaySelector === undefined) return false;
+  const main = document.querySelector(rootSelector);
+  if (!(main instanceof HTMLElement)) return false;
+  const heading = main.querySelector("h1");
+  const busy = main.getAttribute("aria-busy")?.toLocaleLowerCase();
+  const hidden = main.ariaHidden?.toLocaleLowerCase();
+  const isVisibleLoadingMarker = (marker: Element): boolean => {
+    const markerHidden = marker.ariaHidden?.toLocaleLowerCase();
+    return markerHidden !== String(true) && marker.getClientRects().length > 0;
+  };
+  const overlays = Array.from(
+    document.querySelectorAll(overlaySelector),
+  ).filter((overlay) => {
+    const overlayHidden = overlay.ariaHidden?.toLocaleLowerCase();
+    return (
+      overlayHidden !== String(true) &&
+      !main.contains(overlay) &&
+      overlay.closest('[aria-hidden="true"]') === null &&
+      overlay.getClientRects().length > 0
+    );
+  });
+  const hasVisibleLoadingMarker = [main, ...overlays].some(
+    (container) =>
+      container.matches(loadingSelector) ||
+      Array.from(container.querySelectorAll(loadingSelector)).some(
+        isVisibleLoadingMarker,
+      ),
+  );
+  const animationsSettled =
+    !requireAnimationsSettled ||
+    (() => {
+      if (typeof document.getAnimations !== "function") return false;
+      const animations = (() => {
+        try {
+          return document.getAnimations();
+        } catch {
+          return undefined;
+        }
+      })();
+      if (animations === undefined) return false;
+      return animations.every((animation) => {
+        try {
+          const timing = animation.effect?.getComputedTiming();
+          if (timing?.iterations === Infinity) return true;
+          if (typeof timing?.duration !== "number") return false;
+          return (
+            animation.playState === "finished" || animation.playState === "idle"
+          );
+        } catch {
+          return false;
+        }
       });
-      const hasVisibleLoadingMarker = [main, ...overlays].some(
-        (container) =>
-          container.matches(loadingSelector) ||
-          Array.from(container.querySelectorAll(loadingSelector)).some(
-            isVisibleLoadingMarker,
-          ),
-      );
-      return (
-        heading !== null &&
-        busy !== String(true) &&
-        (hidden !== String(true) || overlays.length > 0) &&
-        main.getClientRects().length > 0 &&
-        !hasVisibleLoadingMarker
-      );
-    },
-    REVEAL_READY_ARGUMENT,
+    })();
+  return (
+    heading !== null &&
+    busy !== String(true) &&
+    (hidden !== String(true) || overlays.length > 0) &&
+    main.getClientRects().length > 0 &&
+    !hasVisibleLoadingMarker &&
+    animationsSettled
+  );
+}
+
+const waitForRevealReadyPass = (
+  page: AppReadyPage,
+  requireAnimationsSettled = false,
+): Promise<unknown> =>
+  page.waitForFunction(
+    isRevealSurfaceReady,
+    requireAnimationsSettled
+      ? { ...REVEAL_READY_ARGUMENT, requireAnimationsSettled: true }
+      : REVEAL_READY_ARGUMENT,
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 
@@ -151,13 +188,8 @@ export async function waitForAppReady(page: AppReadyPage): Promise<void> {
 export async function waitForRevealSurfaceReady(
   page: AppReadyPage,
 ): Promise<void> {
-  await Array.from({ length: APP_READY_STABILITY_PASSES }).reduce(
-    async (previous) => {
-      await previous;
-      return waitForRevealReadyPass(page);
-    },
-    Promise.resolve(),
-  );
+  await waitForRevealReadyPass(page);
+  await waitForRevealReadyPass(page, true);
 }
 
 export async function settleNavigation(

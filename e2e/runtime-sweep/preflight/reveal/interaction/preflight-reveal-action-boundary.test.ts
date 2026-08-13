@@ -256,6 +256,7 @@ const revealReady = async (
   );
   vi.stubGlobal("HTMLElement", FakeReadyElement);
   vi.stubGlobal("document", {
+    getAnimations: () => [],
     querySelector: () => main,
     querySelectorAll: () => overlays,
   });
