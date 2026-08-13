@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   DomControlObservation,
@@ -16,6 +16,7 @@ const harness = vi.hoisted(() => {
     loadingAfterAction: false,
     loading: false,
     pageUrl: "https://runtime.invalid/reports",
+    overlayHiddenMain: false,
   };
   const inventory: DomInventory = { controls: [], issues: [] };
   return {
@@ -89,6 +90,18 @@ const action: Action = {
   safety: "read-only",
   transition: "open",
 };
+const buttonControl: DomControlObservation = {
+  ...control,
+  accessibleName: "More actions",
+  controlKey: "button:More%20actions:1",
+  href: null,
+  role: "button",
+  tagName: "button",
+};
+const buttonAction: Action = {
+  ...action,
+  controlKey: buttonControl.controlKey,
+};
 
 const proof: RevealNonMutationProof = {
   afterDigest: "a".repeat(64),
@@ -96,19 +109,22 @@ const proof: RevealNonMutationProof = {
   status: "unchanged",
 };
 
-const pageFor = (): {
-  readonly page: Page;
-  readonly waitForFunction: ReturnType<typeof vi.fn>;
-  readonly waitForLoadState: ReturnType<typeof vi.fn>;
-  readonly waitForURL: ReturnType<typeof vi.fn>;
-} => {
+const pageFor = () => {
   const waitForLoadState = vi.fn(() => {
     harness.state.events.push("load-state");
   });
-  const waitForFunction = vi.fn(() => {
-    harness.state.events.push("app-ready");
-    harness.state.loading = false;
-  });
+  const waitForFunction = vi.fn(
+    (predicate: (argument: unknown) => boolean, argument?: unknown) => {
+      harness.state.events.push("app-ready");
+      harness.state.loading = false;
+      if (harness.state.overlayHiddenMain && !predicate(argument)) {
+        const error = new Error("readiness timed out");
+        error.name = "TimeoutError";
+        return Promise.reject(error);
+      }
+      return Promise.resolve();
+    },
+  );
   const waitForURL = vi.fn((predicate: (url: URL) => boolean) => {
     harness.state.events.push("wait-url");
     if (harness.state.delayedUrl === undefined) {
@@ -140,19 +156,37 @@ const runReveal = async (input?: {
   readonly control?: DomControlObservation;
   readonly delayedUrl?: string;
   readonly loadingAfterAction?: boolean;
-}): Promise<{
-  readonly result: Awaited<
-    ReturnType<ReturnType<typeof createPlaywrightRevealExecutor>>
-  >;
-  readonly waitForFunction: ReturnType<typeof vi.fn>;
-  readonly waitForLoadState: ReturnType<typeof vi.fn>;
-  readonly waitForURL: ReturnType<typeof vi.fn>;
-}> => {
+  readonly overlayHiddenMain?: boolean;
+}) => {
   harness.state.changedUrl = input?.changedUrl;
   harness.state.delayedUrl = input?.delayedUrl;
   harness.state.loadingAfterAction = input?.loadingAfterAction ?? false;
+  harness.state.overlayHiddenMain = input?.overlayHiddenMain ?? false;
   harness.state.loading = false;
   harness.state.pageUrl = "https://runtime.invalid/reports";
+  if (harness.state.overlayHiddenMain) {
+    const menu = {
+      ariaHidden: null,
+      closest: () => null,
+      getAttribute: () => null,
+      getClientRects: () => [{}],
+      matches: () => false,
+      querySelector: () => null,
+      querySelectorAll: () => [],
+    };
+    const main = {
+      ...menu,
+      ariaHidden: "true",
+      contains: () => false,
+      getAttribute: (name: string) => (name === "aria-busy" ? "false" : "true"),
+      querySelector: (selector: string) => (selector === "h1" ? menu : null),
+    };
+    vi.stubGlobal("HTMLElement", Object);
+    vi.stubGlobal("document", {
+      querySelector: () => main,
+      querySelectorAll: () => [menu],
+    });
+  }
   const page = pageFor();
   const executeReveal = createPlaywrightRevealExecutor({ page: page.page });
   const preparation = {
@@ -188,6 +222,8 @@ describe("Playwright reveal execution", () => {
     harness.inventoryDom.mockClear();
     harness.snapshotPage.mockClear();
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("settles a changed URL before freezing the reveal inventory", async () => {
     const changedUrl = "https://runtime.invalid/admin";
@@ -252,18 +288,6 @@ describe("Playwright reveal execution", () => {
   });
 
   it("settles loading after an unchanged read-only click before inventory", async () => {
-    const buttonControl: DomControlObservation = {
-      ...control,
-      accessibleName: "Expand",
-      controlKey: "button:Expand:1",
-      href: null,
-      role: "button",
-      tagName: "button",
-    };
-    const buttonAction: Action = {
-      ...action,
-      controlKey: buttonControl.controlKey,
-    };
     const { waitForFunction, waitForLoadState, waitForURL } = await runReveal({
       action: buttonAction,
       control: buttonControl,
@@ -280,5 +304,22 @@ describe("Playwright reveal execution", () => {
       "app-ready",
       "inventory",
     ]);
+  });
+
+  it("uses overlay readiness only for an unchanged read-only button", async () => {
+    await expect(
+      runReveal({
+        action: buttonAction,
+        control: buttonControl,
+        overlayHiddenMain: true,
+      }),
+    ).resolves.toBeDefined();
+
+    await expect(
+      runReveal({
+        control: { ...control, href: "/reports" },
+        overlayHiddenMain: true,
+      }),
+    ).rejects.toThrow("readiness timed out");
   });
 });

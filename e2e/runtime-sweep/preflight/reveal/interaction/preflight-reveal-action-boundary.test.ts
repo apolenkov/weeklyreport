@@ -185,6 +185,7 @@ class FakeReadyElement {
     readonly hasHeading = false,
     readonly descendants: FakeReadyElement[] = [],
     readonly clientRects: readonly object[] = [{}],
+    readonly hiddenAncestor = false,
   ) {}
 
   get ariaHidden(): string | null {
@@ -197,6 +198,19 @@ class FakeReadyElement {
 
   getClientRects(): readonly object[] {
     return this.clientRects;
+  }
+
+  closest(selector: string): FakeReadyElement | null {
+    return selector === '[aria-hidden="true"]' &&
+      (this.ariaHidden === "true" || this.hiddenAncestor)
+      ? this
+      : null;
+  }
+
+  contains(element: FakeReadyElement): boolean {
+    return this.descendants.some(
+      (descendant) => descendant === element || descendant.contains(element),
+    );
   }
 
   querySelector(selector: string): FakeReadyElement | null {
@@ -280,6 +294,15 @@ describe("post-action reveal readiness", () => {
     await expect(
       revealReady(hiddenMain(), [
         new FakeReadyElement({ role: "menu", "aria-hidden": "true" }),
+      ]),
+    ).resolves.toMatchObject({ ready: false });
+    const nested = new FakeReadyElement({ role: "menu" });
+    await expect(
+      revealReady(hiddenMain([nested]), [nested]),
+    ).resolves.toMatchObject({ ready: false });
+    await expect(
+      revealReady(hiddenMain(), [
+        new FakeReadyElement({ role: "menu" }, false, [], [{}], true),
       ]),
     ).resolves.toMatchObject({ ready: false });
   });
