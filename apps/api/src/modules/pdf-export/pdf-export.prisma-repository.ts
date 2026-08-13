@@ -43,6 +43,28 @@ export class UnsupportedPdfExportStatusError extends Error {
   }
 }
 
+export class PdfExportStateConflictError extends Error {
+  constructor(jobId: string, status: string) {
+    super(
+      `PDF export job ${jobId} is already in terminal state ${status}; completion was not applied.`,
+    );
+    this.name = "PdfExportStateConflictError";
+  }
+}
+
+interface PdfExportJobRow {
+  id: string;
+  reportId: string;
+  status: string;
+  templateVersion: string;
+  filePath: string | null;
+  checksum: string | null;
+  error: string | null;
+  requestedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 function toDomainStatus(status: string): PdfExportJob["status"] {
   const domainStatus = dbStatusToDomain[status];
   if (domainStatus === undefined) {
@@ -122,39 +144,65 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   }
 
   async saveExportJob(job: PdfExportJob): Promise<PdfExportJob> {
-    const updated = await this.prisma.pdfExportJob.update({
-      where: { id: job.jobId },
+    const { count } = await this.prisma.pdfExportJob.updateMany({
+      where: { id: job.jobId, status: "pending" },
       data: {
-        status: pdfStatusToDb[job.status],
+        status: "completed",
         filePath: job.artifactUrl,
         checksum: job.checksum,
         error: null,
       },
     });
 
-    return toExportJob(updated);
+    const current = await this.readExportJobRow(job.jobId);
+    if (count === 0) {
+      if (isIdenticalCompletedArtifact(current, job)) {
+        return toExportJob(current);
+      }
+      throw new PdfExportStateConflictError(job.jobId, current.status);
+    }
+
+    return toExportJob(current);
   }
 
   async markExportFailed(jobId: string, error: string): Promise<void> {
-    await this.prisma.pdfExportJob.update({
-      where: { id: jobId },
-      data: { status: "failed", error },
+    await this.prisma.pdfExportJob.updateMany({
+      where: { id: jobId, status: "pending" },
+      data: {
+        status: "failed",
+        filePath: null,
+        checksum: null,
+        error,
+      },
     });
+  }
+
+  private async readExportJobRow(jobId: string): Promise<PdfExportJobRow> {
+    const row = await this.prisma.pdfExportJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!row) {
+      throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
+    }
+
+    return row;
   }
 }
 
-function toExportJob(row: {
-  id: string;
-  reportId: string;
-  status: string;
-  templateVersion: string;
-  filePath: string | null;
-  checksum: string | null;
-  error: string | null;
-  requestedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}): PdfExportJobRecord {
+function isIdenticalCompletedArtifact(
+  row: PdfExportJobRow,
+  job: PdfExportJob,
+): boolean {
+  return (
+    row.status === "completed" &&
+    row.error === null &&
+    row.filePath === job.artifactUrl &&
+    row.checksum === job.checksum
+  );
+}
+
+function toExportJob(row: PdfExportJobRow): PdfExportJobRecord {
   return {
     ...pdfExportJobSchema.parse({
       jobId: row.id,
