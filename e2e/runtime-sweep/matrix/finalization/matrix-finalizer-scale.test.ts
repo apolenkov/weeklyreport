@@ -10,12 +10,14 @@ import type {
   CampaignMatrixState,
 } from "../campaign-matrix.ts";
 import {
-  DEFAULT_MAX_CASES,
-  DEFAULT_MAX_CONTROLS,
   finalizeCampaignMatrix,
   parseFrozenMatrix,
   serializeFrozenMatrix,
 } from "../matrix-finalizer.ts";
+import {
+  DEFAULT_MAX_CASES,
+  DEFAULT_MAX_CONTROLS_PER_SEGMENT,
+} from "../matrix-limits.ts";
 import { revealTransitionFor } from "../reveal-transition.ts";
 import type { MatrixPreflightControl } from "./matrix-finalizer-contract.ts";
 
@@ -177,6 +179,8 @@ const finalizationInputFor = (
   preflight: [
     { state, controls: [mutationControl(interactionEffect)], specialized: [] },
   ],
+  maxCases: DEFAULT_MAX_CASES,
+  maxControlsPerSegment: DEFAULT_MAX_CONTROLS_PER_SEGMENT,
 });
 
 // Full-suite workers contend for CPU; the isolated production-scale case
@@ -192,6 +196,8 @@ test(
       plan,
       routes,
       preflight: [{ state, controls: controls(), specialized: [] }],
+      maxCases: DEFAULT_MAX_CASES,
+      maxControlsPerSegment: DEFAULT_MAX_CONTROLS_PER_SEGMENT,
     });
     expect(matrix.counts.executable).toBe(OBSERVED_CONTROL_COUNT + 1);
     expect(matrix.revealPaths).toHaveLength(1);
@@ -199,11 +205,25 @@ test(
     expect(matrix.revealTransitions).toHaveLength(OBSERVED_CONTROL_COUNT);
     expect(matrix.limits).toEqual({
       maxCases: DEFAULT_MAX_CASES,
-      maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
+      maxControlsPerSegment: DEFAULT_MAX_CONTROLS_PER_SEGMENT,
     });
   },
   SCALE_TEST_TIMEOUT_MS,
 );
+
+test("rejects controls above the explicit finalizer cap without trimming", () => {
+  expect(() =>
+    finalizeCampaignMatrix({
+      sourceSha: SOURCE_SHA,
+      declaration,
+      plan,
+      routes,
+      preflight: [{ state, controls: controls(), specialized: [] }],
+      maxCases: DEFAULT_MAX_CASES,
+      maxControlsPerSegment: OBSERVED_CONTROL_COUNT - 1,
+    }),
+  ).toThrow("too many controls");
+});
 
 test("accepts an exact mutation-required button without a reveal transition", () => {
   const matrix = finalizeCampaignMatrix(

@@ -160,6 +160,8 @@ describe("URL-scoped reveal control identity", () => {
       plan: { states: [state], inapplicable: [], digest: "url-scoped-plan" },
       routes,
       preflight: [{ state, controls, specialized: [] }],
+      maxCases: 10_000,
+      maxControlsPerSegment: 8192,
     });
     expect(
       matrix.cases.filter(({ controlKey }) => controlKey === "button:Next:0"),

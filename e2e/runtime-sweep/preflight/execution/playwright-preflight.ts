@@ -132,7 +132,13 @@ export async function runBrowserPreflightSegment(input: {
     initialInventory,
     harness: revealHarnessFor(input.harness),
     controlFor: preflightControlForPlan,
+    maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
+    maxRevealActions: input.source.matrixLimits.maxRevealActions,
   });
+  if (controls.length > input.source.matrixLimits.maxControlsPerSegment)
+    throw new BrowserPreflightError(
+      `Preflight segment ${input.state.stateId} has ${controls.length} controls; maxControlsPerSegment is ${input.source.matrixLimits.maxControlsPerSegment}`,
+    );
   return {
     segment: { state: input.state, controls, specialized: [] },
     preparedGroup,

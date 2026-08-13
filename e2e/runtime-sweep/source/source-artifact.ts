@@ -20,6 +20,7 @@ import {
   roleSchema,
   seedProfileSchema,
   sha256DigestSchema,
+  sourceCapacitySchema,
   stableIdentifierSchema,
 } from "./contracts.ts";
 import { freezeDeep, writeManifestFile } from "./manifest-source.ts";
@@ -152,14 +153,9 @@ const sourceFieldsSchema = campaignManifestSchema.omit({ matrixDigest: true });
 export const sourceArtifactSchema = z
   .object({
     artifact: z.literal("SOURCE"),
-    version: z.literal(1),
+    version: z.literal(2),
     ...sourceFieldsSchema.shape,
-    matrixLimits: z
-      .object({
-        maxCases: z.number().int().positive(),
-        maxControlsPerSegment: z.number().int().positive(),
-      })
-      .strict(),
+    matrixLimits: sourceCapacitySchema,
     plan: campaignMatrixPlanSchema,
     specializedDeclarations: z
       .array(specializedDeclarationSchema)
@@ -186,6 +182,16 @@ const bodyForDigest = (
 };
 
 export function parseSourceArtifact(value: unknown): SourceArtifact {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "version" in value &&
+    value.version === 1
+  ) {
+    throw new SourceArtifactError(
+      "SOURCE.json version 1 is legacy and cannot launch; regenerate a version 2 source artifact",
+    );
+  }
   const parsed = sourceArtifactSchema.parse(value);
   assertSpecializedDeclarations(parsed.specializedDeclarations);
   if (sha256Hex(bodyForDigest(parsed)) !== parsed.sourceDigest)

@@ -214,6 +214,8 @@ describe("scoped reveal control identity", () => {
       plan: duplicateDialogPlan,
       routes: duplicateDialogRoutes,
       preflight: [{ state: duplicateDialogState, controls, specialized: [] }],
+      maxCases: 10_000,
+      maxControlsPerSegment: 8192,
     });
     const cancelCases = matrix.cases.filter(
       ({ controlKey }) => controlKey === "button:Cancel:1",
@@ -236,6 +238,8 @@ describe("scoped reveal control identity", () => {
             specialized: [],
           },
         ],
+        maxCases: 10_000,
+        maxControlsPerSegment: 8192,
       }),
     ).toThrow(/duplicate controls/iu);
   });

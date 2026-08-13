@@ -168,7 +168,12 @@ const inputFor = (
     catalogPaths: [catalogPath],
     domainSpecPaths: [specPath],
     matrixDeclaration: matrixDeclaration(),
-    matrixLimits: { maxCases: 10_000, maxControlsPerSegment: 128 },
+    matrixLimits: {
+      maxRevealMaterialEdges: 2048,
+      maxRevealActions: 16_384,
+      maxCases: 10_000,
+      maxControlsPerSegment: 128,
+    },
     exclusions: exclusions(),
   };
 };

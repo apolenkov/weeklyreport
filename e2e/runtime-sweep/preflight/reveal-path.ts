@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { DEFAULT_MAX_CONTROLS } from "../matrix/matrix-limits.ts";
+import {
+  DEFAULT_MAX_REVEAL_ACTIONS,
+  DEFAULT_MAX_REVEAL_MATERIAL_EDGES,
+} from "../matrix/matrix-limits.ts";
 import {
   type DomControlObservation,
   RUNTIME_INTERACTION_EFFECTS,
@@ -12,8 +15,8 @@ import { sha256Hex, stableSerialize } from "../support/ids.ts";
 import type { RevealRepresentativeInput } from "./reveal/interaction/preflight-reveal-transition.ts";
 
 export const MAX_REVEAL_DEPTH = 4;
-export const MAX_REVEAL_BRANCHES = DEFAULT_MAX_CONTROLS;
-export const MAX_REVEAL_ACTIONS = MAX_REVEAL_BRANCHES * (MAX_REVEAL_DEPTH + 1);
+export const MAX_REVEAL_MATERIAL_EDGES = DEFAULT_MAX_REVEAL_MATERIAL_EDGES;
+export const MAX_REVEAL_ACTIONS = DEFAULT_MAX_REVEAL_ACTIONS;
 
 export type RevealSurfaceControl = Readonly<{
   readonly controlKey: string;

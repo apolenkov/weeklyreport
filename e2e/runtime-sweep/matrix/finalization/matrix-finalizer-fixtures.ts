@@ -97,5 +97,7 @@ export const input = (
   plan,
   routes,
   preflight: preflightNavigationStates(plan),
+  maxCases: 100_000,
+  maxControlsPerSegment: 8192,
   ...overrides,
 });

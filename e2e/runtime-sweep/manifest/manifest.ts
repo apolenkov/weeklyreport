@@ -79,7 +79,7 @@ const sourceBody = (input: {
   readonly plan: ReturnType<typeof compileCampaignMatrix>;
 }) => ({
   artifact: "SOURCE" as const,
-  version: 1 as const,
+  version: 2 as const,
   campaignId: input.manifest.campaignId,
   sourceSha: input.manifest.sourceSha,
   sourceTree: input.sourceTree,

@@ -270,8 +270,8 @@ describe("canonical matryoshka reveal traversal", () => {
       harness: fixture.harness,
       controlFor: preflightControlForPlan,
       maxDepth: 3,
-      maxBranches: 1024,
-      maxActions: 4096,
+      maxRevealMaterialEdges: 1024,
+      maxRevealActions: 4096,
     });
     const executions = fixture
       .events()

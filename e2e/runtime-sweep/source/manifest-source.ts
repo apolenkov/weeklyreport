@@ -21,6 +21,7 @@ import {
   type RouteDeclarationInput,
   type SeedProfile,
   type SeedProfileDefinition,
+  type SourceCapacity,
   type SourceTree,
   sourceTreeSchema,
   type StateKind,
@@ -54,10 +55,7 @@ export interface CampaignManifestInput {
   readonly catalogPaths: readonly string[];
   readonly domainSpecPaths: readonly string[];
   readonly matrixDeclaration: MatrixDeclaration;
-  readonly matrixLimits: Readonly<{
-    readonly maxCases: number;
-    readonly maxControlsPerSegment: number;
-  }>;
+  readonly matrixLimits: SourceCapacity;
   readonly exclusions: readonly Exclusion[];
 }
 

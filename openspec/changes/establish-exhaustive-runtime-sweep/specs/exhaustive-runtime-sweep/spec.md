@@ -147,6 +147,49 @@ before baseline execution rather than trimming cells.
 - **THEN** matrix finalization fails before baseline execution
 - **AND** a `none` value or silently trimmed row cannot satisfy the gap
 
+### Requirement: Preflight capacity is source-bound and fails closed
+
+The campaign SHALL publish a version-2 `SOURCE.json` whose strict capacity
+contract contains the four explicit positive limits
+`maxRevealMaterialEdges`, `maxRevealActions`, `maxControlsPerSegment`, and
+`maxCases`. Their values SHALL be covered by the source digest; a missing or
+tampered value SHALL invalidate the source, and a legacy version-1 source SHALL
+be rejected before a new campaign launch rather than receiving a default or
+backfilled value. Production preflight SHALL pass the two reveal limits from
+that exact source artifact to reveal discovery independently. It SHALL reject a
+segment whose discovered control count exceeds the source control limit before
+returning a segment that could be recorded as a canary `PASS`. Matrix
+finalization SHALL repeat the source control and case checks using the two
+matrix limit fields and SHALL reject over-capacity input without trimming rows;
+the `MATRIX.json` limit schema remains limited to `maxCases` and
+`maxControlsPerSegment`.
+
+#### Scenario: source capacity tampering cannot preserve identity
+
+- **WHEN** a source capacity field is missing or changed without the matching
+  source digest
+- **THEN** source parsing rejects the artifact before preflight or matrix work
+  begins
+- **AND** a version-1 source cannot satisfy a new launch by relying on an
+  implicit compatibility default
+
+#### Scenario: reveal edge and action limits are independent
+
+- **WHEN** a source-bound reveal segment exceeds `maxRevealMaterialEdges` or
+  `maxRevealActions`
+- **THEN** discovery fails with the matching exact overflow before returning
+  controls
+- **AND** changing one limit does not silently change the other
+
+#### Scenario: control overflow fails before canary publication
+
+- **WHEN** a segment discovers more controls than its source-bound
+  `maxControlsPerSegment`
+- **THEN** production preflight rejects the segment before the caller can write
+  a canary `PASS`
+- **AND** finalization repeats the check and does not trim the discovered
+  controls or finalized rows
+
 #### Scenario: preflight changes deterministic states
 
 - **WHEN** preflight moves from one deterministic state to the next

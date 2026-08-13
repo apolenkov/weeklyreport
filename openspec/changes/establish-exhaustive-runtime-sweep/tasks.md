@@ -100,6 +100,10 @@
 - [x] 3.17 Bind an explicit route network policy or reviewed `null` declaration
       into source, case identity, and matrix digest; propagate the effective
       policy into ordinary and specialized capture without a permissive default.
+- [x] 3.18 Bind independent reveal material-edge/action and control/case limits
+      to version-2 SOURCE.json, propagate reveal limits into production
+      preflight, reject control overflow before canary PASS, and retain the
+      finalizer's no-trimming second check with focused overflow/tamper tests.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 
