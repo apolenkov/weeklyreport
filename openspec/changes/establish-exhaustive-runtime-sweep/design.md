@@ -149,6 +149,19 @@ inventory and matrix but cannot be used as reveal preparation. Replay requires
 exact equality before the target action, so an unknown, missing, or signature-
 changed control is blocking discovery drift.
 
+The frozen `RevealSurface` is the raw evidence surface: its `order` and
+`domOrderKey` remain intact, its digest remains content-addressed, and every
+transition/action-surface binding continues to reference those exact raw
+before/after surfaces. Branch-budget accounting and visited-state identity use
+a separate material semantic projection. That projection retains the complete
+control set, each control's non-positional signature (key, role, accessible
+name, enabled state, href, and declared interaction effect), and the relative
+control order while ignoring only absolute `order`/`domOrderKey` shifts. A pure
+absolute shift is therefore non-material for accounting; a new or removed
+control, any non-positional drift, or a true relative reorder remains material
+and fail-closed. The projection never trims raw controls, transitions, or
+evidence and never changes the frozen action binding.
+
 Pairwise coverage is calculated over those legal executable rows, never a raw
 Cartesian crossing of every fault with every unrelated control. Every declared
 axis value and legal pair is either present in an executable cell or a typed

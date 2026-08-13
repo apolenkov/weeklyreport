@@ -15,8 +15,8 @@ import {
   registerDynamicControls,
   registerVisitedRevealState,
   revealPathContainsState,
-  sameRevealSurface,
 } from "../guards/preflight-reveal-registration.ts";
+import { sameRevealSurfaceMaterial } from "../guards/reveal-surface-material.ts";
 import { branchFor } from "./preflight-reveal-branch-execution.ts";
 import type { RevealRepresentativeInput } from "./preflight-reveal-transition.ts";
 import {
@@ -265,7 +265,7 @@ const processRevealCandidate = async (
   const materialChanged =
     result.explore &&
     !(
-      sameRevealSurface(current.surface, branch.surface) &&
+      sameRevealSurfaceMaterial(current.surface, branch.surface) &&
       current.url === branch.url
     );
   const branchCount = state.branchCount + (materialChanged ? 1 : 0);

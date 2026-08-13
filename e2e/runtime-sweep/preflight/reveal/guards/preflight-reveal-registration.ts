@@ -11,6 +11,7 @@ import type {
   RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
 import { RevealDiscoveryError } from "../interaction/preflight-reveal-types.ts";
+import { revealSurfaceMaterialFor } from "./reveal-surface-material.ts";
 
 export const controlsForImmediateReveal = (
   branch: RevealBranch,
@@ -19,49 +20,38 @@ export const controlsForImmediateReveal = (
   if (step === undefined || step.beforeUrl !== step.afterUrl)
     return branch.surface.controls;
   const previous = new Map(
-    step.before.controls.map((control) => [control.controlKey, control]),
+    revealSurfaceMaterialFor(step.before).controls.map((control) => [
+      control.controlKey,
+      control,
+    ]),
   );
+  const current = revealSurfaceMaterialFor(branch.surface);
   const sharedControlKeys = new Set(
-    branch.surface.controls
+    current.controls
       .map(({ controlKey }) => controlKey)
       .filter((controlKey) => previous.has(controlKey)),
   );
   const relativeOrderFor = (
-    controls: readonly RevealSurface["controls"][number][],
+    controls: readonly (typeof current.controls)[number][],
   ): readonly string[] =>
     controls
       .filter(({ controlKey }) => sharedControlKeys.has(controlKey))
-      .toSorted((left, right) => {
-        if (left.order < right.order) return -1;
-        if (left.order > right.order) return 1;
-        return (
-          left.domOrderKey.localeCompare(right.domOrderKey) ||
-          left.controlKey.localeCompare(right.controlKey)
-        );
-      })
       .map(({ controlKey }) => controlKey);
   if (
-    stableSerialize(relativeOrderFor(step.before.controls)) !==
-    stableSerialize(relativeOrderFor(branch.surface.controls))
+    stableSerialize(
+      relativeOrderFor(revealSurfaceMaterialFor(step.before).controls),
+    ) !== stableSerialize(relativeOrderFor(current.controls))
   )
     return branch.surface.controls;
-
-  const nonPositionalSignatureFor = (
-    control: RevealSurface["controls"][number],
-  ): string =>
-    stableSerialize({
-      controlKey: control.controlKey,
-      ariaRole: control.ariaRole,
-      accessibleName: control.accessibleName,
-      enabled: control.enabled,
-      href: control.href,
-      interactionEffect: control.interactionEffect,
-    });
   return branch.surface.controls.filter((control) => {
     const prior = previous.get(control.controlKey);
+    const actual = current.controls.find(
+      ({ controlKey }) => controlKey === control.controlKey,
+    );
     return (
       prior === undefined ||
-      nonPositionalSignatureFor(prior) !== nonPositionalSignatureFor(control)
+      actual === undefined ||
+      stableSerialize(prior) !== stableSerialize(actual)
     );
   });
 };
@@ -82,7 +72,7 @@ type RevealState = Pick<RevealBranch, "surface" | "url">;
 type RevealStatePath = Pick<RevealBranch, "path" | "surface" | "url">;
 
 const revealStateIdentityFor = (branch: RevealState): string =>
-  `${branch.surface.digest}:${branch.url}`;
+  `${revealSurfaceMaterialFor(branch.surface).digest}:${branch.url}`;
 
 export const revealStatePathIdentityFor = (branch: RevealStatePath): string =>
   revealStateIdentityFor(branch);
@@ -96,9 +86,12 @@ export const revealPathContainsState = (
     first === undefined
       ? [revealStateIdentityFor(current)]
       : [
-          `${first.before.digest}:${current.path.initialUrl}`,
-          ...current.path.steps.map(
-            ({ after, afterUrl }) => `${after.digest}:${afterUrl}`,
+          revealStateIdentityFor({
+            surface: first.before,
+            url: current.path.initialUrl,
+          }),
+          ...current.path.steps.map(({ after, afterUrl }) =>
+            revealStateIdentityFor({ surface: after, url: afterUrl }),
           ),
         ];
   return identities.includes(revealStateIdentityFor(candidate));

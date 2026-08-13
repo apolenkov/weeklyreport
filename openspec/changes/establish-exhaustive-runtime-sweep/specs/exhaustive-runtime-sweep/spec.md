@@ -210,6 +210,16 @@ transition. Every inventory entry SHALL receive a safe representative action
 and an observable oracle result, or a typed `not-exercised` disposition whose
 reason is recorded in the ledger; an unreasoned omission is a gap.
 
+The raw `RevealSurface` captured for a route or transition SHALL remain the
+evidence surface, including `order`, `domOrderKey`, and its content digest.
+Exact transition and action-surface bindings SHALL continue to reference those
+raw before/after surfaces. Branch-budget accounting and visited-state identity
+MAY use a separate material semantic projection that retains the complete
+control set, non-positional control signature (`controlKey`, role, accessible
+name, enabled state, href, and declared interaction effect), and relative
+control order while ignoring only pure absolute `order`/`domOrderKey` shifts.
+The projection SHALL NOT trim controls, transitions, or evidence.
+
 #### Scenario: a dynamically revealed control is covered
 
 - **WHEN** preflight proves that an action opens a menu, dialog, tab panel, or
@@ -238,6 +248,22 @@ reason is recorded in the ledger; an unreasoned omission is a gap.
 - **WHEN** a visible interactive control has no action result and no typed
   `not-exercised` reason permitted by the campaign policy
 - **THEN** the owning route/state cell is `fail` and the stop gate remains open
+
+#### Scenario: raw positional evidence is distinct from material accounting
+
+- **GIVEN** two raw surfaces have the same control set, non-positional
+  signatures, and relative control order, but every shared control has a pure
+  absolute `order`/`domOrderKey` shift
+- **WHEN** the transition and visited-state records are built
+- **THEN** both raw surfaces and the exact action-surface binding retain their
+  distinct raw fields and digests
+- **AND** the material projection is equal, so the shift does not consume a
+  material branch budget or create a second visited semantic state
+- **WHEN** a control is added or removed, a role/name/enabled/href/interaction-
+  effect signature changes, or shared controls truly reorder
+- **THEN** the material projection differs, the branch/state remains
+  material and fail-closed, and no raw control or evidence is silently
+  trimmed
 
 ### Requirement: State and transition profiles are deterministic and pairwise
 
