@@ -66,15 +66,12 @@ export const resolvePreflightShardResume = async (input: {
   readonly context: PreflightShardJournalContext;
   readonly archiveRoot: string;
   readonly journalPath: string;
-  readonly records?: readonly PreflightShardJournalRecord[];
 }): Promise<PreflightShardResumePlan> => {
-  const records =
-    input.records ??
-    (await readPreflightShardJournal({
-      context: input.context,
-      archiveRoot: input.archiveRoot,
-      filePath: input.journalPath,
-    }));
+  const records = await readPreflightShardJournal({
+    context: input.context,
+    archiveRoot: input.archiveRoot,
+    filePath: input.journalPath,
+  });
   const validation = validatePreflightShardJournal({
     context: input.context,
     records,

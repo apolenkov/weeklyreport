@@ -110,4 +110,22 @@ describe("preflight shard receipt-authorized resume", () => {
       ).rejects.toThrow(/unavailable/u);
     });
   });
+
+  it("does not authorize receipt-only resume when the journal is absent", async () => {
+    await withReceiptFixture(async (fixture) => {
+      const journalPath = preflightShardJournalPathFor(fixture.context);
+      const plan = await resolvePreflightShardResume({
+        context: fixture.context,
+        archiveRoot: fixture.archiveRoot,
+        journalPath,
+      });
+
+      expect(plan.authorizedSkipStateIds).toEqual([]);
+      expect(plan.rerunStateIds).toEqual(
+        fixture.context.shard.states.map(({ state }) => state.stateId),
+      );
+      expect(plan.interruptedStateId).toBeNull();
+      expect(plan.terminalPasses.size).toBe(0);
+    });
+  });
 });
