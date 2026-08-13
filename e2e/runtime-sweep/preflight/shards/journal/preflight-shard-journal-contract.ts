@@ -9,6 +9,7 @@ import {
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import { sha256Hex } from "../../../support/ids.ts";
 import { journalStateSchema } from "../../journal/preflight-journal-contract.ts";
+import { redact } from "../../observability/environment-observer-events.ts";
 import { resourceProofDonorIdSchema } from "../resources/preflight-shard-resource-proof-contract.ts";
 
 export const PREFLIGHT_SHARD_JOURNAL = "PREFLIGHT_SHARD_JOURNAL" as const;
@@ -23,14 +24,15 @@ export const PREFLIGHT_SHARD_JOURNAL_STATUSES = [
 const statusSchema = z.enum(PREFLIGHT_SHARD_JOURNAL_STATUSES);
 const positiveIntegerSchema = z.number().int().positive();
 const nonnegativeIntegerSchema = z.number().int().nonnegative();
-const MAX_FAILURE_SUMMARY_LENGTH = 2000;
+const MAX_FAILURE_SUMMARY_LENGTH = 500;
 const COMPLETE_RECEIPT_FIELD_COUNT = 3;
 const failureSummarySchema = z
   .string()
   .trim()
   .min(1)
   .max(MAX_FAILURE_SUMMARY_LENGTH)
-  .regex(/^[^\u0000-\u001F\u007F]+$/u, "must not contain control characters");
+  .regex(/^[^\u0000-\u001F\u007F]+$/u, "must not contain control characters")
+  .refine((value) => redact(value) === value, "must already be redacted");
 
 export const preflightShardJournalIdentitySchema = z
   .object({

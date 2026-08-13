@@ -1,4 +1,5 @@
 import { sha256Hex } from "../../../support/ids.ts";
+import { redact } from "../../observability/environment-observer-events.ts";
 import type { PreflightShardState } from "../preflight-shard-assignment.ts";
 import {
   assertPreflightShardJournalContext,
@@ -83,7 +84,10 @@ export const createPreflightShardJournalTerminal = (input: {
     receiptPath: input.receipt?.path ?? null,
     receiptDigest: input.receipt?.receiptDigest ?? null,
     segmentDigest: input.receipt?.segmentDigest ?? null,
-    failureSummary: input.failureSummary ?? null,
+    failureSummary:
+      input.failureSummary === undefined
+        ? null
+        : redact(input.failureSummary).trim(),
     previousRecordDigest: input.started.recordDigest,
   });
 };
