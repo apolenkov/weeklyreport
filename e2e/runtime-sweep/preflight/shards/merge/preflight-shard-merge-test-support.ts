@@ -1,4 +1,4 @@
-import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
@@ -7,6 +7,7 @@ import {
   createManifestFixture,
   fakeManifestGit,
 } from "../../../manifest/manifest-fixture.ts";
+import { stableSerialize } from "../../../support/ids.ts";
 import {
   attachSpecializedDeclarations,
   routeForState,
@@ -21,11 +22,12 @@ import {
   writePreflightShardCompletion,
 } from "../completion/preflight-shard-completion-io.ts";
 import type { PreflightShardJournalContext } from "../journal/preflight-shard-journal-context.ts";
+import type { PreflightShardJournalRecord } from "../journal/preflight-shard-journal-contract.ts";
+import { preflightShardJournalPathFor } from "../journal/preflight-shard-journal-io.ts";
 import {
-  appendPreflightShardJournalStarted,
-  appendPreflightShardJournalTerminal,
-  preflightShardJournalPathFor,
-} from "../journal/preflight-shard-journal-io.ts";
+  createPreflightShardJournalStarted,
+  createPreflightShardJournalTerminal,
+} from "../journal/preflight-shard-journal-record.ts";
 import {
   preflightShardSegmentPathFor,
   preflightShardStateReceiptPathFor,
@@ -58,19 +60,13 @@ export type PersistedMergeFixture = Readonly<{
   readonly dispose: () => Promise<void>;
 }>;
 
-const persistState = async (input: {
+const persistSegment = async (input: {
   readonly context: PreflightShardJournalContext;
   readonly archiveRoot: string;
-  readonly journalPath: string;
   readonly state: PreflightShardJournalContext["shard"]["states"][number];
+  readonly started: PreflightShardJournalRecord;
   readonly preexistingSpecialized?: boolean;
-}): Promise<void> => {
-  const started = await appendPreflightShardJournalStarted({
-    context: input.context,
-    archiveRoot: input.archiveRoot,
-    filePath: input.journalPath,
-    state: input.state,
-  });
+}) => {
   const nominalSegment = {
     state: input.state.state,
     controls: [],
@@ -91,7 +87,7 @@ const persistState = async (input: {
   const segmentArtifactPath = preflightShardSegmentPathFor({
     context: input.context,
     state: input.state,
-    attempt: started.attempt,
+    attempt: input.started.attempt,
   });
   await writePreflightSegmentArtifact({
     filePath: segmentArtifactPath,
@@ -101,14 +97,14 @@ const persistState = async (input: {
   const receipt = createPreflightShardStateReceipt({
     context: input.context,
     state: input.state,
-    started,
+    started: input.started,
     segmentArtifactPath,
     segmentArtifact,
   });
   const receiptPath = preflightShardStateReceiptPathFor({
     context: input.context,
     state: input.state,
-    attempt: started.attempt,
+    attempt: input.started.attempt,
   });
   await writePreflightShardStateReceipt({
     context: input.context,
@@ -116,13 +112,71 @@ const persistState = async (input: {
     filePath: receiptPath,
     receipt,
   });
-  await appendPreflightShardJournalTerminal({
+  return { receipt, receiptPath };
+};
+
+const persistState = async (input: {
+  readonly context: PreflightShardJournalContext;
+  readonly archiveRoot: string;
+  readonly state: PreflightShardJournalContext["shard"]["states"][number];
+  readonly preexistingSpecialized?: boolean;
+  readonly previousRecord?: PreflightShardJournalRecord;
+}) => {
+  const started = createPreflightShardJournalStarted({
+    context: input.context,
+    state: input.state,
+    attempt: 1,
+    ...(input.previousRecord === undefined
+      ? {}
+      : { previousRecord: input.previousRecord }),
+  });
+  const { receipt, receiptPath } = await persistSegment({
     context: input.context,
     archiveRoot: input.archiveRoot,
-    filePath: input.journalPath,
-    status: "PASS",
-    receiptPath,
+    state: input.state,
+    started,
+    ...(input.preexistingSpecialized === undefined
+      ? {}
+      : { preexistingSpecialized: input.preexistingSpecialized }),
   });
+  const terminal = createPreflightShardJournalTerminal({
+    context: input.context,
+    started,
+    status: "PASS",
+    receipt: {
+      path: receiptPath,
+      receiptDigest: receipt.receiptDigest,
+      segmentDigest: receipt.segmentDigest,
+    },
+  });
+  return { started, terminal };
+};
+
+const persistShardStates = async (input: {
+  readonly context: PreflightShardJournalContext;
+  readonly archiveRoot: string;
+  readonly journalPath: string;
+  readonly states: readonly PreflightShardJournalContext["shard"]["states"][number][];
+  readonly preexistingSpecializedStateId: string | undefined;
+}): Promise<void> => {
+  const records: PreflightShardJournalRecord[] = [];
+  for (const state of input.states) {
+    const previousRecord = records.at(-1);
+    const persisted = await persistState({
+      context: input.context,
+      archiveRoot: input.archiveRoot,
+      state,
+      preexistingSpecialized:
+        state.state.stateId === input.preexistingSpecializedStateId,
+      ...(previousRecord === undefined ? {} : { previousRecord }),
+    });
+    records.push(persisted.started, persisted.terminal);
+  }
+  await appendFile(
+    input.journalPath,
+    records.map((record) => `${stableSerialize(record)}\n`).join(""),
+    "utf8",
+  );
 };
 
 const persistShardCompletion = async (input: {
@@ -161,15 +215,13 @@ const persistShardCompletion = async (input: {
     proof: resourceProof,
   });
   const journalPath = preflightShardJournalPathFor(context);
-  for (const state of input.shard.states)
-    await persistState({
-      context,
-      archiveRoot,
-      journalPath,
-      state,
-      preexistingSpecialized:
-        state.state.stateId === input.preexistingSpecializedStateId,
-    });
+  await persistShardStates({
+    context,
+    archiveRoot,
+    journalPath,
+    states: input.shard.states,
+    preexistingSpecializedStateId: input.preexistingSpecializedStateId,
+  });
   const filePath = preflightShardCompletionPathFor(context);
   await writePreflightShardCompletion({
     context,
