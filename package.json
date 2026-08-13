@@ -77,6 +77,7 @@
     "test:runtime-manifest": "tsx e2e/runtime-sweep/manifest/finalize-runtime-manifest.ts",
     "test:runtime-coverage": "tsx e2e/runtime-sweep/evidence/finalize-runtime-coverage-cli.ts",
     "test:runtime-driver": "tsx e2e/runtime-sweep/driver/import-ai-driver-cli.ts",
+    "product-variants:manifest": "tsx e2e/product-variants/generate-product-variant-manifest.ts",
     "test:runtime-lane-plan": "tsx e2e/runtime-sweep/lanes/plan-runtime-lanes-cli.ts",
     "test:runtime-lane-database-targets": "tsx e2e/runtime-sweep/lanes/verify-runtime-lane-database-targets-cli.ts",
     "test:runtime-lane-redis-targets": "tsx e2e/runtime-sweep/lanes/verify-runtime-lane-redis-targets-cli.ts",
