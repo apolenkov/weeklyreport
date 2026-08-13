@@ -12,7 +12,8 @@ type BoardColumnParent = Exclude<
 >;
 
 // One column per assigned product so empty products still get a "+ Add" CTA;
-// falls back to stage-tag grouping when `products` is not supplied.
+// an explicitly empty assignment list still groups stored rows by product id.
+// Stage-tag grouping is only for callers that do not supply product data.
 export interface ItemColumn {
   readonly key: string;
   readonly parent: BoardColumnParent;
@@ -120,7 +121,7 @@ export function splitItemBoard(
     (it): it is ActivityKanbanItem => it.parent.kind === "activity",
   );
   const lanes = activityLanes(activityRows, activities);
-  if (products && products.length > 0) {
+  if (products !== undefined) {
     return {
       productColumns: productColumnsFor(products, productRows),
       activityLanes: lanes,

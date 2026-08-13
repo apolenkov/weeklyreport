@@ -175,6 +175,37 @@ describe("splitItemBoard — two-level split", () => {
     ).toEqual(["orphan-row"]);
   });
 
+  it("keeps one stored-product column when the current assignment list is empty", () => {
+    const rows = [
+      productItem({
+        id: "historical-build",
+        parent: { kind: "product", id: "p-historical" },
+        productId: "p-historical",
+        productName: "Historical Platform",
+        stageNames: ["Build"],
+      }),
+      productItem({
+        id: "historical-run",
+        parent: { kind: "product", id: "p-historical" },
+        productId: "p-historical",
+        productName: "Historical Platform",
+        stageNames: ["Run"],
+      }),
+    ];
+
+    const board = splitItemBoard([], rows);
+
+    expect(board.productColumns).toHaveLength(1);
+    expect(expectDefined(board.productColumns[0])).toMatchObject({
+      key: "p-historical",
+      productId: "p-historical",
+      productName: "Historical Platform",
+    });
+    expect(
+      expectDefined(board.productColumns[0]).items.map((item) => item.id),
+    ).toEqual(["historical-build", "historical-run"]);
+  });
+
   it("appends orphan products in first-seen order without duplicates or dropped rows", () => {
     const rows = [
       productItem({ id: "assigned-row" }),
