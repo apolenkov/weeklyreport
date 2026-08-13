@@ -29,8 +29,13 @@ export type PeriodDualStateObservation = Readonly<{ matches: boolean; mismatches
 export type RuntimeSectionState = Readonly<{ status: "draft" | "submitted"; submittedAt: "absent" | "present"; verdict: "none" | "approved" | "changes_requested" }>;
 export type RuntimeSectionSnapshot = RuntimeSectionState &
   Readonly<{ version: number }>;
+export type RuntimeOwnershipAssignment = Readonly<{
+  readonly id: string;
+  readonly stageId: string;
+  readonly userId: string;
+}>;
 // prettier-ignore
-export type RuntimeOwnershipState = Readonly<{ targetOwnerId: string; owners: readonly string[] }>;
+export type RuntimeOwnershipState = Readonly<{ targetOwnerId: string; owners: readonly string[]; assignments: readonly RuntimeOwnershipAssignment[] }>;
 // prettier-ignore
 export type RuntimePermissionState = Readonly<{ actorId: string | null; actorRole: DbRole | null; authenticated: boolean; allowed: boolean; ownsTarget: boolean }>;
 // prettier-ignore

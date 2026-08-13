@@ -5,6 +5,7 @@ import type { SourceArtifact } from "../../source/source-artifact.ts";
 import type { PreflightRoute } from "../execution/playwright-preflight-support.ts";
 import {
   createPreflightRuntimeSetupTestHarness,
+  hiddenMutationSentinel,
   type PreflightRuntimeSetupTestHarness,
 } from "./preflight-runtime-setup.test-fixture.ts";
 
@@ -241,6 +242,37 @@ describe("preflight prepared-state reuse", () => {
     expect(harness.preparationWrites).toBe(2);
   });
 
+  it("revalidates cached state before zero-reveal navigation", async () => {
+    const setup = setupFor(harness);
+    const prepare = createPreparation(setup);
+    await prepare(stateFor(), route, true);
+    harness.setSectionVersion(2);
+    const navigation = vi.fn<() => void>(() => undefined);
+    const inventory = vi.fn<() => void>(() => undefined);
+    const runZeroRevealSegment = async (): Promise<void> => {
+      await prepare(stateFor(), route, false);
+      navigation();
+      inventory();
+    };
+
+    await expect(runZeroRevealSegment()).rejects.toThrow(/before navigation/iu);
+    expect(navigation).not.toHaveBeenCalled();
+    expect(inventory).not.toHaveBeenCalled();
+    expect(harness.preparationWrites).toBe(1);
+
+    await prepare(stateFor(), route, false);
+    expect(harness.preparationWrites).toBe(2);
+
+    navigation.mockClear();
+    inventory.mockClear();
+    harness.setMutationSentinel(hiddenMutationSentinel);
+    await expect(runZeroRevealSegment()).rejects.toThrow(/before navigation/iu);
+    expect(navigation).not.toHaveBeenCalled();
+    expect(inventory).not.toHaveBeenCalled();
+    await prepare(stateFor(), route, false);
+    expect(harness.preparationWrites).toBe(3);
+  });
+
   it("rejects a hidden ownership mutation after the action and drops the cache", async () => {
     const setup = setupFor(harness);
     const prepare = createPreparation(setup);
@@ -256,6 +288,27 @@ describe("preflight prepared-state reuse", () => {
     expect(action).toHaveBeenCalledOnce();
     await prepare(stateFor(), route, false);
     expect(harness.preparationWrites).toBe(2);
+  });
+
+  it("rejects same-owner stage A-to-B drift before and after reveal", async () => {
+    const setup = setupFor(harness);
+    const prepare = createPreparation(setup);
+    const before = await prepare(stateFor(), route, true);
+    harness.setAssignmentStage("stage-b");
+
+    await expect(
+      before.proveNonMutation(() => Promise.resolve()),
+    ).rejects.toThrow(/before reveal/iu);
+
+    const after = await prepare(stateFor(), route, true);
+    const action = vi.fn(() => {
+      harness.setAssignmentStage("stage-b");
+      return Promise.resolve();
+    });
+    await expect(after.proveNonMutation(action)).rejects.toThrow(
+      /after reveal/iu,
+    );
+    expect(action).toHaveBeenCalledOnce();
   });
 
   it("invalidates the cache for explicit reset and disposable-boundary recreation", async () => {

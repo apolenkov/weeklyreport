@@ -1,9 +1,9 @@
-import { readFile } from "node:fs/promises";
-
-import type { Cookie } from "@playwright/test";
+import type { Cookie, Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
 import type { RuntimeMatrixActor } from "../../matrix/runtime-matrix.ts";
+import type { SourceArtifact } from "../../source/source-artifact.ts";
+import { resetProfileSessions } from "./preflight-runtime-preparation.ts";
 import {
   createPreflightSessionCache,
   createProfileSessionCacheRegistry,
@@ -12,6 +12,13 @@ import {
   type PreflightSessionCache,
   quiescePreflightStatePage,
 } from "./preflight-session.ts";
+
+const preparationMocks = vi.hoisted(() => ({ reseed: vi.fn() }));
+
+vi.mock("../../../helpers/e2e-database-setup.ts", () => ({
+  e2eSetupCommands: vi.fn(() => []),
+  reseedE2eDatabase: preparationMocks.reseed,
+}));
 
 const cookieFor = (role: string): Cookie => ({
   name: "customreport_session",
@@ -42,37 +49,56 @@ const head: RuntimeMatrixActor = {
 const anonymous: RuntimeMatrixActor = { id: null, role: null, email: null };
 
 describe("preflight session cache", () => {
-  it("quiesces after reseed authentication before state preparation", async () => {
-    const source = await readFile(
-      new URL("./preflight-runtime-setup.ts", import.meta.url),
-      "utf8",
-    );
-    const resetHelperStart = source.indexOf("const resetProfileSessions");
-    const preparationHelperStart = source.indexOf(
-      "const prepareStateForPreflight",
-      resetHelperStart,
-    );
-    const resetHelper = source.slice(resetHelperStart, preparationHelperStart);
-    const authenticate = resetHelper.indexOf(
-      "await input.sessions.cache.authenticate(input.actors);",
-    );
-    const reauthenticate = resetHelper.indexOf(
-      "await input.sessions.cache.reauthenticate(input.actors);",
-    );
-    const quiesce = resetHelper.indexOf("await quiescePreflightStatePage(");
-    const resetCall = source.indexOf("await resetProfileSessions({");
-    const preparationCall = source.indexOf(
-      "const prepared = await prepareStateForPreflight({",
-      resetCall,
-    );
+  it("quiesces after reseed authentication", async () => {
+    const events: string[] = [];
+    preparationMocks.reseed.mockImplementation(() => events.push("reseed"));
+    const page = {
+      url: () => "http://127.0.0.1:3000/reports",
+      goto: vi.fn(() => {
+        events.push("quiesce");
+        return Promise.resolve();
+      }),
+    } as unknown as Page;
+    const sessions = {
+      created: true,
+      cache: {
+        authenticate: vi.fn(() => {
+          events.push("authenticate");
+          return Promise.resolve();
+        }),
+        reauthenticate: vi.fn(() => Promise.resolve()),
+        use: vi.fn(() => Promise.resolve()),
+      },
+    } as unknown as Parameters<typeof resetProfileSessions>[0]["sessions"];
 
-    expect(resetHelperStart).toBeGreaterThanOrEqual(0);
-    expect(preparationHelperStart).toBeGreaterThan(resetHelperStart);
-    expect(authenticate).toBeGreaterThanOrEqual(0);
-    expect(reauthenticate).toBeGreaterThan(authenticate);
-    expect(quiesce).toBeGreaterThan(reauthenticate);
-    expect(resetCall).toBeGreaterThan(preparationHelperStart);
-    expect(preparationCall).toBeGreaterThan(resetCall);
+    await resetProfileSessions({
+      setup: {
+        source: {} as unknown as SourceArtifact,
+        page,
+        databaseUrl: "postgresql://localhost/customreport_e2e",
+        repoRoot: "/workspace/customreport",
+        apiUrl: "http://127.0.0.1:3002",
+      },
+      profile: "full",
+      actors: [lead],
+      sessions,
+      clearPage: () => {
+        events.push("clear-storage");
+        return Promise.resolve();
+      },
+      awaitApiDrain: () => {
+        events.push("api-drain");
+        return Promise.resolve();
+      },
+    });
+
+    expect(events).toEqual([
+      "reseed",
+      "authenticate",
+      "clear-storage",
+      "quiesce",
+      "api-drain",
+    ]);
   });
 
   it("clears origin storage before quiescing the previous state page", async () => {

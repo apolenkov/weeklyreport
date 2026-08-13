@@ -44,6 +44,11 @@ function snapshotFor(plan: StatePreparationPlan): RuntimeDatabaseSnapshot {
     ownership: {
       targetOwnerId: plan.targets.ownerId,
       owners: plan.ownership.assignments.map(({ userId }) => userId),
+      assignments: plan.ownership.assignments.map(({ stageId, userId }) => ({
+        id: `assignment-${stageId}`,
+        stageId,
+        userId,
+      })),
     },
     permission: {
       actorId: plan.permission.actorId,

@@ -19,15 +19,18 @@ const snapshotFor = (
     mutationSentinel: await transaction.readMutationSentinel(),
   }));
 
+export type PreparedStateValidationPhase =
+  "before reveal" | "after reveal" | "before navigation";
+
+type PreparedStateSnapshot = Awaited<ReturnType<typeof snapshotFor>>;
+
 const assertPreparedSnapshot = (
   expected: PreparedRuntimeState["actual"],
   actual: PreparedRuntimeState["actual"],
-  phase: "before" | "after",
+  phase: PreparedStateValidationPhase,
 ): void => {
   if (stableSerialize(actual) !== stableSerialize(expected))
-    throw new Error(
-      `Prepared runtime database changed ${phase} reveal execution`,
-    );
+    throw new Error(`Prepared runtime database changed ${phase}`);
 };
 
 type MutationEntrySummary = Readonly<
@@ -127,17 +130,39 @@ const formatMutationSentinelDelta = (
 const assertMutationSentinel = (
   expected: PreparedRuntimeState["mutationSentinel"],
   actual: PreparedRuntimeState["mutationSentinel"],
-  phase: "before" | "after",
+  phase: PreparedStateValidationPhase,
 ): void => {
   if (stableSerialize(actual) !== stableSerialize(expected))
     throw new Error(
-      `Runtime mutation sentinel changed ${phase} reveal execution (${formatMutationSentinelDelta(expected, actual)})`,
+      `Runtime mutation sentinel changed ${phase} (${formatMutationSentinelDelta(expected, actual)})`,
     );
 };
 
 type ActionResult =
   | Readonly<{ readonly status: "pass" }>
   | Readonly<{ readonly status: "error"; readonly error: unknown }>;
+
+const assertPreparedStateSnapshot = (
+  prepared: PreparedRuntimeState,
+  current: PreparedStateSnapshot,
+  phase: PreparedStateValidationPhase,
+): void => {
+  assertMutationSentinel(
+    prepared.mutationSentinel,
+    current.mutationSentinel,
+    phase,
+  );
+  assertPreparedSnapshot(prepared.actual, current.targeted, phase);
+};
+
+export async function assertPreparedStateUnchanged(input: {
+  readonly database: RuntimeStateDatabase;
+  readonly prepared: PreparedRuntimeState;
+  readonly phase: PreparedStateValidationPhase;
+}): Promise<void> {
+  const current = await snapshotFor(input.database, input.prepared);
+  assertPreparedStateSnapshot(input.prepared, current, input.phase);
+}
 
 const captureAction = async (
   action: () => Promise<void>,
@@ -158,21 +183,11 @@ export async function provePreparedStateNonMutation(input: {
 }): Promise<RevealNonMutationProof> {
   await input.settle();
   const before = await snapshotFor(input.database, input.prepared);
-  assertMutationSentinel(
-    input.prepared.mutationSentinel,
-    before.mutationSentinel,
-    "before",
-  );
-  assertPreparedSnapshot(input.prepared.actual, before.targeted, "before");
+  assertPreparedStateSnapshot(input.prepared, before, "before reveal");
   const actionResult = await captureAction(input.action);
   const settleResult = await captureAction(input.settle);
   const after = await snapshotFor(input.database, input.prepared);
-  assertMutationSentinel(
-    input.prepared.mutationSentinel,
-    after.mutationSentinel,
-    "after",
-  );
-  assertPreparedSnapshot(input.prepared.actual, after.targeted, "after");
+  assertPreparedStateSnapshot(input.prepared, after, "after reveal");
   if (actionResult.status === "error") throw actionResult.error;
   if (settleResult.status === "error") throw settleResult.error;
   return {

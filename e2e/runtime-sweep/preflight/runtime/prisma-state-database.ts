@@ -169,8 +169,8 @@ const readSnapshot = async (
   });
   const assignments = await transaction.stageAssignment.findMany({
     where: { projectId: targets.projectId },
-    select: { userId: true },
-    orderBy: { stageId: "asc" },
+    select: { id: true, stageId: true, userId: true },
+    orderBy: [{ stageId: "asc" }, { id: "asc" }],
   });
   const permissionState = await actorState(transaction, targets, permission);
   const currentReview = section.sectionReviews.find(
@@ -187,6 +187,11 @@ const readSnapshot = async (
     ownership: {
       targetOwnerId: targets.ownerId,
       owners: assignments.map(({ userId }) => userId),
+      assignments: assignments.map(({ id, stageId, userId }) => ({
+        id,
+        stageId,
+        userId,
+      })),
     },
     permission: permissionState,
   } as const;
