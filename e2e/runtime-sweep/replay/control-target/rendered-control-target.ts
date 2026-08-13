@@ -70,8 +70,11 @@ const inventoryRoleSelector = (roleName: string): string => {
   return `:is(${selectors.join(",")})`;
 };
 
+const fullscreenInteractionSelector = (selector: string): string =>
+  `:root:not(:has(:fullscreen)) ${selector}, :fullscreen:is(${selector}), :fullscreen ${selector}`;
+
 const roleTargetLocator = (page: Page, roleName: string): Locator =>
-  page.locator(inventoryRoleSelector(roleName));
+  page.locator(fullscreenInteractionSelector(inventoryRoleSelector(roleName)));
 
 const isSupportedRole = (role: string): role is SupportedControlRole =>
   (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(role);
@@ -171,14 +174,14 @@ const evaluateRenderedName = (
     const bounds = element.getBoundingClientRect();
     const style = window.getComputedStyle(element);
     const visible = [
-      element.closest("[hidden],[aria-hidden='true']") === null,
-      style.display !== "none",
+      element.closest("[hidden],[aria-hidden='true']") === null &&
+        style.display !== "none",
       !["hidden", "collapse"].includes(style.visibility),
-      Number(style.opacity) !== 0,
-      bounds.width > 0 && bounds.height > 0,
+      Number(style.opacity) !== 0 && bounds.width > 0 && bounds.height > 0,
     ].every(Boolean);
     return (
       element.matches(expected.roleSelector) &&
+      (document.fullscreenElement?.contains(element) ?? true) &&
       visible &&
       inventoryNameFor(element) === expected.name
     );

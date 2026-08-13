@@ -44,6 +44,13 @@ export const SOURCE_TEXT_HELPER_SCRIPT = String.raw`(() => {
 })()`;
 
 export const INVENTORY_SCRIPT = String.raw`(() => {
+  const interactionRoot = document.fullscreenElement ?? document;
+  const queryWithinInteractionRoot = (selector) => {
+    const elements = Array.from(interactionRoot.querySelectorAll(selector));
+    if (interactionRoot instanceof Element && interactionRoot.matches(selector))
+      elements.unshift(interactionRoot);
+    return elements;
+  };
   const interactive = ["button","checkbox","combobox","gridcell","link","listbox",
     "menuitem","menuitemcheckbox","menuitemradio","option","radio","scrollbar",
     "searchbox","slider","spinbutton","switch","tab","textbox","treeitem"];
@@ -66,12 +73,12 @@ export const INVENTORY_SCRIPT = String.raw`(() => {
   };
   const labels = Array.from(document.querySelectorAll("label"));
   const sourceText = ${SOURCE_TEXT_HELPER_SCRIPT};
-  const formElements = Array.from(document.querySelectorAll("form"));
-  const radioGroups = Array.from(document.querySelectorAll('[role="radiogroup"]'));
+  const formElements = queryWithinInteractionRoot("form");
+  const radioGroups = queryWithinInteractionRoot('[role="radiogroup"]');
   const elements = (() => {
-  const candidates = Array.from(document.querySelectorAll(
+  const candidates = queryWithinInteractionRoot(
     "a[href],button,input,select,textarea,option,summary,[contenteditable]:not([contenteditable='false']),[role]"
-  )).map((element) => {
+  ).map((element) => {
     const tagName = element.tagName.toLowerCase();
     const inputType = element instanceof HTMLInputElement ? element.type.toLowerCase() : null;
     const role = roleFor(element);
@@ -118,5 +125,5 @@ export const INVENTORY_SCRIPT = String.raw`(() => {
     (interactive.includes(element.role) || landmarks.includes(element.role)));
 ${KEYBOARD_FOCUS_POLICY_SCRIPT}
   })();
-  return { elements, visibleText: sourceText.text(document.body) };
+  return { elements, visibleText: sourceText.text(interactionRoot) };
 })()`;
