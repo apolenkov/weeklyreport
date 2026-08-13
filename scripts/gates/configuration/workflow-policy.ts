@@ -11,6 +11,8 @@ type WorkflowParseResult =
 
 const WORKFLOW_FILE = /[.](?:yaml|yml)$/u;
 const CHECKOUT_ACTION = "actions/checkout@";
+const PLAYWRIGHT_CHROMIUM_INSTALL =
+  "pnpm --filter @customreport/web exec playwright install --with-deps chromium";
 const SAFE_PERMISSION = new Set(["none", "read"]);
 
 const asObject = (value: unknown): PlainObject | undefined =>
@@ -115,6 +117,34 @@ const checkoutFindings = (jobs: PlainObject): readonly string[] =>
       : [];
   });
 
+const qualityPlaywrightFindings = (jobs: PlainObject): readonly string[] => {
+  const quality = asObject(jobs.quality);
+  const steps = quality?.steps;
+  if (!Array.isArray(steps)) {
+    return [];
+  }
+
+  const unitTestsIndex = steps.findIndex(
+    (step) => asObject(step)?.name === "Unit Tests",
+  );
+  if (unitTestsIndex === -1) {
+    return [];
+  }
+
+  const chromiumInstallIndex = steps.findIndex((step) => {
+    const parsedStep = asObject(step);
+    return (
+      typeof parsedStep?.run === "string" &&
+      parsedStep.run.trim() === PLAYWRIGHT_CHROMIUM_INSTALL
+    );
+  });
+  return chromiumInstallIndex !== -1 && chromiumInstallIndex < unitTestsIndex
+    ? []
+    : [
+        "quality job must install isolated Playwright Chromium before Unit Tests",
+      ];
+};
+
 const policyFindings = (workflow: PlainObject): readonly string[] => {
   const jobs = asObject(workflow.jobs);
   return jobs
@@ -122,6 +152,7 @@ const policyFindings = (workflow: PlainObject): readonly string[] => {
         ...topLevelPermissionFindings(workflow),
         ...jobPermissionFindings(jobs),
         ...checkoutFindings(jobs),
+        ...qualityPlaywrightFindings(jobs),
       ]
     : [
         ...topLevelPermissionFindings(workflow),
