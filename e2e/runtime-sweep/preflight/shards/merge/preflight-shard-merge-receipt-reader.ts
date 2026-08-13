@@ -1,15 +1,22 @@
 import * as path from "node:path";
 
+import type { MatrixPreflightSegment } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import type { SourceArtifact } from "../../../source/source-artifact.ts";
 import { stableSerialize } from "../../../support/ids.ts";
-import type { PreflightArtifact } from "../../artifacts/preflight-artifact.ts";
 import {
-  preflightShardCompletionPathFor,
+  assertPreflightMatchesSource,
+  createPreflightArtifact,
+  parsePreflightArtifact,
+  type PreflightArtifact,
+} from "../../artifacts/preflight-artifact.ts";
+import { attachSpecializedDeclarations } from "../../execution/playwright-preflight-support.ts";
+import {
   readPreflightShardCompletion,
   type RevalidatedPreflightShardCompletion,
 } from "../completion/preflight-shard-completion-io.ts";
-import type { PreflightShardJournalContext } from "../journal/preflight-shard-journal-context.ts";
+import { readPreflightShardJournal } from "../journal/preflight-shard-journal-io.ts";
+import type { RevalidatedPreflightShardPass } from "../journal/preflight-shard-resume.ts";
 import type {
   PreflightShard,
   PreflightShardAssignment,
@@ -24,7 +31,7 @@ import {
   assertPreflightShardResourceProofFilesystem,
   assertPreflightShardResourceProofMatchesSource,
 } from "../resources/preflight-shard-resource-proof-validation.ts";
-import { preflightShardResourceProofPathFor } from "./preflight-shard-merge-assembly.ts";
+import { assertExactSourceStateUnion } from "./preflight-shard-merge-assembly.ts";
 import {
   assertPreflightShardMergeReceiptMatchesSource,
   parsePreflightShardMergeReceipt,
@@ -34,252 +41,246 @@ import {
 
 const equal = (left: unknown, right: unknown): boolean =>
   stableSerialize(left) === stableSerialize(right);
-
-const errorMessage = (error: unknown): string =>
+const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+// prettier-ignore
+const keyFor = (value: { donorId: string; logicalShardId: string; shardAttemptId: string }): string =>
+  [value.donorId, value.logicalShardId, value.shardAttemptId].join("\u0000");
 
-const canonicalAttemptSuffix = (
-  shardId: string,
-  attemptId: string,
-  fileName: string,
-): string => path.join("shards", shardId, "attempts", attemptId, fileName);
+// prettier-ignore
+export type PreflightShardMergeReceiptTrustedBinding = Readonly<{ donorId: string; donorRoot: string; logicalShardId: string; shardAttemptId: string; archiveRoot: string; resourceProofPath: string; completionPath: string; journalPath: string }>;
+// prettier-ignore
+type Input = Readonly<{ source: SourceArtifact; assignment: PreflightShardAssignment; preflight: PreflightArtifact; receipt: PreflightShardMergeReceipt; donorRoots: readonly PreflightShardResourceProofDonorRoot[]; trustedBindings: readonly PreflightShardMergeReceiptTrustedBinding[] }>;
+// prettier-ignore
+type Snapshot = readonly [PreflightShardResourceProof, Awaited<ReturnType<typeof readPreflightShardCompletion>>["completion"], readonly unknown[], readonly unknown[]];
+// prettier-ignore
+type Collection = readonly [readonly Snapshot[], readonly MatrixPreflightSegment[]];
 
-const archiveRootForReceiptShard = (
+// prettier-ignore
+const canonicalPath = (binding: PreflightShardMergeReceiptTrustedBinding, fileName: string): string => path.join(binding.archiveRoot, "shards", binding.logicalShardId, "attempts", binding.shardAttemptId, fileName);
+
+const bindingFor = (
   shard: PreflightShardMergeReceipt["shards"][number],
-): string => {
-  const suffix = `/${canonicalAttemptSuffix(
-    shard.logicalShardId,
-    shard.shardAttemptId,
-    "PREFLIGHT_SHARD_RESOURCE_PROOF.json",
-  )}`;
-  if (!shard.resourceProofPath.endsWith(suffix))
+  bindings: readonly PreflightShardMergeReceiptTrustedBinding[],
+): PreflightShardMergeReceiptTrustedBinding => {
+  const binding = bindings.find(
+    (candidate) => keyFor(candidate) === keyFor(shard),
+  );
+  if (binding === undefined)
     throw new PreflightShardMergeError(
-      `PREFLIGHT_SHARD_MERGE_RECEIPT resource proof path is not canonical for ${shard.logicalShardId}`,
+      `No trusted archive binding exists for ${keyFor(shard)}`,
     );
-  const archiveRoot = shard.resourceProofPath.slice(0, -suffix.length);
   if (
-    archiveRoot.length === 0 ||
-    path.resolve(archiveRoot) !== archiveRoot ||
-    archiveRoot === path.parse(archiveRoot).root
+    path.resolve(binding.archiveRoot) !== binding.archiveRoot ||
+    path.resolve(binding.archiveRoot) ===
+      path.parse(binding.archiveRoot).root ||
+    shard.donorRoot !== binding.donorRoot ||
+    shard.resourceProofPath !==
+      canonicalPath(binding, "PREFLIGHT_SHARD_RESOURCE_PROOF.json") ||
+    shard.completionPath !== canonicalPath(binding, "SHARD_COMPLETE.json") ||
+    shard.journalPath !==
+      canonicalPath(binding, "PREFLIGHT_SHARD.journal.jsonl")
   )
     throw new PreflightShardMergeError(
-      `PREFLIGHT_SHARD_MERGE_RECEIPT resource proof archive root is not canonical for ${shard.logicalShardId}`,
+      `Receipt paths do not match the trusted canonical archive binding for ${keyFor(shard)}`,
     );
-  return archiveRoot;
+  return binding;
 };
 
-const readPersistedProof = async (input: {
-  readonly shard: PreflightShardMergeReceipt["shards"][number];
-  readonly archiveRoot: string;
+const assertBindings = (
+  receipt: PreflightShardMergeReceipt,
+  bindings: readonly PreflightShardMergeReceiptTrustedBinding[],
+): void => {
+  if (
+    bindings.length !== receipt.shards.length ||
+    new Set(bindings.map(keyFor)).size !== bindings.length
+  )
+    throw new PreflightShardMergeError(
+      "Trusted archive bindings must cover every receipt composite attempt exactly once",
+    );
+  receipt.shards.forEach((shard) => bindingFor(shard, bindings));
+};
+
+const proofFor = async (input: {
+  readonly source: SourceArtifact;
+  readonly assignment: PreflightShardAssignment;
+  readonly shard: PreflightShard;
+  readonly receiptShard: PreflightShardMergeReceipt["shards"][number];
+  readonly binding: PreflightShardMergeReceiptTrustedBinding;
 }): Promise<PreflightShardResourceProof> => {
   try {
     const proof = await readPreflightShardResourceProof(
-      input.shard.resourceProofPath,
-      input.archiveRoot,
+      input.binding.resourceProofPath,
+      input.binding.archiveRoot,
     );
     await assertPreflightShardResourceProofFilesystem(proof);
-    return proof;
-  } catch (error: unknown) {
-    throw new PreflightShardMergeError(
-      `Durable merge receipt resource proof read failed for ${input.shard.logicalShardId}: ${errorMessage(error)}`,
-    );
-  }
-};
-
-const assertPersistedProofBinding = (input: {
-  readonly source: SourceArtifact;
-  readonly assignment: PreflightShardAssignment;
-  readonly expectedShard: PreflightShard;
-  readonly receiptShard: PreflightShardMergeReceipt["shards"][number];
-  readonly proof: PreflightShardResourceProof;
-  readonly archiveRoot: string;
-}): void => {
-  const { proof, receiptShard } = input;
-  if (
-    proof.donorId !== receiptShard.donorId ||
-    proof.donorRoot !== receiptShard.donorRoot ||
-    proof.logicalShardId !== receiptShard.logicalShardId ||
-    proof.shardAttemptId !== receiptShard.shardAttemptId ||
-    proof.proofDigest !== receiptShard.resourceProofDigest ||
-    proof.shardIndex !== receiptShard.shardIndex ||
-    proof.shardDigest !== receiptShard.shardDigest ||
-    proof.resources.archiveRoot !== input.archiveRoot
-  )
-    throw new PreflightShardMergeError(
-      `Durable merge receipt resource proof identity drifted for ${receiptShard.logicalShardId}`,
-    );
-  try {
+    if (
+      proof.donorId !== input.receiptShard.donorId ||
+      proof.donorRoot !== input.binding.donorRoot ||
+      proof.logicalShardId !== input.receiptShard.logicalShardId ||
+      proof.shardAttemptId !== input.receiptShard.shardAttemptId ||
+      proof.shardIndex !== input.receiptShard.shardIndex ||
+      proof.shardDigest !== input.receiptShard.shardDigest ||
+      proof.proofDigest !== input.receiptShard.resourceProofDigest ||
+      proof.resources.archiveRoot !== input.binding.archiveRoot
+    )
+      throw new PreflightShardMergeError(
+        `Durable merge receipt resource proof identity drifted for ${input.receiptShard.logicalShardId}`,
+      );
     assertPreflightShardResourceProofMatchesSource({
       source: input.source,
       assignment: input.assignment,
       proof,
-      selectedShard: input.expectedShard,
+      selectedShard: input.shard,
     });
+    return proof;
   } catch (error: unknown) {
+    if (error instanceof PreflightShardMergeError) throw error;
     throw new PreflightShardMergeError(
-      `Durable merge receipt resource proof binding failed for ${receiptShard.logicalShardId}: ${errorMessage(error)}`,
+      `Durable merge receipt resource proof read failed for ${input.receiptShard.logicalShardId}: ${message(error)}`,
     );
   }
 };
 
-const contextFor = (input: {
-  readonly source: SourceArtifact;
-  readonly assignment: PreflightShardAssignment;
-  readonly expectedShard: PreflightShard;
-  readonly receiptShard: PreflightShardMergeReceipt["shards"][number];
-  readonly proof: PreflightShardResourceProof;
-}): PreflightShardJournalContext => {
-  const context: PreflightShardJournalContext = {
+const assertCompletion = (input: {
+  readonly context: {
+    readonly assignment: PreflightShardAssignment;
+    readonly shard: PreflightShard;
+  };
+  readonly shard: PreflightShardMergeReceipt["shards"][number];
+  readonly binding: PreflightShardMergeReceiptTrustedBinding;
+  readonly value: RevalidatedPreflightShardCompletion;
+}): void => {
+  const c = input.value.completion;
+  const states = input.context.shard.states;
+  // prettier-ignore
+  const actual = [c.logicalShardId, c.shardIndex, c.shardDigest, c.assignmentDigest, c.resourceProofDigest, c.archiveRoot, c.journalPath, c.journalRecordCount, c.journalTailDigest, c.completionDigest, c.assignedStateIds, c.assignedStateDigests, c.stateEvidence.map(({ stateId }) => stateId), c.stateEvidence.map(({ stateDigest }) => stateDigest)];
+  // prettier-ignore
+  const expected = [input.shard.logicalShardId, input.shard.shardIndex, input.shard.shardDigest, input.context.assignment.assignmentDigest, input.shard.resourceProofDigest, input.binding.archiveRoot, input.binding.journalPath, input.shard.journalRecordCount, input.shard.journalTailDigest, input.shard.completionDigest, input.shard.assignedStateIds, input.shard.assignedStateDigests, states.map(({ state }) => state.stateId), states.map(({ stateDigest }) => stateDigest)];
+  if (!equal(actual, expected))
+    throw new PreflightShardMergeError(
+      `Durable merge receipt completion, journal, or ordered state binding drifted for ${input.shard.logicalShardId}`,
+    );
+};
+
+const statesFor = (input: {
+  readonly shard: PreflightShard;
+  readonly passes: ReadonlyMap<string, RevalidatedPreflightShardPass>;
+  readonly segments: Map<string, MatrixPreflightSegment>;
+}): readonly unknown[] =>
+  input.shard.states.map(({ state }) => {
+    const pass = input.passes.get(state.stateId);
+    if (pass === undefined || input.segments.has(state.stateId))
+      throw new PreflightShardMergeError(
+        `${pass === undefined ? "Missing" : "Duplicate"} durable terminal state ${state.stateId}`,
+      );
+    input.segments.set(state.stateId, pass.segment);
+    return { stateId: state.stateId, ...pass };
+  });
+
+const collectOnce = async (
+  input: Input & { readonly receipt: PreflightShardMergeReceipt },
+): Promise<Collection> => {
+  const proofs: PreflightShardResourceProof[] = [];
+  const snapshots: Snapshot[] = [];
+  const segments = new Map<string, MatrixPreflightSegment>();
+  for (const [index, shardReceipt] of input.receipt.shards.entries()) {
+    const shard = input.assignment.shards[index];
+    if (shard === undefined)
+      throw new PreflightShardMergeError(
+        `Receipt shard ${index} is outside the assignment`,
+      );
+    const binding = bindingFor(shardReceipt, input.trustedBindings);
+    const proof = await proofFor({
+      source: input.source,
+      assignment: input.assignment,
+      shard,
+      receiptShard: shardReceipt,
+      binding,
+    });
+    const context = {
+      source: input.source,
+      assignment: input.assignment,
+      shard,
+      resourceProof: proof,
+    };
+    const value = await readPreflightShardCompletion({
+      context,
+      archiveRoot: binding.archiveRoot,
+      filePath: binding.completionPath,
+      journalPath: binding.journalPath,
+    });
+    assertCompletion({
+      context,
+      shard: shardReceipt,
+      binding,
+      value,
+    });
+    const journal = await readPreflightShardJournal({
+      context,
+      archiveRoot: binding.archiveRoot,
+      filePath: binding.journalPath,
+    });
+    proofs.push(proof);
+    snapshots.push([
+      proof,
+      value.completion,
+      journal,
+      statesFor({
+        shard,
+        passes: value.resume.terminalPasses,
+        segments,
+      }),
+    ]);
+  }
+  validatePreflightShardResourceProofSet(proofs, {
+    donorRoots: input.donorRoots,
     source: input.source,
     assignment: input.assignment,
-    shard: input.expectedShard,
-    resourceProof: input.proof,
-  };
-  if (
-    input.receiptShard.resourceProofPath !==
-      preflightShardResourceProofPathFor(context) ||
-    input.receiptShard.completionPath !==
-      preflightShardCompletionPathFor(context)
-  )
-    throw new PreflightShardMergeError(
-      `Durable merge receipt paths are not the exact persisted paths for ${input.receiptShard.logicalShardId}`,
-    );
-  return context;
+  });
+  return [
+    snapshots,
+    assertExactSourceStateUnion({ source: input.source, segments }),
+  ];
 };
 
-const assertCompletionBinding = (input: {
-  readonly context: PreflightShardJournalContext;
-  readonly receiptShard: PreflightShardMergeReceipt["shards"][number];
-  readonly revalidated: RevalidatedPreflightShardCompletion;
-  readonly archiveRoot: string;
-}): void => {
-  const completion = input.revalidated.completion;
-  const expectedStateIds = input.context.shard.states.map(
-    ({ state }) => state.stateId,
-  );
-  const expectedStateDigests = input.context.shard.states.map(
-    ({ stateDigest }) => stateDigest,
-  );
-  const stateEvidenceIds = completion.stateEvidence.map(
-    ({ stateId }) => stateId,
-  );
-  const stateEvidenceDigests = completion.stateEvidence.map(
-    ({ stateDigest }) => stateDigest,
-  );
-  if (
-    completion.logicalShardId !== input.receiptShard.logicalShardId ||
-    completion.shardIndex !== input.receiptShard.shardIndex ||
-    completion.shardDigest !== input.receiptShard.shardDigest ||
-    completion.assignmentDigest !== input.context.assignment.assignmentDigest ||
-    completion.resourceProofDigest !== input.receiptShard.resourceProofDigest ||
-    completion.archiveRoot !== input.archiveRoot ||
-    completion.journalPath !== input.receiptShard.journalPath ||
-    completion.journalRecordCount !== input.receiptShard.journalRecordCount ||
-    completion.journalTailDigest !== input.receiptShard.journalTailDigest ||
-    completion.completionDigest !== input.receiptShard.completionDigest ||
-    !equal(completion.assignedStateIds, input.receiptShard.assignedStateIds) ||
-    !equal(
-      completion.assignedStateDigests,
-      input.receiptShard.assignedStateDigests,
-    ) ||
-    !equal(completion.assignedStateIds, expectedStateIds) ||
-    !equal(completion.assignedStateDigests, expectedStateDigests) ||
-    !equal(stateEvidenceIds, expectedStateIds) ||
-    !equal(stateEvidenceDigests, expectedStateDigests)
-  )
-    throw new PreflightShardMergeError(
-      `Durable merge receipt completion, journal, or ordered state binding drifted for ${input.receiptShard.logicalShardId}`,
-    );
-  // readPreflightShardCompletion already revalidated every state receipt and
-  // segment path/digest against this context's journal and source.
-};
-
-const readPersistedCompletion = async (input: {
-  readonly context: PreflightShardJournalContext;
-  readonly receiptShard: PreflightShardMergeReceipt["shards"][number];
-  readonly archiveRoot: string;
-}): Promise<RevalidatedPreflightShardCompletion> => {
-  try {
-    return await readPreflightShardCompletion({
-      context: input.context,
-      archiveRoot: input.archiveRoot,
-      filePath: input.receiptShard.completionPath,
-      journalPath: input.receiptShard.journalPath,
-    });
-  } catch (error: unknown) {
-    throw new PreflightShardMergeError(
-      `Durable merge receipt completion read failed for ${input.receiptShard.logicalShardId}: ${errorMessage(error)}`,
-    );
-  }
-};
-
-/** Revalidates a receipt against persisted proof, completion, journal, and state evidence. */
-export const readPreflightShardMergeReceipt = async (input: {
-  readonly source: SourceArtifact;
-  readonly assignment: PreflightShardAssignment;
-  readonly preflight: PreflightArtifact;
-  readonly receipt: PreflightShardMergeReceipt;
-  readonly donorRoots: readonly PreflightShardResourceProofDonorRoot[];
-}): Promise<PreflightShardMergeReceipt> => {
+/** Revalidates a receipt against two complete durable evidence snapshots. */
+export const readPreflightShardMergeReceipt = async (
+  input: Input,
+): Promise<PreflightShardMergeReceipt> => {
+  const preflight = (() => {
+    try {
+      return parsePreflightArtifact(input.preflight);
+    } catch (error: unknown) {
+      throw new PreflightShardMergeError(
+        `Supplied PREFLIGHT is not canonical: ${message(error)}`,
+      );
+    }
+  })();
   const receipt = parsePreflightShardMergeReceipt(input.receipt);
+  assertBindings(receipt, input.trustedBindings);
   assertPreflightShardMergeReceiptMatchesSource({
     source: input.source,
     assignment: input.assignment,
     donorRoots: input.donorRoots,
-    preflight: input.preflight,
+    preflight,
     receipt,
   });
-  const proofs: PreflightShardResourceProof[] = [];
-  for (const [receiptIndex, receiptShard] of receipt.shards.entries()) {
-    const expectedShard = input.assignment.shards[receiptIndex];
-    if (expectedShard === undefined)
-      throw new PreflightShardMergeError(
-        `Merge receipt references a shard outside the assignment at index ${receiptIndex}`,
-      );
-    const archiveRoot = archiveRootForReceiptShard(receiptShard);
-    const proof = await readPersistedProof({
-      shard: receiptShard,
-      archiveRoot,
-    });
-    assertPersistedProofBinding({
-      source: input.source,
-      assignment: input.assignment,
-      expectedShard,
-      receiptShard,
-      proof,
-      archiveRoot,
-    });
-    const context = contextFor({
-      source: input.source,
-      assignment: input.assignment,
-      expectedShard,
-      receiptShard,
-      proof,
-    });
-    const revalidated = await readPersistedCompletion({
-      context,
-      receiptShard,
-      archiveRoot,
-    });
-    assertCompletionBinding({
-      context,
-      receiptShard,
-      revalidated,
-      archiveRoot,
-    });
-    proofs.push(proof);
-  }
-  try {
-    validatePreflightShardResourceProofSet(proofs, {
-      donorRoots: input.donorRoots,
-      source: input.source,
-      assignment: input.assignment,
-    });
-  } catch (error: unknown) {
+  const first = await collectOnce({ ...input, preflight, receipt });
+  const second = await collectOnce({ ...input, preflight, receipt });
+  if (!equal(first[0], second[0]) || !equal(first[1], second[1]))
     throw new PreflightShardMergeError(
-      `Durable merge receipt proof set is invalid: ${errorMessage(error)}`,
+      "Durable merge receipt evidence drifted between complete snapshot collections",
     );
-  }
+  const reconstructed = createPreflightArtifact({
+    source: input.source,
+    segments: attachSpecializedDeclarations(input.source, first[1]),
+  });
+  assertPreflightMatchesSource(input.source, reconstructed);
+  if (!equal(preflight, reconstructed))
+    throw new PreflightShardMergeError(
+      "Supplied PREFLIGHT does not match the reconstructed durable terminal segments",
+    );
   return freezeDeep(receipt);
 };
 

@@ -8,7 +8,10 @@ import {
   type PreflightShardCompletionReadRequest,
 } from "./preflight-shard-merge.ts";
 import { PreflightShardMergeError } from "./preflight-shard-merge-contract.ts";
-import { readPreflightShardMergeReceipt } from "./preflight-shard-merge-receipt-reader.ts";
+import {
+  type PreflightShardMergeReceiptTrustedBinding,
+  readPreflightShardMergeReceipt,
+} from "./preflight-shard-merge-receipt-reader.ts";
 import {
   createPersistedMergeFixture,
   type PersistedMergeFixture,
@@ -32,6 +35,27 @@ describe("canonical preflight shard merge", () => {
       donorRoots: fixture.donorRoots,
       completionRequests: requests,
     });
+
+  const trustedBindings =
+    (): readonly PreflightShardMergeReceiptTrustedBinding[] =>
+      fixture.requests.map(
+        ({
+          context,
+          archiveRoot,
+          filePath,
+          journalPath,
+          resourceProofPath,
+        }) => ({
+          donorId: context.resourceProof.donorId,
+          donorRoot: context.resourceProof.donorRoot,
+          logicalShardId: context.shard.logicalShardId,
+          shardAttemptId: context.resourceProof.shardAttemptId,
+          archiveRoot,
+          resourceProofPath,
+          completionPath: filePath,
+          journalPath,
+        }),
+      );
 
   it("merges only durable terminal completions in source plan order", async () => {
     const result = await merge();
@@ -57,6 +81,7 @@ describe("canonical preflight shard merge", () => {
       source: fixture.source,
       assignment: fixture.assignment,
       donorRoots: fixture.donorRoots,
+      trustedBindings: trustedBindings(),
       preflight: result.preflight,
       receipt: result.receipt,
     });
