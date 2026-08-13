@@ -1,6 +1,37 @@
 import { mkdir, readdir, rm } from "node:fs/promises";
 import * as path from "node:path";
 
+/**
+ * Translate a proof-owned absolute directory to the value consumed by the
+ * Next config. Next resolves `distDir` with `path.join(appRoot, distDir)`;
+ * passing an absolute proof path therefore appends it under `appRoot` rather
+ * than selecting the proof path. Keep the proof path absolute for identity,
+ * and only expose this reversible relative representation to Next.
+ */
+export const nextDistDirForNextConfig = (
+  appRoot: string,
+  proofDistDir: string,
+): string => {
+  const normalizedAppRoot = path.resolve(appRoot);
+  if (
+    !path.isAbsolute(proofDistDir) ||
+    path.resolve(proofDistDir) !== proofDistDir
+  )
+    throw new Error(
+      "Proof-owned Next dist directory must be a normalized absolute path",
+    );
+  const normalizedProofDistDir = path.resolve(proofDistDir);
+  const configDistDir = path.relative(
+    normalizedAppRoot,
+    normalizedProofDistDir,
+  );
+  if (configDistDir === "" || path.isAbsolute(configDistDir))
+    throw new Error("Proof-owned Next dist directory cannot be app root");
+  if (path.join(normalizedAppRoot, configDistDir) !== normalizedProofDistDir)
+    throw new Error("Proof-owned Next dist directory is not reversible");
+  return configDistDir;
+};
+
 export const RUNTIME_NEXT_LANES = ["sweep", "preflight"] as const;
 export type RuntimeNextLane = (typeof RUNTIME_NEXT_LANES)[number];
 
