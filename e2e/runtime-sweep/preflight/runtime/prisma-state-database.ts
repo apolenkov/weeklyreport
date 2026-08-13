@@ -182,6 +182,7 @@ const readSnapshot = async (
       status: section.status,
       submittedAt: section.submittedAt === null ? "absent" : "present",
       verdict: currentReview?.verdict ?? "none",
+      version: section.version,
     },
     ownership: {
       targetOwnerId: targets.ownerId,

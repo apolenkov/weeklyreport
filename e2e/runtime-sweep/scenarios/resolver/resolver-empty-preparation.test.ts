@@ -45,7 +45,7 @@ const prepareEmptyThroughProductionPath = async () => {
           periodStatus: plan.report.periodStatus,
           archived: plan.report.archived,
         },
-        section: plan.section.state,
+        section: { ...plan.section.state, version: 1 },
         ownership: {
           targetOwnerId: plan.targets.ownerId,
           owners: plan.ownership.assignments.map(({ userId }) => userId),

@@ -27,12 +27,14 @@ export type PermissionExpectation = Readonly<{ boundary: PermissionBoundary; all
 export type PeriodDualStateObservation = Readonly<{ matches: boolean; mismatches: readonly (keyof PeriodDualState)[] }>;
 // prettier-ignore
 export type RuntimeSectionState = Readonly<{ status: "draft" | "submitted"; submittedAt: "absent" | "present"; verdict: "none" | "approved" | "changes_requested" }>;
+export type RuntimeSectionSnapshot = RuntimeSectionState &
+  Readonly<{ version: number }>;
 // prettier-ignore
 export type RuntimeOwnershipState = Readonly<{ targetOwnerId: string; owners: readonly string[] }>;
 // prettier-ignore
 export type RuntimePermissionState = Readonly<{ actorId: string | null; actorRole: DbRole | null; authenticated: boolean; allowed: boolean; ownsTarget: boolean }>;
 // prettier-ignore
-export type RuntimeDatabaseSnapshot = Readonly<{ report: PeriodDualState; section: RuntimeSectionState; ownership: RuntimeOwnershipState; permission: RuntimePermissionState }>;
+export type RuntimeDatabaseSnapshot = Readonly<{ report: PeriodDualState; section: RuntimeSectionSnapshot; ownership: RuntimeOwnershipState; permission: RuntimePermissionState }>;
 // prettier-ignore
 export type RuntimeOracleMismatch = Readonly<{ axis: "lifecycle" | "submission" | "ownership" | "permission"; field: string; expected: string | number | boolean | null; actual: string | number | boolean | null }>;
 // prettier-ignore
