@@ -59,7 +59,4 @@ export const createPreflightRuntimePreparation = (
 };
 
 export { preflightPreparationKeyFor } from "./preflight-preparation-key.ts";
-export type {
-  PreflightRuntimePreparation,
-  PreflightRuntimePreparationWithBoundary,
-} from "./preflight-runtime-preparation.ts";
+export type { PreflightRuntimePreparationWithBoundary } from "./preflight-runtime-preparation.ts";

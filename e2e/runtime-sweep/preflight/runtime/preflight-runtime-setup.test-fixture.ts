@@ -5,12 +5,29 @@ import type { RuntimeDatabaseSnapshot } from "../../support/state-oracle.ts";
 import type {
   OwnershipStateMutation,
   ReportStateMutation,
+  RuntimeMutationSentinel,
   RuntimeStateDatabase,
   RuntimeStateTransaction,
   SectionStateMutation,
 } from "../../support/state-preparation.ts";
 
 const NO_SNAPSHOT = "Test database has no prepared snapshot";
+
+export const hiddenMutationSentinel = [
+  {
+    id: "hidden-mutation",
+    userId: "lead-1",
+    role: "lead",
+    procedure: "reports.hiddenMutation",
+    targetId: "report-1",
+    status: "success",
+    reason: null,
+    ip: null,
+    correlationId: "hidden-mutation-correlation",
+    durationMs: 1,
+    createdAt: "2026-08-13T00:00:00.000Z",
+  },
+] as const satisfies RuntimeMutationSentinel;
 
 export type PreflightRuntimeSetupTestMocks = Readonly<{
   readonly reseed: Mock;
@@ -30,6 +47,8 @@ export type PreflightRuntimeSetupTestHarness = Readonly<{
   readonly reset: () => void;
   readonly setSectionVersion: (version: number) => void;
   readonly setOwners: (owners: readonly string[]) => void;
+  readonly setAssignmentStage: (stageId: string) => void;
+  readonly setMutationSentinel: (sentinel: RuntimeMutationSentinel) => void;
   readonly preparationWrites: number;
   readonly getPage: () => Readonly<{
     readonly page: Page;
@@ -40,6 +59,7 @@ export type PreflightRuntimeSetupTestHarness = Readonly<{
 interface MutableHarnessState {
   currentSnapshot: RuntimeDatabaseSnapshot | undefined;
   activeCookies: readonly Cookie[];
+  mutationSentinel: RuntimeMutationSentinel;
   preparationWrites: number;
 }
 
@@ -52,6 +72,7 @@ interface TransactionChanges {
 const createHarnessState = (): MutableHarnessState => ({
   currentSnapshot: undefined,
   activeCookies: [],
+  mutationSentinel: [],
   preparationWrites: 0,
 });
 
@@ -93,6 +114,13 @@ const createDatabase = (state: MutableHarnessState): RuntimeStateDatabase => ({
             ownership: {
               targetOwnerId: targets.ownerId,
               owners: changes.ownership.assignments.map(({ userId }) => userId),
+              assignments: changes.ownership.assignments.map(
+                ({ stageId, userId }) => ({
+                  id: `assignment-${stageId}`,
+                  stageId,
+                  userId,
+                }),
+              ),
             },
             permission: {
               actorId: permission.actorId,
@@ -106,7 +134,7 @@ const createDatabase = (state: MutableHarnessState): RuntimeStateDatabase => ({
         if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
         return Promise.resolve(state.currentSnapshot);
       },
-      readMutationSentinel: () => Promise.resolve([]),
+      readMutationSentinel: () => Promise.resolve(state.mutationSentinel),
       readViewerGroupAccess: () => Promise.resolve([]),
       removeViewerGroupAccess: () => Promise.resolve(0),
     };
@@ -156,6 +184,54 @@ const configureMocks = (
   });
 };
 
+const setSectionVersion = (
+  state: MutableHarnessState,
+  version: number,
+): void => {
+  if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
+  state.currentSnapshot = {
+    ...state.currentSnapshot,
+    section: { ...state.currentSnapshot.section, version },
+  };
+};
+
+const setOwners = (
+  state: MutableHarnessState,
+  owners: readonly string[],
+): void => {
+  if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
+  const assignments = owners.map((userId, index) => {
+    const current = state.currentSnapshot?.ownership.assignments[index];
+    return {
+      id: current?.id ?? `assignment-${index}`,
+      stageId: current?.stageId ?? `stage-${index}`,
+      userId,
+    };
+  });
+  state.currentSnapshot = {
+    ...state.currentSnapshot,
+    ownership: { ...state.currentSnapshot.ownership, owners, assignments },
+  };
+};
+
+const setAssignmentStage = (
+  state: MutableHarnessState,
+  stageId: string,
+): void => {
+  if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
+  const assignment = state.currentSnapshot.ownership.assignments[0];
+  if (assignment === undefined)
+    throw new Error("Test database has no prepared assignment");
+  const assignments = [
+    { ...assignment, stageId },
+    ...state.currentSnapshot.ownership.assignments.slice(1),
+  ];
+  state.currentSnapshot = {
+    ...state.currentSnapshot,
+    ownership: { ...state.currentSnapshot.ownership, assignments },
+  };
+};
+
 export const createPreflightRuntimeSetupTestHarness = (
   mocks: PreflightRuntimeSetupTestMocks,
 ): PreflightRuntimeSetupTestHarness => {
@@ -166,6 +242,7 @@ export const createPreflightRuntimeSetupTestHarness = (
   const reset = (): void => {
     state.currentSnapshot = undefined;
     state.activeCookies = [];
+    state.mutationSentinel = [];
     state.preparationWrites = 0;
     mocks.reseed.mockClear();
     mocks.login.mockClear();
@@ -177,19 +254,11 @@ export const createPreflightRuntimeSetupTestHarness = (
     database,
     pageContext,
     reset,
-    setSectionVersion(version) {
-      if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
-      state.currentSnapshot = {
-        ...state.currentSnapshot,
-        section: { ...state.currentSnapshot.section, version },
-      };
-    },
-    setOwners(owners) {
-      if (state.currentSnapshot === undefined) throw new Error(NO_SNAPSHOT);
-      state.currentSnapshot = {
-        ...state.currentSnapshot,
-        ownership: { ...state.currentSnapshot.ownership, owners },
-      };
+    setSectionVersion: (version) => setSectionVersion(state, version),
+    setOwners: (owners) => setOwners(state, owners),
+    setAssignmentStage: (stageId) => setAssignmentStage(state, stageId),
+    setMutationSentinel(sentinel) {
+      state.mutationSentinel = sentinel;
     },
     get preparationWrites() {
       return state.preparationWrites;

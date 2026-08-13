@@ -58,7 +58,13 @@ const emptyActual = (): RuntimeDatabaseSnapshot => ({
     verdict: "none",
     version: 1,
   },
-  ownership: { targetOwnerId: "lead-1", owners: ["lead-1"] },
+  ownership: {
+    targetOwnerId: "lead-1",
+    owners: ["lead-1"],
+    assignments: [
+      { id: "assignment-stage-1", stageId: "stage-1", userId: "lead-1" },
+    ],
+  },
   permission: {
     actorId: VIEWER_USER_ID,
     actorRole: "viewer",

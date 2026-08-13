@@ -12,7 +12,10 @@ import {
   type RuntimeStateDatabase,
   type RuntimeStateResetter,
 } from "../../support/state-preparation.ts";
-import { provePreparedStateNonMutation } from "../../support/state-preparation-nonmutation.ts";
+import {
+  assertPreparedStateUnchanged,
+  provePreparedStateNonMutation,
+} from "../../support/state-preparation-nonmutation.ts";
 import {
   type PreflightRoute,
   routeForState,
@@ -40,7 +43,7 @@ type ProfileSessionRegistry = ReturnType<
   typeof createProfileSessionCacheRegistry<CampaignMatrixState["profile"]>
 >;
 
-const resetProfileSessions = async (input: {
+export const resetProfileSessions = async (input: {
   readonly setup: PreflightRuntimeSetupInput;
   readonly profile: CampaignMatrixState["profile"];
   readonly actors: readonly RuntimeMatrixActor[];
@@ -100,7 +103,7 @@ const assertPreparedStateObservation = (
   );
 };
 
-export type PreflightRuntimePreparation = (
+type PreflightRuntimePreparation = (
   state: CampaignMatrixState,
   route: PreflightRoute,
   groupChanged: boolean,
@@ -140,7 +143,22 @@ const preparedStateFor = async (input: {
   readonly reusable: boolean;
 }): Promise<PreparedRuntimeState> => {
   const cached = input.cache.prepared;
-  if (cached?.key === input.preparationKey) return cached.prepared;
+  if (cached?.key === input.preparationKey) {
+    try {
+      // quiescePreflightStatePage has drained tracked API work immediately
+      // before this call. Never navigate or inventory against an unverified
+      // cached database baseline.
+      await assertPreparedStateUnchanged({
+        database: input.context.database,
+        prepared: cached.prepared,
+        phase: "before navigation",
+      });
+    } catch (error: unknown) {
+      if (input.cache.prepared === cached) input.cache.prepared = undefined;
+      throw error;
+    }
+    return cached.prepared;
+  }
   const prepared = await prepareStateForPreflight({
     setup: input.context.setup,
     state: input.state,
