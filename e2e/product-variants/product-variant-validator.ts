@@ -1,7 +1,10 @@
+import { generateProductVariantManifest } from "./product-variant-generator.ts";
 import {
   catalogDigestFor,
   manifestDigestFor,
+  manifestIdentityBodyForComparison,
   sourceDigestFor,
+  stableSerialize,
 } from "./product-variant-hash.ts";
 import {
   CONTROL_FAMILY_VARIANT,
@@ -136,6 +139,19 @@ const currentSourceIssues = (
   ...compareCurrentCoverage(manifest, source),
 ];
 
+const canonicalManifestIssues = (
+  manifest: ProductVariantManifest,
+  source: ProductVariantSource,
+): readonly string[] => {
+  const expected = generateProductVariantManifest(source);
+  return stableSerialize(manifestIdentityBodyForComparison(manifest)) ===
+    stableSerialize(manifestIdentityBodyForComparison(expected))
+    ? []
+    : [
+        "manifest does not match canonical manifest reconstructed from current source",
+      ];
+};
+
 const manifestParseIssues = (
   value: unknown,
 ): ProductVariantManifest | ProductVariantValidation => {
@@ -166,8 +182,12 @@ export function validateProductVariantManifest(
         ? [
             "stale source digest",
             ...currentSourceIssues(manifest, currentSource),
+            ...canonicalManifestIssues(manifest, currentSource),
           ]
-        : currentSourceIssues(manifest, currentSource)),
+        : [
+            ...currentSourceIssues(manifest, currentSource),
+            ...canonicalManifestIssues(manifest, currentSource),
+          ]),
     ...manifest.variants.flatMap(issueForTerminal),
   ];
   const uniqueIssues = [...new Set(issues)];
