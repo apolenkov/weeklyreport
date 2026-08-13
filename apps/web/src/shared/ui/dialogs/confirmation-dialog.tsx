@@ -54,6 +54,7 @@ function DialogActions({
       </button>
       <button
         type="button"
+        data-interaction-effect="mutation-required"
         onClick={onConfirm}
         disabled={isPending}
         className={`btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${

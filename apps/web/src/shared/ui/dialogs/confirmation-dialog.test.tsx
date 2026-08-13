@@ -101,6 +101,26 @@ describe("ConfirmationDialog", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it("marks confirmation as mutation-required for runtime discovery", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Fill from Week 32?"
+        description="This replaces the current draft."
+        confirmLabel="Replace & Fill"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Replace & Fill" }),
+    ).toHaveAttribute("data-interaction-effect", "mutation-required");
+    expect(screen.getByRole("button", { name: "Cancel" })).not.toHaveAttribute(
+      "data-interaction-effect",
+    );
+  });
+
   it("on open, document.activeElement is the first button inside the dialog", () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
