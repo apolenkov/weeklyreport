@@ -65,6 +65,12 @@ interface PdfExportJobRow {
   updatedAt: Date;
 }
 
+type CompletedPdfExportJob = PdfExportJob & {
+  status: "completed";
+  artifactUrl: string;
+  checksum: string;
+};
+
 function toDomainStatus(status: string): PdfExportJob["status"] {
   const domainStatus = dbStatusToDomain[status];
   if (domainStatus === undefined) {
@@ -144,6 +150,8 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   }
 
   async saveExportJob(job: PdfExportJob): Promise<PdfExportJob> {
+    assertValidCompletionJob(job);
+
     const { count } = await this.prisma.pdfExportJob.updateMany({
       where: { id: job.jobId, status: "pending" },
       data: {
@@ -166,7 +174,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   }
 
   async markExportFailed(jobId: string, error: string): Promise<void> {
-    await this.prisma.pdfExportJob.updateMany({
+    const { count } = await this.prisma.pdfExportJob.updateMany({
       where: { id: jobId, status: "pending" },
       data: {
         status: "failed",
@@ -175,6 +183,17 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         error,
       },
     });
+
+    if (count !== 0) {
+      return;
+    }
+
+    const current = await this.readExportJobRow(jobId);
+    if (current.status === "completed" || current.status === "failed") {
+      return;
+    }
+
+    throw new PdfExportStateConflictError(jobId, current.status);
   }
 
   private async readExportJobRow(jobId: string): Promise<PdfExportJobRow> {
@@ -187,6 +206,24 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     }
 
     return row;
+  }
+}
+
+function assertValidCompletionJob(
+  job: PdfExportJob,
+): asserts job is CompletedPdfExportJob {
+  const expectedArtifactUrl = `/pdfs/${job.jobId}.pdf`;
+  if (
+    job.status !== "completed" ||
+    job.artifactUrl === null ||
+    job.artifactUrl.trim() === "" ||
+    job.artifactUrl !== expectedArtifactUrl ||
+    job.checksum === null ||
+    job.checksum.trim() === ""
+  ) {
+    throw new PdfExportDomainError(
+      `PDF export completion requires completed status, artifact URL ${expectedArtifactUrl}, and a checksum.`,
+    );
   }
 }
 
