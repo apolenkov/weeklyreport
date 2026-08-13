@@ -566,7 +566,7 @@
     {
       "id": "runtime-preflight-subconcern-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
       "concern": "preflight",
       "role": "test",
       "target": "e2e/runtime-sweep/preflight/$1/$2"
@@ -574,7 +574,7 @@
     {
       "id": "runtime-preflight-subconcern-implementation",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|reveal/(?:guards|interaction|paths)))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "preflight",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/$1/$2"
