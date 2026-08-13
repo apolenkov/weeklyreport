@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, copyFile, rm } from "node:fs/promises";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -97,6 +97,33 @@ describe("canonical preflight shard merge", () => {
         ),
       ).size,
     ).toBe(reread.shards.length);
+  });
+
+  it("rejects an alternate proof path supplied by the trusted binding", async () => {
+    const result = await merge();
+    const bindings = trustedBindings();
+    const first = bindings[0];
+    if (first === undefined)
+      throw new Error("merge receipt requires a trusted binding");
+    const alternateProofPath = `${first.resourceProofPath}.alternate`;
+    await copyFile(first.resourceProofPath, alternateProofPath);
+    try {
+      await expect(
+        readPreflightShardMergeReceipt({
+          source: fixture.source,
+          assignment: fixture.assignment,
+          donorRoots: fixture.donorRoots,
+          trustedBindings: [
+            { ...first, resourceProofPath: alternateProofPath },
+            ...bindings.slice(1),
+          ],
+          preflight: result.preflight,
+          receipt: result.receipt,
+        }),
+      ).rejects.toThrow(/trusted canonical archive binding/u);
+    } finally {
+      await rm(alternateProofPath, { force: true });
+    }
   });
 
   it("attaches and validates all specialized declarations and segment coverage", async () => {
