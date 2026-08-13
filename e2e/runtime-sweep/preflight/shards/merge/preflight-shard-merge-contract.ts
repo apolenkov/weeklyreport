@@ -12,7 +12,11 @@ import { sha256Hex } from "../../../support/ids.ts";
 import type { PreflightArtifact } from "../../artifacts/preflight-artifact.ts";
 import type { PreflightShardJournalContext } from "../journal/preflight-shard-journal-context.ts";
 import type { PreflightShardAssignment } from "../preflight-shard-assignment.ts";
-import { resourceProofPathSchema } from "../resources/preflight-shard-resource-proof-contract.ts";
+import {
+  resourceProofDonorIdSchema,
+  resourceProofPathSchema,
+} from "../resources/preflight-shard-resource-proof-contract.ts";
+import type { PreflightShardResourceProofDonorRoot } from "../resources/preflight-shard-resource-proof-set-validation.ts";
 
 export const PREFLIGHT_SHARD_MERGE_RECEIPT =
   "PREFLIGHT_SHARD_MERGE_RECEIPT" as const;
@@ -21,17 +25,16 @@ export const PREFLIGHT_SHARD_MERGE_RECEIPT_VERSION = 1 as const;
 const positiveIntegerSchema = z.number().int().positive();
 const nonnegativeIntegerSchema = z.number().int().nonnegative();
 
-/**
- * The durable identities consumed by one canonical shard merge, in assignment
- * order. Paths are retained so a receipt can prove which immutable completion
- * and journal were revalidated without publishing either artifact.
- */
+/** Durable identities consumed by one canonical shard merge. */
 export const preflightShardMergeReceiptShardSchema = z
   .object({
     logicalShardId: stableIdentifierSchema,
     shardIndex: nonnegativeIntegerSchema,
     shardDigest: sha256DigestSchema,
+    donorId: resourceProofDonorIdSchema,
+    donorRoot: resourceProofPathSchema,
     shardAttemptId: stableIdentifierSchema,
+    resourceProofPath: resourceProofPathSchema,
     resourceProofDigest: sha256DigestSchema,
     completionPath: resourceProofPathSchema,
     completionDigest: sha256DigestSchema,
@@ -103,11 +106,13 @@ export type PreflightShardCompletionReadRequest = Readonly<{
   readonly archiveRoot: string;
   readonly filePath: string;
   readonly journalPath: string;
+  readonly resourceProofPath: string;
 }>;
 
 export type PreflightShardMergeInput = Readonly<{
   readonly source: SourceArtifact;
   readonly assignment: PreflightShardAssignment;
+  readonly donorRoots: readonly PreflightShardResourceProofDonorRoot[];
   readonly completionRequests: readonly PreflightShardCompletionReadRequest[];
 }>;
 
@@ -145,3 +150,8 @@ export const parsePreflightShardMergeReceipt = (
     );
   }
 };
+
+export {
+  assertPreflightShardMergeReceiptMatches,
+  assertPreflightShardMergeReceiptMatchesSource,
+} from "./preflight-shard-merge-receipt-validation.ts";

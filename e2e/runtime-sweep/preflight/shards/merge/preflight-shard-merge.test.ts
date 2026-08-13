@@ -28,6 +28,7 @@ describe("canonical preflight shard merge", () => {
     mergePreflightShards({
       source: fixture.source,
       assignment: fixture.assignment,
+      donorRoots: fixture.donorRoots,
       completionRequests: requests,
     });
 
@@ -54,10 +55,11 @@ describe("canonical preflight shard merge", () => {
     const expected = fixture.source.specializedDeclarations.map(
       ({ declarationId }) => declarationId,
     );
-    const actual = result.preflight.specializedDeclarations.map(
-      ({ declarationId }) => declarationId,
-    );
-    expect(actual).toEqual(expected);
+    expect(
+      result.preflight.specializedDeclarations.map(
+        ({ declarationId }) => declarationId,
+      ),
+    ).toEqual(expected);
     const applicable = new Set(
       fixture.source.specializedDeclarations
         .filter((declaration) =>
@@ -69,18 +71,11 @@ describe("canonical preflight shard merge", () => {
         )
         .map(({ declarationId }) => declarationId),
     );
-    expect(
-      result.preflight.segments.flatMap((segment) =>
-        (segment.specialized ?? []).map(({ declarationId }) => declarationId),
-      ),
-    ).toHaveLength(applicable.size);
-    expect(
-      new Set(
-        result.preflight.segments.flatMap((segment) =>
-          (segment.specialized ?? []).map(({ declarationId }) => declarationId),
-        ),
-      ),
-    ).toEqual(applicable);
+    const actual = result.preflight.segments.flatMap((segment) =>
+      (segment.specialized ?? []).map(({ declarationId }) => declarationId),
+    );
+    expect(actual).toHaveLength(applicable.size);
+    expect(new Set(actual)).toEqual(applicable);
   });
 
   it("rejects a missing shard before any incomplete union can merge", async () => {
@@ -139,7 +134,10 @@ describe("canonical preflight shard merge", () => {
     if (first === undefined || second === undefined)
       throw new Error("merge fixture requires two shard requests");
     await expect(
-      merge([{ ...first, filePath: `${first.filePath}.forged` }, second]),
+      merge([
+        { ...first, resourceProofPath: `${first.resourceProofPath}.forged` },
+        second,
+      ]),
     ).rejects.toThrow(/forged archive, completion, or journal path/u);
   });
 
