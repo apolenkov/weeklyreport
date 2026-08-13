@@ -26,7 +26,7 @@ export const withSource = async <T>(
   }
 };
 
-export const shardWithDigest = (shard: PreflightShard): PreflightShard => {
+const shardWithDigest = (shard: PreflightShard): PreflightShard => {
   const { shardDigest: _shardDigest, ...body } = shard;
   return { ...body, shardDigest: sha256Hex(body) };
 };

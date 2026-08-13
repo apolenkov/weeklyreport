@@ -1,13 +1,5 @@
-import {
-  generateProductVariantManifest,
-  productVariantProfiles,
-} from "./product-variant-generator.ts";
-import {
-  type ProductVariant,
-  type ProductVariantManifest,
-  ProductVariantManifestError,
-  type ProductVariantValidation,
-} from "./product-variant-schema.ts";
+import { generateProductVariantManifest } from "./product-variant-generator.ts";
+import { type ProductVariantManifest } from "./product-variant-schema.ts";
 import {
   type ProductVariantGitCommand,
   readProductVariantSource,
@@ -17,18 +9,8 @@ import {
   validateProductVariantManifest,
 } from "./product-variant-validator.ts";
 
-export {
-  assertProductVariantManifest,
-  generateProductVariantManifest,
-  ProductVariantManifestError,
-  productVariantProfiles,
-  validateProductVariantManifest,
-};
-export type {
-  ProductVariant,
-  ProductVariantManifest,
-  ProductVariantValidation,
-};
+export { generateProductVariantManifest, validateProductVariantManifest };
+export type { ProductVariantManifest };
 
 export async function readAndGenerateProductVariantManifest(
   repoRoot: string,

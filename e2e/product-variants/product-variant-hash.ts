@@ -60,7 +60,7 @@ export const sourceDigestFor = (source: ProductVariantSource): string =>
     revealFamilies: source.revealFamilies,
   });
 
-export const manifestBodyForDigest = (
+const manifestBodyForDigest = (
   manifest: ProductVariantManifest,
 ): Omit<ProductVariantManifest, "generatedAt" | "manifestDigest"> => {
   const {

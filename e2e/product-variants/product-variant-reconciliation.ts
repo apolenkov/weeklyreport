@@ -198,7 +198,3 @@ export const historicalReconciliationSchema = z
       .strict(),
   })
   .strict();
-
-export type ProductVariantHistoricalReconciliation = z.infer<
-  typeof historicalReconciliationSchema
->;

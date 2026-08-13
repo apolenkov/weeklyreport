@@ -157,8 +157,6 @@ export const mergePreflightShards = async (
   return freezeDeep({ preflight: finalPreflight, receipt });
 };
 
-export const mergePreflightShardCompletions = mergePreflightShards;
-
 export type {
   PreflightShardCompletionReadRequest,
   PreflightShardMergeInput,

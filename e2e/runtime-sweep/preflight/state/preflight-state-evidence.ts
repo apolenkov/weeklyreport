@@ -30,7 +30,7 @@ import {
  * A typed view over the existing immutable `PREFLIGHT_SEGMENT` artifact.
  * This wrapper adds no artifact kind, file format, or write path.
  */
-export type PreflightStateEvidence = Readonly<{
+type PreflightStateEvidence = Readonly<{
   readonly selector: PreflightStateSelector;
   readonly state: PreflightStateSelection["state"];
   readonly route: PreflightRoute;
@@ -38,7 +38,7 @@ export type PreflightStateEvidence = Readonly<{
   readonly segment: MatrixPreflightSegment;
 }>;
 
-export class PreflightStateEvidenceError extends Error {
+class PreflightStateEvidenceError extends Error {
   override readonly name = "PreflightStateEvidenceError";
 }
 

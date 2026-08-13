@@ -286,6 +286,3 @@ export const readPreflightShardMergeReceipt = async (
     );
   return freezeDeep(receipt);
 };
-
-export const validatePreflightShardMergeReceipt =
-  readPreflightShardMergeReceipt;

@@ -24,7 +24,7 @@ export type ProductVariantSourceFile = Readonly<{
   readonly digest: string;
 }>;
 
-export type ProductVariantCatalogRoute = Readonly<{
+type ProductVariantCatalogRoute = Readonly<{
   readonly route: string;
   readonly access: readonly Role[];
   readonly landing?: string | undefined;
@@ -253,7 +253,4 @@ export const parseCatalogSnapshot = async (
 };
 
 export type { ProductVariantGitCommand } from "./product-variant-source-reader.ts";
-export {
-  assertProductVariantSourceClean,
-  readProductVariantSource,
-} from "./product-variant-source-reader.ts";
+export { readProductVariantSource } from "./product-variant-source-reader.ts";

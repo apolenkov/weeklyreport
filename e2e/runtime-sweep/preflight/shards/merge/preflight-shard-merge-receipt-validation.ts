@@ -203,6 +203,3 @@ export const assertPreflightShardMergeReceiptMatchesSource = (input: {
     receipt,
   });
 };
-
-export const assertPreflightShardMergeReceiptMatches =
-  assertPreflightShardMergeReceiptMatchesSource;

@@ -35,10 +35,8 @@ import {
   runPreflightShardStateAttempt,
 } from "./preflight-shard-runner-support.ts";
 
-export { PreflightShardRunnerError };
-
 /** A state runner may return the real Playwright result or its segment alone. */
-export type PreflightShardStateRunner = (input: {
+type PreflightShardStateRunner = (input: {
   readonly source: SourceArtifact;
   readonly assignment: PreflightShardJournalContext["assignment"];
   readonly state: SourceArtifact["plan"]["states"][number];
@@ -215,4 +213,3 @@ export const runPreflightShard = async (
 };
 
 /** Alias retained for callers that name the durable journal explicitly. */
-export const runJournaledPreflightShard = runPreflightShard;

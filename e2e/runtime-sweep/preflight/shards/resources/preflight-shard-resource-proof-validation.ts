@@ -69,7 +69,7 @@ const overlaps = (left: string, right: string): boolean => {
   );
 };
 
-export const assertResourceProofPathsWithinDonorRoot = (
+const assertResourceProofPathsWithinDonorRoot = (
   proof: PreflightShardResourceProof,
 ): void => {
   resourcePaths(proof.resources).forEach((resourcePath) => {
@@ -176,9 +176,6 @@ export const assertPreflightShardResourceProofMatchesSource = (
       "PREFLIGHT_SHARD_RESOURCE_PROOF selected shard differs from the assignment",
     );
 };
-
-export const assertPreflightShardResourceProofMatches =
-  assertPreflightShardResourceProofMatchesSource;
 
 const assertDonorRoot = async (root: string): Promise<void> => {
   const rootStat = await lstat(root).catch((error: unknown) => {

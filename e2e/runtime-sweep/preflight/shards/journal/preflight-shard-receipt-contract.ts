@@ -28,7 +28,7 @@ const receiptBodySchema = z
   })
   .strict();
 
-export const preflightShardStateReceiptSchema = receiptBodySchema
+const preflightShardStateReceiptSchema = receiptBodySchema
   .extend({ receiptDigest: sha256DigestSchema })
   .strict();
 

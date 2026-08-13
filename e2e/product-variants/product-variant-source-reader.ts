@@ -53,7 +53,7 @@ const gitValue = async (
   }
 };
 
-export async function assertProductVariantSourceClean(
+async function assertProductVariantSourceClean(
   repoRoot: string,
   runCommand: ProductVariantGitCommand = runGit,
 ): Promise<void> {

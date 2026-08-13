@@ -13,14 +13,14 @@ import {
   type PreflightShardState,
 } from "./preflight-shard-assignment-contract.ts";
 
-export const assignmentBodyFor = (
+const assignmentBodyFor = (
   assignment: PreflightShardAssignment,
 ): Omit<PreflightShardAssignment, "assignmentDigest"> => {
   const { assignmentDigest: _assignmentDigest, ...body } = assignment;
   return body;
 };
 
-export const shardBodyFor = (
+const shardBodyFor = (
   shard: PreflightShard,
 ): Omit<PreflightShard, "shardDigest"> => {
   const { shardDigest: _shardDigest, ...body } = shard;

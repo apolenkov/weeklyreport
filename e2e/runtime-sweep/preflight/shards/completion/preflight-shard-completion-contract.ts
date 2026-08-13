@@ -19,7 +19,7 @@ const positiveIntegerSchema = z.number().int().positive();
 const nonnegativeIntegerSchema = z.number().int().nonnegative();
 
 /** The per-state evidence carried by an immutable shard completion. */
-export const preflightShardCompletionStateEvidenceSchema = z
+const preflightShardCompletionStateEvidenceSchema = z
   .object({
     stateId: stableIdentifierSchema,
     planIndex: nonnegativeIntegerSchema,
@@ -115,13 +115,10 @@ const completionBodySchema = z
       });
   });
 
-export const preflightShardCompletionSchema = completionBodySchema
+const preflightShardCompletionSchema = completionBodySchema
   .extend({ completionDigest: sha256DigestSchema })
   .strict();
 
-export type PreflightShardCompletionStateEvidence = z.infer<
-  typeof preflightShardCompletionStateEvidenceSchema
->;
 export type PreflightShardCompletion = z.infer<
   typeof preflightShardCompletionSchema
 >;

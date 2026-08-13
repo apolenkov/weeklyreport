@@ -14,7 +14,7 @@ import { resourceProofDonorIdSchema } from "../resources/preflight-shard-resourc
 
 export const PREFLIGHT_SHARD_JOURNAL = "PREFLIGHT_SHARD_JOURNAL" as const;
 export const PREFLIGHT_SHARD_JOURNAL_VERSION = 1 as const;
-export const PREFLIGHT_SHARD_JOURNAL_STATUSES = [
+const PREFLIGHT_SHARD_JOURNAL_STATUSES = [
   "STARTED",
   "PASS",
   "FAIL",
@@ -158,7 +158,7 @@ const terminalIssues = (record: RecordBody): readonly ShapeIssue[] => {
   ];
 };
 
-export const preflightShardJournalRecordSchema = recordBodySchema
+const preflightShardJournalRecordSchema = recordBodySchema
   .extend({ recordDigest: sha256DigestSchema })
   .strict()
   .superRefine((record, context) => {
@@ -171,9 +171,6 @@ export const preflightShardJournalRecordSchema = recordBodySchema
 
 export type PreflightShardJournalIdentity = z.infer<
   typeof preflightShardJournalIdentitySchema
->;
-export type PreflightShardJournalState = z.infer<
-  typeof preflightShardJournalStateSchema
 >;
 export type PreflightShardJournalRecord = z.infer<
   typeof preflightShardJournalRecordSchema

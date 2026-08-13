@@ -18,15 +18,14 @@ import {
 } from "../resources/preflight-shard-resource-proof-contract.ts";
 import type { PreflightShardResourceProofDonorRoot } from "../resources/preflight-shard-resource-proof-set-validation.ts";
 
-export const PREFLIGHT_SHARD_MERGE_RECEIPT =
-  "PREFLIGHT_SHARD_MERGE_RECEIPT" as const;
-export const PREFLIGHT_SHARD_MERGE_RECEIPT_VERSION = 1 as const;
+const PREFLIGHT_SHARD_MERGE_RECEIPT = "PREFLIGHT_SHARD_MERGE_RECEIPT" as const;
+const PREFLIGHT_SHARD_MERGE_RECEIPT_VERSION = 1 as const;
 
 const positiveIntegerSchema = z.number().int().positive();
 const nonnegativeIntegerSchema = z.number().int().nonnegative();
 
 /** Durable identities consumed by one canonical shard merge. */
-export const preflightShardMergeReceiptShardSchema = z
+const preflightShardMergeReceiptShardSchema = z
   .object({
     logicalShardId: stableIdentifierSchema,
     shardIndex: nonnegativeIntegerSchema,
@@ -86,7 +85,7 @@ const receiptBodySchema = z
     });
   });
 
-export const preflightShardMergeReceiptSchema = receiptBodySchema
+const preflightShardMergeReceiptSchema = receiptBodySchema
   .extend({ receiptDigest: sha256DigestSchema })
   .strict();
 
@@ -151,7 +150,4 @@ export const parsePreflightShardMergeReceipt = (
   }
 };
 
-export {
-  assertPreflightShardMergeReceiptMatches,
-  assertPreflightShardMergeReceiptMatchesSource,
-} from "./preflight-shard-merge-receipt-validation.ts";
+export { assertPreflightShardMergeReceiptMatchesSource } from "./preflight-shard-merge-receipt-validation.ts";
