@@ -120,11 +120,11 @@ export const withCompletionFixture = async <T>(
     const groupCount = new Set(oneShard.states.map(({ groupKey }) => groupKey))
       .size;
     const assignment = createPreflightShardAssignment(source, groupCount);
-    const shard = assignment.shards.toSorted(
-      (left, right) => left.states.length - right.states.length,
-    )[0];
+    const shard = assignment.shards
+      .toSorted((left, right) => left.shardIndex - right.shardIndex)
+      .find(({ states }) => states.length >= 2);
     if (shard === undefined)
-      throw new Error("completion fixture shard missing");
+      throw new Error("completion fixture requires a multi-state shard");
     const resourceProof = createPreflightShardResourceProof({
       source,
       assignment,

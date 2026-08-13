@@ -1,4 +1,6 @@
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
+import { routeForState } from "../../execution/playwright-preflight-support.ts";
+import { createPreflightSegmentArtifact } from "../../journal/preflight-journal-artifact.ts";
 import {
   assertPreflightShardJournalContext,
   type PreflightShardJournalContext,
@@ -12,7 +14,15 @@ import {
   type PreflightShardJournalValidation,
   validatePreflightShardJournal,
 } from "../journal/preflight-shard-journal-validation.ts";
-import type { PreflightShardResumePlan } from "../journal/preflight-shard-resume.ts";
+import {
+  preflightShardSegmentPathFor,
+  preflightShardStateReceiptPathFor,
+} from "../journal/preflight-shard-receipt-paths.ts";
+import type {
+  PreflightShardResumePlan,
+  RevalidatedPreflightShardPass,
+} from "../journal/preflight-shard-resume.ts";
+import { createPreflightShardStateReceipt } from "../journal/preflight-shard-state-receipt.ts";
 import type { PreflightShardState } from "../preflight-shard-assignment.ts";
 import {
   parsePreflightShardCompletion,
@@ -39,27 +49,77 @@ const assertCompleteResume = (input: {
     );
 };
 
-const stateEvidenceFor = (input: {
+type StateCompletionInput = Readonly<{
+  readonly context: PreflightShardJournalContext;
   readonly state: PreflightShardState;
   readonly identity: PreflightShardJournalIdentity;
   readonly validation: PreflightShardJournalValidation;
   readonly resume: PreflightShardResumePlan;
-}) => {
+}>;
+
+const exactRevalidatedPassFor = (
+  input: StateCompletionInput,
+): RevalidatedPreflightShardPass => {
   const stateId = input.state.state.stateId;
   const pass = input.resume.terminalPasses.get(stateId);
   const validatedPass = input.validation.candidatePassRecords.get(stateId);
+  if (pass === undefined || validatedPass === undefined)
+    throw new PreflightShardCompletionError(
+      `SHARD_COMPLETE journal does not contain exact terminal evidence for ${stateId}`,
+    );
+  const passIndex = input.validation.records.findIndex(
+    ({ recordDigest }) => recordDigest === validatedPass.recordDigest,
+  );
+  const started = input.validation.records[passIndex - 1];
   if (
-    pass === undefined ||
-    validatedPass === undefined ||
     stableSerialize(pass.record) !== stableSerialize(validatedPass) ||
-    pass.record.receiptDigest !== pass.receipt.receiptDigest ||
-    pass.record.segmentDigest !== pass.receipt.segmentDigest
+    started?.event !== "started" ||
+    started.status !== "STARTED" ||
+    started.recordDigest !== validatedPass.previousRecordDigest
   )
     throw new PreflightShardCompletionError(
       `SHARD_COMPLETE journal does not contain exact terminal evidence for ${stateId}`,
     );
+  const segmentArtifactPath = preflightShardSegmentPathFor({
+    context: input.context,
+    state: input.state,
+    attempt: started.attempt,
+  });
+  const segmentArtifact = createPreflightSegmentArtifact({
+    source: input.context.source,
+    assignmentDigest: input.context.assignment.assignmentDigest,
+    state: input.state.state,
+    route: routeForState(input.context.source, input.state.state),
+    segment: pass.segment,
+  });
+  const expectedReceipt = createPreflightShardStateReceipt({
+    context: input.context,
+    state: input.state,
+    started,
+    segmentArtifactPath,
+    segmentArtifact,
+  });
+  const expectedReceiptPath = preflightShardStateReceiptPathFor({
+    context: input.context,
+    state: input.state,
+    attempt: started.attempt,
+  });
+  if (
+    pass.record.receiptPath !== expectedReceiptPath ||
+    stableSerialize(pass.receipt) !== stableSerialize(expectedReceipt) ||
+    pass.record.receiptDigest !== expectedReceipt.receiptDigest ||
+    pass.record.segmentDigest !== expectedReceipt.segmentDigest
+  )
+    throw new PreflightShardCompletionError(
+      `SHARD_COMPLETE revalidated receipt or segment drifted for ${stateId}`,
+    );
+  return pass;
+};
+
+const stateEvidenceFor = (input: StateCompletionInput) => {
+  const pass = exactRevalidatedPassFor(input);
   return {
-    stateId,
+    stateId: input.state.state.stateId,
     planIndex: input.state.planIndex,
     stateDigest: input.state.stateDigest,
     groupKey: input.state.groupKey,
@@ -106,6 +166,7 @@ export const createPreflightShardCompletion = (input: {
   const stateEvidence = input.context.shard.states.map((state) =>
     stateEvidenceFor({
       state,
+      context: input.context,
       identity,
       validation,
       resume: input.resume,
