@@ -1,12 +1,23 @@
-import { rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 
 import { preflightShardCompletionPathFor } from "../completion/preflight-shard-completion-io.ts";
 import {
   preflightShardJournalPathFor,
   readPreflightShardJournal,
 } from "../journal/preflight-shard-journal-io.ts";
-import { withResourceProofFixture } from "../resources/preflight-shard-resource-proof-test-support.ts";
+import { createPreflightShardAssignment } from "../preflight-shard-assignment.ts";
+import { withSource } from "../preflight-shard-assignment-test-support.ts";
+import { createPreflightShardResourceProof } from "../resources/preflight-shard-resource-proof-planner.ts";
+import {
+  defaultBrowser,
+  defaultRuntime,
+  resourcesFor,
+} from "../resources/preflight-shard-resource-proof-test-support.ts";
 import type { PreflightShardRunnerInput } from "./preflight-shard-runner.ts";
+
+const ISOLATED_SHARD_COUNT = 4;
 
 export const segmentFor = (
   state: PreflightShardRunnerInput["context"]["source"]["plan"]["states"][number],
@@ -48,21 +59,41 @@ export const cleanupArchive = async (
   });
 };
 
-export const withRunnerFixture = async <T>(
+export const withIsolatedRunnerFixture = async <T>(
   callback: (input: {
     readonly context: PreflightShardRunnerInput["context"];
     readonly archiveRoot: string;
   }) => Promise<T> | T,
 ): Promise<T> =>
-  withResourceProofFixture(async ({ source, assignment, proof, shard }) => {
-    const context = { source, assignment, resourceProof: proof, shard };
+  withSource(async (source) => {
+    const isolatedRoot = await realpath(
+      await mkdtemp(path.join(tmpdir(), "preflight-shard-runner-")),
+    );
     try {
+      const assignment = createPreflightShardAssignment(
+        source,
+        ISOLATED_SHARD_COUNT,
+      );
+      const shard = assignment.shards[0];
+      if (shard === undefined) throw new Error("fixture has no first shard");
+      const proof = createPreflightShardResourceProof({
+        source,
+        assignment,
+        shard,
+        donorId: "Pro",
+        donorRoot: isolatedRoot,
+        shardAttemptId: "attempt-1",
+        browser: defaultBrowser,
+        runtime: defaultRuntime,
+        resources: resourcesFor(isolatedRoot, 0),
+      });
+      const context = { source, assignment, resourceProof: proof, shard };
       return await callback({
         context,
         archiveRoot: proof.resources.archiveRoot,
       });
     } finally {
-      await cleanupArchive(context);
+      await rm(isolatedRoot, { recursive: true, force: true });
     }
   });
 
