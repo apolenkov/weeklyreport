@@ -73,6 +73,6 @@ export interface MatrixFinalizationInput {
   readonly plan: CampaignMatrixPlan;
   readonly routes: readonly Route[];
   readonly preflight: readonly MatrixPreflightSegment[];
-  readonly maxCases?: number;
-  readonly maxControlsPerSegment?: number;
+  readonly maxCases: number;
+  readonly maxControlsPerSegment: number;
 }

@@ -12,8 +12,8 @@ import { stableSerialize } from "../../../support/ids.ts";
 import {
   compareRevealControlIdentity,
   MAX_REVEAL_ACTIONS,
-  MAX_REVEAL_BRANCHES,
   MAX_REVEAL_DEPTH,
+  MAX_REVEAL_MATERIAL_EDGES,
   revealControlPreparationIdentityFor,
   revealPathFor,
   revealSurfaceFor,
@@ -109,33 +109,37 @@ type RevealDiscoveryInput = Readonly<{
   readonly harness: RevealExecutionHarness;
   readonly controlFor: RevealControlFactory;
   readonly maxDepth?: number;
-  readonly maxBranches?: number;
-  readonly maxActions?: number;
+  readonly maxRevealMaterialEdges?: number;
+  readonly maxRevealActions?: number;
 }>;
 
 const revealBoundsFor = (
   input: RevealDiscoveryInput,
 ): Readonly<{
   readonly maxDepth: number;
-  readonly maxBranches: number;
-  readonly maxActions: number;
+  readonly maxRevealMaterialEdges: number;
+  readonly maxRevealActions: number;
 }> => {
   const maxDepth = input.maxDepth ?? MAX_REVEAL_DEPTH;
-  const maxBranches = input.maxBranches ?? MAX_REVEAL_BRANCHES;
-  const maxActions = input.maxActions ?? MAX_REVEAL_ACTIONS;
+  const maxRevealMaterialEdges =
+    input.maxRevealMaterialEdges ?? MAX_REVEAL_MATERIAL_EDGES;
+  const maxRevealActions = input.maxRevealActions ?? MAX_REVEAL_ACTIONS;
   if (!Number.isSafeInteger(maxDepth) || maxDepth < 1)
     throw new RevealDiscoveryError(
       "Reveal depth bound must be a positive integer",
     );
-  if (!Number.isSafeInteger(maxBranches) || maxBranches < 1)
+  if (
+    !Number.isSafeInteger(maxRevealMaterialEdges) ||
+    maxRevealMaterialEdges < 1
+  )
     throw new RevealDiscoveryError(
-      "Reveal branch bound must be a positive integer",
+      "Reveal material edge bound must be a positive integer",
     );
-  if (!Number.isSafeInteger(maxActions) || maxActions < 1)
+  if (!Number.isSafeInteger(maxRevealActions) || maxRevealActions < 1)
     throw new RevealDiscoveryError(
       "Reveal action bound must be a positive integer",
     );
-  return { maxDepth, maxBranches, maxActions };
+  return { maxDepth, maxRevealMaterialEdges, maxRevealActions };
 };
 
 const initialRevealStateFor = (
@@ -208,7 +212,8 @@ const comparePreflightControls = (
 export async function discoverRevealControls(
   input: RevealDiscoveryInput,
 ): Promise<readonly MatrixPreflightControl[]> {
-  const { maxDepth, maxBranches, maxActions } = revealBoundsFor(input);
+  const { maxDepth, maxRevealMaterialEdges, maxRevealActions } =
+    revealBoundsFor(input);
   const initialSurface = revealSurfaceFor(input.initialInventory.controls);
   const initialRawUrl = input.harness.currentUrl();
   const initialUrl = requiredCurrentUrl(initialRawUrl);
@@ -223,8 +228,8 @@ export async function discoverRevealControls(
       plansFor,
       candidatesFor: (inventory) => revealCandidates(inventory, input.route),
       maxDepth,
-      maxBranches,
-      maxActions,
+      maxRevealMaterialEdges,
+      maxRevealActions,
     },
     initialRevealStateFor(input, initialSurface, initialUrl),
   );

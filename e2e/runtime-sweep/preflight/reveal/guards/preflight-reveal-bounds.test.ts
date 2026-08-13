@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
-import { DEFAULT_MAX_CONTROLS } from "../../../matrix/matrix-limits.ts";
+import {
+  DEFAULT_MAX_REVEAL_ACTIONS,
+  DEFAULT_MAX_REVEAL_MATERIAL_EDGES,
+} from "../../../matrix/matrix-limits.ts";
 import type {
   DomControlObservation,
   DomInventory,
@@ -10,8 +13,8 @@ import type { Action } from "../../../source/contracts.ts";
 import { preflightControlForPlan } from "../../execution/playwright-preflight.ts";
 import {
   MAX_REVEAL_ACTIONS,
-  MAX_REVEAL_BRANCHES,
   MAX_REVEAL_DEPTH,
+  MAX_REVEAL_MATERIAL_EDGES,
 } from "../../reveal-path.ts";
 import {
   discoverRevealControls,
@@ -238,12 +241,10 @@ describe("reveal discovery budgets", () => {
       .events()
       .filter((event) => event.startsWith("execute:"));
 
-    expect(MAX_REVEAL_BRANCHES).toBe(DEFAULT_MAX_CONTROLS);
-    expect(MAX_REVEAL_BRANCHES).toBe(1024);
-    expect(MAX_REVEAL_ACTIONS).toBe(
-      MAX_REVEAL_BRANCHES * (MAX_REVEAL_DEPTH + 1),
-    );
-    expect(MAX_REVEAL_ACTIONS).toBe(5120);
+    expect(MAX_REVEAL_MATERIAL_EDGES).toBe(DEFAULT_MAX_REVEAL_MATERIAL_EDGES);
+    expect(MAX_REVEAL_MATERIAL_EDGES).toBe(2048);
+    expect(MAX_REVEAL_ACTIONS).toBe(DEFAULT_MAX_REVEAL_ACTIONS);
+    expect(MAX_REVEAL_ACTIONS).toBe(16_384);
     expect(controls).toHaveLength(LANE_COUNT * 3);
     expect(executions).toHaveLength(LANE_COUNT * 6);
     expect(controls.length).toBeGreaterThan(256);

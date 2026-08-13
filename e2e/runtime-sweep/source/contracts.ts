@@ -131,6 +131,14 @@ export const ownershipDensitySchema = z.enum(OWNERSHIP_DENSITIES);
 export const permissionBoundarySchema = z.enum(PERMISSION_BOUNDARIES);
 export const faultModeSchema = z.enum(FAULT_MODES);
 export const matrixExecutionKindSchema = z.enum(MATRIX_EXECUTION_KINDS);
+export const sourceCapacitySchema = z
+  .object({
+    maxRevealMaterialEdges: z.number().int().positive(),
+    maxRevealActions: z.number().int().positive(),
+    maxControlsPerSegment: z.number().int().positive(),
+    maxCases: z.number().int().positive(),
+  })
+  .strict();
 export const stableIdentifierSchema = stableIdentifierSchemaFactory();
 export const faultIdSchema = stableIdentifierSchemaFactory();
 export const matrixConstraintIdSchema = stableIdentifierSchemaFactory();

@@ -67,8 +67,8 @@ export interface RevealQueueInput {
     inventory: DomInventory,
   ) => readonly RevealCandidate[];
   readonly maxDepth: number;
-  readonly maxBranches: number;
-  readonly maxActions: number;
+  readonly maxRevealMaterialEdges: number;
+  readonly maxRevealActions: number;
 }
 
 const preparationIdentityFor = (
@@ -251,7 +251,7 @@ const processRevealCandidate = async (
   )
     return state;
   const actionCount = state.actionCount + current.path.steps.length + 1;
-  if (actionCount > input.maxActions)
+  if (actionCount > input.maxRevealActions)
     throw new RevealDiscoveryError("Reveal action bound exceeded");
   const result = await branchFor({
     harness: input.harness,
@@ -281,8 +281,8 @@ const processRevealCandidate = async (
     actionCount,
     branchCount,
   };
-  if (materialChanged && branchCount > input.maxBranches)
-    throw new RevealDiscoveryError("Reveal branch bound exceeded");
+  if (materialChanged && branchCount > input.maxRevealMaterialEdges)
+    throw new RevealDiscoveryError("Reveal material edge bound exceeded");
   if (!materialChanged) return transitioned;
   return enqueueChangedBranch({
     queueInput: input,

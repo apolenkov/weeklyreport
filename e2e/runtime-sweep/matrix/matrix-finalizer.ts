@@ -4,8 +4,6 @@ import type {
   CampaignMatrixState,
 } from "./campaign-matrix.ts";
 import {
-  DEFAULT_MAX_CASES,
-  DEFAULT_MAX_CONTROLS,
   DESKTOP_HEIGHT,
   DESKTOP_WIDTH,
   executionFor,
@@ -243,9 +241,8 @@ const matrixIdentityFor = (
 export function finalizeCampaignMatrix(
   input: MatrixFinalizationInput,
 ): FrozenMatrix {
-  const maxCases = input.maxCases ?? DEFAULT_MAX_CASES;
-  const maxControlsPerSegment =
-    input.maxControlsPerSegment ?? DEFAULT_MAX_CONTROLS;
+  const maxCases = input.maxCases;
+  const maxControlsPerSegment = input.maxControlsPerSegment;
   assertLimits(maxCases, maxControlsPerSegment);
   const segments = freezeCampaignPreflight({
     plan: input.plan,

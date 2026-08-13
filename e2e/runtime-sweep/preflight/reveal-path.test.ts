@@ -168,8 +168,8 @@ const discover = async (
     readonly crossRoute?: boolean;
     readonly proof?: ProofMode;
     readonly maxDepth?: number;
-    readonly maxBranches?: number;
-    readonly maxActions?: number;
+    readonly maxRevealMaterialEdges?: number;
+    readonly maxRevealActions?: number;
   }> = {},
 ) => {
   const testFixture = fixture(options);
@@ -180,12 +180,12 @@ const discover = async (
     harness: testFixture.harness,
     controlFor: preflightControlForPlan,
     ...(options.maxDepth === undefined ? {} : { maxDepth: options.maxDepth }),
-    ...(options.maxBranches === undefined
+    ...(options.maxRevealMaterialEdges === undefined
       ? {}
-      : { maxBranches: options.maxBranches }),
-    ...(options.maxActions === undefined
+      : { maxRevealMaterialEdges: options.maxRevealMaterialEdges }),
+    ...(options.maxRevealActions === undefined
       ? {}
-      : { maxActions: options.maxActions }),
+      : { maxRevealActions: options.maxRevealActions }),
   });
   return { controls, events: testFixture.events() };
 };
@@ -257,14 +257,16 @@ describe("deterministic reveal paths", () => {
   });
   it("bounds discovery and rejects missing database mutation proofs", async () => {
     await expect(discover({ maxDepth: 1 })).rejects.toThrow(/depth bound/iu);
-    await expect(discover({ maxBranches: 1 })).rejects.toThrow(
-      /branch bound/iu,
+    await expect(discover({ maxRevealMaterialEdges: 1 })).rejects.toThrow(
+      /material edge bound/iu,
     );
-    await expect(discover({ maxActions: 1 })).rejects.toThrow(/action bound/iu);
-    await expect(discover({ maxBranches: 0 })).rejects.toThrow(
-      /branch bound must be a positive integer/iu,
+    await expect(discover({ maxRevealActions: 1 })).rejects.toThrow(
+      /action bound/iu,
     );
-    await expect(discover({ maxActions: 0 })).rejects.toThrow(
+    await expect(discover({ maxRevealMaterialEdges: 0 })).rejects.toThrow(
+      /material edge bound must be a positive integer/iu,
+    );
+    await expect(discover({ maxRevealActions: 0 })).rejects.toThrow(
       /action bound must be a positive integer/iu,
     );
     const crossRoute = await discover({ crossRoute: true });

@@ -14,7 +14,6 @@ import type {
 import { MATRIX_AXIS_NAMES } from "../matrix.ts";
 import { assertControlTransition } from "../policy/matrix-preflight-transition-validation.ts";
 import {
-  DEFAULT_MAX_CONTROLS,
   type FrozenMatrix,
   frozenMatrixSchema,
   type MatrixExecutableCase,
@@ -170,7 +169,7 @@ const expectedState = (
 export function freezeCampaignPreflight(input: {
   readonly plan: CampaignMatrixPlan;
   readonly segments: readonly MatrixPreflightSegment[];
-  readonly maxControlsPerSegment?: number;
+  readonly maxControlsPerSegment: number;
 }): readonly MatrixPreflightSegment[] {
   const known = preflightMap(input.segments);
   const missing = input.plan.states.find(({ stateId }) => !known.has(stateId));
@@ -198,7 +197,7 @@ export function freezeCampaignPreflight(input: {
       `Preflight state payload changed for ${state.stateId}`,
     );
   });
-  const limit = input.maxControlsPerSegment ?? DEFAULT_MAX_CONTROLS;
+  const limit = input.maxControlsPerSegment;
   assertInvariant(
     Number.isInteger(limit) && limit >= 1,
     "Matrix maxControlsPerSegment must be positive",

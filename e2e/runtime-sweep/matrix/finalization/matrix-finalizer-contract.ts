@@ -31,7 +31,10 @@ import {
   type MatrixPreflightControl,
   matrixPreparationSchema,
 } from "./matrix-finalizer-preflight-contract.ts";
-export { DEFAULT_MAX_CASES, DEFAULT_MAX_CONTROLS } from "../matrix-limits.ts";
+export {
+  DEFAULT_MAX_CASES,
+  DEFAULT_MAX_CONTROLS_PER_SEGMENT,
+} from "../matrix-limits.ts";
 export {
   type MatrixFinalizationInput,
   type MatrixPreflightControl,

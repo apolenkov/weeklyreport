@@ -12,8 +12,10 @@ import {
 } from "../manifest/manifest.ts";
 import {
   DEFAULT_MAX_CASES,
-  DEFAULT_MAX_CONTROLS,
-} from "../matrix/finalization/matrix-finalizer-contract.ts";
+  DEFAULT_MAX_CONTROLS_PER_SEGMENT,
+  DEFAULT_MAX_REVEAL_ACTIONS,
+  DEFAULT_MAX_REVEAL_MATERIAL_EDGES,
+} from "../matrix/matrix-limits.ts";
 import { routeDeclarationFromCatalog } from "../support/route-binding.ts";
 import {
   type Action,
@@ -251,8 +253,10 @@ export async function buildRuntimeManifestInput(): Promise<CampaignManifestInput
     domainSpecPaths: await domainSpecPaths(),
     matrixDeclaration: matrixDeclaration(routes),
     matrixLimits: {
+      maxRevealMaterialEdges: DEFAULT_MAX_REVEAL_MATERIAL_EDGES,
+      maxRevealActions: DEFAULT_MAX_REVEAL_ACTIONS,
+      maxControlsPerSegment: DEFAULT_MAX_CONTROLS_PER_SEGMENT,
       maxCases: DEFAULT_MAX_CASES,
-      maxControlsPerSegment: DEFAULT_MAX_CONTROLS,
     },
     exclusions: exclusions(),
   };

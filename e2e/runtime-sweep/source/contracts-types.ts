@@ -48,6 +48,7 @@ import type {
   seedProfileDefinitionSchema,
   seedProfileSchema,
   sourceBoundResolverOutcomeSchema,
+  sourceCapacitySchema,
   sourceTreeSchema,
   stableIdentifierSchema,
   stateAxesSchema,
@@ -64,6 +65,7 @@ export type SeedCountDimension = (typeof SEED_COUNT_DIMENSIONS)[number];
 export type SeedCountBound = z.infer<typeof seedCountBoundSchema>;
 export type SeedProfileDefinition = z.infer<typeof seedProfileDefinitionSchema>;
 export type SeedProfileBinding = z.infer<typeof seedProfileBindingSchema>;
+export type SourceCapacity = z.infer<typeof sourceCapacitySchema>;
 export type SourceTree = z.infer<typeof sourceTreeSchema>;
 export type LifecycleState = z.infer<typeof lifecycleStateSchema>;
 export type SubmissionState = z.infer<typeof submissionStateSchema>;

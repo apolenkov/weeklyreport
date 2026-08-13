@@ -67,11 +67,36 @@ async function writePreflightFixture(
 }
 
 describe("runtime sweep source artifact identity", () => {
-  it("rejects legacy and tampered source trees", async () => {
+  it("requires version 2 source capacity and rejects legacy artifacts", async () => {
     await withFixture(async ({ input }) => {
       const source = await buildCampaignSource(input, fakeManifestGit());
-      const { sourceTree: _sourceTree, ...legacySource } = source;
-      expect(() => parseSourceArtifact(legacySource)).toThrow();
+      expect(source.version).toBe(2);
+      expect(source.matrixLimits).toEqual({
+        maxRevealMaterialEdges: 2048,
+        maxRevealActions: 16_384,
+        maxControlsPerSegment: 128,
+        maxCases: 10_000,
+      });
+      const legacySource = {
+        ...source,
+        version: 1 as const,
+        matrixLimits: {
+          maxCases: source.matrixLimits.maxCases,
+          maxControlsPerSegment: source.matrixLimits.maxControlsPerSegment,
+        },
+      };
+      expect(() => parseSourceArtifact(legacySource)).toThrow(
+        "version 2 source artifact",
+      );
+
+      const { maxRevealActions: _maxRevealActions, ...missingCapacity } =
+        source.matrixLimits;
+      expect(() =>
+        parseSourceArtifact({
+          ...source,
+          matrixLimits: missingCapacity,
+        }),
+      ).toThrow();
 
       const { sourceDigest: _sourceDigest, ...sourceBody } = source;
       const tamperedBody = { ...sourceBody, sourceTree: "c".repeat(40) };
@@ -84,6 +109,21 @@ describe("runtime sweep source artifact identity", () => {
       expect(() =>
         parseSourceArtifact({
           ...tamperedBody,
+          sourceDigest: source.sourceDigest,
+        }),
+      ).toThrow("digest does not match contents");
+
+      const { sourceDigest: _capacityDigest, ...capacityBody } = source;
+      const tamperedCapacity = {
+        ...capacityBody,
+        matrixLimits: {
+          ...capacityBody.matrixLimits,
+          maxRevealActions: capacityBody.matrixLimits.maxRevealActions + 1,
+        },
+      };
+      expect(() =>
+        parseSourceArtifact({
+          ...tamperedCapacity,
           sourceDigest: source.sourceDigest,
         }),
       ).toThrow("digest does not match contents");

@@ -102,7 +102,7 @@ const discover = (
     initialInventory,
     harness,
     controlFor: preflightControlForPlan,
-    maxBranches: 1,
+    maxRevealMaterialEdges: 1,
   });
 describe("reveal branch budget", () => {
   it("does not spend the budget on a no-op and freezes both executed transitions", async () => {
@@ -129,7 +129,7 @@ describe("reveal branch budget", () => {
       cells.map((control) => control?.expectedActionTransition?.afterUrl),
     ).toEqual([ROUTE, `${ROUTE}?panel=open`]);
   });
-  it("executes the second material candidate before rejecting the branch bound", async () => {
+  it("executes the second material candidate before rejecting the material-edge bound", async () => {
     const firstKey = "button:a-first:0";
     const secondKey = "button:b-second:0";
     const destination = inventoryFor([]);
@@ -138,7 +138,7 @@ describe("reveal branch budget", () => {
       [secondKey, "Open second", `${ROOT_URL}?second=1`, destination],
     ]);
     await expect(discover(fixture.root, fixture.harness)).rejects.toThrow(
-      /branch bound/iu,
+      /material edge bound/iu,
     );
     expectExecuted(fixture, [firstKey, secondKey]);
   });

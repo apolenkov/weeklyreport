@@ -146,8 +146,8 @@ describe("semantic reveal graph traversal", () => {
       harness: fixture.harness,
       controlFor: preflightControlForPlan,
       maxDepth: 3,
-      maxBranches: 256,
-      maxActions: 4096,
+      maxRevealMaterialEdges: 256,
+      maxRevealActions: 4096,
     });
     const executions = fixture
       .events()
