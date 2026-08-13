@@ -72,6 +72,7 @@
     "test:runtime-preflight": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts full",
     "test:runtime-preflight-canary": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts canary",
     "test:runtime-preflight-repair": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts repair",
+    "test:runtime-preflight-shard": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts shard",
     "test:runtime-harness": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/preflight/playwright.harness.config.ts",
     "test:runtime-manifest": "tsx e2e/runtime-sweep/manifest/finalize-runtime-manifest.ts",
     "test:runtime-coverage": "tsx e2e/runtime-sweep/evidence/finalize-runtime-coverage-cli.ts",
