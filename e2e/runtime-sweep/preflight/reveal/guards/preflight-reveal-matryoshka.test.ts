@@ -115,33 +115,42 @@ const observationFor = (
   href: null,
 });
 
-const inventoryFor = (stages: ReadonlyMap<string, Stage>): DomInventory => ({
-  controls: SIBLING_NAMES.flatMap((name, index) => {
-    const stage = stages.get(name) ?? 0;
-    const root = observationFor(
-      rootKeyFor(name),
-      `${stage === 0 ? "Expand" : "Collapse"} activity ${name}`,
-      index * 3,
-    );
-    if (stage === 0) return [root];
-    const nested = observationFor(
-      nestedKeyFor(name),
-      `${stage === 1 ? "Open" : "Close"} nested ${name}`,
-      index * 3 + 1,
-    );
-    if (stage === 1) return [root, nested];
-    return [
-      root,
-      nested,
-      observationFor(
-        detailKeyFor(name),
-        `${stage === 2 ? "Open" : "Close"} detail ${name}`,
-        index * 3 + 2,
-      ),
-    ];
-  }),
-  issues: [],
-});
+type ControlDescriptor = Readonly<{
+  readonly controlKey: string;
+  readonly accessibleName: string;
+}>;
+
+const inventoryFor = (stages: ReadonlyMap<string, Stage>): DomInventory => {
+  const descriptors: readonly ControlDescriptor[] = SIBLING_NAMES.flatMap(
+    (name) => {
+      const stage = stages.get(name) ?? 0;
+      const root: ControlDescriptor = {
+        controlKey: rootKeyFor(name),
+        accessibleName: `${stage === 0 ? "Expand" : "Collapse"} activity ${name}`,
+      };
+      if (stage === 0) return [root];
+      const nested: ControlDescriptor = {
+        controlKey: nestedKeyFor(name),
+        accessibleName: `${stage === 1 ? "Open" : "Close"} nested ${name}`,
+      };
+      if (stage === 1) return [root, nested];
+      return [
+        root,
+        nested,
+        {
+          controlKey: detailKeyFor(name),
+          accessibleName: `${stage === 2 ? "Open" : "Close"} detail ${name}`,
+        },
+      ];
+    },
+  );
+  return {
+    controls: descriptors.map(({ controlKey, accessibleName }, index) =>
+      observationFor(controlKey, accessibleName, index + 1),
+    ),
+    issues: [],
+  };
+};
 
 const actionsSincePrepare = (events: readonly string[]): readonly string[] => {
   const preparationStart = events.lastIndexOf("prepare");

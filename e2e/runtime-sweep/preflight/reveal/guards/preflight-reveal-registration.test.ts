@@ -11,24 +11,29 @@ import type {
   RevealDiscoveryState,
 } from "../interaction/preflight-reveal-branches.ts";
 import {
+  controlsForImmediateReveal,
   registerDynamicControls,
   registerVisitedRevealState,
   revealPathContainsState,
 } from "./preflight-reveal-registration.ts";
 
+const controlFor = (
+  controlKey: string,
+  accessibleName = controlKey,
+  order = 0,
+) => ({
+  controlKey,
+  ariaRole: "button",
+  accessibleName,
+  enabled: true,
+  order,
+  domOrderKey: `${String(order).padStart(4, "0")}:${controlKey}`,
+  href: null,
+  interactionEffect: null,
+});
+
 const surfaceFor = (controlKey: string, accessibleName = controlKey) =>
-  revealSurfaceFor([
-    {
-      controlKey,
-      ariaRole: "button",
-      accessibleName,
-      enabled: true,
-      order: 0,
-      domOrderKey: `0000:${controlKey}`,
-      href: null,
-      interactionEffect: null,
-    },
-  ]);
+  revealSurfaceFor([controlFor(controlKey, accessibleName)]);
 
 const branchFor = (
   initialUrl: string,
@@ -51,7 +56,83 @@ const emptyState = (): RevealDiscoveryState => ({
   branchCount: 0,
 });
 
+const branchWithSurfaceTransitionFor = (
+  before: ReturnType<typeof revealSurfaceFor>,
+  after: ReturnType<typeof revealSurfaceFor>,
+  afterUrl = "/lead/report",
+): RevealBranch => {
+  const firstControl = before.controls[0];
+  if (firstControl === undefined)
+    throw new Error("Reveal transition fixture requires a source control");
+  const beforeUrl = "/lead/report";
+  return {
+    ...branchFor(beforeUrl, afterUrl, after),
+    path: revealPathFor(
+      [
+        revealStepFor(
+          {
+            controlKey: firstControl.controlKey,
+            operation: "click",
+            safety: "read-only",
+            transition: "open",
+          },
+          before,
+          after,
+          beforeUrl,
+          afterUrl,
+          {
+            status: "unchanged",
+            beforeDigest: "d".repeat(64),
+            afterDigest: "d".repeat(64),
+          },
+        ),
+      ],
+      beforeUrl,
+    ),
+  };
+};
+
 describe("reveal registration", () => {
+  it("ignores absolute DOM shifts when shared controls retain relative order", () => {
+    const before = revealSurfaceFor([
+      controlFor("button:alpha:0", "Alpha", 1),
+      controlFor("button:beta:0", "Beta", 2),
+    ]);
+    const after = revealSurfaceFor([
+      controlFor("button:inserted:0", "Inserted", 1),
+      controlFor("button:alpha:0", "Alpha", 2),
+      controlFor("button:beta:0", "Beta", 3),
+    ]);
+    const branch = branchWithSurfaceTransitionFor(before, after);
+
+    expect(
+      controlsForImmediateReveal(branch).map(({ controlKey }) => controlKey),
+    ).toEqual(["button:inserted:0"]);
+    expect(
+      after.controls.find(({ controlKey }) => controlKey === "button:beta:0"),
+    ).toMatchObject({
+      order: 3,
+      domOrderKey: "0003:button:beta:0",
+    });
+  });
+
+  it("fails closed when shared controls truly reorder", () => {
+    const before = revealSurfaceFor([
+      controlFor("button:alpha:0", "Alpha", 1),
+      controlFor("button:beta:0", "Beta", 2),
+    ]);
+    const after = revealSurfaceFor([
+      controlFor("button:beta:0", "Beta", 1),
+      controlFor("button:alpha:0", "Alpha", 2),
+    ]);
+
+    expect(
+      controlsForImmediateReveal(
+        branchWithSurfaceTransitionFor(before, after),
+      ).map(({ controlKey }) => controlKey),
+    ).toEqual(after.controls.map(({ controlKey }) => controlKey));
+  });
+
   it("distinguishes an ancestor cycle from an alternate path", () => {
     const root = branchFor("/lead/report", "/lead/report");
     const childSurface = surfaceFor("button:Child:0");
