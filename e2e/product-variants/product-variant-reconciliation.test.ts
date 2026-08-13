@@ -92,4 +92,27 @@ describe("product-variant reconciliation binding", () => {
       readAndGenerateProductVariantManifest(repoRoot, undefined, dirtyGit),
     ).rejects.toThrow("source worktree is not clean");
   });
+
+  it("rejects a clean source identity switch during read", async () => {
+    const initialSha = "a".repeat(40);
+    const initialTree = "b".repeat(40);
+    const finalSha = "c".repeat(40);
+    const finalTree = "d".repeat(40);
+    const calls = new Map<string, number>();
+    const switchingGit = (args: readonly string[]): Promise<string> => {
+      if (args[0] === "status") return Promise.resolve("");
+      const command = args.join(" ");
+      const call = (calls.get(command) ?? 0) + 1;
+      calls.set(command, call);
+      if (command === "rev-parse --verify HEAD")
+        return Promise.resolve(`${call === 1 ? initialSha : finalSha}\n`);
+      if (command === "rev-parse --verify HEAD^{tree}")
+        return Promise.resolve(`${call === 1 ? initialTree : finalTree}\n`);
+      return Promise.reject(new Error(`unexpected Git command: ${command}`));
+    };
+
+    await expect(
+      readProductVariantSource(repoRoot, switchingGit),
+    ).rejects.toThrow("source identity changed during read");
+  });
 });

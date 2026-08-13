@@ -254,6 +254,16 @@ export async function readProductVariantSource(
   const pageEntries = await pageEntriesFor(root, pages);
   const pageByRoute = pageMapFor(pageEntries);
   const contracts = contractFilesFor(contractFiles);
+  const [finalSourceShaRaw, finalSourceTreeRaw] = await Promise.all([
+    gitValue(root, ["rev-parse", "--verify", "HEAD"], runCommand),
+    gitValue(root, ["rev-parse", "--verify", "HEAD^{tree}"], runCommand),
+  ]);
+  const finalSourceSha = requireSha(finalSourceShaRaw, "final HEAD");
+  const finalSourceTree = requireSha(finalSourceTreeRaw, "final HEAD tree");
+  if (sourceSha !== finalSourceSha || sourceTree !== finalSourceTree)
+    throw new ProductVariantSourceError(
+      `Product-variant source identity changed during read: ${sourceSha}/${sourceTree} -> ${finalSourceSha}/${finalSourceTree}`,
+    );
   await assertProductVariantSourceClean(root, runCommand);
   const declared = declaredFamiliesFor(contracts.roles);
   return {
