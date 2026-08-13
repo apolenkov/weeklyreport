@@ -161,4 +161,19 @@ describe("PREFLIGHT_SHARD_RESOURCE_PROOF contract", () => {
       expect(() => parsePreflightShardResourceProof(candidate)).toThrow();
     });
   });
+
+  it("rejects a browser version copied from the Playwright package", async () => {
+    await withResourceProofFixture(({ proof }) => {
+      const confused = withProofDigest(proof, (body) => ({
+        ...body,
+        browser: {
+          ...body.browser,
+          version: body.runtime.playwrightVersion,
+        },
+      }));
+      expect(() => parsePreflightShardResourceProof(confused)).toThrow(
+        /browser, not the Playwright package/iu,
+      );
+    });
+  });
 });
