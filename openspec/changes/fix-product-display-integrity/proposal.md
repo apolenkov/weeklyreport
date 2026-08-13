@@ -7,6 +7,7 @@ The source-bound 38-screen product atlas found two user-visible integrity failur
 - Derive every seeded product's explicit reporting-group edge from the user's effective seeded group, including the Finance reassignment, and fail seed validation when those identities drift.
 - Keep the lead's populated draft visible in Section Preview under the same group-scoped weekly-report read used by the product.
 - Give every per-group acknowledgement control a stable human-readable group label so two actions never render as identical unlabeled buttons.
+- Preserve report items whose product is no longer present in the lead's current assignment list instead of counting the items and then omitting their cards.
 - Add focused seed, API/read-model, component, and browser regression evidence for the repaired desktop and representative mobile states.
 
 ### Non-goals
@@ -20,7 +21,7 @@ The source-bound 38-screen product atlas found two user-visible integrity failur
 
 ### New Capabilities
 
-None.
+- `report-item-display-integrity`: every counted current-week and next-week item remains rendered and reachable even when its product is absent from the lead's current assignment list.
 
 ### Modified Capabilities
 
@@ -29,4 +30,4 @@ None.
 
 ## Impact
 
-Affected areas are deterministic Prisma seed composition and validation, the weekly-report live read model and shared schema if needed for group labels, report-page review presentation, focused Vitest/Prisma tests, and targeted Playwright evidence. The disposable `customreport_e2e` database may be reset under its existing destructive guard; no migration history or production data is involved.
+Affected areas are deterministic Prisma seed composition and validation, the weekly-report live read model and shared schema if needed for group labels, report-page review presentation, report-item board grouping, focused Vitest/Prisma tests, and targeted Playwright evidence. The disposable `customreport_e2e` database may be reset under its existing destructive guard; no migration history or production data is involved.

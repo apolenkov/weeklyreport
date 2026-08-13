@@ -75,6 +75,46 @@ function groupByProduct(
   return Map.groupBy(items, groupKeyFor);
 }
 
+function productColumnsFor(
+  products: readonly Product[],
+  productRows: readonly ProductKanbanItem[],
+): ItemColumn[] {
+  const assignedProductIds = new Set(products.map((product) => product.id));
+  const assignedColumns = products.map((product) => ({
+    key: product.id,
+    parent: { kind: "product", id: product.id } as const,
+    productId: product.id,
+    productName: product.name,
+    activityId: null,
+    items: productRows.filter((item) => item.productId === product.id),
+  }));
+  const orphanProductIds = [
+    ...new Set(
+      productRows
+        .map((item) => item.productId)
+        .filter((productId) => !assignedProductIds.has(productId)),
+    ),
+  ];
+  const orphanColumns = orphanProductIds.flatMap((productId) => {
+    const orphanItems = productRows.filter(
+      (item) => item.productId === productId,
+    );
+    const firstItem = orphanItems.at(0);
+    if (!firstItem) return [];
+    return [
+      {
+        key: productId,
+        parent: { kind: "product", id: productId } as const,
+        productId,
+        productName: firstItem.productName,
+        activityId: null,
+        items: orphanItems,
+      },
+    ];
+  });
+  return [...assignedColumns, ...orphanColumns];
+}
+
 // Product columns in the shared grid; activity lanes in a lighter block below
 // (activities are their own row, never peer product columns).
 export function splitItemBoard(
@@ -91,14 +131,7 @@ export function splitItemBoard(
   const lanes = activityLanes(activityRows, activities);
   if (products && products.length > 0) {
     return {
-      productColumns: products.map((p) => ({
-        key: p.id,
-        parent: { kind: "product", id: p.id },
-        productId: p.id,
-        productName: p.name,
-        activityId: null,
-        items: productRows.filter((it) => it.productId === p.id),
-      })),
+      productColumns: productColumnsFor(products, productRows),
       activityLanes: lanes,
     };
   }
