@@ -74,6 +74,23 @@ const statusForError = (error: unknown): "FAIL" | "AMBIGUOUS" =>
 const failureSummaryFor = (error: unknown): string =>
   redact(errorMessage(error)) || "Unknown preflight shard failure";
 
+const safeFailureErrorFor = (input: {
+  readonly state: PreflightShardState;
+  readonly status: "FAIL" | "AMBIGUOUS";
+  readonly error: unknown;
+}): PreflightShardRunnerError =>
+  new PreflightShardRunnerError(
+    `Preflight shard state ${input.state.state.stateId} ended ${input.status}: ${failureSummaryFor(input.error)}`,
+  );
+
+const postTerminalBoundaryErrorFor = (input: {
+  readonly state: PreflightShardState;
+  readonly error: unknown;
+}): PreflightShardRunnerError =>
+  new PreflightShardRunnerError(
+    `Preflight shard state ${input.state.state.stateId} passed but the source boundary became invalid: ${failureSummaryFor(input.error)}`,
+  );
+
 const appendFailureAndStop = async (input: {
   readonly runner: PreflightShardRunnerInput;
   readonly state: PreflightShardState;
@@ -110,7 +127,11 @@ const appendFailureAndStop = async (input: {
     // The terminal record is durable; the original failure remains the
     // caller-visible outcome and the next run will re-prove its source.
   }
-  throw input.error;
+  throw safeFailureErrorFor({
+    state: input.state,
+    status,
+    error: input.error,
+  });
 };
 
 const writeAttemptEvidence = async (input: {
@@ -204,42 +225,53 @@ export const runPreflightShardStateAttempt = async (input: {
   readonly assertBoundary: (runner: PreflightShardRunnerInput) => Promise<void>;
 }): Promise<string> => {
   const started = await appendStartedForAttempt(input);
+  const attempt = await (async () => {
+    try {
+      await input.runner.assertLiveSource();
+      const result = await input.runner.runState({
+        source: input.runner.context.source,
+        assignment: input.runner.context.assignment,
+        state: input.sourceState,
+        route: input.route,
+        resetRequired: input.resetRequired,
+      });
+      await input.runner.assertLiveSource();
+      const segment = segmentForResult(result);
+      assertStateResult(input.sourceState, segment);
+      const preparedGroup = preparedGroupForResult(
+        result,
+        preflightSessionGroupKey(input.sourceState, input.route),
+      );
+      const receiptPath = await writeAttemptEvidence({
+        ...input,
+        started,
+        segment,
+      });
+      return { preparedGroup, receiptPath };
+    } catch (error: unknown) {
+      return appendFailureAndStop({
+        ...input,
+        state: input.assigned,
+        error,
+      });
+    }
+  })();
+  await appendPreflightShardJournalTerminal({
+    context: input.runner.context,
+    archiveRoot: input.runner.archiveRoot,
+    filePath: input.runner.journalPath,
+    status: "PASS",
+    receiptPath: attempt.receiptPath,
+  });
   try {
-    await input.runner.assertLiveSource();
-    const result = await input.runner.runState({
-      source: input.runner.context.source,
-      assignment: input.runner.context.assignment,
-      state: input.sourceState,
-      route: input.route,
-      resetRequired: input.resetRequired,
-    });
-    await input.runner.assertLiveSource();
-    const segment = segmentForResult(result);
-    assertStateResult(input.sourceState, segment);
-    const preparedGroup = preparedGroupForResult(
-      result,
-      preflightSessionGroupKey(input.sourceState, input.route),
-    );
-    const receiptPath = await writeAttemptEvidence({
-      ...input,
-      started,
-      segment,
-    });
     await input.assertBoundary(input.runner);
-    await appendPreflightShardJournalTerminal({
-      context: input.runner.context,
-      archiveRoot: input.runner.archiveRoot,
-      filePath: input.runner.journalPath,
-      status: "PASS",
-      receiptPath,
-    });
-    await input.assertBoundary(input.runner);
-    return preparedGroup;
   } catch (error: unknown) {
-    return appendFailureAndStop({
-      ...input,
+    // PASS is already durable. Do not attempt a second terminal append: the
+    // next run must revalidate this PASS and either skip or rerun it.
+    throw postTerminalBoundaryErrorFor({
       state: input.assigned,
       error,
     });
   }
+  return attempt.preparedGroup;
 };

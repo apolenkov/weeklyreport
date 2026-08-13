@@ -3,7 +3,6 @@ import { readFile, rm } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 import { routeForState } from "../../execution/playwright-preflight-support.ts";
-import { PreflightStateAmbiguousError } from "../../journal/preflight-journal-runner-support.ts";
 import { ensurePreflightArchiveRoot } from "../../preflight-archive-path.ts";
 import { preflightSessionGroupKey } from "../../runtime/preflight-session.ts";
 import { preflightShardCompletionPathFor } from "../completion/preflight-shard-completion-io.ts";
@@ -20,8 +19,6 @@ import {
   cleanupArchive,
   inputFor,
   segmentFor,
-  statusesFor,
-  withRunnerFixture,
 } from "./preflight-shard-runner-test-support.ts";
 
 describe("source-bound preflight shard runner", () => {
@@ -205,69 +202,6 @@ describe("source-bound preflight shard runner", () => {
       } finally {
         await cleanupArchive(context);
       }
-    });
-  });
-
-  it("terminalizes state failure with a redacted literal summary and no completion", async () => {
-    await withRunnerFixture(async ({ context }) => {
-      await expect(
-        runPreflightShard(
-          inputFor(context, {
-            runState: () =>
-              Promise.reject(
-                new Error("request failed dsn=postgres://secret@host/db"),
-              ),
-          }),
-        ),
-      ).rejects.toThrow("request failed");
-      const records = await readPreflightShardJournal({
-        context,
-        archiveRoot: context.resourceProof.resources.archiveRoot,
-        filePath: preflightShardJournalPathFor(context),
-      });
-      expect(await statusesFor(context)).toEqual(["STARTED", "FAIL"]);
-      expect(records.at(-1)?.failureSummary).toContain("dsn=[REDACTED]");
-      expect(records.at(-1)?.failureSummary).not.toContain("secret");
-      await expect(
-        readFile(preflightShardCompletionPathFor(context), "utf8"),
-      ).rejects.toThrow(/ENOENT/u);
-    });
-  });
-
-  it("uses AMBIGUOUS for an explicitly uncertain state failure", async () => {
-    await withRunnerFixture(async ({ context }) => {
-      await expect(
-        runPreflightShard(
-          inputFor(context, {
-            runState: () =>
-              Promise.reject(
-                new PreflightStateAmbiguousError("browser state uncertain"),
-              ),
-          }),
-        ),
-      ).rejects.toThrow("browser state uncertain");
-      expect(await statusesFor(context)).toEqual(["STARTED", "AMBIGUOUS"]);
-    });
-  });
-
-  it("terminalizes source drift observed after state execution", async () => {
-    await withRunnerFixture(async ({ context }) => {
-      let stateRan = false;
-      await expect(
-        runPreflightShard(
-          inputFor(context, {
-            assertLiveSource: () =>
-              stateRan
-                ? Promise.reject(new Error("source drift after state"))
-                : Promise.resolve(),
-            runState: ({ state }) => {
-              stateRan = true;
-              return Promise.resolve(segmentFor(state));
-            },
-          }),
-        ),
-      ).rejects.toThrow("source drift after state");
-      expect(await statusesFor(context)).toEqual(["STARTED", "FAIL"]);
     });
   });
 

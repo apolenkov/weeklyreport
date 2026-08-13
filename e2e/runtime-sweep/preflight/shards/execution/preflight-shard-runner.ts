@@ -6,6 +6,7 @@ import {
   type PreflightRoute,
   routeForState,
 } from "../../execution/playwright-preflight-support.ts";
+import { redact } from "../../observability/environment-observer-events.ts";
 import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
@@ -132,12 +133,23 @@ const resolveResume = (input: PreflightShardRunnerInput) =>
     journalPath: input.journalPath,
   });
 
+const safeRunnerErrorFor = (error: unknown): PreflightShardRunnerError => {
+  const message = redact(
+    error instanceof Error ? error.message : String(error),
+  );
+  if (error instanceof PreflightShardRunnerError && message === error.message)
+    return error;
+  return new PreflightShardRunnerError(
+    message || "Unknown preflight shard runner failure",
+  );
+};
+
 /**
  * Execute exactly one source-bound shard and publish only its durable
  * completion evidence. Resume is authorized by revalidated on-disk receipts;
  * skipped states never establish the prepared live session group.
  */
-export const runPreflightShard = async (
+const runPreflightShardUnsafe = async (
   input: PreflightShardRunnerInput,
 ): Promise<PreflightShardRunnerResult> => {
   assertInputContextAndPaths(input);
@@ -190,6 +202,16 @@ export const runPreflightShard = async (
   });
   await assertBoundary(input);
   return { completion, skippedStateIds, rerunStateIds };
+};
+
+export const runPreflightShard = async (
+  input: PreflightShardRunnerInput,
+): Promise<PreflightShardRunnerResult> => {
+  try {
+    return await runPreflightShardUnsafe(input);
+  } catch (error: unknown) {
+    throw safeRunnerErrorFor(error);
+  }
 };
 
 /** Alias retained for callers that name the durable journal explicitly. */
