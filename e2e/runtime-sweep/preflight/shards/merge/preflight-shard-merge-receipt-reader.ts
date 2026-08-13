@@ -75,11 +75,14 @@ const bindingFor = (
     path.resolve(binding.archiveRoot) ===
       path.parse(binding.archiveRoot).root ||
     shard.donorRoot !== binding.donorRoot ||
-    shard.resourceProofPath !==
+    binding.resourceProofPath !==
       canonicalPath(binding, "PREFLIGHT_SHARD_RESOURCE_PROOF.json") ||
-    shard.completionPath !== canonicalPath(binding, "SHARD_COMPLETE.json") ||
-    shard.journalPath !==
-      canonicalPath(binding, "PREFLIGHT_SHARD.journal.jsonl")
+    binding.completionPath !== canonicalPath(binding, "SHARD_COMPLETE.json") ||
+    binding.journalPath !==
+      canonicalPath(binding, "PREFLIGHT_SHARD.journal.jsonl") ||
+    shard.resourceProofPath !== binding.resourceProofPath ||
+    shard.completionPath !== binding.completionPath ||
+    shard.journalPath !== binding.journalPath
   )
     throw new PreflightShardMergeError(
       `Receipt paths do not match the trusted canonical archive binding for ${keyFor(shard)}`,
