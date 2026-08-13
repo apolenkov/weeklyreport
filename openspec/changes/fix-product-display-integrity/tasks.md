@@ -12,9 +12,12 @@
 
 - [x] 3.1 Preserve distinct `{groupId, label}` targets in the report review model and render the label in each visible and accessible acknowledgement action.
 - [x] 3.2 Add component tests proving two group actions have distinct labels while acknowledgement mutation and publish placement remain unchanged.
+- [x] 3.3 Preserve product-owned report items whose product is absent from the current assignment list by appending deterministic orphan-product columns.
+- [x] 3.4 Add causal grouping tests proving assigned columns remain first, orphan products retain first-seen order and labels, and no item is dropped or duplicated.
 
 ## 4. Product Evidence and Verification
 
 - [ ] 4.1 Reset and reseed only `customreport_e2e` through the destructive guard with explicit consent, then prove the Finance lead preview is populated.
 - [ ] 4.2 Capture and review the repaired desktop preview and multi-group acknowledgement surface plus representative iPhone 14 and Pixel 7 layouts in the external product atlas.
+- [ ] 4.2a Prove the lead form renders and can reach every item counted by the Current Week and Next Week badges on desktop and iPhone 14.
 - [ ] 4.3 Run and record the exact focused schema, seed, API, web-component, and Playwright commands; then run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm format:check`, and `openspec validate fix-product-display-integrity --strict`.

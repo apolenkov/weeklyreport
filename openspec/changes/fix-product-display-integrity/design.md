@@ -8,6 +8,7 @@ See `proposal.md` for motivation. The live database proves that Olga and Sergey 
 
 - Make effective seed user groups and explicit product groups one consistent dataset.
 - Carry a validated group label to the existing per-group acknowledgement presentation.
+- Keep every report item reachable when current product assignments no longer contain the item's product.
 - Prove the repaired paths at the seed, read-model, component, and representative browser levels.
 
 **Non-Goals:**
@@ -51,12 +52,30 @@ Alternatives rejected:
 
 The acceptance set is the repaired desktop state plus representative iPhone and Pixel layouts for the affected report surfaces. Existing mobile geometry tests remain the deterministic gate. The archive holds human-reviewed screenshots; the repository does not acquire a second visual-test framework.
 
+### Append deterministic orphan-product columns
+
+The report badge counts the complete item collection. The board must therefore
+render that same collection. When a stored item references a product absent
+from the lead's current assignment list, append one column per missing product
+after the current assigned-product columns. Preserve first-seen product order
+and the item's stored product label. This mirrors the existing activity-lane
+rule that keeps orphan rows reachable and avoids silently changing historical
+report data merely because current assignments changed.
+
+Alternatives rejected:
+
+- Dropping the row makes the visible badge disagree with the rendered records.
+- Reassigning the row to a current product changes report meaning.
+- Hiding the mismatch behind a generic unassigned column loses the stored
+  product identity and combines unrelated products.
+
 ## Risks / Trade-offs
 
 - [Shared read-model field reaches non-weekly consumers] -> make the field optional at the generic section boundary, require and test it in the live weekly-report builder, and preserve existing write responses.
 - [A group is deleted or unnamed] -> fail the live weekly-report parse/build path rather than render an unlabeled acknowledgement action.
 - [Seed reset destroys local MVP rows] -> target only the allowlisted `customreport_e2e` database through the existing destructive guard and explicit consent.
 - [Full-page screenshots exaggerate sticky-overlay behavior] -> verify modal containment at the viewport and with existing mobile geometry assertions, not from full-page pixels alone.
+- [Historical product rows add columns to a compact board] -> append only products that own rows, retain local vertical scrolling, and verify every counted card is reachable at desktop and mobile widths.
 
 ## Migration Plan
 
