@@ -207,9 +207,20 @@ const revealSurfaceControlFor = (
 export const revealSurfaceFor = (
   controls: readonly DomControlObservation[] | readonly RevealSurfaceControl[],
 ): RevealSurface => {
-  const entries = controls.map((control) =>
-    "role" in control ? revealSurfaceControlFor(control) : { ...control },
+  const hasActiveModal = controls.some(
+    (control) =>
+      "role" in control && control.keyboardFocusScope === "active-modal",
   );
+  const entries = controls
+    .filter(
+      (control) =>
+        !hasActiveModal ||
+        !("role" in control) ||
+        control.keyboardFocusScope !== "background",
+    )
+    .map((control) =>
+      "role" in control ? revealSurfaceControlFor(control) : { ...control },
+    );
   const sorted = sortedSurfaceControls(entries);
   assertSurfaceControls(sorted);
   return { controls: sorted, digest: sha256Hex(sorted) };
