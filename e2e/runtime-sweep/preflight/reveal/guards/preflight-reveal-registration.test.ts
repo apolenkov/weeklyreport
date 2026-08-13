@@ -114,6 +114,7 @@ describe("reveal registration", () => {
       order: 3,
       domOrderKey: "0003:button:beta:0",
     });
+    expect(after.digest).not.toBe(before.digest);
   });
 
   it("fails closed when shared controls truly reorder", () => {
@@ -207,11 +208,9 @@ describe("reveal registration", () => {
 
     expect(alternate.isNew).toBe(false);
     expect(alternate.visitedStatePaths.size).toBe(1);
-    expect(
-      alternate.visitedStatePaths.get(
-        `${surface.digest}:/lead/report?panel=open`,
-      ),
-    ).toBe(first.path.digest);
+    expect([...alternate.visitedStatePaths.values()]).toEqual([
+      first.path.digest,
+    ]);
     expect(
       registerVisitedRevealState(alternate.visitedStatePaths, second).isNew,
     ).toBe(false);

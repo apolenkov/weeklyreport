@@ -82,12 +82,14 @@
       failure counts, and require a frozen submit transition to execute the
       scoped confirmation action before recovery.
 - [x] 3.14 Freeze every deterministically reachable post-transition control and
-      its canonical reveal path plus exact semantic surface into
-      `PREFLIGHT.json` before finalizing `MATRIX.json`; prove each preparation
+      its canonical reveal path plus exact raw semantic surface (including
+      `order`/`domOrderKey`) into `PREFLIGHT.json` before finalizing `MATRIX.json`;
+      retain raw transition/action-surface bindings, derive a material semantic
+      projection only for branch/visited accounting, prove each preparation
       step is database-non-mutating, replay the path before the target action,
-      reject ambiguous paths, and fail a cell on any unknown, missing, or
-      signature-drifted post-freeze control instead of appending discovery
-      drift as passing evidence.
+      reject ambiguous paths, and fail a cell on any unknown, missing,
+      non-positional, or relative-order drift instead of trimming discovery
+      evidence or appending drift as passing evidence.
 - [x] 3.15 Bind read-only preparation reuse to the exact canonical state-plan
       digest and full route identity, prove every preparation axis changes the
       key while case/action identity alone may reuse, and stop the whole
