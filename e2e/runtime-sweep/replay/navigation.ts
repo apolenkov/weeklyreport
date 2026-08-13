@@ -12,12 +12,17 @@ const APP_READY_ARGUMENT = {
   rootSelector: APP_READY_SELECTOR,
   loadingSelector: APP_LOADING_SELECTOR,
 } as const;
+const REVEAL_READY_ARGUMENT = {
+  ...APP_READY_ARGUMENT,
+  overlaySelector: REVEAL_OVERLAY_SELECTOR,
+} as const;
 const APP_READY_TIMEOUT_MS = 10_000;
 const APP_READY_STABILITY_PASSES = 2;
 
 export interface AppReadyArgument {
   readonly rootSelector: string;
   readonly loadingSelector: string;
+  readonly overlaySelector?: string;
 }
 
 export interface AppReadyPage {
@@ -90,7 +95,8 @@ const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
 
 const waitForRevealReadyPass = (page: AppReadyPage): Promise<unknown> =>
   page.waitForFunction(
-    ({ rootSelector, loadingSelector }: AppReadyArgument) => {
+    ({ rootSelector, loadingSelector, overlaySelector }: AppReadyArgument) => {
+      if (overlaySelector === undefined) return false;
       const main = document.querySelector(rootSelector);
       if (!(main instanceof HTMLElement)) return false;
       const heading = main.querySelector("h1");
@@ -103,11 +109,14 @@ const waitForRevealReadyPass = (page: AppReadyPage): Promise<unknown> =>
         );
       };
       const overlays = Array.from(
-        document.querySelectorAll(REVEAL_OVERLAY_SELECTOR),
+        document.querySelectorAll(overlaySelector),
       ).filter((overlay) => {
         const overlayHidden = overlay.ariaHidden?.toLocaleLowerCase();
         return (
-          overlayHidden !== String(true) && overlay.getClientRects().length > 0
+          overlayHidden !== String(true) &&
+          !main.contains(overlay) &&
+          overlay.closest('[aria-hidden="true"]') === null &&
+          overlay.getClientRects().length > 0
         );
       });
       const hasVisibleLoadingMarker = [main, ...overlays].some(
@@ -125,7 +134,7 @@ const waitForRevealReadyPass = (page: AppReadyPage): Promise<unknown> =>
         !hasVisibleLoadingMarker
       );
     },
-    APP_READY_ARGUMENT,
+    REVEAL_READY_ARGUMENT,
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 
