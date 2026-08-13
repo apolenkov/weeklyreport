@@ -28,13 +28,23 @@ const execFileAsync = promisify(execFile);
 type SourceTextFile = Awaited<ReturnType<typeof readSourceFile>>;
 type PageEntry = Readonly<{ route: string; file: SourceTextFile }>;
 
+export type ProductVariantGitCommand = (
+  args: readonly string[],
+  cwd: string,
+) => Promise<string>;
+
+const runGit: ProductVariantGitCommand = async (args, cwd) => {
+  const result = await execFileAsync("git", [...args], { cwd });
+  return result.stdout;
+};
+
 const gitValue = async (
   repoRoot: string,
   args: readonly string[],
+  runCommand: ProductVariantGitCommand,
 ): Promise<string> => {
   try {
-    const result = await execFileAsync("git", [...args], { cwd: repoRoot });
-    return result.stdout.trim();
+    return (await runCommand(args, repoRoot)).trim();
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : "git failed";
     throw new ProductVariantSourceError(
@@ -42,6 +52,21 @@ const gitValue = async (
     );
   }
 };
+
+export async function assertProductVariantSourceClean(
+  repoRoot: string,
+  runCommand: ProductVariantGitCommand = runGit,
+): Promise<void> {
+  const status = await gitValue(
+    repoRoot,
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    runCommand,
+  );
+  if (status !== "")
+    throw new ProductVariantSourceError(
+      "Product-variant source worktree is not clean",
+    );
+}
 
 const routeMapFor = (
   catalogs: readonly ProductVariantCatalog[],
@@ -208,12 +233,14 @@ const sourceFilesFor = (
 
 export async function readProductVariantSource(
   repoRoot: string,
+  runCommand: ProductVariantGitCommand = runGit,
 ): Promise<ProductVariantSource> {
   const root = path.resolve(repoRoot);
+  await assertProductVariantSourceClean(root, runCommand);
   const [sourceShaRaw, sourceTreeRaw, pages, ...contractFiles] =
     await Promise.all([
-      gitValue(root, ["rev-parse", "--verify", "HEAD"]),
-      gitValue(root, ["rev-parse", "--verify", "HEAD^{tree}"]),
+      gitValue(root, ["rev-parse", "--verify", "HEAD"], runCommand),
+      gitValue(root, ["rev-parse", "--verify", "HEAD^{tree}"], runCommand),
       pageFiles(path.join(root, "apps/web/src/app")),
       ...CURRENT_PRODUCT_VARIANT_SOURCE_PATHS.map((sourcePath) =>
         readSourceFile(root, sourcePath),
@@ -227,6 +254,7 @@ export async function readProductVariantSource(
   const pageEntries = await pageEntriesFor(root, pages);
   const pageByRoute = pageMapFor(pageEntries);
   const contracts = contractFilesFor(contractFiles);
+  await assertProductVariantSourceClean(root, runCommand);
   const declared = declaredFamiliesFor(contracts.roles);
   return {
     sourceSha,

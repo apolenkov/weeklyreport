@@ -8,7 +8,10 @@ import {
   ProductVariantManifestError,
   type ProductVariantValidation,
 } from "./product-variant-schema.ts";
-import { readProductVariantSource } from "./product-variant-source.ts";
+import {
+  type ProductVariantGitCommand,
+  readProductVariantSource,
+} from "./product-variant-source.ts";
 import {
   assertProductVariantManifest,
   validateProductVariantManifest,
@@ -30,8 +33,9 @@ export type {
 export async function readAndGenerateProductVariantManifest(
   repoRoot: string,
   generatedAt?: string,
+  runCommand?: ProductVariantGitCommand,
 ): Promise<ProductVariantManifest> {
-  const source = await readProductVariantSource(repoRoot);
+  const source = await readProductVariantSource(repoRoot, runCommand);
   const manifest = generateProductVariantManifest(source, generatedAt);
   assertProductVariantManifest(manifest, source);
   return manifest;

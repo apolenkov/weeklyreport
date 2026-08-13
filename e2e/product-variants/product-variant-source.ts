@@ -252,4 +252,8 @@ export const parseCatalogSnapshot = async (
   };
 };
 
-export { readProductVariantSource } from "./product-variant-source-reader.ts";
+export type { ProductVariantGitCommand } from "./product-variant-source-reader.ts";
+export {
+  assertProductVariantSourceClean,
+  readProductVariantSource,
+} from "./product-variant-source-reader.ts";

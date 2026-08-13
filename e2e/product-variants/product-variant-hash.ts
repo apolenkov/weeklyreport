@@ -62,10 +62,19 @@ export const sourceDigestFor = (source: ProductVariantSource): string =>
 
 export const manifestBodyForDigest = (
   manifest: ProductVariantManifest,
-): Omit<ProductVariantManifest, "manifestDigest"> => {
-  const { manifestDigest: _manifestDigest, ...body } = manifest;
+): Omit<ProductVariantManifest, "generatedAt" | "manifestDigest"> => {
+  const {
+    generatedAt: _generatedAt,
+    manifestDigest: _manifestDigest,
+    ...body
+  } = manifest;
   return body;
 };
 
 export const manifestDigestFor = (manifest: ProductVariantManifest): string =>
   digest(manifestBodyForDigest(manifest));
+
+export const manifestIdentityBodyForComparison = (
+  manifest: ProductVariantManifest,
+): Omit<ProductVariantManifest, "generatedAt" | "manifestDigest"> =>
+  manifestBodyForDigest(manifest);

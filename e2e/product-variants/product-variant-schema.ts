@@ -1,6 +1,18 @@
 import { z } from "zod";
 
+import {
+  HISTORICAL_RECONCILIATION,
+  HISTORICAL_RECONCILIATION_VARIANT_IDS,
+  historicalReconciliationSchema,
+} from "./product-variant-reconciliation.ts";
 import { CURRENT_CATALOG_ROLES } from "./product-variant-source.ts";
+
+export {
+  HISTORICAL_RECONCILIATION,
+  HISTORICAL_RECONCILIATION_VARIANT_IDS,
+  historicalReconciliationSchema,
+};
+export type { ProductVariantHistoricalReconciliation } from "./product-variant-reconciliation.ts";
 
 export const ALL_CURRENT = "all-current" as const;
 export const ROUTE_VARIANT = "route" as const;
@@ -163,6 +175,7 @@ export const manifestSchema = z
     profiles: z.array(z.string().min(1)).min(1).readonly(),
     declaredControlFamilies: z.array(declaredFamilySchema).min(1).readonly(),
     revealFamilies: z.array(revealFamilySchema).min(1).readonly(),
+    historicalReconciliation: historicalReconciliationSchema,
     summary: z
       .object({
         roleRouteCount: z.number().int().nonnegative(),
