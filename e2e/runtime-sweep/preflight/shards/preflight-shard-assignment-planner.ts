@@ -74,10 +74,40 @@ const groupsFor = (
     grouped.set(state.groupKey, [...group, state]);
   });
   return [...grouped.values()].toSorted((left, right) => {
+    const weightOrder = right.length - left.length;
+    if (weightOrder !== 0) return weightOrder;
     const leftFirst = left[0]?.planIndex ?? Number.MAX_SAFE_INTEGER;
     const rightFirst = right[0]?.planIndex ?? Number.MAX_SAFE_INTEGER;
-    return leftFirst - rightFirst;
+    const firstIndexOrder = leftFirst - rightFirst;
+    if (firstIndexOrder !== 0) return firstIndexOrder;
+    const leftGroupKey = left[0]?.groupKey ?? "";
+    const rightGroupKey = right[0]?.groupKey ?? "";
+    return leftGroupKey < rightGroupKey
+      ? -1
+      : leftGroupKey > rightGroupKey
+        ? 1
+        : 0;
   });
+};
+
+const sourceGroupCountFor = (source: SourceArtifact): number => {
+  const states = sourceStatesFor(source);
+  return new Set(states.map(({ groupKey }) => groupKey)).size;
+};
+
+export const assertPreflightShardCount = (
+  source: SourceArtifact,
+  shardCount: number,
+): void => {
+  if (!Number.isInteger(shardCount) || shardCount <= 0)
+    throw new PreflightShardAssignmentError(
+      "PREFLIGHT_SHARD_ASSIGNMENT shard count must be a positive integer",
+    );
+  const groupCount = sourceGroupCountFor(source);
+  if (shardCount > groupCount)
+    throw new PreflightShardAssignmentError(
+      `PREFLIGHT_SHARD_ASSIGNMENT shard count ${shardCount} exceeds canonical group count ${groupCount}; empty shards are not allowed`,
+    );
 };
 
 const leastLoadedShard = (shards: readonly MutableShard[]): MutableShard => {
@@ -157,11 +187,8 @@ export function createPreflightShardAssignment(
   source: SourceArtifact,
   shardCount: number,
 ): PreflightShardAssignment {
-  if (!Number.isInteger(shardCount) || shardCount <= 0)
-    throw new PreflightShardAssignmentError(
-      "PREFLIGHT_SHARD_ASSIGNMENT shard count must be a positive integer",
-    );
   assertSpecializedDeclarations(source.specializedDeclarations);
+  assertPreflightShardCount(source, shardCount);
   const states = sourceStatesFor(source);
   const identity = identityFor(source, shardCount);
   const shards = assignGroups(states, shardCount).map(

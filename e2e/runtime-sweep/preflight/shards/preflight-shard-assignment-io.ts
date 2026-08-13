@@ -16,6 +16,7 @@ import {
 } from "./preflight-shard-assignment-contract.ts";
 import {
   assertPreflightShardAssignmentMatchesSource,
+  assertPreflightShardCount,
   createPreflightShardAssignment,
 } from "./preflight-shard-assignment-planner.ts";
 import { parsePreflightShardAssignment } from "./preflight-shard-assignment-validation.ts";
@@ -80,10 +81,15 @@ export async function readOrCreatePreflightShardAssignment(input: {
   readonly source: SourceArtifact;
   readonly shardCount: number;
 }): Promise<PreflightShardAssignment> {
+  assertPreflightShardCount(input.source, input.shardCount);
   const archiveRoot = await ensurePreflightArchiveRoot(input.archiveRoot);
   await assertPreflightArchivePath(archiveRoot, input.filePath);
   if (await fileExists(input.filePath)) {
     const assignment = await readPreflightShardAssignment(input.filePath);
+    if (assignment.shardCount !== input.shardCount)
+      throw new PreflightShardAssignmentError(
+        `PREFLIGHT_SHARD_ASSIGNMENT stored shard count ${assignment.shardCount} does not match requested shard count ${input.shardCount}`,
+      );
     assertPreflightShardAssignmentMatchesSource(input.source, assignment);
     return assignment;
   }

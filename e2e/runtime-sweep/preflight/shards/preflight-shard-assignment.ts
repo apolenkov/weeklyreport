@@ -20,6 +20,7 @@ export {
 } from "./preflight-shard-assignment-io.ts";
 export {
   assertPreflightShardAssignmentMatchesSource,
+  assertPreflightShardCount,
   createPreflightShardAssignment,
   preflightShardStateFor,
 } from "./preflight-shard-assignment-planner.ts";
