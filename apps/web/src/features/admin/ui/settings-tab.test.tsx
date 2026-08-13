@@ -318,11 +318,10 @@ describe("SettingsTab — Identity sub-tab", () => {
       await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
       fireEvent.change(shortNameInput, { target: { value: "SAVED" } });
 
-      await userEvent.setup().click(
-        screen.getByRole("button", {
-          name: /save organization identity/i,
-        }),
-      );
+      const saveButton = screen.getByRole<HTMLButtonElement>("button", {
+        name: /save organization identity/i,
+      });
+      await userEvent.setup().click(saveButton);
       await waitFor(() =>
         expect(
           expectDefined(captured["admin.updateOrganization"]).mutationFn,
@@ -344,6 +343,8 @@ describe("SettingsTab — Identity sub-tab", () => {
           expectDefined(captured["admin.updateOrganization"]).lastOptions
             .onSuccess,
         ).not.toBe(pendingOnSuccess);
+        expect(saveButton).toBeDisabled();
+        expect(saveButton).toHaveTextContent(/saving/i);
       });
       resolveUpdate();
 
