@@ -40,6 +40,23 @@ const REASON_SEPARATOR = " -- ";
 const FINGERPRINT_LENGTH = 16;
 const GIT = "/usr/bin/git";
 
+const gitLocalEnvironmentNames = new Set(
+  execFileSync(GIT, ["rev-parse", "--local-env-vars"], {
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n"),
+);
+
+export const withoutLocalGitEnvironment = (
+  environment: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv =>
+  Object.fromEntries(
+    Object.entries(environment).filter(
+      ([name]) => !gitLocalEnvironmentNames.has(name),
+    ),
+  );
+
 const scopedRemainder = (
   remainder: string,
 ):
@@ -198,7 +215,11 @@ export const readSuppressionInventoryAtCommit = (
       return execFileSync(
         GIT,
         ["grep", "-l", "eslint-disable", commit, "--", "*.ts", "*.tsx"],
-        { cwd, encoding: "utf8" },
+        {
+          cwd,
+          encoding: "utf8",
+          env: withoutLocalGitEnvironment(process.env),
+        },
       );
     } catch (error) {
       if (error instanceof Error && "status" in error && error.status === 1)
@@ -218,6 +239,7 @@ export const readSuppressionInventoryAtCommit = (
         execFileSync(GIT, ["show", `${commit}:${path}`], {
           cwd,
           encoding: "utf8",
+          env: withoutLocalGitEnvironment(process.env),
         }),
       ),
     )
