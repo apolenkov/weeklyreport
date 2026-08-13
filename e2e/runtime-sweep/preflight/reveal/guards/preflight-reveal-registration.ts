@@ -21,11 +21,47 @@ export const controlsForImmediateReveal = (
   const previous = new Map(
     step.before.controls.map((control) => [control.controlKey, control]),
   );
+  const sharedControlKeys = new Set(
+    branch.surface.controls
+      .map(({ controlKey }) => controlKey)
+      .filter((controlKey) => previous.has(controlKey)),
+  );
+  const relativeOrderFor = (
+    controls: readonly RevealSurface["controls"][number][],
+  ): readonly string[] =>
+    controls
+      .filter(({ controlKey }) => sharedControlKeys.has(controlKey))
+      .toSorted((left, right) => {
+        if (left.order < right.order) return -1;
+        if (left.order > right.order) return 1;
+        return (
+          left.domOrderKey.localeCompare(right.domOrderKey) ||
+          left.controlKey.localeCompare(right.controlKey)
+        );
+      })
+      .map(({ controlKey }) => controlKey);
+  if (
+    stableSerialize(relativeOrderFor(step.before.controls)) !==
+    stableSerialize(relativeOrderFor(branch.surface.controls))
+  )
+    return branch.surface.controls;
+
+  const nonPositionalSignatureFor = (
+    control: RevealSurface["controls"][number],
+  ): string =>
+    stableSerialize({
+      controlKey: control.controlKey,
+      ariaRole: control.ariaRole,
+      accessibleName: control.accessibleName,
+      enabled: control.enabled,
+      href: control.href,
+      interactionEffect: control.interactionEffect,
+    });
   return branch.surface.controls.filter((control) => {
     const prior = previous.get(control.controlKey);
     return (
       prior === undefined ||
-      surfaceSignatureFor(prior) !== surfaceSignatureFor(control)
+      nonPositionalSignatureFor(prior) !== nonPositionalSignatureFor(control)
     );
   });
 };
