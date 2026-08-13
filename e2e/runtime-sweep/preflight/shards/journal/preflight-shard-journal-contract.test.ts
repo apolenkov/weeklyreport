@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { sha256Hex } from "../../../support/ids.ts";
 import {
   parsePreflightShardJournalRecord,
   PreflightShardJournalError,
+  preflightShardJournalRecordBody,
 } from "./preflight-shard-journal-contract.ts";
 import {
   createPreflightShardJournalStarted,
@@ -83,6 +85,43 @@ describe("PREFLIGHT_SHARD_JOURNAL record contract", () => {
             failureSummary: "line one\nline two",
           }),
         ).toThrow(PreflightShardJournalError);
+      });
+    },
+  );
+
+  it.each([
+    "postgres://admin:supersecret@127.0.0.1/db",
+    "Authorization: Bearer abc.def.ghi",
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.jwt-secret",
+    "apiKey=example-token",
+  ])(
+    "redacts factory failure evidence and rejects raw crafted input: %s",
+    async (secret) => {
+      await withJournalContext((context, [state]) => {
+        const started = createPreflightShardJournalStarted({
+          context,
+          state,
+          attempt: 1,
+        });
+        const failed = createPreflightShardJournalTerminal({
+          context,
+          started,
+          status: "FAIL",
+          failureSummary: secret,
+        });
+        expect(failed.failureSummary).toContain("[REDACTED]");
+        expect(JSON.stringify(failed)).not.toContain(secret);
+
+        const craftedBody = {
+          ...preflightShardJournalRecordBody(failed),
+          failureSummary: secret,
+        };
+        expect(() =>
+          parsePreflightShardJournalRecord({
+            ...craftedBody,
+            recordDigest: sha256Hex(craftedBody),
+          }),
+        ).toThrow(/must already be redacted/u);
       });
     },
   );
