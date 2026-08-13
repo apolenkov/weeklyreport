@@ -251,9 +251,6 @@ const processRevealCandidate = async (
   )
     return state;
   const actionCount = state.actionCount + current.path.steps.length + 1;
-  const branchCount = state.branchCount + 1;
-  if (branchCount > input.maxBranches)
-    throw new RevealDiscoveryError("Reveal branch bound exceeded");
   if (actionCount > input.maxActions)
     throw new RevealDiscoveryError("Reveal action bound exceeded");
   const result = await branchFor({
@@ -264,6 +261,14 @@ const processRevealCandidate = async (
     branch: current,
     candidate,
   });
+  const branch = result.branch;
+  const materialChanged =
+    result.explore &&
+    !(
+      sameRevealSurface(current.surface, branch.surface) &&
+      current.url === branch.url
+    );
+  const branchCount = state.branchCount + (materialChanged ? 1 : 0);
   const transitioned = {
     ...state,
     controls: controlsWithTransition(
@@ -276,13 +281,9 @@ const processRevealCandidate = async (
     actionCount,
     branchCount,
   };
-  const branch = result.branch;
-  if (
-    !result.explore ||
-    (sameRevealSurface(current.surface, branch.surface) &&
-      current.url === branch.url)
-  )
-    return transitioned;
+  if (materialChanged && branchCount > input.maxBranches)
+    throw new RevealDiscoveryError("Reveal branch bound exceeded");
+  if (!materialChanged) return transitioned;
   return enqueueChangedBranch({
     queueInput: input,
     state: transitioned,
