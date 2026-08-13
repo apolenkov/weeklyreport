@@ -66,6 +66,11 @@ jobs:
 
       # This matches pre-push and includes the root Prisma-script suite that a
       # bare `turbo test` omits.
+      # The root test also runs the runtime Playwright harness, so the browser
+      # must be installed in this job rather than relying on the later E2E job.
+      - name: Install Playwright browsers
+        run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
+
       - name: Unit Tests
         run: pnpm test
 

@@ -122,6 +122,24 @@ const jobPermissionWorkflow = (permissions: string): string =>
 const findingsText = (source: string): string =>
   workflowHygieneFindings(source).join("\n");
 
+const qualityWorkflow = (
+  steps: readonly Readonly<{ name: string; run: string }>[],
+): string =>
+  [
+    "name: Fixture",
+    "on: push",
+    "permissions:",
+    "  contents: read",
+    "jobs:",
+    "  quality:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    ...steps.flatMap(({ name, run }) => [
+      `      - name: ${JSON.stringify(name)}`,
+      `        run: ${JSON.stringify(run)}`,
+    ]),
+  ].join("\n");
+
 const expectFinding = (source: string, pattern: RegExp): void => {
   assert.match(findingsText(source), pattern);
 };
@@ -282,6 +300,44 @@ void test("workflow policy allows explicit read-only job permissions", () => {
     "    permissions: { contents: read, actions: none }",
   );
   assert.deepEqual(workflowHygieneFindings(source), []);
+});
+
+void test("quality job installs isolated Chromium before its unit tests", () => {
+  const source = qualityWorkflow([
+    {
+      name: "Install Playwright browsers",
+      run: "pnpm --filter @customreport/web exec playwright install --with-deps chromium",
+    },
+    { name: "Unit Tests", run: "pnpm test" },
+  ]);
+  assert.deepEqual(workflowHygieneFindings(source), []);
+});
+
+void test("quality job rejects a missing, late, or bypassed Chromium install", () => {
+  const cases = [
+    [{ name: "Unit Tests", run: "pnpm test" }],
+    [
+      { name: "Unit Tests", run: "pnpm test" },
+      {
+        name: "Install Playwright browsers",
+        run: "pnpm --filter @customreport/web exec playwright install --with-deps chromium",
+      },
+    ],
+    [
+      {
+        name: "Install Playwright browsers",
+        run: "pnpm exec playwright install --with-deps chromium",
+      },
+      { name: "Unit Tests", run: "pnpm test" },
+    ],
+  ] as const;
+
+  cases.forEach((steps) => {
+    expectFinding(
+      qualityWorkflow(steps),
+      /quality job must install isolated Playwright Chromium before Unit Tests/u,
+    );
+  });
 });
 
 void test("checked-in workflows satisfy the security policy", () => {
