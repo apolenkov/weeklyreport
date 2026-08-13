@@ -19,15 +19,33 @@ const requiredEnv = (name: string): string => {
 
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const canaryMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "canary";
-const preflightArtifactName = canaryMode ? "preflight-canary" : "preflight";
-const preflightApiLogDir = path.join(
-  archiveRoot,
-  "api-log",
-  preflightArtifactName,
-);
+const shardMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "shard";
+const preflightArtifactName = shardMode
+  ? "shard"
+  : canaryMode
+    ? "preflight-canary"
+    : "preflight";
+const preflightApiLogDir = shardMode
+  ? path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"))
+  : path.join(archiveRoot, "api-log", preflightArtifactName);
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
 const PREFLIGHT_WEB_PORT = requiredEnv("E2E_WEB_PORT");
+const PREFLIGHT_API_PORT = requiredEnv("E2E_API_PORT");
+const PREFLIGHT_WEB_ORIGIN = `http://127.0.0.1:${PREFLIGHT_WEB_PORT}`;
+const PREFLIGHT_API_ORIGIN = `http://127.0.0.1:${PREFLIGHT_API_PORT}`;
+const shardPathEnvironment = shardMode
+  ? {
+      logDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"),
+      pdfDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_PDF_DIR"),
+      outputDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_OUTPUT_DIR"),
+      nextDistDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_NEXT_DIST_DIR"),
+      queuePrefix: requiredEnv("E2E_BULLMQ_PREFIX"),
+      redisHost: requiredEnv("REDIS_HOST"),
+      redisPort: requiredEnv("REDIS_PORT"),
+      databaseUrl: requiredEnv("E2E_DATABASE_URL"),
+    }
+  : undefined;
 const {
   globalSetup: _integrationGlobalSetup,
   globalTeardown: _integrationGlobalTeardown,
@@ -48,23 +66,64 @@ const preflightApiObservabilityEnvironment = {
   OTEL_SERVICE_VERSION: requiredEnv("OTEL_SERVICE_VERSION"),
   ...runtimeTraceSamplingEnvironment,
 } as const;
+const shardApiEnvironment =
+  shardPathEnvironment === undefined
+    ? {}
+    : {
+        DATABASE_URL: shardPathEnvironment.databaseUrl,
+        PORT: PREFLIGHT_API_PORT,
+        FRONTEND_URL: PREFLIGHT_WEB_ORIGIN,
+        APP_BASE_URL: PREFLIGHT_WEB_ORIGIN,
+        PDF_BASE_URL: PREFLIGHT_WEB_ORIGIN,
+        PDF_OUTPUT_DIR: shardPathEnvironment.pdfDir,
+        LOG_DIR: shardPathEnvironment.logDir,
+        BULLMQ_PREFIX: shardPathEnvironment.queuePrefix,
+        REDIS_HOST: shardPathEnvironment.redisHost,
+        REDIS_PORT: shardPathEnvironment.redisPort,
+      };
+const shardWebEnvironment =
+  shardPathEnvironment === undefined
+    ? {}
+    : {
+        NEXT_PUBLIC_API_URL: PREFLIGHT_API_ORIGIN,
+        NEXT_DIST_DIR: shardPathEnvironment.nextDistDir,
+      };
+const preflightWebEnvironment = {
+  ...runtimeSweepWebEnvironment(webServer.env),
+  ...shardWebEnvironment,
+};
+const preflightWebServerCommand = shardMode
+  ? `pnpm --filter @customreport/web exec next dev -p ${PREFLIGHT_WEB_PORT}`
+  : runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT);
 
 export default defineConfig({
   // The preflight preparation owns its exact database reset and profile seed.
   // Do not inherit the integration suite's default global reset/seed lifecycle.
   ...integrationConfigWithoutLifecycle,
   testDir: import.meta.dirname,
-  testMatch: canaryMode ? /preflight-canary\.spec\.ts/ : /preflight\.spec\.ts/,
-  outputDir: path.join(archiveRoot, `playwright-${preflightArtifactName}`),
+  testMatch: shardMode
+    ? /preflight-shard\.spec\.ts/
+    : canaryMode
+      ? /preflight-canary\.spec\.ts/
+      : /preflight\.spec\.ts/,
+  outputDir:
+    shardPathEnvironment?.outputDir ??
+    path.join(archiveRoot, `playwright-${preflightArtifactName}`),
+  use: {
+    ...integrationConfigWithoutLifecycle.use,
+    baseURL: PREFLIGHT_WEB_ORIGIN,
+  },
   timeout: PREFLIGHT_TIMEOUT_MS,
   fullyParallel: false,
   workers: 1,
   projects: [
     {
       name: "runtime-preflight",
-      testMatch: canaryMode
-        ? /preflight-canary\.spec\.ts/
-        : /preflight\.spec\.ts/,
+      testMatch: shardMode
+        ? /preflight-shard\.spec\.ts/
+        : canaryMode
+          ? /preflight-canary\.spec\.ts/
+          : /preflight\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
@@ -79,6 +138,7 @@ export default defineConfig({
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
       env: {
         ...apiServer.env,
+        ...shardApiEnvironment,
         ...preflightApiObservabilityEnvironment,
         LOG_DIR: preflightApiLogDir,
         LOG_LEVEL: "info",
@@ -87,10 +147,10 @@ export default defineConfig({
     },
     {
       ...webServer,
-      command: runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT),
+      command: preflightWebServerCommand,
       cwd: REPO_ROOT,
       gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
-      env: runtimeSweepWebEnvironment(webServer.env),
+      env: preflightWebEnvironment,
     },
   ],
 });
