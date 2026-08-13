@@ -8,6 +8,7 @@ import {
   type PreflightShardCompletionReadRequest,
 } from "./preflight-shard-merge.ts";
 import { PreflightShardMergeError } from "./preflight-shard-merge-contract.ts";
+import { readPreflightShardMergeReceipt } from "./preflight-shard-merge-receipt-reader.ts";
 import {
   createPersistedMergeFixture,
   type PersistedMergeFixture,
@@ -48,6 +49,29 @@ describe("canonical preflight shard merge", () => {
     );
     expect(Object.isFrozen(result.preflight)).toBe(true);
     expect(Object.isFrozen(result.receipt)).toBe(true);
+  });
+
+  it("revalidates a positive receipt with distinct composite shard attempts", async () => {
+    const result = await merge();
+    const reread = await readPreflightShardMergeReceipt({
+      source: fixture.source,
+      assignment: fixture.assignment,
+      donorRoots: fixture.donorRoots,
+      preflight: result.preflight,
+      receipt: result.receipt,
+    });
+    expect(reread).toEqual(result.receipt);
+    expect(reread.shards.map(({ shardAttemptId }) => shardAttemptId)).toEqual([
+      "attempt-1",
+      "attempt-1",
+    ]);
+    expect(
+      new Set(
+        reread.shards.map(({ donorId, logicalShardId, shardAttemptId }) =>
+          [donorId, logicalShardId, shardAttemptId].join("\u0000"),
+        ),
+      ).size,
+    ).toBe(reread.shards.length);
   });
 
   it("attaches and validates all specialized declarations and segment coverage", async () => {
