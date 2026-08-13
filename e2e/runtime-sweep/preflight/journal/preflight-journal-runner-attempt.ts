@@ -80,6 +80,7 @@ export const runStateAttempt = async (input: {
   readonly route: Parameters<JournaledPreflightInput["runState"]>[0]["route"];
   readonly context: JournalStateContext;
   readonly verifyBoundary: BoundaryVerifier;
+  readonly resetRequired: boolean;
 }): Promise<void> => {
   const started = await input.context.writer.appendStarted({
     state: input.state,
@@ -91,7 +92,7 @@ export const runStateAttempt = async (input: {
         assignment: input.runner.assignment,
         state: input.state,
         route: input.route,
-        resetRequired: true,
+        resetRequired: input.resetRequired,
       }),
     );
     assertStateResult(input.state, segment);
