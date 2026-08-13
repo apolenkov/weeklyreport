@@ -1,3 +1,6 @@
+import * as path from "node:path";
+
+import { nextDistDirForNextConfig } from "../runtime/runtime-next-dist.ts";
 import type { PreflightShardLaunchPreparation } from "./preflight-shard-launcher-support.ts";
 
 const LEGACY_ARTIFACT_KEYS = [
@@ -36,6 +39,8 @@ const SHARD_CHILD_PATH_KEYS = [
   "RUNTIME_SWEEP_BASE_URL",
   "NEXT_PUBLIC_API_URL",
 ] as const;
+
+const WEB_ROOT = path.resolve(import.meta.dirname, "../../../../apps/web");
 
 /** Build the only environment accepted by the real-browser shard config. */
 export const preflightShardChildEnvironment = (
@@ -79,7 +84,10 @@ export const preflightShardChildEnvironment = (
     PDF_BASE_URL: launch.webOrigin,
     PDF_OUTPUT_DIR: proof.resources.pdfDir,
     LOG_DIR: proof.resources.logDir,
-    NEXT_DIST_DIR: proof.resources.nextDistDir,
+    NEXT_DIST_DIR: nextDistDirForNextConfig(
+      WEB_ROOT,
+      proof.resources.nextDistDir,
+    ),
     OUTPUT_DIR: proof.resources.outputDir,
     REDIS_HOST: proof.resources.redis.host,
     REDIS_PORT: String(proof.resources.redis.port),

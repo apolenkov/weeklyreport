@@ -179,9 +179,7 @@ describe("source-bound shard prelaunch", () => {
         launch.resourceProof.resources.queuePrefix,
       );
       expect(child.LOG_DIR).toBe(launch.resourceProof.resources.logDir);
-      expect(child.NEXT_DIST_DIR).toBe(
-        launch.resourceProof.resources.nextDistDir,
-      );
+      expect(path.isAbsolute(child.NEXT_DIST_DIR ?? "")).toBe(false);
       expect(child.E2E_DATABASE_URL).toBe(launch.databaseUrl);
       expect(child.RUNTIME_SWEEP_PREFLIGHT).toBeUndefined();
       expect(child.RUNTIME_SWEEP_PREFLIGHT_JOURNAL).toBeUndefined();

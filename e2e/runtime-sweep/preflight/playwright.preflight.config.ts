@@ -9,6 +9,7 @@ import {
 } from "../../runtime-api-server-command.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime/runtime-auth-env.ts";
+import { nextDistDirForNextConfig } from "./runtime/runtime-next-dist.ts";
 import { runtimeTraceSamplingEnvironment } from "./runtime/runtime-observability-policy.ts";
 
 const requiredEnv = (name: string): string => {
@@ -29,6 +30,7 @@ const preflightApiLogDir = shardMode
   ? path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"))
   : path.join(archiveRoot, "api-log", preflightArtifactName);
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
+const WEB_ROOT = path.join(REPO_ROOT, "apps", "web");
 const PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
 const PREFLIGHT_WEB_PORT = requiredEnv("E2E_WEB_PORT");
 const PREFLIGHT_API_PORT = requiredEnv("E2E_API_PORT");
@@ -39,7 +41,10 @@ const shardPathEnvironment = shardMode
       logDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"),
       pdfDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_PDF_DIR"),
       outputDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_OUTPUT_DIR"),
-      nextDistDir: requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_NEXT_DIST_DIR"),
+      nextDistDir: nextDistDirForNextConfig(
+        WEB_ROOT,
+        requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_NEXT_DIST_DIR"),
+      ),
       queuePrefix: requiredEnv("E2E_BULLMQ_PREFIX"),
       redisHost: requiredEnv("REDIS_HOST"),
       redisPort: requiredEnv("REDIS_PORT"),
