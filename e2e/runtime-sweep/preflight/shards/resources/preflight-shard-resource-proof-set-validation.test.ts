@@ -14,16 +14,10 @@ import {
   withProofDigest,
 } from "./preflight-shard-resource-proof-test-support.ts";
 
-const RESOURCE_PROOF_TEST_ROOT = path.join(
-  process.cwd(),
-  ".runtime-shard-resource-proof-fixture",
-);
-const PRO_ROOT = path.join(RESOURCE_PROOF_TEST_ROOT, "donor-pro");
-const AIR_ROOT = path.join(RESOURCE_PROOF_TEST_ROOT, "donor-air");
-const OUTSIDE_ROOT = path.join(
-  process.cwd(),
-  ".runtime-shard-resource-proof-outside",
-);
+const RESOURCE_PROOF_TEST_ROOT = ".runtime-shard-resource-proof-fixture";
+const PRO_ROOT = `${process.cwd()}/${RESOURCE_PROOF_TEST_ROOT}/donor-pro`;
+const AIR_ROOT = `${process.cwd()}/${RESOURCE_PROOF_TEST_ROOT}/donor-air`;
+const OUTSIDE_ROOT = `${process.cwd()}/.runtime-shard-resource-proof-outside`;
 
 const proofFor = (
   source: Parameters<typeof attemptFor>[0],

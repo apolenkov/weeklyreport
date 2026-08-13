@@ -61,6 +61,20 @@ describe("preflight shard resource-proof immutable I/O", () => {
         await expect(
           readPreflightShardResourceProof(filePath, archiveRoot),
         ).resolves.toEqual(proof);
+        const foreignRoot = path.join(root, "foreign");
+        await mkdir(foreignRoot, { recursive: true });
+        const foreignFile = path.join(foreignRoot, "RESOURCE-PROOF.json");
+        await writeFile(
+          foreignFile,
+          serializePreflightShardResourceProof(proof),
+        );
+        await expect(
+          readPreflightShardResourceProof(foreignFile, foreignRoot),
+        ).rejects.toThrow(/does not match.*read root/iu);
+        await expect(
+          // @ts-expect-error archiveRoot is mandatory for confinement.
+          readPreflightShardResourceProof(filePath),
+        ).rejects.toThrow();
         await expect(
           writePreflightShardResourceProof({ archiveRoot, filePath, proof }),
         ).rejects.toThrow(/Cannot create immutable/iu);

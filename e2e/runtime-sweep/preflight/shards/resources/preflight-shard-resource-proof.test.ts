@@ -46,6 +46,7 @@ describe("PREFLIGHT_SHARD_RESOURCE_PROOF contract", () => {
     "planDigest",
     "assignmentDigest",
     "logicalShardId",
+    "shardIndex",
     "shardDigest",
   ])("rejects stale %s identity", async (field) => {
     await withResourceProofFixture(({ source, assignment, proof }) => {
@@ -57,7 +58,9 @@ describe("PREFLIGHT_SHARD_RESOURCE_PROOF contract", () => {
             ? "f".repeat(40)
             : field === "logicalShardId"
               ? "stale-shard"
-              : "stale-value",
+              : field === "shardIndex"
+                ? 999
+                : "stale-value",
       }));
       expect(() =>
         assertPreflightShardResourceProofMatchesSource({
@@ -131,6 +134,31 @@ describe("PREFLIGHT_SHARD_RESOURCE_PROOF contract", () => {
         },
       }));
       expect(() => parsePreflightShardResourceProof(wrongCapability)).toThrow();
+    });
+  });
+
+  it.each([
+    ["nodeVersion", "26.7.0"],
+    ["nodeVersion", "v0.0.0"],
+    ["pnpmVersion", "latest"],
+    ["playwrightVersion", "none"],
+    ["browserVersion", "0"],
+    ["chromiumRevision", "chromium-1440"],
+    ["chromiumRevision", "0"],
+  ])("rejects invalid semantic runtime/browser %s", async (field, value) => {
+    await withResourceProofFixture(({ proof }) => {
+      const candidate = withProofDigest(proof, (body) => ({
+        ...body,
+        ...(field === "browserVersion"
+          ? { browser: { ...body.browser, version: value } }
+          : field.startsWith("node") ||
+              field.startsWith("pnpm") ||
+              field === "playwrightVersion" ||
+              field === "chromiumRevision"
+            ? { runtime: { ...body.runtime, [field]: value } }
+            : {}),
+      }));
+      expect(() => parsePreflightShardResourceProof(candidate)).toThrow();
     });
   });
 });
