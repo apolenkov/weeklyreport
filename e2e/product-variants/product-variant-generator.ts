@@ -247,7 +247,11 @@ export function generateProductVariantManifest(
     variants,
     generatedAt,
   };
-  return manifestSchema.parse({ ...body, manifestDigest: digest(body) });
+  const { generatedAt: _generatedAt, ...identityBody } = body;
+  return manifestSchema.parse({
+    ...body,
+    manifestDigest: digest(identityBody),
+  });
 }
 
 export const productVariantProfiles = [
