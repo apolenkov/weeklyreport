@@ -100,6 +100,7 @@ describe("runtime state oracle", () => {
         status: "submitted",
         submittedAt: "present",
         verdict: "approved",
+        version: 1,
       },
       ownership: {
         targetOwnerId: "lead-owner",

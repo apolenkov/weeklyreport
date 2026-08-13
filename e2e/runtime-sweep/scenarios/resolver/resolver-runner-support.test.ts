@@ -52,7 +52,12 @@ const emptyActual = (): RuntimeDatabaseSnapshot => ({
     periodStatus: "open",
     archived: false,
   },
-  section: { status: "draft", submittedAt: "absent", verdict: "none" },
+  section: {
+    status: "draft",
+    submittedAt: "absent",
+    verdict: "none",
+    version: 1,
+  },
   ownership: { targetOwnerId: "lead-1", owners: ["lead-1"] },
   permission: {
     actorId: VIEWER_USER_ID,
