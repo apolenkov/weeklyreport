@@ -6,6 +6,7 @@ import type {
   DomInventory,
 } from "../../../replay/dom/dom-inventory.ts";
 import { preflightControlForPlan } from "../../execution/playwright-preflight.ts";
+import { revealSurfaceFor } from "../../reveal-path.ts";
 import {
   discoverRevealControls,
   type RevealExecutionHarness,
@@ -182,6 +183,70 @@ test("keeps the first path for a shared semantic surface", async () => {
   expect(
     new Set(sharedControls.map(({ revealPath }) => revealPath.digest)).size,
   ).toBe(1);
+});
+
+test("freezes the active-modal surface independently of background controls", () => {
+  const modalDialog = {
+    ...observation("dialog:Add risk:0", "Add risk", 1),
+    role: "dialog" as const,
+    keyboardFocusScope: "active-modal" as const,
+  };
+  const modalCancel = {
+    ...observation("button:Cancel:0", "Cancel", 2),
+    href: "/cancel",
+    interactionEffect: "client-only" as const,
+    keyboardFocusScope: "active-modal" as const,
+  };
+  const headerCompletion = {
+    ...observation("button:Complete:0", "Complete", 0),
+    keyboardFocusScope: "background" as const,
+  };
+  const stickyCompletion = {
+    ...observation("button:Complete sticky:0", "Complete", 99),
+    keyboardFocusScope: "background" as const,
+  };
+  const headerSurface = revealSurfaceFor([
+    headerCompletion,
+    modalDialog,
+    modalCancel,
+  ]);
+  const stickySurface = revealSurfaceFor([
+    modalCancel,
+    stickyCompletion,
+    modalDialog,
+  ]);
+
+  expect(stickySurface).toEqual(headerSurface);
+  expect(headerSurface.controls).toEqual([
+    {
+      controlKey: modalCancel.controlKey,
+      ariaRole: modalCancel.role,
+      accessibleName: modalCancel.accessibleName,
+      enabled: modalCancel.enabled,
+      order: modalCancel.order,
+      domOrderKey: modalCancel.domOrderKey,
+      href: modalCancel.href,
+      interactionEffect: modalCancel.interactionEffect,
+    },
+    {
+      controlKey: modalDialog.controlKey,
+      ariaRole: modalDialog.role,
+      accessibleName: modalDialog.accessibleName,
+      enabled: modalDialog.enabled,
+      order: modalDialog.order,
+      domOrderKey: modalDialog.domOrderKey,
+      href: modalDialog.href,
+      interactionEffect: null,
+    },
+  ]);
+  expect(revealSurfaceFor([headerCompletion]).controls).toHaveLength(1);
+
+  const changedModalSurface = revealSurfaceFor([
+    headerCompletion,
+    modalDialog,
+    { ...modalCancel, enabled: false },
+  ]);
+  expect(changedModalSurface.digest).not.toBe(headerSurface.digest);
 });
 
 test("does not re-execute a persistent background control behind a modal", async () => {
