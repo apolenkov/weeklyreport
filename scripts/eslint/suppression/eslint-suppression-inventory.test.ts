@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
 
+import { withoutLocalGitEnvironment } from "../../shared/git-environment.ts";
 import {
   readSuppressionInventory,
   readSuppressionInventoryAtCommit,
-  withoutLocalGitEnvironment,
 } from "./eslint-suppression-inventory.ts";
 
 const fixtureDir = mkdtempSync(path.join(tmpdir(), "suppression-inventory-"));

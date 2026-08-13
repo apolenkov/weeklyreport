@@ -3,17 +3,24 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { withoutLocalGitEnvironment } from "../../shared/git-environment.ts";
 import type {
   ReactDoctorBaselineEntry,
   ReactDoctorDiagnosticIdentity,
 } from "./react-doctor-baseline.ts";
 import {
+  assertReactDoctorScanComplete,
   compareReactDoctorBaseline,
   reactDoctorBaselineIsCurrent,
 } from "./react-doctor-baseline.ts";
 
 interface ReactDoctorReport {
+  readonly reactDetected: boolean;
   readonly version: string;
+  readonly projects: readonly {
+    readonly complete: boolean;
+    readonly skippedChecks: readonly string[];
+  }[];
   readonly diagnostics: readonly {
     readonly id: string;
     readonly filePath: string;
@@ -71,6 +78,7 @@ const outcome = spawnSync(
   {
     cwd: REPO_ROOT,
     encoding: "utf8",
+    env: withoutLocalGitEnvironment(process.env),
     maxBuffer: MAX_REPORT_BYTES,
   },
 );
@@ -89,6 +97,7 @@ const baseline = JSON.parse(
 if (report.summary.errorCount !== 0) {
   throw new Error(`React Doctor reported ${report.summary.errorCount} errors`);
 }
+assertReactDoctorScanComplete(report.reactDetected, report.projects);
 if (report.version !== baseline.reactDoctorVersion) {
   throw new Error(
     `React Doctor version drift: ${baseline.reactDoctorVersion} -> ${report.version}`,
