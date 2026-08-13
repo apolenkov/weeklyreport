@@ -2,6 +2,12 @@ import type { MatrixPreflightSegment } from "../../matrix/finalization/matrix-fi
 import { freezeDeep } from "../../source/manifest-source.ts";
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { stableSerialize } from "../../support/ids.ts";
+import {
+  assertPreflightAssignmentMatchesSource,
+  createPreflightAssignment,
+  parsePreflightAssignment,
+  type PreflightAssignment,
+} from "../artifacts/preflight-assignment.ts";
 import type { PreflightRoute } from "../execution/playwright-preflight-support.ts";
 import {
   parsePreflightSegmentArtifact,
@@ -13,12 +19,12 @@ import {
   assertPreflightArchivePath,
   assertPreflightRegularFile,
 } from "../preflight-archive-path.ts";
+import { resolvePreflightStateSelector } from "./preflight-state-selector.ts";
 import {
   type PreflightStateSelection,
   type PreflightStateSelector,
   PreflightStateSelectorError,
-  resolvePreflightStateSelector,
-} from "./preflight-state-selector.ts";
+} from "./preflight-state-selector-contract.ts";
 
 /**
  * A typed view over the existing immutable `PREFLIGHT_SEGMENT` artifact.
@@ -122,6 +128,20 @@ const artifactFor = (value: unknown): PreflightSegmentArtifact => {
   }
 };
 
+const assignmentFor = (
+  source: SourceArtifact,
+  assignment: PreflightAssignment | undefined,
+): PreflightAssignment => {
+  // v1 state evidence accepts only the current sequential assignment. A
+  // future shard assignment must use a separately versioned binder.
+  const current =
+    assignment === undefined
+      ? createPreflightAssignment(source)
+      : parsePreflightAssignment(assignment);
+  assertPreflightAssignmentMatchesSource(source, current);
+  return current;
+};
+
 /**
  * Binds an already parsed `PREFLIGHT_SEGMENT` to an exact current SOURCE
  * selector. The artifact parser remains authoritative for segment/artifact
@@ -131,12 +151,18 @@ export function createPreflightStateEvidence(input: {
   readonly source: SourceArtifact;
   readonly selector: unknown;
   readonly artifact: unknown;
+  readonly assignment?: PreflightAssignment;
 }): PreflightStateEvidence {
   const selection = selectionFor({
     source: input.source,
     selector: input.selector,
   });
   const artifact = artifactFor(input.artifact);
+  const assignment = assignmentFor(input.source, input.assignment);
+  if (artifact.assignmentDigest !== assignment.assignmentDigest)
+    throw new PreflightStateEvidenceError(
+      `PREFLIGHT_SEGMENT assignment digest does not match the current sequential assignment: expected ${assignment.assignmentDigest}, got ${artifact.assignmentDigest}`,
+    );
   assertStateEvidenceBinding({ selection, artifact });
   const segment = preflightSegmentForArtifact(artifact);
   return freezeDeep({
@@ -157,6 +183,7 @@ export async function readPreflightStateEvidence(input: {
   readonly selector: unknown;
   readonly archiveRoot: string;
   readonly filePath: string;
+  readonly assignment?: PreflightAssignment;
 }): Promise<PreflightStateEvidence> {
   await assertPreflightArchivePath(input.archiveRoot, input.filePath);
   await assertPreflightRegularFile(input.filePath);
@@ -164,8 +191,6 @@ export async function readPreflightStateEvidence(input: {
     source: input.source,
     selector: input.selector,
     artifact: await readPreflightSegmentArtifact(input.filePath),
+    ...(input.assignment === undefined ? {} : { assignment: input.assignment }),
   });
 }
-
-export const bindPreflightSegmentEvidence = createPreflightStateEvidence;
-export const scopePreflightSegmentEvidence = createPreflightStateEvidence;

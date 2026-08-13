@@ -15,15 +15,6 @@ import {
   type PreflightStateSemanticSelector,
   preflightStateSemanticSelectorSchema,
 } from "./preflight-state-selector-contract.ts";
-
-export {
-  type PreflightStateSelection,
-  type PreflightStateSelector,
-  PreflightStateSelectorError,
-  preflightStateSelectorSchema,
-  type PreflightStateSemanticSelector,
-  preflightStateSemanticSelectorSchema,
-} from "./preflight-state-selector-contract.ts";
 const selectorBody = (
   selector: PreflightStateSelector,
 ): Omit<PreflightStateSelector, "selectorDigest"> => {
@@ -38,7 +29,7 @@ const journalStateFor = (state: SourceArtifact["plan"]["states"][number]) =>
     axes: state.axes,
   });
 
-export const preflightStateDigestFor = (input: {
+const stateDigestFor = (input: {
   readonly state: SourceArtifact["plan"]["states"][number];
   readonly role: string;
   readonly catalogRoute: string;
@@ -88,7 +79,7 @@ const selectorForSelection = (input: {
     sourceDigest: source.sourceDigest,
     planDigest: source.plan.digest,
     stateId: state.stateId,
-    stateDigest: preflightStateDigestFor({
+    stateDigest: stateDigestFor({
       state,
       role: route.role,
       catalogRoute: route.catalogRoute,
@@ -294,7 +285,3 @@ export function resolvePreflightStateBySemantics(input: {
     }),
   });
 }
-
-export const resolvePreflightStateSemanticSelector =
-  resolvePreflightStateBySemantics;
-export const mapPreflightStateBySemantics = resolvePreflightStateBySemantics;
