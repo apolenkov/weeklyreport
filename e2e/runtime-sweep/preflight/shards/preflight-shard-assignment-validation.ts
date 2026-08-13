@@ -79,6 +79,10 @@ const assertShardHeader = (
     throw new PreflightShardAssignmentError(
       "PREFLIGHT_SHARD_ASSIGNMENT shard indices are duplicated or reordered",
     );
+  if (shard.states.length === 0)
+    throw new PreflightShardAssignmentError(
+      `PREFLIGHT_SHARD_ASSIGNMENT shard ${shard.shardIndex} is empty; every shard must own one complete group`,
+    );
   const expectedLogicalId = logicalShardIdFor(assignment, shard.shardIndex);
   if (shard.logicalShardId !== expectedLogicalId)
     throw new PreflightShardAssignmentError(

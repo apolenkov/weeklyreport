@@ -45,6 +45,24 @@ describe("preflight shard assignment archive I/O", () => {
           }),
         ).resolves.toEqual(assignment);
         await expect(
+          readOrCreatePreflightShardAssignment({
+            archiveRoot: root,
+            filePath,
+            source,
+            shardCount: 4,
+          }),
+        ).rejects.toThrow(/stored shard count 3.*requested shard count 4/u);
+        for (const shardCount of [0, -1, 1.5]) {
+          await expect(
+            readOrCreatePreflightShardAssignment({
+              archiveRoot: root,
+              filePath,
+              source,
+              shardCount,
+            }),
+          ).rejects.toThrow(/positive integer/u);
+        }
+        await expect(
           writePreflightShardAssignment({
             archiveRoot: root,
             filePath,
