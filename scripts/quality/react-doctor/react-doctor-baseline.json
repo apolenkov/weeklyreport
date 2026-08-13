@@ -633,7 +633,7 @@
       "rationale": "This report projection applies separate filtering and mapping to bounded sections/products. The explicit immutable pipeline is intentional and does not warrant a speculative reducer."
     },
     {
-      "id": "src/features/report-sections/model/next-week-columns.ts::40:7::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
+      "id": "src/features/report-sections/model/next-week-columns.ts::41:7::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
       "file": "src/features/report-sections/model/next-week-columns.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
