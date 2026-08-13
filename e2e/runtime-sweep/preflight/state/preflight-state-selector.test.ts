@@ -1,48 +1,19 @@
-import { rm } from "node:fs/promises";
-
 import { describe, expect, it } from "vitest";
 
-import { buildCampaignSource } from "../../manifest/manifest.ts";
-import {
-  createManifestFixture,
-  fakeManifestGit,
-} from "../../manifest/manifest-fixture.ts";
-import type { Role } from "../../source/contracts-types.ts";
-import { sha256Hex, stableSerialize } from "../../support/ids.ts";
+import { stableSerialize } from "../../support/ids.ts";
 import {
   createPreflightStateSelector,
   type PreflightStateSelector,
   preflightStateSemanticSelectorSchema,
   resolvePreflightStateBySemantics,
   resolvePreflightStateSelector,
-} from "./preflight-state-selector.ts";
-
-const withSource = async <T>(
-  callback: (
-    source: Awaited<ReturnType<typeof buildCampaignSource>>,
-  ) => Promise<T> | T,
-): Promise<T> => {
-  const fixture = await createManifestFixture();
-  try {
-    return await callback(
-      await buildCampaignSource(fixture.input, fakeManifestGit()),
-    );
-  } finally {
-    await rm(fixture.root, { recursive: true, force: true });
-  }
-};
-
-const withSelectorDigest = (
-  selector: PreflightStateSelector,
-  patch: Partial<PreflightStateSelector>,
-): unknown => {
-  const { selectorDigest: _selectorDigest, ...body } = selector;
-  const next = { ...body, ...patch };
-  return { ...next, selectorDigest: sha256Hex(next) };
-};
-
-const otherRole = (role: PreflightStateSelector["role"]): Role =>
-  role === "lead" ? "head" : "lead";
+} from "./preflight-state.ts";
+import {
+  canonicalAxisMutations,
+  otherRole,
+  withSelectorDigest,
+  withSource,
+} from "./preflight-state-test-support.ts";
 
 describe("exact preflight state selector", () => {
   it("creates and resolves one complete source/state/route identity", async () => {
@@ -215,6 +186,26 @@ describe("exact preflight state selector", () => {
           }),
         }),
       ).toThrow("Unknown preflight canary stateId");
+    });
+  });
+
+  it("rejects each canonical axis independently after selector digest recomputation", async () => {
+    await withSource((source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("fixture has no states");
+      const selector = createPreflightStateSelector({ source, state });
+      for (const [axis, mutate] of canonicalAxisMutations) {
+        expect(
+          () =>
+            resolvePreflightStateSelector({
+              source,
+              selector: withSelectorDigest(selector, {
+                axes: mutate(selector.axes),
+              }),
+            }),
+          `${axis} axis must reject`,
+        ).toThrow("axes");
+      }
     });
   });
 

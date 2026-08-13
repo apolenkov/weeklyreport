@@ -4,60 +4,46 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildCampaignSource } from "../../manifest/manifest.ts";
-import {
-  createManifestFixture,
-  fakeManifestGit,
-} from "../../manifest/manifest-fixture.ts";
 import { sha256Hex } from "../../support/ids.ts";
+import { createPreflightAssignment } from "../artifacts/preflight-assignment.ts";
 import {
   createPreflightSegmentArtifact,
   writePreflightSegmentArtifact,
 } from "../journal/preflight-journal-artifact.ts";
 import {
   createPreflightStateEvidence,
-  readPreflightStateEvidence,
-} from "./preflight-state-evidence.ts";
-import {
   createPreflightStateSelector,
+  readPreflightStateEvidence,
   resolvePreflightStateSelector,
-} from "./preflight-state-selector.ts";
-
-const withSource = async <T>(
-  callback: (
-    source: Awaited<ReturnType<typeof buildCampaignSource>>,
-  ) => Promise<T> | T,
-): Promise<T> => {
-  const fixture = await createManifestFixture();
-  try {
-    return await callback(
-      await buildCampaignSource(fixture.input, fakeManifestGit()),
-    );
-  } finally {
-    await rm(fixture.root, { recursive: true, force: true });
-  }
-};
+} from "./preflight-state.ts";
+import {
+  artifactFor,
+  canonicalAxisMutations,
+  selfConsistentAxisDrift,
+  withSource,
+} from "./preflight-state-test-support.ts";
 
 describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
   it("wraps the immutable PREFLIGHT_SEGMENT without creating a second artifact", async () => {
     await withSource((source) => {
       const state = source.plan.states[0];
       if (state === undefined) throw new Error("fixture has no states");
+      const assignment = createPreflightAssignment(source);
       const selection = resolvePreflightStateSelector({
         source,
         selector: createPreflightStateSelector({ source, state }),
       });
-      const artifact = createPreflightSegmentArtifact({
+      const artifact = artifactFor({
         source,
-        assignmentDigest: "a".repeat(64),
         state,
         route: selection.route,
-        segment: { state, controls: [], specialized: [] },
+        assignment,
       });
       const evidence = createPreflightStateEvidence({
         source,
         selector: selection.selector,
         artifact,
+        assignment,
       });
       expect(evidence.artifact.artifact).toBe("PREFLIGHT_SEGMENT");
       expect(evidence.artifact.version).toBe(1);
@@ -71,14 +57,14 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
     await withSource((source) => {
       const state = source.plan.states[0];
       if (state === undefined) throw new Error("fixture has no states");
+      const assignment = createPreflightAssignment(source);
       const selector = createPreflightStateSelector({ source, state });
       const selection = resolvePreflightStateSelector({ source, selector });
-      const artifact = createPreflightSegmentArtifact({
+      const artifact = artifactFor({
         source,
-        assignmentDigest: "a".repeat(64),
         state,
         route: selection.route,
-        segment: { state, controls: [], specialized: [] },
+        assignment,
       });
       const { artifactDigest: _artifactDigest, ...body } = artifact;
       const driftedBody = { ...body, sourceSha: "b".repeat(40) };
@@ -86,6 +72,7 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
         createPreflightStateEvidence({
           source,
           selector,
+          assignment,
           artifact: {
             ...driftedBody,
             artifactDigest: sha256Hex(driftedBody),
@@ -95,18 +82,92 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
     });
   });
 
+  it("rejects foreign and stale assignment identities", async () => {
+    await withSource((source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("fixture has no states");
+      const assignment = createPreflightAssignment(source);
+      const selector = createPreflightStateSelector({ source, state });
+      const selection = resolvePreflightStateSelector({ source, selector });
+      const artifact = artifactFor({
+        source,
+        state,
+        route: selection.route,
+        assignment,
+      });
+      const foreignArtifact = createPreflightSegmentArtifact({
+        source,
+        assignmentDigest: "b".repeat(64),
+        state,
+        route: selection.route,
+        segment: { state, controls: [], specialized: [] },
+      });
+      expect(() =>
+        createPreflightStateEvidence({
+          source,
+          selector,
+          assignment,
+          artifact: foreignArtifact,
+        }),
+      ).toThrow("assignment digest");
+
+      const { assignmentDigest: _assignmentDigest, ...staleBody } = assignment;
+      const staleWithSource = { ...staleBody, sourceSha: "c".repeat(40) };
+      const staleAssignment = {
+        ...staleWithSource,
+        assignmentDigest: sha256Hex(staleWithSource),
+      };
+      expect(() =>
+        createPreflightStateEvidence({
+          source,
+          selector,
+          assignment: staleAssignment,
+          artifact,
+        }),
+      ).toThrow("does not match the current SOURCE.json plan");
+    });
+  });
+
+  it("rejects every self-consistent per-axis state drift in the binder", async () => {
+    await withSource((source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("fixture has no states");
+      const assignment = createPreflightAssignment(source);
+      const selector = createPreflightStateSelector({ source, state });
+      const selection = resolvePreflightStateSelector({ source, selector });
+      const artifact = artifactFor({
+        source,
+        state,
+        route: selection.route,
+        assignment,
+      });
+      for (const [axis, mutate] of canonicalAxisMutations) {
+        expect(
+          () =>
+            createPreflightStateEvidence({
+              source,
+              selector,
+              assignment,
+              artifact: selfConsistentAxisDrift(artifact, mutate),
+            }),
+          `${axis} axis drift must be rejected by the binder`,
+        ).toThrow("state digest");
+      }
+    });
+  });
+
   it("retains archive-root, regular-file, and symlink guards when reading evidence", async () => {
     await withSource(async (source) => {
       const state = source.plan.states[0];
       if (state === undefined) throw new Error("fixture has no states");
+      const assignment = createPreflightAssignment(source);
       const selector = createPreflightStateSelector({ source, state });
       const selection = resolvePreflightStateSelector({ source, selector });
-      const artifact = createPreflightSegmentArtifact({
+      const artifact = artifactFor({
         source,
-        assignmentDigest: "a".repeat(64),
         state,
         route: selection.route,
-        segment: { state, controls: [], specialized: [] },
+        assignment,
       });
       const root = await realpath(
         await mkdtemp(path.join(tmpdir(), "preflight-state-evidence-")),
@@ -123,6 +184,7 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
           selector,
           archiveRoot: root,
           filePath,
+          assignment,
         });
         expect(evidence.artifact.artifact).toBe("PREFLIGHT_SEGMENT");
         expect(JSON.parse(await readFile(filePath, "utf8"))).toEqual(artifact);
@@ -135,6 +197,7 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
             selector,
             archiveRoot: root,
             filePath: linkPath,
+            assignment,
           }),
         ).rejects.toThrow(/symlink|regular file/u);
         await expect(
@@ -143,6 +206,7 @@ describe("state-scoped PREFLIGHT_SEGMENT evidence", () => {
             selector,
             archiveRoot: root,
             filePath: path.join(root, "..", "outside.json"),
+            assignment,
           }),
         ).rejects.toThrow(/escaped archive root|archive path/u);
       } finally {
