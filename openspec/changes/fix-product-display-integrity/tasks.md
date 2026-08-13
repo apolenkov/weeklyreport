@@ -17,7 +17,7 @@
 
 ## 4. Product Evidence and Verification
 
-- [ ] 4.1 Reset and reseed only `customreport_e2e` through the destructive guard with explicit consent, then prove the Finance lead preview is populated.
-- [ ] 4.2 Capture and review the repaired desktop preview and multi-group acknowledgement surface plus representative iPhone 14 and Pixel 7 layouts in the external product atlas.
-- [ ] 4.2a Prove the lead form renders and can reach every item counted by the Current Week and Next Week badges on desktop and iPhone 14.
+- [x] 4.1 Reset and reseed only `customreport_e2e` through the destructive guard with explicit consent, then prove the Finance lead preview is populated.
+- [x] 4.2 Capture and review the repaired desktop preview and multi-group acknowledgement surface plus representative iPhone 14 and Pixel 7 layouts in the external product atlas.
+- [x] 4.2a Prove the lead form renders and can reach every item counted by the Current Week and Next Week badges on desktop and iPhone 14.
 - [ ] 4.3 Run and record the exact focused schema, seed, API, web-component, and Playwright commands; then run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm format:check`, and `openspec validate fix-product-display-integrity --strict`.

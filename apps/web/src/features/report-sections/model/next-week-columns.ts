@@ -80,38 +80,29 @@ function productColumnsFor(
   productRows: readonly ProductKanbanItem[],
 ): ItemColumn[] {
   const assignedProductIds = new Set(products.map((product) => product.id));
+  const rowsByProductId = Map.groupBy(productRows, (item) => item.productId);
   const assignedColumns = products.map((product) => ({
     key: product.id,
     parent: { kind: "product", id: product.id } as const,
     productId: product.id,
     productName: product.name,
     activityId: null,
-    items: productRows.filter((item) => item.productId === product.id),
+    items: rowsByProductId.get(product.id) ?? [],
   }));
-  const orphanProductIds = [
-    ...new Set(
-      productRows
-        .map((item) => item.productId)
-        .filter((productId) => !assignedProductIds.has(productId)),
-    ),
-  ];
-  const orphanColumns = orphanProductIds.flatMap((productId) => {
-    const orphanItems = productRows.filter(
-      (item) => item.productId === productId,
-    );
+  const orphanColumns: ItemColumn[] = [];
+  for (const [productId, orphanItems] of rowsByProductId) {
+    if (assignedProductIds.has(productId)) continue;
     const firstItem = orphanItems.at(0);
-    if (!firstItem) return [];
-    return [
-      {
-        key: productId,
-        parent: { kind: "product", id: productId } as const,
-        productId,
-        productName: firstItem.productName,
-        activityId: null,
-        items: orphanItems,
-      },
-    ];
-  });
+    if (!firstItem) continue;
+    orphanColumns.push({
+      key: productId,
+      parent: { kind: "product", id: productId },
+      productId,
+      productName: firstItem.productName,
+      activityId: null,
+      items: orphanItems,
+    });
+  }
   return [...assignedColumns, ...orphanColumns];
 }
 
