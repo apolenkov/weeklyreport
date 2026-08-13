@@ -253,10 +253,3 @@ export function generateProductVariantManifest(
     manifestDigest: digest(identityBody),
   });
 }
-
-export const productVariantProfiles = [
-  "minimal",
-  "demo",
-  "full",
-  "stress",
-] as const;

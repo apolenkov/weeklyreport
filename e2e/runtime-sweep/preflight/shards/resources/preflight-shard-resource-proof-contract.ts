@@ -30,7 +30,7 @@ export const PREFLIGHT_RESOURCE_REQUIRED_CONSENT =
 export const PREFLIGHT_RESOURCE_REQUIRED_REDIS_AUTHORIZATION =
   "RUNTIME_SWEEP_REDIS_RECREATE" as const;
 
-export const PREFLIGHT_DISPOSABLE_DATABASE_NAMES = Object.freeze([
+const PREFLIGHT_DISPOSABLE_DATABASE_NAMES = Object.freeze([
   "customreport_e2e",
   ...RUNTIME_LANE_IDS.map((laneId) => `customreport_e2e_lane_${laneId}_test`),
 ]);
@@ -111,8 +111,6 @@ export const resourceProofDonorIdSchema = z
   .regex(donorIdPattern, "must be a stable donor identifier");
 
 export const resourceProofPathSchema = pathSchema;
-export const resourceProofPortSchema = portSchema;
-export const resourceProofIdentifierSchema = identifierSchema;
 
 /** Returns the conservative host-filesystem identity used for path collisions. */
 export const resourceProofPathIdentity = (value: string): string =>
@@ -269,16 +267,6 @@ export type PreflightShardResourceProofResources = z.infer<
 >;
 export type PreflightShardResourceProofBrowser = z.infer<typeof browserSchema>;
 export type PreflightShardResourceProofRuntime = z.infer<typeof runtimeSchema>;
-export type PreflightShardResourceProofCapabilities = z.infer<
-  typeof capabilitiesSchema
->;
-
 export class PreflightShardResourceProofError extends Error {
   override readonly name = "PreflightShardResourceProofError";
 }
-
-export const isAllowlistedDisposableDatabaseName = (value: string): boolean =>
-  PREFLIGHT_DISPOSABLE_DATABASE_NAMES.includes(value);
-
-export const isResourceProofPath = (value: string): boolean =>
-  pathSchema.safeParse(value).success;

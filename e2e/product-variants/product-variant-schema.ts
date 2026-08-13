@@ -7,18 +7,13 @@ import {
 } from "./product-variant-reconciliation.ts";
 import { CURRENT_CATALOG_ROLES } from "./product-variant-source.ts";
 
-export {
-  HISTORICAL_RECONCILIATION,
-  HISTORICAL_RECONCILIATION_VARIANT_IDS,
-  historicalReconciliationSchema,
-};
-export type { ProductVariantHistoricalReconciliation } from "./product-variant-reconciliation.ts";
+export { HISTORICAL_RECONCILIATION, HISTORICAL_RECONCILIATION_VARIANT_IDS };
 
 export const ALL_CURRENT = "all-current" as const;
 export const ROUTE_VARIANT = "route" as const;
 export const CONTROL_FAMILY_VARIANT = "control-family" as const;
-export const VARIANT_KINDS = [ROUTE_VARIANT, CONTROL_FAMILY_VARIANT] as const;
-export const ACTION_VALUES = [
+const VARIANT_KINDS = [ROUTE_VARIANT, CONTROL_FAMILY_VARIANT] as const;
+const ACTION_VALUES = [
   "none",
   "click",
   "fill",
@@ -26,29 +21,15 @@ export const ACTION_VALUES = [
   "navigate",
   "stateful",
 ] as const;
-export const DISPLAY_VALUES = [
+const DISPLAY_VALUES = [
   "route-entry",
   "control-family",
   "reveal-family",
 ] as const;
-export const TERMINAL_VALUES = [
-  "PENDING_MANUAL_REVIEW",
-  "PASS",
-  "BLOCKED",
-] as const;
-export const MANUAL_REVIEW_VALUES = [
-  "PENDING",
-  "ACCEPTED",
-  "REJECTED",
-] as const;
-export const READ_BACK_VALUES = [
-  "REQUIRED",
-  "PASS",
-  "NOT_REQUIRED",
-  "FAIL",
-] as const;
-export const PROFILE_VALUES = ["minimal", "demo", "full", "stress"] as const;
-export const ROLE_VALUES = [...CURRENT_CATALOG_ROLES, ALL_CURRENT] as const;
+const TERMINAL_VALUES = ["PENDING_MANUAL_REVIEW", "PASS", "BLOCKED"] as const;
+const MANUAL_REVIEW_VALUES = ["PENDING", "ACCEPTED", "REJECTED"] as const;
+const READ_BACK_VALUES = ["REQUIRED", "PASS", "NOT_REQUIRED", "FAIL"] as const;
+const ROLE_VALUES = [...CURRENT_CATALOG_ROLES, ALL_CURRENT] as const;
 
 const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;

@@ -21,7 +21,7 @@ const positiveIntegerSchema = z.number().int().positive();
  * One source-bound nominal state. The complete state payload is retained so
  * parsing can recompute its digest without consulting a mutable worktree.
  */
-export const preflightShardStateSchema = journalStateIdentitySchema
+const preflightShardStateSchema = journalStateIdentitySchema
   .extend({
     planIndex: nonnegativeIntegerSchema,
     groupKey: z.string().min(1),
@@ -38,7 +38,7 @@ const shardBodySchema = z
   })
   .strict();
 
-export const preflightShardSchema = shardBodySchema
+const preflightShardSchema = shardBodySchema
   .extend({ shardDigest: sha256DigestSchema })
   .strict();
 
@@ -84,7 +84,7 @@ export type AssignmentIdentity = Pick<
   | "shardCount"
 >;
 
-export const shardIdentityFor = (
+const shardIdentityFor = (
   identity: AssignmentIdentity,
   shardIndex: number,
 ): Readonly<{

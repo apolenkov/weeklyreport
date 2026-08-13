@@ -119,9 +119,7 @@ const assertSelectorDigest = (selector: PreflightStateSelector): void => {
     );
 };
 
-export function parsePreflightStateSelector(
-  value: unknown,
-): PreflightStateSelector {
+function parsePreflightStateSelector(value: unknown): PreflightStateSelector {
   try {
     const selector = preflightStateSelectorSchema.parse(value);
     assertSelectorDigest(selector);

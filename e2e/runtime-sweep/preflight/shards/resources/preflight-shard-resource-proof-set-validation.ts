@@ -39,10 +39,7 @@ const pathFields = (proof: PreflightShardResourceProof): readonly string[] => [
   proof.resources.archiveRoot,
 ];
 
-export const resourceProofPathsOverlap = (
-  left: string,
-  right: string,
-): boolean => {
+const resourceProofPathsOverlap = (left: string, right: string): boolean => {
   const leftIdentity = resourceProofPathIdentity(left);
   const rightIdentity = resourceProofPathIdentity(right);
   const leftRelative = path.relative(leftIdentity, rightIdentity);

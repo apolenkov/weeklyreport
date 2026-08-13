@@ -24,10 +24,7 @@ const RESOURCE_PROOF_FIXTURE_ROOT = path.join(
   process.cwd(),
   ".runtime-shard-resource-proof-fixture",
 );
-export const DEFAULT_DONOR_ROOT = path.join(
-  RESOURCE_PROOF_FIXTURE_ROOT,
-  "donor-pro",
-);
+const DEFAULT_DONOR_ROOT = path.join(RESOURCE_PROOF_FIXTURE_ROOT, "donor-pro");
 
 export const defaultBrowser = {
   project: "runtime-preflight",

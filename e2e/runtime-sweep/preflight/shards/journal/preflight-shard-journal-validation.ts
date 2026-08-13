@@ -13,7 +13,7 @@ import {
   PreflightShardJournalValidationError,
 } from "./preflight-shard-journal-contract.ts";
 
-export type PreflightShardJournalAttempt = Readonly<{
+type PreflightShardJournalAttempt = Readonly<{
   readonly attempt: number;
   readonly status: PreflightShardJournalRecord["status"];
   readonly record: PreflightShardJournalRecord;

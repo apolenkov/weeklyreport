@@ -262,19 +262,3 @@ export function assertPreflightShardAssignmentMatchesSource(
       "PREFLIGHT_SHARD_ASSIGNMENT does not match the current SOURCE.json plan",
     );
 }
-
-export const preflightShardStateFor = (
-  assignment: PreflightShardAssignment,
-  stateId: string,
-): PreflightShardState => {
-  const state = assignment.states.find(
-    ({ state }) => state.stateId === stateId,
-  );
-  if (state === undefined)
-    throw new PreflightShardAssignmentError(
-      `PREFLIGHT_SHARD_ASSIGNMENT has no state ${stateId}`,
-    );
-  return state;
-};
-
-export { logicalShardIdFor } from "./preflight-shard-assignment-contract.ts";
