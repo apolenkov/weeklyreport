@@ -15,6 +15,7 @@ export default defineConfig({
     /evidence-capture-network\.spec\.ts$/u,
     /keyboard-evidence\.spec\.ts$/u,
     /keyboard-evidence-accessible-name\.spec\.ts$/u,
+    /live-control-observation\.spec\.ts$/u,
     /live-control-frozen-case\.spec\.ts$/u,
     /live-control-lane\.spec\.ts$/u,
     /observability-abort\.spec\.ts$/u,

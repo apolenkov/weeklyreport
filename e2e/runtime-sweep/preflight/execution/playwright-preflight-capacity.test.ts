@@ -1,6 +1,22 @@
 import { rm } from "node:fs/promises";
 
-import { describe, expect, it } from "vitest";
+import type { Page } from "@playwright/test";
+import { describe, expect, it, vi } from "vitest";
+
+const preflightMocks = vi.hoisted(() => ({
+  createPlaywrightRevealExecutor: vi.fn(),
+  inventoryDom: vi.fn(),
+}));
+
+vi.mock("../../replay/dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../replay/dom/dom-inventory.ts")
+  >()),
+  inventoryDom: preflightMocks.inventoryDom,
+}));
+vi.mock("./playwright-reveal-execution.ts", () => ({
+  createPlaywrightRevealExecutor: preflightMocks.createPlaywrightRevealExecutor,
+}));
 
 import {
   buildCampaignSource,
@@ -12,7 +28,10 @@ import {
 } from "../../manifest/manifest-fixture.ts";
 import type { DomInventory } from "../../replay/dom/dom-inventory.ts";
 import { sha256Hex } from "../../support/ids.ts";
-import { runBrowserPreflightSegment } from "./playwright-preflight.ts";
+import {
+  runBrowserPreflightSegment,
+  runPlaywrightPreflightSegment,
+} from "./playwright-preflight.ts";
 
 const ORIGIN = "http://127.0.0.1:3205";
 const DATABASE_DIGEST = "d".repeat(64);
@@ -151,6 +170,83 @@ describe("source-bound preflight capacity", () => {
         }),
       ).rejects.toThrow(/maxControlsPerSegment is 128/iu);
     } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps full initial settle separate from reveal replay settle", async () => {
+    const { fixture, source } = await sourceWithCapacity({});
+    try {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const initialInventory = inventoryFor([buttonFor(0)]);
+      const events: string[] = [];
+      let currentUrl = `${ORIGIN}/`;
+      const waitForLoadState = vi.fn((loadState: string) => {
+        events.push(`load:${loadState}`);
+        return Promise.resolve();
+      });
+      const waitForFunction = vi.fn(() => {
+        events.push("app-ready");
+        return Promise.resolve();
+      });
+      const goto = vi.fn((route: string) => {
+        events.push(`goto:${route}`);
+        currentUrl = new URL(route, ORIGIN).toString();
+        return Promise.resolve({ status: () => 200 });
+      });
+      const page = {
+        url: () => currentUrl,
+        goto,
+        waitForURL: vi.fn(() => Promise.resolve()),
+        waitForLoadState,
+        waitForFunction,
+      } as unknown as Page;
+      preflightMocks.inventoryDom.mockResolvedValue(initialInventory);
+      preflightMocks.createPlaywrightRevealExecutor.mockReturnValue(() =>
+        Promise.resolve({
+          url: currentUrl,
+          inventory: inventoryFor([]),
+          nonMutation: {
+            status: "unchanged" as const,
+            beforeDigest: DATABASE_DIGEST,
+            afterDigest: DATABASE_DIGEST,
+          },
+        }),
+      );
+
+      const result = await runPlaywrightPreflightSegment({
+        source,
+        state,
+        page,
+        expectedOrigin: ORIGIN,
+        prepare: () =>
+          Promise.resolve({
+            proveNonMutation: async (action: () => Promise<void>) => {
+              await action();
+              return {
+                status: "unchanged" as const,
+                beforeDigest: DATABASE_DIGEST,
+                afterDigest: DATABASE_DIGEST,
+              };
+            },
+          }),
+        resetRequired: true,
+      });
+
+      expect(result.segment.controls.length).toBeGreaterThan(0);
+      expect(waitForLoadState).toHaveBeenCalledOnce();
+      expect(waitForLoadState).toHaveBeenCalledWith("networkidle", {
+        timeout: 3000,
+      });
+      expect(goto).toHaveBeenCalledTimes(2);
+      expect(waitForFunction).toHaveBeenCalledTimes(4);
+      expect(
+        events.filter((event) => event === "load:networkidle"),
+      ).toHaveLength(1);
+    } finally {
+      preflightMocks.inventoryDom.mockReset();
+      preflightMocks.createPlaywrightRevealExecutor.mockReset();
       await rm(fixture.root, { recursive: true, force: true });
     }
   });

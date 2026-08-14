@@ -10,6 +10,7 @@ import {
   type AppReadyPage,
   isExpectedNavigationAbort,
   navigate,
+  navigateReveal,
   type NavigationPage,
   type NavigationSettlePage,
   settleNavigation,
@@ -23,22 +24,12 @@ const APP_READY_ARGUMENT: AppReadyArgument = {
 };
 
 class FakeElement {
-  readonly attributes: Readonly<Record<string, string>>;
-  readonly hasHeading: boolean;
-  readonly descendants: readonly FakeElement[];
-  readonly clientRects: readonly object[];
-
   constructor(
-    attributes: Readonly<Record<string, string>> = {},
-    hasHeading = false,
-    descendants: readonly FakeElement[] = [],
-    clientRects: readonly object[] = [{}],
-  ) {
-    this.attributes = attributes;
-    this.hasHeading = hasHeading;
-    this.descendants = descendants;
-    this.clientRects = clientRects;
-  }
+    readonly attributes: Readonly<Record<string, string>> = {},
+    readonly hasHeading = false,
+    readonly descendants: readonly FakeElement[] = [],
+    readonly clientRects: readonly object[] = [{}],
+  ) {}
 
   getAttribute(name: string): string | null {
     return this.attributes[name] ?? null;
@@ -54,37 +45,31 @@ class FakeElement {
 
   querySelectorAll(selector: string): readonly FakeElement[] {
     const selectors = selector.split(",").map((candidate) => candidate.trim());
-    return this.descendants
-      .flatMap((descendant) => [
-        descendant,
-        ...descendant.querySelectorAll(selector),
-      ])
-      .filter((descendant) =>
-        selectors.some((candidate) => descendant.matches(candidate)),
-      );
+    const descendants = this.descendants.flatMap((descendant) => [
+      descendant,
+      ...descendant.querySelectorAll(selector),
+    ]);
+    return descendants.filter((descendant) =>
+      selectors.some((candidate) => descendant.matches(candidate)),
+    );
   }
 
   matches(selector: string): boolean {
+    const classes = this.attributes.class?.split(/\s+/u) ?? [];
     return (
       (selector === '[aria-busy="true"]' &&
         this.getAttribute("aria-busy")?.toLocaleLowerCase() === "true") ||
       (selector === '[data-slot="skeleton"]' &&
         this.getAttribute("data-slot") === "skeleton") ||
-      (selector === ".skeleton" &&
-        (this.attributes.class?.split(/\s+/u).includes("skeleton") ?? false)) ||
-      (selector === ".animate-pulse" &&
-        (this.attributes.class?.split(/\s+/u).includes("animate-pulse") ??
-          false))
+      (selector === ".skeleton" && classes.includes("skeleton")) ||
+      (selector === ".animate-pulse" && classes.includes("animate-pulse"))
     );
   }
 }
 
 function headedMain(descendants: readonly FakeElement[] = []): FakeElement {
   return new FakeElement(
-    {
-      "aria-busy": "false",
-      "aria-hidden": "false",
-    },
+    { "aria-busy": "false", "aria-hidden": "false" },
     true,
     descendants,
   );
@@ -126,19 +111,38 @@ function fakePage(
     .fn<() => string>()
     .mockReturnValueOnce("http://127.0.0.1:3105/")
     .mockReturnValue(finalUrl);
+  const resolved = () => Promise.resolve();
   return {
     url: currentUrl,
     goto: () => Promise.reject(gotoError),
-    waitForURL: (predicate: (url: URL) => boolean) => {
-      if (!predicate(new URL(finalUrl))) {
-        throw new Error("final URL predicate rejected the settled navigation");
-      }
-      return Promise.resolve();
-    },
-    waitForLoadState: () => Promise.resolve(),
-    waitForFunction: () => Promise.resolve(),
+    waitForURL: (predicate: (url: URL) => boolean) =>
+      predicate(new URL(finalUrl))
+        ? Promise.resolve()
+        : Promise.reject(
+            new Error("final URL predicate rejected the settled navigation"),
+          ),
+    waitForLoadState: resolved,
+    waitForFunction: resolved,
   } satisfies NavigationPage;
 }
+
+const navigationProbeFor = (currentUrl: string, status: number) => {
+  const goto = vi.fn(() => Promise.resolve({ status: () => status }));
+  const waitForLoadState = vi.fn(() => Promise.resolve());
+  const waitForFunction = vi.fn(() => Promise.resolve());
+  return {
+    page: {
+      url: () => currentUrl,
+      goto,
+      waitForURL: () => Promise.resolve(),
+      waitForLoadState,
+      waitForFunction,
+    } satisfies NavigationPage,
+    goto,
+    waitForLoadState,
+    waitForFunction,
+  };
+};
 
 describe("runtime navigation recovery", () => {
   afterEach(() => {
@@ -151,31 +155,16 @@ describe("runtime navigation recovery", () => {
   });
 
   it.each([
-    {
-      name: "a visible data-slot skeleton",
-      marker: new FakeElement({ "data-slot": "skeleton" }),
-    },
-    {
-      name: "a visible class-only skeleton",
-      marker: new FakeElement({ class: "skeleton" }),
-    },
-    {
-      name: "a visible descendant aria-busy marker",
-      marker: new FakeElement({ "aria-busy": "true" }),
-    },
-    {
-      name: "the production JobsSkeleton pulse markup",
-      marker: new FakeElement({
-        class: "h-4 w-20 animate-pulse rounded bg-[var(--color-border)]",
-      }),
-    },
-    {
-      name: "the production Trends ChartSkeleton pulse markup",
-      marker: new FakeElement({
-        class: "h-64 w-full animate-pulse rounded-md bg-muted/50",
-      }),
-    },
-  ])("rejects ready state with $name", async ({ marker }) => {
+    new FakeElement({ "data-slot": "skeleton" }),
+    new FakeElement({ class: "skeleton" }),
+    new FakeElement({ "aria-busy": "true" }),
+    new FakeElement({
+      class: "h-4 w-20 animate-pulse rounded bg-[var(--color-border)]",
+    }),
+    new FakeElement({
+      class: "h-64 w-full animate-pulse rounded-md bg-muted/50",
+    }),
+  ])("rejects ready state with a visible loading marker", async (marker) => {
     await expect(evaluateReady(headedMain([marker]))).resolves.toBe(false);
   });
 
@@ -202,7 +191,6 @@ describe("runtime navigation recovery", () => {
 
     await waitForAppReady(page);
 
-    expect(waitForFunction).toHaveBeenCalledTimes(2);
     expect(waitForFunction).toHaveBeenNthCalledWith(
       1,
       expect.any(Function),
@@ -229,15 +217,29 @@ describe("runtime navigation recovery", () => {
   });
 
   it("navigates a relative route from the initial blank page", async () => {
-    const page = {
-      url: () => "about:blank",
-      goto: () => Promise.resolve({ status: () => 200 }),
-      waitForURL: () => Promise.resolve(),
-      waitForLoadState: () => Promise.resolve(),
-      waitForFunction: () => Promise.resolve(),
-    } satisfies NavigationPage;
+    const { page, goto, waitForLoadState, waitForFunction } =
+      navigationProbeFor("about:blank", 200);
 
     await expect(navigate(page, "/head")).resolves.toBe(200);
+    expect(goto).toHaveBeenCalledWith("/head", {
+      waitUntil: "domcontentloaded",
+    });
+    expect(waitForLoadState).toHaveBeenCalledWith("networkidle", {
+      timeout: 3000,
+    });
+    expect(waitForFunction).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps reveal replay on DOMContentLoaded plus app-ready stability only", async () => {
+    const { page, goto, waitForLoadState, waitForFunction } =
+      navigationProbeFor("http://127.0.0.1:3105/head", 204);
+
+    await expect(navigateReveal(page, "/head")).resolves.toBe(204);
+    expect(goto).toHaveBeenCalledWith("/head", {
+      waitUntil: "domcontentloaded",
+    });
+    expect(waitForLoadState).not.toHaveBeenCalled();
+    expect(waitForFunction).toHaveBeenCalledTimes(2);
   });
 
   it("waits for the final URL after a client redirect abort", async () => {

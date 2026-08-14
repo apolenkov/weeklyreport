@@ -63,6 +63,32 @@ describe("live control observations", () => {
     expect(observationFor(before, after)).toBeUndefined();
   });
 
+  it("accepts only a monotonic resource increase in the same document", () => {
+    const before = snapshot({ documentId: "document-a", network: 4 });
+
+    expect(
+      observationFor(
+        before,
+        snapshot({ documentId: "document-a", network: 5 }),
+      ),
+    ).toEqual({
+      kind: "network",
+      detail: "1 resource request(s) observed",
+    });
+    expect(
+      observationFor(
+        before,
+        snapshot({ documentId: "document-a", network: 0 }),
+      ),
+    ).toBeUndefined();
+    expect(
+      observationFor(
+        before,
+        snapshot({ documentId: "document-b", network: 0 }),
+      ),
+    ).toBeUndefined();
+  });
+
   it("recognizes an already-pressed read-only control", () => {
     const before = snapshot();
     const withControl: PageSnapshot = {

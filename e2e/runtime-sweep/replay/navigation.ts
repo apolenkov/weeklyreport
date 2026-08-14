@@ -203,9 +203,21 @@ export async function settleNavigation(
   await waitForAppReady(page);
 }
 
+/**
+ * Settle a replay navigation after Playwright has reached DOMContentLoaded.
+ * Reveal branches already replay a known same-origin landing route and retain
+ * the app-ready stability boundary; the soft network-idle wait is redundant.
+ */
+export async function settleRevealNavigation(
+  page: AppReadyPage,
+): Promise<void> {
+  await waitForAppReady(page);
+}
+
 async function waitForFinalNavigation(
   page: NavigationPage,
   initialUrl: string,
+  settle: (page: NavigationPage) => Promise<void>,
 ): Promise<void> {
   if (page.url() === initialUrl) {
     await page.waitForURL((url) => url.toString() !== initialUrl, {
@@ -213,13 +225,14 @@ async function waitForFinalNavigation(
       timeout: 10_000,
     });
   }
-  await settleNavigation(page);
+  await settle(page);
 }
 
-export async function navigate(
+const navigateWithSettle = async (
   page: NavigationPage,
   route: string,
-): Promise<number | null> {
+  settle: (page: NavigationPage) => Promise<void>,
+): Promise<number | null> => {
   const currentUrl = page.url();
   const initialUrl =
     currentUrl === "about:blank"
@@ -227,11 +240,25 @@ export async function navigate(
       : new URL(route, currentUrl).toString();
   try {
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    await settleNavigation(page);
+    await settle(page);
     return response?.status() ?? null;
   } catch (error: unknown) {
     if (!isExpectedNavigationAbort(error)) throw error;
-    await waitForFinalNavigation(page, initialUrl);
+    await waitForFinalNavigation(page, initialUrl, settle);
     return null;
   }
+};
+
+export function navigate(
+  page: NavigationPage,
+  route: string,
+): Promise<number | null> {
+  return navigateWithSettle(page, route, settleNavigation);
+}
+
+export function navigateReveal(
+  page: NavigationPage,
+  route: string,
+): Promise<number | null> {
+  return navigateWithSettle(page, route, settleRevealNavigation);
 }
