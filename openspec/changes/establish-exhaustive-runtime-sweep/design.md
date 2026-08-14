@@ -587,11 +587,13 @@ as covered.
   canonical ledger small.
 - **[Preflight diagnostic amplification]** One exhaustive segment can issue tens
   of thousands of Playwright calls before it produces a terminal artifact →
-  retain the failed preflight call/network/source trace, failure screenshot,
-  video, and error context, but disable per-call trace DOM snapshots and trace
-  screenshots. This changes diagnostic encoding only; it does not reduce the
-  reveal graph, frozen controls, transitions, or required per-cell visual
-  evidence.
+  retain the failed preflight call/source trace, a separate full network HAR
+  without response bodies, failure screenshot, video, and error context, but
+  disable per-call trace DOM snapshots and trace screenshots. Playwright couples
+  trace network recording to DOM snapshots, so the separate HAR preserves
+  network evidence without restoring the amplified DOM/resource payload. This
+  changes diagnostic encoding only; it does not reduce the reveal graph, frozen
+  controls, transitions, or required per-cell visual evidence.
 - **[Environment variance]** Fonts, browser binaries, or local services can
   alter visual output → pin the browser/package lock and record environment
   fingerprints; do not silently widen the visual tolerance.

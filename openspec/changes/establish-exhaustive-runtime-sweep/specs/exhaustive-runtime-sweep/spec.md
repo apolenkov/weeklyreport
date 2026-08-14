@@ -664,9 +664,9 @@ consistent.
 #### Scenario: exhaustive preflight diagnostics remain bounded without trimming coverage
 
 - **WHEN** one preflight segment executes a high volume of browser calls
-- **THEN** a failure retains its Playwright call/network/source trace, failure
-  screenshot, video, and error context without per-call DOM snapshots or trace
-  screenshots
+- **THEN** a failure retains its Playwright call/source trace, a separate full
+  network HAR without response bodies, failure screenshot, video, and error
+  context without per-call trace DOM snapshots or trace screenshots
 - **AND** the diagnostic policy does not remove a reveal candidate, control,
   transition, non-mutation proof, or required runtime-cell screenshot
 

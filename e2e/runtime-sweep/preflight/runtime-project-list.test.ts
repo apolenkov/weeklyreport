@@ -170,6 +170,11 @@ test("keeps deterministic runtime projects in dependency order", async () => {
       sources: true,
       attachments: true,
     });
+    expect(preflightConfig.use?.contextOptions?.recordHar).toEqual({
+      path: path.join(archive, "playwright-preflight", "network.har"),
+      content: "omit",
+      mode: "full",
+    });
     expect(preflightConfig.use?.screenshot).toBe("only-on-failure");
     expect(preflightConfig.use?.video).toBe("retain-on-failure");
     expect(preflightServers[0]?.command).toBe(runtimeApiServerCommand);
