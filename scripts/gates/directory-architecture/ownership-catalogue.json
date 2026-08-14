@@ -756,9 +756,17 @@
       "target": "e2e/runtime-sweep/replay/test-fixtures/$1"
     },
     {
-      "id": "runtime-control-target",
+      "id": "runtime-control-target-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-target/((?:frozen-action-target(?:\\.test)?|rendered-control-(?:action-guard|generation|state|target(?:-safety)?)(?:\\.spec)?)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/control-target/$1"
+    },
+    {
+      "id": "runtime-control-target-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/control-target/$1"
