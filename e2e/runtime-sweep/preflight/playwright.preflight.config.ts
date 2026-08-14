@@ -107,6 +107,9 @@ const preflightWebEnvironment = {
 const preflightWebServerCommand = shardMode
   ? `pnpm --filter @customreport/web exec next dev -p ${PREFLIGHT_WEB_PORT}`
   : runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT);
+const preflightOutputDir =
+  shardPathEnvironment?.outputDir ??
+  path.join(archiveRoot, `playwright-${preflightArtifactName}`);
 
 export default defineConfig({
   // The preflight preparation owns its exact database reset and profile seed.
@@ -118,12 +121,18 @@ export default defineConfig({
     : canaryMode
       ? /preflight-canary\.spec\.ts/
       : /preflight\.spec\.ts/,
-  outputDir:
-    shardPathEnvironment?.outputDir ??
-    path.join(archiveRoot, `playwright-${preflightArtifactName}`),
+  outputDir: preflightOutputDir,
   use: {
     ...integrationConfigWithoutLifecycle.use,
     baseURL: PREFLIGHT_WEB_ORIGIN,
+    contextOptions: {
+      ...integrationConfigWithoutLifecycle.use?.contextOptions,
+      recordHar: {
+        path: path.join(preflightOutputDir, "network.har"),
+        content: "omit",
+        mode: "full",
+      },
+    },
     trace: {
       mode: "retain-on-failure",
       snapshots: false,
