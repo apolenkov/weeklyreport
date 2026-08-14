@@ -182,6 +182,7 @@ const parseUrl = (scriptName: string, databaseUrl: string): URL => {
 const parseDatabaseTarget = (
   scriptName: string,
   databaseUrl: string,
+  allowAnyDatabase = false,
 ): E2eRuntimeDatabaseIdentity => {
   assertRawUrlSyntax(scriptName, databaseUrl);
   const port = rawPortFor(scriptName, databaseUrl);
@@ -237,7 +238,7 @@ const parseDatabaseTarget = (
     !/^\/[^/]+$/u.test(parsed.pathname) ||
     database.includes("/") ||
     /[\u0000-\u001F\u007F]/u.test(database) ||
-    !E2E_RUNTIME_DATABASE_PATTERN.test(database)
+    (!allowAnyDatabase && !E2E_RUNTIME_DATABASE_PATTERN.test(database))
   ) {
     return refuse(
       scriptName,
@@ -252,6 +253,17 @@ const parseDatabaseTarget = (
     host: parsed.hostname,
     port,
   };
+};
+
+/** Compare exact local PostgreSQL targets without comparing credentials. */
+export const sameLocalPostgresDatabaseTarget = (
+  scriptName: string,
+  leftUrl: string,
+  rightUrl: string,
+): boolean => {
+  const left = parseDatabaseTarget(scriptName, leftUrl, true);
+  const right = parseDatabaseTarget(scriptName, rightUrl, true);
+  return left.database === right.database && left.port === right.port;
 };
 
 /**
