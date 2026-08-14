@@ -667,6 +667,14 @@ consistent.
 - **THEN** a failure retains its Playwright call/source trace, a separate full
   network HAR without response bodies, failure screenshot, video, and error
   context without per-call trace DOM snapshots or trace screenshots
+- **AND** initial navigation retains DOMContentLoaded, the bounded soft
+  network-idle attempt, and two-pass application readiness, while a replayed
+  reveal branch retains DOMContentLoaded and the same application-readiness
+  boundary without repeating the soft network-idle attempt
+- **AND** live observation waiting compares the canonical DOM, control, focus,
+  URL, and network state inside the browser context, captures the full canonical
+  snapshot after a change signal, and never treats navigation-context loss as
+  an observation
 - **AND** the diagnostic policy does not remove a reveal candidate, control,
   transition, non-mutation proof, or required runtime-cell screenshot
 

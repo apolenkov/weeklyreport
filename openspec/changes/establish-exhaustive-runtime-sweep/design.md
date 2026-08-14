@@ -593,7 +593,17 @@ as covered.
   trace network recording to DOM snapshots, so the separate HAR preserves
   network evidence without restoring the amplified DOM/resource payload. This
   changes diagnostic encoding only; it does not reduce the reveal graph, frozen
-  controls, transitions, or required per-cell visual evidence.
+  controls, transitions, or required per-cell visual evidence. Initial route
+  navigation retains DOMContentLoaded, the bounded soft network-idle attempt,
+  and two-pass application readiness. Replayed reveal branches retain
+  DOMContentLoaded and the same two-pass application readiness but omit the
+  redundant soft network-idle attempt. Live observation waiting performs the
+  canonical DOM, control, focus, URL, and network comparison inside the browser
+  context and crosses the Playwright protocol only after a change signal; the
+  terminal classification still uses a full canonical snapshot, and a destroyed
+  navigation context cannot itself produce a passing observation. These
+  scheduling and transport changes preserve the same reveal candidates,
+  transitions, controls, non-mutation proofs, and runtime-cell evidence.
 - **[Environment variance]** Fonts, browser binaries, or local services can
   alter visual output → pin the browser/package lock and record environment
   fingerprints; do not silently widen the visual tolerance.

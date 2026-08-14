@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import type { MatrixPreflightSegment } from "../../matrix/finalization/matrix-finalizer-contract.ts";
 import { assertSpecializedDeclarations } from "../../matrix/specialized/specialized-declarations.ts";
 import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
-import { navigate } from "../../replay/navigation.ts";
+import { navigate, navigateReveal } from "../../replay/navigation.ts";
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import {
   createPreflightArtifact,
@@ -51,6 +51,10 @@ type PreflightRunState = Readonly<{
   readonly preparedGroup: string | undefined;
 }>;
 
+type RevealNavigationHarness = BrowserPreflightHarness & {
+  readonly navigateReveal?: BrowserPreflightHarness["navigate"];
+};
+
 export type BrowserPreflightSegmentResult = Readonly<{
   readonly segment: MatrixPreflightSegment;
   readonly preparedGroup: string;
@@ -79,7 +83,8 @@ const revealHarnessFor = (
 ): RevealExecutionHarness => ({
   prepare: (state, revealRoute) =>
     harness.prepare(state, revealRoute as PreflightRoute, false),
-  navigate: harness.navigate,
+  navigate:
+    (harness as RevealNavigationHarness).navigateReveal ?? harness.navigate,
   currentUrl: () => {
     if (typeof harness.currentUrl !== "function")
       throw new BrowserPreflightError(
@@ -198,13 +203,16 @@ const playwrightHarnessFor = (input: {
     route: PreflightRoute,
     resetRequired: boolean,
   ) => Promise<RevealPreparation>;
-}): BrowserPreflightHarness => {
+}): RevealNavigationHarness => {
   const executeReveal = createPlaywrightRevealExecutor(input);
   return {
     expectedOrigin: input.expectedOrigin,
     prepare: input.prepare,
     navigate: async (route) => {
       await navigate(input.page, route);
+    },
+    navigateReveal: async (route) => {
+      await navigateReveal(input.page, route);
     },
     currentUrl: () => input.page.url(),
     inventory: () => inventoryDom(input.page),
