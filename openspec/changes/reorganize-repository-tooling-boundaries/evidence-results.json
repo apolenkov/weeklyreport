@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-05T21:15:36.000Z",
+  "generatedAt": "2026-08-14T01:00:19.000Z",
   "commands": [
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
       "exitCode": 0,
-      "sourceDigest": "db871b2df8376d209b4c1d94ece50903072920bd2c9ccc028bd360ebc9a1f43a",
-      "summary": "3 files and 56 PDF unit tests passed",
-      "rerunAt": "2026-08-04T06:04:49.542Z"
+      "sourceDigest": "148a4b3665f3ebd90ae795bcad796eb9a914cecae54e708074def640e6189863",
+      "summary": "3 files and 64 PDF unit tests passed",
+      "rerunAt": "2026-08-14T00:59:35.000Z"
     },
     {
-      "command": "set -a; . ./.env.test; set +a; PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
+      "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test REDIS_HOST=127.0.0.1 REDIS_PORT=6396 NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
       "exitCode": 0,
-      "sourceDigest": "ca53163b1bdcfe59171351130b6ea7d0e63e7541e4ecc825c6131f04c2bc270a",
+      "sourceDigest": "2d21118e0cce10d6b2290e55f926cc2b4ac38e7210603da8b3524d4d6ec00c38",
       "summary": "2 PDF integration tests passed against the reset disposable E2E database, including worker completion and a readable persisted artifact",
-      "rerunAt": "2026-08-04T06:06:05.266Z"
+      "rerunAt": "2026-08-14T01:00:01.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/auth/saml.samlify.test.ts src/modules/auth/saml.fixtures.test.ts src/modules/auth/auth.routes.saml-rejection.test.ts",

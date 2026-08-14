@@ -40,7 +40,7 @@
       ],
       "commands": [
         "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
-        "set -a; . ./.env.test; set +a; PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts"
+        "E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test REDIS_HOST=127.0.0.1 REDIS_PORT=6396 NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts"
       ]
     },
     {
