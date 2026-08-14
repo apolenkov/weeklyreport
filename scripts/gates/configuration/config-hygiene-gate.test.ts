@@ -96,6 +96,15 @@ void test("Knip does not load the environment-dependent Prisma config", () => {
   );
 });
 
+void test("runtime harness grants exact destructive consent only for its run", () => {
+  const packageJson: unknown = JSON.parse(readFileSync("package.json", "utf8"));
+  const scripts = isRecord(packageJson) ? packageJson.scripts : undefined;
+  assert.equal(
+    isRecord(scripts) ? scripts["test:runtime-harness"] : undefined,
+    "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/preflight/playwright.harness.config.ts",
+  );
+});
+
 const readOnlyWorkflow = (permissions: string): string =>
   [
     "name: Fixture",
