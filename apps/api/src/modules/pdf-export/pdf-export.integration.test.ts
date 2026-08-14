@@ -35,12 +35,12 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   it("createExportJob creates and returns job", async () => {
@@ -124,7 +124,7 @@ describe("cookie seam — service against real Prisma repo", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     vi.stubEnv("AUTH_DEV_MODE", "false");
     vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "true");
     vi.stubEnv(
@@ -138,7 +138,7 @@ describe("cookie seam — service against real Prisma repo", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

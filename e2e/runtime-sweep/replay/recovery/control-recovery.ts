@@ -1,4 +1,5 @@
-import { assertNonProdDestructiveTarget } from "../../../../prisma/guards/_destructive-guard.ts";
+import { assertE2eRuntimeDestructiveTarget } from "../../../../prisma/guards/_destructive-guard.ts";
+import { sameE2eDatabaseTarget } from "../../../helpers/e2e-database-target.ts";
 import { reseedE2eRuntimeState } from "../../../helpers/e2e-runtime-state-setup.js";
 import type { SeedProfile } from "../../source/contracts.ts";
 
@@ -29,21 +30,25 @@ const messageFrom = (error: unknown): string =>
 export function assertDisposableE2eDatabase(
   databaseUrl: string,
   environment: Readonly<{
+    readonly PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION?: string;
     readonly DATABASE_URL?: string;
     readonly NODE_ENV?: string;
-    readonly ALLOW_PROD_DESTRUCTIVE?: string;
   }> = process.env,
 ): void {
   if (databaseUrl.trim() === "")
     throw new ControlActionPolicyError("E2E_DATABASE_URL must be set");
-  if (databaseUrl === environment.DATABASE_URL)
+  if (
+    environment.DATABASE_URL !== undefined &&
+    sameE2eDatabaseTarget(databaseUrl, environment.DATABASE_URL)
+  )
     throw new ControlActionPolicyError(
       "E2E_DATABASE_URL must differ from DATABASE_URL",
     );
-  assertNonProdDestructiveTarget("runtime-sweep-control-action", {
-    ...environment,
-    DATABASE_URL: databaseUrl,
-  });
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-sweep-control-action",
+    databaseUrl,
+    environment,
+  );
 }
 
 export function createE2eControlRecovery(
@@ -66,6 +71,7 @@ export async function recoverControlAction(
   recovery: ControlActionRecovery,
 ): Promise<void> {
   try {
+    assertDisposableE2eDatabase(recovery.databaseUrl);
     await recovery.resetAndReseed();
     await recovery.assertBaseline();
   } catch (error: unknown) {

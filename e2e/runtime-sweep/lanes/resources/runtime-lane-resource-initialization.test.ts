@@ -47,6 +47,8 @@ const redisRunIds = (
 
 describe("runtime lane resource initialization", () => {
   beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
     vi.stubEnv("RUNTIME_SWEEP_REDIS_RECREATE", "true");
   });
 

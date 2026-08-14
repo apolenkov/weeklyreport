@@ -6,8 +6,10 @@ afterEach(() => {
 });
 
 test("starts current-source servers against the dedicated UAT database", async () => {
-  const databaseUrl = "postgresql://customreport@localhost/customreport_uat";
+  const databaseUrl = "postgresql://customreport@localhost/customreport_e2e";
   vi.stubEnv("E2E_DATABASE_URL", databaseUrl);
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
   const { default: config } = await import("./playwright.config.ts");
   const servers = config.webServer;
   if (!Array.isArray(servers)) {
@@ -48,6 +50,8 @@ test("rejects the development database as the UAT target", async () => {
     "E2E_DATABASE_URL",
     "postgresql://e2e-user:e2e-password@localhost:5432/customreport_dev",
   );
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
 
   await expect(import("./playwright.config.ts")).rejects.toThrow(
     "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
@@ -62,6 +66,8 @@ test.each([
   "postgres://localhost/customreport/e2e",
 ])("rejects a non-PostgreSQL UAT database URL: %s", async (databaseUrl) => {
   vi.stubEnv("E2E_DATABASE_URL", databaseUrl);
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
 
   await expect(import("./playwright.config.ts")).rejects.toThrow(
     "UAT database URLs must be valid PostgreSQL URLs.",
@@ -74,6 +80,8 @@ test("does not expose database credentials in validation errors", async () => {
     "E2E_DATABASE_URL",
     `https://uat-user:${secret}@localhost/customreport_e2e`,
   );
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
 
   const error = await import("./playwright.config.ts").catch(
     (error_: unknown) => error_,

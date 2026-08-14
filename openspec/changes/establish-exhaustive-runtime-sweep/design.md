@@ -251,12 +251,43 @@ Five, six, and ten lanes were rejected after resource-induced failures; failed
 lane orchestration waited for every sibling and left no owned process or port.
 
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
-`prisma migrate reset`/profile seed; Prisma's destructive guard remains final
-authority, with seed validation/stable IDs in the manifest. Native Codex
+`prisma migrate reset`/profile seed; the exact central destructive guard is the
+final authority, with seed validation/stable IDs in the manifest. Native Codex
 `gpt-5.6-luna` Max reviews emit candidates only and never mutate the ledger or
 deterministic browser/database state. Codex owns scheduling, reset/reseed,
 manifest, ledger, merge, adjudication, and gate; read-only verifiers may
 parallelize only through explicitly imported results.
+
+### Exact disposable database boundary
+
+Every E2E/runtime destructive entrypoint passes its raw PostgreSQL URL through
+one validator immediately before its first mutation-capable primitive. The
+validator accepts only loopback hosts and the exact raw path
+`customreport_e2e` or `customreport_e2e_lane_[a-o]_test`; it rejects encoded,
+case-folded, whitespace, query, fragment, and multi-segment aliases. A separate
+target-only call is used by non-mutating lane-plan/readiness checks. Destructive
+calls additionally require the exact per-run consent
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; the historical
+`ALLOW_PROD_DESTRUCTIVE` TypeScript bypass is removed. Production restore stays
+on its independent shell contract.
+
+The ordering is load-bearing:
+
+```text
+raw URL + NODE_ENV + consent
+             |
+             v
+    exact target validator
+             |
+             +--> reject (no pg/Prisma/Redis/spawn)
+             |
+             v
+       one destructive primitive
+```
+
+The same boundary is applied to central E2E setup, profile seed runners,
+integration cleanup, runtime lane preparation/replay/preflight/state/control
+recovery, and the reset-hard, wipe-manual-uat, and policy-backfill entrypoints.
 
 Before an integration or database/Redis gate may resolve its destructive
 execution input, two separate guard-only commands derive the complete canonical

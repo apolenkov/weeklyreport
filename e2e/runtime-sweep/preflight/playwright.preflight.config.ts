@@ -2,6 +2,7 @@ import * as path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import integrationConfig from "../../playwright.integration.config.ts";
 import {
   runtimeApiServerCommand,
@@ -19,6 +20,12 @@ const requiredEnv = (name: string): string => {
 };
 
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
+const preflightDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
+assertE2eRuntimeDestructiveTarget(
+  "runtime-preflight-playwright-config",
+  preflightDatabaseUrl,
+  process.env,
+);
 const canaryMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "canary";
 const shardMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "shard";
 const preflightArtifactName = shardMode

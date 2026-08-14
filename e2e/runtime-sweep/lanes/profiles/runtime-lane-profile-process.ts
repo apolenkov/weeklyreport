@@ -1,13 +1,17 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../../prisma/guards/_destructive-guard.ts";
 import type { SeedProfile } from "../../source/contracts.ts";
 import type {
   RuntimeLane,
   RuntimeLaneAssignment,
 } from "../contracts/runtime-lane-contract.ts";
 import type { RuntimeObservabilityConfig } from "../observability/runtime-observability-readiness.ts";
-import { runtimeLaneRedisRunId } from "../resources/runtime-lane-readiness.ts";
+import {
+  runtimeLaneDatabaseUrl,
+  runtimeLaneRedisRunId,
+} from "../resources/runtime-lane-readiness.ts";
 import { runtimeLaneProfileEnvironment } from "./runtime-lane-profile-environment.ts";
 import type { RuntimeLaneRunIdentity } from "./runtime-lane-run-identity.ts";
 
@@ -137,6 +141,17 @@ export const runRuntimeLaneProfileProcess = async (
     abort: AbortSignal;
   }>,
 ): Promise<void> => {
+  const laneDatabaseUrl = runtimeLaneDatabaseUrl(
+    input.baseDatabaseUrl,
+    input.lane.databaseName,
+  );
+  // Validate the exact lane target immediately before the first child spawn.
+  // The child receives the same consent and target through its environment.
+  assertE2eRuntimeDestructiveTarget(
+    `runtime-lane-profile:${input.lane.laneId}/${input.profile}`,
+    laneDatabaseUrl,
+    process.env,
+  );
   const child = spawn(process.execPath, [...PLAYWRIGHT_ARGS], {
     cwd: REPO_ROOT,
     detached: true,

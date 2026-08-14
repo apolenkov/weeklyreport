@@ -181,6 +181,13 @@
       truncated, tampered, started-only, failed, ambiguous, or digest-drifted
       entries; never resume inside a state; publish canonical `PREFLIGHT.json`
       only after the validated ordered union exactly covers the full source plan.
+- [x] 5.13 Replace the broad destructive database suffix/override path with one
+      exact loopback disposable-target validator and per-run consent boundary;
+      apply it before Prisma, pg, Redis, database creation, reset/seed/cleanup,
+      and child-process operations across E2E, runtime lanes, direct profiles,
+      reset-hard, wipe-manual-uat, and policy backfill. Add fail-before-primitive
+      negatives, exact CI targets, onboarding/runtime docs, and the durable
+      destructive-db-guard delta.
 
 ## 6. Immutable baseline and adjudication
 

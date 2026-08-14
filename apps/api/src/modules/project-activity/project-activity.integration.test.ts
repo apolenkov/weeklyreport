@@ -39,7 +39,7 @@ describe("ProjectActivity (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.create({
       data: { id: groupA, name: "Software Development" },
     });

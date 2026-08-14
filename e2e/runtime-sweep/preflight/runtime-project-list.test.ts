@@ -12,6 +12,7 @@ import {
 const SOURCE_SHA = "a".repeat(40);
 const ENV_KEYS = [
   "E2E_DATABASE_URL",
+  "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION",
   "E2E_API_PORT",
   "E2E_WEB_PORT",
   "LOG_LEVEL",
@@ -38,6 +39,7 @@ type RuntimeEnvironmentSnapshot = Readonly<
 const configureRuntimeEnvironment = (archive: string): void => {
   Object.assign(process.env, {
     E2E_DATABASE_URL: "postgresql://localhost/customreport_e2e",
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
     E2E_WEB_PORT: "3105",
     LOG_LEVEL: "info",
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4318",

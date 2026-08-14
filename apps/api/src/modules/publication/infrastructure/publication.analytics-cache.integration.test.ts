@@ -44,11 +44,11 @@ describe("PublicationService analytics invalidation (integration)", () => {
   const prisma = createTestPrisma();
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

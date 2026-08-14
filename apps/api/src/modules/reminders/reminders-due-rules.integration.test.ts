@@ -24,11 +24,11 @@ describe("due-rule queries vs a cleared deadline (integration)", () => {
   const now = new Date("2026-07-24T10:00:00.000Z");
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

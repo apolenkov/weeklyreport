@@ -12,6 +12,8 @@ import {
 describe("runtime lane infrastructure contract", () => {
   beforeEach(() => {
     vi.stubEnv("RUNTIME_SWEEP_REDIS_RECREATE", "true");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
   });
 
   afterEach(() => {

@@ -15,11 +15,11 @@ describe("prisma-test-helper (integration)", () => {
   const prisma = createTestPrisma();
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 
@@ -35,7 +35,7 @@ describe("prisma-test-helper (integration)", () => {
       },
     });
 
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     const count = await prisma.userActionLog.count();
     expect(count).toBe(0);
@@ -48,7 +48,7 @@ describe("prisma-test-helper (integration)", () => {
       update: {},
     });
 
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     const count = await prisma.appSettings.count();
     expect(count).toBe(0);
@@ -79,7 +79,7 @@ describe("prisma-test-helper (integration)", () => {
       data: { viewerUserId: viewer.id, groupId: group.id },
     });
 
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     const count = await prisma.viewerGroupAccess.count();
     expect(count).toBe(0);

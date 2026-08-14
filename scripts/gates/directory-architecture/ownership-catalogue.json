@@ -902,7 +902,7 @@
     {
       "id": "prisma-operations",
       "scope": "prisma",
-      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|reset-hard|wipe-manual-uat)[^/]*)$",
+      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|create-e2e-database|migrate-deploy|migrate-reset|reset-hard|wipe-manual-uat)[^/]*)$",
       "concern": "database-operations",
       "role": "entrypoint",
       "target": "prisma/operations/$1"

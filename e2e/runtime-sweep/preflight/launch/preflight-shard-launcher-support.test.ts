@@ -28,7 +28,6 @@ import {
   type PreflightShardLaunchPreparation,
   preparePreflightShardLaunch,
 } from "./preflight-shard-launcher-support.ts";
-
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
 
 type ShardFixture = Readonly<{
@@ -97,6 +96,8 @@ const createShardFixture = async (): Promise<ShardFixture> => {
     proof,
   });
   const environment: NodeJS.ProcessEnv = {
+    NODE_ENV: "test",
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
     RUNTIME_SWEEP_ARCHIVE: archiveRoot,
     RUNTIME_SWEEP_SOURCE: sourcePath,
     RUNTIME_SWEEP_SOURCE_SHA: source.sourceSha,
@@ -180,12 +181,11 @@ describe("source-bound shard prelaunch", () => {
       );
       expect(child.LOG_DIR).toBe(launch.resourceProof.resources.logDir);
       expect(path.isAbsolute(child.NEXT_DIST_DIR ?? "")).toBe(false);
-      expect(child.E2E_DATABASE_URL).toBe(launch.databaseUrl);
+      expect(child.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION).toBe("давай");
       expect(child.RUNTIME_SWEEP_PREFLIGHT).toBeUndefined();
       expect(child.RUNTIME_SWEEP_PREFLIGHT_JOURNAL).toBeUndefined();
     });
   });
-
   it("rejects an unknown logical shard before a child can be spawned", async () => {
     await withShardFixture(async ({ environment }) => {
       await expect(
@@ -200,7 +200,6 @@ describe("source-bound shard prelaunch", () => {
       ).rejects.toThrow("Unknown logical shard id");
     });
   });
-
   it("rejects a stale source selector before a child can be spawned", async () => {
     await withShardFixture(async ({ environment }) => {
       await expect(

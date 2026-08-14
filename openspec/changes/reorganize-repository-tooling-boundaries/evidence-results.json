@@ -68,16 +68,16 @@
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/project-activity/project-activity.transaction.test.ts src/modules/project-activity/project-activity.prisma-repository.concurrent.test.ts",
       "exitCode": 0,
-      "sourceDigest": "8ed634b76a6c0253fbb10d4a49c9c043c80c958437e2d228bc872590f06e586a",
+      "sourceDigest": "71e0bf01b4922d3ea759f5c48ae2a848a969c3828f6d0bdce4ad400854050edf",
       "summary": "2 files and 11 transaction-boundary tests passed",
-      "rerunAt": "2026-08-04T06:06:25.701Z"
+      "rerunAt": "2026-08-14T00:39:56.000Z"
     },
     {
-      "command": "set -a; . ./.env.test; set +a; DATABASE_URL=\"${E2E_DATABASE_URL%/*}/customreport_test\" pnpm --filter @customreport/api exec vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false src/modules/project-activity/project-activity.concurrency.integration.test.ts",
+      "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e_lane_a_test NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/api exec vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false src/modules/project-activity/project-activity.concurrency.integration.test.ts",
       "exitCode": 0,
-      "sourceDigest": "dc75db685d92c60f1ceea761c34b4f2704a83cba743acf985f8dee65cd1c4877",
+      "sourceDigest": "393eb1eb5932dfe0aa433cd8c53a687944577489fcccc20f53b168c2f84261cf",
       "summary": "4 real PostgreSQL project-activity concurrency tests passed",
-      "rerunAt": "2026-08-04T06:06:29.107Z"
+      "rerunAt": "2026-08-14T00:40:29.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/report-sections/infrastructure/report-sections.prisma-repository.test.ts src/modules/report-sections/application/report-sections.submit.test.ts src/modules/report-sections/application/report-sections.contract.test.ts",

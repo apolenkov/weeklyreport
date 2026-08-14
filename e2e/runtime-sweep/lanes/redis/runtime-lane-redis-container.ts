@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 
 import { z } from "zod";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../../prisma/guards/_destructive-guard.ts";
 import type {
   RuntimeLaneId,
   RuntimeLaneResource,
@@ -205,11 +206,22 @@ const DEFAULT_LIFECYCLE_DEPENDENCIES: RedisContainerLifecycleDependencies = {
   wait: waitForPort,
 };
 
+const assertRuntimeLaneRedisMutationTarget = (operation: string): void => {
+  assertE2eRuntimeDestructiveTarget(
+    operation,
+    process.env.E2E_DATABASE_URL,
+    process.env,
+  );
+};
+
 export const prepareRuntimeLaneRedisContainer = async (
   resource: RuntimeLaneResource,
   dependencies: RedisContainerLifecycleDependencies = DEFAULT_LIFECYCLE_DEPENDENCIES,
   authorization: RuntimeLaneRedisRecreationAuthorization = requireRuntimeLaneRedisRecreationAuthorization(),
 ): Promise<"created" | "started" | "ready"> => {
+  assertRuntimeLaneRedisMutationTarget(
+    `runtime-lane-redis-prepare:${resource.laneId}`,
+  );
   return prepareRuntimeLaneRedisContainerImplementation(
     resource,
     dependencies,
@@ -227,8 +239,9 @@ export const recreateRuntimeLaneRedisInfrastructure = async (
   resources: readonly RuntimeLaneResource[],
   dependencies: RedisContainerLifecycleDependencies = DEFAULT_LIFECYCLE_DEPENDENCIES,
   authorization: RuntimeLaneRedisRecreationAuthorization = requireRuntimeLaneRedisRecreationAuthorization(),
-) =>
-  recreateRuntimeLaneRedisInfrastructureImplementation(
+): Promise<ReadonlyMap<RuntimeLaneId, string>> => {
+  assertRuntimeLaneRedisMutationTarget("runtime-lane-redis-recreate");
+  return recreateRuntimeLaneRedisInfrastructureImplementation(
     resources,
     dependencies,
     authorization,
@@ -239,3 +252,4 @@ export const recreateRuntimeLaneRedisInfrastructure = async (
       assertRunning: assertRuntimeLaneRedisContainer,
     },
   );
+};

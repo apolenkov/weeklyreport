@@ -27,6 +27,8 @@ describe("runtime control-action safety boundary", () => {
     expect(() =>
       assertDisposableE2eDatabase("postgres://localhost/customreport_e2e", {
         DATABASE_URL: "postgres://localhost/customreport_dev",
+        NODE_ENV: "test",
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
       }),
     ).not.toThrow();
   });
@@ -37,14 +39,24 @@ describe("runtime control-action safety boundary", () => {
       "postgres://localhost/customreport_dev",
       {
         DATABASE_URL: "postgres://localhost/customreport_dev",
+        NODE_ENV: "test",
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
       },
     ],
-    ["production database", "postgres://db/customreport_prod", {}],
+    [
+      "production database",
+      "postgres://db/customreport_prod",
+      {
+        NODE_ENV: "test",
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+      },
+    ],
     [
       "production runtime",
       "postgres://localhost/customreport_e2e",
       {
         NODE_ENV: "production",
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
       },
     ],
   ] as const)("rejects a %s target", (_label, databaseUrl, environment) => {

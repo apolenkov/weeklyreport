@@ -64,7 +64,15 @@ const laneA = (): RuntimeLaneResource => {
 };
 
 describe("runtime lane Redis recreation", () => {
-  beforeEach(() => vi.stubEnv("RUNTIME_SWEEP_REDIS_RECREATE", "true"));
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv(
+      "E2E_DATABASE_URL",
+      "postgresql://user:secret@127.0.0.1/customreport_e2e",
+    );
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    vi.stubEnv("RUNTIME_SWEEP_REDIS_RECREATE", "true");
+  });
   afterEach(() => vi.unstubAllEnvs());
 
   it.each(["", "false", "TRUE"])(

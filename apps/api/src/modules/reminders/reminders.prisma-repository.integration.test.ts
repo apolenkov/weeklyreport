@@ -66,11 +66,11 @@ async function collectPages(
 
 describe("RemindersPrismaRepository execution pagination", () => {
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

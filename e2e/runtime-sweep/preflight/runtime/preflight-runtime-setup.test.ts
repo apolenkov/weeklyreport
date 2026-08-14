@@ -131,6 +131,7 @@ let harness: PreflightRuntimeSetupTestHarness;
 beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
   vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
   harness = createPreflightRuntimeSetupTestHarness(mocks);
   harness.reset();
 });

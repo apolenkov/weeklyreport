@@ -116,13 +116,13 @@ describe("unified-activity lifecycle (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     await assignLeadToProject();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

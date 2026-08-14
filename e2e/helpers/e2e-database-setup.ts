@@ -70,7 +70,11 @@ export function setupE2eDatabase(input: E2eDatabaseSetup): void {
     process.env.NODE_ENV,
   );
 
-  const env = { ...process.env, DATABASE_URL: input.databaseUrl };
+  const env = {
+    ...process.env,
+    DATABASE_URL: input.databaseUrl,
+    E2E_DATABASE_URL: input.databaseUrl,
+  };
 
   for (const command of e2eSetupCommands(
     input.repoRoot,

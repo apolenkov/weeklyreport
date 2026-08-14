@@ -78,7 +78,7 @@ function dedupeKey(ruleId: string, email: string): string {
 
 describe("reminders namespace — per-group scope (integration)", () => {
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     const data = await seedTestData(prisma);
 
     // Group B + its lead, plus a second in-scope group-A lead with NO section.
@@ -188,7 +188,7 @@ describe("reminders namespace — per-group scope (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

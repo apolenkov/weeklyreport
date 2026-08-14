@@ -87,10 +87,24 @@ web, чтобы заработала корреляция ошибок с тре
   `demo`, `full` или `stress`. Профили образуют монотонную лестницу.
 - Единая публичная точка входа — `prisma/seeds/profiles/seed-profile.ts`; внутренние writers
   остаются раздельными.
-- Защита от случайного сноса не той базы — `prisma/guards/_destructive-guard.ts`: он
-  разбирает `DATABASE_URL` и не даёт деструктивную операцию без суффикса
-  `_uat` / `_dev` / `_test` (продакшен защищён отдельно флагом
-  `ALLOW_PROD_DESTRUCTIVE`).
+- Защита E2E/runtime-сноса — `prisma/guards/_destructive-guard.ts`: exact guard
+  принимает только loopback и точные базы `customreport_e2e` или
+  `customreport_e2e_lane_[a-o]_test`, без query/fragment, кодированных или
+  лишних path-сегментов. Для каждой операции нужен отдельный
+  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; `ALLOW_PROD_DESTRUCTIVE`
+  этот guard не обходит.
+- Ручные UAT/dev-операции также используют этот exact guard. Production restore
+  остаётся отдельным entrypoint и не меняется.
+
+  Например, перед E2E reset/seed:
+
+  ```bash
+  NODE_ENV=test \
+  E2E_DATABASE_URL='postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e' \
+  DATABASE_URL='postgresql://customreport:localdev@127.0.0.1:5432/customreport_dev' \
+  PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+  pnpm test:e2e:integration
+  ```
 
 Подробные правила — в [`../AGENTS.md`](../AGENTS.md), разделы про disposable БД и
 Docker-базы.

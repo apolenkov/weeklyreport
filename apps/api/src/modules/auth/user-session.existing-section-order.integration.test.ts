@@ -32,7 +32,7 @@ describe("existingSection lookup — draft-report ordering", () => {
   } as const;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     await prisma.reportingGroup.create({
       data: { id: IDS.group, name: "Group" },
@@ -90,7 +90,7 @@ describe("existingSection lookup — draft-report ordering", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

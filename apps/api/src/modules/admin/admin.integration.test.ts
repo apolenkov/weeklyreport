@@ -21,12 +21,12 @@ describe("AdminPrismaRepository (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

@@ -25,7 +25,7 @@ describe("ProjectActivity concurrent group ownership", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.createMany({
       data: [
         { id: GROUP_A, name: "Group A" },

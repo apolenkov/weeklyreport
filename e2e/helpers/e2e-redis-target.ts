@@ -2,7 +2,11 @@ const MAX_TCP_PORT = 65_535;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
 
 export interface E2eRedisResetEnvironment {
+  readonly DATABASE_URL?: string;
   readonly E2E_REDIS_FLUSH?: string;
+  readonly E2E_DATABASE_URL?: string;
+  readonly NODE_ENV?: string;
+  readonly PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION?: string;
   readonly REDIS_HOST?: string;
   readonly REDIS_PORT?: string;
   readonly RUNTIME_SWEEP_ARCHIVE?: string;

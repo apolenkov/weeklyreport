@@ -125,6 +125,8 @@ afterEach(() => {
 describe("frozen stateful control recovery", () => {
   it("reseeds once and prepares the oracle without a second reseed", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
     const url = vi
       .fn<() => string>()
       .mockReturnValueOnce("about:blank")

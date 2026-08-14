@@ -105,6 +105,7 @@ describe("empty resolver production preparation", () => {
   it("accepts exactly one specialized permission transition", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
     vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
     const prepared = await prepareEmptyThroughProductionPath();
 
     expect(prepared.observation).toMatchObject({

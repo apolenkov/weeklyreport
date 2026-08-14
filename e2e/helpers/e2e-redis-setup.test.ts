@@ -50,9 +50,49 @@ describe("E2E Redis reset command", () => {
 
     try {
       await expect(
-        flushE2eRedis({ host: "127.0.0.1", port: address.port }),
+        flushE2eRedis(
+          { host: "127.0.0.1", port: address.port },
+          {
+            E2E_DATABASE_URL:
+              "postgresql://user:pass@127.0.0.1:5432/customreport_e2e",
+            NODE_ENV: "test",
+            PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+          },
+        ),
       ).resolves.toBeUndefined();
       await expect(received.promise).resolves.toBe("*1\r\n$7\r\nFLUSHDB\r\n");
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
+
+  it("rejects the database target before opening a Redis connection", async () => {
+    const server = net.createServer(() => {
+      throw new Error("Redis connection must not be attempted");
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address();
+    if (typeof address === "string" || address === null) {
+      server.close();
+      throw new Error("Expected a TCP test server address");
+    }
+
+    try {
+      expect(() =>
+        flushE2eRedis(
+          { host: "127.0.0.1", port: address.port },
+          {
+            E2E_DATABASE_URL:
+              "postgresql://user:pass@127.0.0.1:5432/customreport_dev",
+            NODE_ENV: "test",
+            PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+          },
+        ),
+      ).toThrow(/not one of/u);
     } finally {
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),

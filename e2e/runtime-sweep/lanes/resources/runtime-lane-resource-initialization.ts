@@ -1,3 +1,4 @@
+import { assertE2eRuntimeDestructiveTarget } from "../../../../prisma/guards/_destructive-guard.ts";
 import type {
   RuntimeLaneAssignment,
   RuntimeLaneResource,
@@ -29,6 +30,11 @@ export async function initializeRuntimeLaneResources(
   }>,
   dependencies: RuntimeLaneInitializationDependencies = DEFAULT_DEPENDENCIES,
 ): Promise<ReadonlyMap<string, string>> {
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lane-resource-initialization",
+    input.baseDatabaseUrl,
+    process.env,
+  );
   if (!input.redisRecreationAuthorized)
     throw new Error(
       "Runtime lane Redis recreation requires RUNTIME_SWEEP_REDIS_RECREATE=true",

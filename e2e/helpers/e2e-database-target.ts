@@ -1,4 +1,7 @@
-import { assertNonProdDestructiveTarget } from "../../prisma/guards/_destructive-guard.ts";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  type DestructiveTargetEnv,
+} from "../../prisma/guards/_destructive-guard.ts";
 
 export interface E2eDatabaseIdentity {
   readonly database: string;
@@ -43,36 +46,54 @@ const normalizeDatabaseHost = (hostname: string): string => {
     : numericHost;
 };
 
+const exactDatabaseName = (url: URL): string => {
+  const decodedPath = decodeURIComponent(url.pathname);
+  if (!/^\/[^/]+$/u.test(decodedPath))
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL must name exactly one database path segment",
+    );
+  const database = decodedPath.slice(1);
+  if (url.pathname !== `/${database}`)
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL database path must be an exact, unencoded segment",
+    );
+  if (database.includes("%") || /[\u0000-\u001F\u007F]/u.test(database))
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL database path must be safely decoded exactly once",
+    );
+  if (PRODUCTION_DATABASE_NAME.test(database))
+    rejectStrictDatabaseTarget(
+      `Database name "${database}" looks like production.`,
+    );
+  return database;
+};
+
+const parsedE2eUrl = (databaseUrl: string): URL => {
+  if (databaseUrl !== databaseUrl.trim())
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL must not contain leading or trailing whitespace",
+    );
+  const url = new URL(databaseUrl);
+  if (!POSTGRES_PROTOCOLS.has(url.protocol))
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL must use the postgres or postgresql protocol",
+    );
+  if (url.search !== "" || url.hash !== "")
+    rejectStrictDatabaseTarget(
+      "E2E_DATABASE_URL must not contain query parameters or a fragment",
+    );
+  return url;
+};
+
 export const e2eDatabaseIdentity = (
   databaseUrl: string,
 ): E2eDatabaseIdentity => {
   try {
-    const url = new URL(databaseUrl);
-    if (!POSTGRES_PROTOCOLS.has(url.protocol))
-      rejectStrictDatabaseTarget(
-        "E2E_DATABASE_URL must use the postgres or postgresql protocol",
-      );
-    if (url.search !== "" || url.hash !== "")
-      rejectStrictDatabaseTarget(
-        "E2E_DATABASE_URL must not contain query parameters or a fragment",
-      );
+    const url = parsedE2eUrl(databaseUrl);
     const host = normalizeDatabaseHost(url.hostname);
     if (host === "")
       rejectStrictDatabaseTarget("E2E_DATABASE_URL must name a database host");
-    const decodedPath = decodeURIComponent(url.pathname);
-    if (!/^\/[^/]+$/u.test(decodedPath))
-      rejectStrictDatabaseTarget(
-        "E2E_DATABASE_URL must name exactly one database path segment",
-      );
-    const database = decodedPath.slice(1);
-    if (database.includes("%") || /[\u0000-\u001F\u007F]/u.test(database))
-      rejectStrictDatabaseTarget(
-        "E2E_DATABASE_URL database path must be safely decoded exactly once",
-      );
-    if (PRODUCTION_DATABASE_NAME.test(database))
-      rejectStrictDatabaseTarget(
-        `Database name "${database}" looks like production.`,
-      );
+    const database = exactDatabaseName(url);
     const port = url.port || "5432";
     const numericPort = Number(port);
     if (!Number.isInteger(numericPort) || numericPort <= 0)
@@ -104,28 +125,15 @@ export const sameE2eDatabaseTarget = (
   );
 };
 
-const canonicalDatabaseUrl = (
-  databaseUrl: string,
-  identity: E2eDatabaseIdentity,
-): string => {
-  const url = new URL(databaseUrl);
-  url.hostname = identity.host === "loopback" ? "127.0.0.1" : identity.host;
-  url.pathname = `/${identity.database}`;
-  return url.toString();
-};
-
 export const assertStrictNonProdDatabaseTarget = (
   scriptName: string,
   databaseUrl: string,
   nodeEnv: string | undefined,
+  environment: DestructiveTargetEnv = process.env,
 ): void => {
-  const identity = e2eDatabaseIdentity(databaseUrl);
-  if (nodeEnv === "production")
-    rejectStrictDatabaseTarget(
-      `[${scriptName}] Refusing: NODE_ENV=production.`,
-    );
-  assertNonProdDestructiveTarget(scriptName, {
-    DATABASE_URL: canonicalDatabaseUrl(databaseUrl, identity),
+  assertE2eRuntimeDestructiveTarget(scriptName, databaseUrl, {
+    ...environment,
+    DATABASE_URL: databaseUrl,
     ...(nodeEnv === undefined ? {} : { NODE_ENV: nodeEnv }),
   });
 };

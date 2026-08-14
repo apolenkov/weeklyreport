@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PUBLISHED_REPORT_ID } from "../../../prisma/seeds/support/seed-constants.ts";
 import type { RuntimeDatabaseSnapshot } from "./state-oracle.ts";
@@ -102,6 +102,9 @@ function fakeDatabase(
   };
 }
 
+beforeEach(() => {
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+});
 afterEach(() => vi.unstubAllEnvs());
 describe("runtime state preparation policy", () => {
   it("maps an allowed boundary to the canonical actor for each route role", () => {

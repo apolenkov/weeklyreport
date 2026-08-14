@@ -30,7 +30,7 @@ describe("group-scope visibility matrix (integration)", () => {
   } as const;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     await prisma.reportingGroup.createMany({
       data: [
@@ -129,7 +129,7 @@ describe("group-scope visibility matrix (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

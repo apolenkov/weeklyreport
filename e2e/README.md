@@ -40,22 +40,31 @@ e2e/
 
 ## Safety boundary
 
-All destructive E2E work uses an explicit `E2E_DATABASE_URL` that differs from
-`DATABASE_URL`. Runtime lanes derive canonical databases named
-`customreport_e2e_lane_<id>_test`. The Prisma destructive guard remains the
-final database authority. Never set either URL to a production target.
+All destructive E2E and runtime work uses an explicit `E2E_DATABASE_URL` that
+differs from `DATABASE_URL`. The exact guard accepts only loopback PostgreSQL
+URLs whose raw path is exactly `customreport_e2e` or
+`customreport_e2e_lane_[a-o]_test`; encoded, case-folded, whitespace, query,
+fragment, and multi-segment aliases are rejected. Every reset, seed, cleanup,
+Redis flush, database creation, or child process that can perform one of these
+operations must receive the exact per-run consent
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`. `ALLOW_PROD_DESTRUCTIVE`
+cannot bypass this E2E/runtime guard. Production restore remains a separate
+unchanged contract.
 
 Before any lane database or Redis preparation, run the non-mutating plan
 guards:
 
 ```bash
-E2E_DATABASE_URL=postgresql://.../customreport_e2e \
-DATABASE_URL=postgresql://.../customreport_dev \
+E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e \
+DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_dev \
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 RUNTIME_SWEEP_LANE_COUNT=4 \
 pnpm test:runtime-lane-database-targets
 
 E2E_REDIS_FLUSH=true \
 REDIS_HOST=127.0.0.1 \
+E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e \
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 RUNTIME_SWEEP_LANE_COUNT=4 \
 RUNTIME_SWEEP_REDIS_RECREATE=true \
 pnpm test:runtime-lane-redis-targets
@@ -64,8 +73,9 @@ pnpm test:runtime-lane-redis-targets
 These commands only derive typed target evidence. Their result always contains
 `destructiveOperationsAllowed=false`; they cannot connect, create, reset, seed,
 flush, start, or remove a resource. Passing them does not authorize later
-mutation. The preparation and replay entrypoints still require the exact
-single-use Redis capability and the Prisma dangerous-action consent path.
+mutation. The target-plan commands remain non-mutating and use target-only
+validation; preparation and replay require the exact single-use Redis
+capability and the Prisma dangerous-action consent path shown above.
 
 ## Runtime sweep order
 
