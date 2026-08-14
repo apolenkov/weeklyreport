@@ -2,20 +2,32 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import { sameE2eDatabaseTarget } from "../../../../e2e/helpers/e2e-database-target.js";
 import {
   assertE2eRuntimeDestructiveTarget,
   type DestructiveTargetEnv,
 } from "../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../lib/env.js";
 
+const SCRIPT_NAME = "api-integration-test";
+
 let pool: pg.Pool | null = null;
 let prismaInstance: PrismaClient | null = null;
+let prismaDatabaseUrl: string | null = null;
 
 export function assertTestDatabaseUrl(
   url: string,
   environment: DestructiveTargetEnv = process.env,
 ): void {
-  assertE2eRuntimeDestructiveTarget("api-integration-test", url, environment);
+  assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, url, environment);
+  if (
+    environment.DATABASE_URL !== undefined &&
+    sameE2eDatabaseTarget(url, environment.DATABASE_URL)
+  ) {
+    throw new Error(
+      "[api-integration-test] E2E_DATABASE_URL must differ from DATABASE_URL.",
+    );
+  }
 }
 
 // Memoized quoted table list for TRUNCATE (schema static per test run).
@@ -51,14 +63,24 @@ async function discoverTables(prisma: PrismaClient): Promise<string> {
 }
 
 export function createTestPrisma(): PrismaClient {
+  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+  assertTestDatabaseUrl(databaseUrl);
+  if (
+    prismaInstance !== null &&
+    (prismaDatabaseUrl === null ||
+      !sameE2eDatabaseTarget(prismaDatabaseUrl, databaseUrl))
+  ) {
+    throw new Error(
+      "createTestPrisma: the existing client belongs to a different E2E database target",
+    );
+  }
   if (!prismaInstance) {
-    const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
-    assertTestDatabaseUrl(databaseUrl);
     pool = new pg.Pool({
       connectionString: databaseUrl,
     });
     const adapter = new PrismaPg(pool);
     prismaInstance = new PrismaClient({ adapter });
+    prismaDatabaseUrl = databaseUrl;
   }
   return prismaInstance;
 }
@@ -66,8 +88,6 @@ export function createTestPrisma(): PrismaClient {
 // TRUNCATE ACCESS EXCLUSIVE is safe only with --fileParallelism=false;
 // concurrent holders (dev API / Studio on _test) hang beforeEach silently.
 export async function cleanDatabase(): Promise<void> {
-  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
-  assertTestDatabaseUrl(databaseUrl);
   const prisma = createTestPrisma();
   const list = await discoverTables(prisma);
   await prisma.$executeRawUnsafe(
@@ -76,13 +96,16 @@ export async function cleanDatabase(): Promise<void> {
 }
 
 export async function disconnectTestPrisma(): Promise<void> {
-  if (prismaInstance) {
-    await prismaInstance.$disconnect();
-    prismaInstance = null;
-  }
-  if (pool) {
-    await pool.end();
-    pool = null;
+  const activePrisma = prismaInstance;
+  const activePool = pool;
+  prismaInstance = null;
+  pool = null;
+  prismaDatabaseUrl = null;
+  memoizedTableList = null;
+  try {
+    if (activePrisma) await activePrisma.$disconnect();
+  } finally {
+    if (activePool) await activePool.end();
   }
 }
 
