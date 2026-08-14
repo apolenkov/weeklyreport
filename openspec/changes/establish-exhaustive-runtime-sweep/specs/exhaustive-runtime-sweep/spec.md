@@ -661,6 +661,15 @@ consistent.
   exact Sign out boundary may mask landmark topology and movement comparison
   while snapshot-local visual failures remain blocking
 
+#### Scenario: exhaustive preflight diagnostics remain bounded without trimming coverage
+
+- **WHEN** one preflight segment executes a high volume of browser calls
+- **THEN** a failure retains its Playwright call/network/source trace, failure
+  screenshot, video, and error context without per-call DOM snapshots or trace
+  screenshots
+- **AND** the diagnostic policy does not remove a reveal candidate, control,
+  transition, non-mutation proof, or required runtime-cell screenshot
+
 ### Requirement: The baseline is immutable and reruns are explicit
 
 The primary orchestrator SHALL persist one immutable baseline ledger and matrix

@@ -163,6 +163,15 @@ test("keeps deterministic runtime projects in dependency order", async () => {
       width: 1440,
       height: 900,
     });
+    expect(preflightConfig.use?.trace).toEqual({
+      mode: "retain-on-failure",
+      snapshots: false,
+      screenshots: false,
+      sources: true,
+      attachments: true,
+    });
+    expect(preflightConfig.use?.screenshot).toBe("only-on-failure");
+    expect(preflightConfig.use?.video).toBe("retain-on-failure");
     expect(preflightServers[0]?.command).toBe(runtimeApiServerCommand);
     expect(preflightServers[0]?.cwd).toBe(runtimeApiServerCwd);
     expect(preflightServers[0]?.env?.LOG_DIR).toBe(
