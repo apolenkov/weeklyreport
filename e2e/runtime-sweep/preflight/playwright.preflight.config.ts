@@ -124,6 +124,13 @@ export default defineConfig({
   use: {
     ...integrationConfigWithoutLifecycle.use,
     baseURL: PREFLIGHT_WEB_ORIGIN,
+    trace: {
+      mode: "retain-on-failure",
+      snapshots: false,
+      screenshots: false,
+      sources: true,
+      attachments: true,
+    },
   },
   timeout: PREFLIGHT_TIMEOUT_MS,
   fullyParallel: false,
