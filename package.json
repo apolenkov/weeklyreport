@@ -21,7 +21,7 @@
     "lint": "node scripts/gates/orchestrator/lint-gate.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:eslint": "eslint . --max-warnings 0",
+    "lint:eslint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0",
     "lint:stylelint": "stylelint \"**/*.css\" --allow-empty-input --max-warnings 0",
     "lint:prettier-scope:test": "node --test scripts/gates/formatting/prettier-scope-gate.test.ts",
     "lint:stylelint-gate:test": "node --test scripts/gates/formatting/stylelint-gate.test.ts",

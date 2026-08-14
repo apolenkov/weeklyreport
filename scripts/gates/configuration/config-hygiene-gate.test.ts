@@ -105,6 +105,15 @@ void test("runtime harness grants exact destructive consent only for its run", (
   );
 });
 
+void test("repository ESLint has a bounded heap above the measured live scan", () => {
+  const packageJson: unknown = JSON.parse(readFileSync("package.json", "utf8"));
+  const scripts = isRecord(packageJson) ? packageJson.scripts : undefined;
+  assert.equal(
+    isRecord(scripts) ? scripts["lint:eslint"] : undefined,
+    "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0",
+  );
+});
+
 const readOnlyWorkflow = (permissions: string): string =>
   [
     "name: Fixture",
