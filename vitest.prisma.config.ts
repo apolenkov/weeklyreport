@@ -25,6 +25,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Runtime shard fixtures share deterministic repo-local roots. File-level
+    // concurrency lets one fixture delete another and creates false timeouts.
+    fileParallelism: false,
     include: [
       "prisma/**/*.test.ts",
       "e2e/helpers/*.test.ts",

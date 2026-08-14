@@ -2,10 +2,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { sameE2eDatabaseTarget } from "../../../../e2e/helpers/e2e-database-target.js";
 import {
   assertE2eRuntimeDestructiveTarget,
   type DestructiveTargetEnv,
+  sameLocalPostgresDatabaseTarget,
 } from "../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../lib/env.js";
 
@@ -22,7 +22,7 @@ export function assertTestDatabaseUrl(
   assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, url, environment);
   if (
     environment.DATABASE_URL !== undefined &&
-    sameE2eDatabaseTarget(url, environment.DATABASE_URL)
+    sameLocalPostgresDatabaseTarget(SCRIPT_NAME, url, environment.DATABASE_URL)
   ) {
     throw new Error(
       "[api-integration-test] E2E_DATABASE_URL must differ from DATABASE_URL.",
@@ -68,7 +68,11 @@ export function createTestPrisma(): PrismaClient {
   if (
     prismaInstance !== null &&
     (prismaDatabaseUrl === null ||
-      !sameE2eDatabaseTarget(prismaDatabaseUrl, databaseUrl))
+      !sameLocalPostgresDatabaseTarget(
+        SCRIPT_NAME,
+        prismaDatabaseUrl,
+        databaseUrl,
+      ))
   ) {
     throw new Error(
       "createTestPrisma: the existing client belongs to a different E2E database target",
