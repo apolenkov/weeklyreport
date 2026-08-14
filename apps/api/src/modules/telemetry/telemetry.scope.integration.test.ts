@@ -143,14 +143,14 @@ describe("Telemetry group scoping (integration)", () => {
   }
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     const testData = await seedGroupA();
     await seedGroupBReports(testData);
     await seedScopedRows(testData.section.id);
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

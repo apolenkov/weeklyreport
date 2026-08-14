@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { isEntrypoint } from "../../guards/_entrypoint.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import {
@@ -149,7 +149,7 @@ export async function seedStressOverlay(prisma: PrismaClient): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  assertNonProdDestructive("seed-stress-overlay");
+  assertE2eRuntimeDestructive("seed-stress-overlay");
   const databaseUrl = requireEnv("DATABASE_URL");
   const pool = new pg.Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });

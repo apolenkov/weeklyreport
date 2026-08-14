@@ -97,7 +97,7 @@ describe("reports.latestForViewer (integration)", () => {
   }
 
   beforeAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.createMany({
       data: [
         { id: GROUP_A_ID, name: "Group A" },
@@ -166,7 +166,7 @@ describe("reports.latestForViewer (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

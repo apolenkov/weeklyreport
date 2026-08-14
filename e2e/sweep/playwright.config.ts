@@ -6,6 +6,7 @@ import * as path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../prisma/guards/_destructive-guard.ts";
 // Drives the durable Scenario Catalog per role and blocks on console/load/a11y
 // anomalies after preserving the complete per-role report.
 // See openspec/specs/behavioral-ui-regression-gate/spec.md.
@@ -51,6 +52,12 @@ if (
     "E2E_DATABASE_URL must differ from DATABASE_URL for the UAT sweep.",
   );
 }
+
+assertE2eRuntimeDestructiveTarget(
+  "uat-playwright-config",
+  E2E_DATABASE_URL,
+  process.env,
+);
 
 // Repo root (e2e/sweep/playwright.config.ts → ../..).
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");

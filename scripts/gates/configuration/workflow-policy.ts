@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { parseDocument } from "yaml";
 
-type PlainObject = Readonly<Record<string, unknown>>;
+export type WorkflowPlainObject = Readonly<Record<string, unknown>>;
 
-type WorkflowParseResult =
-  | Readonly<{ ok: true; workflow: PlainObject }>
+export type WorkflowParseResult =
+  | Readonly<{ ok: true; workflow: WorkflowPlainObject }>
   | Readonly<{ findings: readonly string[]; ok: false }>;
 
 const WORKFLOW_FILE = /[.](?:yaml|yml)$/u;
@@ -15,9 +15,9 @@ const PLAYWRIGHT_CHROMIUM_INSTALL =
   "pnpm --filter @customreport/web exec playwright install --with-deps chromium";
 const SAFE_PERMISSION = new Set(["none", "read"]);
 
-const asObject = (value: unknown): PlainObject | undefined =>
+const asObject = (value: unknown): WorkflowPlainObject | undefined =>
   typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as PlainObject)
+    ? (value as WorkflowPlainObject)
     : undefined;
 
 const yamlFindings = (
@@ -28,7 +28,7 @@ const yamlFindings = (
     ({ message }) => `workflow YAML is invalid: ${message}`,
   );
 
-const parseWorkflow = (source: string): WorkflowParseResult => {
+export const parseWorkflow = (source: string): WorkflowParseResult => {
   const document = parseDocument(source, {
     prettyErrors: false,
     uniqueKeys: true,
@@ -52,14 +52,14 @@ const parseWorkflow = (source: string): WorkflowParseResult => {
 };
 
 const unsafePermissionEntries = (
-  permissions: PlainObject,
+  permissions: WorkflowPlainObject,
 ): readonly (readonly [string, unknown])[] =>
   Object.entries(permissions).filter(
     ([, value]) => typeof value !== "string" || !SAFE_PERMISSION.has(value),
   );
 
 const topLevelPermissionFindings = (
-  workflow: PlainObject,
+  workflow: WorkflowPlainObject,
 ): readonly string[] => {
   const value = workflow.permissions;
   const permissions = asObject(value);
@@ -78,7 +78,7 @@ const topLevelPermissionFindings = (
   return [...baselineFindings, ...broadFindings];
 };
 
-const jobPermissionFindings = (jobs: PlainObject): readonly string[] =>
+const jobPermissionFindings = (jobs: WorkflowPlainObject): readonly string[] =>
   Object.entries(jobs).flatMap(([jobName, value]) => {
     const job = asObject(value);
     if (job?.permissions === undefined) {
@@ -95,7 +95,7 @@ const jobPermissionFindings = (jobs: PlainObject): readonly string[] =>
         ];
   });
 
-const checkoutFindings = (jobs: PlainObject): readonly string[] =>
+const checkoutFindings = (jobs: WorkflowPlainObject): readonly string[] =>
   Object.entries(jobs).flatMap(([jobName, value]) => {
     const steps = asObject(value)?.steps;
     return Array.isArray(steps)
@@ -117,7 +117,9 @@ const checkoutFindings = (jobs: PlainObject): readonly string[] =>
       : [];
   });
 
-const qualityPlaywrightFindings = (jobs: PlainObject): readonly string[] => {
+const qualityPlaywrightFindings = (
+  jobs: WorkflowPlainObject,
+): readonly string[] => {
   const quality = asObject(jobs.quality);
   const steps = quality?.steps;
   if (!Array.isArray(steps)) {
@@ -145,7 +147,7 @@ const qualityPlaywrightFindings = (jobs: PlainObject): readonly string[] => {
       ];
 };
 
-const policyFindings = (workflow: PlainObject): readonly string[] => {
+const policyFindings = (workflow: WorkflowPlainObject): readonly string[] => {
   const jobs = asObject(workflow.jobs);
   return jobs
     ? [

@@ -20,11 +20,11 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
   const deadline = new Date("2026-08-07T15:00:00.000Z");
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

@@ -56,7 +56,7 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

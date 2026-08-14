@@ -8,7 +8,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import { assertSeedCoverage } from "../support/seed-coverage-check.js";
 import {
@@ -40,43 +40,42 @@ import { logSeedSummary } from "./seed-simple.summary.js";
 import { seedUsers } from "./seed-simple.users.js";
 import { wipeExistingData } from "./seed-simple.wipe.js";
 
-const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const DATABASE_URL = requireEnv("DATABASE_URL");
 
-async function main() {
-  assertNonProdDestructive("seed-simple");
+async function main(): Promise<void> {
+  assertE2eRuntimeDestructive("seed-simple");
+  const pool = new pg.Pool({ connectionString: DATABASE_URL });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  try {
+    await wipeExistingData(prisma);
+    await seedReportingGroups(prisma);
+    await seedOrganizationSettings(prisma);
+    await seedUsers(prisma);
+    await seedProducts(prisma);
+    await seedStages(prisma);
+    await seedStageAssignments(prisma);
+    await seedReports(prisma);
+    await seedActiveSections(prisma);
+    await seedCrossAuthorOverlay(prisma);
+    await seedProjectActivities(prisma);
+    await seedActivityParentedRecords(prisma);
+    await seedActivityOnlyLead(prisma);
+    await seedPublishedWeekSections(prisma);
+    await seedArchivedHistory(prisma);
+    await seedGroupLeaderAndViewer(prisma);
+    await seedReopenRequest(prisma);
+    await seedActionLog(prisma);
+    await seedReminderPolicies(prisma);
 
-  await wipeExistingData(prisma);
-  await seedReportingGroups(prisma);
-  await seedOrganizationSettings(prisma);
-  await seedUsers(prisma);
-  await seedProducts(prisma);
-  await seedStages(prisma);
-  await seedStageAssignments(prisma);
-  await seedReports(prisma);
-  await seedActiveSections(prisma);
-  await seedCrossAuthorOverlay(prisma);
-  await seedProjectActivities(prisma);
-  await seedActivityParentedRecords(prisma);
-  await seedActivityOnlyLead(prisma);
-  await seedPublishedWeekSections(prisma);
-  await seedArchivedHistory(prisma);
-  await seedGroupLeaderAndViewer(prisma);
-  await seedReopenRequest(prisma);
-  await seedActionLog(prisma);
-  await seedReminderPolicies(prisma);
-
-  await logSeedSummary(prisma);
-  await assertSeedCoverage(prisma, "seed-simple", REPORT_ACTIVE);
-}
-
-main()
-  .catch((error: unknown) => {
-    console.error("[seed-simple] Failed:", error);
-    process.exit(1);
-  })
-  .finally(async () => {
+    await logSeedSummary(prisma);
+    await assertSeedCoverage(prisma, "seed-simple", REPORT_ACTIVE);
+  } finally {
     await prisma.$disconnect();
     await pool.end();
-  });
+  }
+}
+
+void main().catch((error: unknown) => {
+  console.error("[seed-simple] Failed:", error);
+  process.exit(1);
+});

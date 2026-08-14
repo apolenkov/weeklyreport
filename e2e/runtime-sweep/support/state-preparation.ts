@@ -1,6 +1,6 @@
 import type { ReportStatus } from "@customreport/shared";
 
-import { assertNonProdDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import {
   SEED_PROFILE_MANIFESTS,
   type SeedCapability,
@@ -12,6 +12,7 @@ import {
   e2eSetupCommands,
   reseedE2eDatabase,
 } from "../../helpers/e2e-database-setup.js";
+import { sameE2eDatabaseTarget } from "../../helpers/e2e-database-target.ts";
 import {
   REACHABLE_ROUTE_SURFACE_EXPECTATION,
   type RuntimeSurfaceExpectation,
@@ -244,18 +245,25 @@ function assertDatabaseTarget(databaseUrl: string): void {
       "databaseUrl is required",
     );
   }
-  if (databaseUrl === process.env.DATABASE_URL) {
+  if (
+    process.env.DATABASE_URL !== undefined &&
+    sameE2eDatabaseTarget(databaseUrl, process.env.DATABASE_URL)
+  ) {
     throw new RuntimeStateTargetError(
       "same-as-development",
       "E2E database must differ from DATABASE_URL",
     );
   }
   try {
-    const environment =
-      process.env.NODE_ENV === undefined
-        ? { DATABASE_URL: databaseUrl }
-        : { DATABASE_URL: databaseUrl, NODE_ENV: process.env.NODE_ENV };
-    assertNonProdDestructiveTarget("runtime-state-preparation", environment);
+    const environment = {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+    };
+    assertE2eRuntimeDestructiveTarget(
+      "runtime-state-preparation",
+      databaseUrl,
+      environment,
+    );
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw new RuntimeStateTargetError("destructive-guard", error.message);

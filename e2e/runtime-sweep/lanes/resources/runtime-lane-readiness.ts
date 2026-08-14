@@ -2,6 +2,7 @@ import net from "node:net";
 
 import pg from "pg";
 
+import { assertE2eRuntimeDatabaseTarget } from "../../../../prisma/guards/_destructive-guard.ts";
 import type { RuntimeLaneAssignment } from "../contracts/runtime-lane-contract.ts";
 import { runtimeLaneDatabaseUrl } from "./runtime-lane-database-url.ts";
 
@@ -24,6 +25,14 @@ export interface RuntimeLaneRedisReadiness {
 const databaseReadiness = async (
   databaseUrl: string,
 ): Promise<RuntimeLaneDatabaseReadiness> => {
+  assertE2eRuntimeDatabaseTarget(
+    "runtime-lane-database-readiness",
+    databaseUrl,
+    {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+    },
+  );
   const client = new pg.Client({ connectionString: databaseUrl });
   try {
     await client.connect();

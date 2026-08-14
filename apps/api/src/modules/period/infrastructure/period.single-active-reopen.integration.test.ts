@@ -86,7 +86,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

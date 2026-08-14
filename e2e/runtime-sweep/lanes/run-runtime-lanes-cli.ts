@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import { parseRuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
 import { runRuntimeLanes } from "./run-runtime-lanes.ts";
 
@@ -11,7 +12,12 @@ const requiredEnv = (name: string): string => {
 };
 
 async function main(): Promise<void> {
-  requiredEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION");
+  const baseDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lanes-cli",
+    baseDatabaseUrl,
+    process.env,
+  );
   const assignmentPath = path.resolve(
     requiredEnv("RUNTIME_SWEEP_LANE_ASSIGNMENT"),
   );
@@ -21,7 +27,7 @@ async function main(): Promise<void> {
   await runRuntimeLanes({
     assignmentPath,
     assignment,
-    baseDatabaseUrl: requiredEnv("E2E_DATABASE_URL"),
+    baseDatabaseUrl,
     redisRecreationAuthorized:
       requiredEnv("RUNTIME_SWEEP_REDIS_RECREATE") === "true",
   });

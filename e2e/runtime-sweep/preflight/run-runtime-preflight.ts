@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import { readSourceArtifact } from "../source/source-artifact.ts";
 import {
   assertLivePreflightSourceIdentity,
@@ -46,6 +47,12 @@ const pnpmLauncher = (): Readonly<{
 const mode = process.argv[2];
 const runShardPreflight = async (): Promise<number> => {
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
+  const databaseUrl = requiredEnv("E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-preflight-shard-launch",
+    databaseUrl,
+    process.env,
+  );
   const launch = await preparePreflightShardLaunch({
     environment: process.env,
     repoRoot,
@@ -93,6 +100,12 @@ if (mode === "shard") {
 
   const launchMode: PreflightLaunchMode = mode === "full" ? "full" : "canary";
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
+  const databaseUrl = requiredEnv("E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(
+    `runtime-preflight-${mode}-launch`,
+    databaseUrl,
+    process.env,
+  );
   const archiveRoot = await ensurePreflightArchiveRoot(
     path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE")),
   );

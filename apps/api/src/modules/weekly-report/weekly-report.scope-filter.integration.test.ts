@@ -38,7 +38,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   }
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     // Two reporting groups (different departments).
     await prisma.reportingGroup.createMany({
@@ -114,7 +114,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

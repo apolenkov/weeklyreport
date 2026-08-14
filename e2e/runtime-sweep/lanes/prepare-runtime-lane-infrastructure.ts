@@ -1,5 +1,6 @@
 import pg from "pg";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import type { RuntimeLaneResource } from "./contracts/runtime-lane-contract.ts";
 import {
   consumeRuntimeLaneRedisRecreationAuthorization,
@@ -20,7 +21,13 @@ const prepareDatabases = async (
   resources: readonly RuntimeLaneResource[],
   baseDatabaseUrl: string,
 ): Promise<number> => {
-  runtimeLaneDatabaseUrl(baseDatabaseUrl, resources[0]?.databaseName ?? "");
+  for (const resource of resources) {
+    assertE2eRuntimeDestructiveTarget(
+      `runtime-lane-create:${resource.laneId}`,
+      runtimeLaneDatabaseUrl(baseDatabaseUrl, resource.databaseName),
+      process.env,
+    );
+  }
   const client = new pg.Client({ connectionString: baseDatabaseUrl });
   await client.connect();
   try {
@@ -69,6 +76,13 @@ export async function prepareRuntimeLaneInfrastructure(
   }>,
   dependencies: RuntimeLaneInfrastructureDependencies = DEFAULT_DEPENDENCIES,
 ): Promise<RuntimeLaneInfrastructureResult> {
+  // This boundary must run before the first pg.Client is constructed or any
+  // Redis/Docker mutation authorization is consumed.
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lane-infrastructure",
+    input.baseDatabaseUrl,
+    process.env,
+  );
   consumeRuntimeLaneRedisRecreationAuthorization(
     requireRuntimeLaneRedisRecreationAuthorization(),
   );

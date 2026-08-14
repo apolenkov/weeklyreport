@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { assertE2eRuntimeDatabaseTarget } from "../../../../prisma/guards/_destructive-guard.ts";
 import {
-  assertStrictNonProdDatabaseTarget,
   e2eDatabaseIdentity,
   sameE2eDatabaseTarget,
 } from "../../../helpers/e2e-database-target.ts";
@@ -168,10 +168,13 @@ const databaseTarget = (
     throw new Error(
       `Runtime lane database ${resource.databaseName} must differ from DATABASE_URL`,
     );
-  assertStrictNonProdDatabaseTarget(
+  assertE2eRuntimeDatabaseTarget(
     "runtime-lane-database-target-verification",
     databaseUrl,
-    nodeEnv,
+    {
+      ...(nodeEnv === undefined ? {} : { NODE_ENV: nodeEnv }),
+      DATABASE_URL: databaseUrl,
+    },
   );
   const identity = e2eDatabaseIdentity(databaseUrl);
   return databaseTargetSchema.parse({
@@ -192,10 +195,13 @@ export const verifyRuntimeLaneDatabaseTargets = (
 ): RuntimeLaneDatabaseTargetVerification => {
   if (sameE2eDatabaseTarget(input.baseDatabaseUrl, input.developerDatabaseUrl))
     throw new Error("E2E_DATABASE_URL must differ from DATABASE_URL");
-  assertStrictNonProdDatabaseTarget(
+  assertE2eRuntimeDatabaseTarget(
     "runtime-lane-database-target-verification",
     input.baseDatabaseUrl,
-    input.nodeEnv,
+    {
+      ...(input.nodeEnv === undefined ? {} : { NODE_ENV: input.nodeEnv }),
+      DATABASE_URL: input.baseDatabaseUrl,
+    },
   );
   return runtimeLaneDatabaseTargetVerificationSchema.parse({
     artifact: "RUNTIME_LANE_DATABASE_TARGET_VERIFICATION",

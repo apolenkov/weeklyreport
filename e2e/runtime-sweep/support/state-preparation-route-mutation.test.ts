@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RuntimeDatabaseSnapshot } from "./state-oracle.ts";
 import {
@@ -52,9 +52,36 @@ const snapshotFor = (
   },
 });
 
+beforeEach(() => {
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+});
+
 afterEach(() => vi.unstubAllEnvs());
 
 describe("route-local state preparation mutations", () => {
+  it("rejects an equivalent developer target before the injected resetter", async () => {
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://developer:credentials@localhost:5432/customreport_e2e",
+    );
+    vi.stubEnv("NODE_ENV", "test");
+    const resetAndSeed = vi.fn();
+
+    await expect(
+      prepareRuntimeStateWithMutation(
+        {
+          ...request,
+          databaseUrl:
+            "postgres://runtime:other@127.0.0.1:5432/customreport_e2e",
+        },
+        {} as Parameters<typeof prepareRuntimeStateWithMutation>[1],
+        vi.fn(),
+        resetAndSeed,
+      ),
+    ).rejects.toThrow(/must differ/iu);
+    expect(resetAndSeed).not.toHaveBeenCalled();
+  });
+
   it("runs the viewer grant removal inside the guarded preparation transaction", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/customreport_dev");
     vi.stubEnv("NODE_ENV", "test");

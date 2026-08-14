@@ -31,11 +31,11 @@ describe("PeriodCreatorScheduler scheduled-to-open wiring (integration)", () => 
   const prisma = createTestPrisma();
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

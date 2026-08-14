@@ -34,7 +34,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import {
   PUBLISHED_REPORT_ID,
@@ -55,11 +55,11 @@ import { logSeedCounts } from "./seed-demo.summary.js";
 import type { Tier, TierDataset } from "./seed-demo.types.js";
 import { wipe } from "./seed-demo.wipe.js";
 
-const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-async function seedFoundation(dataset: TierDataset, tier: Tier): Promise<void> {
+async function seedFoundation(
+  prisma: PrismaClient,
+  dataset: TierDataset,
+  tier: Tier,
+): Promise<void> {
   console.log(`[seed-demo:${tier}] Wiping existing data...`);
   await wipe(prisma);
 
@@ -82,6 +82,7 @@ async function seedFoundation(dataset: TierDataset, tier: Tier): Promise<void> {
 }
 
 async function seedPeriodSections(
+  prisma: PrismaClient,
   dataset: TierDataset,
   tier: Tier,
 ): Promise<void> {
@@ -124,14 +125,25 @@ async function seedPeriodSections(
 }
 
 async function seedDemo(tier: Tier): Promise<void> {
-  assertNonProdDestructive(`seed-demo:${tier}`);
-  const dataset = tier === "small" ? SMALL_DATASET : buildHugeDataset();
+  assertE2eRuntimeDestructive(`seed-demo:${tier}`);
+  const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  try {
+    const dataset = tier === "small" ? SMALL_DATASET : buildHugeDataset();
 
-  await seedFoundation(dataset, tier);
-  await seedPeriodSections(dataset, tier);
+    await seedFoundation(prisma, dataset, tier);
+    await seedPeriodSections(prisma, dataset, tier);
 
-  await logSeedCounts(prisma, tier);
-  await assertSeedCoverage(prisma, `seed-demo:${tier}`, SEED_REPORTS.active.id);
+    await logSeedCounts(prisma, tier);
+    await assertSeedCoverage(
+      prisma,
+      `seed-demo:${tier}`,
+      SEED_REPORTS.active.id,
+    );
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+  }
 }
 
 function parseTier(): Tier {
@@ -143,12 +155,7 @@ function parseTier(): Tier {
   );
 }
 
-seedDemo(parseTier())
-  .catch((error: unknown) => {
-    console.error("[seed-demo] Failed:", error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+void seedDemo(parseTier()).catch((error: unknown) => {
+  console.error("[seed-demo] Failed:", error);
+  process.exit(1);
+});

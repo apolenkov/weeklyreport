@@ -16,6 +16,8 @@ import {
 
 beforeEach(() => {
   command.execute.mockClear();
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
 });
 
 afterEach(() => {
@@ -107,7 +109,7 @@ describe("E2E database setup", () => {
         repoRoot: "/unused",
         mode: "schema+seed",
       }),
-    ).toThrow(/Host "db\.example\.com" is not local/u);
+    ).toThrow(/host "db\.example\.com" is not loopback/u);
   });
 
   it("does not let the production override bypass the E2E target guard", () => {
@@ -121,12 +123,13 @@ describe("E2E database setup", () => {
         repoRoot: "/unused",
         mode: "schema+seed",
       }),
-    ).toThrow(/looks like production/u);
+    ).toThrow(/database name "customreport_prod" looks like production\./iu);
   });
 
   it.each([
     "http://localhost/customreport_test",
     "postgresql://localhost/%70roduction_test",
+    "postgresql://localhost/%63ustomreport_e2e",
     "postgresql://localhost/customreport_test?host=db.example.com",
   ])("rejects a strict target bypass before spawning: %s", (databaseUrl) => {
     vi.stubEnv("ALLOW_PROD_DESTRUCTIVE", "yes");

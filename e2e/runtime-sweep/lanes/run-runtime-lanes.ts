@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import type { RuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
 import { prepareRuntimeLaneArchives } from "./contracts/runtime-lane-files.ts";
 import {
@@ -142,6 +143,11 @@ export async function runRuntimeLanes(
     readonly redisRecreationAuthorized: boolean;
   }>,
 ): Promise<void> {
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lanes",
+    input.baseDatabaseUrl,
+    process.env,
+  );
   await assertRuntimeLaneSource({
     repoRoot: REPO_ROOT,
     sourceSha: input.assignment.sourceSha,

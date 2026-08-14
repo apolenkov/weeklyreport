@@ -17,7 +17,7 @@ import {
 } from "../../../test-utils/prisma-test-helper.js";
 import { ensureLeadSection } from "../application/ensure-lead-section.js";
 
-const TEST_DATABASE_URL = requireEnv(process.env, "DATABASE_URL");
+const TEST_DATABASE_URL = requireEnv(process.env, "E2E_DATABASE_URL");
 
 describe("ensureLeadSection transaction (integration)", () => {
   type LeadSectionPrisma = Parameters<typeof ensureLeadSection>[0];
@@ -34,7 +34,7 @@ describe("ensureLeadSection transaction (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.create({
       data: {
         id: TEST_IDS.group,
@@ -76,7 +76,7 @@ describe("ensureLeadSection transaction (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.onModuleDestroy();
   });
 
