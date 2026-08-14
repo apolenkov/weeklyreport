@@ -1,7 +1,7 @@
 import {
   assertE2eRuntimeDestructiveTarget,
   type DestructiveTargetEnv,
-} from "../../prisma/guards/_destructive-guard.ts";
+} from "../../prisma/guards/_destructive-guard.js";
 
 export interface E2eDatabaseIdentity {
   readonly database: string;
