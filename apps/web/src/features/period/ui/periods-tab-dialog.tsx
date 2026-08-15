@@ -213,6 +213,7 @@ export function CreatePeriodDialog({
         onPeriodStartChange={setters.setPeriodStart}
         periodEnd={values.periodEnd}
         onPeriodEndChange={setters.setPeriodEnd}
+        isEdit={isEdit}
         periodEndError={validation.periodEndError}
         deadline={values.deadline}
         onDeadlineChange={setters.setDeadline}

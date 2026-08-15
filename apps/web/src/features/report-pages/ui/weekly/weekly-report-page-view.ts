@@ -18,6 +18,7 @@ import {
   buildReviewModel,
   type CurrentRole,
   isReviewEnabled,
+  isSubmittedReviewableSection,
   type ReviewModel,
 } from "../../../review";
 import {
@@ -95,7 +96,7 @@ function deriveReviewSurface(
     reviewEnabled,
     submittedOnly,
     // Read|Review offered only when the caller can act on ≥1 section (server-stamped).
-    canReviewAny: reviewModel.sections.some((section) => section.canReview),
+    canReviewAny: reviewModel.sections.some(isSubmittedReviewableSection),
     accordion: buildAccordionModel({
       reportData,
       scope,

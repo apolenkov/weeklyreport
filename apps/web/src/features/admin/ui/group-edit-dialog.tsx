@@ -137,7 +137,10 @@ function GroupFormFields({
   "form" | "onFormChange" | "headCandidates" | "products" | "editingGroup"
 >) {
   return (
-    <div className="mt-4 space-y-4">
+    <div
+      className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
+      data-testid="group-dialog-body"
+    >
       <GroupNameField form={form} onFormChange={onFormChange} />
       <GroupDescriptionField form={form} onFormChange={onFormChange} />
       <GroupLeaderField
@@ -173,7 +176,7 @@ function GroupDialogFooter({
       ? "Save Changes"
       : "Add Group";
   return (
-    <div className="mt-6 flex justify-end gap-3">
+    <div className="mt-6 flex shrink-0 justify-end gap-3">
       <button
         type="button"
         onClick={onClose}
@@ -215,11 +218,11 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={closeIfIdle}
-      surfaceClassName="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
       ariaLabel={editingGroup ? "Edit group" : "Add group"}
       testId="crud-sheet"
     >
-      <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+      <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
         {editingGroup ? "Edit Group" : "Add Group"}
       </h3>
       <GroupFormFields
