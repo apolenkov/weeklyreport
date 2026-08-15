@@ -205,13 +205,15 @@ export async function settleNavigation(
 
 /**
  * Settle a replay navigation after Playwright has reached DOMContentLoaded.
- * Reveal branches already replay a known same-origin landing route and retain
- * the app-ready stability boundary; the soft network-idle wait is redundant.
+ * Reveal branches replay a known same-origin landing route, so the soft
+ * network-idle wait is redundant. They still need the reveal-ready boundary:
+ * inventory visibility must reflect the semantic end state of finite UI
+ * transitions.
  */
 export async function settleRevealNavigation(
   page: AppReadyPage,
 ): Promise<void> {
-  await waitForAppReady(page);
+  await waitForRevealSurfaceReady(page);
 }
 
 async function waitForFinalNavigation(
