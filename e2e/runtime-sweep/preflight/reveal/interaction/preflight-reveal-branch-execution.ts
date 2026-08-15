@@ -237,9 +237,12 @@ export const branchFor = async (
   input: RevealExecutionContext & {
     readonly branch: RevealBranch;
     readonly candidate: RevealCandidate;
+    readonly restoredBranch?: RevealBranch;
   },
 ): Promise<RevealActionResult> => {
-  const reset = await replayBranch({ ...input, path: input.branch.path });
+  const reset =
+    input.restoredBranch ??
+    (await replayBranch({ ...input, path: input.branch.path }));
   const { execution, executionUrl, surface, transition } =
     await executeCandidate(input, reset);
   const explore = sameRevealRoutePath(input.route, executionUrl);

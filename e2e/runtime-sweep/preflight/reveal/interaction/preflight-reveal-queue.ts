@@ -62,6 +62,7 @@ const processRevealCandidate = async (input: {
   readonly current: RevealBranch;
   readonly state: RevealDiscoveryState;
   readonly candidate: RevealCandidate;
+  readonly restoredBranch?: RevealBranch;
 }): Promise<
   Readonly<{
     readonly state: RevealDiscoveryState;
@@ -84,6 +85,9 @@ const processRevealCandidate = async (input: {
     initialSurface: queueInput.initialSurface,
     branch: current,
     candidate,
+    ...(input.restoredBranch === undefined
+      ? {}
+      : { restoredBranch: input.restoredBranch }),
   });
   const materialChanged =
     result.explore &&
@@ -159,16 +163,25 @@ export const processRevealQueueChunk = async (
   if (current === undefined)
     return { state: { ...state, queue: [] }, completed: true };
   const remaining = state.currentBranch ? state.queue : state.queue.slice(1);
-  await restoreRevealBranch({
-    harness: input.harness,
-    state: input.state,
-    route: input.route,
-    initialSurface: input.initialSurface,
-    branch: current,
-  });
+  const unfrozenCandidates =
+    state.currentCandidates ?? candidatesForImmediateReveal(input, current);
+  const requiresLiveRestore = unfrozenCandidates.some(
+    (candidate) =>
+      candidate.action.operation === "select" &&
+      candidate.representativeInput === undefined,
+  );
+  const restoredBranch = requiresLiveRestore
+    ? await restoreRevealBranch({
+        harness: input.harness,
+        state: input.state,
+        route: input.route,
+        initialSurface: input.initialSurface,
+        branch: current,
+      })
+    : undefined;
   const candidates = await freezeRevealCandidateInputs(
     input,
-    state.currentCandidates ?? candidatesForImmediateReveal(input, current),
+    unfrozenCandidates,
   );
   return processCandidates(
     {
@@ -183,6 +196,7 @@ export const processRevealQueueChunk = async (
       current,
       candidates,
       index: state.currentCandidateIndex ?? 0,
+      ...(restoredBranch === undefined ? {} : { restoredBranch }),
       ...(shouldYieldAfterCandidate === undefined
         ? {}
         : { shouldYieldAfterCandidate }),

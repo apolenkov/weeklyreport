@@ -39,6 +39,7 @@ type CandidateProcessor = (input: {
   readonly current: RevealBranch;
   readonly state: RevealDiscoveryState;
   readonly candidate: RevealCandidate;
+  readonly restoredBranch?: RevealBranch;
 }) => Promise<{
   readonly state: RevealDiscoveryState;
   readonly executed: boolean;
@@ -163,6 +164,7 @@ export const processCandidates = async (
     readonly current: RevealBranch;
     readonly candidates: readonly RevealCandidate[];
     readonly index: number;
+    readonly restoredBranch?: RevealBranch;
     readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
   },
   processCandidate: CandidateProcessor,
@@ -174,6 +176,7 @@ export const processCandidates = async (
     current,
     candidates,
     index,
+    restoredBranch,
     shouldYieldAfterCandidate,
   } = input;
   if (index >= candidates.length)
@@ -188,6 +191,7 @@ export const processCandidates = async (
     current,
     state: { ...state, currentCandidateIndex: index },
     candidate,
+    ...(restoredBranch === undefined ? {} : { restoredBranch }),
   });
   const processed: RevealDiscoveryState = {
     ...result.state,
@@ -213,8 +217,10 @@ export const processCandidates = async (
       : { shouldYieldAfterCandidate }),
   });
   if (yielded !== undefined) return yielded;
+  const { restoredBranch: _restoredBranch, ...inputWithoutRestoredBranch } =
+    input;
   return processNext(
-    { ...input, state: processed, index: index + 1 },
+    { ...inputWithoutRestoredBranch, state: processed, index: index + 1 },
     processCandidate,
     processQueue,
   );
