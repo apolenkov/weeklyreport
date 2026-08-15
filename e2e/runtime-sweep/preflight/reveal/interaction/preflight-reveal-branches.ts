@@ -91,9 +91,24 @@ export interface RevealQueueInput {
   readonly maxDepth: number;
   readonly maxRevealMaterialEdges: number;
   readonly maxRevealActions: number;
+  readonly maxControlsPerSegment: number;
 }
 
 export type RevealPureQueueInput = Omit<RevealQueueInput, "harness">;
+
+export const assertRevealControlCapacity = (
+  count: number,
+  maxControlsPerSegment: number,
+): void => {
+  if (!Number.isSafeInteger(maxControlsPerSegment) || maxControlsPerSegment < 1)
+    throw new RevealDiscoveryError(
+      "Reveal control bound must be a positive integer",
+    );
+  if (count > maxControlsPerSegment)
+    throw new RevealDiscoveryError(
+      `Reveal control bound exceeded: ${String(count)} controls; maxControlsPerSegment is ${String(maxControlsPerSegment)}`,
+    );
+};
 
 const preparationIdentityFor = (
   control: Pick<
@@ -224,16 +239,20 @@ export const enqueueChangedBranch = (input: {
   readonly branch: RevealBranch;
 }): RevealDiscoveryState => {
   const { queueInput, state, current, branch } = input;
+  assertRevealControlCapacity(
+    state.controls.length,
+    queueInput.maxControlsPerSegment,
+  );
   if (revealPathContainsState(current, branch)) return state;
   const visited = registerVisitedRevealState(state.visitedStatePaths, branch);
   if (!visited.isNew) return state;
+  const immediateControls = controlsForImmediateReveal(branch);
   const registration = registerDynamicControls(
     state,
     branch,
     current,
-    controlsForImmediateReveal(branch),
+    immediateControls,
   );
-  assertRevealPath(branch.path, branch.surface);
   const plans = queueInput
     .plansFor(branch.inventory)
     .filter(({ control }) =>
@@ -241,6 +260,11 @@ export const enqueueChangedBranch = (input: {
         ({ controlKey }) => controlKey === control.controlKey,
       ),
     );
+  assertRevealControlCapacity(
+    state.controls.length + plans.length,
+    queueInput.maxControlsPerSegment,
+  );
+  assertRevealPath(branch.path, branch.surface);
   const prepared = plans.map((plan) =>
     queueInput.controlFor(plan, branch.path, branch.surface, null, null),
   );

@@ -212,10 +212,12 @@ contract contains the four explicit positive limits
 `maxCases`. Their values SHALL be covered by the source digest; a missing or
 tampered value SHALL invalidate the source, and a legacy version-1 source SHALL
 be rejected before a new campaign launch rather than receiving a default or
-backfilled value. Production preflight SHALL pass the two reveal limits from
+backfilled value. Production preflight SHALL pass the three reveal limits from
 that exact source artifact to reveal discovery independently. It SHALL reject a
 segment whose discovered control count exceeds the source control limit before
-returning a segment that could be recorded as a canary `PASS`. Matrix
+accepting the overflowing dynamic registration or returning a segment that
+could be recorded as a canary `PASS`. Live discovery and parent receipt replay SHALL
+use the same pure control-cap check before extending the queue. Matrix
 finalization SHALL repeat the source control and case checks using the two
 matrix limit fields and SHALL reject over-capacity input without trimming rows;
 the `MATRIX.json` limit schema remains limited to `maxCases` and
@@ -244,6 +246,8 @@ the `MATRIX.json` limit schema remains limited to `maxCases` and
   `maxControlsPerSegment`
 - **THEN** production preflight rejects the segment before the caller can write
   a canary `PASS`
+- **AND** live discovery and parent receipt replay reject the same dynamic
+  overflow before accepting the overflowing registration or extending the queue
 - **AND** finalization repeats the check and does not trim the discovered
   controls or finalized rows
 

@@ -214,6 +214,16 @@
       attempt. This implementation is exact-canary-only; full/shard journal
       continuation remains explicitly NOT-PROVEN and no grant, chunk, or
       canary artifact crosses execution scope.
+- [x] 5.16 Enforce `maxControlsPerSegment` inside the shared pure reveal queue
+      before accepting dynamic control registration or extending the queue;
+      prove exact-limit success, plus-one rejection, and live/parent-replay
+      parity without trimming controls or emitting continuation/canary evidence
+      on overflow.
+- [ ] 5.17 Add a separately identified, exact-source capacity survey with
+      explicit graph, wall-time, child, per-file, and aggregate archive limits.
+      It may publish terminal counts only after the parent reducer proves an
+      empty frontier, never writes or satisfies canary acceptance, and must be
+      completed before replacing the production reveal limits.
 
 ## 6. Immutable baseline and adjudication
 
