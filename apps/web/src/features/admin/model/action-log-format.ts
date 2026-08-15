@@ -27,6 +27,7 @@ export function humanizeProcedure(procedure: string): string {
 
 const STATUS_LABEL: Record<string, string> = {
   success: "OK",
+  fail: "Error",
   failure: "Error",
   failed: "Error",
 };
