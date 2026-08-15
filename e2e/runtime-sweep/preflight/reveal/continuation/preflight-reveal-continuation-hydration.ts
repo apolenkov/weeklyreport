@@ -75,6 +75,14 @@ const queueReceipt = (
   queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, receipt.terminal.pathNodeRef);
   if (receipt.terminal.enqueuedBranchRef !== null)
     queueBranch(queue, receipt.terminal.enqueuedBranchRef);
+  if (receipt.nextFrontier !== null) {
+    queueBranch(queue, receipt.nextFrontier.branchRef);
+    queueAsset(
+      queue,
+      PREFLIGHT_REVEAL_CANDIDATE_LIST,
+      receipt.nextFrontier.candidateListRef,
+    );
+  }
 };
 
 const queueChildAssets = (

@@ -115,6 +115,17 @@ export const assertReceiptContract = (
     ["terminal.surfaceDigest", receipt.terminal.surfaceDigest],
   ] as const)
     assertRef(label, value);
+  if (receipt.nextFrontier !== null)
+    for (const [label, value] of [
+      ["nextFrontier.branchRef", receipt.nextFrontier.branchRef],
+      ["nextFrontier.branchDigest", receipt.nextFrontier.branchDigest],
+      ["nextFrontier.candidateListRef", receipt.nextFrontier.candidateListRef],
+      [
+        "nextFrontier.candidateListDigest",
+        receipt.nextFrontier.candidateListDigest,
+      ],
+    ] as const)
+      assertRef(label, value);
   if (
     stableSerialize(receipt.transition.action) !==
       stableSerialize(receipt.action) ||

@@ -209,6 +209,14 @@ export const assetsForReceipt = (
   addBranchAssets(assets, receipt.terminal.terminalBranchRef);
   if (receipt.terminal.enqueuedBranchRef !== null)
     addBranchAssets(assets, receipt.terminal.enqueuedBranchRef);
+  if (receipt.nextFrontier !== null) {
+    addBranchAssets(assets, receipt.nextFrontier.branchRef);
+    addAsset(
+      assets,
+      PREFLIGHT_REVEAL_CANDIDATE_LIST,
+      receipt.nextFrontier.candidateListRef,
+    );
+  }
   for (const [artifact, ref] of [
     [PREFLIGHT_REVEAL_CANDIDATE_LIST, receipt.candidateListRef],
     [PREFLIGHT_REVEAL_INVENTORY, receipt.terminal.postActionInventoryRef],

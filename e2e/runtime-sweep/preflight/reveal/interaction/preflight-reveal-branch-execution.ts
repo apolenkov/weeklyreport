@@ -56,14 +56,11 @@ const assertRepresentativeInput = (
       );
     return;
   }
-  if (actual === undefined)
+  if (expected === undefined || actual === undefined)
     throw new RevealDiscoveryError(
       `Form reveal lacks a frozen representative input: ${action.controlKey}`,
     );
-  if (
-    expected !== undefined &&
-    stableSerialize(expected) !== stableSerialize(actual)
-  )
+  if (stableSerialize(expected) !== stableSerialize(actual))
     throw new RevealDiscoveryError(
       `Form reveal representative input drifted: ${action.controlKey}`,
     );
@@ -177,6 +174,23 @@ const replayBranch = async (
       preparation,
     }),
   );
+};
+
+export const restoreRevealBranch = async (
+  input: RevealExecutionContext & { readonly branch: RevealBranch },
+): Promise<RevealBranch> => {
+  const restored = await replayBranch({ ...input, path: input.branch.path });
+  if (
+    restored.url !== input.branch.url ||
+    stableSerialize(restored.surface) !==
+      stableSerialize(input.branch.surface) ||
+    stableSerialize(restored.inventory) !==
+      stableSerialize(input.branch.inventory)
+  )
+    throw new RevealDiscoveryError(
+      "Reveal continuation frontier restoration drifted",
+    );
+  return restored;
 };
 const executeCandidate = async (
   input: RevealExecutionContext & { readonly candidate: RevealCandidate },

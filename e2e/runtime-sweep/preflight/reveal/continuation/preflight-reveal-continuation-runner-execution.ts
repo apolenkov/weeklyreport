@@ -1,12 +1,16 @@
 import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
 import { sha256Hex } from "../../../support/ids.ts";
 import { compareRevealControlIdentity } from "../../reveal-path.ts";
+import { restoreRevealBranch } from "../interaction/preflight-reveal-branch-execution.ts";
 import type {
   RevealDiscoveryState,
   RevealQueueChunkResult,
   RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
-import { processRevealQueueChunk } from "../interaction/preflight-reveal-queue.ts";
+import {
+  freezeRevealCandidateInputs,
+  processRevealQueueChunk,
+} from "../interaction/preflight-reveal-queue.ts";
 import type { RevealQueueYieldInput } from "../interaction/preflight-reveal-queue-candidates.ts";
 import { createRevealBootstrap } from "./preflight-reveal-continuation-artifacts.ts";
 import { writeRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
@@ -60,6 +64,34 @@ interface Progress {
   readonly receipts: RevealContinuationReceipt[];
   completedCandidateCount: number;
 }
+
+const frozenNextFrontierFor = async (input: {
+  readonly queueInput: RevealQueueInput;
+  readonly continuation: NonNullable<RevealQueueYieldInput["continuation"]>;
+}) => {
+  const requiresLiveRestore = input.continuation.candidates.some(
+    (candidate) =>
+      candidate.action.operation === "select" &&
+      candidate.representativeInput === undefined,
+  );
+  if (requiresLiveRestore)
+    await restoreRevealBranch({
+      harness: input.queueInput.harness,
+      state: input.queueInput.state,
+      route: input.queueInput.route,
+      initialSurface: input.queueInput.initialSurface,
+      branch: input.continuation.currentBranch,
+    });
+  return {
+    branch: input.continuation.currentBranch,
+    candidates: requiresLiveRestore
+      ? await freezeRevealCandidateInputs(
+          input.queueInput,
+          input.continuation.candidates,
+        )
+      : input.continuation.candidates,
+  };
+};
 
 const chunkFor = (input: {
   readonly input: RevealContinuationInput;
@@ -139,18 +171,27 @@ const bootstrapFor = (input: {
 const terminalHandlerFor =
   (input: {
     readonly continuation: RevealContinuationInput;
+    readonly queueInput: RevealQueueInput;
     readonly grant: RevealExecutionGrant | undefined;
     readonly initial: RevealContinuationInitialState;
     readonly progress: Progress;
     readonly deadlineAt: number;
     readonly now: () => number;
-  }): ((boundary: RevealQueueYieldInput) => boolean) =>
-  (boundary: RevealQueueYieldInput): boolean => {
+  }): ((boundary: RevealQueueYieldInput) => Promise<boolean>) =>
+  async (boundary: RevealQueueYieldInput): Promise<boolean> => {
     const sequence =
       (input.grant?.chain.receiptCount ?? 0) +
       input.progress.receipts.length +
       1;
     input.progress.completedCandidateCount += 1;
+    const shouldYield = input.now() >= input.deadlineAt;
+    const nextFrontier =
+      shouldYield && boundary.continuation !== undefined
+        ? await frozenNextFrontierFor({
+            queueInput: input.queueInput,
+            continuation: boundary.continuation,
+          })
+        : undefined;
     input.progress.receipts.push(
       receiptForTerminal({
         terminal: boundary.terminal,
@@ -164,9 +205,10 @@ const terminalHandlerFor =
         completedCandidateCount: input.progress.completedCandidateCount,
         actionCount: boundary.state.actionCount,
         branchCount: boundary.state.branchCount,
+        ...(nextFrontier === undefined ? {} : { nextFrontier }),
       }),
     );
-    return input.now() >= input.deadlineAt;
+    return shouldYield;
   };
 
 const writeBootstrapAssets = async (input: {
@@ -231,6 +273,7 @@ export const executeRevealContinuationChunk = async (input: {
     input.state,
     terminalHandlerFor({
       continuation: input.input,
+      queueInput: input.queueInput,
       grant: input.grant,
       initial: input.initial,
       progress,

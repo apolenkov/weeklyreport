@@ -1,6 +1,9 @@
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import { sameRevealSurfaceMaterial } from "../guards/reveal-surface-material.ts";
-import { branchFor } from "./preflight-reveal-branch-execution.ts";
+import {
+  branchFor,
+  restoreRevealBranch,
+} from "./preflight-reveal-branch-execution.ts";
 import {
   controlsWithTransition,
   enqueueChangedBranch,
@@ -18,6 +21,41 @@ import {
   type RevealQueueYieldHandler,
 } from "./preflight-reveal-queue-candidates.ts";
 import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
+
+const freezeCandidateInput = async (
+  input: RevealQueueInput,
+  candidate: RevealCandidate,
+): Promise<RevealCandidate> => {
+  const operation = candidate.action.operation;
+  if (operation !== "fill" && operation !== "select") return candidate;
+  if (candidate.representativeInput !== undefined) return candidate;
+  if (operation === "fill")
+    throw new RevealDiscoveryError(
+      `Fill reveal lacks a frozen representative input: ${candidate.action.controlKey}`,
+    );
+  const freeze = input.harness.freezeRepresentativeInput;
+  if (freeze === undefined)
+    throw new RevealDiscoveryError(
+      `Select reveal cannot freeze a representative input: ${candidate.action.controlKey}`,
+    );
+  const representativeInput = await freeze({
+    control: candidate.control,
+    action: candidate.action,
+  });
+  if (representativeInput?.kind !== "select")
+    throw new RevealDiscoveryError(
+      `Select reveal lacks a frozen representative input: ${candidate.action.controlKey}`,
+    );
+  return { ...candidate, representativeInput };
+};
+
+export const freezeRevealCandidateInputs = (
+  input: RevealQueueInput,
+  candidates: readonly RevealCandidate[],
+): Promise<readonly RevealCandidate[]> =>
+  Promise.all(
+    candidates.map((candidate) => freezeCandidateInput(input, candidate)),
+  );
 
 const processRevealCandidate = async (input: {
   readonly queueInput: RevealQueueInput;
@@ -121,8 +159,17 @@ export const processRevealQueueChunk = async (
   if (current === undefined)
     return { state: { ...state, queue: [] }, completed: true };
   const remaining = state.currentBranch ? state.queue : state.queue.slice(1);
-  const candidates =
-    state.currentCandidates ?? candidatesForImmediateReveal(input, current);
+  await restoreRevealBranch({
+    harness: input.harness,
+    state: input.state,
+    route: input.route,
+    initialSurface: input.initialSurface,
+    branch: current,
+  });
+  const candidates = await freezeRevealCandidateInputs(
+    input,
+    state.currentCandidates ?? candidatesForImmediateReveal(input, current),
+  );
   return processCandidates(
     {
       queueInput: input,

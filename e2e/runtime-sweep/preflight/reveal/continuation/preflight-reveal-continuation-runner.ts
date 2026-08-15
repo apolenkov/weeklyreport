@@ -22,6 +22,8 @@ import type {
   RevealExecutionHarness,
   RevealRoute,
 } from "../interaction/preflight-reveal-types.ts";
+import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
+import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
 import { strictRouteFor } from "./preflight-reveal-continuation-contract-factories.ts";
 import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
 import { reducerStateDigestFor } from "./preflight-reveal-continuation-reducer.ts";
@@ -30,6 +32,7 @@ import type {
   RevealContinuationRoute,
   RevealExecutionGrant,
 } from "./preflight-reveal-continuation-schemas.ts";
+import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./preflight-reveal-continuation-schemas.ts";
 import {
   assertRevealExecutionGrantInput as assertGrantInput,
   assertRevealExecutionGrantSource,
@@ -168,12 +171,27 @@ const resumedStateFor = (input: {
     throw new Error(
       "Reveal execution grant frontier assets are not bound to its branch",
     );
-  const candidates = candidatesForImmediateReveal(
+  const derivedCandidates = candidatesForImmediateReveal(
     {
       candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
     },
     currentBranch,
   );
+  const candidateList = rememberedRevealContinuationAsset({
+    artifact: PREFLIGHT_REVEAL_CANDIDATE_LIST,
+    ref: frontier.candidateListRef,
+  });
+  if (candidateList?.artifact !== PREFLIGHT_REVEAL_CANDIDATE_LIST)
+    throw new Error(
+      "Reveal execution grant frontier candidate list is unavailable",
+    );
+  const candidates = canonicalCandidatesForList({
+    branch: currentBranch,
+    branchDigest: frontier.branchDigest,
+    candidates: derivedCandidates,
+    candidateList,
+    candidateListDigest: frontier.candidateListDigest,
+  });
   if (frontier.nextCandidateIndex >= candidates.length)
     throw new Error(
       "Reveal execution grant frontier cursor is outside its candidate list",

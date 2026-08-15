@@ -32,7 +32,10 @@ import {
   revealRouteFor,
   routeForState,
 } from "./playwright-preflight-support.ts";
-import { createPlaywrightRevealExecutor } from "./playwright-reveal-execution.ts";
+import {
+  createPlaywrightRevealExecutor,
+  createPlaywrightRevealRepresentativeInputFreezer,
+} from "./playwright-reveal-execution.ts";
 export {
   assertSpecializedNominalTargets,
   BrowserPreflightError,
@@ -93,6 +96,9 @@ export const revealHarnessFor = (
     return harness.currentUrl();
   },
   inventory: harness.inventory,
+  ...(harness.freezeRepresentativeInput === undefined
+    ? {}
+    : { freezeRepresentativeInput: harness.freezeRepresentativeInput }),
   executeReveal:
     harness.executeReveal ??
     (() =>
@@ -205,6 +211,8 @@ export const playwrightHarnessFor = (input: {
   ) => Promise<RevealPreparation>;
 }): RevealNavigationHarness => {
   const executeReveal = createPlaywrightRevealExecutor(input);
+  const freezeRepresentativeInput =
+    createPlaywrightRevealRepresentativeInputFreezer(input);
   return {
     expectedOrigin: input.expectedOrigin,
     prepare: input.prepare,
@@ -216,6 +224,7 @@ export const playwrightHarnessFor = (input: {
     },
     currentUrl: () => input.page.url(),
     inventory: () => inventoryDom(input.page),
+    freezeRepresentativeInput,
     executeReveal,
   };
 };

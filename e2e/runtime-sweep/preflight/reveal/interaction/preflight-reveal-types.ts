@@ -48,6 +48,11 @@ export interface RevealExecutionHarness {
   readonly navigate: (route: string) => Promise<void>;
   readonly currentUrl: () => string;
   readonly inventory: () => Promise<DomInventory>;
+  readonly freezeRepresentativeInput?: (input: {
+    readonly control: DomControlObservation;
+    readonly action: Action;
+    readonly representativeInput?: RevealRepresentativeInput;
+  }) => Promise<RevealRepresentativeInput | undefined>;
   readonly executeReveal: (input: {
     readonly control: DomControlObservation;
     readonly action: Action;

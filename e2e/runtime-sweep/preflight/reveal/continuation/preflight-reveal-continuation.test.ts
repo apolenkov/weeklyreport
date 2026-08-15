@@ -60,4 +60,39 @@ describe("R188 v3 reveal continuation", () => {
       assertReceiptChunkContract(result.result.chunk);
     });
   });
+
+  it("freezes a select input before sealing its candidate identity and receipt", async () => {
+    await withSource(async (source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const { route } = selectionFor(source, state.stateId);
+      const root = inventoryFor([
+        {
+          ...controlFor("combobox:parent:0", "Parent", 0),
+          role: "combobox",
+          tagName: "select",
+        },
+      ]);
+      const result = await runChunk({
+        source,
+        state,
+        route,
+        root,
+        nested: inventoryFor([]),
+        stableAllPostAction: root,
+        now: () => 0,
+        deadlineAt: 10_000,
+      });
+      const receipt = result.result.chunk.receipts[0];
+      expect(receipt?.representativeInput).toEqual({
+        kind: "select",
+        value: "parent-product",
+        index: 1,
+      });
+      expect(receipt?.transition.representativeInput).toEqual(
+        receipt?.representativeInput,
+      );
+      assertReceiptChunkContract(result.result.chunk);
+    });
+  });
 });
