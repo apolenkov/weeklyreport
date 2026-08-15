@@ -36,13 +36,13 @@ export default async function AdminPage({ searchParams }: Props) {
 
           <AdminTabsMobileSelect activeTab={activeTab} />
 
-          <nav aria-label="Admin tabs" className="hidden sm:block">
+          <nav aria-label="Admin tabs" className="hidden lg:block">
             <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-[var(--shadow-card-resting)]">
               {ADMIN_TABS.map((t) => (
                 <Link
                   key={t}
                   href={`/admin?tab=${t}`}
-                  className={`relative flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize tracking-normal transition-colors ${
+                  className={`relative flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold capitalize tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 ${
                     activeTab === t
                       ? "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] shadow-[0_1px_3px_var(--color-ring)]"
                       : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
