@@ -29,7 +29,7 @@ import {
   type RevealCandidate,
   type RevealDiscoveryState,
 } from "./preflight-reveal-branches.ts";
-import { processRevealQueue } from "./preflight-reveal-queue.ts";
+import { processRevealQueueChunk } from "./preflight-reveal-queue.ts";
 import {
   classifyRevealTransition,
   representativeInputFor,
@@ -37,6 +37,7 @@ import {
 } from "./preflight-reveal-transition.ts";
 import type {
   RevealControlFactory,
+  RevealDiscoveryWithSummary,
   RevealExecutionHarness,
   RevealRoute,
 } from "./preflight-reveal-types.ts";
@@ -231,9 +232,9 @@ const comparePreflightControls = (
     },
   );
 
-export async function discoverRevealControls(
+export async function discoverRevealControlsWithSummary(
   input: RevealDiscoveryInput,
-): Promise<readonly MatrixPreflightControl[]> {
+): Promise<RevealDiscoveryWithSummary> {
   const {
     maxDepth,
     maxRevealMaterialEdges,
@@ -241,28 +242,54 @@ export async function discoverRevealControls(
     maxControlsPerSegment,
   } = revealBoundsFor(input);
   const initialSurface = revealSurfaceFor(input.initialInventory.controls);
-  const initialRawUrl = input.harness.currentUrl();
-  const initialUrl = requiredCurrentUrl(initialRawUrl);
+  const initialUrl = requiredCurrentUrl(input.harness.currentUrl());
   assertRoutePath(input.route, initialUrl);
-  const result = await processRevealQueue(
-    {
-      state: input.state,
-      route: input.route,
-      initialSurface,
-      harness: input.harness,
-      controlFor: input.controlFor,
-      plansFor,
-      candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
-      maxDepth,
-      maxRevealMaterialEdges,
-      maxRevealActions,
-      maxControlsPerSegment,
-    },
-    initialRevealStateFor(
-      { ...input, maxControlsPerSegment },
-      initialSurface,
-      initialUrl,
-    ),
+  const queueInput = {
+    ...input,
+    initialSurface,
+    plansFor,
+    candidatesFor: (inventory: DomInventory) =>
+      revealCandidatesFor(inventory, input.route),
+    maxDepth,
+    maxRevealMaterialEdges,
+    maxRevealActions,
+    maxControlsPerSegment,
+  };
+  const initialState = initialRevealStateFor(
+    { ...input, maxControlsPerSegment },
+    initialSurface,
+    initialUrl,
   );
-  return result.controls.toSorted(comparePreflightControls);
+  const metrics = { candidateCount: 0, queueLength: initialState.queue.length };
+  const result = await processRevealQueueChunk(
+    queueInput,
+    initialState,
+    ({ remainingQueue }) => {
+      metrics.candidateCount += 1;
+      metrics.queueLength = Math.max(
+        metrics.queueLength,
+        remainingQueue.length,
+      );
+      return false;
+    },
+  );
+  if (!result.completed || result.state.queue.length > 0)
+    throw new RevealDiscoveryError("Reveal queue did not exhaust");
+  return {
+    controls: result.state.controls.toSorted(comparePreflightControls),
+    summary: {
+      completedCandidateCount: metrics.candidateCount,
+      revealActionCount: result.state.actionCount,
+      materialEdgeCount: result.state.branchCount,
+      controlCount: result.state.controls.length,
+      visitedStateCount: result.state.visitedStatePaths.size,
+      maxQueueLength: metrics.queueLength,
+      initialSurfaceDigest: initialSurface.digest,
+      queueEmpty: true,
+    },
+  };
+}
+
+export async function discoverRevealControls(input: RevealDiscoveryInput) {
+  return (await discoverRevealControlsWithSummary(input)).controls;
 }

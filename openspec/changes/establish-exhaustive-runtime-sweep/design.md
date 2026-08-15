@@ -246,12 +246,32 @@ it never silently changes the matrix or trims work to a limit.
 Source capacity is an explicit version-2 `SOURCE.json` contract. The source
 digest covers independent positive limits for reveal material edges, reveal
 actions, controls per preflight segment, and total finalized cases. The
-production segment runner passes the two reveal limits from that exact source
+production segment runner passes the three reveal limits from that exact source
 to discovery and rejects a control-count overflow before it returns a segment
 to the canary or full-preflight caller. Finalization applies the source's
 control and case limits again as a second check; it never trims discovered
 controls or finalized rows. `MATRIX.json` keeps only its existing two limit
 fields because reveal limits govern preflight execution, not matrix shape.
+
+Capacity calibration uses a separate diagnostic protocol rather than weakening
+the acceptance runner. A `PREFLIGHT_CAPACITY_SURVEY_PLAN` binds the current
+source SHA/tree/digest, one exact selector and resolved state/route, explicit
+reveal graph limits, one child, a hard wall-time deadline, and per-file plus
+aggregate output limits. A dedicated Playwright configuration selects only the
+survey spec and disables HAR, trace, video, screenshots, and failure-retention
+amplification. The survey runs one monolithic reveal queue, so it creates no
+continuation checkpoint, receipt, grant, parent PASS, assignment, journal,
+matrix, or canary artifact.
+
+Only queue exhaustion may create a `PREFLIGHT_CAPACITY_SURVEY_RESULT` with
+status `COMPLETE`. The result records terminal candidate/action/material-edge/control/
+visited-state/max-queue counts, exact plan/source/selector/state/route identity,
+and an empty frontier, then the launcher rechecks exact live source identity.
+Timeout, overflow, nonzero child exit, identity drift, or bounded-write failure
+leaves no result that can be interpreted as terminal. The plan and result use
+their own artifact kinds and digest domains; acceptance, repair, full, shard,
+matrix, and release paths never parse them. A completed survey supports a later
+reviewed source-limit change but is not acceptance evidence itself.
 
 ### Typed coverage cell and evidence identity
 

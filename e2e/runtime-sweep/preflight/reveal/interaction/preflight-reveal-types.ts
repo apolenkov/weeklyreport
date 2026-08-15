@@ -40,6 +40,22 @@ export type RevealExecution = Readonly<{
   readonly representativeInput?: RevealRepresentativeInput;
 }>;
 
+type RevealDiscoverySummary = Readonly<{
+  readonly completedCandidateCount: number;
+  readonly revealActionCount: number;
+  readonly materialEdgeCount: number;
+  readonly controlCount: number;
+  readonly visitedStateCount: number;
+  readonly maxQueueLength: number;
+  readonly initialSurfaceDigest: string;
+  readonly queueEmpty: true;
+}>;
+
+export type RevealDiscoveryWithSummary = Readonly<{
+  readonly controls: readonly MatrixPreflightControl[];
+  readonly summary: RevealDiscoverySummary;
+}>;
+
 export interface RevealExecutionHarness {
   readonly prepare: (
     state: CampaignMatrixState,

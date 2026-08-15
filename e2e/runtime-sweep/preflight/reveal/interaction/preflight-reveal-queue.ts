@@ -205,15 +205,3 @@ export const processRevealQueueChunk = async (
     processRevealQueueChunk,
   );
 };
-
-export const processRevealQueue = async (
-  input: RevealQueueInput,
-  state: RevealDiscoveryState,
-): Promise<RevealDiscoveryState> => {
-  const result = await processRevealQueueChunk(input, state);
-  if (!result.completed)
-    throw new RevealDiscoveryError(
-      "Reveal queue unexpectedly yielded without a continuation budget",
-    );
-  return result.state;
-};

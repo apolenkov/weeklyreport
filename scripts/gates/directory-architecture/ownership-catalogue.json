@@ -540,6 +540,22 @@
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {
+      "id": "runtime-preflight-capacity-survey-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(capacity/.+|run-runtime-capacity-survey)\\.test\\.ts$",
+      "concern": "preflight-capacity-survey",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1.test.ts"
+    },
+    {
+      "id": "runtime-preflight-capacity-survey-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(capacity/(?!.*\\.test\\.ts$).+|run-runtime-capacity-survey)\\.ts$",
+      "concern": "preflight-capacity-survey",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1.ts"
+    },
+    {
       "id": "runtime-preflight-observability",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/observability/((?!.*\\.test\\.ts$).+\\.ts)$",

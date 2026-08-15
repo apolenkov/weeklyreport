@@ -269,6 +269,44 @@ the `MATRIX.json` limit schema remains limited to `maxCases` and
 - **AND** mutating, recovery, fault, concurrency, infrastructure, and unknown executions receive isolated preparation and never consume the shared prepared state
 - **AND** any non-pass cell stops the group without executing a later cell on uncertain state
 
+### Requirement: Capacity calibration is diagnostic-only and terminal
+
+The campaign SHALL calibrate production reveal limits through a separately
+identified exact-source capacity survey. Its immutable plan SHALL bind the
+exact source identity, one exact selector and resolved state/route, the reveal
+graph limits, one browser child, a hard wall-time deadline, and bounded result
+output. The survey SHALL execute one monolithic reveal queue with HAR, trace,
+video, screenshots, continuation assets, assignment/journal records, parent
+grants, parent PASS, and canary publication disabled. It SHALL publish a
+`COMPLETE` result only after the queue is empty and the live source identity is
+rechecked. The result is diagnostic data only: no launcher, gate, finalizer, or
+repair chain may accept it as canary, preflight, matrix, or release evidence.
+
+#### Scenario: a complete survey reports the terminal graph
+
+- **WHEN** the exact selected state exhausts its reveal queue within every
+  declared graph, time, child, and output bound
+- **THEN** the survey records the terminal completed-candidate, action,
+  material-edge, control, visited-state, and maximum-queue counts
+- **AND** the result binds the exact plan and source identities and records an
+  empty frontier
+
+#### Scenario: an incomplete survey publishes no terminal counts
+
+- **WHEN** the graph overflows, the deadline expires, the browser child exits
+  nonzero, source identity drifts, or bounded output cannot be written
+- **THEN** no `COMPLETE` capacity result is published
+- **AND** partial counters, Playwright diagnostics, continuation output, or a
+  pre-existing survey file cannot satisfy or weaken acceptance
+
+#### Scenario: survey authority cannot be promoted
+
+- **WHEN** a capacity-survey plan or result is supplied to an acceptance,
+  repair, full-preflight, shard, matrix-finalization, or release gate
+- **THEN** its distinct artifact kind and digest domain are rejected
+- **AND** the production reveal limits remain unchanged until the completed
+  survey is independently reviewed and landed in a later exact-source commit
+
 ### Requirement: Every coverage cell has a typed identity and one source SHA
 
 The canonical evidence ledger owned by the primary orchestrator SHALL represent

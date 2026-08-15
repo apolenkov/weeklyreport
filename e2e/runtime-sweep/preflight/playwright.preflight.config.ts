@@ -28,17 +28,50 @@ assertE2eRuntimeDestructiveTarget(
 );
 const canaryMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "canary";
 const shardMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "shard";
+const capacitySurveyMode =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "capacity-survey";
+const capacitySurveyTempRootValue = capacitySurveyMode
+  ? requiredEnv("RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT")
+  : undefined;
+const capacitySurveyTempRoot =
+  capacitySurveyTempRootValue === undefined
+    ? undefined
+    : path.resolve(capacitySurveyTempRootValue);
+if (
+  capacitySurveyTempRootValue !== undefined &&
+  (!path.isAbsolute(capacitySurveyTempRootValue) ||
+    capacitySurveyTempRoot !== capacitySurveyTempRootValue)
+)
+  throw new Error(
+    "Capacity survey temp root must be a normalized absolute path",
+  );
 const preflightArtifactName = shardMode
   ? "shard"
   : canaryMode
     ? "preflight-canary"
-    : "preflight";
-const preflightApiLogDir = shardMode
-  ? path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"))
-  : path.join(archiveRoot, "api-log", preflightArtifactName);
+    : capacitySurveyMode
+      ? "capacity-survey"
+      : "preflight";
+const preflightApiLogDir =
+  capacitySurveyTempRoot === undefined
+    ? shardMode
+      ? path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_LOG_DIR"))
+      : path.join(archiveRoot, "api-log", preflightArtifactName)
+    : path.join(capacitySurveyTempRoot, "api-log");
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const WEB_ROOT = path.join(REPO_ROOT, "apps", "web");
-const PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
+const DEFAULT_PREFLIGHT_TIMEOUT_MS = 45 * 60_000;
+const configuredCapacitySurveyTimeout = capacitySurveyMode
+  ? Number(requiredEnv("RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS"))
+  : undefined;
+if (
+  configuredCapacitySurveyTimeout !== undefined &&
+  (!Number.isSafeInteger(configuredCapacitySurveyTimeout) ||
+    configuredCapacitySurveyTimeout < 1)
+)
+  throw new Error("Capacity survey requires a positive max duration");
+const PREFLIGHT_TIMEOUT_MS =
+  configuredCapacitySurveyTimeout ?? DEFAULT_PREFLIGHT_TIMEOUT_MS;
 const PREFLIGHT_WEB_PORT = requiredEnv("E2E_WEB_PORT");
 const PREFLIGHT_API_PORT = requiredEnv("E2E_API_PORT");
 const PREFLIGHT_WEB_ORIGIN = `http://127.0.0.1:${PREFLIGHT_WEB_PORT}`;
@@ -108,38 +141,55 @@ const preflightWebServerCommand = shardMode
   ? `pnpm --filter @customreport/web exec next dev -p ${PREFLIGHT_WEB_PORT}`
   : runtimeNextServerCommand("preflight", PREFLIGHT_WEB_PORT);
 const preflightOutputDir =
-  shardPathEnvironment?.outputDir ??
-  path.join(archiveRoot, `playwright-${preflightArtifactName}`);
+  capacitySurveyTempRoot === undefined
+    ? (shardPathEnvironment?.outputDir ??
+      path.join(archiveRoot, `playwright-${preflightArtifactName}`))
+    : path.join(capacitySurveyTempRoot, "playwright");
+const preflightSpec = shardMode
+  ? /preflight-shard\.spec\.ts/
+  : canaryMode
+    ? /preflight-canary\.spec\.ts/
+    : capacitySurveyMode
+      ? /preflight-capacity-survey\.spec\.ts/
+      : /preflight\.spec\.ts/;
+const preflightContextOptions = capacitySurveyMode
+  ? { ...integrationConfigWithoutLifecycle.use?.contextOptions }
+  : {
+      ...integrationConfigWithoutLifecycle.use?.contextOptions,
+      recordHar: {
+        path: path.join(preflightOutputDir, "network.har"),
+        content: "omit" as const,
+        mode: "full" as const,
+      },
+    };
 
 export default defineConfig({
   // The preflight preparation owns its exact database reset and profile seed.
   // Do not inherit the integration suite's default global reset/seed lifecycle.
   ...integrationConfigWithoutLifecycle,
   testDir: import.meta.dirname,
-  testMatch: shardMode
-    ? /preflight-shard\.spec\.ts/
-    : canaryMode
-      ? /preflight-canary\.spec\.ts/
-      : /preflight\.spec\.ts/,
+  testMatch: preflightSpec,
   outputDir: preflightOutputDir,
+  ...(capacitySurveyMode ? { reporter: [["list"]] as const, retries: 0 } : {}),
   use: {
     ...integrationConfigWithoutLifecycle.use,
     baseURL: PREFLIGHT_WEB_ORIGIN,
-    contextOptions: {
-      ...integrationConfigWithoutLifecycle.use?.contextOptions,
-      recordHar: {
-        path: path.join(preflightOutputDir, "network.har"),
-        content: "omit",
-        mode: "full",
-      },
-    },
-    trace: {
-      mode: "retain-on-failure",
-      snapshots: false,
-      screenshots: false,
-      sources: true,
-      attachments: true,
-    },
+    contextOptions: preflightContextOptions,
+    ...(capacitySurveyMode
+      ? {
+          trace: "off" as const,
+          screenshot: "off" as const,
+          video: "off" as const,
+        }
+      : {
+          trace: {
+            mode: "retain-on-failure" as const,
+            snapshots: false,
+            screenshots: false,
+            sources: true,
+            attachments: true,
+          },
+        }),
   },
   timeout: PREFLIGHT_TIMEOUT_MS,
   fullyParallel: false,
@@ -147,11 +197,7 @@ export default defineConfig({
   projects: [
     {
       name: "runtime-preflight",
-      testMatch: shardMode
-        ? /preflight-shard\.spec\.ts/
-        : canaryMode
-          ? /preflight-canary\.spec\.ts/
-          : /preflight\.spec\.ts/,
+      testMatch: preflightSpec,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
