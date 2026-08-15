@@ -227,7 +227,7 @@ describe("mutation-audit middleware", () => {
     });
   });
 
-  it("emits status=fail with reason when the mutation throws", async () => {
+  it("emits status=fail with a fixed reason code when the mutation throws", async () => {
     const { audit, mutation } = makeAuditSpy();
     const caller = makeAuditCaller(audit, leadSession);
 
@@ -240,7 +240,7 @@ describe("mutation-audit middleware", () => {
       procedure: "failingMutation",
       target: "thing-1",
       status: "fail",
-      reason: "boom",
+      reason: "BAD_REQUEST",
     });
   });
 
@@ -366,7 +366,7 @@ describe("mutation-audit middleware", () => {
     expect(errorLog?.[1]?.error).toEqual({ name: "Error" });
   });
 
-  it("redacts emails, collapses whitespace, and bounds the audit failure reason", async () => {
+  it("replaces a verbose failure message with its fixed classification", async () => {
     const { audit, mutation } = makeAuditSpy();
     const caller = makeAuditCaller(audit, leadSession);
 
@@ -378,9 +378,6 @@ describe("mutation-audit middleware", () => {
       Record<string, unknown> | undefined;
     const reason = call?.reason as string | undefined;
     expect(reason).toBeDefined();
-    expect(reason).not.toContain("person@example.com");
-    expect(reason).toContain("[redacted]");
-    expect(reason).not.toContain("\n");
-    expect(reason).not.toContain("  at Prisma");
+    expect(reason).toBe("BAD_REQUEST");
   });
 });

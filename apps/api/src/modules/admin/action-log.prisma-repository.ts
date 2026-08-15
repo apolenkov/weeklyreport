@@ -22,6 +22,19 @@ export class ActionLogPrismaRepository implements ActionLogRepository {
       skip: pagination.cursor ? 1 : 0,
       ...(pagination.cursor ? { cursor: { id: pagination.cursor } } : {}),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        createdAt: true,
+        userId: true,
+        role: true,
+        procedure: true,
+        targetId: true,
+        status: true,
+        reason: true,
+        ip: true,
+        correlationId: true,
+        durationMs: true,
+      },
     });
   };
 }
