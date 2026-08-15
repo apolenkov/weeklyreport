@@ -14,6 +14,7 @@ import {
   preflightControlForPlan,
   revealRouteFor,
 } from "../../execution/playwright-preflight-support.ts";
+import type { RevealNonMutationProof } from "../../reveal-path.ts";
 import type { RevealExecutionHarness } from "../interaction/preflight-reveal-types.ts";
 import {
   selectFreezerFor,
@@ -75,46 +76,47 @@ const unchanged = () => ({
   afterDigest: DATABASE_DIGEST,
 });
 
-const terminalFor = (
-  url: string,
-  inventory: DomInventory,
-): Promise<Awaited<ReturnType<RevealExecutionHarness["executeReveal"]>>> =>
-  Promise.resolve({ url, inventory, nonMutation: unchanged() });
-
 const executeRevealFor = (input: {
   readonly actionKey: string;
   readonly route: ReturnType<typeof revealRouteFor>;
   readonly nested: DomInventory;
-  readonly stableAllPostAction?: DomInventory;
-  readonly stablePostAction?: DomInventory;
-  readonly empty?: DomInventory;
-  readonly later?: DomInventory;
-  readonly crossRoute?: boolean;
+  readonly stableAllPostAction: DomInventory | undefined;
+  readonly stablePostAction: DomInventory | undefined;
+  readonly empty: DomInventory | undefined;
+  readonly later: DomInventory | undefined;
+  readonly crossRoute: boolean | undefined;
+  readonly nonMutation: RevealNonMutationProof;
   readonly state: { currentUrl: string };
 }): Promise<Awaited<ReturnType<RevealExecutionHarness["executeReveal"]>>> => {
+  const terminal = (inventory: DomInventory) =>
+    Promise.resolve({
+      url: input.state.currentUrl,
+      inventory,
+      nonMutation: input.nonMutation,
+    });
   if (input.stableAllPostAction !== undefined)
-    return terminalFor(input.state.currentUrl, input.stableAllPostAction);
+    return terminal(input.stableAllPostAction);
   if (input.actionKey === "button:a-open:0") {
     if (input.stablePostAction !== undefined)
-      return terminalFor(input.state.currentUrl, input.stablePostAction);
+      return terminal(input.stablePostAction);
     if (input.empty !== undefined) {
       input.state.currentUrl = `${ORIGIN}${input.route.resolvedRoute}?panel=empty`;
-      return terminalFor(input.state.currentUrl, input.empty);
+      return terminal(input.empty);
     }
     input.state.currentUrl = `${ORIGIN}${input.route.resolvedRoute}?panel=open#dialog`;
-    return terminalFor(input.state.currentUrl, input.nested);
+    return terminal(input.nested);
   }
   if (input.actionKey === "button:b-open:0") {
     input.state.currentUrl = `${ORIGIN}${input.route.resolvedRoute}?panel=later`;
-    return terminalFor(input.state.currentUrl, input.later ?? inventoryFor([]));
+    return terminal(input.later ?? inventoryFor([]));
   }
   if (input.actionKey === "button:cross-route:0" && input.crossRoute === true) {
     input.state.currentUrl = `${ORIGIN}/admin/foreign`;
-    return terminalFor(input.state.currentUrl, inventoryFor([]));
+    return terminal(inventoryFor([]));
   }
   const query = input.actionKey === "button:n-first:0" ? "first" : "second";
   input.state.currentUrl = `${ORIGIN}${input.route.resolvedRoute}?panel=${query}`;
-  return terminalFor(input.state.currentUrl, inventoryFor([]));
+  return terminal(inventoryFor([]));
 };
 
 const harnessFor = (input: {
@@ -126,6 +128,7 @@ const harnessFor = (input: {
   readonly empty?: DomInventory;
   readonly later?: DomInventory;
   readonly crossRoute?: boolean;
+  readonly nonMutation?: RevealNonMutationProof;
   readonly eventSink?: string[];
   readonly selectRepresentatives?: Readonly<
     Record<string, SelectRepresentative>
@@ -166,17 +169,12 @@ const harnessFor = (input: {
         actionKey: action.controlKey,
         route: input.route,
         nested: input.nested,
-        ...(input.stableAllPostAction === undefined
-          ? {}
-          : { stableAllPostAction: input.stableAllPostAction }),
-        ...(input.stablePostAction === undefined
-          ? {}
-          : { stablePostAction: input.stablePostAction }),
-        ...(input.empty === undefined ? {} : { empty: input.empty }),
-        ...(input.later === undefined ? {} : { later: input.later }),
-        ...(input.crossRoute === undefined
-          ? {}
-          : { crossRoute: input.crossRoute }),
+        stableAllPostAction: input.stableAllPostAction,
+        stablePostAction: input.stablePostAction,
+        empty: input.empty,
+        later: input.later,
+        crossRoute: input.crossRoute,
+        nonMutation: input.nonMutation ?? unchanged(),
         state,
       });
       return {
@@ -201,6 +199,7 @@ interface RunChunkInput {
   readonly empty?: DomInventory;
   readonly later?: DomInventory;
   readonly crossRoute?: boolean;
+  readonly nonMutation?: RevealNonMutationProof;
   readonly eventSink?: string[];
   readonly selectRepresentatives?: Readonly<
     Record<string, SelectRepresentative>
@@ -225,6 +224,9 @@ const harnessInputFor = (input: RunChunkInput) => ({
   ...(input.empty === undefined ? {} : { empty: input.empty }),
   ...(input.later === undefined ? {} : { later: input.later }),
   ...(input.crossRoute === undefined ? {} : { crossRoute: input.crossRoute }),
+  ...(input.nonMutation === undefined
+    ? {}
+    : { nonMutation: input.nonMutation }),
   ...(input.eventSink === undefined ? {} : { eventSink: input.eventSink }),
   ...(input.selectRepresentatives === undefined
     ? {}

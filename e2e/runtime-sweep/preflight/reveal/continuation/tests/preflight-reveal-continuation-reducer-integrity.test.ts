@@ -14,6 +14,47 @@ import { replayRevealContinuation } from "../preflight-reveal-continuation-reduc
 import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 reducer synthetic rehash integrity", () => {
+  it("rejects a coherently rehashed receipt with a mutating database proof", async () => {
+    await withSource(async (source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const { route } = selectionFor(source, state.stateId);
+      const root = inventoryFor([
+        controlFor("button:a-open:0", "Open panel", 0),
+      ]);
+      const result = await runChunk({
+        source,
+        state,
+        route,
+        root,
+        nested: inventoryFor([]),
+        stableAllPostAction: root,
+        now: () => 0,
+        deadlineAt: 10_000,
+      });
+      const first = result.result.chunk.receipts[0];
+      if (first === undefined) throw new Error("Fixture produced no receipt");
+      const { digest: _digest, ...body } = first;
+      const nonMutation = {
+        status: "unchanged" as const,
+        beforeDigest: "e".repeat(64),
+        afterDigest: "f".repeat(64),
+      };
+      const alteredBody = {
+        ...body,
+        transition: { ...body.transition, nonMutation },
+        terminal: { ...body.terminal, nonMutation },
+      };
+
+      expect(() =>
+        parseRevealTerminalReceipt({
+          ...alteredBody,
+          digest: receiptDigestForBody(alteredBody),
+        }),
+      ).toThrow(/unchanged non-mutation proof/iu);
+    });
+  });
+
   it("rejects a synthetic rehash that expands one real receipt into 101", async () => {
     await withSource(async (source) => {
       const state = source.plan.states[0];

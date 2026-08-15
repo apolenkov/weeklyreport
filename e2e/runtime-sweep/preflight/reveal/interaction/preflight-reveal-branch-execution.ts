@@ -13,6 +13,7 @@ import {
 import {
   assertInitialInventory,
   assertNonMutation,
+  assertRevealNonMutationProof,
   assertRoutePath,
   requiredCurrentUrl,
   sameRevealRoutePath,
@@ -117,6 +118,7 @@ const replayStep = async (input: {
     boundary.rawUrl,
   );
   assertRoutePath(input.route, executionUrl);
+  assertRevealNonMutationProof(step.nonMutation);
   assertNonMutation(execution);
   const surface = revealSurfaceFor(execution.inventory.controls);
   if (stableSerialize(surface) !== stableSerialize(step.after))
@@ -126,12 +128,6 @@ const replayStep = async (input: {
   if (executionUrl !== step.afterUrl)
     throw new RevealDiscoveryError(
       `Reveal path after URL drifted for ${step.controlKey}`,
-    );
-  if (
-    stableSerialize(execution.nonMutation) !== stableSerialize(step.nonMutation)
-  )
-    throw new RevealDiscoveryError(
-      `Reveal path database proof drifted for ${step.controlKey}`,
     );
   return {
     path: current.path,

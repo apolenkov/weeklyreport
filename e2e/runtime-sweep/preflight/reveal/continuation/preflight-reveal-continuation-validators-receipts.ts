@@ -1,6 +1,7 @@
 import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
 import type { SourceArtifact } from "../../../source/source-artifact.ts";
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
+import { isUnchangedRevealNonMutationProof } from "../../reveal-path.ts";
 import {
   chunkDigestForBody,
   constantTimeEqualHex,
@@ -138,6 +139,10 @@ export const assertReceiptContract = (
   )
     throw new RevealContinuationError(
       "R188 terminal receipt action/result binding drifted",
+    );
+  if (!isUnchangedRevealNonMutationProof(receipt.terminal.nonMutation))
+    throw new RevealContinuationError(
+      "R188 terminal receipt lacks an unchanged non-mutation proof",
     );
   if (
     receipt.terminal.enqueuedBranchRef !== null &&
