@@ -1,7 +1,8 @@
 import * as path from "node:path";
 
-import { sha256Hex, stableSerialize } from "../../support/ids.ts";
+import { stableSerialize } from "../../support/ids.ts";
 import { createParentPass } from "../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
+import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   runIdentityFor,
   strictRouteFor,
@@ -12,7 +13,9 @@ import {
   writeRevealParentPass,
 } from "../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
+  controlsDigestFor,
   emptyInitialFrontierStateFor,
+  reducerCheckpointAssetsFor,
   reducerStateDigestFor,
 } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import type { RevealBootstrap } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
@@ -144,7 +147,7 @@ export const validateEmptyBootstrap = async (input: {
   const controls = controlsSorted(state);
   if (
     reducerStateDigestFor(state) !== input.bootstrap.reducerStateDigest ||
-    sha256Hex(controls) !== input.bootstrap.controlsDigest ||
+    controlsDigestFor(controls) !== input.bootstrap.controlsDigest ||
     controls.length !== input.bootstrap.controlsCount
   )
     throw new Error("R188 empty bootstrap reducer evidence drifted");
@@ -161,6 +164,18 @@ export const completeEmptyBootstrap = async (input: {
 > => {
   assertInitialProgress(input);
   const replay = await validateEmptyBootstrap(input);
+  if (
+    replay.state.controls.length >
+    input.context.source.matrixLimits.maxControlsPerSegment
+  )
+    throw new Error(
+      `R192 parent reducer controls exceed maxControlsPerSegment (${String(input.context.source.matrixLimits.maxControlsPerSegment)})`,
+    );
+  for (const asset of reducerCheckpointAssetsFor(replay.state))
+    await writeRevealContinuationAsset({
+      archiveRoot: input.context.archiveRoot,
+      asset,
+    });
   const pass = createParentPass({
     run: input.bootstrap.run,
     chain: {
@@ -170,7 +185,7 @@ export const completeEmptyBootstrap = async (input: {
       chunkCount: 0,
     },
     reducerStateDigest: reducerStateDigestFor(replay.state),
-    controlsDigest: sha256Hex(controlsSorted(replay.state)),
+    controlsDigest: controlsDigestFor(controlsSorted(replay.state)),
     controlsCount: replay.state.controls.length,
     authorityKey: input.context.authorityKey,
   });

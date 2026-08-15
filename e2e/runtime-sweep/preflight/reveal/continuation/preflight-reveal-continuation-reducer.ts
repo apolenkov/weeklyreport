@@ -1,4 +1,3 @@
-import { sha256Hex } from "../../../support/ids.ts";
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import type { RevealDiscoveryState } from "../interaction/preflight-reveal-branches.ts";
 import { RevealContinuationReplayError } from "./preflight-reveal-continuation-errors.ts";
@@ -9,9 +8,14 @@ import {
 import type {
   RevealContinuationFrontier,
   RevealContinuationReceipt,
-  RevealExecutionGrant,
 } from "./preflight-reveal-continuation-schemas.ts";
-
+export { reducerStateForCheckpoint } from "./checkpoint/preflight-reveal-continuation-checkpoint-hydration.ts";
+export {
+  controlsDigestFor,
+  reducerCheckpointAssetsFor,
+  reducerStateDigestFor,
+  reducerStateSnapshotFor,
+} from "./preflight-reveal-continuation-checkpoint.ts";
 export type { RevealReducerInput } from "./preflight-reveal-continuation-reducer-apply.ts";
 export type RevealContinuationReplay = Readonly<{
   readonly status: "OPEN" | "COMPLETE";
@@ -109,24 +113,3 @@ export const reduceRevealReceiptSuffix = (input: {
     receiptHead: reduced.predecessor,
   };
 };
-
-export const reducerStateDigestFor = (state: RevealDiscoveryState): string =>
-  sha256Hex({
-    queue: state.queue,
-    controls: state.controls,
-    discovered: [...state.discovered.entries()],
-    visitedStatePaths: [...state.visitedStatePaths.entries()],
-    actionCount: state.actionCount,
-    branchCount: state.branchCount,
-    currentBranch: state.currentBranch,
-    currentCandidates: state.currentCandidates,
-    currentCandidateIndex: state.currentCandidateIndex,
-  });
-
-export const reducerStateSnapshotFor = (
-  state: RevealDiscoveryState,
-): RevealExecutionGrant["reducerState"] => ({
-  controls: state.controls,
-  discovered: [...state.discovered.entries()],
-  visitedStatePaths: [...state.visitedStatePaths.entries()],
-});

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { matrixPreflightControlSchema } from "../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
 import { actionSchema } from "../../../source/contracts.ts";
 import {
   revealNonMutationProofSchema,
@@ -12,10 +13,37 @@ import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_CONTINUATION_VERSION,
+  PREFLIGHT_REVEAL_CONTROL,
   PREFLIGHT_REVEAL_INVENTORY,
   PREFLIGHT_REVEAL_PATH_NODE,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
   PREFLIGHT_REVEAL_SURFACE,
 } from "./preflight-reveal-continuation-schema-primitives.ts";
+
+const reducerRegistrationAssetSchema = z
+  .object({
+    signatureDigest: assetRefSchema,
+    pathDigest: assetRefSchema,
+    surfaceDigest: assetRefSchema,
+  })
+  .strict();
+
+const reducerCheckpointControlsSchema = z
+  .object({
+    refs: z.array(assetRefSchema).readonly(),
+    digest: assetRefSchema,
+    count: nonNegativeIntegerSchema,
+  })
+  .strict();
+
+export const controlAssetSchema = z
+  .object({
+    artifact: z.literal(PREFLIGHT_REVEAL_CONTROL),
+    version: z.literal(PREFLIGHT_REVEAL_CONTINUATION_VERSION),
+    digest: assetRefSchema,
+    control: matrixPreflightControlSchema,
+  })
+  .strict();
 
 const domControlSchema = z
   .object({
@@ -174,5 +202,29 @@ export const branchSchema = z
     surfaceDigest: assetRefSchema,
     url: canonicalRelativeUrlSchema,
     depth: nonNegativeIntegerSchema,
+  })
+  .strict();
+
+export const reducerCheckpointSchema = z
+  .object({
+    artifact: z.literal(PREFLIGHT_REVEAL_REDUCER_CHECKPOINT),
+    version: z.literal(PREFLIGHT_REVEAL_CONTINUATION_VERSION),
+    digest: assetRefSchema,
+    controls: reducerCheckpointControlsSchema,
+    discovered: z
+      .array(
+        z.tuple([z.string().min(1), reducerRegistrationAssetSchema]).readonly(),
+      )
+      .readonly(),
+    visitedStatePaths: z
+      .array(z.tuple([z.string().min(1), assetRefSchema]).readonly())
+      .readonly(),
+    queueRefs: z.array(assetRefSchema).readonly(),
+    currentBranchRef: assetRefSchema.nullable(),
+    currentCandidatesRef: assetRefSchema.nullable(),
+    currentCandidatesDigest: assetRefSchema.nullable(),
+    currentCandidateIndex: nonNegativeIntegerSchema.nullable(),
+    actionCount: nonNegativeIntegerSchema,
+    branchCount: nonNegativeIntegerSchema,
   })
   .strict();

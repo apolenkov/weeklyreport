@@ -26,7 +26,10 @@ import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuati
 import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
 import { strictRouteFor } from "./preflight-reveal-continuation-contract-factories.ts";
 import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
-import { reducerStateDigestFor } from "./preflight-reveal-continuation-reducer.ts";
+import {
+  reducerStateDigestFor,
+  reducerStateForCheckpoint,
+} from "./preflight-reveal-continuation-reducer.ts";
 import { executeRevealContinuationChunk } from "./preflight-reveal-continuation-runner-execution.ts";
 import type {
   RevealContinuationRoute,
@@ -196,12 +199,13 @@ const resumedStateFor = (input: {
     throw new Error(
       "Reveal execution grant frontier cursor is outside its candidate list",
     );
+  const checkpoint = reducerStateForCheckpoint({
+    snapshot: input.grant.reducerState,
+    route: input.route,
+  });
   const state: RevealDiscoveryState = {
-    ...input.initial.state,
+    ...checkpoint,
     queue: frontier.queueRefs.map(branchForRef),
-    controls: input.grant.reducerState.controls,
-    discovered: new Map(input.grant.reducerState.discovered),
-    visitedStatePaths: new Map(input.grant.reducerState.visitedStatePaths),
     currentBranch,
     currentCandidates: candidates,
     currentCandidateIndex: frontier.nextCandidateIndex,

@@ -7,7 +7,7 @@ import {
 import { canonicalRevealUrlFor } from "../../reveal-path.ts";
 import { R188_WIRE_VERSION } from "./preflight-reveal-continuation-digests.ts";
 
-/** R188 wire version. Legacy cumulative continuation records are not accepted. */
+/** R192 wire version. Legacy cumulative continuation records are not accepted. */
 export const PREFLIGHT_REVEAL_CONTINUATION_VERSION = R188_WIRE_VERSION;
 export const PREFLIGHT_REVEAL_EXECUTION_GRANT =
   "PREFLIGHT_REVEAL_EXECUTION_GRANT" as const;
@@ -24,6 +24,9 @@ export const PREFLIGHT_REVEAL_PATH_NODE = "PREFLIGHT_REVEAL_PATH_NODE" as const;
 export const PREFLIGHT_REVEAL_CANDIDATE_LIST =
   "PREFLIGHT_REVEAL_CANDIDATE_LIST" as const;
 export const PREFLIGHT_REVEAL_BRANCH = "PREFLIGHT_REVEAL_BRANCH" as const;
+export const PREFLIGHT_REVEAL_CONTROL = "PREFLIGHT_REVEAL_CONTROL" as const;
+export const PREFLIGHT_REVEAL_REDUCER_CHECKPOINT =
+  "PREFLIGHT_REVEAL_REDUCER_CHECKPOINT" as const;
 
 export const nonNegativeIntegerSchema = z.number().int().nonnegative();
 export const positiveIntegerSchema = z.number().int().positive();

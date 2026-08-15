@@ -1,5 +1,4 @@
 import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
-import { sha256Hex } from "../../../support/ids.ts";
 import { compareRevealControlIdentity } from "../../reveal-path.ts";
 import { restoreRevealBranch } from "../interaction/preflight-reveal-branch-execution.ts";
 import type {
@@ -23,6 +22,7 @@ import { R188_ZERO_DIGEST } from "./preflight-reveal-continuation-digests.ts";
 import { genesisForState } from "./preflight-reveal-continuation-genesis.ts";
 import { assetsForGenesis } from "./preflight-reveal-continuation-grant-assets.ts";
 import {
+  controlsDigestFor,
   emptyInitialFrontierStateFor,
   reducerStateDigestFor,
 } from "./preflight-reveal-continuation-reducer.ts";
@@ -157,7 +157,7 @@ const bootstrapFor = (input: {
         input.input.source.matrixLimits.maxControlsPerSegment,
     },
     reducerStateDigest: reducerStateDigestFor(input.state),
-    controlsDigest: sha256Hex(controls),
+    controlsDigest: controlsDigestFor(controls),
     controlsCount: controls.length,
   });
   return {

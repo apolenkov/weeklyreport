@@ -6,8 +6,10 @@ import { RevealContinuationError } from "./preflight-reveal-continuation-errors.
 import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
+  PREFLIGHT_REVEAL_CONTROL,
   PREFLIGHT_REVEAL_INVENTORY,
   PREFLIGHT_REVEAL_PATH_NODE,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
   PREFLIGHT_REVEAL_SURFACE,
   type RevealExecutionGrant,
 } from "./preflight-reveal-continuation-schemas.ts";
@@ -96,7 +98,32 @@ export const assetsForGrant = (
   const assets = new Map<string, RevealContinuationAsset>();
   addFrontierAssets(assets, grant.genesis);
   addFrontierAssets(assets, grant.frontier);
+  for (const asset of reducerCheckpointAssetsForRef(
+    grant.reducerState.checkpointRef,
+  ))
+    assets.set(`${asset.artifact}:${asset.digest}`, asset);
   return [...assets.values()];
+};
+
+const reducerCheckpointAssetsForRef = (
+  ref: string,
+): readonly RevealContinuationAsset[] => {
+  const root = requiredAsset(PREFLIGHT_REVEAL_REDUCER_CHECKPOINT, ref);
+  if (root.artifact !== PREFLIGHT_REVEAL_REDUCER_CHECKPOINT)
+    throw new RevealContinuationError(
+      "R192 reducer checkpoint asset type drifted",
+    );
+  const assets: RevealContinuationAsset[] = [root];
+  for (const controlRef of root.controls.refs)
+    assets.push(requiredAsset(PREFLIGHT_REVEAL_CONTROL, controlRef));
+  if (root.currentCandidatesRef !== null)
+    assets.push(
+      requiredAsset(
+        "PREFLIGHT_REVEAL_CANDIDATE_LIST",
+        root.currentCandidatesRef,
+      ),
+    );
+  return assets;
 };
 
 export const assetsForGenesis = (

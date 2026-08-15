@@ -5,21 +5,21 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import type { ParentContext } from "../../launch/preflight-reveal-continuation-parent.ts";
-import { sealGrant } from "../../launch/preflight-reveal-continuation-parent-grant.ts";
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
+import type { ParentContext } from "../../../launch/preflight-reveal-continuation-parent.ts";
+import { sealGrant } from "../../../launch/preflight-reveal-continuation-parent-grant.ts";
+import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "./preflight-reveal-continuation-fixture.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
 import {
   reduceRevealReceiptSuffix,
   reducerStateDigestFor,
-} from "./preflight-reveal-continuation-reducer.ts";
-import { branchForRef } from "./receipts/preflight-reveal-continuation-receipts.ts";
+} from "../preflight-reveal-continuation-reducer.ts";
+import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 material-branch reducer", () => {
   it("preserves dynamic registration across split reduction", async () => {

@@ -1,12 +1,14 @@
 import * as path from "node:path";
 
-import { sha256Hex } from "../../support/ids.ts";
 import { createParentPass } from "../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
+import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   hydrateRevealContinuationAssets,
   writeRevealParentPass,
 } from "../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
+  controlsDigestFor,
+  reducerCheckpointAssetsFor,
   reduceRevealReceiptSuffix,
   reducerStateDigestFor,
 } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
@@ -25,7 +27,7 @@ import {
   zeroDigest,
 } from "./preflight-reveal-continuation-parent-support.ts";
 
-const completeParent = async (input: {
+export const completeParent = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly chunk: RevealReceiptChunk;
@@ -38,11 +40,23 @@ const completeParent = async (input: {
 }): Promise<
   Readonly<{ readonly done: true; readonly progress: ParentProgress }>
 > => {
+  if (
+    input.reduced.state.controls.length >
+    input.context.source.matrixLimits.maxControlsPerSegment
+  )
+    throw new Error(
+      `R192 parent reducer controls exceed maxControlsPerSegment (${String(input.context.source.matrixLimits.maxControlsPerSegment)})`,
+    );
+  for (const asset of reducerCheckpointAssetsFor(input.reduced.state))
+    await writeRevealContinuationAsset({
+      archiveRoot: input.context.archiveRoot,
+      asset,
+    });
   const pass = createParentPass({
     run: input.chunk.run,
     chain: chainFor({ progress: input.progress, chunk: input.chunk }),
     reducerStateDigest: reducerStateDigestFor(input.reduced.state),
-    controlsDigest: sha256Hex(input.reduced.state.controls),
+    controlsDigest: controlsDigestFor(input.reduced.state.controls),
     controlsCount: input.reduced.state.controls.length,
     authorityKey: input.context.authorityKey,
   });

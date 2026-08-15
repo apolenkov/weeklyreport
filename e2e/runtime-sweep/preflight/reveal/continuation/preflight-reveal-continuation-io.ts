@@ -13,7 +13,7 @@ import {
   parseRevealParentPass,
   parseRevealReceiptChunk,
 } from "./preflight-reveal-continuation-artifacts.ts";
-import { serializeV3 } from "./preflight-reveal-continuation-artifacts.ts";
+import { serializeV4 } from "./preflight-reveal-continuation-artifacts.ts";
 import { MAX_ASSET_BYTES } from "./preflight-reveal-continuation-assets.ts";
 import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 import {
@@ -101,7 +101,7 @@ const writeImmutableJson = async (input: {
   await ensurePreflightArchiveDirectory(root, path.dirname(filePath));
   await assertPreflightArchivePath(root, filePath);
   const parsed = input.parse(input.value);
-  const text = serializeV3(parsed);
+  const text = serializeV4(parsed);
   if (Buffer.byteLength(text, "utf8") > MAX_ARTIFACT_BYTES)
     throw new RevealContinuationError("R188 artifact exceeds the byte bound");
   temporaryCounter.value += 1;

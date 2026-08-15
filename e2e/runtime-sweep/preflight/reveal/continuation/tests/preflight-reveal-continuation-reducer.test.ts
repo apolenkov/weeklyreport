@@ -1,22 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
+import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "./preflight-reveal-continuation-fixture.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
 import {
   reduceRevealReceiptSuffix,
   reducerStateDigestFor,
   replayRevealContinuation,
-} from "./preflight-reveal-continuation-reducer.ts";
+} from "../preflight-reveal-continuation-reducer.ts";
 import {
   branchForRef,
   terminalBranchFor,
-} from "./receipts/preflight-reveal-continuation-receipts.ts";
+} from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 parent-owned reducer", () => {
   it("rejects duplicate, reordered, or omitted candidates at the frontier", async () => {

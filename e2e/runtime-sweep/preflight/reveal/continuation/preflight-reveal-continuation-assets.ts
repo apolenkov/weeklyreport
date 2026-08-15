@@ -16,17 +16,23 @@ import { RevealContinuationError } from "./preflight-reveal-continuation-errors.
 import {
   branchSchema,
   candidateListSchema,
+  controlAssetSchema,
   inventoryAssetSchema,
   pathNodeSchema,
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
+  PREFLIGHT_REVEAL_CONTROL,
   PREFLIGHT_REVEAL_INVENTORY,
   PREFLIGHT_REVEAL_PATH_NODE,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
   PREFLIGHT_REVEAL_SURFACE,
+  reducerCheckpointSchema,
   type RevealBranchAsset,
   type RevealCandidateList,
+  type RevealControlAsset,
   type RevealInventoryAsset,
   type RevealPathNode,
+  type RevealReducerCheckpoint,
   type RevealSurfaceAsset,
   surfaceAssetSchema,
 } from "./preflight-reveal-continuation-schemas.ts";
@@ -45,7 +51,9 @@ export type RevealContinuationAsset =
   | RevealSurfaceAsset
   | RevealPathNode
   | RevealCandidateList
-  | RevealBranchAsset;
+  | RevealBranchAsset
+  | RevealControlAsset
+  | RevealReducerCheckpoint;
 
 const memoryAssets = new Map<string, RevealContinuationAsset>();
 
@@ -121,6 +129,10 @@ const schemaFor = (artifact: RevealContinuationAsset["artifact"]) => {
       return candidateListSchema;
     case PREFLIGHT_REVEAL_BRANCH:
       return branchSchema;
+    case PREFLIGHT_REVEAL_CONTROL:
+      return controlAssetSchema;
+    case PREFLIGHT_REVEAL_REDUCER_CHECKPOINT:
+      return reducerCheckpointSchema;
   }
 };
 

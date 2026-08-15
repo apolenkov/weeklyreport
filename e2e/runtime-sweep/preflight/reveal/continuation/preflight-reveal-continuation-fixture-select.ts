@@ -1,13 +1,17 @@
 import type { DomInventory } from "../../../replay/dom/dom-inventory.ts";
 import type { RevealExecutionHarness } from "../interaction/preflight-reveal-types.ts";
 
-export const DEFAULT_SELECT_REPRESENTATIVE = {
+const DEFAULT_SELECT_REPRESENTATIVE = {
   kind: "select",
   value: "parent-product",
   index: 1,
 } as const;
 
-export type SelectRepresentative = typeof DEFAULT_SELECT_REPRESENTATIVE;
+export type SelectRepresentative = Readonly<{
+  readonly kind: "select";
+  readonly value: string;
+  readonly index: number;
+}>;
 
 export const selectFreezerFor =
   (input: {

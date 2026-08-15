@@ -1,22 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
-import { parseRevealTerminalReceipt } from "./preflight-reveal-continuation-artifacts.ts";
-import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
-import { receiptDigestForBody } from "./preflight-reveal-continuation-digests.ts";
+import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
+import { parseRevealTerminalReceipt } from "../preflight-reveal-continuation-artifacts.ts";
+import { rememberedRevealContinuationAsset } from "../preflight-reveal-continuation-assets.ts";
+import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "./preflight-reveal-continuation-fixture.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
 import {
   reducerStateDigestFor,
   replayRevealContinuation,
-} from "./preflight-reveal-continuation-reducer.ts";
-import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./preflight-reveal-continuation-schemas.ts";
-import { branchForRef } from "./receipts/preflight-reveal-continuation-receipts.ts";
+} from "../preflight-reveal-continuation-reducer.ts";
+import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "../preflight-reveal-continuation-schemas.ts";
+import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 parent-owned reducer authenticity", () => {
   it("reduces a suffix once and digests the resulting state", async () => {
