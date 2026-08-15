@@ -144,7 +144,7 @@ test("assigns distinct stable keys to duplicate semantic controls", async ({
   page,
 }) => {
   await page.setContent(`
-    <button>Repeat</button>
+    <button data-record-stable-id="88888888-8888-4888-8888-888888888888">Repeat</button>
     <button>Repeat</button>
   `);
 
@@ -156,6 +156,10 @@ test("assigns distinct stable keys to duplicate semantic controls", async ({
   ]);
   expect(controls.map((control) => control.order)).toEqual([1, 2]);
   expect(controls[0]?.domOrderKey).toBe("0001:button:Repeat:1");
+  expect(controls.map(({ recordStableId }) => recordStableId)).toEqual([
+    "88888888-8888-4888-8888-888888888888",
+    undefined,
+  ]);
 });
 
 test("uses a composite name that Playwright can locate exactly", async ({

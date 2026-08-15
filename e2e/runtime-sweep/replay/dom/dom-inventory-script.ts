@@ -109,6 +109,7 @@ export const INVENTORY_SCRIPT = String.raw`(() => {
       ? element.value || element.alt : null;
     return { element, role, tagName, inputType,
       href: element instanceof HTMLAnchorElement ? element.getAttribute("href") : null,
+      recordStableId: element.getAttribute("data-record-stable-id"),
       interactionEffect: element.getAttribute("data-interaction-effect"),
       ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,
       title: element.getAttribute("title"), imageAlt, value,

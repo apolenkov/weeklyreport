@@ -58,6 +58,7 @@ const domControlSchema = z
     tagName: z.string().min(1),
     inputType: z.string().nullable(),
     href: z.string().nullable(),
+    recordStableId: z.uuid().optional(),
     interactionEffect: z.enum(["client-only", "mutation-required"]).optional(),
     keyboardExpectedFocusable: z.boolean().optional(),
     keyboardFocusPolicy: z
