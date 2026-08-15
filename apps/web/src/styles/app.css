@@ -7,6 +7,10 @@
 @source "./tailwind-safelist.txt";
 
 @layer base {
+  #main-content:focus {
+    outline: none;
+  }
+
   body {
     background-color: var(--color-background);
     background-image:
