@@ -15,6 +15,7 @@ import {
   capacitySurveyChildEnvironment,
   publishBoundedCapacitySurveyResult,
 } from "./launch/preflight-capacity-survey-launcher-support.ts";
+import { createCapacitySurveyTempRoot } from "./run-runtime-capacity-survey.ts";
 
 const fixtureRoot = path.join(process.cwd(), ".capacity-survey-fixture");
 const environmentInput = {
@@ -37,6 +38,15 @@ const environmentInput = {
 } as const;
 
 describe("capacity survey launcher boundary", () => {
+  it("canonicalizes the macOS temp-root alias before archive validation", async () => {
+    const root = await createCapacitySurveyTempRoot();
+    try {
+      expect(root).toBe(await realpath(root));
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
   it("removes every acceptance environment surface from the browser child", () => {
     const environment = capacitySurveyChildEnvironment({
       ...environmentInput,

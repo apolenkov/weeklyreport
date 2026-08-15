@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +72,9 @@ type CapacitySurveyPaths = Readonly<{
   planPath: string;
   resultPath: string;
 }>;
+
+export const createCapacitySurveyTempRoot = async (): Promise<string> =>
+  realpath(await mkdtemp(path.join(tmpdir(), "customreport-capacity-survey-")));
 
 const capacitySurveyPaths = async (): Promise<CapacitySurveyPaths> => {
   const archiveRoot = await ensurePreflightArchiveRoot(
@@ -190,9 +193,7 @@ const runCapacitySurveyChildAndPublish = async (input: {
   readonly plan: CapacitySurveyPlan;
   readonly paths: CapacitySurveyPaths;
 }): Promise<void> => {
-  const tempRoot = await mkdtemp(
-    path.join(tmpdir(), "customreport-capacity-survey-"),
-  );
+  const tempRoot = await createCapacitySurveyTempRoot();
   const candidatePath = path.join(
     tempRoot,
     "PREFLIGHT_CAPACITY_SURVEY.candidate.json",
