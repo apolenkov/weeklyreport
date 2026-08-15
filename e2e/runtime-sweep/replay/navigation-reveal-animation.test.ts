@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AppReadyArgument,
   type AppReadyPage,
+  navigateReveal,
+  type NavigationPage,
   waitForRevealSurfaceReady,
 } from "./navigation.ts";
 
@@ -59,6 +61,34 @@ function requireArgument(
 
 describe("reveal animation readiness", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("settles finite transitions after reveal navigation without network-idle", async () => {
+    const argumentsSeen: AppReadyArgument[] = [];
+    const waitForLoadState = vi.fn(() => Promise.resolve());
+    const page = {
+      url: () => "http://127.0.0.1:3105/head",
+      goto: () => Promise.resolve({ status: () => 204 }),
+      waitForURL: () => Promise.resolve(),
+      waitForLoadState,
+      waitForFunction: vi.fn(
+        (
+          _predicate: (argument: AppReadyArgument) => boolean,
+          argument?: AppReadyArgument,
+        ) => {
+          argumentsSeen.push(requireArgument(argument));
+          return Promise.resolve();
+        },
+      ),
+    } satisfies NavigationPage;
+
+    await expect(navigateReveal(page, "/head")).resolves.toBe(204);
+
+    expect(waitForLoadState).not.toHaveBeenCalled();
+    expect(argumentsSeen).toHaveLength(2);
+    expect(argumentsSeen[0]?.overlaySelector).toBeDefined();
+    expect(argumentsSeen[0]?.requireAnimationsSettled).not.toBe(true);
+    expect(argumentsSeen[1]?.requireAnimationsSettled).toBe(true);
+  });
 
   it("waits for the final semantic state of a finite transition", async () => {
     const events: string[] = [];

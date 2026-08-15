@@ -230,7 +230,7 @@ describe("runtime navigation recovery", () => {
     expect(waitForFunction).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps reveal replay on DOMContentLoaded plus app-ready stability only", async () => {
+  it("keeps reveal replay off network-idle but waits for finite UI transitions", async () => {
     const { page, goto, waitForLoadState, waitForFunction } =
       navigationProbeFor("http://127.0.0.1:3105/head", 204);
 
