@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { continueChild } from "../../launch/preflight-reveal-continuation-parent-results.ts";
+import { continueChild } from "../../../launch/preflight-reveal-continuation-parent-results.ts";
 import {
   persistChunkAssets,
   withSealedGrantFixture,
-} from "../../launch/preflight-reveal-continuation-parent-test-fixture.ts";
+} from "../../../launch/preflight-reveal-continuation-parent-test-fixture.ts";
 import {
   inventoryFor,
   runChunk,
-} from "./preflight-reveal-continuation-fixture.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
 
 describe("R188 parent chain authority boundary", () => {
   it("rejects grant, receipt, chunk, and accepted-chunk replay drift", async () => {

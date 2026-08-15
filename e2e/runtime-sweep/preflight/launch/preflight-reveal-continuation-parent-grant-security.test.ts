@@ -142,7 +142,7 @@ describe("R188 parent-sealed grant security", () => {
         chain: sealed.grant.chain,
         genesis: sealed.grant.genesis,
         frontier: sealed.grant.frontier,
-        reducerState: { ...sealed.grant.reducerState, controls: [] },
+        reducerState: { checkpointRef: "f".repeat(64) },
         bounds: sealed.grant.bounds,
         reducerStateDigest: sealed.grant.reducerStateDigest,
         authorityKey: context.authorityKey,

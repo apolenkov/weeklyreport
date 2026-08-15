@@ -6,8 +6,10 @@ import {
 import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
+  PREFLIGHT_REVEAL_CONTROL,
   PREFLIGHT_REVEAL_INVENTORY,
   PREFLIGHT_REVEAL_PATH_NODE,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
   PREFLIGHT_REVEAL_SURFACE,
   type RevealBootstrap,
   type RevealContinuationReceipt,
@@ -46,6 +48,11 @@ const queueGrant = (queue: AssetQueue, grant: RevealExecutionGrant): void => {
     queueAsset(queue, PREFLIGHT_REVEAL_CANDIDATE_LIST, refs.candidateListRef);
   }
   for (const ref of grant.frontier.queueRefs) queueBranch(queue, ref);
+  queueAsset(
+    queue,
+    PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
+    grant.reducerState.checkpointRef,
+  );
 };
 
 const queueGenesis = (
@@ -85,23 +92,59 @@ const queueReceipt = (
   }
 };
 
+const queueCheckpointChildren = (
+  queue: AssetQueue,
+  asset: Extract<
+    RevealContinuationAsset,
+    { readonly artifact: typeof PREFLIGHT_REVEAL_REDUCER_CHECKPOINT }
+  >,
+): void => {
+  for (const ref of asset.controls.refs)
+    queueAsset(queue, PREFLIGHT_REVEAL_CONTROL, ref);
+  for (const ref of asset.queueRefs) queueBranch(queue, ref);
+  if (asset.currentBranchRef !== null)
+    queueBranch(queue, asset.currentBranchRef);
+  if (asset.currentCandidatesRef !== null)
+    queueAsset(
+      queue,
+      PREFLIGHT_REVEAL_CANDIDATE_LIST,
+      asset.currentCandidatesRef,
+    );
+};
+
+const queuePathChildren = (
+  queue: AssetQueue,
+  asset: Extract<
+    RevealContinuationAsset,
+    { readonly artifact: typeof PREFLIGHT_REVEAL_PATH_NODE }
+  >,
+): void => {
+  queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.surfaceRef);
+  if (asset.parentPathDigest !== null)
+    queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.parentPathDigest);
+  if (asset.step === null) return;
+  queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.step.beforeSurfaceDigest);
+  queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.step.afterSurfaceDigest);
+};
+
 const queueChildAssets = (
   queue: AssetQueue,
   asset: RevealContinuationAsset,
 ): void => {
-  if (asset.artifact === PREFLIGHT_REVEAL_BRANCH) {
-    queueAsset(queue, PREFLIGHT_REVEAL_INVENTORY, asset.inventoryRef);
-    queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.surfaceRef);
-    queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.pathNodeRef);
-    return;
-  }
-  if (asset.artifact !== PREFLIGHT_REVEAL_PATH_NODE) return;
-  queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.surfaceRef);
-  if (asset.parentPathDigest !== null)
-    queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.parentPathDigest);
-  if (asset.step !== null) {
-    queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.step.beforeSurfaceDigest);
-    queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.step.afterSurfaceDigest);
+  switch (asset.artifact) {
+    case PREFLIGHT_REVEAL_BRANCH:
+      queueAsset(queue, PREFLIGHT_REVEAL_INVENTORY, asset.inventoryRef);
+      queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, asset.surfaceRef);
+      queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.pathNodeRef);
+      break;
+    case PREFLIGHT_REVEAL_REDUCER_CHECKPOINT:
+      queueCheckpointChildren(queue, asset);
+      break;
+    case PREFLIGHT_REVEAL_PATH_NODE:
+      queuePathChildren(queue, asset);
+      break;
+    default:
+      break;
   }
 };
 

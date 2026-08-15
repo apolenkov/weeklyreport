@@ -566,7 +566,7 @@
     {
       "id": "runtime-preflight-reveal-continuation-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/receipts)?)/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/(?:checkpoint|receipts|tests))?)/(.+(?:\\.test|\\.spec)\\.ts)$",
       "concern": "preflight-reveal-continuation",
       "role": "test",
       "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
@@ -574,7 +574,7 @@
     {
       "id": "runtime-preflight-reveal-continuation-implementation",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/receipts)?)/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/(?:checkpoint|receipts|tests))?)/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "preflight-reveal-continuation",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"

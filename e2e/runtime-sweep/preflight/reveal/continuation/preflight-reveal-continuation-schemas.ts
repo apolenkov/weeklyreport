@@ -1,15 +1,16 @@
 import { z } from "zod";
 
-import { matrixPreflightControlSchema } from "../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
 import { revealTransitionSchema } from "../../../matrix/reveal-transition.ts";
 import { actionSchema } from "../../../source/contracts.ts";
 import { revealNonMutationProofSchema } from "../../reveal-path.ts";
 import {
   branchSchema,
   candidateListSchema,
+  controlAssetSchema,
   domInventorySchema,
   inventoryAssetSchema,
   pathNodeSchema,
+  reducerCheckpointSchema,
   representativeInputSchema,
   surfaceAssetSchema,
 } from "./preflight-reveal-continuation-asset-schemas.ts";
@@ -86,22 +87,9 @@ const frontierSchema = z
     completedCandidateCount: nonNegativeIntegerSchema,
   })
   .strict();
-const reducerRegistrationSchema = z
-  .object({
-    signature: z.string().min(1),
-    pathDigest: assetRefSchema,
-    surfaceDigest: assetRefSchema,
-  })
-  .strict();
 const reducerStateSnapshotSchema = z
   .object({
-    controls: z.array(matrixPreflightControlSchema).readonly(),
-    discovered: z
-      .array(z.tuple([z.string().min(1), reducerRegistrationSchema]))
-      .readonly(),
-    visitedStatePaths: z
-      .array(z.tuple([z.string().min(1), assetRefSchema]))
-      .readonly(),
+    checkpointRef: assetRefSchema,
   })
   .strict();
 
@@ -242,3 +230,5 @@ export type RevealSurfaceAsset = z.infer<typeof surfaceAssetSchema>;
 export type RevealPathNode = z.infer<typeof pathNodeSchema>;
 export type RevealCandidateList = z.infer<typeof candidateListSchema>;
 export type RevealBranchAsset = z.infer<typeof branchSchema>;
+export type RevealControlAsset = z.infer<typeof controlAssetSchema>;
+export type RevealReducerCheckpoint = z.infer<typeof reducerCheckpointSchema>;

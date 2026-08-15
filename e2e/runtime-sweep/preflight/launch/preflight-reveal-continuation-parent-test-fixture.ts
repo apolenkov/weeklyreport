@@ -228,3 +228,15 @@ export const withSealedGrantFixture = async <T>(
   callback: (fixture: SealedGrantFixture) => Promise<T>,
 ): Promise<T> =>
   withSource((source) => sealedFixtureForSource(source, callback));
+
+export const withCleanSealedGrantFixture = async <T>(
+  callback: (fixture: SealedGrantFixture) => Promise<T>,
+): Promise<T> =>
+  withCleanSource(({ source, repoRoot }) =>
+    sealedFixtureForSource(source, (fixture) =>
+      callback({
+        ...fixture,
+        context: { ...fixture.context, repoRoot },
+      }),
+    ),
+  );

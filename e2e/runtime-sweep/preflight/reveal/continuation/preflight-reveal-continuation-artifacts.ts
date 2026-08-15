@@ -154,5 +154,5 @@ export const createRevealBootstrap = (input: {
   });
 };
 
-export const serializeV3 = (value: unknown): string =>
+export const serializeV4 = (value: unknown): string =>
   `${new TextDecoder().decode(canonicalBytesFor(value))}\n`;

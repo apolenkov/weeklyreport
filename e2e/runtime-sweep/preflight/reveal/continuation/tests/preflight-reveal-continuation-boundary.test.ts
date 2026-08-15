@@ -14,28 +14,28 @@ import { describe, expect, it } from "vitest";
 import {
   readBoundedBytes,
   readBoundedRegularFile,
-} from "./io/preflight-reveal-continuation-bounded-file.ts";
+} from "../io/preflight-reveal-continuation-bounded-file.ts";
 import {
   createParentPass,
   parseRevealParentPass,
-} from "./preflight-reveal-continuation-artifacts.ts";
-import { MAX_ASSET_BYTES } from "./preflight-reveal-continuation-assets.ts";
+} from "../preflight-reveal-continuation-artifacts.ts";
+import { MAX_ASSET_BYTES } from "../preflight-reveal-continuation-assets.ts";
 import {
   runIdentityFor,
   strictRouteFor,
-} from "./preflight-reveal-continuation-contract-factories.ts";
+} from "../preflight-reveal-continuation-contract-factories.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "./preflight-reveal-continuation-fixture.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
 import {
   assertRevealContinuationOutputAbsent,
   readRevealContinuationArtifact,
   writeRevealReceiptChunk,
-} from "./preflight-reveal-continuation-io.ts";
+} from "../preflight-reveal-continuation-io.ts";
 
 describe("R188 v3 continuation boundaries and immutable IO", () => {
   it("physically caps reads even when an opened file grows after stat", async () => {

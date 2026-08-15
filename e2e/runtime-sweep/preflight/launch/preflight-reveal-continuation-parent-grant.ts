@@ -64,6 +64,13 @@ const createAndWriteGrant = async (input: {
   readonly genesis: RevealExecutionGrant["genesis"];
   readonly ordinal: number;
 }): Promise<SealedGrant> => {
+  if (
+    input.state.controls.length >
+    input.context.source.matrixLimits.maxControlsPerSegment
+  )
+    throw new Error(
+      `R192 parent reducer controls exceed maxControlsPerSegment (${String(input.context.source.matrixLimits.maxControlsPerSegment)})`,
+    );
   const grant = createRevealExecutionGrant({
     source: input.context.source,
     state: input.context.selection.state,

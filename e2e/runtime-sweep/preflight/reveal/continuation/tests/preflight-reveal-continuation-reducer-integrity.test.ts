@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
-import { parseRevealTerminalReceipt } from "./preflight-reveal-continuation-artifacts.ts";
-import { receiptDigestForBody } from "./preflight-reveal-continuation-digests.ts";
+import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
+import { parseRevealTerminalReceipt } from "../preflight-reveal-continuation-artifacts.ts";
+import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "./preflight-reveal-continuation-fixture.ts";
-import { replayRevealContinuation } from "./preflight-reveal-continuation-reducer.ts";
-import { branchForRef } from "./receipts/preflight-reveal-continuation-receipts.ts";
+} from "../preflight-reveal-continuation-fixture.ts";
+import { replayRevealContinuation } from "../preflight-reveal-continuation-reducer.ts";
+import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 reducer synthetic rehash integrity", () => {
   it("rejects a synthetic rehash that expands one real receipt into 101", async () => {

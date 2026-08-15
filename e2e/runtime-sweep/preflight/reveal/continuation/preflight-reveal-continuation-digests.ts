@@ -9,7 +9,7 @@ import type {
   RevealReceiptChunk,
 } from "./preflight-reveal-continuation-schemas.ts";
 
-const R188_HASH_DOMAIN = "customreport/runtime-sweep/reveal/v3";
+const R188_HASH_DOMAIN = "customreport/runtime-sweep/reveal/v4";
 export const R188_DIGEST_LENGTH = sha256Hex("").length;
 export const R188_ZERO_DIGEST = "0".repeat(R188_DIGEST_LENGTH);
 const R188_VERSION_SEGMENT = R188_HASH_DOMAIN.split("/").at(-1);
