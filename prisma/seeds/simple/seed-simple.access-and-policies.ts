@@ -67,32 +67,54 @@ export async function seedReopenRequest(prisma: PrismaClient): Promise<void> {
   });
 }
 
-const ACTION_LOG_ROWS = [
-  {
-    id: "a0000000-0000-4000-8000-000000000e01",
-    userId: ADMIN_ID,
-    role: Role.admin,
-    procedure: "admin.updateSettings",
-    targetId: "singleton",
-    status: UserActionStatus.success,
-    reason: "Seeded demo action: settings viewed during MVP UAT.",
-    ip: "127.0.0.1",
-    correlationId: "seed-simple-settings",
-    durationMs: 42,
+const ACTION_LOG_PROCEDURES = [
+  "admin.updateSettings",
+  "review.publish",
+  "admin.updateUser",
+  "leadForm.saveDraft",
+] as const;
+const ACTION_LOG_ROW_COUNT = 22;
+const ACTION_LOG_FAILURE_INTERVAL = 7;
+const ACTION_LOG_BASE_DURATION_MS = 30;
+const ACTION_LOG_REFERENCE_YEAR = 2026;
+const ACTION_LOG_REFERENCE_MONTH_INDEX = 7;
+const ACTION_LOG_REFERENCE_DAY = 14;
+const ACTION_LOG_REFERENCE_HOUR = 12;
+
+// Two pages of deterministic, profile-owned events make the Action Log cursor
+// transition executable without relying on production or prior-run residue.
+export const ACTION_LOG_ROWS = Array.from(
+  { length: ACTION_LOG_ROW_COUNT },
+  (_, index) => {
+    const ordinal = index + 1;
+    const procedure =
+      ACTION_LOG_PROCEDURES[index % ACTION_LOG_PROCEDURES.length] ??
+      "admin.updateSettings";
+    const failed = ordinal % ACTION_LOG_FAILURE_INTERVAL === 0;
+    const isHeadAction = procedure === "review.publish";
+    return {
+      id: `a0000000-0000-4000-8000-000000000e${String(ordinal).padStart(2, "0")}`,
+      userId: isHeadAction ? HEAD_ID : ADMIN_ID,
+      role: isHeadAction ? Role.head : Role.admin,
+      procedure,
+      targetId: isHeadAction ? REPORT_PUBLISHED : "singleton",
+      status: failed ? UserActionStatus.fail : UserActionStatus.success,
+      reason: failed ? "BAD_REQUEST" : null,
+      ip: "127.0.0.1",
+      correlationId: `seed-simple-action-${String(ordinal).padStart(2, "0")}`,
+      durationMs: ACTION_LOG_BASE_DURATION_MS + ordinal,
+      createdAt: new Date(
+        Date.UTC(
+          ACTION_LOG_REFERENCE_YEAR,
+          ACTION_LOG_REFERENCE_MONTH_INDEX,
+          ACTION_LOG_REFERENCE_DAY,
+          ACTION_LOG_REFERENCE_HOUR,
+          -index,
+        ),
+      ),
+    };
   },
-  {
-    id: "a0000000-0000-4000-8000-000000000e02",
-    userId: HEAD_ID,
-    role: Role.head,
-    procedure: "review.publish",
-    targetId: REPORT_PUBLISHED,
-    status: UserActionStatus.success,
-    reason: "Seeded demo action: previous weekly report published.",
-    ip: "127.0.0.1",
-    correlationId: "seed-simple-publish",
-    durationMs: 86,
-  },
-];
+);
 
 // The full profile's action-log examples are exactly these deterministic rows,
 // so a post-seed journey can assert profile-owned existence instead of trusting
