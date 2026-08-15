@@ -1,5 +1,6 @@
 import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
 import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
+import { DEFAULT_MAX_CONTROLS_PER_SEGMENT } from "../../../matrix/matrix-limits.ts";
 import type {
   DomControlObservation,
   DomInventory,
@@ -24,6 +25,7 @@ import {
 } from "../guards/preflight-reveal-guards.ts";
 import { revealStatePathIdentityFor } from "../guards/preflight-reveal-registration.ts";
 import {
+  assertRevealControlCapacity,
   type RevealCandidate,
   type RevealDiscoveryState,
 } from "./preflight-reveal-branches.ts";
@@ -111,6 +113,7 @@ export type RevealDiscoveryInput = Readonly<{
   readonly maxDepth?: number;
   readonly maxRevealMaterialEdges?: number;
   readonly maxRevealActions?: number;
+  readonly maxControlsPerSegment?: number;
 }>;
 
 const revealBoundsFor = (
@@ -119,11 +122,14 @@ const revealBoundsFor = (
   readonly maxDepth: number;
   readonly maxRevealMaterialEdges: number;
   readonly maxRevealActions: number;
+  readonly maxControlsPerSegment: number;
 }> => {
   const maxDepth = input.maxDepth ?? MAX_REVEAL_DEPTH;
   const maxRevealMaterialEdges =
     input.maxRevealMaterialEdges ?? MAX_REVEAL_MATERIAL_EDGES;
   const maxRevealActions = input.maxRevealActions ?? MAX_REVEAL_ACTIONS;
+  const maxControlsPerSegment =
+    input.maxControlsPerSegment ?? DEFAULT_MAX_CONTROLS_PER_SEGMENT;
   if (!Number.isSafeInteger(maxDepth) || maxDepth < 1)
     throw new RevealDiscoveryError(
       "Reveal depth bound must be a positive integer",
@@ -139,17 +145,33 @@ const revealBoundsFor = (
     throw new RevealDiscoveryError(
       "Reveal action bound must be a positive integer",
     );
-  return { maxDepth, maxRevealMaterialEdges, maxRevealActions };
+  if (!Number.isSafeInteger(maxControlsPerSegment) || maxControlsPerSegment < 1)
+    throw new RevealDiscoveryError(
+      "Reveal control bound must be a positive integer",
+    );
+  return {
+    maxDepth,
+    maxRevealMaterialEdges,
+    maxRevealActions,
+    maxControlsPerSegment,
+  };
 };
 
 export const initialRevealStateFor = (
-  input: Pick<RevealDiscoveryInput, "initialInventory" | "controlFor">,
+  input: Pick<
+    RevealDiscoveryInput,
+    "initialInventory" | "controlFor" | "maxControlsPerSegment"
+  >,
   initialSurface: ReturnType<typeof revealSurfaceFor>,
   initialUrl: string,
 ): RevealDiscoveryState => {
   const initialPath = revealPathFor([], initialUrl);
   const controls = plansFor(input.initialInventory).map((plan) =>
     input.controlFor(plan, initialPath, initialSurface),
+  );
+  assertRevealControlCapacity(
+    controls.length,
+    input.maxControlsPerSegment ?? DEFAULT_MAX_CONTROLS_PER_SEGMENT,
   );
   const discovered = new Map(
     initialSurface.controls.map((control) => [
@@ -212,8 +234,12 @@ const comparePreflightControls = (
 export async function discoverRevealControls(
   input: RevealDiscoveryInput,
 ): Promise<readonly MatrixPreflightControl[]> {
-  const { maxDepth, maxRevealMaterialEdges, maxRevealActions } =
-    revealBoundsFor(input);
+  const {
+    maxDepth,
+    maxRevealMaterialEdges,
+    maxRevealActions,
+    maxControlsPerSegment,
+  } = revealBoundsFor(input);
   const initialSurface = revealSurfaceFor(input.initialInventory.controls);
   const initialRawUrl = input.harness.currentUrl();
   const initialUrl = requiredCurrentUrl(initialRawUrl);
@@ -230,8 +256,13 @@ export async function discoverRevealControls(
       maxDepth,
       maxRevealMaterialEdges,
       maxRevealActions,
+      maxControlsPerSegment,
     },
-    initialRevealStateFor(input, initialSurface, initialUrl),
+    initialRevealStateFor(
+      { ...input, maxControlsPerSegment },
+      initialSurface,
+      initialUrl,
+    ),
   );
   return result.controls.toSorted(comparePreflightControls);
 }

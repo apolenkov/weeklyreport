@@ -28,6 +28,7 @@ export const parentReplayContextFor = (input: {
     {
       initialInventory: input.initialInventory,
       controlFor: preflightControlForPlan,
+      maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
     },
     initialSurface,
     input.initialUrl,
@@ -44,6 +45,7 @@ export const parentReplayContextFor = (input: {
       maxDepth: MAX_REVEAL_DEPTH,
       maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
       maxRevealActions: input.source.matrixLimits.maxRevealActions,
+      maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
     },
   };
 };

@@ -137,6 +137,7 @@ const reducerInputFor = (input: {
   maxDepth: MAX_REVEAL_DEPTH,
   maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
   maxRevealActions: input.source.matrixLimits.maxRevealActions,
+  maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
 });
 
 const initialStateFor = (
@@ -150,6 +151,7 @@ const initialStateFor = (
       {
         initialInventory: input.initialInventory,
         controlFor: input.controlFor,
+        maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
       },
       initialSurface,
       initialUrl,

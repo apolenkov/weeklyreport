@@ -145,6 +145,7 @@ export async function runBrowserPreflightSegment(input: {
     controlFor: preflightControlForPlan,
     maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
     maxRevealActions: input.source.matrixLimits.maxRevealActions,
+    maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
   });
   if (controls.length > input.source.matrixLimits.maxControlsPerSegment)
     throw new BrowserPreflightError(
