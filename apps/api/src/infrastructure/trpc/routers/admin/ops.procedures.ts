@@ -1,4 +1,5 @@
 import {
+  adminActionLogPageSchema,
   omitUndefinedProperties,
   paginationInputSchema,
   queueNameSchema,
@@ -59,6 +60,7 @@ function createActionLogRouter(deps: AdminOpsDeps) {
   return router({
     list: adminProcedure
       .input(paginationInputSchema.optional())
+      .output(adminActionLogPageSchema)
       .query(async ({ input }) => {
         try {
           return await requireActionLogService(deps).list(input);

@@ -1,4 +1,5 @@
 import type { Role } from "@customreport/shared";
+import type { TRPC_ERROR_CODE_KEY } from "@trpc/server";
 
 import {
   ANONYMOUS_USER_ID,
@@ -31,29 +32,6 @@ const TARGET_ID_KEYS = [
   "commentId",
   "activityId",
 ] as const;
-
-const MAX_AUDIT_REASON_LENGTH = 500;
-const REDACTION_MARKER = "[redacted]";
-
-function truncateReason(reason: string): string {
-  if (reason.length <= MAX_AUDIT_REASON_LENGTH) return reason;
-  return reason.slice(0, MAX_AUDIT_REASON_LENGTH).trimEnd();
-}
-
-function redactEmailTokens(reason: string): string {
-  return reason
-    .split(" ")
-    .map((token) => (token.includes("@") ? REDACTION_MARKER : token))
-    .join(" ");
-}
-
-// Failure reasons may carry raw input values and DB metadata (Prisma dumps the
-// whole invocation multi-line). Collapse whitespace, redact embedded emails,
-// and bound the length before the reason reaches any audit sink.
-function sanitizeAuditReason(reason: string): string {
-  const collapsed = reason.replaceAll(/\s+/g, " ").trim();
-  return truncateReason(redactEmailTokens(collapsed));
-}
 
 // Exact-key membership for the recursion's skip set, derived from the ordered
 // TARGET_ID_KEYS so the two can never drift.
@@ -147,9 +125,9 @@ interface MutationAuditRecord {
   readonly procedure: string;
   readonly rawInput: unknown;
   readonly status: "success" | "fail";
-  // The untruncated failure message, or null on success. Both sinks get the
-  // sanitized form (whitespace-collapsed, emails redacted, length-bounded).
-  readonly failureReason: string | null;
+  // Fixed framework classification only. Error messages can contain decoded
+  // input or database metadata and never cross into either audit sink.
+  readonly failureCode: TRPC_ERROR_CODE_KEY | null;
   readonly durationMs: number;
 }
 
@@ -164,10 +142,7 @@ export async function recordMutationAudit(
   const target = targets[0];
   const userId = ctx.session?.userId ?? ANONYMOUS_USER_ID;
   const role = ctx.session?.role ?? null;
-  const reason =
-    record.failureReason === null
-      ? null
-      : sanitizeAuditReason(record.failureReason);
+  const reason = record.failureCode;
 
   ctx.auditLogger.mutation({
     userId,

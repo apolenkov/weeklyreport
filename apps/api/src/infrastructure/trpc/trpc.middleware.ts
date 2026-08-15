@@ -102,7 +102,7 @@ const mutationAuditMiddleware = t.middleware(
       procedure: path,
       rawInput: await readOptionalRawInput(getRawInput),
       status: result.ok ? "success" : "fail",
-      failureReason: result.ok ? null : result.error.message,
+      failureCode: result.ok ? null : result.error.code,
       durationMs: duration,
     });
 
