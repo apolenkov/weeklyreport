@@ -81,10 +81,10 @@ async function lintTemporaryInternalImport() {
   }
 }
 
-// Each case runs ESLint over the tree in-process, ~10s idle. Twice that left no
-// room once the web and shared suites run alongside it, and a boundary gate that
+// Each case runs one or two ESLint processes over the tree. Leave enough room
+// for the complete monorepo suite to run alongside them: a boundary gate that
 // fails on machine load is one people learn to re-run rather than read.
-const ESLINT_RUN_BUDGET_MS = 60_000;
+const ESLINT_RUN_BUDGET_MS = 240_000;
 
 describe("API module public boundary", () => {
   it(
