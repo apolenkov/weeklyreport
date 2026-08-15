@@ -45,7 +45,7 @@ async function seedActionLog(prisma: PrismaClient): Promise<void> {
     procedure: "review.publish",
     targetId: SEED_REPORTS.published.id,
     status: UserActionStatus.success,
-    reason: "Seeded demo action: previous weekly report published.",
+    reason: null,
     ip: "127.0.0.1",
     correlationId: "seed-advanced-publish",
     durationMs: ACTION_LOG_DURATION_MS,

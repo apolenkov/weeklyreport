@@ -90,11 +90,11 @@ routes:
         then: "A toast appears with 'Job <id> queued for retry.' or 'Job <id> removed from failed jobs.'; the job is removed from the failed list (or moved back to the queue), and the DLQ count updates."
         note: "Surfaces BullMQ's email-reminder queue. Rows show job id, name, failure reason, and timestamps."
       - id: admin-actions-view
-        intent: "Audit and search action logs: view procedure calls, results, and actor details; cursor-paginate and search for correlation."
+        intent: "Audit and search action logs: inspect and copy whitelisted event details without exposing mutation, request, or response bodies."
         given: "The admin is on the Action Log tab."
-        when: "the admin searches or paginates through the action log to find procedure calls by user, procedure type, status, or timestamp"
-        then: "The log table updates with matching rows (procedure name humanized, actor, target id, status, reason); rows can be expanded to copy full details (correlation id, raw payload)."
-        note: "Read-only tab. Logs manual-action-log-proof entries are filtered out (internal only). Cursor pagination with 20 rows per page. Procedure names are humanized (e.g. 'Admin: Save User')."
+        when: "the admin searches loaded rows by actor, humanized procedure, status, correlation, or displayed timestamp, expands a row, copies its whitelisted event details, and loads the next cursor page"
+        then: "The matching loaded rows remain visible; the expanded region shows the complete safe metadata, Copy announces its result, and Load more appends the remaining events without duplicates."
+        note: "Read-only tab. Search covers loaded rows only. Internal manual-action-log-proof entries are filtered before the page budget. Cursor pagination shows 20 rows per page."
       - id: admin-settings-configure
         intent: "Configure organization identity, period defaults, reminder defaults, notification settings, and external integrations."
         given: "The admin is on the Settings tab."
