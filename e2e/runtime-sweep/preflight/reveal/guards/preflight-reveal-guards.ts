@@ -7,7 +7,8 @@ import {
 } from "../../../support/resolver-outcome-expectations.ts";
 import {
   canonicalRevealUrlFor,
-  revealNonMutationProofSchema,
+  isUnchangedRevealNonMutationProof,
+  type RevealNonMutationProof,
   type RevealSurface,
   revealSurfaceFor,
 } from "../../reveal-path.ts";
@@ -224,10 +225,15 @@ export const assertInitialInventory = (
     );
 };
 
-export const assertNonMutation = (execution: RevealExecution): void => {
-  const proof = revealNonMutationProofSchema.safeParse(execution.nonMutation);
-  if (!proof.success || proof.data.beforeDigest !== proof.data.afterDigest)
+export const assertRevealNonMutationProof = (
+  nonMutation: RevealNonMutationProof,
+): void => {
+  if (!isUnchangedRevealNonMutationProof(nonMutation))
     throw new RevealDiscoveryError(
       "Reveal action lacks an unchanged database-oracle proof",
     );
+};
+
+export const assertNonMutation = (execution: RevealExecution): void => {
+  assertRevealNonMutationProof(execution.nonMutation);
 };

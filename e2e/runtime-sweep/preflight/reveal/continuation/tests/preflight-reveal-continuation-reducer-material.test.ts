@@ -155,6 +155,24 @@ describe("R188 material-branch reducer", () => {
           chunk: firstChunk.result.chunk,
           ordinal: 0,
         });
+        await expect(
+          runChunk({
+            source,
+            state,
+            route,
+            root,
+            nested,
+            grant: sealed.grant,
+            expectedGrantDigest: sealed.grant.grantDigest,
+            nonMutation: {
+              status: "unchanged",
+              beforeDigest: "e".repeat(64),
+              afterDigest: "f".repeat(64),
+            },
+            now: () => 0,
+            deadlineAt: 10_000,
+          }),
+        ).rejects.toThrow(/unchanged database-oracle proof/iu);
         const resumed = await runChunk({
           source,
           state,
@@ -163,6 +181,11 @@ describe("R188 material-branch reducer", () => {
           nested,
           grant: sealed.grant,
           expectedGrantDigest: sealed.grant.grantDigest,
+          nonMutation: {
+            status: "unchanged",
+            beforeDigest: "e".repeat(64),
+            afterDigest: "e".repeat(64),
+          },
           now: () => 0,
           deadlineAt: 10_000,
         });
@@ -197,6 +220,11 @@ describe("R188 material-branch reducer", () => {
               nested: inventoryFor([controlFor("button:n-first:0", "Nested action", 0)]),
               grant,
               expectedGrantDigest: grant.grantDigest,
+              nonMutation: {
+                status: "unchanged",
+                beforeDigest: "${"f".repeat(64)}",
+                afterDigest: "${"f".repeat(64)}",
+              },
               now: () => 0,
               deadlineAt: 10000,
             });

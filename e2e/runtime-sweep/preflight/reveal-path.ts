@@ -91,6 +91,13 @@ export const revealNonMutationProofSchema = z
   })
   .strict();
 
+export const isUnchangedRevealNonMutationProof = (
+  value: unknown,
+): value is RevealNonMutationProof => {
+  const parsed = revealNonMutationProofSchema.safeParse(value);
+  return parsed.success && parsed.data.beforeDigest === parsed.data.afterDigest;
+};
+
 const revealStepSchema = actionSchema
   .extend({
     before: revealSurfaceSchema,
