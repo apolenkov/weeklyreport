@@ -7,7 +7,7 @@ import {
 import { canonicalRevealUrlFor } from "../../reveal-path.ts";
 import { R188_WIRE_VERSION } from "./preflight-reveal-continuation-digests.ts";
 
-/** R192 wire version. Legacy cumulative continuation records are not accepted. */
+/** R197 wire version. Legacy continuation records without record lineage are rejected. */
 export const PREFLIGHT_REVEAL_CONTINUATION_VERSION = R188_WIRE_VERSION;
 export const PREFLIGHT_REVEAL_EXECUTION_GRANT =
   "PREFLIGHT_REVEAL_EXECUTION_GRANT" as const;

@@ -184,6 +184,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
       decisions: [
         {
           id: "d1",
+          stableId: "88888888-8888-4888-8888-888888888888",
           text: "Approve Redis cluster",
           owner: "Head",
           impact: "Caching",
@@ -192,6 +193,8 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     });
 
     const mapped = mapLeadDecisions(section).at(0);
+    expect(mapped?.id).toBe("d1");
+    expect(mapped?.stableId).toBe("88888888-8888-4888-8888-888888888888");
     expect(mapped?.text).toBe("Approve Redis cluster");
     expect(mapped?.productName).toBe("Group");
   });

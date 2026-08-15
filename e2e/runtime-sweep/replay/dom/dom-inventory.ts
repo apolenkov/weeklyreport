@@ -37,6 +37,7 @@ export interface DomControlObservation {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly recordStableId?: string | undefined;
   readonly interactionEffect?: RuntimeInteractionEffect;
   readonly keyboardExpectedFocusable?: boolean;
   readonly keyboardFocusPolicy?: KeyboardFocusPolicy;
@@ -60,6 +61,7 @@ interface RawDomElement {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly recordStableId: string | null;
   readonly interactionEffect: string | null;
   readonly ariaLabel: string | null;
   readonly labelledByText: string | null;
@@ -126,6 +128,7 @@ const controlFrom = (
 ): DomControlObservation => {
   const accessibleName = accessibleNameFor(element);
   const interactionEffect = interactionEffectFor(element.interactionEffect);
+  const recordStableId = normalizeText(element.recordStableId);
   const controlKey = [
     element.role,
     encodeURIComponent(accessibleName || "(unnamed)"),
@@ -143,6 +146,7 @@ const controlFrom = (
     tagName: element.tagName,
     inputType: element.inputType,
     href: element.href,
+    ...(recordStableId === "" ? {} : { recordStableId }),
     ...(interactionEffect === undefined ? {} : { interactionEffect }),
     ...(element.keyboardExpectedFocusable === undefined
       ? {}

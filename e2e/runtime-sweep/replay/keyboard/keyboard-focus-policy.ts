@@ -79,7 +79,8 @@ export const KEYBOARD_FOCUS_POLICY_SCRIPT = `
   return entries.map((entry) => {
     const keyboardFocusPolicy = focusPolicyFor(entry);
     return { role: entry.role, tagName: entry.tagName, inputType: entry.inputType,
-      href: entry.href, interactionEffect: entry.interactionEffect,
+      href: entry.href, recordStableId: entry.recordStableId,
+      interactionEffect: entry.interactionEffect,
       ariaLabel: entry.ariaLabel, labelledByText: entry.labelledByText,
       labelText: entry.labelText, title: entry.title, imageAlt: entry.imageAlt,
       value: entry.value, text: entry.text, visible: entry.visible,

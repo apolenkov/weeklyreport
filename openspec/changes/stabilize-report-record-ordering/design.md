@@ -62,6 +62,20 @@ differ, but comparison semantics do not change. In particular, visible text
 remains content-addressed because it prevented structurally identical ordinal
 controls from being replayed against different domain records.
 
+### Bind editable decision occurrences to durable lineage
+
+The existing API `stableId` is carried through the decision presentation model
+to a non-visible `data-record-stable-id` attribute on the corresponding edit
+button. DOM inventory records that value separately from the accessible name,
+control key, and locator, so a persisted `Edit decision:N` retains ordinal
+addressing while its actual domain lineage is content-addressed by the inventory
+asset. A newly added client-side decision has no durable identity until the
+server persists it, so its transient edit control intentionally omits lineage.
+
+Adding lineage changes authenticated canonical bytes. The continuation
+wire/hash domain therefore advances from v4 to v5; v4 grants and assets cannot
+prove the new binding and are rejected rather than adapted.
+
 ## Data flow
 
 Before:
@@ -106,8 +120,9 @@ fresh reseed -> ordered child B genesis
   record writes.
 - Product ordering is determined before the React layer; the UI does not invent
   a second ordering rule.
-- Runtime genesis, grant, source, HMAC, and content-addressed asset validation
-  remain unchanged except for bounded mismatch diagnostics.
+- Runtime genesis equality, grant authority, source binding, HMAC validation,
+  and content-addressed validation remain strict. The v5 inventory additionally
+  authenticates optional record lineage without changing control addressing.
 - Seed changes operate only on guarded disposable development/test data.
 
 ## Verification strategy
@@ -115,9 +130,10 @@ fresh reseed -> ordered child B genesis
 Focused static tests inspect the shared include contract and canonical seed row
 builders. API tests prove the three nested relations request ascending
 `stableId` ordering. Seed tests prove deterministic `id`/`stableId` output and
-cover simple plus full-profile overlay records. Runtime tests prove a visible
-text-only ordering mismatch still fails before execution and reports the exact
-genesis field.
+cover simple plus full-profile overlay records. Runtime tests prove both that a
+visible-text-only ordering mismatch fails before execution and that matching
+ordinal-to-lineage mappings resume while swapped lineage with otherwise
+identical controls and text fails before execution.
 
 After those tests and the repository gates pass, a clean exact-SHA canary must
 cross a real parent grant, independent reset/reseed, fresh child genesis, and

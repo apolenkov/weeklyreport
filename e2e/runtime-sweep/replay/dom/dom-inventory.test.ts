@@ -8,6 +8,7 @@ const rawButton = {
   tagName: "button",
   inputType: null,
   href: null,
+  recordStableId: null,
   interactionEffect: null,
   ariaLabel: "Submit",
   labelledByText: null,
@@ -66,5 +67,22 @@ describe("runtime DOM inventory", () => {
     await expect(inventoryDom(pageFor("unreviewed"))).rejects.toThrow(
       /unsupported data-interaction-effect/iu,
     );
+  });
+
+  it("keeps record lineage separate from accessible control identity", async () => {
+    const recordStableId = "88888888-8888-4888-8888-888888888888";
+    const page = {
+      evaluate: () => Promise.resolve([{ ...rawButton, recordStableId }]),
+    } as unknown as Page;
+
+    await expect(inventoryDom(page)).resolves.toMatchObject({
+      controls: [
+        {
+          accessibleName: "Submit",
+          controlKey: "button:Submit:1",
+          recordStableId,
+        },
+      ],
+    });
   });
 });

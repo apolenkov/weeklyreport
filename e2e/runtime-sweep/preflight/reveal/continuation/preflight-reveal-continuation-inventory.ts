@@ -24,6 +24,9 @@ export const serializableInventoryFor = (
       tagName: control.tagName,
       inputType: control.inputType,
       href: control.href,
+      ...(control.recordStableId === undefined
+        ? {}
+        : { recordStableId: control.recordStableId }),
       ...(control.interactionEffect === undefined
         ? {}
         : { interactionEffect: control.interactionEffect }),
@@ -61,6 +64,9 @@ export const domInventoryFor = (
     tagName: control.tagName,
     inputType: control.inputType,
     href: control.href,
+    ...(control.recordStableId === undefined
+      ? {}
+      : { recordStableId: control.recordStableId }),
     ...(control.interactionEffect === undefined
       ? {}
       : { interactionEffect: control.interactionEffect }),

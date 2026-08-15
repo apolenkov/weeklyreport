@@ -13,7 +13,7 @@
 
 - [x] 3.1 Preserve exact genesis equality and add bounded field-level sealed/fresh diagnostics without changing comparison semantics.
 - [x] 3.2 Add a negative continuation regression where controls remain identical but reordered visible record text is rejected before any action.
-- [ ] 3.3 Add a continuation regression binding each ordinal decision control to the same record across a fresh full-profile reset/reseed boundary.
+- [x] 3.3 Add a source-controlled fresh-child continuation regression that accepts matching ordinal decision lineage and rejects swapped lineage before execution.
 
 ## 4. Verification and evidence
 
