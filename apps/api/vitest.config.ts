@@ -10,6 +10,10 @@ export default mergeConfig(
       // Provide the product-critical env vars the app reads via requireEnv (the
       // schema has no defaults and vitest doesn't load .env). See the setup file.
       setupFiles: ["./src/test-utils/test-env.setup.ts"],
+      // Repository-wide TypeScript and ESLint gates allocate their own worker
+      // processes. Keep enough CPU headroom that those gates measure code
+      // defects instead of timing out behind the unit-test worker pool.
+      maxWorkers: 4,
       // Integration and eval suites have their own runner
       // (`vitest.integration.config.ts`, run with --fileParallelism=false), so
       // the default run stays unit-only.

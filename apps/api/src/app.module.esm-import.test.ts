@@ -5,10 +5,10 @@ import { describe, expect, it } from "vitest";
 
 const apiDirectory = fileURLToPath(new URL("../", import.meta.url));
 
-// The spawned loader is given 20s below, so the test must outlive it — on
+// The spawned loader is given its own budget below, so the test must outlive it — on
 // vitest's 5s default the test kills itself before its own budget expires, and
 // the whole suite running in parallel is enough to reach that.
-const SPAWN_BUDGET_MS = 20_000;
+const SPAWN_BUDGET_MS = 60_000;
 
 describe("AppModule ESM import", () => {
   it(

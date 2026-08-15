@@ -61,9 +61,9 @@
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/period/__tests__/lifecycle-write-gate.test.ts src/modules/period/domain/period-transition.test.ts",
       "exitCode": 0,
-      "sourceDigest": "0729a7626d825d5dce1087763fbd44ca7472be94834269deb9501be91a95ca23",
+      "sourceDigest": "3750b0c08620fd5d37ead05e8c5d937bb7f2bf11f3524a177033ba8d1bc9abc0",
       "summary": "2 files and 31 lifecycle ownership tests passed",
-      "rerunAt": "2026-08-04T06:06:23.762Z"
+      "rerunAt": "2026-08-15T18:09:22.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/project-activity/project-activity.transaction.test.ts src/modules/project-activity/project-activity.prisma-repository.concurrent.test.ts",
