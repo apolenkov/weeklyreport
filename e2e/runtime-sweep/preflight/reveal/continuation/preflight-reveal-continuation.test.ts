@@ -95,4 +95,43 @@ describe("R188 v3 reveal continuation", () => {
       assertReceiptChunkContract(result.result.chunk);
     });
   });
+
+  it("reuses the live nested branch after freezing its select input", async () => {
+    await withSource(async (source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const { route } = selectionFor(source, state.stateId);
+      const events: string[] = [];
+      const nested = inventoryFor([
+        {
+          ...controlFor("select:nested:0", "Nested parent", 0),
+          role: "combobox",
+          tagName: "select",
+        },
+      ]);
+
+      await runChunk({
+        source,
+        state,
+        route,
+        root: inventoryFor([controlFor("button:a-open:0", "Open panel", 0)]),
+        nested,
+        eventSink: events,
+        now: () => 0,
+        deadlineAt: 10_000,
+      });
+
+      expect(
+        events.filter(
+          (event) =>
+            event.startsWith("execute:") || event.startsWith("freeze:"),
+        ),
+      ).toEqual([
+        "execute:button:a-open:0",
+        "execute:button:a-open:0",
+        "freeze:select:nested:0",
+        "execute:select:nested:0",
+      ]);
+    });
+  });
 });

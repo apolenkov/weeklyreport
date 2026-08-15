@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const preflightMocks = vi.hoisted(() => ({
   createPlaywrightRevealExecutor: vi.fn(),
+  createPlaywrightRevealRepresentativeInputFreezer: vi.fn(),
   inventoryDom: vi.fn(),
 }));
 
@@ -16,6 +17,8 @@ vi.mock("../../replay/dom/dom-inventory.ts", async (importOriginal) => ({
 }));
 vi.mock("./playwright-reveal-execution.ts", () => ({
   createPlaywrightRevealExecutor: preflightMocks.createPlaywrightRevealExecutor,
+  createPlaywrightRevealRepresentativeInputFreezer:
+    preflightMocks.createPlaywrightRevealRepresentativeInputFreezer,
 }));
 
 import {
