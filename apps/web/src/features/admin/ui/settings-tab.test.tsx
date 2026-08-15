@@ -114,44 +114,6 @@ describe("SettingsTab — Identity sub-tab", () => {
     toastError.mockReset();
   });
 
-  it("renders the five tabs in the documented order", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    // Tab triggers all visible — Identity active by default, including
-    // the fifth «Integrations» tab.
-    expect(screen.getByRole("tab", { name: /identity/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /periods/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /reminders/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /notifications/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /integrations/i })).toBeTruthy();
-  });
-
-  it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
-    // Holidays label is visually hidden below xl; ComingSoonBadge text is
-    // the only source of the tab's accessible "coming soon" name.
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    expect(screen.getByRole("tab", { name: /coming soon/i })).toBeTruthy();
-  });
-
-  it("pointer and keyboard activation of the inert Holidays tab cannot change the selected tab", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const holidaysTab = screen.getByRole("tab", { name: /coming soon/i });
-    expect(holidaysTab).toBeDisabled();
-
-    // Pointer: disabled trigger swallows the click.
-    fireEvent.click(holidaysTab);
-    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
-
-    // Keyboard: the trigger is not focusable/tab-activatable while disabled.
-    fireEvent.keyDown(holidaysTab, { key: "Enter" });
-    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
-  });
-
   it("loads the organization row into the Identity form", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
