@@ -24,10 +24,10 @@ import {
 } from "../guards/preflight-reveal-guards.ts";
 import { revealStatePathIdentityFor } from "../guards/preflight-reveal-registration.ts";
 import {
-  processRevealQueue,
   type RevealCandidate,
   type RevealDiscoveryState,
 } from "./preflight-reveal-branches.ts";
+import { processRevealQueue } from "./preflight-reveal-queue.ts";
 import {
   classifyRevealTransition,
   representativeInputFor,
@@ -56,12 +56,12 @@ const sortedControls = (
     return byKey || stableSerialize(left).localeCompare(stableSerialize(right));
   });
 
-const plansFor = (inventory: DomInventory): readonly LiveControlPlan[] =>
+export const plansFor = (inventory: DomInventory): readonly LiveControlPlan[] =>
   planLiveControlActions(sortedControls(inventory.controls), {
     formSafety: "disposable-reset",
   });
 
-const revealCandidates = (
+export const revealCandidatesFor = (
   inventory: DomInventory,
   route: RevealRoute,
 ): readonly RevealCandidate[] => {
@@ -102,7 +102,7 @@ const revealCandidates = (
     );
 };
 
-type RevealDiscoveryInput = Readonly<{
+export type RevealDiscoveryInput = Readonly<{
   readonly state: CampaignMatrixState;
   readonly route: RevealRoute;
   readonly initialInventory: DomInventory;
@@ -142,8 +142,8 @@ const revealBoundsFor = (
   return { maxDepth, maxRevealMaterialEdges, maxRevealActions };
 };
 
-const initialRevealStateFor = (
-  input: RevealDiscoveryInput,
+export const initialRevealStateFor = (
+  input: Pick<RevealDiscoveryInput, "initialInventory" | "controlFor">,
   initialSurface: ReturnType<typeof revealSurfaceFor>,
   initialUrl: string,
 ): RevealDiscoveryState => {
@@ -226,7 +226,7 @@ export async function discoverRevealControls(
       harness: input.harness,
       controlFor: input.controlFor,
       plansFor,
-      candidatesFor: (inventory) => revealCandidates(inventory, input.route),
+      candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
       maxDepth,
       maxRevealMaterialEdges,
       maxRevealActions,

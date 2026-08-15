@@ -1,3 +1,4 @@
+import { access } from "node:fs/promises";
 import * as path from "node:path";
 
 import { expect, test } from "@playwright/test";
@@ -5,15 +6,18 @@ import { expect, test } from "@playwright/test";
 import { readSourceArtifact } from "../source/source-artifact.ts";
 import {
   assertLivePreflightSourceIdentity,
-  createPreflightCanaryBlocked,
-  createPreflightCanaryFailure,
-  createPreflightCanaryPass,
   preflightCanarySelectorFromEnvironment,
   resolvePreflightCampaignKind,
   resolvePreflightCanarySelection,
-  writePreflightCanaryArtifact,
 } from "./canary/preflight-canary.ts";
-import { runPlaywrightPreflightSegment } from "./execution/playwright-preflight.ts";
+import { runPlaywrightPreflightRevealContinuationChunk } from "./execution/playwright-preflight-continuation.ts";
+import {
+  hydrateRevealContinuationAssets,
+  readRevealContinuationGrant,
+  writeRevealBootstrap,
+  writeRevealReceiptChunk,
+} from "./reveal/continuation/preflight-reveal-continuation-io.ts";
+import { assertRevealExecutionGrantInput } from "./reveal/continuation/preflight-reveal-continuation-runner.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
 const requiredEnv = (name: string): string => {
@@ -24,12 +28,23 @@ const requiredEnv = (name: string): string => {
 
 const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
 const canaryPath = path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"));
+const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const databaseUrl = requiredEnv("E2E_DATABASE_URL");
 const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
 const apiUrl = `http://127.0.0.1:${requiredEnv("E2E_API_PORT")}`;
 const webOrigin = `http://127.0.0.1:${requiredEnv("E2E_WEB_PORT")}`;
 
 const expectedSourceSha = process.env.RUNTIME_SWEEP_CANARY_SOURCE_SHA?.trim();
+const continuationInputPath =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_INPUT?.trim();
+const continuationOutputPath =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT?.trim();
+const continuationAttemptId =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ID?.trim();
+const continuationExpectedGrantDigest =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_EXPECTED_GRANT_DIGEST?.trim();
+const continuationDeadlineAt =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT?.trim();
 
 test("exact-state preflight canary reuses the full segment runner", async ({
   page,
@@ -48,35 +63,22 @@ test("exact-state preflight canary reuses the full segment runner", async ({
     throw new Error("Initial campaigns cannot run a repair canary");
   const selector = preflightCanarySelectorFromEnvironment(process.env);
 
-  let selection!: ReturnType<typeof resolvePreflightCanarySelection>;
-  try {
-    await assertLivePreflightSourceIdentity({
-      source,
-      repoRoot,
-      ...(expectedSourceSha === undefined ? {} : { expectedSourceSha }),
-    });
-    selection =
-      expectedSourceSha === undefined
-        ? resolvePreflightCanarySelection({
-            source,
-            selector,
-          })
-        : resolvePreflightCanarySelection({
-            source,
-            selector,
-            expectedSourceSha,
-          });
-  } catch (error: unknown) {
-    await writePreflightCanaryArtifact(
-      canaryPath,
-      createPreflightCanaryBlocked({
-        source,
-        selector,
-        error,
-      }),
-    );
-    throw error;
-  }
+  await assertLivePreflightSourceIdentity({
+    source,
+    repoRoot,
+    ...(expectedSourceSha === undefined ? {} : { expectedSourceSha }),
+  });
+  const selection =
+    expectedSourceSha === undefined
+      ? resolvePreflightCanarySelection({
+          source,
+          selector,
+        })
+      : resolvePreflightCanarySelection({
+          source,
+          selector,
+          expectedSourceSha,
+        });
 
   const prepare = createPreflightRuntimePreparation({
     source,
@@ -85,33 +87,74 @@ test("exact-state preflight canary reuses the full segment runner", async ({
     repoRoot,
     apiUrl,
   });
-  let result!: Awaited<ReturnType<typeof runPlaywrightPreflightSegment>>;
-  try {
-    result = await runPlaywrightPreflightSegment({
-      source,
-      state: selection.state,
-      page,
-      expectedOrigin: webOrigin,
-      prepare,
-      resetRequired: true,
-    });
-  } catch (error: unknown) {
-    await writePreflightCanaryArtifact(
-      canaryPath,
-      createPreflightCanaryFailure({
-        source,
-        selection,
-        error,
-      }),
+  if (continuationOutputPath === undefined)
+    throw new Error(
+      "Preflight canary PASS requires the reveal continuation parent",
     );
-    throw error;
+  if (continuationAttemptId === undefined)
+    throw new Error("Reveal continuation child requires a parent attempt id");
+  if (
+    (continuationInputPath === undefined) !==
+    (continuationExpectedGrantDigest === undefined)
+  )
+    throw new Error(
+      "Reveal continuation input and expected grant digest must be provided together",
+    );
+  const grant =
+    continuationInputPath === undefined
+      ? undefined
+      : await readRevealContinuationGrant({
+          archiveRoot,
+          filePath: continuationInputPath,
+        });
+  if (continuationInputPath !== undefined && grant === undefined)
+    throw new Error("Reveal continuation input grant is missing");
+  if (continuationInputPath !== undefined) {
+    if (continuationExpectedGrantDigest === undefined)
+      throw new Error(
+        "Reveal continuation child requires the expected sealed grant digest",
+      );
+    if (grant === undefined)
+      throw new Error("Reveal continuation input grant is missing");
+    assertRevealExecutionGrantInput({
+      grant,
+      expectedGrantDigest: continuationExpectedGrantDigest,
+    });
+    await hydrateRevealContinuationAssets({ archiveRoot, grant });
   }
-
-  const artifact = createPreflightCanaryPass({
+  const chunk = await runPlaywrightPreflightRevealContinuationChunk({
     source,
-    selection,
-    segment: result.segment,
+    archiveRoot,
+    state: selection.state,
+    page,
+    expectedOrigin: webOrigin,
+    prepare,
+    ...(grant === undefined ? {} : { grant }),
+    attemptId: continuationAttemptId,
+    ...(continuationExpectedGrantDigest === undefined
+      ? {}
+      : {
+          expectedGrantDigest: continuationExpectedGrantDigest,
+        }),
+    ...(continuationDeadlineAt === undefined
+      ? {}
+      : { deadlineAt: Number(continuationDeadlineAt) }),
+    chunkBudgetMs: Number(
+      process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHUNK_MS ??
+        String(30 * 60_000),
+    ),
   });
-  await writePreflightCanaryArtifact(canaryPath, artifact);
-  expect(artifact.status).toBe("PASS");
+  if (chunk.status === "BOOTSTRAP")
+    await writeRevealBootstrap({
+      archiveRoot,
+      filePath: continuationOutputPath,
+      bootstrap: chunk.bootstrap,
+    });
+  else
+    await writeRevealReceiptChunk({
+      archiveRoot,
+      filePath: continuationOutputPath,
+      chunk: chunk.chunk,
+    });
+  await expect(access(continuationOutputPath)).resolves.toBeUndefined();
 });

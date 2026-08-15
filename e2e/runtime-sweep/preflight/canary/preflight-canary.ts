@@ -1,5 +1,4 @@
 export {
-  createPreflightCanaryBlocked,
   createPreflightCanaryFailure,
   createPreflightCanaryPass,
   parsePreflightCanaryArtifact,

@@ -1,5 +1,6 @@
 import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
 import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
+import type { RevealTransition } from "../../../matrix/reveal-transition.ts";
 import type { DomInventory } from "../../../replay/dom/dom-inventory.ts";
 import type { LiveControlPlan } from "../../../replay/live-control/live-control-planning.ts";
 import type { Action } from "../../../source/contracts.ts";
@@ -10,14 +11,11 @@ import {
   type RevealSurface,
 } from "../../reveal-path.ts";
 import {
-  candidatesForImmediateReveal,
   controlsForImmediateReveal,
   registerDynamicControls,
   registerVisitedRevealState,
   revealPathContainsState,
 } from "../guards/preflight-reveal-registration.ts";
-import { sameRevealSurfaceMaterial } from "../guards/reveal-surface-material.ts";
-import { branchFor } from "./preflight-reveal-branch-execution.ts";
 import type { RevealRepresentativeInput } from "./preflight-reveal-transition.ts";
 import {
   type RevealControlFactory,
@@ -36,7 +34,7 @@ export type RevealBranch = Readonly<{
   readonly inventory: DomInventory;
   readonly surface: RevealSurface;
   readonly url: string;
-  readonly preparation:
+  readonly preparation?:
     import("./preflight-reveal-types.ts").RevealPreparation | undefined;
 }>;
 
@@ -54,6 +52,30 @@ export type RevealDiscoveryState = Readonly<{
   readonly visitedStatePaths: ReadonlyMap<string, string>;
   readonly actionCount: number;
   readonly branchCount: number;
+  /** Runtime-only cursor fields; continuation checkpoints strip preparations. */
+  readonly currentBranch?: RevealBranch;
+  readonly currentCandidates?: readonly RevealCandidate[];
+  readonly currentCandidateIndex?: number;
+}>;
+
+export type RevealQueueChunkResult = Readonly<{
+  readonly state: RevealDiscoveryState;
+  readonly completed: boolean;
+  readonly currentBranch?: RevealBranch;
+  readonly remainingQueue?: readonly RevealBranch[];
+  readonly candidates?: readonly RevealCandidate[];
+  readonly nextCandidateIndex?: number;
+}>;
+
+export type RevealCandidateTerminalResult = Readonly<{
+  readonly candidate: RevealCandidate;
+  readonly result: Readonly<{
+    readonly branch: RevealBranch;
+    readonly transition: RevealTransition;
+    readonly explore: boolean;
+  }>;
+  readonly candidateIndex: number;
+  readonly materialChanged: boolean;
 }>;
 
 export interface RevealQueueInput {
@@ -71,6 +93,8 @@ export interface RevealQueueInput {
   readonly maxRevealActions: number;
 }
 
+export type RevealPureQueueInput = Omit<RevealQueueInput, "harness">;
+
 const preparationIdentityFor = (
   control: Pick<
     MatrixPreflightControl,
@@ -82,6 +106,28 @@ const preparationIdentityFor = (
     control.revealPath,
     control.expectedSurface,
   );
+
+export const revealCandidateAlreadyProcessed = (
+  state: RevealDiscoveryState,
+  current: RevealBranch,
+  candidate: RevealCandidate,
+): boolean => {
+  const identity = revealControlPreparationIdentityFor(
+    candidate.action.controlKey,
+    current.path,
+    current.surface,
+  );
+  const existing = state.controls.find(
+    (control) => preparationIdentityFor(control) === identity,
+  )?.expectedActionTransition;
+  if (existing !== undefined && existing !== null) return true;
+  return current.path.steps.some(
+    ({ controlKey, before, beforeUrl }) =>
+      controlKey === candidate.action.controlKey &&
+      before.digest === current.surface.digest &&
+      beforeUrl === current.url,
+  );
+};
 
 const exactPreparedControl = (
   controls: readonly MatrixPreflightControl[],
@@ -145,7 +191,7 @@ const nextTransitionBinding = (
   };
 };
 
-const controlsWithTransition = (
+export const controlsWithTransition = (
   controls: readonly MatrixPreflightControl[],
   branch: RevealBranch,
   action: Action,
@@ -171,8 +217,8 @@ const controlsWithTransition = (
   );
 };
 
-const enqueueChangedBranch = (input: {
-  readonly queueInput: RevealQueueInput;
+export const enqueueChangedBranch = (input: {
+  readonly queueInput: RevealPureQueueInput;
   readonly state: RevealDiscoveryState;
   readonly current: RevealBranch;
   readonly branch: RevealBranch;
@@ -207,87 +253,4 @@ const enqueueChangedBranch = (input: {
     discovered: registration.state.discovered,
     visitedStatePaths: visited.visitedStatePaths,
   };
-};
-
-export const processRevealQueue = async (
-  input: RevealQueueInput,
-  state: RevealDiscoveryState,
-): Promise<RevealDiscoveryState> => {
-  const [current, ...remaining] = state.queue;
-  if (current === undefined) return state;
-  const candidates = candidatesForImmediateReveal(input, current);
-  const processed = await candidates.reduce<Promise<RevealDiscoveryState>>(
-    (promise, candidate) =>
-      promise.then((nextState) =>
-        processRevealCandidate(input, current, nextState, candidate),
-      ),
-    Promise.resolve<RevealDiscoveryState>({ ...state, queue: remaining }),
-  );
-  return processRevealQueue(input, processed);
-};
-
-const processRevealCandidate = async (
-  input: RevealQueueInput,
-  current: RevealBranch,
-  state: RevealDiscoveryState,
-  candidate: RevealCandidate,
-): Promise<RevealDiscoveryState> => {
-  const identity = revealControlPreparationIdentityFor(
-    candidate.action.controlKey,
-    current.path,
-    current.surface,
-  );
-  const existing = state.controls.find(
-    (control) => preparationIdentityFor(control) === identity,
-  )?.expectedActionTransition;
-  if (existing !== undefined && existing !== null) return state;
-  if (
-    current.path.steps.some(
-      ({ controlKey, before, beforeUrl }) =>
-        controlKey === candidate.action.controlKey &&
-        before.digest === current.surface.digest &&
-        beforeUrl === current.url,
-    )
-  )
-    return state;
-  const actionCount = state.actionCount + current.path.steps.length + 1;
-  if (actionCount > input.maxRevealActions)
-    throw new RevealDiscoveryError("Reveal action bound exceeded");
-  const result = await branchFor({
-    harness: input.harness,
-    state: input.state,
-    route: input.route,
-    initialSurface: input.initialSurface,
-    branch: current,
-    candidate,
-  });
-  const branch = result.branch;
-  const materialChanged =
-    result.explore &&
-    !(
-      sameRevealSurfaceMaterial(current.surface, branch.surface) &&
-      current.url === branch.url
-    );
-  const branchCount = state.branchCount + (materialChanged ? 1 : 0);
-  const transitioned = {
-    ...state,
-    controls: controlsWithTransition(
-      state.controls,
-      current,
-      candidate.action,
-      result.transition,
-      result.branch.surface,
-    ),
-    actionCount,
-    branchCount,
-  };
-  if (materialChanged && branchCount > input.maxRevealMaterialEdges)
-    throw new RevealDiscoveryError("Reveal material edge bound exceeded");
-  if (!materialChanged) return transitioned;
-  return enqueueChangedBranch({
-    queueInput: input,
-    state: transitioned,
-    current,
-    branch,
-  });
 };

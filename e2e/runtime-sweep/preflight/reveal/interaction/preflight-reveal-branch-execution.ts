@@ -245,7 +245,16 @@ export const branchFor = async (
       explore,
     };
   if (sameRevealSurface(reset.surface, surface) && reset.url === executionUrl)
-    return { branch: reset, transition, explore };
+    return {
+      branch: {
+        ...reset,
+        inventory: execution.inventory,
+        surface,
+        url: executionUrl,
+      },
+      transition,
+      explore,
+    };
   const step = revealStepFor(
     input.candidate.action,
     reset.surface,

@@ -17,7 +17,6 @@ import {
   type PreflightCanarySelection,
   type PreflightCanarySelector,
 } from "./preflight-canary-contract.ts";
-import { preflightCanarySelectorFromEnvironment } from "./preflight-canary-selection.ts";
 
 const digestBody = (
   artifact: PreflightCanaryArtifact,
@@ -242,29 +241,6 @@ export function createPreflightCanaryFailure(input: {
       status: "FAIL" as const,
       route: routeForSelection(input.selection),
       phase: input.phase ?? "unknown",
-      error: errorFor(input.error),
-    }),
-  );
-}
-
-export function createPreflightCanaryBlocked(input: {
-  readonly source: SourceArtifact;
-  readonly selector: unknown;
-  readonly error: unknown;
-  readonly capturedAt?: string;
-}): PreflightCanaryArtifact {
-  const selector = preflightCanarySelectorFromEnvironment({
-    RUNTIME_SWEEP_CANARY_SELECTOR: JSON.stringify(input.selector),
-  });
-  return parsePreflightCanaryArtifact(
-    bodyWithCanaryDigest({
-      ...identityFor(
-        input.source,
-        selector,
-        input.capturedAt ?? currentTimestamp(),
-      ),
-      status: "BLOCKED" as const,
-      phase: "selection" as const,
       error: errorFor(input.error),
     }),
   );
