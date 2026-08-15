@@ -175,6 +175,37 @@ function makeReviewableData(): ReturnType<typeof makeWeeklyReportData> {
   };
 }
 
+function makeDraftOnlyReviewableData(): ReturnType<
+  typeof makeWeeklyReportData
+> {
+  const base = makeReviewableData();
+  return {
+    ...base,
+    leadSections: base.leadSections.map((section) => ({
+      ...section,
+      status: "draft" as const,
+      submittedAt: null,
+    })),
+  };
+}
+
+function makeMixedReviewableData(): ReturnType<typeof makeWeeklyReportData> {
+  const base = makeReviewableData();
+  const submittedSection = base.leadSections.at(0);
+  if (!submittedSection) {
+    throw new Error("Expected a reviewable section fixture");
+  }
+  const draftSection = {
+    ...submittedSection,
+    reportSectionId: "22222222-2222-4222-8222-bbbbbbbbbbb2",
+    authorId: "11111111-1111-4111-8111-bbbbbbbbbbbb",
+    authorName: "Bob",
+    status: "draft" as const,
+    submittedAt: null,
+  };
+  return { ...base, leadSections: [...base.leadSections, draftSection] };
+}
+
 describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -249,6 +280,33 @@ describe("WeeklyReportPage — review-mode split (report-review-mode)", () => {
     expect(
       screen.queryByRole("button", { name: "Read" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers no review-mode toggle for draft-only review capability", async () => {
+    renderPage(makeDraftOnlyReviewableData(), undefined, "head");
+
+    await screen.findByRole("heading", { name: "Status Report" });
+    expect(
+      screen.queryByRole("button", { name: "Review" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Section reviews" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps mixed review state limited to submitted sections", async () => {
+    renderPage(makeMixedReviewableData(), undefined, "head");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Review" }),
+    );
+
+    const band = await screen.findByRole("region", { name: "Section reviews" });
+    expect(within(band).getByText("Alice")).toBeInTheDocument();
+    expect(within(band).queryByText("Bob")).not.toBeInTheDocument();
+    expect(
+      within(band).getAllByRole("button", { name: "Approve" }),
+    ).toHaveLength(1);
   });
 
   it("keeps the Agent-review placeholder rendered in both read and review mode", async () => {

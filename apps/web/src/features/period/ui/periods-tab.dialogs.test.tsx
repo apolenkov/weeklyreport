@@ -192,6 +192,20 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     vi.clearAllMocks();
   });
 
+  it("marks period end as required in edit mode in label, native, and ARIA semantics", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId(`action-edit-${openRow.id}`));
+
+    const endInput = screen.getByTestId<HTMLInputElement>("periods-create-end");
+    const endLabel = document.querySelector('label[for="period-end"]');
+    expect(endLabel).toHaveTextContent(/Period end\s*\*/);
+    expect(endLabel).not.toHaveTextContent("(optional)");
+    expect(endInput).toBeRequired();
+    expect(endInput).toHaveAttribute("aria-required", "true");
+  });
+
   it("every row state exposes an Edit icon (unconditional)", async () => {
     renderTab();
     await waitFor(() => {
@@ -322,6 +336,25 @@ describe("PeriodsTab — «Edit period» dialog", () => {
     expect(screen.getByTestId("periods-create-submit")).not.toHaveTextContent(
       /create/i,
     );
+  });
+});
+
+describe("PeriodsTab — «New period» dialog period-end semantics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps period end optional in create mode in label, native, and ARIA semantics", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+
+    const endInput = screen.getByTestId<HTMLInputElement>("periods-create-end");
+    const endLabel = document.querySelector('label[for="period-end"]');
+    expect(endLabel).toHaveTextContent(/Period end\s*\(optional\)/);
+    expect(endInput).not.toBeRequired();
+    expect(endInput).toHaveAttribute("aria-required", "false");
   });
 });
 

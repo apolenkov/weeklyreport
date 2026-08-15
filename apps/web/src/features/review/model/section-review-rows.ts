@@ -14,6 +14,12 @@ export interface SectionReviewRow {
   readonly groupId: string | null;
 }
 
+export function isSubmittedReviewableSection(
+  section: Pick<SectionReviewRow, "status" | "canReview">,
+): boolean {
+  return section.canReview && section.status === "submitted";
+}
+
 // One projection feeds both the head roll-up strip and in-report verdict band.
 export function toSectionReviewRows(
   leadSections: WeeklyReportReadModel["leadSections"],

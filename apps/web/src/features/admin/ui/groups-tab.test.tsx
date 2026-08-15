@@ -179,6 +179,19 @@ describe("GroupsTab — a11y regression", () => {
     ).toHaveAttribute("data-interaction-effect", "mutation-required");
   });
 
+  it("bounds the dialog while keeping overflow inside its form body", () => {
+    renderTab();
+    openAddDialog();
+
+    expect(screen.getByRole("dialog")).toHaveClass(
+      "max-h-[90vh]",
+      "overflow-hidden",
+    );
+    expect(screen.getByTestId("group-dialog-body")).toHaveClass(
+      "overflow-y-auto",
+    );
+  });
+
   describe("backdrop click closes the dialog", () => {
     it("clicking the backdrop div removes data-testid='crud-sheet' from the DOM", async () => {
       renderTab();

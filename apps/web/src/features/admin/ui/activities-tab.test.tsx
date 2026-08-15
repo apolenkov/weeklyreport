@@ -150,16 +150,23 @@ describe("ActivitiesTab — rendering", () => {
     vi.clearAllMocks();
   });
 
-  it("lists each activity with its group, linked products and lead count", async () => {
-    renderTab();
+  it.each([
+    { leadIds: [], expectedCount: "0 leads" },
+    { leadIds: [LEAD_ID], expectedCount: "1 lead" },
+    { leadIds: [LEAD_ID, OTHER_LEAD_ID], expectedCount: "2 leads" },
+  ])(
+    "lists each activity with its group, linked products and lead count ($expectedCount)",
+    async ({ leadIds, expectedCount }) => {
+      renderTab({ activities: [{ ...activity, leadIds }] });
 
-    expect(await screen.findByText("Onboarding Revamp")).toBeInTheDocument();
-    expect(screen.getByText(/Group: Platform/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Linked products: Checkout · Jira: ACME/),
-    ).toBeInTheDocument();
-    expect(screen.getByText("0 leads")).toBeInTheDocument();
-  });
+      expect(await screen.findByText("Onboarding Revamp")).toBeInTheDocument();
+      expect(screen.getByText(/Group: Platform/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Linked products: Checkout · Jira: ACME/),
+      ).toBeInTheDocument();
+      expect(screen.getByText(expectedCount)).toBeInTheDocument();
+    },
+  );
 
   it("separates archived activities and offers Restore for them", async () => {
     renderTab({

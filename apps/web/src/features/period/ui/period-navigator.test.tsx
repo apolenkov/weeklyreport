@@ -125,6 +125,7 @@ describe("PeriodNavigator (lead)", () => {
     expect(navigation.className).toContain("md:basis-auto");
     expect(triggerContainer?.className).toContain("min-w-0");
     expect(triggerContainer?.className).toContain("flex-1");
+    expect(triggerContainer?.className).toContain("md:w-[24ch]");
   });
 
   describe("custom listbox", () => {
@@ -423,6 +424,29 @@ describe("PeriodNavigator (lead)", () => {
         />,
       );
       expect(screen.getByText("Submitted")).toBeInTheDocument();
+    });
+
+    it("widens the submitted trigger on desktop while preserving mobile reflow", () => {
+      render(
+        <PeriodNavigator
+          periods={PERIODS}
+          showLeadSubmissionMarkers
+          leadSubmittedAt={SUBMITTED_AT}
+        />,
+      );
+
+      const navigation = screen.getByRole("group", {
+        name: "Period navigation (swipe left/right or use arrows)",
+      });
+      const triggerContainer = getTrigger().parentElement;
+
+      expect(triggerContainer?.className).toContain("md:w-[32ch]");
+      expect(triggerContainer?.className).not.toContain("md:w-[24ch]");
+      expect(triggerContainer?.className).toContain("flex-1");
+      expect(navigation.className).toContain("basis-full");
+      expect(navigation.className).toContain("md:basis-auto");
+      expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
+      expect(within(getTrigger()).getByText("Submitted")).toBeInTheDocument();
     });
 
     it("does not show the submitted marker when the flag is off (head/viewer)", () => {

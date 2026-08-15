@@ -4,6 +4,7 @@ export type {
   ReviewModel,
 } from "./model/report-review-model";
 export { buildReviewModel, isReviewEnabled } from "./model/report-review-model";
+export { isSubmittedReviewableSection } from "./model/section-review-rows";
 export { LeadReviewFeedback } from "./ui/comments/lead-review-feedback";
 export { ReviewedRow } from "./ui/comments/reviewed-row";
 export { ReopenTab } from "./ui/reopen-tab";
