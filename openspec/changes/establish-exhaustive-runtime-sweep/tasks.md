@@ -219,11 +219,13 @@
       prove exact-limit success, plus-one rejection, and live/parent-replay
       parity without trimming controls or emitting continuation/canary evidence
       on overflow.
-- [ ] 5.17 Add a separately identified, exact-source capacity survey with
-      explicit graph, wall-time, child, per-file, and aggregate archive limits.
-      It may publish terminal counts only after the parent reducer proves an
-      empty frontier, never writes or satisfies canary acceptance, and must be
-      completed before replacing the production reveal limits.
+- [ ] 5.17 Add a separately identified, exact-source, single-child capacity
+      survey with explicit graph, wall-time, per-file, and aggregate archive
+      limits. Disable HAR, trace, video, screenshots, continuation assets, and
+      every canary/journal/PASS writer. It may publish terminal counts only
+      after the monolithic reveal queue proves an empty frontier, never writes
+      or satisfies acceptance evidence, and must be completed before replacing
+      the production reveal limits.
 
 ## 6. Immutable baseline and adjudication
 
