@@ -2,13 +2,18 @@ import { z } from "zod";
 
 import {
   type RevealPath,
+  revealPathSchema,
   type RevealSurface,
+  revealSurfaceSchema,
 } from "../../preflight/reveal-path.ts";
 import {
   type Action,
+  actionSchema,
   type CampaignManifest,
   type MatrixExecution,
   type MatrixExecutionInapplicable,
+  matrixExecutionSchema,
+  matrixInapplicableSchema,
   resolverOutcomeKindSchema,
   sha256DigestSchema,
 } from "../../source/contracts.ts";
@@ -16,7 +21,10 @@ import type {
   CampaignMatrixPlan,
   CampaignMatrixState,
 } from "../campaign-matrix.ts";
-import type { RevealTransition } from "../reveal-transition.ts";
+import {
+  type RevealTransition,
+  revealTransitionSchema,
+} from "../reveal-transition.ts";
 
 type Route = CampaignManifest["routes"][number];
 
@@ -48,6 +56,37 @@ export interface MatrixPreflightControl {
   readonly expectedActionTransition: RevealTransition | null;
   readonly expectedActionSurface: RevealSurface | null;
 }
+
+export const matrixPreflightControlSchema: z.ZodType<MatrixPreflightControl> = z
+  .object({
+    controlKey: z.string().min(1),
+    inventory: z
+      .object({
+        ariaRole: z.string().min(1),
+        accessibleName: z.string(),
+        enabled: z.boolean(),
+        order: z.number().int().nonnegative(),
+        domOrderKey: z.string().min(1),
+        href: z.string().nullable(),
+      })
+      .strict(),
+    action: actionSchema.optional(),
+    execution: matrixExecutionSchema.optional(),
+    inapplicable: matrixInapplicableSchema.optional(),
+    revealPath: revealPathSchema,
+    expectedSurface: revealSurfaceSchema,
+    expectedActionTransition: revealTransitionSchema.nullable(),
+    expectedActionSurface: revealSurfaceSchema.nullable(),
+  })
+  .strict()
+  .refine(
+    ({ action, execution, inapplicable }) =>
+      Number(action !== undefined) +
+        Number(execution !== undefined) +
+        Number(inapplicable !== undefined) ===
+      1,
+    "A preflight control must declare exactly one action, execution, or inapplicable reason",
+  );
 
 export interface MatrixPreflightEntry {
   readonly declarationId?: string | undefined;

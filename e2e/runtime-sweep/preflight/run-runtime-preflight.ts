@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import * as path from "node:path";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
@@ -18,7 +17,9 @@ import {
   type PreflightFullPaths,
   preparePreflightFullPaths,
 } from "./launch/preflight-launcher-support.ts";
+import { runPreflightPlaywrightChild } from "./launch/preflight-playwright-child.ts";
 import { runPreflightRepairChain } from "./launch/preflight-repair-chain.ts";
+import { runPreflightRevealContinuation } from "./launch/preflight-reveal-continuation-parent.ts";
 import {
   preflightShardChildEnvironment,
   preparePreflightShardLaunch,
@@ -34,17 +35,8 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const pnpmLauncher = (): Readonly<{
-  readonly command: string;
-  readonly leadingArgs: readonly string[];
-}> => {
-  const executable = requiredEnv("npm_execpath");
-  return /\.[cm]?js$/u.test(executable)
-    ? { command: process.execPath, leadingArgs: [executable] }
-    : { command: executable, leadingArgs: [] };
-};
-
 const mode = process.argv[2];
+
 const runShardPreflight = async (): Promise<number> => {
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
   const databaseUrl = requiredEnv("E2E_DATABASE_URL");
@@ -57,36 +49,9 @@ const runShardPreflight = async (): Promise<number> => {
     environment: process.env,
     repoRoot,
   });
-  const launcher = pnpmLauncher();
-  const child = spawn(
-    launcher.command,
-    [
-      ...launcher.leadingArgs,
-      "--filter",
-      "@customreport/web",
-      "exec",
-      "playwright",
-      "test",
-      "--config",
-      "../../e2e/runtime-sweep/preflight/playwright.preflight.config.ts",
-    ],
-    {
-      cwd: repoRoot,
-      env: preflightShardChildEnvironment(process.env, launch),
-      stdio: "inherit",
-    },
-  );
-  return new Promise<number>((resolve, reject) => {
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (signal !== null) {
-        reject(
-          new Error(`Runtime preflight shard terminated by signal ${signal}`),
-        );
-        return;
-      }
-      resolve(code ?? 1);
-    });
+  return runPreflightPlaywrightChild({
+    repoRoot,
+    environment: preflightShardChildEnvironment(process.env, launch),
   });
 };
 
@@ -155,12 +120,12 @@ if (mode === "shard") {
     requiredEnv("RUNTIME_SWEEP_SOURCE"),
   );
   const source = await readSourceArtifact(sourcePath);
-
   if (launchMode === "canary")
     await assertArchiveFile(
       "RUNTIME_SWEEP_PREFLIGHT_CANARY",
       requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"),
     );
+
   const prepareFullPreflight = async (): Promise<PreflightFullPaths> => {
     const preflightPath = await assertArchiveFile(
       "RUNTIME_SWEEP_PREFLIGHT",
@@ -190,7 +155,8 @@ if (mode === "shard") {
       segmentRoot,
     });
   };
-  const launchGateInput = {
+
+  await assertPreflightLaunchGate({
     mode: launchMode,
     source,
     repoRoot,
@@ -205,52 +171,43 @@ if (mode === "shard") {
     ...(process.env.RUNTIME_SWEEP_CANARY_SOURCE_SHA === undefined
       ? {}
       : { expectedSourceSha: process.env.RUNTIME_SWEEP_CANARY_SOURCE_SHA }),
-  } as const;
-  await assertPreflightLaunchGate(launchGateInput);
+  });
+
   const initialFullPreflight =
     mode === "full" ? await prepareFullPreflight() : undefined;
-
   const runPlaywright = (
     preflightMode: PreflightLaunchMode,
     fullPreflight?: PreflightFullPaths,
-  ): Promise<number> => {
-    const launcher = pnpmLauncher();
-    const child = spawn(
-      launcher.command,
-      [
-        ...launcher.leadingArgs,
-        "--filter",
-        "@customreport/web",
-        "exec",
-        "playwright",
-        "test",
-        "--config",
-        "../../e2e/runtime-sweep/preflight/playwright.preflight.config.ts",
-      ],
-      {
-        cwd: repoRoot,
-        env: preflightChildEnvironment(
-          process.env,
-          preflightMode,
-          fullPreflight,
-        ),
-        stdio: "inherit",
+    extraEnvironment?: NodeJS.ProcessEnv,
+  ): Promise<number> =>
+    runPreflightPlaywrightChild({
+      repoRoot,
+      environment: {
+        ...preflightChildEnvironment(process.env, preflightMode, fullPreflight),
+        ...extraEnvironment,
       },
-    );
-    return new Promise<number>((resolve, reject) => {
-      child.once("error", reject);
-      child.once("exit", (code, signal) => {
-        if (signal !== null) {
-          reject(new Error(`Runtime preflight terminated by signal ${signal}`));
-          return;
-        }
-        resolve(code ?? 1);
-      });
+    });
+
+  const runRevealCanary = (): Promise<number> => {
+    if (selector === undefined)
+      throw new Error(
+        "Reveal continuation parent requires an exact canary selector",
+      );
+    return runPreflightRevealContinuation({
+      source,
+      repoRoot,
+      archiveRoot,
+      canaryPath: assertArchiveOutput(
+        "RUNTIME_SWEEP_PREFLIGHT_CANARY",
+        requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"),
+      ),
+      selector,
+      runPlaywright,
     });
   };
 
   if (mode === "canary") {
-    process.exitCode = await runPlaywright("canary");
+    process.exitCode = await runRevealCanary();
   } else if (mode === "full") {
     if (initialFullPreflight === undefined)
       throw new Error("Initial full preflight paths were not prepared");
@@ -261,7 +218,7 @@ if (mode === "shard") {
       requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"),
     );
     process.exitCode = await runPreflightRepairChain({
-      runCanary: () => runPlaywright("canary"),
+      runCanary: runRevealCanary,
       readCanary: () => readPreflightCanaryArtifact(canaryPath),
       assertCanary: (canary) => {
         assertPreflightCanaryPassForSource({

@@ -194,6 +194,26 @@
       trace DOM snapshots/screenshots; prove the policy does not trim reveal or
       runtime-cell coverage and rerun the exact R182 timeout state before
       marking this task complete.
+- [ ] 5.15 Preserve completed reveal-discovery candidates across bounded child
+      chunks with immutable terminal-candidate receipt chunks containing only
+      disjoint suffixes and a pure deterministic parent-owned reducer: amend
+      the contract/design, bind source/tree/plan/state/selector/route/
+      initial-surface identities and a fresh parent attempt, enforce canonical
+      receipt/chunk digests, atomic archive-confined raw IO, parent-only HMAC
+      execution grants, and source-derived finite no-progress guards.
+      Permit one authority-free receiptless bootstrap only for ordinal zero,
+      no grant, a zero chain, and a parent-revalidated empty initial frontier;
+      require the parent to re-derive its genesis, source bounds, reducer state,
+      and controls before signing the zero-chain parent PASS.
+      Recreate a fresh disposable database/browser boundary, replay the next
+      branch's canonical path, and prove uninterrupted versus split equivalence
+      plus tamper, reorder, omission, duplicate, stale-source, synthetic
+      rehash, last-candidate, and canonical IO rejection. The child emits no
+      PASS; the parent alone reduces the suffix to an empty frontier and writes
+      the parent PASS/canary PASS. Any nonzero child exit terminates the current
+      attempt. This implementation is exact-canary-only; full/shard journal
+      continuation remains explicitly NOT-PROVEN and no grant, chunk, or
+      canary artifact crosses execution scope.
 
 ## 6. Immutable baseline and adjudication
 

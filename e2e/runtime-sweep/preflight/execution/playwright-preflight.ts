@@ -78,7 +78,7 @@ const entriesFor = (source: SourceArtifact): readonly PreflightEntry[] =>
       );
     });
 
-const revealHarnessFor = (
+export const revealHarnessFor = (
   harness: BrowserPreflightHarness,
 ): RevealExecutionHarness => ({
   prepare: (state, revealRoute) =>
@@ -194,7 +194,7 @@ export async function runBrowserPreflight(input: {
   });
 }
 
-const playwrightHarnessFor = (input: {
+export const playwrightHarnessFor = (input: {
   readonly source: SourceArtifact;
   readonly page: Page;
   readonly expectedOrigin: string;

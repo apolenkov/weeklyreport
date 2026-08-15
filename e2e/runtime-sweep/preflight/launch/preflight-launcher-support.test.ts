@@ -32,6 +32,28 @@ const withSource = async <T>(
 };
 
 describe("runtime preflight launcher boundaries", () => {
+  it("routes repair canaries through the parent and forbids child-authored PASS", async () => {
+    const [launcher, child] = await Promise.all([
+      readFile(
+        path.resolve(import.meta.dirname, "..", "run-runtime-preflight.ts"),
+        "utf8",
+      ),
+      readFile(
+        path.resolve(import.meta.dirname, "..", "preflight-canary.spec.ts"),
+        "utf8",
+      ),
+    ]);
+    expect(launcher).toMatch(/runCanary:\s*runRevealCanary/u);
+    expect(launcher).not.toMatch(
+      /runCanary:\s*\(\)\s*=>\s*runPlaywright\("canary"\)/u,
+    );
+    expect(child).toContain(
+      "Preflight canary PASS requires the reveal continuation parent",
+    );
+    expect(child).not.toContain("createPreflightCanaryPass");
+    expect(child).not.toContain("runPlaywrightPreflightSegment");
+  });
+
   it("keeps canary independent of a stale journal and creates assignment before repair full", async () => {
     await withSource(async (source) => {
       const archiveRoot = await realpath(

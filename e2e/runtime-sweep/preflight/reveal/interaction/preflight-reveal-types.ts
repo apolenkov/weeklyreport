@@ -7,6 +7,7 @@ import type {
 } from "../../../replay/dom/dom-inventory.ts";
 import type { LiveControlPlan } from "../../../replay/live-control/live-control-planning.ts";
 import type { Action } from "../../../source/contracts.ts";
+import type { Role, RouteBindingTarget } from "../../../source/contracts.ts";
 import type { ResolverOutcomeExpectation } from "../../../support/resolver-outcome-expectations.ts";
 import type {
   RevealNonMutationProof,
@@ -19,6 +20,11 @@ export type RevealRoute = Readonly<{
   readonly resolvedRoute: string;
   readonly landingRoute?: string | undefined;
   readonly expectedOutcome?: ResolverOutcomeExpectation | undefined;
+  /** Optional source-bound identity, required when writing continuation state. */
+  readonly role?: Role;
+  readonly catalogRoute?: string;
+  readonly target?: RouteBindingTarget;
+  readonly kind?: "unconditional" | "resolver";
 }>;
 
 export type RevealPreparation = Readonly<{

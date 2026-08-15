@@ -134,8 +134,81 @@ source and a recreated disposable state boundary. It may skip only exact
 terminal records whose segment artifacts revalidate; a failed, ambiguous,
 started-only, truncated, stale, foreign, reordered, duplicate, or digest-drifted
 record is rejected or rerun from the start of that state. Resume never restores
-mid-path browser state. Canonical publication remains one complete ordered
-`PREFLIGHT.json` whose state union exactly equals the frozen source plan.
+mid-action, mid-path, or mid-browser state. Canonical publication remains one
+complete ordered `PREFLIGHT.json` whose state union exactly equals the frozen
+source plan.
+
+### Terminal completed-candidate continuation
+
+Exhaustive reveal discovery may exceed one Playwright child lifetime even when
+its state boundary is valid. The only within-state continuation point is after
+one complete candidate has returned a terminal result and all resulting
+discovery state has been applied. A cooperative internal chunk budget is
+checked only after that candidate boundary, leaving teardown headroom below the
+existing 45-minute outer Playwright timeout; the timeout itself is never used
+as a checkpoint boundary. A hard timeout or crash is a real failure and
+terminates the current attempt. Only a successfully written CONTINUE result
+may start a fresh child from the last durable checkpoint.
+
+Each child emits one canonical, atomically durable, archive-confined
+`PREFLIGHT_REVEAL_RECEIPT_CHUNK` at a terminal candidate boundary. A chunk
+contains only a disjoint, nonempty terminal-candidate suffix, its predecessor
+receipt/chunk heads and counts, and a reducer-derived frontier digest; it never
+repeats the parent's receipt prefix. A receipt binds the predecessor, source
+branch identity, deterministic candidate list/index/identity/action/input,
+terminal transition, post-action inventory, surface, URL, non-mutation proof,
+and exact action/branch/completed counters.
+The queue, discovery map, visited map, and cursor are never trusted as a full
+snapshot: the pure reducer reconstructs them from the source-bound genesis and
+receipts. Preparation closures, live Page objects, and browser state are never
+serialized.
+
+The only receipt-free child result is an observation-only
+`PREFLIGHT_REVEAL_BOOTSTRAP` from ordinal zero, with no grant and a zero
+predecessor chain, when the initial candidate frontier is empty. It carries no
+authority and cannot advance progress. The parent hydrates its immutable
+genesis assets, re-derives the exact source/state/route/attempt identity,
+genesis, bounds, empty candidate list, reducer state, and controls, and accepts
+it only when the pure reducer independently reaches an empty frontier. The
+child still authors neither COMPLETE nor PASS; only the parent may sign a
+zero-chain `PREFLIGHT_REVEAL_PARENT_PASS` and write canary PASS.
+An initial frontier with any eligible candidate retains the existing nonempty
+receipt-chunk and parent-sealed execution-grant path; it is never reclassified
+as a bootstrap observation.
+
+On restart the parent rechecks live clean Git source and the exact campaign,
+selector, source/tree/plan/state/route identity, then parses and deterministically
+replays the raw child result. It requires the exact immutable receipt prefix,
+strict progress, and a fresh disposable database/browser boundary. The parent
+seals an accepted reducer frontier as a parent-owned
+`PREFLIGHT_REVEAL_EXECUTION_GRANT` with a fresh in-memory authority tag; only
+that grant may be supplied to the next child. The child replays the current
+branch's canonical path from its clean route, re-derives the candidate
+list/order, restores the bounded parent-derived reducer snapshot (controls,
+dynamic-control registrations, visited state paths, and exact preparations),
+and rejects any snapshot/frontier mismatch against the sealed reducer-state
+digest before the next action. The snapshot carries no receipt history. The
+child starts exactly at the next candidate and never emits
+`PASS`: after reducing the suffix, the parent either seals the next execution
+grant or reduces an empty frontier and alone creates the
+`PREFLIGHT_REVEAL_PARENT_PASS` plus canary PASS after another live source
+recheck.
+
+Parsing validates canonical bytes, field digests, receipt semantics, source/tree,
+state, route, surface, cursor/order, duplicate/missing records, and counters;
+the parent reducer establishes semantic completeness. Source, tree, state,
+route, surface, selector, or digest drift fails before browser work. A raw or
+sealed continuation result is progress evidence only: it is neither a terminal
+journal record nor a canary result and cannot authorize matrix finalization or
+a full-preflight launch. This vertical slice is exact-canary-only; full and
+shard journal continuation integration remains NOT-PROVEN, and canary artifacts
+cannot be reused across those scopes. The launcher loops a source-derived
+finite number of child chunks only while each result advances the completed
+candidate ordinal and immutable predecessor chain; a repeated or missing
+result fails closed. Any nonzero child exit, including a hard timeout or crash,
+terminates the current attempt; only cooperative receipt chunks advance to a
+new child. A new parent process starts a fresh attempt and cannot reuse the
+prior in-memory authority secret.
 
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after

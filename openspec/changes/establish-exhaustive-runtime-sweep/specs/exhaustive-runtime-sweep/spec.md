@@ -139,6 +139,63 @@ before baseline execution rather than trimming cells.
   of prior terminal states and newly completed states exactly equals the full
   ordered source plan at one SHA with no gap or duplicate
 
+#### Scenario: reveal discovery continues only after a terminal candidate
+
+- **GIVEN** one preflight state has a bounded reveal queue with more candidates
+  than one child chunk can safely execute
+- **WHEN** a child completes a candidate and reaches the cooperative chunk
+  budget
+- **THEN** it durably writes one archive-confined raw
+  `PREFLIGHT_REVEAL_RECEIPT_CHUNK` only after
+  the candidate result, counters, and terminal receipt are complete
+- **AND** the result contains the exact source SHA/tree/tree digest,
+  source/plan/state/selector/route identities, and a nonempty disjoint
+  terminal-candidate receipt suffix with predecessor heads/counts
+- **AND** every receipt binds its predecessor, current branch identity,
+  deterministic candidate list/index/identity/action/input, terminal
+  transition, post-action inventory/surface/URL/non-mutation proof, and exact
+  action/branch/completed counters; queue/maps are reducer-derived rather than
+  trusted snapshots
+- **AND** preparation closures, Page objects, mid-action work, and browser state
+  are absent from every result
+- **AND** the only receipt-free result is an authority-free
+  `PREFLIGHT_REVEAL_BOOTSTRAP` from ordinal zero with no grant and a zero chain
+  when the initial candidate frontier is empty; the parent MUST hydrate its
+  immutable genesis graph and independently re-derive exact run identity,
+  genesis, source bounds, the empty candidate list, reducer state, and controls
+  before it alone signs a zero-chain parent PASS and canary PASS
+- **AND** an initial frontier with any eligible candidate still emits a
+  nonempty receipt chunk and follows the existing parent-sealed execution-grant
+  path; it MUST NOT be reclassified as a receipt-free bootstrap
+- **AND** the parent rechecks live clean source before and after every child,
+  validates the predecessor heads and suffix, deterministically reduces only
+  the new suffix in its in-memory reducer, and seals only a valid execution
+  grant with a fresh in-memory authority tag plus the bounded reducer snapshot
+  required to restore controls, dynamic registrations, visited state paths,
+  and exact preparations before passing it to the next child
+- **AND** a fresh child recreates the disposable database/browser boundary,
+  navigates the clean route, replays the canonical prefix, re-derives and
+  validates the candidate list/order, restores the parent snapshot without
+  receipt history, verifies the full reducer-state digest, then starts exactly
+  at the next candidate
+- **AND** a result before a completed candidate, stale/tampered/foreign or
+  reordered receipt chain, duplicate/missing record, identity or digest drift,
+  replaced immutable prefix, or non-progressing child fails before the next
+  action
+- **AND** continuation never restores mid-path, mid-action, or browser state,
+  never appends terminal journal PASS, never accepts child-authored canary PASS,
+  and never authorizes matrix/full-preflight completion
+- **AND** any nonzero child exit, including a hard timeout or crash, is a real
+  failure that terminates the current attempt; only a durably written
+  cooperative receipt chunk may start the next child from the last sealed
+  execution grant
+- **AND** the child never authors COMPLETE or PASS; the parent accepts the
+  suffix only when its reducer reaches an empty frontier, then rechecks source
+  and alone writes the exact canary PASS artifact
+- **AND** the launcher uses a source-derived finite repetition guard; this
+  exact vertical slice proves canary only, while full/shard journal continuation
+  remains NOT-PROVEN and cannot reuse canary results
+
 #### Scenario: an invalid specialized witness fails finalization
 
 - **WHEN** a transition disagrees with its action, a non-`none` fault lacks a
