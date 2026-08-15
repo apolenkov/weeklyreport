@@ -564,6 +564,22 @@
       "target": "e2e/runtime-sweep/preflight/target/$1"
     },
     {
+      "id": "runtime-preflight-reveal-continuation-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/receipts)?)/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-reveal-continuation",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-reveal-continuation-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/receipts)?)/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight-reveal-continuation",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
+    },
+    {
       "id": "runtime-preflight-subconcern-tests",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
@@ -1233,9 +1249,17 @@
     {
       "id": "shared-schemas-admin-implementation",
       "scope": "shared-schemas",
-      "pattern": "^packages/shared/src/schemas/(?:admin/)?(report-admin\\.schema\\.ts)$",
+      "pattern": "^packages/shared/src/schemas/(?:admin/)?((?:action-log|report-admin)\\.schema\\.ts)$",
       "concern": "admin-contract",
       "role": "implementation",
+      "target": "packages/shared/src/schemas/admin/$1"
+    },
+    {
+      "id": "shared-schemas-admin-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:admin/)?(action-log\\.schema\\.test\\.ts)$",
+      "concern": "admin-contract",
+      "role": "test",
       "target": "packages/shared/src/schemas/admin/$1"
     },
     {
