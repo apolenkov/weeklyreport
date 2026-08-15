@@ -18,7 +18,20 @@ export interface SeedProfileSnapshot {
   readonly userIds: readonly string[];
   readonly projectIds: readonly string[];
   readonly reportIds: readonly string[];
+  readonly itemRecords: readonly SeedRecordIdentity[];
+  readonly riskRecords: readonly SeedRecordIdentity[];
+  readonly decisionRecords: readonly SeedDecisionIdentity[];
   readonly stableText: readonly string[];
+}
+
+interface SeedRecordIdentity {
+  readonly reportSectionId: string;
+  readonly id: string;
+  readonly stableId: string;
+}
+
+interface SeedDecisionIdentity extends SeedRecordIdentity {
+  readonly text: string;
 }
 
 interface ScopedUserGroup {
@@ -91,7 +104,15 @@ export async function validateSeedProfile(
   profile: SeedProfile,
 ): Promise<SeedProfileSnapshot> {
   const scope = SEED_PROFILE_SCOPES[profile];
-  const [counts, users, projects, reports] = await Promise.all([
+  const [
+    counts,
+    users,
+    projects,
+    reports,
+    itemRecords,
+    riskRecords,
+    decisionRecords,
+  ] = await Promise.all([
     collectScopedSeedCounts(prisma, profile),
     prisma.user.findMany({
       where: { id: { in: [...scope.userIds] } },
@@ -118,6 +139,21 @@ export async function validateSeedProfile(
       orderBy: { id: "asc" },
       select: { id: true, weekLabel: true },
     }),
+    prisma.item.findMany({
+      where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
+      orderBy: [{ reportSectionId: "asc" }, { stableId: "asc" }],
+      select: { reportSectionId: true, id: true, stableId: true },
+    }),
+    prisma.risk.findMany({
+      where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
+      orderBy: [{ reportSectionId: "asc" }, { stableId: "asc" }],
+      select: { reportSectionId: true, id: true, stableId: true },
+    }),
+    prisma.decision.findMany({
+      where: { reportSection: { reportId: { in: [...scope.reportIds] } } },
+      orderBy: [{ reportSectionId: "asc" }, { stableId: "asc" }],
+      select: { reportSectionId: true, id: true, stableId: true, text: true },
+    }),
   ]);
 
   assertCountBounds(profile, counts);
@@ -130,6 +166,9 @@ export async function validateSeedProfile(
     userIds: users.map(({ id }) => id),
     projectIds: projects.map(({ id }) => id),
     reportIds: reports.map(({ id }) => id),
+    itemRecords,
+    riskRecords,
+    decisionRecords,
     stableText: [
       ...users.flatMap(({ email, name }) => [email, name]),
       ...projects.map(({ name }) => name),

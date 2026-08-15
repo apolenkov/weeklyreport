@@ -1,4 +1,4 @@
-import { stableSerialize } from "../../../support/ids.ts";
+import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import { canonicalRevealUrlFor } from "../../reveal-path.ts";
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import type {
@@ -14,6 +14,39 @@ import {
   pathNodeAssetsFor,
   surfaceAssetFor,
 } from "./receipts/preflight-reveal-continuation-receipt-assets.ts";
+
+type RevealGenesis = RevealExecutionGrant["genesis"];
+
+const GENESIS_FIELDS = [
+  "inventoryRef",
+  "inventoryDigest",
+  "surfaceRef",
+  "surfaceDigest",
+  "pathNodeRef",
+  "pathDigest",
+  "branchRef",
+  "branchDigest",
+  "candidateListRef",
+  "candidateListDigest",
+  "url",
+] as const satisfies readonly (keyof RevealGenesis)[];
+
+const diagnosticValueFor = (
+  field: keyof RevealGenesis,
+  value: string,
+): string =>
+  field === "url" ? `sha256:${sha256Hex(value)};length=${value.length}` : value;
+
+export const genesisMismatchFor = (
+  fresh: RevealGenesis,
+  sealed: RevealGenesis,
+): string =>
+  GENESIS_FIELDS.filter((field) => fresh[field] !== sealed[field])
+    .map(
+      (field) =>
+        `${field}[sealed=${diagnosticValueFor(field, sealed[field])},fresh=${diagnosticValueFor(field, fresh[field])}]`,
+    )
+    .join(", ");
 
 export const genesisForState = (input: {
   readonly state: RevealDiscoveryState;
@@ -58,8 +91,10 @@ export const assertFreshGenesis = (input: {
   readonly grant: RevealExecutionGrant;
 }): void => {
   const fresh = genesisForState(input);
-  if (stableSerialize(fresh) !== stableSerialize(input.grant.genesis))
+  if (stableSerialize(fresh) !== stableSerialize(input.grant.genesis)) {
+    const mismatch = genesisMismatchFor(fresh, input.grant.genesis);
     throw new Error(
-      "R188 fresh genesis does not match the parent-sealed grant",
+      `R188 fresh genesis does not match the parent-sealed grant: ${mismatch || "canonical serialization drift"}`,
     );
+  }
 };

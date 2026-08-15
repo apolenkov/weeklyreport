@@ -81,6 +81,7 @@ export function fetchForeignContentAssignments(
 const foreignContentSectionSelect = {
   authorId: true,
   items: {
+    orderBy: { stableId: "asc" },
     select: {
       id: true,
       projectId: true,
@@ -94,6 +95,7 @@ const foreignContentSectionSelect = {
     },
   },
   risks: {
+    orderBy: { stableId: "asc" },
     select: {
       id: true,
       projectId: true,
@@ -105,6 +107,7 @@ const foreignContentSectionSelect = {
     },
   },
   decisions: {
+    orderBy: { stableId: "asc" },
     select: {
       id: true,
       productId: true,

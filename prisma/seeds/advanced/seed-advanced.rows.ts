@@ -26,6 +26,7 @@ export interface ProjectStatusRow {
 
 export interface ItemRow {
   readonly id: string;
+  readonly stableId: string;
   readonly reportSectionId: string;
   readonly projectId: string;
   readonly type: ItemType;
@@ -33,6 +34,10 @@ export interface ItemRow {
   readonly tag: string;
   readonly workflowStatus: ItemWorkflowStatus;
   readonly stageNames: string[];
+}
+
+interface ItemUpsertClient {
+  readonly item: Pick<PrismaClient["item"], "upsert">;
 }
 
 export async function upsertSection(
@@ -65,7 +70,7 @@ export async function upsertProjectStatus(
 }
 
 export async function upsertItem(
-  prisma: PrismaClient,
+  prisma: ItemUpsertClient,
   { id, ...fields }: ItemRow,
 ): Promise<void> {
   await prisma.item.upsert({

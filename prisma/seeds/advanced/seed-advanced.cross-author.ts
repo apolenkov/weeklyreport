@@ -62,6 +62,7 @@ export async function seedCrossAuthorOverlay(
 
   await upsertItem(prisma, {
     id: itemId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA, OLGA_DEVOPS_ITEM_SEQ),
+    stableId: itemId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA, OLGA_DEVOPS_ITEM_SEQ),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA),
     projectId: PRODUCT_PAYMENT_GATEWAY,
     type: ItemType.current,
