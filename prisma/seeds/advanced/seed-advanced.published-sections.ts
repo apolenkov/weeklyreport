@@ -53,6 +53,7 @@ async function seedProductRows(
     });
     await upsertItem(prisma, {
       id: itemId(PUBLISHED_SUFFIX, cfg.leadIndex, productIdx + 1),
+      stableId: itemId(PUBLISHED_SUFFIX, cfg.leadIndex, productIdx + 1),
       reportSectionId,
       projectId: product.id,
       type: ItemType.current,

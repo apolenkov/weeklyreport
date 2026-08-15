@@ -140,6 +140,7 @@ async function seedItems(
   const rows = [
     ...current.map((text, i) => ({
       id: itemId(ACTIVE_SUFFIX, cfg.leadIndex, i + 1),
+      stableId: itemId(ACTIVE_SUFFIX, cfg.leadIndex, i + 1),
       reportSectionId,
       projectId: cyclic(cfg.products, i).id,
       type: ItemType.current,
@@ -150,6 +151,7 @@ async function seedItems(
     })),
     ...next.map((text, i) => ({
       id: itemId(ACTIVE_SUFFIX, cfg.leadIndex, current.length + i + 1),
+      stableId: itemId(ACTIVE_SUFFIX, cfg.leadIndex, current.length + i + 1),
       reportSectionId,
       projectId: cyclic(cfg.products, i).id,
       type: ItemType.next,

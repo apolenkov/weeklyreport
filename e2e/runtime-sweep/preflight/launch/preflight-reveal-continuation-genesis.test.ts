@@ -13,6 +13,7 @@ import {
   selectionFor,
   withSource,
 } from "../reveal/continuation/preflight-reveal-continuation-fixture.ts";
+import { genesisMismatchFor } from "../reveal/continuation/preflight-reveal-continuation-genesis.ts";
 import { assetsForGenesis } from "../reveal/continuation/preflight-reveal-continuation-grant-assets.ts";
 import { replayRevealContinuation } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
@@ -50,6 +51,36 @@ const contextFor = (input: {
 });
 
 describe("R188 parent-sealed genesis boundary", () => {
+  it("bounds and redacts URL values in genesis mismatch diagnostics", () => {
+    const digest = "a".repeat(64);
+    const sealed = {
+      inventoryRef: digest,
+      inventoryDigest: digest,
+      surfaceRef: digest,
+      surfaceDigest: digest,
+      pathNodeRef: digest,
+      pathDigest: digest,
+      branchRef: digest,
+      branchDigest: digest,
+      candidateListRef: digest,
+      candidateListDigest: digest,
+      url: `/lead/form?token=${"sealed-secret".repeat(100)}`,
+    };
+    const fresh = {
+      ...sealed,
+      url: `/lead/form?token=${"fresh-secret".repeat(100)}`,
+    };
+
+    const mismatch = genesisMismatchFor(fresh, sealed);
+
+    expect(mismatch).toMatch(
+      /^url\[sealed=sha256:[a-f0-9]{64};length=\d+,fresh=sha256:[a-f0-9]{64};length=\d+\]$/u,
+    );
+    expect(mismatch).not.toContain("sealed-secret");
+    expect(mismatch).not.toContain("fresh-secret");
+    expect(mismatch.length).toBeLessThan(200);
+  });
+
   it("rederives an empty bootstrap from parent-owned source and assets", async () => {
     await withSource(async (source) => {
       const state = source.plan.states[0];
@@ -152,23 +183,104 @@ describe("R188 parent-sealed genesis boundary", () => {
           ordinal: 0,
         });
         const events: string[] = [];
-        await expect(
-          runChunk({
-            source,
-            state,
-            route,
-            root: inventoryFor([
-              controlFor("button:foreign-open:0", "Foreign panel", 0),
-            ]),
-            nested: inventoryFor([]),
-            grant: sealed.grant,
-            expectedGrantDigest: sealed.grant.grantDigest,
-            eventSink: events,
-            now: () => 0,
-            deadlineAt: 10_000,
-          }),
-        ).rejects.toThrow(
-          /fresh genesis does not match the parent-sealed grant/u,
+        const resumed = runChunk({
+          source,
+          state,
+          route,
+          root: inventoryFor([
+            controlFor("button:foreign-open:0", "Foreign panel", 0),
+          ]),
+          nested: inventoryFor([]),
+          grant: sealed.grant,
+          expectedGrantDigest: sealed.grant.grantDigest,
+          eventSink: events,
+          now: () => 0,
+          deadlineAt: 10_000,
+        });
+        await expect(resumed).rejects.toThrow(
+          /fresh genesis does not match the parent-sealed grant: inventoryRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\].*surfaceRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\].*branchRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\].*candidateListRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\]/u,
+        );
+        expect(events.filter((event) => event.startsWith("execute:"))).toEqual(
+          [],
+        );
+      } finally {
+        await rm(archiveRoot, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("rejects reordered visible records even when controls are identical", async () => {
+    await withSource(async (source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const { selection, route } = selectionFor(source, state.stateId);
+      const controls = [
+        controlFor("button:a-open:0", "Edit decision", 0),
+        controlFor("button:b-open:0", "Edit decision", 1),
+      ];
+      const sealedRoot = {
+        ...inventoryFor(controls),
+        visibleText: "Decision Alpha Decision Beta",
+      };
+      let nowCalls = 0;
+      const firstChunk = await runChunk({
+        source,
+        state,
+        route,
+        root: sealedRoot,
+        nested: inventoryFor([]),
+        stableAllPostAction: sealedRoot,
+        now: () => nowCalls++,
+        deadlineAt: 1,
+      });
+      const firstReceipt = firstChunk.result.chunk.receipts[0];
+      if (firstReceipt === undefined) throw new Error("Fixture has no receipt");
+      const initialBranch = branchForRef(firstReceipt.branchRef);
+      const replay = parentReplayContextFor({
+        source,
+        state,
+        route,
+        initialUrl: initialBranch.url,
+        initialInventory: initialBranch.inventory,
+      });
+      const reduced = replayRevealContinuation({
+        queueInput: replay.queueInput,
+        initialState: replay.initialState,
+        receipts: firstChunk.result.chunk.receipts,
+        predecessorCompletedCandidateCount: 0,
+        predecessorDigest: null,
+      });
+      const archiveRoot = await mkdtemp(
+        path.join(process.cwd(), ".r188-genesis-visible-text-"),
+      );
+      try {
+        const context = contextFor({ source, archiveRoot, selection, route });
+        const sealed = await sealGrant({
+          context,
+          progress: zeroProgress,
+          replay,
+          state: reduced.state,
+          chunk: firstChunk.result.chunk,
+          ordinal: 0,
+        });
+        const events: string[] = [];
+        const resumed = runChunk({
+          source,
+          state,
+          route,
+          root: {
+            ...inventoryFor(controls),
+            visibleText: "Decision Beta Decision Alpha",
+          },
+          nested: inventoryFor([]),
+          grant: sealed.grant,
+          expectedGrantDigest: sealed.grant.grantDigest,
+          eventSink: events,
+          now: () => 0,
+          deadlineAt: 10_000,
+        });
+        await expect(resumed).rejects.toThrow(
+          /^R188 fresh genesis does not match the parent-sealed grant: inventoryRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\], inventoryDigest\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\], branchRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\], branchDigest\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\], candidateListRef\[sealed=[a-f0-9]{64},fresh=[a-f0-9]{64}\]$/u,
         );
         expect(events.filter((event) => event.startsWith("execute:"))).toEqual(
           [],

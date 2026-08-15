@@ -111,6 +111,7 @@ async function seedHistorySection(
     });
     await upsertItem(prisma, {
       id: itemId(suffix, cfg.leadIndex, productIdx + 1),
+      stableId: itemId(suffix, cfg.leadIndex, productIdx + 1),
       reportSectionId,
       projectId: product.id,
       type: ItemType.current,

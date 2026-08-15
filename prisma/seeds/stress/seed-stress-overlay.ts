@@ -44,7 +44,12 @@ async function seedStressItems(
     const isNext = itemOffset === ITEMS_PER_STRESS_PROJECT;
     await prisma.item.upsert({
       where: { id: itemId },
-      update: { projectId, text, stageNames: [stageName] },
+      update: {
+        stableId: stressId(STRESS_ID_KIND.itemStable, itemIndex),
+        projectId,
+        text,
+        stageNames: [stageName],
+      },
       create: {
         id: itemId,
         stableId: stressId(STRESS_ID_KIND.itemStable, itemIndex),

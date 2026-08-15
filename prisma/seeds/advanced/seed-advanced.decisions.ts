@@ -28,6 +28,7 @@ const DECISION_SEQ = { oauthQuota: 1, pgBouncerWindow: 2, wafRollout: 3 };
 const DECISION_ROWS = [
   {
     id: decisionId(DECISION_SEQ.oauthQuota),
+    stableId: decisionId(DECISION_SEQ.oauthQuota),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
     productId: PRODUCT_MARKETING_PORTAL,
     text: "Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)",
@@ -38,6 +39,7 @@ const DECISION_ROWS = [
   },
   {
     id: decisionId(DECISION_SEQ.pgBouncerWindow),
+    stableId: decisionId(DECISION_SEQ.pgBouncerWindow),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_IGOR),
     productId: PRODUCT_INTERNAL_BI,
     text: "Утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)",
@@ -48,6 +50,7 @@ const DECISION_ROWS = [
   },
   {
     id: decisionId(DECISION_SEQ.wafRollout),
+    stableId: decisionId(DECISION_SEQ.wafRollout),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_DMITRY),
     productId: PRODUCT_DEVOPS_TOOLS,
     text: "Дать зелёный свет фазовой раскатке WAF в shadow-mode",
