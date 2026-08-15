@@ -290,21 +290,21 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::80:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::81:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
       "rationale": "The control is wrapped by the local FieldLabel component, which renders a label with htmlFor matching the control id (period-start, period-end, or period-deadline). The JSX-only analyzer misses this cross-component association; adding a duplicate aria-label would be redundant."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::106:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::113:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
       "rationale": "The control is wrapped by the local FieldLabel component, which renders a label with htmlFor matching the control id (period-start, period-end, or period-deadline). The JSX-only analyzer misses this cross-component association; adding a duplicate aria-label would be redundant."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::141:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::150:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
