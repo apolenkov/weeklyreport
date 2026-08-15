@@ -226,3 +226,23 @@ export const candidateListAssetFor = (
   });
   return candidateListSchema.parse({ ...body, digest });
 };
+
+export const candidateFrontierFor = (input: {
+  readonly branch: RevealBranch;
+  readonly candidates: readonly RevealCandidate[];
+}) => {
+  const branch = branchAssetFor(input.branch);
+  const candidates = candidateListAssetFor(
+    input.branch,
+    input.candidates,
+    branch.digest,
+  );
+  return {
+    branchRef: branch.digest,
+    branchDigest: branch.digest,
+    candidateListRef: candidates.digest,
+    candidateListDigest: candidateListDigestFor(
+      candidates.candidates.map((candidate) => candidate.candidateId),
+    ),
+  };
+};

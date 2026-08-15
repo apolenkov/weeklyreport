@@ -232,3 +232,22 @@ export const createPlaywrightRevealExecutor =
       ...(representativeInput === undefined ? {} : { representativeInput }),
     };
   };
+
+export const createPlaywrightRevealRepresentativeInputFreezer =
+  (input: {
+    readonly page: Page;
+  }): NonNullable<RevealExecutionHarness["freezeRepresentativeInput"]> =>
+  async (candidateInput) => {
+    if (candidateInput.action.operation !== "select")
+      return candidateInput.representativeInput;
+    const locator = targetLocator(
+      input.page,
+      targetFor(candidateInput.control),
+    );
+    return representativeSelectFor(
+      locator,
+      candidateInput.representativeInput?.kind === "select"
+        ? candidateInput.representativeInput
+        : undefined,
+    );
+  };

@@ -200,11 +200,14 @@ describe("preflight reveal transition classification", () => {
     const initialUrl = "/lead/report?source=redirect&x=2&x=1#hash";
     const liveInitialUrl = absoluteBrowserUrl(initialUrl);
     const recordCall = vi.fn<(value: string) => void>();
+    const frozen = { kind: "select" as const, value: "active", index: 1 };
     const harness: RevealExecutionHarness = {
       prepare: () => Promise.resolve(),
       navigate: () => Promise.resolve(),
       currentUrl: () => liveInitialUrl,
       inventory: () => Promise.resolve(initialInventory),
+      freezeRepresentativeInput: ({ action }) =>
+        Promise.resolve(action.operation === "select" ? frozen : undefined),
       executeReveal: ({ control: target, action, representativeInput }) => {
         recordCall(`${target.accessibleName}:${action.operation}`);
         if (action.operation === "fill")
@@ -213,18 +216,12 @@ describe("preflight reveal transition classification", () => {
             value: "Runtime sweep",
           });
         if (action.operation === "select")
-          expect(representativeInput).toBeUndefined();
-        const frozenRepresentative =
-          action.operation === "select"
-            ? { kind: "select" as const, value: "active", index: 1 }
-            : representativeInput;
+          expect(representativeInput).toEqual(frozen);
         return Promise.resolve({
           url: liveInitialUrl,
           inventory: initialInventory,
           nonMutation: proof,
-          ...(frozenRepresentative === undefined
-            ? {}
-            : { representativeInput: frozenRepresentative }),
+          ...(representativeInput === undefined ? {} : { representativeInput }),
         });
       },
     };

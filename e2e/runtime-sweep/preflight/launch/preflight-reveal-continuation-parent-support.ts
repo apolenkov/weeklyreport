@@ -100,6 +100,14 @@ export const frontierForState = (input: {
   const candidates =
     input.state.currentCandidates ??
     revealCandidatesFor(currentBranch.inventory, input.route);
+  if (
+    candidates.some(
+      (candidate) =>
+        candidate.action.operation === "select" &&
+        candidate.representativeInput === undefined,
+    )
+  )
+    throw new Error("R188 parent cannot seal an unfrozen select frontier");
   return frontierFor({
     state: input.state,
     currentBranch,

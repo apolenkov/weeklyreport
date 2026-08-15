@@ -56,8 +56,10 @@ export const candidatesAtBoundary = (
   state: RevealDiscoveryState,
   branch: RevealBranch,
   queue: readonly RevealBranch[],
+  canonicalCandidates?: readonly RevealCandidate[],
 ): RevealContinuation | undefined => {
-  const candidates = candidatesForImmediateReveal(input, branch);
+  const candidates =
+    canonicalCandidates ?? candidatesForImmediateReveal(input, branch);
   const boundary: RevealDiscoveryState = {
     ...state,
     queue,

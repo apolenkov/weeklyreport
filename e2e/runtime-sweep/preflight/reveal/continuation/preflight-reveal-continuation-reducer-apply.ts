@@ -10,17 +10,15 @@ import { applyRevealCandidateResult } from "../interaction/preflight-reveal-queu
 import {
   candidatesAtBoundary,
   nextContinuationFor,
+  type RevealContinuation,
 } from "../interaction/preflight-reveal-queue-candidates.ts";
 import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
+import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
 import { RevealContinuationReplayError } from "./preflight-reveal-continuation-errors.ts";
 import type { RevealContinuationReceipt } from "./preflight-reveal-continuation-schemas.ts";
 import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./preflight-reveal-continuation-schemas.ts";
 import { assertReceiptContract } from "./preflight-reveal-continuation-validators.ts";
-import {
-  candidateListDigestFor,
-  revealCandidateIdentityFor,
-  revealCandidateIdsFor,
-} from "./receipts/preflight-reveal-continuation-receipt-assets.ts";
+import { revealCandidateIdentityFor } from "./receipts/preflight-reveal-continuation-receipt-assets.ts";
 import {
   assertTerminalReceiptSemantics,
   branchForRef,
@@ -65,12 +63,10 @@ const assertReceiptFrontier = (input: {
     );
 };
 
-const candidateListFor = (input: {
-  readonly receipt: RevealContinuationReceipt;
-}) => {
+const candidateListForRef = (ref: string) => {
   const candidateList = rememberedRevealContinuationAsset({
     artifact: PREFLIGHT_REVEAL_CANDIDATE_LIST,
-    ref: input.receipt.candidateListRef,
+    ref,
   });
   if (candidateList?.artifact !== PREFLIGHT_REVEAL_CANDIDATE_LIST)
     throw new RevealContinuationReplayError(
@@ -81,38 +77,22 @@ const candidateListFor = (input: {
 
 const assertCandidateBinding = (input: {
   readonly branch: RevealBranch;
-  readonly candidates: readonly RevealCandidate[];
   readonly receipt: RevealContinuationReceipt;
   readonly candidate: RevealCandidate;
-  readonly candidateList: Extract<
-    ReturnType<typeof rememberedRevealContinuationAsset>,
-    { readonly artifact: typeof PREFLIGHT_REVEAL_CANDIDATE_LIST }
-  >;
 }): void => {
   const expectedId = revealCandidateIdentityFor({
     branch: input.branch,
     candidate: input.candidate,
   });
-  const ids = revealCandidateIdsFor(input.branch, input.candidates);
-  const candidateListDigest = candidateListDigestFor(ids);
-  const expectedCandidateList = input.candidates.map((candidate, index) => ({
-    candidateId: ids[index],
-    action: candidate.action,
-    representativeInput: candidate.representativeInput ?? null,
-  }));
   if (
     input.receipt.candidateId !== expectedId ||
     stableSerialize(input.candidate.action) !==
       stableSerialize(input.receipt.action) ||
     stableSerialize(input.candidate.representativeInput ?? null) !==
-      stableSerialize(input.receipt.representativeInput) ||
-    candidateListDigest !== input.receipt.candidateListDigest ||
-    input.candidateList.branchDigest !== input.receipt.branchDigest ||
-    stableSerialize(input.candidateList.candidates) !==
-      stableSerialize(expectedCandidateList)
+      stableSerialize(input.receipt.representativeInput)
   )
     throw new RevealContinuationReplayError(
-      `R188 receipt candidate identity or list drifted (candidate=${expectedId}/${input.receipt.candidateId}, list=${candidateListDigest}/${input.receipt.candidateListDigest})`,
+      `R188 receipt candidate identity drifted (candidate=${expectedId}/${input.receipt.candidateId})`,
     );
 };
 
@@ -123,10 +103,11 @@ const assertReceiptCandidate = (input: {
   readonly receipt: RevealContinuationReceipt;
 }) => {
   assertReceiptFrontier({ state: input.state, branch: input.branch });
-  const candidates = candidatesForImmediateReveal(
-    input.queueInput,
-    input.branch,
-  );
+  const derivedCandidates =
+    input.state.currentBranch?.path.digest === input.branch.path.digest &&
+    input.state.currentCandidates !== undefined
+      ? input.state.currentCandidates
+      : candidatesForImmediateReveal(input.queueInput, input.branch);
   const expectedIndex =
     input.state.currentBranch?.path.digest === input.branch.path.digest
       ? (input.state.currentCandidateIndex ?? 0)
@@ -135,22 +116,95 @@ const assertReceiptCandidate = (input: {
     throw new RevealContinuationReplayError(
       `R188 receipt candidate index is not the reducer cursor: expected=${String(expectedIndex)} actual=${String(input.receipt.candidateIndex)}`,
     );
+  const candidateList = candidateListForRef(input.receipt.candidateListRef);
+  const candidates = canonicalCandidatesForList({
+    branch: input.branch,
+    branchDigest: input.receipt.branchDigest,
+    candidates: derivedCandidates,
+    candidateList,
+    candidateListDigest: input.receipt.candidateListDigest,
+  });
   const candidate = candidates[input.receipt.candidateIndex];
   if (candidate === undefined)
     throw new RevealContinuationReplayError(
-      "R188 receipt candidate index is outside the derived candidate list",
+      "R188 receipt candidate index is outside the canonical candidate list",
     );
-  const candidateList = candidateListFor({
-    receipt: input.receipt,
-  });
   assertCandidateBinding({
     branch: input.branch,
-    candidates,
     receipt: input.receipt,
     candidate,
-    candidateList,
   });
   return { candidates, candidate };
+};
+
+const stateForCanonicalNext = (input: {
+  readonly next: RevealContinuation;
+  readonly nextFrontier: NonNullable<RevealContinuationReceipt["nextFrontier"]>;
+}): RevealDiscoveryState => {
+  if (input.nextFrontier.branchRef !== input.nextFrontier.branchDigest)
+    throw new RevealContinuationReplayError(
+      "R188 receipt lacks its canonical next frontier",
+    );
+  const recordedBranch = branchForRef(input.nextFrontier.branchRef);
+  if (
+    recordedBranch.path.digest !== input.next.currentBranch.path.digest ||
+    stableSerialize(recordedBranch.surface) !==
+      stableSerialize(input.next.currentBranch.surface) ||
+    stableSerialize(recordedBranch.inventory) !==
+      stableSerialize(input.next.currentBranch.inventory) ||
+    recordedBranch.url !== input.next.currentBranch.url
+  )
+    throw new RevealContinuationReplayError(
+      "R188 receipt next frontier branch drifted",
+    );
+  const candidates = canonicalCandidatesForList({
+    branch: input.next.currentBranch,
+    branchDigest: input.nextFrontier.branchDigest,
+    candidates: input.next.candidates,
+    candidateList: candidateListForRef(input.nextFrontier.candidateListRef),
+    candidateListDigest: input.nextFrontier.candidateListDigest,
+  });
+  return { ...input.next.state, currentCandidates: candidates };
+};
+
+const stateAfterBoundaryFor = (input: {
+  readonly queueInput: RevealReducerInput;
+  readonly transitioned: RevealDiscoveryState;
+  readonly branch: RevealBranch;
+  readonly receipt: RevealContinuationReceipt;
+  readonly candidates: readonly RevealCandidate[];
+}): RevealDiscoveryState => {
+  const sameBranch = candidatesAtBoundary(
+    input.queueInput,
+    input.transitioned,
+    input.branch,
+    input.transitioned.queue,
+    input.candidates,
+  );
+  if (sameBranch !== undefined) {
+    if (input.receipt.nextFrontier !== null)
+      throw new RevealContinuationReplayError(
+        "R188 receipt declares a next frontier before its branch is exhausted",
+      );
+    return sameBranch.state;
+  }
+  const next = nextContinuationFor(input.queueInput, input.transitioned);
+  if (next !== undefined) {
+    const nextFrontier = input.receipt.nextFrontier;
+    if (nextFrontier === null) return next.state;
+    return stateForCanonicalNext({ next, nextFrontier });
+  }
+  if (input.receipt.nextFrontier !== null)
+    throw new RevealContinuationReplayError(
+      "R188 receipt declares a next frontier after reducer completion",
+    );
+  const {
+    currentBranch: _currentBranch,
+    currentCandidates: _currentCandidates,
+    currentCandidateIndex: _currentCandidateIndex,
+    ...withoutCursor
+  } = input.transitioned;
+  return { ...withoutCursor, queue: [] };
 };
 
 const stateForReceipt = (input: {
@@ -187,21 +241,13 @@ const stateForReceipt = (input: {
       materialChanged: input.receipt.materialChanged,
     },
   });
-  const next =
-    candidatesAtBoundary(
-      input.queueInput,
-      transitioned,
-      input.branch,
-      transitioned.queue,
-    ) ?? nextContinuationFor(input.queueInput, transitioned);
-  if (next !== undefined) return next.state;
-  const {
-    currentBranch: _currentBranch,
-    currentCandidates: _currentCandidates,
-    currentCandidateIndex: _currentCandidateIndex,
-    ...withoutCursor
-  } = transitioned;
-  return { ...withoutCursor, queue: [] };
+  return stateAfterBoundaryFor({
+    queueInput: input.queueInput,
+    transitioned,
+    branch: input.branch,
+    receipt: input.receipt,
+    candidates: input.candidates,
+  });
 };
 
 export const applyReceipt = (input: {

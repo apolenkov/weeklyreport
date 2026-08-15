@@ -136,6 +136,15 @@ const receiptBodySchema = z
         enqueuedBranchRef: assetRefSchema.nullable(),
       })
       .strict(),
+    nextFrontier: z
+      .object({
+        branchRef: assetRefSchema,
+        branchDigest: assetRefSchema,
+        candidateListRef: assetRefSchema,
+        candidateListDigest: assetRefSchema,
+      })
+      .strict()
+      .nullable(),
     materialChanged: z.boolean(),
     actionCount: nonNegativeIntegerSchema,
     branchCount: nonNegativeIntegerSchema,

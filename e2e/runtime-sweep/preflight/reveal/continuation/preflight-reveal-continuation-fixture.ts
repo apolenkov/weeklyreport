@@ -16,6 +16,10 @@ import {
 } from "../../execution/playwright-preflight-support.ts";
 import type { RevealExecutionHarness } from "../interaction/preflight-reveal-types.ts";
 import {
+  selectFreezerFor,
+  type SelectRepresentative,
+} from "./preflight-reveal-continuation-fixture-select.ts";
+import {
   discoverRevealControlsChunk,
   type RevealContinuationBootstrapResult,
   type RevealContinuationChunkResult,
@@ -123,9 +127,20 @@ const harnessFor = (input: {
   readonly later?: DomInventory;
   readonly crossRoute?: boolean;
   readonly eventSink?: string[];
+  readonly selectRepresentatives?: Readonly<
+    Record<string, SelectRepresentative>
+  >;
 }) => {
   const state = { currentUrl: `${ORIGIN}${input.route.resolvedRoute}` };
   const events = input.eventSink ?? [];
+  const currentInventory = () =>
+    state.currentUrl.includes("panel=open")
+      ? input.nested
+      : state.currentUrl.includes("panel=empty")
+        ? (input.empty ?? inventoryFor([]))
+        : state.currentUrl.includes("panel=later")
+          ? (input.later ?? inventoryFor([]))
+          : input.root;
   const harness: RevealExecutionHarness = {
     prepare: () => {
       events.push("prepare");
@@ -137,19 +152,17 @@ const harnessFor = (input: {
       return Promise.resolve();
     },
     currentUrl: () => state.currentUrl,
-    inventory: () =>
-      Promise.resolve(
-        state.currentUrl.includes("panel=open")
-          ? input.nested
-          : state.currentUrl.includes("panel=empty")
-            ? (input.empty ?? inventoryFor([]))
-            : state.currentUrl.includes("panel=later")
-              ? (input.later ?? inventoryFor([]))
-              : input.root,
-      ),
-    executeReveal: ({ action }) => {
+    inventory: () => Promise.resolve(currentInventory()),
+    freezeRepresentativeInput: selectFreezerFor({
+      currentInventory,
+      events,
+      ...(input.selectRepresentatives === undefined
+        ? {}
+        : { representatives: input.selectRepresentatives }),
+    }),
+    executeReveal: async ({ action, representativeInput }) => {
       events.push(`execute:${action.controlKey}`);
-      return executeRevealFor({
+      const result = await executeRevealFor({
         actionKey: action.controlKey,
         route: input.route,
         nested: input.nested,
@@ -166,6 +179,10 @@ const harnessFor = (input: {
           : { crossRoute: input.crossRoute }),
         state,
       });
+      return {
+        ...result,
+        ...(representativeInput === undefined ? {} : { representativeInput }),
+      };
     },
   };
   return { events, harness };
@@ -185,6 +202,9 @@ interface RunChunkInput {
   readonly later?: DomInventory;
   readonly crossRoute?: boolean;
   readonly eventSink?: string[];
+  readonly selectRepresentatives?: Readonly<
+    Record<string, SelectRepresentative>
+  >;
   readonly maxRevealActions?: number;
   readonly grant?: RevealExecutionGrant;
   readonly expectedGrantDigest?: string;
@@ -206,6 +226,9 @@ const harnessInputFor = (input: RunChunkInput) => ({
   ...(input.later === undefined ? {} : { later: input.later }),
   ...(input.crossRoute === undefined ? {} : { crossRoute: input.crossRoute }),
   ...(input.eventSink === undefined ? {} : { eventSink: input.eventSink }),
+  ...(input.selectRepresentatives === undefined
+    ? {}
+    : { selectRepresentatives: input.selectRepresentatives }),
 });
 
 const sourceFor = (input: RunChunkInput) =>

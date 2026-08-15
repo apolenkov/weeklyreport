@@ -25,6 +25,7 @@ import {
 } from "../preflight-reveal-continuation-schemas.ts";
 import {
   branchAssetFor,
+  candidateFrontierFor,
   candidateListAssetFor,
   candidateListDigestFor,
   inventoryAssetFor,
@@ -148,6 +149,10 @@ interface TerminalReceiptInput {
   readonly completedCandidateCount: number;
   readonly actionCount: number;
   readonly branchCount: number;
+  readonly nextFrontier?: Readonly<{
+    readonly branch: RevealBranch;
+    readonly candidates: readonly RevealCandidate[];
+  }>;
 }
 
 const terminalReceiptAssetsFor = (input: TerminalReceiptInput) => {
@@ -172,6 +177,10 @@ const terminalReceiptAssetsFor = (input: TerminalReceiptInput) => {
     throw new RevealContinuationError(
       "R188 terminal candidate index is out of range",
     );
+  const nextFrontier =
+    input.nextFrontier === undefined
+      ? null
+      : candidateFrontierFor(input.nextFrontier);
   return {
     afterAsset,
     afterBranch,
@@ -182,6 +191,7 @@ const terminalReceiptAssetsFor = (input: TerminalReceiptInput) => {
     candidateId,
     candidateList,
     ids,
+    nextFrontier,
   };
 };
 
@@ -198,6 +208,7 @@ export const receiptForTerminal = (
     candidateId,
     candidateList,
     ids,
+    nextFrontier,
   } = terminalReceiptAssetsFor(input);
   const body = {
     artifact: PREFLIGHT_REVEAL_TERMINAL_RECEIPT,
@@ -229,6 +240,7 @@ export const receiptForTerminal = (
         ? afterAsset.digest
         : null,
     },
+    nextFrontier,
     materialChanged: input.terminal.materialChanged,
     actionCount: input.actionCount,
     branchCount: input.branchCount,
