@@ -14,6 +14,7 @@ import {
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
 import { discoverRevealControlsWithSummary } from "../reveal/interaction/preflight-reveal-discovery.ts";
+import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { PreflightRuntimePreparationWithBoundary } from "../runtime/preflight-runtime-setup.ts";
 import {
   playwrightHarnessFor,
@@ -64,6 +65,7 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
   readonly expectedOrigin: string;
   readonly prepare: PreflightRuntimePreparationWithBoundary;
   readonly beforeComplete: () => Promise<void>;
+  readonly onProgress?: (progress: RevealDiscoveryProgress) => void;
   readonly now?: () => number;
 }): Promise<CapacitySurveyResult> {
   const target = exactSurveyTarget(input.source, input.plan);
@@ -96,6 +98,9 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
       maxRevealMaterialEdges: input.plan.limits.materialEdges,
       maxRevealActions: input.plan.limits.actions,
       maxControlsPerSegment: input.plan.limits.controls,
+      ...(input.onProgress === undefined
+        ? {}
+        : { onProgress: input.onProgress }),
     })
   ).summary;
   await input.beforeComplete();

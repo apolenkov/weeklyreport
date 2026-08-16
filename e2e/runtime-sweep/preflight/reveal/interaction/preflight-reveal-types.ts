@@ -51,6 +51,16 @@ type RevealDiscoverySummary = Readonly<{
   readonly queueEmpty: true;
 }>;
 
+export type RevealDiscoveryProgress = Readonly<{
+  readonly completedCandidateCount: number;
+  readonly revealActionCount: number;
+  readonly materialEdgeCount: number;
+  readonly controlCount: number;
+  readonly visitedStateCount: number;
+  readonly queueLength: number;
+  readonly maxQueueLength: number;
+}>;
+
 export type RevealDiscoveryWithSummary = Readonly<{
   readonly controls: readonly MatrixPreflightControl[];
   readonly summary: RevealDiscoverySummary;

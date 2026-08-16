@@ -20,6 +20,7 @@
         "e2e/runtime-sweep/preflight/playwright.config.ts",
         "e2e/runtime-sweep/preflight/playwright.harness.config.ts",
         "e2e/runtime-sweep/preflight/playwright.capacity-survey.config.ts",
+        "e2e/runtime-sweep/preflight/preflight-capacity-survey-global-setup.ts",
         "e2e/runtime-sweep/preflight/playwright.preflight.config.ts",
         "e2e/runtime-sweep/**/*.test.ts",
         "e2e/**/*.spec.ts",

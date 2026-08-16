@@ -115,6 +115,9 @@ export type RevealDiscoveryInput = Readonly<{
   readonly maxRevealMaterialEdges?: number;
   readonly maxRevealActions?: number;
   readonly maxControlsPerSegment?: number;
+  readonly onProgress?: (
+    progress: import("./preflight-reveal-types.ts").RevealDiscoveryProgress,
+  ) => void;
 }>;
 
 const revealBoundsFor = (
@@ -264,12 +267,21 @@ export async function discoverRevealControlsWithSummary(
   const result = await processRevealQueueChunk(
     queueInput,
     initialState,
-    ({ remainingQueue }) => {
+    ({ state: currentState, remainingQueue }) => {
       metrics.candidateCount += 1;
       metrics.queueLength = Math.max(
         metrics.queueLength,
         remainingQueue.length,
       );
+      input.onProgress?.({
+        completedCandidateCount: metrics.candidateCount,
+        revealActionCount: currentState.actionCount,
+        materialEdgeCount: currentState.branchCount,
+        controlCount: currentState.controls.length,
+        visitedStateCount: currentState.visitedStatePaths.size,
+        queueLength: remainingQueue.length,
+        maxQueueLength: metrics.queueLength,
+      });
       return false;
     },
   );
