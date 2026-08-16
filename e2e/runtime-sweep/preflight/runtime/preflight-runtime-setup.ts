@@ -22,6 +22,7 @@ export type PreflightRuntimeSetupInput = Readonly<{
   readonly databaseUrl: string;
   readonly repoRoot: string;
   readonly apiUrl: string;
+  readonly maxRevealDepth?: number;
 }>;
 
 const loginForActor = async (
@@ -44,8 +45,14 @@ export const createPreflightRuntimePreparation = (
     CampaignMatrixState["profile"]
   >(() =>
     Promise.resolve(
-      createPreflightSessionCache(input.page.context(), (actor) =>
-        loginForActor(input.page, actor),
+      createPreflightSessionCache(
+        input.page.context(),
+        (actor) => loginForActor(input.page, actor),
+        {
+          ...(input.maxRevealDepth === undefined
+            ? {}
+            : { maxRevealDepth: input.maxRevealDepth }),
+        },
       ),
     ),
   );

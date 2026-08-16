@@ -305,6 +305,8 @@ repair chain may accept it as canary, preflight, matrix, or release evidence.
   the browser session cookie while reveal branches remain
 - **THEN** the harness refreshes that exact actor through the verified login
   flow before reusing the session and replaces the cached cookie
+- **AND** the refresh safety window is derived from the immutable survey plan's
+  reveal-depth limit plus the initial navigation and inventory budget
 - **AND** the replacement must remain valid beyond the bounded full-branch
   replay window; otherwise the survey fails closed
 - **AND** refresh-side browser storage and API work are quiesced before the

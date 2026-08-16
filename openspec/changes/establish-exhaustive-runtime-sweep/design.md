@@ -268,8 +268,10 @@ lifetime, its preflight session cache uses the browser cookie's absolute expiry
 as the renewal authority. Before expiry enters a bounded safety window, the
 harness refreshes only the selected actor through the same verified dev-login
 identity flow and replaces the cached cookie. It does not duplicate or extend
-the server JWT lifetime. The five-minute safety window covers the documented
-four-step replay action/settle maximum plus initial navigation and inventory.
+the server JWT lifetime. The immutable survey plan's reveal-depth limit derives
+the safety window: one minute for each possible replay action/settle step plus
+one additional minute for initial navigation and inventory. Production and
+acceptance paths retain their production reveal-depth default.
 After a refresh, the harness clears browser storage, returns to `about:blank`,
 drains API work, and only then establishes or revalidates the prepared database
 baseline. Missing expiration, a replacement still inside that window, refresh
