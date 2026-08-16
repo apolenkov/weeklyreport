@@ -167,10 +167,12 @@ export async function assertPreflightRegularFile(
   filePath: string,
 ): Promise<void> {
   const candidate = normalizedAbsolute(filePath, ARCHIVE_FILE);
-  const stat = await lstat(candidate).catch(() => {
-    throw new PreflightArchivePathError(
-      `Preflight archive file is unavailable: ${candidate}`,
-    );
+  const stat = await lstat(candidate).catch((error: unknown) => {
+    if (isMissing(error))
+      throw new PreflightArchivePathError(
+        `Preflight archive file is unavailable: ${candidate}`,
+      );
+    throw error;
   });
   if (!stat.isFile() || stat.isSymbolicLink())
     throw new PreflightArchivePathError(

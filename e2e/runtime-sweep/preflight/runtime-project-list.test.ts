@@ -226,6 +226,24 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     expect(capacityConfig.use?.screenshot).toBe("off");
     expect(capacityConfig.use?.video).toBe("off");
     expect(capacityConfig.use?.contextOptions).not.toHaveProperty("recordHar");
+
+    const { default: failureFrontierReplayConfig } =
+      await import("./playwright.failure-frontier-replay.config.ts");
+    expect(failureFrontierReplayConfig.globalSetup).toBe(
+      path.join(
+        import.meta.dirname,
+        "preflight-failure-frontier-replay-global-setup.ts",
+      ),
+    );
+    expect(failureFrontierReplayConfig.testMatch).toEqual(
+      /preflight-failure-frontier-replay\.spec\.ts/,
+    );
+    expect(
+      failureFrontierReplayConfig.projects?.map(({ name }) => name),
+    ).toEqual(["runtime-failure-frontier-replay"]);
+    expect(failureFrontierReplayConfig.use?.trace).toBe("off");
+    expect(failureFrontierReplayConfig.use?.screenshot).toBe("off");
+    expect(failureFrontierReplayConfig.use?.video).toBe("off");
   } finally {
     restoreRuntimeEnvironment(environmentSnapshot);
     await rm(archive, { recursive: true, force: true });

@@ -7,7 +7,6 @@ import {
   assertPreflightRegularFile,
   ensurePreflightArchiveDirectory,
   ensurePreflightArchiveRoot,
-  PreflightArchivePathError,
 } from "../preflight-archive-path.ts";
 import {
   CAPACITY_SURVEY_MAX_ARTIFACT_BYTES,
@@ -20,7 +19,7 @@ import {
   PREFLIGHT_CAPACITY_SURVEY_RESULT,
 } from "./preflight-capacity-survey-contract.ts";
 
-class CapacitySurveyArtifactIOError extends Error {
+export class CapacitySurveyArtifactIOError extends Error {
   override readonly name = "CapacitySurveyArtifactIOError";
 }
 
@@ -50,14 +49,7 @@ const textFor = (value: CapacitySurveyPlan | CapacitySurveyResult): string => {
 const assertRegularImmutableTarget = async (
   filePath: string,
 ): Promise<void> => {
-  try {
-    await assertPreflightRegularFile(filePath);
-  } catch (error: unknown) {
-    if (error instanceof PreflightArchivePathError) throw error;
-    throw new CapacitySurveyArtifactIOError(
-      `Capacity survey artifact is not a readable regular file: ${filePath}`,
-    );
-  }
+  await assertPreflightRegularFile(filePath);
   const stat = await lstat(filePath);
   if (!stat.isFile() || stat.isSymbolicLink())
     throw new CapacitySurveyArtifactIOError(

@@ -276,16 +276,50 @@ identified exact-source capacity survey. Its immutable plan SHALL bind the
 exact source identity, one exact selector and resolved state/route, the reveal
 graph limits, one browser child, a hard wall-time deadline, and bounded result
 output. The survey SHALL execute one monolithic reveal queue with HAR, trace,
-video, screenshots, continuation assets, assignment/journal records, parent
-grants, parent PASS, and canary publication disabled. It SHALL publish a
-`COMPLETE` result only after the queue is empty and the live source identity is
-rechecked. The result is diagnostic data only: no launcher, gate, finalizer, or
-repair chain may accept it as canary, preflight, matrix, or release evidence.
-The monolithic browser loop SHALL execute without an active Playwright
-`TestInfo`, and queue traversal SHALL use iterative cursors so completed API
-calls and adopted Promises are not retained for the lifetime of the survey.
-Fixed-interval progress output MAY contain bounded scalar counters and process
-memory values only; it is never terminal result or acceptance evidence.
+video, screenshots, continuation checkpoints, receipts, grants,
+assignment/journal records, parent PASS, and canary publication disabled. It
+SHALL publish a `COMPLETE` result only after the queue is empty and the live
+source identity is rechecked. The result is diagnostic data only: no launcher,
+gate, finalizer, or repair chain may accept it as canary, preflight, matrix, or
+release evidence. The monolithic browser loop SHALL execute without an active
+Playwright `TestInfo`, and queue traversal SHALL use iterative cursors so
+completed API calls and adopted Promises are not retained for the lifetime of
+the survey. Fixed-interval progress output MAY contain bounded scalar counters
+and process memory values only; it is never terminal result or acceptance
+evidence.
+
+The capacity survey MAY configure an optional first-failure callback only
+around terminal candidate execution. Before the candidate cursor advances, the
+callback MAY publish one separately rooted
+`PREFLIGHT_REVEAL_FAILURE_FRONTIER` diagnostic packet containing immutable
+content-addressed branch, path, inventory, surface and canonical candidate-list
+evidence. The packet SHALL bind the exact source SHA/tree/tree digest/source
+digest, source plan digest, capacity-plan artifact digest, selector, state,
+route, candidate index, candidate identity, representative input and action-key
+digest. It SHALL rethrow the original failure and SHALL NOT publish or satisfy a
+capacity result, continuation, resume, grant, PASS, canary, journal, matrix,
+repair, release or acceptance artifact.
+
+The frontier manifest SHALL be canonical and no larger than 65,536 bytes. Its
+branch depth SHALL be at most 8. It SHALL declare positive per-file,
+asset-count and aggregate-byte bounds, while the parser SHALL reject more than
+64 content assets, an asset larger than 8,388,608 bytes, or aggregate
+manifest-plus-asset bytes greater than 67,108,864. All paths SHALL remain under
+one exact archive-confined packet root and SHALL resolve to regular non-symlink
+files. Content assets SHALL be written and digest-read back before an
+exclusive, synced, read-back-verified manifest is written last. Missing,
+duplicate, stale, foreign, reordered, oversized, path-escaping, symlinked,
+digest-drifted, partial or mutated evidence SHALL invalidate the packet before
+browser launch.
+
+A focused replay SHALL accept only a valid exact-source packet, create a fresh
+disposable database/browser boundary, hydrate and restore the saved branch and
+path, and re-derive the canonical candidates from the restored inventory. The
+re-derived list, index, candidate identity, representative input and action key
+SHALL match the packet before the unchanged production whole-surface boundary
+is invoked without executing the final action. A serialized raw action SHALL
+never authorize replay, and no replay outcome SHALL satisfy the survey's
+empty-frontier result or any acceptance gate.
 
 #### Scenario: a complete survey reports the terminal graph
 
@@ -303,6 +337,44 @@ memory values only; it is never terminal result or acceptance evidence.
 - **THEN** no `COMPLETE` capacity result is published
 - **AND** partial counters, Playwright diagnostics, continuation output, or a
   pre-existing survey file cannot satisfy or weaken acceptance
+
+#### Scenario: the first terminal-candidate failure is captured without authority
+
+- **WHEN** the exact survey configures failure-frontier capture and terminal
+  candidate execution throws before its cursor advances
+- **THEN** at most one complete frontier packet binds the pre-candidate branch,
+  canonical candidate list, failing index and exact source/plan/selector/state/
+  route identity
+- **AND** the original failure is rethrown, the child remains nonzero, no
+  `COMPLETE` capacity result is published, and the packet grants no resume or
+  acceptance authority
+- **AND** a callback or publication failure leaves no valid manifest and does
+  not replace or convert the original failure
+
+#### Scenario: a failure-frontier packet fails closed at every evidence bound
+
+- **WHEN** the manifest or an asset is missing, duplicate, stale, foreign,
+  reordered, oversized, too deep, over the asset-count or aggregate-byte bound,
+  outside the packet root, symlinked, digest-drifted, partially written, or
+  changed after publication
+- **THEN** packet validation fails before browser launch
+- **AND** neither raw content assets nor a pre-existing manifest can authorize
+  replay, continuation, capacity completion or acceptance
+
+#### Scenario: focused replay re-derives the failing candidate
+
+- **WHEN** a valid exact-source failure-frontier packet is replayed from a fresh
+  disposable database and browser boundary
+- **THEN** the saved path is restored and the canonical candidate list is
+  re-derived from the restored inventory
+- **AND** list, index, candidate identity, representative input and action key
+  must exactly match before the unchanged whole-surface boundary runs
+- **AND** the final action is not executed, a serialized raw action is never
+  trusted, and `REPRODUCED`, `PATH_OR_LINEAGE_DRIFT`, `NOT_REPRODUCED`, or
+  `INVALID_PACKET` remains diagnostic-only
+- **AND** the declared plan duration bounds global setup, servers, browser work
+  and teardown through one detached process-group deadline with forced cleanup
+  of surviving descendants
 
 #### Scenario: a long survey retains bounded runner lifecycle state
 
@@ -339,6 +411,8 @@ memory values only; it is never terminal result or acceptance evidence.
 - **THEN** its distinct artifact kind and digest domain are rejected
 - **AND** the production reveal limits remain unchanged until the completed
   survey is independently reviewed and landed in a later exact-source commit
+- **AND** a failure-frontier packet or focused replay verdict is rejected by the
+  same acceptance, repair, matrix, release and publication boundaries
 
 ### Requirement: Every coverage cell has a typed identity and one source SHA
 

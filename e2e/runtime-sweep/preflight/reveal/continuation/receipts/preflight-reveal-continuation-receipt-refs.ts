@@ -230,3 +230,14 @@ export const assetsForReceipt = (
   addPathAssets(assets, receipt.terminal.pathNodeRef);
   return [...assets.values()];
 };
+
+/** Returns the exact immutable asset closure for one saved candidate frontier. */
+export const assetsForCandidateFrontier = (input: {
+  readonly branchRef: string;
+  readonly candidateListRef: string;
+}): readonly RevealContinuationAsset[] => {
+  const assets = new Map<string, RevealContinuationAsset>();
+  addBranchAssets(assets, input.branchRef);
+  addAsset(assets, PREFLIGHT_REVEAL_CANDIDATE_LIST, input.candidateListRef);
+  return [...assets.values()];
+};

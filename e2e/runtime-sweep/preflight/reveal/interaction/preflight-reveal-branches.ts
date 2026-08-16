@@ -78,6 +78,19 @@ export type RevealCandidateTerminalResult = Readonly<{
   readonly materialChanged: boolean;
 }>;
 
+export type RevealCandidateFailure = Readonly<{
+  readonly state: RevealDiscoveryState;
+  readonly branch: RevealBranch;
+  readonly candidates: readonly RevealCandidate[];
+  readonly candidateIndex: number;
+  readonly candidateIdentity: string;
+  readonly originalError: unknown;
+}>;
+
+export type RevealCandidateFailureHandler = (
+  failure: RevealCandidateFailure,
+) => Promise<void> | void;
+
 export interface RevealQueueInput {
   readonly state: CampaignMatrixState;
   readonly route: RevealRoute;
@@ -92,6 +105,7 @@ export interface RevealQueueInput {
   readonly maxRevealMaterialEdges: number;
   readonly maxRevealActions: number;
   readonly maxControlsPerSegment: number;
+  readonly onCandidateFailure?: RevealCandidateFailureHandler;
 }
 
 export type RevealPureQueueInput = Omit<RevealQueueInput, "harness">;

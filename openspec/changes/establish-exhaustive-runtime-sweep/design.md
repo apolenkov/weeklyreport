@@ -271,6 +271,61 @@ never satisfy result or acceptance authority. The survey runs one monolithic
 reveal queue, so it creates no continuation checkpoint, receipt, grant, parent
 PASS, assignment, journal, matrix, or canary artifact.
 
+A failed monolithic survey may invoke one optional diagnostic-only
+`onCandidateFailure` callback around terminal candidate execution. The callback
+is absent by default and is never supplied by production preflight, canary,
+full, shard, repair, matrix, release, or acceptance paths. It receives the
+pre-candidate discovery state, current branch, canonical candidate list,
+candidate index and identity, and the original thrown error before the cursor
+advances. It may publish only a bounded first-failure frontier packet and must
+then rethrow the original error. A capture or publication failure leaves no
+valid packet and never replaces, converts, retries, or marks the original
+survey failure as complete.
+
+The failure-frontier packet has its own
+`PREFLIGHT_REVEAL_FAILURE_FRONTIER` artifact kind, version and diagnostic-only
+digest domain. It is published under a separate archive-confined packet root,
+never as a capacity plan/result, continuation checkpoint, receipt, grant,
+parent PASS, canary, journal, matrix, or release artifact. It reuses the strict
+immutable content encodings for branch, path nodes, inventory, surface and
+canonical candidate-list evidence, but the frontier manifest is the only
+packet-completion marker and those content objects carry no execution
+authority. The manifest binds source SHA/tree/tree digest/source digest, source
+plan digest, capacity-plan artifact digest, selector/state/route identities,
+branch/path/inventory/surface/candidate-list refs and digests, candidate index
+and candidate identity, action-key digest, bounded failure classification and
+the declared packet limits.
+
+The canonical manifest is at most 64 KiB and a captured branch is at most depth 8. A packet declares positive per-file, asset-count and aggregate-byte bounds;
+the parser additionally rejects more than 64 content assets, any content asset
+larger than the existing 8 MiB continuation-asset ceiling, or more than 64 MiB
+of aggregate manifest-plus-asset bytes. Every path is resolved under the exact
+packet root and regular non-symlink files are required. Assets are written
+content-addressed and read back by digest before the manifest is created
+exclusively, synced and reread; the manifest is written last. Missing,
+duplicate, foreign, stale, reordered, oversized, path-escaping, symlinked,
+digest-drifted, partially written, or post-publication-mutated inputs invalidate
+the packet before browser launch.
+
+A focused replay accepts only a valid packet whose source and capacity-plan
+identities match the live clean repository. It hydrates the recorded branch and
+path, creates a fresh disposable database/browser boundary, replays the path,
+derives the current canonical candidate list from the restored inventory, and
+requires exact list, index, candidate-id, representative-input and action-key
+equality. It then invokes the unchanged production whole-surface action
+boundary for that candidate without executing the final action. Serialized raw
+actions never authorize replay. An earlier restore/lineage mismatch is reported
+as `PATH_OR_LINEAGE_DRIFT`; an exact final-boundary mismatch is `REPRODUCED`; a
+fully matching boundary is `NOT_REPRODUCED`; identity or packet rejection is
+`INVALID_PACKET`. None of those diagnostic outcomes is acceptance evidence or
+satisfies the empty-frontier capacity result.
+
+The operator entrypoint launches the focused Playwright process as a detached
+process group. The exact plan duration is an outer hard deadline covering
+global setup, web/API servers, browser work and teardown; expiry interrupts the
+whole group and retains a bounded forced-kill escalation so a departed group
+leader cannot leave server or browser descendants running.
+
 Because this diagnostic may legitimately run longer than the product session
 lifetime, its preflight session cache uses the browser cookie's absolute expiry
 as the renewal authority. Before expiry enters a bounded safety window, the

@@ -27,6 +27,7 @@ import { revealStatePathIdentityFor } from "../guards/preflight-reveal-registrat
 import {
   assertRevealControlCapacity,
   type RevealCandidate,
+  type RevealCandidateFailureHandler,
   type RevealDiscoveryState,
 } from "./preflight-reveal-branches.ts";
 import { processRevealQueueChunk } from "./preflight-reveal-queue.ts";
@@ -118,6 +119,7 @@ export type RevealDiscoveryInput = Readonly<{
   readonly onProgress?: (
     progress: import("./preflight-reveal-types.ts").RevealDiscoveryProgress,
   ) => void;
+  readonly onCandidateFailure?: RevealCandidateFailureHandler;
 }>;
 
 const revealBoundsFor = (

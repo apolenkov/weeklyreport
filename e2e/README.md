@@ -123,6 +123,39 @@ covered targets. Every lane owns a distinct database, Redis instance, API/web
 ports, browser process, Next.js output, queue namespace, and archive subtree.
 Each lane uses one Playwright worker and executes its assigned cells serially.
 
+## Failure-frontier diagnostic replay
+
+A failed exact capacity survey may opt in to a separately rooted
+`PREFLIGHT_REVEAL_FAILURE_FRONTIER` packet. After that packet exists, replay
+only its saved branch with the ordinary preflight runtime environment plus the
+following exact paths:
+
+```bash
+RUNTIME_SWEEP_ARCHIVE=/absolute/archive/root \
+RUNTIME_SWEEP_SOURCE=/absolute/archive/root/SOURCE.json \
+RUNTIME_SWEEP_CAPACITY_SURVEY_PLAN=/absolute/archive/root/survey/PREFLIGHT_CAPACITY_SURVEY_PLAN.json \
+RUNTIME_SWEEP_FAILURE_FRONTIER_REPLAY_PACKET_ROOT=/absolute/archive/root/failure-frontier \
+RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT=/absolute/disposable/temp/root \
+RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS=600000 \
+E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e \
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+pnpm test:runtime-preflight-failure-frontier-replay
+```
+
+The global setup validates the source, capacity plan, complete packet, archive
+confinement, and live clean Git identity before launching Chromium. A valid
+packet gets one fresh guarded database/browser boundary. Replay restores the
+saved path, re-derives the canonical immediate candidate list, checks the
+unchanged whole-surface boundary, and never executes the failing final action.
+The command runs Playwright in a detached child process group; the declared
+maximum duration covers setup, servers, browser work, and teardown, with
+process-group escalation if graceful interruption does not finish.
+It emits exactly one diagnostic-only classification: `INVALID_PACKET`,
+`PATH_OR_LINEAGE_DRIFT`, `REPRODUCED`, or `NOT_REPRODUCED`. None is a capacity
+result, continuation, canary, matrix, PASS, release, or acceptance artifact.
+Generic browser, database, server, or filesystem failures remain non-zero
+infrastructure failures rather than diagnostic verdicts.
+
 ## Evidence and archive
 
 Runtime evidence is not curated repository documentation. Store it below the

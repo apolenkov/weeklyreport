@@ -19,10 +19,15 @@ import {
 } from "./capacity/preflight-capacity-survey-io.ts";
 import { createCapacitySurveyProgressReporter } from "./capacity/preflight-capacity-survey-progress.ts";
 import { runPlaywrightPreflightCapacitySurvey } from "./execution/playwright-preflight-capacity-survey.ts";
+import { capacitySurveyFailureFrontierRootForChild } from "./launch/preflight-capacity-survey-launcher-support.ts";
 import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
 } from "./preflight-archive-path.ts";
+import {
+  assertFailureFrontierManifestAbsent,
+  createRevealFailureFrontierHandler,
+} from "./reveal/failure-frontier/preflight-reveal-failure-frontier.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
 const requiredEnv = (name: string): string => {
@@ -31,7 +36,15 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const assertAbsent = async (filePath: string): Promise<void> => {
+const optionalEnv = (name: string): string | undefined => {
+  const value = process.env[name]?.trim();
+  return value === undefined || value === "" ? undefined : value;
+};
+
+const assertAbsent = async (
+  filePath: string,
+  label = "Capacity survey result",
+): Promise<void> => {
   try {
     await lstat(filePath);
   } catch (error: unknown) {
@@ -39,7 +52,7 @@ const assertAbsent = async (filePath: string): Promise<void> => {
       return;
     throw error;
   }
-  throw new Error(`Capacity survey result already exists: ${filePath}`);
+  throw new Error(`${label} already exists: ${filePath}`);
 };
 
 const { defaultBrowserType: _defaultBrowserType, ...desktopChrome } =
@@ -60,6 +73,7 @@ const runCapacitySurveyInBrowser = async (input: {
   readonly webOrigin: string;
   readonly resultRoot: string;
   readonly resultPath: string;
+  readonly failureFrontierRoot?: string;
 }): Promise<void> => {
   const browser = await chromium.launch({ headless: true });
   try {
@@ -90,6 +104,20 @@ const runCapacitySurveyInBrowser = async (input: {
             expectedSourceSha: input.plan.sourceSha,
           }).then(() => undefined),
         onProgress: createCapacitySurveyProgressReporter(),
+        ...(input.failureFrontierRoot === undefined
+          ? {}
+          : {
+              onCandidateFailure: createRevealFailureFrontierHandler({
+                packetRoot: input.failureFrontierRoot,
+                plan: input.plan,
+                beforeCapture: () =>
+                  assertLivePreflightSourceIdentity({
+                    source: input.source,
+                    repoRoot: input.repoRoot,
+                    expectedSourceSha: input.plan.sourceSha,
+                  }).then(() => undefined),
+              }),
+            }),
       });
       await writeCapacitySurveyResult({
         archiveRoot: input.resultRoot,
@@ -116,6 +144,9 @@ export default async function runCapacitySurveyGlobalSetup(): Promise<void> {
   const resultRoot = path.resolve(
     requiredEnv("RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT_ROOT"),
   );
+  const failureFrontierRoot = optionalEnv(
+    "RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT",
+  );
   const databaseUrl = requiredEnv("E2E_DATABASE_URL");
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
   const apiUrl = `http://127.0.0.1:${requiredEnv("E2E_API_PORT")}`;
@@ -126,6 +157,26 @@ export default async function runCapacitySurveyGlobalSetup(): Promise<void> {
   const exactResultRoot = await ensurePreflightArchiveRoot(resultRoot);
   await assertPreflightArchivePath(exactResultRoot, resultPath);
   await assertAbsent(resultPath);
+  const exactFailureFrontierRoot =
+    failureFrontierRoot === undefined
+      ? undefined
+      : capacitySurveyFailureFrontierRootForChild({
+          archiveRoot: exactArchiveRoot,
+          planPath,
+          resultRoot: exactResultRoot,
+          tempRoot: path.resolve(
+            requiredEnv("RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT"),
+          ),
+          failureFrontierRoot,
+        });
+  if (exactFailureFrontierRoot !== undefined) {
+    await assertPreflightArchivePath(
+      exactArchiveRoot,
+      path.join(exactFailureFrontierRoot, ".failure-frontier-boundary"),
+    );
+    await ensurePreflightArchiveRoot(exactFailureFrontierRoot);
+    await assertFailureFrontierManifestAbsent(exactFailureFrontierRoot);
+  }
   const source = await readSourceArtifact(sourcePath);
   const plan = await readCapacitySurveyPlan({
     archiveRoot: exactArchiveRoot,
@@ -145,5 +196,8 @@ export default async function runCapacitySurveyGlobalSetup(): Promise<void> {
     webOrigin,
     resultRoot: exactResultRoot,
     resultPath,
+    ...(exactFailureFrontierRoot === undefined
+      ? {}
+      : { failureFrontierRoot: exactFailureFrontierRoot }),
   });
 }

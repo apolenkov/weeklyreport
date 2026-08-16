@@ -24,7 +24,7 @@ import {
 import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
 
 const freezeCandidateInput = async (
-  input: RevealQueueInput,
+  harness: RevealQueueInput["harness"],
   candidate: RevealCandidate,
 ): Promise<RevealCandidate> => {
   const operation = candidate.action.operation;
@@ -34,7 +34,7 @@ const freezeCandidateInput = async (
     throw new RevealDiscoveryError(
       `Fill reveal lacks a frozen representative input: ${candidate.action.controlKey}`,
     );
-  const freeze = input.harness.freezeRepresentativeInput;
+  const freeze = harness.freezeRepresentativeInput;
   if (freeze === undefined)
     throw new RevealDiscoveryError(
       `Select reveal cannot freeze a representative input: ${candidate.action.controlKey}`,
@@ -54,8 +54,14 @@ export const freezeRevealCandidateInputs = (
   input: RevealQueueInput,
   candidates: readonly RevealCandidate[],
 ): Promise<readonly RevealCandidate[]> =>
+  freezeRevealCandidateInputsForHarness(input.harness, candidates);
+
+export const freezeRevealCandidateInputsForHarness = (
+  harness: RevealQueueInput["harness"],
+  candidates: readonly RevealCandidate[],
+): Promise<readonly RevealCandidate[]> =>
   Promise.all(
-    candidates.map((candidate) => freezeCandidateInput(input, candidate)),
+    candidates.map((candidate) => freezeCandidateInput(harness, candidate)),
   );
 
 const processRevealCandidate = async (input: {

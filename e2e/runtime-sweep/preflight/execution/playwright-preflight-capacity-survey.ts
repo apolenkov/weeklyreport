@@ -13,6 +13,7 @@ import {
   assertInitialLanding,
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
+import type { RevealCandidateFailureHandler } from "../reveal/interaction/preflight-reveal-branches.ts";
 import { discoverRevealControlsWithSummary } from "../reveal/interaction/preflight-reveal-discovery.ts";
 import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { PreflightRuntimePreparationWithBoundary } from "../runtime/preflight-runtime-setup.ts";
@@ -66,6 +67,7 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
   readonly prepare: PreflightRuntimePreparationWithBoundary;
   readonly beforeComplete: () => Promise<void>;
   readonly onProgress?: (progress: RevealDiscoveryProgress) => void;
+  readonly onCandidateFailure?: RevealCandidateFailureHandler;
   readonly now?: () => number;
 }): Promise<CapacitySurveyResult> {
   const target = exactSurveyTarget(input.source, input.plan);
@@ -101,6 +103,9 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
       ...(input.onProgress === undefined
         ? {}
         : { onProgress: input.onProgress }),
+      ...(input.onCandidateFailure === undefined
+        ? {}
+        : { onCandidateFailure: input.onCandidateFailure }),
     })
   ).summary;
   await input.beforeComplete();
