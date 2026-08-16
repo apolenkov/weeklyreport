@@ -1,9 +1,6 @@
 import type { Cookie } from "@playwright/test";
 
-import {
-  MS_PER_SECOND,
-  SECONDS_PER_MINUTE,
-} from "../../../../packages/shared/src/index.ts";
+import { MS_PER_SECOND } from "../../../../packages/shared/src/index.ts";
 import type { CampaignMatrixState } from "../../matrix/campaign-matrix.ts";
 import {
   actorForPermission,
@@ -12,6 +9,7 @@ import {
 } from "../../matrix/runtime-matrix.ts";
 import type { RouteBindingTarget } from "../../source/contracts.ts";
 import { MAX_REVEAL_DEPTH } from "../reveal-path.ts";
+import { sessionRefreshSafetySecondsFor } from "./preflight-session-timing.ts";
 
 type PreflightGroupRoute = Readonly<{
   readonly role: CampaignMatrixState["axes"]["role"];
@@ -101,17 +99,13 @@ class PreflightSessionError extends Error {
 }
 
 const SESSION_COOKIE_NAME = "customreport_session";
-// Each possible reveal step receives one minute for action and settle budgets;
-// one additional minute covers initial navigation and inventory.
-const SESSION_REFRESH_SAFETY_SECONDS =
-  (MAX_REVEAL_DEPTH + 1) * SECONDS_PER_MINUTE;
-
 type CachedActorSession = Readonly<{
   readonly cookies: readonly Cookie[];
   readonly expiresAtSeconds: number;
 }>;
 
 type PreflightSessionCacheOptions = Readonly<{
+  readonly maxRevealDepth?: number;
   readonly nowSeconds?: () => number;
 }>;
 
@@ -146,8 +140,8 @@ const sessionExpiryFor = (cookies: readonly Cookie[]): number | null => {
 const sessionNeedsRefresh = (
   session: CachedActorSession,
   nowSeconds: number,
-): boolean =>
-  session.expiresAtSeconds <= nowSeconds + SESSION_REFRESH_SAFETY_SECONDS;
+  safetySeconds: number,
+): boolean => session.expiresAtSeconds <= nowSeconds + safetySeconds;
 
 const isAuthenticatedActor = (
   actor: RuntimeMatrixActor,
@@ -199,10 +193,12 @@ const refreshActorSession = async (input: {
     actor: AuthenticatedActor,
   ) => Promise<CachedActorSession>;
   readonly nowSeconds: () => number;
+  readonly safetySeconds: number;
 }): Promise<CachedActorSession> => {
   const session = await input.authenticate(input.actor);
   const refreshedAtSeconds = requiredSessionTime(input.nowSeconds);
-  if (!sessionNeedsRefresh(session, refreshedAtSeconds)) return session;
+  if (!sessionNeedsRefresh(session, refreshedAtSeconds, input.safetySeconds))
+    return session;
   throw new PreflightSessionError(
     `Refreshed session for role ${input.actor.role} remains inside the replay safety window`,
   );
@@ -213,6 +209,7 @@ const installActorSession = async (input: {
   readonly context: PreflightCookieContext;
   readonly sessions: Map<string, CachedActorSession>;
   readonly nowSeconds: () => number;
+  readonly safetySeconds: number;
   readonly refresh: (actor: AuthenticatedActor) => Promise<CachedActorSession>;
 }): Promise<void> => {
   const key = actorKey(input.actor);
@@ -225,6 +222,7 @@ const installActorSession = async (input: {
     const refresh = sessionNeedsRefresh(
       cached,
       requiredSessionTime(input.nowSeconds),
+      input.safetySeconds,
     );
     const session = refresh ? await input.refresh(input.actor) : cached;
     if (refresh) await input.context.clearCookies();
@@ -259,6 +257,9 @@ export function createPreflightSessionCache(
   const cookiesByActor = new Map<string, CachedActorSession>();
   const state = { initialized: false };
   const nowSeconds = options.nowSeconds ?? (() => Date.now() / MS_PER_SECOND);
+  const safetySeconds = sessionRefreshSafetySecondsFor(
+    options.maxRevealDepth ?? MAX_REVEAL_DEPTH,
+  );
 
   const authenticateActor = (actor: AuthenticatedActor) =>
     authenticateActorSession({
@@ -311,11 +312,13 @@ export function createPreflightSessionCache(
         context,
         sessions: cookiesByActor,
         nowSeconds,
+        safetySeconds,
         refresh: (selected) =>
           refreshActorSession({
             actor: selected,
             authenticate: authenticateActor,
             nowSeconds,
+            safetySeconds,
           }),
       });
     },

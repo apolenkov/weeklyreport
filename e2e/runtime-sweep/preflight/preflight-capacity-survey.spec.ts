@@ -74,6 +74,7 @@ test("exact-source capacity survey reports only an exhausted reveal queue", asyn
     databaseUrl,
     repoRoot,
     apiUrl,
+    maxRevealDepth: plan.limits.maxDepth,
   });
   const result = await runPlaywrightPreflightCapacitySurvey({
     source,

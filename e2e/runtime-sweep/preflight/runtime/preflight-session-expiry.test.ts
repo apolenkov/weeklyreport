@@ -34,6 +34,7 @@ const sessionHarnessFor = (
     actor: RuntimeMatrixActor,
     loginCount: number,
   ) => readonly Cookie[],
+  options: Readonly<{ readonly maxRevealDepth?: number }> = {},
 ) => {
   let nowSeconds = 0;
   let loginCount = 0;
@@ -56,6 +57,7 @@ const sessionHarnessFor = (
   });
   const cache = createPreflightSessionCache(context, login, {
     nowSeconds: () => nowSeconds,
+    ...options,
   });
   return {
     cache,
@@ -69,6 +71,15 @@ const sessionHarnessFor = (
 };
 
 describe("preflight session expiry", () => {
+  it.each([0, 1.5, Number.MAX_SAFE_INTEGER])(
+    "rejects an invalid reveal depth %s before authentication",
+    (maxRevealDepth) => {
+      expect(() => sessionHarnessFor(() => [], { maxRevealDepth })).toThrow(
+        /reveal depth must be a positive safe integer/iu,
+      );
+    },
+  );
+
   it("refreshes only the selected actor at the expiry safety boundary", async () => {
     const harness = sessionHarnessFor((actor, loginCount) => [
       cookieFor(
@@ -86,6 +97,32 @@ describe("preflight session expiry", () => {
     harness.setNowSeconds(700);
     await harness.cache.use(lead);
     expect(harness.activeCookies()[0]?.value).toBe("session-lead-3");
+    await harness.cache.use(head);
+    expect(harness.activeCookies()[0]?.value).toBe("session-head-2");
+    expect(harness.login).toHaveBeenCalledTimes(3);
+  });
+
+  it("derives the refresh boundary from a custom reveal depth", async () => {
+    const harness = sessionHarnessFor(
+      (actor, loginCount) => [
+        cookieFor(
+          `${actor.role ?? "anonymous"}-${loginCount}`,
+          loginCount <= 2 ? 1000 : 4600,
+        ),
+      ],
+      { maxRevealDepth: 8 },
+    );
+
+    await harness.cache.authenticate([lead, head]);
+    harness.setNowSeconds(459);
+    await harness.cache.use(lead);
+    expect(harness.activeCookies()[0]?.value).toBe("session-lead-1");
+    expect(harness.login).toHaveBeenCalledTimes(2);
+
+    harness.setNowSeconds(460);
+    await harness.cache.use(lead);
+    expect(harness.activeCookies()[0]?.value).toBe("session-lead-3");
+    harness.setNowSeconds(0);
     await harness.cache.use(head);
     expect(harness.activeCookies()[0]?.value).toBe("session-head-2");
     expect(harness.login).toHaveBeenCalledTimes(3);
@@ -137,6 +174,37 @@ describe("preflight session expiry", () => {
       );
       expect(harness.activeCookies()).toEqual([]);
       expect(harness.context.addCookies).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    [1000, "rejects"],
+    [1001, "accepts"],
+  ] as const)(
+    "%s-second custom-depth replacement %s the exact replay boundary",
+    async (refreshedExpiry, expected) => {
+      const harness = sessionHarnessFor(
+        (actor, loginCount) => [
+          cookieFor(
+            actor.role ?? "anonymous",
+            loginCount === 1 ? 1000 : refreshedExpiry,
+          ),
+        ],
+        { maxRevealDepth: 8 },
+      );
+
+      await harness.cache.authenticate([lead]);
+      harness.setNowSeconds(460);
+
+      if (expected === "rejects") {
+        await expect(harness.cache.use(lead)).rejects.toThrow(
+          /remains inside the replay safety window/iu,
+        );
+        expect(harness.activeCookies()).toEqual([]);
+        return;
+      }
+      await expect(harness.cache.use(lead)).resolves.toBeUndefined();
+      expect(harness.activeCookies()[0]?.value).toBe("session-lead");
     },
   );
 
