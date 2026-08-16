@@ -207,8 +207,14 @@ export const serializeSourceArtifact = (artifact: SourceArtifact): string =>
 export async function readSourceArtifact(
   filePath: string,
 ): Promise<SourceArtifact> {
+  const text = await readFile(filePath, "utf8").catch((error: unknown) => {
+    const missing =
+      error instanceof Error && "code" in error && error.code === "ENOENT";
+    if (!missing) throw error;
+    throw new SourceArtifactError(`Cannot read SOURCE.json: ${error.message}`);
+  });
   try {
-    return parseSourceArtifact(JSON.parse(await readFile(filePath, "utf8")));
+    return parseSourceArtifact(JSON.parse(text));
   } catch (error: unknown) {
     if (error instanceof SourceArtifactError) throw error;
     throw new SourceArtifactError(

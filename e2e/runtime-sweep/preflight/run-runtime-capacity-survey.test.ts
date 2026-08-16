@@ -75,6 +75,46 @@ describe("capacity survey launcher boundary", () => {
     expect(
       environment.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT,
     ).toBeUndefined();
+    expect(
+      environment.RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT,
+    ).toBeUndefined();
+  });
+
+  it("passes a failure-frontier root only when the survey explicitly opts in", () => {
+    const failureFrontierRoot = path.join(
+      fixtureRoot,
+      "archive",
+      "failure-frontier",
+    );
+    const environment = capacitySurveyChildEnvironment({
+      ...environmentInput,
+      inherited: {},
+      failureFrontierRoot,
+    });
+
+    expect(
+      environment.RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT,
+    ).toBe(failureFrontierRoot);
+  });
+
+  it("rejects a direct-child failure-frontier root outside the archive", () => {
+    expect(() =>
+      capacitySurveyChildEnvironment({
+        ...environmentInput,
+        inherited: {},
+        failureFrontierRoot: path.join(fixtureRoot, "outside-archive"),
+      }),
+    ).toThrow(/failure-frontier root.*archive/iu);
+  });
+
+  it("rejects a direct-child failure-frontier root shared with plan output", () => {
+    expect(() =>
+      capacitySurveyChildEnvironment({
+        ...environmentInput,
+        inherited: {},
+        failureFrontierRoot: path.dirname(environmentInput.planPath),
+      }),
+    ).toThrow(/failure-frontier root.*separate/iu);
   });
 
   it("accepts only the exact bounded plan/result file set", async () => {

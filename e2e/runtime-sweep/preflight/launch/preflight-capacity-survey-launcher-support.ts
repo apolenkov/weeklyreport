@@ -103,6 +103,51 @@ export const publishBoundedCapacitySurveyResult = async (input: {
   });
 };
 
+const pathsOverlap = (left: string, right: string): boolean => {
+  const relative = path.relative(left, right);
+  return (
+    relative === "" ||
+    (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
+};
+
+export const capacitySurveyFailureFrontierRootForChild = (input: {
+  readonly archiveRoot: string;
+  readonly planPath: string;
+  readonly resultRoot: string;
+  readonly tempRoot: string;
+  readonly failureFrontierRoot: string;
+}): string => {
+  const archiveRoot = path.resolve(input.archiveRoot);
+  const failureFrontierRoot = path.resolve(input.failureFrontierRoot);
+  const relative = path.relative(archiveRoot, failureFrontierRoot);
+  if (
+    relative === "" ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    throw new Error(
+      "Capacity survey failure-frontier root must remain below the archive root",
+    );
+  const forbiddenRoots = [
+    path.dirname(path.resolve(input.planPath)),
+    path.resolve(input.resultRoot),
+    path.resolve(input.tempRoot),
+  ];
+  if (
+    forbiddenRoots.some(
+      (forbidden) =>
+        pathsOverlap(forbidden, failureFrontierRoot) ||
+        pathsOverlap(failureFrontierRoot, forbidden),
+    )
+  )
+    throw new Error(
+      "Capacity survey failure-frontier root must be separate from plan/result and temp roots",
+    );
+  return failureFrontierRoot;
+};
+
 export const capacitySurveyChildEnvironment = (input: {
   readonly inherited: NodeJS.ProcessEnv;
   readonly archiveRoot: string;
@@ -112,7 +157,18 @@ export const capacitySurveyChildEnvironment = (input: {
   readonly resultRoot: string;
   readonly tempRoot: string;
   readonly maxDurationMs: number;
+  readonly failureFrontierRoot?: string;
 }): NodeJS.ProcessEnv => {
+  const failureFrontierRoot =
+    input.failureFrontierRoot === undefined
+      ? undefined
+      : capacitySurveyFailureFrontierRootForChild({
+          archiveRoot: input.archiveRoot,
+          planPath: input.planPath,
+          resultRoot: input.resultRoot,
+          tempRoot: input.tempRoot,
+          failureFrontierRoot: input.failureFrontierRoot,
+        });
   const environment = Object.fromEntries(
     Object.entries(input.inherited).filter(
       ([key]) =>
@@ -132,5 +188,11 @@ export const capacitySurveyChildEnvironment = (input: {
     RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT_ROOT: input.resultRoot,
     RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT: input.tempRoot,
     RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS: String(input.maxDurationMs),
+    ...(failureFrontierRoot === undefined
+      ? {}
+      : {
+          RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT:
+            failureFrontierRoot,
+        }),
   };
 };

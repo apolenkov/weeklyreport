@@ -72,6 +72,7 @@
     "test:runtime-preflight": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts full",
     "test:runtime-preflight-canary": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts canary",
     "test:runtime-preflight-capacity-survey": "tsx e2e/runtime-sweep/preflight/run-runtime-capacity-survey.ts",
+    "test:runtime-preflight-failure-frontier-replay": "tsx e2e/runtime-sweep/preflight/run-runtime-failure-frontier-replay.ts",
     "test:runtime-preflight-repair": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts repair",
     "test:runtime-preflight-shard": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts shard",
     "test:runtime-harness": "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/preflight/playwright.harness.config.ts",

@@ -71,6 +71,7 @@ type CapacitySurveyPaths = Readonly<{
   sourcePath: string;
   planPath: string;
   resultPath: string;
+  failureFrontierRoot?: string;
 }>;
 
 export const createCapacitySurveyTempRoot = async (): Promise<string> =>
@@ -87,6 +88,13 @@ const capacitySurveyPaths = async (): Promise<CapacitySurveyPaths> => {
   const resultPath = path.resolve(
     requiredEnv("RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT"),
   );
+  const configuredFailureRoot = optionalEnv(
+    "RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT",
+  );
+  const failureFrontierRoot =
+    configuredFailureRoot === undefined
+      ? undefined
+      : path.resolve(configuredFailureRoot);
   await Promise.all(
     [sourcePath, planPath, resultPath].map((filePath) =>
       assertPreflightArchivePath(archiveRoot, filePath),
@@ -104,7 +112,26 @@ const capacitySurveyPaths = async (): Promise<CapacitySurveyPaths> => {
   );
   if (path.dirname(planPath) !== path.dirname(resultPath))
     throw new Error("Capacity survey plan and result must share one directory");
-  return { archiveRoot, sourcePath, planPath, resultPath };
+  if (failureFrontierRoot !== undefined) {
+    await assertPreflightArchivePath(
+      archiveRoot,
+      path.join(failureFrontierRoot, ".failure-frontier-boundary"),
+    );
+    if (
+      failureFrontierRoot === path.dirname(planPath) ||
+      failureFrontierRoot === archiveRoot
+    )
+      throw new Error(
+        "Capacity survey failure-frontier root must be separate from plan/result and archive roots",
+      );
+  }
+  return {
+    archiveRoot,
+    sourcePath,
+    planPath,
+    resultPath,
+    ...(failureFrontierRoot === undefined ? {} : { failureFrontierRoot }),
+  };
 };
 
 const capacitySurveySelection = (source: SourceArtifact) => {
@@ -210,6 +237,9 @@ const runCapacitySurveyChildAndPublish = async (input: {
         resultRoot: tempRoot,
         tempRoot,
         maxDurationMs: input.plan.limits.maxDurationMs,
+        ...(input.paths.failureFrontierRoot === undefined
+          ? {}
+          : { failureFrontierRoot: input.paths.failureFrontierRoot }),
       }),
       maxDurationMs: input.plan.limits.maxDurationMs,
     });

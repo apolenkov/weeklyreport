@@ -30,6 +30,13 @@ inside each page. The gap is visible in `e2e/sweep/catalog-sweep.spec.ts`,
   PASS. No raw or sealed continuation can authorize a full-preflight launch.
   Full/shard journal continuation remains explicitly NOT-PROVEN in this change
   and cannot reuse canary artifacts.
+- Preserve the first terminal-candidate failure of a diagnostic capacity survey
+  in a separately identified, bounded failure-frontier packet before attempting
+  another opaque full traversal. The packet binds the exact source, plan,
+  selector, state, route, branch, canonical candidate list and failing index,
+  but never grants continuation, resume, PASS, canary, capacity-result or
+  acceptance authority. A focused replay must re-derive the saved candidate
+  from fresh exact-source state instead of trusting a serialized raw action.
 - Keep native Codex `gpt-5.6-luna` Max reviews bounded to canonical role/profile
   evidence batches. Reports use the `native-codex` provider contract, emit
   candidates only, and require an explicit verifier import before any merge;

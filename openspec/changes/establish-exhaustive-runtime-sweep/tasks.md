@@ -231,6 +231,24 @@
       outside active Playwright `TestInfo`, traverse with iterative cursors, and
       retain only fixed-interval scalar heap/cardinality progress samples.
 
+- [ ] 5.18 Preserve one terminal-candidate failure from an exact capacity survey
+      in a separately rooted, diagnostic-only failure-frontier packet. Add an
+      optional default-off callback before candidate-cursor advancement that
+      receives the pre-candidate state, branch, canonical candidate list,
+      failing index/identity and original error, publishes bounded immutable
+      branch/path/inventory/surface/candidate-list evidence, and rethrows the
+      original error without emitting RESULT, continuation, resume, grant,
+      PASS, canary, journal, matrix or acceptance authority. Bind exact source,
+      plan, selector, state and route identity; enforce a 64 KiB manifest,
+      depth 8, at most 64 assets, 8 MiB per asset and 64 MiB aggregate bounds;
+      require archive confinement, regular non-symlink files, write-last atomic
+      manifest publication and digest read-back. Add missing, duplicate, stale,
+      foreign, reorder, tamper, symlink, path-escape, partial-write and every
+      bound negative. Add a fresh-state focused Chromium replay that restores
+      the saved path, re-derives and exactly matches the canonical candidate,
+      invokes the unchanged whole-surface boundary without executing the final
+      action, and emits only diagnostic terminal classifications.
+
 ## 6. Immutable baseline and adjudication
 
 - [ ] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/

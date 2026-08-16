@@ -556,6 +556,22 @@
       "target": "e2e/runtime-sweep/preflight/$1.ts"
     },
     {
+      "id": "runtime-preflight-failure-frontier-entrypoint-test",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-failure-frontier-replay\\.test\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-failure-frontier-entrypoint",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-failure-frontier-replay\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "entrypoint",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
       "id": "runtime-preflight-observability",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/observability/((?!.*\\.test\\.ts$).+\\.ts)$",
@@ -594,6 +610,30 @@
       "concern": "preflight-reveal-continuation",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-fixtures",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/(.+-test-support\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "fixture",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/((?!.*(?:\\.test|\\.spec|-test-support)\\.ts$).+\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
     },
     {
       "id": "runtime-preflight-subconcern-tests",
@@ -678,7 +718,7 @@
     {
       "id": "runtime-source-contract-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/source/((?:contracts-landing|route-network-policy|source-artifact)\\.test\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/source/((?:contracts-landing|route-network-policy|source-artifact(?:-io)?)\\.test\\.ts)$",
       "concern": "source-contracts",
       "role": "test",
       "target": "e2e/runtime-sweep/source/$1"
