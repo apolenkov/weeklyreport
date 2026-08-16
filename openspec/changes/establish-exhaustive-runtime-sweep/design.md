@@ -259,9 +259,17 @@ source SHA/tree/digest, one exact selector and resolved state/route, explicit
 reveal graph limits, one child, a hard wall-time deadline, and per-file plus
 aggregate output limits. A dedicated Playwright configuration selects only the
 survey spec and disables HAR, trace, video, screenshots, and failure-retention
-amplification. The survey runs one monolithic reveal queue, so it creates no
-continuation checkpoint, receipt, grant, parent PASS, assignment, journal,
-matrix, or canary artifact.
+amplification. The server lifecycle remains owned by that configuration, while
+the browser survey runs from its global setup without an active Playwright
+`TestInfo`; the post-setup spec performs no browser work and checks only that a
+terminal result candidate exists. This prevents the test runner from retaining
+one `pw:api` step for every replay call until the full survey ends. The reveal
+queue advances candidates and branches through iterative cursors rather than an
+adopted Promise chain, and emits only bounded scalar heap/cardinality progress
+samples at a fixed interval. Those partial samples are diagnostic logs and can
+never satisfy result or acceptance authority. The survey runs one monolithic
+reveal queue, so it creates no continuation checkpoint, receipt, grant, parent
+PASS, assignment, journal, matrix, or canary artifact.
 
 Because this diagnostic may legitimately run longer than the product session
 lifetime, its preflight session cache uses the browser cookie's absolute expiry

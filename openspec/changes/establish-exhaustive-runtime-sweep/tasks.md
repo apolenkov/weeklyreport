@@ -227,7 +227,9 @@
       or satisfies acceptance evidence, and must be completed before replacing
       the production reveal limits. Renew a near-expiry cached actor session
       from its actual browser-cookie expiry without changing the product auth
-      TTL, and reject route drift before inventory comparison.
+      TTL, reject route drift before inventory comparison, run browser work
+      outside active Playwright `TestInfo`, traverse with iterative cursors, and
+      retain only fixed-interval scalar heap/cardinality progress samples.
 
 ## 6. Immutable baseline and adjudication
 

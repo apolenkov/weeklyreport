@@ -26,6 +26,8 @@ const ENV_KEYS = [
   "RUNTIME_SWEEP_BUGSINK_DSN",
   "RUNTIME_SWEEP_ARCHIVE",
   "RUNTIME_SWEEP_BASE_URL",
+  "RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS",
+  "RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT",
   "RUNTIME_SWEEP_PREFLIGHT_MODE",
   "RUNTIME_SWEEP_PROFILE",
   "RUNTIME_SWEEP_SOURCE_SHA",
@@ -202,6 +204,28 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     expect(preflightServers[1]?.command).toBe(
       "pnpm exec tsx e2e/runtime-sweep/preflight/run-runtime-next-server.ts preflight 3105",
     );
+
+    process.env.RUNTIME_SWEEP_PREFLIGHT_MODE = "capacity-survey";
+    process.env.RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT = archive;
+    process.env.RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS = "60000";
+    const { default: capacityConfig } =
+      await import("./playwright.capacity-survey.config.ts");
+    expect(capacityConfig.globalSetup).toBe(
+      path.join(
+        import.meta.dirname,
+        "preflight-capacity-survey-global-setup.ts",
+      ),
+    );
+    expect(capacityConfig.testMatch).toEqual(
+      /preflight-capacity-survey\.spec\.ts/,
+    );
+    expect(capacityConfig.projects?.map(({ name }) => name)).toEqual([
+      "runtime-capacity-survey",
+    ]);
+    expect(capacityConfig.use?.trace).toBe("off");
+    expect(capacityConfig.use?.screenshot).toBe("off");
+    expect(capacityConfig.use?.video).toBe("off");
+    expect(capacityConfig.use?.contextOptions).not.toHaveProperty("recordHar");
   } finally {
     restoreRuntimeEnvironment(environmentSnapshot);
     await rm(archive, { recursive: true, force: true });

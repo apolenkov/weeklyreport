@@ -46,11 +46,10 @@ type CandidateProcessor = (input: {
   readonly terminal?: RevealCandidateTerminalResult;
 }>;
 
-type QueueProcessor = (
-  input: RevealQueueInput,
-  state: RevealDiscoveryState,
-  shouldYieldAfterCandidate?: RevealQueueYieldHandler,
-) => Promise<RevealQueueChunkResult>;
+export type RevealCandidateProcessingResult = Readonly<{
+  state: RevealDiscoveryState;
+  yielded?: RevealQueueChunkResult;
+}>;
 
 export const candidatesAtBoundary = (
   input: RevealPureQueueInput,
@@ -108,27 +107,6 @@ const terminalContinuationFor = (input: {
     ? undefined
     : nextContinuationFor(input.queueInput, input.state);
 
-const continueFromCursor = (
-  input: {
-    readonly queueInput: RevealQueueInput;
-    readonly state: RevealDiscoveryState;
-    readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
-  },
-  processQueue: QueueProcessor,
-): Promise<RevealQueueChunkResult> => {
-  const {
-    currentBranch: _currentBranch,
-    currentCandidates: _currentCandidates,
-    currentCandidateIndex: _currentCandidateIndex,
-    ...withoutCursor
-  } = input.state;
-  return processQueue(
-    input.queueInput,
-    { ...withoutCursor, queue: input.state.queue },
-    input.shouldYieldAfterCandidate,
-  );
-};
-
 const processExecutedCandidate = async (input: {
   readonly queueInput: RevealQueueInput;
   readonly state: RevealDiscoveryState;
@@ -157,6 +135,29 @@ const processExecutedCandidate = async (input: {
   });
 };
 
+const requiredCandidateAt = (
+  candidates: readonly RevealCandidate[],
+  index: number,
+): RevealCandidate => {
+  const candidate = candidates[index];
+  if (candidate !== undefined) return candidate;
+  throw new RevealDiscoveryError(
+    `Reveal candidate ${String(index)} is missing from its ordered list`,
+  );
+};
+
+const candidateCursorState = (
+  state: RevealDiscoveryState,
+  current: RevealBranch,
+  candidates: readonly RevealCandidate[],
+  nextCandidateIndex: number,
+): RevealDiscoveryState => ({
+  ...state,
+  currentBranch: current,
+  currentCandidates: candidates,
+  currentCandidateIndex: nextCandidateIndex,
+});
+
 export const processCandidates = async (
   input: {
     readonly queueInput: RevealQueueInput;
@@ -168,68 +169,57 @@ export const processCandidates = async (
     readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
   },
   processCandidate: CandidateProcessor,
-  processQueue: QueueProcessor,
-): Promise<RevealQueueChunkResult> => {
+): Promise<RevealCandidateProcessingResult> => {
   const {
     queueInput,
-    state,
     current,
     candidates,
     index,
     restoredBranch,
     shouldYieldAfterCandidate,
   } = input;
-  if (index >= candidates.length)
-    return continueFromCursor(input, processQueue);
-  const candidate = candidates[index];
-  if (candidate === undefined)
-    throw new RevealDiscoveryError(
-      `Reveal candidate ${String(index)} is missing from its ordered list`,
+  const cursor: {
+    state: RevealDiscoveryState;
+    restoredBranch: RevealBranch | undefined;
+  } = { state: input.state, restoredBranch };
+  for (const [offset] of candidates.slice(index).entries()) {
+    const candidateIndex = index + offset;
+    const candidate = requiredCandidateAt(candidates, candidateIndex);
+    const result = await processCandidate({
+      queueInput,
+      current,
+      state: { ...cursor.state, currentCandidateIndex: candidateIndex },
+      candidate,
+      ...(cursor.restoredBranch === undefined
+        ? {}
+        : { restoredBranch: cursor.restoredBranch }),
+    });
+    cursor.state = candidateCursorState(
+      result.state,
+      current,
+      candidates,
+      candidateIndex + 1,
     );
-  const result = await processCandidate({
-    queueInput,
-    current,
-    state: { ...state, currentCandidateIndex: index },
-    candidate,
-    ...(restoredBranch === undefined ? {} : { restoredBranch }),
-  });
-  const processed: RevealDiscoveryState = {
-    ...result.state,
-    currentBranch: current,
-    currentCandidates: candidates,
-    currentCandidateIndex: index + 1,
-  };
-  if (!result.executed || result.terminal === undefined)
-    return processNext(
-      { ...input, state: processed, index: index + 1 },
-      processCandidate,
-      processQueue,
-    );
-  const yielded = await processExecutedCandidate({
-    queueInput,
-    state: processed,
-    current,
-    candidates,
-    nextCandidateIndex: index + 1,
-    terminal: result.terminal,
-    ...(shouldYieldAfterCandidate === undefined
-      ? {}
-      : { shouldYieldAfterCandidate }),
-  });
-  if (yielded !== undefined) return yielded;
-  const { restoredBranch: _restoredBranch, ...inputWithoutRestoredBranch } =
-    input;
-  return processNext(
-    { ...inputWithoutRestoredBranch, state: processed, index: index + 1 },
-    processCandidate,
-    processQueue,
-  );
+    if (!result.executed || result.terminal === undefined) continue;
+    cursor.restoredBranch = undefined;
+    const yielded = await processExecutedCandidate({
+      queueInput,
+      state: cursor.state,
+      current,
+      candidates,
+      nextCandidateIndex: candidateIndex + 1,
+      terminal: result.terminal,
+      ...(shouldYieldAfterCandidate === undefined
+        ? {}
+        : { shouldYieldAfterCandidate }),
+    });
+    if (yielded !== undefined) return { state: cursor.state, yielded };
+  }
+  const {
+    currentBranch: _currentBranch,
+    currentCandidates: _currentCandidates,
+    currentCandidateIndex: _currentCandidateIndex,
+    ...withoutCursor
+  } = cursor.state;
+  return { state: { ...withoutCursor, queue: cursor.state.queue } };
 };
-
-function processNext(
-  input: Parameters<typeof processCandidates>[0],
-  processCandidate: CandidateProcessor,
-  processQueue: QueueProcessor,
-): Promise<RevealQueueChunkResult> {
-  return processCandidates(input, processCandidate, processQueue);
-}

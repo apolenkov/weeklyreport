@@ -37,6 +37,10 @@ const surveySpec = /preflight-capacity-survey\.spec\.ts/;
 
 export default defineConfig({
   ...preflightConfig,
+  globalSetup: path.join(
+    import.meta.dirname,
+    "preflight-capacity-survey-global-setup.ts",
+  ),
   testMatch: surveySpec,
   outputDir: path.join(tempRoot, "playwright"),
   reporter: [["list"]],

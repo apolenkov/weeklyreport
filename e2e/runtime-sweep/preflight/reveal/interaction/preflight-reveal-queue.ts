@@ -18,6 +18,7 @@ import {
 } from "./preflight-reveal-branches.ts";
 import {
   processCandidates,
+  type RevealCandidateProcessingResult,
   type RevealQueueYieldHandler,
 } from "./preflight-reveal-queue-candidates.ts";
 import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
@@ -154,17 +155,24 @@ export const applyRevealCandidateResult = (input: {
   });
 };
 
-export const processRevealQueueChunk = async (
-  input: RevealQueueInput,
-  state: RevealDiscoveryState,
-  shouldYieldAfterCandidate?: RevealQueueYieldHandler,
-): Promise<RevealQueueChunkResult> => {
+const currentBranchFor = (state: RevealDiscoveryState): RevealBranch => {
   const current = state.currentBranch ?? state.queue[0];
-  if (current === undefined)
-    return { state: { ...state, queue: [] }, completed: true };
-  const remaining = state.currentBranch ? state.queue : state.queue.slice(1);
+  if (current !== undefined) return current;
+  throw new RevealDiscoveryError("Reveal queue cursor is missing its branch");
+};
+
+const processCurrentRevealBranch = async (input: {
+  readonly queueInput: RevealQueueInput;
+  readonly state: RevealDiscoveryState;
+  readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
+}): Promise<RevealCandidateProcessingResult> => {
+  const current = currentBranchFor(input.state);
+  const remaining = input.state.currentBranch
+    ? input.state.queue
+    : input.state.queue.slice(1);
   const unfrozenCandidates =
-    state.currentCandidates ?? candidatesForImmediateReveal(input, current);
+    input.state.currentCandidates ??
+    candidatesForImmediateReveal(input.queueInput, current);
   const requiresLiveRestore = unfrozenCandidates.some(
     (candidate) =>
       candidate.action.operation === "select" &&
@@ -172,36 +180,58 @@ export const processRevealQueueChunk = async (
   );
   const restoredBranch = requiresLiveRestore
     ? await restoreRevealBranch({
-        harness: input.harness,
-        state: input.state,
-        route: input.route,
-        initialSurface: input.initialSurface,
+        harness: input.queueInput.harness,
+        state: input.queueInput.state,
+        route: input.queueInput.route,
+        initialSurface: input.queueInput.initialSurface,
         branch: current,
       })
     : undefined;
   const candidates = await freezeRevealCandidateInputs(
-    input,
+    input.queueInput,
     unfrozenCandidates,
   );
   return processCandidates(
     {
-      queueInput: input,
+      queueInput: input.queueInput,
       state: {
-        ...state,
+        ...input.state,
         queue: remaining,
         currentBranch: current,
         currentCandidates: candidates,
-        currentCandidateIndex: state.currentCandidateIndex ?? 0,
+        currentCandidateIndex: input.state.currentCandidateIndex ?? 0,
       },
       current,
       candidates,
-      index: state.currentCandidateIndex ?? 0,
+      index: input.state.currentCandidateIndex ?? 0,
       ...(restoredBranch === undefined ? {} : { restoredBranch }),
+      ...(input.shouldYieldAfterCandidate === undefined
+        ? {}
+        : { shouldYieldAfterCandidate: input.shouldYieldAfterCandidate }),
+    },
+    processRevealCandidate,
+  );
+};
+
+export const processRevealQueueChunk = async (
+  input: RevealQueueInput,
+  state: RevealDiscoveryState,
+  shouldYieldAfterCandidate?: RevealQueueYieldHandler,
+): Promise<RevealQueueChunkResult> => {
+  const cursor = { state };
+  while (
+    cursor.state.currentBranch !== undefined ||
+    cursor.state.queue.length > 0
+  ) {
+    const processed = await processCurrentRevealBranch({
+      queueInput: input,
+      state: cursor.state,
       ...(shouldYieldAfterCandidate === undefined
         ? {}
         : { shouldYieldAfterCandidate }),
-    },
-    processRevealCandidate,
-    processRevealQueueChunk,
-  );
+    });
+    if (processed.yielded !== undefined) return processed.yielded;
+    cursor.state = processed.state;
+  }
+  return { state: { ...cursor.state, queue: [] }, completed: true };
 };

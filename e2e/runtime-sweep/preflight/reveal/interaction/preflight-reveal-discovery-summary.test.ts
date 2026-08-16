@@ -148,10 +148,12 @@ const discoveryInputFor = (
 describe("preflight reveal discovery summary", () => {
   it("reports terminal counts from the same planted queue traversal", async () => {
     const fixture = fixtureFor();
+    const progress: unknown[] = [];
 
-    const result = await discoverRevealControlsWithSummary(
-      discoveryInputFor(fixture.harness),
-    );
+    const result = await discoverRevealControlsWithSummary({
+      ...discoveryInputFor(fixture.harness),
+      onProgress: (sample) => progress.push(sample),
+    });
 
     expect(result.summary).toEqual({
       completedCandidateCount: 2,
@@ -166,6 +168,26 @@ describe("preflight reveal discovery summary", () => {
     });
     expect(result.controls).toHaveLength(2);
     expect(fixture.executionCount()).toBe(3);
+    expect(progress).toEqual([
+      {
+        completedCandidateCount: 1,
+        revealActionCount: 1,
+        materialEdgeCount: 1,
+        controlCount: 2,
+        visitedStateCount: 2,
+        queueLength: 1,
+        maxQueueLength: 1,
+      },
+      {
+        completedCandidateCount: 2,
+        revealActionCount: 3,
+        materialEdgeCount: 2,
+        controlCount: 2,
+        visitedStateCount: 3,
+        queueLength: 1,
+        maxQueueLength: 1,
+      },
+    ]);
   });
 
   it("does not return a partial summary when a material edge bound overflows", async () => {

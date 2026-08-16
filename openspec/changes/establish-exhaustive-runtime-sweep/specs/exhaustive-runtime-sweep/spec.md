@@ -281,6 +281,11 @@ grants, parent PASS, and canary publication disabled. It SHALL publish a
 `COMPLETE` result only after the queue is empty and the live source identity is
 rechecked. The result is diagnostic data only: no launcher, gate, finalizer, or
 repair chain may accept it as canary, preflight, matrix, or release evidence.
+The monolithic browser loop SHALL execute without an active Playwright
+`TestInfo`, and queue traversal SHALL use iterative cursors so completed API
+calls and adopted Promises are not retained for the lifetime of the survey.
+Fixed-interval progress output MAY contain bounded scalar counters and process
+memory values only; it is never terminal result or acceptance evidence.
 
 #### Scenario: a complete survey reports the terminal graph
 
@@ -298,6 +303,18 @@ repair chain may accept it as canary, preflight, matrix, or release evidence.
 - **THEN** no `COMPLETE` capacity result is published
 - **AND** partial counters, Playwright diagnostics, continuation output, or a
   pre-existing survey file cannot satisfy or weaken acceptance
+
+#### Scenario: a long survey retains bounded runner lifecycle state
+
+- **WHEN** the monolithic survey processes candidates and replays branches for
+  longer than an ordinary Playwright test
+- **THEN** its browser calls execute outside active Playwright `TestInfo`
+  instrumentation and do not accumulate per-call test steps
+- **AND** candidate and branch traversal uses iterative cursors rather than an
+  unresolved Promise chain proportional to completed work
+- **AND** any periodic heap, queue, control, visited-state, or candidate sample
+  is scalar-only, emitted at a fixed interval, and cannot be parsed as a
+  terminal capacity result
 
 #### Scenario: a long-running survey renews its harness session
 
