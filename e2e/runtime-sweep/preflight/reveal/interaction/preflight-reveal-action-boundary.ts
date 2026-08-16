@@ -3,8 +3,12 @@ import type {
   DomInventory,
 } from "../../../replay/dom/dom-inventory.ts";
 import type { Action } from "../../../source/contracts.ts";
-import { stableSerialize } from "../../../support/ids.ts";
-import { type RevealSurface, revealSurfaceFor } from "../../reveal-path.ts";
+import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
+import {
+  type RevealSurface,
+  type RevealSurfaceControl,
+  revealSurfaceFor,
+} from "../../reveal-path.ts";
 import {
   assertSameRevealOrigin,
   requiredCurrentUrl,
@@ -24,6 +28,65 @@ type LiveRevealBoundary = Readonly<{
   readonly control: DomControlObservation;
   readonly rawUrl: string;
 }>;
+
+const SURFACE_DIFF_ENTRY_LIMIT = 8;
+const SURFACE_FIELDS = [
+  "ariaRole",
+  "accessibleName",
+  "enabled",
+  "order",
+  "domOrderKey",
+  "href",
+  "interactionEffect",
+] as const satisfies readonly Exclude<
+  keyof RevealSurfaceControl,
+  "controlKey"
+>[];
+
+const changedSurfaceFields = (
+  expected: RevealSurfaceControl,
+  actual: RevealSurfaceControl,
+): readonly (typeof SURFACE_FIELDS)[number][] =>
+  SURFACE_FIELDS.filter((field) => expected[field] !== actual[field]);
+
+const boundedSurfaceDiff = (
+  expected: RevealSurface,
+  actual: RevealSurface,
+): string => {
+  const expectedByKey = new Map(
+    expected.controls.map((control) => [control.controlKey, control] as const),
+  );
+  const actualByKey = new Map(
+    actual.controls.map((control) => [control.controlKey, control] as const),
+  );
+  const added = actual.controls
+    .filter(({ controlKey }) => !expectedByKey.has(controlKey))
+    .map(({ controlKey }) => sha256Hex(controlKey));
+  const removed = expected.controls
+    .filter(({ controlKey }) => !actualByKey.has(controlKey))
+    .map(({ controlKey }) => sha256Hex(controlKey));
+  const changed = expected.controls.flatMap((expectedControl) => {
+    const actualControl = actualByKey.get(expectedControl.controlKey);
+    if (actualControl === undefined) return [];
+    const fields = changedSurfaceFields(expectedControl, actualControl);
+    return fields.length === 0
+      ? []
+      : [`${sha256Hex(expectedControl.controlKey)}:fields=${fields.join(",")}`];
+  });
+  const truncated = [added, removed, changed].some(
+    (entries) => entries.length > SURFACE_DIFF_ENTRY_LIMIT,
+  );
+  return [
+    `expectedCount=${expected.controls.length}`,
+    `actualCount=${actual.controls.length}`,
+    `expectedDigest=${expected.digest}`,
+    `actualDigest=${actual.digest}`,
+    `added=[${added.slice(0, SURFACE_DIFF_ENTRY_LIMIT).join(",")}]`,
+    `removed=[${removed.slice(0, SURFACE_DIFF_ENTRY_LIMIT).join(",")}]`,
+    `changed=[${changed.slice(0, SURFACE_DIFF_ENTRY_LIMIT).join(";")}]`,
+    `truncated=${String(truncated)}`,
+  ].join(" ");
+};
 
 const controlForAction = (
   inventory: DomInventory,
@@ -55,7 +118,7 @@ const assertLiveSurface = (
   const actual = revealSurfaceFor(inventory.controls);
   if (stableSerialize(actual) !== stableSerialize(expected))
     throw new RevealDiscoveryError(
-      `Reveal action surface drifted immediately before execution: ${controlKey}`,
+      `Reveal action surface drifted immediately before execution: actionKeyDigest=${sha256Hex(controlKey)} ${boundedSurfaceDiff(expected, actual)}`,
     );
 };
 
