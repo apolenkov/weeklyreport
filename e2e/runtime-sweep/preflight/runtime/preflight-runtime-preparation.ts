@@ -28,6 +28,7 @@ import {
 import type { PreflightRuntimeSetupInput } from "./preflight-runtime-setup.ts";
 import {
   createProfileSessionCacheRegistry,
+  type PreflightSessionCache,
   quiescePreflightStatePage,
 } from "./preflight-session.ts";
 
@@ -189,6 +190,26 @@ const clearCacheForChangedPreparation = (
     cache.prepared = undefined;
 };
 
+const quiescePreflightSetup = (
+  setup: PreflightRuntimeSetupInput,
+  awaitApiDrain: () => Promise<void>,
+): Promise<void> =>
+  quiescePreflightStatePage(
+    setup.page,
+    () => clearClientStorage(setup.page),
+    awaitApiDrain,
+  );
+
+const selectPreflightActor = async (input: {
+  readonly setup: PreflightRuntimeSetupInput;
+  readonly sessions: PreflightSessionCache;
+  readonly actor: RuntimeMatrixActor;
+  readonly awaitApiDrain: () => Promise<void>;
+}): Promise<void> => {
+  await input.sessions.use(input.actor);
+  await quiescePreflightSetup(input.setup, input.awaitApiDrain);
+};
+
 const preparePreflightState = async (input: {
   readonly context: PreflightPreparationContext;
   readonly cache: PreparedStateCache;
@@ -197,11 +218,7 @@ const preparePreflightState = async (input: {
   readonly groupChanged: boolean;
 }): Promise<RevealPreparation> => {
   const { setup, awaitApiDrain, sessionsByProfile } = input.context;
-  await quiescePreflightStatePage(
-    setup.page,
-    () => clearClientStorage(setup.page),
-    awaitApiDrain,
-  );
+  await quiescePreflightSetup(setup, awaitApiDrain);
   const profileSessions = await sessionsByProfile.get(input.state.profile);
   const resetRequired = input.groupChanged || profileSessions.created;
   const preparationKey = preflightPreparationKeyFor({
@@ -227,6 +244,12 @@ const preparePreflightState = async (input: {
       clearPage: () => clearClientStorage(setup.page),
       awaitApiDrain,
     });
+  await selectPreflightActor({
+    setup,
+    sessions: profileSessions.cache,
+    actor: actorForPermission(input.state.axes.permission, input.route.role),
+    awaitApiDrain,
+  });
   const prepared = await preparedStateFor({
     context: input.context,
     cache: input.cache,
@@ -235,9 +258,6 @@ const preparePreflightState = async (input: {
     preparationKey,
     reusable,
   });
-  await profileSessions.cache.use(
-    actorForPermission(input.state.axes.permission, input.route.role),
-  );
   return {
     proveNonMutation: async (action: () => Promise<void>) => {
       try {

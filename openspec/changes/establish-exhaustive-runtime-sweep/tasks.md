@@ -225,7 +225,9 @@
       every canary/journal/PASS writer. It may publish terminal counts only
       after the monolithic reveal queue proves an empty frontier, never writes
       or satisfies acceptance evidence, and must be completed before replacing
-      the production reveal limits.
+      the production reveal limits. Renew a near-expiry cached actor session
+      from its actual browser-cookie expiry without changing the product auth
+      TTL, and reject route drift before inventory comparison.
 
 ## 6. Immutable baseline and adjudication
 

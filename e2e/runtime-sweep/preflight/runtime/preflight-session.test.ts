@@ -25,7 +25,7 @@ const cookieFor = (role: string): Cookie => ({
   value: `session-${role}`,
   domain: "127.0.0.1",
   path: "/",
-  expires: -1,
+  expires: 4_000_000_000,
   httpOnly: true,
   secure: false,
   sameSite: "Lax",

@@ -263,6 +263,19 @@ amplification. The survey runs one monolithic reveal queue, so it creates no
 continuation checkpoint, receipt, grant, parent PASS, assignment, journal,
 matrix, or canary artifact.
 
+Because this diagnostic may legitimately run longer than the product session
+lifetime, its preflight session cache uses the browser cookie's absolute expiry
+as the renewal authority. Before expiry enters a bounded safety window, the
+harness refreshes only the selected actor through the same verified dev-login
+identity flow and replaces the cached cookie. It does not duplicate or extend
+the server JWT lifetime. The five-minute safety window covers the documented
+four-step replay action/settle maximum plus initial navigation and inventory.
+After a refresh, the harness clears browser storage, returns to `about:blank`,
+drains API work, and only then establishes or revalidates the prepared database
+baseline. Missing expiration, a replacement still inside that window, refresh
+failure, identity drift, or off-route navigation fails before inventory replay;
+the strict canonical surface equality remains unchanged.
+
 Only queue exhaustion may create a `PREFLIGHT_CAPACITY_SURVEY_RESULT` with
 status `COMPLETE`. The result records terminal candidate/action/material-edge/control/
 visited-state/max-queue counts, exact plan/source/selector/state/route identity,
