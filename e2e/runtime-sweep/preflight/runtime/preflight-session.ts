@@ -1,5 +1,9 @@
 import type { Cookie } from "@playwright/test";
 
+import {
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+} from "../../../../packages/shared/src/index.ts";
 import type { CampaignMatrixState } from "../../matrix/campaign-matrix.ts";
 import {
   actorForPermission,
@@ -7,6 +11,7 @@ import {
   runtimeStateGroupKey,
 } from "../../matrix/runtime-matrix.ts";
 import type { RouteBindingTarget } from "../../source/contracts.ts";
+import { MAX_REVEAL_DEPTH } from "../reveal-path.ts";
 
 type PreflightGroupRoute = Readonly<{
   readonly role: CampaignMatrixState["axes"]["role"];
@@ -96,6 +101,19 @@ class PreflightSessionError extends Error {
 }
 
 const SESSION_COOKIE_NAME = "customreport_session";
+// Each possible reveal step receives one minute for action and settle budgets;
+// one additional minute covers initial navigation and inventory.
+const SESSION_REFRESH_SAFETY_SECONDS =
+  (MAX_REVEAL_DEPTH + 1) * SECONDS_PER_MINUTE;
+
+type CachedActorSession = Readonly<{
+  readonly cookies: readonly Cookie[];
+  readonly expiresAtSeconds: number;
+}>;
+
+type PreflightSessionCacheOptions = Readonly<{
+  readonly nowSeconds?: () => number;
+}>;
 
 const actorKey = (actor: RuntimeMatrixActor): string =>
   [
@@ -115,9 +133,108 @@ const sessionCookies = (cookies: readonly Cookie[]): readonly Cookie[] =>
     .filter((cookie) => cookie.name === SESSION_COOKIE_NAME)
     .map((cookie) => ({ ...cookie }));
 
+const sessionExpiryFor = (cookies: readonly Cookie[]): number | null => {
+  const expirations = cookies.map(({ expires }) => expires);
+  if (
+    expirations.length === 0 ||
+    expirations.some((expires) => !Number.isFinite(expires) || expires < 0)
+  )
+    return null;
+  return Math.min(...expirations);
+};
+
+const sessionNeedsRefresh = (
+  session: CachedActorSession,
+  nowSeconds: number,
+): boolean =>
+  session.expiresAtSeconds <= nowSeconds + SESSION_REFRESH_SAFETY_SECONDS;
+
 const isAuthenticatedActor = (
   actor: RuntimeMatrixActor,
 ): actor is AuthenticatedActor => actor.role !== null;
+
+const authenticateActorSession = async (input: {
+  readonly context: PreflightCookieContext;
+  readonly login: (actor: AuthenticatedActor) => Promise<void>;
+  readonly sessions: Map<string, CachedActorSession>;
+  readonly actor: AuthenticatedActor;
+}): Promise<CachedActorSession> => {
+  const key = actorKey(input.actor);
+  input.sessions.delete(key);
+  await input.context.clearCookies();
+  try {
+    await input.login(input.actor);
+    const cookies = sessionCookies(await input.context.cookies());
+    if (cookies.length === 0)
+      throw new PreflightSessionError(
+        `Login for role ${input.actor.role} did not produce a session cookie`,
+      );
+    const expiresAtSeconds = sessionExpiryFor(cookies);
+    if (expiresAtSeconds === null)
+      throw new PreflightSessionError(
+        `Login for role ${input.actor.role} did not produce an expiring session cookie`,
+      );
+    const session = { cookies, expiresAtSeconds };
+    input.sessions.set(key, session);
+    return session;
+  } catch (error: unknown) {
+    input.sessions.delete(key);
+    await input.context.clearCookies();
+    throw error;
+  }
+};
+
+const requiredSessionTime = (nowSeconds: () => number): number => {
+  const currentTimeSeconds = nowSeconds();
+  if (!Number.isFinite(currentTimeSeconds) || currentTimeSeconds < 0)
+    throw new PreflightSessionError(
+      "Preflight session clock must return non-negative epoch seconds",
+    );
+  return currentTimeSeconds;
+};
+
+const refreshActorSession = async (input: {
+  readonly actor: AuthenticatedActor;
+  readonly authenticate: (
+    actor: AuthenticatedActor,
+  ) => Promise<CachedActorSession>;
+  readonly nowSeconds: () => number;
+}): Promise<CachedActorSession> => {
+  const session = await input.authenticate(input.actor);
+  const refreshedAtSeconds = requiredSessionTime(input.nowSeconds);
+  if (!sessionNeedsRefresh(session, refreshedAtSeconds)) return session;
+  throw new PreflightSessionError(
+    `Refreshed session for role ${input.actor.role} remains inside the replay safety window`,
+  );
+};
+
+const installActorSession = async (input: {
+  readonly actor: AuthenticatedActor;
+  readonly context: PreflightCookieContext;
+  readonly sessions: Map<string, CachedActorSession>;
+  readonly nowSeconds: () => number;
+  readonly refresh: (actor: AuthenticatedActor) => Promise<CachedActorSession>;
+}): Promise<void> => {
+  const key = actorKey(input.actor);
+  try {
+    const cached = input.sessions.get(key);
+    if (cached === undefined)
+      throw new PreflightSessionError(
+        `No cached session exists for role ${input.actor.role}`,
+      );
+    const refresh = sessionNeedsRefresh(
+      cached,
+      requiredSessionTime(input.nowSeconds),
+    );
+    const session = refresh ? await input.refresh(input.actor) : cached;
+    if (refresh) await input.context.clearCookies();
+    await input.context.addCookies(session.cookies);
+  } catch (error: unknown) {
+    input.sessions.delete(key);
+    await input.context.clearCookies();
+    throw error;
+  }
+};
 
 export function createProfileSessionCacheRegistry<Profile extends string>(
   create: (profile: Profile) => Promise<PreflightSessionCache>,
@@ -137,9 +254,19 @@ export function createProfileSessionCacheRegistry<Profile extends string>(
 export function createPreflightSessionCache(
   context: PreflightCookieContext,
   login: (actor: AuthenticatedActor) => Promise<void>,
+  options: PreflightSessionCacheOptions = {},
 ): PreflightSessionCache {
-  const cookiesByActor = new Map<string, readonly Cookie[]>();
+  const cookiesByActor = new Map<string, CachedActorSession>();
   const state = { initialized: false };
+  const nowSeconds = options.nowSeconds ?? (() => Date.now() / MS_PER_SECOND);
+
+  const authenticateActor = (actor: AuthenticatedActor) =>
+    authenticateActorSession({
+      context,
+      login,
+      sessions: cookiesByActor,
+      actor,
+    });
 
   const authenticateActors = async (
     actors: readonly RuntimeMatrixActor[],
@@ -150,14 +277,7 @@ export function createPreflightSessionCache(
     cookiesByActor.clear();
     for (const actor of uniqueActors(actors)) {
       if (!isAuthenticatedActor(actor)) continue;
-      await context.clearCookies();
-      await login(actor);
-      const cookies = sessionCookies(await context.cookies());
-      if (cookies.length === 0)
-        throw new PreflightSessionError(
-          `Login for role ${actor.role} did not produce a session cookie`,
-        );
-      cookiesByActor.set(actorKey(actor), cookies);
+      await authenticateActor(actor);
     }
     state.initialized = true;
     await context.clearCookies();
@@ -185,14 +305,19 @@ export function createPreflightSessionCache(
         );
 
       await context.clearCookies();
-      if (actor.role === null) return;
-
-      const cookies = cookiesByActor.get(actorKey(actor));
-      if (cookies === undefined)
-        throw new PreflightSessionError(
-          `No cached session exists for role ${actor.role}`,
-        );
-      await context.addCookies(cookies);
+      if (!isAuthenticatedActor(actor)) return;
+      await installActorSession({
+        actor,
+        context,
+        sessions: cookiesByActor,
+        nowSeconds,
+        refresh: (selected) =>
+          refreshActorSession({
+            actor: selected,
+            authenticate: authenticateActor,
+            nowSeconds,
+          }),
+      });
     },
   };
 }

@@ -299,6 +299,20 @@ repair chain may accept it as canary, preflight, matrix, or release evidence.
 - **AND** partial counters, Playwright diagnostics, continuation output, or a
   pre-existing survey file cannot satisfy or weaken acceptance
 
+#### Scenario: a long-running survey renews its harness session
+
+- **WHEN** an authenticated capacity survey approaches the absolute expiry of
+  the browser session cookie while reveal branches remain
+- **THEN** the harness refreshes that exact actor through the verified login
+  flow before reusing the session and replaces the cached cookie
+- **AND** the replacement must remain valid beyond the bounded full-branch
+  replay window; otherwise the survey fails closed
+- **AND** refresh-side browser storage and API work are quiesced before the
+  prepared database baseline is established or revalidated
+- **AND** an absent, non-expiring, or unrefreshable session fails closed before
+  target navigation without changing the product authentication lifetime or
+  weakening canonical inventory comparison
+
 #### Scenario: survey authority cannot be promoted
 
 - **WHEN** a capacity-survey plan or result is supplied to an acceptance,

@@ -145,13 +145,13 @@ const replayBranch = async (
   const prepared = await input.harness.prepare(input.state, input.route);
   const preparation = prepared ?? undefined;
   await input.harness.navigate(input.route.resolvedRoute);
-  const initial = await input.harness.inventory();
-  assertInitialInventory(input.initialSurface, initial);
   const initialRawUrl = input.harness.currentUrl();
   const initialUrl = requiredCurrentUrl(initialRawUrl);
   assertRoutePath(input.route, initialUrl);
   if (initialUrl !== input.path.initialUrl)
     throw new RevealDiscoveryError("Reveal path initial URL drifted");
+  const initial = await input.harness.inventory();
+  assertInitialInventory(input.initialSurface, initial);
   return input.path.steps.reduce<Promise<RevealBranch>>(
     (promise, step) =>
       promise.then((current) =>

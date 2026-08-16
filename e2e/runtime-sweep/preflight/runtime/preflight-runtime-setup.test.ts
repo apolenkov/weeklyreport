@@ -146,7 +146,7 @@ describe("preflight prepared-state reuse", () => {
 
     expect(harness.preparationWrites).toBe(1);
     expect(mocks.reseed).toHaveBeenCalledOnce();
-    expect(mocks.drain).toHaveBeenCalledTimes(3);
+    expect(mocks.drain).toHaveBeenCalledTimes(5);
     expect(mocks.clearStorage).toHaveBeenCalledTimes(2);
     expect(harness.pageContext.clearCookies).toHaveBeenCalledTimes(4);
     expect(harness.pageContext.addCookies).toHaveBeenCalledTimes(3);
