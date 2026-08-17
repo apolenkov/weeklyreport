@@ -2,6 +2,7 @@ import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-re
 import type { CapacitySurveyTiming } from "./preflight-capacity-survey-timing.ts";
 
 export const CAPACITY_SURVEY_PROGRESS_INTERVAL = 1024;
+export const CAPACITY_SURVEY_TIMING_PROGRESS_INTERVAL = 128;
 
 type MemorySample = Readonly<{
   heapUsed: number;
@@ -37,12 +38,12 @@ export const createCapacitySurveyProgressReporter = (
   const memoryUsage = input?.memoryUsage ?? process.memoryUsage;
   const write = input?.write ?? ((line: string) => process.stdout.write(line));
   const timing = input?.timing;
+  const progressInterval =
+    timing?.enabled === true
+      ? CAPACITY_SURVEY_TIMING_PROGRESS_INTERVAL
+      : CAPACITY_SURVEY_PROGRESS_INTERVAL;
   return (progress) => {
-    if (
-      progress.completedCandidateCount % CAPACITY_SURVEY_PROGRESS_INTERVAL !==
-      0
-    )
-      return;
+    if (progress.completedCandidateCount % progressInterval !== 0) return;
     const memory = memoryUsage();
     const timingFields = timingFieldsFor(timing);
     write(
