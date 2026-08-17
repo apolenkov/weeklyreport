@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-reveal-types.ts";
 import {
   CAPACITY_SURVEY_PROGRESS_INTERVAL,
+  CAPACITY_SURVEY_TIMING_PROGRESS_INTERVAL,
   createCapacitySurveyProgressReporter,
 } from "./preflight-capacity-survey-progress.ts";
 import { createCapacitySurveyTiming } from "./preflight-capacity-survey-timing.ts";
@@ -59,7 +60,7 @@ describe("capacity survey progress reporter", () => {
       write: enabledWrite,
     });
 
-    enabledReporter(progressFor(CAPACITY_SURVEY_PROGRESS_INTERVAL));
+    enabledReporter(progressFor(CAPACITY_SURVEY_TIMING_PROGRESS_INTERVAL));
 
     const enabledPayload = JSON.parse(
       String(enabledWrite.mock.calls[0]?.[0]),
@@ -91,6 +92,8 @@ describe("capacity survey progress reporter", () => {
       timing: createCapacitySurveyTiming(),
       write: disabledWrite,
     });
+    disabledReporter(progressFor(CAPACITY_SURVEY_TIMING_PROGRESS_INTERVAL));
+    expect(disabledWrite).not.toHaveBeenCalled();
     disabledReporter(progressFor(CAPACITY_SURVEY_PROGRESS_INTERVAL));
     const disabledPayload = JSON.parse(
       String(disabledWrite.mock.calls[0]?.[0]),
