@@ -8,7 +8,7 @@ Define the organization-wide, administrator-managed AI provider configuration an
 
 ### Requirement: Only administrators manage the global AI integration
 
-The `admin.aiProvider` tRPC surface and Settings → Integrations AI card MUST use the canonical `adminProcedure` for every configuration read, draft write, test, activation, disable, rollback, and progress operation. The system MUST maintain one organization-wide active AI configuration and MUST NOT expose per-user, per-role, or per-feature provider overrides.
+The `admin.aiProvider` tRPC surface and Settings → AI → Provider card MUST use the canonical `adminProcedure` for every configuration read, draft write, test, activation, disable, rollback, and progress operation. The system MUST maintain one organization-wide active AI configuration and MUST NOT expose per-user, per-role, or per-feature provider overrides.
 
 #### Scenario: Admin manages the integration
 
@@ -117,6 +117,22 @@ The `admin.aiProvider.activate` operation MUST express an administrator's intent
 - **WHEN** any required embedding remains failed or missing after bounded retries
 - **THEN** the candidate revision is not activated
 - **AND** the prior configuration continues serving users without automatic fallback to any third provider
+
+### Requirement: Provider activation proves every active AI feature
+
+Before a candidate provider becomes globally active, the provider lifecycle MUST
+evaluate every active registered feature prompt bundle against that exact
+candidate provider revision. The compatibility result MUST include the prompt
+revision, content hash, contract version, evaluator version, bounded outcome, and
+safe check results. A stale or failed feature evaluation MUST preserve the
+previous provider pointer and MUST NOT start embedding preparation.
+
+#### Scenario: An active feature is incompatible with a candidate provider
+
+- **WHEN** generic provider capability checks pass but an active feature prompt
+  evaluator fails
+- **THEN** the candidate remains inactive with a safe compatibility failure
+- **AND** the existing provider and embedding preparation state are unchanged
 
 ### Requirement: Unconfigured and disabled states are explicit
 

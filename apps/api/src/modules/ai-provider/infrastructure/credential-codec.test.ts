@@ -6,13 +6,14 @@ import {
 } from "./credential-codec";
 
 const KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const context = { revisionId: "revision-1", role: "generation" as const };
 
 describe("AesGcmCredentialCodec", () => {
   it("round-trips a credential and exposes only masked metadata", () => {
     const codec = new AesGcmCredentialCodec(KEY, 7);
-    const encrypted = codec.encrypt("sk-provider-secret");
+    const encrypted = codec.encrypt("sk-provider-secret", context);
 
-    expect(codec.decrypt(encrypted)).toBe("sk-provider-secret");
+    expect(codec.decrypt(encrypted, context)).toBe("sk-provider-secret");
     expect(encrypted.ciphertext).not.toContain("sk-provider-secret");
     expect(codec.metadata(encrypted)).toEqual({
       configured: true,
@@ -22,13 +23,33 @@ describe("AesGcmCredentialCodec", () => {
 
   it("detects tampering and rejects a different key version", () => {
     const codec = new AesGcmCredentialCodec(KEY, 1);
-    const encrypted = codec.encrypt("secret");
+    const encrypted = codec.encrypt("secret", context);
     const tampered = { ...encrypted, ciphertext: `${encrypted.ciphertext}A` };
 
-    expect(() => codec.decrypt(tampered)).toThrow(CredentialCodecError);
-    expect(() => codec.decrypt({ ...encrypted, keyVersion: 2 })).toThrow(
-      /version/i,
+    expect(() => codec.decrypt(tampered, context)).toThrow(
+      CredentialCodecError,
     );
+    expect(() =>
+      codec.decrypt({ ...encrypted, keyVersion: 2 }, context),
+    ).toThrow(/version/i);
+  });
+
+  it("rejects a credential authenticated for another revision or role", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 1);
+    const encrypted = codec.encrypt("secret", context);
+
+    expect(() =>
+      codec.decrypt(encrypted, {
+        revisionId: "revision-2",
+        role: "generation",
+      }),
+    ).toThrow(CredentialCodecError);
+    expect(() =>
+      codec.decrypt(encrypted, {
+        revisionId: "revision-1",
+        role: "embeddings",
+      }),
+    ).toThrow(CredentialCodecError);
   });
 
   it("validates key material before encryption", () => {

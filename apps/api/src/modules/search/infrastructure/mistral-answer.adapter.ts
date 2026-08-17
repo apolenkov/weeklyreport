@@ -1,3 +1,4 @@
+import type { AiComposedPromptSet } from "../application/ai-feature-prompt-catalog.js";
 import type {
   CitationRepairInput,
   GroundedAnswer,
@@ -22,6 +23,7 @@ export type MistralAnswerAdapterConfig = MistralClientConfig &
   Readonly<{
     model: string;
     maxTokens: number;
+    prompts: AiComposedPromptSet;
   }>;
 
 const validateConfig = (config: MistralAnswerAdapterConfig): void => {
@@ -107,7 +109,7 @@ export class MistralAnswerAdapter implements ReportAssistantAnswerPort {
     return parseAnswer(
       await call(
         this.client,
-        buildGroundedAnswerPrompt(input),
+        buildGroundedAnswerPrompt(input, this.config.prompts),
         this.config,
         "answer",
       ),
@@ -118,7 +120,7 @@ export class MistralAnswerAdapter implements ReportAssistantAnswerPort {
     return parseAnswer(
       await call(
         this.client,
-        buildCitationRepairPrompt(input),
+        buildCitationRepairPrompt(input, this.config.prompts),
         this.config,
         "citation repair",
       ),

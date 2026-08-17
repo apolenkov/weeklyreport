@@ -19,6 +19,7 @@
     "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
     "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck && pnpm lint:status-literal-unions && pnpm lint:playwright-image && pnpm depcruise && pnpm knip",
+    "lint:md": "node scripts/lint-markdown.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",

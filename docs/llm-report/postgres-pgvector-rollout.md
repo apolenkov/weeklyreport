@@ -5,6 +5,10 @@ the explicit `0.8.2-pg15-bookworm` release tag. Production additionally pins
 the verified multi-platform manifest digest in `docker-compose.prod.yml`. The
 Debian Bookworm variant is intentional: the PostgreSQL major version stays 15
 while the image supplies the `vector` extension required by the semantic cache.
+The same init migration also owns the feature-scoped AI prompt control,
+immutable prompt revision, and exact evaluation tables. Disposable reset/seed
+paths must create the Report Assistant baseline idempotently; prompt state is
+not supplied by environment values at runtime.
 
 | Environment             | Tracked image/configuration                                                          | Database name                                                            | Data lifecycle                                        |
 | ----------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------- |

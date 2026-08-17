@@ -62,6 +62,7 @@ import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/index.js";
 import { AiProviderConfigurationService } from "./modules/ai-provider/index.js";
+import { AiPromptService } from "./modules/ai-prompts/index.js";
 import { ActionLogService } from "./modules/admin/index.js";
 import { JobsService } from "./modules/admin/index.js";
 import { PeriodAdminService } from "./modules/admin/index.js";
@@ -351,6 +352,7 @@ async function bootstrap() {
   const telegramOutboundQueue = queueRegistry.get("telegram-outbound");
 
   const prismaService = app.get(PrismaService);
+  await app.get(AiPromptService).bootstrap("bootstrap");
 
   // Thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
@@ -399,6 +401,7 @@ async function bootstrap() {
     reopenRequestAdminService: app.get(ReopenRequestAdminService),
     actionLogService: app.get(ActionLogService),
     aiProviderService: app.get(AiProviderConfigurationService),
+    aiPromptService: app.get(AiPromptService),
     // Without this the deactivate/activate revoked-set fast path is dead code:
     // the procedures call `deps.sessionRevocationService?.` and silently no-op.
     // The DI instance shares the Redis revoked set with the context factory's

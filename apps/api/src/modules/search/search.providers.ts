@@ -8,8 +8,13 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { AiProviderPrometheusMetrics } from "../../infrastructure/metrics/ai-provider.metrics.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
+import { AiPromptService } from "../ai-prompts/index.js";
 import {
   AesGcmCredentialCodec,
+  AI_COMPATIBILITY_QUEUE_NAME,
+  AiCompatibilityBullmqEnqueuer,
+  type AiCompatibilityEnqueuer,
+  AiCompatibilityProcessor,
   AiProviderConfigurationRepository,
   AiProviderConfigurationService,
 } from "../ai-provider/index.js";
@@ -17,6 +22,7 @@ import {
   AiRuntimeResolver,
   type AiRuntimeResolverPort,
 } from "./application/ai-runtime.resolver.js";
+import { AiRuntimeConfigurationRepository } from "./application/ai-runtime-configuration.repository.js";
 import { REPORT_ASSISTANT_TELEMETRY } from "./application/report-assistant.telemetry.js";
 import { SearchService } from "./application/search.service.js";
 import type { SemanticEmbeddingRepository } from "./application/semantic-embedding.repository.js";
@@ -43,7 +49,14 @@ export const createSearchProviders = (): Provider[] => [
   ReportSearchPrismaRepository,
   SemanticEmbeddingPrismaRepository,
   SemanticIndexPrismaSourceLoader,
+  AiRuntimeConfigurationRepository,
   AiProviderPrometheusMetrics,
+  {
+    provide: "AI_COMPATIBILITY_ENQUEUER",
+    useFactory: (queue: JobEnqueuer): AiCompatibilityEnqueuer =>
+      new AiCompatibilityBullmqEnqueuer(queue),
+    inject: [getQueueToken(AI_COMPATIBILITY_QUEUE_NAME)],
+  },
   {
     provide: OpenAiCompatibleCapabilityTester,
     useFactory: (env: EnvConfig) =>
@@ -73,6 +86,7 @@ export const createSearchProviders = (): Provider[] => [
       semanticRepository: SemanticEmbeddingRepository,
       enqueuer: SemanticIndexEnqueuer,
       env: EnvConfig,
+      configurationRepository: AiRuntimeConfigurationRepository,
     ) =>
       new AiRuntimeResolver(
         repository,
@@ -80,6 +94,7 @@ export const createSearchProviders = (): Provider[] => [
         semanticRepository,
         enqueuer,
         env,
+        configurationRepository,
       ),
     inject: [
       AiProviderConfigurationRepository,
@@ -87,6 +102,7 @@ export const createSearchProviders = (): Provider[] => [
       SemanticEmbeddingPrismaRepository,
       SEMANTIC_INDEX_ENQUEUER,
       ENV_CONFIG,
+      AiRuntimeConfigurationRepository,
     ],
   },
   {
@@ -123,6 +139,8 @@ export const createSearchProviders = (): Provider[] => [
       preparation: SemanticPreparationCoordinator,
       logger: AppLogger,
       metrics: AiProviderPrometheusMetrics,
+      promptService: AiPromptService,
+      compatibilityEnqueuer: AiCompatibilityEnqueuer,
     ) =>
       new AiProviderConfigurationService(
         repository,
@@ -134,6 +152,15 @@ export const createSearchProviders = (): Provider[] => [
           record: (event) => logger.info("ai_provider.audit", { ...event }),
         },
         metrics,
+        {
+          evaluate: (provider) =>
+            promptService.evaluateProviderCompatibility(provider),
+          verify: (provider) =>
+            promptService.verifyProviderCompatibility(provider),
+          currentFeatureEvaluatorVersions: () =>
+            promptService.currentFeatureEvaluatorVersions(),
+        },
+        compatibilityEnqueuer,
       ),
     inject: [
       AiProviderConfigurationRepository,
@@ -143,6 +170,35 @@ export const createSearchProviders = (): Provider[] => [
       SemanticPreparationCoordinator,
       APP_LOGGER,
       AiProviderPrometheusMetrics,
+      AiPromptService,
+      "AI_COMPATIBILITY_ENQUEUER",
+    ],
+  },
+  {
+    provide: AiCompatibilityProcessor,
+    useFactory: (
+      repository: AiProviderConfigurationRepository,
+      service: AiProviderConfigurationService,
+      promptService: AiPromptService,
+      env: EnvConfig,
+      logger: AppLogger,
+      cls: ClsService,
+    ) =>
+      new AiCompatibilityProcessor(
+        repository,
+        service,
+        promptService,
+        env,
+        logger,
+        cls,
+      ),
+    inject: [
+      AiProviderConfigurationRepository,
+      AiProviderConfigurationService,
+      AiPromptService,
+      ENV_CONFIG,
+      APP_LOGGER,
+      ClsService,
     ],
   },
   {

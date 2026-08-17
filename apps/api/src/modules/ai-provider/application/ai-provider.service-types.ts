@@ -1,4 +1,10 @@
-import type { AiProviderProfile as SharedAiProviderProfile } from "@customreport/shared";
+import type {
+  AiProviderAnswerProtocol,
+  AiProviderCapabilityTestResult,
+  AiProviderFeatureCompatibility,
+  AiProviderProfile as SharedAiProviderProfile,
+  AiProviderReasoningMode,
+} from "@customreport/shared";
 import {
   AiProviderLifecycle,
   AiProviderProfile,
@@ -6,7 +12,11 @@ import {
 } from "@prisma/client";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
-import type { ResolvedProviderProfile } from "../domain/provider-profile.js";
+import type {
+  ResolvedCompositeProviderProfile,
+  ResolvedProviderProfile,
+} from "../domain/provider-profile.js";
+import type { AiCompatibilityEnqueuer } from "../infrastructure/ai-compatibility.queue.js";
 import type {
   AiProviderConfigurationRepository,
   StoredAiProviderRevision,
@@ -27,16 +37,69 @@ export type AiProviderEnvironment = Pick<
   | "MISTRAL_EMBEDDING_DIMENSIONS"
 >;
 
+export type LegacyAiProviderSettings = Readonly<{
+  apiKey: string;
+  plannerModel: string;
+  answerModel: string;
+  embeddingModel: string;
+  embeddingDimensions: number;
+}>;
+
+export const legacySettings = (
+  env: AiProviderEnvironment,
+): LegacyAiProviderSettings | null => {
+  const {
+    MISTRAL_API_KEY: apiKey,
+    MISTRAL_PLANNER_MODEL: plannerModel,
+    MISTRAL_ANSWER_MODEL: answerModel,
+    MISTRAL_EMBEDDING_MODEL: embeddingModel,
+    MISTRAL_EMBEDDING_DIMENSIONS: embeddingDimensions,
+  } = env;
+  return apiKey &&
+    plannerModel &&
+    answerModel &&
+    embeddingModel &&
+    embeddingDimensions !== undefined
+    ? {
+        apiKey,
+        plannerModel,
+        answerModel,
+        embeddingModel,
+        embeddingDimensions,
+      }
+    : null;
+};
+
+export type AiProviderCapabilityRuntimeConfig = Readonly<{
+  reasoningMode: AiProviderReasoningMode;
+  reasoningCustomValue: string | null;
+}>;
+
+export type AiProviderTestEnqueuer = AiCompatibilityEnqueuer;
+
 export type AiProviderCapabilityTester = Readonly<{
   test(
-    profile: ResolvedProviderProfile,
-    credential: string,
+    profile: ResolvedCompositeProviderProfile | ResolvedProviderProfile,
+    credentials: Readonly<{ generation: string; embeddings: string }> | string,
+    runtime?: AiProviderCapabilityRuntimeConfig,
   ): Promise<
     Readonly<{
       result: Prisma.JsonValue;
       embeddingDimensions: number | null;
+      answerProtocol?: AiProviderAnswerProtocol | null;
     }>
   >;
+}>;
+
+export type AiProviderPromptCompatibility = Readonly<{
+  evaluate(provider: StoredAiProviderRevision): Promise<
+    Readonly<{
+      status: AiProviderCapabilityTestResult["status"];
+      features: readonly AiProviderFeatureCompatibility[];
+    }>
+  >;
+  verify(provider: StoredAiProviderRevision): Promise<boolean>;
+  currentFeatureEvaluatorVersions?: () => Readonly<Record<string, string>>;
 }>;
 
 export type AiProviderPreparationCoordinator = Readonly<{
@@ -72,7 +135,7 @@ export type AiProviderStateMetrics = Readonly<{
 
 export type AiProviderCapabilityTestMetrics = Readonly<{
   profile: SharedAiProviderProfile;
-  result: "passed" | "failed";
+  result: AiProviderCapabilityTestResult["status"];
 }>;
 
 export type AiProviderPreparationMetrics = Readonly<{
@@ -101,6 +164,8 @@ export type AiProviderServiceDependencies = Readonly<{
   env: AiProviderEnvironment;
   tester?: AiProviderCapabilityTester;
   preparation?: AiProviderPreparationCoordinator;
+  promptCompatibility?: AiProviderPromptCompatibility;
+  testEnqueuer?: AiProviderTestEnqueuer;
   audit: AiProviderAuditSink;
   metrics: AiProviderMetricsSink;
 }>;
@@ -146,10 +211,49 @@ export const toSharedProfile = (
 
 export const credentialFrom = (
   revision: StoredAiProviderRevision,
+  role: "generation" | "embeddings" = "generation",
 ): StoredCredential => ({
-  ciphertext: revision.credentialCiphertext,
-  nonce: revision.credentialNonce,
-  tag: revision.credentialTag,
-  keyVersion: revision.credentialKeyVersion,
-  maskedSuffix: revision.credentialMaskedSuffix,
+  ciphertext:
+    role === "generation"
+      ? revision.generationCredentialCiphertext
+      : requiredEmbeddingCredential(revision, "embeddingCredentialCiphertext"),
+  nonce:
+    role === "generation"
+      ? revision.generationCredentialNonce
+      : requiredEmbeddingCredential(revision, "embeddingCredentialNonce"),
+  tag:
+    role === "generation"
+      ? revision.generationCredentialTag
+      : requiredEmbeddingCredential(revision, "embeddingCredentialTag"),
+  keyVersion:
+    role === "generation"
+      ? revision.generationCredentialKeyVersion
+      : requiredEmbeddingCredential(revision, "embeddingCredentialKeyVersion"),
+  maskedSuffix:
+    role === "generation"
+      ? revision.generationCredentialMaskedSuffix
+      : requiredEmbeddingCredential(
+          revision,
+          "embeddingCredentialMaskedSuffix",
+        ),
 });
+
+const requiredEmbeddingCredential = <
+  Key extends
+    | "embeddingCredentialCiphertext"
+    | "embeddingCredentialNonce"
+    | "embeddingCredentialTag"
+    | "embeddingCredentialKeyVersion"
+    | "embeddingCredentialMaskedSuffix",
+>(
+  revision: StoredAiProviderRevision,
+  key: Key,
+): NonNullable<StoredAiProviderRevision[Key]> => {
+  const value = revision[key];
+  if (revision.embeddingMode !== "separate" || value === null) {
+    throw new AiProviderConfigurationError(
+      "A separate embedding credential is not configured",
+    );
+  }
+  return value;
+};

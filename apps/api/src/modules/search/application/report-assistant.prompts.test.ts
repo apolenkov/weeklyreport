@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  REPORT_CITATION_REPAIR_PROMPT_VERSION,
+  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
+  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
+  REPORT_SEARCH_PLANNER_REPAIR_PROMPT_VERSION,
+} from "../../ai-prompts/application/ai-feature-prompt-baseline.js";
+import { baselineReportAssistantPrompts } from "../../ai-prompts/application/ai-feature-prompt-catalog.js";
 import type { GroundedAnswerInput } from "./report-assistant.ports.js";
 import {
   buildCitationRepairPrompt,
   buildGroundedAnswerPrompt,
   buildPlannerPrompt,
   buildPlannerRepairPrompt,
-  REPORT_CITATION_REPAIR_PROMPT_VERSION,
-  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_REPAIR_PROMPT_VERSION,
   SEARCH_REPORT_ENTRIES_TOOL_NAME,
 } from "./report-assistant.prompts.js";
 
@@ -18,10 +21,11 @@ const plannerInput = {
   now: new Date("2026-08-04T23:30:00.000Z"),
   timeZone: "Asia/Almaty",
 } as const;
+const prompts = baselineReportAssistantPrompts();
 
 describe("report assistant planner prompts", () => {
   it("builds the exact one-tool planner envelope with trusted context only", () => {
-    const prompt = buildPlannerPrompt(plannerInput);
+    const prompt = buildPlannerPrompt(plannerInput, prompts);
     const data = JSON.parse(prompt.data) as Record<string, unknown>;
 
     expect(prompt.version).toBe(REPORT_SEARCH_PLANNER_PROMPT_VERSION);
@@ -31,7 +35,7 @@ describe("report assistant planner prompts", () => {
     });
     expect(prompt.parallelToolCalls).toBe(false);
     expect(prompt.tool.function.name).toBe(SEARCH_REPORT_ENTRIES_TOOL_NAME);
-    expect(prompt.tool.function.strict).toBe(true);
+    expect(prompt.tool.function).not.toHaveProperty("strict");
     expect(prompt.tool.function.parameters).toMatchObject({
       type: "object",
       additionalProperties: false,
@@ -46,14 +50,17 @@ describe("report assistant planner prompts", () => {
   });
 
   it("keeps repair input in a bounded data message and allow-lists issue metadata", () => {
-    const prompt = buildPlannerRepairPrompt({
-      original: plannerInput,
-      previousArguments: { recordKinds: ["risk"], internal: "discard me" },
-      issues: [
-        { path: ["filters", "riskSeverities"], code: "invalid_value" },
-        { path: ["secret"], code: "unexpected_private_code" },
-      ],
-    });
+    const prompt = buildPlannerRepairPrompt(
+      {
+        original: plannerInput,
+        previousArguments: { recordKinds: ["risk"], internal: "discard me" },
+        issues: [
+          { path: ["filters", "riskSeverities"], code: "invalid_value" },
+          { path: ["secret"], code: "unexpected_private_code" },
+        ],
+      },
+      prompts,
+    );
     const data = JSON.parse(prompt.data) as {
       original: Record<string, unknown>;
       previousArguments: Record<string, unknown>;
@@ -114,7 +121,7 @@ describe("report assistant planner prompts", () => {
         estimatedTokens: 10,
       },
     } as unknown as GroundedAnswerInput;
-    const prompt = buildGroundedAnswerPrompt(input);
+    const prompt = buildGroundedAnswerPrompt(input, prompts);
 
     expect(prompt.version).toBe(REPORT_GROUNDED_ANSWER_PROMPT_VERSION);
     expect(JSON.parse(prompt.data)).toEqual({
@@ -141,32 +148,35 @@ describe("report assistant planner prompts", () => {
   });
 
   it("serializes citation repair with only bounded source IDs and issue codes", () => {
-    const prompt = buildCitationRepairPrompt({
-      original: {
-        question: "What changed?",
-        grounding: {
-          aggregates: {
-            totalCount: 0,
-            byKind: [],
-            byPeriod: [],
-            byAuthor: [],
-            groups: [],
-            supportingStatusFacts: [],
+    const prompt = buildCitationRepairPrompt(
+      {
+        original: {
+          question: "What changed?",
+          grounding: {
+            aggregates: {
+              totalCount: 0,
+              byKind: [],
+              byPeriod: [],
+              byAuthor: [],
+              groups: [],
+              supportingStatusFacts: [],
+            },
+            evidence: [],
+            truncated: false,
+            estimatedTokens: 0,
           },
-          evidence: [],
-          truncated: false,
-          estimatedTokens: 0,
         },
+        previousAnswer: {
+          answerMarkdown: "Answer [S1]",
+          sourceIds: ["S1", "S1", "not-a-source"],
+          insufficientEvidence: false,
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        allowedSourceIds: ["S1", "S2", "not-a-source"],
+        issues: ["unknown_source", "secret details"],
       },
-      previousAnswer: {
-        answerMarkdown: "Answer [S1]",
-        sourceIds: ["S1", "S1", "not-a-source"],
-        insufficientEvidence: false,
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-      },
-      allowedSourceIds: ["S1", "S2", "not-a-source"],
-      issues: ["unknown_source", "secret details"],
-    });
+      prompts,
+    );
     const data = JSON.parse(prompt.data) as Record<string, unknown>;
 
     expect(prompt.version).toBe(REPORT_CITATION_REPAIR_PROMPT_VERSION);

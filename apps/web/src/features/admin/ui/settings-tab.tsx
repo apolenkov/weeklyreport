@@ -14,6 +14,7 @@ import {
   IdentitySubTab,
   IntegrationsSubTab,
   NotificationsSubTab,
+  SettingsAiSubTab,
 } from "../../organization";
 import { PeriodsSubTab } from "../../period";
 import type { MockSettings } from "../model/admin-types";
@@ -34,8 +35,9 @@ interface SettingsTabProps {
  *   3. Reminders    — defaultTimezone, defaultReminderAudience.
  *   4. Notifications — notificationFromEmail.
  *
- * The five sub-tabs and the shared mutation/CheckIcon helpers live in sibling
- * modules (settings-*-sub-tab / settings-periods-fields-* / settings-tab-shared).
+ * The settings sub-tabs and shared field helpers live in sibling modules;
+ * AI-specific provider and prompt controls are kept under the dedicated AI
+ * workspace rather than the external Integrations surface.
  */
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
@@ -48,12 +50,13 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
       <Tabs defaultValue="identity" className="w-full">
         <TabsList
           variant="line"
-          className="max-w-full justify-start overflow-x-auto border-b border-[var(--color-border)]"
+          className="max-w-full justify-start overflow-x-auto overflow-y-hidden border-b border-[var(--color-border)]"
         >
           <TabsTrigger value="identity">Identity</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
           {/* External integrations: Element remains roadmapped while the AI
               provider has a live admin control plane. */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -76,6 +79,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
         <TabsContent value="notifications" className="pt-6">
           <NotificationsSubTab serverSettings={serverSettings} />
+        </TabsContent>
+
+        <TabsContent value="ai" className="pt-6">
+          <SettingsAiSubTab />
         </TabsContent>
 
         <TabsContent value="integrations" className="pt-6">

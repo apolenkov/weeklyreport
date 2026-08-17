@@ -1,7 +1,7 @@
 import type { AiProviderControlRead } from "@customreport/shared";
 import { AiProviderLifecycle } from "@prisma/client";
 
-import type { ResolvedProviderProfile } from "../domain/provider-profile.js";
+import type { ResolvedEmbeddingProfile } from "../domain/provider-profile.js";
 import type { StoredAiProviderRevision } from "../infrastructure/ai-provider.repository.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
@@ -16,6 +16,15 @@ export type PreparationResult = Readonly<{
   elapsedMs: number;
 }>;
 
+export const preparationAlreadyCompleted = (
+  revision: StoredAiProviderRevision,
+): boolean =>
+  revision.lifecycle === AiProviderLifecycle.preparing &&
+  revision.preparationFinishedAt !== null &&
+  revision.preparationTotal > 0 &&
+  revision.preparationCompleted === revision.preparationTotal &&
+  revision.preparationFailed === 0;
+
 export class AiProviderActivationPreparation {
   constructor(
     private readonly dependencies: AiProviderServiceDependencies,
@@ -24,7 +33,7 @@ export class AiProviderActivationPreparation {
 
   async start(
     revisionId: string,
-    profile: ResolvedProviderProfile,
+    profile: ResolvedEmbeddingProfile,
   ): Promise<StoredAiProviderRevision> {
     const startedAt = now();
     const preparing = await this.dependencies.repository.updateProgress(
@@ -45,7 +54,7 @@ export class AiProviderActivationPreparation {
 
   async update(
     revisionId: string,
-    profile: ResolvedProviderProfile,
+    profile: ResolvedEmbeddingProfile,
     progress: PreparationResult,
     startedAt: Date,
   ): Promise<void> {
@@ -63,7 +72,7 @@ export class AiProviderActivationPreparation {
 
   async complete(
     revisionId: string,
-    profile: ResolvedProviderProfile,
+    profile: ResolvedEmbeddingProfile,
     result: PreparationResult,
     startedAt: Date | null,
   ): Promise<void> {
@@ -77,7 +86,7 @@ export class AiProviderActivationPreparation {
   async fail(
     revisionId: string,
     actorId: string,
-    profile: ResolvedProviderProfile,
+    profile: ResolvedEmbeddingProfile,
     result: PreparationResult,
     startedAt: Date,
   ): Promise<AiProviderControlRead> {
@@ -105,7 +114,7 @@ export class AiProviderActivationPreparation {
   }
 
   private record(
-    profile: ResolvedProviderProfile["profile"],
+    profile: ResolvedEmbeddingProfile["profile"],
     revision: StoredAiProviderRevision,
   ): void {
     this.dependencies.metrics.recordPreparation({

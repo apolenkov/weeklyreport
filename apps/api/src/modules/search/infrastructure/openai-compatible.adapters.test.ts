@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { baselineReportAssistantPrompts } from "../application/ai-feature-prompt-catalog.js";
 import type {
   GroundedAnswerInput,
   PlannerInput,
 } from "../application/report-assistant.ports.js";
 import {
-  OpenAiCompatibleAnswerAdapter,
   OpenAiCompatibleEmbeddingAdapter,
   OpenAiCompatiblePlannerAdapter,
+  reasoningRequestOptions,
 } from "./openai-compatible.adapters.js";
+import { OpenAiCompatibleAnswerAdapter } from "./openai-compatible.answer-adapter.js";
 import {
   type OpenAiCompatibleFetch,
   OpenAiCompatibleProtocolError,
@@ -34,6 +36,8 @@ const grounding: GroundedAnswerInput["grounding"] = {
   truncated: false,
   estimatedTokens: 0,
 };
+
+const prompts = baselineReportAssistantPrompts();
 
 const transportFor = (responses: readonly unknown[]) => {
   const bodies: unknown[] = [];
@@ -62,7 +66,64 @@ const transportFor = (responses: readonly unknown[]) => {
   };
 };
 
+const transportForHttp = (
+  responses: readonly Readonly<{ status: number; body: unknown }>[],
+) => {
+  const bodies: unknown[] = [];
+  const fetcher: OpenAiCompatibleFetch = (_input, init) => {
+    const body = typeof init?.body === "string" ? init.body : "null";
+    bodies.push(JSON.parse(body) as unknown);
+    const response = responses[bodies.length - 1];
+    return Promise.resolve(
+      new Response(JSON.stringify(response?.body ?? null), {
+        status: response?.status ?? 500,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  };
+  return {
+    transport: new OpenAiCompatibleTransport({
+      baseUrl: "https://ai.example.com/v1",
+      credential: "secret",
+      timeoutMs: 1000,
+      fetcher,
+    }),
+    bodies,
+  };
+};
+
 describe("OpenAI-compatible report assistant adapters", () => {
+  it("maps provider reasoning without arbitrary request fields", () => {
+    expect(
+      reasoningRequestOptions({
+        profile: "mistral",
+        mode: "provider_default",
+        customValue: null,
+      }),
+    ).toEqual({});
+    expect(
+      reasoningRequestOptions({
+        profile: "openrouter",
+        mode: "off",
+        customValue: null,
+      }),
+    ).toEqual({ reasoning: { effort: "none" } });
+    expect(
+      reasoningRequestOptions({
+        profile: "custom-openai-compatible",
+        mode: "custom",
+        customValue: "deep",
+      }),
+    ).toEqual({ reasoningEffort: "deep" });
+    expect(
+      reasoningRequestOptions({
+        profile: "mistral",
+        mode: "off",
+        customValue: null,
+      }),
+    ).toEqual({ reasoningEffort: "none" });
+  });
+
   it("forces exactly one search tool and disables parallel tool calls", async () => {
     const harness = transportFor([
       {
@@ -86,6 +147,7 @@ describe("OpenAI-compatible report assistant adapters", () => {
     const planner = new OpenAiCompatiblePlannerAdapter(harness.transport, {
       model: "planner",
       maxTokens: 100,
+      prompts,
     });
 
     await expect(planner.plan(plannerInput)).resolves.toEqual({});
@@ -97,13 +159,37 @@ describe("OpenAI-compatible report assistant adapters", () => {
     expect(body.tools).toHaveLength(1);
     expect(body.tools[0]?.function).toMatchObject({
       name: "search_report_entries",
-      strict: true,
     });
+    expect(body.tools[0]?.function).not.toHaveProperty("strict");
     expect(body.tool_choice).toEqual({
       type: "function",
       function: { name: "search_report_entries" },
     });
     expect(body.parallel_tool_calls).toBe(false);
+  });
+
+  it("stops after one same-protocol retry when tool generation stays invalid", async () => {
+    const toolFailure = {
+      status: 400,
+      body: { error: { code: "tool_use_failed" } },
+    };
+    const harness = transportForHttp([toolFailure, toolFailure, toolFailure]);
+    const planner = new OpenAiCompatiblePlannerAdapter(harness.transport, {
+      model: "planner",
+      maxTokens: 100,
+      prompts,
+    });
+
+    await expect(planner.plan(plannerInput)).rejects.toMatchObject({
+      providerCode: "tool_use_failed",
+    });
+    expect(harness.bodies).toHaveLength(2);
+    expect(harness.bodies[1]).toMatchObject({ temperature: 0.2 });
+    expect(harness.bodies).toSatisfy((bodies: unknown[]) =>
+      bodies.every(
+        (body) => !(body as Record<string, unknown>).response_format,
+      ),
+    );
   });
 
   it("requires strict structured answers and normalizes usage", async () => {
@@ -126,6 +212,8 @@ describe("OpenAI-compatible report assistant adapters", () => {
     const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
       model: "answer",
       maxTokens: 100,
+      answerProtocol: "json_schema",
+      prompts,
     });
 
     await expect(
@@ -141,6 +229,112 @@ describe("OpenAI-compatible report assistant adapters", () => {
         json_schema: { strict: true },
       },
     });
+  });
+
+  it("forces and validates exactly one side-effect-free answer tool", async () => {
+    const harness = transportFor([
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                {
+                  function: {
+                    name: "submit_grounded_report_answer",
+                    arguments: JSON.stringify({
+                      answerMarkdown: "Answer",
+                      citedSourceIds: ["S1"],
+                      insufficientEvidence: false,
+                    }),
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        usage: { prompt_tokens: 2, completion_tokens: 3, total_tokens: 5 },
+      },
+    ]);
+    const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
+      model: "answer",
+      maxTokens: 100,
+      answerProtocol: "forced_tool",
+      prompts,
+    });
+
+    await expect(
+      answerer.answer({ question: "Question", grounding }),
+    ).resolves.toMatchObject({
+      answerMarkdown: "Answer",
+      sourceIds: ["S1"],
+    });
+    expect(harness.bodies[0]).toMatchObject({
+      tools: [
+        {
+          function: {
+            name: "submit_grounded_report_answer",
+            strict: true,
+          },
+        },
+      ],
+      tool_choice: {
+        type: "function",
+        function: { name: "submit_grounded_report_answer" },
+      },
+      parallel_tool_calls: false,
+    });
+    expect(harness.bodies[0]).not.toHaveProperty("response_format");
+  });
+
+  it("rejects malformed, multiple, and wrong answer tool calls", async () => {
+    const responses = [
+      { choices: [{ message: { tool_calls: [] } }] },
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                {
+                  function: {
+                    name: "submit_grounded_report_answer",
+                    arguments: "{}",
+                  },
+                },
+                {
+                  function: {
+                    name: "submit_grounded_report_answer",
+                    arguments: "{}",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            message: {
+              tool_calls: [
+                { function: { name: "other_tool", arguments: "{}" } },
+              ],
+            },
+          },
+        ],
+      },
+    ];
+    for (const response of responses) {
+      const harness = transportFor([response]);
+      const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
+        model: "answer",
+        maxTokens: 100,
+        answerProtocol: "forced_tool",
+        prompts,
+      });
+      await expect(
+        answerer.answer({ question: "Question", grounding }),
+      ).rejects.toBeInstanceOf(OpenAiCompatibleProtocolError);
+    }
   });
 
   it("preserves provider embedding ordering across bounded batches", async () => {
@@ -185,6 +379,7 @@ describe("OpenAI-compatible report assistant adapters", () => {
       {
         model: "planner",
         maxTokens: 100,
+        prompts,
       },
     );
     await expect(planner.plan(plannerInput)).rejects.toBeInstanceOf(

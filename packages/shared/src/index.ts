@@ -4,6 +4,8 @@ export * from "./admin/reminder-policy.schema";
 export * from "./auth";
 export * from "./constants";
 export * from "./name/user-name";
+export * from "./schemas/ai-compatibility-execution";
+export * from "./schemas/ai-prompt-management";
 export * from "./schemas/ai-provider-configuration";
 export * from "./schemas/analytics";
 export * from "./schemas/auth";

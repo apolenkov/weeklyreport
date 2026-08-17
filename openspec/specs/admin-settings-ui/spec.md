@@ -70,14 +70,29 @@ is heading + description + Coming-Soon badge; it asserts no messaging status.
 - **THEN** no "Slack" card and no "CI Integration" card are rendered
 - **AND** the `admin.integrationsStatus` payload contains no `ci` field
 
-#### Scenario: Element and AI cards are present as Coming-Soon
+#### Scenario: Element is the only messaging roadmap card
 
 - **WHEN** an admin opens the Integrations sub-tab
 - **THEN** a card headed "Element" is rendered (not "Telegram") with a
   description and a Coming-Soon badge
-- **AND** an "AI" card is rendered describing a provider/model selection applied
-  to all AI features (summary, risk extraction, RAG) and carries a Coming-Soon
-  badge
+- **AND** no AI provider or prompt controls are rendered in Integrations because
+  the live AI control plane is owned by Settings → AI
+
+### Requirement: AI has a dedicated Settings workspace
+
+The Settings surface MUST expose an **AI** sub-tab with client-side,
+keyboard-accessible local navigation for **Overview**, **Provider**, and
+**Features**. Provider lifecycle controls MUST live only in AI → Provider.
+Overview MUST show safe global provider and registered-feature readiness without
+credentials or prompt bodies. Features MUST expose only code-registered prompt
+features and MUST preserve unsaved edits across query refresh.
+
+#### Scenario: Admin opens the AI workspace
+
+- **WHEN** an admin selects Settings → AI
+- **THEN** Overview, Provider, and Features navigation is visible and usable by
+  keyboard
+- **AND** Integrations contains only external or roadmapped integrations
 
 #### Scenario: the Element card renders no Telegram-derived status
 

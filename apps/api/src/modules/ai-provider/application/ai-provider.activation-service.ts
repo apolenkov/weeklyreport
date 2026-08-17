@@ -2,11 +2,15 @@ import type { AiProviderControlRead } from "@customreport/shared";
 import { AiProviderLifecycle } from "@prisma/client";
 
 import { embeddingScopeChanged } from "../domain/provider-profile.js";
-import { AiProviderActivationPreparation } from "./ai-provider.activation-preparation.js";
+import {
+  AiProviderActivationPreparation,
+  preparationAlreadyCompleted,
+} from "./ai-provider.activation-preparation.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
   AiProviderConfigurationError,
   type AiProviderServiceDependencies,
+  completeCapabilityResult,
   now,
   requireRevision,
   resolveProfileFromRevision,
@@ -18,6 +22,39 @@ const RETAINED_LIFECYCLES: readonly AiProviderLifecycle[] = [
   AiProviderLifecycle.active,
   AiProviderLifecycle.superseded,
 ];
+
+const assertRevisionReady = (
+  revision: Awaited<ReturnType<typeof requireRevision>>,
+  allowedLifecycles: readonly AiProviderLifecycle[],
+): void => {
+  if (!allowedLifecycles.includes(revision.lifecycle)) {
+    throw new AiProviderConfigurationError(
+      "Only a validated AI provider revision can be activated",
+    );
+  }
+  if (!completeCapabilityResult(revision.testResult)) {
+    throw new AiProviderConfigurationError(
+      "Current passing generation and embedding evidence is required",
+    );
+  }
+  if (
+    revision.latestExecution?.state !== "completed" ||
+    revision.latestExecution.outcome !== "passed"
+  ) {
+    throw new AiProviderConfigurationError(
+      "A current composite capability execution is required",
+    );
+  }
+};
+
+const failActivation = (
+  dependencies: AiProviderServiceDependencies,
+  profile: ReturnType<typeof toSharedProfile>,
+  message: string,
+): never => {
+  dependencies.metrics.recordActivation({ profile, result: "failed" });
+  throw new AiProviderConfigurationError(message);
+};
 
 export class AiProviderActivationService {
   private readonly preparationState: AiProviderActivationPreparation;
@@ -38,6 +75,7 @@ export class AiProviderActivationService {
   ): Promise<AiProviderControlRead> {
     return this.activateWithLifecycles(revisionId, actorId, [
       AiProviderLifecycle.validated,
+      AiProviderLifecycle.preparing,
     ]);
   }
 
@@ -47,95 +85,122 @@ export class AiProviderActivationService {
     allowedLifecycles: readonly AiProviderLifecycle[],
   ): Promise<AiProviderControlRead> {
     const revision = await requireRevision(this.dependencies, revisionId);
-    if (!allowedLifecycles.includes(revision.lifecycle)) {
-      throw new AiProviderConfigurationError(
-        "Only a validated AI provider revision can be activated",
-      );
-    }
+    assertRevisionReady(revision, allowedLifecycles);
     const control = await this.dependencies.repository.getControl();
     const previous = control?.activeConfiguration ?? null;
-    const profile = resolveProfileFromRevision(revision);
+    const embeddingScope = resolveProfileFromRevision(revision);
+    const generationProfile = toSharedProfile(revision.generationProfile);
     const changed = previous
-      ? embeddingScopeChanged(profile, resolveProfileFromRevision(previous))
+      ? embeddingScopeChanged(
+          embeddingScope,
+          resolveProfileFromRevision(previous),
+        )
       : true;
     this.dependencies.audit.record({
       event: "ai_provider.activation_requested",
       actorId,
       revisionId,
-      profile: profile.profile,
+      profile: generationProfile,
     });
     this.dependencies.metrics.recordActivation({
-      profile: profile.profile,
+      profile: generationProfile,
       result: "requested",
     });
-    if (changed && !this.dependencies.preparation) {
-      this.dependencies.metrics.recordActivation({
-        profile: profile.profile,
-        result: "failed",
-      });
-      throw new AiProviderConfigurationError(
+    if (changed && !this.dependencies.preparation)
+      return failActivation(
+        this.dependencies,
+        generationProfile,
         "Embedding preparation is not configured",
       );
+    const preparationFailure = await this.prepareIfChanged(
+      changed && !preparationAlreadyCompleted(revision),
+      revisionId,
+      actorId,
+      embeddingScope,
+      previous,
+    );
+    if (preparationFailure) return preparationFailure;
+    const activated = await this.dependencies.repository.activateRevision(
+      revisionId,
+      now(),
+    );
+    if (!activated) {
+      return failActivation(
+        this.dependencies,
+        generationProfile,
+        "AI provider activation lost a lifecycle race",
+      );
     }
-    if (changed && this.dependencies.preparation) {
-      const preparing = await this.preparationState.start(revisionId, profile);
-      try {
-        const result = await this.dependencies.preparation.prepare(
-          preparing,
-          previous,
-          (progress) =>
-            this.preparationState.update(
-              revisionId,
-              profile,
-              progress,
-              preparing.preparationStartedAt ?? now(),
-            ),
-        );
-        if (result.failed > 0 || result.completed < result.total) {
-          return await this.preparationState.fail(
-            revisionId,
-            actorId,
-            profile,
-            result,
-            preparing.preparationStartedAt ?? now(),
-          );
-        }
-        await this.preparationState.complete(
-          revisionId,
-          profile,
-          result,
-          preparing.preparationStartedAt,
-        );
-      } catch {
-        return this.preparationState.fail(
-          revisionId,
-          actorId,
-          profile,
-          {
-            completed: preparing.preparationCompleted,
-            total: Math.max(1, preparing.preparationTotal),
-            failed: Math.max(1, preparing.preparationFailed),
-            elapsedMs: Math.max(
-              0,
-              Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),
-            ),
-          },
-          preparing.preparationStartedAt ?? now(),
-        );
-      }
-    }
-    await this.dependencies.repository.activateRevision(revisionId, now());
     this.dependencies.audit.record({
       event: "ai_provider.activation_succeeded",
       actorId,
       revisionId,
-      profile: profile.profile,
+      profile: generationProfile,
     });
     this.dependencies.metrics.recordActivation({
-      profile: profile.profile,
+      profile: generationProfile,
       result: "succeeded",
     });
     return this.reader.read();
+  }
+
+  private async prepareIfChanged(
+    changed: boolean,
+    revisionId: string,
+    actorId: string,
+    embeddingScope: ReturnType<typeof resolveProfileFromRevision>,
+    previous: Awaited<ReturnType<typeof requireRevision>> | null,
+  ): Promise<AiProviderControlRead | null> {
+    if (!changed || !this.dependencies.preparation) return null;
+    const preparing = await this.preparationState.start(
+      revisionId,
+      embeddingScope,
+    );
+    try {
+      const result = await this.dependencies.preparation.prepare(
+        preparing,
+        previous,
+        (progress) =>
+          this.preparationState.update(
+            revisionId,
+            embeddingScope,
+            progress,
+            preparing.preparationStartedAt ?? now(),
+          ),
+      );
+      if (result.failed > 0 || result.completed < result.total) {
+        return await this.preparationState.fail(
+          revisionId,
+          actorId,
+          embeddingScope,
+          result,
+          preparing.preparationStartedAt ?? now(),
+        );
+      }
+      await this.preparationState.complete(
+        revisionId,
+        embeddingScope,
+        result,
+        preparing.preparationStartedAt,
+      );
+      return null;
+    } catch {
+      return this.preparationState.fail(
+        revisionId,
+        actorId,
+        embeddingScope,
+        {
+          completed: preparing.preparationCompleted,
+          total: Math.max(1, preparing.preparationTotal),
+          failed: Math.max(1, preparing.preparationFailed),
+          elapsedMs: Math.max(
+            0,
+            Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),
+          ),
+        },
+        preparing.preparationStartedAt ?? now(),
+      );
+    }
   }
 
   async disable(actorId: string): Promise<AiProviderControlRead> {
@@ -167,7 +232,7 @@ export class AiProviderActivationService {
       event: "ai_provider.restored",
       actorId,
       revisionId,
-      profile: toSharedProfile(revision.profile),
+      profile: toSharedProfile(revision.generationProfile),
     });
     return result;
   }

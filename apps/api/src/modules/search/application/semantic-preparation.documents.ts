@@ -19,6 +19,9 @@ export const sameScope = (
   left: SemanticEmbeddingScope,
   right: SemanticEmbeddingScope,
 ): boolean =>
+  (left.embeddingScopeIdentity === undefined ||
+    right.embeddingScopeIdentity === undefined ||
+    left.embeddingScopeIdentity === right.embeddingScopeIdentity) &&
   left.provider === right.provider &&
   left.model === right.model &&
   left.inputVersion === right.inputVersion &&

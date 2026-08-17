@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { envSchema } from "./env.schema";
@@ -33,7 +36,7 @@ const COMPLETE = {
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   AI_PROVIDER_CONFIG_KEY_VERSION: "1",
   AI_PROVIDER_ALLOWED_ORIGINS:
-    "https://api.mistral.ai,https://openrouter.ai,https://ai.example.com",
+    "https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://ai.example.com",
   MISTRAL_API_KEY: "test-only-placeholder",
   MISTRAL_PLANNER_MODEL: "mistral-medium-3-5",
   MISTRAL_ANSWER_MODEL: "mistral-medium-3-5",
@@ -52,7 +55,33 @@ const COMPLETE = {
   REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: "8000",
 } as const;
 
+const builtInOrigins = [
+  "https://api.mistral.ai",
+  "https://openrouter.ai",
+  "https://api.groq.com",
+  "https://api.jina.ai",
+] as const;
+
+const exampleAllowlist = (filename: string): readonly string[] | undefined =>
+  readFileSync(
+    resolve(import.meta.dirname, `../../../../../${filename}`),
+    "utf8",
+  )
+    .split("\n")
+    .find((line) => line.startsWith("AI_PROVIDER_ALLOWED_ORIGINS="))
+    ?.split("=")[1]
+    ?.split(",");
+
 describe("envSchema — no defaults, every product var required", () => {
+  it.each([".env.example", ".env.test.example"])(
+    "documents every built-in provider origin in %s",
+    (filename) => {
+      expect(exampleAllowlist(filename)).toEqual(
+        expect.arrayContaining([...builtInOrigins]),
+      );
+    },
+  );
+
   it("accepts a complete config", () => {
     expect(envSchema.safeParse(COMPLETE).success).toBe(true);
   });

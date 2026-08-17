@@ -69,12 +69,16 @@ export class SemanticIndexProcessor extends RawBullMqProcessor<SemanticIndexJobD
       job.data.configurationRevisionId,
     );
     const scope = runtime.scope;
-    if (
+    const scopeMismatch =
+      (job.data.scope.embeddingScopeIdentity !== undefined &&
+        scope.embeddingScopeIdentity !== undefined &&
+        job.data.scope.embeddingScopeIdentity !==
+          scope.embeddingScopeIdentity) ||
       job.data.scope.provider !== scope.provider ||
       job.data.scope.model !== scope.model ||
       job.data.scope.inputVersion !== scope.inputVersion ||
-      job.data.scope.dimensions !== scope.dimensions
-    ) {
+      job.data.scope.dimensions !== scope.dimensions;
+    if (scopeMismatch) {
       throw new Error("Semantic index job scope does not match its runtime");
     }
     const candidate = await this.sourceLoader.load(job.data);

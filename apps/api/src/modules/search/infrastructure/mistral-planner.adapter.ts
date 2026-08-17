@@ -4,6 +4,7 @@ import type {
 } from "@mistralai/mistralai/models/components";
 import { z } from "zod";
 
+import type { AiComposedPromptSet } from "../application/ai-feature-prompt-catalog.js";
 import type {
   PlannerInput,
   PlannerRepairInput,
@@ -31,6 +32,7 @@ export type MistralPlannerAdapterConfig = Readonly<{
   model: string;
   maxTokens: number;
   providerTimeoutMs: number;
+  prompts: AiComposedPromptSet;
 }>;
 
 export type MistralClientConfig = Readonly<{
@@ -199,7 +201,7 @@ export class MistralPlannerAdapter implements ReportAssistantPlannerPort {
   plan(input: PlannerInput): Promise<unknown> {
     return request(
       this.client,
-      buildPlannerPrompt(input),
+      buildPlannerPrompt(input, this.config.prompts),
       this.config,
       "planner",
     );
@@ -208,7 +210,7 @@ export class MistralPlannerAdapter implements ReportAssistantPlannerPort {
   repairPlan(input: PlannerRepairInput): Promise<unknown> {
     return request(
       this.client,
-      buildPlannerRepairPrompt(input),
+      buildPlannerRepairPrompt(input, this.config.prompts),
       this.config,
       "planner repair",
     );

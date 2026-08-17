@@ -31,6 +31,9 @@ import {
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+const MILLISECONDS_PER_SECOND = 1000;
+
 export type ReportAssistantConfig = Readonly<{
   candidateLimit: number;
   exhaustiveLimit: number;
@@ -43,6 +46,23 @@ export type ReportAssistantClock = Readonly<{ now: Date }>;
 
 const outcome = (value: ReportAssistantOutcome): ReportAssistantOutcome =>
   reportAssistantOutcomeSchema.parse(value);
+
+const providerUnavailable = (
+  error: ReportAssistantProviderError,
+): ReportAssistantOutcome =>
+  outcome({
+    kind: "provider_unavailable",
+    ...(error.statusCode === HTTP_TOO_MANY_REQUESTS &&
+    error.retryAfterMs !== undefined
+      ? {
+          rateLimit: {
+            retryAfterSeconds: Math.ceil(
+              error.retryAfterMs / MILLISECONDS_PER_SECOND,
+            ),
+          },
+        }
+      : {}),
+  });
 
 type AssistantExecution = Readonly<{
   outcome: ReportAssistantOutcome;
@@ -96,7 +116,7 @@ export class ReportAssistantService {
           this.config.model,
           startedAt,
         );
-        return outcome({ kind: "provider_unavailable" });
+        return providerUnavailable(error);
       }
       this.recordTelemetry(
         "error",

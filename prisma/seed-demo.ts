@@ -53,6 +53,7 @@ import {
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
+import { seedAiPromptBaseline } from "./seed-ai-prompts.js";
 import {
   HEAD_USER_ID,
   VIEWER_USER_ID,
@@ -726,6 +727,7 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
     update: { activeConfigurationId: null, enabled: false },
     create: { id: "singleton", activeConfigurationId: null, enabled: false },
   });
+  await seedAiPromptBaseline(prisma);
 
   await prisma.user.createMany({
     data: [

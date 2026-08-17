@@ -35,6 +35,10 @@ const outcomeMessage = (outcome: AssistantOutcome): string => {
     return "That question matches too many records. Add a period, person, product, or record type.";
   }
   if (outcome.kind === "provider_unavailable") {
+    if (outcome.rateLimit) {
+      const { retryAfterSeconds } = outcome.rateLimit;
+      return `The AI provider reached its rate limit. Try again in about ${retryAfterSeconds} seconds.`;
+    }
     return "The AI service is temporarily unavailable. Try the same question again in a moment.";
   }
   if (outcome.kind === "ai_not_configured") {

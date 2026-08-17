@@ -90,9 +90,9 @@ routes:
         then: "The log table updates with matching rows (procedure name humanized, actor, target id, status, reason); rows can be expanded to copy full details (correlation id, raw payload)."
         note: "Read-only tab. Logs manual-action-log-proof entries are filtered out (internal only). Cursor pagination with 20 rows per page. UFB-019: procedure names humanized (e.g. 'Admin: Save User')."
       - id: admin-settings-configure
-        intent: "Configure organization identity, period defaults, reminder defaults, notification settings, and the global AI provider."
+        intent: "Configure organization identity, period defaults, reminder defaults, notification settings, the global AI provider, and external integrations."
         given: "The admin is on the Settings tab."
-        when: "the admin edits organization short/full name (Identity), period cycle parameters (Periods sub-tab), reminder timezone/audience defaults (Reminders sub-tab), notification from-email (Notifications sub-tab), or opens the live AI controls (Integrations sub-tab)"
+        when: "the admin edits organization short/full name (Identity), period cycle parameters (Periods sub-tab), reminder timezone/audience defaults (Reminders sub-tab), notification from-email (Notifications sub-tab), opens the live AI controls (AI sub-tab), or reviews external roadmapped integrations (Integrations sub-tab)"
         then: "A toast appears with the relevant save confirmation; the landing page cache is revalidated where applicable; AI draft state is refreshed from the database-backed control plane."
         note: "UFB-047/Phase 48-B: tabbed layout (Identity, Periods, Reminders, Notifications, Integrations, Holidays). Holidays is coming-soon and read-only (styled like the other sub-tabs). Period policy knobs and org identity are saved via PATCH semantics."
   - route: /admin/products
@@ -173,12 +173,24 @@ routes:
         when: "the admin enters a notification from-email (or leaves blank), then clicks Save Notification Settings"
         then: "a success toast displays \"Notification settings saved\" with a green checkmark; the email persists (or clears if blank) for use in reminder + escalation emails"
         note: "Save button disabled if the input is non-empty but not a valid email shape (basic validation: ^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$). Empty field means fall back to per-mailer default. tRPC mutation: admin.updateSettings with {notificationFromEmail: string|null}."
-      - id: admin-view-integrations-status
-        intent: "Manage the global AI provider and view external integration status"
+      - id: admin-manage-ai-workspace
+        intent: "Manage the global AI provider and registered feature prompt lifecycle"
+        given: "the admin is on the AI sub-tab"
+        when: "the admin reviews Overview, opens Provider to save/test/activate/disable/restore/discard a revision, or opens Features to draft, evaluate, activate, restore, and discard a Report Assistant prompt version"
+        then: "Overview shows safe provider and feature readiness; Provider shows the compact lifecycle control; Features shows locked core, editable behavior, effective preview, history, and stale-evaluation gates without exposing credentials or report data."
+      - id: admin-save-ai-separate-embedding
+        intent: "Save a composite AI provider with an independent embedding connection"
+        given: "the admin is on Settings → AI → Provider with a generation credential and an approved custom endpoint"
+        when: "the admin selects Separate connection, fills the embedding profile, endpoint, model, and credential, then saves the draft"
+        then: "one immutable draft stores Generation and Embeddings fields together, keeps both credentials encrypted and masked, leaves dimensions pending measurement, and does not activate the draft"
+        note: "The role-filtered profile catalog excludes generation-only profiles from Embeddings; activation and capability testing remain single composite lifecycle operations."
+        note: "The AI control plane uses admin.aiProvider and admin.aiPrompts procedures. The integration journey covers Overview, provider draft/discard, prompt draft/evaluation/activation/restore, and Lead Chat readiness. Provider and prompt activation remain independent pointers and never rebuild embeddings for prompt-only changes."
+      - id: admin-view-external-integrations
+        intent: "Review external integration status"
         given: "the admin is on the Integrations sub-tab"
-        when: "the admin saves a draft, runs the synthetic capability test, activates or disables the provider, restores a retained revision, or reviews the Telegram status card"
-        then: "the AI card shows the selected profile, masked credential, lifecycle, exact preparation counts and elapsed time, while Telegram remains coming-soon; failed tests never activate a revision and the previous active configuration remains visible until atomic activation."
-        note: "The AI control plane uses admin.aiProvider.get/save/test/activate/disable/restore/progress. The minimal availability payload is separate from this admin-only metadata surface. No Slack or CI card (removed in admin-settings-surface-cleanup)."
+        when: "the admin reviews the Element roadmapped integration card"
+        then: "Element remains marked Coming Soon and no AI provider, prompt, evaluation, or Telegram-derived status is rendered under Integrations."
+        note: "AI administration lives only under Settings → AI; Slack and CI cards remain removed."
   - route: /head/dashboard
     access: [admin]
     intents:

@@ -7,8 +7,12 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 
+export const AI_PROVIDER_TEST_QUEUED_MESSAGE =
+  "Provider compatibility test queued.";
+
 const CAPABILITY_LABELS = {
   authentication: "Authentication",
+  structured_planner: "Structured planner",
   planner_tool_call: "Planner tool call",
   structured_answer: "Structured answer",
   token_usage: "Token usage",
@@ -16,6 +20,18 @@ const CAPABILITY_LABELS = {
 } as const;
 
 const failureDescription = (failureCode: string | undefined): string => {
+  if (failureCode === "tool_use_failed") {
+    return "The model did not produce a valid tool call after retry.";
+  }
+  if (
+    failureCode === "rate_limit_exceeded" ||
+    failureCode === "provider_http_429"
+  ) {
+    return "The provider rate limit was exceeded after retry.";
+  }
+  if (failureCode === "provider_authentication_failed") {
+    return "The provider rejected the credential.";
+  }
   if (failureCode === "OpenAiCompatibleProtocolError") {
     return "The provider response is incompatible.";
   }
@@ -25,26 +41,65 @@ const failureDescription = (failureCode: string | undefined): string => {
   return "The capability check did not pass.";
 };
 
-export const capabilityTestMessage = (
+type CapabilityTestResult = NonNullable<
+  AiProviderConfigurationRead["testResult"]
+>;
+type CapabilityLane =
+  CapabilityTestResult["generation"] | CapabilityTestResult["embeddings"];
+
+const capabilityTestMessage = (
   revision: AiProviderConfigurationRead,
 ): string => {
-  if (revision.lifecycle === "validated") {
-    return "All required provider capabilities passed.";
+  const result = revision.testResult;
+  if (!result) return "The provider capability test failed.";
+  if (result.status === "passed") {
+    return "Generation, planner protocol, answer JSON, and embeddings passed.";
   }
-  const failed =
-    revision.testResult?.capabilities.filter(
-      ({ status }) => status === "failed",
-    ) ?? [];
-  const actionable = failed.filter(
-    ({ capability }) =>
-      capability !== "authentication" ||
-      !failed.some(({ capability: item }) => item === "planner_tool_call"),
+  if (result.status === "inconclusive") {
+    return revision.embeddings.mode === "reuse_generation"
+      ? "Generation and Embeddings share one connection; the test was inconclusive. Retry when the provider is available."
+      : "Generation or Embeddings was temporarily unavailable; retry the test.";
+  }
+  const laneMessage = (label: string, lane: CapabilityLane): string | null => {
+    const failed = lane.capabilities.find(({ status }) => status === "failed");
+    return failed
+      ? `${label} · ${CAPABILITY_LABELS[failed.capability]}: ${failureDescription(failed.failureCode)}`
+      : lane.status === "failed"
+        ? `${label}: the connection did not pass its required checks.`
+        : null;
+  };
+  const messages = [
+    laneMessage("Generation", result.generation),
+    ...(revision.embeddings.mode === "reuse_generation"
+      ? []
+      : [laneMessage("Embeddings", result.embeddings)]),
+  ].filter((message): message is string => message !== null);
+  return (
+    messages[0] ??
+    "The provider capability test did not produce a complete result."
   );
-  const failure = actionable[0] ?? failed[0];
-  if (!failure) return "The provider capability test failed.";
-  return `${CAPABILITY_LABELS[failure.capability]}: ${failureDescription(
-    failure.failureCode,
-  )}`;
+};
+
+export const compatibilityExecutionMessage = (
+  revision: AiProviderConfigurationRead,
+): string | null => {
+  const execution = revision.latestExecution;
+  if (!execution) return null;
+  if (execution.state === "queued") {
+    return AI_PROVIDER_TEST_QUEUED_MESSAGE;
+  }
+  if (execution.state === "running") {
+    return "Provider compatibility test running.";
+  }
+  if (execution.outcome === "inconclusive") {
+    return "Compatibility could not be determined because the provider is temporarily unavailable. Retry the test.";
+  }
+  if (execution.outcome === "configuration_error") {
+    return execution.failureCode === "provider_authentication_failed"
+      ? "Generation authentication failed. Replace the rejected provider credential and save a new draft."
+      : "The provider rejected its configuration. Review the endpoint and model identifiers.";
+  }
+  return capabilityTestMessage(revision);
 };
 
 type AiProviderMutationsInput = Readonly<{
@@ -68,6 +123,7 @@ export const useAiProviderMutations = ({
         setSavedRevision(revision);
         setMessage("Draft saved. Test it before activation.");
         toast.success("AI provider draft saved");
+        refresh();
       },
       onError: (error) => setMessage(error.message),
     }),
@@ -76,12 +132,11 @@ export const useAiProviderMutations = ({
     trpc.admin.aiProvider.test.mutationOptions({
       onSuccess: (revision) => {
         setSavedRevision(revision);
-        setMessage(capabilityTestMessage(revision));
-        toast.success(
-          revision.lifecycle === "validated"
-            ? "AI provider test passed"
-            : "AI provider test completed",
+        setMessage(
+          compatibilityExecutionMessage(revision) ??
+            capabilityTestMessage(revision),
         );
+        toast.success("AI provider compatibility test queued");
         refresh();
       },
       onError: (error) => setMessage(error.message),
@@ -117,6 +172,16 @@ export const useAiProviderMutations = ({
       onError: (error) => setMessage(error.message),
     }),
   );
+  const discard = useMutation(
+    trpc.admin.aiProvider.discard.mutationOptions({
+      onSuccess: () => {
+        setSavedRevision(null);
+        setMessage("Discarded AI provider attempt.");
+        refresh();
+      },
+      onError: (error) => setMessage(error.message),
+    }),
+  );
 
-  return { save, test, activate, disable, restore };
+  return { save, test, activate, disable, restore, discard };
 };

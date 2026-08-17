@@ -18,6 +18,30 @@ LLM не получает прямой доступ к базе. Активны�
 - Это не отдельный демонстрационный интерфейс: чат встраивается в существующий Lead toolbar и использует текущие UI primitives, tokens, tRPC, NestJS-модули, shared Zod-схемы и тестовые правила проекта.
 - Используется capability-based TypeScript-реализация с OpenAI-compatible transport для function calling, grounded answer и embeddings; экспериментальные обозначения Terra/Luna не переносятся.
 
+### Новая AI control plane
+
+Административная поверхность теперь находится в **Settings → AI**. Вкладка
+**Overview** показывает только безопасную готовность глобального провайдера и
+зарегистрированных функций; **Provider** содержит единственный глобальный
+provider lifecycle; **Features** содержит только code-registered функции и
+immutable prompt bundles. **Integrations** оставлена для внешних или
+roadmapped сервисов и больше не содержит AI controls.
+
+Для Report Assistant серверный `AiFeaturePromptCatalog` регистрирует четыре
+слота: planner, planner-repair, grounded-answer и citation-repair. Каждый
+слот содержит полный database-backed prompt text в immutable revision.
+Редактирование создаёт feature-local immutable revision; активируется ровно
+один bundle pointer. Перед активацией synthetic evaluator доказывает exact
+provider revision + prompt revision + content hash + contract/evaluator
+versions. Prompt activation повторно проверяет эту identity tuple внутри
+транзакции и не трогает embedding pointer.
+
+После explicit idempotent bootstrap `AiRuntimeConfigurationRepository` читает
+enabled provider и active prompt under repeatable-read snapshot. Все planner,
+repair, answer и citation-repair calls одного запроса используют этот snapshot.
+Missing, corrupt or unevaluated state даёт `ai_not_configured` до retrieval;
+compiled prompt text не является fallback.
+
 ## Как работает система
 
 ```mermaid
@@ -59,7 +83,13 @@ Mistral не выбирает SQL, database IDs, ACL, similarity threshold, чи
 
 Невалидный function call получает одну попытку исправления. Повторная ошибка возвращает контролируемый `invalid_plan`, а не исправляется сервером скрытыми defaults.
 
-Это не «обычный чат в надежде, что модель догадается». API использует четыре версионируемых технических промпта: planner, исправление невалидного плана, grounded answer и исправление citations. Planner обязан вызвать один tool; answer получает только подготовленный сервером набор разрешённых фактов. Текст отчёта считается недоверенными данными и не может менять системные инструкции. Полный контракт закреплён в `docs/llm-report/lead-report-assistant-prompt-contract.md`.
+Это не «обычный чат в надежде, что модель догадается». API использует четыре
+catalog-owned технических слота: planner, исправление невалидного плана,
+grounded answer и исправление citations. Planner обязан вызвать один tool;
+answer получает только подготовленный сервером набор разрешённых фактов. Текст
+отчёта считается недоверенными данными и не может менять системные инструкции.
+Полный контракт и lifecycle закреплены в
+`docs/llm-report/lead-report-assistant-prompt-contract.md`.
 
 ### 3. Периоды и источники истины
 

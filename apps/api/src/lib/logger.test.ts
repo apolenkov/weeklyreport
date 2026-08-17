@@ -222,6 +222,7 @@ describe("createAppLogger", () => {
 
   it("does not prune (readdir) the log directory on every log line", async () => {
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    await flush();
     const readdirSpy = vi.spyOn(fsp, "readdir");
 
     // Large maxBytes so no rotation fires: only the interval-gated prune can

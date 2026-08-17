@@ -1,4 +1,8 @@
-import { AiProviderLifecycle, AiProviderProfile } from "@prisma/client";
+import {
+  AiProviderLifecycle,
+  AiProviderProfile,
+  AiProviderReasoningMode,
+} from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -12,21 +16,37 @@ const revision = (
   lifecycle: AiProviderLifecycle = AiProviderLifecycle.draft,
 ) => ({
   id,
-  profile: AiProviderProfile.mistral,
-  baseUrl: "https://api.mistral.ai/v1",
-  endpointIdentity: "mistral:api",
+  generationProfile: AiProviderProfile.mistral,
+  generationBaseUrl: "https://api.mistral.ai/v1",
+  generationEndpointIdentity: "mistral:api",
   plannerModel: "mistral-large-latest",
   answerModel: "mistral-large-latest",
   embeddingModel: "mistral-embed",
   embeddingDimensions: 1024,
   semanticInputVersion: "report-assistant/v1",
-  credentialCiphertext: "ciphertext",
-  credentialNonce: "nonce",
-  credentialTag: "tag",
-  credentialKeyVersion: 1,
-  credentialMaskedSuffix: "••••abcd",
+  reasoningMode: AiProviderReasoningMode.provider_default,
+  reasoningCustomValue: null,
+  answerProtocol: null,
+  generationCredentialCiphertext: "ciphertext",
+  generationCredentialNonce: "nonce",
+  generationCredentialTag: "tag",
+  generationCredentialKeyVersion: 1,
+  generationCredentialMaskedSuffix: "••••abcd",
+  embeddingMode: "reuse_generation" as const,
+  embeddingProfile: null,
+  embeddingBaseUrl: null,
+  embeddingEndpointIdentity: null,
+  embeddingCredentialCiphertext: null,
+  embeddingCredentialNonce: null,
+  embeddingCredentialTag: null,
+  embeddingCredentialKeyVersion: null,
+  embeddingCredentialMaskedSuffix: null,
+  generationCompatibilityIdentity: "generation-identity",
+  embeddingScopeIdentity: "embedding-identity",
+  compositeTestIdentity: "composite-identity",
   lifecycle,
   testResult: null,
+  compatibilityExecutions: [],
   testedAt: null,
   preparationCompleted: 0,
   preparationTotal: 0,
@@ -40,6 +60,24 @@ const revision = (
   updatedAt: new Date("2026-08-10T00:00:00.000Z"),
 });
 
+const passingTestResult = {
+  status: "passed",
+  generation: {
+    status: "passed",
+    answerProtocol: "json_schema",
+    capabilities: [{ capability: "authentication", status: "passed" }],
+    featureCompatibility: [],
+  },
+  embeddings: {
+    status: "passed",
+    capabilities: [{ capability: "batch_embeddings", status: "passed" }],
+  },
+  testedAt: "2026-08-10T00:00:00.000Z",
+};
+
+const promptRevisionId = "33333333-3333-4333-8333-333333333333";
+const promptContentHash = "a".repeat(64);
+const promptContractVersion = "report-assistant/core/v1";
 const encryptedCredential = {
   ciphertext: "ciphertext",
   nonce: "nonce",
@@ -49,15 +87,26 @@ const encryptedCredential = {
 } as const;
 
 const draft = {
-  profile: AiProviderProfile.mistral,
-  baseUrl: "https://api.mistral.ai/v1",
-  endpointIdentity: "mistral:api",
+  id: "revision-new",
+  generation: {
+    profile: AiProviderProfile.mistral,
+    baseUrl: "https://api.mistral.ai/v1",
+    endpointIdentity: "mistral:api",
+    credential: encryptedCredential,
+  },
   plannerModel: "mistral-large-latest",
   answerModel: "mistral-large-latest",
-  embeddingModel: "mistral-embed",
-  embeddingDimensions: 1024,
-  semanticInputVersion: "report-assistant/v1",
-  credential: encryptedCredential,
+  reasoningMode: AiProviderReasoningMode.provider_default,
+  reasoningCustomValue: null,
+  embeddings: {
+    mode: "reuse_generation",
+    model: "mistral-embed",
+    dimensions: 1024,
+    semanticInputVersion: "report-assistant/v1",
+  },
+  generationCompatibilityIdentity: "generation-identity",
+  embeddingScopeIdentity: "embedding-identity",
+  compositeTestIdentity: "composite-identity",
 } satisfies NewAiProviderRevision;
 
 type RevisionRecord = ReturnType<typeof revision>;
@@ -65,6 +114,12 @@ type CreateInput = Readonly<{ data: Readonly<Record<string, unknown>> }>;
 
 const buildHarness = () => {
   const active = revision("revision-active", AiProviderLifecycle.active);
+  const candidate = {
+    ...revision("revision-new", AiProviderLifecycle.validated),
+    answerProtocol: "json_schema" as const,
+    testResult: passingTestResult,
+    testedAt: new Date("2026-08-10T00:00:00.000Z"),
+  };
   const controlUpsert = vi
     .fn<(input: unknown) => Promise<unknown>>()
     .mockResolvedValue({
@@ -79,6 +134,15 @@ const buildHarness = () => {
   const revisionUpdate = vi
     .fn<(input: unknown) => Promise<RevisionRecord>>()
     .mockResolvedValue(active);
+  const revisionUpdateMany = vi
+    .fn<(input: unknown) => Promise<{ count: number }>>()
+    .mockResolvedValue({ count: 1 });
+  const controlUpdateMany = vi
+    .fn<(input: unknown) => Promise<{ count: number }>>()
+    .mockResolvedValue({ count: 1 });
+  const configurationDeleteMany = vi
+    .fn<(input: unknown) => Promise<{ count: number }>>()
+    .mockResolvedValue({ count: 1 });
   const controlFindFirst = vi
     .fn<() => Promise<{ id: string }>>()
     .mockResolvedValue({ id: "singleton" });
@@ -88,11 +152,24 @@ const buildHarness = () => {
   const transaction = {
     aiProviderConfiguration: {
       create: revisionCreate,
+      findUnique: vi.fn().mockResolvedValue(candidate),
       update: revisionUpdate,
+      updateMany: revisionUpdateMany,
+      deleteMany: configurationDeleteMany,
     },
     aiProviderControl: {
       upsert: controlUpsert,
       update: controlUpdate,
+      updateMany: controlUpdateMany,
+    },
+    aiCompatibilityExecution: {
+      findFirst: vi.fn().mockResolvedValue({ id: "execution-current" }),
+    },
+    aiFeaturePromptControl: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    aiPromptEvaluation: {
+      findFirst: vi.fn().mockResolvedValue({ id: "prompt-evaluation-current" }),
     },
   };
   const transactionRunner = vi.fn(
@@ -118,6 +195,7 @@ const buildHarness = () => {
       findFirst: vi.fn().mockResolvedValue(null),
       findUnique: vi.fn().mockResolvedValue(active),
       update: revisionUpdate,
+      deleteMany: configurationDeleteMany,
     },
   } as unknown as PrismaService;
   return {
@@ -127,15 +205,43 @@ const buildHarness = () => {
     controlUpdate,
     revisionCreate,
     revisionUpdate,
+    revisionUpdateMany,
+    controlUpdateMany,
     transaction,
+    candidate,
     controlFindFirst,
     configurationFindMany,
     configurationUpdate: revisionUpdate,
+    configurationDeleteMany,
     transactionRunner,
   };
 };
 
 describe("AiProviderConfigurationRepository", () => {
+  it("conditionally deletes only disposable lifecycle rows", async () => {
+    const harness = buildHarness();
+
+    await expect(
+      harness.repository.discardDisposable("revision-draft"),
+    ).resolves.toBe(true);
+    expect(harness.configurationDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "revision-draft",
+        lifecycle: {
+          in: [AiProviderLifecycle.draft, AiProviderLifecycle.failed],
+        },
+      },
+    });
+  });
+
+  it("reports a concurrent lifecycle change without deleting a row", async () => {
+    const harness = buildHarness();
+    harness.configurationDeleteMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      harness.repository.discardDisposable("revision-raced"),
+    ).resolves.toBe(false);
+  });
   it("reads the active revision and retained revisions without credentials in the control shape", async () => {
     const harness = buildHarness();
 
@@ -159,11 +265,12 @@ describe("AiProviderConfigurationRepository", () => {
     expect(harness.transactionRunner).toHaveBeenCalledTimes(1);
     const created = harness.revisionCreate.mock.calls[0]?.[0];
     expect(created?.data).toMatchObject({
-      credentialCiphertext: encryptedCredential.ciphertext,
-      credentialNonce: encryptedCredential.nonce,
-      credentialTag: encryptedCredential.tag,
-      credentialKeyVersion: encryptedCredential.keyVersion,
-      credentialMaskedSuffix: encryptedCredential.maskedSuffix,
+      generationCredentialCiphertext: encryptedCredential.ciphertext,
+      generationCredentialNonce: encryptedCredential.nonce,
+      generationCredentialTag: encryptedCredential.tag,
+      generationCredentialKeyVersion: encryptedCredential.keyVersion,
+      generationCredentialMaskedSuffix: encryptedCredential.maskedSuffix,
+      embeddingMode: "reuse_generation",
     });
     expect(harness.controlUpsert).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "singleton" } }),
@@ -176,21 +283,67 @@ describe("AiProviderConfigurationRepository", () => {
 
     await harness.repository.activateRevision("revision-new", activatedAt);
 
-    expect(harness.revisionUpdate).toHaveBeenNthCalledWith(1, {
-      where: { id: "revision-old" },
+    expect(harness.revisionUpdateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        id: "revision-old",
+        lifecycle: AiProviderLifecycle.active,
+      },
       data: {
         lifecycle: AiProviderLifecycle.superseded,
         supersededAt: activatedAt,
       },
     });
-    expect(harness.revisionUpdate).toHaveBeenNthCalledWith(2, {
-      where: { id: "revision-new" },
+    expect(harness.revisionUpdateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: "revision-new",
+        lifecycle: {
+          in: [
+            AiProviderLifecycle.validated,
+            AiProviderLifecycle.preparing,
+            AiProviderLifecycle.active,
+            AiProviderLifecycle.superseded,
+          ],
+        },
+      },
       data: { lifecycle: AiProviderLifecycle.active, activatedAt },
     });
-    expect(harness.controlUpdate).toHaveBeenCalledWith({
-      where: { id: "singleton" },
+    expect(harness.controlUpdateMany).toHaveBeenCalledWith({
+      where: { id: "singleton", activeConfigurationId: "revision-old" },
       data: { activeConfigurationId: "revision-new", enabled: true },
     });
+  });
+
+  it("reports a concurrent active-pointer change without committing activation", async () => {
+    const harness = buildHarness();
+    harness.controlUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      harness.repository.activateRevision(
+        "revision-new",
+        new Date("2026-08-10T01:00:00.000Z"),
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("activates from provider smoke evidence without prompt evaluation", async () => {
+    const harness = buildHarness();
+    harness.transaction.aiFeaturePromptControl.findMany.mockResolvedValue([
+      {
+        featureKey: "lead-report-assistant",
+        activeRevision: {
+          id: promptRevisionId,
+          effectiveContentHash: promptContentHash,
+          coreContractVersion: promptContractVersion,
+        },
+      },
+    ]);
+    harness.transaction.aiPromptEvaluation.findFirst.mockResolvedValue(null);
+    const resultWithoutEvaluation = await harness.repository.activateRevision(
+      "revision-new",
+      new Date("2026-08-10T01:00:00.000Z"),
+    );
+    expect(resultWithoutEvaluation).toBe(true);
+    expect(harness.controlUpdateMany).toHaveBeenCalledOnce();
   });
 
   it("preserves active lifecycle while recording a failed capability retest", async () => {
@@ -200,22 +353,92 @@ describe("AiProviderConfigurationRepository", () => {
     await harness.repository.setTestResult(
       "revision-active",
       { status: "failed" },
-      false,
+      "failed",
       null,
       testedAt,
       AiProviderLifecycle.active,
     );
 
-    expect(harness.configurationUpdate).toHaveBeenCalledWith({
-      where: { id: "revision-active" },
-      data: expect.objectContaining({
-        lifecycle: AiProviderLifecycle.active,
-        testResult: { status: "failed" },
-        embeddingDimensions: null,
-        testedAt,
-      }),
-      select: expect.anything(),
-    });
+    const update = harness.configurationUpdate.mock.calls[0]?.[0] as {
+      data: {
+        lifecycle: AiProviderLifecycle;
+        testResult: { status: "failed" };
+        embeddingDimensions?: number | null;
+        testedAt: Date;
+      };
+      select: object;
+    };
+    expect(update.data.lifecycle).toBe(AiProviderLifecycle.active);
+    expect(update.data.testResult).toEqual({ status: "failed" });
+    expect(update.data).not.toHaveProperty("embeddingDimensions");
+    expect(update.data).not.toHaveProperty("generationCompatibilityIdentity");
+    expect(update.data).not.toHaveProperty("embeddingScopeIdentity");
+    expect(update.data).not.toHaveProperty("compositeTestIdentity");
+    expect(update.data.testedAt).toBe(testedAt);
+    expect(typeof update.select).toBe("object");
+  });
+
+  it("persists the selected answer protocol from a passing capability result", async () => {
+    const harness = buildHarness();
+
+    await harness.repository.setTestResult(
+      "revision-new",
+      {
+        status: "passed",
+        answerProtocol: "forced_tool",
+      },
+      "passed",
+      1024,
+      new Date("2026-08-10T01:00:00.000Z"),
+      AiProviderLifecycle.draft,
+    );
+
+    const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
+      data?: Readonly<Record<string, unknown>>;
+    };
+    expect(update.data?.answerProtocol).toBe("forced_tool");
+  });
+
+  it("persists JSON Object Mode selected by the generation capability probe", async () => {
+    const harness = buildHarness();
+
+    await harness.repository.setTestResult(
+      "revision-new",
+      {
+        status: "passed",
+        generation: {
+          status: "passed",
+          answerProtocol: "json_object",
+        },
+      },
+      "passed",
+      1024,
+      new Date("2026-08-14T09:10:50.390Z"),
+      AiProviderLifecycle.draft,
+    );
+
+    const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
+      data?: Readonly<Record<string, unknown>>;
+    };
+    expect(update.data?.answerProtocol).toBe("json_object");
+  });
+
+  it("returns an inconclusive non-active revision to draft", async () => {
+    const harness = buildHarness();
+
+    await harness.repository.setTestResult(
+      "revision-new",
+      { status: "inconclusive" },
+      "inconclusive",
+      null,
+      new Date("2026-08-10T01:00:00.000Z"),
+      AiProviderLifecycle.failed,
+    );
+
+    const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
+      data?: Readonly<Record<string, unknown>>;
+    };
+    expect(update.data?.lifecycle).toBe(AiProviderLifecycle.draft);
   });
 
   it("disables the singleton without deleting retained revisions", async () => {

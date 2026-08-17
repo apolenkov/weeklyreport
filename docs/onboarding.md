@@ -77,18 +77,20 @@ web, чтобы заработала корреляция ошибок с тре
 
 Для Lead Chat deployment задаёт encryption key, allowlist origins и операционные
 лимиты. Provider profile, credential и model choices для development/UAT и
-production вводятся администратором в Settings → Integrations и хранятся
+production вводятся администратором в Settings → AI → Provider и хранятся
 зашифрованно в базе. Credential не попадает в Git, OpenSpec, логи и скриншоты.
 Production rollout требует одобрения endpoint/data region, retention/ZDR, model
 availability, spending limit и rate-limit posture. Внешний origin должен быть
 явно добавлен в `AI_PROVIDER_ALLOWED_ORIGINS`; автоматического failover нет.
 
-Сначала проверяют полную конфигурацию и запускают синтетический capability test в
-Settings → Integrations, затем делают smoke-проверку save → submit → publish →
-search → PDF → Chat. Для PostgreSQL сначала проверяют initialized-database ledger
-через `pnpm db:check-init-target`, затем применяют DDL через прямой `DIRECT_URL`
+Сначала проверяют полную конфигурацию и запускают generic плюс active-feature
+synthetic capability test в Settings → AI → Provider, затем проверяют prompt
+bootstrap и exact provider/prompt evaluation в Settings → AI → Features. После
+этого делают smoke-проверку save → submit → publish → search → PDF → Chat.
+Для PostgreSQL сначала проверяют initialized-database ledger через
+`pnpm db:check-init-target`, затем применяют DDL через прямой `DIRECT_URL`
 connection, а production database никогда не reset-ят. Расходы, token/request
-rate, 429, timeout и provider lifecycle смотрят по billing и bounded
+rate, 429, timeout и provider/prompt lifecycle смотрят по billing и bounded
 `customreport_*` metrics. Полный порядок команд — в
 [`lead-report-assistant-rollout.md`](./llm-report/lead-report-assistant-rollout.md).
 

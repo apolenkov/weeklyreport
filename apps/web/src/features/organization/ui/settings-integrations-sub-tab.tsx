@@ -4,9 +4,8 @@ import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../../lib/trpc-context";
-import { AiProviderCard } from "./ai-provider-card";
 
-/** Read-only surface for external integrations plus the admin AI control plane. */
+/** Read-only surface for external integrations that remain roadmapped. */
 export function IntegrationsSubTab() {
   const trpc = useTRPC();
   const statusQ = useQuery(trpc.admin.integrationsStatus.queryOptions());
@@ -28,8 +27,8 @@ export function IntegrationsSubTab() {
   return (
     <div className="max-w-3xl space-y-4">
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        External integrations available to CustomReport. AI changes are tested
-        before they can affect users.
+        External integrations available to CustomReport. AI settings are managed
+        from the dedicated AI workspace.
       </p>
       <div
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
@@ -51,7 +50,6 @@ export function IntegrationsSubTab() {
           />
         </div>
       </div>
-      <AiProviderCard />
     </div>
   );
 }

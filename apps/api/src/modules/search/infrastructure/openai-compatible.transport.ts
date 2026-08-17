@@ -3,16 +3,17 @@ import type {
   ReportAssistantTokenUsage,
 } from "../application/report-assistant.ports.js";
 import { ReportAssistantProviderError } from "../application/report-assistant.ports.js";
+import { withTransientRetry } from "./openai-compatible.retry.js";
+import { normalizedUsage } from "./openai-compatible.usage.js";
 
 const RETRYABLE_STATUS_MIN = 500;
 const RATE_LIMIT_STATUS = 429;
 const MAX_PROVIDER_ERROR_CODE_LENGTH = 100;
-
+const MILLISECONDS_PER_SECOND = 1000;
 type OpenAiCompatibleMessage = Readonly<{
   role: "system" | "user" | "assistant";
   content: string;
 }>;
-
 type OpenAiCompatibleTool = Readonly<Record<string, unknown>>;
 
 export type OpenAiCompatibleChatRequest = Readonly<{
@@ -23,6 +24,9 @@ export type OpenAiCompatibleChatRequest = Readonly<{
   toolChoice?: unknown;
   parallelToolCalls?: boolean;
   responseFormat?: unknown;
+  reasoningEffort?: string;
+  reasoning?: Readonly<{ effort: string }>;
+  temperature?: number;
 }>;
 
 export type OpenAiCompatibleChatResponse = Readonly<{
@@ -91,17 +95,40 @@ const responseBody = async (response: Response): Promise<unknown> => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const boundedErrorCode = (value: unknown): string | null =>
+  typeof value === "string" && value.length > 0
+    ? value.slice(0, MAX_PROVIDER_ERROR_CODE_LENGTH)
+    : null;
+
 const safeErrorCode = (value: unknown): string => {
   if (!isRecord(value)) return "provider_http_error";
   const error = value.error;
-  if (!isRecord(error) || typeof error.code !== "string") {
-    return "provider_http_error";
-  }
-  return error.code.slice(0, MAX_PROVIDER_ERROR_CODE_LENGTH);
+  if (!isRecord(error)) return "provider_http_error";
+  const metadata = error.metadata;
+  const typedCode = isRecord(metadata)
+    ? (boundedErrorCode(metadata.provider_code) ??
+      boundedErrorCode(metadata.error_type))
+    : null;
+  return (
+    typedCode ??
+    boundedErrorCode(error.code) ??
+    (typeof error.code === "number" && Number.isInteger(error.code)
+      ? `provider_http_${error.code}`
+      : "provider_http_error")
+  );
 };
 
 const retryableStatus = (status: number): boolean =>
   status === RATE_LIMIT_STATUS || status >= RETRYABLE_STATUS_MIN;
+
+const retryAfterMilliseconds = (response: Response): number | undefined => {
+  if (response.status !== RATE_LIMIT_STATUS) return undefined;
+  const seconds = Number.parseFloat(response.headers.get("retry-after") ?? "");
+  const milliseconds = seconds * MILLISECONDS_PER_SECOND;
+  return Number.isFinite(milliseconds) && milliseconds >= 0
+    ? milliseconds
+    : undefined;
+};
 
 const assertResponse = async (
   response: Response,
@@ -114,12 +141,14 @@ const assertResponse = async (
       new Error(safeErrorCode(body)),
       response.status,
       retryableStatus(response.status),
+      safeErrorCode(body),
+      retryAfterMilliseconds(response),
     );
   }
   return body;
 };
 
-const requestJson = async (
+const requestJsonOnce = async (
   config: OpenAiCompatibleTransportConfig,
   path: string,
   body: unknown,
@@ -147,28 +176,18 @@ const requestJson = async (
   }
 };
 
+const requestJson = (
+  config: OpenAiCompatibleTransportConfig,
+  path: string,
+  body: unknown,
+  operation: ReportAssistantProviderOperation,
+): Promise<unknown> =>
+  withTransientRetry(() => requestJsonOnce(config, path, body, operation));
+
 const asObject = (value: unknown, label: string): Record<string, unknown> => {
   if (!isRecord(value))
     throw new OpenAiCompatibleProtocolError(`${label} is invalid`);
   return value;
-};
-
-const normalizedUsage = (value: unknown): ReportAssistantTokenUsage => {
-  const usage = asObject(value, "Provider usage");
-  const promptTokens = usage.prompt_tokens;
-  const completionTokens = usage.completion_tokens;
-  const totalTokens = usage.total_tokens;
-  const tokenValue = (token: unknown): number => {
-    if (typeof token !== "number" || !Number.isInteger(token) || token < 0) {
-      throw new OpenAiCompatibleProtocolError("Provider usage is invalid");
-    }
-    return token;
-  };
-  return {
-    promptTokens: tokenValue(promptTokens),
-    completionTokens: tokenValue(completionTokens),
-    totalTokens: tokenValue(totalTokens),
-  };
 };
 
 export class OpenAiCompatibleTransport {
@@ -195,6 +214,13 @@ export class OpenAiCompatibleTransport {
         ...(request.responseFormat
           ? { response_format: request.responseFormat }
           : {}),
+        ...(request.reasoningEffort
+          ? { reasoning_effort: request.reasoningEffort }
+          : {}),
+        ...(request.reasoning ? { reasoning: request.reasoning } : {}),
+        ...(request.temperature === undefined
+          ? {}
+          : { temperature: request.temperature }),
       },
       operation,
     );
@@ -215,6 +241,9 @@ export class OpenAiCompatibleTransport {
   }
 
   static usage(value: unknown): ReportAssistantTokenUsage {
-    return normalizedUsage(value);
+    return normalizedUsage(
+      value,
+      () => new OpenAiCompatibleProtocolError("Provider usage is invalid"),
+    );
   }
 }

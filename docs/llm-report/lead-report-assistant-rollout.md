@@ -95,10 +95,18 @@ the reset workflow described in the pgvector rollout inventory.
 ## 2. Network and provider preflight
 
 Verify TLS/443 reachability for the selected allowlisted origin. After the API
-is running, an administrator configures the provider credential and three model
-roles in **Settings → Integrations**, then runs the synthetic capability test.
-The test verifies authentication, forced tool calling, strict structured output,
-usage, and ordered finite embeddings; it measures dimensions from the response.
+is running, an administrator opens **Settings → AI → Provider**, configures the
+provider credential and three model roles, then runs the generic capability
+test. The test also evaluates every active registered feature prompt bundle
+against the exact candidate provider. Generic checks verify authentication,
+forced planner tool calling, usage, and ordered finite embeddings; answer
+compatibility probes strict JSON Schema first and selects one forced answer tool
+only for a classified response-format incompatibility. Authentication, rate
+limit, timeout, transport, and provider failures never trigger protocol
+negotiation. The selected answer protocol and exact provider reasoning
+configuration (Provider default, Off, or a bounded Custom value) are stored on
+the tested revision and applied to planner, repair, answer, and citation-repair
+calls. Feature checks use synthetic questions and grounding only.
 Do not put the credential, model IDs, or dimensions into deployment environment
 files. A failed test, missing model, unexpected region, or blocked egress is a
 preflight failure; do not test by sending report text.
@@ -117,7 +125,8 @@ docker compose -f docker-compose.prod.yml up -d api web
 ```
 
 The migration container uses `DIRECT_URL` and must complete before the API is
-healthy. Verify the database directly:
+healthy. API startup and all seed paths then run the idempotent Report Assistant
+prompt bootstrap. Verify the database directly:
 
 ```sql
 SELECT current_setting('server_version_num');
@@ -129,6 +138,12 @@ The final query is a dimension smoke check only; the application migration
 also enforces the configured dimension with a database constraint. Do not run
 `prisma migrate reset`, `db:reset:hard`, or an equivalent destructive command
 against production.
+
+Verify that `AiFeaturePromptControl` has one active Report Assistant baseline
+and that no prompt body, credential, report data, or provider response was
+printed by migration or bootstrap logs. A newly bootstrapped active bundle
+remains unavailable until an exact provider/prompt evaluation passes; this is
+intentional fail-closed behavior.
 
 ## 4. Smoke checks after deployment
 
@@ -145,6 +160,22 @@ search, and PDF export. Then, as a Lead with an accessible report, open the
 native Chat panel, ask a redacted question, confirm the answer shows only
 authorized report sources, and open one source link. Confirm the panel's error
 state is actionable if the provider is unavailable.
+
+As an administrator, open **Settings → AI** and verify Overview shows safe
+readiness, Provider shows the active profile/model without a credential, and
+Features shows Report Assistant. Create a redacted behavioral draft, confirm
+the locked core is read-only, run evaluation, and activate only after the
+exact provider/prompt result passes. Restore and discard checks must leave the
+other pointer and embedding state unchanged. **Settings → Integrations** must
+show only external roadmapped services.
+
+When a provider uses strict JSON Schema, the runtime sends that protocol only.
+When capability testing selects the forced answer tool, the runtime sends one
+named `submit_grounded_report_answer` tool with the server-owned answer schema
+and no alternate protocol. A failed runtime request is reported safely rather
+than retried through a different protocol. Provider default reasoning omits the
+reasoning field; Off and Custom use only the profile-specific bounded mapping
+validated during capability testing.
 
 Automated tests must continue to use deterministic fakes or Playwright route
 interception. They must never contact a real provider. Review the bounded metrics
@@ -164,6 +195,7 @@ customreport_ai_provider_preparation_total
 customreport_ai_provider_preparation_failed
 customreport_ai_provider_preparation_elapsed_seconds
 customreport_ai_provider_activations_total
+customreport_ai_prompt_lifecycle_total
 ```
 
 Check provider spend, request/token rate, 429s, timeouts, and error outcomes
@@ -185,10 +217,26 @@ code or configuration. A temporary provider outage is not permission to log
 prompts or send report data to another endpoint.
 
 To roll back a successful provider activation, use the admin Restore control on
-the retained tested revision. The old active pointer remains available until
-the replacement is ready; old embedding scopes are retained for rollback and
-are not deleted as part of restoration.
+the retained tested revision. To roll back prompt behavior, use Features →
+Report Assistant → Restore on the retained bundle after it passes a fresh
+evaluation against the active provider. The old active pointers remain
+available until the replacement is ready; old embedding scopes are retained
+for rollback and prompt-only restoration never rebuilds embeddings.
 
 Record the deployment config version, migration decision, image digests,
 preflight result, smoke result, metric review, and rollback decision in the
 deployment system. Production databases are never reset.
+
+## Compatibility evaluation operations
+
+Provider and prompt checks are accepted immediately as durable jobs. The UI
+polls the stored `queued`, `running`, and `completed` state, so a browser
+reload or request timeout never loses an evaluation. A repeated request for
+the same immutable identity reuses its existing run. Generation checks run
+serially and omit sampling overrides such as `temperature`, matching runtime.
+
+Treat `inconclusive` as a retryable operational condition: inspect provider
+availability, timeout, transport, or throttling before retrying. Only a
+proven protocol/schema/behaviour mismatch is `incompatible`; authentication
+or authorization is a `configuration_error`. Do not change models, routes,
+reasoning, or answer protocol merely to turn a check green.

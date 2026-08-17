@@ -1,9 +1,12 @@
 flowchart TD
     user["Lead: задаёт вопрос в Report chat"] --> ui["Web: отправляет question и resolution tokens"]
     ui --> api["tRPC leadForm.assistant\nТолько canonical leadProcedure"]
-    api --> planner["Active provider planner\nВызов единственного tool: search_report_entries"]
+    api --> snapshot["AiRuntimeConfigurationRepository\nrepeatable-read provider + active prompt pair"]
+    snapshot --> ready{"Enabled provider, active bundle,\nexact passing evaluation?"}
+    ready -- "Нет" --> unavailable["Исход: ai_not_configured\nДо retrieval и provider work"]
+    ready -- "Да" --> planner["Snapshot planner\nОдин search_report_entries tool call"]
     planner --> valid{"SearchPlan\nпрошёл Zod-проверку?"}
-    valid -- "Нет, первая ошибка" --> planRepair["Mistral: одна попытка исправить план"]
+    valid -- "Нет, первая ошибка" --> planRepair["Snapshot planner-repair\nОдна попытка исправления"]
     planRepair --> valid
     valid -- "Нет, повторно" --> invalidPlan["Исход: invalid_plan"]
     valid -- "Да" --> period["Выбрать источники периодов\nТекущий open/reopened: live\nИстория: publishedSnapshot"]
@@ -22,17 +25,17 @@ flowchart TD
     semantic -- "Нет" --> context["Сервер считает aggregate\nи собирает компактный GroundingBundle"]
     semantic -- "Да" --> cache{"Все нужные embeddings\nесть в semantic cache?"}
     cache -- "Да" --> rank["pgvector: ранжировать\nтолько разрешённый exact-набор"]
-    cache -- "Нет, небольшой gap" --> readThrough["Active provider embeddings + upsert cache"]
+    cache -- "Нет, небольшой gap" --> readThrough["Snapshot embeddings\n+ upsert cache"]
     readThrough --> rank
     cache -- "Нет, большой gap" --> queue["Поставить BullMQ jobs\nбез текста отчёта в payload"]
     queue --> pending["Исход: semantic_index_pending"]
     rank --> context
-    context --> answer["Active provider answer\nТолько вопрос + GroundingBundle"]
+    context --> answer["Snapshot answerer\nQuestion + GroundingBundle"]
     answer --> citations{"Все citations\nвалидны?"}
-    citations -- "Нет, первая ошибка" --> citationRepair["Mistral: одна попытка\nисправить citations"]
+    citations -- "Нет, первая ошибка" --> citationRepair["Snapshot citation-repair\nОдна попытка исправления"]
     citationRepair --> citations
     citations -- "Нет, повторно" --> generationError["Контролируемая ошибка генерации"]
     citations -- "Да" --> result["Исход: ok\nMarkdown + проверенные источники + metadata"]
-    planner -. "временный сбой" .-> unavailable["Исход: provider_unavailable"]
-    answer -. "временный сбой" .-> unavailable
-    readThrough -. "временный сбой" .-> unavailable
+    planner -. "Временный provider failure" .-> unavailableProvider["Исход: provider_unavailable"]
+    answer -. "Временный provider failure" .-> unavailableProvider
+    readThrough -. "Временный provider failure" .-> unavailableProvider
