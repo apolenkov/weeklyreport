@@ -25,19 +25,30 @@ import { StatusSlideDeck } from "./status-slide-deck";
 import { useLeadSlidesData } from "./use-lead-slides-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
-interface LeadSlidesClientProps {
+interface LeadSlidesClientBaseProps {
   readonly initialReportId?: string | null;
   readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
   readonly foreignContentPending: boolean;
   // Caller (lead-form header) can host the fullscreen button on the deck root.
   readonly deckRef?: RefObject<HTMLDivElement | null>;
-  // Lead-form-hosted path owns useFullscreen and threads state; standalone owns the hook.
+  // Lead-form-hosted path owns fullscreen and density state; standalone owns
+  // both controls locally.
   readonly isFullscreen?: boolean;
   readonly onToggle?: () => void;
   // Lead-form threads one useRecordVisibility instance for Mine vs Everyone; default Mine-only.
   readonly visibilityMode?: "mine" | "everyone";
   readonly visibilityHydrated?: boolean;
 }
+
+type LeadSlidesClientProps =
+  | (LeadSlidesClientBaseProps & {
+      readonly density?: undefined;
+      readonly onDensityChange?: undefined;
+    })
+  | (LeadSlidesClientBaseProps & {
+      readonly density: SlideDensity;
+      readonly onDensityChange: (density: SlideDensity) => void;
+    });
 
 // What renders instead of the deck; `null` means the deck itself is ready.
 function deckPlaceholder(state: {
@@ -156,19 +167,23 @@ type LeadSlidesDeck = ReturnType<typeof useLeadSlidesDeck>;
 function DeckToolbar({
   density,
   onDensityChange,
+  showDensity,
   showFullscreenControls,
   fullscreen,
   toggleRef,
 }: {
   readonly density: SlideDensity;
   readonly onDensityChange: (next: SlideDensity) => void;
+  readonly showDensity: boolean;
   readonly showFullscreenControls: boolean;
   readonly fullscreen: DeckFullscreen;
   readonly toggleRef: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <SlideDensityControl value={density} onChange={onDensityChange} />
+      {showDensity ? (
+        <SlideDensityControl value={density} onChange={onDensityChange} />
+      ) : null}
       {showFullscreenControls ? (
         <DeckToolbarControls
           isFullscreen={fullscreen.isFullscreen}
@@ -186,6 +201,7 @@ function LeadSlidesDeckView({
   fullscreen,
   deck,
   density,
+  showDensityControl,
   onDensityChange,
   selectedIndex,
   onSelect,
@@ -195,10 +211,23 @@ function LeadSlidesDeckView({
   readonly fullscreen: DeckFullscreen;
   readonly deck: Omit<LeadSlidesDeck, "placeholder">;
   readonly density: SlideDensity;
+  readonly showDensityControl: boolean;
   readonly onDensityChange: (next: SlideDensity) => void;
   readonly selectedIndex: number;
   readonly onSelect: (next: number) => void;
 }) {
+  const deckToolbar =
+    showDensityControl || deck.showFullscreenControls ? (
+      <DeckToolbar
+        density={density}
+        onDensityChange={onDensityChange}
+        showDensity={showDensityControl}
+        showFullscreenControls={deck.showFullscreenControls}
+        fullscreen={fullscreen}
+        toggleRef={toggleRef}
+      />
+    ) : undefined;
+
   return (
     <div ref={deckRef} className={deckSurfaceClass(fullscreen.isFullscreen)}>
       <StatusSlideDeck
@@ -207,15 +236,7 @@ function LeadSlidesDeckView({
         onSelect={onSelect}
         mode="lead"
         onRowActivate={deck.onRowActivate}
-        toolbar={
-          <DeckToolbar
-            density={density}
-            onDensityChange={onDensityChange}
-            showFullscreenControls={deck.showFullscreenControls}
-            fullscreen={fullscreen}
-            toggleRef={toggleRef}
-          />
-        }
+        toolbar={deckToolbar}
       />
       <DeckFullscreenOverlay
         isFullscreen={fullscreen.isFullscreen}
@@ -235,9 +256,14 @@ export function LeadSlidesClient({
   onToggle: externalOnToggle,
   visibilityMode = "mine",
   visibilityHydrated = false,
+  density,
+  onDensityChange,
 }: LeadSlidesClientProps) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
-  const [density, setDensity] = useState<SlideDensity>("document");
+  const [internalDensity, setInternalDensity] =
+    useState<SlideDensity>("document");
+  const activeDensity = density ?? internalDensity;
+  const handleDensityChange = onDensityChange ?? setInternalDensity;
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const fullscreen = useDeckFullscreen({
@@ -252,7 +278,7 @@ export function LeadSlidesClient({
     foreignContentPending,
     visibilityMode,
     visibilityHydrated,
-    density,
+    density: activeDensity,
   });
 
   if (deck.placeholder !== null) {
@@ -265,8 +291,9 @@ export function LeadSlidesClient({
       toggleRef={toggleButtonRef}
       fullscreen={fullscreen}
       deck={deck}
-      density={density}
-      onDensityChange={setDensity}
+      density={activeDensity}
+      showDensityControl={density === undefined}
+      onDensityChange={handleDensityChange}
       selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
       onSelect={setSelectedIndex}
     />

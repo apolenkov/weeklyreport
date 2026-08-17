@@ -23,7 +23,10 @@ function HistoryEmptyState({
   readonly includeArchive: boolean;
 }) {
   return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
+    <div
+      data-testid="history-empty-state"
+      className="flex flex-1 items-center justify-center rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center"
+    >
       <p className="text-sm text-[var(--color-muted-foreground)]">
         {includeArchive ? "No report history yet." : "No current history yet."}
       </p>
@@ -74,8 +77,14 @@ export function HistoryPanel({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="space-y-6">
+    <div
+      data-testid="history-panel-grid"
+      className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"
+    >
+      <div
+        data-testid="history-panel-list"
+        className="flex min-h-0 flex-col gap-6"
+      >
         {entries.length > 0 ? (
           <LeadHistoryList entries={visibleEntries} />
         ) : (

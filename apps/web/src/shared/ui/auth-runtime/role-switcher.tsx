@@ -137,6 +137,8 @@ function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
         variant="outline"
         size="sm"
         disabled={pending}
+        aria-label="Switch development role"
+        title="Switch development role"
         className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-status-at-risk-border)] data-[state=open]:bg-[var(--color-status-at-risk-bg)] data-[state=open]:text-[var(--color-status-at-risk-fg)]"
         data-testid="dev-role-switcher-trigger"
       >

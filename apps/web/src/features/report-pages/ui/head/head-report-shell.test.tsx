@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// Head shell routes document actions and context controls into the two-row
-// ReportToolbar, plus a header context label beside the title.
+// Head shell routes document actions and context controls into the report
+// chrome, plus a header context label beside the title.
 
 import "@testing-library/jest-dom/vitest";
 
@@ -14,10 +14,24 @@ import { makeQueryState } from "../../../../test-utils/query-state";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
-// Deck no longer surfaces a focus href; stub is a plain marker.
-vi.mock("../../../slides", () => ({
-  HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
-}));
+// Deck no longer surfaces a focus href; stub exposes the shell-owned density
+// state without introducing a second control row into this shell test.
+vi.mock("../../../slides", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../slides")>();
+  return {
+    ...actual,
+    HeadSlidesClient: ({
+      density,
+    }: {
+      density?: "document" | "presentation";
+    }) => (
+      <div
+        data-testid="head-slides-client-stub"
+        data-density={density ?? "uncontrolled"}
+      />
+    ),
+  };
+});
 
 // Shell test only verifies Publish & Lock is mounted, not its internals.
 vi.mock("../../../period", async (importOriginal) => {
@@ -42,7 +56,7 @@ vi.mock("../weekly/weekly-report-page", () => ({
     headerContextLabel?: React.ReactNode;
   }) => (
     <div data-testid="weekly-report-page-stub">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]">
         <h1>Status Report</h1>
         <div data-testid="weekly-report-header-label">{headerContextLabel}</div>
       </header>
@@ -186,6 +200,68 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
         screen.getByRole("group", { name: "Document actions" }),
       ).getByTestId("head-publish-lock-action-stub"),
     ).toBeInTheDocument();
+  });
+
+  it("renders one inert Slide templates control only in slides context", async () => {
+    const user = userEvent.setup();
+
+    const formRender = render(
+      <HeadReportShell reportId={TEST_REPORT_ID} mode="form" />,
+    );
+    expect(
+      screen.queryByTestId("slide-templates-coming-soon"),
+    ).not.toBeInTheDocument();
+    formRender.unmount();
+
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+    const slidesToolbar = screen.getByRole("group", {
+      name: "Context controls",
+    });
+    const templates = within(slidesToolbar).getByTestId(
+      "slide-templates-coming-soon",
+    );
+    expect(templates).toHaveAttribute("aria-disabled", "true");
+    expect(
+      within(slidesToolbar).getAllByTestId("slide-templates-coming-soon"),
+    ).toHaveLength(1);
+
+    await user.click(templates);
+    expect(templates).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("keeps shell-owned density reversible in the single slides context toolbar", async () => {
+    const user = userEvent.setup();
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+
+    const contextControls = screen.getByRole("group", {
+      name: "Context controls",
+    });
+    expect(
+      within(contextControls).getAllByRole("group", { name: "Slide density" }),
+    ).toHaveLength(1);
+    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
+      "data-density",
+      "document",
+    );
+
+    await user.click(
+      within(contextControls).getByRole("button", { name: "Presentation" }),
+    );
+    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
+      "data-density",
+      "presentation",
+    );
+
+    await user.click(
+      within(contextControls).getByRole("button", { name: "Document" }),
+    );
+    expect(screen.getByTestId("head-slides-client-stub")).toHaveAttribute(
+      "data-density",
+      "document",
+    );
+    expect(
+      screen.getAllByRole("group", { name: "Slide density" }),
+    ).toHaveLength(1);
   });
 
   it("reserves period navigation and document-action geometry while slides load", () => {

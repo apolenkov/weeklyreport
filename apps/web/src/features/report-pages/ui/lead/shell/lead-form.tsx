@@ -144,6 +144,8 @@ export function LeadForm(props: LeadFormProps) {
       setGroupExpanded={editing.setGroupExpanded}
       deckRef={shell.deckRef}
       fullscreenToggleRef={shell.fullscreenToggleRef}
+      density={shell.density}
+      onDensityChange={shell.setDensity}
       slidesFullscreen={shell.slidesFullscreen}
       unsetOwnStageCount={editing.unsetOwnStageCount}
     />

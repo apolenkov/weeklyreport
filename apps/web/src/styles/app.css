@@ -73,6 +73,59 @@
   }
 }
 
+@media (width >= 64rem) {
+  .operational-paper-shell {
+    background-image:
+      radial-gradient(
+        ellipse 34rem 22rem at 4% 6%,
+        color-mix(in srgb, var(--color-primary) 8%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        ellipse 40rem 26rem at 94% 34%,
+        color-mix(in srgb, var(--color-starbucks-gold) 7%, transparent),
+        transparent 74%
+      ),
+      conic-gradient(
+        from 205deg at 54% 4%,
+        color-mix(in srgb, var(--color-starbucks-accent) 5%, transparent),
+        transparent 18%,
+        color-mix(in srgb, var(--color-starbucks-green) 3%, transparent) 36%,
+        transparent 62%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.78) 0,
+        rgba(255, 255, 255, 0.34) 8rem,
+        rgba(255, 255, 255, 0) 24rem
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(0, 98, 65, 0.032) 0,
+        rgba(0, 98, 65, 0.032) 1px,
+        transparent 1px,
+        transparent 10rem
+      ),
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.018) 0,
+        rgba(0, 0, 0, 0.018) 1px,
+        transparent 1px,
+        transparent 2rem
+      ),
+      linear-gradient(
+        90deg,
+        rgba(194, 154, 70, 0.045),
+        rgba(194, 154, 70, 0) 22rem
+      );
+  }
+
+  .operational-paper-shell > main#main-content {
+    background-color: transparent;
+    background-image: none;
+  }
+}
+
 /*
  * Force-generate utilities that Tailwind v4 scanner misses in packages/ui.
  * shadcn/ui components use these in cva() and cn() template literals.

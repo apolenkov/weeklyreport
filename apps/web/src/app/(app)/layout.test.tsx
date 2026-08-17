@@ -62,4 +62,18 @@ describe("AppGroupLayout tooltip provider", () => {
       await screen.findByRole("tooltip", { name: "probe tooltip" }),
     ).toBeInTheDocument();
   });
+
+  it("places application content inside the shared paper surface", () => {
+    render(
+      <AppGroupLayout>
+        <main id="main-content" tabIndex={-1}>
+          Application content
+        </main>
+      </AppGroupLayout>,
+    );
+
+    expect(
+      screen.getByRole("main").closest(".operational-paper-shell"),
+    ).not.toBeNull();
+  });
 });

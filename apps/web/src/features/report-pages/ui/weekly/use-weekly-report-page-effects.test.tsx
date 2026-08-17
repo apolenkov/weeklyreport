@@ -64,6 +64,7 @@ describe("useCanonicalReportRedirect", () => {
     renderHook(() => useCanonicalReportRedirect(args));
     expect(replace).toHaveBeenCalledWith(
       "/head/report/report-1?authorId=user%20name%2F%D0%BA%D1%82%D0%BE",
+      { scroll: false },
     );
   });
 
@@ -71,7 +72,9 @@ describe("useCanonicalReportRedirect", () => {
     renderHook(() =>
       useCanonicalReportRedirect({ ...args, focusedAuthorId: null }),
     );
-    expect(replace).toHaveBeenCalledWith("/head/report/report-1");
+    expect(replace).toHaveBeenCalledWith("/head/report/report-1", {
+      scroll: false,
+    });
   });
 
   it("does nothing while disabled", () => {

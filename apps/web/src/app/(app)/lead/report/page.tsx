@@ -21,7 +21,7 @@ export default async function LeadReportPage({ searchParams }: Props) {
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div
-        className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
+        className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
         style={{ paddingBottom: LEAD_FORM_ACTION_BAR_CLEARANCE }}
       >
         <Suspense fallback={<LeadFormSkeleton mode={resolvedMode} />}>

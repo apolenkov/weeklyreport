@@ -223,12 +223,23 @@ function renderHarness({
   section = makeSection(),
   readOnly = false,
   search = "",
+  density,
+  onDensityChange,
 }: {
   readonly section?: ReportSectionReadModel;
   readonly readOnly?: boolean;
   readonly search?: string;
+  readonly density?: "document" | "presentation";
+  readonly onDensityChange?: (next: "document" | "presentation") => void;
 } = {}) {
   mockSearchParams = new URLSearchParams(search);
+  const densityProps =
+    density === undefined
+      ? {}
+      : {
+          density,
+          onDensityChange: onDensityChange ?? (() => undefined),
+        };
   const { proxy, captured } = createMockTRPC([
     { path: ["reports", "getActive"], query: { reportId: REPORT_ID } },
     {
@@ -268,6 +279,7 @@ function renderHarness({
         initialReportId={REPORT_ID}
         foreignContent={undefined}
         foreignContentPending={false}
+        {...densityProps}
       />
     </Wrapper>,
   );
@@ -285,7 +297,7 @@ afterEach(() => {
 });
 
 describe("LeadSlidesClient inline slide editing", () => {
-  it("exposes a reversible density control in the hosted report deck", async () => {
+  it("keeps a reversible density control in the standalone deck", async () => {
     renderHarness();
     await screen.findByTestId("status-slide-deck");
     const document = screen.getByRole("button", { name: "Document" });
@@ -298,6 +310,17 @@ describe("LeadSlidesClient inline slide editing", () => {
     expect(presentation).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(document);
     expect(document).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("accepts shell-owned density without rendering a second deck toolbar", async () => {
+    const onDensityChange = vi.fn();
+    renderHarness({ density: "presentation", onDensityChange });
+    await screen.findByTestId("status-slide-deck");
+
+    expect(
+      screen.queryByRole("group", { name: "Slide density" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("status-slide-deck")).toBeInTheDocument();
   });
 
   it("opens an own item row and saves through reports.saveDraft", async () => {
