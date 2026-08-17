@@ -39,7 +39,7 @@ function QueueSkeleton() {
           <div
             key={index}
             data-testid="dashboard-queue-skeleton-row"
-            className="grid min-h-[4.875rem] min-w-0 items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_5.5rem_5.5rem]"
+            className="grid min-h-[4.875rem] min-w-0 items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_var(--dashboard-summary-action-w)_var(--dashboard-summary-action-w)]"
           >
             <span className="flex min-w-0 items-center gap-3">
               <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
@@ -48,8 +48,8 @@ function QueueSkeleton() {
             <Skeleton className="h-6 w-24 rounded-[var(--radius-pill)]" />
             <Skeleton className="h-4 w-32 max-w-full" />
             <Skeleton className="h-4 w-28 max-w-full" />
-            <Skeleton className="h-11 w-[5.5rem] rounded-[var(--radius-pill)]" />
-            <Skeleton className="h-11 w-[5.5rem] rounded-[var(--radius-pill)]" />
+            <Skeleton className="h-[var(--dashboard-action-h)] w-[var(--dashboard-summary-action-w)] rounded-[var(--radius-pill)]" />
+            <Skeleton className="h-[var(--dashboard-action-h)] w-[var(--dashboard-summary-action-w)] rounded-[var(--radius-pill)]" />
           </div>
         ))}
       </div>

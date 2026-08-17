@@ -15,7 +15,7 @@ describe("DashboardSkeleton", () => {
     for (const row of screen.getAllByTestId("dashboard-queue-skeleton-row")) {
       expect(row).toHaveClass("min-h-[4.875rem]");
       expect(row).toHaveClass(
-        "lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_5.5rem_5.5rem]",
+        "lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_var(--dashboard-summary-action-w)_var(--dashboard-summary-action-w)]",
       );
     }
     expect(container.querySelector(".overflow-x-auto")).not.toBeInTheDocument();

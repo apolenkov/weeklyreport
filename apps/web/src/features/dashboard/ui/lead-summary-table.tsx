@@ -72,7 +72,7 @@ function LeadRowToggle({
       aria-expanded={expanded}
       aria-controls={detailId}
       onClick={onToggle}
-      className="inline-flex min-h-[var(--touch-target-min)] w-[5.5rem] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+      className="inline-flex h-[var(--dashboard-action-h)] w-[var(--dashboard-summary-action-w)] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
     >
       {expanded ? "Less" : "Details"}
       <ChevronDown
@@ -101,7 +101,7 @@ function LeadQueueRowSummary({
   readonly onToggle: () => void;
 }) {
   return (
-    <div className="grid min-w-0 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4 lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_5.5rem_5.5rem]">
+    <div className="grid min-w-0 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-4 lg:grid-cols-[minmax(11rem,1.3fr)_minmax(9rem,0.8fr)_minmax(10rem,1fr)_minmax(9rem,0.8fr)_var(--dashboard-summary-action-w)_var(--dashboard-summary-action-w)]">
       <LeadIdentity lead={lead} />
       <LeadStateBadges lead={lead} />
       <span className="min-w-0 text-xs text-[var(--color-muted-foreground)]">
@@ -111,7 +111,7 @@ function LeadQueueRowSummary({
       <span className="min-w-0 text-xs font-medium text-[var(--color-foreground)]">
         {contentSummary(lead)}
       </span>
-      <div className="flex w-[5.5rem] flex-wrap items-center sm:justify-end">
+      <div className="flex w-[var(--dashboard-summary-action-w)] flex-wrap items-center sm:justify-end [&>a]:h-[var(--dashboard-action-h)] [&>a]:w-full [&>a]:justify-center [&>button]:h-[var(--dashboard-action-h)] [&>button]:w-full [&>button]:justify-center">
         <LeadPrimaryAction
           lead={lead}
           reportId={reportId}

@@ -173,6 +173,11 @@ for shell sections, and `p-5`/`p-6` (20/24px) for report/card surfaces.
 - The default toolbar control height is `--toolbar-control-h: 2rem` (32px).
   Under `width < 48rem` (768px), it becomes `--touch-target-min: 44px`.
   Primary mobile controls explicitly use the 44px minimum.
+- Dashboard queue actions use two stable component tokens:
+  `--dashboard-summary-action-w: 5.5rem` for each summary-row action track and
+  `--dashboard-detail-action-w: 9.25rem` for each expanded-row action cell.
+  Both tiers use `--dashboard-action-h: var(--touch-target-min)` so labels,
+  icons, pending copy, and disclosure state never change the outer geometry.
 - Standard Tailwind breakpoints are used in components: `sm` 640px, `md`
   768px, `lg` 1024px, and `xl` 1280px. The CSS media query for toolbar density
   is explicitly below 48rem.
@@ -210,7 +215,9 @@ The state contracts below describe what the current code already provides.
   pointer guard, decorative SVGs hidden from the accessibility tree, and 44px
   `touch`/mobile sizing.
 - **Motion/layout**: compact rounded-md package buttons; report actions use
-  rounded-pill clusters and flex-wrap rows.
+  rounded-pill clusters and flex-wrap rows. Within a Dashboard queue tier,
+  controls fill the complete tokenized action cell and share one height;
+  content length must not shrink or enlarge an individual control.
 
 ### Card and surface primitives
 
