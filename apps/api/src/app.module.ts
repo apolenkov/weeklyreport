@@ -36,7 +36,7 @@ import { RemindersModule } from "./modules/reminders/index.js";
 import { RemindersService } from "./modules/reminders/index.js";
 import { ReportSectionsModule } from "./modules/report-sections/index.js";
 import { ReviewModule } from "./modules/review/index.js";
-import { SearchModule } from "./modules/search/index.js";
+import { SearchModule } from "./modules/search/module.js";
 import { TelegramModule } from "./modules/telegram/index.js";
 import { TelemetryModule } from "./modules/telemetry/index.js";
 import { WeeklyReportModule } from "./modules/weekly-report/index.js";

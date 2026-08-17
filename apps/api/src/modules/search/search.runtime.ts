@@ -1,6 +1,8 @@
 import type {
   ReportAssistantAnswerPort,
+  ReportAssistantCitationRepairPort,
   ReportAssistantPlannerPort,
+  ReportAssistantPlannerRepairPort,
 } from "./application/report-assistant.ports.js";
 
 const runtimeOnlyError = (): Promise<never> =>
@@ -14,4 +16,16 @@ export const runtimeOnlyPlanner = (): ReportAssistantPlannerPort => ({
 
 export const runtimeOnlyAnswerer = (): ReportAssistantAnswerPort => ({
   answer: runtimeOnlyError,
+});
+
+export const runtimeOnlyPlannerWithRepair = (): ReportAssistantPlannerPort &
+  ReportAssistantPlannerRepairPort => ({
+  plan: runtimeOnlyError,
+  repairPlan: runtimeOnlyError,
+});
+
+export const runtimeOnlyAnswererWithRepair = (): ReportAssistantAnswerPort &
+  ReportAssistantCitationRepairPort => ({
+  answer: runtimeOnlyError,
+  repairAnswer: runtimeOnlyError,
 });

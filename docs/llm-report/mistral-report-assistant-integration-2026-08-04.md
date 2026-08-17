@@ -1,5 +1,11 @@
 # Mistral integration for the Lead report assistant — research (2026-08-04)
 
+Operational note: this historical provider research describes model and privacy
+considerations only. The live provider workflow is Settings → AI → Provider;
+prompt behavior and exact provider/prompt evaluation are managed in Settings →
+AI → Features. Legacy environment values are bootstrap inputs, not runtime
+prompt or provider fallbacks.
+
 Scope: official Mistral API access, TypeScript SDK, chat/tool-calling models,
 embeddings, request behavior, and privacy facts relevant to internal weekly-report
 content. Only first-party Mistral documentation, legal pages, Help Center, and the
@@ -125,6 +131,21 @@ mention JSON to avoid an indefinite whitespace response.
 These API constraints do not remove the need for application validation and the
 single bounded repair attempt already designed for the assistant.
 
+The provider administration flow also records one universal reasoning setting.
+Provider default omits a reasoning parameter, while Off and Custom are translated
+to the profile-specific `reasoning_effort` field with `none` or the exact bounded
+custom value. The capability test exercises the selected mapping against both
+planner and answer contracts; the runtime does not reinterpret it as arbitrary
+request JSON.
+
+Answer capability testing probes strict JSON Schema first. A forced
+`submit_grounded_report_answer` tool is tried once only when the provider returns
+a classified response-format incompatibility. Authentication, rate-limit,
+timeout, transport, and provider/server failures stop the test without protocol
+negotiation. The successful protocol is persisted and the Lead runtime uses only
+that protocol, validating both JSON Schema payloads and forced-tool arguments
+through the same server-owned answer contract.
+
 ## Embeddings
 
 Use:
@@ -235,3 +256,13 @@ the production configuration.
 Method note: researched on 2026-08-04. Mistral model availability, pricing, API limits,
 and legal terms are changeable external facts; re-check the linked primary sources and
 `GET /v1/models` immediately before production rollout.
+
+## Compatibility checks
+
+The application queues compatibility checks and persists only their immutable
+identity, bounded check classification, and timestamps. It never stores a
+credential, provider body, prompt body, or raw upstream response in the job
+record. Mistral `429`, timeout, network, and server failures are inconclusive;
+authentication failures are configuration errors; only validated contract
+failures are incompatible. Compatibility and runtime requests omit sampling
+overrides such as `temperature`.

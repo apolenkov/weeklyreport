@@ -192,10 +192,21 @@ export class SemanticPreparationCoordinator implements AiProviderPreparationCoor
       );
     }
     return {
-      provider: revision.endpointIdentity,
+      embeddingScopeIdentity: revision.embeddingScopeIdentity,
+      provider:
+        revision.embeddingMode === "reuse_generation"
+          ? revision.generationEndpointIdentity
+          : requiredEmbeddingEndpoint(revision.embeddingEndpointIdentity),
       model: revision.embeddingModel,
       inputVersion: revision.semanticInputVersion,
       dimensions: revision.embeddingDimensions,
     };
   }
 }
+
+const requiredEmbeddingEndpoint = (value: string | null): string => {
+  if (value === null) {
+    throw new Error("Separate embedding endpoint is not configured");
+  }
+  return value;
+};

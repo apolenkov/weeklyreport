@@ -17,4 +17,16 @@ describe("reportAssistantOutcomeSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts bounded safe rate-limit feedback without provider details", () => {
+    expect(
+      reportAssistantOutcomeSchema.parse({
+        kind: "provider_unavailable",
+        rateLimit: { retryAfterSeconds: 42 },
+      }),
+    ).toEqual({
+      kind: "provider_unavailable",
+      rateLimit: { retryAfterSeconds: 42 },
+    });
+  });
 });

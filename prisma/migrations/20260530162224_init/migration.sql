@@ -7,10 +7,34 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TYPE "Role" AS ENUM ('lead', 'head', 'viewer', 'admin');
 
 -- CreateEnum
-CREATE TYPE "AiProviderProfile" AS ENUM ('mistral', 'openrouter', 'custom_openai_compatible');
+CREATE TYPE "AiProviderProfile" AS ENUM ('mistral', 'openrouter', 'openai', 'groq', 'jina', 'custom_openai_compatible');
+
+-- CreateEnum
+CREATE TYPE "AiProviderEmbeddingMode" AS ENUM ('reuse_generation', 'separate');
 
 -- CreateEnum
 CREATE TYPE "AiProviderLifecycle" AS ENUM ('draft', 'validated', 'preparing', 'active', 'failed', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "AiProviderReasoningMode" AS ENUM ('provider_default', 'off', 'custom');
+
+-- CreateEnum
+CREATE TYPE "AiProviderAnswerProtocol" AS ENUM ('json_schema', 'forced_tool', 'json_object');
+
+-- CreateEnum
+CREATE TYPE "AiPromptBundleLifecycle" AS ENUM ('draft', 'validated', 'active', 'failed', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "AiPromptEvaluationOutcome" AS ENUM ('passed', 'failed', 'inconclusive');
+
+-- CreateEnum
+CREATE TYPE "AiCompatibilityExecutionKind" AS ENUM ('provider_test', 'prompt_evaluation');
+
+-- CreateEnum
+CREATE TYPE "AiCompatibilityExecutionState" AS ENUM ('queued', 'running', 'completed');
+
+-- CreateEnum
+CREATE TYPE "AiCompatibilityOutcome" AS ENUM ('passed', 'incompatible', 'configuration_error', 'inconclusive');
 
 -- CreateEnum
 CREATE TYPE "UserActionStatus" AS ENUM ('success', 'fail');
@@ -995,19 +1019,34 @@ ALTER TABLE "Decision"
 -- secret column.
 CREATE TABLE "AiProviderConfiguration" (
     "id" TEXT NOT NULL,
-    "profile" "AiProviderProfile" NOT NULL,
-    "baseUrl" TEXT NOT NULL,
-    "endpointIdentity" TEXT NOT NULL,
+    "generationProfile" "AiProviderProfile" NOT NULL,
+    "generationBaseUrl" TEXT NOT NULL,
+    "generationEndpointIdentity" TEXT NOT NULL,
     "plannerModel" TEXT NOT NULL,
     "answerModel" TEXT NOT NULL,
+    "reasoningMode" "AiProviderReasoningMode" NOT NULL,
+    "reasoningCustomValue" TEXT,
+    "answerProtocol" "AiProviderAnswerProtocol",
+    "generationCredentialCiphertext" TEXT NOT NULL,
+    "generationCredentialNonce" TEXT NOT NULL,
+    "generationCredentialTag" TEXT NOT NULL,
+    "generationCredentialKeyVersion" INTEGER NOT NULL,
+    "generationCredentialMaskedSuffix" TEXT NOT NULL,
+    "embeddingMode" "AiProviderEmbeddingMode" NOT NULL,
+    "embeddingProfile" "AiProviderProfile",
+    "embeddingBaseUrl" TEXT,
+    "embeddingEndpointIdentity" TEXT,
     "embeddingModel" TEXT NOT NULL,
     "embeddingDimensions" INTEGER,
+    "embeddingCredentialCiphertext" TEXT,
+    "embeddingCredentialNonce" TEXT,
+    "embeddingCredentialTag" TEXT,
+    "embeddingCredentialKeyVersion" INTEGER,
+    "embeddingCredentialMaskedSuffix" TEXT,
     "semanticInputVersion" TEXT NOT NULL,
-    "credentialCiphertext" TEXT NOT NULL,
-    "credentialNonce" TEXT NOT NULL,
-    "credentialTag" TEXT NOT NULL,
-    "credentialKeyVersion" INTEGER NOT NULL,
-    "credentialMaskedSuffix" TEXT NOT NULL,
+    "generationCompatibilityIdentity" TEXT NOT NULL,
+    "embeddingScopeIdentity" TEXT NOT NULL,
+    "compositeTestIdentity" TEXT NOT NULL,
     "lifecycle" "AiProviderLifecycle" NOT NULL DEFAULT 'draft',
     "testResult" JSONB,
     "testedAt" TIMESTAMP(3),
@@ -1022,7 +1061,28 @@ CREATE TABLE "AiProviderConfiguration" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "AiProviderConfiguration_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "AiProviderConfiguration_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "AiProviderConfiguration_embedding_mode_shape_check" CHECK (
+      ("embeddingMode" = 'reuse_generation'
+        AND "embeddingProfile" IS NULL
+        AND "embeddingBaseUrl" IS NULL
+        AND "embeddingEndpointIdentity" IS NULL
+        AND "embeddingCredentialCiphertext" IS NULL
+        AND "embeddingCredentialNonce" IS NULL
+        AND "embeddingCredentialTag" IS NULL
+        AND "embeddingCredentialKeyVersion" IS NULL
+        AND "embeddingCredentialMaskedSuffix" IS NULL)
+      OR
+      ("embeddingMode" = 'separate'
+        AND "embeddingProfile" IS NOT NULL
+        AND "embeddingBaseUrl" IS NOT NULL
+        AND "embeddingEndpointIdentity" IS NOT NULL
+        AND "embeddingCredentialCiphertext" IS NOT NULL
+        AND "embeddingCredentialNonce" IS NOT NULL
+        AND "embeddingCredentialTag" IS NOT NULL
+        AND "embeddingCredentialKeyVersion" IS NOT NULL
+        AND "embeddingCredentialMaskedSuffix" IS NOT NULL)
+    )
 );
 
 CREATE TABLE "AiProviderControl" (
@@ -1038,7 +1098,13 @@ CREATE TABLE "AiProviderControl" (
 CREATE INDEX "AiProviderConfiguration_lifecycle_updatedAt_idx"
   ON "AiProviderConfiguration"("lifecycle", "updatedAt" DESC);
 CREATE INDEX "AiProviderConfiguration_embedding_scope_idx"
-  ON "AiProviderConfiguration"("endpointIdentity", "embeddingModel", "semanticInputVersion", "embeddingDimensions");
+  ON "AiProviderConfiguration"("embeddingEndpointIdentity", "embeddingModel", "semanticInputVersion", "embeddingDimensions");
+CREATE INDEX "AiProviderConfiguration_generation_compatibility_idx"
+  ON "AiProviderConfiguration"("generationCompatibilityIdentity");
+CREATE INDEX "AiProviderConfiguration_embedding_scope_identity_idx"
+  ON "AiProviderConfiguration"("embeddingScopeIdentity");
+CREATE INDEX "AiProviderConfiguration_composite_test_identity_idx"
+  ON "AiProviderConfiguration"("compositeTestIdentity");
 CREATE INDEX "AiProviderControl_activeConfigurationId_idx"
   ON "AiProviderControl"("activeConfigurationId");
 CREATE UNIQUE INDEX "AiProviderControl_activeConfigurationId_key"
@@ -1048,6 +1114,123 @@ ALTER TABLE "AiProviderControl"
   ADD CONSTRAINT "AiProviderControl_activeConfigurationId_fkey"
   FOREIGN KEY ("activeConfigurationId") REFERENCES "AiProviderConfiguration"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Immutable feature-scoped prompt bundles and their one-per-feature active
+-- pointer. Prompt bodies are snapshots owned by the application catalog.
+CREATE TABLE "AiPromptBundleRevision" (
+    "id" TEXT NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "revision" INTEGER NOT NULL,
+    "baseRevisionId" TEXT,
+    "coreContractVersion" TEXT NOT NULL,
+    "composerVersion" TEXT NOT NULL,
+    "lockedCoreSnapshot" JSONB NOT NULL,
+    "promptContents" JSONB NOT NULL,
+    "effectiveContentHash" TEXT NOT NULL,
+    "lifecycle" "AiPromptBundleLifecycle" NOT NULL DEFAULT 'draft',
+    "createdBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "activatedAt" TIMESTAMP(3),
+    "supersededAt" TIMESTAMP(3),
+
+    CONSTRAINT "AiPromptBundleRevision_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiFeaturePromptControl" (
+    "id" TEXT NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "activeRevisionId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiFeaturePromptControl_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "AiPromptEvaluation" (
+    "id" TEXT NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "promptRevisionId" TEXT NOT NULL,
+    "generationCompatibilityIdentity" TEXT NOT NULL,
+    "contentHash" TEXT NOT NULL,
+    "contractVersion" TEXT NOT NULL,
+    "evaluatorVersion" TEXT NOT NULL,
+    "checks" JSONB NOT NULL,
+    "outcome" "AiPromptEvaluationOutcome" NOT NULL,
+    "evaluatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AiPromptEvaluation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AiCompatibilityExecution" (
+    "id" TEXT NOT NULL,
+    "identity" TEXT NOT NULL,
+    "kind" "AiCompatibilityExecutionKind" NOT NULL,
+    "providerRevisionId" TEXT NOT NULL,
+    "promptRevisionId" TEXT,
+    "featureKey" TEXT,
+    "contentHash" TEXT,
+    "contractVersion" TEXT,
+    "evaluatorVersion" TEXT NOT NULL,
+    "state" "AiCompatibilityExecutionState" NOT NULL DEFAULT 'queued',
+    "outcome" "AiCompatibilityOutcome",
+    "failureCode" TEXT,
+    "checks" JSONB,
+    "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "startedAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+
+    CONSTRAINT "AiCompatibilityExecution_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "AiPromptBundleRevision_featureKey_revision_key"
+  ON "AiPromptBundleRevision"("featureKey", "revision");
+CREATE INDEX "AiPromptBundleRevision_featureKey_lifecycle_updatedAt_idx"
+  ON "AiPromptBundleRevision"("featureKey", "lifecycle", "updatedAt" DESC);
+CREATE INDEX "AiPromptBundleRevision_effectiveContentHash_idx"
+  ON "AiPromptBundleRevision"("effectiveContentHash");
+CREATE UNIQUE INDEX "AiFeaturePromptControl_featureKey_key"
+  ON "AiFeaturePromptControl"("featureKey");
+CREATE UNIQUE INDEX "AiFeaturePromptControl_activeRevisionId_key"
+  ON "AiFeaturePromptControl"("activeRevisionId");
+CREATE INDEX "AiFeaturePromptControl_activeRevisionId_idx"
+  ON "AiFeaturePromptControl"("activeRevisionId");
+CREATE UNIQUE INDEX "AiPromptEvaluation_promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion_key"
+  ON "AiPromptEvaluation"("promptRevisionId", "generationCompatibilityIdentity", "contentHash", "contractVersion", "evaluatorVersion");
+CREATE INDEX "AiPromptEvaluation_featureKey_outcome_evaluatedAt_idx"
+  ON "AiPromptEvaluation"("featureKey", "outcome", "evaluatedAt" DESC);
+CREATE INDEX "AiPromptEvaluation_generationCompatibilityIdentity_promptRevisionId_idx"
+  ON "AiPromptEvaluation"("generationCompatibilityIdentity", "promptRevisionId");
+CREATE UNIQUE INDEX "AiCompatibilityExecution_identity_key"
+  ON "AiCompatibilityExecution"("identity");
+CREATE INDEX "AiCompatibilityExecution_providerRevisionId_requestedAt_idx"
+  ON "AiCompatibilityExecution"("providerRevisionId", "requestedAt" DESC);
+CREATE INDEX "AiCompatibilityExecution_promptRevisionId_requestedAt_idx"
+  ON "AiCompatibilityExecution"("promptRevisionId", "requestedAt" DESC);
+CREATE INDEX "AiCompatibilityExecution_state_requestedAt_idx"
+  ON "AiCompatibilityExecution"("state", "requestedAt");
+
+ALTER TABLE "AiPromptBundleRevision"
+  ADD CONSTRAINT "AiPromptBundleRevision_baseRevisionId_fkey"
+  FOREIGN KEY ("baseRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AiFeaturePromptControl"
+  ADD CONSTRAINT "AiFeaturePromptControl_activeRevisionId_fkey"
+  FOREIGN KEY ("activeRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "AiPromptEvaluation"
+  ADD CONSTRAINT "AiPromptEvaluation_promptRevisionId_fkey"
+  FOREIGN KEY ("promptRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AiCompatibilityExecution"
+  ADD CONSTRAINT "AiCompatibilityExecution_providerRevisionId_fkey"
+  FOREIGN KEY ("providerRevisionId") REFERENCES "AiProviderConfiguration"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AiCompatibilityExecution"
+  ADD CONSTRAINT "AiCompatibilityExecution_promptRevisionId_fkey"
+  FOREIGN KEY ("promptRevisionId") REFERENCES "AiPromptBundleRevision"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Content-addressed semantic cache. It stores no report text, report/record
 -- IDs, authorization data, or generated answers. `vector` is intentionally

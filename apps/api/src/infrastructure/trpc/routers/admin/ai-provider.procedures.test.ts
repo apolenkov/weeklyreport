@@ -1,4 +1,7 @@
-import type { AiProviderControlRead } from "@customreport/shared";
+import {
+  AI_PROVIDER_PROFILE_CAPABILITIES,
+  type AiProviderControlRead,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../../lib/audit-logger.js";
@@ -9,12 +12,19 @@ const control: AiProviderControlRead = {
   enabled: false,
   availability: "not_configured",
   activeRevisionId: null,
+  profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES.map((capability) => ({
+    profile: capability.profile,
+    roles: [...capability.roles],
+  })),
   active: null,
   revisions: [],
 };
 
 const callerFor = (role: "admin" | "lead") => {
-  const service = { read: vi.fn().mockResolvedValue(control) };
+  const service = {
+    read: vi.fn().mockResolvedValue(control),
+    discard: vi.fn().mockResolvedValue({ discarded: true }),
+  };
   return {
     caller: createAppRouter({
       aiProviderService: service,
@@ -38,6 +48,18 @@ const callerFor = (role: "admin" | "lead") => {
 };
 
 describe("admin.aiProvider procedures", () => {
+  it("calls discard for an admin", async () => {
+    const { caller, service } = callerFor("admin");
+    await expect(
+      caller.admin.aiProvider.discard({
+        revisionId: "11111111-1111-4111-8111-111111111111",
+      }),
+    ).resolves.toEqual({ discarded: true });
+    expect(service.discard).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+      "admin-1",
+    );
+  });
   it("uses the service for an admin read", async () => {
     const { caller, service } = callerFor("admin");
 

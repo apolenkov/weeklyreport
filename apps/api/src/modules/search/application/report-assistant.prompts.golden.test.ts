@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  REPORT_CITATION_REPAIR_PROMPT_VERSION,
+  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
+  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
+} from "../../ai-prompts/application/ai-feature-prompt-baseline.js";
+import { baselineReportAssistantPrompts } from "../../ai-prompts/application/ai-feature-prompt-catalog.js";
 import type { GroundedAnswerInput } from "./report-assistant.ports.js";
 import {
   buildCitationRepairPrompt,
   buildGroundedAnswerPrompt,
   buildPlannerPrompt,
-  REPORT_CITATION_REPAIR_PROMPT_VERSION,
-  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
   SEARCH_REPORT_ENTRIES_TOOL_NAME,
 } from "./report-assistant.prompts.js";
 
@@ -37,16 +40,17 @@ const emptyGrounding = {
   truncated: false,
   estimatedTokens: 0,
 } as const;
+const prompts = baselineReportAssistantPrompts();
 
 describe("report assistant prompt goldens", () => {
   it("keeps English and Russian planner envelopes identical apart from data", () => {
     for (const input of plannerCases) {
-      const prompt = buildPlannerPrompt(input);
+      const prompt = buildPlannerPrompt(input, prompts);
       const data = JSON.parse(prompt.data) as Record<string, unknown>;
 
       expect(prompt.version).toBe(REPORT_SEARCH_PLANNER_PROMPT_VERSION);
       expect(prompt.tool.function.name).toBe(SEARCH_REPORT_ENTRIES_TOOL_NAME);
-      expect(prompt.tool.function.strict).toBe(true);
+      expect(prompt.tool.function).not.toHaveProperty("strict");
       expect(prompt.toolChoice).toEqual({
         type: "function",
         function: { name: "search_report_entries" },
@@ -61,28 +65,17 @@ describe("report assistant prompt goldens", () => {
     }
   });
 
-  it("preserves explicit null and default scope semantics at the tool boundary", () => {
-    const prompt = buildPlannerPrompt(plannerCases[0]);
+  it("exposes compact defaults while preserving the complete plan vocabulary", () => {
+    const prompt = buildPlannerPrompt(plannerCases[0], prompts);
     const parameters = prompt.tool.function.parameters as {
       required: readonly string[];
     };
 
-    expect(parameters.required).toEqual([
-      "periods",
-      "authors",
-      "subjects",
-      "stages",
-      "recordKinds",
-      "filters",
-      "retrieval",
-      "output",
-    ]);
-    expect(JSON.stringify(prompt.tool.function.parameters)).not.toContain(
+    expect(parameters.required).toBeUndefined();
+    expect(JSON.stringify(prompt.tool.function.parameters)).toContain(
       '"default"',
     );
-    expect(prompt.system).toContain(
-      "Use null or the schema's explicit no-filter form",
-    );
+    expect(prompt.system).toContain("Omit unrelated fields");
     expect(prompt.system).toContain(
       "the current editable report plus the three latest published reports",
     );
@@ -90,14 +83,20 @@ describe("report assistant prompt goldens", () => {
   });
 
   it("separates exact-only planning from semantic residual extraction", () => {
-    const exactPrompt = buildPlannerPrompt({
-      ...plannerCases[0],
-      question: "List overdue risks for CRM Portal",
-    });
-    const semanticPrompt = buildPlannerPrompt({
-      ...plannerCases[0],
-      question: "Find reports describing customer-impacting release blockers",
-    });
+    const exactPrompt = buildPlannerPrompt(
+      {
+        ...plannerCases[0],
+        question: "List overdue risks for CRM Portal",
+      },
+      prompts,
+    );
+    const semanticPrompt = buildPlannerPrompt(
+      {
+        ...plannerCases[0],
+        question: "Find reports describing customer-impacting release blockers",
+      },
+      prompts,
+    );
 
     for (const prompt of [exactPrompt, semanticPrompt]) {
       expect(prompt.system).toContain(
@@ -148,7 +147,7 @@ describe("report assistant prompt goldens", () => {
         truncated: true,
       },
     } as unknown as GroundedAnswerInput;
-    const prompt = buildGroundedAnswerPrompt(input);
+    const prompt = buildGroundedAnswerPrompt(input, prompts);
     const data = JSON.parse(prompt.data) as {
       grounding: {
         aggregates: { totalCount: number };
@@ -167,17 +166,20 @@ describe("report assistant prompt goldens", () => {
 
   it("keeps citation repair bounded and versioned", () => {
     const answerText = "The release remains blocked. [S1]";
-    const prompt = buildCitationRepairPrompt({
-      original: { question: "What changed?", grounding: emptyGrounding },
-      previousAnswer: {
-        answerMarkdown: answerText,
-        sourceIds: ["S1", "S1", "S99"],
-        insufficientEvidence: true,
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    const prompt = buildCitationRepairPrompt(
+      {
+        original: { question: "What changed?", grounding: emptyGrounding },
+        previousAnswer: {
+          answerMarkdown: answerText,
+          sourceIds: ["S1", "S1", "S99"],
+          insufficientEvidence: true,
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        },
+        allowedSourceIds: ["S1", "S2", "not-a-source"],
+        issues: ["unknown_source", "prompt injection"],
       },
-      allowedSourceIds: ["S1", "S2", "not-a-source"],
-      issues: ["unknown_source", "prompt injection"],
-    });
+      prompts,
+    );
     const data = JSON.parse(prompt.data) as Record<string, unknown>;
 
     expect(prompt.version).toBe(REPORT_CITATION_REPAIR_PROMPT_VERSION);

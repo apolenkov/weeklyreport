@@ -89,7 +89,7 @@ Postgres и Redis.
 
 Production requires an encryption key and an explicit provider-origin allowlist;
 the active provider credential and model choices are stored by an administrator
-in Settings → Integrations. Create an untracked
+in Settings → AI → Provider. Create an untracked
 `.env.prod` и заполни обязательные значения из `.env.example`:
 
 ```env
@@ -113,7 +113,7 @@ SMTP_FROM=noreply@example.com
 
 AI_PROVIDER_CONFIG_ENCRYPTION_KEY=<base64-or-hex-32-byte-key>
 AI_PROVIDER_CONFIG_KEY_VERSION=1
-AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai
+AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai
 REPORT_ASSISTANT_INPUT_VERSION=1
 REPORT_ASSISTANT_SIMILARITY_THRESHOLD=0.55
 REPORT_ASSISTANT_CANDIDATE_LIMIT=500
@@ -138,10 +138,14 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml config --quiet
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
-After deployment, an administrator opens **Settings → Integrations**, enters
-the provider credential and the three model IDs, runs the synthetic capability
-test, and activates the tested revision. The provider credential, model IDs,
-and measured embedding dimensions do not belong in `.env.prod`.
+After deployment, an administrator opens **Settings → AI → Provider**, enters
+the provider credential and the three model IDs, runs the generic plus active
+feature synthetic capability tests, and activates the tested revision. Under
+**Settings → AI → Features**, the administrator evaluates and activates Report
+Assistant prompt behavior only after the exact provider/prompt pair passes.
+The provider credential, model IDs, and measured embedding dimensions do not
+belong in `.env.prod`; prompt bodies are database-backed runtime data and are
+never environment fallbacks.
 
 После успешного запуска проверь `https://reports.example.com/health/live`.
 Production database не сбрасывается и не пересеивается: миграции применяются

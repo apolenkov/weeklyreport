@@ -164,6 +164,45 @@ describe("searchPlanSchema", () => {
     expect(searchPlanSchema.safeParse(validPlan()).success).toBe(true);
   });
 
+  it("normalizes a compact default plan", () => {
+    expect(searchPlanSchema.parse({})).toEqual(validPlan());
+  });
+
+  it("preserves compact previous-period blockers and current author work", () => {
+    expect(
+      searchPlanSchema.parse({
+        periods: {
+          includeCurrent: false,
+          published: { mode: "latest", count: 1 },
+        },
+        recordKinds: ["risk"],
+        filters: { riskSeverities: ["blocked"] },
+      }),
+    ).toMatchObject({
+      periods: {
+        includeCurrent: false,
+        published: { mode: "latest", count: 1, references: [] },
+      },
+      recordKinds: ["risk"],
+      filters: { riskSeverities: ["blocked"] },
+    });
+    expect(
+      searchPlanSchema.parse({
+        authors: {
+          mode: "selected",
+          references: ["Petrov"],
+          includeSelf: false,
+        },
+        recordKinds: ["item"],
+        filters: { itemTypes: ["current"] },
+      }),
+    ).toMatchObject({
+      authors: { mode: "selected", references: ["Petrov"] },
+      recordKinds: ["item"],
+      filters: { itemTypes: ["current"] },
+    });
+  });
+
   it.each(invalidPlans)("rejects %s", (_name, makeInvalid) => {
     expect(searchPlanSchema.safeParse(makeInvalid(validPlan())).success).toBe(
       false,
@@ -245,7 +284,7 @@ describe("searchPlanSchema", () => {
     expect(searchPlanSchema.safeParse(invalidPlan()).success).toBe(false);
   });
 
-  it("rejects unsafe references and enforces generated required fields", () => {
+  it("rejects unsafe references and publishes documented defaults", () => {
     expect(
       searchPlanSchema.safeParse({
         ...validPlan(),
@@ -253,15 +292,8 @@ describe("searchPlanSchema", () => {
       }).success,
     ).toBe(false);
     const jsonSchema = z.toJSONSchema(searchPlanSchema);
-    expect(jsonSchema.required).toEqual([
-      "periods",
-      "authors",
-      "subjects",
-      "stages",
-      "recordKinds",
-      "filters",
-      "retrieval",
-      "output",
-    ]);
+    expect(jsonSchema.properties?.periods).toMatchObject({
+      default: validPlan().periods,
+    });
   });
 });

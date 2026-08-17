@@ -2,6 +2,7 @@ import type {
   AiProviderAvailabilityRead,
   AiProviderConfigurationRead,
   AiProviderControlRead,
+  AiProviderDiscardResult,
   AiProviderDraft,
   AiProviderPreparationProgress,
 } from "@customreport/shared";
@@ -14,19 +15,27 @@ import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
   type AiProviderAuditSink,
   type AiProviderCapabilityTester,
+  AiProviderConfigurationError,
   type AiProviderMetricsSink,
+  AiProviderNotFoundError,
   type AiProviderPreparationCoordinator,
+  type AiProviderPromptCompatibility,
   NOOP_AUDIT,
   NOOP_METRICS,
 } from "./ai-provider.service-support.js";
-import type { AiProviderEnvironment } from "./ai-provider.service-types.js";
+import type {
+  AiProviderEnvironment,
+  AiProviderTestEnqueuer,
+} from "./ai-provider.service-types.js";
 
 export type {
+  AiProviderCapabilityRuntimeConfig,
   AiProviderCapabilityTester,
   AiProviderCapabilityTestMetrics,
   AiProviderMetricsSink,
   AiProviderPreparationCoordinator,
   AiProviderPreparationMetrics,
+  AiProviderPromptCompatibility,
   AiProviderStateMetrics,
 } from "./ai-provider.service-support.js";
 export {
@@ -35,6 +44,10 @@ export {
 } from "./ai-provider.service-support.js";
 
 export class AiProviderConfigurationService {
+  private readonly dependencies: Readonly<{
+    repository: AiProviderConfigurationRepository;
+    audit: AiProviderAuditSink;
+  }>;
   private readonly reader: AiProviderReadService;
   private readonly drafts: AiProviderDraftService;
   private readonly activations: AiProviderActivationService;
@@ -47,13 +60,18 @@ export class AiProviderConfigurationService {
     preparation?: AiProviderPreparationCoordinator,
     audit: AiProviderAuditSink = NOOP_AUDIT,
     metrics: AiProviderMetricsSink = NOOP_METRICS,
+    promptCompatibility?: AiProviderPromptCompatibility,
+    testEnqueuer?: AiProviderTestEnqueuer,
   ) {
+    this.dependencies = { repository, audit };
     const dependencies = {
       repository,
       codec,
       env,
       tester,
       preparation,
+      promptCompatibility,
+      testEnqueuer,
       audit,
       metrics,
     } as const;
@@ -87,6 +105,14 @@ export class AiProviderConfigurationService {
     return this.drafts.test(revisionId, actorId);
   }
 
+  executeTest(
+    revisionId: string,
+    actorId = "worker",
+    executionId?: string,
+  ): Promise<AiProviderConfigurationRead> {
+    return this.drafts.executeTest(revisionId, actorId, executionId);
+  }
+
   activate(
     revisionId: string,
     actorId: string,
@@ -100,6 +126,35 @@ export class AiProviderConfigurationService {
 
   restore(revisionId: string, actorId: string): Promise<AiProviderControlRead> {
     return this.activations.restore(revisionId, actorId);
+  }
+
+  async discard(
+    revisionId: string,
+    actorId: string,
+  ): Promise<AiProviderDiscardResult> {
+    const revision = await this.dependencies.repository.getRevision(revisionId);
+    if (!revision) throw new AiProviderNotFoundError();
+    if (revision.lifecycle !== "draft" && revision.lifecycle !== "failed") {
+      throw new AiProviderConfigurationError(
+        "Only draft or failed AI provider attempts can be discarded",
+      );
+    }
+    if (!(await this.dependencies.repository.discardDisposable(revisionId))) {
+      throw new AiProviderConfigurationError(
+        "AI provider attempt could not be discarded",
+      );
+    }
+    this.dependencies.audit.record({
+      event: "ai_provider.discarded",
+      actorId,
+      revisionId,
+      generationProfile: revision.generationProfile,
+      embeddingMode: revision.embeddingMode,
+      plannerModel: revision.plannerModel,
+      answerModel: revision.answerModel,
+      embeddingModel: revision.embeddingModel,
+    });
+    return { discarded: true };
   }
 
   progress(revisionId: string): Promise<AiProviderPreparationProgress> {

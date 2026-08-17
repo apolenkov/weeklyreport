@@ -2,6 +2,7 @@ import { searchReportEntriesToolInputSchema } from "@customreport/shared";
 import { z } from "zod";
 
 import { groundingPromptData } from "../domain/context-builder.js";
+import type { AiComposedPromptSet } from "./ai-feature-prompt-catalog.js";
 import type {
   CitationRepairInput,
   GroundedAnswer,
@@ -9,23 +10,7 @@ import type {
   PlannerInput,
   PlannerRepairInput,
 } from "./report-assistant.ports.js";
-import {
-  REPORT_CITATION_REPAIR_PROMPT_VERSION,
-  REPORT_CITATION_REPAIR_SYSTEM_PROMPT,
-  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
-  REPORT_GROUNDED_ANSWER_SYSTEM_PROMPT,
-  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_REPAIR_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_REPAIR_SYSTEM_PROMPT,
-  REPORT_SEARCH_PLANNER_SYSTEM_PROMPT,
-} from "./report-assistant.prompt-text.js";
-
-export {
-  REPORT_CITATION_REPAIR_PROMPT_VERSION,
-  REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_PROMPT_VERSION,
-  REPORT_SEARCH_PLANNER_REPAIR_PROMPT_VERSION,
-} from "./report-assistant.prompt-text.js";
+import { compactDefaultedSchema } from "./report-assistant.tool-schema.js";
 
 export const SEARCH_REPORT_ENTRIES_TOOL_NAME = "search_report_entries";
 const ACTOR_ROLE = "LEAD" as const;
@@ -36,9 +21,10 @@ const PLANNER_TOOL_DESCRIPTION =
   "Translate a Lead's report question into a strict, server-resolved search plan.";
 
 const plannerToolParameters = (): Record<string, unknown> => {
-  const schema = zodSchemaValue(searchReportEntriesToolInputSchema);
-  delete schema.$schema;
-  return schema;
+  const schema = compactDefaultedSchema(
+    zodSchemaValue(searchReportEntriesToolInputSchema),
+  );
+  return schema as Record<string, unknown>;
 };
 
 const zodSchemaValue = (schema: typeof searchReportEntriesToolInputSchema) =>
@@ -49,7 +35,6 @@ const searchReportEntriesTool = {
   function: {
     name: SEARCH_REPORT_ENTRIES_TOOL_NAME,
     description: PLANNER_TOOL_DESCRIPTION,
-    strict: true,
     parameters: plannerToolParameters(),
   },
 };
@@ -153,20 +138,24 @@ const safeRepairIssues = (
     code: allowedIssueCodes.has(issue.code) ? issue.code : "custom",
   }));
 
-export const buildPlannerPrompt = (input: PlannerInput): PlannerPrompt =>
+export const buildPlannerPrompt = (
+  input: PlannerInput,
+  promptSet: AiComposedPromptSet,
+): PlannerPrompt =>
   plannerPrompt(
-    REPORT_SEARCH_PLANNER_PROMPT_VERSION,
-    REPORT_SEARCH_PLANNER_SYSTEM_PROMPT,
+    promptSet.slotVersions.planner,
+    promptSet.prompts.planner,
     plannerData(input),
   );
 
 export const buildPlannerRepairPrompt = (
   input: PlannerRepairInput,
+  promptSet: AiComposedPromptSet,
 ): PlannerPrompt => {
   const original = plannerData(input.original);
   return plannerPrompt(
-    REPORT_SEARCH_PLANNER_REPAIR_PROMPT_VERSION,
-    REPORT_SEARCH_PLANNER_REPAIR_SYSTEM_PROMPT,
+    promptSet.slotVersions["planner-repair"],
+    promptSet.prompts["planner-repair"],
     {
       original,
       previousArguments: input.previousArguments,
@@ -229,10 +218,11 @@ const groundedAnswerPrompt = (
 
 export const buildGroundedAnswerPrompt = (
   input: GroundedAnswerInput,
+  promptSet: AiComposedPromptSet,
 ): GroundedAnswerPrompt =>
   groundedAnswerPrompt(
-    REPORT_GROUNDED_ANSWER_PROMPT_VERSION,
-    REPORT_GROUNDED_ANSWER_SYSTEM_PROMPT,
+    promptSet.slotVersions["grounded-answer"],
+    promptSet.prompts["grounded-answer"],
     answerData(input),
   );
 
@@ -244,10 +234,11 @@ const previousAnswerData = (answer: GroundedAnswer) => ({
 
 export const buildCitationRepairPrompt = (
   input: CitationRepairInput,
+  promptSet: AiComposedPromptSet,
 ): GroundedAnswerPrompt =>
   groundedAnswerPrompt(
-    REPORT_CITATION_REPAIR_PROMPT_VERSION,
-    REPORT_CITATION_REPAIR_SYSTEM_PROMPT,
+    promptSet.slotVersions["citation-repair"],
+    promptSet.prompts["citation-repair"],
     {
       question: input.original.question,
       grounding: groundingPromptData(input.original.grounding),

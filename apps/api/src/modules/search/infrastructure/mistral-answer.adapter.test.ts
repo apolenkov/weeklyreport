@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { baselineReportAssistantPrompts } from "../application/ai-feature-prompt-catalog.js";
 import {
   MistralAnswerAdapter,
   type MistralAnswerAdapterConfig,
@@ -16,6 +17,7 @@ const config: MistralAnswerAdapterConfig = {
   providerTimeoutMs: 5000,
   model: "mistral-medium-3-5",
   maxTokens: 512,
+  prompts: baselineReportAssistantPrompts(),
 };
 
 const input = {

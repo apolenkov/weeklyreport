@@ -1,6 +1,7 @@
 import type { ChatCompletionResponse } from "@mistralai/mistralai/models/components";
 import { describe, expect, it, vi } from "vitest";
 
+import { baselineReportAssistantPrompts } from "../application/ai-feature-prompt-catalog.js";
 import type { MistralChatClient } from "./mistral-planner.adapter.js";
 import {
   MistralPlannerAdapter,
@@ -14,6 +15,7 @@ const config = {
   model: "mistral-medium-3-5",
   maxTokens: 256,
   providerTimeoutMs: 5000,
+  prompts: baselineReportAssistantPrompts(),
 } as const;
 
 const plannerInput = {
@@ -61,7 +63,7 @@ const fakeClient = (response: ChatCompletionResponse) => {
 };
 
 describe("MistralPlannerAdapter", () => {
-  it("uses one strict tool call with bounded request timeout", async () => {
+  it("uses one typed tool call with bounded request timeout", async () => {
     const { client, complete } = fakeClient(
       responseWithArguments({ retrieval: "structured" }),
     );
@@ -87,7 +89,7 @@ describe("MistralPlannerAdapter", () => {
     expect(tool?.type).toBe("function");
     if (tool?.type === "function") {
       expect(tool.function.name).toBe("search_report_entries");
-      expect(tool.function.strict).toBe(true);
+      expect(tool.function).not.toHaveProperty("strict");
     }
   });
 

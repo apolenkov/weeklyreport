@@ -385,7 +385,10 @@ describe("ReportAssistantService", () => {
   });
 
   it("repairs one invalid plan and returns invalid_plan after a second failure", async () => {
-    const repaired = createHarness({}, { repairedPlan: basePlan });
+    const repaired = createHarness(
+      { unexpected: true },
+      { repairedPlan: basePlan },
+    );
     await expect(
       repaired.service.answer(request, ACTOR_ID),
     ).resolves.toMatchObject({
@@ -393,7 +396,10 @@ describe("ReportAssistantService", () => {
     });
     expect(repaired.plannerRepair).toHaveBeenCalledOnce();
 
-    const failed = createHarness({}, { repairedPlan: {} });
+    const failed = createHarness(
+      { unexpected: true },
+      { repairedPlan: { unexpected: true } },
+    );
     await expect(failed.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "invalid_plan",
     });
@@ -525,6 +531,25 @@ describe("ReportAssistantService", () => {
 
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "provider_unavailable",
+    });
+  });
+
+  it("returns safe retry timing for a provider rate limit", async () => {
+    const harness = createHarness(basePlan);
+    harness.answerer.mockRejectedValue(
+      new ReportAssistantProviderError(
+        "answer",
+        new Error("rate_limit_exceeded"),
+        429,
+        true,
+        "rate_limit_exceeded",
+        42_100,
+      ),
+    );
+
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "provider_unavailable",
+      rateLimit: { retryAfterSeconds: 43 },
     });
   });
 

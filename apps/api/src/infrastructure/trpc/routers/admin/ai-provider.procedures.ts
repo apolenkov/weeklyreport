@@ -1,6 +1,7 @@
 import {
   aiProviderConfigurationReadSchema,
   aiProviderControlReadSchema,
+  aiProviderDiscardResultSchema,
   aiProviderDraftSchema,
   aiProviderPreparationProgressSchema,
   aiProviderRevisionInputSchema,
@@ -92,6 +93,19 @@ export function createAdminAiProviderProcedures(deps: AdminAiProviderDeps) {
       .mutation(async ({ input, ctx }) => {
         try {
           return await requireService(deps.aiProviderService).restore(
+            input.revisionId,
+            ctx.session.userId,
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+    discard: adminProcedure
+      .input(aiProviderRevisionInputSchema)
+      .output(aiProviderDiscardResultSchema)
+      .mutation(async ({ input, ctx }) => {
+        try {
+          return await requireService(deps.aiProviderService).discard(
             input.revisionId,
             ctx.session.userId,
           );

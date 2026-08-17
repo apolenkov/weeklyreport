@@ -5,6 +5,7 @@
 
 import { test, expect } from "./fixtures";
 import { prisma } from "./helpers/db";
+import { randomUUID } from "node:crypto";
 import {
   ACTIVE_REPORT_ID,
   LEAD_1_ID,
@@ -146,24 +147,36 @@ test.describe("Admin CRUD (integration)", () => {
 
     try {
       await adminPage.goto("/admin/settings");
-      await adminPage.getByRole("tab", { name: "Integrations" }).click();
+      await adminPage.getByRole("tab", { name: "AI" }).click();
+      await adminPage.getByRole("tab", { name: "Provider" }).click();
 
       await expect(
         adminPage.getByTestId("integration-row-ai"),
       ).toBeVisible({ timeout: 15_000 });
       await adminPage
-        .getByLabel("AI provider profile")
+        .getByLabel("Generation provider profile")
         .selectOption("custom-openai-compatible");
       await adminPage
-        .getByLabel("AI provider endpoint")
+        .getByLabel("Generation endpoint")
         .fill("https://ai.example.com/v1");
       await adminPage.getByLabel("Planner model").fill(plannerModel);
       await adminPage.getByLabel("Answer model").fill(answerModel);
-      await adminPage.getByLabel("Embedding model").fill(embeddingModel);
-      await adminPage.getByLabel("Embedding dimensions").fill("3");
       await adminPage
-        .getByLabel("AI provider credential")
-        .fill("e2e-provider-secret");
+        .getByLabel("Embedding connection mode")
+        .selectOption("separate");
+      await adminPage
+        .getByLabel("Embeddings provider profile")
+        .selectOption("custom-openai-compatible");
+      await adminPage
+        .getByLabel("Embeddings endpoint")
+        .fill("https://ai.example.com/v1");
+      await adminPage.getByLabel("Embedding model").fill(embeddingModel);
+      await adminPage
+        .getByLabel("Generation credential")
+        .fill("e2e-generation-secret");
+      await adminPage
+        .getByLabel("Embeddings credential")
+        .fill("e2e-embedding-secret");
 
       const saveResponse = adminPage.waitForResponse(
         (response) =>
@@ -180,11 +193,17 @@ test.describe("Admin CRUD (integration)", () => {
       expect(stored).toMatchObject({
         answerModel,
         embeddingModel,
-        embeddingDimensions: 3,
+        embeddingDimensions: null,
+        embeddingMode: "separate",
+        embeddingProfile: "custom_openai_compatible",
+        embeddingBaseUrl: "https://ai.example.com/v1",
         lifecycle: "draft",
       });
-      expect(stored?.credentialCiphertext).not.toContain(
-        "e2e-provider-secret",
+      expect(stored?.generationCredentialCiphertext).not.toContain(
+        "e2e-generation-secret",
+      );
+      expect(stored?.embeddingCredentialCiphertext).not.toContain(
+        "e2e-embedding-secret",
       );
       const control = await prisma.aiProviderControl.findUnique({
         where: { id: "singleton" },
@@ -201,6 +220,232 @@ test.describe("Admin CRUD (integration)", () => {
       await prisma.aiProviderConfiguration.deleteMany({
         where: { plannerModel },
       });
+    }
+  });
+
+  test("admin AI workspace keeps provider, prompt, and Lead availability coherent", async ({
+    adminPage,
+    leadPage,
+  }) => {
+    const startedAt = new Date();
+    const providerId = randomUUID();
+    const featureKey = "lead-report-assistant";
+    const baseline = await prisma.aiPromptBundleRevision.findFirst({
+      where: { featureKey, lifecycle: "active" },
+    });
+    if (!baseline) throw new Error("AI prompt baseline is missing");
+    const originalControl = await prisma.aiProviderControl.findUnique({
+      where: { id: "singleton" },
+    });
+
+    await prisma.aiProviderConfiguration.create({
+      data: {
+        id: providerId,
+        generationProfile: "custom_openai_compatible",
+        generationBaseUrl: "https://ai.example.com/v1",
+        generationEndpointIdentity: `e2e:${providerId}`,
+        plannerModel: "e2e-planner",
+        answerModel: "e2e-answer",
+        embeddingModel: "e2e-embedding",
+        embeddingDimensions: 3,
+        semanticInputVersion: "report-assistant/v1",
+        reasoningMode: "provider_default",
+        reasoningCustomValue: null,
+        answerProtocol: "json_schema",
+        generationCredentialCiphertext: "e2e-ciphertext",
+        generationCredentialNonce: "e2e-nonce",
+        generationCredentialTag: "e2e-tag",
+        generationCredentialKeyVersion: 1,
+        generationCredentialMaskedSuffix: "••••test",
+        embeddingMode: "reuse_generation",
+        embeddingProfile: null,
+        embeddingBaseUrl: null,
+        embeddingEndpointIdentity: null,
+        embeddingCredentialCiphertext: null,
+        embeddingCredentialNonce: null,
+        embeddingCredentialTag: null,
+        embeddingCredentialKeyVersion: null,
+        embeddingCredentialMaskedSuffix: null,
+        generationCompatibilityIdentity: `generation-${providerId}`,
+        embeddingScopeIdentity: `embedding-${providerId}`,
+        compositeTestIdentity: `composite-${providerId}`,
+        lifecycle: "active",
+        testResult: {
+          status: "passed",
+          generation: {
+            status: "passed",
+            answerProtocol: "json_schema",
+            capabilities: [
+              { capability: "authentication", status: "passed" },
+            ],
+            featureCompatibility: [],
+          },
+          embeddings: {
+            status: "passed",
+            capabilities: [
+              { capability: "batch_embeddings", status: "passed" },
+            ],
+          },
+          testedAt: startedAt.toISOString(),
+        },
+        testedAt: startedAt,
+        activatedAt: startedAt,
+      },
+    });
+    await prisma.aiProviderControl.upsert({
+      where: { id: "singleton" },
+      update: { activeConfigurationId: providerId, enabled: true },
+      create: { id: "singleton", activeConfigurationId: providerId, enabled: true },
+    });
+    await prisma.aiPromptEvaluation.create({
+      data: {
+        featureKey,
+        promptRevisionId: baseline.id,
+        generationCompatibilityIdentity: `generation-${providerId}`,
+        contentHash: baseline.effectiveContentHash,
+        contractVersion: baseline.coreContractVersion,
+        evaluatorVersion: "report-assistant/evaluator/v2",
+        checks: [
+          {
+            code: "protocol_shape",
+            status: "passed",
+            passedCount: 1,
+            failedCount: 0,
+          },
+        ],
+        outcome: "passed",
+      },
+    });
+
+    try {
+      await adminPage.goto("/admin/settings");
+      await adminPage.getByRole("tab", { name: "AI" }).click();
+      await expect(adminPage.getByText("AI overview")).toBeVisible();
+
+      await adminPage.getByRole("tab", { name: "Provider" }).click();
+      await adminPage.getByRole("button", { name: "Toggle AI provider settings" }).click();
+      await adminPage
+        .getByLabel("Generation credential")
+        .fill("e2e-generation-secret");
+      await adminPage.getByRole("button", { name: "Save draft" }).click();
+      await expect(adminPage.getByRole("button", { name: "Discard" })).toBeVisible();
+      adminPage.once("dialog", (dialog) => dialog.accept());
+      await adminPage.getByRole("button", { name: "Discard" }).click();
+      await expect.poll(async () =>
+        prisma.aiProviderConfiguration.count({ where: { lifecycle: "draft" } }),
+      ).toBe(0);
+
+      await adminPage.getByRole("tab", { name: "Features" }).click();
+      await adminPage.getByRole("button", { name: "Report Assistant" }).click();
+      const plannerPrompt = adminPage.getByRole("textbox", { name: "planner prompt" });
+      await adminPage.getByText("planner", { exact: true }).click();
+      await plannerPrompt.fill("E2E complete planner prompt.");
+      await adminPage.getByRole("button", { name: "Save Draft" }).click();
+      await expect.poll(async () =>
+        prisma.aiPromptBundleRevision.findFirst({
+          where: { featureKey, lifecycle: "draft", createdAt: { gte: startedAt } },
+        }),
+      ).not.toBeNull();
+      const candidate = await prisma.aiPromptBundleRevision.findFirst({
+        where: { featureKey, lifecycle: "draft", createdAt: { gte: startedAt } },
+        orderBy: { revision: "desc" },
+      });
+      if (!candidate) throw new Error("Prompt draft was not persisted");
+      await prisma.aiPromptBundleRevision.update({
+        where: { id: candidate.id },
+        data: { lifecycle: "validated" },
+      });
+      const evaluation = await prisma.aiPromptEvaluation.create({
+        data: {
+          featureKey,
+          promptRevisionId: candidate.id,
+          generationCompatibilityIdentity: `generation-${providerId}`,
+          contentHash: candidate.effectiveContentHash,
+          contractVersion: candidate.coreContractVersion,
+          evaluatorVersion: "report-assistant/evaluator/v2",
+          checks: [
+            {
+              code: "protocol_shape",
+              status: "passed",
+              passedCount: 1,
+              failedCount: 0,
+            },
+          ],
+          outcome: "passed",
+        },
+      });
+
+      await adminPage.reload();
+      await adminPage.getByRole("tab", { name: "AI" }).click();
+      await adminPage.getByRole("tab", { name: "Features" }).click();
+      await adminPage.getByRole("button", { name: "Report Assistant" }).click();
+      await expect(adminPage.getByRole("button", { name: /Activate/ })).toBeEnabled();
+      adminPage.once("dialog", (dialog) => dialog.accept());
+      await adminPage.getByRole("button", { name: "Activate" }).click();
+      await expect.poll(async () =>
+        (await prisma.aiFeaturePromptControl.findUnique({ where: { featureKey } }))
+          ?.activeRevisionId,
+      ).toBe(candidate.id);
+
+      await adminPage.getByRole("button", { name: /Version 1/ }).click();
+      await expect(adminPage.getByRole("button", { name: "Restore" })).toBeEnabled();
+      adminPage.once("dialog", (dialog) => dialog.accept());
+      await adminPage.getByRole("button", { name: "Restore" }).click();
+      await expect.poll(async () =>
+        (await prisma.aiFeaturePromptControl.findUnique({ where: { featureKey } }))
+          ?.activeRevisionId,
+      ).toBe(baseline.id);
+      expect(evaluation.id).toBeTruthy();
+
+      await leadPage.goto(`/lead/report/${ACTIVE_REPORT_ID}?authorId=${LEAD_OLGA_ID}`);
+      await expect(leadPage.getByRole("button", { name: "Chat" })).toBeEnabled();
+    } finally {
+      await prisma.aiFeaturePromptControl.update({
+        where: { featureKey },
+        data: { activeRevisionId: baseline.id },
+      });
+      await prisma.aiPromptBundleRevision.update({
+        where: { id: baseline.id },
+        data: { lifecycle: "active", supersededAt: null, activatedAt: new Date() },
+      });
+      const createdPromptRows = await prisma.aiPromptBundleRevision.findMany({
+        where: { featureKey, createdAt: { gte: startedAt }, id: { not: baseline.id } },
+        select: { id: true },
+      });
+      const createdPromptIds = createdPromptRows.map(({ id }) => id);
+      if (createdPromptIds.length > 0) {
+        await prisma.aiPromptEvaluation.deleteMany({
+          where: { promptRevisionId: { in: createdPromptIds } },
+        });
+        await prisma.aiPromptBundleRevision.deleteMany({
+          where: { id: { in: createdPromptIds } },
+        });
+      }
+      await prisma.aiPromptEvaluation.deleteMany({
+        where: { generationCompatibilityIdentity: `generation-${providerId}` },
+      });
+      await prisma.aiProviderControl.upsert({
+        where: { id: "singleton" },
+        update: {
+          activeConfigurationId: originalControl?.activeConfigurationId ?? null,
+          enabled: originalControl?.enabled ?? false,
+        },
+        create: {
+          id: "singleton",
+          activeConfigurationId: originalControl?.activeConfigurationId ?? null,
+          enabled: originalControl?.enabled ?? false,
+        },
+      });
+      const createdProviders = await prisma.aiProviderConfiguration.findMany({
+        where: { createdAt: { gte: startedAt } },
+        select: { id: true },
+      });
+      const createdProviderIds = createdProviders.map(({ id }) => id);
+      if (createdProviderIds.length > 0) {
+        await prisma.aiProviderConfiguration.deleteMany({
+          where: { id: { in: createdProviderIds } },
+        });
+      }
     }
   });
 });

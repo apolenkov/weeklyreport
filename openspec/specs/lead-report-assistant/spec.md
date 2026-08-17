@@ -98,6 +98,31 @@ The shared assistant output MUST be a discriminated union covering `ok`, `clarif
 - **WHEN** an authorized Lead invokes the assistant while global AI availability is `not_configured`
 - **THEN** the procedure returns `{ "kind": "ai_not_configured" }` without retrieval or provider work
 
+### Requirement: Runtime uses one exact provider and prompt snapshot
+
+The report-assistant runtime MUST resolve the enabled active provider and the
+active compatible `lead-report-assistant` prompt bundle under one repeatable
+database snapshot. The request snapshot MUST include the provider revision,
+feature key, prompt revision, contract version, and composed planner/repair,
+answer/repair prompts. A missing, corrupt, stale, or unevaluated prompt bundle
+MUST return `ai_not_configured` before retrieval. Runtime resolution MUST NOT
+fall back to compiled prompt constants, while exact provider-only embedding
+worker resolution remains independent of prompt activation.
+
+#### Scenario: Prompt activation races with an in-flight request
+
+- **WHEN** an administrator activates a new prompt bundle after a request has
+  resolved its runtime snapshot
+- **THEN** every planner, repair, answer, and citation-repair call in that
+  request uses the original composed prompt set
+
+#### Scenario: The active prompt pair is unavailable
+
+- **WHEN** the global provider is active but the feature prompt control or exact
+  provider/prompt evaluation is absent or invalid
+- **THEN** the procedure returns `{ "kind": "ai_not_configured" }` before
+  retrieval or provider work
+
 ### Requirement: Answers are grounded in server-prepared evidence
 
 The answer adapter MUST receive only the original question, deterministic server aggregates, and an authorization-filtered `GroundingBundle`. It MUST implement the versioned grounded-answer and citation-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, keep trusted instructions separate from serialized untrusted evidence, and use a schema-constrained structured response. It MUST return structured Markdown, cited local source IDs, and an insufficient-evidence flag. The server MUST verify every cited ID, allow one bounded citation repair, and MUST NOT publish an answer containing unknown citations.

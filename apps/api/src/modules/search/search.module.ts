@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module.js";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
+import { AiPromptsModule } from "../ai-prompts/index.js";
 import { AiProviderModule } from "../ai-provider/index.js";
 import { AiProviderConfigurationService } from "../ai-provider/index.js";
 import { AiRuntimeResolver } from "./application/ai-runtime.resolver.js";
@@ -10,7 +11,7 @@ import { SearchService } from "./application/search.service.js";
 import { createSearchProviders } from "./search.providers.js";
 
 @Module({
-  imports: [BullMQModule, ConfigModule, AiProviderModule],
+  imports: [BullMQModule, ConfigModule, AiProviderModule, AiPromptsModule],
   providers: createSearchProviders(),
   exports: [
     SearchService,

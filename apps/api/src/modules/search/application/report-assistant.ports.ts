@@ -7,18 +7,24 @@ export class ReportAssistantProviderError extends Error {
   readonly operation: ReportAssistantProviderOperation;
   readonly statusCode: number | undefined;
   readonly retryable: boolean;
+  readonly providerCode: string | undefined;
+  readonly retryAfterMs: number | undefined;
 
   constructor(
     operation: ReportAssistantProviderOperation,
     cause: unknown,
     statusCode: number | undefined,
     retryable: boolean,
+    providerCode?: string,
+    retryAfterMs?: number,
   ) {
     super(`Report assistant provider ${operation} request failed`, { cause });
     this.name = "ReportAssistantProviderError";
     this.operation = operation;
     this.statusCode = statusCode;
     this.retryable = retryable;
+    this.providerCode = providerCode;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 

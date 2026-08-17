@@ -12,6 +12,7 @@ const QUEUE_NAMES = [
   // now so the admin smoke-test enqueue and the DLQ monitor share one
   // connection the moment the feature turns on.
   "telegram-outbound",
+  "ai-compatibility",
   SEMANTIC_INDEX_QUEUE_NAME,
 ] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];

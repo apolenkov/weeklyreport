@@ -6,17 +6,27 @@ import type {
   AiProviderDraft,
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 import { useTRPC } from "../../../lib/trpc-context";
+import { AiProviderCardFeedback } from "./ai-provider-card-feedback";
 import {
   AiProviderForm,
   profileLabel,
   toAiProviderForm,
 } from "./ai-provider-form";
-import { useAiProviderMutations } from "./ai-provider-mutations";
+import {
+  AI_PROVIDER_TEST_QUEUED_MESSAGE,
+  compatibilityExecutionMessage,
+  useAiProviderMutations,
+} from "./ai-provider-mutations";
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
-import { selectDisplayedRevision } from "./ai-provider-revision-selection";
+import { AiProviderRevisionDetails } from "./ai-provider-revision-details";
+import {
+  initialAiProviderCardExpanded,
+  selectObservedRevision,
+} from "./ai-provider-revision-selection";
 
 type AiProviderMutations = ReturnType<typeof useAiProviderMutations>;
 
@@ -28,200 +38,187 @@ type AiProviderCardContentProps = Readonly<{
   onSave: (draft: AiProviderDraft) => void;
 }>;
 
+const mutationsAreBusy = (mutations: AiProviderMutations): boolean =>
+  Object.values(mutations).some((mutation) => mutation.isPending);
+
 function AiProviderCardHeader({
   availability,
-}: Readonly<{ availability: AiProviderControlRead["availability"] }>) {
+  active,
+}: Readonly<{
+  availability: AiProviderControlRead["availability"];
+  active: AiProviderControlRead["active"];
+}>) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
-        <p className="text-xs font-semibold tracking-[0.12em] text-[var(--color-starbucks-accent)] uppercase">
-          AI integration
-        </p>
-        <h3 className="mt-1 text-lg font-semibold text-[var(--color-foreground)]">
-          AI provider
-        </h3>
-        <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--color-muted-foreground)]">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
+            AI provider
+          </h3>
+          <p className="text-xs font-semibold tracking-[0.12em] text-[var(--color-starbucks-accent)] uppercase">
+            AI integration
+          </p>
+        </div>
+        <p className="mt-1 max-w-3xl text-sm leading-5 text-[var(--color-muted-foreground)]">
           Configure the provider used by the Lead assistant and semantic index.
           A saved draft is isolated until you test and activate it.
         </p>
       </div>
-      <span
-        className="inline-flex shrink-0 items-center gap-2 self-start rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-foreground)]"
-        data-testid="integration-ai-status"
-      >
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 lg:flex-nowrap lg:justify-end">
+        {active && (
+          <span className="min-w-0 max-w-full truncate text-sm text-[var(--color-muted-foreground)]">
+            {profileLabel(active.generation.profile)} ·{" "}
+            {active.generation.answerModel}
+          </span>
+        )}
         <span
-          className={
-            availability === "available"
-              ? "size-2 rounded-full bg-[var(--color-primary)]"
-              : "size-2 rounded-full bg-[var(--color-muted-foreground)]"
-          }
+          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-2.5 py-1 text-sm font-semibold text-[var(--color-foreground)]"
+          data-testid="integration-ai-status"
+        >
+          <span
+            className={
+              availability === "available"
+                ? "size-2 rounded-full bg-[var(--color-primary)]"
+                : "size-2 rounded-full bg-[var(--color-muted-foreground)]"
+            }
+          />
+          {availability === "available" ? "Active" : "Not configured"}
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className="size-4 shrink-0 transition-transform group-data-[expanded=true]:rotate-180"
+          data-testid="ai-provider-disclosure-indicator"
         />
-        {availability === "available" ? "Active" : "Not configured"}
-      </span>
+      </div>
     </div>
   );
 }
 
-function AiProviderCardFeedback({
-  revision,
-  message,
-  mutations,
-}: Readonly<{
-  revision: AiProviderControlRead["active"] | AiProviderConfigurationRead;
-  message: string | null;
-  mutations: AiProviderMutations;
-}>) {
-  return (
-    <>
-      {revision?.lifecycle === "preparing" && (
-        <p
-          className="mt-5 border-l-2 border-[var(--color-starbucks-accent)] pl-3 text-sm text-[var(--color-muted-foreground)]"
-          data-testid="ai-preparation-progress"
-        >
-          Preparation: {revision.progress.completed}/{revision.progress.total}{" "}
-          complete; {revision.progress.failed} failed; elapsed{" "}
-          {revision.progress.elapsedMs} ms.
-        </p>
-      )}
-      {message && (
-        <p
-          className="mt-5 border-l-2 border-[var(--color-starbucks-accent)] pl-3 text-sm text-[var(--color-muted-foreground)]"
-          role="status"
-        >
-          {message}
-        </p>
-      )}
-      <AiProviderOperationError
-        message={message}
-        visible={
-          mutations.save.isError ||
-          mutations.test.isError ||
-          mutations.activate.isError ||
-          mutations.disable.isError ||
-          mutations.restore.isError
-        }
-      />
-    </>
-  );
-}
-
-function AiProviderCardContent({
+export function AiProviderCardContent({
   data,
   savedRevision,
   message,
   mutations,
   onSave,
 }: AiProviderCardContentProps) {
-  const displayedRevision = selectDisplayedRevision(data);
-  const revisionId = savedRevision?.id ?? displayedRevision?.id ?? null;
-  const revision = savedRevision ?? displayedRevision;
-  const busy =
-    mutations.save.isPending ||
-    mutations.test.isPending ||
-    mutations.activate.isPending ||
-    mutations.disable.isPending ||
-    mutations.restore.isPending;
+  const revision = selectObservedRevision(data, savedRevision);
+  const revisionId = revision?.id ?? null;
+  const executionMessage = revision
+    ? compatibilityExecutionMessage(revision)
+    : null;
+  const observedMessage =
+    message === AI_PROVIDER_TEST_QUEUED_MESSAGE
+      ? (executionMessage ?? message)
+      : (message ?? executionMessage);
+  const needsAttention = initialAiProviderCardExpanded(
+    data,
+    revision,
+    observedMessage,
+  );
+  const [expanded, setExpanded] = useState(needsAttention);
+  const allBusy = mutationsAreBusy(mutations);
 
   return (
     <div
-      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs sm:p-6"
+      className="border-t border-[var(--color-border)] pt-4 sm:pt-5"
       data-testid="integration-row-ai"
     >
-      <AiProviderCardHeader availability={data.availability} />
+      <button
+        type="button"
+        className="group w-full text-left"
+        data-expanded={expanded}
+        aria-expanded={expanded}
+        aria-label="Toggle AI provider settings"
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <AiProviderCardHeader
+          availability={data.availability}
+          active={data.active}
+        />
+      </button>
 
-      <AiProviderForm
-        key={revisionId ?? "new"}
-        initial={toAiProviderForm(revision)}
-        revision={revision}
-        revisionId={revisionId}
-        availability={data.availability}
-        busy={busy}
-        savePending={mutations.save.isPending}
-        testPending={mutations.test.isPending}
-        activatePending={mutations.activate.isPending}
-        disablePending={mutations.disable.isPending}
-        onSave={onSave}
-        onTest={(id) => mutations.test.mutate({ revisionId: id })}
-        onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
-        onDisable={() => mutations.disable.mutate()}
-      />
+      {expanded && (
+        <>
+          <AiProviderForm
+            key={revisionId ?? "new"}
+            initial={toAiProviderForm(revision)}
+            revision={revision}
+            revisionId={revisionId}
+            availability={data.availability}
+            profileCapabilities={data.profileCapabilities}
+            busy={allBusy}
+            savePending={mutations.save.isPending}
+            testPending={mutations.test.isPending}
+            activatePending={mutations.activate.isPending}
+            disablePending={mutations.disable.isPending}
+            onSave={onSave}
+            onTest={(id) => mutations.test.mutate({ revisionId: id })}
+            onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
+            onDisable={() => mutations.disable.mutate()}
+          />
 
-      <AiProviderCardFeedback
-        revision={revision}
-        message={message}
-        mutations={mutations}
-      />
-      {revision && <AiProviderRevisionDetails revision={revision} />}
-      <AiProviderRetainedRevisions
-        revisions={data.revisions}
-        activeRevisionId={data.activeRevisionId}
-        busy={busy}
-        restorePending={mutations.restore.isPending}
-        onRestore={(id) => mutations.restore.mutate({ revisionId: id })}
-      />
+          <AiProviderCardFeedback
+            revision={revision}
+            message={observedMessage}
+            mutations={mutations}
+          />
+          {revision && (
+            <details
+              className="group mt-4 border-t border-[var(--color-border)] pt-3"
+              data-testid="ai-provider-diagnostics"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--radius-sm)] py-1 text-sm font-semibold text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                  <span className="block text-xs tracking-[0.12em] text-[var(--color-muted-foreground)] uppercase">
+                    Diagnostics
+                  </span>
+                  <span className="mt-1 block font-normal text-[var(--color-muted-foreground)]">
+                    Provider metadata and retained revisions
+                  </span>
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 shrink-0 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div className="mt-3 flex flex-col gap-4">
+                <AiProviderRevisionDetails revision={revision} />
+                <AiProviderRetainedRevisions
+                  revisions={data.revisions}
+                  activeRevisionId={data.activeRevisionId}
+                  busy={allBusy}
+                  restorePending={mutations.restore.isPending}
+                  onRestore={(id) =>
+                    mutations.restore.mutate({ revisionId: id })
+                  }
+                  discardPending={mutations.discard.isPending}
+                  onDiscard={(id) =>
+                    mutations.discard.mutate({ revisionId: id })
+                  }
+                />
+              </div>
+            </details>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function AiProviderOperationError({
-  message,
-  visible,
-}: Readonly<{ message: string | null; visible: boolean }>) {
-  if (!visible) return null;
-  return (
-    <p className="mt-3 text-xs text-red-600" role="alert">
-      {message ?? "AI provider operation failed."}
-    </p>
-  );
-}
-
-function AiProviderRevisionDetails({
-  revision,
-}: Readonly<{
-  revision: NonNullable<AiProviderControlRead["active"]>;
-}>) {
-  return (
-    <dl className="mt-6 grid gap-4 border-t border-[var(--color-border)] pt-5 text-sm sm:grid-cols-3">
-      <div>
-        <dt className="text-xs font-semibold tracking-[0.1em] text-[var(--color-muted-foreground)] uppercase">
-          Profile
-        </dt>
-        <dd
-          data-testid="integration-ai-provider"
-          className="mt-1 font-medium text-[var(--color-foreground)]"
-        >
-          {profileLabel(revision.profile)}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-xs font-semibold tracking-[0.1em] text-[var(--color-muted-foreground)] uppercase">
-          Credential
-        </dt>
-        <dd
-          data-testid="integration-ai-credential"
-          className="mt-1 font-mono text-[var(--color-foreground)]"
-        >
-          {revision.credentialMaskedSuffix ?? "not configured"}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-xs font-semibold tracking-[0.1em] text-[var(--color-muted-foreground)] uppercase">
-          Embeddings
-        </dt>
-        <dd
-          data-testid="integration-ai-rag"
-          className="mt-1 font-mono text-[var(--color-foreground)]"
-        >
-          {revision.embeddingModel} / {revision.embeddingDimensions}
-        </dd>
-      </div>
-    </dl>
-  );
-}
-
 export function AiProviderCard() {
+  const pollIntervalMs = 1500;
   const trpc = useTRPC();
-  const aiQ = useQuery(trpc.admin.aiProvider.get.queryOptions());
+  const aiQ = useQuery({
+    ...trpc.admin.aiProvider.get.queryOptions(),
+    refetchInterval: (query) =>
+      query.state.data?.revisions.some(
+        (revision) =>
+          revision.latestExecution?.state === "queued" ||
+          revision.latestExecution?.state === "running",
+      )
+        ? pollIntervalMs
+        : false,
+  });
   const [savedRevision, setSavedRevision] =
     useState<AiProviderConfigurationRead | null>(null);
   const [message, setMessage] = useState<string | null>(null);

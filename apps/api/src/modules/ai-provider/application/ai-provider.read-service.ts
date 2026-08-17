@@ -25,7 +25,7 @@ export class AiProviderReadService {
       ? toControl(stored, this.dependencies.codec)
       : emptyControl();
     const metrics: AiProviderStateMetrics = {
-      profile: result.active?.profile ?? "none",
+      profile: result.active?.generation.profile ?? "none",
       state: result.active?.lifecycle ?? "not_configured",
     };
     this.dependencies.metrics.recordState(metrics);

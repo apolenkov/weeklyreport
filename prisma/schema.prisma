@@ -835,8 +835,8 @@ model SemanticEmbedding {
   inputVersion String
   dimensions   Int
   vector       Unsupported("vector")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
   // `provider` stores the stable, non-secret endpoint identity derived from
   // profile + normalized base URL. Dimensions are part of the identity so a
@@ -848,48 +848,157 @@ model SemanticEmbedding {
 // Immutable, organization-wide provider revisions. Credentials are encrypted
 // application data; only the masked suffix is safe to return from reads.
 model AiProviderConfiguration {
-  id                    String                         @id
-  profile               AiProviderProfile
-  baseUrl               String
-  endpointIdentity      String
-  plannerModel          String
-  answerModel           String
-  embeddingModel        String
-  embeddingDimensions   Int?
-  semanticInputVersion  String
-  credentialCiphertext  String
-  credentialNonce       String
-  credentialTag         String
-  credentialKeyVersion  Int
-  credentialMaskedSuffix String
-  lifecycle             AiProviderLifecycle           @default(draft)
-  testResult            Json?
-  testedAt              DateTime?
-  preparationCompleted  Int                            @default(0)
-  preparationTotal      Int                            @default(0)
-  preparationFailed     Int                            @default(0)
-  preparationStartedAt  DateTime?
-  preparationFinishedAt DateTime?
-  preparationElapsedMs  Int                            @default(0)
-  activatedAt           DateTime?
-  supersededAt          DateTime?
-  createdAt             DateTime                       @default(now())
-  updatedAt             DateTime                       @updatedAt
-  activeControl         AiProviderControl?             @relation("AiProviderControlActive")
+  id                               String                     @id
+  generationProfile                AiProviderProfile
+  generationBaseUrl                String
+  generationEndpointIdentity       String
+  plannerModel                     String
+  answerModel                      String
+  reasoningMode                    AiProviderReasoningMode
+  reasoningCustomValue             String?
+  answerProtocol                   AiProviderAnswerProtocol?
+  generationCredentialCiphertext   String
+  generationCredentialNonce        String
+  generationCredentialTag          String
+  generationCredentialKeyVersion   Int
+  generationCredentialMaskedSuffix String
+  embeddingMode                    AiProviderEmbeddingMode
+  embeddingProfile                 AiProviderProfile?
+  embeddingBaseUrl                 String?
+  embeddingEndpointIdentity        String?
+  embeddingModel                   String
+  embeddingDimensions              Int?
+  embeddingCredentialCiphertext    String?
+  embeddingCredentialNonce         String?
+  embeddingCredentialTag           String?
+  embeddingCredentialKeyVersion    Int?
+  embeddingCredentialMaskedSuffix  String?
+  semanticInputVersion             String
+  generationCompatibilityIdentity  String
+  embeddingScopeIdentity           String
+  compositeTestIdentity            String
+  lifecycle                        AiProviderLifecycle        @default(draft)
+  testResult                       Json?
+  testedAt                         DateTime?
+  preparationCompleted             Int                        @default(0)
+  preparationTotal                 Int                        @default(0)
+  preparationFailed                Int                        @default(0)
+  preparationStartedAt             DateTime?
+  preparationFinishedAt            DateTime?
+  preparationElapsedMs             Int                        @default(0)
+  activatedAt                      DateTime?
+  supersededAt                     DateTime?
+  createdAt                        DateTime                   @default(now())
+  updatedAt                        DateTime                   @updatedAt
+  activeControl                    AiProviderControl?         @relation("AiProviderControlActive")
+  compatibilityExecutions          AiCompatibilityExecution[] @relation("AiCompatibilityExecutionProvider")
 
   @@index([lifecycle, updatedAt(sort: Desc)])
-  @@index([endpointIdentity, embeddingModel, semanticInputVersion, embeddingDimensions])
+  @@index([generationCompatibilityIdentity])
+  @@index([embeddingScopeIdentity])
+  @@index([compositeTestIdentity])
+  @@index([embeddingEndpointIdentity, embeddingModel, semanticInputVersion, embeddingDimensions])
+}
+
+// Feature-scoped immutable prompt bundles. The JSON columns are server-owned
+// snapshots; shared contracts validate the shape before any runtime use.
+model AiPromptBundleRevision {
+  id                      String                     @id
+  featureKey              String
+  revision                Int
+  baseRevisionId          String?
+  coreContractVersion     String
+  composerVersion         String
+  lockedCoreSnapshot      Json
+  promptContents          Json
+  effectiveContentHash    String
+  lifecycle               AiPromptBundleLifecycle    @default(draft)
+  createdBy               String?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  activatedAt             DateTime?
+  supersededAt            DateTime?
+  baseRevision            AiPromptBundleRevision?    @relation("AiPromptRevisionBase", fields: [baseRevisionId], references: [id], onDelete: Restrict)
+  derivedRevisions        AiPromptBundleRevision[]   @relation("AiPromptRevisionBase")
+  activeControl           AiFeaturePromptControl?    @relation("AiPromptControlActive")
+  evaluations             AiPromptEvaluation[]       @relation("AiPromptEvaluationBundle")
+  compatibilityExecutions AiCompatibilityExecution[] @relation("AiCompatibilityExecutionPrompt")
+
+  @@unique([featureKey, revision])
+  @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
+  @@index([effectiveContentHash])
+}
+
+// One control row per code-registered feature. The nullable pointer is the
+// only runtime source for an active prompt bundle.
+model AiFeaturePromptControl {
+  id               String                  @id @default(uuid())
+  featureKey       String                  @unique
+  activeRevisionId String?                 @unique
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  activeRevision   AiPromptBundleRevision? @relation("AiPromptControlActive", fields: [activeRevisionId], references: [id], onDelete: SetNull)
+
+  @@index([activeRevisionId])
+}
+
+// Safe synthetic evaluation result for one exact provider/prompt identity.
+// It deliberately has no prompt text, provider response, or product data.
+model AiPromptEvaluation {
+  id                 String                    @id @default(uuid())
+  featureKey         String
+  promptRevisionId   String
+  generationCompatibilityIdentity String
+  contentHash        String
+  contractVersion    String
+  evaluatorVersion   String
+  checks             Json
+  outcome            AiPromptEvaluationOutcome
+  evaluatedAt        DateTime                  @default(now())
+  promptRevision     AiPromptBundleRevision    @relation("AiPromptEvaluationBundle", fields: [promptRevisionId], references: [id], onDelete: Restrict)
+
+  @@unique([promptRevisionId, generationCompatibilityIdentity, contentHash, contractVersion, evaluatorVersion])
+  @@index([featureKey, outcome, evaluatedAt(sort: Desc)])
+  @@index([generationCompatibilityIdentity, promptRevisionId])
+}
+
+// A durable, immutable compatibility run. It stores only identity, bounded
+// classifications, and timestamps; secrets, prompt text, and raw upstream
+// responses never leave process memory.
+model AiCompatibilityExecution {
+  id                 String                        @id @default(uuid())
+  identity           String                        @unique
+  kind               AiCompatibilityExecutionKind
+  providerRevisionId String
+  promptRevisionId   String?
+  featureKey         String?
+  contentHash        String?
+  contractVersion    String?
+  evaluatorVersion   String
+  state              AiCompatibilityExecutionState @default(queued)
+  outcome            AiCompatibilityOutcome?
+  failureCode        String?
+  checks             Json?
+  requestedAt        DateTime                      @default(now())
+  startedAt          DateTime?
+  completedAt        DateTime?
+  providerRevision   AiProviderConfiguration       @relation("AiCompatibilityExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
+  promptRevision     AiPromptBundleRevision?       @relation("AiCompatibilityExecutionPrompt", fields: [promptRevisionId], references: [id], onDelete: Cascade)
+
+  @@index([providerRevisionId, requestedAt(sort: Desc)])
+  @@index([promptRevisionId, requestedAt(sort: Desc)])
+  @@index([state, requestedAt])
 }
 
 // Singleton control row. The active pointer is the only source of runtime
 // availability; retained revisions remain addressable for explicit restore.
 model AiProviderControl {
-  id                   String                    @id @default("singleton")
-  activeConfigurationId String? @unique
-  enabled              Boolean                   @default(false)
-  createdAt            DateTime                  @default(now())
-  updatedAt            DateTime                  @updatedAt
-  activeConfiguration  AiProviderConfiguration? @relation("AiProviderControlActive", fields: [activeConfigurationId], references: [id], onDelete: SetNull)
+  id                    String                   @id @default("singleton")
+  activeConfigurationId String?                  @unique
+  enabled               Boolean                  @default(false)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  activeConfiguration   AiProviderConfiguration? @relation("AiProviderControlActive", fields: [activeConfigurationId], references: [id], onDelete: SetNull)
 
   @@index([activeConfigurationId])
 }
@@ -909,7 +1018,15 @@ enum Role {
 enum AiProviderProfile {
   mistral
   openrouter
+  openai
+  groq
+  jina
   custom_openai_compatible
+}
+
+enum AiProviderEmbeddingMode {
+  reuse_generation
+  separate
 }
 
 enum AiProviderLifecycle {
@@ -919,6 +1036,50 @@ enum AiProviderLifecycle {
   active
   failed
   superseded
+}
+
+enum AiProviderReasoningMode {
+  provider_default
+  off
+  custom
+}
+
+enum AiProviderAnswerProtocol {
+  json_schema
+  forced_tool
+  json_object
+}
+
+enum AiPromptBundleLifecycle {
+  draft
+  validated
+  active
+  failed
+  superseded
+}
+
+enum AiPromptEvaluationOutcome {
+  passed
+  failed
+  inconclusive
+}
+
+enum AiCompatibilityExecutionKind {
+  provider_test
+  prompt_evaluation
+}
+
+enum AiCompatibilityExecutionState {
+  queued
+  running
+  completed
+}
+
+enum AiCompatibilityOutcome {
+  passed
+  incompatible
+  configuration_error
+  inconclusive
 }
 
 enum UserActionStatus {

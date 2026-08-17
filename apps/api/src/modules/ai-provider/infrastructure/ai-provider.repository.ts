@@ -1,38 +1,82 @@
-import { randomUUID } from "node:crypto";
-
+import type { AiProviderCapabilityTestResult } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import {
+  type AiProviderAnswerProtocol,
   AiProviderLifecycle,
   AiProviderProfile,
+  AiProviderReasoningMode,
   type Prisma,
 } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { activateAiProviderRevision } from "./ai-provider.repository.activation.js";
+import {
+  type AiProviderPreparationUpdate,
+  createDraftRecord,
+  type NewAiProviderRevision,
+  setTestResultRecord,
+  updateProgressRecord,
+} from "./ai-provider.repository.commands.js";
+import {
+  completeCompatibilityExecution,
+  createOrReuseProviderExecution,
+  getCompatibilityExecution,
+  type ProviderExecutionRequest,
+  startCompatibilityExecution,
+  updateProviderExecutionIdentity,
+} from "./ai-provider.repository.executions.js";
 import {
   aiProviderControlInclude,
   type AiProviderControlRecord,
   type AiProviderRevisionRecord,
   aiProviderRevisionSelect,
 } from "./ai-provider.repository.select.js";
-import type { EncryptedCredential } from "./credential-codec.js";
+
+export type { NewAiProviderRevision } from "./ai-provider.repository.commands.js";
 
 export type StoredAiProviderRevision = Readonly<{
   id: string;
-  profile: AiProviderProfile;
-  baseUrl: string;
-  endpointIdentity: string;
+  generationProfile: AiProviderProfile;
+  generationBaseUrl: string;
+  generationEndpointIdentity: string;
   plannerModel: string;
   answerModel: string;
+  reasoningMode: AiProviderReasoningMode;
+  reasoningCustomValue: string | null;
+  answerProtocol: AiProviderAnswerProtocol | null;
+  generationCredentialCiphertext: string;
+  generationCredentialNonce: string;
+  generationCredentialTag: string;
+  generationCredentialKeyVersion: number;
+  generationCredentialMaskedSuffix: string;
+  embeddingMode: "reuse_generation" | "separate";
+  embeddingProfile: AiProviderProfile | null;
+  embeddingBaseUrl: string | null;
+  embeddingEndpointIdentity: string | null;
   embeddingModel: string;
   embeddingDimensions: number | null;
+  embeddingCredentialCiphertext: string | null;
+  embeddingCredentialNonce: string | null;
+  embeddingCredentialTag: string | null;
+  embeddingCredentialKeyVersion: number | null;
+  embeddingCredentialMaskedSuffix: string | null;
   semanticInputVersion: string;
-  credentialCiphertext: string;
-  credentialNonce: string;
-  credentialTag: string;
-  credentialKeyVersion: number;
-  credentialMaskedSuffix: string;
+  generationCompatibilityIdentity: string;
+  embeddingScopeIdentity: string;
+  compositeTestIdentity: string;
   lifecycle: AiProviderLifecycle;
   testResult: Prisma.JsonValue | null;
+  latestExecution?: Readonly<{
+    id: string;
+    state: "queued" | "running" | "completed";
+    outcome:
+      "passed" | "incompatible" | "configuration_error" | "inconclusive" | null;
+    failureCode: string | null;
+    checks: Prisma.JsonValue | null;
+    requestedAt: Date;
+    startedAt: Date | null;
+    completedAt: Date | null;
+  }> | null;
   testedAt: Date | null;
   preparationCompleted: number;
   preparationTotal: number;
@@ -56,21 +100,12 @@ export type StoredAiProviderControl = Readonly<{
   revisions: readonly StoredAiProviderRevision[];
 }>;
 
-export type NewAiProviderRevision = Readonly<{
-  profile: AiProviderProfile;
-  baseUrl: string;
-  endpointIdentity: string;
-  plannerModel: string;
-  answerModel: string;
-  embeddingModel: string;
-  embeddingDimensions: number | null;
-  semanticInputVersion: string;
-  credential: EncryptedCredential;
-}>;
-
 const toRevision = (
   value: AiProviderRevisionRecord,
-): StoredAiProviderRevision => value;
+): StoredAiProviderRevision => ({
+  ...value,
+  latestExecution: value.compatibilityExecutions[0] ?? null,
+});
 
 const toControl = (
   value: AiProviderControlRecord,
@@ -121,119 +156,101 @@ export class AiProviderConfigurationRepository {
   async createDraft(
     input: NewAiProviderRevision,
   ): Promise<StoredAiProviderRevision> {
-    const revision = await this.prisma.$transaction(async (transaction) => {
-      const created = await transaction.aiProviderConfiguration.create({
-        data: {
-          id: randomUUID(),
-          profile: input.profile,
-          baseUrl: input.baseUrl,
-          endpointIdentity: input.endpointIdentity,
-          plannerModel: input.plannerModel,
-          answerModel: input.answerModel,
-          embeddingModel: input.embeddingModel,
-          embeddingDimensions: input.embeddingDimensions,
-          semanticInputVersion: input.semanticInputVersion,
-          credentialCiphertext: input.credential.ciphertext,
-          credentialNonce: input.credential.nonce,
-          credentialTag: input.credential.tag,
-          credentialKeyVersion: input.credential.keyVersion,
-          credentialMaskedSuffix: input.credential.maskedSuffix,
-        },
-        select: aiProviderRevisionSelect,
-      });
-      await transaction.aiProviderControl.upsert({
-        where: { id: "singleton" },
-        update: {},
-        create: { id: "singleton" },
-      });
-      return created;
-    });
-    return toRevision(revision);
+    return toRevision(await createDraftRecord(this.prisma, input));
   }
 
   async setTestResult(
     id: string,
     result: Prisma.InputJsonValue,
-    passed: boolean,
+    status: AiProviderCapabilityTestResult["status"],
     embeddingDimensions: number | null,
     testedAt: Date,
     currentLifecycle: AiProviderLifecycle,
+    identities:
+      | Readonly<{
+          generationCompatibilityIdentity: string;
+          embeddingScopeIdentity: string;
+          compositeTestIdentity: string;
+        }>
+      | undefined = undefined,
   ): Promise<StoredAiProviderRevision> {
-    const revision = await this.prisma.aiProviderConfiguration.update({
-      where: { id },
-      data: {
-        lifecycle:
-          currentLifecycle === AiProviderLifecycle.active
-            ? AiProviderLifecycle.active
-            : passed
-              ? AiProviderLifecycle.validated
-              : AiProviderLifecycle.failed,
-        testResult: result,
+    return toRevision(
+      await setTestResultRecord(this.prisma, {
+        id,
+        result,
+        status,
         embeddingDimensions,
         testedAt,
-      },
-      select: aiProviderRevisionSelect,
-    });
-    return toRevision(revision);
+        currentLifecycle,
+        ...identities,
+      }),
+    );
+  }
+
+  async createOrReuseProviderExecution(
+    revisionId: string,
+    input: ProviderExecutionRequest,
+  ): Promise<Readonly<{ id: string; created: boolean }>> {
+    return createOrReuseProviderExecution(this.prisma, revisionId, input);
+  }
+
+  async startExecution(id: string): Promise<boolean> {
+    return startCompatibilityExecution(this.prisma, id);
+  }
+
+  async updateExecutionIdentity(
+    id: string,
+    identity: string,
+    revisionId: string,
+  ): Promise<boolean> {
+    return updateProviderExecutionIdentity(
+      this.prisma,
+      id,
+      identity,
+      revisionId,
+    );
+  }
+
+  async completeExecution(
+    id: string,
+    outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
+    failureCode: string | null = null,
+    checks: Prisma.InputJsonValue = [],
+  ): Promise<void> {
+    await completeCompatibilityExecution(
+      this.prisma,
+      id,
+      outcome,
+      failureCode,
+      checks,
+    );
+  }
+
+  async getExecution(id: string): Promise<Readonly<{
+    providerRevisionId: string;
+    promptRevisionId: string | null;
+    featureKey: string | null;
+    kind: "provider_test" | "prompt_evaluation";
+  }> | null> {
+    return getCompatibilityExecution(this.prisma, id);
   }
 
   async updateProgress(
     id: string,
-    progress: Readonly<{
-      completed: number;
-      total: number;
-      failed: number;
-      elapsedMs: number;
-      startedAt: Date | null;
-      finishedAt: Date | null;
-      lifecycle?: AiProviderLifecycle;
-    }>,
+    progress: AiProviderPreparationUpdate,
   ): Promise<StoredAiProviderRevision> {
-    const revision = await this.prisma.aiProviderConfiguration.update({
-      where: { id },
-      data: {
-        preparationCompleted: progress.completed,
-        preparationTotal: progress.total,
-        preparationFailed: progress.failed,
-        preparationElapsedMs: progress.elapsedMs,
-        preparationStartedAt: progress.startedAt,
-        preparationFinishedAt: progress.finishedAt,
-        ...(progress.lifecycle ? { lifecycle: progress.lifecycle } : {}),
-      },
-      select: aiProviderRevisionSelect,
-    });
-    return toRevision(revision);
+    return toRevision(await updateProgressRecord(this.prisma, id, progress));
   }
 
-  async activateRevision(id: string, now: Date): Promise<void> {
-    await this.prisma.$transaction(async (transaction) => {
-      const control = await transaction.aiProviderControl.upsert({
-        where: { id: "singleton" },
-        update: {},
-        create: { id: "singleton" },
-        select: { activeConfigurationId: true },
-      });
-      if (
-        control.activeConfigurationId &&
-        control.activeConfigurationId !== id
-      ) {
-        await transaction.aiProviderConfiguration.update({
-          where: { id: control.activeConfigurationId },
-          data: {
-            lifecycle: AiProviderLifecycle.superseded,
-            supersededAt: now,
-          },
-        });
-      }
-      await transaction.aiProviderConfiguration.update({
-        where: { id },
-        data: { lifecycle: AiProviderLifecycle.active, activatedAt: now },
-      });
-      await transaction.aiProviderControl.update({
-        where: { id: "singleton" },
-        data: { activeConfigurationId: id, enabled: true },
-      });
-    });
+  async activateRevision(
+    id: string,
+    now: Date,
+    options: Readonly<{
+      allowBootstrap?: boolean;
+      promptEvaluatorVersions?: Readonly<Record<string, string>>;
+    }> = {},
+  ): Promise<boolean> {
+    return activateAiProviderRevision(this.prisma, id, now, options);
   }
 
   async disable(): Promise<void> {
@@ -242,5 +259,17 @@ export class AiProviderConfigurationRepository {
       update: { enabled: false },
       create: { id: "singleton", enabled: false },
     });
+  }
+
+  async discardDisposable(id: string): Promise<boolean> {
+    const result = await this.prisma.aiProviderConfiguration.deleteMany({
+      where: {
+        id,
+        lifecycle: {
+          in: [AiProviderLifecycle.draft, AiProviderLifecycle.failed],
+        },
+      },
+    });
+    return result.count === 1;
   }
 }

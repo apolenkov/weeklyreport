@@ -8,9 +8,10 @@
  * the form values and the success toast fires.
  */
 
-import type {
-  AiProviderConfigurationRead,
-  AiProviderControlRead,
+import {
+  AI_PROVIDER_PROFILE_CAPABILITIES,
+  type AiProviderConfigurationRead,
+  type AiProviderControlRead,
 } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -58,33 +59,55 @@ const DEFAULT_AI_PROVIDER = {
   enabled: false,
   availability: "not_configured" as const,
   activeRevisionId: null,
+  profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES.map(
+    ({ profile, roles }) => ({ profile, roles: [...roles] }),
+  ),
   active: null,
   revisions: [],
 };
 
 const AI_REVISION: AiProviderConfigurationRead = {
   id: "11111111-1111-4111-8111-111111111111",
-  profile: "mistral",
   lifecycle: "active",
-  baseUrl: "https://api.mistral.ai/v1",
-  plannerModel: "planner",
-  answerModel: "answer",
-  embeddingModel: "embed",
-  embeddingDimensions: 1024,
+  generation: {
+    profile: "mistral",
+    baseUrl: "https://api.mistral.ai/v1",
+    plannerModel: "planner",
+    answerModel: "answer",
+    reasoningMode: "provider_default",
+    reasoningCustomValue: null,
+    answerProtocol: "json_schema",
+    credentialConfigured: true,
+    credentialMaskedSuffix: "••••abcd",
+  },
+  embeddings: {
+    mode: "reuse_generation",
+    model: "embed",
+    dimensions: 1024,
+  },
+  generationCompatibilityIdentity: "generation-identity",
   semanticInputVersion: "report-assistant/v1",
-  credentialConfigured: true,
-  credentialMaskedSuffix: "••••abcd",
   testResult: {
     status: "passed",
-    capabilities: (
-      [
-        "authentication",
-        "planner_tool_call",
-        "structured_answer",
-        "token_usage",
-        "batch_embeddings",
-      ] as const
-    ).map((capability) => ({ capability, status: "passed" as const })),
+    generation: {
+      status: "passed",
+      answerProtocol: "json_schema",
+      capabilities: (
+        [
+          "authentication",
+          "planner_tool_call",
+          "structured_answer",
+          "token_usage",
+        ] as const
+      ).map((capability) => ({ capability, status: "passed" as const })),
+      featureCompatibility: [],
+    },
+    embeddings: {
+      status: "passed",
+      capabilities: (["authentication", "batch_embeddings"] as const).map(
+        (capability) => ({ capability, status: "passed" as const }),
+      ),
+    },
     testedAt: new Date("2026-08-10T00:00:00.000Z"),
   },
   progress: { completed: 8, total: 8, failed: 0, elapsedMs: 2500 },
@@ -97,6 +120,7 @@ const CONFIGURED_AI_PROVIDER: AiProviderControlRead = {
   enabled: true,
   availability: "available",
   activeRevisionId: AI_REVISION.id,
+  profileCapabilities: DEFAULT_AI_PROVIDER.profileCapabilities,
   active: AI_REVISION,
   revisions: [AI_REVISION],
 };
@@ -132,6 +156,9 @@ function buildProxy(
     { path: ["admin", "aiProvider", "activate"], mutation: true },
     { path: ["admin", "aiProvider", "disable"], mutation: true },
     { path: ["admin", "aiProvider", "restore"], mutation: true },
+    { path: ["admin", "aiProvider", "discard"], mutation: true },
+    { path: ["admin", "aiPrompts", "list"], query: { features: [] } },
+    { path: ["admin", "aiPrompts", "get"], query: { features: [] } },
     { path: ["auth", "me"] },
     { path: ["org", "getPublic"] },
     { path: ["weeklyReport", "get"] },
@@ -193,17 +220,27 @@ describe("SettingsTab — Identity sub-tab", () => {
     toastError.mockReset();
   });
 
-  it("renders the five tabs in the documented order", () => {
+  it("renders the six tabs in the documented order", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
     // Tab triggers all visible — Identity active by default, including
-    // the fifth «Integrations» tab.
+    // the fifth «Integrations» tab and sixth «AI» tab.
     expect(screen.getByRole("tab", { name: /identity/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /periods/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /reminders/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /notifications/i })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /integrations/i })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^ai$/i })).toBeTruthy();
+  });
+
+  it("keeps the outer Settings tablist horizontal-only", () => {
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    const tablist = screen.getByRole("tablist");
+    expect(tablist).toHaveClass("overflow-x-auto", "overflow-y-hidden");
+    expect(tablist).not.toHaveClass("overflow-y-auto");
   });
 
   it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
@@ -687,10 +724,13 @@ describe("SettingsTab — Integrations sub-tab", () => {
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
 
-    expect(await screen.findByLabelText("AI provider profile")).toBeTruthy();
-    expect(screen.getByLabelText("AI provider credential")).toBeTruthy();
+    expect(
+      await screen.findByLabelText("Generation provider profile"),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Generation credential")).toBeTruthy();
     expect(screen.queryByLabelText("Embedding dimensions")).toBeNull();
     expect(screen.getByRole("button", { name: /save draft/i })).toBeTruthy();
     expect(screen.queryByTestId("integration-badge-ai")).toBeNull();
@@ -707,27 +747,33 @@ describe("SettingsTab — Integrations sub-tab", () => {
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /toggle ai provider settings/i }),
+    );
 
     const credential = screen.getByLabelText(
-      "AI provider credential",
+      "Generation credential",
     ) as HTMLInputElement;
     expect(credential).toHaveValue("");
     expect(credential).toHaveAttribute("placeholder", "••••abcd");
     await user.selectOptions(
-      screen.getByLabelText("AI provider profile"),
+      screen.getByLabelText("Generation provider profile"),
       "custom-openai-compatible",
     );
     const endpoint = screen.getByLabelText(
-      "AI provider endpoint",
+      "Generation endpoint",
     ) as HTMLInputElement;
     expect(endpoint).not.toBeDisabled();
     await user.type(endpoint, "https://approved.example.com/v1");
     await user.click(screen.getByRole("button", { name: /save draft/i }));
 
     expect(captured["admin.aiProvider.save"]?.calls[0]).toMatchObject({
-      profile: "custom-openai-compatible",
-      baseUrl: "https://approved.example.com/v1",
+      generation: {
+        profile: "custom-openai-compatible",
+        baseUrl: "https://approved.example.com/v1",
+      },
     });
     expect(captured["admin.aiProvider.save"]?.calls[0]).not.toHaveProperty(
       "credential",
@@ -737,16 +783,22 @@ describe("SettingsTab — Integrations sub-tab", () => {
   it("keeps the active provider visible over an older validated draft", async () => {
     const active: AiProviderConfigurationRead = {
       ...AI_REVISION,
-      plannerModel: "poolside/laguna-xs-2.1:free",
-      answerModel: "poolside/laguna-xs-2.1:free",
+      generation: {
+        ...AI_REVISION.generation,
+        plannerModel: "poolside/laguna-xs-2.1:free",
+        answerModel: "poolside/laguna-xs-2.1:free",
+      },
       updatedAt: new Date("2026-08-11T10:00:00.000Z"),
     };
     const staleDraft: AiProviderConfigurationRead = {
       ...AI_REVISION,
       id: "22222222-2222-4222-8222-222222222222",
       lifecycle: "validated",
-      plannerModel: "openrouter/free",
-      answerModel: "openrouter/free",
+      generation: {
+        ...AI_REVISION.generation,
+        plannerModel: "openrouter/free",
+        answerModel: "openrouter/free",
+      },
       updatedAt: new Date("2026-08-11T09:00:00.000Z"),
       activatedAt: null,
     };
@@ -754,13 +806,18 @@ describe("SettingsTab — Integrations sub-tab", () => {
       enabled: true,
       availability: "available",
       activeRevisionId: active.id,
+      profileCapabilities: DEFAULT_AI_PROVIDER.profileCapabilities,
       active,
       revisions: [active, staleDraft],
     });
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /toggle ai provider settings/i }),
+    );
 
     expect(screen.getByLabelText("Planner model")).toHaveValue(
       "poolside/laguna-xs-2.1:free",
@@ -777,6 +834,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
       enabled: true,
       availability: "available",
       activeRevisionId: candidate.id,
+      profileCapabilities: DEFAULT_AI_PROVIDER.profileCapabilities,
       active: candidate,
       revisions: [candidate],
     };
@@ -789,7 +847,11 @@ describe("SettingsTab — Integrations sub-tab", () => {
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /toggle ai provider settings/i }),
+    );
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     await user.click(
@@ -822,13 +884,22 @@ describe("SettingsTab — Integrations sub-tab", () => {
       lifecycle: "failed",
       testResult: {
         status: "failed",
-        capabilities: [
-          {
-            capability: "planner_tool_call",
-            status: "failed",
-            failureCode: "OpenAiCompatibleProtocolError",
-          },
-        ],
+        generation: {
+          status: "failed",
+          answerProtocol: null,
+          capabilities: [
+            {
+              capability: "planner_tool_call",
+              status: "failed",
+              failureCode: "OpenAiCompatibleProtocolError",
+            },
+          ],
+          featureCompatibility: [],
+        },
+        embeddings: {
+          status: "failed",
+          capabilities: [],
+        },
         testedAt: new Date("2026-08-11T00:00:00.000Z"),
       },
     };
@@ -840,14 +911,15 @@ describe("SettingsTab — Integrations sub-tab", () => {
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
     await user.click(
       screen.getByRole("button", { name: /test capabilities/i }),
     );
 
     expect(
       await screen.findByText(
-        "Planner tool call: The provider response is incompatible.",
+        "Generation · Planner tool call: The provider response is incompatible.",
       ),
     ).toBeTruthy();
     expect(screen.queryByText("OpenAiCompatibleProtocolError")).toBeNull();
@@ -870,6 +942,7 @@ describe("SettingsTab — Integrations sub-tab", () => {
       enabled: false,
       availability: "not_configured",
       activeRevisionId: null,
+      profileCapabilities: DEFAULT_AI_PROVIDER.profileCapabilities,
       active: null,
       revisions: [preparingRevision, retainedRevision],
     });
@@ -879,7 +952,8 @@ describe("SettingsTab — Integrations sub-tab", () => {
     renderSettings(proxy);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
+    await user.click(screen.getByRole("tab", { name: /^ai$/i }));
+    await user.click(screen.getByRole("tab", { name: /^provider$/i }));
     expect(screen.getByTestId("ai-preparation-progress")).toHaveTextContent(
       "3/10 complete; 1 failed; elapsed 4200 ms",
     );

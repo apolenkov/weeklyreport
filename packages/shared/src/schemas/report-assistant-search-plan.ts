@@ -17,6 +17,7 @@ const MAX_DECISION_TIMINGS = 6;
 const MAX_CANONICAL_STATUSES = 4;
 const MAX_PRIORITY_RANK = 100;
 const MAX_REQUESTED_LIMIT = 200;
+const DEFAULT_PUBLISHED_PERIOD_COUNT = 3;
 const referenceSchema = safeText({ max: 200 });
 
 const periodModeSchema = z.enum(["none", "latest", "all", "named"]);
@@ -60,76 +61,127 @@ const searchPlanBaseSchema = z
   .object({
     periods: z
       .object({
-        includeCurrent: z.boolean(),
+        includeCurrent: z.boolean().default(true),
         published: z
           .object({
-            mode: periodModeSchema,
+            mode: periodModeSchema.default("latest"),
             count: z
               .number()
               .int()
               .min(1)
               .max(MAX_PUBLISHED_PERIODS)
-              .nullable(),
-            references: referencesSchema,
+              .nullable()
+              .default(DEFAULT_PUBLISHED_PERIOD_COUNT),
+            references: referencesSchema.default([]),
           })
-          .strict(),
+          .strict()
+          .default({
+            mode: "latest",
+            count: DEFAULT_PUBLISHED_PERIOD_COUNT,
+            references: [],
+          }),
       })
-      .strict(),
+      .strict()
+      .default({
+        includeCurrent: true,
+        published: {
+          mode: "latest",
+          count: DEFAULT_PUBLISHED_PERIOD_COUNT,
+          references: [],
+        },
+      }),
     authors: z
       .object({
-        mode: authorModeSchema,
-        references: referencesSchema,
-        includeSelf: z.boolean(),
+        mode: authorModeSchema.default("self"),
+        references: referencesSchema.default([]),
+        includeSelf: z.boolean().default(true),
       })
-      .strict(),
+      .strict()
+      .default({ mode: "self", references: [], includeSelf: true }),
     subjects: z
       .object({
-        parentKinds: z.array(parentKindSchema).max(2),
-        productReferences: referencesSchema,
-        activityReferences: referencesSchema,
-        linkedActivityMode: z.enum(["exclude", "include", "only"]),
+        parentKinds: z.array(parentKindSchema).max(2).default([]),
+        productReferences: referencesSchema.default([]),
+        activityReferences: referencesSchema.default([]),
+        linkedActivityMode: z
+          .enum(["exclude", "include", "only"])
+          .default("exclude"),
       })
-      .strict(),
-    stages: z.object({ references: referencesSchema }).strict(),
-    recordKinds: z.array(recordKindSchema).max(MAX_RECORD_KINDS),
+      .strict()
+      .default({
+        parentKinds: [],
+        productReferences: [],
+        activityReferences: [],
+        linkedActivityMode: "exclude",
+      }),
+    stages: z
+      .object({ references: referencesSchema.default([]) })
+      .strict()
+      .default({ references: [] }),
+    recordKinds: z.array(recordKindSchema).max(MAX_RECORD_KINDS).default([]),
     filters: z
       .object({
-        itemTypes: z.array(itemTypeSchema).max(2),
+        itemTypes: z.array(itemTypeSchema).max(2).default([]),
         itemWorkflowStatuses: z
           .array(itemWorkflowStatusSchema)
-          .max(MAX_ITEM_WORKFLOW_STATUSES),
-        riskSeverities: z.array(riskSeveritySchema).max(2),
-        decisionStates: z.array(decisionStateSchema).max(2),
-        decisionTiming: z.array(decisionTimingSchema).max(MAX_DECISION_TIMINGS),
+          .max(MAX_ITEM_WORKFLOW_STATUSES)
+          .default([]),
+        riskSeverities: z.array(riskSeveritySchema).max(2).default([]),
+        decisionStates: z.array(decisionStateSchema).max(2).default([]),
+        decisionTiming: z
+          .array(decisionTimingSchema)
+          .max(MAX_DECISION_TIMINGS)
+          .default([]),
         canonicalHealth: z
           .array(canonicalStatusSchema)
-          .max(MAX_CANONICAL_STATUSES),
-        carriedOver: z.boolean().nullable(),
-        hasPriority: z.boolean().nullable(),
+          .max(MAX_CANONICAL_STATUSES)
+          .default([]),
+        carriedOver: z.boolean().nullable().default(null),
+        hasPriority: z.boolean().nullable().default(null),
         priorityRanks: z
           .array(z.number().int().min(1).max(MAX_PRIORITY_RANK))
-          .max(MAX_PRIORITY_RANK),
+          .max(MAX_PRIORITY_RANK)
+          .default([]),
       })
-      .strict(),
+      .strict()
+      .default({
+        itemTypes: [],
+        itemWorkflowStatuses: [],
+        riskSeverities: [],
+        decisionStates: [],
+        decisionTiming: [],
+        canonicalHealth: [],
+        carriedOver: null,
+        hasPriority: null,
+        priorityRanks: [],
+      }),
     retrieval: z
       .object({
-        mode: retrievalModeSchema,
-        semanticQuery: safeText({ max: 500 }).nullable(),
+        mode: retrievalModeSchema.default("structured"),
+        semanticQuery: safeText({ max: 500 }).nullable().default(null),
       })
-      .strict(),
+      .strict()
+      .default({ mode: "structured", semanticQuery: null }),
     output: z
       .object({
-        mode: outputModeSchema,
-        groupBy: z.array(groupingSchema).max(2),
+        mode: outputModeSchema.default("list"),
+        groupBy: z.array(groupingSchema).max(2).default([]),
         requestedLimit: z
           .number()
           .int()
           .min(1)
           .max(MAX_REQUESTED_LIMIT)
-          .nullable(),
-        exhaustive: z.boolean(),
+          .nullable()
+          .default(null),
+        exhaustive: z.boolean().default(false),
       })
-      .strict(),
+      .strict()
+      .default({
+        mode: "list",
+        groupBy: [],
+        requestedLimit: null,
+        exhaustive: false,
+      }),
   })
   .strict();
 

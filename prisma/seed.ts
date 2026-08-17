@@ -44,6 +44,7 @@ import {
   assertSeedCoverage,
   stabilizeSeedRecordIdentities,
 } from "./seed-coverage-check.js";
+import { seedAiPromptBaseline } from "./seed-ai-prompts.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -1414,6 +1415,7 @@ async function main() {
     update: { activeConfigurationId: null, enabled: false },
     create: { id: "singleton", activeConfigurationId: null, enabled: false },
   });
+  await seedAiPromptBaseline(prisma);
 
   // --- 9. Organization singleton ---
   // The migration seeds this row on first apply with ON CONFLICT DO NOTHING.

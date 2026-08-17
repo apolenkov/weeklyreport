@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ReportAssistantProviderError } from "../application/report-assistant.ports.js";
 import {
@@ -15,11 +15,15 @@ const config = (fetcher: OpenAiCompatibleFetch) => ({
 });
 
 describe("OpenAiCompatibleTransport", () => {
-  it("uses bounded POST requests with redirects disabled and normalizes usage", async () => {
+  it("uses bounded POST requests without sampling overrides and normalizes usage", async () => {
     const fetcher: OpenAiCompatibleFetch = (_input, init) => {
       expect(init?.method).toBe("POST");
       expect(init?.redirect).toBe("error");
       expect(init?.signal).toBeInstanceOf(AbortSignal);
+      const body = init?.body;
+      expect(typeof body).toBe("string");
+      if (typeof body !== "string") throw new Error("Expected JSON body");
+      expect(JSON.parse(body)).not.toHaveProperty("temperature");
       return Promise.resolve(
         new Response(
           JSON.stringify({
@@ -49,13 +53,37 @@ describe("OpenAiCompatibleTransport", () => {
   });
 
   it("classifies rate limits as retryable without returning provider bodies", async () => {
-    const fetcher: OpenAiCompatibleFetch = () =>
-      Promise.resolve(
+    const fetcher = vi
+      .fn<OpenAiCompatibleFetch>()
+      .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ error: { message: "secret provider body" } }),
-          {
-            status: 429,
-          },
+          JSON.stringify({ error: { code: "rate_limit_exceeded" } }),
+          { status: 429, headers: { "retry-after": "0" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [], usage: {} }), {
+          status: 200,
+        }),
+      );
+    const transport = new OpenAiCompatibleTransport(config(fetcher));
+
+    await expect(
+      transport.chat(
+        { model: "planner", maxTokens: 10, messages: [] },
+        "planner",
+      ),
+    ).resolves.toMatchObject({ choices: [] });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves a long Retry-After and does not retry before its reset", async () => {
+    const fetcher = vi
+      .fn<OpenAiCompatibleFetch>()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ error: { code: "rate_limit_exceeded" } }),
+          { status: 429, headers: { "retry-after": "42" } },
         ),
       );
     const transport = new OpenAiCompatibleTransport(config(fetcher));
@@ -66,9 +94,11 @@ describe("OpenAiCompatibleTransport", () => {
         "planner",
       ),
     ).rejects.toMatchObject({
+      constructor: ReportAssistantProviderError,
       statusCode: 429,
-      retryable: true,
+      retryAfterMs: 42_000,
     });
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("keeps non-retryable provider failures technical and body-free", async () => {
@@ -96,6 +126,36 @@ describe("OpenAiCompatibleTransport", () => {
         "planner",
       ),
     ).rejects.not.toThrow("secret body");
+  });
+
+  it("preserves OpenRouter typed error metadata without provider messages", async () => {
+    const fetcher: OpenAiCompatibleFetch = () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 400,
+              message: "sensitive provider detail",
+              metadata: {
+                error_type: "invalid_request",
+                provider_code: "unsupported_reasoning_effort",
+              },
+            },
+          }),
+          { status: 400 },
+        ),
+      );
+    const transport = new OpenAiCompatibleTransport(config(fetcher));
+
+    await expect(
+      transport.chat(
+        { model: "planner", maxTokens: 10, messages: [] },
+        "planner",
+      ),
+    ).rejects.toMatchObject({
+      providerCode: "unsupported_reasoning_effort",
+      statusCode: 400,
+    });
   });
 
   it("rejects malformed successful provider payloads", async () => {

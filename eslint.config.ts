@@ -64,6 +64,7 @@ const functionalPlugin = functional as unknown as ESLint.Plugin;
 const apiModulesDir = "apps/api/src/modules";
 const apiModules = [
   "ai-provider",
+  "ai-prompts",
   "activity",
   "admin",
   "analytics",

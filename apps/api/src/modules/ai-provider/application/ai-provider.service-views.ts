@@ -1,4 +1,7 @@
 import {
+  AI_PROVIDER_PROFILE_CAPABILITIES,
+  type AiCompatibilityExecutionRead,
+  aiCompatibilityExecutionReadSchema,
   type AiProviderAvailabilityRead,
   aiProviderAvailabilityReadSchema,
   type AiProviderCapabilityTestResult,
@@ -31,24 +34,60 @@ const safeTestResult = (
   return parsed.success ? parsed.data : null;
 };
 
+const executionRead = (
+  revision: StoredAiProviderRevision,
+): AiCompatibilityExecutionRead | null => {
+  const execution = revision.latestExecution;
+  if (!execution) return null;
+  return aiCompatibilityExecutionReadSchema.parse({
+    ...execution,
+    checks: execution.checks ?? [],
+  });
+};
+
 export const safeRevision = (
   revision: StoredAiProviderRevision,
   codec: AesGcmCredentialCodec,
 ): AiProviderConfigurationRead => {
-  const credentialMetadata = codec.metadata(credentialFrom(revision));
+  const generationCredential = codec.metadata(credentialFrom(revision));
   return aiProviderConfigurationReadSchema.parse({
     id: revision.id,
-    profile: toSharedProfile(revision.profile),
     lifecycle: revision.lifecycle,
-    baseUrl: revision.baseUrl,
-    plannerModel: revision.plannerModel,
-    answerModel: revision.answerModel,
-    embeddingModel: revision.embeddingModel,
-    embeddingDimensions: revision.embeddingDimensions,
+    generation: {
+      profile: toSharedProfile(revision.generationProfile),
+      baseUrl: revision.generationBaseUrl,
+      plannerModel: revision.plannerModel,
+      answerModel: revision.answerModel,
+      reasoningMode: revision.reasoningMode,
+      reasoningCustomValue: revision.reasoningCustomValue,
+      answerProtocol: revision.answerProtocol,
+      credentialConfigured: generationCredential.configured,
+      credentialMaskedSuffix: generationCredential.maskedSuffix,
+    },
+    embeddings:
+      revision.embeddingMode === "reuse_generation"
+        ? {
+            mode: "reuse_generation",
+            model: revision.embeddingModel,
+            dimensions: revision.embeddingDimensions,
+          }
+        : {
+            mode: "separate",
+            profile: toSharedProfile(
+              requiredEmbeddingValue(revision.embeddingProfile),
+            ),
+            baseUrl: requiredEmbeddingValue(revision.embeddingBaseUrl),
+            model: revision.embeddingModel,
+            dimensions: revision.embeddingDimensions,
+            credentialConfigured: true,
+            credentialMaskedSuffix: codec.metadata(
+              credentialFrom(revision, "embeddings"),
+            ).maskedSuffix,
+          },
+    generationCompatibilityIdentity: revision.generationCompatibilityIdentity,
     semanticInputVersion: revision.semanticInputVersion,
-    credentialConfigured: credentialMetadata.configured,
-    credentialMaskedSuffix: credentialMetadata.maskedSuffix,
     testResult: safeTestResult(revision.testResult),
+    latestExecution: executionRead(revision),
     progress: {
       completed: revision.preparationCompleted,
       total: revision.preparationTotal,
@@ -66,6 +105,7 @@ export const emptyControl = (): AiProviderControlRead =>
     enabled: false,
     availability: "not_configured",
     activeRevisionId: null,
+    profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
     active: null,
     revisions: [],
   });
@@ -82,6 +122,7 @@ export const toControl = (
         ? "available"
         : "not_configured",
     activeRevisionId: control.activeConfigurationId,
+    profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
     active: control.activeConfiguration
       ? safeRevision(control.activeConfiguration, codec)
       : null,
@@ -110,8 +151,14 @@ export const progressOf = (
 });
 
 export const completeCapabilityResult = (value: Prisma.JsonValue): boolean => {
+  return capabilityResultStatus(value) === "passed";
+};
+
+export const capabilityResultStatus = (
+  value: Prisma.JsonValue,
+): AiProviderCapabilityTestResult["status"] | null => {
   const parsed = aiProviderCapabilityTestResultSchema.safeParse(value);
-  return parsed.success && parsed.data.status === "passed";
+  return parsed.success ? parsed.data.status : null;
 };
 
 export const requireRevision = async (
@@ -125,20 +172,34 @@ export const requireRevision = async (
 
 export const resolveProfileFromRevision = (
   revision: StoredAiProviderRevision,
-): import("../domain/provider-profile.js").ResolvedProviderProfile => ({
-  profile: toSharedProfile(revision.profile),
-  baseUrl: revision.baseUrl,
-  endpointIdentity: revision.endpointIdentity,
-  plannerModel: revision.plannerModel,
-  answerModel: revision.answerModel,
-  embeddingModel: revision.embeddingModel,
-  embeddingDimensions: requiredEmbeddingDimensions(
-    revision.embeddingDimensions,
-  ),
+): import("../domain/provider-profile.js").ResolvedEmbeddingProfile => ({
+  profile:
+    revision.embeddingMode === "reuse_generation"
+      ? toSharedProfile(revision.generationProfile)
+      : toSharedProfile(requiredEmbeddingValue(revision.embeddingProfile)),
+  baseUrl:
+    revision.embeddingMode === "reuse_generation"
+      ? revision.generationBaseUrl
+      : requiredEmbeddingValue(revision.embeddingBaseUrl),
+  endpointIdentity:
+    revision.embeddingMode === "reuse_generation"
+      ? revision.generationEndpointIdentity
+      : requiredEmbeddingValue(revision.embeddingEndpointIdentity),
+  model: revision.embeddingModel,
+  dimensions: requiredEmbeddingDimensions(revision.embeddingDimensions),
   semanticInputVersion: revision.semanticInputVersion,
 });
 
-export const requiredEmbeddingDimensions = (value: number | null): number => {
+const requiredEmbeddingValue = <Value>(value: Value | null): Value => {
+  if (value === null) {
+    throw new AiProviderConfigurationError(
+      "Separate embedding connection is incomplete",
+    );
+  }
+  return value;
+};
+
+const requiredEmbeddingDimensions = (value: number | null): number => {
   if (value === null) {
     throw new AiProviderConfigurationError(
       "AI provider embedding dimensions have not been measured",

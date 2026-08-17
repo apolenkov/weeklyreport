@@ -1,5 +1,11 @@
 # LLM Report Assistant
 
+AI administration lives in **Settings → AI**. **Overview** shows safe provider
+and registered-feature readiness, **Provider** owns the global provider
+lifecycle, and **Features** owns immutable feature-scoped prompt bundles. The
+external **Integrations** surface contains only external or roadmapped
+services such as Element.
+
 Этот раздел описывает встроенный помощник для Lead в Weekly Report. Он отвечает
 на вопросы о доступных пользователю отчётах: черновике текущей недели и
 опубликованной истории. Помощник не является источником данных и не имеет
@@ -21,8 +27,8 @@
 Такой порядок важен: модель не выбирает SQL, идентификаторы, права, период или
 источник данных, а семантический поиск не может расширить доступный набор.
 Сбой активного провайдера не затрагивает сохранение, отправку и публикацию
-отчётов. Провайдер выбирается администратором глобально; автоматического
-failover нет.
+отчётов. Провайдер выбирается администратором глобально в Settings → AI →
+Provider; автоматического failover нет.
 
 ## С чего начать новому участнику команды
 
@@ -32,20 +38,21 @@ failover нет.
    границы web, API, PostgreSQL/pgvector, Redis/BullMQ и активного провайдера.
 3. Для правил предметной области и ограничений прочитайте
    [сводку решений](./lead-report-assistant-decision-summary.md). Точные контракты
-   запроса и промптов находятся рядом; они нужны при изменении API или адаптеров.
+   запроса и prompt lifecycle находятся рядом; они нужны при изменении API,
+   адаптеров или Settings → AI.
 
 ## Карта материалов
 
-| Файл                                                 | Назначение                                                                                               |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `logical-flow.mmd`                                   | Логика обработки вопроса и исходы.                                                                       |
-| `architecture.mmd`                                   | Компоненты, хранилища и внешние границы.                                                                 |
-| `lead-report-assistant-decision-summary.md`          | Функциональные и архитектурные решения.                                                                  |
-| `lead-report-assistant-search-plan-contract.md`      | Строгий контракт `SearchPlan`.                                                                           |
-| `lead-report-assistant-prompt-contract.md`           | Версионируемые промпты planner, answer и repair.                                                         |
-| `lead-report-assistant-rollout.md`                   | Подготовка, выпуск, мониторинг и откат.                                                                  |
-| `postgres-pgvector-rollout.md`                       | Совместимость PostgreSQL/pgvector и проверка данных.                                                     |
-| `mistral-report-assistant-integration-2026-08-04.md` | Историческое исследование Mistral и privacy-требований; активный профиль теперь задаётся в Integrations. |
+| Файл                                                 | Назначение                                                                                                |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `logical-flow.mmd`                                   | Логика обработки вопроса и исходы.                                                                        |
+| `architecture.mmd`                                   | Компоненты, хранилища и внешние границы.                                                                  |
+| `lead-report-assistant-decision-summary.md`          | Функциональные и архитектурные решения.                                                                   |
+| `lead-report-assistant-search-plan-contract.md`      | Строгий контракт `SearchPlan`.                                                                            |
+| `lead-report-assistant-prompt-contract.md`           | Complete versioned prompts, durable versions, evaluation, and runtime source of truth.                    |
+| `lead-report-assistant-rollout.md`                   | Подготовка, выпуск, мониторинг и откат.                                                                   |
+| `postgres-pgvector-rollout.md`                       | Совместимость PostgreSQL/pgvector и проверка данных.                                                      |
+| `mistral-report-assistant-integration-2026-08-04.md` | Историческое исследование Mistral и privacy-требований; активный профиль теперь задаётся в Settings → AI. |
 
 ## Главные инварианты
 
@@ -57,3 +64,6 @@ failover нет.
 - Ответ опирается на серверные факты, а каждая ссылка проверяется сервером.
 - Вопросы, ответы, текст отчётов, embeddings и идентификаторы не попадают в
   логи и labels метрик.
+- Runtime reads one enabled provider plus one active, exactly evaluated Report
+  Assistant bundle under a repeatable-read snapshot. Missing or corrupt state
+  returns `ai_not_configured`; compiled prompt text is never a fallback.

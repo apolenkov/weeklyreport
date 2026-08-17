@@ -1,15 +1,24 @@
+import type {
+  AiProviderAnswerProtocol,
+  AiProviderReasoningMode,
+} from "@customreport/shared";
+
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import type {
+  AesGcmCredentialCodec,
   AiProviderConfigurationRepository,
   StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
-import { AesGcmCredentialCodec } from "../../ai-provider/index.js";
+import type { AiComposedPromptSet } from "./ai-feature-prompt-catalog.js";
 import {
-  OpenAiCompatibleAnswerAdapter,
-  OpenAiCompatibleEmbeddingAdapter,
-  OpenAiCompatiblePlannerAdapter,
-} from "../infrastructure/openai-compatible.adapters.js";
-import { OpenAiCompatibleTransport } from "../infrastructure/openai-compatible.transport.js";
+  baselineReportAssistantPrompts,
+  REPORT_ASSISTANT_FEATURE_KEY,
+} from "./ai-feature-prompt-catalog.js";
+import {
+  createRuntimeClients,
+  type RuntimeClients,
+} from "./ai-runtime.clients.js";
+import type { AiRuntimeConfigurationRepository } from "./ai-runtime-configuration.repository.js";
 import type {
   EmbeddingPort,
   ReportAssistantAnswerPort,
@@ -24,13 +33,17 @@ import type {
 import type { SemanticIndexEnqueuer } from "./semantic-index.enqueuer.js";
 import { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
-const requiredEmbeddingDimensions = (value: number | null): number => {
-  if (value === null) throw new AiRuntimeNotConfiguredError();
-  return value;
-};
-
 export type AiRuntimeSnapshot = Readonly<{
   revisionId: string;
+  generationCompatibilityIdentity: string;
+  embeddingScopeIdentity: string;
+  featureKey: string | null;
+  promptRevisionId: string | null;
+  coreContractVersion: string | null;
+  prompts: AiComposedPromptSet | null;
+  reasoningMode: AiProviderReasoningMode;
+  reasoningCustomValue: string | null;
+  answerProtocol: AiProviderAnswerProtocol | null;
   planner: ReportAssistantPlannerPort & ReportAssistantPlannerRepairPort;
   answerer: ReportAssistantAnswerPort & ReportAssistantCitationRepairPort;
   embeddings: EmbeddingPort;
@@ -43,19 +56,6 @@ export type AiRuntimeResolverPort = Readonly<{
   resolveActive(): Promise<AiRuntimeSnapshot | null>;
   resolveExact(revisionId: string): Promise<AiRuntimeSnapshot>;
 }>;
-
-type RuntimeClients = Readonly<{
-  planner: ReportAssistantPlannerPort & ReportAssistantPlannerRepairPort;
-  answerer: ReportAssistantAnswerPort & ReportAssistantCitationRepairPort;
-  embeddings: EmbeddingPort;
-  scope: SemanticEmbeddingScope;
-  model: string;
-}>;
-
-const toSharedProfile = (profile: StoredAiProviderRevision["profile"]) =>
-  profile === "custom_openai_compatible"
-    ? ("custom-openai-compatible" as const)
-    : profile;
 
 export class AiRuntimeNotConfiguredError extends Error {
   constructor() {
@@ -82,92 +82,91 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       | "REPORT_ASSISTANT_SIMILARITY_THRESHOLD"
       | "REPORT_ASSISTANT_READ_THROUGH_LIMIT"
     >,
+    _configurationRepository?: Pick<
+      AiRuntimeConfigurationRepository,
+      "resolveReportAssistant"
+    >,
   ) {}
 
   async resolveActive(): Promise<AiRuntimeSnapshot | null> {
     const control = await this.repository.getControl();
     const active = control?.activeConfiguration;
-    if (control?.enabled !== true || active?.lifecycle !== "active") {
-      return null;
-    }
-    return this.resolveRevision(active);
+    return control?.enabled === true && active?.lifecycle === "active"
+      ? (() => {
+          const prompts = baselineReportAssistantPrompts();
+          return this.resolveRevision(
+            active,
+            prompts,
+            REPORT_ASSISTANT_FEATURE_KEY,
+            null,
+            prompts.coreContractVersion,
+          );
+        })()
+      : null;
   }
 
   async resolveExact(revisionId: string): Promise<AiRuntimeSnapshot> {
     const revision = await this.repository.getRevision(revisionId);
     if (!revision) throw new AiRuntimeNotConfiguredError();
-    return this.resolveRevision(revision);
+    return this.resolveRevision(revision, null, null, null, null);
   }
 
   private resolveRevision(
     revision: StoredAiProviderRevision,
+    prompts: AiComposedPromptSet | null,
+    featureKey: string | null,
+    promptRevisionId: string | null,
+    coreContractVersion: string | null,
   ): AiRuntimeSnapshot {
+    // Exact embedding workers intentionally have no generation prompts. The
+    // active assistant uses code-owned prompts, so promptRevisionId is null in
+    // both cases and cannot distinguish their client sets.
+    const promptIdentity = prompts
+      ? `prompt:${prompts.contentHash}`
+      : "embedding-only";
+    const cacheKey = [
+      revision.id,
+      promptIdentity,
+      revision.generationCompatibilityIdentity,
+      revision.embeddingScopeIdentity,
+    ].join(":");
     const clients =
-      this.clients.get(revision.id) ?? this.createClients(revision);
-    this.clients.set(revision.id, clients);
-    const semanticRetrieval = new SemanticRetrievalService(
-      clients.embeddings,
-      this.semanticRepository,
-      {
-        configurationRevisionId: revision.id,
-        scope: clients.scope,
-        similarityThreshold: this.env.REPORT_ASSISTANT_SIMILARITY_THRESHOLD,
-        readThroughLimit: this.env.REPORT_ASSISTANT_READ_THROUGH_LIMIT,
-        enqueuer: this.semanticEnqueuer,
-      },
-    );
+      this.clients.get(cacheKey) ??
+      createRuntimeClients(
+        revision,
+        prompts,
+        this.codec,
+        this.env,
+        () => new AiRuntimeNotConfiguredError(),
+      );
+    this.clients.set(cacheKey, clients);
     return {
       revisionId: revision.id,
+      generationCompatibilityIdentity: revision.generationCompatibilityIdentity,
+      embeddingScopeIdentity: revision.embeddingScopeIdentity,
+      featureKey,
+      promptRevisionId,
+      coreContractVersion,
+      prompts,
+      reasoningMode: revision.reasoningMode,
+      reasoningCustomValue: revision.reasoningCustomValue,
+      answerProtocol: "json_object",
       planner: clients.planner,
       answerer: clients.answerer,
       embeddings: clients.embeddings,
-      semanticRetrieval,
+      semanticRetrieval: new SemanticRetrievalService(
+        clients.embeddings,
+        this.semanticRepository,
+        {
+          configurationRevisionId: revision.id,
+          scope: clients.scope,
+          similarityThreshold: this.env.REPORT_ASSISTANT_SIMILARITY_THRESHOLD,
+          readThroughLimit: this.env.REPORT_ASSISTANT_READ_THROUGH_LIMIT,
+          enqueuer: this.semanticEnqueuer,
+        },
+      ),
       scope: clients.scope,
       model: clients.model,
-    };
-  }
-
-  private createClients(revision: StoredAiProviderRevision): RuntimeClients {
-    const embeddingDimensions = requiredEmbeddingDimensions(
-      revision.embeddingDimensions,
-    );
-    const credential = this.codec.decrypt({
-      ciphertext: revision.credentialCiphertext,
-      nonce: revision.credentialNonce,
-      tag: revision.credentialTag,
-      keyVersion: revision.credentialKeyVersion,
-      maskedSuffix: revision.credentialMaskedSuffix,
-    });
-    const transport = new OpenAiCompatibleTransport({
-      baseUrl: revision.baseUrl,
-      credential,
-      timeoutMs: this.env.REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS,
-    });
-    const planner = new OpenAiCompatiblePlannerAdapter(transport, {
-      model: revision.plannerModel,
-      maxTokens: this.env.REPORT_ASSISTANT_PLANNER_MAX_TOKENS,
-    });
-    const answerer = new OpenAiCompatibleAnswerAdapter(transport, {
-      model: revision.answerModel,
-      maxTokens: this.env.REPORT_ASSISTANT_ANSWER_MAX_TOKENS,
-    });
-    const embeddings = new OpenAiCompatibleEmbeddingAdapter(transport, {
-      model: revision.embeddingModel,
-      dimensions: embeddingDimensions,
-      batchSize: this.env.REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE,
-      tokenBudget: this.env.REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET,
-    });
-    return {
-      planner,
-      answerer,
-      embeddings,
-      scope: {
-        provider: revision.endpointIdentity,
-        model: revision.embeddingModel,
-        inputVersion: revision.semanticInputVersion,
-        dimensions: embeddingDimensions,
-      },
-      model: `${toSharedProfile(revision.profile)}:${revision.answerModel}`,
     };
   }
 }

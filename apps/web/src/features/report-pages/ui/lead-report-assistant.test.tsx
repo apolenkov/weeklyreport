@@ -236,4 +236,21 @@ describe("LeadReportAssistant", () => {
       await screen.findByText(new RegExp(message, "u")),
     ).toBeInTheDocument();
   });
+
+  it("explains provider throttling instead of blaming the connection", async () => {
+    const mutation = renderAssistant();
+    mutation.mutationFn.mockResolvedValue({
+      kind: "provider_unavailable",
+      rateLimit: { retryAfterSeconds: 42 },
+    });
+    await openAssistant();
+    submitQuestion();
+
+    expect(
+      await screen.findByText(/rate limit.*42 seconds/iu),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Check your connection/iu),
+    ).not.toBeInTheDocument();
+  });
 });

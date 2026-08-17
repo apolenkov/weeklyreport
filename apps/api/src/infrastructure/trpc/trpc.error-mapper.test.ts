@@ -12,6 +12,11 @@ import {
   AdminUserConflictError,
 } from "../../modules/admin/index.js";
 import {
+  AiPromptConfigurationError,
+  AiPromptConflictError,
+  AiPromptNotFoundError,
+} from "../../modules/ai-prompts/index.js";
+import {
   AiProviderConfigurationError,
   AiProviderNotFoundError,
   CredentialCodecError,
@@ -387,6 +392,22 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "ProviderUrlPolicyError",
       make: () => new ProviderUrlPolicyError("m"),
       code: "BAD_REQUEST",
+    },
+    {
+      name: "AiPromptConfigurationError",
+      make: () => new AiPromptConfigurationError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AiPromptConflictError",
+      make: () => new AiPromptConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AiPromptNotFoundError",
+      make: () => new AiPromptNotFoundError(),
+      code: "NOT_FOUND",
+      message: "AI prompt revision was not found",
     },
     {
       name: "SectionVersionConflictError",

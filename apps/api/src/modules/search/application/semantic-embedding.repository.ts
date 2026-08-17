@@ -2,6 +2,7 @@ import type { EmbeddingVector } from "./report-assistant.ports.js";
 
 export type SemanticEmbeddingScope = Readonly<{
   provider: string;
+  embeddingScopeIdentity?: string;
   model: string;
   inputVersion: string;
   dimensions: number;

@@ -51,6 +51,7 @@ import {
 } from "@prisma/client";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import { stabilizeSeedRecordIdentities } from "./seed-coverage-check.js";
+import { seedAiPromptBaseline } from "./seed-ai-prompts.js";
 import {
   ADMIN_EMAIL,
   HEAD_EMAIL,
@@ -398,6 +399,7 @@ async function main() {
     update: { activeConfigurationId: null, enabled: false },
     create: { id: "singleton", activeConfigurationId: null, enabled: false },
   });
+  await seedAiPromptBaseline(prisma);
 
   console.log("[seed-simple] Creating users (RU names)...");
   await prisma.user.createMany({

@@ -11,6 +11,11 @@ import {
   AdminUserConflictError,
 } from "../../modules/admin/index.js";
 import {
+  AiPromptConfigurationError,
+  AiPromptConflictError,
+  AiPromptNotFoundError,
+} from "../../modules/ai-prompts/index.js";
+import {
   AiProviderConfigurationError,
   AiProviderNotFoundError,
   CredentialCodecError,
@@ -74,6 +79,9 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [AiProviderNotFoundError, "NOT_FOUND"],
   [CredentialCodecError, "BAD_REQUEST"],
   [ProviderUrlPolicyError, "BAD_REQUEST"],
+  [AiPromptConfigurationError, "BAD_REQUEST"],
+  [AiPromptConflictError, "CONFLICT"],
+  [AiPromptNotFoundError, "NOT_FOUND"],
   // A section-write version conflict is a concurrency clash, not a validation
   // failure — CONFLICT (409) so the client reloads and retries, distinct from
   // the ReportSectionDomainError BAD_REQUEST below.

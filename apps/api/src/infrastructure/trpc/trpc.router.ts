@@ -12,6 +12,7 @@ import type {
   SnapshotAdminService,
 } from "../../modules/admin/index.js";
 import type { SessionRevocationService } from "../../modules/admin/index.js";
+import type { AiPromptService } from "../../modules/ai-prompts/index.js";
 import type { AiProviderConfigurationService } from "../../modules/ai-provider/index.js";
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
@@ -177,6 +178,7 @@ interface RouterDeps {
   actionLogService?: ActionLogService;
   /** Admin-only database-backed AI control plane. */
   aiProviderService?: AiProviderConfigurationService;
+  aiPromptService?: AiPromptService;
 }
 
 export function createAppRouter(deps: RouterDeps) {
