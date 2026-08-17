@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { observeActionNavigation } from "../../replay/control-actions/action-navigation-boundary.ts";
+import type { LiveControlObservation } from "../../replay/live-control/live-control-planning.ts";
 import type { Action } from "../../source/contracts.ts";
 import { createCapacitySurveyTiming } from "../capacity/preflight-capacity-survey-timing.ts";
 import { settleUnchangedRevealAction } from "./playwright-reveal-navigation.ts";
@@ -14,7 +15,10 @@ const action: Action = {
   transition: "open",
 };
 
-const runSettledAction = async (enabled: boolean) => {
+const runSettledAction = async (
+  enabled: boolean,
+  outcome?: Readonly<{ readonly observation?: LiveControlObservation }>,
+) => {
   let nowMs = 0;
   const events: string[] = [];
   const timing = createCapacitySurveyTiming({
@@ -51,7 +55,13 @@ const runSettledAction = async (enabled: boolean) => {
   };
 
   await timing.span("action", () =>
-    settleUnchangedRevealAction({ action, observer, page, timing }),
+    settleUnchangedRevealAction({
+      action,
+      observer,
+      ...(outcome === undefined ? {} : { outcome }),
+      page,
+      timing,
+    }),
   );
   return { events, snapshot: timing.snapshot() };
 };
@@ -89,5 +99,64 @@ describe("reveal navigation timing parity", () => {
     );
     expect(disabled.snapshot.actionRevealReadyCount).toBe(0);
     expect(disabled.snapshot.actionNavigationBoundaryCount).toBe(0);
+  });
+
+  it("skips navigation grace for a stable DOM outcome after reveal readiness", async () => {
+    const { events } = await runSettledAction(true, {
+      observation: { kind: "dom", detail: "Live DOM or control state changed" },
+    });
+
+    expect(events).toEqual(["waitForFunction", "waitForFunction", "cancel"]);
+  });
+
+  it.each(["url", "network", "focus"] as const)(
+    "keeps navigation grace for a stable %s outcome",
+    async (kind) => {
+      const { events } = await runSettledAction(true, {
+        observation: { kind, detail: `${kind} observation` },
+      });
+
+      expect(events).toContain("waitForURL");
+    },
+  );
+
+  it("settles URL drift during reveal readiness despite a DOM outcome", async () => {
+    const state = { url: SOURCE_URL };
+    const waitForFunction = vi.fn(() => {
+      state.url = "https://runtime.invalid/reports/next";
+      return Promise.resolve();
+    });
+    const waitForNavigation = vi.fn(() => Promise.resolve(true));
+    const waitForLoadState = vi.fn(() => Promise.resolve());
+    const observer = {
+      cancel: vi.fn(),
+      initialUrl: SOURCE_URL,
+      waitForNavigation,
+    };
+    const page = {
+      goto: () => Promise.resolve(null),
+      url: () => state.url,
+      waitForFunction,
+      waitForLoadState,
+      waitForURL: vi.fn(() => Promise.resolve()),
+    };
+
+    await settleUnchangedRevealAction({
+      action,
+      observer,
+      outcome: {
+        observation: {
+          kind: "dom",
+          detail: "Live DOM or control state changed",
+        },
+      },
+      page,
+    });
+
+    expect(waitForNavigation).toHaveBeenCalledOnce();
+    expect(waitForLoadState).toHaveBeenCalledWith("networkidle", {
+      timeout: 3000,
+    });
+    expect(observer.cancel).not.toHaveBeenCalled();
   });
 });

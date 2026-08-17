@@ -145,6 +145,7 @@ export const observerFor = (
   options: Readonly<{
     readonly control?: ControlActionTarget;
     readonly allowIdempotent?: boolean;
+    readonly onObservation?: (observation: LiveControlObservation) => void;
     readonly requireMeaningfulFocus?: boolean;
   }> = {},
 ): (() => Promise<"pass" | "fail">) => {
@@ -166,7 +167,9 @@ export const observerFor = (
         ? { requireMeaningfulFocus: true }
         : {},
     );
-    return observed === undefined ? "fail" : "pass";
+    if (observed === undefined) return "fail";
+    options.onObservation?.(observed);
+    return "pass";
   };
 };
 

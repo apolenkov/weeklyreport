@@ -3,26 +3,23 @@ import type { Page } from "@playwright/test";
 import {
   expectedActionNavigationFor,
   observeActionNavigation,
-  settleActionNavigation,
 } from "../../replay/control-actions/action-navigation-boundary.ts";
 import { executeControlAction } from "../../replay/control-actions/control-actions.ts";
 import { targetLocator } from "../../replay/control-target/rendered-control-target.ts";
 import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
 import { snapshotPage } from "../../replay/live-control/live-control-observation.ts";
+import type { LiveControlObservation } from "../../replay/live-control/live-control-planning.ts";
 import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
-import { waitForAppReady } from "../../replay/navigation.ts";
-import {
-  representativeInputForFill,
-  type RevealRepresentativeInput,
-} from "../reveal/interaction/preflight-reveal-transition.ts";
+import type { RevealRepresentativeInput } from "../reveal/interaction/preflight-reveal-transition.ts";
+import { representativeInputForFill } from "../reveal/interaction/preflight-reveal-transition.ts";
 import type {
   RevealExecution,
   RevealExecutionHarness,
 } from "../reveal/interaction/preflight-reveal-types.ts";
-import { settleUnchangedRevealAction } from "./playwright-reveal-navigation.ts";
+import { settleRevealActionNavigation } from "./playwright-reveal-navigation.ts";
 import { captureRevealExecutionObservation } from "./playwright-reveal-observation.ts";
 
 const REVEAL_TIMEOUT_MS = 10_000;
@@ -154,6 +151,7 @@ const executeRevealAction = async (input: {
     input.page,
     currentLocation ? undefined : expectedNavigation,
   );
+  const observedOutcomes: LiveControlObservation[] = [];
   const execution = await executeControlAction({
     page: input.page,
     control: target,
@@ -163,7 +161,13 @@ const executeRevealAction = async (input: {
       action.operation,
       before,
       REVEAL_TIMEOUT_MS,
-      { control: target, allowIdempotent: true },
+      {
+        control: target,
+        allowIdempotent: true,
+        onObservation: (observation) => {
+          observedOutcomes.push(observation);
+        },
+      },
     ),
     timeoutMs: REVEAL_TIMEOUT_MS,
   });
@@ -171,27 +175,12 @@ const executeRevealAction = async (input: {
     throw new Error(
       `Reveal action did not reach terminal pass: ${action.controlKey}`,
     );
-  if (currentLocation) {
-    navigationObserver.cancel();
-    return waitForAppReady(input.page);
-  }
-  if (
-    expectedNavigation !== undefined ||
-    input.page.url() !== navigationObserver.initialUrl
-  ) {
-    const navigation = await settleActionNavigation(
-      input.page,
-      navigationObserver,
-      undefined,
-      expectedNavigation,
-    );
-    if (navigation.status === "failed")
-      throw new Error(`Reveal action navigation failed: ${navigation.reason}`);
-    return;
-  }
-  await settleUnchangedRevealAction({
+  await settleRevealActionNavigation({
     action,
+    currentLocation,
+    expectedNavigation,
     observer: navigationObserver,
+    observation: observedOutcomes.at(0),
     page: input.page,
     timing: input.actionInput.timing,
   });
