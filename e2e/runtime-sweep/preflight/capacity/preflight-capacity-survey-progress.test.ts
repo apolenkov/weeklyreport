@@ -5,6 +5,7 @@ import {
   CAPACITY_SURVEY_PROGRESS_INTERVAL,
   createCapacitySurveyProgressReporter,
 } from "./preflight-capacity-survey-progress.ts";
+import { createCapacitySurveyTiming } from "./preflight-capacity-survey-timing.ts";
 
 const progressFor = (
   completedCandidateCount: number,
@@ -37,5 +38,68 @@ describe("capacity survey progress reporter", () => {
       heapUsedBytes: 123,
       rssBytes: 456,
     });
+  });
+
+  it("keeps enabled timing fields flat and omits them when disabled", async () => {
+    let nowMs = 0;
+    const enabledTiming = createCapacitySurveyTiming({
+      enabled: true,
+      now: () => nowMs,
+    });
+    enabledTiming.beginCandidateQueue();
+    await enabledTiming.span("navigate", () => {
+      nowMs += 5;
+      return Promise.resolve();
+    });
+    enabledTiming.endCandidateQueue();
+    const enabledWrite = vi.fn();
+    const enabledReporter = createCapacitySurveyProgressReporter({
+      memoryUsage: () => ({ heapUsed: 123, rss: 456 }),
+      timing: enabledTiming,
+      write: enabledWrite,
+    });
+
+    enabledReporter(progressFor(CAPACITY_SURVEY_PROGRESS_INTERVAL));
+
+    const enabledPayload = JSON.parse(
+      String(enabledWrite.mock.calls[0]?.[0]),
+    ) as Record<string, unknown>;
+    const timingKeys = [
+      "capacitySurveyTimingElapsedMs",
+      "capacitySurveyTimingPrepareWallMs",
+      "capacitySurveyTimingNavigateWallMs",
+      "capacitySurveyTimingInventoryWallMs",
+      "capacitySurveyTimingFreezeWallMs",
+      "capacitySurveyTimingExecuteRevealWallMs",
+      "capacitySurveyTimingCandidateTotalWallMs",
+      "capacitySurveyTimingExternalUnionWallMs",
+      "capacitySurveyTimingPureQueueResidualWallMs",
+    ];
+    timingKeys.forEach((key) => {
+      expect(enabledPayload[key]).toEqual(expect.any(Number));
+    });
+    expect(enabledPayload.timing).toBeUndefined();
+    expect(
+      Object.values(enabledPayload).filter(
+        (value) => typeof value === "object" && value !== null,
+      ),
+    ).toEqual([]);
+
+    const disabledWrite = vi.fn();
+    const disabledReporter = createCapacitySurveyProgressReporter({
+      memoryUsage: () => ({ heapUsed: 123, rss: 456 }),
+      timing: createCapacitySurveyTiming(),
+      write: disabledWrite,
+    });
+    disabledReporter(progressFor(CAPACITY_SURVEY_PROGRESS_INTERVAL));
+    const disabledPayload = JSON.parse(
+      String(disabledWrite.mock.calls[0]?.[0]),
+    ) as Record<string, unknown>;
+    expect(
+      Object.keys(disabledPayload).filter((key) =>
+        key.startsWith("capacitySurveyTiming"),
+      ),
+    ).toEqual([]);
+    expect(disabledPayload.timing).toBeUndefined();
   });
 });
