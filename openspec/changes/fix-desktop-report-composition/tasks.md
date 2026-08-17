@@ -18,5 +18,7 @@
 
 - [x] 3.1 Add `openspec/deferred/add-slide-template-selection` with catalog, preview, persistence, export, activation, and non-goal boundaries.
 - [x] 3.2 Run focused Vitest, web typecheck, changed-file ESLint/Stylelint/Prettier, `git diff --check`, and `openspec validate fix-desktop-report-composition --strict`.
-- [ ] 3.3 Capture a fresh source-bound desktop matrix for Head History, Dashboard, Status form, Status slides Product/Leads, and the shared Lead controls.
-- [ ] 3.4 Run accessibility and interaction checks, obtain independent full-set visual review, and repeat affected captures after every source change.
+- [x] 3.3 Capture a fresh source-bound desktop matrix for Head History, Dashboard, Status form, Status slides Product/Leads, and the shared Lead controls.
+- [x] 3.4 Run accessibility and interaction checks, obtain independent full-set visual review, and repeat affected captures after every source change.
+
+Evidence: `customreport-archive/2026-08-17-desktop-showcase-8c59ef306/` binds seven `1980x1178` captures and their SHA-256 values to product commit `8c59ef306399c6bad6b6c62664bcc6ff93bc8b99` / tree `09c1a80eeb90ea1f87c4de4835956d53eba67caf`. All seven routes had `scrollY=0`, zero body overflow, zero scoped axe A/AA violations, and zero browser-console errors; Dashboard action coordinates had `0px` disclosure delta. Independent direct full-set visual review returned `APPROVE` with no blockers.

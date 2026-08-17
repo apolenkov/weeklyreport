@@ -17,6 +17,10 @@ See `proposal.md`. Runtime measurement showed Next route focus moving `main#main
 
 ## Decisions
 
+### Preserve the owner-approved Head Status composition as the desktop baseline
+
+The 2026-08-17 owner walkthrough accepted the Head Status composition as the visual baseline: restrained density, aligned geometry, compact controls, a quiet decorative background, and stable element positions without unnecessary rows. Follow-on desktop surfaces SHOULD converge on that language without mechanically duplicating the page or redesigning the accepted baseline without a concrete defect.
+
 ### Disable automatic route scroll only on desktop primary links
 
 Desktop Next links use `scroll={false}` so focus remains on the activating navigation control and `main` is not native-focus scrolled below the static header. The accessible `tabIndex={-1}` main targets and skip-link contract remain unchanged. Sticky navigation and removal of main focusability were rejected because they mask the cause or regress accessibility.
@@ -48,3 +52,5 @@ Document/Presentation remains functional in Head and hosted Lead report chrome. 
 ## Migration Plan
 
 Land one frontend/OpenSpec commit, run focused tests and desktop visual acceptance, then repeat the exact-SHA runtime sweep. Rollback is a normal commit revert; no data, configuration, flag, or credential migration exists. Period dual-state, role-coverage, and destructive-database invariants are preserved; the deferred-feature invariant is strengthened.
+
+The product implementation and visual evidence are bound to commit `8c59ef306399c6bad6b6c62664bcc6ff93bc8b99` / tree `09c1a80eeb90ea1f87c4de4835956d53eba67caf`. Closing task metadata is permitted only as a direct metadata-only descendant so the product SHA remains the runtime and screenshot authority.
