@@ -173,8 +173,7 @@ const executeRevealAction = async (input: {
     );
   if (currentLocation) {
     navigationObserver.cancel();
-    await waitForAppReady(input.page);
-    return;
+    return waitForAppReady(input.page);
   }
   if (
     expectedNavigation !== undefined ||
@@ -194,6 +193,7 @@ const executeRevealAction = async (input: {
     action,
     observer: navigationObserver,
     page: input.page,
+    timing: input.actionInput.timing,
   });
 };
 

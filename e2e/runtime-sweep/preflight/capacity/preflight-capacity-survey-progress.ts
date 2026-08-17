@@ -28,6 +28,16 @@ const timingFieldsFor = (
     capacitySurveyTimingPreSettleWallMs: snapshot.preSettleWallMs,
     capacitySurveyTimingBeforeSnapshotWallMs: snapshot.beforeSnapshotWallMs,
     capacitySurveyTimingActionWallMs: snapshot.actionWallMs,
+    capacitySurveyTimingActionRevealReadyWallMs:
+      snapshot.actionRevealReadyWallMs,
+    capacitySurveyTimingActionRevealReadyCount: snapshot.actionRevealReadyCount,
+    capacitySurveyTimingActionNavigationBoundaryWallMs:
+      snapshot.actionNavigationBoundaryWallMs,
+    capacitySurveyTimingActionNavigationBoundaryCount:
+      snapshot.actionNavigationBoundaryCount,
+    capacitySurveyTimingNavigationNoneCount: snapshot.navigationNoneCount,
+    capacitySurveyTimingNavigationObservedCount:
+      snapshot.navigationObservedCount,
     capacitySurveyTimingPostSettleWallMs: snapshot.postSettleWallMs,
     capacitySurveyTimingAfterSnapshotWallMs: snapshot.afterSnapshotWallMs,
     capacitySurveyTimingRepresentativeInputWallMs:

@@ -128,13 +128,22 @@ const runDiscovery = async (enabled: boolean) => {
       await phase("representativeInput", 1, () => undefined);
       await phase("preSettle", 2, () => undefined);
       await phase("beforeSnapshot", 3, () => undefined);
-      await phase("action", 4, () => {
+      await phase("action", 4, async () => {
         const next = graph[current].nextByControl[input.action.controlKey];
         if (next === undefined)
           throw new Error(
             `Unknown planted edge: ${current}/${input.action.controlKey}`,
           );
         current = next;
+        await phase("actionRevealReady", 1, () => undefined);
+        await phase("actionNavigationBoundary", 1, () => undefined);
+        await phase(
+          input.action.controlKey === OPEN_CHILD.controlKey
+            ? "navigationNone"
+            : "navigationObserved",
+          0,
+          () => undefined,
+        );
       });
       await phase("postSettle", 5, () => undefined);
       await phase("afterSnapshot", 6, () => undefined);
@@ -192,6 +201,18 @@ describe("capacity timing through reveal discovery", () => {
         snapshot.afterSnapshotWallMs +
         snapshot.representativeInputWallMs +
         snapshot.postObservationWallMs,
+    );
+    expect(snapshot.actionRevealReadyCount).toBe(
+      snapshot.actionNavigationBoundaryCount,
+    );
+    expect(snapshot.actionRevealReadyCount).toBe(
+      snapshot.navigationNoneCount + snapshot.navigationObservedCount,
+    );
+    expect(snapshot.actionRevealReadyWallMs).toBeLessThanOrEqual(
+      snapshot.actionWallMs,
+    );
+    expect(snapshot.actionNavigationBoundaryWallMs).toBeLessThanOrEqual(
+      snapshot.actionWallMs,
     );
   });
 });

@@ -30,6 +30,12 @@ export type CapacitySurveyTimingSnapshot = Readonly<{
   readonly preSettleWallMs: number;
   readonly beforeSnapshotWallMs: number;
   readonly actionWallMs: number;
+  readonly actionRevealReadyWallMs: number;
+  readonly actionRevealReadyCount: number;
+  readonly actionNavigationBoundaryWallMs: number;
+  readonly actionNavigationBoundaryCount: number;
+  readonly navigationNoneCount: number;
+  readonly navigationObservedCount: number;
   readonly postSettleWallMs: number;
   readonly afterSnapshotWallMs: number;
   readonly representativeInputWallMs: number;
