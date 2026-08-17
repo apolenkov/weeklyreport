@@ -31,3 +31,8 @@ Evidence: `customreport-archive/2026-08-17-desktop-showcase-8c59ef306/` binds se
 - [x] 4.4 Re-measure the live desktop DOM, capture fresh Dashboard evidence, and obtain independent visual approval.
 
 Evidence: `customreport-archive/2026-08-17-dashboard-action-alignment/` contains fresh collapsed and expanded captures at `1280x720` and `1980x1178`. Live measurements showed `Review` / `Details` / `Less` at `88x44px`, `Open` / `Request Changes` / `Revoke` at `148x44px`, and zero summary-action coordinate delta after expansion. The page retained `scrollY=0`, zero body overflow, zero console errors, and zero axe WCAG A/AA violations. Two independent direct visual reviews returned `APPROVE` / `PASS` with no blockers.
+
+## 5. Owner-feedback correction: History empty-state semantic surface
+
+- [x] 5.1 Add focused History empty-state token coverage and replace only its elevated card background with `--color-surface-empty`, preserving the desktop rail alignment, centered copy, data behavior, and mobile scope.
+- [ ] 5.2 Capture the seeded desktop History empty state on the resulting exact source, verify computed token, rail alignment, `scrollY=0`, console/axe cleanliness, and obtain fresh independent full-frame visual approval before treating this correction as accepted.
