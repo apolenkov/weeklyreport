@@ -18,6 +18,7 @@ import {
   writeCapacitySurveyResult,
 } from "./capacity/preflight-capacity-survey-io.ts";
 import { createCapacitySurveyProgressReporter } from "./capacity/preflight-capacity-survey-progress.ts";
+import { createCapacitySurveyTiming } from "./capacity/preflight-capacity-survey-timing.ts";
 import { runPlaywrightPreflightCapacitySurvey } from "./execution/playwright-preflight-capacity-survey.ts";
 import { capacitySurveyFailureFrontierRootForChild } from "./launch/preflight-capacity-survey-launcher-support.ts";
 import {
@@ -40,6 +41,11 @@ const optionalEnv = (name: string): string | undefined => {
   const value = process.env[name]?.trim();
   return value === undefined || value === "" ? undefined : value;
 };
+
+const optionalCapacitySurveyTiming = () =>
+  process.env.RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING === "true"
+    ? createCapacitySurveyTiming({ enabled: true })
+    : undefined;
 
 const assertAbsent = async (
   filePath: string,
@@ -83,6 +89,8 @@ const runCapacitySurveyInBrowser = async (input: {
     });
     try {
       const page = await context.newPage();
+      const timing = optionalCapacitySurveyTiming();
+      const timingOptions = timing === undefined ? {} : { timing };
       const prepare = createPreflightRuntimePreparation({
         source: input.source,
         page,
@@ -103,7 +111,8 @@ const runCapacitySurveyInBrowser = async (input: {
             repoRoot: input.repoRoot,
             expectedSourceSha: input.plan.sourceSha,
           }).then(() => undefined),
-        onProgress: createCapacitySurveyProgressReporter(),
+        onProgress: createCapacitySurveyProgressReporter(timingOptions),
+        ...timingOptions,
         ...(input.failureFrontierRoot === undefined
           ? {}
           : {

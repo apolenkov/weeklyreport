@@ -9,6 +9,10 @@ import {
   type CapacitySurveyResult,
   createCapacitySurveyResult,
 } from "../capacity/preflight-capacity-survey-contract.ts";
+import type {
+  CapacitySurveyTiming,
+  CapacitySurveyTimingStage,
+} from "../capacity/preflight-capacity-survey-timing.ts";
 import {
   assertInitialLanding,
   assertResolverOutcomeUi,
@@ -59,6 +63,51 @@ const exactSurveyTarget = (
   return { state, route };
 };
 
+export const timedHarnessFor = (
+  harness: ReturnType<typeof playwrightHarnessFor>,
+  timing: CapacitySurveyTiming | undefined,
+): ReturnType<typeof playwrightHarnessFor> => {
+  if (timing === undefined) return harness;
+  const timed = <Value>(
+    stage: CapacitySurveyTimingStage,
+    operation: () => Promise<Value>,
+  ): Promise<Value> => timing.span(stage, operation);
+  const freezeRepresentativeInput = harness.freezeRepresentativeInput;
+  const executeReveal = harness.executeReveal;
+  const navigateReveal = harness.navigateReveal;
+  const base = {
+    ...harness,
+    prepare: (
+      state: Parameters<typeof harness.prepare>[0],
+      route: Parameters<typeof harness.prepare>[1],
+      resetRequired: Parameters<typeof harness.prepare>[2],
+    ) => timed("prepare", () => harness.prepare(state, route, resetRequired)),
+    navigate: (route: Parameters<typeof harness.navigate>[0]) =>
+      timed("navigate", () => harness.navigate(route)),
+    ...(navigateReveal === undefined
+      ? {}
+      : {
+          navigateReveal: (
+            route: Parameters<NonNullable<typeof navigateReveal>>[0],
+          ) => timed("navigate", () => navigateReveal(route)),
+        }),
+    inventory: () => timed("inventory", harness.inventory),
+    ...(executeReveal === undefined
+      ? {}
+      : {
+          executeReveal: (input: Parameters<typeof executeReveal>[0]) =>
+            timed("executeReveal", () => executeReveal(input)),
+        }),
+  };
+  if (freezeRepresentativeInput === undefined) return base;
+  const freeze = freezeRepresentativeInput;
+  return {
+    ...base,
+    freezeRepresentativeInput: (input: Parameters<typeof freeze>[0]) =>
+      timed("freeze", () => freeze(input)),
+  };
+};
+
 export async function runPlaywrightPreflightCapacitySurvey(input: {
   readonly source: SourceArtifact;
   readonly plan: CapacitySurveyPlan;
@@ -68,17 +117,21 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
   readonly beforeComplete: () => Promise<void>;
   readonly onProgress?: (progress: RevealDiscoveryProgress) => void;
   readonly onCandidateFailure?: RevealCandidateFailureHandler;
+  readonly timing?: CapacitySurveyTiming;
   readonly now?: () => number;
 }): Promise<CapacitySurveyResult> {
   const target = exactSurveyTarget(input.source, input.plan);
   const now = input.now ?? Date.now;
   const startedMs = now();
-  const harness = playwrightHarnessFor({
-    source: input.source,
-    page: input.page,
-    expectedOrigin: input.expectedOrigin,
-    prepare: input.prepare,
-  });
+  const harness = timedHarnessFor(
+    playwrightHarnessFor({
+      source: input.source,
+      page: input.page,
+      expectedOrigin: input.expectedOrigin,
+      prepare: input.prepare,
+    }),
+    input.timing,
+  );
   await harness.prepare(target.state, target.route, true);
   await harness.navigate(target.route.resolvedRoute);
   assertInitialLanding(
@@ -89,25 +142,32 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
   const initialInventory = await harness.inventory();
   if (target.route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(target.route.expectedOutcome, initialInventory);
-  const summary = (
-    await discoverRevealControlsWithSummary({
-      state: target.state,
-      route: revealRouteFor(target.route),
-      initialInventory,
-      harness: revealHarnessFor(harness),
-      controlFor: preflightControlForPlan,
-      maxDepth: input.plan.limits.maxDepth,
-      maxRevealMaterialEdges: input.plan.limits.materialEdges,
-      maxRevealActions: input.plan.limits.actions,
-      maxControlsPerSegment: input.plan.limits.controls,
-      ...(input.onProgress === undefined
-        ? {}
-        : { onProgress: input.onProgress }),
-      ...(input.onCandidateFailure === undefined
-        ? {}
-        : { onCandidateFailure: input.onCandidateFailure }),
-    })
-  ).summary;
+  input.timing?.beginCandidateQueue();
+  const summary = await (async () => {
+    try {
+      return (
+        await discoverRevealControlsWithSummary({
+          state: target.state,
+          route: revealRouteFor(target.route),
+          initialInventory,
+          harness: revealHarnessFor(harness),
+          controlFor: preflightControlForPlan,
+          maxDepth: input.plan.limits.maxDepth,
+          maxRevealMaterialEdges: input.plan.limits.materialEdges,
+          maxRevealActions: input.plan.limits.actions,
+          maxControlsPerSegment: input.plan.limits.controls,
+          ...(input.onProgress === undefined
+            ? {}
+            : { onProgress: input.onProgress }),
+          ...(input.onCandidateFailure === undefined
+            ? {}
+            : { onCandidateFailure: input.onCandidateFailure }),
+        })
+      ).summary;
+    } finally {
+      input.timing?.endCandidateQueue();
+    }
+  })();
   await input.beforeComplete();
   const completedMs = now();
   return createCapacitySurveyResult({
