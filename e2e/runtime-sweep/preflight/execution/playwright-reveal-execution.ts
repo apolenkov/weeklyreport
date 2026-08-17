@@ -13,10 +13,7 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
-import {
-  waitForAppReady,
-  waitForRevealSurfaceReady,
-} from "../../replay/navigation.ts";
+import { waitForAppReady } from "../../replay/navigation.ts";
 import {
   representativeInputForFill,
   type RevealRepresentativeInput,
@@ -25,6 +22,8 @@ import type {
   RevealExecution,
   RevealExecutionHarness,
 } from "../reveal/interaction/preflight-reveal-types.ts";
+import { settleUnchangedRevealAction } from "./playwright-reveal-navigation.ts";
+import { captureRevealExecutionObservation } from "./playwright-reveal-observation.ts";
 
 const REVEAL_TIMEOUT_MS = 10_000;
 
@@ -109,14 +108,6 @@ type RevealActionInput = Parameters<RevealExecutionHarness["executeReveal"]>[0];
 const isFormAction = (input: RevealActionInput): boolean =>
   input.action.operation === "fill" || input.action.operation === "select";
 
-const settleUnchangedReadOnlyClick = (
-  page: Page,
-  action: RevealActionInput["action"],
-): Promise<void> =>
-  action.operation === "click" && action.safety === "read-only"
-    ? waitForRevealSurfaceReady(page)
-    : Promise.resolve();
-
 const representativeInputForAction = async (
   input: RevealActionInput,
   locator: ReturnType<typeof targetLocator> | undefined,
@@ -140,6 +131,7 @@ const executeRevealAction = async (input: {
   readonly actionInput: RevealActionInput;
   readonly representativeInput: RevealRepresentativeInput | undefined;
 }): Promise<void> => {
+  const { action } = input.actionInput;
   if (isFormAction(input.actionInput)) {
     await executeFormAction({
       page: input.page,
@@ -153,9 +145,7 @@ const executeRevealAction = async (input: {
   }
   const before = await snapshotPage(input.page);
   const target = targetFor(input.actionInput.control);
-  const expectedNavigation = expectedActionNavigationFor(
-    input.actionInput.action.controlKey,
-  );
+  const expectedNavigation = expectedActionNavigationFor(action.controlKey);
   const currentLocation =
     input.actionInput.control.href !== null &&
     new URL(input.actionInput.control.href, before.url).toString() ===
@@ -167,10 +157,10 @@ const executeRevealAction = async (input: {
   const execution = await executeControlAction({
     page: input.page,
     control: target,
-    action: input.actionInput.action,
+    action,
     observeOutcome: observerFor(
       input.page,
-      input.actionInput.action.operation,
+      action.operation,
       before,
       REVEAL_TIMEOUT_MS,
       { control: target, allowIdempotent: true },
@@ -179,7 +169,7 @@ const executeRevealAction = async (input: {
   });
   if (execution.status !== "pass")
     throw new Error(
-      `Reveal action did not reach terminal pass: ${input.actionInput.action.controlKey}`,
+      `Reveal action did not reach terminal pass: ${action.controlKey}`,
     );
   if (currentLocation) {
     navigationObserver.cancel();
@@ -200,8 +190,11 @@ const executeRevealAction = async (input: {
       throw new Error(`Reveal action navigation failed: ${navigation.reason}`);
     return;
   }
-  navigationObserver.cancel();
-  await settleUnchangedReadOnlyClick(input.page, input.actionInput.action);
+  await settleUnchangedRevealAction({
+    action,
+    observer: navigationObserver,
+    page: input.page,
+  });
 };
 
 export const createPlaywrightRevealExecutor =
@@ -225,9 +218,12 @@ export const createPlaywrightRevealExecutor =
         representativeInput,
       }),
     );
+    const observation = await captureRevealExecutionObservation({
+      inventory: () => inventoryDom(input.page),
+      page: input.page,
+    });
     return {
-      url: input.page.url(),
-      inventory: await inventoryDom(input.page),
+      ...observation,
       nonMutation,
       ...(representativeInput === undefined ? {} : { representativeInput }),
     };

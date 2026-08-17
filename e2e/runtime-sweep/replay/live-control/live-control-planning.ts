@@ -2,45 +2,20 @@ import type { RevealRepresentativeInput } from "../../matrix/reveal-transition.t
 import type { Action } from "../../source/contracts.ts";
 import type { ControlActionExecution } from "../control-actions/control-actions.ts";
 import type { DomControlObservation } from "../dom/dom-inventory.ts";
+import {
+  isDirectMutationName,
+  isFormFillRole,
+  isFormSelectRole,
+  isInteractiveRole,
+  isStateChangingRole,
+  normalizedControlName,
+  type StatefulOperation,
+  statefulOperationFor,
+  transitionForName,
+} from "./live-control-planning-policy.ts";
 
-const INTERACTIVE_ROLES = new Set([
-  "button",
-  "checkbox",
-  "combobox",
-  "gridcell",
-  "link",
-  "listbox",
-  "menuitem",
-  "menuitemcheckbox",
-  "menuitemradio",
-  "option",
-  "radio",
-  "scrollbar",
-  "slider",
-  "switch",
-  "tab",
-  "treeitem",
-]);
-const STATE_CHANGING_ROLE =
-  /^(?:checkbox|radio|switch|menuitemcheckbox|menuitemradio|slider|option)$/u;
-const FORM_FILL_ROLES = new Set(["searchbox", "spinbutton", "textbox"]);
-const FORM_SELECT_ROLES = new Set(["combobox", "listbox"]);
-const DIRECT_MUTATION_BUTTON_NAMES = new Set([
-  "at risk",
-  "blocked",
-  "mark complete",
-  "move this report to the archive",
-  "move to current week",
-  "move to next week",
-  "on track",
-]);
-const DIRECT_MUTATION_BUTTON_PREFIX =
-  /^(?:(?:acknowledge|activate|deactivate|downgrade risk|escalate risk|request reopen)\b|(?:archive|reopen|unarchive)\s+\S)/u;
-const STAGE_STATUS_BUTTON_NAME =
-  /^[^:]+: (?:empty|on-track|at-risk|blocked)(?: (?:by risk|— status set))?$/u;
 type NotExercisedPolicy = "inapplicable" | "unsafe" | "unavailable";
 type FormSafety = "non-mutating" | "disposable-reset";
-type StatefulOperation = "publish" | "delete" | "revoke" | "restore";
 
 export interface LiveControlPlanningOptions {
   readonly formSafety?: FormSafety;
@@ -90,9 +65,6 @@ const retryAction = (controlKey: string): Action => ({
   transition: "retry",
 });
 
-const normalizedName = (name: string): string =>
-  name.trim().replaceAll(/\s+/g, " ").toLocaleLowerCase();
-
 const normalizedTagName = (control: DomControlObservation): string =>
   control.tagName.trim().toLocaleLowerCase();
 
@@ -104,49 +76,25 @@ const isSearchInput = (control: DomControlObservation): boolean =>
   normalizedInputType(control) === "search";
 
 const isFormFillControl = (control: DomControlObservation): boolean =>
-  FORM_FILL_ROLES.has(control.role) || isSearchInput(control);
+  isFormFillRole(control.role) || isSearchInput(control);
 
 const isFormSelectControl = (control: DomControlObservation): boolean =>
-  normalizedTagName(control) === "select" &&
-  FORM_SELECT_ROLES.has(control.role);
+  normalizedTagName(control) === "select" && isFormSelectRole(control.role);
 
 const isSubmitControl = (control: DomControlObservation): boolean =>
   control.role === "button" &&
   (control.inputType === "submit" ||
     ["create", "request", "save", "send", "submit"].some((prefix) => {
-      const name = normalizedName(control.accessibleName);
+      const name = normalizedControlName(control.accessibleName);
       return name === prefix || name.startsWith(`${prefix} `);
     }));
 
 const asyncSideEffectReason = (
   control: DomControlObservation,
 ): string | null =>
-  normalizedName(control.accessibleName) === "export pdf"
+  normalizedControlName(control.accessibleName) === "export pdf"
     ? "Async PDF export requires a dedicated job-completion and queue-cleanup oracle"
     : null;
-
-const transitionForName = (
-  name: string,
-): Extract<Action["transition"], "open" | "cancel"> | undefined => {
-  const normalized = normalizedName(name);
-  if (/^(?:open|show|view|expand|edit|details)\b/u.test(normalized))
-    return "open";
-  if (/^(?:cancel|close|dismiss)\b/u.test(normalized)) return "cancel";
-  return undefined;
-};
-
-const statefulOperationFor = (name: string): StatefulOperation | undefined => {
-  const normalized = normalizedName(name);
-  if (normalized === "publish" || normalized.startsWith("publish "))
-    return "publish";
-  if (normalized === "delete" || normalized.startsWith("delete "))
-    return "delete";
-  if (normalized === "revoke" || normalized.startsWith("revoke "))
-    return "revoke";
-  if (normalized === "restore" || normalized.startsWith("restore "))
-    return "restore";
-  return undefined;
-};
 
 const unsupportedPlan = (
   control: DomControlObservation,
@@ -172,20 +120,11 @@ const bindStableTarget = (
     ? { ...action, target: { role: "link", href: control.href } }
     : action;
 
-const isDirectMutationName = (name: string): boolean => {
-  const normalized = normalizedName(name);
-  return (
-    DIRECT_MUTATION_BUTTON_NAMES.has(normalized) ||
-    DIRECT_MUTATION_BUTTON_PREFIX.test(normalized) ||
-    STAGE_STATUS_BUTTON_NAME.test(normalized)
-  );
-};
-
 const isDirectMutationButton = (control: DomControlObservation): boolean =>
   control.role === "button" && isDirectMutationName(control.accessibleName);
 
 const interactiveAction = (control: DomControlObservation): Action => {
-  const normalized = normalizedName(control.accessibleName);
+  const normalized = normalizedControlName(control.accessibleName);
   if (/^(?:retry|try again)\b/u.test(normalized))
     return retryAction(control.controlKey);
   const safety = isDirectMutationButton(control) ? "irreversible" : "read-only";
@@ -262,7 +201,7 @@ const planFor = (
     );
   if (!control.enabled)
     return unsupportedPlan(control, "unavailable", "Control is disabled");
-  if (STATE_CHANGING_ROLE.test(control.role))
+  if (isStateChangingRole(control.role))
     return {
       control,
       action: clickAction(control.controlKey, "irreversible"),
@@ -281,7 +220,7 @@ const planFor = (
     isSubmitControl(control)
   )
     return formPlan(control, options);
-  if (INTERACTIVE_ROLES.has(control.role))
+  if (isInteractiveRole(control.role))
     return { control, action: interactiveAction(control) };
   return unsupportedPlan(
     control,

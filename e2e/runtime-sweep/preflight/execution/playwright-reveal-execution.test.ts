@@ -138,12 +138,12 @@ const pageFor = () => {
     return Promise.resolve();
   });
   return {
-    page: {
+    page: Object.assign({} as Page, {
       url: () => harness.state.pageUrl,
       waitForFunction,
       waitForLoadState,
       waitForURL,
-    } as unknown as Page,
+    }),
     waitForFunction,
     waitForLoadState,
     waitForURL,
@@ -295,15 +295,13 @@ describe("Playwright reveal execution", () => {
       loadingAfterAction: true,
     });
 
-    expect(waitForURL).not.toHaveBeenCalled();
+    expect(waitForURL).toHaveBeenCalledWith(expect.any(Function), {
+      timeout: 100,
+    });
     expect(waitForFunction).toHaveBeenCalledTimes(2);
-    expect(harness.state.events).toEqual([
-      "action",
-      "loading",
-      "app-ready",
-      "app-ready",
-      "inventory",
-    ]);
+    expect(harness.state.events).toEqual(
+      "action loading app-ready app-ready wait-url inventory".split(" "),
+    );
   });
 
   it("uses overlay readiness only for an unchanged read-only button", async () => {
