@@ -1,3 +1,4 @@
+import type { RevealExecutionTiming } from "../preflight/reveal/interaction/preflight-reveal-types.ts";
 import type { RevealNonMutationProof } from "../preflight/reveal-path.ts";
 import { sha256Hex, stableSerialize } from "./ids.ts";
 import type {
@@ -180,13 +181,24 @@ export async function provePreparedStateNonMutation(input: {
   readonly prepared: PreparedRuntimeState;
   readonly settle: () => Promise<void>;
   readonly action: () => Promise<void>;
+  readonly timing?: RevealExecutionTiming;
 }): Promise<RevealNonMutationProof> {
-  await input.settle();
-  const before = await snapshotFor(input.database, input.prepared);
+  const timed = <Value>(
+    stage: Parameters<RevealExecutionTiming["span"]>[0],
+    operation: () => Promise<Value>,
+  ): Promise<Value> => input.timing?.span(stage, operation) ?? operation();
+  await timed("preSettle", input.settle);
+  const before = await timed("beforeSnapshot", () =>
+    snapshotFor(input.database, input.prepared),
+  );
   assertPreparedStateSnapshot(input.prepared, before, "before reveal");
-  const actionResult = await captureAction(input.action);
-  const settleResult = await captureAction(input.settle);
-  const after = await snapshotFor(input.database, input.prepared);
+  const actionResult = await captureAction(() => timed("action", input.action));
+  const settleResult = await captureAction(() =>
+    timed("postSettle", input.settle),
+  );
+  const after = await timed("afterSnapshot", () =>
+    snapshotFor(input.database, input.prepared),
+  );
   assertPreparedStateSnapshot(input.prepared, after, "after reveal");
   if (actionResult.status === "error") throw actionResult.error;
   if (settleResult.status === "error") throw settleResult.error;

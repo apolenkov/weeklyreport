@@ -1,11 +1,9 @@
-import { reseedE2eDatabase } from "../../../helpers/e2e-database-setup.ts";
 import type { CampaignMatrixState } from "../../matrix/campaign-matrix.ts";
 import {
   actorForPermission,
   type RuntimeMatrixActor,
 } from "../../matrix/runtime-matrix.ts";
 import { clearClientStorage } from "../../replay/browser-state/client-storage.ts";
-import type { SourceArtifact } from "../../source/source-artifact.ts";
 import {
   type PreparedRuntimeState,
   prepareRuntimeState,
@@ -25,6 +23,15 @@ import {
   preflightPreparationKeyFor,
   statePreparationInputFor,
 } from "./preflight-preparation-key.ts";
+import type { PreparedStateCache } from "./preflight-prepared-state-cache.ts";
+import {
+  actorsForProfile,
+  resetProfileSessions,
+} from "./preflight-profile-session-reset.ts";
+import type {
+  PreflightRuntimePreparation,
+  PreflightRuntimePreparationWithBoundary,
+} from "./preflight-runtime-preparation-contract.ts";
 import type { PreflightRuntimeSetupInput } from "./preflight-runtime-setup.ts";
 import {
   createProfileSessionCacheRegistry,
@@ -32,48 +39,9 @@ import {
   quiescePreflightStatePage,
 } from "./preflight-session.ts";
 
-const actorsForProfile = (
-  source: SourceArtifact,
-  profile: CampaignMatrixState["profile"],
-): readonly RuntimeMatrixActor[] =>
-  source.plan.states
-    .filter((candidate) => candidate.profile === profile)
-    .map(({ axes }) => actorForPermission(axes.permission, axes.role));
-
 type ProfileSessionRegistry = ReturnType<
   typeof createProfileSessionCacheRegistry<CampaignMatrixState["profile"]>
 >;
-
-export const resetProfileSessions = async (input: {
-  readonly setup: PreflightRuntimeSetupInput;
-  readonly profile: CampaignMatrixState["profile"];
-  readonly actors: readonly RuntimeMatrixActor[];
-  readonly sessions: Awaited<
-    ReturnType<
-      ReturnType<
-        typeof createProfileSessionCacheRegistry<CampaignMatrixState["profile"]>
-      >["get"]
-    >
-  >;
-  readonly clearPage: () => Promise<void>;
-  readonly awaitApiDrain: () => Promise<void>;
-}): Promise<void> => {
-  reseedE2eDatabase({
-    databaseUrl: input.setup.databaseUrl,
-    profile: input.profile,
-    repoRoot: input.setup.repoRoot,
-  });
-  if (input.sessions.created) {
-    await input.sessions.cache.authenticate(input.actors);
-  } else {
-    await input.sessions.cache.reauthenticate(input.actors);
-  }
-  await quiescePreflightStatePage(
-    input.setup.page,
-    input.clearPage,
-    input.awaitApiDrain,
-  );
-};
 
 const prepareStateForPreflight = async (input: {
   readonly setup: PreflightRuntimeSetupInput;
@@ -104,33 +72,12 @@ const assertPreparedStateObservation = (
   );
 };
 
-type PreflightRuntimePreparation = (
-  state: CampaignMatrixState,
-  route: PreflightRoute,
-  groupChanged: boolean,
-) => Promise<RevealPreparation>;
-
-export type PreflightRuntimePreparationWithBoundary =
-  PreflightRuntimePreparation &
-    Readonly<{
-      readonly recreateDisposableBoundary: () => Promise<void>;
-    }>;
-
 type PreflightPreparationContext = Readonly<{
   readonly setup: PreflightRuntimeSetupInput;
   readonly database: RuntimeStateDatabase;
   readonly sessionsByProfile: ProfileSessionRegistry;
   readonly awaitApiDrain: () => Promise<void>;
 }>;
-
-interface PreparedStateCache {
-  prepared:
-    | Readonly<{
-        readonly key: string;
-        readonly prepared: PreparedRuntimeState;
-      }>
-    | undefined;
-}
 
 const isReadOnlyPreparation = (state: CampaignMatrixState): boolean =>
   state.axes.fault === "none" && state.axes.controlTransition === "none";
@@ -259,13 +206,14 @@ const preparePreflightState = async (input: {
     reusable,
   });
   return {
-    proveNonMutation: async (action: () => Promise<void>) => {
+    proveNonMutation: async (action, timing) => {
       try {
         return await provePreparedStateNonMutation({
           database: input.context.database,
           prepared,
           settle: awaitApiDrain,
           action,
+          ...(timing === undefined ? {} : { timing }),
         });
       } catch (error: unknown) {
         if (
@@ -309,3 +257,6 @@ export const createPreflightPreparation = (
     recreateDisposableBoundaryFor({ setup: context.setup, prepare });
   return Object.assign(prepare, { recreateDisposableBoundary });
 };
+
+export { resetProfileSessions } from "./preflight-profile-session-reset.ts";
+export type { PreflightRuntimePreparationWithBoundary } from "./preflight-runtime-preparation-contract.ts";

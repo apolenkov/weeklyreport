@@ -27,9 +27,34 @@ export type RevealRoute = Readonly<{
   readonly kind?: "unconditional" | "resolver";
 }>;
 
+export const REVEAL_EXECUTION_TIMING_STAGES = [
+  "replayExecute",
+  "candidateExecute",
+  "preSettle",
+  "beforeSnapshot",
+  "action",
+  "postSettle",
+  "afterSnapshot",
+  "representativeInput",
+  "postObservation",
+] as const;
+
+export type RevealExecutionTimingStage =
+  (typeof REVEAL_EXECUTION_TIMING_STAGES)[number];
+
+export type RevealExecutionTiming = Readonly<{
+  readonly span: <Value>(
+    stage: RevealExecutionTimingStage,
+    operation: () => Promise<Value>,
+  ) => Promise<Value>;
+}>;
+
+export type RevealExecutionKind = "replay" | "candidate";
+
 export type RevealPreparation = Readonly<{
   readonly proveNonMutation: (
     action: () => Promise<void>,
+    timing?: RevealExecutionTiming,
   ) => Promise<RevealNonMutationProof>;
 }>;
 
@@ -80,10 +105,12 @@ export interface RevealExecutionHarness {
     readonly representativeInput?: RevealRepresentativeInput;
   }) => Promise<RevealRepresentativeInput | undefined>;
   readonly executeReveal: (input: {
+    readonly executionKind?: RevealExecutionKind;
     readonly control: DomControlObservation;
     readonly action: Action;
     readonly representativeInput?: RevealRepresentativeInput;
     readonly preparation: RevealPreparation | undefined;
+    readonly timing?: RevealExecutionTiming;
   }) => Promise<RevealExecution>;
 }
 

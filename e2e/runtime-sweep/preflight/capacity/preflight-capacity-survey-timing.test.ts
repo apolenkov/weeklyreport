@@ -28,18 +28,26 @@ const runFakeSurvey = async (browserDelayMs: number) => {
   await browserSpan("navigate", browserDelayMs + 3);
   await browserSpan("inventory", browserDelayMs + 4);
   await browserSpan("freeze", browserDelayMs + 1);
-  await timing.span("executeReveal", async () => {
-    advance(browserDelayMs + 5);
-    await browserSpan("inventory", 2);
-  });
+  const attributedExecute = (
+    kind: "candidateExecute" | "replayExecute",
+    durationMs: number,
+  ): Promise<void> =>
+    timing.span("executeReveal", () =>
+      timing.span(kind, () => {
+        advance(durationMs);
+        return Promise.resolve();
+      }),
+    );
+  await attributedExecute("candidateExecute", browserDelayMs + 5);
+  await attributedExecute("replayExecute", browserDelayMs + 2);
   advance(7);
   timing.endCandidateQueue();
 
   return {
     timing: timing.snapshot(),
     terminal: {
-      completedCandidateCount: 6,
-      revealActionCount: 14,
+      completedCandidateCount: 1,
+      revealActionCount: 2,
       materialEdgeCount: 3,
       controlCount: 22,
       visitedStateCount: 5,
@@ -47,8 +55,8 @@ const runFakeSurvey = async (browserDelayMs: number) => {
       queueEmpty: true,
     },
     progress: {
-      completedCandidateCount: 6,
-      revealActionCount: 14,
+      completedCandidateCount: 1,
+      revealActionCount: 2,
       materialEdgeCount: 3,
       controlCount: 22,
       visitedStateCount: 5,
@@ -74,6 +82,17 @@ describe("capacity survey timing", () => {
       inventoryWallMs: 0,
       freezeWallMs: 0,
       executeRevealWallMs: 0,
+      replayExecuteCount: 0,
+      replayExecuteWallMs: 0,
+      candidateExecuteCount: 0,
+      candidateExecuteWallMs: 0,
+      preSettleWallMs: 0,
+      beforeSnapshotWallMs: 0,
+      actionWallMs: 0,
+      postSettleWallMs: 0,
+      afterSnapshotWallMs: 0,
+      representativeInputWallMs: 0,
+      postObservationWallMs: 0,
       candidateTotalWallMs: 0,
       externalUnionWallMs: 0,
       pureQueueResidualWallMs: 0,
@@ -84,7 +103,7 @@ describe("capacity survey timing", () => {
     const baseline = await runFakeSurvey(1);
     const slowBrowser = await runFakeSurvey(11);
 
-    expect(baseline.timing.externalUnionWallMs).toBe(22);
+    expect(baseline.timing.externalUnionWallMs).toBe(23);
     expect(baseline.timing.pureQueueResidualWallMs).toBe(7);
     expect(slowBrowser.timing.prepareWallMs).toBeGreaterThan(
       baseline.timing.prepareWallMs,
@@ -100,6 +119,21 @@ describe("capacity survey timing", () => {
     );
     expect(slowBrowser.timing.executeRevealWallMs).toBeGreaterThan(
       baseline.timing.executeRevealWallMs,
+    );
+    expect(baseline.timing.candidateExecuteCount).toBe(1);
+    expect(baseline.timing.replayExecuteCount).toBe(1);
+    expect(baseline.timing.candidateExecuteWallMs).toBeGreaterThan(0);
+    expect(baseline.timing.replayExecuteWallMs).toBeGreaterThan(0);
+    expect(baseline.timing.executeRevealWallMs).toBe(
+      baseline.timing.candidateExecuteWallMs +
+        baseline.timing.replayExecuteWallMs,
+    );
+    expect(
+      baseline.timing.candidateExecuteCount +
+        baseline.timing.replayExecuteCount,
+    ).toBe(baseline.terminal.revealActionCount);
+    expect(baseline.timing.candidateExecuteCount).toBe(
+      baseline.terminal.completedCandidateCount,
     );
     expect(slowBrowser.timing.candidateTotalWallMs).toBeGreaterThan(
       baseline.timing.candidateTotalWallMs,

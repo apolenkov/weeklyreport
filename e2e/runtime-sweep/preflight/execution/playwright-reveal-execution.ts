@@ -200,28 +200,36 @@ const executeRevealAction = async (input: {
 export const createPlaywrightRevealExecutor =
   (input: { readonly page: Page }): RevealExecutionHarness["executeReveal"] =>
   async (actionInput): Promise<RevealExecution> => {
+    const timed = <Value>(
+      stage: Parameters<NonNullable<typeof actionInput.timing>["span"]>[0],
+      operation: () => Promise<Value>,
+    ): Promise<Value> =>
+      actionInput.timing?.span(stage, operation) ?? operation();
     const locator = isFormAction(actionInput)
       ? targetLocator(input.page, targetFor(actionInput.control))
       : undefined;
-    const representativeInput = await representativeInputForAction(
-      actionInput,
-      locator,
+    const representativeInput = await timed("representativeInput", () =>
+      representativeInputForAction(actionInput, locator),
     );
     if (actionInput.preparation === undefined)
       throw new Error(
         "Playwright reveal execution lacks prepared DB proof context",
       );
-    const nonMutation = await actionInput.preparation.proveNonMutation(() =>
-      executeRevealAction({
+    const nonMutation = await actionInput.preparation.proveNonMutation(
+      () =>
+        executeRevealAction({
+          page: input.page,
+          actionInput,
+          representativeInput,
+        }),
+      actionInput.timing,
+    );
+    const observation = await timed("postObservation", () =>
+      captureRevealExecutionObservation({
+        inventory: () => inventoryDom(input.page),
         page: input.page,
-        actionInput,
-        representativeInput,
       }),
     );
-    const observation = await captureRevealExecutionObservation({
-      inventory: () => inventoryDom(input.page),
-      page: input.page,
-    });
     return {
       ...observation,
       nonMutation,
