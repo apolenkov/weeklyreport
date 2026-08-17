@@ -21,6 +21,18 @@ const timingFieldsFor = (
     capacitySurveyTimingInventoryWallMs: snapshot.inventoryWallMs,
     capacitySurveyTimingFreezeWallMs: snapshot.freezeWallMs,
     capacitySurveyTimingExecuteRevealWallMs: snapshot.executeRevealWallMs,
+    capacitySurveyTimingReplayExecuteCount: snapshot.replayExecuteCount,
+    capacitySurveyTimingReplayExecuteWallMs: snapshot.replayExecuteWallMs,
+    capacitySurveyTimingCandidateExecuteCount: snapshot.candidateExecuteCount,
+    capacitySurveyTimingCandidateExecuteWallMs: snapshot.candidateExecuteWallMs,
+    capacitySurveyTimingPreSettleWallMs: snapshot.preSettleWallMs,
+    capacitySurveyTimingBeforeSnapshotWallMs: snapshot.beforeSnapshotWallMs,
+    capacitySurveyTimingActionWallMs: snapshot.actionWallMs,
+    capacitySurveyTimingPostSettleWallMs: snapshot.postSettleWallMs,
+    capacitySurveyTimingAfterSnapshotWallMs: snapshot.afterSnapshotWallMs,
+    capacitySurveyTimingRepresentativeInputWallMs:
+      snapshot.representativeInputWallMs,
+    capacitySurveyTimingPostObservationWallMs: snapshot.postObservationWallMs,
     capacitySurveyTimingCandidateTotalWallMs: snapshot.candidateTotalWallMs,
     capacitySurveyTimingExternalUnionWallMs: snapshot.externalUnionWallMs,
     capacitySurveyTimingPureQueueResidualWallMs:

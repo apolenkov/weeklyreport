@@ -13,12 +13,14 @@ import type {
   CapacitySurveyTiming,
   CapacitySurveyTimingStage,
 } from "../capacity/preflight-capacity-survey-timing.ts";
+import { CapacitySurveyTimingError } from "../capacity/preflight-capacity-survey-timing.ts";
 import {
   assertInitialLanding,
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
 import type { RevealCandidateFailureHandler } from "../reveal/interaction/preflight-reveal-branches.ts";
 import { discoverRevealControlsWithSummary } from "../reveal/interaction/preflight-reveal-discovery.ts";
+import type { RevealExecutionKind } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { PreflightRuntimePreparationWithBoundary } from "../runtime/preflight-runtime-setup.ts";
 import {
@@ -63,6 +65,21 @@ const exactSurveyTarget = (
   return { state, route };
 };
 
+const EXECUTION_STAGE_BY_KIND = {
+  replay: "replayExecute",
+  candidate: "candidateExecute",
+} as const satisfies Record<RevealExecutionKind, CapacitySurveyTimingStage>;
+
+const executionStageFor = (
+  kind: RevealExecutionKind | undefined,
+): CapacitySurveyTimingStage => {
+  if (kind === undefined)
+    throw new CapacitySurveyTimingError(
+      "Timed reveal execution requires replay or candidate attribution",
+    );
+  return EXECUTION_STAGE_BY_KIND[kind];
+};
+
 export const timedHarnessFor = (
   harness: ReturnType<typeof playwrightHarnessFor>,
   timing: CapacitySurveyTiming | undefined,
@@ -96,7 +113,11 @@ export const timedHarnessFor = (
       ? {}
       : {
           executeReveal: (input: Parameters<typeof executeReveal>[0]) =>
-            timed("executeReveal", () => executeReveal(input)),
+            timed("executeReveal", () =>
+              timing.span(executionStageFor(input.executionKind), () =>
+                executeReveal({ ...input, timing }),
+              ),
+            ),
         }),
   };
   if (freezeRepresentativeInput === undefined) return base;
