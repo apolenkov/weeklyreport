@@ -188,6 +188,9 @@ export const capacitySurveyChildEnvironment = (input: {
     RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT_ROOT: input.resultRoot,
     RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT: input.tempRoot,
     RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS: String(input.maxDurationMs),
+    ...(input.inherited.RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING === "true"
+      ? { RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING: "true" }
+      : {}),
     ...(failureFrontierRoot === undefined
       ? {}
       : {
