@@ -5,6 +5,7 @@ import {
   type PageSnapshot,
   waitForObservation,
 } from "./live-control-observation.ts";
+import { observerFor } from "./live-control-records.ts";
 
 interface ObservationSignalFixture {
   readonly documentId: string;
@@ -124,6 +125,22 @@ describe("bounded live control observation waiting", () => {
       expect(fake.fullSnapshotCalls()).toBe(1);
     },
   );
+
+  it("forwards the exact canonical observation through observerFor", async () => {
+    const fake = pageForObservation({
+      signals: [signal({ documentId: "document-after" })],
+      snapshots: [snapshot({ dom: '{"text":"Changed","controls":[]}' })],
+    });
+    const onObservation = vi.fn();
+
+    await expect(
+      observerFor(fake.page, "click", snapshot(), 100, { onObservation })(),
+    ).resolves.toBe("pass");
+    expect(onObservation).toHaveBeenCalledExactlyOnceWith({
+      kind: "dom",
+      detail: "Live DOM or control state changed",
+    });
+  });
 
   it("requires a canonical observation after a same-URL document replacement", async () => {
     const fake = pageForObservation({
