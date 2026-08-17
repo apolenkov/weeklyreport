@@ -25,7 +25,7 @@ function HistoryEmptyState({
   return (
     <div
       data-testid="history-empty-state"
-      className="flex flex-1 items-center justify-center rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center"
+      className="flex flex-1 items-center justify-center rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center"
     >
       <p className="text-sm text-[var(--color-muted-foreground)]">
         {includeArchive ? "No report history yet." : "No current history yet."}

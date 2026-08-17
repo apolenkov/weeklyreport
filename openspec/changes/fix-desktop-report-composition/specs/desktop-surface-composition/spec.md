@@ -43,6 +43,17 @@ The `/reports` desktop empty state MUST occupy the same visual grid row as Histo
 - **THEN** the empty-state panel and the complete summary rail share aligned top and bottom grid boundaries
 - **AND** no fabricated report data or action is shown
 
+### Requirement: Empty History uses the semantic empty-state surface
+
+The `/reports` History empty-state panel MUST use the `--color-surface-empty` semantic token rather than the elevated `--color-card` token. The token correction MUST preserve the existing grid alignment, centered message, copy, and no-data behavior.
+
+#### Scenario: Compiled history renders the semantic empty surface
+
+- **WHEN** `/reports` renders no current history at a desktop width
+- **THEN** the empty-state panel uses `bg-[var(--color-surface-empty)]`
+- **AND** the empty-state panel does not use `bg-[var(--color-card)]`
+- **AND** the panel remains aligned with the complete summary rail row
+
 ### Requirement: Visual acceptance covers every affected desktop surface
 
 The change MUST be accepted only after source-bound screenshots and direct interaction checks cover Head History, Dashboard, Status form, Status slides in Product and Leads scope, plus the shared Lead report control hierarchy.

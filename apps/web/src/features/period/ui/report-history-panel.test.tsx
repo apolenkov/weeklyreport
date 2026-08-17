@@ -38,11 +38,15 @@ describe("HistoryPanel desktop empty composition", () => {
       "flex",
       "flex-col",
     );
-    expect(screen.getByTestId("history-empty-state")).toHaveClass(
+    const emptyState = screen.getByTestId("history-empty-state");
+
+    expect(emptyState).toHaveClass(
       "flex-1",
       "items-center",
       "justify-center",
+      "bg-[var(--color-surface-empty)]",
     );
+    expect(emptyState).not.toHaveClass("bg-[var(--color-card)]");
     expect(screen.getByTestId("history-summary")).toBeInTheDocument();
     expect(screen.getByText("No current history yet.")).toBeInTheDocument();
   });
