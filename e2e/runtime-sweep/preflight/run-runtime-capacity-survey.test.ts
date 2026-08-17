@@ -60,6 +60,7 @@ describe("capacity survey launcher boundary", () => {
         RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT:
           "/authority/chunk.json",
         RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT: "/stale/result.json",
+        RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING: "true",
       },
     });
 
@@ -67,6 +68,7 @@ describe("capacity survey launcher boundary", () => {
       SAFE_VALUE: "retained",
       RUNTIME_SWEEP_PREFLIGHT_MODE: "capacity-survey",
       RUNTIME_SWEEP_CAPACITY_SURVEY_RESULT: environmentInput.resultPath,
+      RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING: "true",
     });
     expect(environment.RUNTIME_SWEEP_CAMPAIGN_KIND).toBeUndefined();
     expect(environment.RUNTIME_SWEEP_CANARY_STATE_ID).toBeUndefined();
@@ -79,6 +81,20 @@ describe("capacity survey launcher boundary", () => {
       environment.RUNTIME_SWEEP_CAPACITY_SURVEY_FAILURE_FRONTIER_ROOT,
     ).toBeUndefined();
   });
+
+  it.each(["false", "1", "TRUE"])(
+    "does not propagate a non-canonical timing opt-in value %s",
+    (timingValue) => {
+      const environment = capacitySurveyChildEnvironment({
+        ...environmentInput,
+        inherited: {
+          RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING: timingValue,
+        },
+      });
+
+      expect(environment.RUNTIME_SWEEP_CAPACITY_SURVEY_TIMING).toBeUndefined();
+    },
+  );
 
   it("passes a failure-frontier root only when the survey explicitly opts in", () => {
     const failureFrontierRoot = path.join(
