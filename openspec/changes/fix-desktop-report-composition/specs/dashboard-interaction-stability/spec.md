@@ -19,3 +19,25 @@ The Dashboard queue skeleton MUST reserve the same desktop action tracks, contro
 - **WHEN** queue skeleton rows are replaced by loaded lead rows
 - **THEN** the queue frame and action tracks retain their geometry
 - **AND** the transition does not shift adjacent controls because of label width
+
+### Requirement: Dashboard queue action tiers are visually equivalent
+
+At desktop width, Dashboard controls within the same action tier MUST use the
+same outer height, width, alignment, and reserved geometry. Summary-row primary
+actions and disclosure controls MUST each fill a `5.5rem` track. Expanded-row
+actions MUST each fill a `9.25rem` cell and use the shared `44px` action height.
+Different labels, icons, pending copy, and disclosure state MUST NOT resize an
+individual control.
+
+#### Scenario: Head compares queue actions in one expanded row
+
+- **WHEN** the Head expands a submitted lead row
+- **THEN** `Review` and `Less` fill equal summary-row tracks
+- **AND** `Open`, `Request Changes`, and `Revoke` use equal expanded-row cells
+- **AND** every visible queue action remains vertically centered on the same baseline
+
+#### Scenario: An action changes its visible label
+
+- **WHEN** a disclosure or mutation changes a queue action label
+- **THEN** the control retains its exact outer width and height
+- **AND** adjacent controls retain their coordinates

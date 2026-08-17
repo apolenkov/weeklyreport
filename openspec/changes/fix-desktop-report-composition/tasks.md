@@ -22,3 +22,12 @@
 - [x] 3.4 Run accessibility and interaction checks, obtain independent full-set visual review, and repeat affected captures after every source change.
 
 Evidence: `customreport-archive/2026-08-17-desktop-showcase-8c59ef306/` binds seven `1980x1178` captures and their SHA-256 values to product commit `8c59ef306399c6bad6b6c62664bcc6ff93bc8b99` / tree `09c1a80eeb90ea1f87c4de4835956d53eba67caf`. All seven routes had `scrollY=0`, zero body overflow, zero scoped axe A/AA violations, and zero browser-console errors; Dashboard action coordinates had `0px` disclosure delta. Independent direct full-set visual review returned `APPROVE` with no blockers.
+
+## 4. Owner-feedback correction
+
+- [x] 4.1 Record equal Dashboard action-tier dimensions in the design system and normative interaction spec.
+- [x] 4.2 Add focused regression coverage for summary-track fill and expanded action-cell sizing.
+- [x] 4.3 Apply the tokenized dimensions without changing action behavior or mobile scope.
+- [x] 4.4 Re-measure the live desktop DOM, capture fresh Dashboard evidence, and obtain independent visual approval.
+
+Evidence: `customreport-archive/2026-08-17-dashboard-action-alignment/` contains fresh collapsed and expanded captures at `1280x720` and `1980x1178`. Live measurements showed `Review` / `Details` / `Less` at `88x44px`, `Open` / `Request Changes` / `Revoke` at `148x44px`, and zero summary-action coordinate delta after expansion. The page retained `scrollY=0`, zero body overflow, zero console errors, and zero axe WCAG A/AA violations. Two independent direct visual reviews returned `APPROVE` / `PASS` with no blockers.
