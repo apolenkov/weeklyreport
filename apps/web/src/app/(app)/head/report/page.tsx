@@ -14,7 +14,7 @@ export default async function HeadReportPage({ searchParams }: Props) {
       tabIndex={-1}
       className="min-h-screen bg-[var(--color-background)]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <WeeklyReportPage authorId={authorId} redirectToCanonical />
       </div>
     </main>

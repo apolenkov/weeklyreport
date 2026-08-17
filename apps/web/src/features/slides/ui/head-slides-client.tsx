@@ -18,7 +18,7 @@ import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 import { StatusSlideDeck } from "./status-slide-deck";
 
-interface HeadSlidesClientProps {
+interface HeadSlidesClientBaseProps {
   // When set, load the requested report period instead of the active period.
   readonly reportId?: string;
   // "product" aggregates every lead's content per product (head ScopeToggle).
@@ -26,6 +26,16 @@ interface HeadSlidesClientProps {
   // Viewer shell passes false so the empty-report fallback never hits a head-only procedure.
   readonly enableActivity?: boolean;
 }
+
+type HeadSlidesClientProps =
+  | (HeadSlidesClientBaseProps & {
+      readonly density?: undefined;
+      readonly onDensityChange?: undefined;
+    })
+  | (HeadSlidesClientBaseProps & {
+      readonly density: SlideDensity;
+      readonly onDensityChange: (density: SlideDensity) => void;
+    });
 
 interface SlideDeckArgs {
   readonly reportId: string | undefined;
@@ -137,12 +147,22 @@ export function HeadSlidesClient({
   reportId,
   scope = "lead",
   enableActivity = true,
+  density,
+  onDensityChange,
 }: HeadSlidesClientProps = {}) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
-  const [density, setDensity] = useState<SlideDensity>("document");
+  const [internalDensity, setInternalDensity] =
+    useState<SlideDensity>("document");
+  const activeDensity = density ?? internalDensity;
+  const handleDensityChange = onDensityChange ?? setInternalDensity;
 
   const { weeklyQ, activityQ, needsActivityFallback, slides } =
-    useHeadSlideDeck({ reportId, scope, enableActivity, density });
+    useHeadSlideDeck({
+      reportId,
+      scope,
+      enableActivity,
+      density: activeDensity,
+    });
 
   // Two-sided clamp derived at render — see lead-slides-client: a negative
   // index from an empty-deck arrow press must clamp too, not just an
@@ -168,7 +188,14 @@ export function HeadSlidesClient({
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
       mode="head"
-      toolbar={<SlideDensityControl value={density} onChange={setDensity} />}
+      toolbar={
+        density === undefined ? (
+          <SlideDensityControl
+            value={activeDensity}
+            onChange={handleDensityChange}
+          />
+        ) : undefined
+      }
     />
   );
 }

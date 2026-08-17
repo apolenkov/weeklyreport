@@ -30,6 +30,19 @@ describe("ViewModeToggle", () => {
     const slides = screen.getByRole("link", { name: /slides/i });
     expect(slides).toHaveAttribute("href", "/lead/report/abc?mode=slides");
   });
+
+  it("shows mode labels only at desktop when requested", () => {
+    render(
+      <ViewModeToggle
+        editHref="/head/report/abc"
+        slidesHref="/head/report/abc?mode=slides"
+        desktopLabels
+      />,
+    );
+
+    expect(screen.getByText("Edit")).toHaveClass("sr-only", "lg:not-sr-only");
+    expect(screen.getByText("Slides")).toHaveClass("sr-only", "lg:not-sr-only");
+  });
 });
 
 // ArchiveToggle -----------------------------------------------------------------

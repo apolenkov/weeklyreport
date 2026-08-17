@@ -161,7 +161,7 @@ for shell sections, and `p-5`/`p-6` (20/24px) for report/card surfaces.
 
 ### Page geometry
 
-- The shared navigation and primary app frame use `max-w-6xl` (72rem / 1152px)
+- The shared navigation and primary app frame use `max-w-7xl` (80rem / 1280px)
   with `px-4` (16px), `sm:px-6` (24px), and `lg:px-8` (32px).
 - Report shells use vertical `space-y-4`; page headers wrap with `gap-4` and
   document actions stay in a labelled `DocumentActionGroup`.

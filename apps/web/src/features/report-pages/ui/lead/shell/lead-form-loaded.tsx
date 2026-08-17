@@ -13,7 +13,7 @@ import type {
 } from "../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
 import type { RecordVisibility } from "../../../../report-sections/client";
-import { LeadSlidesClient } from "../../../../slides";
+import { LeadSlidesClient, type SlideDensity } from "../../../../slides";
 import {
   LeadFormDialogs,
   type LeadFormDialogsQuickAdd,
@@ -75,6 +75,8 @@ export interface LeadFormLoadedProps {
   readonly setGroupExpanded: Dispatch<SetStateAction<boolean>>;
   readonly deckRef: RefObject<HTMLDivElement | null>;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
+  readonly density: SlideDensity;
+  readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: FullscreenHandle;
   readonly unsetOwnStageCount: number;
 }
@@ -160,6 +162,8 @@ function LoadedChrome({
         isForeignSlidesDeck={data.isForeignSlidesDeck}
         isSlidesMode={props.isSlidesMode}
         targetReportId={data.targetReportId}
+        density={props.density}
+        onDensityChange={props.onDensityChange}
         slidesFullscreen={props.slidesFullscreen}
         fullscreenToggleRef={props.fullscreenToggleRef}
         groupExpanded={props.groupExpanded}
@@ -195,6 +199,8 @@ function LoadedReportContent({
         onToggle={props.slidesFullscreen.toggle}
         visibilityMode={data.toolbarVisibility}
         visibilityHydrated={data.visibilityHydrated}
+        density={props.density}
+        onDensityChange={props.onDensityChange}
       />
     );
   }

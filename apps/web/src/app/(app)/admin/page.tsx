@@ -26,7 +26,7 @@ export default async function AdminPage({ searchParams }: Props) {
       tabIndex={-1}
       className="operational-paper-shell min-h-screen"
     >
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">

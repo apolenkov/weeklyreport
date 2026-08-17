@@ -24,7 +24,7 @@ export function NavBar() {
 
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
-      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 lg:px-8">
         <NavBrand
           role={model.role}
           homeLabel={model.homeLabel}
@@ -47,7 +47,7 @@ export function NavBar() {
       </div>
 
       {/* Teal bottom accent — 3px tealA, rounded top corners. */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div
           className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]"
           data-testid="nav-accent"

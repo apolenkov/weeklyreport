@@ -103,12 +103,14 @@ describe("LeadSummaryTable action queue", () => {
       />,
     );
     const toggle = screen.getByRole("button", { name: /details/i });
+    expect(toggle).toHaveClass("w-[5.5rem]");
     const detailId = toggle.getAttribute("aria-controls");
     if (!detailId) throw new Error("Disclosure is missing aria-controls");
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveClass("w-[5.5rem]");
     expect(document.getElementById(detailId)).toBeVisible();
     expect(screen.getByText("Products")).toBeVisible();
     expect(screen.getByText("Activities")).toBeVisible();

@@ -11,6 +11,7 @@ interface ViewModeToggleProps {
   readonly mode?: "edit" | "slides";
   // Viewer is read-only — pencil "Edit" is misleading; head keeps "Edit".
   readonly readOnly?: boolean;
+  readonly desktopLabels?: boolean;
 }
 
 export function ViewModeToggle({
@@ -18,6 +19,7 @@ export function ViewModeToggle({
   slidesHref,
   mode = "edit",
   readOnly = false,
+  desktopLabels = false,
 }: ViewModeToggleProps) {
   // <Link> segments keep middle-click / open-in-new-tab; slides is its own route.
   const reportLabel = readOnly ? "Report" : "Edit";
@@ -27,23 +29,33 @@ export function ViewModeToggle({
         href={editHref}
         scroll={false}
         title={reportLabel}
-        className={segmentClassName(mode === "edit", { iconOnly: true })}
+        className={segmentClassName(mode === "edit", {
+          iconOnly: true,
+          desktopLabels,
+        })}
       >
         {readOnly ? (
           <FileText className="h-4 w-4" aria-hidden="true" />
         ) : (
           <Pencil className="h-4 w-4" aria-hidden="true" />
         )}
-        <span className="sr-only">{reportLabel}</span>
+        <span className={desktopLabels ? "sr-only lg:not-sr-only" : "sr-only"}>
+          {reportLabel}
+        </span>
       </Link>
       <Link
         href={slidesHref}
         scroll={false}
         title="Slides"
-        className={segmentClassName(mode === "slides", { iconOnly: true })}
+        className={segmentClassName(mode === "slides", {
+          iconOnly: true,
+          desktopLabels,
+        })}
       >
         <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-        <span className="sr-only">Slides</span>
+        <span className={desktopLabels ? "sr-only lg:not-sr-only" : "sr-only"}>
+          Slides
+        </span>
       </Link>
     </SegmentedToggle>
   );

@@ -29,9 +29,9 @@ export function SlideDensityControl({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(density.value)}
-            className={`inline-flex h-10 items-center justify-center rounded-[var(--radius-pill)] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
+            className={`inline-flex h-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
               active
-                ? "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)]"
+                ? "bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]"
                 : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
             }`}
           >
