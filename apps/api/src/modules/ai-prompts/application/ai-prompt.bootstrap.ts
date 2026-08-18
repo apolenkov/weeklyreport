@@ -10,17 +10,18 @@ import {
   type AiPromptMetricsSink,
 } from "./ai-prompt.service-support.js";
 
-export const bootstrapPromptControl = async (
+export const handoffPromptBaseline = async (
   repository: AiPromptRepository,
   catalog: AiFeaturePromptCatalog,
   audit: AiPromptAuditSink,
   metrics: AiPromptMetricsSink,
   actorId: string,
-): Promise<AiPromptOperationResult | null> => {
+): Promise<AiPromptOperationResult> => {
   const entry = catalog.require(REPORT_ASSISTANT_FEATURE_KEY);
   const baseline = entry.compose(entry.defaultEditableInstructions);
-  const created = await repository.bootstrap({
+  const result = await repository.handoff({
     featureKey: entry.featureKey,
+    servingContractVersion: entry.servingContractVersion,
     coreContractVersion: entry.coreContractVersion,
     composerVersion: entry.composerVersion,
     lockedCoreSnapshot: Object.fromEntries(
@@ -30,23 +31,24 @@ export const bootstrapPromptControl = async (
     effectiveContentHash: baseline.contentHash,
     createdBy: actorId,
   });
-  if (!created) return null;
-  audit.record({
-    event: "ai_prompt.bootstrapped",
-    actorId,
-    featureKey: entry.featureKey,
-    revisionId: created.id,
-    contentHash: created.effectiveContentHash,
-    contractVersion: created.coreContractVersion,
-  });
-  metrics.record({
-    feature: REPORT_ASSISTANT_FEATURE_KEY,
-    operation: "bootstrap",
-    outcome: "passed",
-  });
+  if (result.created) {
+    audit.record({
+      event: "ai_prompt.handoff_created",
+      actorId,
+      featureKey: entry.featureKey,
+      revisionId: result.revision.id,
+      contentHash: result.revision.effectiveContentHash,
+      contractVersion: result.revision.coreContractVersion,
+    });
+    metrics.record({
+      feature: REPORT_ASSISTANT_FEATURE_KEY,
+      operation: "handoff",
+      outcome: "passed",
+    });
+  }
   return {
-    featureKey: REPORT_ASSISTANT_FEATURE_KEY,
-    revisionId: created.id,
-    lifecycle: "active",
+    featureKey: entry.featureKey,
+    revisionId: result.revision.id,
+    lifecycle: result.revision.lifecycle,
   };
 };

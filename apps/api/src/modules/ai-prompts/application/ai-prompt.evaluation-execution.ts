@@ -6,13 +6,13 @@ import type {
   StoredAiPromptBundleRevision,
 } from "../infrastructure/ai-prompt.repository.js";
 import type { AiFeaturePromptCatalogEntry } from "./ai-feature-prompt-catalog.js";
+import { safePromptEvaluation } from "./ai-prompt.evaluation-support.js";
 import type { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import {
   type AiPromptAuditSink,
   AiPromptConflictError,
   type AiPromptMetricsSink,
   composedFromRevision,
-  safePromptEvaluation,
 } from "./ai-prompt.service-support.js";
 
 export const executePromptEvaluation = async (
@@ -37,19 +37,23 @@ export const executePromptEvaluation = async (
     generationCompatibilityIdentity: provider.generationCompatibilityIdentity,
     contentHash: revision.effectiveContentHash,
     contractVersion: revision.coreContractVersion,
+    servingContractVersion: entry.servingContractVersion,
     evaluatorVersion: entry.evaluatorVersion,
     checks: result.checks,
     outcome: result.outcome,
     evaluatedAt: new Date(),
   });
-  const transitioned = await repository.transition(
-    revision.featureKey,
-    revision.id,
-    [AiPromptBundleLifecycle.draft, AiPromptBundleLifecycle.failed],
-    result.outcome === "passed"
-      ? AiPromptBundleLifecycle.validated
-      : AiPromptBundleLifecycle.failed,
-  );
+  const transitioned =
+    revision.lifecycle === AiPromptBundleLifecycle.active
+      ? true
+      : await repository.transition(
+          revision.featureKey,
+          revision.id,
+          [AiPromptBundleLifecycle.draft, AiPromptBundleLifecycle.failed],
+          result.outcome === "passed"
+            ? AiPromptBundleLifecycle.validated
+            : AiPromptBundleLifecycle.failed,
+        );
   if (!transitioned)
     throw new AiPromptConflictError(
       "Prompt lifecycle changed during evaluation",

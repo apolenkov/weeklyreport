@@ -25,9 +25,17 @@ const availabilityLabel = (
   value: AiPromptFeatureRead["control"]["availability"],
 ): string => {
   if (value === "available") return "Ready";
-  if (value === "evaluation_required") return "Evaluation required";
   if (value === "provider_incompatible") return "Provider incompatible";
   return "Not configured";
+};
+
+const servingLabel = (
+  bundle: AiPromptFeatureRead["control"]["activeBundle"],
+): string => {
+  if (!bundle) return "No active serving revision";
+  if (bundle.servingStatus === "current") return "Current serving contract";
+  if (bundle.servingStatus === "legacy") return "Legacy serving contract";
+  return "Incompatible serving snapshot";
 };
 
 function Overview({
@@ -91,7 +99,7 @@ function Overview({
                 <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
                   Active version{" "}
                   {feature.control.activeBundle
-                    ? `v${feature.control.activeBundle.revision}`
+                    ? `v${feature.control.activeBundle.revision} · ${servingLabel(feature.control.activeBundle)}`
                     : "not configured"}
                 </p>
               </div>
@@ -205,7 +213,6 @@ export function SettingsAiSubTab() {
           {featureQ.data && (
             <SettingsAiFeatureDetail
               feature={featureQ.data}
-              provider={providerQ.data?.active ?? null}
               onRefresh={refreshFeature}
             />
           )}

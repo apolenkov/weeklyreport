@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type {
+  AiPromptActivationInput,
   AiPromptEvaluationInput,
   AiPromptOperationResult,
   AiPromptRestoreInput,
@@ -30,6 +31,7 @@ import {
   type AiPromptMetricsSink,
   AiPromptNotFoundError,
   bundleRead,
+  composedFromRevision,
   featureFromCatalog,
 } from "./ai-prompt.service-support.js";
 
@@ -38,6 +40,7 @@ const executionIdentity = (
   generationCompatibilityIdentity: string,
   contentHash: string,
   contractVersion: string,
+  servingContractVersion: string,
   evaluatorVersion: string,
 ): string =>
   createHash("sha256")
@@ -48,6 +51,7 @@ const executionIdentity = (
         generationCompatibilityIdentity,
         contentHash,
         contractVersion,
+        servingContractVersion,
         evaluatorVersion,
       ].join(":"),
     )
@@ -70,6 +74,12 @@ export class AiPromptLifecycleService {
       input.featureKey,
       input.revisionId,
     );
+    if (revision.servingContractVersion !== entry.servingContractVersion) {
+      throw new AiPromptConfigurationError(
+        "This prompt revision belongs to a retired serving contract",
+      );
+    }
+    composedFromRevision(entry, revision);
     const provider = await this.requireActiveProvider();
     if (!this.enqueuer) {
       throw new AiPromptConfigurationError(
@@ -84,6 +94,7 @@ export class AiPromptLifecycleService {
           provider.generationCompatibilityIdentity,
           revision.effectiveContentHash,
           revision.coreContractVersion,
+          entry.servingContractVersion,
           entry.evaluatorVersion,
         ),
         featureKey: input.featureKey,
@@ -143,20 +154,24 @@ export class AiPromptLifecycleService {
   }
 
   async activate(
-    input: AiPromptEvaluationInput & { evaluationId: string },
+    input: AiPromptActivationInput,
     actorId: string,
   ): Promise<AiPromptOperationResult> {
     return activateAiPromptRevision(
       {
         repository: this.repository,
-        providerRepository: this.providerRepository,
         catalog: this.catalog,
         audit: this.audit,
         metrics: this.metrics,
       },
       input,
       actorId,
-      [AiPromptBundleLifecycle.validated],
+      [
+        AiPromptBundleLifecycle.draft,
+        AiPromptBundleLifecycle.validated,
+        AiPromptBundleLifecycle.failed,
+        AiPromptBundleLifecycle.active,
+      ],
       "activation",
     );
   }
@@ -168,7 +183,6 @@ export class AiPromptLifecycleService {
     return activateAiPromptRevision(
       {
         repository: this.repository,
-        providerRepository: this.providerRepository,
         catalog: this.catalog,
         audit: this.audit,
         metrics: this.metrics,

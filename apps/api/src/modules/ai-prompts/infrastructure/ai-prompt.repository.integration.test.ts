@@ -79,6 +79,7 @@ const bootstrap = async () =>
     featureKey,
     coreContractVersion: baseline.coreContractVersion,
     composerVersion: baseline.composerVersion,
+    servingContractVersion: baseline.servingContractVersion,
     lockedCoreSnapshot: lockedCoreSnapshot,
     promptContents: baseline.slots.reduce(
       (instructions, slot) => ({
@@ -103,6 +104,7 @@ const createDraft = async (baseRevisionId: string, suffix: string) => {
     baseRevisionId,
     coreContractVersion: composed.coreContractVersion,
     composerVersion: composed.composerVersion,
+    servingContractVersion: composed.servingContractVersion,
     lockedCoreSnapshot: lockedCoreSnapshot,
     promptContents: editable,
     effectiveContentHash: composed.contentHash,
@@ -141,6 +143,42 @@ describe("AI prompt control-plane database states", () => {
     ).resolves.toMatchObject({ activeRevisionId: first.id });
   });
 
+  it("creates an idempotent current-serving handoff draft without moving the active pointer", async () => {
+    const input = {
+      featureKey,
+      servingContractVersion: baseline.servingContractVersion,
+      coreContractVersion: baseline.coreContractVersion,
+      composerVersion: baseline.composerVersion,
+      lockedCoreSnapshot,
+      promptContents: baseline.slots.reduce(
+        (instructions, slot) => ({
+          ...instructions,
+          [slot.slot]: slot.promptContents,
+        }),
+        {},
+      ),
+      effectiveContentHash: baseline.contentHash,
+      createdBy: "handoff",
+    };
+    const first = await repository.handoff(input);
+    const second = await repository.handoff(input);
+
+    expect(first).toMatchObject({
+      created: true,
+      revision: { lifecycle: AiPromptBundleLifecycle.draft, revision: 1 },
+    });
+    expect(second).toMatchObject({
+      created: false,
+      revision: {
+        id: first.revision.id,
+        lifecycle: AiPromptBundleLifecycle.draft,
+      },
+    });
+    await expect(
+      prisma.aiFeaturePromptControl.findUnique({ where: { featureKey } }),
+    ).resolves.toMatchObject({ activeRevisionId: null });
+  });
+
   it("promotes exact compatibility evidence to passed without later downgrade", async () => {
     const active = await bootstrap();
     if (!active) throw new Error("Prompt baseline was not created");
@@ -151,6 +189,8 @@ describe("AI prompt control-plane database states", () => {
         generationCompatibilityIdentity: "generation-identity",
         contentHash: active.effectiveContentHash,
         contractVersion: active.coreContractVersion,
+        servingContractVersion:
+          active.servingContractVersion ?? baseline.servingContractVersion,
         evaluatorVersion: "report-assistant/evaluator/v2",
         checks: [
           {
@@ -175,29 +215,11 @@ describe("AI prompt control-plane database states", () => {
     ).resolves.toMatchObject({ outcome: AiPromptEvaluationOutcome.passed });
   });
 
-  it("rechecks the provider pair during activation and preserves history on discard", async () => {
+  it("activates current prompt text and preserves history on discard", async () => {
     const active = await bootstrap();
     if (!active) throw new Error("Prompt baseline was not created");
     await createProvider();
     const candidate = await createDraft(active.id, "candidate");
-    const evaluation = await repository.recordEvaluation({
-      featureKey,
-      promptRevisionId: candidate.id,
-      generationCompatibilityIdentity: "generation-identity",
-      contentHash: candidate.effectiveContentHash,
-      contractVersion: candidate.coreContractVersion,
-      evaluatorVersion: "report-assistant/evaluator/v1",
-      checks: [
-        {
-          code: "protocol_shape",
-          status: "passed",
-          passedCount: 1,
-          failedCount: 0,
-        },
-      ],
-      outcome: AiPromptEvaluationOutcome.passed,
-      evaluatedAt: now,
-    });
     await repository.transition(
       featureKey,
       candidate.id,
@@ -212,11 +234,8 @@ describe("AI prompt control-plane database states", () => {
         [AiPromptBundleLifecycle.validated],
         now,
         {
-          generationCompatibilityIdentity: "generation-identity",
-          contentHash: candidate.effectiveContentHash,
-          contractVersion: candidate.coreContractVersion,
-          evaluatorVersion: "report-assistant/evaluator/v1",
-          evaluationId: evaluation.id,
+          servingContractVersion:
+            candidate.servingContractVersion ?? baseline.servingContractVersion,
         },
       ),
     ).resolves.toBe(true);

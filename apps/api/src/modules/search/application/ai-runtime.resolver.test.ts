@@ -6,7 +6,11 @@ import type {
   StoredAiProviderRevision,
 } from "../../ai-provider/infrastructure/ai-provider.repository.js";
 import { AesGcmCredentialCodec } from "../../ai-provider/infrastructure/credential-codec.js";
-import { baselineReportAssistantPrompts } from "./ai-feature-prompt-catalog.js";
+import {
+  aiFeaturePromptCatalog,
+  baselineReportAssistantPrompts,
+  REPORT_ASSISTANT_FEATURE_KEY,
+} from "./ai-feature-prompt-catalog.js";
 import {
   AiRuntimeNotConfiguredError,
   AiRuntimeResolver,
@@ -93,6 +97,19 @@ const env = {
 const createResolver = (active: StoredAiProviderRevision | null) => {
   const getControl = vi.fn().mockResolvedValue(control(active));
   const getRevision = vi.fn().mockResolvedValue(active);
+  const prompts = baselineReportAssistantPrompts();
+  const resolveReportAssistant = vi.fn().mockResolvedValue(
+    active?.lifecycle === AiProviderLifecycle.active
+      ? {
+          provider: active,
+          featureKey: REPORT_ASSISTANT_FEATURE_KEY,
+          promptRevisionId: "prompt-revision-1",
+          servingContractVersion: prompts.servingContractVersion,
+          coreContractVersion: prompts.coreContractVersion,
+          prompts,
+        }
+      : null,
+  );
   const repository = { getControl, getRevision };
   const semanticRepository: SemanticEmbeddingRepository = {
     findCachedHashes: vi.fn().mockResolvedValue([]),
@@ -109,9 +126,11 @@ const createResolver = (active: StoredAiProviderRevision | null) => {
       semanticRepository,
       enqueuer,
       env,
+      { resolveReportAssistant },
     ),
     getControl,
     getRevision,
+    resolveReportAssistant,
   };
 };
 
@@ -135,7 +154,8 @@ describe("AiRuntimeResolver", () => {
     expect(second?.planner).toBe(first?.planner);
     expect(second?.answerer).toBe(first?.answerer);
     expect(second?.semanticRetrieval).not.toBe(first?.semanticRetrieval);
-    expect(harness.getControl).toHaveBeenCalledTimes(2);
+    expect(harness.resolveReportAssistant).toHaveBeenCalledTimes(2);
+    expect(first?.promptRevisionId).toBe("prompt-revision-1");
   });
 
   it("does not resolve a disabled or non-active control and can resolve an exact retained revision", async () => {
@@ -160,6 +180,34 @@ describe("AiRuntimeResolver", () => {
     expect(assistant?.answerer).not.toBe(exact.answerer);
   });
 
+  it("keeps prompt-backed clients separate across an activation boundary", async () => {
+    const active = revision(AiProviderLifecycle.active);
+    const harness = createResolver(active);
+    const first = await harness.resolver.resolveActive();
+    const baseline = baselineReportAssistantPrompts();
+    const changed = aiFeaturePromptCatalog
+      .require(REPORT_ASSISTANT_FEATURE_KEY)
+      .compose({
+        ...baseline.prompts,
+        planner: `${baseline.prompts.planner}\nUse the stored serving revision.`,
+      });
+    harness.resolveReportAssistant.mockResolvedValue({
+      provider: active,
+      featureKey: REPORT_ASSISTANT_FEATURE_KEY,
+      promptRevisionId: "prompt-revision-2",
+      servingContractVersion: changed.servingContractVersion,
+      coreContractVersion: changed.coreContractVersion,
+      prompts: changed,
+    });
+
+    const second = await harness.resolver.resolveActive();
+
+    expect(first?.prompts?.contentHash).not.toBe(second?.prompts?.contentHash);
+    expect(first?.planner).not.toBe(second?.planner);
+    expect(first?.promptRevisionId).toBe("prompt-revision-1");
+    expect(second?.promptRevisionId).toBe("prompt-revision-2");
+  });
+
   it("fails exact worker resolution when the revision no longer exists", async () => {
     const harness = createResolver(null);
 
@@ -182,10 +230,9 @@ describe("AiRuntimeResolver", () => {
     expect(exact.planner).toBeDefined();
   });
 
-  it("uses and caches code-owned prompts without stored prompt state", async () => {
+  it("fails closed when the durable prompt snapshot is unavailable", async () => {
     const active = revision(AiProviderLifecycle.active);
-    const prompts = baselineReportAssistantPrompts();
-    const resolveReportAssistant = vi.fn();
+    const resolveReportAssistant = vi.fn().mockResolvedValue(null);
     const configurationRepository = { resolveReportAssistant };
     const resolver = new AiRuntimeResolver(
       {
@@ -206,20 +253,7 @@ describe("AiRuntimeResolver", () => {
       configurationRepository,
     );
 
-    const first = await resolver.resolveActive();
-    const second = await resolver.resolveActive();
-    expect(first?.promptRevisionId).toBeNull();
-    expect(first?.prompts).toEqual(prompts);
-    expect(first).toMatchObject({
-      reasoningMode: "provider_default",
-      reasoningCustomValue: null,
-      answerProtocol: "json_object",
-    });
-    expect(second?.planner).toBe(first?.planner);
-
-    const changed = await resolver.resolveActive();
-    expect(changed?.promptRevisionId).toBeNull();
-    expect(changed?.planner).toBe(first?.planner);
-    expect(resolveReportAssistant).not.toHaveBeenCalled();
+    await expect(resolver.resolveActive()).resolves.toBeNull();
+    expect(resolveReportAssistant).toHaveBeenCalledOnce();
   });
 });

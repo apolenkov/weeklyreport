@@ -26,13 +26,15 @@ import {
 export const REPORT_ASSISTANT_FEATURE_KEY = "lead-report-assistant" as const;
 const REPORT_ASSISTANT_CORE_CONTRACT_VERSION = "report-assistant/core/v1";
 const REPORT_ASSISTANT_COMPOSER_VERSION = "report-assistant/composer/v2";
-export const REPORT_ASSISTANT_EVALUATOR_VERSION =
-  "report-assistant/evaluator/v2";
+export const REPORT_ASSISTANT_SERVING_CONTRACT_VERSION =
+  "report-assistant/editor-serving/v1";
+const REPORT_ASSISTANT_EVALUATOR_VERSION = "report-assistant/evaluator/v2";
 
 export type AiComposedPromptSet = Readonly<{
   featureKey: AiFeatureKey;
   coreContractVersion: string;
   composerVersion: string;
+  servingContractVersion: string;
   contentHash: string;
   slotVersions: Readonly<Record<AiPromptSlot, string>>;
   prompts: Readonly<Record<AiPromptSlot, string>>;
@@ -49,6 +51,7 @@ export type AiFeaturePromptCatalogEntry = Readonly<{
   promptVersions: Readonly<Record<AiPromptSlot, string>>;
   coreContractVersion: string;
   composerVersion: string;
+  servingContractVersion: string;
   evaluatorVersion: string;
   compose(editable: AiPromptContents): AiComposedPromptSet;
 }>;
@@ -95,6 +98,7 @@ const createEntry = (): AiFeaturePromptCatalogEntry => {
     promptVersions,
     coreContractVersion: REPORT_ASSISTANT_CORE_CONTRACT_VERSION,
     composerVersion: REPORT_ASSISTANT_COMPOSER_VERSION,
+    servingContractVersion: REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
     evaluatorVersion: REPORT_ASSISTANT_EVALUATOR_VERSION,
     compose(editable: AiPromptContents): AiComposedPromptSet {
       return composePromptSet(entry, editable, lockedCore);
@@ -106,7 +110,10 @@ const createEntry = (): AiFeaturePromptCatalogEntry => {
 export const composePromptSet = (
   entry: Pick<
     AiFeaturePromptCatalogEntry,
-    "featureKey" | "coreContractVersion" | "composerVersion"
+    | "featureKey"
+    | "coreContractVersion"
+    | "composerVersion"
+    | "servingContractVersion"
   >,
   editable: AiPromptContents,
   snapshot: Readonly<Record<AiPromptSlot, string>>,
@@ -122,6 +129,7 @@ export const composePromptSet = (
     featureKey: entry.featureKey,
     coreContractVersion: entry.coreContractVersion,
     composerVersion: entry.composerVersion,
+    servingContractVersion: entry.servingContractVersion,
     contentHash: hashContent(serialized),
     slotVersions: promptVersions,
     prompts,

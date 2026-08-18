@@ -8,6 +8,7 @@ import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js"
 import {
   bootstrap,
   createDraft,
+  handoff,
   recordEvaluation,
 } from "./ai-prompt.repository.commands.js";
 import {
@@ -16,12 +17,14 @@ import {
   transition,
 } from "./ai-prompt.repository.lifecycle.js";
 import {
-  type AiPromptActivationCompatibility,
+  type AiPromptActivationContract,
   type AiPromptEvaluationLookup,
+  type AiPromptHandoffResult,
   evaluationSelect,
   type NewAiPromptBootstrap,
   type NewAiPromptBundleRevision,
   type NewAiPromptEvaluation,
+  type NewAiPromptHandoff,
   revisionSelect,
   revisionWhere,
   type StoredAiFeaturePromptControl,
@@ -33,11 +36,13 @@ import {
 } from "./ai-prompt.repository.types.js";
 
 export type {
-  AiPromptActivationCompatibility,
+  AiPromptActivationContract,
   AiPromptEvaluationLookup,
+  AiPromptHandoffResult,
   NewAiPromptBootstrap,
   NewAiPromptBundleRevision,
   NewAiPromptEvaluation,
+  NewAiPromptHandoff,
   StoredAiFeaturePromptControl,
   StoredAiPromptBundleRevision,
   StoredAiPromptEvaluation,
@@ -124,6 +129,10 @@ export class AiPromptRepository {
     return bootstrap(this.prisma, input);
   }
 
+  handoff(input: NewAiPromptHandoff): Promise<AiPromptHandoffResult> {
+    return handoff(this.prisma, input);
+  }
+
   recordEvaluation(
     input: NewAiPromptEvaluation,
   ): Promise<StoredAiPromptEvaluation> {
@@ -135,7 +144,7 @@ export class AiPromptRepository {
   ): Promise<StoredAiPromptEvaluation | null> {
     const evaluation = await this.prisma.aiPromptEvaluation.findUnique({
       where: {
-        promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
+        promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
           input,
       },
       select: evaluationSelect,
@@ -206,7 +215,7 @@ export class AiPromptRepository {
     revisionId: string,
     allowedLifecycle: readonly AiPromptBundleLifecycle[],
     now: Date,
-    compatibility?: AiPromptActivationCompatibility,
+    contract: AiPromptActivationContract,
   ): Promise<boolean> {
     return activate(
       this.prisma,
@@ -214,7 +223,7 @@ export class AiPromptRepository {
       revisionId,
       allowedLifecycle,
       now,
-      compatibility,
+      contract,
     );
   }
 }

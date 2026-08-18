@@ -88,6 +88,7 @@ const evaluation = (
   generationCompatibilityIdentity: "generation-identity",
   contentHash: baseline.contentHash,
   contractVersion: baseline.coreContractVersion,
+  servingContractVersion: baseline.servingContractVersion,
   evaluatorVersion,
   checks: [
     {
@@ -111,6 +112,7 @@ const bundle = (
   baseRevisionId: null,
   coreContractVersion: baseline.coreContractVersion,
   composerVersion: baseline.composerVersion,
+  servingContractVersion: baseline.servingContractVersion,
   lockedCoreSnapshot,
   promptContents: baseline.slots.reduce(
     (values, slot) => ({ ...values, [slot.slot]: slot.promptContents }),
@@ -173,6 +175,10 @@ const serviceFor = (values: {
     bootstrap: vi
       .fn()
       .mockResolvedValue(bundle(AiPromptBundleLifecycle.active)),
+    handoff: vi.fn().mockResolvedValue({
+      revision: bundle(AiPromptBundleLifecycle.draft),
+      created: true,
+    }),
   };
   const providerRepository = {
     getControl: vi.fn().mockResolvedValue(
@@ -236,6 +242,48 @@ describe("AiPromptService", () => {
     );
   });
 
+  it("rejects drafts based on a legacy serving revision", async () => {
+    const legacy = {
+      ...bundle(AiPromptBundleLifecycle.active),
+      servingContractVersion: null,
+    };
+    const harness = serviceFor({
+      revision: legacy,
+      control: control(legacy),
+    });
+
+    await expect(
+      harness.service.draft(
+        {
+          featureKey: "lead-report-assistant",
+          baseRevisionId: revisionId,
+          promptContents: aiFeaturePromptCatalog.require(
+            "lead-report-assistant",
+          ).defaultEditableInstructions,
+        },
+        "admin-1",
+      ),
+    ).rejects.toBeInstanceOf(AiPromptConfigurationError);
+    expect(harness.repository.createDraft).not.toHaveBeenCalled();
+  });
+
+  it("keeps a legacy active revision readable but unavailable for serving", async () => {
+    const legacy = {
+      ...bundle(AiPromptBundleLifecycle.active),
+      servingContractVersion: null,
+    };
+    const harness = serviceFor({
+      revision: legacy,
+      control: control(legacy),
+      provider: provider(),
+    });
+
+    const result = await harness.service.read("lead-report-assistant");
+
+    expect(result.control.activeBundle?.servingStatus).toBe("legacy");
+    expect(result.control.availability).toBe("not_configured");
+  });
+
   it("records evaluation against the exact active provider and transitions the candidate", async () => {
     const candidate = bundle(AiPromptBundleLifecycle.draft);
     const harness = serviceFor({ revision: candidate });
@@ -260,11 +308,11 @@ describe("AiPromptService", () => {
     );
   });
 
-  it("requires a current passing evaluation before activation", async () => {
-    const candidate = bundle(AiPromptBundleLifecycle.validated, evaluation());
+  it("activates a structurally valid current revision without evaluation", async () => {
+    const candidate = bundle(AiPromptBundleLifecycle.validated);
     const harness = serviceFor({
       revision: candidate,
-      storedEvaluation: evaluation(),
+      storedEvaluation: null,
     });
 
     await expect(
@@ -272,7 +320,6 @@ describe("AiPromptService", () => {
         {
           featureKey: "lead-report-assistant",
           revisionId,
-          evaluationId: "859b2767-0f86-41e2-b025-49730ca010e4",
         },
         "admin-1",
       ),
@@ -425,6 +472,29 @@ describe("AiPromptService", () => {
     expect(harness.repository.discardDisposable).not.toHaveBeenCalled();
   });
 
+  it("hands off the exact current baseline as a disposable revision", async () => {
+    const harness = serviceFor({ control: null });
+
+    await expect(
+      harness.service.handoffCurrentBaseline("rollout"),
+    ).resolves.toMatchObject({
+      featureKey: "lead-report-assistant",
+      revisionId,
+      lifecycle: "draft",
+    });
+    expect(harness.repository.handoff).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featureKey: "lead-report-assistant",
+        servingContractVersion: baseline.servingContractVersion,
+        coreContractVersion: baseline.coreContractVersion,
+        composerVersion: baseline.composerVersion,
+        effectiveContentHash: baseline.contentHash,
+        promptContents: aiFeaturePromptCatalog.require("lead-report-assistant")
+          .defaultEditableInstructions,
+      }),
+    );
+  });
+
   it("discards a failed prompt attempt", async () => {
     const harness = serviceFor({
       revision: bundle(AiPromptBundleLifecycle.failed),
@@ -441,21 +511,5 @@ describe("AiPromptService", () => {
       "lead-report-assistant",
       revisionId,
     );
-  });
-
-  it("bootstraps once and leaves existing prompt controls untouched", async () => {
-    const harness = serviceFor({ control: null });
-    harness.repository.bootstrap
-      .mockResolvedValueOnce(bundle(AiPromptBundleLifecycle.active))
-      .mockResolvedValueOnce(null);
-
-    await expect(harness.service.bootstrap()).resolves.toMatchObject({
-      lifecycle: "active",
-    });
-    harness.repository.getControl.mockResolvedValue(
-      control(bundle(AiPromptBundleLifecycle.active)),
-    );
-    await expect(harness.service.bootstrap()).resolves.toBeNull();
-    expect(harness.repository.bootstrap).toHaveBeenCalledTimes(2);
   });
 });

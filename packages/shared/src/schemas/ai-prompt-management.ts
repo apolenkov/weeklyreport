@@ -53,8 +53,12 @@ export const aiPromptBundleLifecycleSchema = z.enum([
 export const aiPromptAvailabilitySchema = z.enum([
   "available",
   "not_configured",
-  "evaluation_required",
   "provider_incompatible",
+]);
+export const aiPromptServingStatusSchema = z.enum([
+  "current",
+  "legacy",
+  "incompatible",
 ]);
 export const aiPromptOperationOutcomeSchema = z.enum([
   "passed",
@@ -133,6 +137,7 @@ export const aiPromptEvaluationReadSchema = z
     generationCompatibilityIdentity: versionSchema,
     contentHash: contentHashSchema,
     contractVersion: versionSchema,
+    servingContractVersion: versionSchema.nullable(),
     evaluatorVersion: versionSchema,
     outcome: aiPromptOperationOutcomeSchema,
     checks: z
@@ -151,6 +156,8 @@ export const aiPromptBundleReadSchema = z
     baseRevisionId: z.uuid().nullable(),
     coreContractVersion: versionSchema,
     composerVersion: versionSchema,
+    servingContractVersion: versionSchema.nullable(),
+    servingStatus: aiPromptServingStatusSchema,
     lockedCoreSnapshot: z.record(
       aiPromptSlotSchema,
       safePromptText(AI_PROMPT_CORE_LIMIT),
@@ -228,7 +235,6 @@ const activationInputSchema = () =>
     .object({
       featureKey: aiFeatureKeySchema,
       revisionId: z.uuid(),
-      evaluationId: z.uuid(),
     })
     .strict();
 

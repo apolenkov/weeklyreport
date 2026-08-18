@@ -5,7 +5,6 @@ import {
   aiPromptDiscardInputSchema,
   aiPromptDiscardResultSchema,
   aiPromptDraftInputSchema,
-  aiPromptEvaluationInputSchema,
   aiPromptFeatureInputSchema,
   aiPromptFeatureReadSchema,
   aiPromptOperationResultSchema,
@@ -60,19 +59,6 @@ export function createAdminAiPromptProcedures(deps: AdminAiPromptDeps) {
       .mutation(async ({ input, ctx }) => {
         try {
           return await requireService(deps.aiPromptService).draft(
-            input,
-            ctx.session.userId,
-          );
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
-    evaluate: adminProcedure
-      .input(aiPromptEvaluationInputSchema)
-      .output(aiPromptBundleReadSchema)
-      .mutation(async ({ input, ctx }) => {
-        try {
-          return await requireService(deps.aiPromptService).evaluate(
             input,
             ctx.session.userId,
           );

@@ -45,6 +45,17 @@ describe("AI prompt management contracts", () => {
     ).toBe(false);
   });
 
+  it("keeps serving identity catalog-owned", () => {
+    expect(
+      aiPromptDraftInputSchema.safeParse({
+        featureKey: "lead-report-assistant",
+        baseRevisionId: id,
+        promptContents,
+        servingContractVersion: "report-assistant/editor-serving/v1",
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires every slot and enforces safe text limits", () => {
     expect(
       aiPromptContentsSchema.safeParse({
@@ -89,6 +100,7 @@ describe("AI prompt management contracts", () => {
         generationCompatibilityIdentity: "generation-identity",
         contentHash: hash,
         contractVersion: "report-assistant/v1",
+        servingContractVersion: "report-assistant/editor-serving/v1",
         evaluatorVersion: "report-assistant-evaluator/v1",
         outcome: "passed",
         checks: [

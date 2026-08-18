@@ -226,12 +226,7 @@ export class AiProviderConfigurationRepository {
     );
   }
 
-  async getExecution(id: string): Promise<Readonly<{
-    providerRevisionId: string;
-    promptRevisionId: string | null;
-    featureKey: string | null;
-    kind: "provider_test" | "prompt_evaluation";
-  }> | null> {
+  async getExecution(id: string): ReturnType<typeof getCompatibilityExecution> {
     return getCompatibilityExecution(this.prisma, id);
   }
 

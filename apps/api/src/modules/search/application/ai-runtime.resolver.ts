@@ -11,10 +11,6 @@ import type {
 } from "../../ai-provider/index.js";
 import type { AiComposedPromptSet } from "./ai-feature-prompt-catalog.js";
 import {
-  baselineReportAssistantPrompts,
-  REPORT_ASSISTANT_FEATURE_KEY,
-} from "./ai-feature-prompt-catalog.js";
-import {
   createRuntimeClients,
   type RuntimeClients,
 } from "./ai-runtime.clients.js";
@@ -39,6 +35,7 @@ export type AiRuntimeSnapshot = Readonly<{
   embeddingScopeIdentity: string;
   featureKey: string | null;
   promptRevisionId: string | null;
+  servingContractVersion: string | null;
   coreContractVersion: string | null;
   prompts: AiComposedPromptSet | null;
   reasoningMode: AiProviderReasoningMode;
@@ -82,33 +79,31 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       | "REPORT_ASSISTANT_SIMILARITY_THRESHOLD"
       | "REPORT_ASSISTANT_READ_THROUGH_LIMIT"
     >,
-    _configurationRepository?: Pick<
+    private readonly configurationRepository: Pick<
       AiRuntimeConfigurationRepository,
       "resolveReportAssistant"
     >,
   ) {}
 
   async resolveActive(): Promise<AiRuntimeSnapshot | null> {
-    const control = await this.repository.getControl();
-    const active = control?.activeConfiguration;
-    return control?.enabled === true && active?.lifecycle === "active"
-      ? (() => {
-          const prompts = baselineReportAssistantPrompts();
-          return this.resolveRevision(
-            active,
-            prompts,
-            REPORT_ASSISTANT_FEATURE_KEY,
-            null,
-            prompts.coreContractVersion,
-          );
-        })()
+    const configuration =
+      await this.configurationRepository.resolveReportAssistant();
+    return configuration
+      ? this.resolveRevision(
+          configuration.provider,
+          configuration.prompts,
+          configuration.featureKey,
+          configuration.promptRevisionId,
+          configuration.servingContractVersion,
+          configuration.coreContractVersion,
+        )
       : null;
   }
 
   async resolveExact(revisionId: string): Promise<AiRuntimeSnapshot> {
     const revision = await this.repository.getRevision(revisionId);
     if (!revision) throw new AiRuntimeNotConfiguredError();
-    return this.resolveRevision(revision, null, null, null, null);
+    return this.resolveRevision(revision, null, null, null, null, null);
   }
 
   private resolveRevision(
@@ -116,13 +111,14 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
     prompts: AiComposedPromptSet | null,
     featureKey: string | null,
     promptRevisionId: string | null,
+    servingContractVersion: string | null,
     coreContractVersion: string | null,
   ): AiRuntimeSnapshot {
     // Exact embedding workers intentionally have no generation prompts. The
-    // active assistant uses code-owned prompts, so promptRevisionId is null in
-    // both cases and cannot distinguish their client sets.
+    // active assistant has a persisted prompt identity, so its client set is
+    // kept separate even when both snapshots use the same provider revision.
     const promptIdentity = prompts
-      ? `prompt:${prompts.contentHash}`
+      ? `prompt:${prompts.servingContractVersion}:${prompts.contentHash}`
       : "embedding-only";
     const cacheKey = [
       revision.id,
@@ -146,6 +142,7 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       embeddingScopeIdentity: revision.embeddingScopeIdentity,
       featureKey,
       promptRevisionId,
+      servingContractVersion,
       coreContractVersion,
       prompts,
       reasoningMode: revision.reasoningMode,

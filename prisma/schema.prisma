@@ -909,6 +909,7 @@ model AiPromptBundleRevision {
   baseRevisionId          String?
   coreContractVersion     String
   composerVersion         String
+  servingContractVersion  String?
   lockedCoreSnapshot      Json
   promptContents          Json
   effectiveContentHash    String
@@ -951,13 +952,14 @@ model AiPromptEvaluation {
   generationCompatibilityIdentity String
   contentHash        String
   contractVersion    String
+  servingContractVersion String?
   evaluatorVersion   String
   checks             Json
   outcome            AiPromptEvaluationOutcome
   evaluatedAt        DateTime                  @default(now())
   promptRevision     AiPromptBundleRevision    @relation("AiPromptEvaluationBundle", fields: [promptRevisionId], references: [id], onDelete: Restrict)
 
-  @@unique([promptRevisionId, generationCompatibilityIdentity, contentHash, contractVersion, evaluatorVersion])
+  @@unique([promptRevisionId, generationCompatibilityIdentity, contentHash, contractVersion, servingContractVersion, evaluatorVersion])
   @@index([featureKey, outcome, evaluatedAt(sort: Desc)])
   @@index([generationCompatibilityIdentity, promptRevisionId])
 }

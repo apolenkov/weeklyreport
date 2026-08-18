@@ -2,7 +2,6 @@ import type {
   AiCompatibilityExecutionRead,
   AiPromptBundleRead,
   AiPromptContents,
-  AiPromptEvaluationRead,
   AiPromptFeatureRead,
 } from "@customreport/shared";
 import { aiCompatibilityExecutionReadSchema } from "@customreport/shared";
@@ -25,10 +24,6 @@ import {
   type AiFeaturePromptCatalogEntry,
   composePromptSet,
 } from "./ai-feature-prompt-catalog.js";
-import type {
-  AiPromptEvaluationResult,
-  AiPromptSyntheticEvaluator,
-} from "./ai-prompt.evaluator.js";
 
 export type AiPromptAuditSink = Readonly<{
   record(event: Readonly<Record<string, string | number | null>>): void;
@@ -44,7 +39,8 @@ export type AiPromptMetricsSink = Readonly<{
         | "activation"
         | "restore"
         | "discard"
-        | "bootstrap";
+        | "bootstrap"
+        | "handoff";
       outcome: "passed" | "failed";
     }>,
   ): void;
@@ -122,16 +118,10 @@ const editableFrom = (value: unknown): AiPromptContents => {
   return parsed.data;
 };
 
-const evaluationRead = (
-  revision: StoredAiPromptBundleRevision,
-): AiPromptEvaluationRead | null => {
-  const evaluation = revision.latestEvaluation;
-  if (!evaluation) return null;
-  return aiPromptEvaluationReadSchema.parse({
-    ...evaluation,
-    outcome: evaluation.outcome,
-  });
-};
+const evaluationRead = (revision: StoredAiPromptBundleRevision) =>
+  revision.latestEvaluation
+    ? aiPromptEvaluationReadSchema.parse(revision.latestEvaluation)
+    : null;
 
 const executionRead = (
   revision: StoredAiPromptBundleRevision,
@@ -151,15 +141,17 @@ export const bundleRead = (
   const promptContents = editableFrom(revision.promptContents);
   const lockedCoreSnapshot = lockedCoreFrom(revision.lockedCoreSnapshot);
   const composed = composePromptSet(entry, promptContents, lockedCoreSnapshot);
-  if (
-    composed.contentHash !== revision.effectiveContentHash ||
-    composed.coreContractVersion !== revision.coreContractVersion ||
-    composed.composerVersion !== revision.composerVersion
-  ) {
-    throw new AiPromptConfigurationError(
-      "Stored AI prompt hash or contract is invalid",
-    );
-  }
+  const metadataMatches =
+    composed.contentHash === revision.effectiveContentHash &&
+    composed.coreContractVersion === revision.coreContractVersion &&
+    composed.composerVersion === revision.composerVersion;
+  const servingStatus =
+    revision.servingContractVersion === null ||
+    revision.servingContractVersion !== entry.servingContractVersion
+      ? "legacy"
+      : metadataMatches
+        ? "current"
+        : "incompatible";
   return aiPromptBundleReadSchema.parse({
     id: revision.id,
     featureKey: revision.featureKey,
@@ -167,6 +159,8 @@ export const bundleRead = (
     baseRevisionId: revision.baseRevisionId,
     coreContractVersion: revision.coreContractVersion,
     composerVersion: revision.composerVersion,
+    servingContractVersion: revision.servingContractVersion,
+    servingStatus,
     lockedCoreSnapshot,
     promptContents,
     slots: composed.slots,
@@ -184,39 +178,27 @@ export const bundleRead = (
 export const composedFromRevision = (
   entry: AiFeaturePromptCatalogEntry,
   revision: StoredAiPromptBundleRevision,
-): AiComposedPromptSet =>
-  composePromptSet(
+): AiComposedPromptSet => {
+  if (revision.servingContractVersion !== entry.servingContractVersion) {
+    throw new AiPromptConfigurationError(
+      "Stored AI prompt belongs to a retired serving contract",
+    );
+  }
+  const composed = composePromptSet(
     entry,
     editableFrom(revision.promptContents),
     lockedCoreFrom(revision.lockedCoreSnapshot),
   );
-
-export const safePromptEvaluation = async (
-  evaluator: AiPromptSyntheticEvaluator,
-  entry: AiFeaturePromptCatalogEntry,
-  provider: StoredAiProviderRevision,
-  prompts: AiComposedPromptSet,
-): Promise<AiPromptEvaluationResult> => {
-  try {
-    return await evaluator.evaluate({ feature: entry, provider, prompts });
-  } catch (error) {
-    const inconclusive =
-      typeof error === "object" &&
-      error !== null &&
-      "retryable" in error &&
-      error.retryable === true;
-    return {
-      outcome: inconclusive ? "inconclusive" : "failed",
-      checks: [
-        {
-          code: "provider_probe_failed",
-          status: inconclusive ? "inconclusive" : "failed",
-          passedCount: 0,
-          failedCount: 1,
-        },
-      ],
-    };
+  if (
+    composed.contentHash !== revision.effectiveContentHash ||
+    composed.coreContractVersion !== revision.coreContractVersion ||
+    composed.composerVersion !== revision.composerVersion
+  ) {
+    throw new AiPromptConfigurationError(
+      "Stored AI prompt hash or contract is invalid",
+    );
   }
+  return composed;
 };
 
 export const promptAvailability = (
@@ -226,16 +208,16 @@ export const promptAvailability = (
 ): AiPromptFeatureRead["control"]["availability"] => {
   if (!control?.activeRevision || !provider) return "not_configured";
   if (provider.lifecycle !== "active") return "provider_incompatible";
-  const evaluation = control.activeRevision.latestEvaluation;
-  if (evaluation?.outcome !== "passed") return "evaluation_required";
   if (
-    evaluation.generationCompatibilityIdentity !==
-      provider.generationCompatibilityIdentity ||
-    evaluation.contentHash !== control.activeRevision.effectiveContentHash ||
-    evaluation.contractVersion !== control.activeRevision.coreContractVersion ||
-    evaluation.evaluatorVersion !== entry.evaluatorVersion
+    control.activeRevision.servingContractVersion !==
+    entry.servingContractVersion
   ) {
-    return "evaluation_required";
+    return "not_configured";
+  }
+  try {
+    composedFromRevision(entry, control.activeRevision);
+  } catch {
+    return "not_configured";
   }
   return "available";
 };

@@ -91,6 +91,11 @@ export function PromptHistory({
             <span>
               Version {bundle.revision} · {lifecycleLabel(bundle.lifecycle)}
             </span>
+            {bundle.servingStatus !== "current" && (
+              <span className="ml-2 text-xs font-semibold text-amber-700">
+                {bundle.servingStatus === "legacy" ? "Legacy" : "Incompatible"}
+              </span>
+            )}
             <span className="text-xs text-[var(--color-muted-foreground)]">
               {bundle.id === active?.id
                 ? "Active"

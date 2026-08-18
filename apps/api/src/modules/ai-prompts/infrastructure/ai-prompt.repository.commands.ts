@@ -8,10 +8,12 @@ import {
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
+  type AiPromptHandoffResult,
   evaluationSelect,
   type NewAiPromptBootstrap,
   type NewAiPromptBundleRevision,
   type NewAiPromptEvaluation,
+  type NewAiPromptHandoff,
   revisionSelect,
   type StoredAiPromptBundleRevision,
   type StoredAiPromptEvaluation,
@@ -46,6 +48,7 @@ export const createDraft = async (
         baseRevisionId: input.baseRevisionId,
         coreContractVersion: input.coreContractVersion,
         composerVersion: input.composerVersion,
+        servingContractVersion: input.servingContractVersion,
         lockedCoreSnapshot: input.lockedCoreSnapshot,
         promptContents: input.promptContents,
         effectiveContentHash: input.effectiveContentHash,
@@ -65,6 +68,11 @@ export const bootstrap = async (
     await transaction.$executeRaw(
       Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.featureKey}, 0))`,
     );
+    await transaction.aiFeaturePromptControl.upsert({
+      where: { featureKey: input.featureKey },
+      update: {},
+      create: { id: randomUUID(), featureKey: input.featureKey },
+    });
     const existing = await transaction.aiPromptBundleRevision.findFirst({
       where: { featureKey: input.featureKey },
       select: revisionSelect,
@@ -83,6 +91,7 @@ export const bootstrap = async (
         revision: 1,
         coreContractVersion: input.coreContractVersion,
         composerVersion: input.composerVersion,
+        servingContractVersion: input.servingContractVersion,
         lockedCoreSnapshot: input.lockedCoreSnapshot,
         promptContents: input.promptContents,
         effectiveContentHash: input.effectiveContentHash,
@@ -101,19 +110,75 @@ export const bootstrap = async (
   return created ? toRevision(created) : null;
 };
 
+export const handoff = async (
+  prisma: PrismaService,
+  input: NewAiPromptHandoff,
+): Promise<AiPromptHandoffResult> => {
+  const result = await prisma.$transaction(async (transaction) => {
+    await transaction.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.featureKey}, 0))`,
+    );
+    await transaction.aiFeaturePromptControl.upsert({
+      where: { featureKey: input.featureKey },
+      update: {},
+      create: { id: randomUUID(), featureKey: input.featureKey },
+    });
+    const existing = await transaction.aiPromptBundleRevision.findMany({
+      where: {
+        featureKey: input.featureKey,
+        servingContractVersion: input.servingContractVersion,
+        coreContractVersion: input.coreContractVersion,
+        composerVersion: input.composerVersion,
+        effectiveContentHash: input.effectiveContentHash,
+      },
+      select: revisionSelect,
+      orderBy: { revision: "asc" },
+    });
+    const reusable = existing[0];
+    if (reusable) {
+      return { revision: toRevision(reusable), created: false };
+    }
+    const latest = await transaction.aiPromptBundleRevision.findFirst({
+      where: { featureKey: input.featureKey },
+      select: { id: true, revision: true },
+      orderBy: { revision: "desc" },
+    });
+    const created = await transaction.aiPromptBundleRevision.create({
+      data: {
+        id: randomUUID(),
+        featureKey: input.featureKey,
+        revision: (latest?.revision ?? 0) + 1,
+        baseRevisionId: latest?.id ?? null,
+        coreContractVersion: input.coreContractVersion,
+        composerVersion: input.composerVersion,
+        servingContractVersion: input.servingContractVersion,
+        lockedCoreSnapshot: input.lockedCoreSnapshot,
+        promptContents: input.promptContents,
+        effectiveContentHash: input.effectiveContentHash,
+        lifecycle: AiPromptBundleLifecycle.draft,
+        createdBy: input.createdBy,
+      },
+      select: revisionSelect,
+    });
+    return { revision: toRevision(created), created: true };
+  });
+  return result;
+};
+
 export const recordEvaluation = async (
   prisma: PrismaService,
   input: NewAiPromptEvaluation,
 ): Promise<StoredAiPromptEvaluation> => {
   const evaluation = await prisma.aiPromptEvaluation.upsert({
     where: {
-      promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
+      promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
         {
           promptRevisionId: input.promptRevisionId,
           generationCompatibilityIdentity:
             input.generationCompatibilityIdentity,
           contentHash: input.contentHash,
           contractVersion: input.contractVersion,
+          servingContractVersion: input.servingContractVersion,
           evaluatorVersion: input.evaluatorVersion,
         },
     },

@@ -23,6 +23,9 @@ describe("AI feature prompt catalog", () => {
   it("uses each versioned slot as the complete runtime prompt", () => {
     const baseline = baselineReportAssistantPrompts();
     expect(baseline.featureKey).toBe(REPORT_ASSISTANT_FEATURE_KEY);
+    expect(baseline.servingContractVersion).toBe(
+      "report-assistant/editor-serving/v1",
+    );
     expect(baseline.contentHash).toMatch(/^[a-f0-9]{64}$/u);
     expect(baseline.slots).toHaveLength(4);
     expect(baseline.slots[0]?.effectivePrompt).toBe(

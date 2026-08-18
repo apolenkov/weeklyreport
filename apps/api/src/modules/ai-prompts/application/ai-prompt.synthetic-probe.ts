@@ -102,11 +102,7 @@ export class OpenAiCompatiblePromptSyntheticProbe implements AiPromptSyntheticPr
     const answerer = new OpenAiCompatibleAnswerAdapter(transport, {
       model: input.provider.answerModel,
       maxTokens: this.config.answerMaxTokens,
-      answerProtocol:
-        input.provider.answerProtocol ??
-        (() => {
-          throw new Error("Provider answer protocol has not been tested");
-        })(),
+      answerProtocol: "json_object",
       reasoning,
       prompts: input.prompts,
     });

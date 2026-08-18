@@ -4,9 +4,10 @@ import {
   type AiPromptSlot,
   aiPromptSlotSchema,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import { AiPromptBundleLifecycle, Prisma } from "@prisma/client";
 
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   aiProviderRevisionSelect,
   type StoredAiProviderRevision,
@@ -15,8 +16,8 @@ import {
   type AiComposedPromptSet,
   aiFeaturePromptCatalog,
   composePromptSet,
-  REPORT_ASSISTANT_EVALUATOR_VERSION,
   REPORT_ASSISTANT_FEATURE_KEY,
+  REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
 } from "./ai-feature-prompt-catalog.js";
 
 const providerSelect = aiProviderRevisionSelect;
@@ -28,6 +29,7 @@ const promptSelect = {
   baseRevisionId: true,
   coreContractVersion: true,
   composerVersion: true,
+  servingContractVersion: true,
   lockedCoreSnapshot: true,
   promptContents: true,
   effectiveContentHash: true,
@@ -50,6 +52,7 @@ export type AiRuntimeConfigurationSnapshot = Readonly<{
   provider: StoredAiProviderRevision;
   featureKey: typeof REPORT_ASSISTANT_FEATURE_KEY;
   promptRevisionId: string;
+  servingContractVersion: typeof REPORT_ASSISTANT_SERVING_CONTRACT_VERSION;
   coreContractVersion: string;
   prompts: AiComposedPromptSet;
 }>;
@@ -82,6 +85,11 @@ const lockedCore = (
 
 const resolvePrompt = (value: PromptRecord): AiComposedPromptSet => {
   const entry = aiFeaturePromptCatalog.require(REPORT_ASSISTANT_FEATURE_KEY);
+  if (
+    value.servingContractVersion !== REPORT_ASSISTANT_SERVING_CONTRACT_VERSION
+  ) {
+    throw new Error("Stored AI prompt has an unsupported serving contract");
+  }
   const editable = aiPromptContentsSchema.parse(value.promptContents);
   const composed = composePromptSet(
     entry,
@@ -99,6 +107,7 @@ const resolvePrompt = (value: PromptRecord): AiComposedPromptSet => {
   return composed;
 };
 
+@Injectable()
 export class AiRuntimeConfigurationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -120,25 +129,13 @@ export class AiRuntimeConfigurationRepository {
         if (
           providerControl?.enabled !== true ||
           provider?.lifecycle !== "active" ||
-          prompt?.featureKey !== REPORT_ASSISTANT_FEATURE_KEY
+          prompt?.featureKey !== REPORT_ASSISTANT_FEATURE_KEY ||
+          prompt.servingContractVersion !==
+            REPORT_ASSISTANT_SERVING_CONTRACT_VERSION
         ) {
           return null;
         }
-        const evaluation = await transaction.aiPromptEvaluation.findUnique({
-          where: {
-            promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
-              {
-                promptRevisionId: prompt.id,
-                generationCompatibilityIdentity:
-                  provider.generationCompatibilityIdentity,
-                contentHash: prompt.effectiveContentHash,
-                contractVersion: prompt.coreContractVersion,
-                evaluatorVersion: REPORT_ASSISTANT_EVALUATOR_VERSION,
-              },
-          },
-          select: { outcome: true },
-        });
-        return evaluation?.outcome === "passed" ? { provider, prompt } : null;
+        return { provider, prompt };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -149,6 +146,7 @@ export class AiRuntimeConfigurationRepository {
         provider: storedProvider(result.provider),
         featureKey: REPORT_ASSISTANT_FEATURE_KEY,
         promptRevisionId: result.prompt.id,
+        servingContractVersion: REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
         coreContractVersion: result.prompt.coreContractVersion,
         prompts,
       };
