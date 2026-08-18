@@ -1,3 +1,5 @@
+import "reflect-metadata";
+
 import {
   AiPromptBundleLifecycle,
   AiProviderLifecycle,
@@ -5,7 +7,7 @@ import {
 } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   aiFeaturePromptCatalog,
   baselineReportAssistantPrompts,
@@ -63,6 +65,7 @@ const prompt = {
   baseRevisionId: null,
   coreContractVersion: prompts.coreContractVersion,
   composerVersion: prompts.composerVersion,
+  servingContractVersion: prompts.servingContractVersion,
   lockedCoreSnapshot,
   promptContents: entry.defaultEditableInstructions,
   effectiveContentHash: prompts.contentHash,
@@ -74,12 +77,7 @@ const prompt = {
   supersededAt: null,
 };
 
-const evaluation = {
-  id: "a0000000-0000-4000-8000-000000000903",
-  outcome: "passed" as const,
-};
-
-function createRepository(input: Readonly<{ evaluation: unknown }>) {
+function createRepository(input: Readonly<{ promptOverride?: object }> = {}) {
   const transaction = {
     aiProviderControl: {
       findUnique: vi.fn().mockResolvedValue({
@@ -89,11 +87,8 @@ function createRepository(input: Readonly<{ evaluation: unknown }>) {
     },
     aiFeaturePromptControl: {
       findUnique: vi.fn().mockResolvedValue({
-        activeRevision: prompt,
+        activeRevision: { ...prompt, ...input.promptOverride },
       }),
-    },
-    aiPromptEvaluation: {
-      findUnique: vi.fn().mockResolvedValue(input.evaluation),
     },
   };
   const transactionRunner = vi.fn(
@@ -106,13 +101,21 @@ function createRepository(input: Readonly<{ evaluation: unknown }>) {
   return {
     repository: new AiRuntimeConfigurationRepository(prisma),
     transactionRunner,
-    evaluationFindUnique: transaction.aiPromptEvaluation.findUnique,
   };
 }
 
 describe("AiRuntimeConfigurationRepository", () => {
-  it("resolves one prompt/provider pair under repeatable read", async () => {
-    const harness = createRepository({ evaluation });
+  it("declares PrismaService for Nest runtime injection", () => {
+    expect(
+      Reflect.getMetadata(
+        "design:paramtypes",
+        AiRuntimeConfigurationRepository,
+      ),
+    ).toEqual([PrismaService]);
+  });
+
+  it("resolves one prompt/provider pair without evaluation under repeatable read", async () => {
+    const harness = createRepository();
 
     const result = await harness.repository.resolveReportAssistant();
 
@@ -127,24 +130,20 @@ describe("AiRuntimeConfigurationRepository", () => {
       expect.any(Function),
       { isolationLevel: "RepeatableRead" },
     );
-    expect(harness.evaluationFindUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
-            {
-              promptRevisionId: promptId,
-              generationCompatibilityIdentity: "generation-identity",
-              contentHash: prompt.effectiveContentHash,
-              contractVersion: prompt.coreContractVersion,
-              evaluatorVersion: "report-assistant/evaluator/v2",
-            },
-        },
-      }),
-    );
   });
 
-  it("returns no runtime when the exact passing evaluation is absent", async () => {
-    const harness = createRepository({ evaluation: null });
+  it("returns the current prompt when no evaluation record exists", async () => {
+    const harness = createRepository();
+
+    await expect(
+      harness.repository.resolveReportAssistant(),
+    ).resolves.toMatchObject({ promptRevisionId: promptId });
+  });
+
+  it("fails closed when the active revision belongs to the legacy serving contract", async () => {
+    const harness = createRepository({
+      promptOverride: { servingContractVersion: null },
+    });
 
     await expect(
       harness.repository.resolveReportAssistant(),
@@ -167,9 +166,6 @@ describe("AiRuntimeConfigurationRepository", () => {
         findUnique: vi
           .fn()
           .mockResolvedValue({ activeRevision: invalidPrompt }),
-      },
-      aiPromptEvaluation: {
-        findUnique: vi.fn().mockResolvedValue(evaluation),
       },
     };
     const prisma = {

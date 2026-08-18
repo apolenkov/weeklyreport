@@ -2,10 +2,9 @@ import type {
   AiFeatureKey,
   AiPromptBundleRead,
   AiPromptContents,
-  AiProviderConfigurationRead,
 } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useCallback, useEffect } from "react";
+import { type ReactNode, useCallback } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
@@ -16,7 +15,6 @@ type PromptLifecycleProps = Readonly<{
   selected: AiPromptBundleRead;
   base: AiPromptBundleRead | null;
   selectedInstructions: AiPromptContents;
-  provider: AiProviderConfigurationRead | null;
   dirty: boolean;
   active: AiPromptBundleRead | null;
   onSelectionChange: (bundle: AiPromptBundleRead | null) => void;
@@ -25,23 +23,42 @@ type PromptLifecycleProps = Readonly<{
   children: (busy: boolean) => ReactNode;
 }>;
 
-const POLL_INTERVAL_MS = 1500;
+const isCurrentServing = (bundle: AiPromptBundleRead): boolean =>
+  bundle.servingStatus === "current";
 
-export const isCurrentProviderEvaluation = (
-  bundle: AiPromptBundleRead | null,
-  provider: AiProviderConfigurationRead | null,
+const isDisposable = (bundle: AiPromptBundleRead): boolean =>
+  bundle.lifecycle === "draft" || bundle.lifecycle === "failed";
+
+const canDraftRevision = (
+  base: AiPromptBundleRead | null,
+  selected: AiPromptBundleRead,
+  busy: boolean,
+): boolean => Boolean(base) && isCurrentServing(selected) && !busy;
+
+const canActivateRevision = (
+  selected: AiPromptBundleRead,
+  busy: boolean,
 ): boolean =>
-  bundle?.latestEvaluation?.outcome === "passed" &&
-  bundle.latestEvaluation.generationCompatibilityIdentity ===
-    provider?.generationCompatibilityIdentity &&
-  bundle.latestEvaluation.contentHash === bundle.effectiveContentHash;
+  ["draft", "failed", "validated"].includes(selected.lifecycle) &&
+  isCurrentServing(selected) &&
+  !busy;
+
+const canRestoreRevision = (
+  selected: AiPromptBundleRead,
+  busy: boolean,
+): boolean =>
+  selected.lifecycle === "superseded" && isCurrentServing(selected) && !busy;
+
+const canDiscardRevision = (
+  selected: AiPromptBundleRead,
+  busy: boolean,
+): boolean => isDisposable(selected) && isCurrentServing(selected) && !busy;
 
 export function SettingsAiPromptLifecycle({
   featureKey,
   selected,
   base,
   selectedInstructions,
-  provider,
   dirty,
   active,
   onSelectionChange,
@@ -66,30 +83,6 @@ export function SettingsAiPromptLifecycle({
       onError: () => toast.error("AI prompt draft could not be saved."),
     }),
   );
-  const evaluate = useMutation(
-    trpc.admin.aiPrompts.evaluate.mutationOptions({
-      onSuccess: (bundle) => {
-        onSelectionChange(bundle);
-        onDirtyChange(false);
-        void refreshQueries();
-        toast.success("AI prompt evaluation queued");
-      },
-      onError: () =>
-        toast.error("AI prompt evaluation could not be completed."),
-    }),
-  );
-
-  const executionActive =
-    selected.latestExecution?.state === "queued" ||
-    selected.latestExecution?.state === "running";
-  useEffect(() => {
-    if (!executionActive) return undefined;
-    const interval = window.setInterval(
-      () => void refreshQueries(),
-      POLL_INTERVAL_MS,
-    );
-    return () => window.clearInterval(interval);
-  }, [executionActive, refreshQueries]);
   const activate = useMutation(
     trpc.admin.aiPrompts.activate.mutationOptions({
       onSuccess: () => {
@@ -123,28 +116,15 @@ export function SettingsAiPromptLifecycle({
     }),
   );
 
-  const evaluationId = selected.latestEvaluation?.id;
-  const evaluatedForProvider = isCurrentProviderEvaluation(selected, provider);
   const busy =
     draft.isPending ||
-    evaluate.isPending ||
     activate.isPending ||
     restore.isPending ||
     discard.isPending;
-  const canDraft = Boolean(base && !busy);
-  const canEvaluate =
-    ["draft", "failed"].includes(selected.lifecycle) &&
-    !busy &&
-    !executionActive;
-  const canActivate =
-    selected.lifecycle === "validated" &&
-    Boolean(evaluationId && evaluatedForProvider) &&
-    !busy;
-  const canRestore =
-    selected.lifecycle === "superseded" &&
-    Boolean(evaluationId && evaluatedForProvider) &&
-    !busy;
-  const canDiscard = ["draft", "failed"].includes(selected.lifecycle) && !busy;
+  const canDraft = canDraftRevision(base, selected, busy);
+  const canActivate = canActivateRevision(selected, busy);
+  const canRestore = canRestoreRevision(selected, busy);
+  const canDiscard = canDiscardRevision(selected, busy);
 
   return (
     <>
@@ -152,12 +132,10 @@ export function SettingsAiPromptLifecycle({
       <PromptActions
         busy={busy}
         canDraft={canDraft}
-        canEvaluate={canEvaluate}
         canActivate={canActivate}
         canRestore={canRestore}
         canDiscard={canDiscard}
         draftPending={draft.isPending}
-        evaluatePending={evaluate.isPending}
         activatePending={activate.isPending}
         restorePending={restore.isPending}
         discardPending={discard.isPending}
@@ -170,22 +148,11 @@ export function SettingsAiPromptLifecycle({
             promptContents: selectedInstructions,
           })
         }
-        onEvaluate={() =>
-          evaluate.mutate({ featureKey, revisionId: selected.id })
-        }
         onActivate={() =>
-          activate.mutate({
-            featureKey,
-            revisionId: selected.id,
-            evaluationId: evaluationId ?? "",
-          })
+          activate.mutate({ featureKey, revisionId: selected.id })
         }
         onRestore={() =>
-          restore.mutate({
-            featureKey,
-            revisionId: selected.id,
-            evaluationId: evaluationId ?? "",
-          })
+          restore.mutate({ featureKey, revisionId: selected.id })
         }
         onDiscard={() =>
           discard.mutate({ featureKey, revisionId: selected.id })

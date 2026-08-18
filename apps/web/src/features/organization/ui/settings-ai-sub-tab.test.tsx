@@ -7,7 +7,7 @@ import {
   type AiProviderControlRead,
 } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,7 +29,6 @@ vi.mock("sonner", () => ({
 const ACTIVE_ID = "11111111-1111-4111-8111-111111111111";
 const CANDIDATE_ID = "22222222-2222-4222-8222-222222222222";
 const PROVIDER_ID = "33333333-3333-4333-8333-333333333333";
-const STALE_PROVIDER_ID = "44444444-4444-4444-8444-444444444444";
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 const SLOT_KEYS = [
@@ -45,7 +44,7 @@ const makeBundle = (
     revision: number;
     lifecycle: AiPromptBundleRead["lifecycle"];
     hash: string;
-    generationCompatibilityIdentity?: string;
+    servingStatus?: AiPromptBundleRead["servingStatus"];
   }>,
 ): AiPromptBundleRead => {
   const instructions: AiPromptContents = {
@@ -57,27 +56,6 @@ const makeBundle = (
   const lockedCoreSnapshot = Object.fromEntries(
     SLOT_KEYS.map((slot) => [slot, `Locked safety core for ${slot}`]),
   ) as AiPromptBundleRead["lockedCoreSnapshot"];
-  const evaluation = input.generationCompatibilityIdentity
-    ? {
-        id: "55555555-5555-4555-8555-555555555555",
-        featureKey: "lead-report-assistant" as const,
-        promptRevisionId: input.id,
-        generationCompatibilityIdentity: input.generationCompatibilityIdentity,
-        contentHash: input.hash,
-        contractVersion: "report-assistant/core/v1",
-        evaluatorVersion: "report-assistant/evaluator/v1",
-        outcome: "passed" as const,
-        checks: [
-          {
-            code: "protocol_shape",
-            status: "passed" as const,
-            passedCount: 1,
-            failedCount: 0,
-          },
-        ],
-        evaluatedAt: new Date("2026-08-11T00:00:00.000Z"),
-      }
-    : null;
   return {
     id: input.id,
     featureKey: "lead-report-assistant",
@@ -85,6 +63,8 @@ const makeBundle = (
     baseRevisionId: input.revision === 1 ? null : ACTIVE_ID,
     coreContractVersion: "report-assistant/core/v1",
     composerVersion: "report-assistant/composer/v1",
+    servingContractVersion: "report-assistant/editor-serving/v1",
+    servingStatus: input.servingStatus ?? "current",
     lockedCoreSnapshot,
     promptContents: instructions,
     slots: SLOT_KEYS.map((slot) => ({
@@ -105,7 +85,7 @@ const makeBundle = (
       input.lifecycle === "superseded"
         ? new Date("2026-08-11T00:00:00.000Z")
         : null,
-    latestEvaluation: evaluation,
+    latestEvaluation: null,
   };
 };
 
@@ -154,7 +134,6 @@ const makeFeature = (candidate: AiPromptBundleRead): AiPromptFeatureRead => {
     revision: 1,
     lifecycle: "active",
     hash: HASH_A,
-    generationCompatibilityIdentity: provider.generationCompatibilityIdentity,
   });
   return {
     featureKey: "lead-report-assistant",
@@ -189,7 +168,6 @@ function renderWorkspace(feature: AiPromptFeatureRead) {
       queryByInput: () => feature,
     },
     { path: ["admin", "aiPrompts", "draft"], mutation: true },
-    { path: ["admin", "aiPrompts", "evaluate"], mutation: true },
     { path: ["admin", "aiPrompts", "activate"], mutation: true },
     { path: ["admin", "aiPrompts", "restore"], mutation: true },
     { path: ["admin", "aiPrompts", "discard"], mutation: true },
@@ -260,7 +238,6 @@ describe("SettingsAiSubTab", () => {
         revision: 2,
         lifecycle: "validated",
         hash: HASH_B,
-        generationCompatibilityIdentity: STALE_PROVIDER_ID,
       }),
     );
     renderWorkspace(feature);
@@ -270,7 +247,7 @@ describe("SettingsAiSubTab", () => {
 
     expect(screen.getByText("Prompts")).toBeTruthy();
     expect(screen.getByText("Version 1 · Active")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Activate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Activate" })).toBeEnabled();
 
     const plannerPrompt = screen.getByLabelText("planner prompt");
     const plannerDetails = plannerPrompt.closest("details");
@@ -290,7 +267,7 @@ describe("SettingsAiSubTab", () => {
     );
   });
 
-  it("keeps the selected draft visible and reports safe evaluation errors", async () => {
+  it("keeps the selected draft visible and offers direct activation", async () => {
     const feature = makeFeature(
       makeBundle({
         id: CANDIDATE_ID,
@@ -299,22 +276,14 @@ describe("SettingsAiSubTab", () => {
         hash: HASH_B,
       }),
     );
-    const { captured } = renderWorkspace(feature);
-    captured["admin.aiPrompts.evaluate"]?.mutationFn.mockRejectedValue(
-      new Error("provider body must not surface"),
-    );
+    renderWorkspace(feature);
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: "Features" }));
     await screen.findByRole("button", { name: "Report Assistant" });
-    await user.click(screen.getByRole("button", { name: "Evaluate" }));
 
-    await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith(
-        "AI prompt evaluation could not be completed.",
-      ),
-    );
     expect(screen.getByText("Draft · v2")).toBeTruthy();
-    expect(screen.queryByText(/provider body must not surface/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Evaluate" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Activate" })).toBeEnabled();
   });
 
   it("protects retained prompt versions and keeps restore available", async () => {
@@ -325,8 +294,6 @@ describe("SettingsAiSubTab", () => {
           revision: 2,
           lifecycle: "superseded",
           hash: HASH_B,
-          generationCompatibilityIdentity:
-            provider.generationCompatibilityIdentity,
         }),
       ),
     );
@@ -336,5 +303,27 @@ describe("SettingsAiSubTab", () => {
 
     expect(screen.getByRole("button", { name: "Restore" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+  });
+
+  it("keeps legacy history inspectable but disables serving actions", async () => {
+    renderWorkspace(
+      makeFeature(
+        makeBundle({
+          id: CANDIDATE_ID,
+          revision: 2,
+          lifecycle: "superseded",
+          hash: HASH_B,
+          servingStatus: "legacy",
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: "Features" }));
+    await screen.findByRole("button", { name: "Report Assistant" });
+
+    expect(screen.getByTestId("ai-prompt-serving-status")).toHaveTextContent(
+      "Legacy serving contract",
+    );
+    expect(screen.getByRole("button", { name: "Restore" })).toBeDisabled();
   });
 });

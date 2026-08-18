@@ -2,7 +2,7 @@ import { AiPromptBundleLifecycle } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
-  type AiPromptActivationCompatibility,
+  type AiPromptActivationContract,
   revisionWhere,
 } from "./ai-prompt.repository.types.js";
 
@@ -49,7 +49,7 @@ export const activate = async (
   revisionId: string,
   allowedLifecycle: readonly AiPromptBundleLifecycle[],
   now: Date,
-  compatibility?: AiPromptActivationCompatibility,
+  contract: AiPromptActivationContract,
 ): Promise<boolean> =>
   prisma.$transaction(async (transaction) => {
     const control = await transaction.aiFeaturePromptControl.findUnique({
@@ -57,52 +57,11 @@ export const activate = async (
       select: { activeRevisionId: true },
     });
     if (!control) return false;
-    if (compatibility) {
-      const providerControl = await transaction.aiProviderControl.findUnique({
-        where: { id: "singleton" },
-        select: { enabled: true, activeConfigurationId: true },
-      });
-      if (
-        providerControl?.enabled !== true ||
-        providerControl.activeConfigurationId === null
-      ) {
-        return false;
-      }
-      const provider = await transaction.aiProviderConfiguration.findUnique({
-        where: { id: providerControl.activeConfigurationId },
-        select: { generationCompatibilityIdentity: true },
-      });
-      if (
-        provider?.generationCompatibilityIdentity !==
-        compatibility.generationCompatibilityIdentity
-      ) {
-        return false;
-      }
-      const evaluation = await transaction.aiPromptEvaluation.findUnique({
-        where: {
-          promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
-            {
-              promptRevisionId: revisionId,
-              generationCompatibilityIdentity:
-                compatibility.generationCompatibilityIdentity,
-              contentHash: compatibility.contentHash,
-              contractVersion: compatibility.contractVersion,
-              evaluatorVersion: compatibility.evaluatorVersion,
-            },
-        },
-        select: { id: true, outcome: true },
-      });
-      if (
-        evaluation?.id !== compatibility.evaluationId ||
-        evaluation.outcome !== "passed"
-      ) {
-        return false;
-      }
-    }
     const candidate = await transaction.aiPromptBundleRevision.updateMany({
       where: {
         ...revisionWhere(featureKey, revisionId),
         lifecycle: { in: [...allowedLifecycle] },
+        servingContractVersion: contract.servingContractVersion,
       },
       data: { lifecycle: AiPromptBundleLifecycle.active, activatedAt: now },
     });

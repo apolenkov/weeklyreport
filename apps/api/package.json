@@ -11,6 +11,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false",
     "db:generate": "prisma generate --schema=../../prisma/schema.prisma",
     "db:bootstrap-ai-provider": "tsx scripts/bootstrap-ai-provider.ts",
+    "db:handoff-ai-prompts": "DOTENV_CONFIG_PATH=../../.env node --import @swc-node/register/esm-register scripts/handoff-ai-prompts.ts",
     "postinstall": "prisma generate --schema=../../prisma/schema.prisma"
   },
   "dependencies": {

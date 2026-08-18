@@ -1,13 +1,9 @@
 import type {
-  AiPromptEvaluationInput,
+  AiPromptActivationInput,
   AiPromptOperationResult,
 } from "@customreport/shared";
 import { AiPromptBundleLifecycle } from "@prisma/client";
 
-import {
-  AiProviderConfigurationRepository,
-  type StoredAiProviderRevision,
-} from "../../ai-provider/index.js";
 import type {
   AiPromptRepository,
   StoredAiPromptBundleRevision,
@@ -28,22 +24,10 @@ import {
 
 type ActivationDependencies = Readonly<{
   repository: AiPromptRepository;
-  providerRepository: AiProviderConfigurationRepository;
   catalog: AiFeaturePromptCatalog;
   audit: AiPromptAuditSink;
   metrics: AiPromptMetricsSink;
 }>;
-
-const requireActiveProvider = async (
-  providerRepository: AiProviderConfigurationRepository,
-): Promise<StoredAiProviderRevision> => {
-  const control = await providerRepository.getControl();
-  const provider = control?.activeConfiguration;
-  if (!control?.enabled || provider?.lifecycle !== "active") {
-    throw new AiPromptConfigurationError("AI provider is not configured");
-  }
-  return provider;
-};
 
 const requireRevision = async (
   repository: AiPromptRepository,
@@ -57,7 +41,7 @@ const requireRevision = async (
 
 export const activateAiPromptRevision = async (
   dependencies: ActivationDependencies,
-  input: AiPromptEvaluationInput & { evaluationId?: string },
+  input: AiPromptActivationInput,
   actorId: string,
   allowedLifecycle: readonly AiPromptBundleLifecycle[],
   operation: "activation" | "restore",
@@ -68,23 +52,10 @@ export const activateAiPromptRevision = async (
     input.featureKey,
     input.revisionId,
   );
-  const provider = await requireActiveProvider(dependencies.providerRepository);
-  const evaluation = await dependencies.repository.findEvaluation({
-    promptRevisionId: revision.id,
-    generationCompatibilityIdentity: provider.generationCompatibilityIdentity,
-    contentHash: revision.effectiveContentHash,
-    contractVersion: revision.coreContractVersion,
-    evaluatorVersion: entry.evaluatorVersion,
-  });
-  const passingEvaluation =
-    evaluation?.outcome === "passed" ? evaluation : null;
-  if (!passingEvaluation) {
+  if (revision.servingContractVersion !== entry.servingContractVersion) {
     throw new AiPromptConfigurationError(
-      "A current passing provider/prompt evaluation is required",
+      "This prompt revision belongs to a retired serving contract",
     );
-  }
-  if (input.evaluationId && input.evaluationId !== passingEvaluation.id) {
-    throw new AiPromptConflictError("Prompt evaluation is stale");
   }
   composedFromRevision(entry, revision);
   const activated = await dependencies.repository.activate(
@@ -93,11 +64,7 @@ export const activateAiPromptRevision = async (
     allowedLifecycle,
     new Date(),
     {
-      generationCompatibilityIdentity: provider.generationCompatibilityIdentity,
-      contentHash: revision.effectiveContentHash,
-      contractVersion: revision.coreContractVersion,
-      evaluatorVersion: entry.evaluatorVersion,
-      evaluationId: passingEvaluation.id,
+      servingContractVersion: entry.servingContractVersion,
     },
   );
   if (!activated) {
@@ -109,10 +76,8 @@ export const activateAiPromptRevision = async (
     actorId,
     featureKey: input.featureKey,
     revisionId: revision.id,
-    providerRevisionId: provider.id,
     contentHash: revision.effectiveContentHash,
     contractVersion: revision.coreContractVersion,
-    evaluatorVersion: entry.evaluatorVersion,
   });
   dependencies.metrics.record({
     feature: REPORT_ASSISTANT_FEATURE_KEY,

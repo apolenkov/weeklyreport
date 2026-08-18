@@ -14,6 +14,7 @@ const featureKey = "lead-report-assistant";
 const revisionId = "659b2767-0f86-41e2-b025-49730ca010e4";
 const oldRevisionId = "759b2767-0f86-41e2-b025-49730ca010e4";
 const hash = "a".repeat(64);
+const servingContractVersion = "report-assistant/editor-serving/v1";
 
 const revision = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: revisionId,
@@ -22,6 +23,7 @@ const revision = (overrides: Partial<Record<string, unknown>> = {}) => ({
   baseRevisionId: null,
   coreContractVersion: "report-assistant/core/v1",
   composerVersion: "report-assistant/composer/v1",
+  servingContractVersion,
   lockedCoreSnapshot: {},
   promptContents: {},
   effectiveContentHash: hash,
@@ -43,10 +45,15 @@ const evaluation = {
   generationCompatibilityIdentity: "generation-identity",
   contentHash: hash,
   contractVersion: "report-assistant/core/v1",
+  servingContractVersion,
   evaluatorVersion: "report-assistant/evaluator/v1",
   checks: [{ code: "protocol_shape", status: "passed" }],
   outcome: AiPromptEvaluationOutcome.passed,
   evaluatedAt: new Date("2026-08-10T00:00:00.000Z"),
+};
+
+const activationCompatibility = {
+  servingContractVersion,
 };
 
 const draft: NewAiPromptBundleRevision = {
@@ -54,6 +61,7 @@ const draft: NewAiPromptBundleRevision = {
   baseRevisionId: oldRevisionId,
   coreContractVersion: "report-assistant/core/v1",
   composerVersion: "report-assistant/composer/v1",
+  servingContractVersion,
   lockedCoreSnapshot: {},
   promptContents: {},
   effectiveContentHash: hash,
@@ -179,6 +187,7 @@ describe("AiPromptRepository", () => {
         revisionId,
         [AiPromptBundleLifecycle.validated],
         new Date("2026-08-10T01:00:00.000Z"),
+        activationCompatibility,
       ),
     ).resolves.toBe(true);
     expect(harness.updateMany).toHaveBeenCalledTimes(2);
@@ -188,7 +197,7 @@ describe("AiPromptRepository", () => {
     });
   });
 
-  it("rechecks the exact evaluated provider pair inside activation", async () => {
+  it("activates a current contract without provider or evaluation checks", async () => {
     const harness = buildHarness();
 
     await expect(
@@ -198,19 +207,21 @@ describe("AiPromptRepository", () => {
         [AiPromptBundleLifecycle.validated],
         new Date("2026-08-10T01:00:00.000Z"),
         {
-          generationCompatibilityIdentity: "generation-identity",
-          contentHash: hash,
-          contractVersion: "report-assistant/core/v1",
-          evaluatorVersion: "report-assistant/evaluator/v1",
-          evaluationId: revisionId,
+          servingContractVersion,
         },
       ),
     ).resolves.toBe(true);
-    expect(harness.providerControlFindUnique).toHaveBeenCalledWith({
-      where: { id: "singleton" },
-      select: { enabled: true, activeConfigurationId: true },
-    });
-    expect(harness.evaluationFindUnique).toHaveBeenCalled();
+    expect(harness.providerControlFindUnique).not.toHaveBeenCalled();
+    expect(harness.evaluationFindUnique).not.toHaveBeenCalled();
+    const updateCalls = harness.updateMany.mock.calls as unknown as readonly [
+      Readonly<{ where: Readonly<Record<string, unknown>> }>,
+    ][];
+    expect(
+      updateCalls.some(
+        ([input]) =>
+          input.where.servingContractVersion === servingContractVersion,
+      ),
+    ).toBe(true);
   });
 
   it("reports a concurrent active-pointer change without committing a mixed bundle", async () => {
@@ -223,6 +234,7 @@ describe("AiPromptRepository", () => {
         revisionId,
         [AiPromptBundleLifecycle.validated],
         new Date("2026-08-10T01:00:00.000Z"),
+        activationCompatibility,
       ),
     ).resolves.toBe(false);
   });
@@ -236,6 +248,7 @@ describe("AiPromptRepository", () => {
       generationCompatibilityIdentity: "generation-identity",
       contentHash: hash,
       contractVersion: "report-assistant/core/v1",
+      servingContractVersion,
       evaluatorVersion: "report-assistant/evaluator/v1",
       checks: [{ code: "protocol_shape", status: "passed" }],
       outcome: AiPromptEvaluationOutcome.passed,
@@ -251,12 +264,13 @@ describe("AiPromptRepository", () => {
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion:
+          promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
             {
               promptRevisionId: revisionId,
               generationCompatibilityIdentity: "generation-identity",
               contentHash: hash,
               contractVersion: "report-assistant/core/v1",
+              servingContractVersion,
               evaluatorVersion: "report-assistant/evaluator/v1",
             },
         },

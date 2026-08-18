@@ -14,11 +14,11 @@ import type {
 import type { AiPromptRepository } from "../infrastructure/ai-prompt.repository.js";
 import type { StoredAiPromptEvaluation } from "../infrastructure/ai-prompt.repository.types.js";
 import type { AiFeaturePromptCatalog } from "./ai-feature-prompt-catalog.js";
+import { safePromptEvaluation } from "./ai-prompt.evaluation-support.js";
 import type { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import {
   type AiPromptMetricsSink,
   composedFromRevision,
-  safePromptEvaluation,
 } from "./ai-prompt.service-support.js";
 
 export type AiPromptProviderCompatibilityResult = Readonly<{
@@ -90,6 +90,7 @@ export class AiPromptProviderCompatibilityService {
       promptRevisionId: string;
       contentHash: string;
       contractVersion: string;
+      servingContractVersion: string;
       evaluatorVersion: string;
     }>,
   ): Promise<AiProviderFeatureCompatibility | null> {
@@ -110,6 +111,7 @@ export class AiPromptProviderCompatibilityService {
       generationCompatibilityIdentity: provider.generationCompatibilityIdentity,
       contentHash: expected.contentHash,
       contractVersion: expected.contractVersion,
+      servingContractVersion: expected.servingContractVersion,
       evaluatorVersion: expected.evaluatorVersion,
       checks: snapshot.checks,
       outcome: "passed",
@@ -138,12 +140,16 @@ export class AiPromptProviderCompatibilityService {
         const control = await this.repository.getControl(entry.featureKey);
         const active = control?.activeRevision;
         if (!active) return [...collected, null] as const;
+        if (active.servingContractVersion !== entry.servingContractVersion) {
+          return [...collected, null] as const;
+        }
         const lookup = {
           promptRevisionId: active.id,
           generationCompatibilityIdentity:
             provider.generationCompatibilityIdentity,
           contentHash: active.effectiveContentHash,
           contractVersion: active.coreContractVersion,
+          servingContractVersion: entry.servingContractVersion,
           evaluatorVersion: entry.evaluatorVersion,
         };
         const existing = await this.repository.findEvaluation(lookup);
@@ -168,6 +174,7 @@ export class AiPromptProviderCompatibilityService {
             provider.generationCompatibilityIdentity,
           contentHash: active.effectiveContentHash,
           contractVersion: active.coreContractVersion,
+          servingContractVersion: entry.servingContractVersion,
           evaluatorVersion: entry.evaluatorVersion,
           checks: [...result.checks] as Record<string, string | number>[],
           outcome: result.outcome,
@@ -198,6 +205,9 @@ export class AiPromptProviderCompatibilityService {
         const control = await this.repository.getControl(entry.featureKey);
         const active = control?.activeRevision;
         if (!active) return true;
+        if (active.servingContractVersion !== entry.servingContractVersion) {
+          return false;
+        }
         return (
           passingSnapshotFeature(provider, {
             featureKey: entry.featureKey,

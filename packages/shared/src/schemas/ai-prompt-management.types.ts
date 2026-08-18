@@ -20,6 +20,7 @@ import type {
   aiPromptOperationResultSchema,
   aiPromptRestoreInputSchema,
   aiPromptRevisionInputSchema,
+  aiPromptServingStatusSchema,
   aiPromptSlotReadSchema,
   aiPromptSlotSchema,
 } from "./ai-prompt-management";
@@ -30,6 +31,7 @@ export type AiPromptBundleLifecycle = z.infer<
   typeof aiPromptBundleLifecycleSchema
 >;
 export type AiPromptAvailability = z.infer<typeof aiPromptAvailabilitySchema>;
+export type AiPromptServingStatus = z.infer<typeof aiPromptServingStatusSchema>;
 export type AiPromptContents = z.infer<typeof aiPromptContentsSchema>;
 export type AiPromptSlotRead = z.infer<typeof aiPromptSlotReadSchema>;
 export type AiPromptEvaluationCheck = z.infer<

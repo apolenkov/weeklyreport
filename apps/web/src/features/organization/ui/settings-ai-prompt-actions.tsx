@@ -1,18 +1,15 @@
 type PromptActionsProps = Readonly<{
   busy: boolean;
   canDraft: boolean;
-  canEvaluate: boolean;
   canActivate: boolean;
   canRestore: boolean;
   canDiscard: boolean;
   draftPending: boolean;
-  evaluatePending: boolean;
   activatePending: boolean;
   restorePending: boolean;
   discardPending: boolean;
   dirty: boolean;
   onDraft: () => void;
-  onEvaluate: () => void;
   onActivate: () => void;
   onRestore: () => void;
   onDiscard: () => void;
@@ -21,18 +18,15 @@ type PromptActionsProps = Readonly<{
 export function PromptActions({
   busy,
   canDraft,
-  canEvaluate,
   canActivate,
   canRestore,
   canDiscard,
   draftPending,
-  evaluatePending,
   activatePending,
   restorePending,
   discardPending,
   dirty,
   onDraft,
-  onEvaluate,
   onActivate,
   onRestore,
   onDiscard,
@@ -46,14 +40,6 @@ export function PromptActions({
         onClick={onDraft}
       >
         {draftPending ? "Saving…" : "Save Draft"}
-      </button>
-      <button
-        type="button"
-        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
-        disabled={!canEvaluate || busy}
-        onClick={onEvaluate}
-      >
-        {evaluatePending ? "Evaluating…" : "Evaluate"}
       </button>
       <button
         type="button"

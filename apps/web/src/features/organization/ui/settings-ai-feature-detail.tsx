@@ -4,19 +4,14 @@ import type {
   AiPromptBundleRead,
   AiPromptContents,
   AiPromptFeatureRead,
-  AiProviderConfigurationRead,
 } from "@customreport/shared";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  isCurrentProviderEvaluation,
-  SettingsAiPromptLifecycle,
-} from "./settings-ai-prompt-lifecycle";
+import { SettingsAiPromptLifecycle } from "./settings-ai-prompt-lifecycle";
 import { PromptEditor, PromptHistory } from "./settings-ai-prompt-sections";
 
 type FeatureDetailProps = Readonly<{
   feature: AiPromptFeatureRead;
-  provider: AiProviderConfigurationRead | null;
   onRefresh: () => Promise<unknown>;
 }>;
 
@@ -25,7 +20,6 @@ const lifecycleLabel = (lifecycle: AiPromptBundleRead["lifecycle"]): string =>
 
 export function SettingsAiFeatureDetail({
   feature,
-  provider,
   onRefresh,
 }: FeatureDetailProps) {
   const source = feature.control.latestRevision ?? feature.control.activeBundle;
@@ -54,18 +48,12 @@ export function SettingsAiFeatureDetail({
     feature.control.activeBundle;
   const active = feature.control.activeBundle;
   const base =
-    active ??
-    feature.control.history.find((bundle) =>
-      ["validated", "superseded"].includes(bundle.lifecycle),
-    ) ??
-    null;
+    feature.control.history.find(
+      (bundle) =>
+        bundle.servingStatus === "current" &&
+        ["active", "validated", "superseded"].includes(bundle.lifecycle),
+    ) ?? null;
   const selectedInstructions = instructions ?? selected?.promptContents ?? null;
-  const evaluatedForProvider = isCurrentProviderEvaluation(selected, provider);
-  const compatibilityLabel = evaluatedForProvider
-    ? "Passes current provider evaluation"
-    : provider
-      ? "Evaluation required for current provider"
-      : "Provider unavailable";
 
   if (!selectedInstructions || !selected) {
     return (
@@ -101,28 +89,33 @@ export function SettingsAiFeatureDetail({
             {feature.displayName}
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-[var(--color-muted-foreground)]">
-            {feature.description} Runtime currently uses the versioned prompts
-            shipped with the application. Stored editor revisions are retained
-            for future use and do not affect provider activation or Chat.
+            {feature.description} The active editor version serves Report
+            Assistant directly after structural validation. Runtime protocols,
+            retrieval controls, and authorization remain owned by the
+            application.
           </p>
         </div>
-        <span className="rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
-          {lifecycleLabel(selected.lifecycle)} · v{selected.revision}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
+            {lifecycleLabel(selected.lifecycle)} · v{selected.revision}
+          </span>
+          <span
+            className="text-xs font-semibold text-[var(--color-muted-foreground)]"
+            data-testid="ai-prompt-serving-status"
+          >
+            {selected.servingStatus === "current"
+              ? "Current serving contract"
+              : selected.servingStatus === "legacy"
+                ? "Legacy serving contract"
+                : "Incompatible serving snapshot"}
+          </span>
+        </div>
       </div>
-      <p
-        className="text-sm text-[var(--color-muted-foreground)]"
-        data-testid="ai-prompt-provider-compatibility"
-      >
-        Optional diagnostic: {compatibilityLabel}
-      </p>
-
       <SettingsAiPromptLifecycle
         featureKey={feature.featureKey}
         selected={selected}
         base={base}
         selectedInstructions={selectedInstructions}
-        provider={provider}
         dirty={dirty}
         active={active}
         onSelectionChange={handleLifecycleSelection}

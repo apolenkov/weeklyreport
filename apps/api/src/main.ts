@@ -352,7 +352,6 @@ async function bootstrap() {
   const telegramOutboundQueue = queueRegistry.get("telegram-outbound");
 
   const prismaService = app.get(PrismaService);
-  await app.get(AiPromptService).bootstrap("bootstrap");
 
   // Thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph

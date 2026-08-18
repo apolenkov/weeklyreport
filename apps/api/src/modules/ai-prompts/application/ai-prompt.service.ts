@@ -27,7 +27,7 @@ import {
   type AiFeaturePromptCatalogEntry,
   composePromptSet,
 } from "./ai-feature-prompt-catalog.js";
-import { bootstrapPromptControl } from "./ai-prompt.bootstrap.js";
+import { handoffPromptBaseline } from "./ai-prompt.bootstrap.js";
 import type { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import { AiPromptLifecycleService } from "./ai-prompt.lifecycle-service.js";
 import {
@@ -40,6 +40,7 @@ import {
   type AiPromptMetricsSink,
   AiPromptNotFoundError,
   bundleRead,
+  composedFromRevision,
   featureFromCatalog,
   lockedCoreFrom,
   NOOP_AI_PROMPT_AUDIT,
@@ -112,6 +113,12 @@ export class AiPromptService {
         "A draft must be based on a retained prompt revision",
       );
     }
+    if (base.servingContractVersion !== entry.servingContractVersion) {
+      throw new AiPromptConfigurationError(
+        "A draft must be based on the current serving prompt contract",
+      );
+    }
+    composedFromRevision(entry, base);
     const promptContents = aiPromptContentsSchema.parse(input.promptContents);
     const lockedCoreSnapshot = lockedCoreFrom(base.lockedCoreSnapshot);
     const composed = composePromptSet(
@@ -122,8 +129,9 @@ export class AiPromptService {
     const created = await this.repository.createDraft({
       featureKey: input.featureKey,
       baseRevisionId: base.id,
-      coreContractVersion: base.coreContractVersion,
-      composerVersion: base.composerVersion,
+      coreContractVersion: composed.coreContractVersion,
+      composerVersion: composed.composerVersion,
+      servingContractVersion: entry.servingContractVersion,
       lockedCoreSnapshot: lockedCoreSnapshot,
       promptContents,
       effectiveContentHash: composed.contentHash,
@@ -195,10 +203,8 @@ export class AiPromptService {
     return this.compatibility.currentFeatureEvaluatorVersions();
   }
 
-  async bootstrap(
-    actorId = "bootstrap",
-  ): Promise<AiPromptOperationResult | null> {
-    return bootstrapPromptControl(
+  handoffCurrentBaseline(actorId = "handoff") {
+    return handoffPromptBaseline(
       this.repository,
       this.catalog,
       this.audit,
