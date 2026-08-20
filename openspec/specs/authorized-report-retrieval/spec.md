@@ -8,13 +8,40 @@ TBD - created by syncing add-native-lead-report-assistant.
 
 ### Requirement: A strict SearchPlan expresses user intent without internal controls
 
-`@customreport/shared` MUST implement the exact strict `SearchPlan` wire contract in `docs/llm-report/lead-report-assistant-search-plan-contract.md`, including its field names, enum literals, requiredness, explicit no-filter values, bounds and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Every tool field MUST be explicit; no SearchPlan field MUST use a silent default. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
+`@customreport/shared` MUST implement the compact strict `SearchPlan` wire contract in `docs/llm-report/lead-report-assistant-search-plan-contract.md`, including its field names, enum literals, documented normalization defaults, no-filter values, bounds, and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Optional user filters MAY be omitted and normalized only through the documented defaults; normalization MUST NOT invent a product or authorization choice. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
+
+#### Scenario: Planner omits optional fields
+
+- **WHEN** the planner omits optional filter fields from an otherwise valid plan
+- **THEN** the shared schema materializes only the documented defaults and explicit no-filter values
+- **AND** the normalized plan remains subject to all cross-field validation
+
+#### Scenario: Planner requests last week's blockers
+
+- **WHEN** the planner requests blocker or open-risk records for the previous report period
+- **THEN** the shared schema accepts a compact plan containing that period and those filters without unrelated empty collections
+
+#### Scenario: Planner requests one author's current work
+
+- **WHEN** the planner requests current-period work for an author reference such as “Petrov”
+- **THEN** the shared schema preserves the author reference for server-side authorized entity resolution
+- **AND** it does not require unrelated subject, stage, decision, or risk fields
+
+#### Scenario: Planner includes an internal control
+
+- **WHEN** a plan contains a database identifier, ACL choice, vector dimension, similarity threshold, or unknown field
+- **THEN** strict shared validation rejects the plan before retrieval
+
+#### Scenario: Planner explicitly omits a mode-specific value
+
+- **WHEN** the planner explicitly selects named-period or semantic-retrieval mode but omits its required reference or query
+- **THEN** shared validation rejects the plan without silently inventing the missing value
 
 #### Scenario: Planner emits the documented no-filter shape
 
 - **WHEN** a filter dimension is absent from user intent
 - **THEN** the plan uses the contract's explicit empty-array or null representation
-- **AND** the server does not infer a hidden model-controlled default
+- **AND** any omitted structural fields use only the contract's documented defaults
 
 #### Scenario: Decision filters are requested
 

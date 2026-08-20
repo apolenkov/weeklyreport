@@ -103,12 +103,28 @@ The shared assistant output MUST be a discriminated union covering `ok`, `clarif
 The report-assistant runtime MUST resolve the enabled active provider and the
 active current-serving `lead-report-assistant` prompt revision under one
 repeatable database snapshot. The request snapshot MUST include the provider
-revision, feature key, prompt revision, serving-contract identity, contract
-version, and composed planner/repair and answer/repair prompts. A missing,
+revision, generation connection identity, effective embedding scope identity,
+feature key, prompt revision, serving-contract identity, contract version, and
+composed planner/repair and answer/repair prompts. Planner, answer, and repair
+calls MUST use the generation connection; query embedding and retrieval MUST use
+the effective embedding connection, which aliases generation only in
+`reuse_generation` mode. A missing,
 corrupt, stale, legacy, or incompatible prompt bundle MUST return
 `ai_not_configured` before retrieval. Runtime resolution MUST NOT fall back to
 compiled prompt constants or the removed integration. Exact provider-only
 embedding worker resolution remains independent of prompt activation.
+
+#### Scenario: Separate connections serve one request
+
+- **WHEN** a Lead request resolves a composite with Groq generation and Jina embeddings
+- **THEN** planner and answer calls use only Groq while embedding calls use only Jina
+- **AND** both connections belong to the same immutable active revision snapshot
+
+#### Scenario: Embeddings reuse generation
+
+- **WHEN** the active revision uses `reuse_generation`
+- **THEN** runtime aliases the generation connection for embeddings with the configured embedding model
+- **AND** it does not resolve a second credential
 
 #### Scenario: Prompt activation races with an in-flight request
 
@@ -168,7 +184,7 @@ server-owned and MUST NOT be editable through prompt lifecycle operations.
 
 ### Requirement: Answers are grounded in server-prepared evidence
 
-The answer adapter MUST receive only the original question, deterministic server aggregates, and an authorization-filtered `GroundingBundle`. It MUST implement the versioned grounded-answer and citation-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, keep trusted instructions separate from serialized untrusted evidence, and use a schema-constrained structured response. It MUST return structured Markdown, cited local source IDs, and an insufficient-evidence flag. The server MUST verify every cited ID, allow one bounded citation repair, and MUST NOT publish an answer containing unknown citations.
+The answer adapter MUST receive only the original question, deterministic server aggregates, and an authorization-filtered `GroundingBundle`. It MUST implement the versioned grounded-answer and citation-repair contracts in `docs/llm-report/lead-report-assistant-prompt-contract.md`, keep trusted instructions separate from serialized untrusted evidence, request the fixed JSON Object Mode response, and accept only the minimal structured answer envelope. It MUST return structured Markdown, cited local source IDs, and an insufficient-evidence flag. The server MUST verify every cited ID, allow one bounded citation repair using the same JSON Object Mode, and MUST NOT publish an answer containing unknown citations. It MUST NOT require a response-format JSON schema or a forced answer tool.
 
 #### Scenario: Answer cites valid report evidence
 

@@ -22,4 +22,4 @@
 
 - [x] 4.1 Update durable AI provider, prompt management, lead assistant, directory architecture, and related documentation to match the simplified behavior.
 - [x] 4.2 Add focused regression tests for fail-closed availability, activation conflict rollback, queue recovery, duplicate running claims, and bounded runtime cache.
-- [ ] 4.3 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm depcruise`, and `pnpm lint:md`; inspect the final diff and working tree.
+- [x] 4.3 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm depcruise`, and `pnpm lint:md`; inspect the final diff and working tree.

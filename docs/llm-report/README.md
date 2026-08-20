@@ -48,7 +48,7 @@ Provider; автоматического failover нет.
 | `logical-flow.mmd`                                   | Логика обработки вопроса и исходы.                                                                        |
 | `architecture.mmd`                                   | Компоненты, хранилища и внешние границы.                                                                  |
 | `lead-report-assistant-decision-summary.md`          | Функциональные и архитектурные решения.                                                                   |
-| `lead-report-assistant-search-plan-contract.md`      | Строгий контракт `SearchPlan`.                                                                            |
+| `lead-report-assistant-search-plan-contract.md`      | Нормализуемый строгий контракт `SearchPlan` и его defaults.                                               |
 | `lead-report-assistant-prompt-contract.md`           | Complete versioned prompts, durable versions, and runtime source of truth.                                |
 | `lead-report-assistant-rollout.md`                   | Подготовка, выпуск, мониторинг и откат.                                                                   |
 | `postgres-pgvector-rollout.md`                       | Совместимость PostgreSQL/pgvector и проверка данных.                                                      |

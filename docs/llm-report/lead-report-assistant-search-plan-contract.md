@@ -1,16 +1,40 @@
 # Lead report assistant — SearchPlan wire contract
 
-This document fixes the exact v1 wire shape for the single
+This document fixes the exact v1 normalized shape for the single
 `search_report_entries` function. The implementation MUST preserve field names,
-literals, requiredness and no-filter semantics. JSON Schema is generated from the
-shared Zod source; this document is the design contract, not a second hand-written
-runtime schema.
+literals, normalization rules, and no-filter semantics. JSON Schema is generated
+from the shared Zod source; this document is the design contract, not a second
+hand-written runtime schema.
 
 ## Boundary
 
-The Mistral function parameters are exactly one `SearchPlan` object. Every field is
-required and every object is strict. Empty arrays and explicit `null` values mean no
-filter as specified below; no Zod `.default()` is permitted.
+The planner function parameters are exactly one `SearchPlan` object. The shared
+Zod boundary uses strict objects and rejects unknown fields. The parser accepts
+omitted optional fields and materializes only the documented defaults below; after
+normalization, the parsed `SearchPlan` has the complete shape shown in this
+document. Empty arrays and explicit `null` values mean no filter as specified
+below. Defaults never select an author, grant access, add a database identifier,
+change an ACL decision, or choose a semantic threshold.
+
+## Normalization defaults
+
+When the planner omits a field, the shared schema applies these defaults before
+cross-field validation:
+
+- `periods`: `includeCurrent: true`; published `mode: "latest"`, `count: 3`,
+  and `references: []`;
+- `authors`: `mode: "self"`, `references: []`, and `includeSelf: true`;
+- `subjects`: empty `parentKinds`, product and activity references, and
+  `linkedActivityMode: "exclude"`;
+- `stages.references`, `recordKinds`, and all filter arrays: `[]`;
+- nullable filters `carriedOver`, `hasPriority`, and `output.requestedLimit`:
+  `null`;
+- `retrieval`: `mode: "structured"` and `semanticQuery: null`;
+- `output`: `mode: "list"`, `groupBy: []`, and `exhaustive: false`.
+
+These defaults are schema normalization, not hidden product behavior. Explicit
+mode-specific combinations are still checked by `.superRefine()` and rejected
+when their required references or semantic query are missing.
 
 Clarification tokens are not model-generated SearchPlan fields. They remain in the
 validated assistant request beside the question and are applied by the server during

@@ -56,7 +56,7 @@ existing diagnostic values and lifecycle actions when opened.
 #### Scenario: Administrator opens Provider diagnostics
 
 - **WHEN** the administrator activates the `Diagnostics` disclosure
-- **THEN** the revision metadata, masked credentials, answer protocol,
+- **THEN** the revision metadata, masked credentials, capability-lane results,
   embedding measurement, and any Restore or Discard action become available
 - **AND** opening diagnostics does not change provider lifecycle state or the
   active configuration
