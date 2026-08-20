@@ -16,6 +16,7 @@ import {
 } from "../reveal/guards/preflight-reveal-guards.ts";
 import type { RevealPreparation } from "../reveal/interaction/preflight-reveal-types.ts";
 import {
+  navigateToRevealLanding,
   playwrightHarnessFor,
   revealHarnessFor,
 } from "./playwright-preflight.ts";
@@ -92,6 +93,7 @@ const initialInventoryFor = async (input: {
     harness.currentUrl(),
     continuation.expectedOrigin,
   );
+  await navigateToRevealLanding(harness, route);
   const initialInventory = await harness.inventory();
   if (route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(route.expectedOutcome, initialInventory);

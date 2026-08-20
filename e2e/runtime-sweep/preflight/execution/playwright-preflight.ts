@@ -14,14 +14,16 @@ import {
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
 import { discoverRevealControls } from "../reveal/interaction/preflight-reveal-discovery.ts";
-import type {
-  RevealExecutionHarness,
-  RevealPreparation,
-} from "../reveal/interaction/preflight-reveal-types.ts";
+import type { RevealPreparation } from "../reveal/interaction/preflight-reveal-types.ts";
 import {
   preflightGroupNeedsReset,
   preflightSessionGroupKey,
 } from "../runtime/preflight-session.ts";
+import {
+  navigateToRevealLanding,
+  revealHarnessFor,
+  type RevealNavigationHarness,
+} from "./playwright-preflight-reveal-harness.ts";
 import {
   assertSpecializedNominalTargets,
   attachSpecializedDeclarations,
@@ -29,13 +31,16 @@ import {
   type BrowserPreflightHarness,
   preflightControlForPlan,
   type PreflightRoute,
-  revealRouteFor,
   routeForState,
 } from "./playwright-preflight-support.ts";
 import {
   createPlaywrightRevealExecutor,
   createPlaywrightRevealRepresentativeInputFreezer,
 } from "./playwright-reveal-execution.ts";
+export {
+  navigateToRevealLanding,
+  revealHarnessFor,
+} from "./playwright-preflight-reveal-harness.ts";
 export {
   assertSpecializedNominalTargets,
   BrowserPreflightError,
@@ -53,10 +58,6 @@ type PreflightRunState = Readonly<{
   readonly segments: readonly MatrixPreflightSegment[];
   readonly preparedGroup: string | undefined;
 }>;
-
-type RevealNavigationHarness = BrowserPreflightHarness & {
-  readonly navigateReveal?: BrowserPreflightHarness["navigate"];
-};
 
 export type BrowserPreflightSegmentResult = Readonly<{
   readonly segment: MatrixPreflightSegment;
@@ -80,34 +81,6 @@ const entriesFor = (source: SourceArtifact): readonly PreflightEntry[] =>
         left.state.stateId.localeCompare(right.state.stateId)
       );
     });
-
-export const revealHarnessFor = (
-  harness: BrowserPreflightHarness,
-): RevealExecutionHarness => ({
-  prepare: (state, revealRoute) =>
-    harness.prepare(state, revealRoute as PreflightRoute, false),
-  navigate:
-    (harness as RevealNavigationHarness).navigateReveal ?? harness.navigate,
-  currentUrl: () => {
-    if (typeof harness.currentUrl !== "function")
-      throw new BrowserPreflightError(
-        "Browser preflight current URL callback is not configured",
-      );
-    return harness.currentUrl();
-  },
-  inventory: harness.inventory,
-  ...(harness.freezeRepresentativeInput === undefined
-    ? {}
-    : { freezeRepresentativeInput: harness.freezeRepresentativeInput }),
-  executeReveal:
-    harness.executeReveal ??
-    (() =>
-      Promise.reject(
-        new BrowserPreflightError(
-          "Preflight reveal execution is not configured",
-        ),
-      )),
-});
 
 const assertCurrentUrlCallback = (harness: BrowserPreflightHarness): void => {
   if (typeof harness.currentUrl !== "function")
@@ -133,10 +106,10 @@ export async function runBrowserPreflightSegment(input: {
     input.harness.currentUrl(),
     input.harness.expectedOrigin,
   );
+  const revealRoute = await navigateToRevealLanding(input.harness, route);
   const initialInventory = await input.harness.inventory();
   if (route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(route.expectedOutcome, initialInventory);
-  const revealRoute = revealRouteFor(route);
   const controls = await discoverRevealControls({
     state: input.state,
     route: revealRoute,

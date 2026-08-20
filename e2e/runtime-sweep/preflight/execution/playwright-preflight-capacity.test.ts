@@ -242,8 +242,8 @@ describe("source-bound preflight capacity", () => {
       expect(waitForLoadState).toHaveBeenCalledWith("networkidle", {
         timeout: 3000,
       });
-      expect(goto).toHaveBeenCalledTimes(2);
-      expect(waitForFunction).toHaveBeenCalledTimes(4);
+      expect(goto).toHaveBeenCalledTimes(3);
+      expect(waitForFunction).toHaveBeenCalledTimes(6);
       expect(
         events.filter((event) => event === "load:networkidle"),
       ).toHaveLength(1);

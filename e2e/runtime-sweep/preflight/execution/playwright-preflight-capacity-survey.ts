@@ -24,14 +24,12 @@ import type { RevealExecutionKind } from "../reveal/interaction/preflight-reveal
 import type { RevealDiscoveryProgress } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { PreflightRuntimePreparationWithBoundary } from "../runtime/preflight-runtime-setup.ts";
 import {
+  navigateToRevealLanding,
   playwrightHarnessFor,
   preflightControlForPlan,
   revealHarnessFor,
 } from "./playwright-preflight.ts";
-import {
-  revealRouteFor,
-  routeForState,
-} from "./playwright-preflight-support.ts";
+import { routeForState } from "./playwright-preflight-support.ts";
 
 const exactSurveyTarget = (
   source: SourceArtifact,
@@ -129,7 +127,7 @@ export const timedHarnessFor = (
   };
 };
 
-export async function runPlaywrightPreflightCapacitySurvey(input: {
+type CapacitySurveyRunInput = Readonly<{
   readonly source: SourceArtifact;
   readonly plan: CapacitySurveyPlan;
   readonly page: Page;
@@ -140,10 +138,14 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
   readonly onCandidateFailure?: RevealCandidateFailureHandler;
   readonly timing?: CapacitySurveyTiming;
   readonly now?: () => number;
-}): Promise<CapacitySurveyResult> {
+}>;
+
+export async function runPlaywrightPreflightCapacitySurvey(
+  input: CapacitySurveyRunInput,
+): Promise<CapacitySurveyResult> {
   const target = exactSurveyTarget(input.source, input.plan);
-  const now = input.now ?? Date.now;
-  const startedMs = now();
+  const now = input.now ?? Date.now,
+    startedMs = now();
   const harness = timedHarnessFor(
     playwrightHarnessFor({
       source: input.source,
@@ -160,6 +162,7 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
     harness.currentUrl(),
     input.expectedOrigin,
   );
+  const revealRoute = await navigateToRevealLanding(harness, target.route);
   const initialInventory = await harness.inventory();
   if (target.route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(target.route.expectedOutcome, initialInventory);
@@ -169,7 +172,7 @@ export async function runPlaywrightPreflightCapacitySurvey(input: {
       return (
         await discoverRevealControlsWithSummary({
           state: target.state,
-          route: revealRouteFor(target.route),
+          route: revealRoute,
           initialInventory,
           harness: revealHarnessFor(harness),
           controlFor: preflightControlForPlan,
