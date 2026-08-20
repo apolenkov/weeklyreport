@@ -175,9 +175,9 @@
   /* Decisions use blue so they cannot be mistaken for green success state. */
   --color-decisions-accent: #4a7494;
 
-  --slide-canvas-max-w: 1088px;
+  --slide-canvas-max-w: 100%;
   --slide-canvas-min-w: 900px;
-  --slide-canvas-min-h: 680px;
+  --slide-canvas-min-h: 360px;
 }
 
 .dark {

@@ -47,3 +47,12 @@ Evidence: `customreport-archive/2026-08-17-history-empty-surface-d89b99cf/` bind
 - [ ] 6.4 Obtain two independent full-frame reviews and complete the final acceptance synthesis.
 
 Current evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/CANDIDATE-PROBE.json` and the focused 7/7 deterministic checks cover the candidate corrections. Canonical DB replay and the complete 51-frame + T01-T07 packet remain NOT-PROVEN; historical packets do not close tasks 6.3 or 6.4.
+
+## 7. Owner-feedback correction: Head Presentation canvas and carousel
+
+- [x] 7.1 Add focused tests first for Head carousel edge-disabled states, one-step Previous/Next selection, selected-card visibility, and the tokenized Presentation frame contract without brittle total-button counts.
+- [x] 7.2 Add a focused CSS token regression using the shared `readPackageStyleSource` helper for the full-width Presentation frame and compact `360px` minimum.
+- [x] 7.3 Implement the minimal Head Presentation frame and carousel correction: full available width, tokenized auto-growing minimum with skeleton parity, explicit edge-aware arrows, smooth/snap scrolling, and selected-card visibility; preserve density, ordering, fullscreen, and mobile behavior.
+- [x] 7.4 Run focused Vitest, web typecheck, targeted ESLint/Stylelint/Prettier, `git diff --check`, and strict OpenSpec validation.
+
+Evidence: the focused Head carousel/token/skeleton checks and static gates pass on the current worktree. Fresh exact-SHA real-Chrome capture and independent review remain governed by tasks 6.3 and 6.4; this no-runtime tranche does not close them.
