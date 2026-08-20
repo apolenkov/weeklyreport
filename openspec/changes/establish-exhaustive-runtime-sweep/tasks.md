@@ -194,7 +194,7 @@
       trace DOM snapshots/screenshots; prove the policy does not trim reveal or
       runtime-cell coverage and rerun the exact R182 timeout state before
       marking this task complete.
-- [ ] 5.15 Preserve completed reveal-discovery candidates across bounded child
+- [x] 5.15 Preserve completed reveal-discovery candidates across bounded child
       chunks with immutable terminal-candidate receipt chunks containing only
       disjoint suffixes and a pure deterministic parent-owned reducer: amend
       the contract/design, bind source/tree/plan/state/selector/route/
