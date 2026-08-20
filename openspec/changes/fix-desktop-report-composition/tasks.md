@@ -38,3 +38,12 @@ Evidence: `customreport-archive/2026-08-17-dashboard-action-alignment/` contains
 - [x] 5.2 Capture the seeded desktop History empty state on the resulting exact source, verify computed token, rail alignment, `scrollY=0`, console/axe cleanliness, and obtain fresh independent full-frame visual approval before treating this correction as accepted.
 
 Evidence: `customreport-archive/2026-08-17-history-empty-surface-d89b99cf/` binds the exact `1980x1178` viewport capture and computed metrics to product commit `d89b99cf768e6d8af2ff695c7322409e1333c1dc` / tree `7aa1091a2403c44721a4d0e193b5f136f8c99dc9`. The guarded minimal seed produced the real empty History state. Computed `--color-surface-empty` was `#fafaf7`; empty-panel/summary-rail top and bottom deltas were both `0px`; `scrollY`, horizontal overflow, scoped axe A/AA violations, console errors, page errors, and failed requests were all zero. Real `History -> Dashboard -> History` clicks preserved `scrollY=0` and the complete header. Two fresh independent direct visual reviews returned `APPROVE` with no blockers.
+
+## 6. Final desktop acceptance corrections
+
+- [x] 6.1 Verify `/reports/latest` preserves the viewport with `scroll: false` and add focused regression coverage.
+- [x] 6.2 Verify the `chart-1`/`chart-4` legend tokens meet desktop WCAG AA contrast and add token regression coverage.
+- [ ] 6.3 Capture a complete fresh exact-SHA 51-frame + T01-T07 canonical-seeded real-Chrome packet with manifest, checksums, and nonvisual oracles.
+- [ ] 6.4 Obtain two independent full-frame reviews and complete the final acceptance synthesis.
+
+Current evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/CANDIDATE-PROBE.json` and the focused 7/7 deterministic checks cover the candidate corrections. Canonical DB replay and the complete 51-frame + T01-T07 packet remain NOT-PROVEN; historical packets do not close tasks 6.3 or 6.4.
