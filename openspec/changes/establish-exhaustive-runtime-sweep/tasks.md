@@ -219,7 +219,7 @@
       prove exact-limit success, plus-one rejection, and live/parent-replay
       parity without trimming controls or emitting continuation/canary evidence
       on overflow.
-- [ ] 5.17 Add a separately identified, exact-source, single-child capacity
+- [x] 5.17 Add a separately identified, exact-source, single-child capacity
       survey with explicit graph, wall-time, per-file, and aggregate archive
       limits. Disable HAR, trace, video, screenshots, continuation assets, and
       every canary/journal/PASS writer. It may publish terminal counts only
