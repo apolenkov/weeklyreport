@@ -253,7 +253,7 @@
             <td>Источник исполнения и десктопных доказательств</td>
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
-              Текущий clean source для исполнения: ветка
+              Последний runtime-proven executable baseline: ветка
               <code>campaign/cr-001-20260820</code>,
               <code>commit</code>
               <code>b0b8a9f40d46caa026cc6e0a226cb1d2996b1275</code>, дерево
@@ -262,17 +262,23 @@
               51-кадровый desktop-пакет привязан к предыдущему source SHA
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>; он не
               подменяет fresh exact-SHA capture на текущем HEAD.
+              Сам этот owner-facing snapshot является docs-потомком
+              <code>113757b645cd06d9547e15f9e295a3445e9a2790</code> с деревом
+              <code>d619006614fd431a1ba18d7f9a32d04a8fb7c509</code>; эта Git-
+              идентичность не является runtime baseline.
             </td>
           </tr>
           <tr>
             <td>Десктопный пакет, OpenSpec 6.3</td>
             <td><span class="status warn">PARTIAL</span></td>
             <td>
-              На указанном точном исходнике существуют полный основной
-              знаменатель из 51 кадра, артефакты переходов T01–T07, контрольные
-              суммы и невизуальные оракулы. Это доказательная база для
-              ограниченного десктопного просмотра, но не закрывает всю задачу
-              6.3.
+              На историческом exact source
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> существуют
+              полный основной знаменатель из 51 кадра, артефакты переходов
+              T01–T07, контрольные суммы и невизуальные оракулы. Это
+              доказательная база для ограниченного десктопного просмотра, но
+              не fresh packet на runtime baseline <code>b0b8a9f40</code> и не
+              закрытие всей задачи 6.3.
             </td>
           </tr>
           <tr>
@@ -323,7 +329,7 @@
           <code>runtime-sweep</code> или доказательство выпуска.
         </p>
         <p>
-          <strong>Свежий runtime-пакет на текущем HEAD:</strong>
+          <strong>Свежий runtime-пакет на последнем runtime baseline:</strong>
           <code class="path"
             >/home/user/work/customreport-archive/2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code
           >. Он относится к одному Admin/minimal canary и не является заменой
