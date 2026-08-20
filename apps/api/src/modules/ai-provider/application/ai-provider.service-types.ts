@@ -1,7 +1,5 @@
 import type {
-  AiProviderAnswerProtocol,
   AiProviderCapabilityTestResult,
-  AiProviderFeatureCompatibility,
   AiProviderProfile as SharedAiProviderProfile,
   AiProviderReasoningMode,
 } from "@customreport/shared";
@@ -16,7 +14,8 @@ import type {
   ResolvedCompositeProviderProfile,
   ResolvedProviderProfile,
 } from "../domain/provider-profile.js";
-import type { AiCompatibilityEnqueuer } from "../infrastructure/ai-compatibility.queue.js";
+import type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
+export type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
 import type {
   AiProviderConfigurationRepository,
   StoredAiProviderRevision,
@@ -75,8 +74,6 @@ export type AiProviderCapabilityRuntimeConfig = Readonly<{
   reasoningCustomValue: string | null;
 }>;
 
-export type AiProviderTestEnqueuer = AiCompatibilityEnqueuer;
-
 export type AiProviderCapabilityTester = Readonly<{
   test(
     profile: ResolvedCompositeProviderProfile | ResolvedProviderProfile,
@@ -86,20 +83,8 @@ export type AiProviderCapabilityTester = Readonly<{
     Readonly<{
       result: Prisma.JsonValue;
       embeddingDimensions: number | null;
-      answerProtocol?: AiProviderAnswerProtocol | null;
     }>
   >;
-}>;
-
-export type AiProviderPromptCompatibility = Readonly<{
-  evaluate(provider: StoredAiProviderRevision): Promise<
-    Readonly<{
-      status: AiProviderCapabilityTestResult["status"];
-      features: readonly AiProviderFeatureCompatibility[];
-    }>
-  >;
-  verify(provider: StoredAiProviderRevision): Promise<boolean>;
-  currentFeatureEvaluatorVersions?: () => Readonly<Record<string, string>>;
 }>;
 
 export type AiProviderPreparationCoordinator = Readonly<{
@@ -164,7 +149,6 @@ export type AiProviderServiceDependencies = Readonly<{
   env: AiProviderEnvironment;
   tester?: AiProviderCapabilityTester;
   preparation?: AiProviderPreparationCoordinator;
-  promptCompatibility?: AiProviderPromptCompatibility;
   testEnqueuer?: AiProviderTestEnqueuer;
   audit: AiProviderAuditSink;
   metrics: AiProviderMetricsSink;

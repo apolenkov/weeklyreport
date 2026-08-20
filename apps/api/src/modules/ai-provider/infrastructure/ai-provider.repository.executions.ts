@@ -1,8 +1,8 @@
-import { AiCompatibilityExecutionKind, type Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 export type ProviderExecutionRequest = Readonly<{
-  evaluatorVersion: string;
+  testSuiteVersion: string;
 }>;
 
 const revisionExecutionIdentity = (
@@ -16,21 +16,27 @@ export const createOrReuseProviderExecution = async (
   prisma: PrismaService,
   revisionId: string,
   input: ProviderExecutionRequest,
-): Promise<Readonly<{ id: string; created: boolean }>> => {
+): Promise<
+  Readonly<{
+    id: string;
+    created: boolean;
+    state: "queued" | "running" | "completed";
+  }>
+> => {
   const revision = await prisma.aiProviderConfiguration.findUnique({
     where: { id: revisionId },
     select: { compositeTestIdentity: true },
   });
   if (!revision) {
     throw new Error(
-      "AI provider revision was not found for compatibility execution",
+      "AI provider revision was not found for provider test execution",
     );
   }
   const baseIdentity = revisionExecutionIdentity(
     revision.compositeTestIdentity,
     revisionId,
   );
-  const executions = await prisma.aiCompatibilityExecution.findMany({
+  const executions = await prisma.aiProviderTestExecution.findMany({
     where: {
       OR: [
         { identity: baseIdentity },
@@ -38,7 +44,7 @@ export const createOrReuseProviderExecution = async (
       ],
     },
     orderBy: { requestedAt: "desc" },
-    select: { id: true, outcome: true },
+    select: { id: true, outcome: true, state: true },
   });
   const existing = executions[0];
   if (
@@ -46,57 +52,56 @@ export const createOrReuseProviderExecution = async (
     (existing.outcome === null ||
       !retryableTerminalOutcomes.has(existing.outcome))
   ) {
-    return { id: existing.id, created: false };
+    return { id: existing.id, created: false, state: existing.state };
   }
   const identity = existing
     ? `${baseIdentity}:retry:${executions.length}`
     : baseIdentity;
   try {
-    const created = await prisma.aiCompatibilityExecution.create({
+    const created = await prisma.aiProviderTestExecution.create({
       data: {
         identity,
-        kind: AiCompatibilityExecutionKind.provider_test,
         providerRevisionId: revisionId,
-        evaluatorVersion: input.evaluatorVersion,
+        testSuiteVersion: input.testSuiteVersion,
       },
       select: { id: true },
     });
-    return { ...created, created: true };
+    return { ...created, created: true, state: "queued" };
   } catch (error) {
-    const raced = await prisma.aiCompatibilityExecution.findUnique({
+    const raced = await prisma.aiProviderTestExecution.findUnique({
       where: { identity },
-      select: { id: true },
+      select: { id: true, state: true },
     });
     if (raced) return { ...raced, created: false };
     throw error;
   }
 };
 
-export const startCompatibilityExecution = async (
+export const startProviderTestExecution = async (
   prisma: PrismaService,
   id: string,
 ): Promise<boolean> => {
-  const result = await prisma.aiCompatibilityExecution.updateMany({
-    where: { id, state: { in: ["queued", "running"] } },
+  const result = await prisma.aiProviderTestExecution.updateMany({
+    where: { id, state: "queued" },
     data: { state: "running", startedAt: new Date() },
   });
   return result.count === 1;
 };
 
-export const updateProviderExecutionIdentity = async (
+export const updateProviderTestExecutionIdentity = async (
   prisma: PrismaService,
   id: string,
   identity: string,
   revisionId: string,
 ): Promise<boolean> => {
-  const existing = await prisma.aiCompatibilityExecution.findUnique({
+  const existing = await prisma.aiProviderTestExecution.findUnique({
     where: { id },
     select: { identity: true },
   });
   if (!existing) return false;
   const retrySuffix = /:retry:\d+$/u.exec(existing.identity)?.[0] ?? "";
-  const result = await prisma.aiCompatibilityExecution.updateMany({
-    where: { id, kind: AiCompatibilityExecutionKind.provider_test },
+  const result = await prisma.aiProviderTestExecution.updateMany({
+    where: { id },
     data: {
       identity: `${revisionExecutionIdentity(identity, revisionId)}${retrySuffix}`,
     },
@@ -104,14 +109,14 @@ export const updateProviderExecutionIdentity = async (
   return result.count === 1;
 };
 
-export const completeCompatibilityExecution = async (
+export const completeProviderTestExecution = async (
   prisma: PrismaService,
   id: string,
   outcome: "passed" | "incompatible" | "configuration_error" | "inconclusive",
   failureCode: string | null,
   checks: Prisma.InputJsonValue,
 ): Promise<void> => {
-  await prisma.aiCompatibilityExecution.update({
+  await prisma.aiProviderTestExecution.update({
     where: { id },
     data: {
       state: "completed",
@@ -123,21 +128,13 @@ export const completeCompatibilityExecution = async (
   });
 };
 
-export const getCompatibilityExecution = (
+export const getProviderTestExecution = (
   prisma: PrismaService,
   id: string,
-): Promise<Readonly<{
-  providerRevisionId: string;
-  promptRevisionId: string | null;
-  featureKey: string | null;
-  kind: "provider_test" | "prompt_evaluation";
-}> | null> =>
-  prisma.aiCompatibilityExecution.findUnique({
+): Promise<Readonly<{ providerRevisionId: string }> | null> =>
+  prisma.aiProviderTestExecution.findUnique({
     where: { id },
     select: {
       providerRevisionId: true,
-      promptRevisionId: true,
-      featureKey: true,
-      kind: true,
     },
   });

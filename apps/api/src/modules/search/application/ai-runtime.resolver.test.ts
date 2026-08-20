@@ -39,7 +39,6 @@ const revision = (
   semanticInputVersion: "report-assistant/v1",
   reasoningMode: "provider_default",
   reasoningCustomValue: null,
-  answerProtocol: "json_schema",
   generationCredentialCiphertext: encrypted.ciphertext,
   generationCredentialNonce: encrypted.nonce,
   generationCredentialTag: encrypted.tag,
@@ -208,26 +207,51 @@ describe("AiRuntimeResolver", () => {
     expect(second?.promptRevisionId).toBe("prompt-revision-2");
   });
 
+  it("evicts the least recently used prompt client", async () => {
+    const active = revision(AiProviderLifecycle.active);
+    const harness = createResolver(active);
+    const baseline = baselineReportAssistantPrompts();
+    const catalog = aiFeaturePromptCatalog.require(
+      REPORT_ASSISTANT_FEATURE_KEY,
+    );
+    const first = await harness.resolver.resolveActive();
+
+    [2, 3, 4, 5].forEach((version) => {
+      const prompts = catalog.compose({
+        ...baseline.prompts,
+        planner: `${baseline.prompts.planner}\nCache variant ${version}.`,
+      });
+      harness.resolveReportAssistant.mockResolvedValueOnce({
+        provider: active,
+        featureKey: REPORT_ASSISTANT_FEATURE_KEY,
+        promptRevisionId: `prompt-revision-${version}`,
+        servingContractVersion: prompts.servingContractVersion,
+        coreContractVersion: prompts.coreContractVersion,
+        prompts,
+      });
+    });
+
+    await Promise.all([2, 3, 4, 5].map(() => harness.resolver.resolveActive()));
+    harness.resolveReportAssistant.mockResolvedValueOnce({
+      provider: active,
+      featureKey: REPORT_ASSISTANT_FEATURE_KEY,
+      promptRevisionId: "prompt-revision-1-again",
+      servingContractVersion: baseline.servingContractVersion,
+      coreContractVersion: baseline.coreContractVersion,
+      prompts: baseline,
+    });
+
+    const firstAgain = await harness.resolver.resolveActive();
+
+    expect(firstAgain?.planner).not.toBe(first?.planner);
+  });
+
   it("fails exact worker resolution when the revision no longer exists", async () => {
     const harness = createResolver(null);
 
     await expect(
       harness.resolver.resolveExact("missing"),
     ).rejects.toBeInstanceOf(AiRuntimeNotConfiguredError);
-  });
-
-  it("keeps exact embedding workers independent from answer protocol state", async () => {
-    const retained = {
-      ...revision(AiProviderLifecycle.superseded),
-      answerProtocol: null,
-    };
-    const harness = createResolver(retained);
-
-    const exact = await harness.resolver.resolveExact(retained.id);
-
-    expect(exact.answerProtocol).toBe("json_object");
-    expect(exact.embeddings).toBeDefined();
-    expect(exact.planner).toBeDefined();
   });
 
   it("fails closed when the durable prompt snapshot is unavailable", async () => {

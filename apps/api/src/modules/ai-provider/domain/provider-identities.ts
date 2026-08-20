@@ -1,14 +1,13 @@
 import { createHash } from "node:crypto";
 
 import type {
-  AiProviderAnswerProtocol,
   AiProviderProfile,
   AiProviderReasoningMode,
 } from "@customreport/shared";
 
 const AI_PROVIDER_IDENTITY_VERSION = "ai-provider-identities/v1";
 const AI_PROVIDER_PROFILE_REGISTRY_VERSION = "provider-profile-registry/v1";
-const AI_PROVIDER_CAPABILITY_SUITE_VERSION = "provider-compatibility/v1";
+const AI_PROVIDER_CAPABILITY_SUITE_VERSION = "provider-test/v1";
 const AI_PROVIDER_GENERATION_CONTRACT_VERSION = "generation-contract/v1";
 const AI_PROVIDER_SAMPLING_POLICY_VERSION = "provider-default-sampling/v1";
 
@@ -24,8 +23,7 @@ export const buildGenerationCompatibilityIdentity = (
     answerModel: string;
     reasoningMode: AiProviderReasoningMode;
     reasoningCustomValue: string | null;
-    answerProtocol: AiProviderAnswerProtocol | null;
-    evaluatorVersion: string;
+    testSuiteVersion: string;
   }>,
 ): string =>
   fingerprint({
@@ -37,10 +35,9 @@ export const buildGenerationCompatibilityIdentity = (
     answerModel: input.answerModel,
     reasoningMode: input.reasoningMode,
     reasoningCustomValue: input.reasoningCustomValue,
-    answerProtocol: input.answerProtocol,
     samplingPolicyVersion: AI_PROVIDER_SAMPLING_POLICY_VERSION,
     contractVersion: AI_PROVIDER_GENERATION_CONTRACT_VERSION,
-    evaluatorVersion: input.evaluatorVersion,
+    testSuiteVersion: input.testSuiteVersion,
   });
 
 export const buildEmbeddingScopeIdentity = (
@@ -71,7 +68,7 @@ export const buildCompositeTestIdentity = (
           credentialFingerprint: string;
           model: string;
         }>;
-    evaluatorVersion: string;
+    testSuiteVersion: string;
   }>,
 ): string =>
   fingerprint({
@@ -80,5 +77,5 @@ export const buildCompositeTestIdentity = (
     embeddings: input.embeddings,
     profileRegistryVersion: AI_PROVIDER_PROFILE_REGISTRY_VERSION,
     capabilitySuiteVersion: AI_PROVIDER_CAPABILITY_SUITE_VERSION,
-    evaluatorVersion: input.evaluatorVersion,
+    testSuiteVersion: input.testSuiteVersion,
   });

@@ -1,6 +1,5 @@
 import type { AiProviderCapabilityTestResult } from "@customreport/shared";
 import {
-  AiProviderAnswerProtocol,
   AiProviderLifecycle,
   type AiProviderProfile,
   type AiProviderReasoningMode,
@@ -66,28 +65,6 @@ type SetTestResultInput = Readonly<{
   embeddingScopeIdentity?: string;
   compositeTestIdentity?: string;
 }>;
-
-const answerProtocolFrom = (
-  result: Prisma.InputJsonValue,
-): AiProviderAnswerProtocol | null | undefined => {
-  const value = result as unknown;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return undefined;
-  }
-  const object = value as Record<string, unknown>;
-  const generation = object.generation;
-  const protocol =
-    generation && typeof generation === "object" && !Array.isArray(generation)
-      ? (generation as Record<string, unknown>).answerProtocol
-      : object.answerProtocol;
-  if (protocol === undefined) return undefined;
-  if (protocol === null) return null;
-  return protocol === AiProviderAnswerProtocol.json_schema ||
-    protocol === AiProviderAnswerProtocol.forced_tool ||
-    protocol === AiProviderAnswerProtocol.json_object
-    ? protocol
-    : undefined;
-};
 
 export const createDraftRecord = (
   prisma: PrismaService,
@@ -171,7 +148,6 @@ const testedLifecycle = (input: SetTestResultInput): AiProviderLifecycle =>
 
 const testEvidenceData = (
   input: SetTestResultInput,
-  answerProtocol: AiProviderAnswerProtocol | null | undefined,
 ): Readonly<Record<string, unknown>> => ({
   embeddingDimensions: input.embeddingDimensions,
   ...(input.generationCompatibilityIdentity
@@ -183,16 +159,13 @@ const testEvidenceData = (
   ...(input.compositeTestIdentity
     ? { compositeTestIdentity: input.compositeTestIdentity }
     : {}),
-  ...(answerProtocol === undefined ? {} : { answerProtocol }),
 });
 
 export const setTestResultRecord = (
   prisma: PrismaService,
   input: SetTestResultInput,
 ) => {
-  const answerProtocol = answerProtocolFrom(input.result);
-  const providerEvidencePassed =
-    input.embeddingDimensions !== null && answerProtocol != null;
+  const providerEvidencePassed = input.embeddingDimensions !== null;
   const preserveActiveEvidence =
     input.currentLifecycle === AiProviderLifecycle.active &&
     !providerEvidencePassed;
@@ -202,9 +175,7 @@ export const setTestResultRecord = (
       lifecycle: testedLifecycle(input),
       testResult: input.result,
       testedAt: input.testedAt,
-      ...(preserveActiveEvidence
-        ? {}
-        : testEvidenceData(input, answerProtocol)),
+      ...(preserveActiveEvidence ? {} : testEvidenceData(input)),
     },
     select: aiProviderRevisionSelect,
   });

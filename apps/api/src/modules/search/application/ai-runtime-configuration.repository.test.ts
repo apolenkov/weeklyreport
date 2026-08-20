@@ -8,12 +8,12 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { AiRuntimeConfigurationRepository } from "../infrastructure/ai-runtime-configuration.prisma-repository.js";
 import {
   aiFeaturePromptCatalog,
   baselineReportAssistantPrompts,
   REPORT_ASSISTANT_FEATURE_KEY,
 } from "./ai-feature-prompt-catalog.js";
-import { AiRuntimeConfigurationRepository } from "./ai-runtime-configuration.repository.js";
 
 const providerId = "a0000000-0000-4000-8000-000000000901";
 const promptId = "a0000000-0000-4000-8000-000000000902";
@@ -36,7 +36,6 @@ const provider = {
   semanticInputVersion: "report-assistant/v1",
   reasoningMode: "provider_default",
   reasoningCustomValue: null,
-  answerProtocol: "json_schema",
   generationCompatibilityIdentity: "generation-identity",
   credentialCiphertext: "ciphertext",
   credentialNonce: "nonce",

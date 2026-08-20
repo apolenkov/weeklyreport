@@ -1,5 +1,3 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
-
 import { ReportAssistantProviderError } from "../application/report-assistant.ports.js";
 import { safeFailureCode } from "./openai-compatible.answer-probe.js";
 import type { OpenAiCompatibleTransport } from "./openai-compatible.transport.js";
@@ -23,9 +21,7 @@ export type CapabilityProbeResult = Readonly<{
 
 export type GenerationLaneResult = Readonly<{
   status: CapabilityStatus;
-  answerProtocol: AiProviderAnswerProtocol | null;
   capabilities: readonly CapabilityProbeResult[];
-  featureCompatibility: readonly [];
   connectionFailed: boolean;
 }>;
 

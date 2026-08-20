@@ -1,7 +1,4 @@
-import {
-  AiPromptBundleLifecycle,
-  AiPromptEvaluationOutcome,
-} from "@prisma/client";
+import { AiPromptBundleLifecycle } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -33,24 +30,8 @@ const revision = (overrides: Partial<Record<string, unknown>> = {}) => ({
   updatedAt: new Date("2026-08-10T00:00:00.000Z"),
   activatedAt: null,
   supersededAt: null,
-  evaluations: [],
-  compatibilityExecutions: [],
   ...overrides,
 });
-
-const evaluation = {
-  id: revisionId,
-  featureKey,
-  promptRevisionId: revisionId,
-  generationCompatibilityIdentity: "generation-identity",
-  contentHash: hash,
-  contractVersion: "report-assistant/core/v1",
-  servingContractVersion,
-  evaluatorVersion: "report-assistant/evaluator/v1",
-  checks: [{ code: "protocol_shape", status: "passed" }],
-  outcome: AiPromptEvaluationOutcome.passed,
-  evaluatedAt: new Date("2026-08-10T00:00:00.000Z"),
-};
 
 const activationCompatibility = {
   servingContractVersion,
@@ -79,10 +60,6 @@ const buildHarness = () => {
   const providerControlFindUnique = vi
     .fn()
     .mockResolvedValue({ enabled: true, activeConfigurationId: oldRevisionId });
-  const evaluationFindUnique = vi.fn().mockResolvedValue({
-    id: revisionId,
-    outcome: AiPromptEvaluationOutcome.passed,
-  });
   const controlUpdate = vi.fn().mockResolvedValue(undefined);
   const controlUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
   const executeRaw = vi.fn().mockResolvedValue(0);
@@ -100,7 +77,6 @@ const buildHarness = () => {
         generationCompatibilityIdentity: "generation-identity",
       }),
     },
-    aiPromptEvaluation: { findUnique: evaluationFindUnique },
     aiPromptBundleRevision: { aggregate, create, updateMany },
   };
   const transactionRunner = vi.fn(
@@ -121,10 +97,6 @@ const buildHarness = () => {
       updateMany,
       deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
-    aiPromptEvaluation: {
-      upsert: vi.fn().mockResolvedValue(evaluation),
-      findUnique: vi.fn().mockResolvedValue(evaluation),
-    },
   } as unknown as PrismaService;
   return {
     repository: new AiPromptRepository(prisma),
@@ -135,7 +107,6 @@ const buildHarness = () => {
     controlUpdate,
     controlUpdateMany,
     providerControlFindUnique,
-    evaluationFindUnique,
     executeRaw,
   };
 };
@@ -212,7 +183,6 @@ describe("AiPromptRepository", () => {
       ),
     ).resolves.toBe(true);
     expect(harness.providerControlFindUnique).not.toHaveBeenCalled();
-    expect(harness.evaluationFindUnique).not.toHaveBeenCalled();
     const updateCalls = harness.updateMany.mock.calls as unknown as readonly [
       Readonly<{ where: Readonly<Record<string, unknown>> }>,
     ][];
@@ -237,44 +207,5 @@ describe("AiPromptRepository", () => {
         activationCompatibility,
       ),
     ).resolves.toBe(false);
-  });
-
-  it("keys safe evaluation storage by the exact compatibility tuple", async () => {
-    const harness = buildHarness();
-
-    await harness.repository.recordEvaluation({
-      featureKey,
-      promptRevisionId: revisionId,
-      generationCompatibilityIdentity: "generation-identity",
-      contentHash: hash,
-      contractVersion: "report-assistant/core/v1",
-      servingContractVersion,
-      evaluatorVersion: "report-assistant/evaluator/v1",
-      checks: [{ code: "protocol_shape", status: "passed" }],
-      outcome: AiPromptEvaluationOutcome.passed,
-      evaluatedAt: new Date("2026-08-10T00:00:00.000Z"),
-    });
-
-    expect(
-      (
-        harness.prisma.aiPromptEvaluation as unknown as {
-          upsert: ReturnType<typeof vi.fn>;
-        }
-      ).upsert,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
-            {
-              promptRevisionId: revisionId,
-              generationCompatibilityIdentity: "generation-identity",
-              contentHash: hash,
-              contractVersion: "report-assistant/core/v1",
-              servingContractVersion,
-              evaluatorVersion: "report-assistant/evaluator/v1",
-            },
-        },
-      }),
-    );
   });
 });

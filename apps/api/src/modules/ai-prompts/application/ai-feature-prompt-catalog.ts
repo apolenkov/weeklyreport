@@ -28,7 +28,6 @@ const REPORT_ASSISTANT_CORE_CONTRACT_VERSION = "report-assistant/core/v1";
 const REPORT_ASSISTANT_COMPOSER_VERSION = "report-assistant/composer/v2";
 export const REPORT_ASSISTANT_SERVING_CONTRACT_VERSION =
   "report-assistant/editor-serving/v1";
-const REPORT_ASSISTANT_EVALUATOR_VERSION = "report-assistant/evaluator/v2";
 
 export type AiComposedPromptSet = Readonly<{
   featureKey: AiFeatureKey;
@@ -52,7 +51,6 @@ export type AiFeaturePromptCatalogEntry = Readonly<{
   coreContractVersion: string;
   composerVersion: string;
   servingContractVersion: string;
-  evaluatorVersion: string;
   compose(editable: AiPromptContents): AiComposedPromptSet;
 }>;
 
@@ -76,11 +74,12 @@ const defaultEditableInstructions: AiPromptContents = lockedCore;
 
 const canonicalContent = (
   featureKey: AiFeatureKey,
+  slots: readonly AiPromptSlot[],
   prompts: Readonly<Record<AiPromptSlot, string>>,
 ): string =>
   JSON.stringify({
     featureKey,
-    slots: slotOrder.map((slot) => ({ slot, prompt: prompts[slot] })),
+    slots: slots.map((slot) => ({ slot, prompt: prompts[slot] })),
   });
 
 const hashContent = (content: string): string =>
@@ -99,7 +98,6 @@ const createEntry = (): AiFeaturePromptCatalogEntry => {
     coreContractVersion: REPORT_ASSISTANT_CORE_CONTRACT_VERSION,
     composerVersion: REPORT_ASSISTANT_COMPOSER_VERSION,
     servingContractVersion: REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
-    evaluatorVersion: REPORT_ASSISTANT_EVALUATOR_VERSION,
     compose(editable: AiPromptContents): AiComposedPromptSet {
       return composePromptSet(entry, editable, lockedCore);
     },
@@ -111,6 +109,8 @@ export const composePromptSet = (
   entry: Pick<
     AiFeaturePromptCatalogEntry,
     | "featureKey"
+    | "slots"
+    | "promptVersions"
     | "coreContractVersion"
     | "composerVersion"
     | "servingContractVersion"
@@ -121,7 +121,7 @@ export const composePromptSet = (
   const parsed = aiPromptContentsSchema.safeParse(editable);
   if (!parsed.success) throw new Error("Invalid report-assistant prompt edit");
   const prompts = parsed.data;
-  const serialized = canonicalContent(entry.featureKey, prompts);
+  const serialized = canonicalContent(entry.featureKey, entry.slots, prompts);
   if (serialized.length > AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT) {
     throw new Error("Composed report-assistant prompts exceed the size limit");
   }
@@ -131,9 +131,9 @@ export const composePromptSet = (
     composerVersion: entry.composerVersion,
     servingContractVersion: entry.servingContractVersion,
     contentHash: hashContent(serialized),
-    slotVersions: promptVersions,
+    slotVersions: entry.promptVersions,
     prompts,
-    slots: slotOrder.map((slot) => ({
+    slots: entry.slots.map((slot) => ({
       slot,
       lockedCore: snapshot[slot],
       promptContents: parsed.data[slot],

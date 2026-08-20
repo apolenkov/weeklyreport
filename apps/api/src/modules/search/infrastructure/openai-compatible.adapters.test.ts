@@ -212,7 +212,6 @@ describe("OpenAI-compatible report assistant adapters", () => {
     const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
       model: "answer",
       maxTokens: 100,
-      answerProtocol: "json_schema",
       prompts,
     });
 
@@ -225,116 +224,9 @@ describe("OpenAI-compatible report assistant adapters", () => {
     });
     expect(harness.bodies[0]).toMatchObject({
       response_format: {
-        type: "json_schema",
-        json_schema: { strict: true },
+        type: "json_object",
       },
     });
-  });
-
-  it("forces and validates exactly one side-effect-free answer tool", async () => {
-    const harness = transportFor([
-      {
-        choices: [
-          {
-            message: {
-              tool_calls: [
-                {
-                  function: {
-                    name: "submit_grounded_report_answer",
-                    arguments: JSON.stringify({
-                      answerMarkdown: "Answer",
-                      citedSourceIds: ["S1"],
-                      insufficientEvidence: false,
-                    }),
-                  },
-                },
-              ],
-            },
-          },
-        ],
-        usage: { prompt_tokens: 2, completion_tokens: 3, total_tokens: 5 },
-      },
-    ]);
-    const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
-      model: "answer",
-      maxTokens: 100,
-      answerProtocol: "forced_tool",
-      prompts,
-    });
-
-    await expect(
-      answerer.answer({ question: "Question", grounding }),
-    ).resolves.toMatchObject({
-      answerMarkdown: "Answer",
-      sourceIds: ["S1"],
-    });
-    expect(harness.bodies[0]).toMatchObject({
-      tools: [
-        {
-          function: {
-            name: "submit_grounded_report_answer",
-            strict: true,
-          },
-        },
-      ],
-      tool_choice: {
-        type: "function",
-        function: { name: "submit_grounded_report_answer" },
-      },
-      parallel_tool_calls: false,
-    });
-    expect(harness.bodies[0]).not.toHaveProperty("response_format");
-  });
-
-  it("rejects malformed, multiple, and wrong answer tool calls", async () => {
-    const responses = [
-      { choices: [{ message: { tool_calls: [] } }] },
-      {
-        choices: [
-          {
-            message: {
-              tool_calls: [
-                {
-                  function: {
-                    name: "submit_grounded_report_answer",
-                    arguments: "{}",
-                  },
-                },
-                {
-                  function: {
-                    name: "submit_grounded_report_answer",
-                    arguments: "{}",
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-      {
-        choices: [
-          {
-            message: {
-              tool_calls: [
-                { function: { name: "other_tool", arguments: "{}" } },
-              ],
-            },
-          },
-        ],
-      },
-    ];
-    for (const response of responses) {
-      const harness = transportFor([response]);
-      const answerer = new OpenAiCompatibleAnswerAdapter(harness.transport, {
-        model: "answer",
-        maxTokens: 100,
-        answerProtocol: "forced_tool",
-        prompts,
-      });
-      await expect(
-        answerer.answer({ question: "Question", grounding }),
-      ).rejects.toBeInstanceOf(OpenAiCompatibleProtocolError);
-    }
   });
 
   it("preserves provider embedding ordering across bounded batches", async () => {

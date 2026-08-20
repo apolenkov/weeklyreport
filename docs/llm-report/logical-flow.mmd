@@ -2,7 +2,7 @@ flowchart TD
     user["Lead: задаёт вопрос в Report chat"] --> ui["Web: отправляет question и resolution tokens"]
     ui --> api["tRPC leadForm.assistant\nТолько canonical leadProcedure"]
     api --> snapshot["AiRuntimeConfigurationRepository\nrepeatable-read provider + active prompt pair"]
-    snapshot --> ready{"Enabled provider, active bundle,\nexact passing evaluation?"}
+    snapshot --> ready{"Enabled provider, active current-serving\nbundle with valid content?"}
     ready -- "Нет" --> unavailable["Исход: ai_not_configured\nДо retrieval и provider work"]
     ready -- "Да" --> planner["Snapshot planner\nОдин search_report_entries tool call"]
     planner --> valid{"SearchPlan\nпрошёл Zod-проверку?"}

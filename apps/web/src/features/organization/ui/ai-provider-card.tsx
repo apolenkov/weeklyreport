@@ -18,7 +18,7 @@ import {
 } from "./ai-provider-form";
 import {
   AI_PROVIDER_TEST_QUEUED_MESSAGE,
-  compatibilityExecutionMessage,
+  providerTestExecutionMessage,
   useAiProviderMutations,
 } from "./ai-provider-mutations";
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
@@ -104,7 +104,7 @@ export function AiProviderCardContent({
   const revision = selectObservedRevision(data, savedRevision);
   const revisionId = revision?.id ?? null;
   const executionMessage = revision
-    ? compatibilityExecutionMessage(revision)
+    ? providerTestExecutionMessage(revision)
     : null;
   const observedMessage =
     message === AI_PROVIDER_TEST_QUEUED_MESSAGE

@@ -18,7 +18,6 @@
     "@bull-board/api": "^8.0.1",
     "@bull-board/express": "^8.0.1",
     "@customreport/shared": "workspace:*",
-    "@mistralai/mistralai": "^2.5.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",

@@ -1,13 +1,11 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
-
 import {
   buildCompositeTestIdentity,
   buildEmbeddingScopeIdentity,
   buildGenerationCompatibilityIdentity,
 } from "../domain/provider-identities.js";
 import type { ResolvedCompositeProviderProfile } from "../domain/provider-profile.js";
-import { AI_PROVIDER_EVALUATOR_VERSION } from "../infrastructure/ai-compatibility.queue.js";
 import type { StoredAiProviderRevision } from "../infrastructure/ai-provider.repository.js";
+import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import {
   AiProviderConfigurationError,
   type AiProviderServiceDependencies,
@@ -88,7 +86,6 @@ export const embeddingCredentialFor = (
 export const generationIdentityFor = (
   dependencies: AiProviderServiceDependencies,
   revision: StoredAiProviderRevision,
-  answerProtocol: AiProviderAnswerProtocol | null,
 ): string =>
   buildGenerationCompatibilityIdentity({
     profile: toSharedProfile(revision.generationProfile),
@@ -103,8 +100,7 @@ export const generationIdentityFor = (
     answerModel: revision.answerModel,
     reasoningMode: revision.reasoningMode,
     reasoningCustomValue: revision.reasoningCustomValue,
-    answerProtocol,
-    evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+    testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
   });
 
 export const embeddingIdentityFor = (
@@ -152,5 +148,5 @@ export const compositeIdentityFor = (
               ),
             ),
           },
-    evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+    testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
   });

@@ -2,9 +2,9 @@
 
 Operational note: this historical provider research describes model and privacy
 considerations only. The live provider workflow is Settings → AI → Provider;
-prompt behavior and exact provider/prompt evaluation are managed in Settings →
-AI → Features. Legacy environment values are bootstrap inputs, not runtime
-prompt or provider fallbacks.
+prompt behavior and serving-contract validation are managed in Settings → AI →
+Features. Legacy environment values are bootstrap inputs, not runtime prompt or
+provider fallbacks.
 
 Scope: official Mistral API access, TypeScript SDK, chat/tool-calling models,
 embeddings, request behavior, and privacy facts relevant to internal weekly-report
@@ -27,9 +27,9 @@ Sources: [Mistral Medium 3.5 model card](https://docs.mistral.ai/models/model-ca
 
 `mistral-small-2603` is the cost-oriented UAT alternative: its model card also
 lists Function Calling and Structured Outputs. It should replace Large only after
-the same planner, citation, Russian-query, and prompt-injection evaluation suite
+the same planner, citation, Russian-query, and prompt-injection regression suite
 passes. Its published token prices are materially lower than Large 3's, but model
-choice must be made from measured application quality rather than price alone.
+choice must be made from measured application behavior rather than price alone.
 [Mistral Small 4 model card](https://docs.mistral.ai/models/model-cards/mistral-small-4-0-26-03)
 
 Before deployment, call `GET /v1/models` using the target workspace key and verify
@@ -69,36 +69,15 @@ validated required-env mechanism. It must not copy the SDK README's illustrative
 `?? ""` fallback: a missing key must fail boot explicitly under this repository's
 configuration rules.
 
-## Official TypeScript SDK
+## TypeScript client note
 
-The official package is `@mistralai/mistralai`:
-
-```bash
-pnpm --filter @customreport/api add @mistralai/mistralai
-```
-
-The current SDK major is v2, is ESM-only, and uses Zod v4, which aligns with this
-project's runtime and validation stack. The official repository documents
-installation with pnpm, chat and embedding methods, retries, regional servers, a
-custom Fetch-based HTTP client, and timeout/error hooks.
-[Official TypeScript SDK](https://github.com/mistralai/client-ts)
-
-Minimal client shape (illustrative, not a replacement for the project's adapter and
-env validation):
-
-```ts
-import { Mistral } from "@mistralai/mistralai";
-
-const client = new Mistral({
-  apiKey: validatedEnv.MISTRAL_API_KEY,
-  server: "eu",
-});
-```
-
-The SDK currently distinguishes `global`, `eu`, and `us` servers; the EU server is
-`https://api.eu.mistral.ai`. The application should make the endpoint/region an
-explicit reviewed configuration decision rather than accept an invisible fallback.
-[TypeScript SDK server selection](https://github.com/mistralai/client-ts#server-selection)
+The live implementation intentionally uses the project's OpenAI-compatible
+transport and does not carry a provider-specific Mistral SDK dependency. The
+official client documentation remains useful research for chat, embedding,
+retry, and regional-server semantics, but it is not an installation step for
+this application. The endpoint and region remain an explicit reviewed
+configuration decision rather than an invisible fallback.
+[Official client documentation](https://github.com/mistralai/client-ts)
 
 ## Tool calling and structured output behavior
 
@@ -120,11 +99,10 @@ and produces its arguments; the application must parse, validate, authorize, and
 execute them. The returned tool result can then be supplied to a later model call.
 [Function-calling guide](https://docs.mistral.ai/studio-api/conversations/function-calling)
 
-For the final grounded answer, prefer Custom Structured Outputs with the shared JSON
-Schema/Zod-derived contract. Mistral states that custom structured output enforces a
-supplied schema and is more reliable than plain JSON mode. Plain JSON mode guarantees
-valid JSON but not adherence to a particular schema, and the prompt must explicitly
-mention JSON to avoid an indefinite whitespace response.
+For the final grounded answer, this project uses one fixed JSON Object Mode request
+and validates the response with the shared Zod-derived contract. Plain JSON mode
+guarantees valid JSON but not adherence to the application schema, so server-side
+validation and the bounded answer repair remain mandatory.
 [Custom Structured Outputs](https://docs.mistral.ai/studio-api/conversations/structured-output/custom),
 [known limitations](https://docs.mistral.ai/resources/known-limitations)
 
@@ -138,13 +116,10 @@ custom value. The capability test exercises the selected mapping against both
 planner and answer contracts; the runtime does not reinterpret it as arbitrary
 request JSON.
 
-Answer capability testing probes strict JSON Schema first. A forced
-`submit_grounded_report_answer` tool is tried once only when the provider returns
-a classified response-format incompatibility. Authentication, rate-limit,
-timeout, transport, and provider/server failures stop the test without protocol
-negotiation. The successful protocol is persisted and the Lead runtime uses only
-that protocol, validating both JSON Schema payloads and forced-tool arguments
-through the same server-owned answer contract.
+Provider testing exercises the fixed JSON Object Mode answer request. Authentication,
+rate-limit, timeout, transport, and provider/server failures are classified without
+trying a second answer protocol. The Lead runtime always uses the same code-owned
+request shape and validates the result through the server-owned answer contract.
 
 ## Embeddings
 
@@ -257,12 +232,12 @@ Method note: researched on 2026-08-04. Mistral model availability, pricing, API 
 and legal terms are changeable external facts; re-check the linked primary sources and
 `GET /v1/models` immediately before production rollout.
 
-## Compatibility checks
+## Provider tests
 
-The application queues compatibility checks and persists only their immutable
-identity, bounded check classification, and timestamps. It never stores a
-credential, provider body, prompt body, or raw upstream response in the job
-record. Mistral `429`, timeout, network, and server failures are inconclusive;
-authentication failures are configuration errors; only validated contract
-failures are incompatible. Compatibility and runtime requests omit sampling
-overrides such as `temperature`.
+The application queues provider tests and persists only their immutable identity,
+bounded capability classification, and timestamps. It never stores a credential,
+provider body, prompt body, or raw upstream response in the job record. Mistral
+`429`, timeout, network, and server failures are inconclusive; authentication
+failures are configuration errors; only validated provider contract failures are
+incompatible. Provider and runtime requests omit sampling overrides such as
+`temperature`.

@@ -21,30 +21,7 @@ import { useLeadReportAssistantController } from "./use-lead-report-assistant-co
 export function LeadReportAssistant() {
   const trpc = useTRPC();
   const [open, setOpen] = useState(false);
-  const availabilityProcedure = (
-    trpc as unknown as Readonly<{
-      ai?: Readonly<{
-        availability?: Readonly<{
-          queryOptions: () => {
-            queryKey: readonly unknown[];
-            queryFn: () => Promise<{
-              availability: "available" | "not_configured";
-            }>;
-          };
-        }>;
-      }>;
-    }>
-  ).ai?.availability;
-  const availability = useQuery(
-    availabilityProcedure?.queryOptions() ?? {
-      queryKey: ["ai", "availability", "legacy-test-proxy"],
-      // Older isolated UI fixtures omit the optional availability procedure.
-      // The production proxy always exposes it; treating the absent fixture
-      // as available keeps this component's existing interaction tests focused
-      // on the chat surface itself.
-      queryFn: () => Promise.resolve({ availability: "available" as const }),
-    },
-  );
+  const availability = useQuery(trpc.ai.availability.queryOptions());
   const isAvailable = availability.data?.availability === "available";
   const {
     question,

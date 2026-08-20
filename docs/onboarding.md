@@ -61,11 +61,12 @@ CustomReport автоматизирует еженедельные статус-
 
 - **Корневой `.env`** — основной. Его читает api (запускается с
   `--env-file=../../.env`). Образец — `.env.example`, скопируй его в `.env`.
-- **`apps/web/.env` и `apps/web/.env.local`** — локальное окружение web. Next.js
-  читает их из каталога приложения. Сюда кладут `NEXT_PUBLIC_*` переменные.
+- **`apps/web/.env.local`** — локальное окружение web. Next.js читает его из
+  каталога приложения, поэтому корневой `.env` не заменяет этот файл. Образец —
+  `apps/web/.env.example`; скопируй его в `apps/web/.env.local`.
 
-Для стандартного локального запуска достаточно корневого `.env`, созданного из
-`.env.example`: он уже согласован с credentials и host-портом Postgres из
+Для стандартного локального запуска нужны оба файла, созданные из примеров. Их
+значения уже согласованы с credentials и host-портом Postgres из
 `docker-compose.yml`. Менять `DATABASE_URL` на `user:pass` нельзя — локальный
 Compose использует пользователя `customreport` и пароль `localdev`.
 
@@ -83,9 +84,9 @@ Production rollout требует одобрения endpoint/data region, reten
 availability, spending limit и rate-limit posture. Внешний origin должен быть
 явно добавлен в `AI_PROVIDER_ALLOWED_ORIGINS`; автоматического failover нет.
 
-Сначала проверяют полную конфигурацию и запускают generic плюс active-feature
-synthetic capability test в Settings → AI → Provider, затем проверяют prompt
-bootstrap и exact provider/prompt evaluation в Settings → AI → Features. После
+Сначала проверяют полную конфигурацию и запускают provider capability test в
+Settings → AI → Provider, затем проверяют prompt bootstrap и текущий prompt
+contract в Settings → AI → Features. После
 этого делают smoke-проверку save → submit → publish → search → PDF → Chat.
 Для PostgreSQL сначала проверяют initialized-database ledger через
 `pnpm db:check-init-target`, затем применяют DDL через прямой `DIRECT_URL`

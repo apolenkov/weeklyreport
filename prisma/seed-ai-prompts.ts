@@ -47,6 +47,7 @@ export async function seedAiPromptBaseline(
         revision: 1,
         coreContractVersion: composed.coreContractVersion,
         composerVersion: composed.composerVersion,
+        servingContractVersion: composed.servingContractVersion,
         lockedCoreSnapshot,
         promptContents: entry.defaultEditableInstructions,
         effectiveContentHash: composed.contentHash,

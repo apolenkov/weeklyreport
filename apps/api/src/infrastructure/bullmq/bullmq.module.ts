@@ -54,7 +54,7 @@ const BOUNDED_RETENTION_JOB_OPTS: DefaultJobOptions = {
     // equivalent retention are set per-job at enqueue time, not on the queue.
     BullModule.registerQueue({ name: "telegram-outbound" }),
     BullModule.registerQueue({
-      name: "ai-compatibility",
+      name: "ai-provider-test",
       defaultJobOptions: BOUNDED_RETENTION_JOB_OPTS,
     }),
     BullModule.registerQueue({

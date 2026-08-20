@@ -5,7 +5,6 @@ import {
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
   aiPromptDraftInputSchema,
-  aiPromptEvaluationReadSchema,
   aiPromptRevisionInputSchema,
 } from "./ai-prompt-management";
 
@@ -91,32 +90,6 @@ describe("AI prompt management contracts", () => {
     ).toBe(false);
   });
 
-  it("rejects evaluation bodies that contain prompt/provider payloads", () => {
-    expect(
-      aiPromptEvaluationReadSchema.safeParse({
-        id,
-        featureKey: "lead-report-assistant",
-        promptRevisionId: id,
-        generationCompatibilityIdentity: "generation-identity",
-        contentHash: hash,
-        contractVersion: "report-assistant/v1",
-        servingContractVersion: "report-assistant/editor-serving/v1",
-        evaluatorVersion: "report-assistant-evaluator/v1",
-        outcome: "passed",
-        checks: [
-          {
-            code: "protocol_shape",
-            status: "passed",
-            passedCount: 1,
-            failedCount: 0,
-          },
-        ],
-        evaluatedAt: "2026-08-10T00:00:00.000Z",
-        promptText: "must not be accepted",
-      }).success,
-    ).toBe(false);
-  });
-
   it("rejects incomplete bundle slot reads", () => {
     expect(
       aiPromptBundleReadSchema.safeParse({
@@ -135,7 +108,6 @@ describe("AI prompt management contracts", () => {
         updatedAt: "2026-08-10T00:00:00.000Z",
         activatedAt: null,
         supersededAt: null,
-        latestEvaluation: null,
       }).success,
     ).toBe(false);
   });

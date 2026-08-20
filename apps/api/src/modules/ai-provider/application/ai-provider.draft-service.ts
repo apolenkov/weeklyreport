@@ -5,7 +5,7 @@ import type {
   AiProviderDraft,
 } from "@customreport/shared";
 
-import { AI_PROVIDER_EVALUATOR_VERSION } from "../infrastructure/ai-compatibility.queue.js";
+import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import { bootstrapAiProvider } from "./ai-provider.bootstrap.js";
 import { saveAiProviderDraft } from "./ai-provider.draft-service.save.js";
 import { executeAiProviderTest } from "./ai-provider.draft-service.test-execution.js";
@@ -39,19 +39,18 @@ export class AiProviderDraftService {
     const enqueuer = this.dependencies.testEnqueuer;
     if (!enqueuer) {
       throw new AiProviderConfigurationError(
-        "AI provider compatibility queue is not wired",
+        "AI provider test queue is not wired",
       );
     }
     const execution =
       await this.dependencies.repository.createOrReuseProviderExecution(
         revision.id,
-        { evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION },
+        { testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION },
       );
-    if (execution.created) {
+    if (execution.created || execution.state === "queued") {
       await enqueuer.enqueue({
         traceId: randomUUID(),
         executionId: execution.id,
-        kind: "provider_test",
       });
     }
     const queued = await requireRevision(this.dependencies, revisionId);

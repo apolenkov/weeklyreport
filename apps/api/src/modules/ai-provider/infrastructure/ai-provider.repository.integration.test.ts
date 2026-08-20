@@ -31,9 +31,7 @@ const passingTestResult = {
   status: "passed",
   generation: {
     status: "passed",
-    answerProtocol: "json_schema",
     capabilities: [{ capability: "authentication", status: "passed" }],
-    featureCompatibility: [],
   },
   embeddings: {
     status: "passed",
@@ -64,7 +62,6 @@ const revision = (
       semanticInputVersion: "report-assistant/v1",
       reasoningMode: "provider_default",
       reasoningCustomValue: null,
-      answerProtocol: "json_schema",
       generationCredentialCiphertext: "ciphertext",
       generationCredentialNonce: "nonce",
       generationCredentialTag: "tag",
@@ -268,7 +265,7 @@ describe("AI provider control-plane database states", () => {
     );
   });
 
-  it("persists the tested protocol and bounded failure metadata", async () => {
+  it("persists bounded provider test metadata", async () => {
     const candidate = await revision(
       "a0000000-0000-4000-8000-00000000000f",
       AiProviderLifecycle.draft,
@@ -279,13 +276,11 @@ describe("AI provider control-plane database states", () => {
       candidate.id,
       {
         status: "passed",
-        answerProtocol: "forced_tool",
-        capabilities: [
-          {
-            capability: "structured_answer",
-            status: "passed",
-          },
-        ],
+        generation: {
+          status: "passed",
+          capabilities: [{ capability: "structured_answer", status: "passed" }],
+        },
+        embeddings: { status: "passed", capabilities: [] },
         testedAt: testedAt.toISOString(),
       },
       "passed",
@@ -297,11 +292,10 @@ describe("AI provider control-plane database states", () => {
     await expect(
       prisma.aiProviderConfiguration.findUnique({
         where: { id: candidate.id },
-        select: { answerProtocol: true, testResult: true },
+        select: { testResult: true },
       }),
     ).resolves.toMatchObject({
-      answerProtocol: "forced_tool",
-      testResult: { answerProtocol: "forced_tool" },
+      testResult: { generation: { status: "passed" } },
     });
   });
 
@@ -313,7 +307,7 @@ describe("AI provider control-plane database states", () => {
         AiProviderLifecycle.failed,
       );
       const request = {
-        evaluatorVersion: "provider-compatibility-v5",
+        testSuiteVersion: "provider-test-v1",
       };
       const first = await repository.createOrReuseProviderExecution(
         candidate.id,
@@ -345,13 +339,13 @@ describe("AI provider control-plane database states", () => {
       );
 
       await expect(
-        prisma.aiCompatibilityExecution.findUnique({
+        prisma.aiProviderTestExecution.findUnique({
           where: { id: first.id },
-          select: { identity: true, evaluatorVersion: true, checks: true },
+          select: { identity: true, testSuiteVersion: true, checks: true },
         }),
       ).resolves.toEqual({
         identity: `${candidate.compositeTestIdentity}:revision:${candidate.id}`,
-        evaluatorVersion: request.evaluatorVersion,
+        testSuiteVersion: request.testSuiteVersion,
         checks: [
           {
             code: "generation.authentication",
@@ -376,7 +370,7 @@ describe("AI provider control-plane database states", () => {
       expect(new Set(retried.map(({ id }) => id)).size).toBe(1);
       expect(retried[0].id).not.toBe(first.id);
       await expect(
-        prisma.aiCompatibilityExecution.count({
+        prisma.aiProviderTestExecution.count({
           where: { providerRevisionId: candidate.id },
         }),
       ).resolves.toBe(2);
@@ -396,7 +390,7 @@ describe("AI provider control-plane database states", () => {
       where: { id: candidate.id },
       data: { compositeTestIdentity: previous.compositeTestIdentity },
     });
-    const request = { evaluatorVersion: "provider-compatibility-v5" };
+    const request = { testSuiteVersion: "provider-test-v1" };
     const previousExecution = await repository.createOrReuseProviderExecution(
       previous.id,
       request,
@@ -416,7 +410,7 @@ describe("AI provider control-plane database states", () => {
     expect(current).toMatchObject({ created: true });
     expect(current.id).not.toBe(previousExecution.id);
     await expect(
-      prisma.aiCompatibilityExecution.findUnique({
+      prisma.aiProviderTestExecution.findUnique({
         where: { id: current.id },
         select: { identity: true, providerRevisionId: true, state: true },
       }),
@@ -436,7 +430,7 @@ describe("AI provider control-plane database states", () => {
     await createControl(null, false);
     const execution = await repository.createOrReuseProviderExecution(
       candidate.id,
-      { evaluatorVersion: "provider-compatibility-v7" },
+      { testSuiteVersion: "provider-test-v1" },
     );
     await repository.startExecution(execution.id);
     await repository.completeExecution(execution.id, "passed", null, []);
@@ -473,12 +467,11 @@ describe("AI provider control-plane database states", () => {
     await createControl(current.id, true);
     await Promise.all(
       [candidateA, candidateB].map((candidate) =>
-        prisma.aiCompatibilityExecution.create({
+        prisma.aiProviderTestExecution.create({
           data: {
             identity: candidate.compositeTestIdentity,
-            kind: "provider_test",
             providerRevisionId: candidate.id,
-            evaluatorVersion: "provider-compatibility-v5",
+            testSuiteVersion: "provider-test-v1",
             state: "completed",
             outcome: "passed",
             checks: [],

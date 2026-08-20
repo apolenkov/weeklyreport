@@ -1,5 +1,3 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
-
 import type {
   AiProviderCapabilityRuntimeConfig,
   ResolvedCompositeProviderProfile,
@@ -19,16 +17,13 @@ export type CompositeCapabilityProbeOutput = Readonly<{
   status: CapabilityStatus;
   generation: Readonly<{
     status: CapabilityStatus;
-    answerProtocol: AiProviderAnswerProtocol | null;
     capabilities: readonly CapabilityProbeResult[];
-    featureCompatibility: readonly [];
   }>;
   embeddings: Readonly<{
     status: CapabilityStatus;
     capabilities: readonly CapabilityProbeResult[];
   }>;
   embeddingDimensions: number | null;
-  answerProtocol: AiProviderAnswerProtocol | null;
 }>;
 
 export const runCompositeCapabilityProbes = async (input: {
@@ -69,15 +64,12 @@ export const runCompositeCapabilityProbes = async (input: {
     status,
     generation: {
       status: generation.status,
-      answerProtocol: generation.answerProtocol,
       capabilities: generation.capabilities,
-      featureCompatibility: generation.featureCompatibility,
     },
     embeddings: {
       status: embeddings.status,
       capabilities: embeddings.capabilities,
     },
     embeddingDimensions: embeddings.dimensions,
-    answerProtocol: generation.answerProtocol,
   };
 };

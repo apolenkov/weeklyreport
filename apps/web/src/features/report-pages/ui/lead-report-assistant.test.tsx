@@ -36,9 +36,12 @@ const successOutcome = {
 
 function renderAssistant(
   availability:
-    "available" | "not_configured" | "pending" | "error" = "available",
+    | "available"
+    | "not_configured"
+    | "pending"
+    | "error" = "available",
 ) {
-  const { proxy, captured } = createMockTRPC([
+  const descriptors = [
     { path: ["leadForm", "assistant"], mutation: true },
     {
       path: ["ai", "availability"],
@@ -51,7 +54,8 @@ function renderAssistant(
             ? "pending"
             : { availability },
     },
-  ]);
+  ];
+  const { proxy, captured } = createMockTRPC(descriptors);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });

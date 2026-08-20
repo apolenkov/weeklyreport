@@ -80,7 +80,7 @@ export function GenerationFields({
       </div>
       <Field
         label="Reasoning"
-        hint="Compatibility testing keeps this setting with Generation and selects the answer protocol."
+        hint="Provider testing validates this setting with the generation capabilities."
       >
         <select
           aria-label="Generation reasoning"

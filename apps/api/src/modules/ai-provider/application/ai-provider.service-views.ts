@@ -1,7 +1,5 @@
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
-  type AiCompatibilityExecutionRead,
-  aiCompatibilityExecutionReadSchema,
   type AiProviderAvailabilityRead,
   aiProviderAvailabilityReadSchema,
   type AiProviderCapabilityTestResult,
@@ -11,6 +9,8 @@ import {
   type AiProviderControlRead,
   aiProviderControlReadSchema,
   type AiProviderPreparationProgress,
+  type AiProviderTestExecutionRead,
+  aiProviderTestExecutionReadSchema,
 } from "@customreport/shared";
 import { AiProviderLifecycle, type Prisma } from "@prisma/client";
 
@@ -36,10 +36,10 @@ const safeTestResult = (
 
 const executionRead = (
   revision: StoredAiProviderRevision,
-): AiCompatibilityExecutionRead | null => {
+): AiProviderTestExecutionRead | null => {
   const execution = revision.latestExecution;
   if (!execution) return null;
-  return aiCompatibilityExecutionReadSchema.parse({
+  return aiProviderTestExecutionReadSchema.parse({
     ...execution,
     checks: execution.checks ?? [],
   });
@@ -60,7 +60,6 @@ export const safeRevision = (
       answerModel: revision.answerModel,
       reasoningMode: revision.reasoningMode,
       reasoningCustomValue: revision.reasoningCustomValue,
-      answerProtocol: revision.answerProtocol,
       credentialConfigured: generationCredential.configured,
       credentialMaskedSuffix: generationCredential.maskedSuffix,
     },

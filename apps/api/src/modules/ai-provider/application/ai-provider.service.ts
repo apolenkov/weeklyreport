@@ -19,7 +19,6 @@ import {
   type AiProviderMetricsSink,
   AiProviderNotFoundError,
   type AiProviderPreparationCoordinator,
-  type AiProviderPromptCompatibility,
   NOOP_AUDIT,
   NOOP_METRICS,
 } from "./ai-provider.service-support.js";
@@ -35,7 +34,6 @@ export type {
   AiProviderMetricsSink,
   AiProviderPreparationCoordinator,
   AiProviderPreparationMetrics,
-  AiProviderPromptCompatibility,
   AiProviderStateMetrics,
 } from "./ai-provider.service-support.js";
 export {
@@ -60,7 +58,6 @@ export class AiProviderConfigurationService {
     preparation?: AiProviderPreparationCoordinator,
     audit: AiProviderAuditSink = NOOP_AUDIT,
     metrics: AiProviderMetricsSink = NOOP_METRICS,
-    promptCompatibility?: AiProviderPromptCompatibility,
     testEnqueuer?: AiProviderTestEnqueuer,
   ) {
     this.dependencies = { repository, audit };
@@ -70,7 +67,6 @@ export class AiProviderConfigurationService {
       env,
       tester,
       preparation,
-      promptCompatibility,
       testEnqueuer,
       audit,
       metrics,

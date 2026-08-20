@@ -85,7 +85,6 @@ const makeBundle = (
       input.lifecycle === "superseded"
         ? new Date("2026-08-11T00:00:00.000Z")
         : null,
-    latestEvaluation: null,
   };
 };
 
@@ -99,7 +98,6 @@ const provider: AiProviderConfigurationRead = {
     answerModel: "answer",
     reasoningMode: "provider_default",
     reasoningCustomValue: null,
-    answerProtocol: "json_schema",
     credentialConfigured: true,
     credentialMaskedSuffix: "••••abcd",
   },

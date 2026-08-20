@@ -1,7 +1,6 @@
 import type { AiProviderCapabilityTestResult } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import {
-  type AiProviderAnswerProtocol,
   AiProviderLifecycle,
   AiProviderProfile,
   AiProviderReasoningMode,
@@ -18,12 +17,12 @@ import {
   updateProgressRecord,
 } from "./ai-provider.repository.commands.js";
 import {
-  completeCompatibilityExecution,
+  completeProviderTestExecution,
   createOrReuseProviderExecution,
-  getCompatibilityExecution,
+  getProviderTestExecution,
   type ProviderExecutionRequest,
-  startCompatibilityExecution,
-  updateProviderExecutionIdentity,
+  startProviderTestExecution,
+  updateProviderTestExecutionIdentity,
 } from "./ai-provider.repository.executions.js";
 import {
   aiProviderControlInclude,
@@ -43,7 +42,6 @@ export type StoredAiProviderRevision = Readonly<{
   answerModel: string;
   reasoningMode: AiProviderReasoningMode;
   reasoningCustomValue: string | null;
-  answerProtocol: AiProviderAnswerProtocol | null;
   generationCredentialCiphertext: string;
   generationCredentialNonce: string;
   generationCredentialTag: string;
@@ -104,7 +102,7 @@ const toRevision = (
   value: AiProviderRevisionRecord,
 ): StoredAiProviderRevision => ({
   ...value,
-  latestExecution: value.compatibilityExecutions[0] ?? null,
+  latestExecution: value.testExecutions[0] ?? null,
 });
 
 const toControl = (
@@ -190,12 +188,12 @@ export class AiProviderConfigurationRepository {
   async createOrReuseProviderExecution(
     revisionId: string,
     input: ProviderExecutionRequest,
-  ): Promise<Readonly<{ id: string; created: boolean }>> {
+  ): ReturnType<typeof createOrReuseProviderExecution> {
     return createOrReuseProviderExecution(this.prisma, revisionId, input);
   }
 
   async startExecution(id: string): Promise<boolean> {
-    return startCompatibilityExecution(this.prisma, id);
+    return startProviderTestExecution(this.prisma, id);
   }
 
   async updateExecutionIdentity(
@@ -203,7 +201,7 @@ export class AiProviderConfigurationRepository {
     identity: string,
     revisionId: string,
   ): Promise<boolean> {
-    return updateProviderExecutionIdentity(
+    return updateProviderTestExecutionIdentity(
       this.prisma,
       id,
       identity,
@@ -217,7 +215,7 @@ export class AiProviderConfigurationRepository {
     failureCode: string | null = null,
     checks: Prisma.InputJsonValue = [],
   ): Promise<void> {
-    await completeCompatibilityExecution(
+    await completeProviderTestExecution(
       this.prisma,
       id,
       outcome,
@@ -226,8 +224,8 @@ export class AiProviderConfigurationRepository {
     );
   }
 
-  async getExecution(id: string): ReturnType<typeof getCompatibilityExecution> {
-    return getCompatibilityExecution(this.prisma, id);
+  async getExecution(id: string): ReturnType<typeof getProviderTestExecution> {
+    return getProviderTestExecution(this.prisma, id);
   }
 
   async updateProgress(
@@ -242,7 +240,6 @@ export class AiProviderConfigurationRepository {
     now: Date,
     options: Readonly<{
       allowBootstrap?: boolean;
-      promptEvaluatorVersions?: Readonly<Record<string, string>>;
     }> = {},
   ): Promise<boolean> {
     return activateAiProviderRevision(this.prisma, id, now, options);

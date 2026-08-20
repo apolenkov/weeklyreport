@@ -13,7 +13,7 @@ import {
   buildGenerationCompatibilityIdentity,
 } from "../domain/provider-identities.js";
 import { resolveProviderProfile } from "../domain/provider-profile.js";
-import { AI_PROVIDER_EVALUATOR_VERSION } from "../infrastructure/ai-compatibility.queue.js";
+import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import type { AiProviderReadService } from "./ai-provider.read-service.js";
 import { legacySettings, now } from "./ai-provider.service-support.js";
 import type { AiProviderServiceDependencies } from "./ai-provider.service-types.js";
@@ -65,8 +65,7 @@ export const bootstrapAiProvider = async (
     answerModel: profile.generation.answerModel,
     reasoningMode: profile.generation.reasoningMode,
     reasoningCustomValue: null,
-    answerProtocol: "json_schema",
-    evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+    testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
   });
   const embeddingScopeIdentity = buildEmbeddingScopeIdentity({
     endpointIdentity: profile.embeddings.effective.endpointIdentity,
@@ -100,7 +99,7 @@ export const bootstrapAiProvider = async (
         mode: "reuse_generation",
         model: profile.embeddings.effective.model,
       },
-      evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+      testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
     }),
   });
   const testedAt = now();
@@ -110,12 +109,10 @@ export const bootstrapAiProvider = async (
       status: "passed",
       generation: {
         status: "passed",
-        answerProtocol: "json_schema",
         capabilities: GENERATION_CAPABILITY_NAMES.map((capability) => ({
           capability,
           status: "passed",
         })),
-        featureCompatibility: [],
       },
       embeddings: {
         status: "passed",

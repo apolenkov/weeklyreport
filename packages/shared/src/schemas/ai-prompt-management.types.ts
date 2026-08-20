@@ -11,9 +11,6 @@ import type {
   aiPromptDiscardInputSchema,
   aiPromptDiscardResultSchema,
   aiPromptDraftInputSchema,
-  aiPromptEvaluationCheckSchema,
-  aiPromptEvaluationInputSchema,
-  aiPromptEvaluationReadSchema,
   aiPromptFeatureControlReadSchema,
   aiPromptFeatureInputSchema,
   aiPromptFeatureReadSchema,
@@ -34,12 +31,6 @@ export type AiPromptAvailability = z.infer<typeof aiPromptAvailabilitySchema>;
 export type AiPromptServingStatus = z.infer<typeof aiPromptServingStatusSchema>;
 export type AiPromptContents = z.infer<typeof aiPromptContentsSchema>;
 export type AiPromptSlotRead = z.infer<typeof aiPromptSlotReadSchema>;
-export type AiPromptEvaluationCheck = z.infer<
-  typeof aiPromptEvaluationCheckSchema
->;
-export type AiPromptEvaluationRead = z.infer<
-  typeof aiPromptEvaluationReadSchema
->;
 export type AiPromptBundleRead = z.infer<typeof aiPromptBundleReadSchema>;
 export type AiPromptFeatureControlRead = z.infer<
   typeof aiPromptFeatureControlReadSchema
@@ -49,9 +40,6 @@ export type AiPromptCatalogRead = z.infer<typeof aiPromptCatalogReadSchema>;
 export type AiPromptFeatureInput = z.infer<typeof aiPromptFeatureInputSchema>;
 export type AiPromptRevisionInput = z.infer<typeof aiPromptRevisionInputSchema>;
 export type AiPromptDraftInput = z.infer<typeof aiPromptDraftInputSchema>;
-export type AiPromptEvaluationInput = z.infer<
-  typeof aiPromptEvaluationInputSchema
->;
 export type AiPromptActivationInput = z.infer<
   typeof aiPromptActivationInputSchema
 >;

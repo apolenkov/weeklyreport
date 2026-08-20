@@ -1,5 +1,4 @@
 import type { AiProviderConfigurationRead } from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
 
 import {
   type AiProviderServiceDependencies,
@@ -22,23 +21,6 @@ const resultObjectFrom = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : {};
-
-const withAnswerProtocol = (
-  result: Record<string, unknown>,
-  answerProtocol: string | null,
-): Record<string, unknown> => {
-  const generation = result.generation;
-  const generationResult =
-    typeof generation === "object" &&
-    generation !== null &&
-    !Array.isArray(generation)
-      ? (generation as Record<string, unknown>)
-      : {};
-  return {
-    ...result,
-    generation: { ...generationResult, answerProtocol },
-  };
-};
 
 export const executeAiProviderTest = async (
   dependencies: AiProviderServiceDependencies,
@@ -75,21 +57,13 @@ export const executeAiProviderTest = async (
       reasoningCustomValue: revision.reasoningCustomValue,
     },
   );
-  const answerProtocol = test.answerProtocol ?? revision.answerProtocol;
-  const resultWithProtocol = withAnswerProtocol(
-    resultObjectFrom(test.result),
-    answerProtocol,
-  );
-  const capabilityPassed = completeCapabilityResult(
-    resultWithProtocol as Prisma.JsonValue,
-  );
+  const capabilityPassed = completeCapabilityResult(test.result);
   const embeddingDimensions = capabilityPassed
     ? (test.embeddingDimensions ?? revision.embeddingDimensions)
     : null;
   const generationCompatibilityIdentity = generationIdentityFor(
     dependencies,
     revision,
-    answerProtocol,
   );
   const embeddingScopeIdentity = embeddingIdentityFor(
     revision,
@@ -100,12 +74,10 @@ export const executeAiProviderTest = async (
     revision,
     generationCompatibilityIdentity,
   );
-  const providerStatus = capabilityResultStatus(
-    resultWithProtocol as Prisma.JsonValue,
-  );
+  const providerStatus = capabilityResultStatus(test.result);
   if (!providerStatus) throw new Error("Provider capability result is invalid");
   const status = providerStatus;
-  const result = { ...resultWithProtocol, status };
+  const result = { ...resultObjectFrom(test.result), status };
   const tested = await dependencies.repository.setTestResult(
     revisionId,
     result,

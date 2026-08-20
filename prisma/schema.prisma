@@ -856,7 +856,6 @@ model AiProviderConfiguration {
   answerModel                      String
   reasoningMode                    AiProviderReasoningMode
   reasoningCustomValue             String?
-  answerProtocol                   AiProviderAnswerProtocol?
   generationCredentialCiphertext   String
   generationCredentialNonce        String
   generationCredentialTag          String
@@ -891,7 +890,7 @@ model AiProviderConfiguration {
   createdAt                        DateTime                   @default(now())
   updatedAt                        DateTime                   @updatedAt
   activeControl                    AiProviderControl?         @relation("AiProviderControlActive")
-  compatibilityExecutions          AiCompatibilityExecution[] @relation("AiCompatibilityExecutionProvider")
+  testExecutions                   AiProviderTestExecution[] @relation("AiProviderTestExecutionProvider")
 
   @@index([lifecycle, updatedAt(sort: Desc)])
   @@index([generationCompatibilityIdentity])
@@ -922,8 +921,6 @@ model AiPromptBundleRevision {
   baseRevision            AiPromptBundleRevision?    @relation("AiPromptRevisionBase", fields: [baseRevisionId], references: [id], onDelete: Restrict)
   derivedRevisions        AiPromptBundleRevision[]   @relation("AiPromptRevisionBase")
   activeControl           AiFeaturePromptControl?    @relation("AiPromptControlActive")
-  evaluations             AiPromptEvaluation[]       @relation("AiPromptEvaluationBundle")
-  compatibilityExecutions AiCompatibilityExecution[] @relation("AiCompatibilityExecutionPrompt")
 
   @@unique([featureKey, revision])
   @@index([featureKey, lifecycle, updatedAt(sort: Desc)])
@@ -943,52 +940,24 @@ model AiFeaturePromptControl {
   @@index([activeRevisionId])
 }
 
-// Safe synthetic evaluation result for one exact provider/prompt identity.
-// It deliberately has no prompt text, provider response, or product data.
-model AiPromptEvaluation {
+// A durable provider-only capability test. It stores only identity, bounded
+// classifications, and timestamps; secrets, prompts, and raw responses never
+// leave process memory.
+model AiProviderTestExecution {
   id                 String                    @id @default(uuid())
-  featureKey         String
-  promptRevisionId   String
-  generationCompatibilityIdentity String
-  contentHash        String
-  contractVersion    String
-  servingContractVersion String?
-  evaluatorVersion   String
-  checks             Json
-  outcome            AiPromptEvaluationOutcome
-  evaluatedAt        DateTime                  @default(now())
-  promptRevision     AiPromptBundleRevision    @relation("AiPromptEvaluationBundle", fields: [promptRevisionId], references: [id], onDelete: Restrict)
-
-  @@unique([promptRevisionId, generationCompatibilityIdentity, contentHash, contractVersion, servingContractVersion, evaluatorVersion])
-  @@index([featureKey, outcome, evaluatedAt(sort: Desc)])
-  @@index([generationCompatibilityIdentity, promptRevisionId])
-}
-
-// A durable, immutable compatibility run. It stores only identity, bounded
-// classifications, and timestamps; secrets, prompt text, and raw upstream
-// responses never leave process memory.
-model AiCompatibilityExecution {
-  id                 String                        @id @default(uuid())
-  identity           String                        @unique
-  kind               AiCompatibilityExecutionKind
+  identity           String                    @unique
   providerRevisionId String
-  promptRevisionId   String?
-  featureKey         String?
-  contentHash        String?
-  contractVersion    String?
-  evaluatorVersion   String
-  state              AiCompatibilityExecutionState @default(queued)
-  outcome            AiCompatibilityOutcome?
+  testSuiteVersion   String
+  state              AiProviderTestExecutionState @default(queued)
+  outcome            AiProviderTestOutcome?
   failureCode        String?
   checks             Json?
-  requestedAt        DateTime                      @default(now())
+  requestedAt        DateTime                  @default(now())
   startedAt          DateTime?
   completedAt        DateTime?
-  providerRevision   AiProviderConfiguration       @relation("AiCompatibilityExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
-  promptRevision     AiPromptBundleRevision?       @relation("AiCompatibilityExecutionPrompt", fields: [promptRevisionId], references: [id], onDelete: Cascade)
+  providerRevision   AiProviderConfiguration   @relation("AiProviderTestExecutionProvider", fields: [providerRevisionId], references: [id], onDelete: Cascade)
 
   @@index([providerRevisionId, requestedAt(sort: Desc)])
-  @@index([promptRevisionId, requestedAt(sort: Desc)])
   @@index([state, requestedAt])
 }
 
@@ -1046,12 +1015,6 @@ enum AiProviderReasoningMode {
   custom
 }
 
-enum AiProviderAnswerProtocol {
-  json_schema
-  forced_tool
-  json_object
-}
-
 enum AiPromptBundleLifecycle {
   draft
   validated
@@ -1060,24 +1023,13 @@ enum AiPromptBundleLifecycle {
   superseded
 }
 
-enum AiPromptEvaluationOutcome {
-  passed
-  failed
-  inconclusive
-}
-
-enum AiCompatibilityExecutionKind {
-  provider_test
-  prompt_evaluation
-}
-
-enum AiCompatibilityExecutionState {
+enum AiProviderTestExecutionState {
   queued
   running
   completed
 }
 
-enum AiCompatibilityOutcome {
+enum AiProviderTestOutcome {
   passed
   incompatible
   configuration_error

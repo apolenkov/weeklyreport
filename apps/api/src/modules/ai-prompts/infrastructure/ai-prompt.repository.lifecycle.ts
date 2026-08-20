@@ -50,38 +50,48 @@ export const activate = async (
   allowedLifecycle: readonly AiPromptBundleLifecycle[],
   now: Date,
   contract: AiPromptActivationContract,
-): Promise<boolean> =>
-  prisma.$transaction(async (transaction) => {
-    const control = await transaction.aiFeaturePromptControl.findUnique({
-      where: { featureKey },
-      select: { activeRevisionId: true },
-    });
-    if (!control) return false;
-    const candidate = await transaction.aiPromptBundleRevision.updateMany({
-      where: {
-        ...revisionWhere(featureKey, revisionId),
-        lifecycle: { in: [...allowedLifecycle] },
-        servingContractVersion: contract.servingContractVersion,
-      },
-      data: { lifecycle: AiPromptBundleLifecycle.active, activatedAt: now },
-    });
-    if (candidate.count !== 1) return false;
-    if (control.activeRevisionId && control.activeRevisionId !== revisionId) {
-      await transaction.aiPromptBundleRevision.updateMany({
-        where: {
-          id: control.activeRevisionId,
-          featureKey,
-          lifecycle: AiPromptBundleLifecycle.active,
-        },
-        data: {
-          lifecycle: AiPromptBundleLifecycle.superseded,
-          supersededAt: now,
-        },
+): Promise<boolean> => {
+  try {
+    return await prisma.$transaction(async (transaction) => {
+      const control = await transaction.aiFeaturePromptControl.findUnique({
+        where: { featureKey },
+        select: { activeRevisionId: true },
       });
-    }
-    const pointer = await transaction.aiFeaturePromptControl.updateMany({
-      where: { featureKey, activeRevisionId: control.activeRevisionId },
-      data: { activeRevisionId: revisionId },
+      if (!control) return false;
+      const candidate = await transaction.aiPromptBundleRevision.updateMany({
+        where: {
+          ...revisionWhere(featureKey, revisionId),
+          lifecycle: { in: [...allowedLifecycle] },
+          servingContractVersion: contract.servingContractVersion,
+        },
+        data: { lifecycle: AiPromptBundleLifecycle.active, activatedAt: now },
+      });
+      if (candidate.count !== 1) throw new ActivationRaceError();
+      if (control.activeRevisionId && control.activeRevisionId !== revisionId) {
+        const superseded = await transaction.aiPromptBundleRevision.updateMany({
+          where: {
+            id: control.activeRevisionId,
+            featureKey,
+            lifecycle: AiPromptBundleLifecycle.active,
+          },
+          data: {
+            lifecycle: AiPromptBundleLifecycle.superseded,
+            supersededAt: now,
+          },
+        });
+        if (superseded.count !== 1) throw new ActivationRaceError();
+      }
+      const pointer = await transaction.aiFeaturePromptControl.updateMany({
+        where: { featureKey, activeRevisionId: control.activeRevisionId },
+        data: { activeRevisionId: revisionId },
+      });
+      if (pointer.count !== 1) throw new ActivationRaceError();
+      return true;
     });
-    return pointer.count === 1;
-  });
+  } catch (error) {
+    if (error instanceof ActivationRaceError) return false;
+    throw error;
+  }
+};
+
+class ActivationRaceError extends Error {}
