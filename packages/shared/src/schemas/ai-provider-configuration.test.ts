@@ -96,15 +96,13 @@ describe("ai provider contracts", () => {
     ).toBe(false);
   });
 
-  it("accepts only the bounded tested answer protocols", () => {
+  it("accepts only bounded provider capability results", () => {
     expect(
       aiProviderCapabilityTestResultSchema.safeParse({
         status: "passed",
         generation: {
           status: "passed",
-          answerProtocol: "forced_tool",
-          capabilities: [],
-          featureCompatibility: [],
+          capabilities: [{ capability: "structured_answer", status: "passed" }],
         },
         embeddings: { status: "passed", capabilities: [] },
         testedAt: null,
@@ -115,9 +113,8 @@ describe("ai provider contracts", () => {
         status: "passed",
         generation: {
           status: "passed",
-          answerProtocol: "arbitrary",
           capabilities: [],
-          featureCompatibility: [],
+          unexpected: true,
         },
         embeddings: { status: "passed", capabilities: [] },
         testedAt: null,
@@ -125,32 +122,14 @@ describe("ai provider contracts", () => {
     ).toBe(false);
   });
 
-  it("accepts a coherent provider-passed feature-inconclusive result", () => {
+  it("accepts independent three-state lane results", () => {
     expect(
       aiProviderCapabilityTestResultSchema.safeParse({
         status: "inconclusive",
         generation: {
           status: "passed",
-          answerProtocol: "json_schema",
           capabilities: [
             { capability: "structured_planner", status: "passed" },
-          ],
-          featureCompatibility: [
-            {
-              featureKey: "lead-report-assistant",
-              promptRevisionId: "33333333-3333-4333-8333-333333333333",
-              contentHash: "a".repeat(64),
-              evaluatorVersion: "report-assistant/evaluator/v2",
-              outcome: "inconclusive",
-              checks: [
-                {
-                  code: "protocol_shape",
-                  status: "inconclusive",
-                  passedCount: 0,
-                  failedCount: 1,
-                },
-              ],
-            },
           ],
         },
         embeddings: { status: "passed", capabilities: [] },
@@ -197,7 +176,10 @@ describe("ai provider contracts", () => {
     expect(
       aiProviderDraftSchema.safeParse({
         ...draft,
-        generation: { ...draft.generation, answerProtocol: "json_schema" },
+        generation: {
+          ...draft.generation,
+          legacyField: "must-not-be-accepted",
+        },
       }).success,
     ).toBe(false);
     expect(
@@ -234,7 +216,6 @@ describe("ai provider contracts", () => {
         answerModel: "answer-1",
         reasoningMode: "provider_default",
         reasoningCustomValue: null,
-        answerProtocol: null,
         credentialConfigured: true,
         credentialMaskedSuffix: "••••alue",
       },
@@ -266,7 +247,6 @@ describe("ai provider contracts", () => {
           answerModel: "answer-1",
           reasoningMode: "off",
           reasoningCustomValue: null,
-          answerProtocol: null,
           credentialConfigured: true,
           credentialMaskedSuffix: "••••gkey",
         },

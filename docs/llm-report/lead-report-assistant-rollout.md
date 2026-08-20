@@ -96,17 +96,17 @@ the reset workflow described in the pgvector rollout inventory.
 
 Verify TLS/443 reachability for the selected allowlisted origin. After the API
 is running, an administrator opens **Settings → AI → Provider**, configures the
-provider credential and three model roles, then runs the generic capability
-test. The test also evaluates every active registered feature prompt bundle
-against the exact candidate provider. Generic checks verify authentication,
-forced planner tool calling, usage, and ordered finite embeddings; answer
-compatibility probes strict JSON Schema first and selects one forced answer tool
-only for a classified response-format incompatibility. Authentication, rate
-limit, timeout, transport, and provider failures never trigger protocol
-negotiation. The selected answer protocol and exact provider reasoning
-configuration (Provider default, Off, or a bounded Custom value) are stored on
-the tested revision and applied to planner, repair, answer, and citation-repair
-calls. Feature checks use synthetic questions and grounding only.
+provider credential and three model roles, then runs the provider capability
+test. The test uses only synthetic non-report data and verifies authentication,
+forced planner tool calling, fixed JSON Object Mode answer handling, usage, and
+ordered finite embeddings. Authentication, rate limit, timeout, transport, and
+provider failures are classified without trying another answer protocol. The
+tested revision stores only the bounded provider capability result and exact
+provider reasoning configuration (Provider default, Off, or a bounded Custom
+value); runtime applies the fixed code-owned answer contract. Do not put the
+credential, model IDs, or dimensions into deployment environment files. A
+failed test, missing model, unexpected region, or blocked egress is a preflight
+failure; do not test by sending report text.
 Do not put the credential, model IDs, or dimensions into deployment environment
 files. A failed test, missing model, unexpected region, or blocked egress is a
 preflight failure; do not test by sending report text.
@@ -141,9 +141,9 @@ against production.
 
 Verify that `AiFeaturePromptControl` has one active Report Assistant baseline
 and that no prompt body, credential, report data, or provider response was
-printed by migration or bootstrap logs. A newly bootstrapped active bundle
-remains unavailable until an exact provider/prompt evaluation passes; this is
-intentional fail-closed behavior.
+printed by migration or bootstrap logs. A newly bootstrapped active bundle is
+usable only when its serving contract and active provider are structurally valid;
+otherwise the runtime remains unavailable by design.
 
 ## 4. Smoke checks after deployment
 
@@ -164,18 +164,16 @@ state is actionable if the provider is unavailable.
 As an administrator, open **Settings → AI** and verify Overview shows safe
 readiness, Provider shows the active profile/model without a credential, and
 Features shows Report Assistant. Create a redacted behavioral draft, confirm
-the locked core is read-only, run evaluation, and activate only after the
-exact provider/prompt result passes. Restore and discard checks must leave the
+the locked core is read-only, review the composed prompt, and activate only
+after current-contract validation passes. Restore and discard checks must leave the
 other pointer and embedding state unchanged. **Settings → Integrations** must
 show only external roadmapped services.
 
-When a provider uses strict JSON Schema, the runtime sends that protocol only.
-When capability testing selects the forced answer tool, the runtime sends one
-named `submit_grounded_report_answer` tool with the server-owned answer schema
-and no alternate protocol. A failed runtime request is reported safely rather
-than retried through a different protocol. Provider default reasoning omits the
-reasoning field; Off and Custom use only the profile-specific bounded mapping
-validated during capability testing.
+The runtime sends one fixed JSON Object Mode answer request and validates the
+result with the shared server-owned answer schema. A failed runtime request is
+reported safely rather than retried through another answer protocol. Provider
+default reasoning omits the reasoning field; Off and Custom use only the
+profile-specific bounded mapping validated during provider testing.
 
 Automated tests must continue to use deterministic fakes or Playwright route
 interception. They must never contact a real provider. Review the bounded metrics
@@ -218,8 +216,8 @@ prompts or send report data to another endpoint.
 
 To roll back a successful provider activation, use the admin Restore control on
 the retained tested revision. To roll back prompt behavior, use Features →
-Report Assistant → Restore on the retained bundle after it passes a fresh
-evaluation against the active provider. The old active pointers remain
+Report Assistant → Restore on the retained current-serving bundle after it
+passes the current serving-contract checks. The old active pointers remain
 available until the replacement is ready; old embedding scopes are retained
 for rollback and prompt-only restoration never rebuilds embeddings.
 
@@ -227,16 +225,17 @@ Record the deployment config version, migration decision, image digests,
 preflight result, smoke result, metric review, and rollback decision in the
 deployment system. Production databases are never reset.
 
-## Compatibility evaluation operations
+## Provider test operations
 
-Provider and prompt checks are accepted immediately as durable jobs. The UI
-polls the stored `queued`, `running`, and `completed` state, so a browser
-reload or request timeout never loses an evaluation. A repeated request for
-the same immutable identity reuses its existing run. Generation checks run
-serially and omit sampling overrides such as `temperature`, matching runtime.
+Provider tests are accepted as durable jobs. The UI polls the stored `queued`,
+`running`, and `completed` state, so a browser reload or request timeout does
+not lose a test. A repeated request for the same immutable identity reuses its
+existing run; if a queued row lost its first queue handoff, a later request
+re-enqueues it. Generation checks run serially and omit sampling overrides such
+as `temperature`, matching runtime.
 
 Treat `inconclusive` as a retryable operational condition: inspect provider
 availability, timeout, transport, or throttling before retrying. Only a
-proven protocol/schema/behaviour mismatch is `incompatible`; authentication
-or authorization is a `configuration_error`. Do not change models, routes,
-reasoning, or answer protocol merely to turn a check green.
+validated provider contract mismatch is `incompatible`; authentication or
+authorization is a `configuration_error`. Do not change models or routes merely
+to turn a test green.

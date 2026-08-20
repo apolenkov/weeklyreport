@@ -1,23 +1,15 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  AiPromptBundleLifecycle,
-  AiPromptEvaluationOutcome,
-  Prisma,
-} from "@prisma/client";
+import { AiPromptBundleLifecycle, Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   type AiPromptHandoffResult,
-  evaluationSelect,
   type NewAiPromptBootstrap,
   type NewAiPromptBundleRevision,
-  type NewAiPromptEvaluation,
   type NewAiPromptHandoff,
   revisionSelect,
   type StoredAiPromptBundleRevision,
-  type StoredAiPromptEvaluation,
-  toEvaluation,
   toRevision,
 } from "./ai-prompt.repository.types.js";
 
@@ -163,37 +155,4 @@ export const handoff = async (
     return { revision: toRevision(created), created: true };
   });
   return result;
-};
-
-export const recordEvaluation = async (
-  prisma: PrismaService,
-  input: NewAiPromptEvaluation,
-): Promise<StoredAiPromptEvaluation> => {
-  const evaluation = await prisma.aiPromptEvaluation.upsert({
-    where: {
-      promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
-        {
-          promptRevisionId: input.promptRevisionId,
-          generationCompatibilityIdentity:
-            input.generationCompatibilityIdentity,
-          contentHash: input.contentHash,
-          contractVersion: input.contractVersion,
-          servingContractVersion: input.servingContractVersion,
-          evaluatorVersion: input.evaluatorVersion,
-        },
-    },
-    // Passing evidence is absorbing for one exact compatibility tuple. A later
-    // nondeterministic probe may promote a failure, but cannot erase a pass.
-    update:
-      input.outcome === AiPromptEvaluationOutcome.passed
-        ? {
-            checks: input.checks,
-            outcome: input.outcome,
-            evaluatedAt: input.evaluatedAt,
-          }
-        : {},
-    create: { id: randomUUID(), ...input },
-    select: evaluationSelect,
-  });
-  return toEvaluation(evaluation);
 };

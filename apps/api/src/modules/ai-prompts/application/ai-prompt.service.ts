@@ -13,7 +13,6 @@ import {
 import { AiPromptBundleLifecycle } from "@prisma/client";
 
 import {
-  type AiCompatibilityEnqueuer,
   AiProviderConfigurationRepository,
   type StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
@@ -28,12 +27,7 @@ import {
   composePromptSet,
 } from "./ai-feature-prompt-catalog.js";
 import { handoffPromptBaseline } from "./ai-prompt.bootstrap.js";
-import type { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import { AiPromptLifecycleService } from "./ai-prompt.lifecycle-service.js";
-import {
-  type AiPromptProviderCompatibilityResult,
-  AiPromptProviderCompatibilityService,
-} from "./ai-prompt.provider-compatibility.js";
 import {
   type AiPromptAuditSink,
   AiPromptConfigurationError,
@@ -50,32 +44,19 @@ import {
 
 export class AiPromptService {
   private readonly lifecycle: AiPromptLifecycleService;
-  private readonly compatibility: AiPromptProviderCompatibilityService;
 
   constructor(
     private readonly repository: AiPromptRepository,
     private readonly providerRepository: AiProviderConfigurationRepository,
-    evaluator: AiPromptSyntheticEvaluator,
     private readonly catalog: AiFeaturePromptCatalog = aiFeaturePromptCatalog,
     audit: AiPromptAuditSink = NOOP_AI_PROMPT_AUDIT,
     metrics: AiPromptMetricsSink = NOOP_AI_PROMPT_METRICS,
-    enqueuer?: AiCompatibilityEnqueuer,
   ) {
     this.lifecycle = new AiPromptLifecycleService(
       repository,
-      providerRepository,
-      evaluator,
       catalog,
       audit,
       metrics,
-      enqueuer,
-    );
-    this.compatibility = new AiPromptProviderCompatibilityService(
-      repository,
-      evaluator,
-      catalog,
-      metrics,
-      providerRepository,
     );
     this.audit = audit;
     this.metrics = metrics;
@@ -154,20 +135,6 @@ export class AiPromptService {
     return bundleRead(entry, created);
   }
 
-  evaluate(
-    input: Parameters<AiPromptLifecycleService["evaluate"]>[0],
-    actorId: string,
-  ) {
-    return this.lifecycle.evaluate(input, actorId);
-  }
-
-  executeEvaluation(
-    input: Parameters<AiPromptLifecycleService["evaluate"]>[0],
-    providerRevisionId?: string,
-  ) {
-    return this.lifecycle.executeEvaluation(input, providerRevisionId);
-  }
-
   activate(
     input: Parameters<AiPromptLifecycleService["activate"]>[0],
     actorId: string,
@@ -187,20 +154,6 @@ export class AiPromptService {
     actorId: string,
   ) {
     return this.lifecycle.discard(input, actorId);
-  }
-
-  evaluateProviderCompatibility(
-    provider: StoredAiProviderRevision,
-  ): Promise<AiPromptProviderCompatibilityResult> {
-    return this.compatibility.evaluate(provider);
-  }
-
-  verifyProviderCompatibility(provider: StoredAiProviderRevision) {
-    return this.compatibility.verify(provider);
-  }
-
-  currentFeatureEvaluatorVersions(): Readonly<Record<string, string>> {
-    return this.compatibility.currentFeatureEvaluatorVersions();
   }
 
   handoffCurrentBaseline(actorId = "handoff") {

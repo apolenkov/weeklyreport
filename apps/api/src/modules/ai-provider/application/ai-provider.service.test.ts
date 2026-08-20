@@ -50,7 +50,6 @@ const revision = (
     embeddingDimensions: 1024,
     semanticInputVersion: "report-assistant/v1",
     reasoningMode: AiProviderReasoningMode.provider_default,
-    answerProtocol: "json_schema",
     generationCredentialCiphertext: credential.ciphertext,
     generationCredentialNonce: credential.nonce,
     generationCredentialTag: credential.tag,
@@ -131,14 +130,12 @@ const passedResult = {
   status: "passed" as const,
   generation: {
     status: "passed" as const,
-    answerProtocol: "json_schema" as const,
     capabilities: [
       "authentication",
       "planner_tool_call",
       "structured_answer",
       "token_usage",
     ].map((capability) => ({ capability, status: "passed" as const })),
-    featureCompatibility: [],
   },
   embeddings: {
     status: "passed" as const,
@@ -148,22 +145,6 @@ const passedResult = {
     })),
   },
   testedAt: now.toISOString(),
-};
-
-const passedPromptCompatibility = {
-  featureKey: "lead-report-assistant" as const,
-  promptRevisionId: "33333333-3333-4333-8333-333333333333",
-  contentHash: "a".repeat(64),
-  evaluatorVersion: "report-assistant/evaluator/v1",
-  outcome: "passed" as const,
-  checks: [
-    {
-      code: "protocol_shape",
-      status: "passed" as const,
-      passedCount: 1,
-      failedCount: 0,
-    },
-  ],
 };
 
 interface RepositoryHarness {
@@ -194,15 +175,7 @@ interface RepositoryHarness {
       progress: Readonly<Record<string, unknown>>,
     ) => Promise<StoredAiProviderRevision>
   >;
-  activateRevision: Mock<
-    (
-      id: string,
-      at: Date,
-      options?: Readonly<{
-        promptEvaluatorVersions?: Readonly<Record<string, string>>;
-      }>,
-    ) => Promise<boolean>
-  >;
+  activateRevision: Mock<(id: string, at: Date) => Promise<boolean>>;
   disable: Mock<() => Promise<void>>;
   discardDisposable: Mock<(id: string) => Promise<boolean>>;
 }
@@ -258,15 +231,7 @@ const repositoryFor = (values: {
       >()
       .mockResolvedValue(draft),
     activateRevision: vi
-      .fn<
-        (
-          id: string,
-          at: Date,
-          options?: Readonly<{
-            promptEvaluatorVersions?: Readonly<Record<string, string>>;
-          }>,
-        ) => Promise<boolean>
-      >()
+      .fn<(id: string, at: Date) => Promise<boolean>>()
       .mockResolvedValue(true),
     disable: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     discardDisposable: vi
@@ -552,88 +517,6 @@ describe("AiProviderConfigurationService", () => {
     );
   });
 
-  it("does not couple provider testing to stored prompt compatibility", async () => {
-    const repository = repositoryFor({ draft: revision(revisionId) });
-    const promptCompatibility = {
-      evaluate: vi.fn().mockResolvedValue({
-        status: "passed",
-        features: [passedPromptCompatibility],
-      }),
-      verify: vi.fn().mockResolvedValue(true),
-    };
-    const service = new AiProviderConfigurationService(
-      repository as never,
-      codec,
-      env,
-      tester,
-      undefined,
-      undefined,
-      undefined,
-      promptCompatibility,
-    );
-
-    await service.executeTest(revisionId);
-
-    expect(promptCompatibility.evaluate).not.toHaveBeenCalled();
-    const testResult = repository.setTestResult.mock.calls[0]?.[1];
-    expect(testResult).toMatchObject({
-      status: "passed",
-      generation: { featureCompatibility: [] },
-    });
-  });
-
-  it("keeps provider validation passed when optional prompt diagnostics are inconclusive", async () => {
-    const repository = repositoryFor({ draft: revision(revisionId) });
-    const inconclusiveFeature = {
-      ...passedPromptCompatibility,
-      outcome: "inconclusive" as const,
-      checks: [
-        {
-          code: "protocol_shape",
-          status: "inconclusive" as const,
-          passedCount: 0,
-          failedCount: 1,
-        },
-      ],
-    };
-    const promptCompatibility = {
-      evaluate: vi.fn().mockResolvedValue({
-        status: "inconclusive" as const,
-        features: [inconclusiveFeature],
-      }),
-      verify: vi.fn().mockResolvedValue(false),
-    };
-    const service = new AiProviderConfigurationService(
-      repository as never,
-      codec,
-      env,
-      tester,
-      undefined,
-      undefined,
-      undefined,
-      promptCompatibility,
-    );
-
-    await service.executeTest(revisionId);
-
-    const call = repository.setTestResult.mock.calls[0];
-    expect(call?.[0]).toBe(revisionId);
-    expect(call?.[1]).toMatchObject({
-      status: "passed",
-      generation: {
-        status: "passed",
-        featureCompatibility: [],
-      },
-      embeddings: { status: "passed" },
-    });
-    expect(call?.[2]).toBe("passed");
-    expect(call?.[3]).toBe(1024);
-    expect(call?.[4]).toBeInstanceOf(Date);
-    expect(call?.[5]).toBe(AiProviderLifecycle.draft);
-    expect(call?.[6]).toBeDefined();
-    expect(promptCompatibility.evaluate).not.toHaveBeenCalled();
-  });
-
   it("keeps an active revision active when its capability retest passes", async () => {
     const active = revision(activeId, {
       lifecycle: AiProviderLifecycle.active,
@@ -678,7 +561,6 @@ describe("AiProviderConfigurationService", () => {
           status: "failed",
           generation: {
             status: "failed",
-            answerProtocol: null,
             capabilities: [
               {
                 capability: "planner_tool_call",
@@ -686,7 +568,6 @@ describe("AiProviderConfigurationService", () => {
                 failureCode: "tool_use_failed",
               },
             ],
-            featureCompatibility: [],
           },
           embeddings: { status: "passed", capabilities: [] },
           testedAt: now.toISOString(),
@@ -741,7 +622,7 @@ describe("AiProviderConfigurationService", () => {
     expect(repository.activateRevision).not.toHaveBeenCalled();
   });
 
-  it("activates without consulting stale prompt compatibility", async () => {
+  it("activates without prompt compatibility checks", async () => {
     const active = revision(activeId, {
       lifecycle: AiProviderLifecycle.active,
     });
@@ -762,25 +643,17 @@ describe("AiProviderConfigurationService", () => {
         elapsedMs: 0,
       }),
     };
-    const promptCompatibility = {
-      evaluate: vi.fn(),
-      verify: vi.fn().mockResolvedValue(false),
-    };
     const service = new AiProviderConfigurationService(
       repository as never,
       codec,
       env,
       tester,
       preparation,
-      undefined,
-      undefined,
-      promptCompatibility,
     );
 
     await expect(
       service.activate(revisionId, "admin-1"),
     ).resolves.toBeDefined();
-    expect(promptCompatibility.verify).not.toHaveBeenCalled();
     expect(preparation.prepare).toHaveBeenCalledOnce();
     expect(repository.activateRevision).toHaveBeenCalledOnce();
   });
@@ -788,7 +661,6 @@ describe("AiProviderConfigurationService", () => {
   it("uses the passing capability result as activation evidence", async () => {
     const candidate = revision(revisionId, {
       lifecycle: AiProviderLifecycle.validated,
-      answerProtocol: null,
     });
     const repository = repositoryFor({ draft: candidate });
     repository.getRevision.mockResolvedValue(candidate);

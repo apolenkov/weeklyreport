@@ -1,5 +1,3 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
-
 import type {
   AiProviderCapabilityRuntimeConfig,
   ResolvedProviderProfile,
@@ -46,7 +44,6 @@ export type AnswerProbe = Readonly<{
     status: "passed" | "failed";
     failureCode?: string;
   }>;
-  answerProtocol: AiProviderAnswerProtocol | null;
 }>;
 
 export const runAnswer = async (
@@ -67,11 +64,10 @@ export const runAnswer = async (
         customValue: runtime.reasoningCustomValue,
       }
     : undefined;
-  const probe = async (answerProtocol: AiProviderAnswerProtocol) => {
+  const probe = async () => {
     const answerer = new OpenAiCompatibleAnswerAdapter(transport, {
       model: profile.answerModel,
       maxTokens: answerMaxTokens,
-      answerProtocol,
       prompts,
       ...(reasoning ? { reasoning } : {}),
     });
@@ -80,10 +76,9 @@ export const runAnswer = async (
   };
 
   try {
-    await probe("json_object");
+    await probe();
     return {
       result: { capability: "structured_answer", status: "passed" },
-      answerProtocol: "json_object",
     };
   } catch (error) {
     if (error instanceof ReportAssistantProviderError) throw error;
@@ -93,7 +88,6 @@ export const runAnswer = async (
         status: "failed",
         failureCode: safeFailureCode(error),
       },
-      answerProtocol: null,
     };
   }
 };

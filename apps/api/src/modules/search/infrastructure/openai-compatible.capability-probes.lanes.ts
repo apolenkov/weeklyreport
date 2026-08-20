@@ -55,14 +55,12 @@ export const generationLane = async (
     const authenticationFailure = isAuthenticationFailure(error);
     return {
       status: failureStatus(error),
-      answerProtocol: null,
       capabilities: [
         failureResult(
           authenticationFailure ? "authentication" : "structured_planner",
           error,
         ),
       ],
-      featureCompatibility: [],
       connectionFailed: connectionFailure,
     };
   }
@@ -101,21 +99,17 @@ export const generationLane = async (
     ];
     return {
       status: statusOf(capabilities),
-      answerProtocol: answer.answerProtocol,
       capabilities,
-      featureCompatibility: [],
       connectionFailed: false,
     };
   } catch (error) {
     return {
       status: failureStatus(error),
-      answerProtocol: null,
       capabilities: [
         authentication,
         structuredPlanner,
         failureResult("structured_answer", error),
       ],
-      featureCompatibility: [],
       connectionFailed: isConnectionFailure(error),
     };
   }

@@ -251,7 +251,6 @@ test.describe("Admin CRUD (integration)", () => {
         semanticInputVersion: "report-assistant/v1",
         reasoningMode: "provider_default",
         reasoningCustomValue: null,
-        answerProtocol: "json_schema",
         generationCredentialCiphertext: "e2e-ciphertext",
         generationCredentialNonce: "e2e-nonce",
         generationCredentialTag: "e2e-tag",
@@ -274,11 +273,9 @@ test.describe("Admin CRUD (integration)", () => {
           status: "passed",
           generation: {
             status: "passed",
-            answerProtocol: "json_schema",
             capabilities: [
               { capability: "authentication", status: "passed" },
             ],
-            featureCompatibility: [],
           },
           embeddings: {
             status: "passed",
@@ -297,26 +294,6 @@ test.describe("Admin CRUD (integration)", () => {
       update: { activeConfigurationId: providerId, enabled: true },
       create: { id: "singleton", activeConfigurationId: providerId, enabled: true },
     });
-    await prisma.aiPromptEvaluation.create({
-      data: {
-        featureKey,
-        promptRevisionId: baseline.id,
-        generationCompatibilityIdentity: `generation-${providerId}`,
-        contentHash: baseline.effectiveContentHash,
-        contractVersion: baseline.coreContractVersion,
-        evaluatorVersion: "report-assistant/evaluator/v2",
-        checks: [
-          {
-            code: "protocol_shape",
-            status: "passed",
-            passedCount: 1,
-            failedCount: 0,
-          },
-        ],
-        outcome: "passed",
-      },
-    });
-
     try {
       await adminPage.goto("/admin/settings");
       await adminPage.getByRole("tab", { name: "AI" }).click();
@@ -355,26 +332,6 @@ test.describe("Admin CRUD (integration)", () => {
         where: { id: candidate.id },
         data: { lifecycle: "validated" },
       });
-      const evaluation = await prisma.aiPromptEvaluation.create({
-        data: {
-          featureKey,
-          promptRevisionId: candidate.id,
-          generationCompatibilityIdentity: `generation-${providerId}`,
-          contentHash: candidate.effectiveContentHash,
-          contractVersion: candidate.coreContractVersion,
-          evaluatorVersion: "report-assistant/evaluator/v2",
-          checks: [
-            {
-              code: "protocol_shape",
-              status: "passed",
-              passedCount: 1,
-              failedCount: 0,
-            },
-          ],
-          outcome: "passed",
-        },
-      });
-
       await adminPage.reload();
       await adminPage.getByRole("tab", { name: "AI" }).click();
       await adminPage.getByRole("tab", { name: "Features" }).click();
@@ -395,8 +352,6 @@ test.describe("Admin CRUD (integration)", () => {
         (await prisma.aiFeaturePromptControl.findUnique({ where: { featureKey } }))
           ?.activeRevisionId,
       ).toBe(baseline.id);
-      expect(evaluation.id).toBeTruthy();
-
       await leadPage.goto(`/lead/report/${ACTIVE_REPORT_ID}?authorId=${LEAD_OLGA_ID}`);
       await expect(leadPage.getByRole("button", { name: "Chat" })).toBeEnabled();
     } finally {
@@ -414,16 +369,10 @@ test.describe("Admin CRUD (integration)", () => {
       });
       const createdPromptIds = createdPromptRows.map(({ id }) => id);
       if (createdPromptIds.length > 0) {
-        await prisma.aiPromptEvaluation.deleteMany({
-          where: { promptRevisionId: { in: createdPromptIds } },
-        });
         await prisma.aiPromptBundleRevision.deleteMany({
           where: { id: { in: createdPromptIds } },
         });
       }
-      await prisma.aiPromptEvaluation.deleteMany({
-        where: { generationCompatibilityIdentity: `generation-${providerId}` },
-      });
       await prisma.aiProviderControl.upsert({
         where: { id: "singleton" },
         update: {

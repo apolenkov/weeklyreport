@@ -8,21 +8,20 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { AiProviderPrometheusMetrics } from "../../infrastructure/metrics/ai-provider.metrics.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
-import { AiPromptService } from "../ai-prompts/index.js";
 import {
   AesGcmCredentialCodec,
-  AI_COMPATIBILITY_QUEUE_NAME,
-  AiCompatibilityBullmqEnqueuer,
-  type AiCompatibilityEnqueuer,
-  AiCompatibilityProcessor,
+  AI_PROVIDER_TEST_ENQUEUER,
+  AI_PROVIDER_TEST_QUEUE_NAME,
   AiProviderConfigurationRepository,
   AiProviderConfigurationService,
+  AiProviderTestBullmqEnqueuer,
+  type AiProviderTestEnqueuer,
+  AiProviderTestProcessor,
 } from "../ai-provider/index.js";
 import {
   AiRuntimeResolver,
   type AiRuntimeResolverPort,
 } from "./application/ai-runtime.resolver.js";
-import { AiRuntimeConfigurationRepository } from "./application/ai-runtime-configuration.repository.js";
 import { REPORT_ASSISTANT_TELEMETRY } from "./application/report-assistant.telemetry.js";
 import { SearchService } from "./application/search.service.js";
 import type { SemanticEmbeddingRepository } from "./application/semantic-embedding.repository.js";
@@ -31,6 +30,7 @@ import {
   type SemanticIndexEnqueuer,
 } from "./application/semantic-index.enqueuer.js";
 import { SemanticPreparationCoordinator } from "./application/semantic-preparation.coordinator.js";
+import { AiRuntimeConfigurationRepository } from "./infrastructure/ai-runtime-configuration.prisma-repository.js";
 import { OpenAiCompatibleCapabilityTester } from "./infrastructure/openai-compatible.capability-tester.js";
 import { ReportAssistantPrometheusTelemetry } from "./infrastructure/report-assistant-prometheus-telemetry.adapter.js";
 import { ReportSearchPrismaRepository } from "./infrastructure/report-search.prisma-repository.js";
@@ -52,10 +52,10 @@ export const createSearchProviders = (): Provider[] => [
   AiRuntimeConfigurationRepository,
   AiProviderPrometheusMetrics,
   {
-    provide: "AI_COMPATIBILITY_ENQUEUER",
-    useFactory: (queue: JobEnqueuer): AiCompatibilityEnqueuer =>
-      new AiCompatibilityBullmqEnqueuer(queue),
-    inject: [getQueueToken(AI_COMPATIBILITY_QUEUE_NAME)],
+    provide: AI_PROVIDER_TEST_ENQUEUER,
+    useFactory: (queue: JobEnqueuer): AiProviderTestEnqueuer =>
+      new AiProviderTestBullmqEnqueuer(queue),
+    inject: [getQueueToken(AI_PROVIDER_TEST_QUEUE_NAME)],
   },
   {
     provide: OpenAiCompatibleCapabilityTester,
@@ -139,8 +139,7 @@ export const createSearchProviders = (): Provider[] => [
       preparation: SemanticPreparationCoordinator,
       logger: AppLogger,
       metrics: AiProviderPrometheusMetrics,
-      promptService: AiPromptService,
-      compatibilityEnqueuer: AiCompatibilityEnqueuer,
+      testEnqueuer: AiProviderTestEnqueuer,
     ) =>
       new AiProviderConfigurationService(
         repository,
@@ -152,15 +151,7 @@ export const createSearchProviders = (): Provider[] => [
           record: (event) => logger.info("ai_provider.audit", { ...event }),
         },
         metrics,
-        {
-          evaluate: (provider) =>
-            promptService.evaluateProviderCompatibility(provider),
-          verify: (provider) =>
-            promptService.verifyProviderCompatibility(provider),
-          currentFeatureEvaluatorVersions: () =>
-            promptService.currentFeatureEvaluatorVersions(),
-        },
-        compatibilityEnqueuer,
+        testEnqueuer,
       ),
     inject: [
       AiProviderConfigurationRepository,
@@ -170,32 +161,21 @@ export const createSearchProviders = (): Provider[] => [
       SemanticPreparationCoordinator,
       APP_LOGGER,
       AiProviderPrometheusMetrics,
-      AiPromptService,
-      "AI_COMPATIBILITY_ENQUEUER",
+      AI_PROVIDER_TEST_ENQUEUER,
     ],
   },
   {
-    provide: AiCompatibilityProcessor,
+    provide: AiProviderTestProcessor,
     useFactory: (
       repository: AiProviderConfigurationRepository,
       service: AiProviderConfigurationService,
-      promptService: AiPromptService,
       env: EnvConfig,
       logger: AppLogger,
       cls: ClsService,
-    ) =>
-      new AiCompatibilityProcessor(
-        repository,
-        service,
-        promptService,
-        env,
-        logger,
-        cls,
-      ),
+    ) => new AiProviderTestProcessor(repository, service, env, logger, cls),
     inject: [
       AiProviderConfigurationRepository,
       AiProviderConfigurationService,
-      AiPromptService,
       ENV_CONFIG,
       APP_LOGGER,
       ClsService,

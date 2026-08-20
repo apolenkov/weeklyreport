@@ -15,6 +15,7 @@ type OpenAiCompatibleMessage = Readonly<{
   content: string;
 }>;
 type OpenAiCompatibleTool = Readonly<Record<string, unknown>>;
+type JsonObjectResponseFormat = Readonly<{ type: "json_object" }>;
 
 export type OpenAiCompatibleChatRequest = Readonly<{
   model: string;
@@ -23,7 +24,7 @@ export type OpenAiCompatibleChatRequest = Readonly<{
   tools?: readonly OpenAiCompatibleTool[];
   toolChoice?: unknown;
   parallelToolCalls?: boolean;
-  responseFormat?: unknown;
+  responseFormat?: JsonObjectResponseFormat;
   reasoningEffort?: string;
   reasoning?: Readonly<{ effort: string }>;
   temperature?: number;

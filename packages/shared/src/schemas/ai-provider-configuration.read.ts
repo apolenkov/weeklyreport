@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { aiCompatibilityExecutionReadSchema } from "./ai-compatibility-execution";
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   aiProviderAvailabilitySchema,
@@ -15,10 +14,8 @@ import {
   modelIdentifierSchema,
   reasoningCustomValueSchema,
 } from "./ai-provider-configuration.base";
-import {
-  aiProviderAnswerProtocolSchema,
-  aiProviderCapabilityTestResultSchema,
-} from "./ai-provider-configuration-results";
+import { aiProviderCapabilityTestResultSchema } from "./ai-provider-configuration-results";
+import { aiProviderTestExecutionReadSchema } from "./ai-provider-test-execution";
 
 const aiProviderGenerationReadSchema = z
   .object({
@@ -28,7 +25,6 @@ const aiProviderGenerationReadSchema = z
     answerModel: modelIdentifierSchema,
     reasoningMode: aiProviderReasoningModeSchema,
     reasoningCustomValue: reasoningCustomValueSchema.nullable(),
-    answerProtocol: aiProviderAnswerProtocolSchema.nullable(),
     credentialConfigured: z.boolean(),
     credentialMaskedSuffix: maskedCredentialSchema,
   })
@@ -64,7 +60,7 @@ export const aiProviderConfigurationReadSchema = z
     generationCompatibilityIdentity: z.string().trim().min(1),
     semanticInputVersion: z.string().trim().min(1),
     testResult: aiProviderCapabilityTestResultSchema.nullable(),
-    latestExecution: aiCompatibilityExecutionReadSchema.nullable().optional(),
+    latestExecution: aiProviderTestExecutionReadSchema.nullable().optional(),
     progress: z
       .object({
         completed: z.number().int().nonnegative(),

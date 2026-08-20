@@ -12,7 +12,6 @@ export const aiProviderRevisionSelect = {
   semanticInputVersion: true,
   reasoningMode: true,
   reasoningCustomValue: true,
-  answerProtocol: true,
   generationCredentialCiphertext: true,
   generationCredentialNonce: true,
   generationCredentialTag: true,
@@ -32,7 +31,7 @@ export const aiProviderRevisionSelect = {
   compositeTestIdentity: true,
   lifecycle: true,
   testResult: true,
-  compatibilityExecutions: {
+  testExecutions: {
     select: {
       id: true,
       state: true,

@@ -1,18 +1,11 @@
-import { createHash, randomUUID } from "node:crypto";
-
 import type {
   AiPromptActivationInput,
-  AiPromptEvaluationInput,
+  AiPromptDiscardInput,
   AiPromptOperationResult,
   AiPromptRestoreInput,
 } from "@customreport/shared";
 import { AiPromptBundleLifecycle } from "@prisma/client";
 
-import {
-  type AiCompatibilityEnqueuer,
-  AiProviderConfigurationRepository,
-  type StoredAiProviderRevision,
-} from "../../ai-provider/index.js";
 import type {
   AiPromptRepository,
   StoredAiPromptBundleRevision,
@@ -22,136 +15,22 @@ import {
   REPORT_ASSISTANT_FEATURE_KEY,
 } from "./ai-feature-prompt-catalog.js";
 import { activateAiPromptRevision } from "./ai-prompt.activation.js";
-import { executePromptEvaluation } from "./ai-prompt.evaluation-execution.js";
-import type { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import {
   type AiPromptAuditSink,
   AiPromptConfigurationError,
   AiPromptConflictError,
   type AiPromptMetricsSink,
   AiPromptNotFoundError,
-  bundleRead,
-  composedFromRevision,
   featureFromCatalog,
 } from "./ai-prompt.service-support.js";
-
-const executionIdentity = (
-  promptRevisionId: string,
-  generationCompatibilityIdentity: string,
-  contentHash: string,
-  contractVersion: string,
-  servingContractVersion: string,
-  evaluatorVersion: string,
-): string =>
-  createHash("sha256")
-    .update(
-      [
-        "prompt-compatibility-v2",
-        promptRevisionId,
-        generationCompatibilityIdentity,
-        contentHash,
-        contractVersion,
-        servingContractVersion,
-        evaluatorVersion,
-      ].join(":"),
-    )
-    .digest("hex");
 
 export class AiPromptLifecycleService {
   constructor(
     private readonly repository: AiPromptRepository,
-    private readonly providerRepository: AiProviderConfigurationRepository,
-    private readonly evaluator: AiPromptSyntheticEvaluator,
     private readonly catalog: AiFeaturePromptCatalog,
     private readonly audit: AiPromptAuditSink,
     private readonly metrics: AiPromptMetricsSink,
-    private readonly enqueuer?: AiCompatibilityEnqueuer,
   ) {}
-
-  async evaluate(input: AiPromptEvaluationInput, _actorId: string) {
-    const entry = featureFromCatalog(this.catalog, input.featureKey);
-    const revision = await this.requireRevision(
-      input.featureKey,
-      input.revisionId,
-    );
-    if (revision.servingContractVersion !== entry.servingContractVersion) {
-      throw new AiPromptConfigurationError(
-        "This prompt revision belongs to a retired serving contract",
-      );
-    }
-    composedFromRevision(entry, revision);
-    const provider = await this.requireActiveProvider();
-    if (!this.enqueuer) {
-      throw new AiPromptConfigurationError(
-        "AI prompt compatibility queue is not wired",
-      );
-    }
-    const execution = await this.repository.createOrReusePromptExecution(
-      revision.id,
-      {
-        identity: executionIdentity(
-          revision.id,
-          provider.generationCompatibilityIdentity,
-          revision.effectiveContentHash,
-          revision.coreContractVersion,
-          entry.servingContractVersion,
-          entry.evaluatorVersion,
-        ),
-        featureKey: input.featureKey,
-        providerRevisionId: provider.id,
-        generationCompatibilityIdentity:
-          provider.generationCompatibilityIdentity,
-        contentHash: revision.effectiveContentHash,
-        contractVersion: revision.coreContractVersion,
-        evaluatorVersion: entry.evaluatorVersion,
-      },
-    );
-    if (execution.created) {
-      await this.enqueuer.enqueue({
-        traceId: randomUUID(),
-        executionId: execution.id,
-        kind: "prompt_evaluation",
-      });
-    }
-    return bundleRead(
-      entry,
-      await this.requireRevision(input.featureKey, revision.id),
-    );
-  }
-
-  async executeEvaluation(
-    input: AiPromptEvaluationInput,
-    providerRevisionId?: string,
-    actorId = "worker",
-  ) {
-    const entry = featureFromCatalog(this.catalog, input.featureKey);
-    const revision = await this.requireRevision(
-      input.featureKey,
-      input.revisionId,
-    );
-    const provider = providerRevisionId
-      ? await this.providerRepository.getRevision(providerRevisionId)
-      : await this.requireActiveProvider();
-    if (!provider) {
-      throw new AiPromptConfigurationError(
-        "AI provider revision is not available",
-      );
-    }
-    await executePromptEvaluation(
-      this.repository,
-      this.evaluator,
-      entry,
-      revision,
-      provider,
-      this.audit,
-      this.metrics,
-      actorId,
-    );
-    return bundleRead(
-      entry,
-      await this.requireRevision(input.featureKey, revision.id),
-    );
-  }
 
   async activate(
     input: AiPromptActivationInput,
@@ -194,7 +73,7 @@ export class AiPromptLifecycleService {
     );
   }
 
-  async discard(input: AiPromptEvaluationInput, actorId: string) {
+  async discard(input: AiPromptDiscardInput, actorId: string) {
     featureFromCatalog(this.catalog, input.featureKey);
     const revision = await this.requireRevision(
       input.featureKey,
@@ -236,15 +115,6 @@ export class AiPromptLifecycleService {
       revisionId: input.revisionId,
       discarded: true as const,
     };
-  }
-
-  private async requireActiveProvider(): Promise<StoredAiProviderRevision> {
-    const control = await this.providerRepository.getControl();
-    const provider = control?.activeConfiguration;
-    if (!control?.enabled || provider?.lifecycle !== "active") {
-      throw new AiPromptConfigurationError("AI provider is not configured");
-    }
-    return provider;
   }
 
   private async requireRevision(

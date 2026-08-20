@@ -26,7 +26,6 @@ const revision = (
   semanticInputVersion: "report-assistant/v1",
   reasoningMode: AiProviderReasoningMode.provider_default,
   reasoningCustomValue: null,
-  answerProtocol: null,
   generationCredentialCiphertext: "ciphertext",
   generationCredentialNonce: "nonce",
   generationCredentialTag: "tag",
@@ -46,7 +45,7 @@ const revision = (
   compositeTestIdentity: "composite-identity",
   lifecycle,
   testResult: null,
-  compatibilityExecutions: [],
+  testExecutions: [],
   testedAt: null,
   preparationCompleted: 0,
   preparationTotal: 0,
@@ -64,9 +63,7 @@ const passingTestResult = {
   status: "passed",
   generation: {
     status: "passed",
-    answerProtocol: "json_schema",
     capabilities: [{ capability: "authentication", status: "passed" }],
-    featureCompatibility: [],
   },
   embeddings: {
     status: "passed",
@@ -75,9 +72,6 @@ const passingTestResult = {
   testedAt: "2026-08-10T00:00:00.000Z",
 };
 
-const promptRevisionId = "33333333-3333-4333-8333-333333333333";
-const promptContentHash = "a".repeat(64);
-const promptContractVersion = "report-assistant/core/v1";
 const encryptedCredential = {
   ciphertext: "ciphertext",
   nonce: "nonce",
@@ -116,7 +110,6 @@ const buildHarness = () => {
   const active = revision("revision-active", AiProviderLifecycle.active);
   const candidate = {
     ...revision("revision-new", AiProviderLifecycle.validated),
-    answerProtocol: "json_schema" as const,
     testResult: passingTestResult,
     testedAt: new Date("2026-08-10T00:00:00.000Z"),
   };
@@ -162,14 +155,8 @@ const buildHarness = () => {
       update: controlUpdate,
       updateMany: controlUpdateMany,
     },
-    aiCompatibilityExecution: {
+    aiProviderTestExecution: {
       findFirst: vi.fn().mockResolvedValue({ id: "execution-current" }),
-    },
-    aiFeaturePromptControl: {
-      findMany: vi.fn().mockResolvedValue([]),
-    },
-    aiPromptEvaluation: {
-      findFirst: vi.fn().mockResolvedValue({ id: "prompt-evaluation-current" }),
     },
   };
   const transactionRunner = vi.fn(
@@ -325,24 +312,13 @@ describe("AiProviderConfigurationRepository", () => {
     ).resolves.toBe(false);
   });
 
-  it("activates from provider smoke evidence without prompt evaluation", async () => {
+  it("activates from provider test evidence without prompt checks", async () => {
     const harness = buildHarness();
-    harness.transaction.aiFeaturePromptControl.findMany.mockResolvedValue([
-      {
-        featureKey: "lead-report-assistant",
-        activeRevision: {
-          id: promptRevisionId,
-          effectiveContentHash: promptContentHash,
-          coreContractVersion: promptContractVersion,
-        },
-      },
-    ]);
-    harness.transaction.aiPromptEvaluation.findFirst.mockResolvedValue(null);
-    const resultWithoutEvaluation = await harness.repository.activateRevision(
+    const resultWithoutPromptChecks = await harness.repository.activateRevision(
       "revision-new",
       new Date("2026-08-10T01:00:00.000Z"),
     );
-    expect(resultWithoutEvaluation).toBe(true);
+    expect(resultWithoutPromptChecks).toBe(true);
     expect(harness.controlUpdateMany).toHaveBeenCalledOnce();
   });
 
@@ -376,51 +352,6 @@ describe("AiProviderConfigurationRepository", () => {
     expect(update.data).not.toHaveProperty("compositeTestIdentity");
     expect(update.data.testedAt).toBe(testedAt);
     expect(typeof update.select).toBe("object");
-  });
-
-  it("persists the selected answer protocol from a passing capability result", async () => {
-    const harness = buildHarness();
-
-    await harness.repository.setTestResult(
-      "revision-new",
-      {
-        status: "passed",
-        answerProtocol: "forced_tool",
-      },
-      "passed",
-      1024,
-      new Date("2026-08-10T01:00:00.000Z"),
-      AiProviderLifecycle.draft,
-    );
-
-    const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
-      data?: Readonly<Record<string, unknown>>;
-    };
-    expect(update.data?.answerProtocol).toBe("forced_tool");
-  });
-
-  it("persists JSON Object Mode selected by the generation capability probe", async () => {
-    const harness = buildHarness();
-
-    await harness.repository.setTestResult(
-      "revision-new",
-      {
-        status: "passed",
-        generation: {
-          status: "passed",
-          answerProtocol: "json_object",
-        },
-      },
-      "passed",
-      1024,
-      new Date("2026-08-14T09:10:50.390Z"),
-      AiProviderLifecycle.draft,
-    );
-
-    const update = harness.configurationUpdate.mock.calls.at(-1)?.[0] as {
-      data?: Readonly<Record<string, unknown>>;
-    };
-    expect(update.data?.answerProtocol).toBe("json_object");
   });
 
   it("returns an inconclusive non-active revision to draft", async () => {

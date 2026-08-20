@@ -14,9 +14,7 @@ import type {
   AiPromptRepository,
   StoredAiFeaturePromptControl,
   StoredAiPromptBundleRevision,
-  StoredAiPromptEvaluation,
 } from "../infrastructure/ai-prompt.repository.js";
-import { AiPromptSyntheticEvaluator } from "./ai-prompt.evaluator.js";
 import { AiPromptService } from "./ai-prompt.service.js";
 import { AiPromptConfigurationError } from "./ai-prompt.service-support.js";
 
@@ -24,9 +22,6 @@ const revisionId = "659b2767-0f86-41e2-b025-49730ca010e4";
 const providerId = "759b2767-0f86-41e2-b025-49730ca010e4";
 const now = new Date("2026-08-10T00:00:00.000Z");
 const baseline = baselineReportAssistantPrompts();
-const evaluatorVersion = aiFeaturePromptCatalog.require(
-  "lead-report-assistant",
-).evaluatorVersion;
 const lockedCoreSnapshot = Object.fromEntries(
   baseline.slots.map(({ slot, lockedCore }) => [slot, lockedCore]),
 );
@@ -45,7 +40,6 @@ const provider = (
   semanticInputVersion: "report-assistant/v1",
   reasoningMode: "provider_default",
   reasoningCustomValue: null,
-  answerProtocol: "json_schema",
   generationCredentialCiphertext: "ciphertext",
   generationCredentialNonce: "nonce",
   generationCredentialTag: "tag",
@@ -79,32 +73,8 @@ const provider = (
   ...overrides,
 });
 
-const evaluation = (
-  outcome: "passed" | "failed" | "inconclusive" = "passed",
-): StoredAiPromptEvaluation => ({
-  id: "859b2767-0f86-41e2-b025-49730ca010e4",
-  featureKey: "lead-report-assistant",
-  promptRevisionId: revisionId,
-  generationCompatibilityIdentity: "generation-identity",
-  contentHash: baseline.contentHash,
-  contractVersion: baseline.coreContractVersion,
-  servingContractVersion: baseline.servingContractVersion,
-  evaluatorVersion,
-  checks: [
-    {
-      code: "protocol_shape",
-      status: outcome,
-      passedCount: outcome === "passed" ? 1 : 0,
-      failedCount: outcome === "passed" ? 0 : 1,
-    },
-  ],
-  outcome,
-  evaluatedAt: now,
-});
-
 const bundle = (
   lifecycle: AiPromptBundleLifecycle,
-  latestEvaluation: StoredAiPromptEvaluation | null = null,
 ): StoredAiPromptBundleRevision => ({
   id: revisionId,
   featureKey: "lead-report-assistant",
@@ -125,7 +95,6 @@ const bundle = (
   updatedAt: now,
   activatedAt: lifecycle === AiPromptBundleLifecycle.active ? now : null,
   supersededAt: lifecycle === AiPromptBundleLifecycle.superseded ? now : null,
-  latestEvaluation,
 });
 
 const control = (
@@ -149,8 +118,6 @@ const serviceFor = (values: {
   revision?: StoredAiPromptBundleRevision;
   control?: StoredAiFeaturePromptControl | null;
   provider?: StoredAiProviderRevision | null;
-  evaluatorOutcome?: "passed" | "failed" | "inconclusive";
-  storedEvaluation?: StoredAiPromptEvaluation | null;
 }) => {
   const storedRevision =
     values.revision ?? bundle(AiPromptBundleLifecycle.draft);
@@ -162,13 +129,6 @@ const serviceFor = (values: {
       ),
     getRevision: vi.fn().mockResolvedValue(storedRevision),
     createDraft: vi.fn().mockResolvedValue(storedRevision),
-    recordEvaluation: vi
-      .fn()
-      .mockImplementation(
-        (input: { outcome: StoredAiPromptEvaluation["outcome"] }) =>
-          Promise.resolve(evaluation(input.outcome)),
-      ),
-    findEvaluation: vi.fn().mockResolvedValue(values.storedEvaluation ?? null),
     transition: vi.fn().mockResolvedValue(true),
     discardDisposable: vi.fn().mockResolvedValue(true),
     activate: vi.fn().mockResolvedValue(true),
@@ -190,26 +150,11 @@ const serviceFor = (values: {
           },
     ),
   };
-  const evaluatorOutcome = values.evaluatorOutcome ?? "passed";
-  const evaluate = vi.fn().mockResolvedValue({
-    outcome: evaluatorOutcome,
-    checks: [
-      {
-        code: "protocol_shape",
-        status: evaluatorOutcome,
-        passedCount: evaluatorOutcome === "passed" ? 1 : 0,
-        failedCount: evaluatorOutcome === "passed" ? 0 : 1,
-      },
-    ],
-  });
-  const evaluator = new AiPromptSyntheticEvaluator({ evaluate });
   return {
-    evaluate,
     repository: promptRepository,
     service: new AiPromptService(
       promptRepository as unknown as AiPromptRepository,
       providerRepository as never,
-      evaluator,
       aiFeaturePromptCatalog,
     ),
   };
@@ -284,36 +229,9 @@ describe("AiPromptService", () => {
     expect(result.control.availability).toBe("not_configured");
   });
 
-  it("records evaluation against the exact active provider and transitions the candidate", async () => {
-    const candidate = bundle(AiPromptBundleLifecycle.draft);
-    const harness = serviceFor({ revision: candidate });
-
-    await harness.service.executeEvaluation({
-      featureKey: "lead-report-assistant",
-      revisionId,
-    });
-
-    expect(harness.repository.recordEvaluation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        promptRevisionId: revisionId,
-        generationCompatibilityIdentity: "generation-identity",
-        contentHash: baseline.contentHash,
-      }),
-    );
-    expect(harness.repository.transition).toHaveBeenCalledWith(
-      "lead-report-assistant",
-      revisionId,
-      [AiPromptBundleLifecycle.draft, AiPromptBundleLifecycle.failed],
-      AiPromptBundleLifecycle.validated,
-    );
-  });
-
-  it("activates a structurally valid current revision without evaluation", async () => {
+  it("activates a structurally valid current revision", async () => {
     const candidate = bundle(AiPromptBundleLifecycle.validated);
-    const harness = serviceFor({
-      revision: candidate,
-      storedEvaluation: null,
-    });
+    const harness = serviceFor({ revision: candidate });
 
     await expect(
       harness.service.activate(
@@ -325,137 +243,6 @@ describe("AiPromptService", () => {
       ),
     ).resolves.toMatchObject({ lifecycle: "active" });
     expect(harness.repository.activate).toHaveBeenCalled();
-  });
-
-  it("preserves inconclusive provider compatibility as a three-state result", async () => {
-    const active = bundle(AiPromptBundleLifecycle.active);
-    const harness = serviceFor({
-      revision: active,
-      control: control(active),
-      evaluatorOutcome: "inconclusive",
-    });
-
-    await expect(
-      harness.service.evaluateProviderCompatibility(provider()),
-    ).resolves.toMatchObject({
-      status: "inconclusive",
-      features: [
-        expect.objectContaining({
-          featureKey: "lead-report-assistant",
-          outcome: "inconclusive",
-        }),
-      ],
-    });
-  });
-
-  it("reuses exact passing compatibility evidence without another provider call", async () => {
-    const active = bundle(AiPromptBundleLifecycle.active);
-    const harness = serviceFor({
-      revision: active,
-      control: control(active),
-      storedEvaluation: evaluation("passed"),
-    });
-
-    await expect(
-      harness.service.evaluateProviderCompatibility(provider()),
-    ).resolves.toMatchObject({ status: "passed" });
-    expect(harness.evaluate).not.toHaveBeenCalled();
-    expect(harness.repository.recordEvaluation).not.toHaveBeenCalled();
-  });
-
-  it("retries non-passing compatibility evidence and promotes a pass", async () => {
-    const active = bundle(AiPromptBundleLifecycle.active);
-    const harness = serviceFor({
-      revision: active,
-      control: control(active),
-      storedEvaluation: evaluation("failed"),
-      evaluatorOutcome: "passed",
-    });
-
-    await expect(
-      harness.service.evaluateProviderCompatibility(provider()),
-    ).resolves.toMatchObject({ status: "passed" });
-    expect(harness.evaluate).toHaveBeenCalledOnce();
-    expect(harness.repository.recordEvaluation).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "passed" }),
-    );
-  });
-
-  it("reuses the provider revision passing snapshot when shared evidence was downgraded", async () => {
-    const active = bundle(AiPromptBundleLifecycle.active);
-    const previouslyPassed = provider({
-      testResult: {
-        status: "passed",
-        generation: {
-          status: "passed",
-          answerProtocol: "json_schema",
-          capabilities: [],
-          featureCompatibility: [
-            {
-              featureKey: "lead-report-assistant",
-              promptRevisionId: revisionId,
-              contentHash: baseline.contentHash,
-              evaluatorVersion,
-              outcome: "passed",
-              checks: evaluation("passed").checks,
-            },
-          ],
-        },
-        embeddings: { status: "passed", capabilities: [] },
-        testedAt: now.toISOString(),
-      },
-    });
-    const harness = serviceFor({
-      revision: active,
-      control: control(active),
-      provider: previouslyPassed,
-      storedEvaluation: evaluation("failed"),
-      evaluatorOutcome: "failed",
-    });
-
-    await expect(
-      harness.service.evaluateProviderCompatibility(provider()),
-    ).resolves.toMatchObject({ status: "passed" });
-    expect(harness.evaluate).not.toHaveBeenCalled();
-    expect(harness.repository.recordEvaluation).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "passed" }),
-    );
-  });
-
-  it("verifies the immutable provider snapshot instead of mutable shared evidence", async () => {
-    const active = bundle(AiPromptBundleLifecycle.active);
-    const harness = serviceFor({
-      revision: active,
-      control: control(active),
-      storedEvaluation: evaluation("failed"),
-    });
-    const compatible = provider({
-      testResult: {
-        status: "passed",
-        generation: {
-          status: "passed",
-          answerProtocol: "json_schema",
-          capabilities: [],
-          featureCompatibility: [
-            {
-              featureKey: "lead-report-assistant",
-              promptRevisionId: revisionId,
-              contentHash: baseline.contentHash,
-              evaluatorVersion,
-              outcome: "passed",
-              checks: evaluation("passed").checks,
-            },
-          ],
-        },
-        embeddings: { status: "passed", capabilities: [] },
-        testedAt: now.toISOString(),
-      },
-    });
-
-    await expect(
-      harness.service.verifyProviderCompatibility(compatible),
-    ).resolves.toBe(true);
-    expect(harness.repository.findEvaluation).not.toHaveBeenCalled();
   });
 
   it("refuses protected prompt discard", async () => {

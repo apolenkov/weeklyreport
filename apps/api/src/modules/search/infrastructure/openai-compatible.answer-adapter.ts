@@ -1,6 +1,3 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
-import { z } from "zod";
-
 import type { AiComposedPromptSet } from "../application/ai-feature-prompt-catalog.js";
 import type {
   CitationRepairInput,
@@ -27,32 +24,9 @@ import {
 export type OpenAiCompatibleAnswerConfig = Readonly<{
   model: string;
   maxTokens: number;
-  answerProtocol: AiProviderAnswerProtocol;
   reasoning?: OpenAiCompatibleReasoningConfig;
   prompts: AiComposedPromptSet;
 }>;
-
-const groundedAnswerJsonSchema = (): Record<string, unknown> => {
-  const schema = z.toJSONSchema(groundedAnswerResponseSchema) as Record<
-    string,
-    unknown
-  >;
-  const { $schema: _schema, ...withoutMeta } = schema;
-  return withoutMeta;
-};
-
-const SUBMIT_GROUNDED_REPORT_ANSWER_TOOL_NAME =
-  "submit_grounded_report_answer" as const;
-
-const groundedAnswerTool = (): Record<string, unknown> => ({
-  type: "function",
-  function: {
-    name: SUBMIT_GROUNDED_REPORT_ANSWER_TOOL_NAME,
-    description: "Submit the grounded report answer.",
-    strict: true,
-    parameters: groundedAnswerJsonSchema(),
-  },
-});
 
 const parseStructuredAnswer = (
   response: OpenAiCompatibleChatResponse,
@@ -85,76 +59,12 @@ const parseStructuredAnswer = (
   };
 };
 
-const parseForcedToolAnswer = (
-  response: OpenAiCompatibleChatResponse,
-): GroundedAnswer => {
-  const calls = (response.choices ?? []).flatMap((choice) =>
-    choice.message?.tool_calls ? [...choice.message.tool_calls] : [],
-  );
-  const call = calls[0]?.function;
-  if (
-    response.choices?.length !== 1 ||
-    calls.length !== 1 ||
-    call?.name !== SUBMIT_GROUNDED_REPORT_ANSWER_TOOL_NAME
-  ) {
-    throw new OpenAiCompatibleProtocolError(
-      "Answer must return exactly one named tool call",
-    );
-  }
-  const value =
-    typeof call.arguments === "string"
-      ? (() => {
-          try {
-            return JSON.parse(call.arguments) as unknown;
-          } catch {
-            return undefined;
-          }
-        })()
-      : call.arguments;
-  const parsed = groundedAnswerResponseSchema.safeParse(value);
-  if (!parsed.success) {
-    throw new OpenAiCompatibleProtocolError(
-      "Answer tool arguments are invalid",
-    );
-  }
-  return {
-    answerMarkdown: parsed.data.answerMarkdown,
-    sourceIds: parsed.data.citedSourceIds,
-    insufficientEvidence: parsed.data.insufficientEvidence,
-    usage: OpenAiCompatibleTransport.usage(response.usage),
-  };
-};
-
 const answerRequest = (
   transport: OpenAiCompatibleTransport,
   prompt: ReturnType<typeof buildGroundedAnswerPrompt>,
   config: OpenAiCompatibleAnswerConfig,
   operation: "answer" | "citation repair",
 ): Promise<GroundedAnswer> => {
-  const protocolRequest =
-    config.answerProtocol === "json_object"
-      ? {
-          responseFormat: { type: "json_object" },
-        }
-      : config.answerProtocol === "json_schema"
-        ? {
-            responseFormat: {
-              type: "json_schema",
-              json_schema: {
-                name: "grounded_report_answer",
-                strict: true,
-                schema: groundedAnswerJsonSchema(),
-              },
-            },
-          }
-        : {
-            tools: [groundedAnswerTool()],
-            toolChoice: {
-              type: "function",
-              function: { name: SUBMIT_GROUNDED_REPORT_ANSWER_TOOL_NAME },
-            },
-            parallelToolCalls: false,
-          };
   return transport
     .chat(
       {
@@ -164,17 +74,12 @@ const answerRequest = (
           { role: "system", content: prompt.system },
           { role: "user", content: prompt.data },
         ],
-        ...protocolRequest,
+        responseFormat: { type: "json_object" },
         ...reasoningRequestOptions(config.reasoning),
       },
       operation,
     )
-    .then(
-      config.answerProtocol === "json_object" ||
-        config.answerProtocol === "json_schema"
-        ? parseStructuredAnswer
-        : parseForcedToolAnswer,
-    );
+    .then(parseStructuredAnswer);
 };
 
 export class OpenAiCompatibleAnswerAdapter

@@ -65,9 +65,9 @@ The configuration repository MUST persist provider credentials using authenticat
 - **WHEN** the API boots without the required encryption master key or with an invalid key shape
 - **THEN** validated environment configuration fails boot with a specific error
 
-### Requirement: Draft configurations prove required capabilities before activation
+### Requirement: Draft configurations prove required provider capabilities before activation
 
-The `admin.aiProvider.test` operation MUST use synthetic, non-report data to verify authentication, timeout handling, exactly one forced function call with parallel calls disabled, strict JSON-schema output, token usage, batch embeddings, finite ordered vectors, and one consistent positive embedding-vector length. It MUST persist that measured length on the revision only when every required capability passes, and MUST NOT send an embedding-dimensions option to the provider. A draft MUST NOT enter a validated or preparing state unless every required capability passes. Safe test status MUST be visible to the admin without provider response bodies. Retesting an active revision MUST persist the safe result and measurement without changing its `active` lifecycle, active pointer, or availability.
+The `admin.aiProvider.test` operation MUST use synthetic, non-report data to verify authentication, timeout handling, exactly one forced planner function call with parallel calls disabled, fixed JSON Object Mode answer output, token usage, batch embeddings, finite ordered vectors, and one consistent positive embedding-vector length. It MUST persist that measured length on the revision only when every required provider capability passes, and MUST NOT send an embedding-dimensions option to the provider. Provider test results MUST contain only bounded generation and embedding capability lanes; they MUST NOT persist a protocol selector or prompt/feature compatibility diagnostics. A draft MUST NOT enter a validated or preparing state unless every required provider capability passes. Safe test status MUST be visible to the admin without provider response bodies. Retesting an active revision MUST persist the safe result and measurement without changing its `active` lifecycle, active pointer, or availability.
 
 #### Scenario: All capabilities pass
 
@@ -99,7 +99,7 @@ The `admin.aiProvider.test` operation MUST use synthetic, non-report data to ver
 
 ### Requirement: Activation is atomic and preserves service during preparation
 
-The `admin.aiProvider.activate` operation MUST express an administrator's intent to make one validated revision global. If its embedding scope differs from the active scope, the system MUST keep the old revision active while the new scope is prepared, expose exact completed, total, failed, and elapsed status, and atomically change the global active pointer only after preparation is complete. If the scope is unchanged, activation MUST NOT rebuild embeddings.
+The `admin.aiProvider.activate` operation MUST express an administrator's intent to make one validated revision global. If its embedding scope differs from the active scope, the system MUST keep the old revision active while the new scope is prepared, expose exact completed, total, failed, and elapsed status, and atomically change the global active pointer only after preparation is complete. If the scope is unchanged, activation MUST NOT rebuild embeddings. Candidate lifecycle updates and the active-pointer compare-and-set MUST commit in one transaction; a stale pointer race MUST roll back the candidate transition and return a controlled conflict.
 
 #### Scenario: Provider or embedding scope changes
 
@@ -118,21 +118,25 @@ The `admin.aiProvider.activate` operation MUST express an administrator's intent
 - **THEN** the candidate revision is not activated
 - **AND** the prior configuration continues serving users without automatic fallback to any third provider
 
-### Requirement: Provider activation proves every active AI feature
+#### Scenario: Another activation wins the pointer race
 
-Before a candidate provider becomes globally active, the provider lifecycle MUST
-evaluate every active registered feature prompt bundle against that exact
-candidate provider revision. The compatibility result MUST include the prompt
-revision, content hash, contract version, evaluator version, bounded outcome, and
-safe check results. A stale or failed feature evaluation MUST preserve the
-previous provider pointer and MUST NOT start embedding preparation.
+- **WHEN** two administrators activate validated revisions concurrently
+- **THEN** exactly one compare-and-set succeeds
+- **AND** the losing transaction leaves its candidate and the previous pointer unchanged
 
-#### Scenario: An active feature is incompatible with a candidate provider
+### Requirement: Provider test queue handoff is recoverable
 
-- **WHEN** generic provider capability checks pass but an active feature prompt
-  evaluator fails
-- **THEN** the candidate remains inactive with a safe compatibility failure
-- **AND** the existing provider and embedding preparation state are unchanged
+The durable provider test execution MUST be claimable only from `queued` to
+`running`. A request that finds an existing queued execution MUST enqueue it
+again, and a duplicate request MUST reuse the same execution identity. A worker
+MUST persist a terminal bounded outcome and timestamps without storing prompts,
+provider response bodies, credentials, or report data.
+
+#### Scenario: Queue handoff is interrupted
+
+- **WHEN** the database row is queued but the first queue enqueue is lost
+- **THEN** a later test request re-enqueues the same queued execution
+- **AND** the worker can claim it exactly once
 
 ### Requirement: Unconfigured and disabled states are explicit
 

@@ -9,7 +9,7 @@ the executable prompt text.
 
 The code-registered `AiFeaturePromptCatalog` owns the feature key, slot order,
 display metadata, complete-prompt schema, composer version, core-contract version,
-and synthetic evaluator version. The first registered
+and serving-contract identity. The first registered
 feature is `lead-report-assistant` with exactly these required slots:
 
 | Slot              | Runtime responsibility                                   | Administrator may edit |
@@ -78,45 +78,28 @@ draft -> validated -> active -> superseded
 ```
 
 Only `draft` and `failed` attempts may be discarded. Active, validated, and
-superseded revisions remain exact restore evidence. Restore re-evaluates the
-selected superseded revision against the current provider before the same
-atomic active-pointer swap.
+superseded revisions remain exact restore evidence. Restore revalidates the
+selected superseded revision against the current serving contract before the
+same atomic active-pointer swap; it does not call a provider.
 
 The Settings → AI → Features surface displays a compact progressive prompt list,
 immutable history, and an active-versus-candidate prompt diff. It never accepts
 feature keys or slots invented by the browser.
 
-## Exact provider/prompt evaluation
+## Prompt lifecycle and provider testing
 
-`admin.aiPrompts.evaluate` evaluates the complete composed bundle against the
-currently active immutable provider revision using synthetic questions,
-catalogs, grounding, and citations only. The bounded check set covers:
+Prompt activation validates the current serving-contract identity, recomposes
+the persisted prompt contents, verifies the content hash and catalog-owned
+metadata, and performs the active-pointer swap atomically. It does not call a
+provider or require a separate provider-test result. Provider activation is independent
+from prompt lifecycle operations.
 
-- protocol shape and strict tool/answer handling;
-- English and Russian planning;
-- exact and semantic retrieval intent;
-- aggregate answers and insufficient evidence;
-- citation validation and one citation repair;
-- prompt-injection resistance in synthetic evidence; and
-- context-budget limits.
-
-The stored result contains only check codes, pass/fail counts, outcome, and the
-exact identity tuple:
-
-```text
-feature key
-prompt revision ID
-provider revision ID
-effective content hash
-core contract version
-evaluator version
-```
-
-Prompt activation rechecks that tuple, the passing evaluation ID, the active
-provider pointer, and the prompt lifecycle inside the pointer-swap transaction.
-Provider activation performs the inverse check: every active registered feature
-must have a current passing evaluation against the candidate provider before
-embedding preparation or activation begins.
+`admin.aiProvider.test` is the only asynchronous provider test. It exercises the
+provider's authentication, planner tool call, fixed JSON Object Mode answer,
+usage, and embedding capabilities with synthetic non-report data. Its durable
+result contains only bounded generation and embedding capability lanes,
+timestamps, and outcome metadata; it does not contain prompt bodies or provider
+responses.
 
 ## Runtime resolution and bootstrap
 
@@ -127,23 +110,21 @@ an operator-created control or active pointer. Bootstrap is not a runtime
 fallback.
 
 `AiRuntimeConfigurationRepository` reads the enabled active provider and active
-Report Assistant bundle under a repeatable-read database snapshot, then checks
-the exact passing evaluation and recomposes the persisted snapshot. The
+Report Assistant bundle under a repeatable-read database snapshot, then validates
+the serving identity and recomposes the persisted snapshot. The
 `AiRuntimeSnapshot` carries provider revision identity, feature key, prompt
 revision identity, contract version, and all four composed prompts. It also
-carries the persisted reasoning mode/custom value and tested answer protocol.
+carries the persisted reasoning mode/custom value.
 Planner, planner-repair, answer, and citation-repair calls in one request use
-that same snapshot. Embedding workers resolve only an exact provider revision
-and remain independent of prompt activation or answer-protocol state.
+that same snapshot. Embedding workers resolve only an exact provider revision and
+remain independent of prompt activation.
 
-The provider revision is tested with exactly one answer protocol. Strict JSON
-Schema is probed first; the named `submit_grounded_report_answer` tool is allowed
-only after a classified protocol-shape incompatibility. Runtime never negotiates
-between protocols for a user request, and both response forms are validated by
-the same server-owned answer schema. Provider default reasoning is omitted from
-the request; Off and Custom are translated by the selected provider profile.
+The runtime uses one code-owned answer protocol: JSON Object Mode followed by
+shared server-side answer-schema validation. Provider default reasoning is
+omitted from the request; Off and Custom are translated by the selected provider
+profile.
 
-If the provider, prompt pointer, persisted snapshot, or exact evaluation is
+If the provider, prompt pointer, persisted snapshot, or serving contract is
 missing, corrupt, stale, or incompatible, Report Assistant is unavailable and
 returns the existing `ai_not_configured` outcome before retrieval. There is no
 compiled-prompt fallback.
@@ -151,8 +132,8 @@ compiled-prompt fallback.
 ## Change and review rules
 
 Changing prompt text, slot versions, composer version, core-contract version,
-evaluator version, model IDs, context limits, or
-retrieval behavior requires a new golden baseline review and a new exact
-provider/prompt evaluation before activation. Reviewers must verify that report
-write paths, authorization, period/source selection, citation validation, and
-embedding scope are unchanged by a prompt-only operation.
+serving-contract identity, model IDs, context limits, or retrieval behavior
+requires a new golden baseline review and a review of the provider test contract.
+Reviewers must verify that report write paths, authorization, period/source
+selection, citation validation, and embedding scope are unchanged by a
+prompt-only operation.

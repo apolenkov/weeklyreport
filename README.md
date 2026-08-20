@@ -6,9 +6,11 @@
 (`head`) просматривает, публикует и экспортирует единый сводный отчёт. Есть ещё
 роли `admin` (администрирование) и `viewer` (только чтение).
 
-> Это MVP. Продакшена пока нет — локальная, dev, test и UAT базы данных
-> одноразовые: их сброс и пересборка с нуля ожидаемы и безопасны. Подробности —
-> в [`CLAUDE.md`](./CLAUDE.md), раздел «MVP Phase: Database Is Disposable».
+> Проект находится в pre-production MVP. Локальная, dev, test и UAT базы данных
+> одноразовые: их сброс и пересборка с нуля ожидаемы и безопасны. Production
+> Compose-конфигурация предназначена для будущего развёртывания и не отменяет
+> это правило для непроизводственных окружений. Подробности — в
+> [`CLAUDE.md`](./CLAUDE.md), раздел «MVP Phase».
 
 ## Стек
 
@@ -41,14 +43,16 @@ customreport
 ## Локальный запуск
 
 ```bash
-# 1. Зависимости
+# 1. Включить package manager из package.json и установить зависимости
+corepack enable
 pnpm install
 
-# 2. Окружение: скопировать пример и задать обязательные AI control-plane values
+# 2. Окружение API и web
 cp .env.example .env
+cp apps/web/.env.example apps/web/.env.local
 
-# 3. Поднять только зависимости приложения
-docker compose up -d postgres redis mailhog
+# 3. Поднять зависимости и дождаться их готовности
+docker compose up -d --wait postgres redis mailhog
 
 # 4. Применить миграции и залить демо-данные
 pnpm db:fresh:simple      # минимальный middle-tier seed
@@ -57,6 +61,10 @@ pnpm db:fresh:simple      # минимальный middle-tier seed
 # 5. Запустить web + api из исходников
 pnpm dev
 ```
+
+`apps/web/.env.local` нужен отдельно: Next.js читает environment files из
+`apps/web`, а API читает корневой `.env`. Локальный web template включает
+dev-login picker и role switcher; эти значения не предназначены для production.
 
 После старта:
 
@@ -139,13 +147,13 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 After deployment, an administrator opens **Settings → AI → Provider**, enters
-the provider credential and the three model IDs, runs the generic plus active
-feature synthetic capability tests, and activates the tested revision. Under
-**Settings → AI → Features**, the administrator evaluates and activates Report
-Assistant prompt behavior only after the exact provider/prompt pair passes.
-The provider credential, model IDs, and measured embedding dimensions do not
-belong in `.env.prod`; prompt bodies are database-backed runtime data and are
-never environment fallbacks.
+the provider credential and the three model IDs, runs the synthetic provider
+capability test, and activates the tested revision. Under **Settings → AI →
+Features**, prompt revisions are structurally validated and activated
+independently; prompt lifecycle never calls a provider or requires a
+provider/prompt compatibility result. The provider credential, model IDs, and
+measured embedding dimensions do not belong in `.env.prod`; prompt bodies are
+database-backed runtime data and are never environment fallbacks.
 
 После успешного запуска проверь `https://reports.example.com/health/live`.
 Production database не сбрасывается и не пересеивается: миграции применяются

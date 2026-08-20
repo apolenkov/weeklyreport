@@ -76,7 +76,6 @@ const revision = (): StoredAiProviderRevision => ({
   semanticInputVersion: INPUT_VERSION,
   reasoningMode: "provider_default",
   reasoningCustomValue: null,
-  answerProtocol: "json_schema",
   generationCredentialCiphertext: "ciphertext",
   generationCredentialNonce: "nonce",
   generationCredentialTag: "tag",

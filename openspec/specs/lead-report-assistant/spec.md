@@ -125,14 +125,13 @@ embedding worker resolution remains independent of prompt activation.
 - **THEN** the procedure returns `{ "kind": "ai_not_configured" }` before
   retrieval or provider work
 
-#### Scenario: An active prompt has no evaluation record
+#### Scenario: An active prompt has no separate quality record
 
-- **WHEN** the active prompt is structurally valid and current-serving but has
-  no prompt evaluation row
+- **WHEN** the active prompt is structurally valid and current-serving
 - **THEN** runtime resolution still returns the provider/prompt snapshot
-- **AND** no evaluation or LLM request is made as part of resolution
+- **AND** no quality evaluation or LLM request is made as part of resolution
 
-#### Scenario: The active prompt revision is from the removed integration
+#### Scenario: The active prompt revision is legacy
 
 - **WHEN** the active pointer references a revision without the current
   serving-contract identity
@@ -146,7 +145,7 @@ Switching prompt text from compiled constants to a current-serving editor
 revision MUST NOT change the report-assistant generation protocols. The planner
 MUST continue to use exactly one forced `search_report_entries` tool call with
 the current compact `SearchPlan` contract and bounded repair. The answer MUST
-continue to use the current JSON Object Mode envelope, server-prepared
+continue to use only the fixed JSON Object Mode envelope, server-prepared
 evidence, source allowlisting, and bounded citation repair. Tool schemas,
 authorization, retrieval limits, aggregates, and output validation MUST remain
 server-owned and MUST NOT be editable through prompt lifecycle operations.

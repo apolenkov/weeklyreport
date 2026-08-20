@@ -6,6 +6,9 @@
  * shapes can never diverge — `pathFilter()` always returns
  * `{ queryKey: [splitPath] }`, never a vacuous `{ tag }` filter.
  *
+ * The global AI availability procedure defaults to `not_configured`; a test
+ * that exercises a configured surface can override it with its own descriptor.
+ *
  * @internal — test utility only; not imported by production code.
  */
 
@@ -103,7 +106,15 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
   const root: Record<string, unknown> = {};
 
-  for (const descriptor of descriptors) {
+  const effectiveDescriptors: readonly ProcedureDescriptor[] = [
+    {
+      path: ["ai", "availability"],
+      query: { availability: "not_configured" },
+    },
+    ...descriptors,
+  ];
+
+  for (const descriptor of effectiveDescriptors) {
     const { path, query, queryByInput, mutation } = descriptor;
     const dotted = toDotted(path);
     const qk = toQueryKey(path);

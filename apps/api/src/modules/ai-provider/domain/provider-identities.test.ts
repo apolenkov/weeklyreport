@@ -7,7 +7,7 @@ import {
   buildGenerationCompatibilityIdentity,
 } from "./provider-identities.js";
 
-const evaluatorVersion = "provider-compatibility-v5";
+const testSuiteVersion = "provider-test-v1";
 const codec = new AesGcmCredentialCodec("a".repeat(64), 1);
 
 const generationIdentity = (answerModel = "answer-1") =>
@@ -19,8 +19,7 @@ const generationIdentity = (answerModel = "answer-1") =>
     answerModel,
     reasoningMode: "provider_default",
     reasoningCustomValue: null,
-    answerProtocol: "json_schema",
-    evaluatorVersion,
+    testSuiteVersion,
   });
 
 const embeddingScope = (model = "text-embedding-3-small") =>
@@ -37,12 +36,12 @@ describe("provider compatibility identities", () => {
     const firstComposite = buildCompositeTestIdentity({
       generationCompatibilityIdentity: generation,
       embeddings: { mode: "reuse_generation", model: "text-embedding-3-small" },
-      evaluatorVersion,
+      testSuiteVersion,
     });
     const secondComposite = buildCompositeTestIdentity({
       generationCompatibilityIdentity: generation,
       embeddings: { mode: "reuse_generation", model: "text-embedding-3-large" },
-      evaluatorVersion,
+      testSuiteVersion,
     });
 
     expect(generation).toBe(generationIdentity());
@@ -67,7 +66,7 @@ describe("provider compatibility identities", () => {
         credentialFingerprint: codec.fingerprint("embedding-secret-1"),
         model: "jina-embeddings-v3",
       },
-      evaluatorVersion,
+      testSuiteVersion,
     });
     const rotatedComposite = buildCompositeTestIdentity({
       generationCompatibilityIdentity: generationIdentity(),
@@ -78,7 +77,7 @@ describe("provider compatibility identities", () => {
         credentialFingerprint: codec.fingerprint("embedding-secret-2"),
         model: "jina-embeddings-v3",
       },
-      evaluatorVersion,
+      testSuiteVersion,
     });
 
     expect(rotatedComposite).not.toBe(firstComposite);

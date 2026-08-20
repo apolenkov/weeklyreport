@@ -49,7 +49,7 @@ Provider; автоматического failover нет.
 | `architecture.mmd`                                   | Компоненты, хранилища и внешние границы.                                                                  |
 | `lead-report-assistant-decision-summary.md`          | Функциональные и архитектурные решения.                                                                   |
 | `lead-report-assistant-search-plan-contract.md`      | Строгий контракт `SearchPlan`.                                                                            |
-| `lead-report-assistant-prompt-contract.md`           | Complete versioned prompts, durable versions, evaluation, and runtime source of truth.                    |
+| `lead-report-assistant-prompt-contract.md`           | Complete versioned prompts, durable versions, and runtime source of truth.                                |
 | `lead-report-assistant-rollout.md`                   | Подготовка, выпуск, мониторинг и откат.                                                                   |
 | `postgres-pgvector-rollout.md`                       | Совместимость PostgreSQL/pgvector и проверка данных.                                                      |
 | `mistral-report-assistant-integration-2026-08-04.md` | Историческое исследование Mistral и privacy-требований; активный профиль теперь задаётся в Settings → AI. |
@@ -64,6 +64,6 @@ Provider; автоматического failover нет.
 - Ответ опирается на серверные факты, а каждая ссылка проверяется сервером.
 - Вопросы, ответы, текст отчётов, embeddings и идентификаторы не попадают в
   логи и labels метрик.
-- Runtime reads one enabled provider plus one active, exactly evaluated Report
+- Runtime reads one enabled provider plus one active, current-serving Report
   Assistant bundle under a repeatable-read snapshot. Missing or corrupt state
   returns `ai_not_configured`; compiled prompt text is never a fallback.

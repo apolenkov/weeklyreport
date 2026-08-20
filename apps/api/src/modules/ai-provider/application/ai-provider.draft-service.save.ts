@@ -12,11 +12,11 @@ import {
   buildGenerationCompatibilityIdentity,
 } from "../domain/provider-identities.js";
 import { resolveProviderProfile } from "../domain/provider-profile.js";
-import { AI_PROVIDER_EVALUATOR_VERSION } from "../infrastructure/ai-compatibility.queue.js";
 import type {
   NewAiProviderRevision,
   StoredAiProviderRevision,
 } from "../infrastructure/ai-provider.repository.js";
+import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import type { AesGcmCredentialCodec } from "../infrastructure/credential-codec.js";
 import {
   AiProviderConfigurationError,
@@ -156,8 +156,7 @@ export const saveAiProviderDraft = async (
     answerModel: profile.generation.answerModel,
     reasoningMode: profile.generation.reasoningMode,
     reasoningCustomValue: profile.generation.reasoningCustomValue,
-    answerProtocol: null,
-    evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+    testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
   });
   const embeddingScopeIdentity = buildEmbeddingScopeIdentity({
     endpointIdentity: profile.embeddings.effective.endpointIdentity,
@@ -191,7 +190,7 @@ export const saveAiProviderDraft = async (
               ),
             ),
           },
-    evaluatorVersion: AI_PROVIDER_EVALUATOR_VERSION,
+    testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
   });
   const revision = await dependencies.repository.createDraft({
     id: revisionId,

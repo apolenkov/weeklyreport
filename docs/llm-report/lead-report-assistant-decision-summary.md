@@ -31,15 +31,14 @@ roadmapped сервисов и больше не содержит AI controls.
 слота: planner, planner-repair, grounded-answer и citation-repair. Каждый
 слот содержит полный database-backed prompt text в immutable revision.
 Редактирование создаёт feature-local immutable revision; активируется ровно
-один bundle pointer. Перед активацией synthetic evaluator доказывает exact
-provider revision + prompt revision + content hash + contract/evaluator
-versions. Prompt activation повторно проверяет эту identity tuple внутри
-транзакции и не трогает embedding pointer.
+один bundle pointer. Перед активацией сервер проверяет текущий serving contract,
+состав prompt bundle и content hash. Prompt activation повторно проверяет эту
+identity tuple внутри транзакции и не трогает embedding pointer.
 
 После explicit idempotent bootstrap `AiRuntimeConfigurationRepository` читает
 enabled provider и active prompt under repeatable-read snapshot. Все planner,
 repair, answer и citation-repair calls одного запроса используют этот snapshot.
-Missing, corrupt or unevaluated state даёт `ai_not_configured` до retrieval;
+Missing, corrupt or incompatible state даёт `ai_not_configured` до retrieval;
 compiled prompt text не является fallback.
 
 ## Как работает система
@@ -188,7 +187,7 @@ Semantic ranking работает только по полному exact candida
 - Поскольку модуль начинает защищать ACL, live/snapshot и structured-before-vector invariants, он переводится в оправданный `domain/application/infrastructure` split.
 - Публичный API модуля остаётся маленьким: `ReportAssistantService.answer(...)`; проект не заполняется множеством shallow NestJS services.
 - Candidate projection, normalization, filtering, aggregation, context construction и citation validation реализуются как короткие pure-функции.
-- Реальные внутренние seams: report search repository, Mistral language model port и embedding port. Production adapters подменяются deterministic fakes в тестах.
+- Реальные внутренние seams: report search repository, OpenAI-compatible language-model port и embedding port. Production adapters подменяются deterministic fakes в тестах.
 - Все cross-module imports проходят через `index.ts` facade. Существующая `filterSectionToSharedProducts` переиспользуется, а не копируется.
 - Shared Zod contracts создаются в `packages/shared` до app-local типов; function JSON Schema генерируется из Zod и не дублируется вручную.
 - Новый tRPC endpoint использует канонический `leadProcedure`, чтобы сохранить role-coverage gate.
@@ -223,21 +222,34 @@ Semantic ranking работает только по полному exact candida
 
 **Ограничение:** report text не кладётся в Redis. Job содержит locator и expected hash; worker повторно читает canonical source и отбрасывает устаревший job.
 
-### Mistral и обязательная конфигурация
+### Provider configuration and rollout
 
-**Что меняется:** API получает production adapters для Mistral function calling, answer generation и embeddings. Во все environments добавляются обязательные значения модели, dimensions, timeouts, thresholds и лимиты; secret `MISTRAL_API_KEY` хранится только в secret manager/environment.
+**Что меняется:** API использует один OpenAI-compatible transport для planner,
+answer и embeddings. Encryption key, allowlist, timeouts, thresholds и лимиты
+задаются окружением; credential, model IDs, dimensions и reasoning configuration
+вводит администратор в Settings → AI → Provider и они хранятся зашифрованно в
+базе.
 
-**Почему:** модельные параметры должны меняться без изменения кода, но проект запрещает скрытые defaults. Boot должен выявлять неполную конфигурацию, а не запускаться с неизвестной моделью.
+**Почему:** активная provider revision является единственным runtime source of
+truth. Это позволяет менять provider configuration без environment fallback и
+не запускать API с неизвестной моделью.
 
-**Rollout-условие:** конфигурация и secret должны быть подготовлены до выкладки версии, которая делает их обязательными. Иначе API корректно откажется стартовать. Недоступность Mistral после старта влияет на Chat, но не должна ломать report save/submit/publish.
+**Rollout-условие:** перед активацией администратор запускает provider capability
+test на synthetic non-report data. Тест проверяет authentication, planner,
+фиксированный structured-answer contract и embeddings; prompt lifecycle от него
+независим. Недоступность provider после старта влияет на Chat, но не должна
+ломать report save/submit/publish.
 
-**Стартовая конфигурация для UAT:** выбранный владельцем `mistral-medium-3-5` для planner и answer, `mistral-embed` с 1024 dimensions, endpoint `eu`. Закреплённый ID выбран вместо `mistral-medium-latest`, чтобы поведение не менялось незаметно. Более дешёвый `mistral-small-2603` можно принять только после тех же русских/английских eval-тестов.
+**Стартовая конфигурация для UAT:** Mistral может быть одним из проверяемых
+профилей, но не является встроенным runtime adapter или обязательной
+environment-конфигурацией. Любой profile/model допускается к активации только
+после того же provider capability test.
 
 **Privacy-условие:** до production владелец подтверждает платный workspace, режим использования данных для обучения, допустимый срок хранения/ZDR и регион обработки. Для этой функции не используются Labs models. В приложение не логируются вопросы, report text, prompts или ответы.
 
 ### API, модульные границы и зависимости
 
-**Что меняется:** `search` становится invariant-bearing module; добавляется Lead-only tRPC procedure, официальный Mistral TypeScript client и внутренние ports/adapters.
+**Что меняется:** `search` становится invariant-bearing module; добавляется Lead-only tRPC procedure, OpenAI-compatible transport и внутренние ports/adapters.
 
 **Почему:** создание отдельного `assistant` домена раздробило бы поисковую ответственность и противоречило canonical domain vocabulary. Полный внутренний split оправдан новыми security/data-source invariants, но наружу экспортируется только необходимый facade.
 
@@ -262,7 +274,7 @@ Semantic ranking работает только по полному exact candida
 - Отсутствующий или устаревший embedding не скрывается, но и не повреждает canonical content.
 - Новый endpoint недоступен другим ролям по canonical middleware chain.
 - Никакая existing database таблица отчёта не превращается в AI-owned projection.
-- Реализация идёт вертикальными срезами: contracts → pure structured core → repository integration → pgvector → worker → Mistral → UI.
+- Реализация идёт вертикальными срезами: contracts → pure structured core → repository integration → pgvector → worker → OpenAI-compatible transport → UI.
 - Каждый срез сохраняет зелёными `typecheck`, `lint`, unit tests и build; DB/queue slices дополнительно проходят integration/E2E.
 - Rollback приложения не требует восстановления report data. Таблица embedding cache может остаться неиспользуемой или быть удалена отдельной проверенной миграцией; canonical reports от неё не зависят.
 
@@ -270,10 +282,10 @@ Semantic ranking работает только по полному exact candida
 
 До production/UAT включения потребуется:
 
-1. Создать отдельные Mistral workspaces/keys для development и production; сохранить ключ как `MISTRAL_API_KEY` в local untracked `.env` или secret manager, не в Git.
-2. Для первой UAT указать: planner/answer `mistral-medium-3-5`, embeddings `mistral-embed`, dimensions `1024`, server `eu`. После eval можно отдельно одобрить `mistral-small-2603` ради экономии.
+1. Выбрать provider profile, endpoint, credential и model IDs в Settings → AI → Provider; credential не хранить в Git или environment-файлах normal runtime.
+2. Разрешить исходящие HTTPS-запросы только к endpoint из `AI_PROVIDER_ALLOWED_ORIGINS` и подтвердить data-region/retention posture.
 3. Начать с similarity threshold `0.55`, candidate limit `500`, synchronous read-through `16`, exhaustive limit `200`, context budget `8000`, provider timeout `30000 ms`, planner output `1500` tokens, answer output `2000` tokens, embedding batch `32` и aggregate embedding budget `8000` tokens. Финальное cost/quality решение принимается по UAT-замерам.
-4. Разрешить исходящие HTTPS-запросы API к Mistral, если инфраструктура использует egress allow-list.
+4. Запустить provider capability test на synthetic data и активировать только tested revision.
 5. Применить pgvector-совместимый PostgreSQL image/extension и новую DB schema в целевом окружении.
 6. До production подтвердить plan/training/retention/ZDR/data-region posture и проверить secret/config rollout до запуска новой версии API.
 

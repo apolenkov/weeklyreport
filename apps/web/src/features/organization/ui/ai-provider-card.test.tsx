@@ -8,7 +8,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AiProviderCardContent } from "./ai-provider-card";
-import { compatibilityExecutionMessage } from "./ai-provider-mutations";
+import { providerTestExecutionMessage } from "./ai-provider-mutations";
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
 import {
   initialAiProviderCardExpanded,
@@ -30,7 +30,6 @@ const revision = (
     answerModel: "answer",
     reasoningMode: "provider_default",
     reasoningCustomValue: null,
-    answerProtocol: "json_schema",
     credentialConfigured: true,
     credentialMaskedSuffix: "••••test",
   },
@@ -112,7 +111,7 @@ describe("initialAiProviderCardExpanded", () => {
   });
 });
 
-describe("compatibilityExecutionMessage", () => {
+describe("providerTestExecutionMessage", () => {
   it("reports a complete passing result for an active revision", () => {
     const active: AiProviderConfigurationRead = {
       ...revision("active"),
@@ -120,9 +119,7 @@ describe("compatibilityExecutionMessage", () => {
         status: "passed",
         generation: {
           status: "passed",
-          answerProtocol: "json_schema",
           capabilities: [],
-          featureCompatibility: [],
         },
         embeddings: { status: "passed", capabilities: [] },
         testedAt: new Date("2026-08-14T06:17:00.000Z"),
@@ -139,8 +136,8 @@ describe("compatibilityExecutionMessage", () => {
       },
     };
 
-    expect(compatibilityExecutionMessage(active)).toBe(
-      "Generation, planner protocol, answer JSON, and embeddings passed.",
+    expect(providerTestExecutionMessage(active)).toBe(
+      "Generation, planner, answer, and embeddings passed.",
     );
   });
 
@@ -159,7 +156,7 @@ describe("compatibilityExecutionMessage", () => {
       },
     };
 
-    expect(compatibilityExecutionMessage(failed)).toBe(
+    expect(providerTestExecutionMessage(failed)).toBe(
       "Generation authentication failed. Replace the rejected provider credential and save a new draft.",
     );
   });
@@ -291,9 +288,6 @@ describe("AiProviderCardContent", () => {
     expect(diagnostics).not.toHaveAttribute("open");
     fireEvent.click(screen.getByText("Diagnostics", { exact: true }));
     expect(diagnostics).toHaveAttribute("open");
-    expect(
-      screen.getByTestId("integration-ai-answer-protocol"),
-    ).toHaveTextContent("JSON Schema");
   });
 
   it("preserves an explicit disclosure choice across refetches", () => {
@@ -449,43 +443,25 @@ describe("AiProviderCardContent", () => {
       <AiProviderCardContent
         data={{ ...control(null), revisions: [inconclusive] }}
         savedRevision={queued}
-        message="Provider compatibility test queued."
+        message="Provider test queued."
         mutations={mutations() as never}
         onSave={vi.fn()}
       />,
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Compatibility could not be determined because the provider is temporarily unavailable. Retry the test.",
+      "The provider test could not be completed because the provider is temporarily unavailable. Retry the test.",
     );
   });
 
-  it("shows passed provider lanes and inconclusive feature compatibility truthfully", () => {
+  it("shows provider lanes without obsolete feature diagnostics", () => {
     const candidate: AiProviderConfigurationRead = {
       ...revision("draft"),
       testResult: {
         status: "inconclusive",
         generation: {
           status: "passed",
-          answerProtocol: "json_schema",
           capabilities: [{ capability: "planner_tool_call", status: "passed" }],
-          featureCompatibility: [
-            {
-              featureKey: "lead-report-assistant",
-              promptRevisionId: "33333333-3333-4333-8333-333333333333",
-              contentHash: "a".repeat(64),
-              evaluatorVersion: "report-assistant/evaluator/v2",
-              outcome: "inconclusive",
-              checks: [
-                {
-                  code: "protocol_shape",
-                  status: "inconclusive",
-                  passedCount: 0,
-                  failedCount: 1,
-                },
-              ],
-            },
-          ],
         },
         embeddings: { status: "passed", capabilities: [] },
         testedAt: new Date("2026-08-13T08:42:34.000Z"),
@@ -518,11 +494,8 @@ describe("AiProviderCardContent", () => {
     expect(screen.getByTestId("ai-capability-results")).toHaveTextContent(
       "Embeddings: Same connection as Generation · Passed",
     );
-    expect(screen.getByTestId("ai-capability-results")).toHaveTextContent(
-      "Feature compatibility: Inconclusive",
-    );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Compatibility could not be determined because the provider is temporarily unavailable. Retry the test.",
+      "The provider test could not be completed because the provider is temporarily unavailable. Retry the test.",
     );
     expect(
       screen.queryByText("The provider capability test failed."),
@@ -536,7 +509,6 @@ describe("AiProviderCardContent", () => {
         status: "failed",
         generation: {
           status: "failed",
-          answerProtocol: null,
           capabilities: [
             {
               capability: "planner_tool_call",
@@ -544,7 +516,6 @@ describe("AiProviderCardContent", () => {
               failureCode: "tool_use_failed",
             },
           ],
-          featureCompatibility: [],
         },
         embeddings: { status: "passed", capabilities: [] },
         testedAt: new Date("2026-08-13T08:57:54.000Z"),

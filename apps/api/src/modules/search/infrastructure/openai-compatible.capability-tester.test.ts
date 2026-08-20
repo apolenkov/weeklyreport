@@ -11,7 +11,6 @@ type CapabilityResult = Readonly<{
   status: string;
   generation: Readonly<{
     status: string;
-    answerProtocol: string | null;
     capabilities: readonly Readonly<{ capability: string; status: string }>[];
   }>;
   embeddings: Readonly<{
@@ -151,9 +150,6 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     expect(result.embeddingDimensions).toBe(3);
     expect(JSON.stringify(bodies)).not.toContain("secret-provider-key");
     expect(JSON.stringify(bodies)).toContain("Synthetic");
-    expect(capabilityResult.generation).toMatchObject({
-      answerProtocol: "json_object",
-    });
     expect(
       headers.every(
         (value) => value.get("authorization") === "Bearer secret-provider-key",
@@ -257,7 +253,7 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     ]);
   });
 
-  it("does not negotiate another answer protocol when JSON mode is rejected", async () => {
+  it("fails the answer capability when fixed JSON mode is rejected", async () => {
     const bodies: unknown[] = [];
     const tester = new OpenAiCompatibleCapabilityTester(
       1000,
@@ -279,49 +275,13 @@ describe("OpenAiCompatibleCapabilityTester", () => {
     );
 
     const result = await tester.test(profile, "secret-provider-key");
-    expect(result.answerProtocol).toBeNull();
+    const capabilityResult = result.result as unknown as CapabilityResult;
+    expect(capabilityResult.generation.status).toBe("failed");
+    expect(capabilityResult.embeddings.status).toBe("passed");
     expect(bodies).toHaveLength(3);
     expect(bodies[1]).toMatchObject({
       response_format: { type: "json_object" },
     });
-  });
-
-  it("does not negotiate a second protocol after invalid structured output", async () => {
-    const bodies: unknown[] = [];
-    const tester = new OpenAiCompatibleCapabilityTester(
-      1000,
-      100,
-      100,
-      2,
-      100,
-      responseFetcherFor(
-        [
-          { status: 200, body: passingResponses[0] },
-          {
-            status: 200,
-            body: {
-              choices: [{ message: { content: "not-json" } }],
-              usage: {
-                prompt_tokens: 1,
-                completion_tokens: 1,
-                total_tokens: 2,
-              },
-            },
-          },
-          { status: 200, body: passingResponses[2] },
-        ],
-        bodies,
-      ),
-    );
-
-    const result = await tester.test(profile, "secret-provider-key");
-    const capabilityResult = result.result as unknown as CapabilityResult;
-
-    expect(result.answerProtocol).toBeNull();
-    expect(capabilityResult.generation.status).toBe("failed");
-    expect(capabilityResult.embeddings.status).toBe("passed");
-    expect(bodies).toHaveLength(3);
-    expect(bodies[2]).toMatchObject({ model: "embed" });
   });
 
   it("does not negotiate after an authentication failure", async () => {

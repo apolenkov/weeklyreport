@@ -1,7 +1,4 @@
-import type {
-  AiProviderAnswerProtocol,
-  AiProviderReasoningMode,
-} from "@customreport/shared";
+import type { AiProviderReasoningMode } from "@customreport/shared";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import type {
@@ -9,12 +6,12 @@ import type {
   AiProviderConfigurationRepository,
   StoredAiProviderRevision,
 } from "../../ai-provider/index.js";
+import type { AiRuntimeConfigurationRepository } from "../infrastructure/ai-runtime-configuration.prisma-repository.js";
 import type { AiComposedPromptSet } from "./ai-feature-prompt-catalog.js";
 import {
   createRuntimeClients,
   type RuntimeClients,
 } from "./ai-runtime.clients.js";
-import type { AiRuntimeConfigurationRepository } from "./ai-runtime-configuration.repository.js";
 import type {
   EmbeddingPort,
   ReportAssistantAnswerPort,
@@ -40,7 +37,6 @@ export type AiRuntimeSnapshot = Readonly<{
   prompts: AiComposedPromptSet | null;
   reasoningMode: AiProviderReasoningMode;
   reasoningCustomValue: string | null;
-  answerProtocol: AiProviderAnswerProtocol | null;
   planner: ReportAssistantPlannerPort & ReportAssistantPlannerRepairPort;
   answerer: ReportAssistantAnswerPort & ReportAssistantCitationRepairPort;
   embeddings: EmbeddingPort;
@@ -62,6 +58,7 @@ export class AiRuntimeNotConfiguredError extends Error {
 }
 
 export class AiRuntimeResolver implements AiRuntimeResolverPort {
+  private static readonly CLIENT_CACHE_LIMIT = 4;
   private readonly clients = new Map<string, RuntimeClients>();
 
   constructor(
@@ -126,16 +123,15 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       revision.generationCompatibilityIdentity,
       revision.embeddingScopeIdentity,
     ].join(":");
-    const clients =
-      this.clients.get(cacheKey) ??
+    const clients = this.getOrCreateClients(cacheKey, () =>
       createRuntimeClients(
         revision,
         prompts,
         this.codec,
         this.env,
         () => new AiRuntimeNotConfiguredError(),
-      );
-    this.clients.set(cacheKey, clients);
+      ),
+    );
     return {
       revisionId: revision.id,
       generationCompatibilityIdentity: revision.generationCompatibilityIdentity,
@@ -147,7 +143,6 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       prompts,
       reasoningMode: revision.reasoningMode,
       reasoningCustomValue: revision.reasoningCustomValue,
-      answerProtocol: "json_object",
       planner: clients.planner,
       answerer: clients.answerer,
       embeddings: clients.embeddings,
@@ -165,5 +160,25 @@ export class AiRuntimeResolver implements AiRuntimeResolverPort {
       scope: clients.scope,
       model: clients.model,
     };
+  }
+
+  private getOrCreateClients(
+    cacheKey: string,
+    create: () => RuntimeClients,
+  ): RuntimeClients {
+    const cached = this.clients.get(cacheKey);
+    if (cached) {
+      this.clients.delete(cacheKey);
+      this.clients.set(cacheKey, cached);
+      return cached;
+    }
+    const clients = create();
+    this.clients.set(cacheKey, clients);
+    while (this.clients.size > AiRuntimeResolver.CLIENT_CACHE_LIMIT) {
+      const oldestKey = this.clients.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.clients.delete(oldestKey);
+    }
+    return clients;
   }
 }

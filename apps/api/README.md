@@ -23,14 +23,17 @@ All API endpoints are tRPC procedures served at `/trpc`. Authentication uses `pr
 ## Development
 
 ```bash
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-AUTH_DEV_MODE=true AUTH_JWT_SECRET="local-dev-secret-minimum-32-characters-long!!" \
-REDIS_HOST=localhost REDIS_PORT=6379 FRONTEND_URL=http://localhost:3000 PORT=3001 \
+cp .env.example .env
+docker compose up -d postgres redis mailhog
 pnpm dev
 ```
+
+The API runs on `http://localhost:3002`. `.env.example` is the complete
+development configuration; it includes the required AI, PDF, Redis, telemetry,
+and health-check settings, so do not replace it with a partial inline command.
 
 ## Testing
 
 ```bash
-pnpm test    # 68 Vitest tests across 9 service modules
+pnpm test
 ```

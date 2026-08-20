@@ -7,8 +7,7 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 
-export const AI_PROVIDER_TEST_QUEUED_MESSAGE =
-  "Provider compatibility test queued.";
+export const AI_PROVIDER_TEST_QUEUED_MESSAGE = "Provider test queued.";
 
 const CAPABILITY_LABELS = {
   authentication: "Authentication",
@@ -53,7 +52,7 @@ const capabilityTestMessage = (
   const result = revision.testResult;
   if (!result) return "The provider capability test failed.";
   if (result.status === "passed") {
-    return "Generation, planner protocol, answer JSON, and embeddings passed.";
+    return "Generation, planner, answer, and embeddings passed.";
   }
   if (result.status === "inconclusive") {
     return revision.embeddings.mode === "reuse_generation"
@@ -80,7 +79,7 @@ const capabilityTestMessage = (
   );
 };
 
-export const compatibilityExecutionMessage = (
+export const providerTestExecutionMessage = (
   revision: AiProviderConfigurationRead,
 ): string | null => {
   const execution = revision.latestExecution;
@@ -89,10 +88,10 @@ export const compatibilityExecutionMessage = (
     return AI_PROVIDER_TEST_QUEUED_MESSAGE;
   }
   if (execution.state === "running") {
-    return "Provider compatibility test running.";
+    return "Provider test running.";
   }
   if (execution.outcome === "inconclusive") {
-    return "Compatibility could not be determined because the provider is temporarily unavailable. Retry the test.";
+    return "The provider test could not be completed because the provider is temporarily unavailable. Retry the test.";
   }
   if (execution.outcome === "configuration_error") {
     return execution.failureCode === "provider_authentication_failed"
@@ -133,10 +132,10 @@ export const useAiProviderMutations = ({
       onSuccess: (revision) => {
         setSavedRevision(revision);
         setMessage(
-          compatibilityExecutionMessage(revision) ??
+          providerTestExecutionMessage(revision) ??
             capabilityTestMessage(revision),
         );
-        toast.success("AI provider compatibility test queued");
+        toast.success("AI provider test queued");
         refresh();
       },
       onError: (error) => setMessage(error.message),

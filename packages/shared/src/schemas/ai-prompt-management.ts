@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { aiCompatibilityExecutionReadSchema } from "./ai-compatibility-execution";
-
 export const AI_PROMPT_SLOT_KEYS = [
   "planner",
   "planner-repair",
@@ -15,9 +13,7 @@ export const AI_PROMPT_SLOT_CONTENT_LIMIT = 12_000;
 export const AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT = 48_000;
 export const AI_PROMPT_CORE_LIMIT = 24_000;
 export const AI_PROMPT_HASH_LENGTH = 64;
-export const AI_PROMPT_EVALUATION_CHECK_LIMIT = 32;
 export const AI_PROMPT_VERSION_LIMIT = 120;
-export const AI_PROMPT_CHECK_CODE_LIMIT = 80;
 export const AI_PROMPT_DISPLAY_NAME_LIMIT = 120;
 export const AI_PROMPT_DESCRIPTION_LIMIT = 500;
 export const AI_PROMPT_HISTORY_LIMIT = 100;
@@ -60,16 +56,6 @@ export const aiPromptServingStatusSchema = z.enum([
   "legacy",
   "incompatible",
 ]);
-export const aiPromptOperationOutcomeSchema = z.enum([
-  "passed",
-  "failed",
-  "inconclusive",
-]);
-export const aiPromptEvaluationCheckStatusSchema = z.enum([
-  "passed",
-  "failed",
-  "inconclusive",
-]);
 
 export const aiPromptSlotDefinitionSchema = z
   .object({
@@ -97,57 +83,6 @@ export const aiPromptSlotReadSchema = z
   })
   .strict();
 
-export const aiPromptEvaluationCheckSchema = z
-  .object({
-    code: z.string().trim().min(1).max(AI_PROMPT_CHECK_CODE_LIMIT),
-    status: aiPromptEvaluationCheckStatusSchema,
-    passedCount: z.number().int().nonnegative(),
-    failedCount: z.number().int().nonnegative(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.passedCount + value.failedCount === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["passedCount"],
-        message: "An evaluation check must record at least one case",
-      });
-    }
-    if (value.status === "passed" && value.failedCount > 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["status"],
-        message: "A passing check cannot contain failed cases",
-      });
-    }
-    if (value.status === "failed" && value.failedCount === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["status"],
-        message: "A failed check must contain a failed case",
-      });
-    }
-  });
-
-export const aiPromptEvaluationReadSchema = z
-  .object({
-    id: z.uuid(),
-    featureKey: aiFeatureKeySchema,
-    promptRevisionId: z.uuid(),
-    generationCompatibilityIdentity: versionSchema,
-    contentHash: contentHashSchema,
-    contractVersion: versionSchema,
-    servingContractVersion: versionSchema.nullable(),
-    evaluatorVersion: versionSchema,
-    outcome: aiPromptOperationOutcomeSchema,
-    checks: z
-      .array(aiPromptEvaluationCheckSchema)
-      .min(1)
-      .max(AI_PROMPT_EVALUATION_CHECK_LIMIT),
-    evaluatedAt: z.coerce.date(),
-  })
-  .strict();
-
 export const aiPromptBundleReadSchema = z
   .object({
     id: z.uuid(),
@@ -170,8 +105,6 @@ export const aiPromptBundleReadSchema = z
     updatedAt: z.coerce.date(),
     activatedAt: z.coerce.date().nullable(),
     supersededAt: z.coerce.date().nullable(),
-    latestEvaluation: aiPromptEvaluationReadSchema.nullable(),
-    latestExecution: aiCompatibilityExecutionReadSchema.nullable().optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -229,7 +162,6 @@ export const aiPromptDraftInputSchema = z
   })
   .strict();
 
-export const aiPromptEvaluationInputSchema = revisionInputSchema();
 const activationInputSchema = () =>
   z
     .object({

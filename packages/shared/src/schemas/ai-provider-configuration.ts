@@ -30,11 +30,9 @@ export {
   aiProviderRevisionInputSchema,
 } from "./ai-provider-configuration.read";
 export {
-  aiProviderAnswerProtocolSchema,
   aiProviderCapabilitySchema,
   aiProviderCapabilityStatusSchema,
   aiProviderCapabilityTestResultSchema,
-  aiProviderFeatureCompatibilitySchema,
 } from "./ai-provider-configuration-results";
 
 export const aiProviderGenerationDraftSchema = z

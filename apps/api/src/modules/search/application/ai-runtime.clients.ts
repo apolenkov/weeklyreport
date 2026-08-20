@@ -129,7 +129,6 @@ export const createRuntimeClients = (
     ? new OpenAiCompatibleAnswerAdapter(generationTransport, {
         model: revision.answerModel,
         maxTokens: env.REPORT_ASSISTANT_ANSWER_MAX_TOKENS,
-        answerProtocol: "json_object",
         reasoning,
         prompts,
       })

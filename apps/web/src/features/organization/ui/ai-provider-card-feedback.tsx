@@ -17,18 +17,6 @@ const capabilityStatusLabel = (
       ? "Failed"
       : "Inconclusive";
 
-const featureStatus = (
-  result: NonNullable<AiProviderConfigurationRead["testResult"]>,
-): "passed" | "failed" | "inconclusive" | null => {
-  const features = result.generation.featureCompatibility;
-  if (features.length === 0) return null;
-  return features.some(({ outcome }) => outcome === "failed")
-    ? "failed"
-    : features.some(({ outcome }) => outcome === "inconclusive")
-      ? "inconclusive"
-      : "passed";
-};
-
 export function AiProviderCardFeedback({
   revision,
   message,
@@ -43,9 +31,6 @@ export function AiProviderCardFeedback({
     ? revision.embeddings.mode === "reuse_generation"
       ? capabilityResult.generation.status
       : capabilityResult.embeddings.status
-    : null;
-  const promptStatus = capabilityResult
-    ? featureStatus(capabilityResult)
     : null;
   return (
     <>
@@ -65,12 +50,6 @@ export function AiProviderCardFeedback({
               ? `Same connection as Generation · ${capabilityStatusLabel(embeddingStatus ?? "inconclusive")}`
               : capabilityStatusLabel(embeddingStatus ?? "inconclusive")}
           </p>
-          {promptStatus && (
-            <p className="inline-flex items-center gap-1.5">
-              <span className="font-semibold">Feature compatibility:</span>{" "}
-              {capabilityStatusLabel(promptStatus)}
-            </p>
-          )}
         </div>
       )}
       {revision?.lifecycle === "preparing" && (

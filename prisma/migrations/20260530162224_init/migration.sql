@@ -19,22 +19,14 @@ CREATE TYPE "AiProviderLifecycle" AS ENUM ('draft', 'validated', 'preparing', 'a
 CREATE TYPE "AiProviderReasoningMode" AS ENUM ('provider_default', 'off', 'custom');
 
 -- CreateEnum
-CREATE TYPE "AiProviderAnswerProtocol" AS ENUM ('json_schema', 'forced_tool', 'json_object');
-
 -- CreateEnum
 CREATE TYPE "AiPromptBundleLifecycle" AS ENUM ('draft', 'validated', 'active', 'failed', 'superseded');
 
 -- CreateEnum
-CREATE TYPE "AiPromptEvaluationOutcome" AS ENUM ('passed', 'failed', 'inconclusive');
+CREATE TYPE "AiProviderTestExecutionState" AS ENUM ('queued', 'running', 'completed');
 
 -- CreateEnum
-CREATE TYPE "AiCompatibilityExecutionKind" AS ENUM ('provider_test', 'prompt_evaluation');
-
--- CreateEnum
-CREATE TYPE "AiCompatibilityExecutionState" AS ENUM ('queued', 'running', 'completed');
-
--- CreateEnum
-CREATE TYPE "AiCompatibilityOutcome" AS ENUM ('passed', 'incompatible', 'configuration_error', 'inconclusive');
+CREATE TYPE "AiProviderTestOutcome" AS ENUM ('passed', 'incompatible', 'configuration_error', 'inconclusive');
 
 -- CreateEnum
 CREATE TYPE "UserActionStatus" AS ENUM ('success', 'fail');
@@ -1026,7 +1018,6 @@ CREATE TABLE "AiProviderConfiguration" (
     "answerModel" TEXT NOT NULL,
     "reasoningMode" "AiProviderReasoningMode" NOT NULL,
     "reasoningCustomValue" TEXT,
-    "answerProtocol" "AiProviderAnswerProtocol",
     "generationCredentialCiphertext" TEXT NOT NULL,
     "generationCredentialNonce" TEXT NOT NULL,
     "generationCredentialTag" TEXT NOT NULL,
@@ -1147,41 +1138,21 @@ CREATE TABLE "AiFeaturePromptControl" (
     CONSTRAINT "AiFeaturePromptControl_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "AiPromptEvaluation" (
-    "id" TEXT NOT NULL,
-    "featureKey" TEXT NOT NULL,
-    "promptRevisionId" TEXT NOT NULL,
-    "generationCompatibilityIdentity" TEXT NOT NULL,
-    "contentHash" TEXT NOT NULL,
-    "contractVersion" TEXT NOT NULL,
-    "evaluatorVersion" TEXT NOT NULL,
-    "checks" JSONB NOT NULL,
-    "outcome" "AiPromptEvaluationOutcome" NOT NULL,
-    "evaluatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "AiPromptEvaluation_pkey" PRIMARY KEY ("id")
-);
-
 -- CreateTable
-CREATE TABLE "AiCompatibilityExecution" (
+CREATE TABLE "AiProviderTestExecution" (
     "id" TEXT NOT NULL,
     "identity" TEXT NOT NULL,
-    "kind" "AiCompatibilityExecutionKind" NOT NULL,
     "providerRevisionId" TEXT NOT NULL,
-    "promptRevisionId" TEXT,
-    "featureKey" TEXT,
-    "contentHash" TEXT,
-    "contractVersion" TEXT,
-    "evaluatorVersion" TEXT NOT NULL,
-    "state" "AiCompatibilityExecutionState" NOT NULL DEFAULT 'queued',
-    "outcome" "AiCompatibilityOutcome",
+    "testSuiteVersion" TEXT NOT NULL,
+    "state" "AiProviderTestExecutionState" NOT NULL DEFAULT 'queued',
+    "outcome" "AiProviderTestOutcome",
     "failureCode" TEXT,
     "checks" JSONB,
     "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "startedAt" TIMESTAMP(3),
     "completedAt" TIMESTAMP(3),
 
-    CONSTRAINT "AiCompatibilityExecution_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "AiProviderTestExecution_pkey" PRIMARY KEY ("id")
 );
 
 CREATE UNIQUE INDEX "AiPromptBundleRevision_featureKey_revision_key"
@@ -1196,20 +1167,12 @@ CREATE UNIQUE INDEX "AiFeaturePromptControl_activeRevisionId_key"
   ON "AiFeaturePromptControl"("activeRevisionId");
 CREATE INDEX "AiFeaturePromptControl_activeRevisionId_idx"
   ON "AiFeaturePromptControl"("activeRevisionId");
-CREATE UNIQUE INDEX "AiPromptEvaluation_promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_evaluatorVersion_key"
-  ON "AiPromptEvaluation"("promptRevisionId", "generationCompatibilityIdentity", "contentHash", "contractVersion", "evaluatorVersion");
-CREATE INDEX "AiPromptEvaluation_featureKey_outcome_evaluatedAt_idx"
-  ON "AiPromptEvaluation"("featureKey", "outcome", "evaluatedAt" DESC);
-CREATE INDEX "AiPromptEvaluation_generationCompatibilityIdentity_promptRevisionId_idx"
-  ON "AiPromptEvaluation"("generationCompatibilityIdentity", "promptRevisionId");
-CREATE UNIQUE INDEX "AiCompatibilityExecution_identity_key"
-  ON "AiCompatibilityExecution"("identity");
-CREATE INDEX "AiCompatibilityExecution_providerRevisionId_requestedAt_idx"
-  ON "AiCompatibilityExecution"("providerRevisionId", "requestedAt" DESC);
-CREATE INDEX "AiCompatibilityExecution_promptRevisionId_requestedAt_idx"
-  ON "AiCompatibilityExecution"("promptRevisionId", "requestedAt" DESC);
-CREATE INDEX "AiCompatibilityExecution_state_requestedAt_idx"
-  ON "AiCompatibilityExecution"("state", "requestedAt");
+CREATE UNIQUE INDEX "AiProviderTestExecution_identity_key"
+  ON "AiProviderTestExecution"("identity");
+CREATE INDEX "AiProviderTestExecution_providerRevisionId_requestedAt_idx"
+  ON "AiProviderTestExecution"("providerRevisionId", "requestedAt" DESC);
+CREATE INDEX "AiProviderTestExecution_state_requestedAt_idx"
+  ON "AiProviderTestExecution"("state", "requestedAt");
 
 ALTER TABLE "AiPromptBundleRevision"
   ADD CONSTRAINT "AiPromptBundleRevision_baseRevisionId_fkey"
@@ -1219,17 +1182,9 @@ ALTER TABLE "AiFeaturePromptControl"
   ADD CONSTRAINT "AiFeaturePromptControl_activeRevisionId_fkey"
   FOREIGN KEY ("activeRevisionId") REFERENCES "AiPromptBundleRevision"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "AiPromptEvaluation"
-  ADD CONSTRAINT "AiPromptEvaluation_promptRevisionId_fkey"
-  FOREIGN KEY ("promptRevisionId") REFERENCES "AiPromptBundleRevision"("id")
-  ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "AiCompatibilityExecution"
-  ADD CONSTRAINT "AiCompatibilityExecution_providerRevisionId_fkey"
+ALTER TABLE "AiProviderTestExecution"
+  ADD CONSTRAINT "AiProviderTestExecution_providerRevisionId_fkey"
   FOREIGN KEY ("providerRevisionId") REFERENCES "AiProviderConfiguration"("id")
-  ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "AiCompatibilityExecution"
-  ADD CONSTRAINT "AiCompatibilityExecution_promptRevisionId_fkey"
-  FOREIGN KEY ("promptRevisionId") REFERENCES "AiPromptBundleRevision"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Content-addressed semantic cache. It stores no report text, report/record

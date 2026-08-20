@@ -16,7 +16,8 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## API Proxy
 
-Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API server. This keeps all cookies same-origin — no CORS issues.
+Next.js rewrites in `next.config.ts` proxy `/trpc/*`, `/auth/*`, `/health/*`,
+`/api/*`, and `/pdfs/*` to the API server. This keeps all cookies same-origin.
 
 ## Key Components
 
@@ -28,13 +29,12 @@ Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API se
 ## Development
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev
+NEXT_PUBLIC_API_URL=http://localhost:3002 pnpm dev
 ```
 
 ## E2E Testing
 
 ```bash
-# Requires API + DB running
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-  pnpm exec playwright test    # 85 tests (journeys, visual, a11y, responsive)
+# Requires E2E_DATABASE_URL distinct from DATABASE_URL.
+pnpm test:e2e:integration
 ```

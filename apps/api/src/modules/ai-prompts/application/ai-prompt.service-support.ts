@@ -1,15 +1,12 @@
 import type {
-  AiCompatibilityExecutionRead,
   AiPromptBundleRead,
   AiPromptContents,
   AiPromptFeatureRead,
 } from "@customreport/shared";
-import { aiCompatibilityExecutionReadSchema } from "@customreport/shared";
 import {
   AI_PROMPT_SLOT_KEYS,
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
-  aiPromptEvaluationReadSchema,
   aiPromptSlotSchema,
 } from "@customreport/shared";
 
@@ -35,7 +32,6 @@ export type AiPromptMetricsSink = Readonly<{
       feature: "lead-report-assistant";
       operation:
         | "draft"
-        | "evaluation"
         | "activation"
         | "restore"
         | "discard"
@@ -118,22 +114,6 @@ const editableFrom = (value: unknown): AiPromptContents => {
   return parsed.data;
 };
 
-const evaluationRead = (revision: StoredAiPromptBundleRevision) =>
-  revision.latestEvaluation
-    ? aiPromptEvaluationReadSchema.parse(revision.latestEvaluation)
-    : null;
-
-const executionRead = (
-  revision: StoredAiPromptBundleRevision,
-): AiCompatibilityExecutionRead | null => {
-  const execution = revision.latestExecution;
-  if (!execution) return null;
-  return aiCompatibilityExecutionReadSchema.parse({
-    ...execution,
-    checks: execution.checks ?? [],
-  });
-};
-
 export const bundleRead = (
   entry: AiFeaturePromptCatalogEntry,
   revision: StoredAiPromptBundleRevision,
@@ -170,8 +150,6 @@ export const bundleRead = (
     updatedAt: revision.updatedAt,
     activatedAt: revision.activatedAt,
     supersededAt: revision.supersededAt,
-    latestEvaluation: evaluationRead(revision),
-    latestExecution: executionRead(revision),
   });
 };
 

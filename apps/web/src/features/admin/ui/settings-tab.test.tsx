@@ -76,7 +76,6 @@ const AI_REVISION: AiProviderConfigurationRead = {
     answerModel: "answer",
     reasoningMode: "provider_default",
     reasoningCustomValue: null,
-    answerProtocol: "json_schema",
     credentialConfigured: true,
     credentialMaskedSuffix: "••••abcd",
   },
@@ -91,7 +90,6 @@ const AI_REVISION: AiProviderConfigurationRead = {
     status: "passed",
     generation: {
       status: "passed",
-      answerProtocol: "json_schema",
       capabilities: (
         [
           "authentication",
@@ -100,7 +98,6 @@ const AI_REVISION: AiProviderConfigurationRead = {
           "token_usage",
         ] as const
       ).map((capability) => ({ capability, status: "passed" as const })),
-      featureCompatibility: [],
     },
     embeddings: {
       status: "passed",
@@ -886,7 +883,6 @@ describe("SettingsTab — Integrations sub-tab", () => {
         status: "failed",
         generation: {
           status: "failed",
-          answerProtocol: null,
           capabilities: [
             {
               capability: "planner_tool_call",
@@ -894,7 +890,6 @@ describe("SettingsTab — Integrations sub-tab", () => {
               failureCode: "OpenAiCompatibleProtocolError",
             },
           ],
-          featureCompatibility: [],
         },
         embeddings: {
           status: "failed",

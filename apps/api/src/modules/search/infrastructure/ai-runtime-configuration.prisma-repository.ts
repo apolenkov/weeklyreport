@@ -18,7 +18,7 @@ import {
   composePromptSet,
   REPORT_ASSISTANT_FEATURE_KEY,
   REPORT_ASSISTANT_SERVING_CONTRACT_VERSION,
-} from "./ai-feature-prompt-catalog.js";
+} from "../application/ai-feature-prompt-catalog.js";
 
 const providerSelect = aiProviderRevisionSelect;
 

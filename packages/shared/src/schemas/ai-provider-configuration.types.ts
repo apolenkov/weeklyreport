@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import type {
-  aiProviderAnswerProtocolSchema,
   aiProviderAvailabilityReadSchema,
   aiProviderAvailabilitySchema,
   aiProviderCapabilityTestResultSchema,
@@ -10,7 +9,6 @@ import type {
   aiProviderControlReadSchema,
   aiProviderDiscardResultSchema,
   aiProviderDraftSchema,
-  aiProviderFeatureCompatibilitySchema,
   aiProviderLifecycleSchema,
   aiProviderPreparationProgressSchema,
   aiProviderProfileCapabilitySchema,
@@ -33,9 +31,6 @@ export type AiProviderAvailability = z.infer<
 export type AiProviderReasoningMode = z.infer<
   typeof aiProviderReasoningModeSchema
 >;
-export type AiProviderAnswerProtocol = z.infer<
-  typeof aiProviderAnswerProtocolSchema
->;
 export type AiProviderDraft = z.infer<typeof aiProviderDraftSchema>;
 export type AiProviderConfigurationRead = z.infer<
   typeof aiProviderConfigurationReadSchema
@@ -45,9 +40,6 @@ export type AiProviderPreparationProgress = z.infer<
 >;
 export type AiProviderCapabilityTestResult = z.infer<
   typeof aiProviderCapabilityTestResultSchema
->;
-export type AiProviderFeatureCompatibility = z.infer<
-  typeof aiProviderFeatureCompatibilitySchema
 >;
 export type AiProviderAvailabilityRead = z.infer<
   typeof aiProviderAvailabilityReadSchema

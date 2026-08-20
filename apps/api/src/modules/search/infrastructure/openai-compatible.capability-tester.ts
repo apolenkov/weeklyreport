@@ -1,4 +1,3 @@
-import type { AiProviderAnswerProtocol } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import type {
@@ -31,7 +30,6 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
     Readonly<{
       result: Prisma.JsonValue;
       embeddingDimensions: number | null;
-      answerProtocol: AiProviderAnswerProtocol | null;
     }>
   > {
     if (this.embeddingBatchSize < 2 || this.embeddingTokenBudget < 1) {
@@ -74,7 +72,6 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
         generation: {
           ...probe.generation,
           capabilities: [...probe.generation.capabilities],
-          featureCompatibility: [...probe.generation.featureCompatibility],
         },
         embeddings: {
           ...probe.embeddings,
@@ -83,7 +80,6 @@ export class OpenAiCompatibleCapabilityTester implements AiProviderCapabilityTes
         testedAt: new Date().toISOString(),
       } as Prisma.JsonValue,
       embeddingDimensions: probe.embeddingDimensions,
-      answerProtocol: probe.answerProtocol,
     };
   }
 }

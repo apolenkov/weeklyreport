@@ -12,7 +12,7 @@ fail-closed runtime contract.
 Every administrator-visible AI feature MUST be registered in the typed
 `AiFeaturePromptCatalog`. A catalog entry MUST own its stable feature key,
 required slots, complete-prompt schema, contract versions, serving-contract
-identity, composer, evaluator metadata, and limits. API input MUST reject
+identity, composer metadata, and limits. API input MUST reject
 unregistered feature keys, unknown slots, lifecycle fields, hashes, and
 catalog-owned versions. Prompt wording MUST be supplied by the persisted
 immutable revision; the catalog MUST NOT silently substitute compiled prompt
@@ -34,9 +34,9 @@ text during runtime resolution.
 
 ### Requirement: Prompt revisions are immutable and feature-local
 
-The persistence layer MUST store immutable `AiPromptBundleRevision` rows,
-one `AiFeaturePromptControl` row per registered feature, and durable historical
-`AiPromptEvaluation` rows. Revision numbers MUST be monotonic within a feature,
+The persistence layer MUST store immutable `AiPromptBundleRevision` rows and
+one `AiFeaturePromptControl` row per registered feature. Revision numbers MUST
+be monotonic within a feature,
 allocated under a feature-local concurrency guard, and linked to the selected
 base revision. Each serving-capable revision MUST carry the current
 catalog-owned serving-contract identity. Revisions missing that identity or
@@ -68,13 +68,14 @@ remain available for exact history and restore operations.
   disposable
 - **AND** active, validated, and superseded revisions remain untouched
 
-### Requirement: Current prompt revisions activate without provider evaluation
+### Requirement: Current prompt revisions activate without a provider test
 
 Activation and restore MUST validate the current serving-contract identity, the
 catalog-owned composition, the stored content hash, and the allowed lifecycle.
-They MUST NOT call a provider, call an LLM, look up a prompt evaluation, or
-require a quality/evaluation result. The pointer swap MUST be atomic, and a
-stale or invalid candidate MUST leave the existing active prompt unchanged.
+They MUST NOT call a provider, call an LLM, or require a provider-test result.
+The pointer swap MUST be atomic, and a stale or invalid candidate MUST
+leave the existing active prompt unchanged. A compare-and-set conflict MUST
+roll back the candidate transition and return a controlled conflict.
 Provider activation MUST remain independent from prompt lifecycle operations.
 
 #### Scenario: A current candidate is activated directly
@@ -91,6 +92,12 @@ Provider activation MUST remain independent from prompt lifecycle operations.
 - **THEN** prompt activation still succeeds
 - **AND** provider state remains unchanged
 
+#### Scenario: Another administrator activates a prompt first
+
+- **WHEN** two administrators activate different current candidates concurrently
+- **THEN** exactly one feature pointer compare-and-set succeeds
+- **AND** the losing candidate transition is rolled back
+
 #### Scenario: A legacy candidate is submitted
 
 - **WHEN** a legacy candidate is submitted for activation or restore
@@ -106,7 +113,7 @@ identity, prompt revision identity, serving-contract identity, contract
 version, and all composed prompt slots. Missing, corrupt, legacy, or
 incompatible prompt state MUST return the existing `ai_not_configured` outcome
 before retrieval. A structurally valid current-serving prompt MUST remain
-resolvable without an evaluation row. Compiled prompt text MUST NOT be a
+resolvable without a separate quality record. Compiled prompt text MUST NOT be a
 runtime fallback; exact provider-only resolution for embedding workers MUST
 stay independent of prompt activation.
 
@@ -123,12 +130,11 @@ stay independent of prompt activation.
 - **THEN** the assistant returns `ai_not_configured` without retrieval or
   provider work
 
-#### Scenario: An active prompt has no evaluation record
+#### Scenario: An active prompt has no separate quality record
 
-- **WHEN** the active prompt is structurally valid and current-serving but has
-  no prompt evaluation row
+- **WHEN** the active prompt is structurally valid and current-serving
 - **THEN** runtime resolution still returns the provider/prompt snapshot
-- **AND** no evaluation or LLM request is made as part of resolution
+- **AND** no quality evaluation or LLM request is made as part of resolution
 
 ### Requirement: Prompt administration is safe and observable
 

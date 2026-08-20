@@ -2,14 +2,12 @@ import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 import type { AiPromptBundleLifecycle } from "@prisma/client";
-import { AiCompatibilityExecutionKind } from "@prisma/client";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {
   bootstrap,
   createDraft,
   handoff,
-  recordEvaluation,
 } from "./ai-prompt.repository.commands.js";
 import {
   activate,
@@ -18,47 +16,29 @@ import {
 } from "./ai-prompt.repository.lifecycle.js";
 import {
   type AiPromptActivationContract,
-  type AiPromptEvaluationLookup,
   type AiPromptHandoffResult,
-  evaluationSelect,
   type NewAiPromptBootstrap,
   type NewAiPromptBundleRevision,
-  type NewAiPromptEvaluation,
   type NewAiPromptHandoff,
   revisionSelect,
   revisionWhere,
   type StoredAiFeaturePromptControl,
   type StoredAiPromptBundleRevision,
-  type StoredAiPromptEvaluation,
   toControl,
-  toEvaluation,
   toRevision,
 } from "./ai-prompt.repository.types.js";
 
 export type {
   AiPromptActivationContract,
-  AiPromptEvaluationLookup,
   AiPromptHandoffResult,
   NewAiPromptBootstrap,
   NewAiPromptBundleRevision,
-  NewAiPromptEvaluation,
   NewAiPromptHandoff,
   StoredAiFeaturePromptControl,
   StoredAiPromptBundleRevision,
-  StoredAiPromptEvaluation,
 } from "./ai-prompt.repository.types.js";
 
 const PROMPT_HISTORY_LIMIT = 100;
-
-export type PromptExecutionRequest = Readonly<{
-  identity: string;
-  featureKey: string;
-  providerRevisionId: string;
-  generationCompatibilityIdentity: string;
-  contentHash: string;
-  contractVersion: string;
-  evaluatorVersion: string;
-}>;
 
 @Injectable()
 export class AiPromptRepository {
@@ -131,59 +111,6 @@ export class AiPromptRepository {
 
   handoff(input: NewAiPromptHandoff): Promise<AiPromptHandoffResult> {
     return handoff(this.prisma, input);
-  }
-
-  recordEvaluation(
-    input: NewAiPromptEvaluation,
-  ): Promise<StoredAiPromptEvaluation> {
-    return recordEvaluation(this.prisma, input);
-  }
-
-  async findEvaluation(
-    input: AiPromptEvaluationLookup,
-  ): Promise<StoredAiPromptEvaluation | null> {
-    const evaluation = await this.prisma.aiPromptEvaluation.findUnique({
-      where: {
-        promptRevisionId_generationCompatibilityIdentity_contentHash_contractVersion_servingContractVersion_evaluatorVersion:
-          input,
-      },
-      select: evaluationSelect,
-    });
-    return evaluation ? toEvaluation(evaluation) : null;
-  }
-
-  async createOrReusePromptExecution(
-    promptRevisionId: string,
-    input: PromptExecutionRequest,
-  ): Promise<Readonly<{ id: string; created: boolean }>> {
-    const existing = await this.prisma.aiCompatibilityExecution.findUnique({
-      where: { identity: input.identity },
-      select: { id: true },
-    });
-    if (existing) return { ...existing, created: false };
-    try {
-      const created = await this.prisma.aiCompatibilityExecution.create({
-        data: {
-          identity: input.identity,
-          kind: AiCompatibilityExecutionKind.prompt_evaluation,
-          promptRevisionId,
-          providerRevisionId: input.providerRevisionId,
-          featureKey: input.featureKey,
-          contentHash: input.contentHash,
-          contractVersion: input.contractVersion,
-          evaluatorVersion: input.evaluatorVersion,
-        },
-        select: { id: true },
-      });
-      return { ...created, created: true };
-    } catch (error) {
-      const raced = await this.prisma.aiCompatibilityExecution.findUnique({
-        where: { identity: input.identity },
-        select: { id: true },
-      });
-      if (raced) return { ...raced, created: false };
-      throw error;
-    }
   }
 
   transition(
