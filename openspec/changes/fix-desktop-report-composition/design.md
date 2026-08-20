@@ -33,6 +33,20 @@ Desktop application mains share a CSS-only paper surface built from existing sem
 
 History owns its grid-row height; both Head headers use a desktop `minmax(0,1fr) auto` grid; Head and hosted Lead slide density state moves to their report shells so each control can join its trailing context cluster. Standalone Lead decks keep their local density control. This preserves DOM focus order and the existing period, scope, density, fullscreen, and publication models.
 
+### Correct Head Presentation canvas and carousel affordance
+
+The Head Presentation frame owns the available inline size of the report
+content (`width: 100%`) instead of imposing the prior `1088px` poster-like cap.
+Its minimum block size comes from a shared CSS token set to `360px`; content
+may grow beyond that minimum, and the loading skeleton uses the same token so
+the settled deck does not jump. The slide strip uses CSS smooth scrolling and
+scroll snapping, while the selected card is kept visible after selection by
+adjusting only the carousel viewport's horizontal `scrollLeft`.
+Native Previous/Next buttons expose the carousel contract with stable English
+accessible names, disabled states at the first/last slide, and no fabricated
+extra slide. This is a desktop Head correction only; slide ordering, density,
+fullscreen, source-record identity, and mobile composition remain unchanged.
+
 ### Reserve Dashboard action geometry
 
 The two trailing desktop queue tracks use fixed compact widths sized for every primary and disclosure label. Skeleton rows use the same tracks, control heights, and minimum row height as loaded rows. Expansion may add detail height, but it does not move the summary-row actions.
@@ -48,6 +62,8 @@ Document/Presentation remains functional in Head and hosted Lead report chrome. 
 - [Risk] Moving density state changes deck lifecycle. -> Keep the same state values and add focused reversibility/record-preservation tests.
 - [Risk] Fixed Dashboard action tracks clip a label. -> Size both tracks for the longest current primary/disclosure label and verify the live seeded queue.
 - [Risk] Header actions still wrap below desktop breakpoint. -> This is intentional because mobile redesign is out of scope and controls must remain reachable.
+- [Risk] A compact minimum could expose an undersized empty canvas. -> Keep the token at `360px`, allow intrinsic content growth, and verify skeleton/settled frame geometry rather than replacing the minimum with a fixed poster height.
+- [Risk] Carousel arrows could duplicate keyboard navigation or hide the selected card. -> Reuse the existing selected-index contract, disable only at boundaries, and adjust only the carousel viewport's horizontal scroll with visible focus; never request document or vertical scrolling.
 
 ## Migration Plan
 

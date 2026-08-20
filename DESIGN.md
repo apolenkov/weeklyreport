@@ -181,10 +181,11 @@ for shell sections, and `p-5`/`p-6` (20/24px) for report/card surfaces.
 - Standard Tailwind breakpoints are used in components: `sm` 640px, `md`
   768px, `lg` 1024px, and `xl` 1280px. The CSS media query for toolbar density
   is explicitly below 48rem.
-- Presentation targets a 1088 × 680 desktop canvas, with a 900px minimum width
-  and a 680px minimum height. The canvas and its content-driven rows grow
-  vertically when needed, so the 16:10 target never clips complete record text.
-  Slide canvases use 20px padding.
+- Presentation uses the full available desktop report-frame width, with a 900px
+  minimum width and a tokenized 360px minimum height. The canvas and its
+  content-driven rows grow vertically when needed, so compact decks do not
+  reserve poster-like blank space or clip complete record text. Slide canvases
+  use 20px padding.
 - The body has a layered white-to-transparent wash over a 32px square grid.
   `operational-paper-shell` adds a white vertical wash, 10rem green vertical
   rhythm, 2rem paper lines, and a quiet gold wash.

@@ -9,6 +9,8 @@ Fresh owner walkthroughs on the seeded desktop stand exposed presentation defect
 - Align the History empty panel with the full summary rail and reduce unused space without changing history data.
 - Keep Head document actions right-aligned on desktop and preserve the disabled `Nothing to publish` primary action.
 - Move the working Document/Presentation density controls into the report context toolbar so Head and hosted Lead slide decks no longer create a separate control row; standalone Lead decks may retain their local density toolbar.
+- Make the Head Presentation slide frame fill the available report frame width, replace the poster-like fixed minimum height with a tokenized compact minimum that still auto-grows with content, and keep the loading skeleton geometry aligned with the resulting frame.
+- Give the Head slide carousel explicit Previous/Next controls with disabled edge states, smooth snap-scrolling, and selected-card visibility so the active presentation remains legible and navigable at desktop width.
 - Add one visible inert `Slide templates` Coming-Soon affordance and a separate deferred backlog record for future template selection.
 - Reserve compact Dashboard action tracks and matching skeleton geometry so disclosure labels and loading transitions do not move adjacent controls.
 - Produce a fresh source-bound desktop screenshot matrix and independent visual review.
@@ -18,6 +20,7 @@ Fresh owner walkthroughs on the seeded desktop stand exposed presentation defect
 - Mobile or compact-layout redesign.
 - New colors, image assets, animation, report data, permissions, exports, or slide-template implementation.
 - Changing the working Document/Presentation density semantics.
+- Redesigning mobile slide composition or changing the underlying slide data/order contract.
 
 ## Capabilities
 
@@ -29,7 +32,7 @@ Fresh owner walkthroughs on the seeded desktop stand exposed presentation defect
 ### Modified Capabilities
 
 - `report-toolbar-layout`: Head header and context controls keep a stable two-column action hierarchy and one compact context row.
-- `head-slide-density`: The existing density control moves into Head and hosted Lead report context chrome without changing deck behavior.
+- `head-slide-density`: The existing density control moves into Head and hosted Lead report context chrome; Head Presentation uses a full-width, tokenized-height report frame and an edge-aware carousel without changing deck behavior or source-record identity.
 - `deferred-feature-pattern`: Slide-template selection has one canonical visible inert Coming-Soon trace until activation.
 
 ## Impact
