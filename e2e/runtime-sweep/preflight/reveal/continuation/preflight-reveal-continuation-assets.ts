@@ -1,4 +1,4 @@
-import { link, open, unlink } from "node:fs/promises";
+import { link, lstat, open, unlink } from "node:fs/promises";
 import * as path from "node:path";
 
 import { freezeDeep } from "../../../source/manifest-source.ts";
@@ -44,6 +44,8 @@ const REF_PATTERN = new RegExp(
 export const MAX_ASSET_BYTES = 8_388_608;
 const PRIVATE_FILE_MODE = 0o600;
 const CONTENT_ASSET_SIZE_ERROR = "Content asset exceeds the byte bound";
+const CONTENT_ASSET_REGULAR_FILE_ERROR =
+  "Content asset must be a regular non-symlink file";
 const temporaryCounter = { value: 0 };
 
 export type RevealContinuationAsset =
@@ -164,7 +166,7 @@ const linkOrVerifyAsset = async (input: {
       await readBoundedRegularFile({
         filePath: input.filePath,
         maxBytes: MAX_ASSET_BYTES,
-        regularFileError: "Content asset must be a regular non-symlink file",
+        regularFileError: CONTENT_ASSET_REGULAR_FILE_ERROR,
         sizeError: CONTENT_ASSET_SIZE_ERROR,
       })
     ).toString("utf8");
@@ -237,7 +239,7 @@ export const readRevealContinuationAsset = async (input: {
   const buffer = await readBoundedRegularFile({
     filePath,
     maxBytes: MAX_ASSET_BYTES,
-    regularFileError: "Content asset must be a regular non-symlink file",
+    regularFileError: CONTENT_ASSET_REGULAR_FILE_ERROR,
     sizeError: CONTENT_ASSET_SIZE_ERROR,
   });
   const text = buffer.toString("utf8");
@@ -261,4 +263,22 @@ export const readRevealContinuationAsset = async (input: {
       "Content asset filename does not match its digest",
     );
   return parsed;
+};
+
+/**
+ * Re-checks the durable boundary without re-reading an immutable asset body.
+ * Fresh child hydration still parses and verifies the digest before use.
+ */
+export const assertRevealContinuationAssetPresent = async (input: {
+  readonly archiveRoot: string;
+  readonly artifact: RevealContinuationAsset["artifact"];
+  readonly ref: string;
+}): Promise<void> => {
+  const filePath = assetPathFor(input.archiveRoot, input.artifact, input.ref);
+  await assertPreflightArchivePath(path.resolve(input.archiveRoot), filePath);
+  const stats = await lstat(filePath);
+  if (!stats.isFile() || stats.isSymbolicLink())
+    throw new RevealContinuationError(CONTENT_ASSET_REGULAR_FILE_ERROR);
+  if (stats.size > MAX_ASSET_BYTES)
+    throw new RevealContinuationError(CONTENT_ASSET_SIZE_ERROR);
 };

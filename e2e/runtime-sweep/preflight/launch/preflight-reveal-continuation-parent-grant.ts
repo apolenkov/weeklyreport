@@ -2,6 +2,7 @@ import * as path from "node:path";
 
 import { stableSerialize } from "../../support/ids.ts";
 import {
+  assertRevealContinuationAssetPresent,
   readRevealContinuationAsset,
   writeRevealContinuationAsset,
 } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
@@ -34,11 +35,36 @@ type SealedGrant = Readonly<{
   readonly grant: RevealExecutionGrant;
 }>;
 
+const persistedAssetKeysByArchive = new Map<string, Set<string>>();
+
+const persistedAssetKeysFor = (archiveRoot: string): Set<string> => {
+  const key = path.resolve(archiveRoot);
+  const existing = persistedAssetKeysByArchive.get(key);
+  if (existing !== undefined) return existing;
+  const created = new Set<string>();
+  persistedAssetKeysByArchive.set(key, created);
+  return created;
+};
+
+const assetKeyFor = (
+  asset: Parameters<typeof writeRevealContinuationAsset>[0]["asset"],
+): string => `${asset.artifact}:${asset.digest}`;
+
 const persistGrantAssets = async (input: {
   readonly archiveRoot: string;
   readonly grant: RevealExecutionGrant;
 }): Promise<void> => {
+  const persistedAssetKeys = persistedAssetKeysFor(input.archiveRoot);
   for (const asset of assetsForGrant(input.grant)) {
+    const assetKey = assetKeyFor(asset);
+    if (persistedAssetKeys.has(assetKey)) {
+      await assertRevealContinuationAssetPresent({
+        archiveRoot: input.archiveRoot,
+        artifact: asset.artifact,
+        ref: asset.digest,
+      });
+      continue;
+    }
     await writeRevealContinuationAsset({
       archiveRoot: input.archiveRoot,
       asset,
@@ -52,6 +78,7 @@ const persistGrantAssets = async (input: {
       throw new Error(
         `R188 durable grant asset read-back drifted: ${asset.artifact}:${asset.digest}`,
       );
+    persistedAssetKeys.add(assetKey);
   }
 };
 
