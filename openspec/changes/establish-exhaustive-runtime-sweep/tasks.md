@@ -251,7 +251,7 @@
 
 ## 6. Immutable baseline and adjudication
 
-- [ ] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/
+- [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/
       profile/matrix digests, tool versions, exclusions, and environment liveness.
 - [ ] 6.2 Run the complete deterministic Playwright matrix sequentially across
       all declared roles, routes, states, controls, transitions, and controlled
