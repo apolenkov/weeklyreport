@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { readPackageStyleSource } from "../../../test-utils/package-style-source";
+import { readPackageStyleSource } from "../../../../test-utils/package-style-source";
 
 const css = readPackageStyleSource();
 

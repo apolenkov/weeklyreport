@@ -5,19 +5,19 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { HistoryEntry } from "../../report-sections";
+import type { HistoryEntry } from "../../../report-sections";
 
-vi.mock("./lead-history-list", () => ({
+vi.mock("../lead-history-list", () => ({
   LeadHistoryList: () => <div data-testid="history-list" />,
 }));
-vi.mock("./lead-history-sidebar", () => ({
+vi.mock("../lead-history-sidebar", () => ({
   LeadHistorySidebar: () => <aside data-testid="history-summary" />,
 }));
-vi.mock("./lead-history-skeleton", () => ({
+vi.mock("../lead-history-skeleton", () => ({
   LeadHistorySkeleton: () => <div data-testid="history-skeleton" />,
 }));
 
-import { HistoryPanel } from "./report-history-panel";
+import { HistoryPanel } from "../report-history-panel";
 
 describe("HistoryPanel desktop empty composition", () => {
   it("stretches the empty state through the summary rail row", () => {

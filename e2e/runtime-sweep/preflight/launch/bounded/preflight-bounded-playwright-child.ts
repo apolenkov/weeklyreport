@@ -9,7 +9,7 @@ type BoundedPlaywrightChildInput = Readonly<{
   terminationGraceMs: number;
 }>;
 
-export class PreflightBoundedPlaywrightChildError extends Error {
+class PreflightBoundedPlaywrightChildError extends Error {
   override readonly name = "PreflightBoundedPlaywrightChildError";
 }
 
@@ -44,7 +44,7 @@ const signalProcessGroup = (
   }
 };
 
-export const assertBoundedPlaywrightDuration = (
+const assertBoundedPlaywrightDuration = (
   operationName: string,
   name: string,
   value: number,

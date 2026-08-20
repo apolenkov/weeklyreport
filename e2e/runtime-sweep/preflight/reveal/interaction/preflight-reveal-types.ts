@@ -118,8 +118,6 @@ export interface RevealExecutionHarness {
   }) => Promise<RevealExecution>;
 }
 
-export type { RevealRepresentativeInput } from "./preflight-reveal-transition.ts";
-
 export type RevealControlFactory = (
   plan: LiveControlPlan,
   revealPath: RevealPath,
