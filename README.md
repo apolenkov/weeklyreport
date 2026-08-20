@@ -121,7 +121,7 @@ SMTP_FROM=noreply@example.com
 
 AI_PROVIDER_CONFIG_ENCRYPTION_KEY=<base64-or-hex-32-byte-key>
 AI_PROVIDER_CONFIG_KEY_VERSION=1
-AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai
+AI_PROVIDER_ALLOWED_ORIGINS=https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com
 REPORT_ASSISTANT_INPUT_VERSION=1
 REPORT_ASSISTANT_SIMILARITY_THRESHOLD=0.55
 REPORT_ASSISTANT_CANDIDATE_LIMIT=500

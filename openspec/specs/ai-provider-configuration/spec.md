@@ -28,12 +28,17 @@ The `admin.aiProvider` tRPC surface and Settings → AI → Provider card MUST u
 
 ### Requirement: Supported profiles include approved custom models
 
-The configuration contract MUST support `mistral`, `openrouter`, and `custom-openai-compatible` profiles. Built-in profiles MUST select their fixed base URL; the custom profile MUST accept a normalized base URL and free-form planner, answer, and embedding model identifiers. Every resolved base URL MUST match an origin explicitly supplied by deployment configuration, and the API MUST reject user-info, query, fragment, redirect, or non-allowlisted targets before making a request.
+The configuration contract MUST use one role-aware provider-profile registry. It MUST support `mistral`, `openrouter`, `openai`, `groq`, `jina`, and `custom-openai-compatible` profiles. Generation MUST allow Mistral, OpenRouter, OpenAI, Groq, and custom profiles; embeddings MUST allow Mistral, OpenRouter, OpenAI, Jina, and custom profiles. Built-in profiles MUST select their fixed base URL and declare their supported roles. The custom profile MUST accept a normalized base URL and free-form model identifiers for its selected role. Every resolved base URL MUST match an origin explicitly supplied by deployment configuration, and the API MUST reject user-info, query, fragment, redirect, or non-allowlisted targets before making a request.
 
 #### Scenario: Admin selects a built-in profile
 
-- **WHEN** the admin saves Mistral or OpenRouter with valid model identifiers and a credential
+- **WHEN** the admin saves a role-compatible built-in profile with valid model identifiers and a credential
 - **THEN** the server resolves the profile's fixed base URL and verifies its origin against deployment policy
+
+#### Scenario: Role-incompatible built-in profile is submitted
+
+- **WHEN** the admin submits Jina for generation or Groq for embeddings
+- **THEN** shared and server validation reject the connection before any provider request
 
 #### Scenario: Admin selects an approved corporate endpoint
 
@@ -45,19 +50,45 @@ The configuration contract MUST support `mistral`, `openrouter`, and `custom-ope
 - **WHEN** the custom URL contains user info, a query, a fragment, follows a redirect, or resolves to an origin absent from the deployment allowlist
 - **THEN** the system rejects it without sending a credential or synthetic test payload
 
+### Requirement: AI configuration revisions bind generation and embedding connections atomically
+
+One immutable provider revision MUST contain exactly one generation connection and one effective embedding connection. Generation MUST own the planner and answer models plus reasoning configuration. Embeddings MUST either reuse the generation profile, endpoint, and credential or define one separate profile, endpoint, credential, and model. The system MUST NOT expose independent active pointers or lifecycle operations for the two connections, and runtime MUST never serve a mixed pair from different revisions.
+
+#### Scenario: Admin chooses separate providers
+
+- **WHEN** the admin saves OpenAI or Groq for generation and Mistral or Jina for embeddings with valid role-specific fields
+- **THEN** one draft revision contains both connections and their model identifiers
+- **AND** neither connection becomes active independently
+
+#### Scenario: Embeddings reuse generation
+
+- **WHEN** the admin selects `reuse_generation`
+- **THEN** the revision derives the effective embedding profile, endpoint, and credential from generation
+- **AND** it stores no independent embedding credential
+
+#### Scenario: Separate embedding fields are incomplete
+
+- **WHEN** separate mode omits a required embedding profile, endpoint, credential, or model
+- **THEN** the shared contract rejects the draft before persistence or provider work
+
 ### Requirement: Provider credentials remain secret at every boundary
 
-The configuration repository MUST persist provider credentials using authenticated encryption under a required environment-owned master key. Shared schemas, `admin.aiProvider` responses, the Integrations UI, jobs, audit events, logs, traces, metrics, and client errors MUST NOT expose plaintext credentials or stored ciphertext. Read models MUST expose only whether a credential exists and an optional masked suffix.
+The configuration repository MUST persist each independent provider credential using authenticated encryption under a required environment-owned master key and connection-role-specific authenticated data. Shared schemas, `admin.aiProvider` responses, the Settings UI, jobs, audit events, logs, traces, metrics, and client errors MUST NOT expose plaintext credentials or stored ciphertext. Read models MUST expose only role-specific credential presence and optional masked suffixes. A changed connection MUST require a new credential; an unchanged connection MAY inherit encrypted credential material from the base revision. Reuse-generation mode MUST reject a second embedding credential.
 
 #### Scenario: Admin saves a provider credential
 
 - **WHEN** a valid credential is submitted for a draft revision
 - **THEN** the repository stores authenticated ciphertext and encryption metadata rather than plaintext
 
+#### Scenario: Admin saves two connection credentials
+
+- **WHEN** valid separate generation and embedding credentials are submitted
+- **THEN** the repository stores two independently authenticated encryption envelopes rather than plaintext
+
 #### Scenario: Admin reads an existing configuration
 
 - **WHEN** the configuration has a stored credential
-- **THEN** the response reports that a credential is configured and may show a masked suffix
+- **THEN** the response reports role-specific credential presence and may show masked suffixes
 - **AND** neither plaintext nor ciphertext is returned
 
 #### Scenario: Encryption configuration is missing
@@ -166,7 +197,7 @@ The control plane MUST audit draft saves, tests, activation requests, activation
 
 ### Requirement: Existing Mistral service is bootstrapped once without a runtime fallback
 
-An explicit idempotent rollout operation MUST create an encrypted active Mistral revision from the legacy validated environment configuration only when no AI control or configuration row exists. It MUST do nothing when database configuration already exists. Normal runtime resolution MUST NOT fall back to legacy environment provider values. The bootstrap input MUST NOT include a regional Mistral server selector and MUST create the built-in Mistral revision with its approved global endpoint.
+An explicit idempotent rollout operation MUST create an encrypted active Mistral revision from the legacy validated environment configuration only when no AI control or configuration row exists. It MUST create one composite revision in `reuse_generation` mode with one encrypted generation credential and the legacy planner, answer, and embedding models. It MUST do nothing when database configuration already exists. Normal runtime resolution MUST NOT fall back to legacy environment provider values. The bootstrap input MUST NOT include a regional Mistral server selector and MUST create the built-in Mistral revision with its approved global endpoint.
 
 #### Scenario: Existing deployment is upgraded
 
