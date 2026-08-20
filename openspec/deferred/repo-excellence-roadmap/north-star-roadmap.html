@@ -250,17 +250,18 @@
         </thead>
         <tbody>
           <tr>
-            <td>Источник десктопных доказательств</td>
+            <td>Источник исполнения и десктопных доказательств</td>
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
-              Исполняемый baseline: ветка <code>campaign/cr-001-20260820</code>,
-              фиксация
+              Текущий clean source для исполнения: ветка
+              <code>campaign/cr-001-20260820</code>,
               <code>commit</code>
-              <code>e5105aa9ee75206a7a941568e201e7218eacce84</code>, дерево
+              <code>b0b8a9f40d46caa026cc6e0a226cb1d2996b1275</code>, дерево
               <code>tree</code>
-              <code>07d9c8439c7346c4a00f52332c54675040cf2b67</code>. Последующие
-              коммиты OpenSpec являются только docs-потомками этого baseline,
-              без изменений исполняемого продукта или harness.
+              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>. Исторический
+              51-кадровый desktop-пакет привязан к предыдущему source SHA
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>; он не
+              подменяет fresh exact-SHA capture на текущем HEAD.
             </td>
           </tr>
           <tr>
@@ -272,6 +273,17 @@
               суммы и невизуальные оракулы. Это доказательная база для
               ограниченного десктопного просмотра, но не закрывает всю задачу
               6.3.
+            </td>
+          </tr>
+          <tr>
+            <td>Current runtime canary</td>
+            <td><span class="status ok">LIVE-PROVEN-BOUNDED</span></td>
+            <td>
+              На текущем SHA естественно завершился один реальный Chromium
+              canary для <code>admin / minimal / /admin</code>: parent
+              <code>PASS</code>, <code>BRANCH_EXHAUSTED</code>, 277 continuation
+              receipts и 390 control observations. Это один bounded slice, а
+              не полная матрица.
             </td>
           </tr>
           <tr>
@@ -309,6 +321,13 @@
           именно было снято и проверено в Chrome, запущенном из исходников. Он
           не подменяет независимую проверку, принятие
           <code>runtime-sweep</code> или доказательство выпуска.
+        </p>
+        <p>
+          <strong>Свежий runtime-пакет на текущем HEAD:</strong>
+          <code class="path"
+            >/Users/wrk/work/customreport-archive/2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code
+          >. Он относится к одному Admin/minimal canary и не является заменой
+          desktop-пакету или полной матрице.
         </p>
         <table>
           <thead>
@@ -415,13 +434,14 @@
         <li>
           <strong>5.15 · ограниченный контур продолжения · ACCEPTED</strong>
           <span>
-            Пакет Admin/minimal на exact-SHA
-            <code>2026-08-20-runtime-514-e5105aa9-admin-rerun7</code> дал два
-            неперекрывающихся чанка, <code>BRANCH_EXHAUSTED</code>, parent-only
-            <code>PASS</code> и <code>PREFLIGHT_CANARY</code>. 44
-            детерминированных теста закрывают эквивалентность reducer и
-            негативные границы. Полное или shard-продолжение остаётся отдельным
-            контуром <code>NOT-PROVEN</code>.
+            Исторический пакет Admin/minimal на exact-SHA
+            <code>2026-08-20-runtime-514-e5105aa9-admin-rerun7</code> дал
+            parent-only <code>PASS</code> и <code>PREFLIGHT_CANARY</code>.
+            Текущий повтор на <code>b0b8a9f40</code> сохранён отдельно в
+            <code>2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code>
+            и также завершился <code>PASS</code> с
+            <code>BRANCH_EXHAUSTED</code>. Полное или shard-продолжение остаётся
+            отдельным контуром <code>NOT-PROVEN</code>.
           </span>
         </li>
         <li>
