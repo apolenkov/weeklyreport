@@ -46,7 +46,12 @@ function ReportsLatestContent() {
 
   useEffect(() => {
     if (reportId) {
-      router.replace(`/reports/${reportId}?source=status&recovery=${recovery}`);
+      router.replace(
+        `/reports/${reportId}?source=status&recovery=${recovery}`,
+        {
+          scroll: false,
+        },
+      );
     }
   }, [reportId, router, recovery]);
 
