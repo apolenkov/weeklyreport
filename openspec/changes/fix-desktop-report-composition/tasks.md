@@ -43,10 +43,10 @@ Evidence: `customreport-archive/2026-08-17-history-empty-surface-d89b99cf/` bind
 
 - [x] 6.1 Verify `/reports/latest` preserves the viewport with `scroll: false` and add focused regression coverage.
 - [x] 6.2 Verify the `chart-1`/`chart-4` legend tokens meet desktop WCAG AA contrast and add token regression coverage.
-- [ ] 6.3 Capture a complete fresh exact-SHA 51-frame + T01-T07 canonical-seeded real-Chrome packet with manifest, checksums, and nonvisual oracles.
+- [x] 6.3 Capture a complete fresh exact-SHA 51-frame + T01-T07 canonical-seeded real-Chrome packet with manifest, checksums, and nonvisual oracles.
 - [ ] 6.4 Obtain two independent full-frame reviews and complete the final acceptance synthesis.
 
-Current evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/CANDIDATE-PROBE.json` and the focused 7/7 deterministic checks cover the candidate corrections. Canonical DB replay and the complete 51-frame + T01-T07 packet remain NOT-PROVEN; historical packets do not close tasks 6.3 or 6.4.
+Evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/` is a complete source-bound packet for branch `rescue/exemplary-repository-20260812`, commit `0d03068fae9efc79c062698fd34c41c9810f9af2`, and tree `e21185142e8ba8e3025f1e8eece68a2ccf941f1d`; its manifest records a clean worktree at capture. `MANIFEST.json` records all 51 primary frames, the supplemental `L10-top-context`, and 18 T01-T07 transition records; `FINAL-METRICS.json` records no capture or transition errors and zero blocker issues; `CONTROL-LEDGER.json` records T07 focus/dialog/popover outcomes; and `SHA256SUMS.txt` binds the packet files. The packet is evidence for 6.3 only. Its manifest explicitly says `capture sanity only; no independent visual review claimed`; no two-review synthesis is present, so 6.4 remains NOT-PROVEN and CR-001 remains open.
 
 ## 7. Owner-feedback correction: Head Presentation canvas and carousel
 
