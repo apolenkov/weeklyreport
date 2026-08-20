@@ -9,11 +9,7 @@ import {
   EMPTY_CAPACITY_SURVEY_TIMING_SNAPSHOT,
 } from "./preflight-capacity-survey-timing-snapshot.ts";
 
-export {
-  CAPACITY_SURVEY_TIMING_STAGES,
-  type CapacitySurveyTimingSnapshot,
-  type CapacitySurveyTimingStage,
-} from "./preflight-capacity-survey-timing-contract.ts";
+export type { CapacitySurveyTimingStage } from "./preflight-capacity-survey-timing-contract.ts";
 
 export class CapacitySurveyTimingError extends Error {
   override readonly name = "CapacitySurveyTimingError";

@@ -325,7 +325,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::23:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
+      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::25:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
       "file": "src/features/report-pages/ui/head/head-report-shell.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -1074,7 +1074,7 @@
       "rationale": "DialogSurface uses the shared useDialogFocus hook, which traps Tab/Shift+Tab, handles Escape, restores focus, and tests role/aria-modal behavior. Native dialog is not a drop-in replacement for this established compatibility contract; the warning is a false positive."
     },
     {
-      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::28:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::29:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
       "file": "src/shared/ui/report-shell/segmented-toggle.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",

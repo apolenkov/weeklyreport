@@ -1,20 +1,11 @@
 import { REVEAL_EXECUTION_TIMING_STAGES } from "../reveal/interaction/preflight-reveal-types.ts";
 
-const CAPACITY_SURVEY_BROWSER_TIMING_STAGES = [
-  "prepare",
-  "navigate",
-  "inventory",
-  "freeze",
-  "executeReveal",
-] as const;
-
-export const CAPACITY_SURVEY_TIMING_STAGES = [
-  ...CAPACITY_SURVEY_BROWSER_TIMING_STAGES,
-  ...REVEAL_EXECUTION_TIMING_STAGES,
-] as const;
+type CapacitySurveyBrowserTimingStage =
+  "prepare" | "navigate" | "inventory" | "freeze" | "executeReveal";
 
 export type CapacitySurveyTimingStage =
-  (typeof CAPACITY_SURVEY_TIMING_STAGES)[number];
+  | CapacitySurveyBrowserTimingStage
+  | (typeof REVEAL_EXECUTION_TIMING_STAGES)[number];
 
 export type CapacitySurveyTimingSnapshot = Readonly<{
   readonly elapsedMs: number;

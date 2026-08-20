@@ -51,7 +51,7 @@ const isFrontierAsset = (
   }
 };
 
-export const failureFrontierDescriptorFor = (
+const failureFrontierDescriptorFor = (
   asset: RevealContinuationAsset,
 ): RevealFailureFrontierAssetDescriptor => {
   if (!isFrontierAsset(asset))

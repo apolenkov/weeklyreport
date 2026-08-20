@@ -8,7 +8,6 @@ import {
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import type { CapacitySurveyPlan } from "../../capacity/preflight-capacity-survey-contract.ts";
-import type { RevealContinuationAsset } from "../continuation/preflight-reveal-continuation-assets.ts";
 import {
   assetRefSchema,
   PREFLIGHT_REVEAL_BRANCH,
@@ -17,8 +16,6 @@ import {
   PREFLIGHT_REVEAL_PATH_NODE,
   PREFLIGHT_REVEAL_SURFACE,
   representativeInputSchema,
-  type RevealBranchAsset,
-  type RevealCandidateList,
 } from "../continuation/preflight-reveal-continuation-schemas.ts";
 
 export const PREFLIGHT_REVEAL_FAILURE_FRONTIER =
@@ -214,9 +211,3 @@ export const assertFailureFrontierMatchesPlan = (
       `Failure-frontier packet does not match exact capacity plan: ${mismatches.join(", ")}`,
     );
 };
-
-export type FailureFrontierContent = Readonly<{
-  readonly branch: RevealBranchAsset;
-  readonly candidates: RevealCandidateList;
-  readonly assets: readonly RevealContinuationAsset[];
-}>;

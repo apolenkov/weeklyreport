@@ -5,7 +5,6 @@ import { captureRevealFailureFrontier } from "./preflight-reveal-failure-frontie
 export {
   FAILURE_FRONTIER_LIMITS,
   FAILURE_FRONTIER_MANIFEST_NAME,
-  PREFLIGHT_REVEAL_FAILURE_FRONTIER,
   RevealFailureFrontierError,
 } from "./preflight-reveal-failure-frontier-contract.ts";
 export {

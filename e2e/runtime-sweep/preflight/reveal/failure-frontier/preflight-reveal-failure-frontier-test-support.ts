@@ -42,7 +42,7 @@ export const failureFrontierCandidate: RevealCandidate = {
   },
 };
 
-export const failureFrontierBranch = (): RevealBranch => {
+const failureFrontierBranch = (): RevealBranch => {
   const inventory = {
     controls: [failureFrontierCandidate.control],
     issues: [],
