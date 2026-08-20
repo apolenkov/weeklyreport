@@ -188,7 +188,7 @@
       reset-hard, wipe-manual-uat, and policy backfill. Add fail-before-primitive
       negatives, exact CI targets, onboarding/runtime docs, and the durable
       destructive-db-guard delta.
-- [ ] 5.14 Bound exhaustive preflight diagnostic amplification by retaining the
+- [x] 5.14 Bound exhaustive preflight diagnostic amplification by retaining the
       failed call/source trace, a separate full network HAR without response
       bodies, failure screenshot, video, and error context without per-call
       trace DOM snapshots/screenshots; prove the policy does not trim reveal or
