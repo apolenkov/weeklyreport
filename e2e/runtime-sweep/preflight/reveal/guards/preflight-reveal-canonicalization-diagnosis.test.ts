@@ -185,7 +185,7 @@ describe("independent disclosure diagnosis", () => {
         surfaceFor({ a: true, b: true, c: true, d: true }),
       ],
     );
-    const singleConflict = { ...firstSingle, url: "/other" };
+    const singleConflict = [firstSingle, { ...firstSingle, url: "/other" }];
     const cases = [
       [firstSingle, known, "depth-too-shallow", false],
       [untrusted, known, "step-not-eligible", false],
@@ -193,7 +193,7 @@ describe("independent disclosure diagnosis", () => {
       [fixture.candidate, [], "single-branch-missing", false],
       [
         fixture.candidate,
-        [singleConflict, ...fixture.singles.slice(1), ...fixture.pairs],
+        [...singleConflict, ...fixture.singles.slice(1), ...fixture.pairs],
         "single-branch-material-or-url-mismatch",
         false,
       ],
