@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
 import { executeControlAction } from "../control-actions/control-actions.ts";
-import { inventoryTargetLocator } from "./rendered-control-target.ts";
+import { inventoryDom } from "../dom/dom-inventory.ts";
+import {
+  inventoryTargetLocator,
+  targetLocator,
+} from "./rendered-control-target.ts";
 
 const clickAction = (controlKey: string): Action => ({
   controlKey,
@@ -185,6 +189,40 @@ test("preserves inventory name sources before rendered text", async ({
 
   expect(result).toMatchObject({ status: "pass" });
   await expect(page.locator("output")).toHaveText("2");
+});
+
+test("executes a composite card whose source name needs boundary spaces", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <button type="button"><span>Внутренний BI</span><span>Волков И.О. / Лебедев В.</span><span><svg aria-hidden="true"></svg>100% ready</span></button>
+    <output></output>
+    <script>
+      document.querySelector("button").addEventListener("click", () => {
+        document.querySelector("output").textContent = "clicked";
+      });
+    </script>
+  `);
+
+  const control = (await inventoryDom(page)).controls.find(
+    ({ role }) => role === "button",
+  );
+  if (control === undefined) throw new Error("Composite card is missing");
+  const actionControl = {
+    ...control,
+    ariaRole: control.role,
+  } as const;
+  await expect(targetLocator(page, actionControl)).toHaveCount(0);
+  const result = await executeControlAction({
+    page,
+    control: actionControl,
+    action: clickAction(control.controlKey),
+    observeOutcome: (): Promise<"pass"> => Promise.resolve("pass"),
+    timeoutMs: 250,
+  });
+
+  expect(result).toMatchObject({ status: "pass" });
+  await expect(page.locator("output")).toHaveText("clicked");
 });
 
 test("matches a CSS-transformed aria-labelledby inventory name", async ({
