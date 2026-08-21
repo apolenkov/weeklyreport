@@ -1,5 +1,6 @@
 import type { MatrixPreflightControl } from "../../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
 import { freezeDeep } from "../../../../source/manifest-source.ts";
+import { candidatesForImmediateReveal } from "../../guards/preflight-reveal-registration.ts";
 import type {
   RevealCandidate,
   RevealDiscoveryState,
@@ -46,7 +47,13 @@ const candidatesForCheckpoint = (input: {
   return canonicalCandidatesForList({
     branch: input.branch,
     branchDigest: input.checkpoint.currentBranchRef ?? "",
-    candidates: revealCandidatesFor(input.branch.inventory, input.route),
+    candidates: candidatesForImmediateReveal(
+      {
+        candidatesFor: (inventory) =>
+          revealCandidatesFor(inventory, input.route),
+      },
+      input.branch,
+    ),
     candidateList,
     candidateListDigest: digest,
   });
