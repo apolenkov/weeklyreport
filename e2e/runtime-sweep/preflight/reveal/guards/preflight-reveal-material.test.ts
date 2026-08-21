@@ -6,7 +6,7 @@ import {
   revealSurfaceFor,
 } from "../../reveal-path.ts";
 import type { RevealBranch } from "../interaction/preflight-reveal-branches.ts";
-import { independentDisclosureReductionFor } from "./preflight-reveal-canonicalization.ts";
+import { independentDisclosureReductionFor } from "./preflight-reveal-canonicalization-diagnosis.ts";
 import {
   controlsForImmediateReveal,
   registerVisitedRevealState,

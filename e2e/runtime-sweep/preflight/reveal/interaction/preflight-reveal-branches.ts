@@ -10,7 +10,7 @@ import {
   type RevealPath,
   type RevealSurface,
 } from "../../reveal-path.ts";
-import { independentDisclosureReductionDiagnosisForState } from "../guards/preflight-reveal-canonicalization.ts";
+import { independentDisclosureReductionDiagnosisForState } from "../guards/preflight-reveal-canonicalization-diagnosis.ts";
 import {
   controlsForImmediateReveal,
   registerDynamicControls,
