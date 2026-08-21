@@ -9,12 +9,14 @@ import type {
   RevealDiscoveryState,
 } from "../interaction/preflight-reveal-branches.ts";
 import {
+  matchesUnion,
   type RevealSurfaceMaterial,
   revealSurfaceMaterialFor,
   sameRevealSurfaceMaterial,
 } from "./reveal-surface-material.ts";
 
 const MIN_CANONICALIZATION_DEPTH = 3;
+const SOURCE_BOUND_ROW_LOCAL = "source-bound-row-local" as const;
 
 type BranchView = Readonly<Pick<RevealBranch, "path" | "surface" | "url">>;
 
@@ -25,19 +27,12 @@ type ToggleBinding = Readonly<{
   readonly targetId: string;
 }>;
 
-type MaterialControl = RevealSurfaceMaterial["controls"][number];
-
 type BindingPair = Readonly<{
   readonly left: ToggleBinding;
   readonly right: ToggleBinding;
   readonly leftIndex: number;
   readonly rightIndex: number;
 }>;
-
-interface MaterialUnionState {
-  readonly controls: Map<string, MaterialControl>;
-  readonly changed: Map<string, string>;
-}
 
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
 
@@ -57,6 +52,29 @@ const hasModalOrBackgroundControl = (surface: RevealSurface): boolean =>
       keyboardFocusScope === "background",
   );
 
+const isSourceBoundDisclosure = (
+  control: RevealSurfaceControl | undefined,
+): control is RevealSurfaceControl =>
+  control?.ariaRole === "button" &&
+  control.enabled &&
+  control.interactionEffect !== "mutation-required" &&
+  control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL;
+
+const hasValidTargetId = (value: string | null | undefined): value is string =>
+  typeof value === "string" && value.length > 0 && !/\s/u.test(value);
+
+const sourceBoundAfterControlFor = (
+  step: RevealPath["steps"][number],
+  targetId: string,
+): RevealSurfaceControl | undefined => {
+  const matches = step.after.controls.filter(
+    (control) =>
+      control.ariaControls === targetId &&
+      control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+};
+
 const toggleBindingForStep = (
   step: RevealPath["steps"][number],
 ): ToggleBinding | undefined => {
@@ -70,20 +88,13 @@ const toggleBindingForStep = (
     return undefined;
 
   const source = sourceControlFor(step.before, step.controlKey);
-  const after = sourceControlFor(step.after, step.controlKey);
-  const targetId = source?.ariaControls;
+  if (!isSourceBoundDisclosure(source)) return undefined;
+  const targetId = source.ariaControls;
+  if (!hasValidTargetId(targetId) || typeof source.ariaExpanded !== "boolean")
+    return undefined;
+  const after = sourceBoundAfterControlFor(step, targetId);
   if (
-    source === undefined ||
     after === undefined ||
-    source.ariaRole !== "button" ||
-    !source.enabled ||
-    source.interactionEffect === "mutation-required" ||
-    source.disclosureIndependence !== "source-bound-row-local" ||
-    after.disclosureIndependence !== "source-bound-row-local" ||
-    typeof targetId !== "string" ||
-    targetId.length === 0 ||
-    /\s/u.test(targetId) ||
-    typeof source.ariaExpanded !== "boolean" ||
     typeof after.ariaExpanded !== "boolean" ||
     after.ariaExpanded === source.ariaExpanded
   )
@@ -123,93 +134,6 @@ const branchForSequence = (
   )
     ? first
     : undefined;
-};
-
-const materialControlsByKeyFor = (
-  material: RevealSurfaceMaterial,
-): ReadonlyMap<string, MaterialControl> =>
-  new Map(material.controls.map((control) => [control.controlKey, control]));
-
-const rootOrderIsStable = (
-  root: RevealSurfaceMaterial,
-  actual: RevealSurfaceMaterial,
-): boolean => {
-  const rootKeys = root.controls.map(({ controlKey }) => controlKey);
-  const actualRootKeys = actual.controls
-    .map(({ controlKey }) => controlKey)
-    .filter((controlKey) => rootKeys.includes(controlKey));
-  return stableSerialize(actualRootKeys) === stableSerialize(rootKeys);
-};
-
-const mergeMaterialControl = (
-  state: MaterialUnionState,
-  control: MaterialControl,
-): boolean => {
-  const signature = stableSerialize(control);
-  const current = state.controls.get(control.controlKey);
-  if (current !== undefined && stableSerialize(current) === signature)
-    return true;
-  const previousChange = state.changed.get(control.controlKey);
-  if (previousChange !== undefined && previousChange !== signature)
-    return false;
-  state.changed.set(control.controlKey, signature);
-  state.controls.set(control.controlKey, control);
-  return true;
-};
-
-const mergeSingleMaterial = (
-  state: MaterialUnionState,
-  root: RevealSurfaceMaterial,
-  single: BranchView,
-): boolean => {
-  const material = revealSurfaceMaterialFor(single.surface);
-  const rootControlsByKey = materialControlsByKeyFor(root);
-  const controlsByKey = materialControlsByKeyFor(material);
-  if (!root.controls.every(({ controlKey }) => controlsByKey.has(controlKey)))
-    return false;
-  return material.controls.every((control) => {
-    const rootControl = rootControlsByKey.get(control.controlKey);
-    return rootControl !== undefined &&
-      stableSerialize(rootControl) === stableSerialize(control)
-      ? true
-      : mergeMaterialControl(state, control);
-  });
-};
-
-const unionMaterialFor = (
-  root: RevealSurfaceMaterial,
-  singles: readonly BranchView[],
-): ReadonlyMap<string, MaterialControl> | undefined => {
-  const state: MaterialUnionState = {
-    controls: new Map(
-      root.controls.map((control) => [control.controlKey, control]),
-    ),
-    changed: new Map(),
-  };
-  return singles.every((single) => mergeSingleMaterial(state, root, single))
-    ? state.controls
-    : undefined;
-};
-
-const matchesUnion = (input: {
-  readonly root: RevealSurfaceMaterial;
-  readonly singles: readonly BranchView[];
-  readonly actual: RevealSurfaceMaterial;
-}): boolean => {
-  const expected = unionMaterialFor(input.root, input.singles);
-  if (!expected) return false;
-  if (
-    input.actual.controls.length !== expected.size ||
-    !rootOrderIsStable(input.root, input.actual)
-  )
-    return false;
-  return input.actual.controls.every((control) => {
-    const expectedControl = expected.get(control.controlKey);
-    return (
-      expectedControl !== undefined &&
-      stableSerialize(expectedControl) === stableSerialize(control)
-    );
-  });
 };
 
 const bindingPairsFor = (
