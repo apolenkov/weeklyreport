@@ -263,13 +263,15 @@
               <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code>, дерево
               <code>7db797414e8b664b6d3f088e2973f2253ec0fa26</code>; его
               admin/demo canary завершился fail-closed на границе ёмкости и не
-              стал runtime-proven baseline. Новый source-candidate после
-              исправления identity: commit
-              <code>709f27d6b245b40c5789163345f614a49b396384</code>, дерево
-              <code>8dd70060fa58bfdf9446740468bd490811f87769</code>; targeted
-              regression и все 38 lint-gates зелёные, но новый exact admin/demo
-              canary ещё не запускался. Исторический 51-кадровый desktop-пакет
-              привязан к предыдущему source SHA
+              стал runtime-proven baseline. Новый exact source после исправления
+              identity: commit
+              <code>43df65c31e9df7e055027b77df3e047740b34235</code>, дерево
+              <code>d2d3c80453e0fd15cbe9e636c63a0e5f07ec5131</code>; targeted
+              regression и все 38 lint-gates зелёные. Его corrected admin/demo
+              canary также fail-closed на <code>8199 &gt; 8192</code> без PASS,
+              а Sol вынес <code>ITERATE</code> из-за оставшейся
+              occurrence-sensitive identity. Исторический 51-кадровый
+              desktop-пакет привязан к предыдущему source SHA
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с деревом
               <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он не
               подменяет fresh exact-SHA capture на текущем HEAD. Предыдущий
@@ -344,10 +346,12 @@
               <code>Show -&gt; Hide</code>: <code>controlKey</code> строится из
               accessible name, поэтому after-control не находится по старому
               ключу. Это дефект identity в harness, не дефект продукта. В
-              source-candidate <code>709f27d6b</code> добавлена стабильная
-              target-identity по <code>aria-controls</code> и реалистичный
-              Show-to-Hide regression; exact canary для этого SHA остаётся
-              следующим доказательным шагом.
+              source-candidate добавлена стабильная target-identity по
+              <code>aria-controls</code> и реалистичный Show-to-Hide regression;
+              exact source <code>43df65c31</code> воспроизвёл capacity boundary,
+              а Sol оставил <code>ITERATE</code>, поскольку sequence/uniqueness
+              всё ещё используют name-derived <code>controlKey</code> для
+              одинаковых sibling controls.
             </td>
           </tr>
           <tr>
@@ -533,10 +537,12 @@
             архиве как <code>HARNESS-CAPACITY-BOUNDARY / NOT-PROVEN</code> с
             полным checksum-пакетом; Sol классифицировал текущую реализацию как
             <code>ITERATE</code> из-за неустойчивой name-derived identity. Это
-            не разрешает повышать лимит или обрезать граф. Source-candidate
-            <code>709f27d6b245b40c5789163345f614a49b396384</code> исправляет
-            identity и имеет зелёный детерминированный regression; exact canary
-            и новое Sol-решение ещё не опубликованы.
+            не разрешает повышать лимит или обрезать граф. Exact source
+            <code>43df65c31e9df7e055027b77df3e047740b34235</code> с зелёным
+            детерминированным regression воспроизвёл ту же границу; новый Sol
+            gate записан как <code>ITERATE</code>. Нужна target-based sequence
+            identity и regression с одинаковыми <code>Show action details</code>
+            siblings.
           </span>
         </li>
         <li>
