@@ -13,6 +13,7 @@ import {
   assertInitialLanding,
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
+import { revealReductionContextFor } from "../reveal/guards/preflight-reveal-reduction-context.ts";
 import { discoverRevealControls } from "../reveal/interaction/preflight-reveal-discovery.ts";
 import type { RevealPreparation } from "../reveal/interaction/preflight-reveal-types.ts";
 import {
@@ -111,9 +112,15 @@ export async function runBrowserPreflightSegment(input: {
   const initialInventory = await input.harness.inventory();
   if (route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(route.expectedOutcome, initialInventory);
+  const reductionContext = revealReductionContextFor({
+    source: input.source,
+    state: input.state,
+    route,
+  });
   const controls = await discoverRevealControls({
     state: input.state,
     route: revealRoute,
+    ...(reductionContext === undefined ? {} : { reductionContext }),
     initialInventory,
     harness: revealHarnessFor(input.harness),
     controlFor: preflightControlForPlan,

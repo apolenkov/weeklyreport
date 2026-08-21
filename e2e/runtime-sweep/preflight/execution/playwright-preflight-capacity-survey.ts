@@ -18,6 +18,7 @@ import {
   assertInitialLanding,
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
+import { revealReductionContextFor } from "../reveal/guards/preflight-reveal-reduction-context.ts";
 import type { RevealCandidateFailureHandler } from "../reveal/interaction/preflight-reveal-branches.ts";
 import { discoverRevealControlsWithSummary } from "../reveal/interaction/preflight-reveal-discovery.ts";
 import type { RevealExecutionKind } from "../reveal/interaction/preflight-reveal-types.ts";
@@ -166,6 +167,11 @@ export async function runPlaywrightPreflightCapacitySurvey(
   const initialInventory = await harness.inventory();
   if (target.route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(target.route.expectedOutcome, initialInventory);
+  const reductionContext = revealReductionContextFor({
+    source: input.source,
+    state: target.state,
+    route: target.route,
+  });
   input.timing?.beginCandidateQueue();
   const summary = await (async () => {
     try {
@@ -173,6 +179,7 @@ export async function runPlaywrightPreflightCapacitySurvey(
         await discoverRevealControlsWithSummary({
           state: target.state,
           route: revealRoute,
+          ...(reductionContext === undefined ? {} : { reductionContext }),
           initialInventory,
           harness: revealHarnessFor(harness),
           controlFor: preflightControlForPlan,

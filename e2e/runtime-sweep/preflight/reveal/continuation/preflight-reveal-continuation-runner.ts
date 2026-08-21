@@ -7,6 +7,7 @@ import {
   assertRoutePath,
   requiredCurrentUrl,
 } from "../guards/preflight-reveal-guards.ts";
+import { revealReductionContextFor } from "../guards/preflight-reveal-reduction-context.ts";
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import {
   type RevealDiscoveryState,
@@ -126,19 +127,27 @@ const reducerInputFor = (input: {
   readonly harness: RevealExecutionHarness;
   readonly controlFor: RevealDiscoveryInput["controlFor"];
   readonly source: SourceArtifact;
-}): RevealQueueInput => ({
-  state: input.state,
-  route: input.route,
-  initialSurface: input.initialSurface,
-  harness: input.harness,
-  controlFor: input.controlFor,
-  plansFor,
-  candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
-  maxDepth: MAX_REVEAL_DEPTH,
-  maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
-  maxRevealActions: input.source.matrixLimits.maxRevealActions,
-  maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
-});
+}): RevealQueueInput => {
+  const reductionContext = revealReductionContextFor({
+    source: input.source,
+    state: input.state,
+    route: input.route,
+  });
+  return {
+    state: input.state,
+    route: input.route,
+    ...(reductionContext === undefined ? {} : { reductionContext }),
+    initialSurface: input.initialSurface,
+    harness: input.harness,
+    controlFor: input.controlFor,
+    plansFor,
+    candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
+    maxDepth: MAX_REVEAL_DEPTH,
+    maxRevealMaterialEdges: input.source.matrixLimits.maxRevealMaterialEdges,
+    maxRevealActions: input.source.matrixLimits.maxRevealActions,
+    maxControlsPerSegment: input.source.matrixLimits.maxControlsPerSegment,
+  };
+};
 
 const initialStateFor = (
   input: RevealContinuationInput,
