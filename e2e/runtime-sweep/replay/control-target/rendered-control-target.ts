@@ -76,6 +76,14 @@ const fullscreenInteractionSelector = (selector: string): string =>
 const roleTargetLocator = (page: Page, roleName: string): Locator =>
   page.locator(fullscreenInteractionSelector(inventoryRoleSelector(roleName)));
 
+const exactRenderedText = (value: string): RegExp => {
+  const normalized = value
+    .trim()
+    .replaceAll(/\s+/gu, " ")
+    .replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+  return new RegExp(String.raw`^\s*${normalized}\s*$`, "u");
+};
+
 const isSupportedRole = (role: string): role is SupportedControlRole =>
   (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(role);
 
@@ -92,6 +100,26 @@ export const targetLocator = (
     })
     .and(roleTargetLocator(page, control.ariaRole))
     .nth(occurrenceFrom(control.controlKey) - 1);
+};
+
+/**
+ * Resolve a control using the DOM semantics used by inventoryDom.
+ *
+ * Playwright's accessibility tree can expose a native summary as `generic`
+ * while inventoryDom intentionally records it as an implicit button. The
+ * readiness path therefore adds a summary-only fallback; action execution
+ * continues to use targetLocator and its stricter accessibility intersection.
+ */
+export const inventoryTargetLocator = (
+  page: Page,
+  control: ControlActionTarget,
+): Locator => {
+  const target = targetLocator(page, control);
+  if (control.ariaRole !== "button") return target;
+  const summary = page
+    .locator(fullscreenInteractionSelector("summary:not([role])"))
+    .filter({ hasText: exactRenderedText(control.accessibleName) });
+  return target.or(summary).nth(occurrenceFrom(control.controlKey) - 1);
 };
 
 export const titleTargetLocator = (

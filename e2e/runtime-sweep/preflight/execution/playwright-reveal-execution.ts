@@ -6,7 +6,10 @@ import {
 } from "../../replay/control-actions/action-navigation-boundary.ts";
 import { SUPPORTED_CONTROL_ROLES } from "../../replay/control-actions/control-action-roles.ts";
 import { executeControlAction } from "../../replay/control-actions/control-actions.ts";
-import { targetLocator } from "../../replay/control-target/rendered-control-target.ts";
+import {
+  inventoryTargetLocator,
+  targetLocator,
+} from "../../replay/control-target/rendered-control-target.ts";
 import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
 import { snapshotPage } from "../../replay/live-control/live-control-observation.ts";
 import type { LiveControlObservation } from "../../replay/live-control/live-control-planning.ts";
@@ -14,11 +17,13 @@ import {
   observerFor,
   targetFor,
 } from "../../replay/live-control/live-control-records.ts";
+import { stableSerialize } from "../../support/ids.ts";
 import type { RevealRepresentativeInput } from "../reveal/interaction/preflight-reveal-transition.ts";
 import { representativeInputForFill } from "../reveal/interaction/preflight-reveal-transition.ts";
-import type {
-  RevealExecution,
-  RevealExecutionHarness,
+import {
+  RevealDiscoveryError,
+  type RevealExecution,
+  type RevealExecutionHarness,
 } from "../reveal/interaction/preflight-reveal-types.ts";
 import type { RevealSurface, RevealSurfaceControl } from "../reveal-path.ts";
 import { settleRevealActionNavigation } from "./playwright-reveal-navigation.ts";
@@ -45,13 +50,40 @@ const controlTargetFor = (
 export const waitForExpectedRevealSurface = async (input: {
   readonly page: Page;
   readonly expected: RevealSurface;
+  readonly actual: RevealSurface;
 }): Promise<void> => {
-  const supportedControls = input.expected.controls.filter((control) =>
-    (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(control.ariaRole),
+  const expectedByKey = new Map(
+    input.expected.controls.map((control) => [control.controlKey, control]),
   );
+  const actualByKey = new Map(
+    input.actual.controls.map((control) => [control.controlKey, control]),
+  );
+  for (const actualControl of actualByKey.values()) {
+    const expectedControl = expectedByKey.get(actualControl.controlKey);
+    if (
+      expectedControl === undefined ||
+      stableSerialize(expectedControl) !== stableSerialize(actualControl)
+    )
+      throw new RevealDiscoveryError(
+        `Reveal readiness surface changed unexpectedly for ${actualControl.controlKey}`,
+      );
+  }
+  const missingControls = input.expected.controls.filter(
+    (control) => !actualByKey.has(control.controlKey),
+  );
+  const unsupportedControl = missingControls.find(
+    (control) =>
+      !(SUPPORTED_CONTROL_ROLES as readonly string[]).includes(
+        control.ariaRole,
+      ),
+  );
+  if (unsupportedControl !== undefined)
+    throw new RevealDiscoveryError(
+      `Reveal readiness cannot wait for unsupported role ${unsupportedControl.ariaRole}`,
+    );
   await Promise.all(
-    supportedControls.map((control) =>
-      targetLocator(input.page, controlTargetFor(control)).waitFor({
+    missingControls.map((control) =>
+      inventoryTargetLocator(input.page, controlTargetFor(control)).waitFor({
         state: "visible",
         timeout: REVEAL_DATA_READY_TIMEOUT_MS,
       }),

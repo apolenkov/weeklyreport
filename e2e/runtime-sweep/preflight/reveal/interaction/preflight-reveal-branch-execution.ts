@@ -80,11 +80,13 @@ const replayStep = async (input: {
   assertRoutePath(input.route, executionUrl);
   assertRevealNonMutationProof(step.nonMutation);
   assertNonMutation(execution);
+  const executionSurface = revealSurfaceFor(execution.inventory.controls);
   const settledInventory =
-    input.harness.waitForRevealSurfaceReady === undefined
+    input.harness.waitForRevealSurfaceReady === undefined ||
+    stableSerialize(executionSurface) === stableSerialize(step.after)
       ? execution.inventory
       : await input.harness
-          .waitForRevealSurfaceReady(step.after)
+          .waitForRevealSurfaceReady(step.after, executionSurface)
           .then(async () => input.harness.inventory());
   const surface = revealSurfaceFor(settledInventory.controls);
   if (stableSerialize(surface) !== stableSerialize(step.after))
