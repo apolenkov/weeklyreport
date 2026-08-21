@@ -11,6 +11,7 @@ import {
   type RevealSurface,
 } from "../../reveal-path.ts";
 import * as reductionDiagnosis from "../guards/preflight-reveal-canonicalization-diagnosis.ts";
+import type { RevealReductionContext } from "../guards/preflight-reveal-reduction-context.ts";
 import {
   controlsForImmediateReveal,
   registerDynamicControls,
@@ -95,6 +96,7 @@ export type RevealCandidateFailureHandler = (
 export interface RevealQueueInput {
   readonly state: CampaignMatrixState;
   readonly route: RevealRoute;
+  readonly reductionContext?: RevealReductionContext;
   readonly initialSurface: RevealSurface;
   readonly harness: RevealExecutionHarness;
   readonly controlFor: RevealControlFactory;

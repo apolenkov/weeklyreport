@@ -23,6 +23,7 @@ import {
   assertRoutePath,
   requiredCurrentUrl,
 } from "../guards/preflight-reveal-guards.ts";
+import type { RevealReductionContext } from "../guards/preflight-reveal-reduction-context.ts";
 import { revealStatePathIdentityFor } from "../guards/preflight-reveal-registration.ts";
 import {
   assertRevealControlCapacity,
@@ -109,6 +110,7 @@ export const revealCandidatesFor = (
 export type RevealDiscoveryInput = Readonly<{
   readonly state: CampaignMatrixState;
   readonly route: RevealRoute;
+  readonly reductionContext?: RevealReductionContext;
   readonly initialInventory: DomInventory;
   readonly harness: RevealExecutionHarness;
   readonly controlFor: RevealControlFactory;
@@ -304,6 +306,5 @@ export async function discoverRevealControlsWithSummary(
   };
 }
 
-export async function discoverRevealControls(input: RevealDiscoveryInput) {
-  return (await discoverRevealControlsWithSummary(input)).controls;
-}
+export const discoverRevealControls = (input: RevealDiscoveryInput) =>
+  discoverRevealControlsWithSummary(input).then(({ controls }) => controls);
