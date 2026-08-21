@@ -258,11 +258,21 @@
               <code>commit</code>
               <code>b0b8a9f40d46caa026cc6e0a226cb1d2996b1275</code>, дерево
               <code>tree</code>
-              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>.
-              Исторический 51-кадровый desktop-пакет привязан к предыдущему
-              source SHA <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с
-              деревом <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он
-              не подменяет fresh exact-SHA capture на текущем HEAD. Предыдущий
+              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>. Последний
+              exact repair-source для runtime-утверждений: commit
+              <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code>, дерево
+              <code>7db797414e8b664b6d3f088e2973f2253ec0fa26</code>; его
+              admin/demo canary завершился fail-closed на границе ёмкости и не
+              стал runtime-proven baseline. Новый source-candidate после
+              исправления identity: commit
+              <code>709f27d6b245b40c5789163345f614a49b396384</code>, дерево
+              <code>8dd70060fa58bfdf9446740468bd490811f87769</code>; targeted
+              regression и все 38 lint-gates зелёные, но новый exact admin/demo
+              canary ещё не запускался. Исторический 51-кадровый desktop-пакет
+              привязан к предыдущему source SHA
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с деревом
+              <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он не
+              подменяет fresh exact-SHA capture на текущем HEAD. Предыдущий
               roadmap-only snapshot является docs-потомком
               <code>113757b645cd06d9547e15f9e295a3445e9a2790</code> с деревом
               <code>d619006614fd431a1ba18d7f9a32d04a8fb7c509</code>; эта Git-
@@ -286,8 +296,8 @@
             <td>Current runtime canary</td>
             <td><span class="status ok">LIVE-PROVEN-BOUNDED</span></td>
             <td>
-              На текущем SHA естественно завершился один реальный Chromium
-              canary для <code>admin / minimal / /admin</code>: parent
+              На предыдущем bounded source естественно завершился один реальный
+              Chromium canary для <code>admin / minimal / /admin</code>: parent
               <code>PASS</code>, <code>BRANCH_EXHAUSTED</code>, 277 continuation
               receipts и 390 control observations. Это один bounded slice, а не
               полная матрица.
@@ -319,18 +329,25 @@
             <td>Текущий exact-SHA preflight</td>
             <td><span class="status danger">BLOCKED / NOT-PROVEN</span></td>
             <td>
-              На текущем SHA
-              <code>a27db1fd896cbbb1a4f837a8de138d4d76570179</code>, дерево
-              <code>033d3474e10122f1ebe713514ab2e3aea9ab914f</code>, bounded
-              admin/minimal canary прошёл с 390 controls и 277 receipts. Это не
-              admin/demo failure-state и не полная матрица. Предыдущая граница
-              <code>8199 &gt; 8192</code> на старом SHA сохраняется как
-              диагностическое основание. Sol нашёл, что одной pairwise эвристики
-              недостаточно: canonicalization требует явного source-bound
-              контракта
-              <code>data-reveal-independence="source-bound-row-local"</code>; до
-              exact admin/demo canary текущий repair остаётся
-              <code>NOT-PROVEN</code>.
+              На последнем проверенном repair-source
+              <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code>, дерево
+              <code>7db797414e8b664b6d3f088e2973f2253ec0fa26</code>, exact
+              <code>admin/demo</code> canary дошёл до continuation queue и
+              fail-closed остановился на <code>8199 &gt; 8192</code> после
+              примерно 15 минут. PASS, continuation authority и segment artifact
+              не опубликованы. Это подтверждает работу capacity guard, но не
+              доказывает terminal canonicalization; repair остаётся
+              <code>NOT-PROVEN</code>. Sol ранее подтвердил, что одной pairwise
+              эвристики недостаточно: нужен явный source-bound контракт
+              <code>data-reveal-independence="source-bound-row-local"</code>.
+              Тот же exact Sol gate нашёл в реальном ActionLog смену имени
+              <code>Show -&gt; Hide</code>: <code>controlKey</code> строится из
+              accessible name, поэтому after-control не находится по старому
+              ключу. Это дефект identity в harness, не дефект продукта. В
+              source-candidate <code>709f27d6b</code> добавлена стабильная
+              target-identity по <code>aria-controls</code> и реалистичный
+              Show-to-Hide regression; exact canary для этого SHA остаётся
+              следующим доказательным шагом.
             </td>
           </tr>
           <tr>
@@ -511,8 +528,15 @@
             дефект продукта. Введён source-bound контракт
             <code>data-reveal-independence="source-bound-row-local"</code> для
             row-local disclosure; без него даже pairwise-commutative triple
-            остаётся ordinary branch. Нужен exact admin/demo canary и полный
-            checksum-пакет перед новым решением.
+            остаётся ordinary branch. Exact admin/demo попытка на repair-source
+            <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code> сохранена в
+            архиве как <code>HARNESS-CAPACITY-BOUNDARY / NOT-PROVEN</code> с
+            полным checksum-пакетом; Sol классифицировал текущую реализацию как
+            <code>ITERATE</code> из-за неустойчивой name-derived identity. Это
+            не разрешает повышать лимит или обрезать граф. Source-candidate
+            <code>709f27d6b245b40c5789163345f614a49b396384</code> исправляет
+            identity и имеет зелёный детерминированный regression; exact canary
+            и новое Sol-решение ещё не опубликованы.
           </span>
         </li>
         <li>
