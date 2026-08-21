@@ -73,7 +73,10 @@ describe("preflight reveal branch execution", () => {
   });
 
   it("re-reads the replay inventory after semantic surface readiness", async () => {
-    const restore = async (populateAfterReadiness: boolean) => {
+    const restore = async (
+      populateAfterReadiness: boolean,
+      executionInventory: DomInventory = { controls: [], issues: [] },
+    ) => {
       const afterControl: DomControlObservation = {
         ...control,
         accessibleName: "Close",
@@ -125,7 +128,7 @@ describe("preflight reveal branch execution", () => {
         inventory: () => Promise.resolve(currentInventory),
         waitForRevealSurfaceReady,
         executeReveal: () => {
-          currentInventory = { controls: [], issues: [] };
+          currentInventory = executionInventory;
           return Promise.resolve({
             url: "https://runtime.invalid/lead/report",
             inventory: currentInventory,
@@ -165,8 +168,16 @@ describe("preflight reveal branch execution", () => {
     } = await restore(true);
 
     expect(waitForRevealSurfaceReady).toHaveBeenCalledOnce();
-    expect(waitForRevealSurfaceReady).toHaveBeenCalledWith(afterSurface);
+    expect(waitForRevealSurfaceReady).toHaveBeenCalledWith(
+      afterSurface,
+      revealSurfaceFor({ controls: [], issues: [] }.controls),
+    );
     expect(restored.surface).toEqual(afterSurface);
     expect(restored.inventory).toEqual(afterInventory);
+
+    const exact = await restore(false, afterInventory);
+    expect(exact.waitForRevealSurfaceReady).not.toHaveBeenCalled();
+    expect(exact.restored.surface).toEqual(afterSurface);
+    expect(exact.restored.inventory).toEqual(afterInventory);
   });
 });

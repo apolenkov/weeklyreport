@@ -106,6 +106,7 @@ export interface RevealExecutionHarness {
   /** Wait for a named, expected surface signal before replay equality checks. */
   readonly waitForRevealSurfaceReady?: (
     expected: RevealSurface,
+    actual: RevealSurface,
   ) => Promise<void>;
   readonly freezeRepresentativeInput?: (input: {
     readonly control: DomControlObservation;

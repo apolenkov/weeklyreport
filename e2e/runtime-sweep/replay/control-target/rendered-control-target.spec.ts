@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
 import { executeControlAction } from "../control-actions/control-actions.ts";
+import { inventoryTargetLocator } from "./rendered-control-target.ts";
 
 const clickAction = (controlKey: string): Action => ({
   controlKey,
@@ -122,6 +123,26 @@ test("supports a summary with its implicit button role", async ({ page }) => {
 
   expect(result).toMatchObject({ status: "pass" });
   await expect(page.locator("details")).toHaveAttribute("open", "");
+});
+
+test("resolves a native summary with the inventory button semantics", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <details>
+      <summary>Advanced</summary>
+      <p>Details</p>
+    </details>
+  `);
+
+  await expect(
+    inventoryTargetLocator(page, {
+      accessibleName: "Advanced",
+      ariaRole: "button",
+      controlKey: "button:Advanced:1",
+      enabled: true,
+    }),
+  ).toBeVisible();
 });
 
 test("selects the requested rendered-name occurrence", async ({ page }) => {
