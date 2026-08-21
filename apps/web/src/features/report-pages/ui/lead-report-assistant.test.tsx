@@ -36,10 +36,7 @@ const successOutcome = {
 
 function renderAssistant(
   availability:
-    | "available"
-    | "not_configured"
-    | "pending"
-    | "error" = "available",
+    "available" | "not_configured" | "pending" | "error" = "available",
 ) {
   const descriptors = [
     { path: ["leadForm", "assistant"], mutation: true },
