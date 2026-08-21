@@ -26,6 +26,9 @@ export const revealHarnessFor = (
     return harness.currentUrl();
   },
   inventory: harness.inventory,
+  ...(harness.waitForRevealSurfaceReady === undefined
+    ? {}
+    : { waitForRevealSurfaceReady: harness.waitForRevealSurfaceReady }),
   ...(harness.freezeRepresentativeInput === undefined
     ? {}
     : { freezeRepresentativeInput: harness.freezeRepresentativeInput }),

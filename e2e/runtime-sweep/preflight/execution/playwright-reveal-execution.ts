@@ -4,6 +4,7 @@ import {
   expectedActionNavigationFor,
   observeActionNavigation,
 } from "../../replay/control-actions/action-navigation-boundary.ts";
+import { SUPPORTED_CONTROL_ROLES } from "../../replay/control-actions/control-action-roles.ts";
 import { executeControlAction } from "../../replay/control-actions/control-actions.ts";
 import { targetLocator } from "../../replay/control-target/rendered-control-target.ts";
 import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
@@ -19,10 +20,44 @@ import type {
   RevealExecution,
   RevealExecutionHarness,
 } from "../reveal/interaction/preflight-reveal-types.ts";
+import type { RevealSurface, RevealSurfaceControl } from "../reveal-path.ts";
 import { settleRevealActionNavigation } from "./playwright-reveal-navigation.ts";
 import { captureRevealExecutionObservation } from "./playwright-reveal-observation.ts";
 
 const REVEAL_TIMEOUT_MS = 10_000;
+const REVEAL_DATA_READY_TIMEOUT_MS = 5000;
+
+const controlTargetFor = (
+  control: RevealSurfaceControl,
+): Parameters<typeof targetLocator>[1] => ({
+  controlKey: control.controlKey,
+  ariaRole: control.ariaRole,
+  accessibleName: control.accessibleName,
+  enabled: control.enabled,
+  href: control.href,
+});
+
+/**
+ * Wait for the expected semantic controls to become visible after an async
+ * query settles. Replay still inventories the page and performs strict
+ * surface equality after this bounded, named readiness signal.
+ */
+export const waitForExpectedRevealSurface = async (input: {
+  readonly page: Page;
+  readonly expected: RevealSurface;
+}): Promise<void> => {
+  const supportedControls = input.expected.controls.filter((control) =>
+    (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(control.ariaRole),
+  );
+  await Promise.all(
+    supportedControls.map((control) =>
+      targetLocator(input.page, controlTargetFor(control)).waitFor({
+        state: "visible",
+        timeout: REVEAL_DATA_READY_TIMEOUT_MS,
+      }),
+    ),
+  );
+};
 
 const nativeOptionAt = async (
   locator: ReturnType<typeof targetLocator>,
