@@ -83,6 +83,7 @@ function VerdictActions({
     <span className="flex items-center gap-1.5">
       <button
         type="button"
+        data-interaction-effect="mutation-required"
         className={APPROVE_BUTTON_CLASSNAME}
         onClick={() => onSubmit("approved")}
         disabled={disabled}
@@ -91,6 +92,7 @@ function VerdictActions({
       </button>
       <button
         type="button"
+        data-interaction-effect="mutation-required"
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
         onClick={() => onSubmit("changes_requested")}
         disabled={disabled}
