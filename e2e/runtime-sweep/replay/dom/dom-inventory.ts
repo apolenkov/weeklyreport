@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { z } from "zod";
 
 import {
   type KeyboardFocusPolicy,
@@ -25,6 +26,27 @@ export const RUNTIME_INTERACTION_EFFECTS = [
 export const RUNTIME_DISCLOSURE_INDEPENDENCE = [
   "source-bound-row-local",
 ] as const;
+
+export const runtimePreflightControlInventorySchema = z
+  .object({
+    ariaRole: z.string().min(1),
+    accessibleName: z.string(),
+    enabled: z.boolean(),
+    order: z.number().int().nonnegative(),
+    domOrderKey: z.string().min(1),
+    href: z.string().nullable(),
+    ariaControls: z.string().min(1).nullable().optional(),
+    ariaExpanded: z.boolean().nullable().optional(),
+    disclosureIndependence: z.enum(RUNTIME_DISCLOSURE_INDEPENDENCE).optional(),
+    keyboardFocusScope: z
+      .enum(["page", "active-modal", "background"])
+      .optional(),
+  })
+  .strict();
+
+export type RuntimePreflightControlInventory = z.infer<
+  typeof runtimePreflightControlInventorySchema
+>;
 
 export type RuntimeDisclosureIndependence =
   (typeof RUNTIME_DISCLOSURE_INDEPENDENCE)[number];

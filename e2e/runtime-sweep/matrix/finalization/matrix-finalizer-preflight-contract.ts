@@ -6,7 +6,10 @@ import {
   type RevealSurface,
   revealSurfaceSchema,
 } from "../../preflight/reveal-path.ts";
-import { RUNTIME_DISCLOSURE_INDEPENDENCE } from "../../replay/dom/dom-inventory.ts";
+import {
+  type RuntimePreflightControlInventory,
+  runtimePreflightControlInventorySchema,
+} from "../../replay/dom/dom-inventory.ts";
 import {
   type Action,
   actionSchema,
@@ -41,20 +44,7 @@ export type MatrixPreparation = z.infer<typeof matrixPreparationSchema>;
 
 export interface MatrixPreflightControl {
   readonly controlKey: string;
-  readonly inventory: Readonly<{
-    readonly ariaRole: string;
-    readonly accessibleName: string;
-    readonly enabled: boolean;
-    readonly order: number;
-    readonly domOrderKey: string;
-    readonly href: string | null;
-    readonly ariaControls?: string | null | undefined;
-    readonly ariaExpanded?: boolean | null | undefined;
-    readonly disclosureIndependence?:
-      (typeof RUNTIME_DISCLOSURE_INDEPENDENCE)[number] | undefined;
-    readonly keyboardFocusScope?:
-      "page" | "active-modal" | "background" | undefined;
-  }>;
+  readonly inventory: RuntimePreflightControlInventory;
   readonly action?: Action | undefined;
   readonly execution?: MatrixExecution | undefined;
   readonly inapplicable?: MatrixExecutionInapplicable | undefined;
@@ -67,24 +57,7 @@ export interface MatrixPreflightControl {
 export const matrixPreflightControlSchema: z.ZodType<MatrixPreflightControl> = z
   .object({
     controlKey: z.string().min(1),
-    inventory: z
-      .object({
-        ariaRole: z.string().min(1),
-        accessibleName: z.string(),
-        enabled: z.boolean(),
-        order: z.number().int().nonnegative(),
-        domOrderKey: z.string().min(1),
-        href: z.string().nullable(),
-        ariaControls: z.string().min(1).nullable().optional(),
-        ariaExpanded: z.boolean().nullable().optional(),
-        disclosureIndependence: z
-          .enum(RUNTIME_DISCLOSURE_INDEPENDENCE)
-          .optional(),
-        keyboardFocusScope: z
-          .enum(["page", "active-modal", "background"])
-          .optional(),
-      })
-      .strict(),
+    inventory: runtimePreflightControlInventorySchema,
     action: actionSchema.optional(),
     execution: matrixExecutionSchema.optional(),
     inapplicable: matrixInapplicableSchema.optional(),

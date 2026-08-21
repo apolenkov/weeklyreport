@@ -9,12 +9,15 @@ import {
   createManifestFixture,
   fakeManifestGit,
 } from "../../manifest/manifest-fixture.ts";
+import { revealTransitionFor } from "../../matrix/reveal-transition.ts";
 import { runBrowserPreflightSegment } from "../execution/playwright-preflight.ts";
+import { revealPathFor, revealSurfaceFor } from "../reveal-path.ts";
 import {
   assertPreflightCanaryPassForSource,
   createPreflightCanaryFailure,
   createPreflightCanaryPass,
   parsePreflightCanaryArtifact,
+  readPreflightCanaryArtifact,
   resolvePreflightCanarySelection,
   writePreflightCanaryArtifact,
 } from "./preflight-canary.ts";
@@ -114,7 +117,57 @@ describe("exact-state preflight canary artifact", () => {
       const pass = createPreflightCanaryPass({
         source,
         selection,
-        segment: { state, controls: [], specialized: [] },
+        segment: {
+          state,
+          controls: [
+            (() => {
+              const controlKey = "button:Advanced:1";
+              const inventory = {
+                ariaRole: "button",
+                accessibleName: "Advanced",
+                enabled: true,
+                order: 1,
+                domOrderKey: "0001:button:Advanced:1",
+                href: null,
+                ariaControls: "advanced-panel",
+                ariaExpanded: false,
+                disclosureIndependence: "source-bound-row-local" as const,
+                keyboardFocusScope: "page" as const,
+              };
+              const expectedSurface = revealSurfaceFor([
+                { controlKey, ...inventory, interactionEffect: null },
+              ]);
+              const action = {
+                controlKey,
+                operation: "click" as const,
+                safety: "read-only" as const,
+                transition: "none" as const,
+              };
+              const expectedActionTransition = revealTransitionFor(
+                action,
+                expectedSurface,
+                expectedSurface,
+                "/",
+                "/",
+                {
+                  status: "unchanged",
+                  beforeDigest: "a".repeat(64),
+                  afterDigest: "a".repeat(64),
+                },
+              );
+              return {
+                controlKey,
+                inventory,
+                action,
+                revealPath: revealPathFor(),
+                expectedSurface,
+                expectedActionSurface: expectedSurface,
+                expectedActionTransition,
+              };
+            })(),
+          ],
+          specialized: [],
+        },
         capturedAt: "2026-08-12T00:00:00.000Z",
       });
       const root = await mkdtemp(path.join(tmpdir(), "runtime-canary-"));
@@ -122,6 +175,9 @@ describe("exact-state preflight canary artifact", () => {
         const artifactPath = path.join(root, "PREFLIGHT_CANARY.json");
         await writePreflightCanaryArtifact(artifactPath, pass);
         expect(JSON.parse(await readFile(artifactPath, "utf8"))).toEqual(pass);
+        await expect(
+          readPreflightCanaryArtifact(artifactPath),
+        ).resolves.toEqual(pass);
         await expect(
           writePreflightCanaryArtifact(artifactPath, pass),
         ).rejects.toThrow("Cannot create immutable campaign manifest");
