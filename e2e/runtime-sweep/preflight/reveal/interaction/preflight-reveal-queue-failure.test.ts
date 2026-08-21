@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { makePlan } from "../../capacity/preflight-capacity-survey-test-support.ts";
-import { revealPathFor, revealSurfaceFor } from "../../reveal-path.ts";
+import {
+  revealPathFor,
+  revealStepFor,
+  revealSurfaceFor,
+} from "../../reveal-path.ts";
 import type {
   RevealBranch,
   RevealCandidate,
   RevealDiscoveryState,
   RevealQueueInput,
 } from "./preflight-reveal-branches.ts";
+import { RevealCapacityOverflowError } from "./preflight-reveal-branches.ts";
 import { revealCandidateIdentityFor } from "./preflight-reveal-candidate-identity.ts";
 import { processCandidates } from "./preflight-reveal-queue-candidates.ts";
 
@@ -143,5 +148,59 @@ describe("preflight reveal candidate failure boundary", () => {
 
     await expect(operation).rejects.toBe(original);
     expect(state.currentCandidateIndex).toBe(0);
+  });
+
+  it("publishes the exact terminal branch for a capacity overflow", async () => {
+    const current = branch();
+    const state = stateFor(current);
+    const pending = {
+      ...current,
+      path: revealPathFor(
+        [
+          revealStepFor(
+            candidate.action,
+            current.surface,
+            current.surface,
+            current.url,
+            current.url,
+            {
+              status: "unchanged",
+              beforeDigest: "d".repeat(64),
+              afterDigest: "d".repeat(64),
+            },
+          ),
+        ],
+        current.path.initialUrl,
+      ),
+    };
+    const captured: unknown[] = [];
+    const overflow = new RevealCapacityOverflowError({
+      current,
+      branch: pending,
+      state,
+      action: candidate.action,
+      message: "capacity overflow",
+    });
+
+    const operation = processCandidates(
+      {
+        queueInput: queueInputFor((failure) => {
+          captured.push(failure);
+        }),
+        state,
+        current,
+        candidates: [candidate],
+        index: 0,
+      },
+      () => Promise.reject(overflow),
+    );
+
+    await expect(operation).rejects.toBe(overflow);
+    expect(captured).toEqual([
+      expect.objectContaining({
+        branch: current,
+        pendingBranch: pending,
+      }),
+    ]);
   });
 });

@@ -25,6 +25,10 @@ import {
   RevealFailureFrontierError,
   type RevealFailureFrontierManifest,
 } from "./preflight-reveal-failure-frontier-contract.ts";
+import {
+  assertFailureFrontierPendingManifestBindings,
+  pendingBranchManifestFieldsFor,
+} from "./preflight-reveal-failure-frontier-pending-branch.ts";
 
 const isFrontierAsset = (
   asset: RevealContinuationAsset,
@@ -117,6 +121,7 @@ export const failureFrontierManifestFor = (input: {
   readonly plan: CapacitySurveyPlan;
   readonly failure: RevealCandidateFailure;
   readonly branch: RevealBranchAsset;
+  readonly pendingBranch?: RevealBranchAsset | undefined;
   readonly candidates: RevealCandidateList;
   readonly assets: readonly RevealContinuationAsset[];
 }): RevealFailureFrontierManifest => {
@@ -163,6 +168,7 @@ export const failureFrontierManifestFor = (input: {
     ),
     candidateIndex: input.failure.candidateIndex,
     candidateIdentity: input.failure.candidateIdentity,
+    ...pendingBranchManifestFieldsFor(input.pendingBranch),
     representativeInput: candidate.representativeInput,
     actionKeyDigest: sha256Hex(candidate.action.controlKey),
     failure: failureClassificationFor(input.failure.originalError),
@@ -187,9 +193,10 @@ export const assertFailureFrontierClosure = (
 export const assertFailureFrontierBindings = (input: {
   readonly manifest: RevealFailureFrontierManifest;
   readonly branch: RevealBranchAsset;
+  readonly pendingBranch?: RevealBranchAsset | undefined;
   readonly candidates: RevealCandidateList;
 }): void => {
-  const { manifest, branch, candidates } = input;
+  const { manifest, branch, pendingBranch, candidates } = input;
   const candidate = candidates.candidates[manifest.candidateIndex];
   const candidateDigest = candidateListDigestFor(
     candidates.candidates.map(({ candidateId }) => candidateId),
@@ -219,4 +226,9 @@ export const assertFailureFrontierBindings = (input: {
     throw new RevealFailureFrontierError(
       "Failure-frontier branch exceeds the depth bound",
     );
+  assertFailureFrontierPendingManifestBindings({
+    manifest,
+    branch,
+    ...(pendingBranch === undefined ? {} : { pendingBranch }),
+  });
 };

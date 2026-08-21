@@ -235,9 +235,12 @@ export const assetsForReceipt = (
 export const assetsForCandidateFrontier = (input: {
   readonly branchRef: string;
   readonly candidateListRef: string;
+  readonly additionalBranchRefs?: readonly string[] | undefined;
 }): readonly RevealContinuationAsset[] => {
   const assets = new Map<string, RevealContinuationAsset>();
   addBranchAssets(assets, input.branchRef);
+  for (const branchRef of input.additionalBranchRefs ?? [])
+    addBranchAssets(assets, branchRef);
   addAsset(assets, PREFLIGHT_REVEAL_CANDIDATE_LIST, input.candidateListRef);
   return [...assets.values()];
 };
