@@ -9,12 +9,12 @@ import {
 import type {
   ControlActionTarget,
   RenderedNameActionLease,
-  RenderedTargetValidator,
 } from "../control-actions/control-action-types.ts";
 import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
+import { cleanupDiscoveryValidator } from "./rendered-control-discovery-cleanup.ts";
+import { EVALUATE_RENDERED_NAME_SCRIPT } from "./rendered-control-name-evaluator.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
-  RENDERED_TARGET_GUARD_PROPERTY,
   RENDERED_TARGET_VALIDATOR_PROPERTY,
 } from "./rendered-control-state.ts";
 
@@ -145,108 +145,6 @@ export const hrefTargetLocator = (
     .nth(occurrenceFrom(control.controlKey) - 1);
 };
 
-interface RenderedNameExpectation {
-  readonly generation: string;
-  readonly name: string;
-  readonly roleName: string;
-  readonly roleSelector: string;
-  readonly validatorProperty: string;
-}
-
-const evaluateRenderedName = (
-  element: Node,
-  expected: RenderedNameExpectation,
-): boolean => {
-  if (!(element instanceof HTMLElement)) return false;
-  const normalize = (value: string | null): string =>
-    (value ?? "").replaceAll(/\s+/gu, " ").trim();
-  const readableText = (target: Element): string =>
-    target instanceof HTMLElement && target.innerText
-      ? target.innerText
-      : target.textContent;
-  const inventoryNameFor = (target: HTMLElement): string => {
-    const labelledBy = target.getAttribute("aria-labelledby");
-    if (labelledBy !== null)
-      return normalize(
-        labelledBy
-          .split(/\s+/u)
-          .map((id) => document.getElementById(id))
-          .map((label) => (label === null ? "" : readableText(label)))
-          .join(" "),
-      );
-    const ariaLabel = target.getAttribute("aria-label");
-    if (ariaLabel !== null) return normalize(ariaLabel);
-    const explicitLabel = target.id
-      ? [...document.querySelectorAll("label")].find(
-          (label) => label.htmlFor === target.id,
-        )
-      : undefined;
-    const labelText = (explicitLabel ?? target.closest("label"))?.innerText;
-    if (normalize(labelText ?? null) !== "")
-      return normalize(labelText ?? null);
-    const imageAlt =
-      target.querySelector("img[alt]")?.getAttribute("alt") ?? null;
-    const inputValue =
-      target instanceof HTMLInputElement &&
-      ["button", "image", "reset", "submit"].includes(target.type)
-        ? target.value || target.alt
-        : null;
-    const namedValue = [target.title, imageAlt, inputValue]
-      .map((value) => normalize(value))
-      .find((value) => value !== "");
-    if (namedValue !== undefined) return namedValue;
-    if (expected.roleName === "alertdialog") return "";
-    return normalize(readableText(target));
-  };
-  const matchesCurrent = (): boolean => {
-    const bounds = element.getBoundingClientRect();
-    const style = window.getComputedStyle(element);
-    const visible = [
-      element.closest("[hidden],[aria-hidden='true']") === null &&
-        style.display !== "none",
-      !["hidden", "collapse"].includes(style.visibility),
-      Number(style.opacity) !== 0 && bounds.width > 0 && bounds.height > 0,
-    ].every(Boolean);
-    return (
-      element.matches(expected.roleSelector) &&
-      (document.fullscreenElement?.contains(element) ?? true) &&
-      visible &&
-      inventoryNameFor(element) === expected.name
-    );
-  };
-  if (!matchesCurrent()) return false;
-  Object.assign(matchesCurrent, { generation: expected.generation });
-  Object.defineProperty(element, expected.validatorProperty, {
-    configurable: true,
-    value: matchesCurrent,
-  });
-  return true;
-};
-
-const cleanupDiscoveryValidator = (
-  handle: ElementHandle<HTMLElement>,
-  generation: string,
-): Promise<void> =>
-  handle.evaluate(
-    (element, expected) => {
-      const guarded = element as HTMLElement & Record<string, unknown>;
-      const validator = guarded[expected.validatorProperty] as
-        RenderedTargetValidator | undefined;
-      const guard = guarded[expected.guardProperty] as
-        { readonly validator?: unknown } | undefined;
-      if (
-        validator?.generation === expected.generation &&
-        guard?.validator !== validator
-      )
-        delete guarded[expected.validatorProperty];
-    },
-    {
-      generation,
-      guardProperty: RENDERED_TARGET_GUARD_PROPERTY,
-      validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
-    },
-  );
-
 export const releaseRenderedNameTarget = async (
   handle: ElementHandle<HTMLElement>,
 ): Promise<void> => {
@@ -261,6 +159,7 @@ export const releaseRenderedNameTarget = async (
 };
 
 const matchingHandle = async (
+  page: Page,
   handles: readonly ElementHandle[],
   expectedName: string,
   roleName: string,
@@ -268,36 +167,58 @@ const matchingHandle = async (
   occurrence: number,
   signal?: AbortSignal,
 ): Promise<ElementHandle<HTMLElement> | undefined> => {
-  const matches: ElementHandle<HTMLElement>[] = [];
-  for (const handle of handles) {
-    if (signal?.aborted === true) {
-      await releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>);
+  if (signal?.aborted === true) {
+    await Promise.all(
+      handles.map((handle) =>
+        releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>),
+      ),
+    );
+    return undefined;
+  }
+  const generations = handles.map(() => randomUUID());
+  const matchFlags = await page.evaluate<boolean[]>(
+    `(${EVALUATE_RENDERED_NAME_SCRIPT})(${JSON.stringify({
+      candidateSelector: fullscreenInteractionSelector(roleSelector),
+      generations,
+      name: expectedName,
+      roleName,
+      roleSelector,
+      validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
+    })})`,
+  );
+  if (matchFlags.length !== handles.length) {
+    await Promise.all(
+      handles.map((handle) =>
+        releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>),
+      ),
+    );
+    return undefined;
+  }
+  const matchingHandles: ElementHandle<HTMLElement>[] = [];
+  for (const [index, handle] of handles.entries()) {
+    if (matchFlags[index] !== true) {
+      await handle.dispose();
       continue;
     }
-    const generation = randomUUID();
-    try {
-      if (
-        await handle.evaluate(evaluateRenderedName, {
-          generation,
-          name: expectedName,
-          roleName,
-          roleSelector,
-          validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
-        })
-      ) {
-        const renderedHandle = handle as ElementHandle<HTMLElement>;
-        discoveryGenerations.set(renderedHandle, generation);
-        matches.push(renderedHandle);
-        continue;
-      }
-    } catch {
-      // A detached handle is a stale candidate, never an action target.
+    const generation = generations[index];
+    if (generation === undefined) {
+      await handle.dispose();
+      continue;
     }
-    await handle.dispose();
+    const renderedHandle = handle as ElementHandle<HTMLElement>;
+    discoveryGenerations.set(renderedHandle, generation);
+    matchingHandles.push(renderedHandle);
   }
-  const selected = matches[occurrence - 1];
+  const abortedAfterDiscovery = Boolean(signal?.aborted);
+  if (abortedAfterDiscovery) {
+    await Promise.all(
+      matchingHandles.map((handle) => releaseRenderedNameTarget(handle)),
+    );
+    return undefined;
+  }
+  const selected = matchingHandles[occurrence - 1];
   await Promise.all(
-    matches
+    matchingHandles
       .filter((handle) => handle !== selected)
       .map((handle) => releaseRenderedNameTarget(handle)),
   );
@@ -312,6 +233,7 @@ export const renderedNameTargetHandle = async (
   const expectedName = control.accessibleName.replaceAll(/\s+/gu, " ").trim();
   const roleSelector = inventoryRoleSelector(control.ariaRole);
   const selected = await matchingHandle(
+    page,
     await roleTargetLocator(page, control.ariaRole).elementHandles(),
     expectedName,
     control.ariaRole,
