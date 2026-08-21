@@ -10,15 +10,6 @@ export interface RenderedNameEvaluationInput {
   readonly validatorProperty: string;
 }
 
-declare global {
-  interface Window {
-    __customreportRenderedNameEvaluator?: (
-      element: HTMLElement,
-      expected: RenderedNameEvaluationInput,
-    ) => boolean;
-  }
-}
-
 export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(element, expected) => {
   const sourceText = ${SOURCE_TEXT_HELPER_SCRIPT};
   const normalize = (value) => (value ?? "").replaceAll(/\s+/gu, " ").trim();
@@ -88,30 +79,50 @@ export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(element, expected) => {
   return true;
 }`;
 
-export const INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT = `(() => {
-  window.__customreportRenderedNameEvaluator = ${EVALUATE_RENDERED_NAME_SCRIPT};
+export const renderedNameEvaluatorPropertyFor = (nonce: string): string =>
+  `__customreport_rendered_name_evaluator_${nonce}`;
+
+export const installRenderedNameEvaluatorScriptFor = (
+  property: string,
+): string => `(() => {
+  const property = ${JSON.stringify(property)};
+  if (Object.prototype.hasOwnProperty.call(window, property))
+    throw new Error("Rendered-name evaluator property already exists");
+  window[property] = ${EVALUATE_RENDERED_NAME_SCRIPT};
 })()`;
 
-export const REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT =
-  "delete window.__customreportRenderedNameEvaluator";
+export const removeRenderedNameEvaluatorScriptFor = (
+  property: string,
+): string => `delete window[${JSON.stringify(property)}]`;
 
 export const evaluateRenderedNameHandle = (
   page: Page,
   handle: ElementHandle<HTMLElement>,
   expected: RenderedNameEvaluationInput,
+  evaluatorProperty: string,
 ): Promise<boolean> =>
   page.evaluate<
     boolean,
     {
       readonly element: ElementHandle<HTMLElement>;
       readonly expected: RenderedNameEvaluationInput;
+      readonly evaluatorProperty: string;
     }
   >(
-    ({ element, expected: evaluationInput }) => {
-      const evaluator = window.__customreportRenderedNameEvaluator;
-      if (evaluator === undefined)
+    ({ element, expected: evaluationInput, evaluatorProperty: property }) => {
+      const candidate: unknown = Object.getOwnPropertyDescriptor(
+        window,
+        property,
+      )?.value;
+      const isEvaluator = (
+        value: unknown,
+      ): value is (
+        target: HTMLElement,
+        input: RenderedNameEvaluationInput,
+      ) => boolean => typeof value === "function";
+      if (!isEvaluator(candidate))
         throw new Error("Rendered-name evaluator is unavailable");
-      return evaluator(element, evaluationInput);
+      return candidate(element, evaluationInput);
     },
-    { element: handle, expected },
+    { element: handle, expected, evaluatorProperty },
   );
