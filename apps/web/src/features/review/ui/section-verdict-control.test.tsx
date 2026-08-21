@@ -133,10 +133,19 @@ describe("SectionVerdictControl — verdict buttons", () => {
 
   it("shows both verdict actions for a designated reviewer", () => {
     renderControl({ canReview: true });
-    expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Approve" })).toMatchObject({
+      disabled: false,
+    });
+    expect(screen.getByRole("button", { name: "Approve" })).toHaveAttribute(
+      "data-interaction-effect",
+      "mutation-required",
+    );
     expect(
       screen.getByRole("button", { name: "Request changes" }),
-    ).toBeEnabled();
+    ).toMatchObject({ disabled: false });
+    expect(
+      screen.getByRole("button", { name: "Request changes" }),
+    ).toHaveAttribute("data-interaction-effect", "mutation-required");
   });
 
   it("Approve submits approved+version, toasts, invalidates review cache, and notifies parent", async () => {
