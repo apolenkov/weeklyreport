@@ -37,6 +37,8 @@ export interface DomControlObservation {
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly ariaControls?: string | null | undefined;
+  readonly ariaExpanded?: boolean | null | undefined;
   readonly recordStableId?: string | undefined;
   readonly interactionEffect?: RuntimeInteractionEffect;
   readonly keyboardExpectedFocusable?: boolean;
@@ -56,11 +58,30 @@ export interface DomInventory {
   readonly visibleText?: string | undefined;
 }
 
+export const domControlDisclosureMetadataFor = (
+  control: Pick<
+    DomControlObservation,
+    "ariaControls" | "ariaExpanded" | "keyboardFocusScope"
+  >,
+) => ({
+  ...(control.ariaControls === undefined
+    ? {}
+    : { ariaControls: control.ariaControls }),
+  ...(control.ariaExpanded === undefined
+    ? {}
+    : { ariaExpanded: control.ariaExpanded }),
+  ...(control.keyboardFocusScope === undefined
+    ? {}
+    : { keyboardFocusScope: control.keyboardFocusScope }),
+});
+
 interface RawDomElement {
   readonly role: string;
   readonly tagName: string;
   readonly inputType: string | null;
   readonly href: string | null;
+  readonly ariaControls: string | null;
+  readonly ariaExpanded: boolean | null;
   readonly recordStableId: string | null;
   readonly interactionEffect: string | null;
   readonly ariaLabel: string | null;
@@ -146,6 +167,8 @@ const controlFrom = (
     tagName: element.tagName,
     inputType: element.inputType,
     href: element.href,
+    ariaControls: element.ariaControls,
+    ariaExpanded: element.ariaExpanded,
     ...(recordStableId === "" ? {} : { recordStableId }),
     ...(interactionEffect === undefined ? {} : { interactionEffect }),
     ...(element.keyboardExpectedFocusable === undefined

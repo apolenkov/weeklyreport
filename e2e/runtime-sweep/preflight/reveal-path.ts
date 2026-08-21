@@ -5,14 +5,16 @@ import {
   DEFAULT_MAX_REVEAL_MATERIAL_EDGES,
 } from "../matrix/matrix-limits.ts";
 import {
+  domControlDisclosureMetadataFor,
   type DomControlObservation,
-  RUNTIME_INTERACTION_EFFECTS,
   type RuntimeInteractionEffect,
 } from "../replay/dom/dom-inventory.ts";
 import type { Action } from "../source/contracts.ts";
 import { actionSchema, sha256DigestSchema } from "../source/contracts.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
 import type { RevealRepresentativeInput } from "./reveal/interaction/preflight-reveal-transition.ts";
+import { revealSurfaceSchema } from "./reveal/reveal-surface-contract.ts";
+export { revealSurfaceSchema } from "./reveal/reveal-surface-contract.ts";
 
 export const MAX_REVEAL_DEPTH = 4;
 export const MAX_REVEAL_MATERIAL_EDGES = DEFAULT_MAX_REVEAL_MATERIAL_EDGES;
@@ -27,6 +29,9 @@ export type RevealSurfaceControl = Readonly<{
   readonly domOrderKey: string;
   readonly href: string | null;
   readonly interactionEffect: RuntimeInteractionEffect | null;
+  readonly ariaControls?: string | null | undefined;
+  readonly ariaExpanded?: boolean | null | undefined;
+  readonly keyboardFocusScope?: DomControlObservation["keyboardFocusScope"];
 }>;
 
 export type RevealSurface = Readonly<{
@@ -62,26 +67,6 @@ export type RevealControlIdentity = Readonly<{
   readonly revealPathDigest: string;
   readonly expectedSurfaceDigest: string;
 }>;
-
-const revealSurfaceControlSchema = z
-  .object({
-    controlKey: z.string().min(1),
-    ariaRole: z.string().min(1),
-    accessibleName: z.string(),
-    enabled: z.boolean(),
-    order: z.number().int().nonnegative(),
-    domOrderKey: z.string().min(1),
-    href: z.string().nullable(),
-    interactionEffect: z.enum(RUNTIME_INTERACTION_EFFECTS).nullable(),
-  })
-  .strict();
-
-export const revealSurfaceSchema = z
-  .object({
-    controls: z.array(revealSurfaceControlSchema).readonly(),
-    digest: sha256DigestSchema,
-  })
-  .strict();
 
 export const revealNonMutationProofSchema = z
   .object({
@@ -177,27 +162,26 @@ export const revealPathSchema = z
   })
   .strict();
 
-const surfaceControlKey = (control: RevealSurfaceControl): string =>
-  stableSerialize(control);
-
 const sortedSurfaceControls = (
   controls: readonly RevealSurfaceControl[],
 ): readonly RevealSurfaceControl[] =>
   controls.toSorted((left, right) => {
     const byKey = left.controlKey.localeCompare(right.controlKey);
-    return (
-      byKey || surfaceControlKey(left).localeCompare(surfaceControlKey(right))
-    );
+    return byKey || stableSerialize(left).localeCompare(stableSerialize(right));
   });
 
 const assertSurfaceControls = (
   controls: readonly RevealSurfaceControl[],
 ): void => {
-  const keys = controls.map(({ controlKey }) => controlKey);
-  if (new Set(keys).size !== keys.length)
+  if (
+    new Set(controls.map(({ controlKey }) => controlKey)).size !==
+    controls.length
+  )
     throw new Error("Reveal surface contains duplicate control identities");
-  const sorted = sortedSurfaceControls(controls);
-  if (stableSerialize(sorted) !== stableSerialize(controls))
+  if (
+    stableSerialize(sortedSurfaceControls(controls)) !==
+    stableSerialize(controls)
+  )
     throw new Error("Reveal surface controls must be stable-sorted");
 };
 
@@ -212,6 +196,7 @@ const revealSurfaceControlFor = (
   domOrderKey: control.domOrderKey,
   href: control.href,
   interactionEffect: control.interactionEffect ?? null,
+  ...domControlDisclosureMetadataFor(control),
 });
 
 export const revealSurfaceFor = (

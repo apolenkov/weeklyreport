@@ -24,6 +24,12 @@ export const serializableInventoryFor = (
       tagName: control.tagName,
       inputType: control.inputType,
       href: control.href,
+      ...(control.ariaControls === undefined
+        ? {}
+        : { ariaControls: control.ariaControls }),
+      ...(control.ariaExpanded === undefined
+        ? {}
+        : { ariaExpanded: control.ariaExpanded }),
       ...(control.recordStableId === undefined
         ? {}
         : { recordStableId: control.recordStableId }),
@@ -64,6 +70,12 @@ export const domInventoryFor = (
     tagName: control.tagName,
     inputType: control.inputType,
     href: control.href,
+    ...(control.ariaControls === undefined
+      ? {}
+      : { ariaControls: control.ariaControls }),
+    ...(control.ariaExpanded === undefined
+      ? {}
+      : { ariaExpanded: control.ariaExpanded }),
     ...(control.recordStableId === undefined
       ? {}
       : { recordStableId: control.recordStableId }),

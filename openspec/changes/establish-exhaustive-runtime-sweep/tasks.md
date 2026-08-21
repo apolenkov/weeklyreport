@@ -249,6 +249,15 @@
       invokes the unchanged whole-surface boundary without executing the final
       action, and emits only diagnostic terminal classifications.
 
+- [x] 5.19 Add source-bound canonicalization for independent reversible
+      `aria-controls`-scoped disclosures. Retain toggle metadata in live and
+      continuation inventories, execute and record both `A → B` and `B → A`
+      for disjoint targets, require equal material surfaces and URL before
+      reducing deeper combinations to the material union, retain every
+      row-local control, and keep modal/coupled/URL-changing/incomplete
+      controls ordinary. Add deterministic equivalence/rejection tests and
+      preserve the existing `maxControlsPerSegment` plus-one guard.
+
 ## 6. Immutable baseline and adjudication
 
 - [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/

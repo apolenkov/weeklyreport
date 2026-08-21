@@ -41,6 +41,22 @@ describe("R197 continuation inventory lineage contract", () => {
     );
   });
 
+  it("round-trips scoped disclosure metadata", () => {
+    const disclosure = {
+      ...control,
+      ariaControls: "panel-a",
+      ariaExpanded: false,
+    } as const;
+
+    const serialized = serializableInventoryFor(inventoryFor([disclosure]));
+
+    expect(serialized.controls[0]).toMatchObject({
+      ariaControls: "panel-a",
+      ariaExpanded: false,
+    });
+    expect(domInventoryFor(serialized)).toEqual(inventoryFor([disclosure]));
+  });
+
   it("fails closed on malformed lineage and legacy v4 inventory assets", () => {
     const body = {
       artifact: PREFLIGHT_REVEAL_INVENTORY,

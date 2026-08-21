@@ -69,6 +69,23 @@ describe("runtime DOM inventory", () => {
     );
   });
 
+  it("captures scoped disclosure metadata for continuation proofs", async () => {
+    const page = {
+      evaluate: () =>
+        Promise.resolve([
+          {
+            ...rawButton,
+            ariaControls: "panel-a",
+            ariaExpanded: false,
+          },
+        ]),
+    } as unknown as Page;
+
+    await expect(inventoryDom(page)).resolves.toMatchObject({
+      controls: [{ ariaControls: "panel-a", ariaExpanded: false }],
+    });
+  });
+
   it("keeps record lineage separate from accessible control identity", async () => {
     const recordStableId = "88888888-8888-4888-8888-888888888888";
     const page = {
