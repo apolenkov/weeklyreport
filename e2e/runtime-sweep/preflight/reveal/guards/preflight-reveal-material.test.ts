@@ -6,6 +6,7 @@ import {
   revealSurfaceFor,
 } from "../../reveal-path.ts";
 import type { RevealBranch } from "../interaction/preflight-reveal-branches.ts";
+import { independentDisclosureReductionFor } from "./preflight-reveal-canonicalization.ts";
 import {
   controlsForImmediateReveal,
   registerVisitedRevealState,
@@ -72,6 +73,100 @@ const branchWithSurfaceTransitionFor = (
       ],
       beforeUrl,
     ),
+  };
+};
+
+const duplicateDisclosureFixtures = () => {
+  const unchanged = {
+    status: "unchanged" as const,
+    beforeDigest: "d".repeat(64),
+    afterDigest: "d".repeat(64),
+  };
+  const surface = (expandedRows: ReadonlySet<number>) => {
+    const occurrences = new Map<string, number>();
+    return revealSurfaceFor(
+      [0, 1, 2].map((row) => {
+        const expanded = expandedRows.has(row);
+        const accessibleName = expanded
+          ? "Hide action details"
+          : "Show action details";
+        const occurrence = (occurrences.get(accessibleName) ?? 0) + 1;
+        occurrences.set(accessibleName, occurrence);
+        const controlKey = `button:${encodeURIComponent(accessibleName)}:${occurrence}`;
+        return {
+          ...controlFor(controlKey, accessibleName, row + 1),
+          ariaControls: `panel-row-${row}`,
+          ariaExpanded: expanded,
+          disclosureIndependence: "source-bound-row-local" as const,
+        };
+      }),
+    );
+  };
+  const branch = (
+    rows: readonly number[],
+    surfaces: readonly ReturnType<typeof surface>[],
+  ) => {
+    const steps = rows.map((row, index) => {
+      const before = surfaces[index];
+      const after = surfaces[index + 1];
+      if (before === undefined || after === undefined)
+        throw new Error("duplicate fixture surface is missing");
+      const source = before.controls.find(
+        (control) => control.ariaControls === `panel-row-${row}`,
+      );
+      if (source === undefined)
+        throw new Error("duplicate fixture control missing");
+      return revealStepFor(
+        {
+          controlKey: source.controlKey,
+          operation: "click",
+          safety: "read-only",
+          transition: "open",
+        },
+        before,
+        after,
+        "/admin",
+        "/admin",
+        unchanged,
+      );
+    });
+    const finalSurface = surfaces.at(-1);
+    if (finalSurface === undefined)
+      throw new Error("duplicate fixture final surface is missing");
+    return {
+      path: revealPathFor(steps, "/admin"),
+      inventory: { controls: [], issues: [] },
+      surface: finalSurface,
+      url: "/admin",
+    } satisfies RevealBranch;
+  };
+  const root = surface(new Set());
+  const single = (row: number) =>
+    branch([row], [root, surface(new Set([row]))]);
+  const pair = (first: number, second: number) =>
+    branch(
+      [first, second],
+      [root, surface(new Set([first])), surface(new Set([first, second]))],
+    );
+  return {
+    candidate: branch(
+      [0, 1, 2],
+      [
+        root,
+        surface(new Set([0])),
+        surface(new Set([0, 1])),
+        surface(new Set([0, 1, 2])),
+      ],
+    ),
+    singles: [single(0), single(1), single(2)],
+    pairs: [
+      pair(0, 1),
+      pair(1, 0),
+      pair(0, 2),
+      pair(2, 0),
+      pair(1, 2),
+      pair(2, 1),
+    ],
   };
 };
 
@@ -154,5 +249,16 @@ describe("reveal material projection", () => {
     expect(repeated.isNew).toBe(false);
     expect(repeated.visitedStatePaths.size).toBe(1);
     expect(revealPathContainsState(second, first)).toBe(true);
+  });
+
+  it("canonicalizes identical disclosure siblings by target identity", () => {
+    const fixture = duplicateDisclosureFixtures();
+
+    expect(
+      independentDisclosureReductionFor({
+        branch: fixture.candidate,
+        knownBranches: [...fixture.singles, ...fixture.pairs],
+      }),
+    ).toBe(true);
   });
 });

@@ -23,7 +23,7 @@ type BranchView = Readonly<Pick<RevealBranch, "path" | "surface" | "url">>;
 const SCOPED_DISCLOSURE_TRANSITIONS = new Set(["none", "open", "cancel"]);
 
 type ToggleBinding = Readonly<{
-  readonly controlKey: string;
+  readonly identity: string;
   readonly targetId: string;
 }>;
 
@@ -35,9 +35,6 @@ type BindingPair = Readonly<{
 }>;
 
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-const sequenceFor = (path: RevealPath): readonly string[] =>
-  path.steps.map(({ controlKey }) => controlKey);
 
 const sourceControlFor = (
   surface: RevealSurface,
@@ -62,6 +59,20 @@ const isSourceBoundDisclosure = (
 
 const hasValidTargetId = (value: string | null | undefined): value is string =>
   typeof value === "string" && value.length > 0 && !/\s/u.test(value);
+
+const sourceBoundIdentityFor = (targetId: string): string =>
+  `source-bound-target:${targetId}`;
+
+const sequenceKeyForStep = (step: RevealPath["steps"][number]): string => {
+  const source = sourceControlFor(step.before, step.controlKey);
+  return isSourceBoundDisclosure(source) &&
+    hasValidTargetId(source.ariaControls)
+    ? sourceBoundIdentityFor(source.ariaControls)
+    : step.controlKey;
+};
+
+const sequenceFor = (path: RevealPath): readonly string[] =>
+  path.steps.map(sequenceKeyForStep);
 
 const sourceBoundAfterControlFor = (
   step: RevealPath["steps"][number],
@@ -92,6 +103,12 @@ const toggleBindingForStep = (
   const targetId = source.ariaControls;
   if (!hasValidTargetId(targetId) || typeof source.ariaExpanded !== "boolean")
     return undefined;
+  const beforeMatches = step.before.controls.filter(
+    (control) =>
+      isSourceBoundDisclosure(control) && control.ariaControls === targetId,
+  );
+  if (beforeMatches.length !== 1 || beforeMatches[0] !== source)
+    return undefined;
   const after = sourceBoundAfterControlFor(step, targetId);
   if (
     after === undefined ||
@@ -100,7 +117,7 @@ const toggleBindingForStep = (
   )
     return undefined;
 
-  return { controlKey: step.controlKey, targetId };
+  return { identity: sourceBoundIdentityFor(targetId), targetId };
 };
 
 const toggleBindingsFor = (
@@ -111,8 +128,7 @@ const toggleBindingsFor = (
 };
 
 const uniqueBindingsFor = (bindings: readonly ToggleBinding[]): boolean =>
-  new Set(bindings.map(({ controlKey }) => controlKey)).size ===
-    bindings.length &&
+  new Set(bindings.map(({ identity }) => identity)).size === bindings.length &&
   new Set(bindings.map(({ targetId }) => targetId)).size === bindings.length;
 
 const branchForSequence = (
@@ -157,12 +173,12 @@ const pairOrderEquivalentFor = (input: {
 }): boolean => {
   const { pair } = input;
   const forward = branchForSequence(input.knownBranches, input.initialUrl, [
-    pair.left.controlKey,
-    pair.right.controlKey,
+    pair.left.identity,
+    pair.right.identity,
   ]);
   const reverse = branchForSequence(input.knownBranches, input.initialUrl, [
-    pair.right.controlKey,
-    pair.left.controlKey,
+    pair.right.identity,
+    pair.left.identity,
   ]);
   const leftSingle = input.singles[pair.leftIndex];
   const rightSingle = input.singles[pair.rightIndex];
@@ -215,8 +231,8 @@ export const independentDisclosureReductionFor = (input: {
     steps[0]?.before ?? input.branch.surface,
   );
   const resolvedSingles = bindings
-    .map(({ controlKey }) =>
-      branchForSequence(input.knownBranches, initialUrl, [controlKey]),
+    .map(({ identity }) =>
+      branchForSequence(input.knownBranches, initialUrl, [identity]),
     )
     .filter(isDefined);
   if (
