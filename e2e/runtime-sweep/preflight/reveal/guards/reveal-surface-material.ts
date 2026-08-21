@@ -85,6 +85,19 @@ const materialIdentityFor = (control: MaterialControl): string =>
     ? `aria-controls:${control.ariaControls}`
     : `control-key:${control.controlKey}`;
 
+const materialSignatureFor = (control: MaterialControl): string =>
+  stableSerialize(
+    control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL &&
+      typeof control.ariaControls === "string" &&
+      control.ariaControls.length > 0
+      ? {
+          ...control,
+          controlKey: materialIdentityFor(control),
+          accessibleName: "source-bound-disclosure",
+        }
+      : control,
+  );
+
 interface MaterialUnionState {
   readonly controls: Map<string, MaterialControl>;
   readonly changed: Map<string, string>;
@@ -112,10 +125,10 @@ const mergeMaterialControl = (
   state: MaterialUnionState,
   control: MaterialControl,
 ): boolean => {
-  const signature = stableSerialize(control);
+  const signature = materialSignatureFor(control);
   const identity = materialIdentityFor(control);
   const current = state.controls.get(identity);
-  if (current !== undefined && stableSerialize(current) === signature)
+  if (current !== undefined && materialSignatureFor(current) === signature)
     return true;
   const previousChange = state.changed.get(identity);
   if (previousChange !== undefined && previousChange !== signature)
@@ -142,7 +155,7 @@ const mergeSingleMaterial = (
   return material.controls.every((control) => {
     const rootControl = rootControlsByKey.get(materialIdentityFor(control));
     return rootControl !== undefined &&
-      stableSerialize(rootControl) === stableSerialize(control)
+      materialSignatureFor(rootControl) === materialSignatureFor(control)
       ? true
       : mergeMaterialControl(state, control);
   });
@@ -179,7 +192,7 @@ export const matchesUnion = (input: {
     const expectedControl = expected.get(materialIdentityFor(control));
     return (
       expectedControl !== undefined &&
-      stableSerialize(expectedControl) === stableSerialize(control)
+      materialSignatureFor(expectedControl) === materialSignatureFor(control)
     );
   });
 };
