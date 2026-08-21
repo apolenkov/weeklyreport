@@ -114,6 +114,7 @@ export const INVENTORY_SCRIPT = String.raw`(() => {
       ariaExpanded: ariaExpandedValue === "true"
         ? true
         : ariaExpandedValue === "false" ? false : null,
+      disclosureIndependence: element.getAttribute("data-reveal-independence"),
       recordStableId: element.getAttribute("data-record-stable-id"),
       interactionEffect: element.getAttribute("data-interaction-effect"),
       ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,

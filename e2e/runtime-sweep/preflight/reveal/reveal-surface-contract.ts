@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { RUNTIME_INTERACTION_EFFECTS } from "../../replay/dom/dom-inventory.ts";
+import {
+  RUNTIME_DISCLOSURE_INDEPENDENCE,
+  RUNTIME_INTERACTION_EFFECTS,
+} from "../../replay/dom/dom-inventory.ts";
 import { sha256DigestSchema } from "../../source/contracts.ts";
 
 const revealSurfaceControlSchema = z
@@ -15,6 +18,7 @@ const revealSurfaceControlSchema = z
     interactionEffect: z.enum(RUNTIME_INTERACTION_EFFECTS).nullable(),
     ariaControls: z.string().min(1).nullable().optional(),
     ariaExpanded: z.boolean().nullable().optional(),
+    disclosureIndependence: z.enum(RUNTIME_DISCLOSURE_INDEPENDENCE).optional(),
     keyboardFocusScope: z
       .enum(["page", "active-modal", "background"])
       .optional(),

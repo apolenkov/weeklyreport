@@ -24,21 +24,26 @@ const controlFor = (
   key: string,
   target: string,
   expanded: boolean,
-): DomControlObservation => ({
-  controlKey: key,
-  domOrderKey: `${key}:0001`,
-  order: 1,
-  role: "button",
-  accessibleName: key,
-  enabled: true,
-  disabled: false,
-  visible: true,
-  tagName: "button",
-  inputType: null,
-  href: null,
-  ariaControls: target,
-  ariaExpanded: expanded,
-});
+  disclosureIndependence?: "source-bound-row-local",
+): DomControlObservation => {
+  const independence = disclosureIndependence ?? "source-bound-row-local";
+  return {
+    controlKey: key,
+    domOrderKey: `${key}:0001`,
+    order: 1,
+    role: "button",
+    accessibleName: key,
+    enabled: true,
+    disabled: false,
+    visible: true,
+    tagName: "button",
+    inputType: null,
+    href: null,
+    ariaControls: target,
+    ariaExpanded: expanded,
+    disclosureIndependence: independence,
+  };
+};
 
 const inventoryFor = (
   controls: readonly DomControlObservation[],
@@ -201,6 +206,48 @@ describe("independent disclosure canonicalization", () => {
     expect(
       independentDisclosureReductionFor({
         branch: coupled,
+        knownBranches: [...fixture.singles, ...fixture.pairs],
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps a triple ordinary when a fourth disclosure lacks a source-bound contract", () => {
+    const fixture = fixtures();
+    const root = surfaceFor({ a: false, b: false, c: false, d: false });
+    const candidate = branchFor(
+      ["a", "b", "c"],
+      [
+        root,
+        surfaceFor({ a: true, b: false, c: false, d: false }),
+        surfaceFor({ a: true, b: true, c: false, d: false }),
+        surfaceFor({ a: true, b: true, c: true, d: false }),
+      ],
+    );
+    const untrusted = {
+      ...candidate,
+      path: revealPathFor(
+        candidate.path.steps.map((step) => ({
+          ...step,
+          before: revealSurfaceFor(
+            step.before.controls.map((control) => ({
+              ...control,
+              disclosureIndependence: undefined,
+            })),
+          ),
+          after: revealSurfaceFor(
+            step.after.controls.map((control) => ({
+              ...control,
+              disclosureIndependence: undefined,
+            })),
+          ),
+        })),
+        "/admin",
+      ),
+    };
+
+    expect(
+      independentDisclosureReductionFor({
+        branch: untrusted,
         knownBranches: [...fixture.singles, ...fixture.pairs],
       }),
     ).toBe(false);

@@ -49,6 +49,7 @@ test("inventories visible semantic controls and their metadata", async ({
       <label for="title">Title</label><input id="title" type="text">
       <label><input type="checkbox">Agree</label>
       <select aria-label="Status" data-interaction-effect="mutation-required"><option>Open</option></select>
+      <button aria-expanded="false" aria-controls="panel-row" data-reveal-independence="source-bound-row-local">Row details</button>
       <textarea aria-label="Notes"></textarea>
       <details open><summary>More</summary></details>
       <div contenteditable="true" aria-label="Editor">Text</div>
@@ -75,6 +76,9 @@ test("inventories visible semantic controls and their metadata", async ({
   expect(inventory.controls[0]?.href).toBe("/reports");
   expect(inventory.controls[2]?.inputType).toBe("text");
   expect(inventory.controls[4]?.interactionEffect).toBe("mutation-required");
+  expect(inventory.controls[5]?.disclosureIndependence).toBe(
+    "source-bound-row-local",
+  );
   expect(inventory.controls[2]?.interactionEffect).toBeUndefined();
   expect(inventory.controls.every((control) => control.visible)).toBe(true);
   expect(inventory.issues).toHaveLength(0);

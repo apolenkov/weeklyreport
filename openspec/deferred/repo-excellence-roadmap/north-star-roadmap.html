@@ -319,18 +319,18 @@
             <td>Текущий exact-SHA preflight</td>
             <td><span class="status danger">BLOCKED / NOT-PROVEN</span></td>
             <td>
-              На SHA
-              <code>bdab8e4a02ea09a31f37f1d0fd32e9802185f378</code>, дерево
-              <code>eea57f83ca3c087d643fe6f79a4c49c0281e330f</code>, пять первых
-              состояний прошли, а шестое
-              <code>admin / demo / /admin</code> fail-closed с ошибкой
-              <code>8199 &gt; 8192</code> до публикации сегмента. Отдельный
-              capacity survey с допуском <code>65536</code> controls завершился
-              по стене <code>600000ms</code> без terminal result. Это
-              классифицировано как граница ёмкости harness, а не как доказанный
-              продуктовый дефект; полный runtime остаётся
-              <code>NOT-PROVEN</code>. Exact receipts и checksum-пакет находятся
-              в archive.
+              На текущем SHA
+              <code>a27db1fd896cbbb1a4f837a8de138d4d76570179</code>, дерево
+              <code>033d3474e10122f1ebe713514ab2e3aea9ab914f</code>, bounded
+              admin/minimal canary прошёл с 390 controls и 277 receipts. Это не
+              admin/demo failure-state и не полная матрица. Предыдущая граница
+              <code>8199 &gt; 8192</code> на старом SHA сохраняется как
+              диагностическое основание. Sol нашёл, что одной pairwise эвристики
+              недостаточно: canonicalization требует явного source-bound
+              контракта
+              <code>data-reveal-independence="source-bound-row-local"</code>; до
+              exact admin/demo canary текущий repair остаётся
+              <code>NOT-PROVEN</code>.
             </td>
           </tr>
           <tr>
@@ -498,7 +498,7 @@
           </span>
         </li>
         <li>
-          <strong>Новая causal boundary · IN PROGRESS</strong>
+          <strong>Новая causal boundary · REPAIR IN PROGRESS</strong>
           <span>
             На странице Action Log seed показывает
             <code>20 loaded+</code> строк, а каждая
@@ -508,8 +508,11 @@
             <code>maxDepth=4</code> это уже
             <code>1+20+190+1140+4845=6196</code> reachable subsets. Это
             объясняет рост harness-графа, но не разрешает trim и не доказывает
-            дефект продукта. Нужен минимальный source-bound путь
-            canonicalization/разделения перед новым canary.
+            дефект продукта. Введён source-bound контракт
+            <code>data-reveal-independence="source-bound-row-local"</code> для
+            row-local disclosure; без него даже pairwise-commutative triple
+            остаётся ordinary branch. Нужен exact admin/demo canary и полный
+            checksum-пакет перед новым решением.
           </span>
         </li>
         <li>

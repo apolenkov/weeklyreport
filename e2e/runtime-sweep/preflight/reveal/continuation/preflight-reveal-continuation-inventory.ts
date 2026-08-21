@@ -30,6 +30,9 @@ export const serializableInventoryFor = (
       ...(control.ariaExpanded === undefined
         ? {}
         : { ariaExpanded: control.ariaExpanded }),
+      ...(control.disclosureIndependence === undefined
+        ? {}
+        : { disclosureIndependence: control.disclosureIndependence }),
       ...(control.recordStableId === undefined
         ? {}
         : { recordStableId: control.recordStableId }),
@@ -76,6 +79,9 @@ export const domInventoryFor = (
     ...(control.ariaExpanded === undefined
       ? {}
       : { ariaExpanded: control.ariaExpanded }),
+    ...(control.disclosureIndependence === undefined
+      ? {}
+      : { disclosureIndependence: control.disclosureIndependence }),
     ...(control.recordStableId === undefined
       ? {}
       : { recordStableId: control.recordStableId }),

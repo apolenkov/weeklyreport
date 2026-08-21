@@ -31,6 +31,7 @@ export type RevealSurfaceControl = Readonly<{
   readonly interactionEffect: RuntimeInteractionEffect | null;
   readonly ariaControls?: string | null | undefined;
   readonly ariaExpanded?: boolean | null | undefined;
+  readonly disclosureIndependence?: DomControlObservation["disclosureIndependence"];
   readonly keyboardFocusScope?: DomControlObservation["keyboardFocusScope"];
 }>;
 
