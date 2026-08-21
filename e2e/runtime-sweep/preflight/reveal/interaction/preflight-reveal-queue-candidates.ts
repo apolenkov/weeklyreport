@@ -9,7 +9,10 @@ import {
   type RevealQueueChunkResult,
   type RevealQueueInput,
 } from "./preflight-reveal-branches.ts";
-import { revealCandidateIdentityFor } from "./preflight-reveal-candidate-identity.ts";
+import {
+  type CandidateProcessor,
+  processCandidateAtFailureBoundary,
+} from "./preflight-reveal-queue-failure-boundary.ts";
 import { yieldAfterTerminal } from "./preflight-reveal-queue-yield.ts";
 import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
 
@@ -34,18 +37,6 @@ export type RevealQueueYieldInput = Readonly<{
 export type RevealQueueYieldHandler = (
   input: RevealQueueYieldInput,
 ) => Promise<boolean> | boolean;
-
-type CandidateProcessor = (input: {
-  readonly queueInput: RevealQueueInput;
-  readonly current: RevealBranch;
-  readonly state: RevealDiscoveryState;
-  readonly candidate: RevealCandidate;
-  readonly restoredBranch?: RevealBranch;
-}) => Promise<{
-  readonly state: RevealDiscoveryState;
-  readonly executed: boolean;
-  readonly terminal?: RevealCandidateTerminalResult;
-}>;
 
 export type RevealCandidateProcessingResult = Readonly<{
   state: RevealDiscoveryState;
@@ -158,49 +149,6 @@ const candidateCursorState = (
   currentCandidates: candidates,
   currentCandidateIndex: nextCandidateIndex,
 });
-
-const processCandidateAtFailureBoundary = async (input: {
-  readonly queueInput: RevealQueueInput;
-  readonly current: RevealBranch;
-  readonly state: RevealDiscoveryState;
-  readonly candidates: readonly RevealCandidate[];
-  readonly candidateIndex: number;
-  readonly candidate: RevealCandidate;
-  readonly restoredBranch?: RevealBranch;
-  readonly processCandidate: CandidateProcessor;
-}): ReturnType<CandidateProcessor> => {
-  const state = { ...input.state, currentCandidateIndex: input.candidateIndex };
-  try {
-    return await input.processCandidate({
-      queueInput: input.queueInput,
-      current: input.current,
-      state,
-      candidate: input.candidate,
-      ...(input.restoredBranch === undefined
-        ? {}
-        : { restoredBranch: input.restoredBranch }),
-    });
-  } catch (originalError: unknown) {
-    const handler = input.queueInput.onCandidateFailure;
-    if (handler !== undefined)
-      await Promise.allSettled([
-        Promise.resolve().then(() =>
-          handler({
-            state,
-            branch: input.current,
-            candidates: input.candidates,
-            candidateIndex: input.candidateIndex,
-            candidateIdentity: revealCandidateIdentityFor({
-              branch: input.current,
-              candidate: input.candidate,
-            }),
-            originalError,
-          }),
-        ),
-      ]);
-    throw originalError;
-  }
-};
 
 export const processCandidates = async (
   input: {

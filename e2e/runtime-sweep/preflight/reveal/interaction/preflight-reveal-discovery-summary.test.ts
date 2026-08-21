@@ -12,6 +12,7 @@ import {
   discoverRevealControlsWithSummary,
   type RevealExecutionHarness,
 } from "./preflight-reveal-discovery.ts";
+import { duplicateSiblingLifecycleFixture } from "./preflight-reveal-discovery-summary-duplicate-sibling-fixture.ts";
 
 const ORIGIN = "http://127.0.0.1:3205";
 const ROUTE = "/admin";
@@ -214,5 +215,21 @@ describe("preflight reveal discovery summary", () => {
     expect(controls).toEqual(summarized.controls);
     expect(summaryFixture.executionCount()).toBe(3);
     expect(wrapperFixture.executionCount()).toBe(3);
+  });
+
+  it("generates the next sibling action from the updated branch inventory", async () => {
+    const fixture = duplicateSiblingLifecycleFixture();
+
+    await discoverRevealControlsWithSummary({
+      ...discoveryInputFor(fixture.harness),
+      initialInventory: fixture.initialInventory,
+    });
+
+    expect(fixture.attemptedActions).toContain(
+      "after-first:button:Show%20action%20details:1",
+    );
+    expect(fixture.attemptedActions).not.toContain(
+      "after-first:button:Show%20action%20details:2",
+    );
   });
 });

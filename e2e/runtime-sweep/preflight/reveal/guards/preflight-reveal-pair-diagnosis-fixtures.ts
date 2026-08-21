@@ -85,36 +85,35 @@ const branchFor = (
   };
 };
 
-export const fixtures = () => {
+export const fixturesFor = (keys: readonly string[]) => {
   const root = surfaceFor([]);
   const single = (key: string): RevealBranch =>
     branchFor([key], [root, surfaceFor([key])]);
-  const pair = (first: string, second: string): RevealBranch =>
+  const pair = (firstKey: string, secondKey: string): RevealBranch =>
     branchFor(
-      [first, second],
-      [root, surfaceFor([first]), surfaceFor([first, second])],
+      [firstKey, secondKey],
+      [root, surfaceFor([firstKey]), surfaceFor([firstKey, secondKey])],
     );
+  const candidate = branchFor(keys, [
+    root,
+    ...keys.map((_, index) => surfaceFor(keys.slice(0, index + 1))),
+  ]);
+  const pairs = keys.flatMap((leftKey, firstIndex) =>
+    keys
+      .slice(firstIndex + 1)
+      .flatMap((rightKey) => [
+        pair(leftKey, rightKey),
+        pair(rightKey, leftKey),
+      ]),
+  );
   return {
-    candidate: branchFor(
-      ["a", "b", "c"],
-      [
-        root,
-        surfaceFor(["a"]),
-        surfaceFor(["a", "b"]),
-        surfaceFor(["a", "b", "c"]),
-      ],
-    ),
-    singles: [single("a"), single("b"), single("c")],
-    pairs: [
-      pair("a", "b"),
-      pair("b", "a"),
-      pair("a", "c"),
-      pair("c", "a"),
-      pair("b", "c"),
-      pair("c", "b"),
-    ],
+    candidate,
+    singles: keys.map(single),
+    pairs,
   };
 };
+
+export const fixtures = () => fixturesFor(["a", "b", "c"]);
 
 export const untrustedSurfaceFor = (surface: RevealSurface): RevealSurface =>
   revealSurfaceFor(

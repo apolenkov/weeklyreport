@@ -158,6 +158,7 @@ export const applyRevealCandidateResult = (input: {
     state: transitioned,
     current,
     branch: terminal.result.branch,
+    action: terminal.candidate.action,
   });
 };
 

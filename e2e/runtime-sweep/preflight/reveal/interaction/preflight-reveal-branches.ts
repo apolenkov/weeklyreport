@@ -5,19 +5,11 @@ import type { DomInventory } from "../../../replay/dom/dom-inventory.ts";
 import type { LiveControlPlan } from "../../../replay/live-control/live-control-planning.ts";
 import type { Action } from "../../../source/contracts.ts";
 import {
-  assertRevealPath,
   revealControlPreparationIdentityFor,
   type RevealPath,
   type RevealSurface,
 } from "../../reveal-path.ts";
-import * as reductionDiagnosis from "../guards/preflight-reveal-canonicalization-diagnosis.ts";
 import type { RevealReductionContext } from "../guards/preflight-reveal-reduction-context.ts";
-import {
-  controlsForImmediateReveal,
-  registerDynamicControls,
-  registerVisitedRevealState,
-  revealPathContainsState,
-} from "../guards/preflight-reveal-registration.ts";
 import type { RevealRepresentativeInput } from "./preflight-reveal-transition.ts";
 import {
   type RevealControlFactory,
@@ -86,6 +78,8 @@ export type RevealCandidateFailure = Readonly<{
   readonly candidates: readonly RevealCandidate[];
   readonly candidateIndex: number;
   readonly candidateIdentity: string;
+  /** Present only when a terminal branch was materialized before a capacity overflow. */
+  readonly pendingBranch?: RevealBranch | undefined;
   readonly originalError: unknown;
 }>;
 
@@ -113,20 +107,6 @@ export interface RevealQueueInput {
 
 export type RevealPureQueueInput = Omit<RevealQueueInput, "harness">;
 
-export const assertRevealControlCapacity = (
-  count: number,
-  maxControlsPerSegment: number,
-): void => {
-  if (!Number.isSafeInteger(maxControlsPerSegment) || maxControlsPerSegment < 1)
-    throw new RevealDiscoveryError(
-      "Reveal control bound must be a positive integer",
-    );
-  if (count > maxControlsPerSegment)
-    throw new RevealDiscoveryError(
-      `Reveal control bound exceeded: ${String(count)} controls; maxControlsPerSegment is ${String(maxControlsPerSegment)}`,
-    );
-};
-
 const preparationIdentityFor = (
   control: Pick<
     MatrixPreflightControl,
@@ -138,15 +118,6 @@ const preparationIdentityFor = (
     control.revealPath,
     control.expectedSurface,
   );
-
-const knownBranchCountFor = (state: RevealDiscoveryState): number =>
-  new Set([
-    ...state.queue.map(({ path }) => path.digest),
-    ...(state.currentBranch === undefined
-      ? []
-      : [state.currentBranch.path.digest]),
-    ...state.controls.map(({ revealPath }) => revealPath.digest),
-  ]).size;
 
 export const revealCandidateAlreadyProcessed = (
   state: RevealDiscoveryState,
@@ -258,60 +229,6 @@ export const controlsWithTransition = (
   );
 };
 
-export const enqueueChangedBranch = (input: {
-  readonly queueInput: RevealPureQueueInput;
-  readonly state: RevealDiscoveryState;
-  readonly current: RevealBranch;
-  readonly branch: RevealBranch;
-}): RevealDiscoveryState => {
-  const { queueInput, state, current, branch } = input;
-  assertRevealControlCapacity(
-    state.controls.length,
-    queueInput.maxControlsPerSegment,
-  );
-  if (revealPathContainsState(current, branch)) return state;
-  const visited = registerVisitedRevealState(state.visitedStatePaths, branch);
-  if (!visited.isNew) return state;
-  const reduction =
-    reductionDiagnosis.independentDisclosureReductionDiagnosisForState({
-      state,
-      branch,
-    });
-  if (reduction.reason === "reduction-proven")
-    return {
-      ...state,
-      visitedStatePaths: visited.visitedStatePaths,
-    };
-  const immediateControls = controlsForImmediateReveal(branch);
-  const registration = registerDynamicControls(
-    state,
-    branch,
-    current,
-    immediateControls,
-  );
-  const plans = queueInput
-    .plansFor(branch.inventory)
-    .filter(({ control }) =>
-      registration.controls.some(
-        ({ controlKey }) => controlKey === control.controlKey,
-      ),
-    );
-  const projectedControls = state.controls.length + plans.length;
-  if (projectedControls > queueInput.maxControlsPerSegment)
-    throw new RevealDiscoveryError(
-      `Reveal control bound exceeded: ${String(projectedControls)} controls; maxControlsPerSegment is ${String(queueInput.maxControlsPerSegment)}; reductionReason=${reduction.reason}${reductionDiagnosis.independentDisclosureReductionCapacityDetailsFor(reduction)}; pathDepth=${String(branch.path.steps.length)}; knownBranches=${String(knownBranchCountFor(state))}; plannedControls=${String(plans.length)}; projectedControls=${String(projectedControls)}`,
-    );
-  assertRevealPath(branch.path, branch.surface);
-  const prepared = plans.map((plan) =>
-    queueInput.controlFor(plan, branch.path, branch.surface, null, null),
-  );
-  if (current.path.steps.length >= queueInput.maxDepth)
-    throw new RevealDiscoveryError("Reveal depth bound exceeded");
-  return {
-    ...state,
-    queue: [...state.queue, branch],
-    controls: [...state.controls, ...prepared],
-    discovered: registration.state.discovered,
-    visitedStatePaths: visited.visitedStatePaths,
-  };
-};
+export { assertRevealControlCapacity } from "./preflight-reveal-branch-capacity.ts";
+export { enqueueChangedBranch } from "./preflight-reveal-branch-enqueue.ts";
+export { RevealCapacityOverflowError } from "./preflight-reveal-capacity-errors.ts";

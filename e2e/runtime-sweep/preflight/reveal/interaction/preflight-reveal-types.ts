@@ -132,5 +132,5 @@ export type RevealControlFactory = (
 ) => MatrixPreflightControl;
 
 export class RevealDiscoveryError extends Error {
-  override readonly name = "RevealDiscoveryError";
+  override readonly name: string = "RevealDiscoveryError";
 }

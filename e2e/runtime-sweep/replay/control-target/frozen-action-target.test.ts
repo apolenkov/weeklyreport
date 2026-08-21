@@ -36,6 +36,29 @@ const frozenAction = (href?: string): Action => ({
   ...(href === undefined ? {} : { target: { role: "link", href } }),
 });
 
+const disclosure = (
+  controlKey: string,
+  ariaControls: string,
+  accessibleName = "Show action details",
+  order = 1,
+  ariaExpanded = false,
+): DomControlObservation => ({
+  controlKey,
+  domOrderKey: `${String(order).padStart(4, "0")}:${controlKey}`,
+  order,
+  role: "button",
+  accessibleName,
+  enabled: true,
+  disabled: false,
+  visible: true,
+  tagName: "button",
+  inputType: null,
+  href: null,
+  ariaControls,
+  ariaExpanded,
+  disclosureIndependence: "source-bound-row-local",
+});
+
 describe("frozen action target selection", () => {
   it("rejects exact-key href drift and uses the stable target", () => {
     const exact = link(frozenAction().controlKey, "/reports/exact");
@@ -91,6 +114,39 @@ describe("frozen action target selection", () => {
     expect(selectFrozenActionTarget([renamed], frozenAction())).toBeUndefined();
     expect(
       selectFrozenActionTarget([renamed], frozenAction("/reports/stable")),
+    ).toBeUndefined();
+  });
+
+  it("fails closed when an occurrence shift removes the frozen exact key", () => {
+    const frozenBinding = {
+      action: {
+        controlKey: "button:Show%20action%20details:2",
+        operation: "click",
+        safety: "read-only",
+        transition: "open",
+      } satisfies Action,
+      ariaControls: "panel-row-2",
+      disclosureIndependence: "source-bound-row-local",
+    } as const;
+    const firstRowAfterExpand = disclosure(
+      "button:Hide%20action%20details:1",
+      "panel-row-1",
+      "Hide action details",
+      1,
+      true,
+    );
+    const secondRowAfterFirstRowExpands = disclosure(
+      "button:Show%20action%20details:1",
+      frozenBinding.ariaControls,
+      "Show action details",
+      2,
+    );
+
+    expect(
+      selectFrozenActionTarget(
+        [firstRowAfterExpand, secondRowAfterFirstRowExpands],
+        frozenBinding.action,
+      ),
     ).toBeUndefined();
   });
 
