@@ -10,6 +10,7 @@ import {
   type RevealPath,
   type RevealSurface,
 } from "../../reveal-path.ts";
+import { independentDisclosureReductionForState } from "../guards/preflight-reveal-canonicalization.ts";
 import {
   controlsForImmediateReveal,
   registerDynamicControls,
@@ -260,6 +261,16 @@ export const enqueueChangedBranch = (input: {
   if (revealPathContainsState(current, branch)) return state;
   const visited = registerVisitedRevealState(state.visitedStatePaths, branch);
   if (!visited.isNew) return state;
+  if (
+    independentDisclosureReductionForState({
+      state,
+      branch,
+    })
+  )
+    return {
+      ...state,
+      visitedStatePaths: visited.visitedStatePaths,
+    };
   const immediateControls = controlsForImmediateReveal(branch);
   const registration = registerDynamicControls(
     state,

@@ -604,6 +604,14 @@
       "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
     },
     {
+      "id": "runtime-preflight-reveal-contract-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(reveal-surface-contract\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1"
+    },
+    {
       "id": "runtime-preflight-reveal-continuation-implementation",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/(?:checkpoint|receipts|tests))?)/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",

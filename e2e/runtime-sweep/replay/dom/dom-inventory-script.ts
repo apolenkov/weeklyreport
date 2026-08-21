@@ -107,8 +107,13 @@ export const INVENTORY_SCRIPT = String.raw`(() => {
     const value = element instanceof HTMLInputElement &&
       ["button","image","reset","submit"].includes(inputType || "")
       ? element.value || element.alt : null;
+    const ariaExpandedValue = element.getAttribute("aria-expanded");
     return { element, role, tagName, inputType,
       href: element instanceof HTMLAnchorElement ? element.getAttribute("href") : null,
+      ariaControls: element.getAttribute("aria-controls")?.trim() || null,
+      ariaExpanded: ariaExpandedValue === "true"
+        ? true
+        : ariaExpandedValue === "false" ? false : null,
       recordStableId: element.getAttribute("data-record-stable-id"),
       interactionEffect: element.getAttribute("data-interaction-effect"),
       ariaLabel: element.getAttribute("aria-label"), labelledByText, labelText,

@@ -10,6 +10,9 @@ type RevealSurfaceMaterialControl = Readonly<
     | "enabled"
     | "href"
     | "interactionEffect"
+    | "ariaControls"
+    | "ariaExpanded"
+    | "keyboardFocusScope"
   >
 >;
 
@@ -39,6 +42,15 @@ const revealSurfaceMaterialControlFor = (
   enabled: control.enabled,
   href: control.href,
   interactionEffect: control.interactionEffect,
+  ...(control.ariaControls === undefined
+    ? {}
+    : { ariaControls: control.ariaControls }),
+  ...(control.ariaExpanded === undefined
+    ? {}
+    : { ariaExpanded: control.ariaExpanded }),
+  ...(control.keyboardFocusScope === undefined
+    ? {}
+    : { keyboardFocusScope: control.keyboardFocusScope }),
 });
 
 export const revealSurfaceMaterialFor = (

@@ -2,7 +2,10 @@ import {
   type RevealSurfaceControl,
   surfaceSignatureFor,
 } from "../../preflight/reveal-path.ts";
-import type { DomInventory } from "../dom/dom-inventory.ts";
+import {
+  domControlDisclosureMetadataFor,
+  type DomInventory,
+} from "../dom/dom-inventory.ts";
 import { FrozenRevealReplayError } from "./frozen-reveal-replay-error.ts";
 
 export const assertFrozenRevealTarget = (
@@ -25,6 +28,7 @@ export const assertFrozenRevealTarget = (
     domOrderKey: actual.domOrderKey,
     href: actual.href,
     interactionEffect: actual.interactionEffect ?? null,
+    ...domControlDisclosureMetadataFor(actual),
   } satisfies RevealSurfaceControl;
   if (surfaceControl.enabled !== expected.enabled)
     throw new FrozenRevealReplayError(

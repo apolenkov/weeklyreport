@@ -227,6 +227,7 @@ test("freezes the active-modal surface independently of background controls", ()
       domOrderKey: modalCancel.domOrderKey,
       href: modalCancel.href,
       interactionEffect: modalCancel.interactionEffect,
+      keyboardFocusScope: modalCancel.keyboardFocusScope,
     },
     {
       controlKey: modalDialog.controlKey,
@@ -237,6 +238,7 @@ test("freezes the active-modal surface independently of background controls", ()
       domOrderKey: modalDialog.domOrderKey,
       href: modalDialog.href,
       interactionEffect: null,
+      keyboardFocusScope: modalDialog.keyboardFocusScope,
     },
   ]);
   expect(revealSurfaceFor([headerCompletion]).controls).toHaveLength(1);

@@ -338,6 +338,37 @@ empty-frontier result or any acceptance gate.
 - **AND** partial counters, Playwright diagnostics, continuation output, or a
   pre-existing survey file cannot satisfy or weaken acceptance
 
+### Requirement: Independent scoped disclosures use proven equivalence reduction
+
+Reveal discovery SHALL reduce only reversible, read-only, single-target
+disclosures whose independence is proven from the exact runtime surface. A
+candidate is eligible only when its control exposes one `aria-controls` target,
+an `aria-expanded` boolean, a read-only click with no URL transition, and no
+active-modal/background coupling.
+
+#### Scenario: independent disclosures are proven in both orders
+
+- **GIVEN** two eligible disclosures `A` and `B` with disjoint controlled target
+  ids
+- **WHEN** the harness executes `A → B` and `B → A` from the same exact prepared
+  source state
+- **THEN** both paths and every row-local control revealed by either path are
+  recorded
+- **AND** the material semantic surfaces and canonical URL are equal in both
+  orders
+- **AND** only after that equality is proven may a deeper combination use the
+  material union representative
+- **AND** the source-bound `maxControlsPerSegment` is unchanged
+
+#### Scenario: coupled or incomplete disclosures stay exhaustive
+
+- **WHEN** a disclosure lacks one target id or boolean `aria-expanded`, changes
+  the URL, enters a modal/background boundary, has overlapping targets, or its
+  two execution orders produce unequal material surfaces
+- **THEN** the branch remains an ordinary reveal branch
+- **AND** no control or path is trimmed, merged, or marked inapplicable
+- **AND** the production overflow guard remains fail-closed
+
 #### Scenario: the first terminal-candidate failure is captured without authority
 
 - **WHEN** the exact survey configures failure-frontier capture and terminal

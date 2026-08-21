@@ -258,12 +258,12 @@
               <code>commit</code>
               <code>b0b8a9f40d46caa026cc6e0a226cb1d2996b1275</code>, дерево
               <code>tree</code>
-              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>. Исторический
-              51-кадровый desktop-пакет привязан к предыдущему source SHA
-              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с деревом
-              <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он не
-              подменяет fresh exact-SHA capture на текущем HEAD.
-              Предыдущий roadmap-only snapshot является docs-потомком
+              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>.
+              Исторический 51-кадровый desktop-пакет привязан к предыдущему
+              source SHA <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с
+              деревом <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он
+              не подменяет fresh exact-SHA capture на текущем HEAD. Предыдущий
+              roadmap-only snapshot является docs-потомком
               <code>113757b645cd06d9547e15f9e295a3445e9a2790</code> с деревом
               <code>d619006614fd431a1ba18d7f9a32d04a8fb7c509</code>; эта Git-
               идентичность не является runtime baseline.
@@ -277,8 +277,8 @@
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> существуют
               полный основной знаменатель из 51 кадра, артефакты переходов
               T01–T07, контрольные суммы и невизуальные оракулы. Это
-              доказательная база для ограниченного десктопного просмотра, но
-              не fresh packet на runtime baseline <code>b0b8a9f40</code> и не
+              доказательная база для ограниченного десктопного просмотра, но не
+              fresh packet на runtime baseline <code>b0b8a9f40</code> и не
               закрытие всей задачи 6.3.
             </td>
           </tr>
@@ -289,8 +289,8 @@
               На текущем SHA естественно завершился один реальный Chromium
               canary для <code>admin / minimal / /admin</code>: parent
               <code>PASS</code>, <code>BRANCH_EXHAUSTED</code>, 277 continuation
-              receipts и 390 control observations. Это один bounded slice, а
-              не полная матрица.
+              receipts и 390 control observations. Это один bounded slice, а не
+              полная матрица.
             </td>
           </tr>
           <tr>
@@ -311,8 +311,26 @@
               (<code>5 passed</code>, роли <code>51/0</code> маршрутов и
               аномалий) и <code>openspec validate --all --strict</code>
               (<code>181/0</code>). Пакеты сохранены в archive; это
-              функциональная и структурная проверка, не полная runtime-матрица
-              и не visual/release acceptance.
+              функциональная и структурная проверка, не полная runtime-матрица и
+              не visual/release acceptance.
+            </td>
+          </tr>
+          <tr>
+            <td>Текущий exact-SHA preflight</td>
+            <td><span class="status danger">BLOCKED / NOT-PROVEN</span></td>
+            <td>
+              На SHA
+              <code>bdab8e4a02ea09a31f37f1d0fd32e9802185f378</code>, дерево
+              <code>eea57f83ca3c087d643fe6f79a4c49c0281e330f</code>, пять первых
+              состояний прошли, а шестое
+              <code>admin / demo / /admin</code> fail-closed с ошибкой
+              <code>8199 &gt; 8192</code> до публикации сегмента. Отдельный
+              capacity survey с допуском <code>65536</code> controls завершился
+              по стене <code>600000ms</code> без terminal result. Это
+              классифицировано как граница ёмкости harness, а не как доказанный
+              продуктовый дефект; полный runtime остаётся
+              <code>NOT-PROVEN</code>. Exact receipts и checksum-пакет находятся
+              в archive.
             </td>
           </tr>
           <tr>
@@ -435,9 +453,12 @@
       <h2>3. Следующая очередь исполнения</h2>
       <div class="callout ok">
         <strong>Текущая рабочая последовательность:</strong>
-        <code>5.17 → matrix → review → fixes → final resweep</code>. 5.14 и 5.15
-        уже приняты только как ограниченные доказательства exact-canary;
-        следующий незакрытый крупный gate — полная матрица 6.2.
+        <code
+          >5.17 → causal diagnosis → bounded fix/canary → matrix → review →
+          fixes → final resweep</code
+        >. 5.14 и 5.15 приняты только как ограниченные доказательства
+        exact-canary; полная матрица 6.2 остановлена до решения границы
+        reveal-графа.
       </div>
       <ol class="sequence">
         <li>
@@ -458,7 +479,9 @@
             <code>2026-08-20-runtime-514-e5105aa9-admin-rerun7</code> дал
             parent-only <code>PASS</code> и <code>PREFLIGHT_CANARY</code>.
             Текущий повтор на <code>b0b8a9f40</code> сохранён отдельно в
-            <code>2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code>
+            <code
+              >2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code
+            >
             и также завершился <code>PASS</code> с
             <code>BRANCH_EXHAUSTED</code>. Полное или shard-продолжение остаётся
             отдельным контуром <code>NOT-PROVEN</code>.
@@ -467,14 +490,30 @@
         <li>
           <strong>5.17 · исследование ёмкости · ACCEPTED</strong>
           <span>
-            Одно дочернее исследование на exact-source завершено в отдельной
-            области; счётчики и граница guard сохранены. Это доказательство
-            ёмкости, не замена полной матрице и не доказательство отсутствия
-            продуктовых дефектов.
+            На exact-source initial preflight guard сохранил границу
+            <code>8199 &gt; 8192</code>. Последующий single-child survey с
+            допуском <code>65536</code> controls истёк по стене
+            <code>600000ms</code> и не создал terminal result. Пакет принят
+            только как диагностический; лимит нельзя менять по этому числу.
           </span>
         </li>
         <li>
-          <strong>Полная матрица · после 5.17</strong>
+          <strong>Новая causal boundary · IN PROGRESS</strong>
+          <span>
+            На странице Action Log seed показывает
+            <code>20 loaded+</code> строк, а каждая
+            <code>ActionLogRow</code> хранит независимый
+            <code>useState(false)</code> для раскрытия деталей. Несколько
+            раскрытий одновременно дают аддитивный powerset-граф: при
+            <code>maxDepth=4</code> это уже
+            <code>1+20+190+1140+4845=6196</code> reachable subsets. Это
+            объясняет рост harness-графа, но не разрешает trim и не доказывает
+            дефект продукта. Нужен минимальный source-bound путь
+            canonicalization/разделения перед новым canary.
+          </span>
+        </li>
+        <li>
+          <strong>Полная матрица · после causal boundary</strong>
           <span>
             Манифест 6.1 уже заморожен. Далее выполнить заявленную матрицу,
             импортировать независимые пакеты проверок, разобрать находки,

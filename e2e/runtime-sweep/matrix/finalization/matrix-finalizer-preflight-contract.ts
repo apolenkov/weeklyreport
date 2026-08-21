@@ -47,6 +47,10 @@ export interface MatrixPreflightControl {
     readonly order: number;
     readonly domOrderKey: string;
     readonly href: string | null;
+    readonly ariaControls?: string | null | undefined;
+    readonly ariaExpanded?: boolean | null | undefined;
+    readonly keyboardFocusScope?:
+      "page" | "active-modal" | "background" | undefined;
   }>;
   readonly action?: Action | undefined;
   readonly execution?: MatrixExecution | undefined;
@@ -68,6 +72,11 @@ export const matrixPreflightControlSchema: z.ZodType<MatrixPreflightControl> = z
         order: z.number().int().nonnegative(),
         domOrderKey: z.string().min(1),
         href: z.string().nullable(),
+        ariaControls: z.string().min(1).nullable().optional(),
+        ariaExpanded: z.boolean().nullable().optional(),
+        keyboardFocusScope: z
+          .enum(["page", "active-modal", "background"])
+          .optional(),
       })
       .strict(),
     action: actionSchema.optional(),

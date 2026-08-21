@@ -6,6 +6,7 @@ import type {
 } from "../../matrix/finalization/matrix-finalizer-contract.ts";
 import type { RevealTransition } from "../../matrix/reveal-transition.ts";
 import type { SpecializedDeclaration } from "../../matrix/specialized/specialized-declarations.ts";
+import { domControlDisclosureMetadataFor } from "../../replay/dom/dom-inventory.ts";
 import type { LiveControlPlan } from "../../replay/live-control/live-control-planning.ts";
 import type {
   Action,
@@ -149,6 +150,7 @@ export const preflightControlForPlan = (
     order: plan.control.order,
     domOrderKey: plan.control.domOrderKey,
     href: plan.control.href,
+    ...domControlDisclosureMetadataFor(plan.control),
   } as const;
   if (plan.action !== undefined)
     return {

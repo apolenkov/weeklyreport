@@ -351,6 +351,21 @@ their own artifact kinds and digest domains; acceptance, repair, full, shard,
 matrix, and release paths never parse them. A completed survey supports a later
 reviewed source-limit change but is not acceptance evidence itself.
 
+Independent reversible disclosures are canonicalized only after their effect is
+proven rather than by raising a source limit or trimming the graph. A control is
+eligible only when it is a read-only click with one `aria-controls` target, a
+boolean `aria-expanded` state, no URL change, and no modal/background coupling.
+The harness retains each single-toggle branch and every row-local control it
+reveals. For a pair of eligible controls it executes both `A → B` and `B → A`,
+requires disjoint controlled targets and equal material surfaces/URLs, and only
+then may use the material union as the canonical representative for deeper
+combinations. Coupled controls, modal surfaces, URL-changing controls, missing
+ARIA scope, and any non-equal pair remain ordinary branches and are never
+canonicalized. The reduction is therefore an equivalence proof over already
+executed controls, not an exclusion or a limit bypass; the source-bound
+`maxControlsPerSegment` remains unchanged and the proof is persisted in the
+same exact-source continuation state.
+
 ### Typed coverage cell and evidence identity
 
 The implementation may choose JSONL or an equivalent typed store, but the

@@ -9,9 +9,11 @@ import type { FrozenPhaseInput } from "../live/frozen-case-live-capture-types.ts
 import { frozenActionBoundaryOutcome } from "./frozen-case-action-boundary.ts";
 
 const inventoryDomMock = vi.hoisted(() => vi.fn());
+const domControlDisclosureMetadataMock = vi.hoisted(() => vi.fn(() => ({})));
 
 vi.mock("../../dom/dom-inventory.ts", () => ({
   RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+  domControlDisclosureMetadataFor: domControlDisclosureMetadataMock,
   inventoryDom: inventoryDomMock,
 }));
 
