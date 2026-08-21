@@ -156,7 +156,9 @@ describe("shared reveal control capacity", () => {
           controlFor: controlFactory,
           maxControlsPerSegment: 1,
         }),
-      ).rejects.toThrow("Reveal control bound exceeded");
+      ).rejects.toThrow(
+        /Reveal control bound exceeded: \d+ controls; maxControlsPerSegment is 1; reductionReason=[a-z-]+; pathDepth=\d+; knownBranches=\d+; plannedControls=\d+; projectedControls=\d+/u,
+      );
       expect(
         overflow.events.filter((event) => event.startsWith("execute:")),
       ).toEqual(["execute:button:a-open:0"]);

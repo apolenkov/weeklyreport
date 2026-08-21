@@ -10,7 +10,7 @@ import {
   type RevealPath,
   type RevealSurface,
 } from "../../reveal-path.ts";
-import { independentDisclosureReductionForState } from "../guards/preflight-reveal-canonicalization.ts";
+import { independentDisclosureReductionDiagnosisForState } from "../guards/preflight-reveal-canonicalization.ts";
 import {
   controlsForImmediateReveal,
   registerDynamicControls,
@@ -137,6 +137,15 @@ const preparationIdentityFor = (
     control.expectedSurface,
   );
 
+const knownBranchCountFor = (state: RevealDiscoveryState): number =>
+  new Set([
+    ...state.queue.map(({ path }) => path.digest),
+    ...(state.currentBranch === undefined
+      ? []
+      : [state.currentBranch.path.digest]),
+    ...state.controls.map(({ revealPath }) => revealPath.digest),
+  ]).size;
+
 export const revealCandidateAlreadyProcessed = (
   state: RevealDiscoveryState,
   current: RevealBranch,
@@ -261,12 +270,11 @@ export const enqueueChangedBranch = (input: {
   if (revealPathContainsState(current, branch)) return state;
   const visited = registerVisitedRevealState(state.visitedStatePaths, branch);
   if (!visited.isNew) return state;
-  if (
-    independentDisclosureReductionForState({
-      state,
-      branch,
-    })
-  )
+  const reductionDiagnosis = independentDisclosureReductionDiagnosisForState({
+    state,
+    branch,
+  });
+  if (reductionDiagnosis.reason === "reduction-proven")
     return {
       ...state,
       visitedStatePaths: visited.visitedStatePaths,
@@ -285,8 +293,13 @@ export const enqueueChangedBranch = (input: {
         ({ controlKey }) => controlKey === control.controlKey,
       ),
     );
+  const projectedControls = state.controls.length + plans.length;
+  if (projectedControls > queueInput.maxControlsPerSegment)
+    throw new RevealDiscoveryError(
+      `Reveal control bound exceeded: ${String(projectedControls)} controls; maxControlsPerSegment is ${String(queueInput.maxControlsPerSegment)}; reductionReason=${reductionDiagnosis.reason}; pathDepth=${String(branch.path.steps.length)}; knownBranches=${String(knownBranchCountFor(state))}; plannedControls=${String(plans.length)}; projectedControls=${String(projectedControls)}`,
+    );
   assertRevealControlCapacity(
-    state.controls.length + plans.length,
+    projectedControls,
     queueInput.maxControlsPerSegment,
   );
   assertRevealPath(branch.path, branch.surface);

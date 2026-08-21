@@ -20,6 +20,27 @@ const SOURCE_BOUND_ROW_LOCAL = "source-bound-row-local" as const;
 
 type BranchView = Readonly<Pick<RevealBranch, "path" | "surface" | "url">>;
 
+type IndependentDisclosureReductionReason =
+  | "depth-too-shallow"
+  | "step-not-eligible"
+  | "bindings-not-unique"
+  | "single-branch-missing"
+  | "single-branch-material-or-url-mismatch"
+  | "pair-order-missing-or-mismatch"
+  | "union-mismatch"
+  | "reduction-proven";
+
+export type IndependentDisclosureReductionDiagnosis = Readonly<
+  | {
+      readonly eligible: false;
+      readonly reason: Exclude<
+        IndependentDisclosureReductionReason,
+        "reduction-proven"
+      >;
+    }
+  | { readonly eligible: true; readonly reason: "reduction-proven" }
+>;
+
 const SCOPED_DISCLOSURE_TRANSITIONS = new Set(["none", "open", "cancel"]);
 
 type ToggleBinding = Readonly<{
@@ -131,25 +152,31 @@ const uniqueBindingsFor = (bindings: readonly ToggleBinding[]): boolean =>
   new Set(bindings.map(({ identity }) => identity)).size === bindings.length &&
   new Set(bindings.map(({ targetId }) => targetId)).size === bindings.length;
 
+type BranchSequenceLookup = Readonly<
+  | { readonly kind: "missing" }
+  | { readonly kind: "conflict" }
+  | { readonly kind: "match"; readonly branch: BranchView }
+>;
+
 const branchForSequence = (
   knownBranches: readonly BranchView[],
   initialUrl: string,
   sequence: readonly string[],
-): BranchView | undefined => {
+): BranchSequenceLookup => {
   const matches = knownBranches.filter(
     (branch) =>
       branch.path.initialUrl === initialUrl &&
       stableSerialize(sequenceFor(branch.path)) === stableSerialize(sequence),
   );
   const first = matches[0];
-  if (first === undefined) return undefined;
+  if (first === undefined) return { kind: "missing" };
   return matches.every(
     (match) =>
       match.url === first.url &&
       sameRevealSurfaceMaterial(match.surface, first.surface),
   )
-    ? first
-    : undefined;
+    ? { kind: "match", branch: first }
+    : { kind: "conflict" };
 };
 
 const bindingPairsFor = (
@@ -183,19 +210,19 @@ const pairOrderEquivalentFor = (input: {
   const leftSingle = input.singles[pair.leftIndex];
   const rightSingle = input.singles[pair.rightIndex];
   if (
-    forward === undefined ||
-    reverse === undefined ||
+    forward.kind !== "match" ||
+    reverse.kind !== "match" ||
     leftSingle === undefined ||
     rightSingle === undefined ||
-    forward.url !== input.initialUrl ||
-    reverse.url !== input.initialUrl ||
-    !sameRevealSurfaceMaterial(forward.surface, reverse.surface)
+    forward.branch.url !== input.initialUrl ||
+    reverse.branch.url !== input.initialUrl ||
+    !sameRevealSurfaceMaterial(forward.branch.surface, reverse.branch.surface)
   )
     return false;
   return matchesUnion({
     root: input.root,
     singles: [leftSingle, rightSingle],
-    actual: revealSurfaceMaterialFor(forward.surface),
+    actual: revealSurfaceMaterialFor(forward.branch.surface),
   });
 };
 
@@ -218,49 +245,77 @@ const knownBranchesFor = (
   return [...views, ...fromControls.values()];
 };
 
-export const independentDisclosureReductionFor = (input: {
+export const independentDisclosureReductionDiagnosisFor = (input: {
   readonly branch: BranchView;
   readonly knownBranches: readonly BranchView[];
-}): boolean => {
+}): IndependentDisclosureReductionDiagnosis => {
   const steps = input.branch.path.steps;
-  if (steps.length < MIN_CANONICALIZATION_DEPTH) return false;
+  if (steps.length < MIN_CANONICALIZATION_DEPTH)
+    return { eligible: false, reason: "depth-too-shallow" };
   const bindings = toggleBindingsFor(input.branch.path);
-  if (bindings === undefined || !uniqueBindingsFor(bindings)) return false;
+  if (bindings === undefined)
+    return { eligible: false, reason: "step-not-eligible" };
+  if (!uniqueBindingsFor(bindings))
+    return { eligible: false, reason: "bindings-not-unique" };
   const initialUrl = input.branch.path.initialUrl;
   const rootMaterial = revealSurfaceMaterialFor(
     steps[0]?.before ?? input.branch.surface,
   );
-  const resolvedSingles = bindings
-    .map(({ identity }) =>
-      branchForSequence(input.knownBranches, initialUrl, [identity]),
-    )
-    .filter(isDefined);
+  const singleLookups = bindings.map(({ identity }) =>
+    branchForSequence(input.knownBranches, initialUrl, [identity]),
+  );
+  if (singleLookups.some(({ kind }) => kind === "missing"))
+    return { eligible: false, reason: "single-branch-missing" };
+  if (singleLookups.some(({ kind }) => kind === "conflict"))
+    return {
+      eligible: false,
+      reason: "single-branch-material-or-url-mismatch",
+    };
+  const resolvedSingles = singleLookups.map((lookup) =>
+    lookup.kind === "match" ? lookup.branch : undefined,
+  );
   if (
-    resolvedSingles.length !== bindings.length ||
-    !resolvedSingles.every((branch) => branch.url === initialUrl) ||
+    resolvedSingles.includes(undefined) ||
+    resolvedSingles.some((branch) => branch?.url !== initialUrl)
+  )
+    return {
+      eligible: false,
+      reason: "single-branch-material-or-url-mismatch",
+    };
+  const matchedSingles = resolvedSingles.filter(isDefined);
+  if (
     !matchesUnion({
       root: rootMaterial,
-      singles: resolvedSingles,
+      singles: matchedSingles,
       actual: revealSurfaceMaterialFor(input.branch.surface),
     })
   )
-    return false;
-  return bindingPairsFor(bindings).every((pair) =>
-    pairOrderEquivalentFor({
-      pair,
-      knownBranches: input.knownBranches,
-      initialUrl,
-      root: rootMaterial,
-      singles: resolvedSingles,
-    }),
-  );
+    return { eligible: false, reason: "union-mismatch" };
+  if (
+    !bindingPairsFor(bindings).every((pair) =>
+      pairOrderEquivalentFor({
+        pair,
+        knownBranches: input.knownBranches,
+        initialUrl,
+        root: rootMaterial,
+        singles: matchedSingles,
+      }),
+    )
+  )
+    return { eligible: false, reason: "pair-order-missing-or-mismatch" };
+  return { eligible: true, reason: "reduction-proven" };
 };
 
-export const independentDisclosureReductionForState = (input: {
+export const independentDisclosureReductionFor = (input: {
+  readonly branch: BranchView;
+  readonly knownBranches: readonly BranchView[];
+}): boolean => independentDisclosureReductionDiagnosisFor(input).eligible;
+
+export const independentDisclosureReductionDiagnosisForState = (input: {
   readonly state: RevealDiscoveryState;
   readonly branch: BranchView;
-}): boolean =>
-  independentDisclosureReductionFor({
+}): IndependentDisclosureReductionDiagnosis =>
+  independentDisclosureReductionDiagnosisFor({
     branch: input.branch,
     knownBranches: knownBranchesFor(input.state),
   });
