@@ -14,9 +14,10 @@ import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
 import { cleanupDiscoveryValidator } from "./rendered-control-discovery-cleanup.ts";
 import {
   evaluateRenderedNameHandle,
-  INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT,
-  REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT,
+  installRenderedNameEvaluatorScriptFor,
+  removeRenderedNameEvaluatorScriptFor,
   type RenderedNameEvaluationInput,
+  renderedNameEvaluatorPropertyFor,
 } from "./rendered-control-name-evaluator.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
@@ -177,7 +178,8 @@ const matchingHandle = async (
     return undefined;
   }
   const matchingHandles: ElementHandle<HTMLElement>[] = [];
-  await page.evaluate(INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT);
+  const evaluatorProperty = renderedNameEvaluatorPropertyFor(randomUUID());
+  await page.evaluate(installRenderedNameEvaluatorScriptFor(evaluatorProperty));
   try {
     for (const handle of handles) {
       if (Boolean(signal?.aborted)) {
@@ -194,7 +196,14 @@ const matchingHandle = async (
           roleSelector,
           validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
         };
-        if (await evaluateRenderedNameHandle(page, renderedHandle, expected)) {
+        if (
+          await evaluateRenderedNameHandle(
+            page,
+            renderedHandle,
+            expected,
+            evaluatorProperty,
+          )
+        ) {
           discoveryGenerations.set(renderedHandle, generation);
           matchingHandles.push(renderedHandle);
           continue;
@@ -205,7 +214,9 @@ const matchingHandle = async (
       await handle.dispose();
     }
   } finally {
-    await page.evaluate(REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT);
+    await page.evaluate(
+      removeRenderedNameEvaluatorScriptFor(evaluatorProperty),
+    );
   }
   const abortedAfterDiscovery = Boolean(signal?.aborted);
   if (abortedAfterDiscovery) {
