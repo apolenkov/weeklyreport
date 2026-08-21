@@ -253,56 +253,55 @@
             <td>Источник исполнения и десктопных доказательств</td>
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
-              Последний runtime-proven executable baseline: ветка
-              <code>campaign/cr-001-20260820</code>,
-              <code>commit</code>
-              <code>b0b8a9f40d46caa026cc6e0a226cb1d2996b1275</code>, дерево
-              <code>tree</code>
-              <code>816ec65ef888b846cf1b9e2b728807967d068928</code>. Последний
-              exact repair-source для runtime-утверждений: commit
-              <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code>, дерево
-              <code>7db797414e8b664b6d3f088e2973f2253ec0fa26</code>; его
-              admin/demo canary завершился fail-closed на границе ёмкости и не
-              стал runtime-proven baseline. Новый exact source после исправления
-              identity: commit
-              <code>43df65c31e9df7e055027b77df3e047740b34235</code>, дерево
-              <code>d2d3c80453e0fd15cbe9e636c63a0e5f07ec5131</code>; targeted
-              regression и все 38 lint-gates зелёные. Его corrected admin/demo
-              canary также fail-closed на <code>8199 &gt; 8192</code> без PASS,
-              а Sol вынес <code>ITERATE</code> из-за оставшейся
-              occurrence-sensitive identity. Исторический 51-кадровый
-              desktop-пакет привязан к предыдущему source SHA
+              Source candidate для продолжения campaign: ветка
+              <code>campaign/cr-001-20260820</code>, commit
+              <code>13b2fd4381377bf50df4c6c091722f885030fd1a</code>, дерево
+              <code>93b1173d98da31993d4885b4d790711fd37fa2da</code>. Этот SHA
+              содержит принятый Sol code-атом pair diagnosis, но не является
+              runtimeEvidenceSha: для него ещё нет свежего полного Chromium
+              пакета, а clean-state receipt будет создан отдельно после
+              docs-коммита. Последний runtime-bound exact source перед ним —
+              <code>e657c5cf4207f7df16532e3e65f08fd33b9ed794</code>, дерево
+              <code>ffb3f8bfb71645c2a34b10745175af66823b7563</code>; его
+              Admin/demo canary fail-closed на границе <code>8192</code> без
+              terminal PASS. Более поздний repair-source
+              <code>43df65c31e9df7e055027b77df3e047740b34235</code> с деревом
+              <code>d2d3c80453e0fd15cbe9e636c63a0e5f07ec5131</code> также
+              воспроизвёл <code>8199 &gt; 8192</code>, а Sol вынес
+              <code>ITERATE</code> из-за occurrence-sensitive identity.
+              Исторический принятый desktop-пакет привязан к source SHA
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> с деревом
-              <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он не
-              подменяет fresh exact-SHA capture на текущем HEAD. Предыдущий
-              roadmap-only snapshot является docs-потомком
-              <code>113757b645cd06d9547e15f9e295a3445e9a2790</code> с деревом
-              <code>d619006614fd431a1ba18d7f9a32d04a8fb7c509</code>; эта Git-
-              идентичность не является runtime baseline.
+              <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он остаётся
+              ограниченной доказательной базой и не подменяет fresh exact-SHA
+              capture на текущем HEAD.
             </td>
           </tr>
           <tr>
             <td>Десктопный пакет, OpenSpec 6.3</td>
-            <td><span class="status warn">PARTIAL</span></td>
+            <td><span class="status ok">ACCEPTED-BOUNDED</span></td>
             <td>
               На историческом exact source
-              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> существуют
-              полный основной знаменатель из 51 кадра, артефакты переходов
-              T01–T07, контрольные суммы и невизуальные оракулы. Это
-              доказательная база для ограниченного десктопного просмотра, но не
-              fresh packet на runtime baseline <code>b0b8a9f40</code> и не
-              закрытие всей задачи 6.3.
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> принят пакет
+              <code
+                >2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa</code
+              >: основной знаменатель <strong>51/51</strong>, без пропусков,
+              <strong>18 переходов</strong> и отдельный supplemental
+              <code>L10-top-context</code>. Контрольные суммы, geometry/a11y/
+              console/request оракулы и source manifest сохранены. Статус
+              означает принятие именно этого bounded packet; его манифест прямо
+              не заявляет independent visual review, а текущий SHA
+              <code>13b2fd438</code> требует нового exact-SHA capture.
             </td>
           </tr>
           <tr>
             <td>Current runtime canary</td>
-            <td><span class="status ok">LIVE-PROVEN-BOUNDED</span></td>
+            <td><span class="status warn">HISTORICAL-BOUNDED</span></td>
             <td>
-              На предыдущем bounded source естественно завершился один реальный
+              Исторический bounded source действительно завершил один real
               Chromium canary для <code>admin / minimal / /admin</code>: parent
               <code>PASS</code>, <code>BRANCH_EXHAUSTED</code>, 277 continuation
-              receipts и 390 control observations. Это один bounded slice, а не
-              полная матрица.
+              receipts и 390 control observations. Это один bounded slice, не
+              текущий runtimeEvidenceSha и не полная матрица.
             </td>
           </tr>
           <tr>
@@ -318,7 +317,7 @@
             <td>Exact-HEAD verification tranche</td>
             <td><span class="status warn">PARTIAL-PROVEN</span></td>
             <td>
-              На SHA <code>e898f92fa</code> прошли production build
+              На историческом SHA <code>e898f92fa</code> прошли production build
               (<code>5/5</code>), integration (<code>52 passed</code>), UAT
               (<code>5 passed</code>, роли <code>51/0</code> маршрутов и
               аномалий) и <code>openspec validate --all --strict</code>
@@ -328,12 +327,12 @@
             </td>
           </tr>
           <tr>
-            <td>Текущий exact-SHA preflight</td>
+            <td>Исторический exact-SHA preflight</td>
             <td><span class="status danger">BLOCKED / NOT-PROVEN</span></td>
             <td>
-              На последнем проверенном repair-source
-              <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code>, дерево
-              <code>7db797414e8b664b6d3f088e2973f2253ec0fa26</code>, exact
+              На исторических runtime-bound repair-sources, последний из которых
+              — <code>43df65c31e9df7e055027b77df3e047740b34235</code> (дерево
+              <code>d2d3c80453e0fd15cbe9e636c63a0e5f07ec5131</code>), exact
               <code>admin/demo</code> canary дошёл до continuation queue и
               fail-closed остановился на <code>8199 &gt; 8192</code> после
               примерно 15 минут. PASS, continuation authority и segment artifact
@@ -351,7 +350,9 @@
               exact source <code>43df65c31</code> воспроизвёл capacity boundary,
               а Sol оставил <code>ITERATE</code>, поскольку sequence/uniqueness
               всё ещё используют name-derived <code>controlKey</code> для
-              одинаковых sibling controls.
+              одинаковых sibling controls. Текущий source candidate
+              <code>13b2fd438</code> содержит только принятый diagnostic code
+              atom и пока не имеет свежего runtime proof.
             </td>
           </tr>
           <tr>
@@ -475,15 +476,19 @@
       <div class="callout ok">
         <strong>Текущая рабочая последовательность:</strong>
         <code
-          >5.17 → causal diagnosis → bounded fix/canary → matrix → review →
-          fixes → final resweep</code
-        >. 5.14 и 5.15 приняты только как ограниченные доказательства
-        exact-canary; полная матрица 6.2 остановлена до решения границы
-        reveal-графа.
+          >source candidate → rebind 5.14/5.15/5.17 → 5.19 Sol gate → matrix →
+          review → fixes → final resweep</code
+        >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
+        ограниченной диагностической области; перед полной матрицей 6.2 их
+        знаменатель и exact-SHA provenance нужно повторно связать с текущим
+        source.
       </div>
       <ol class="sequence">
         <li>
-          <strong>5.14 · ограниченный диагностический пакет · ACCEPTED</strong>
+          <strong
+            >5.14 · ограниченный диагностический пакет ·
+            ACCEPTED-BOUNDED</strong
+          >
           <span>
             Естественный timeout R182 на exact-SHA сохранён в
             <code
@@ -494,7 +499,9 @@
           </span>
         </li>
         <li>
-          <strong>5.15 · ограниченный контур продолжения · ACCEPTED</strong>
+          <strong
+            >5.15 · ограниченный контур продолжения · ACCEPTED-BOUNDED</strong
+          >
           <span>
             Исторический пакет Admin/minimal на exact-SHA
             <code>2026-08-20-runtime-514-e5105aa9-admin-rerun7</code> дал
@@ -509,7 +516,7 @@
           </span>
         </li>
         <li>
-          <strong>5.17 · исследование ёмкости · ACCEPTED</strong>
+          <strong>5.17 · исследование ёмкости · ACCEPTED-BOUNDED</strong>
           <span>
             На exact-source initial preflight guard сохранил границу
             <code>8199 &gt; 8192</code>. Последующий single-child survey с
@@ -548,9 +555,11 @@
         <li>
           <strong>Полная матрица · после causal boundary</strong>
           <span>
-            Манифест 6.1 уже заморожен. Далее выполнить заявленную матрицу,
-            импортировать независимые пакеты проверок, разобрать находки,
-            исправить подтверждённые пробелы и повторить полный и затронутый
+            Манифест 6.1 уже заморожен исторически. Сначала связать его с
+            текущим exact source и обновлёнными runtime-contracts, затем
+            выполнить заявленную матрицу, импортировать независимые пакеты,
+            разобрать находки, исправить подтверждённые пробелы и повторить
+            полный и затронутый
             <code>affected/full sweep</code> на одном финальном SHA
             доказательств исполнения.
           </span>
@@ -636,7 +645,9 @@
             Ограниченные runtime/browser/DB/Redis-пакеты уже выполнены только на
             allowlisted disposable target; production, credentials, внешняя
             публикация и неизвестные базы не затрагивались. Следующий
-            исполнитель начинает с текущего clean HEAD и берёт 6.2.
+            исполнитель начинает с текущего source candidate, сначала делает
+            exact-SHA rebind 5.14/5.15/5.17, затем закрывает causal 5.19
+            deterministic/Sol gate, и только после этого берёт 6.2.
           </li>
         </ul>
       </div>
@@ -645,19 +656,21 @@
       <div class="callout">
         <p>
           Считать ограниченные пакеты 5.14/5.15/5.17 принятыми только в их
-          ограниченной области, сохранить их неизменными и перейти к подготовке
-          полной матрицы 6.2. Затем нужна проверка Luna 6.3, независимый синтез
-          6.4 и только после этого — исправления и финальный повторный полный
-          sweep. Полное CR-001 пока не закрыто.
+          ограниченной области, сохранить их неизменными и сначала перепривязать
+          их provenance к текущему source candidate. Затем закрыть causal 5.19
+          deterministic/Sol gate, и только после этого подготовить и выполнить
+          полную матрицу 6.2, получить проверку Luna 6.3, независимый синтез 6.4
+          и только затем — исправления и финальный повторный полный sweep.
+          Полное CR-001 пока не закрыто.
         </p>
       </div>
 
       <footer>
-        Обновлено по повторному чтению текущей идентичности исходника. Дорожная
-        карта не содержит внешних ресурсов или CDN и не выполняет внешних
-        записей. Полное CR-001 закрывается только при одновременном выполнении
-        всех обязательных условий OpenSpec, исполнения, проверки, очистки и
-        выпуска.
+        Обновлено по exact-SHA <code>13b2fd438</code> и повторному чтению
+        текущей идентичности исходника. Дорожная карта не содержит внешних
+        ресурсов или CDN и не выполняет внешних записей. Полное CR-001
+        закрывается только при одновременном выполнении всех обязательных
+        условий OpenSpec, исполнения, проверки, очистки и выпуска.
       </footer>
     </main>
   </body>
