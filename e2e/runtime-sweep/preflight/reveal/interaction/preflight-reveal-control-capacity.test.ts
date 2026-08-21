@@ -147,17 +147,26 @@ describe("shared reveal control capacity", () => {
 
       const overflow = harnessFor({ route, root, nested });
       const controlFactory = vi.fn(preflightControlForPlan);
-      await expect(
-        discoverRevealControls({
+      let overflowError: unknown;
+      try {
+        await discoverRevealControls({
           state,
           route,
           initialInventory: root,
           harness: overflow.harness,
           controlFor: controlFactory,
           maxControlsPerSegment: 1,
-        }),
-      ).rejects.toThrow(
-        /Reveal control bound exceeded: \d+ controls; maxControlsPerSegment is 1; reductionReason=[a-z-]+; pathDepth=\d+; knownBranches=\d+; plannedControls=\d+; projectedControls=\d+/u,
+        });
+      } catch (error: unknown) {
+        overflowError = error;
+      }
+      if (!(overflowError instanceof Error))
+        throw new Error("Expected dynamic overflow to return an Error");
+      expect(overflowError.message).toBe(
+        "Reveal control bound exceeded: 2 controls; maxControlsPerSegment is 1; reductionReason=depth-too-shallow; pathDepth=1; knownBranches=1; plannedControls=1; projectedControls=2",
+      );
+      expect(overflowError.message).not.toMatch(
+        /button:a-open:0|\/admin|https?:\/\/|password|secret|token/iu,
       );
       expect(
         overflow.events.filter((event) => event.startsWith("execute:")),
