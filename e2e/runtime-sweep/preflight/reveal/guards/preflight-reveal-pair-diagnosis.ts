@@ -1,20 +1,17 @@
-import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
-import type { RevealDiscoveryState } from "../interaction/preflight-reveal-branches.ts";
+import { stableSerialize } from "../../../support/ids.ts";
+import type { BranchView } from "./preflight-reveal-canonicalization.ts";
 import {
-  type BranchView,
-  knownBranchesFor,
-  type ToggleBinding,
-  toggleBindingsAnalysisFor,
-  uniqueBindingsFor,
-} from "./preflight-reveal-canonicalization.ts";
+  type DisclosurePathEvidence,
+  hasAdditionalDisclosureFor,
+  pairEvidenceFor,
+  pathWithOrderFor,
+} from "./preflight-reveal-pair-evidence.ts";
 import type { RevealReductionContext } from "./preflight-reveal-reduction-context.ts";
 import {
   matchesUnion,
   revealSurfaceMaterialFor,
   sameRevealSurfaceMaterial,
 } from "./reveal-surface-material.ts";
-
-const SCOPED_DISCLOSURE_TRANSITIONS = new Set(["none", "open", "cancel"]);
 
 type PairDiagnosticReason =
   | "context-not-bound"
@@ -35,123 +32,12 @@ export type PairReductionDiagnostic = Readonly<{
   readonly reason: PairDiagnosticReason;
 }>;
 
-type DisclosurePathEvidence = Readonly<{
-  readonly branch: BranchView;
-  readonly prefixDigest: string;
-  readonly bindings: readonly ToggleBinding[];
-  readonly rootSurface: BranchView["surface"];
-}>;
-
-const prefixFingerprintFor = (
-  path: BranchView["path"],
-  suffixStartIndex: number,
-): string => {
-  const firstStep = path.steps[0];
-  const prefixSteps = path.steps.slice(0, suffixStartIndex);
-  const exitStep = prefixSteps.at(-1);
-  return sha256Hex({
-    initialUrl: path.initialUrl,
-    initialRootSurfaceDigest: firstStep?.before.digest ?? "",
-    prefixSteps: prefixSteps.map((step) => ({
-      controlKey: step.controlKey,
-      operation: step.operation,
-      safety: step.safety,
-      transition: step.transition,
-      beforeUrl: step.beforeUrl,
-      afterUrl: step.afterUrl,
-      beforeSurfaceDigest: step.before.digest,
-      afterSurfaceDigest: step.after.digest,
-    })),
-    exitUrl: exitStep?.afterUrl ?? path.initialUrl,
-    exitSurfaceDigest: exitStep?.after.digest ?? firstStep?.before.digest ?? "",
-  });
-};
-
-const suffixStartIndexFor = (path: BranchView["path"]): number | undefined => {
-  const index = path.steps.findIndex(
-    (step) =>
-      step.operation === "click" &&
-      step.safety === "read-only" &&
-      SCOPED_DISCLOSURE_TRANSITIONS.has(step.transition) &&
-      step.beforeUrl === step.afterUrl,
-  );
-  return index === -1 ? undefined : index;
-};
-
-const disclosurePathEvidenceFor = (
-  branch: BranchView,
-): DisclosurePathEvidence | undefined => {
-  const suffixStartIndex = suffixStartIndexFor(branch.path);
-  if (suffixStartIndex === undefined) return undefined;
-  const analysis = toggleBindingsAnalysisFor({
-    ...branch.path,
-    steps: branch.path.steps.slice(suffixStartIndex),
-  });
-  if (!analysis.eligible || analysis.bindings.length === 0) return undefined;
-  if (!uniqueBindingsFor(analysis.bindings)) return undefined;
-  return {
-    branch,
-    prefixDigest: prefixFingerprintFor(branch.path, suffixStartIndex),
-    bindings: analysis.bindings,
-    rootSurface:
-      branch.path.steps[suffixStartIndex - 1]?.after ??
-      branch.path.steps[0]?.before ??
-      branch.surface,
-  };
-};
-
-const pairEvidenceFor = (
-  branch: BranchView,
-): DisclosurePathEvidence | undefined => {
-  const evidence = disclosurePathEvidenceFor(branch);
-  return evidence?.bindings.length === 2 ? evidence : undefined;
-};
-
-const pathWithOrderFor = (
-  branches: readonly BranchView[],
-  prefixDigest: string,
-  order: readonly string[],
-): DisclosurePathEvidence | undefined => {
-  for (const branch of branches) {
-    const evidence = disclosurePathEvidenceFor(branch);
-    if (evidence?.prefixDigest !== prefixDigest) continue;
-    if (
-      stableSerialize(evidence.bindings.map(({ identity }) => identity)) ===
-      stableSerialize(order)
-    )
-      return evidence;
-  }
-  return undefined;
-};
-
-const hasAdditionalDisclosureFor = (input: {
-  readonly branches: readonly BranchView[];
-  readonly prefixDigest: string;
-  readonly pairBindings: readonly ToggleBinding[];
-}): boolean =>
-  input.branches.some((branch) => {
-    const suffixStartIndex = suffixStartIndexFor(branch.path);
-    if (suffixStartIndex === undefined) return false;
-    if (
-      prefixFingerprintFor(branch.path, suffixStartIndex) !== input.prefixDigest
-    )
-      return false;
-    const analysis = toggleBindingsAnalysisFor({
-      ...branch.path,
-      steps: branch.path.steps.slice(suffixStartIndex),
-    });
-    return (
-      !analysis.eligible || analysis.bindings.length > input.pairBindings.length
-    );
-  });
-
 const contextMatches = (input: {
   readonly context: RevealReductionContext | undefined;
-  readonly expectedContext?: RevealReductionContext;
+  readonly expectedContext: RevealReductionContext;
 }): boolean =>
   input.context !== undefined &&
-  (input.expectedContext === undefined ||
-    stableSerialize(input.context) === stableSerialize(input.expectedContext));
+  stableSerialize(input.context) === stableSerialize(input.expectedContext);
 
 const requiredSavingsFor = (input: {
   readonly currentControlCount: number;
@@ -223,7 +109,7 @@ export const pairReductionDiagnosisFor = (input: {
   readonly branch: BranchView;
   readonly knownBranches: readonly BranchView[];
   readonly context: RevealReductionContext | undefined;
-  readonly expectedContext?: RevealReductionContext;
+  readonly expectedContext: RevealReductionContext;
   readonly currentControlCount: number;
   readonly plannedControlCount: number;
   readonly maxControlsPerSegment: number;
@@ -269,24 +155,3 @@ export const pairReductionDiagnosisFor = (input: {
     requiredSavings,
   });
 };
-
-export const pairReductionDiagnosisForState = (input: {
-  readonly state: RevealDiscoveryState;
-  readonly branch: BranchView;
-  readonly context: RevealReductionContext | undefined;
-  readonly expectedContext?: RevealReductionContext;
-  readonly currentControlCount: number;
-  readonly plannedControlCount: number;
-  readonly maxControlsPerSegment: number;
-}): PairReductionDiagnostic =>
-  pairReductionDiagnosisFor({
-    branch: input.branch,
-    knownBranches: knownBranchesFor(input.state),
-    context: input.context,
-    ...(input.expectedContext === undefined
-      ? {}
-      : { expectedContext: input.expectedContext }),
-    currentControlCount: input.currentControlCount,
-    plannedControlCount: input.plannedControlCount,
-    maxControlsPerSegment: input.maxControlsPerSegment,
-  });
