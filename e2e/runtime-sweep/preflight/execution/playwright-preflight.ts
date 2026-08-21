@@ -36,6 +36,7 @@ import {
 import {
   createPlaywrightRevealExecutor,
   createPlaywrightRevealRepresentativeInputFreezer,
+  waitForExpectedRevealSurface,
 } from "./playwright-reveal-execution.ts";
 export {
   navigateToRevealLanding,
@@ -198,6 +199,8 @@ export const playwrightHarnessFor = (input: {
     },
     currentUrl: () => input.page.url(),
     inventory: () => inventoryDom(input.page),
+    waitForRevealSurfaceReady: (expected) =>
+      waitForExpectedRevealSurface({ page: input.page, expected }),
     freezeRepresentativeInput,
     executeReveal,
   };

@@ -80,7 +80,13 @@ const replayStep = async (input: {
   assertRoutePath(input.route, executionUrl);
   assertRevealNonMutationProof(step.nonMutation);
   assertNonMutation(execution);
-  const surface = revealSurfaceFor(execution.inventory.controls);
+  const settledInventory =
+    input.harness.waitForRevealSurfaceReady === undefined
+      ? execution.inventory
+      : await input.harness
+          .waitForRevealSurfaceReady(step.after)
+          .then(async () => input.harness.inventory());
+  const surface = revealSurfaceFor(settledInventory.controls);
   if (stableSerialize(surface) !== stableSerialize(step.after))
     throw new RevealDiscoveryError(
       `Reveal path after surface drifted for ${step.controlKey}`,
@@ -91,7 +97,7 @@ const replayStep = async (input: {
     );
   return {
     path: current.path,
-    inventory: execution.inventory,
+    inventory: settledInventory,
     surface,
     url: executionUrl,
     preparation: current.preparation,

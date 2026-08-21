@@ -103,6 +103,10 @@ export interface RevealExecutionHarness {
   readonly navigate: (route: string) => Promise<void>;
   readonly currentUrl: () => string;
   readonly inventory: () => Promise<DomInventory>;
+  /** Wait for a named, expected surface signal before replay equality checks. */
+  readonly waitForRevealSurfaceReady?: (
+    expected: RevealSurface,
+  ) => Promise<void>;
   readonly freezeRepresentativeInput?: (input: {
     readonly control: DomControlObservation;
     readonly action: Action;
