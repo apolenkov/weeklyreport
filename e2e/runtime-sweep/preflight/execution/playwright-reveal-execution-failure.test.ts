@@ -95,4 +95,29 @@ describe("Playwright reveal execution failure diagnostics", () => {
       `Reveal action did not reach terminal pass: ${control.controlKey}; status=${status}; reason=${reason}`,
     );
   });
+
+  it("normalizes and bounds an observer failure reason", async () => {
+    const rawReason = `${"line-one\nline-two\t".repeat(30)}SENTINEL_AFTER_BOUND`;
+    const expectedReason = rawReason
+      .replaceAll(/\s+/gu, " ")
+      .trim()
+      .slice(0, 240);
+
+    mocks.executeControlAction.mockReturnValueOnce({
+      controlKey: control.controlKey,
+      operation: "click",
+      resetPerformed: false,
+      status: "fail",
+      reason: rawReason,
+    });
+
+    const executeReveal = createPlaywrightRevealExecutor({ page });
+    await expect(
+      executeReveal({ action, control, preparation }),
+    ).rejects.toThrow(
+      `Reveal action did not reach terminal pass: ${control.controlKey}; status=fail; reason=${expectedReason}`,
+    );
+    expect(expectedReason).toHaveLength(240);
+    expect(expectedReason).not.toContain("SENTINEL_AFTER_BOUND");
+  });
 });
