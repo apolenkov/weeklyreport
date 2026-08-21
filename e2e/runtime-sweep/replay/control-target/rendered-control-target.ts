@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { ElementHandle, Locator, Page } from "@playwright/test";
+import type { ElementHandle, JSHandle, Locator, Page } from "@playwright/test";
 
 import {
   SUPPORTED_CONTROL_ROLES,
@@ -13,11 +13,10 @@ import type {
 import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
 import { cleanupDiscoveryValidator } from "./rendered-control-discovery-cleanup.ts";
 import {
+  EVALUATE_RENDERED_NAME_SCRIPT,
   evaluateRenderedNameHandle,
-  installRenderedNameEvaluatorScriptFor,
-  removeRenderedNameEvaluatorScriptFor,
   type RenderedNameEvaluationInput,
-  renderedNameEvaluatorPropertyFor,
+  type RenderedNameEvaluator,
 } from "./rendered-control-name-evaluator.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
@@ -178,8 +177,9 @@ const matchingHandle = async (
     return undefined;
   }
   const matchingHandles: ElementHandle<HTMLElement>[] = [];
-  const evaluatorProperty = renderedNameEvaluatorPropertyFor(randomUUID());
-  await page.evaluate(installRenderedNameEvaluatorScriptFor(evaluatorProperty));
+  const evaluator: JSHandle<RenderedNameEvaluator> = await page.evaluateHandle(
+    EVALUATE_RENDERED_NAME_SCRIPT,
+  );
   try {
     for (const handle of handles) {
       if (Boolean(signal?.aborted)) {
@@ -200,8 +200,8 @@ const matchingHandle = async (
           await evaluateRenderedNameHandle(
             page,
             renderedHandle,
+            evaluator,
             expected,
-            evaluatorProperty,
           )
         ) {
           discoveryGenerations.set(renderedHandle, generation);
@@ -214,9 +214,7 @@ const matchingHandle = async (
       await handle.dispose();
     }
   } finally {
-    await page.evaluate(
-      removeRenderedNameEvaluatorScriptFor(evaluatorProperty),
-    );
+    await evaluator.dispose();
   }
   const abortedAfterDiscovery = Boolean(signal?.aborted);
   if (abortedAfterDiscovery) {

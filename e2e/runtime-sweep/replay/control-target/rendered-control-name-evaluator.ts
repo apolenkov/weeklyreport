@@ -1,4 +1,4 @@
-import type { ElementHandle, Page } from "@playwright/test";
+import type { ElementHandle, JSHandle, Page } from "@playwright/test";
 
 import { SOURCE_TEXT_HELPER_SCRIPT } from "../dom/dom-inventory.ts";
 
@@ -79,50 +79,27 @@ export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(element, expected) => {
   return true;
 }`;
 
-export const renderedNameEvaluatorPropertyFor = (nonce: string): string =>
-  `__customreport_rendered_name_evaluator_${nonce}`;
-
-export const installRenderedNameEvaluatorScriptFor = (
-  property: string,
-): string => `(() => {
-  const property = ${JSON.stringify(property)};
-  if (Object.prototype.hasOwnProperty.call(window, property))
-    throw new Error("Rendered-name evaluator property already exists");
-  window[property] = ${EVALUATE_RENDERED_NAME_SCRIPT};
-})()`;
-
-export const removeRenderedNameEvaluatorScriptFor = (
-  property: string,
-): string => `delete window[${JSON.stringify(property)}]`;
+export type RenderedNameEvaluator = (
+  element: HTMLElement,
+  expected: RenderedNameEvaluationInput,
+) => boolean;
 
 export const evaluateRenderedNameHandle = (
   page: Page,
   handle: ElementHandle<HTMLElement>,
+  evaluator: JSHandle<RenderedNameEvaluator>,
   expected: RenderedNameEvaluationInput,
-  evaluatorProperty: string,
 ): Promise<boolean> =>
   page.evaluate<
     boolean,
     {
       readonly element: ElementHandle<HTMLElement>;
+      readonly evaluator: JSHandle<RenderedNameEvaluator>;
       readonly expected: RenderedNameEvaluationInput;
-      readonly evaluatorProperty: string;
     }
   >(
-    ({ element, expected: evaluationInput, evaluatorProperty: property }) => {
-      const candidate: unknown = Object.getOwnPropertyDescriptor(
-        window,
-        property,
-      )?.value;
-      const isEvaluator = (
-        value: unknown,
-      ): value is (
-        target: HTMLElement,
-        input: RenderedNameEvaluationInput,
-      ) => boolean => typeof value === "function";
-      if (!isEvaluator(candidate))
-        throw new Error("Rendered-name evaluator is unavailable");
-      return candidate(element, evaluationInput);
+    ({ element, evaluator: evaluate, expected: evaluationInput }) => {
+      return evaluate(element, evaluationInput);
     },
-    { element: handle, expected, evaluatorProperty },
+    { element: handle, evaluator, expected },
   );
