@@ -1,6 +1,25 @@
+import type { ElementHandle, Page } from "@playwright/test";
+
 import { SOURCE_TEXT_HELPER_SCRIPT } from "../dom/dom-inventory.ts";
 
-export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(expected) => {
+export interface RenderedNameEvaluationInput {
+  readonly generation: string;
+  readonly name: string;
+  readonly roleName: string;
+  readonly roleSelector: string;
+  readonly validatorProperty: string;
+}
+
+declare global {
+  interface Window {
+    __customreportRenderedNameEvaluator?: (
+      element: HTMLElement,
+      expected: RenderedNameEvaluationInput,
+    ) => boolean;
+  }
+}
+
+export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(element, expected) => {
   const sourceText = ${SOURCE_TEXT_HELPER_SCRIPT};
   const normalize = (value) => (value ?? "").replaceAll(/\s+/gu, " ").trim();
   const sourceTextFor = (target) =>
@@ -42,35 +61,57 @@ export const EVALUATE_RENDERED_NAME_SCRIPT = String.raw`(expected) => {
   };
   const inventoryNameFor = (target) => nameFor(target, sourceTextFor);
   const renderedNameFor = (target) => nameFor(target, renderedTextFor);
-  return Array.from(document.querySelectorAll(expected.candidateSelector)).map(
-    (element, index) => {
-      if (!(element instanceof HTMLElement)) return false;
-      const matchesCurrent = () => {
-        const bounds = element.getBoundingClientRect();
-        const style = window.getComputedStyle(element);
-        const visible = [
-          element.closest("[hidden],[aria-hidden='true']") === null &&
-            style.display !== "none",
-          !["hidden", "collapse"].includes(style.visibility),
-          Number(style.opacity) !== 0 && bounds.width > 0 && bounds.height > 0,
-        ].every(Boolean);
-        return (
-          element.matches(expected.roleSelector) &&
-          (document.fullscreenElement?.contains(element) ?? true) &&
-          visible &&
-          (inventoryNameFor(element) === expected.name ||
-            renderedNameFor(element) === expected.name)
-        );
-      };
-      if (!matchesCurrent()) return false;
-      Object.assign(matchesCurrent, {
-        generation: expected.generations[index],
-      });
-      Object.defineProperty(element, expected.validatorProperty, {
-        configurable: true,
-        value: matchesCurrent,
-      });
-      return true;
-    },
-  );
+  if (!(element instanceof HTMLElement)) return false;
+  const matchesCurrent = () => {
+    const bounds = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    const visible = [
+      element.closest("[hidden],[aria-hidden='true']") === null &&
+        style.display !== "none",
+      !["hidden", "collapse"].includes(style.visibility),
+      Number(style.opacity) !== 0 && bounds.width > 0 && bounds.height > 0,
+    ].every(Boolean);
+    return (
+      element.matches(expected.roleSelector) &&
+      (document.fullscreenElement?.contains(element) ?? true) &&
+      visible &&
+      (inventoryNameFor(element) === expected.name ||
+        renderedNameFor(element) === expected.name)
+    );
+  };
+  if (!matchesCurrent()) return false;
+  Object.assign(matchesCurrent, { generation: expected.generation });
+  Object.defineProperty(element, expected.validatorProperty, {
+    configurable: true,
+    value: matchesCurrent,
+  });
+  return true;
 }`;
+
+export const INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT = `(() => {
+  window.__customreportRenderedNameEvaluator = ${EVALUATE_RENDERED_NAME_SCRIPT};
+})()`;
+
+export const REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT =
+  "delete window.__customreportRenderedNameEvaluator";
+
+export const evaluateRenderedNameHandle = (
+  page: Page,
+  handle: ElementHandle<HTMLElement>,
+  expected: RenderedNameEvaluationInput,
+): Promise<boolean> =>
+  page.evaluate<
+    boolean,
+    {
+      readonly element: ElementHandle<HTMLElement>;
+      readonly expected: RenderedNameEvaluationInput;
+    }
+  >(
+    ({ element, expected: evaluationInput }) => {
+      const evaluator = window.__customreportRenderedNameEvaluator;
+      if (evaluator === undefined)
+        throw new Error("Rendered-name evaluator is unavailable");
+      return evaluator(element, evaluationInput);
+    },
+    { element: handle, expected },
+  );

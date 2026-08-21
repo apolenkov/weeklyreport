@@ -12,7 +12,12 @@ import type {
 } from "../control-actions/control-action-types.ts";
 import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
 import { cleanupDiscoveryValidator } from "./rendered-control-discovery-cleanup.ts";
-import { EVALUATE_RENDERED_NAME_SCRIPT } from "./rendered-control-name-evaluator.ts";
+import {
+  evaluateRenderedNameHandle,
+  INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT,
+  REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT,
+  type RenderedNameEvaluationInput,
+} from "./rendered-control-name-evaluator.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
   RENDERED_TARGET_VALIDATOR_PROPERTY,
@@ -167,47 +172,40 @@ const matchingHandle = async (
   occurrence: number,
   signal?: AbortSignal,
 ): Promise<ElementHandle<HTMLElement> | undefined> => {
-  if (signal?.aborted === true) {
-    await Promise.all(
-      handles.map((handle) =>
-        releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>),
-      ),
-    );
-    return undefined;
-  }
-  const generations = handles.map(() => randomUUID());
-  const matchFlags = await page.evaluate<boolean[]>(
-    `(${EVALUATE_RENDERED_NAME_SCRIPT})(${JSON.stringify({
-      candidateSelector: fullscreenInteractionSelector(roleSelector),
-      generations,
-      name: expectedName,
-      roleName,
-      roleSelector,
-      validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
-    })})`,
-  );
-  if (matchFlags.length !== handles.length) {
-    await Promise.all(
-      handles.map((handle) =>
-        releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>),
-      ),
-    );
+  if (Boolean(signal?.aborted)) {
+    await Promise.all(handles.map((handle) => handle.dispose()));
     return undefined;
   }
   const matchingHandles: ElementHandle<HTMLElement>[] = [];
-  for (const [index, handle] of handles.entries()) {
-    if (matchFlags[index] !== true) {
+  await page.evaluate(INSTALL_RENDERED_NAME_EVALUATOR_SCRIPT);
+  try {
+    for (const handle of handles) {
+      if (Boolean(signal?.aborted)) {
+        await handle.dispose();
+        continue;
+      }
+      const generation = randomUUID();
+      const renderedHandle = handle as ElementHandle<HTMLElement>;
+      try {
+        const expected: RenderedNameEvaluationInput = {
+          generation,
+          name: expectedName,
+          roleName,
+          roleSelector,
+          validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
+        };
+        if (await evaluateRenderedNameHandle(page, renderedHandle, expected)) {
+          discoveryGenerations.set(renderedHandle, generation);
+          matchingHandles.push(renderedHandle);
+          continue;
+        }
+      } catch {
+        // A detached handle is a stale candidate, never an action target.
+      }
       await handle.dispose();
-      continue;
     }
-    const generation = generations[index];
-    if (generation === undefined) {
-      await handle.dispose();
-      continue;
-    }
-    const renderedHandle = handle as ElementHandle<HTMLElement>;
-    discoveryGenerations.set(renderedHandle, generation);
-    matchingHandles.push(renderedHandle);
+  } finally {
+    await page.evaluate(REMOVE_RENDERED_NAME_EVALUATOR_SCRIPT);
   }
   const abortedAfterDiscovery = Boolean(signal?.aborted);
   if (abortedAfterDiscovery) {
