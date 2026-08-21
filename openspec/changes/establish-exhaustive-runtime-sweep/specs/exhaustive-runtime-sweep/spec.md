@@ -341,10 +341,13 @@ empty-frontier result or any acceptance gate.
 ### Requirement: Independent scoped disclosures use proven equivalence reduction
 
 Reveal discovery SHALL reduce only reversible, read-only, single-target
-disclosures whose independence is proven from the exact runtime surface. A
-candidate is eligible only when its control exposes one `aria-controls` target,
-an `aria-expanded` boolean, a read-only click with no URL transition, and no
-active-modal/background coupling.
+disclosures whose independence is proven by the exact runtime surface and an
+explicit source-bound component contract. A candidate is eligible only when
+its control exposes one `aria-controls` target, an `aria-expanded` boolean, a
+read-only click with no URL transition, no active-modal/background coupling,
+and `data-reveal-independence="source-bound-row-local"` in every before/after
+surface for the candidate steps. ARIA shape and pairwise equality alone are
+insufficient evidence of higher-order independence.
 
 #### Scenario: independent disclosures are proven in both orders
 
@@ -368,6 +371,14 @@ active-modal/background coupling.
 - **THEN** the branch remains an ordinary reveal branch
 - **AND** no control or path is trimmed, merged, or marked inapplicable
 - **AND** the production overflow guard remains fail-closed
+
+#### Scenario: an untrusted fourth disclosure keeps the preceding triple ordinary
+
+- **GIVEN** three reversible disclosures appear pairwise commutative but a
+  fourth disclosure has no source-bound independence contract
+- **WHEN** the harness considers the three-disclosure branch for reduction
+- **THEN** it keeps that branch ordinary and explores the fourth disclosure
+- **AND** no pairwise proof is treated as a higher-order independence proof
 
 #### Scenario: the first terminal-candidate failure is captured without authority
 

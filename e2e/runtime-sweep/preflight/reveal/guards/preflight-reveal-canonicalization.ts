@@ -17,13 +17,8 @@ import {
 const MIN_CANONICALIZATION_DEPTH = 3;
 
 type BranchView = Readonly<Pick<RevealBranch, "path" | "surface" | "url">>;
-type RevealTransition = RevealPath["steps"][number]["transition"];
 
-const SCOPED_DISCLOSURE_TRANSITIONS: ReadonlySet<RevealTransition> = new Set([
-  "none",
-  "open",
-  "cancel",
-]);
+const SCOPED_DISCLOSURE_TRANSITIONS = new Set(["none", "open", "cancel"]);
 
 type ToggleBinding = Readonly<{
   readonly controlKey: string;
@@ -83,6 +78,8 @@ const toggleBindingForStep = (
     source.ariaRole !== "button" ||
     !source.enabled ||
     source.interactionEffect === "mutation-required" ||
+    source.disclosureIndependence !== "source-bound-row-local" ||
+    after.disclosureIndependence !== "source-bound-row-local" ||
     typeof targetId !== "string" ||
     targetId.length === 0 ||
     /\s/u.test(targetId) ||
@@ -290,15 +287,16 @@ export const independentDisclosureReductionFor = (input: {
   const bindings = toggleBindingsFor(input.branch.path);
   if (bindings === undefined || !uniqueBindingsFor(bindings)) return false;
   const initialUrl = input.branch.path.initialUrl;
-  const root = steps[0]?.before;
-  if (root === undefined) return false;
-  const rootMaterial = revealSurfaceMaterialFor(root);
-  const singles = bindings.map(({ controlKey }) =>
-    branchForSequence(input.knownBranches, initialUrl, [controlKey]),
+  const rootMaterial = revealSurfaceMaterialFor(
+    steps[0]?.before ?? input.branch.surface,
   );
-  const resolvedSingles = singles.filter(isDefined);
+  const resolvedSingles = bindings
+    .map(({ controlKey }) =>
+      branchForSequence(input.knownBranches, initialUrl, [controlKey]),
+    )
+    .filter(isDefined);
   if (
-    resolvedSingles.length !== singles.length ||
+    resolvedSingles.length !== bindings.length ||
     !resolvedSingles.every((branch) => branch.url === initialUrl) ||
     !matchesUnion({
       root: rootMaterial,

@@ -86,6 +86,19 @@ describe("runtime DOM inventory", () => {
     });
   });
 
+  it("rejects an untrusted disclosure-independence declaration", async () => {
+    const page = {
+      evaluate: () =>
+        Promise.resolve([
+          { ...rawButton, disclosureIndependence: "unreviewed" },
+        ]),
+    } as unknown as Page;
+
+    await expect(inventoryDom(page)).rejects.toThrow(
+      /unsupported data-reveal-independence/iu,
+    );
+  });
+
   it("keeps record lineage separate from accessible control identity", async () => {
     const recordStableId = "88888888-8888-4888-8888-888888888888";
     const page = {

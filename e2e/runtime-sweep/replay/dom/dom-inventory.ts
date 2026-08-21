@@ -22,6 +22,13 @@ export const RUNTIME_INTERACTION_EFFECTS = [
   "mutation-required",
 ] as const;
 
+export const RUNTIME_DISCLOSURE_INDEPENDENCE = [
+  "source-bound-row-local",
+] as const;
+
+export type RuntimeDisclosureIndependence =
+  (typeof RUNTIME_DISCLOSURE_INDEPENDENCE)[number];
+
 export type RuntimeInteractionEffect =
   (typeof RUNTIME_INTERACTION_EFFECTS)[number];
 
@@ -39,6 +46,7 @@ export interface DomControlObservation {
   readonly href: string | null;
   readonly ariaControls?: string | null | undefined;
   readonly ariaExpanded?: boolean | null | undefined;
+  readonly disclosureIndependence?: RuntimeDisclosureIndependence | undefined;
   readonly recordStableId?: string | undefined;
   readonly interactionEffect?: RuntimeInteractionEffect;
   readonly keyboardExpectedFocusable?: boolean;
@@ -61,7 +69,10 @@ export interface DomInventory {
 export const domControlDisclosureMetadataFor = (
   control: Pick<
     DomControlObservation,
-    "ariaControls" | "ariaExpanded" | "keyboardFocusScope"
+    | "ariaControls"
+    | "ariaExpanded"
+    | "disclosureIndependence"
+    | "keyboardFocusScope"
   >,
 ) => ({
   ...(control.ariaControls === undefined
@@ -70,6 +81,9 @@ export const domControlDisclosureMetadataFor = (
   ...(control.ariaExpanded === undefined
     ? {}
     : { ariaExpanded: control.ariaExpanded }),
+  ...(control.disclosureIndependence === undefined
+    ? {}
+    : { disclosureIndependence: control.disclosureIndependence }),
   ...(control.keyboardFocusScope === undefined
     ? {}
     : { keyboardFocusScope: control.keyboardFocusScope }),
@@ -82,6 +96,7 @@ interface RawDomElement {
   readonly href: string | null;
   readonly ariaControls: string | null;
   readonly ariaExpanded: boolean | null;
+  readonly disclosureIndependence?: string | null;
   readonly recordStableId: string | null;
   readonly interactionEffect: string | null;
   readonly ariaLabel: string | null;
@@ -142,6 +157,17 @@ const interactionEffectFor = (
   throw new Error(`Unsupported data-interaction-effect value: ${value}`);
 };
 
+const disclosureIndependenceFor = (
+  value: string | null | undefined,
+): RuntimeDisclosureIndependence | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const independence = RUNTIME_DISCLOSURE_INDEPENDENCE.find(
+    (entry) => entry === value,
+  );
+  if (independence !== undefined) return independence;
+  throw new Error(`Unsupported data-reveal-independence value: ${value}`);
+};
+
 const controlFrom = (
   element: RawDomElement,
   order: number,
@@ -149,6 +175,9 @@ const controlFrom = (
 ): DomControlObservation => {
   const accessibleName = accessibleNameFor(element);
   const interactionEffect = interactionEffectFor(element.interactionEffect);
+  const disclosureIndependence = disclosureIndependenceFor(
+    element.disclosureIndependence,
+  );
   const recordStableId = normalizeText(element.recordStableId);
   const controlKey = [
     element.role,
@@ -169,6 +198,7 @@ const controlFrom = (
     href: element.href,
     ariaControls: element.ariaControls,
     ariaExpanded: element.ariaExpanded,
+    ...(disclosureIndependence === undefined ? {} : { disclosureIndependence }),
     ...(recordStableId === "" ? {} : { recordStableId }),
     ...(interactionEffect === undefined ? {} : { interactionEffect }),
     ...(element.keyboardExpectedFocusable === undefined

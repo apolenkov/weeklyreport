@@ -249,14 +249,17 @@
       invokes the unchanged whole-surface boundary without executing the final
       action, and emits only diagnostic terminal classifications.
 
-- [x] 5.19 Add source-bound canonicalization for independent reversible
+- [ ] 5.19 Add source-bound canonicalization for independent reversible
       `aria-controls`-scoped disclosures. Retain toggle metadata in live and
-      continuation inventories, execute and record both `A → B` and `B → A`
-      for disjoint targets, require equal material surfaces and URL before
-      reducing deeper combinations to the material union, retain every
-      row-local control, and keep modal/coupled/URL-changing/incomplete
-      controls ordinary. Add deterministic equivalence/rejection tests and
-      preserve the existing `maxControlsPerSegment` plus-one guard.
+      continuation inventories, require the explicit
+      `data-reveal-independence="source-bound-row-local"` contract in every
+      candidate step, execute and record both `A → B` and `B → A` for disjoint
+      targets, require equal material surfaces and URL before reducing deeper
+      combinations to the material union, retain every row-local control, and
+      keep modal/coupled/URL-changing/incomplete/untrusted controls ordinary.
+      Add deterministic four-toggle rejection coverage and preserve the
+      existing `maxControlsPerSegment` plus-one guard. This remains
+      NOT-PROVEN until an exact `admin/demo` canary exercises the contract.
 
 ## 6. Immutable baseline and adjudication
 

@@ -54,6 +54,10 @@ describe("ActionLogRow details", () => {
       name: /show action details/i,
     });
 
+    expect(trigger).toHaveAttribute(
+      "data-reveal-independence",
+      "source-bound-row-local",
+    );
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(
       screen.queryByRole("region", { name: /action details/i }),

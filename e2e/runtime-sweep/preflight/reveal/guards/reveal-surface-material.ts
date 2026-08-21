@@ -12,6 +12,7 @@ type RevealSurfaceMaterialControl = Readonly<
     | "interactionEffect"
     | "ariaControls"
     | "ariaExpanded"
+    | "disclosureIndependence"
     | "keyboardFocusScope"
   >
 >;
@@ -48,6 +49,9 @@ const revealSurfaceMaterialControlFor = (
   ...(control.ariaExpanded === undefined
     ? {}
     : { ariaExpanded: control.ariaExpanded }),
+  ...(control.disclosureIndependence === undefined
+    ? {}
+    : { disclosureIndependence: control.disclosureIndependence }),
   ...(control.keyboardFocusScope === undefined
     ? {}
     : { keyboardFocusScope: control.keyboardFocusScope }),

@@ -173,6 +173,7 @@ export function ActionLogRow({ row }: { readonly row: AdminActionLogEvent }) {
             type="button"
             aria-expanded={expanded}
             aria-controls={detailId}
+            data-reveal-independence="source-bound-row-local"
             aria-label={`${expanded ? "Hide" : "Show"} action details`}
             onClick={() => setExpanded((current) => !current)}
             className="inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] md:min-h-8"

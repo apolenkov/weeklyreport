@@ -38,6 +38,7 @@ const SURFACE_FIELDS = [
   "domOrderKey",
   "href",
   "interactionEffect",
+  "disclosureIndependence",
 ] as const satisfies readonly Exclude<
   keyof RevealSurfaceControl,
   "controlKey"

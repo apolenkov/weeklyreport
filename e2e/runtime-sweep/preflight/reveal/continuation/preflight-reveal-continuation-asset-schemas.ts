@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { matrixPreflightControlSchema } from "../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
+import { RUNTIME_DISCLOSURE_INDEPENDENCE } from "../../../replay/dom/dom-inventory.ts";
 import { actionSchema } from "../../../source/contracts.ts";
 import {
   revealNonMutationProofSchema,
@@ -60,6 +61,7 @@ const domControlSchema = z
     href: z.string().nullable(),
     ariaControls: z.string().min(1).nullable().optional(),
     ariaExpanded: z.boolean().nullable().optional(),
+    disclosureIndependence: z.enum(RUNTIME_DISCLOSURE_INDEPENDENCE).optional(),
     recordStableId: z.uuid().optional(),
     interactionEffect: z.enum(["client-only", "mutation-required"]).optional(),
     keyboardExpectedFocusable: z.boolean().optional(),

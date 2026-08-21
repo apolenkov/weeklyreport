@@ -6,6 +6,7 @@ import {
   type RevealSurface,
   revealSurfaceSchema,
 } from "../../preflight/reveal-path.ts";
+import { RUNTIME_DISCLOSURE_INDEPENDENCE } from "../../replay/dom/dom-inventory.ts";
 import {
   type Action,
   actionSchema,
@@ -49,6 +50,8 @@ export interface MatrixPreflightControl {
     readonly href: string | null;
     readonly ariaControls?: string | null | undefined;
     readonly ariaExpanded?: boolean | null | undefined;
+    readonly disclosureIndependence?:
+      (typeof RUNTIME_DISCLOSURE_INDEPENDENCE)[number] | undefined;
     readonly keyboardFocusScope?:
       "page" | "active-modal" | "background" | undefined;
   }>;
@@ -74,6 +77,9 @@ export const matrixPreflightControlSchema: z.ZodType<MatrixPreflightControl> = z
         href: z.string().nullable(),
         ariaControls: z.string().min(1).nullable().optional(),
         ariaExpanded: z.boolean().nullable().optional(),
+        disclosureIndependence: z
+          .enum(RUNTIME_DISCLOSURE_INDEPENDENCE)
+          .optional(),
         keyboardFocusScope: z
           .enum(["page", "active-modal", "background"])
           .optional(),
