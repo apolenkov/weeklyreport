@@ -92,6 +92,33 @@ const branchFor = (
   };
 };
 
+const renamedSurfaceFor = (surface: RevealSurface): RevealSurface =>
+  revealSurfaceFor(
+    surface.controls.map((control) =>
+      control.ariaExpanded === true
+        ? {
+            ...control,
+            controlKey: `hide-${control.controlKey}`,
+            accessibleName: `Hide ${control.accessibleName}`,
+          }
+        : control,
+    ),
+  );
+
+const renamedBranchFor = (branch: RevealBranch): RevealBranch => {
+  const steps = branch.path.steps.map((step) => ({
+    ...step,
+    before: renamedSurfaceFor(step.before),
+    after: renamedSurfaceFor(step.after),
+  }));
+  const surface = renamedSurfaceFor(branch.surface);
+  return {
+    ...branch,
+    path: revealPathFor(steps, branch.path.initialUrl),
+    surface,
+  };
+};
+
 const fixtures = () => {
   const root = surfaceFor({ a: false, b: false, c: false });
   const single = (key: string): RevealBranch => {
@@ -251,5 +278,20 @@ describe("independent disclosure canonicalization", () => {
         knownBranches: [...fixture.singles, ...fixture.pairs],
       }),
     ).toBe(false);
+  });
+
+  it("matches a source-bound disclosure when its accessible name changes", () => {
+    const fixture = fixtures();
+    const candidate = renamedBranchFor(fixture.candidate);
+
+    expect(
+      independentDisclosureReductionFor({
+        branch: candidate,
+        knownBranches: [
+          ...fixture.singles.map(renamedBranchFor),
+          ...fixture.pairs.map(renamedBranchFor),
+        ],
+      }),
+    ).toBe(true);
   });
 });
