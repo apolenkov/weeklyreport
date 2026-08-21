@@ -29,8 +29,9 @@ import type { RevealSurface, RevealSurfaceControl } from "../reveal-path.ts";
 import { settleRevealActionNavigation } from "./playwright-reveal-navigation.ts";
 import { captureRevealExecutionObservation } from "./playwright-reveal-observation.ts";
 
-const REVEAL_TIMEOUT_MS = 10_000;
-const REVEAL_DATA_READY_TIMEOUT_MS = 5000;
+const REVEAL_TIMEOUT_MS = 10_000,
+  REVEAL_DATA_READY_TIMEOUT_MS = 5000,
+  REVEAL_FAILURE_REASON_MAX_LENGTH = 240;
 
 const controlTargetFor = (
   control: RevealSurfaceControl,
@@ -240,7 +241,7 @@ const executeRevealAction = async (input: {
   });
   if (execution.status !== "pass")
     throw new Error(
-      `Reveal action did not reach terminal pass: ${action.controlKey}`,
+      `Reveal action did not reach terminal pass: ${action.controlKey}; status=${execution.status}; reason=${(execution.reason ?? "unspecified").replaceAll(/\s+/gu, " ").trim().slice(0, REVEAL_FAILURE_REASON_MAX_LENGTH)}`,
     );
   await settleRevealActionNavigation({
     action,
