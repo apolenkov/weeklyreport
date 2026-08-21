@@ -12,6 +12,7 @@ import {
   revealSurfaceFor,
 } from "../../reveal-path.ts";
 import type { RevealBranch } from "../interaction/preflight-reveal-branches.ts";
+import { toggleBindingsFor } from "./preflight-reveal-canonicalization.ts";
 import {
   independentDisclosureReductionDiagnosisFor,
   independentDisclosureReductionFor,
@@ -214,6 +215,13 @@ describe("independent disclosure diagnosis", () => {
       });
       expect(diagnosis.reason).toBe(reason);
       expect(diagnosis.eligible).toBe(eligible);
+      if (reason === "step-not-eligible")
+        expect(diagnosis).toMatchObject({
+          stepIndex: 0,
+          predicate: "source-control-not-source-bound",
+        });
+      if (reason === "reduction-proven")
+        expect(toggleBindingsFor(branch.path)).toHaveLength(3);
       expect(independentDisclosureReductionFor({ branch, knownBranches })).toBe(
         eligible,
       );

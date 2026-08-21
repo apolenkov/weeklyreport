@@ -21,7 +21,26 @@ export type ToggleBinding = Readonly<{
   readonly targetId: string;
 }>;
 
-const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+export type ToggleBindingEligibilityPredicate =
+  | "operation-not-click"
+  | "safety-not-read-only"
+  | "transition-not-scoped"
+  | "url-changed"
+  | "modal-or-background-control"
+  | "source-control-not-source-bound"
+  | "target-id-invalid"
+  | "source-expanded-state-invalid"
+  | "before-target-not-unique"
+  | "after-target-not-unique"
+  | "after-expanded-state-invalid-or-unchanged";
+
+type ToggleBindingAnalysis = Readonly<
+  | { readonly kind: "eligible"; readonly binding: ToggleBinding }
+  | {
+      readonly kind: "ineligible";
+      readonly predicate: ToggleBindingEligibilityPredicate;
+    }
+>;
 
 const sourceControlFor = (
   surface: RevealSurface,
@@ -73,45 +92,98 @@ const sourceBoundAfterControlFor = (
   return matches.length === 1 ? matches[0] : undefined;
 };
 
-const toggleBindingForStep = (
+const basicEligibilityPredicateFor = (
   step: RevealPath["steps"][number],
-): ToggleBinding | undefined => {
-  if (
-    step.operation !== "click" ||
-    step.safety !== "read-only" ||
-    !SCOPED_DISCLOSURE_TRANSITIONS.has(step.transition) ||
-    step.beforeUrl !== step.afterUrl ||
-    hasModalOrBackgroundControl(step.before)
-  )
-    return undefined;
+): ToggleBindingEligibilityPredicate | undefined => {
+  if (step.operation !== "click") return "operation-not-click";
+  if (step.safety !== "read-only") return "safety-not-read-only";
+  if (!SCOPED_DISCLOSURE_TRANSITIONS.has(step.transition))
+    return "transition-not-scoped";
+  if (step.beforeUrl !== step.afterUrl) return "url-changed";
+  if (hasModalOrBackgroundControl(step.before))
+    return "modal-or-background-control";
+  return undefined;
+};
+
+const toggleBindingAnalysisForStep = (
+  step: RevealPath["steps"][number],
+): ToggleBindingAnalysis => {
+  const basicPredicate = basicEligibilityPredicateFor(step);
+  if (basicPredicate !== undefined)
+    return {
+      kind: "ineligible",
+      predicate: basicPredicate,
+    };
 
   const source = sourceControlFor(step.before, step.controlKey);
-  if (!isSourceBoundDisclosure(source)) return undefined;
+  if (!isSourceBoundDisclosure(source))
+    return {
+      kind: "ineligible",
+      predicate: "source-control-not-source-bound",
+    };
   const targetId = source.ariaControls;
-  if (!hasValidTargetId(targetId) || typeof source.ariaExpanded !== "boolean")
-    return undefined;
+  if (!hasValidTargetId(targetId))
+    return { kind: "ineligible", predicate: "target-id-invalid" };
+  if (typeof source.ariaExpanded !== "boolean")
+    return {
+      kind: "ineligible",
+      predicate: "source-expanded-state-invalid",
+    };
   const beforeMatches = step.before.controls.filter(
     (control) =>
       isSourceBoundDisclosure(control) && control.ariaControls === targetId,
   );
   if (beforeMatches.length !== 1 || beforeMatches[0] !== source)
-    return undefined;
+    return { kind: "ineligible", predicate: "before-target-not-unique" };
   const after = sourceBoundAfterControlFor(step, targetId);
+  if (after === undefined)
+    return { kind: "ineligible", predicate: "after-target-not-unique" };
   if (
-    after === undefined ||
     typeof after.ariaExpanded !== "boolean" ||
     after.ariaExpanded === source.ariaExpanded
   )
-    return undefined;
+    return {
+      kind: "ineligible",
+      predicate: "after-expanded-state-invalid-or-unchanged",
+    };
 
-  return { identity: sourceBoundIdentityFor(targetId), targetId };
+  return {
+    kind: "eligible",
+    binding: { identity: sourceBoundIdentityFor(targetId), targetId },
+  };
+};
+
+export type ToggleBindingsAnalysis = Readonly<
+  | { readonly eligible: true; readonly bindings: readonly ToggleBinding[] }
+  | {
+      readonly eligible: false;
+      readonly stepIndex: number;
+      readonly predicate: ToggleBindingEligibilityPredicate;
+    }
+>;
+
+export const toggleBindingsAnalysisFor = (
+  path: RevealPath,
+): ToggleBindingsAnalysis => {
+  const bindings: ToggleBinding[] = [];
+  for (const [stepIndex, step] of path.steps.entries()) {
+    const analysis = toggleBindingAnalysisForStep(step);
+    if (analysis.kind === "ineligible")
+      return {
+        eligible: false,
+        stepIndex,
+        predicate: analysis.predicate,
+      };
+    bindings.push(analysis.binding);
+  }
+  return { eligible: true, bindings };
 };
 
 export const toggleBindingsFor = (
   path: RevealPath,
 ): readonly ToggleBinding[] | undefined => {
-  const bindings = path.steps.map(toggleBindingForStep);
-  return bindings.every(isDefined) ? bindings : undefined;
+  const analysis = toggleBindingsAnalysisFor(path);
+  return analysis.eligible ? analysis.bindings : undefined;
 };
 
 export const uniqueBindingsFor = (

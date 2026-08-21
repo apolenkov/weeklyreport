@@ -5,7 +5,8 @@ import {
   knownBranchesFor,
   sequenceFor,
   type ToggleBinding,
-  toggleBindingsFor,
+  type ToggleBindingEligibilityPredicate,
+  toggleBindingsAnalysisFor,
   uniqueBindingsFor,
 } from "./preflight-reveal-canonicalization.ts";
 import {
@@ -27,16 +28,31 @@ type IndependentDisclosureReductionReason =
   | "union-mismatch"
   | "reduction-proven";
 
+type StepNotEligibleDiagnosis = Readonly<{
+  readonly eligible: false;
+  readonly reason: "step-not-eligible";
+  readonly stepIndex: number;
+  readonly predicate: ToggleBindingEligibilityPredicate;
+}>;
+
 export type IndependentDisclosureReductionDiagnosis = Readonly<
+  | StepNotEligibleDiagnosis
   | {
       readonly eligible: false;
       readonly reason: Exclude<
         IndependentDisclosureReductionReason,
-        "reduction-proven"
+        "reduction-proven" | "step-not-eligible"
       >;
     }
   | { readonly eligible: true; readonly reason: "reduction-proven" }
 >;
+
+export const independentDisclosureReductionCapacityDetailsFor = (
+  diagnosis: IndependentDisclosureReductionDiagnosis,
+): string =>
+  diagnosis.reason === "step-not-eligible"
+    ? `; reductionStepIndex=${String(diagnosis.stepIndex)}; reductionPredicate=${diagnosis.predicate}`
+    : "";
 
 type BranchSequenceLookup = Readonly<
   | { readonly kind: "missing" }
@@ -128,9 +144,15 @@ export const independentDisclosureReductionDiagnosisFor = (input: {
   const steps = input.branch.path.steps;
   if (steps.length < MIN_CANONICALIZATION_DEPTH)
     return { eligible: false, reason: "depth-too-shallow" };
-  const bindings = toggleBindingsFor(input.branch.path);
-  if (bindings === undefined)
-    return { eligible: false, reason: "step-not-eligible" };
+  const bindingsAnalysis = toggleBindingsAnalysisFor(input.branch.path);
+  if (!bindingsAnalysis.eligible)
+    return {
+      eligible: false,
+      reason: "step-not-eligible",
+      stepIndex: bindingsAnalysis.stepIndex,
+      predicate: bindingsAnalysis.predicate,
+    };
+  const { bindings } = bindingsAnalysis;
   if (!uniqueBindingsFor(bindings))
     return { eligible: false, reason: "bindings-not-unique" };
   const initialUrl = input.branch.path.initialUrl;
