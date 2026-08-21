@@ -1,7 +1,10 @@
 import type { Page } from "@playwright/test";
 import { describe, expect, it, vi } from "vitest";
 
-import { inventoryDom } from "./dom-inventory.ts";
+import {
+  inventoryDom,
+  runtimePreflightControlInventorySchema,
+} from "./dom-inventory.ts";
 
 const rawButton = {
   role: "button",
@@ -114,5 +117,30 @@ describe("runtime DOM inventory", () => {
         },
       ],
     });
+  });
+
+  it("round-trips preflight metadata and rejects unknown inventory fields", () => {
+    const inventory = {
+      ariaRole: "button",
+      accessibleName: "Advanced",
+      enabled: true,
+      order: 1,
+      domOrderKey: "0001:button:Advanced:1",
+      href: null,
+      ariaControls: "advanced-panel",
+      ariaExpanded: false,
+      disclosureIndependence: "source-bound-row-local" as const,
+      keyboardFocusScope: "page" as const,
+    };
+
+    expect(runtimePreflightControlInventorySchema.parse(inventory)).toEqual(
+      inventory,
+    );
+    expect(() =>
+      runtimePreflightControlInventorySchema.parse({
+        ...inventory,
+        unexpected: true,
+      }),
+    ).toThrow();
   });
 });

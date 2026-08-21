@@ -8,6 +8,7 @@ import {
   assertSpecializedDeclarations,
   SPECIALIZED_DECLARATION_COUNT,
 } from "../../matrix/specialized/specialized-declarations.ts";
+import { runtimePreflightControlInventorySchema } from "../../replay/dom/dom-inventory.ts";
 import {
   actionSchema,
   matrixAxesSchema,
@@ -37,21 +38,10 @@ import {
 } from "./preflight-artifact-reveal.ts";
 import { assertSpecializedPreflightCoverage } from "./preflight-artifact-specialized.ts";
 
-const inventorySchema = z
-  .object({
-    ariaRole: z.string().min(1),
-    accessibleName: z.string(),
-    enabled: z.boolean(),
-    order: z.number().int().nonnegative(),
-    domOrderKey: z.string().min(1),
-    href: z.string().nullable(),
-  })
-  .strict();
-
 export const preflightControlSchema = z
   .object({
     controlKey: z.string().min(1),
-    inventory: inventorySchema,
+    inventory: runtimePreflightControlInventorySchema,
     action: actionSchema.optional(),
     execution: matrixExecutionSchema.optional(),
     inapplicable: matrixInapplicableSchema.optional(),
