@@ -93,7 +93,6 @@ const materialSignatureFor = (control: MaterialControl): string =>
       ? {
           ...control,
           controlKey: materialIdentityFor(control),
-          accessibleName: "source-bound-disclosure",
         }
       : control,
   );

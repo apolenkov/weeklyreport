@@ -261,4 +261,25 @@ describe("reveal material projection", () => {
       }),
     ).toBe(true);
   });
+
+  it("rejects source-bound accessible-name drift in the combined surface", () => {
+    const fixture = duplicateDisclosureFixtures();
+    const drifted: RevealBranch = {
+      ...fixture.candidate,
+      surface: revealSurfaceFor(
+        fixture.candidate.surface.controls.map((control) =>
+          control.ariaControls === "panel-row-1"
+            ? { ...control, accessibleName: "Unexpected details" }
+            : control,
+        ),
+      ),
+    };
+
+    expect(
+      independentDisclosureReductionFor({
+        branch: drifted,
+        knownBranches: [...fixture.singles, ...fixture.pairs],
+      }),
+    ).toBe(false);
+  });
 });
