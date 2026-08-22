@@ -20,6 +20,13 @@ import type {
   RevealPureQueueInput,
 } from "./preflight-reveal-branches.ts";
 import { enqueueChangedBranch } from "./preflight-reveal-branches.ts";
+import {
+  controlKeyForTarget,
+  retainedStateFor,
+  trustedKnownBranchesFor,
+  trustedSurfaceFor,
+  type TrustedToggle,
+} from "./preflight-reveal-canonicalization-enqueue-fixture.ts";
 
 const TOGGLES = ["a", "b", "c", "d"] as const;
 type Toggle = (typeof TOGGLES)[number];
@@ -182,6 +189,108 @@ const queueInputFor = (
 });
 
 describe("source-bound canonicalization enqueue boundary", () => {
+  it("retains every saved row-local control while skipping the deeper branch", () => {
+    const fixture = trustedKnownBranchesFor();
+    expect(controlKeyForTarget(fixture.representative, "panel-c")).toBe(
+      "button:c:2",
+    );
+    expect(controlKeyForTarget(fixture.candidate, "panel-c")).toBe(
+      "button:c:1",
+    );
+    const queueInput = queueInputFor(
+      2,
+      trustedSurfaceFor(new Set<TrustedToggle>()),
+    );
+    const state = retainedStateFor(fixture, queueInput);
+    expect(
+      state.controls.map(({ inventory }) => inventory.ariaControls),
+    ).toEqual(["panel-c", "panel-d"]);
+    expect(
+      new Set(
+        state.controls.map(({ expectedSurface }) => expectedSurface.digest),
+      ).size,
+    ).toBe(1);
+    const next = enqueueChangedBranch({
+      queueInput,
+      state,
+      current: fixture.current,
+      branch: fixture.candidate,
+      action: actionFor("c"),
+    });
+
+    expect(next.queue).not.toContain(fixture.candidate);
+    expect(next.controls).toEqual(state.controls);
+    expect(next.visitedStatePaths.size).toBe(state.visitedStatePaths.size + 1);
+  });
+
+  it("keeps a duplicate target representative on the ordinary path", () => {
+    const fixture = trustedKnownBranchesFor();
+    const retained = retainedStateFor(
+      fixture,
+      queueInputFor(2, trustedSurfaceFor(new Set<TrustedToggle>())),
+    );
+    const target = retained.controls.find(
+      ({ inventory }) => inventory.ariaControls === "panel-c",
+    );
+    if (target === undefined) throw new Error("Missing panel-c representative");
+    const next = enqueueChangedBranch({
+      queueInput: queueInputFor(5, trustedSurfaceFor(new Set<TrustedToggle>())),
+      state: { ...retained, controls: [...retained.controls, target] },
+      current: fixture.current,
+      branch: fixture.candidate,
+      action: actionFor("c"),
+    });
+
+    expect(next.queue).toContain(fixture.candidate);
+    expect(
+      next.controls.filter(
+        ({ inventory }) => inventory.ariaControls === "panel-c",
+      ),
+    ).toHaveLength(3);
+  });
+
+  it("falls back to ordinary registration when a reduced control is not retained", () => {
+    const fixture = trustedKnownBranchesFor();
+    const retained = retainedStateFor(
+      fixture,
+      queueInputFor(2, trustedSurfaceFor(new Set<TrustedToggle>())),
+    );
+    const next = enqueueChangedBranch({
+      queueInput: queueInputFor(2, trustedSurfaceFor(new Set<TrustedToggle>())),
+      state: { ...retained, controls: [], discovered: new Map() },
+      current: fixture.current,
+      branch: fixture.candidate,
+      action: actionFor("c"),
+    });
+
+    expect(next.queue).toContain(fixture.candidate);
+    expect(
+      next.controls.map(({ inventory }) => inventory.ariaControls),
+    ).toEqual(["panel-c", "panel-d"]);
+    expect(next.discovered.size).toBe(2);
+  });
+
+  it("keeps the plus-one guard fail-closed when retention is missing", () => {
+    const fixture = trustedKnownBranchesFor();
+    const retained = retainedStateFor(
+      fixture,
+      queueInputFor(2, trustedSurfaceFor(new Set<TrustedToggle>())),
+    );
+
+    expect(() =>
+      enqueueChangedBranch({
+        queueInput: queueInputFor(
+          3,
+          trustedSurfaceFor(new Set<TrustedToggle>()),
+        ),
+        state: { ...retained, discovered: new Map() },
+        current: fixture.current,
+        branch: fixture.candidate,
+        action: actionFor("c"),
+      }),
+    ).toThrow(/reductionReason=reduction-proven.*projectedControls=4/iu);
+  });
+
   it("retains the ordinary branch and the untrusted fourth control", () => {
     const fixture = knownBranchesFor();
     const next = enqueueChangedBranch({

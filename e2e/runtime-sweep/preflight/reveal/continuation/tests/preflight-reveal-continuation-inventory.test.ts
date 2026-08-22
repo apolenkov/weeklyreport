@@ -46,6 +46,7 @@ describe("R197 continuation inventory lineage contract", () => {
       ...control,
       ariaControls: "panel-a",
       ariaExpanded: false,
+      disclosureIndependence: "source-bound-row-local",
     } as const;
 
     const serialized = serializableInventoryFor(inventoryFor([disclosure]));
@@ -53,6 +54,7 @@ describe("R197 continuation inventory lineage contract", () => {
     expect(serialized.controls[0]).toMatchObject({
       ariaControls: "panel-a",
       ariaExpanded: false,
+      disclosureIndependence: "source-bound-row-local",
     });
     expect(domInventoryFor(serialized)).toEqual(inventoryFor([disclosure]));
   });
