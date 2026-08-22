@@ -251,28 +251,27 @@
         <h3>Identity и граница текущей редакции</h3>
         <p>
           <strong>Текущий committed source:</strong> <code>HEAD</code>
-          <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code>, дерево
-          <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Это чистая
-          source-bound точка после фиксации harness-атома; она включает
-          диагностический код, но не содержит runtime acceptance.
+          <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>, дерево
+          <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Это чистая
+          source-bound точка после фиксации 5.19 harness-атома; она включает
+          source-bound canonicalization code, но не содержит runtime acceptance.
         </p>
         <p>
-          <strong>Committed diagnostic atom:</strong> harness получил свежий
-          <code>Sol APPROVE</code> на exact dirty candidate и зафиксирован в
-          коммите <code>d47041cf0</code>. Он <strong>default-off</strong>,
-          запускается только явным diagnostic flag и в этой сессии не
-          выполнялся. Receipt source-bound, archive-confined и bounded;
-          проверены per-gauge hysteresis, owned-child termination, pre-resource
-          read-back и forged-receipt negatives. Атом не пишет acceptance
-          artifacts, assignment/journal/segment/canary или parent
-          <code>PASS</code>; он не создаёт runtime evidence и не устанавливает
-          root cause.
+          <strong>Committed harness atoms:</strong> предыдущий diagnostic atom
+          <code>d47041cf0</code> остаётся <strong>default-off</strong> и не
+          создаёт runtime evidence. Последний commit
+          <code>ec600c90</code> получил независимый <code>Sol APPROVE</code> и
+          добавляет source-bound canonicalization для 5.19: retained-control и
+          normalized-representative matching, fail-closed duplicate/missing
+          paths и continuation metadata round-trip. Локальный доказательный
+          контур — <strong>23/23</strong> focused tests, typecheck, ESLint,
+          Prettier и diff-check; live canary по-прежнему не выполнялся.
         </p>
         <p>
-          <strong>Эта правка roadmap:</strong> обновляет только provenance и
-          текущий host gate в этом HTML-файле. После отдельной фиксации она
-          получит новый docs-only SHA/tree, но всё равно не станет
-          <code>runtimeEvidenceSha</code> без свежего runtime-пакета.
+          <strong>Эта редакция roadmap:</strong> обновляет только provenance,
+          source-bound code proof и текущий host gate в этом HTML-файле. После
+          отдельной фиксации она получит новый docs-only SHA/tree, но всё равно
+          не станет <code>runtimeEvidenceSha</code> без свежего runtime-пакета.
         </p>
       </div>
       <table>
@@ -289,8 +288,8 @@
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
               Для этой редакции текущий source identity — committed
-              <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code> с деревом
-              <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Свежий
+              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code> с деревом
+              <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -353,13 +352,12 @@
             </td>
             <td>
               Свежий read-only snapshot для committed source
-              <code>d47041cf0</code> показал свободную память
-              <strong>83%</strong>, но swap <strong>3807.31M</strong> из
-              <strong>5120.00M</strong>. Для diagnostic envelope разрешено не
-              более <strong>512 MiB</strong>; это примерно
-              <strong>7.44×</strong> выше порога. Sol остановил pre-run gate.
-              Убийство чужих процессов и принудительное освобождение памяти не
-              разрешены.
+              <code>ec600c90</code> от <code>2026-08-22T23:47:52Z</code> показал
+              swap <strong>3735.31M</strong> из <strong>5120.00M</strong>. Для
+              diagnostic envelope разрешено не более <strong>512 MiB</strong>;
+              это примерно <strong>7.29×</strong> выше порога. Sol оставил
+              pre-run gate <code>INELIGIBLE_SWAP</code>; убийство процессов и
+              принудительное освобождение памяти не выполнялись.
             </td>
           </tr>
           <tr>
@@ -382,6 +380,21 @@
               (<code>181/0</code>). Пакеты сохранены в archive; это
               функциональная и структурная проверка, не полная runtime-матрица и
               не visual/release acceptance.
+            </td>
+          </tr>
+          <tr>
+            <td>Current source-only verification tranche</td>
+            <td><span class="status ok">CODE/TEST/SPEC-PROVEN</span></td>
+            <td>
+              На текущем commit
+              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>
+              source manifest привязан к дереву
+              <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Focused
+              proof 5.19 — <code>23/23</code>; Sol post-commit review —
+              <code>APPROVE</code>;
+              <code>openspec validate --all --strict</code> —
+              <code>182 passed, 0 failed</code>. Это кодовая и структурная
+              проверка, не browser/runtime acceptance.
             </td>
           </tr>
           <tr>
@@ -420,19 +433,24 @@
           <tr>
             <td>OpenSpec 5.19 source-bound canonicalization</td>
             <td>
-              <span class="status warn">CODE-PARTIAL / CANARY NOT-PROVEN</span>
+              <span class="status ok"
+                >CODE/TEST/REVIEW-PROVEN / CANARY NOT-PROVEN</span
+              >
             </td>
             <td>
-              Контракт сохраняет toggle metadata в live/continuation surfaces,
+              На текущем commit
+              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>
+              контракт сохраняет toggle metadata в live/continuation surfaces,
               требует
               <code>data-reveal-independence="source-bound-row-local"</code>,
               проверяет оба порядка <code>A → B</code> и <code>B → A</code>,
               равенство material surface и адреса и не сокращает untrusted
               fourth disclosure. Boundary-тесты подтверждают сохранение D и
-              plus-one guard в тестовом контуре; exact
-              <code>admin/demo</code> Chromium canary и source-bound runtime
-              receipt отсутствуют. Это не runtime evidence и не root-cause
-              verdict.
+              plus-one guard; независимый Sol post-commit review —
+              <code>APPROVE</code>. Exact <code>admin/demo</code> Chromium
+              canary и source-bound runtime receipt отсутствуют из-за
+              <code>INELIGIBLE_SWAP</code>. Это не runtime evidence и не
+              root-cause verdict.
             </td>
           </tr>
           <tr>
@@ -750,13 +768,17 @@
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code> с деревом
-        <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Diagnostic atom
-        уже committed, но runtimeEvidenceSha ещё не доказан; эта docs-only
-        правка после фиксации получит отдельный SHA/tree. Дорожная карта не
-        содержит внешних ресурсов или CDN и не выполняет внешних записей. Полное
-        CR-001 закрывается только при одновременном выполнении всех обязательных
-        условий OpenSpec, исполнения, проверки, очистки и выпуска.
+        <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code> с деревом
+        <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code> и source-tree
+        digest
+        <code
+          >ecc389cee035efdc566e6c61012178a1e5ee66a83338b6a0222a604d089235e7</code
+        >. 5.19 code/test/review proof уже committed, но runtimeEvidenceSha ещё
+        не доказан; эта docs-only правка после фиксации получит отдельный
+        SHA/tree. Дорожная карта не содержит внешних ресурсов или CDN и не
+        выполняет внешних записей. Полное CR-001 закрывается только при
+        одновременном выполнении всех обязательных условий OpenSpec, исполнения,
+        проверки, очистки и выпуска.
       </footer>
     </main>
   </body>
