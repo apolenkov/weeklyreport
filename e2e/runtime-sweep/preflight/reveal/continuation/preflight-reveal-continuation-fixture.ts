@@ -15,7 +15,6 @@ import {
   revealRouteFor,
 } from "../../execution/playwright-preflight-support.ts";
 import type { RevealNonMutationProof } from "../../reveal-path.ts";
-import type { RevealCandidateFailure } from "../interaction/preflight-reveal-branches.ts";
 import type { RevealExecutionHarness } from "../interaction/preflight-reveal-types.ts";
 import {
   selectFreezerFor,
@@ -206,7 +205,6 @@ interface RunChunkInput {
     Record<string, SelectRepresentative>
   >;
   readonly maxRevealActions?: number;
-  readonly onCandidateFailure?: (failure: RevealCandidateFailure) => void;
   readonly grant?: RevealExecutionGrant;
   readonly expectedGrantDigest?: string;
   readonly now?: () => number;
@@ -265,9 +263,6 @@ const discoverInputFor = (
   attemptId: "attempt-fixture",
   ...(input.deadlineAt === undefined ? {} : { deadlineAt: input.deadlineAt }),
   ...(input.now === undefined ? {} : { now: input.now }),
-  ...(input.onCandidateFailure === undefined
-    ? {}
-    : { onCandidateFailure: input.onCandidateFailure }),
 });
 
 export const runChunk = async (

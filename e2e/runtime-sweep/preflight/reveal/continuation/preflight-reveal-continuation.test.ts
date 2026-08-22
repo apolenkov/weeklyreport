@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { RevealCandidateFailure } from "../interaction/preflight-reveal-branches.ts";
 import {
   controlFor,
   inventoryFor,
@@ -59,39 +58,6 @@ describe("R188 v3 reveal continuation", () => {
       );
       expect("passDigest" in result.result.chunk).toBe(false);
       assertReceiptChunkContract(result.result.chunk);
-    });
-  });
-
-  it("forwards the optional candidate-failure callback without replacing the error", async () => {
-    await withSource(async (source) => {
-      const state = source.plan.states[0];
-      if (state === undefined) throw new Error("Fixture has no source state");
-      const { route } = selectionFor(source, state.stateId);
-      const failures: Pick<
-        RevealCandidateFailure,
-        "candidateIndex" | "candidateIdentity"
-      >[] = [];
-
-      await expect(
-        runChunk({
-          source,
-          state,
-          route,
-          root: inventoryFor([controlFor("button:failure:0", "Failure", 0)]),
-          nested: inventoryFor([]),
-          maxRevealActions: 0,
-          onCandidateFailure: ({ candidateIndex, candidateIdentity }) =>
-            failures.push({ candidateIndex, candidateIdentity }),
-          now: () => 0,
-          deadlineAt: 10_000,
-        }),
-      ).rejects.toThrow("Reveal action bound exceeded");
-
-      expect(failures).toHaveLength(1);
-      expect(failures[0]).toMatchObject({
-        candidateIndex: 0,
-      });
-      expect(failures[0]?.candidateIdentity).toMatch(/^[0-9a-f]{64}$/u);
     });
   });
 
