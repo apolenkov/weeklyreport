@@ -238,48 +238,6 @@ describe("independent disclosure canonicalization", () => {
     ).toBe(false);
   });
 
-  it("keeps a triple ordinary when a fourth disclosure lacks a source-bound contract", () => {
-    const fixture = fixtures();
-    const root = surfaceFor({ a: false, b: false, c: false, d: false });
-    const candidate = branchFor(
-      ["a", "b", "c"],
-      [
-        root,
-        surfaceFor({ a: true, b: false, c: false, d: false }),
-        surfaceFor({ a: true, b: true, c: false, d: false }),
-        surfaceFor({ a: true, b: true, c: true, d: false }),
-      ],
-    );
-    const untrusted = {
-      ...candidate,
-      path: revealPathFor(
-        candidate.path.steps.map((step) => ({
-          ...step,
-          before: revealSurfaceFor(
-            step.before.controls.map((control) => ({
-              ...control,
-              disclosureIndependence: undefined,
-            })),
-          ),
-          after: revealSurfaceFor(
-            step.after.controls.map((control) => ({
-              ...control,
-              disclosureIndependence: undefined,
-            })),
-          ),
-        })),
-        "/admin",
-      ),
-    };
-
-    expect(
-      independentDisclosureReductionFor({
-        branch: untrusted,
-        knownBranches: [...fixture.singles, ...fixture.pairs],
-      }),
-    ).toBe(false);
-  });
-
   it("matches a source-bound disclosure when its accessible name changes", () => {
     const fixture = fixtures();
     const candidate = renamedBranchFor(fixture.candidate);

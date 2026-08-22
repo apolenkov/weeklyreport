@@ -63,6 +63,19 @@ const isSourceBoundDisclosure = (
   control.interactionEffect !== "mutation-required" &&
   control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL;
 
+const hasDisclosureShape = (control: RevealSurfaceControl): boolean =>
+  typeof control.ariaControls === "string" ||
+  typeof control.ariaExpanded === "boolean";
+
+export const untrustedDisclosureFor = (
+  surface: RevealSurface,
+): RevealSurfaceControl | undefined =>
+  surface.controls.find(
+    (control) =>
+      hasDisclosureShape(control) &&
+      control.disclosureIndependence !== SOURCE_BOUND_ROW_LOCAL,
+  );
+
 const hasValidTargetId = (value: string | null | undefined): value is string =>
   typeof value === "string" && value.length > 0 && !/\s/u.test(value);
 
