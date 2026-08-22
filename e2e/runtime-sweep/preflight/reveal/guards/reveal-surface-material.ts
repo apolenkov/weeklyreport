@@ -1,7 +1,7 @@
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import type { RevealSurface, RevealSurfaceControl } from "../../reveal-path.ts";
 
-type RevealSurfaceMaterialControl = Readonly<
+export type RevealSurfaceMaterialControl = Readonly<
   Pick<
     RevealSurfaceControl,
     | "controlKey"
@@ -34,7 +34,7 @@ const compareRevealSurfacePosition = (
   );
 };
 
-const revealSurfaceMaterialControlFor = (
+export const revealSurfaceMaterialControlFor = (
   control: RevealSurfaceControl,
 ): RevealSurfaceMaterialControl => ({
   controlKey: control.controlKey,
@@ -73,61 +73,70 @@ export const sameRevealSurfaceMaterial = (
   revealSurfaceMaterialFor(left).digest ===
   revealSurfaceMaterialFor(right).digest;
 
-type MaterialControl = RevealSurfaceMaterial["controls"][number];
 type MaterialBranchView = Readonly<{ readonly surface: RevealSurface }>;
 
 const SOURCE_BOUND_ROW_LOCAL = "source-bound-row-local" as const;
 
-const materialIdentityFor = (control: MaterialControl): string =>
+export const revealSurfaceMaterialIdentityFor = (
+  control: RevealSurfaceMaterialControl,
+): string =>
   control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL &&
   typeof control.ariaControls === "string" &&
   control.ariaControls.length > 0
     ? `aria-controls:${control.ariaControls}`
     : `control-key:${control.controlKey}`;
 
-const materialSignatureFor = (control: MaterialControl): string =>
+export const revealSurfaceMaterialSignatureFor = (
+  control: RevealSurfaceMaterialControl,
+): string =>
   stableSerialize(
     control.disclosureIndependence === SOURCE_BOUND_ROW_LOCAL &&
       typeof control.ariaControls === "string" &&
       control.ariaControls.length > 0
       ? {
           ...control,
-          controlKey: materialIdentityFor(control),
+          controlKey: revealSurfaceMaterialIdentityFor(control),
         }
       : control,
   );
 
 interface MaterialUnionState {
-  readonly controls: Map<string, MaterialControl>;
+  readonly controls: Map<string, RevealSurfaceMaterialControl>;
   readonly changed: Map<string, string>;
 }
 
 const materialControlsByKeyFor = (
   material: RevealSurfaceMaterial,
-): ReadonlyMap<string, MaterialControl> =>
+): ReadonlyMap<string, RevealSurfaceMaterialControl> =>
   new Map(
-    material.controls.map((control) => [materialIdentityFor(control), control]),
+    material.controls.map((control) => [
+      revealSurfaceMaterialIdentityFor(control),
+      control,
+    ]),
   );
 
 const rootOrderIsStable = (
   root: RevealSurfaceMaterial,
   actual: RevealSurfaceMaterial,
 ): boolean => {
-  const rootKeys = root.controls.map(materialIdentityFor);
+  const rootKeys = root.controls.map(revealSurfaceMaterialIdentityFor);
   const actualRootKeys = actual.controls
-    .map(materialIdentityFor)
+    .map(revealSurfaceMaterialIdentityFor)
     .filter((identity) => rootKeys.includes(identity));
   return stableSerialize(actualRootKeys) === stableSerialize(rootKeys);
 };
 
 const mergeMaterialControl = (
   state: MaterialUnionState,
-  control: MaterialControl,
+  control: RevealSurfaceMaterialControl,
 ): boolean => {
-  const signature = materialSignatureFor(control);
-  const identity = materialIdentityFor(control);
+  const signature = revealSurfaceMaterialSignatureFor(control);
+  const identity = revealSurfaceMaterialIdentityFor(control);
   const current = state.controls.get(identity);
-  if (current !== undefined && materialSignatureFor(current) === signature)
+  if (
+    current !== undefined &&
+    revealSurfaceMaterialSignatureFor(current) === signature
+  )
     return true;
   const previousChange = state.changed.get(identity);
   if (previousChange !== undefined && previousChange !== signature)
@@ -147,14 +156,17 @@ const mergeSingleMaterial = (
   const controlsByKey = materialControlsByKeyFor(material);
   if (
     !root.controls.every((control) =>
-      controlsByKey.has(materialIdentityFor(control)),
+      controlsByKey.has(revealSurfaceMaterialIdentityFor(control)),
     )
   )
     return false;
   return material.controls.every((control) => {
-    const rootControl = rootControlsByKey.get(materialIdentityFor(control));
+    const rootControl = rootControlsByKey.get(
+      revealSurfaceMaterialIdentityFor(control),
+    );
     return rootControl !== undefined &&
-      materialSignatureFor(rootControl) === materialSignatureFor(control)
+      revealSurfaceMaterialSignatureFor(rootControl) ===
+        revealSurfaceMaterialSignatureFor(control)
       ? true
       : mergeMaterialControl(state, control);
   });
@@ -163,10 +175,13 @@ const mergeSingleMaterial = (
 const unionMaterialFor = (
   root: RevealSurfaceMaterial,
   singles: readonly MaterialBranchView[],
-): ReadonlyMap<string, MaterialControl> | undefined => {
+): ReadonlyMap<string, RevealSurfaceMaterialControl> | undefined => {
   const state: MaterialUnionState = {
     controls: new Map(
-      root.controls.map((control) => [materialIdentityFor(control), control]),
+      root.controls.map((control) => [
+        revealSurfaceMaterialIdentityFor(control),
+        control,
+      ]),
     ),
     changed: new Map(),
   };
@@ -188,10 +203,13 @@ export const matchesUnion = (input: {
   )
     return false;
   return input.actual.controls.every((control) => {
-    const expectedControl = expected.get(materialIdentityFor(control));
+    const expectedControl = expected.get(
+      revealSurfaceMaterialIdentityFor(control),
+    );
     return (
       expectedControl !== undefined &&
-      materialSignatureFor(expectedControl) === materialSignatureFor(control)
+      revealSurfaceMaterialSignatureFor(expectedControl) ===
+        revealSurfaceMaterialSignatureFor(control)
     );
   });
 };
