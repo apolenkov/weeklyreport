@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 
 const DIAGNOSTIC_TRACE_MODE_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_TRACE_MODE";
 const DIAGNOSTIC_PLAYWRIGHT_ARGUMENTS = [
@@ -55,10 +55,16 @@ const pnpmLauncher = (): Readonly<{
     : { command: executable, leadingArgs: [] };
 };
 
-export const runPreflightDiagnosticPlaywrightChild = (input: {
+export type PreflightDiagnosticPlaywrightChild = Readonly<{
+  readonly child: ChildProcess;
+  readonly completion: Promise<number>;
+}>;
+
+export const spawnPreflightDiagnosticPlaywrightChild = (input: {
   readonly repoRoot: string;
   readonly environment: NodeJS.ProcessEnv;
-}): Promise<number> => {
+  readonly detached?: boolean;
+}): PreflightDiagnosticPlaywrightChild => {
   const launcher = pnpmLauncher();
   const traceMode = diagnosticTraceModeFromEnvironment(input.environment);
   const child = spawn(
@@ -71,9 +77,10 @@ export const runPreflightDiagnosticPlaywrightChild = (input: {
       cwd: input.repoRoot,
       env: input.environment,
       stdio: "inherit",
+      detached: input.detached ?? false,
     },
   );
-  return new Promise<number>((resolve, reject) => {
+  const completion = new Promise<number>((resolve, reject) => {
     child.once("error", reject);
     child.once("exit", (code, signal) => {
       if (signal !== null) {
@@ -85,4 +92,11 @@ export const runPreflightDiagnosticPlaywrightChild = (input: {
       resolve(code ?? 1);
     });
   });
+  return { child, completion };
 };
+
+export const runPreflightDiagnosticPlaywrightChild = (input: {
+  readonly repoRoot: string;
+  readonly environment: NodeJS.ProcessEnv;
+}): Promise<number> =>
+  spawnPreflightDiagnosticPlaywrightChild(input).completion;

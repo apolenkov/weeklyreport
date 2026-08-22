@@ -23,6 +23,10 @@ const FRACTIONAL_SWAP_USAGE =
 describe("Darwin diagnostic host pressure", () => {
   it("parses compressed pages and monotonic page counters", () => {
     expect(parseDarwinVmStat(VM_STAT)).toEqual({
+      pageSizeBytes: 16_384,
+      freePages: 10,
+      inactivePages: null,
+      speculativePages: null,
       compressedBytes: 65_536,
       pageins: 100,
       pageouts: 60,
@@ -49,6 +53,10 @@ describe("Darwin diagnostic host pressure", () => {
 
   it("returns null for malformed or incomplete platform output", () => {
     expect(parseDarwinVmStat("Pageins: nope")).toEqual({
+      pageSizeBytes: null,
+      freePages: null,
+      inactivePages: null,
+      speculativePages: null,
       compressedBytes: null,
       pageins: null,
       pageouts: null,

@@ -15,7 +15,11 @@ const TEBIBYTES = GIBIBYTES * GIBIBYTES_PER_TEBIBYTE;
 
 type DarwinHostCommand = "vm_stat" | "sysctl";
 
-type DarwinVmStat = Readonly<{
+export type DarwinVmStat = Readonly<{
+  readonly pageSizeBytes: number | null;
+  readonly freePages: number | null;
+  readonly inactivePages: number | null;
+  readonly speculativePages: number | null;
   readonly compressedBytes: number | null;
   readonly pageins: number | null;
   readonly pageouts: number | null;
@@ -23,7 +27,7 @@ type DarwinVmStat = Readonly<{
   readonly swapouts: number | null;
 }>;
 
-type DarwinSwapUsage = Readonly<{
+export type DarwinSwapUsage = Readonly<{
   readonly swapTotalBytes: number | null;
   readonly swapUsedBytes: number | null;
   readonly swapFreeBytes: number | null;
@@ -103,6 +107,10 @@ export const parseDarwinVmStat = (output: string): DarwinVmStat => {
   );
   const compressedPages = counterFor(output, "Pages occupied by compressor");
   return {
+    pageSizeBytes: pageSize,
+    freePages: counterFor(output, "Pages free"),
+    inactivePages: counterFor(output, "Pages inactive"),
+    speculativePages: counterFor(output, "Pages speculative"),
     compressedBytes:
       pageSize === null ? null : safeByteProductFor(compressedPages, pageSize),
     pageins: counterFor(output, "Pageins"),
