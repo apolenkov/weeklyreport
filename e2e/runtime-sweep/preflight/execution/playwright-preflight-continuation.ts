@@ -14,6 +14,7 @@ import {
   assertInitialLanding,
   assertResolverOutcomeUi,
 } from "../reveal/guards/preflight-reveal-guards.ts";
+import type { RevealCandidateFailureHandler } from "../reveal/interaction/preflight-reveal-branches.ts";
 import type { RevealPreparation } from "../reveal/interaction/preflight-reveal-types.ts";
 import {
   navigateToRevealLanding,
@@ -46,6 +47,7 @@ interface ContinuationChunkInput {
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;
   readonly now?: () => number;
+  readonly onCandidateFailure?: RevealCandidateFailureHandler;
 }
 
 const assertExactSourceState = (input: ContinuationChunkInput): void => {
@@ -142,6 +144,9 @@ export async function runPlaywrightPreflightRevealContinuationChunk(
       ? {}
       : { chunkBudgetMs: input.chunkBudgetMs }),
     ...(input.now === undefined ? {} : { now: input.now }),
+    ...(input.onCandidateFailure === undefined
+      ? {}
+      : { onCandidateFailure: input.onCandidateFailure }),
   });
   if (
     result.controls !== undefined &&
