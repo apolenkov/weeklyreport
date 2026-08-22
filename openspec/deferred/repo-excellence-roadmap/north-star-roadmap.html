@@ -253,14 +253,15 @@
             <td>Источник исполнения и десктопных доказательств</td>
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
-              Source candidate для продолжения campaign: ветка
+              Source candidate перед этой редакцией roadmap: ветка
               <code>campaign/cr-001-20260820</code>, commit
-              <code>13b2fd4381377bf50df4c6c091722f885030fd1a</code>, дерево
-              <code>93b1173d98da31993d4885b4d790711fd37fa2da</code>. Этот SHA
-              содержит принятый Sol code-атом pair diagnosis, но не является
-              runtimeEvidenceSha: для него ещё нет свежего полного Chromium
-              пакета, а clean-state receipt будет создан отдельно после
-              docs-коммита. Последний runtime-bound exact source перед ним —
+              <code>9df3c76948325aa6611dd0d83e9ea71b7ffdebbd</code>, дерево
+              <code>b1ec5f7094187798232134df7063f8f9cc79f02f</code>. Это
+              статический harness/test-кандидат, а не runtimeEvidenceSha: для
+              него нет свежего полного Chromium пакета. Данная редакция HTML
+              является docs-only изменением и создаст новый source identity; его
+              нужно перечитать перед запуском runtime. Последний runtime-bound
+              exact source перед ним —
               <code>e657c5cf4207f7df16532e3e65f08fd33b9ed794</code>, дерево
               <code>ffb3f8bfb71645c2a34b10745175af66823b7563</code>; его
               Admin/demo canary fail-closed на границе <code>8192</code> без
@@ -289,8 +290,8 @@
               <code>L10-top-context</code>. Контрольные суммы, geometry/a11y/
               console/request оракулы и source manifest сохранены. Статус
               означает принятие именно этого bounded packet; его манифест прямо
-              не заявляет independent visual review, а текущий SHA
-              <code>13b2fd438</code> требует нового exact-SHA capture.
+              не заявляет independent visual review, а текущий source candidate
+              требует нового exact-SHA capture.
             </td>
           </tr>
           <tr>
@@ -345,14 +346,31 @@
               <code>Show -&gt; Hide</code>: <code>controlKey</code> строится из
               accessible name, поэтому after-control не находится по старому
               ключу. Это дефект identity в harness, не дефект продукта. В
-              source-candidate добавлена стабильная target-identity по
-              <code>aria-controls</code> и реалистичный Show-to-Hide regression;
-              exact source <code>43df65c31</code> воспроизвёл capacity boundary,
-              а Sol оставил <code>ITERATE</code>, поскольку sequence/uniqueness
-              всё ещё используют name-derived <code>controlKey</code> для
-              одинаковых sibling controls. Текущий source candidate
-              <code>13b2fd438</code> содержит только принятый diagnostic code
-              atom и пока не имеет свежего runtime proof.
+              текущем code candidate сохранены source-bound target identity по
+              <code>aria-controls</code>, reversible pair-order checks,
+              material-union guard и regression для Show-to-Hide. Это закрывает
+              локальный кодовый контур 5.19, но не его acceptance: exact
+              <code>admin/demo</code> canary на текущем clean source ещё не
+              выполнен. Поэтому canonicalization остаётся
+              <code>CODE-PROVEN / CANARY NOT-PROVEN</code>, а старые capacity
+              boundary и Sol <code>ITERATE</code> receipts не переименовываются
+              в PASS.
+            </td>
+          </tr>
+          <tr>
+            <td>OpenSpec 5.19 source-bound canonicalization</td>
+            <td>
+              <span class="status warn">CODE-PROVEN / CANARY NOT-PROVEN</span>
+            </td>
+            <td>
+              Контракт сохраняет toggle metadata в live/continuation surfaces,
+              требует
+              <code>data-reveal-independence="source-bound-row-local"</code>,
+              проверяет оба порядка <code>A → B</code> и <code>B → A</code>,
+              равенство material surface/URL и не сокращает untrusted fourth
+              disclosure. Детерминированные rejection-тесты есть; exact
+              <code>admin/demo</code> Chromium canary и source-bound runtime
+              receipt отсутствуют.
             </td>
           </tr>
           <tr>
@@ -476,8 +494,8 @@
       <div class="callout ok">
         <strong>Текущая рабочая последовательность:</strong>
         <code
-          >source candidate → rebind 5.14/5.15/5.17 → 5.19 Sol gate → matrix →
-          review → fixes → final resweep</code
+          >current clean source → exact 5.19 admin/demo canary → rebind
+          5.14/5.15/5.17 → matrix → review → fixes → final resweep</code
         >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
         ограниченной диагностической области; перед полной матрицей 6.2 их
         знаменатель и exact-SHA provenance нужно повторно связать с текущим
@@ -526,7 +544,10 @@
           </span>
         </li>
         <li>
-          <strong>Новая causal boundary · REPAIR IN PROGRESS</strong>
+          <strong
+            >5.19 · source-bound canonicalization · CODE-PROVEN / CANARY
+            NOT-PROVEN</strong
+          >
           <span>
             На странице Action Log seed показывает
             <code>20 loaded+</code> строк, а каждая
@@ -539,17 +560,14 @@
             дефект продукта. Введён source-bound контракт
             <code>data-reveal-independence="source-bound-row-local"</code> для
             row-local disclosure; без него даже pairwise-commutative triple
-            остаётся ordinary branch. Exact admin/demo попытка на repair-source
-            <code>d9886be5fc0ea291eb4199e226ddcd51c09fd104</code> сохранена в
-            архиве как <code>HARNESS-CAPACITY-BOUNDARY / NOT-PROVEN</code> с
-            полным checksum-пакетом; Sol классифицировал текущую реализацию как
-            <code>ITERATE</code> из-за неустойчивой name-derived identity. Это
-            не разрешает повышать лимит или обрезать граф. Exact source
-            <code>43df65c31e9df7e055027b77df3e047740b34235</code> с зелёным
-            детерминированным regression воспроизвёл ту же границу; новый Sol
-            gate записан как <code>ITERATE</code>. Нужна target-based sequence
-            identity и regression с одинаковыми <code>Show action details</code>
-            siblings.
+            остаётся ordinary branch. Текущий code candidate уже сохраняет
+            target-based sequence identity, reversible pair-order proof,
+            material-union guard и deterministic rejection для untrusted fourth
+            disclosure. Exact <code>admin/demo</code> canary на clean source ещё
+            не запускался: он требует source-bound browser/API/DB/Redis/
+            telemetry packet и независимое Sol review. Поэтому лимит нельзя
+            повышать, граф нельзя обрезать, а 5.19 нельзя помечать закрытым по
+            одним тестам.
           </span>
         </li>
         <li>
@@ -644,10 +662,10 @@
           <li>
             Ограниченные runtime/browser/DB/Redis-пакеты уже выполнены только на
             allowlisted disposable target; production, credentials, внешняя
-            публикация и неизвестные базы не затрагивались. Следующий
-            исполнитель начинает с текущего source candidate, сначала делает
-            exact-SHA rebind 5.14/5.15/5.17, затем закрывает causal 5.19
-            deterministic/Sol gate, и только после этого берёт 6.2.
+            публикация и неизвестные базы не затрагивались. После этой docs-only
+            редакции следующий исполнитель перечитывает новый clean source
+            identity, сначала делает exact 5.19 admin/demo canary, затем rebind
+            5.14/5.15/5.17, и только после этого берёт 6.2.
           </li>
         </ul>
       </div>
@@ -656,9 +674,10 @@
       <div class="callout">
         <p>
           Считать ограниченные пакеты 5.14/5.15/5.17 принятыми только в их
-          ограниченной области, сохранить их неизменными и сначала перепривязать
-          их provenance к текущему source candidate. Затем закрыть causal 5.19
-          deterministic/Sol gate, и только после этого подготовить и выполнить
+          ограниченной области и сохранить их неизменными. После этой docs-only
+          редакции перечитать новый exact source identity, выполнить 5.19
+          admin/demo canary и только затем перепривязать 5.14/5.15/5.17 к
+          текущему runtimeEvidenceSha. После этого подготовить и выполнить
           полную матрицу 6.2, получить проверку Luna 6.3, независимый синтез 6.4
           и только затем — исправления и финальный повторный полный sweep.
           Полное CR-001 пока не закрыто.
@@ -666,11 +685,12 @@
       </div>
 
       <footer>
-        Обновлено по exact-SHA <code>13b2fd438</code> и повторному чтению
-        текущей идентичности исходника. Дорожная карта не содержит внешних
-        ресурсов или CDN и не выполняет внешних записей. Полное CR-001
-        закрывается только при одновременном выполнении всех обязательных
-        условий OpenSpec, исполнения, проверки, очистки и выпуска.
+        Обновлено по статическому source candidate
+        <code>9df3c769</code>; после docs-only коммита exact SHA/tree нужно
+        перечитать заново. Дорожная карта не содержит внешних ресурсов или CDN и
+        не выполняет внешних записей. Полное CR-001 закрывается только при
+        одновременном выполнении всех обязательных условий OpenSpec, исполнения,
+        проверки, очистки и выпуска.
       </footer>
     </main>
   </body>
