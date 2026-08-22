@@ -226,9 +226,9 @@
         Предыдущий запуск на SHA <code>11c98223</code> дошёл до terminal
         capacity failure в continuation canary, но Sol указал, что
         failure-frontier callback был подключён не к тому режиму. На текущем SHA
-        <code>cac4e90a</code> этот seam удалён, source manifest и Sol gate
-        прошли. Единственный свежий monolithic capacity survey завершился
-        тайм-аутом webServer: Next/Turbopack не разрешил внутренний font-модуль.
+        <code>b494ccb7</code> этот seam удалён, runtime wrapper выровнен на
+        webpack, а локальные gates прошли. Новый exact-SHA Sol code gate ещё
+        ожидается; после него допустим только bounded web-startup smoke.
         Результат survey не опубликован; полный CR-001 не закрыт.
       </div>
 
@@ -239,9 +239,9 @@
             <dt>Ветка</dt>
             <dd>campaign/cr-001-20260820</dd>
             <dt>Последний коммит</dt>
-            <dd>cac4e90a22642e2083e3277eb45698052e7a1fb8</dd>
+            <dd>b494ccb74429ded7b9185d2ff328fa55176c25fa</dd>
             <dt>Дерево коммита</dt>
-            <dd>4058dc891fedaedcc0d10f4ff7d19ad22b992030</dd>
+            <dd>b7873b63e1a0e595e36c75c37e8e637c14968a03</dd>
             <dt>Рабочее дерево</dt>
             <dd>
               чистое дерево; runtime attempt завершён до browser survey, live
@@ -249,8 +249,8 @@
             </dd>
             <dt>Отпечаток source-пакета</dt>
             <dd>
-              текущий пакет создан для cac4e90a; SHA-256 source-файла
-              <code>e9be6715…</code>
+              текущий пакет создан для b494ccb7; SHA-256 source-файла
+              <code>02162c76…</code>
             </dd>
           </dl>
         </article>
@@ -275,7 +275,7 @@
             </tr>
             <tr>
               <td>Sol-review текущего SHA</td>
-              <td><span class="state done">PASS</span></td>
+              <td><span class="state wait">code gate pending</span></td>
             </tr>
           </table>
         </article>
@@ -375,6 +375,16 @@
               </td>
             </tr>
             <tr>
+              <td>Webpack runtime alignment</td>
+              <td><span class="state wait">local PASS / Sol pending</span></td>
+              <td>
+                Runtime wrapper теперь передаёт дочернему Next аргументы
+                <code>dev --webpack -p &lt;port&gt;</code>. Проверены argv,
+                proxy scrub, typecheck, ESLint, Prettier, diff-check и directory
+                architecture; браузер после изменения ещё не запускался.
+              </td>
+            </tr>
+            <tr>
               <td>Предыдущий canary на SHA 11c98223</td>
               <td><span class="state stop">CAPACITY-FAILURE</span></td>
               <td>
@@ -468,13 +478,11 @@
           <ol class="path">
             <li class="done">
               <div>
-                <strong
-                  >Пересоздать source manifest для cac4e90a и получить Sol
-                  PASS.</strong
+                <strong>Получить exact-SHA Sol code PASS для b494ccb7.</strong
                 ><br /><span class="small"
-                  >Выполнено. После любого изменения старые runtime-материалы
-                  считаются историческими; для следующего запуска потребуется
-                  новый exact-SHA review.</span
+                  >Manifest и локальные gates уже готовы; после любого изменения
+                  старые runtime-материалы считаются историческими. До нового
+                  Sol PASS runtime не запускается.</span
                 >
               </div>
             </li>
