@@ -56,6 +56,11 @@ type PreflightEntry = Readonly<{
   readonly route: PreflightRoute;
 }>;
 
+type PreflightPhaseObserver = (
+  stage: "navigate" | "reveal-ready" | "inventory",
+  operation: "navigate" | "wait-reveal" | "inventory",
+) => void;
+
 type PreflightRunState = Readonly<{
   readonly segments: readonly MatrixPreflightSegment[];
   readonly preparedGroup: string | undefined;
@@ -97,18 +102,22 @@ export async function runBrowserPreflightSegment(input: {
   readonly route?: PreflightRoute;
   readonly harness: BrowserPreflightHarness;
   readonly resetRequired: boolean;
+  readonly onPhase?: PreflightPhaseObserver;
 }): Promise<BrowserPreflightSegmentResult> {
   assertCurrentUrlCallback(input.harness);
   const route = input.route ?? routeForState(input.source, input.state);
   const preparedGroup = preflightSessionGroupKey(input.state, route);
   await input.harness.prepare(input.state, route, input.resetRequired);
+  input.onPhase?.("navigate", "navigate");
   await input.harness.navigate(route.resolvedRoute);
   assertInitialLanding(
     route,
     input.harness.currentUrl(),
     input.harness.expectedOrigin,
   );
+  input.onPhase?.("reveal-ready", "wait-reveal");
   const revealRoute = await navigateToRevealLanding(input.harness, route);
+  input.onPhase?.("inventory", "inventory");
   const initialInventory = await input.harness.inventory();
   if (route.expectedOutcome !== undefined)
     assertResolverOutcomeUi(route.expectedOutcome, initialInventory);
@@ -224,6 +233,7 @@ export function runPlaywrightPreflightSegment(input: {
     resetRequired: boolean,
   ) => Promise<RevealPreparation>;
   readonly resetRequired?: boolean;
+  readonly onPhase?: PreflightPhaseObserver;
 }): Promise<BrowserPreflightSegmentResult> {
   const harness = playwrightHarnessFor(input);
   return runBrowserPreflightSegment({
@@ -231,6 +241,7 @@ export function runPlaywrightPreflightSegment(input: {
     state: input.state,
     harness,
     resetRequired: input.resetRequired ?? true,
+    ...(input.onPhase === undefined ? {} : { onPhase: input.onPhase }),
   });
 }
 

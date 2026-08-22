@@ -28,6 +28,9 @@ const ENV_KEYS = [
   "RUNTIME_SWEEP_BASE_URL",
   "RUNTIME_SWEEP_CAPACITY_SURVEY_MAX_DURATION_MS",
   "RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT",
+  "RUNTIME_SWEEP_DIAGNOSTIC_CAMPAIGN_ID",
+  "RUNTIME_SWEEP_DIAGNOSTIC_OUTPUT_ROOT",
+  "RUNTIME_SWEEP_DIAGNOSTIC_STATE_ID",
   "RUNTIME_SWEEP_PREFLIGHT_MODE",
   "RUNTIME_SWEEP_PROFILE",
   "RUNTIME_SWEEP_SOURCE_SHA",
@@ -244,6 +247,38 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     expect(failureFrontierReplayConfig.use?.trace).toBe("off");
     expect(failureFrontierReplayConfig.use?.screenshot).toBe("off");
     expect(failureFrontierReplayConfig.use?.video).toBe("off");
+
+    process.env.RUNTIME_SWEEP_PREFLIGHT_MODE = "diagnostic";
+    process.env.RUNTIME_SWEEP_DIAGNOSTIC_OUTPUT_ROOT = path.join(
+      archive,
+      "diagnostic",
+    );
+    process.env.RUNTIME_SWEEP_DIAGNOSTIC_STATE_ID = "state-1";
+    process.env.RUNTIME_SWEEP_DIAGNOSTIC_CAMPAIGN_ID = "campaign-diagnostic";
+    const { default: diagnosticConfig } =
+      await import("./playwright.diagnostic.config.ts");
+    expect(diagnosticConfig.globalSetup).toBeUndefined();
+    expect(diagnosticConfig.testMatch).toEqual(
+      /preflight-diagnostic\.spec\.ts/u,
+    );
+    expect(diagnosticConfig.outputDir).toBe(
+      path.join(archive, "diagnostic", "playwright"),
+    );
+    expect(diagnosticConfig.projects?.map(({ name }) => name)).toEqual([
+      "runtime-preflight-diagnostic",
+    ]);
+    expect(diagnosticConfig.use?.trace).toEqual({
+      mode: "retain-on-failure",
+      snapshots: false,
+      screenshots: false,
+      sources: true,
+      attachments: true,
+    });
+    expect(diagnosticConfig.use?.screenshot).toBe("off");
+    expect(diagnosticConfig.use?.video).toBe("off");
+    expect(diagnosticConfig.use?.contextOptions).not.toHaveProperty(
+      "recordHar",
+    );
   } finally {
     restoreRuntimeEnvironment(environmentSnapshot);
     await rm(archive, { recursive: true, force: true });

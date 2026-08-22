@@ -542,7 +542,7 @@
     {
       "id": "runtime-preflight-support-implementation",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/preflight/((?:run-runtime-preflight|runtime-observability-policy)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:run-runtime-preflight(?:-diagnostic)?|runtime-observability-policy)\\.ts)$",
       "concern": "preflight",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/$1"
@@ -650,6 +650,22 @@
       "concern": "preflight-reveal-failure-frontier",
       "role": "implementation",
       "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/$1"
     },
     {
       "id": "runtime-preflight-subconcern-tests",
