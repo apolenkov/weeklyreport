@@ -8,6 +8,7 @@ import {
   type ToggleBindingEligibilityPredicate,
   toggleBindingsAnalysisFor,
   uniqueBindingsFor,
+  untrustedDisclosureFor,
 } from "./preflight-reveal-canonicalization.ts";
 import {
   matchesUnion,
@@ -26,6 +27,7 @@ type IndependentDisclosureReductionReason =
   | "single-branch-material-or-url-mismatch"
   | "pair-order-missing-or-mismatch"
   | "union-mismatch"
+  | "untrusted-disclosure"
   | "reduction-proven";
 
 type StepNotEligibleDiagnosis = Readonly<{
@@ -35,13 +37,20 @@ type StepNotEligibleDiagnosis = Readonly<{
   readonly predicate: ToggleBindingEligibilityPredicate;
 }>;
 
+type UntrustedDisclosureDiagnosis = Readonly<{
+  readonly eligible: false;
+  readonly reason: "untrusted-disclosure";
+  readonly surfaceIndex: number;
+}>;
+
 export type IndependentDisclosureReductionDiagnosis = Readonly<
   | StepNotEligibleDiagnosis
+  | UntrustedDisclosureDiagnosis
   | {
       readonly eligible: false;
       readonly reason: Exclude<
         IndependentDisclosureReductionReason,
-        "reduction-proven" | "step-not-eligible"
+        "reduction-proven" | "step-not-eligible" | "untrusted-disclosure"
       >;
     }
   | { readonly eligible: true; readonly reason: "reduction-proven" }
@@ -52,7 +61,9 @@ export const independentDisclosureReductionCapacityDetailsFor = (
 ): string =>
   diagnosis.reason === "step-not-eligible"
     ? `; reductionStepIndex=${String(diagnosis.stepIndex)}; reductionPredicate=${diagnosis.predicate}`
-    : "";
+    : diagnosis.reason === "untrusted-disclosure"
+      ? `; reductionSurfaceIndex=${String(diagnosis.surfaceIndex)}`
+      : "";
 
 type BranchSequenceLookup = Readonly<
   | { readonly kind: "missing" }
@@ -137,6 +148,17 @@ const pairOrderEquivalentFor = (input: {
   });
 };
 
+const untrustedDisclosureDiagnosisFor = (
+  branch: BranchView,
+): UntrustedDisclosureDiagnosis | undefined => {
+  const surfaceIndex = branch.path.steps
+    .flatMap(({ before, after }) => [before, after])
+    .findIndex((surface) => untrustedDisclosureFor(surface) !== undefined);
+  return surfaceIndex === -1
+    ? undefined
+    : { eligible: false, reason: "untrusted-disclosure", surfaceIndex };
+};
+
 export const independentDisclosureReductionDiagnosisFor = (input: {
   readonly branch: BranchView;
   readonly knownBranches: readonly BranchView[];
@@ -152,6 +174,8 @@ export const independentDisclosureReductionDiagnosisFor = (input: {
       stepIndex: bindingsAnalysis.stepIndex,
       predicate: bindingsAnalysis.predicate,
     };
+  const untrustedDiagnosis = untrustedDisclosureDiagnosisFor(input.branch);
+  if (untrustedDiagnosis !== undefined) return untrustedDiagnosis;
   const { bindings } = bindingsAnalysis;
   if (!uniqueBindingsFor(bindings))
     return { eligible: false, reason: "bindings-not-unique" };

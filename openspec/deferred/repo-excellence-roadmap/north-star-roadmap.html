@@ -348,11 +348,14 @@
               ключу. Это дефект identity в harness, не дефект продукта. В
               текущем code candidate сохранены source-bound target identity по
               <code>aria-controls</code>, reversible pair-order checks,
-              material-union guard и regression для Show-to-Hide. Это закрывает
-              локальный кодовый контур 5.19, но не его acceptance: exact
+              material-union guard и regression для Show-to-Hide. Добавлена
+              также boundary-проверка trusted A/B/C + untrusted D: ветка
+              остаётся ordinary, D сохраняется, а plus-one cap остаётся
+              fail-closed. Это закрывает только часть локального кодового
+              контура 5.19, но не его acceptance: exact
               <code>admin/demo</code> canary на текущем clean source ещё не
               выполнен. Поэтому canonicalization остаётся
-              <code>CODE-PROVEN / CANARY NOT-PROVEN</code>, а старые capacity
+              <code>CODE-PARTIAL / CANARY NOT-PROVEN</code>, а старые capacity
               boundary и Sol <code>ITERATE</code> receipts не переименовываются
               в PASS.
             </td>
@@ -360,7 +363,7 @@
           <tr>
             <td>OpenSpec 5.19 source-bound canonicalization</td>
             <td>
-              <span class="status warn">CODE-PROVEN / CANARY NOT-PROVEN</span>
+              <span class="status warn">CODE-PARTIAL / CANARY NOT-PROVEN</span>
             </td>
             <td>
               Контракт сохраняет toggle metadata в live/continuation surfaces,
@@ -368,9 +371,9 @@
               <code>data-reveal-independence="source-bound-row-local"</code>,
               проверяет оба порядка <code>A → B</code> и <code>B → A</code>,
               равенство material surface/URL и не сокращает untrusted fourth
-              disclosure. Детерминированные rejection-тесты есть; exact
-              <code>admin/demo</code> Chromium canary и source-bound runtime
-              receipt отсутствуют.
+              disclosure. Boundary-тесты подтверждают сохранение D и plus-one
+              guard; exact <code>admin/demo</code> Chromium canary и
+              source-bound runtime receipt отсутствуют.
             </td>
           </tr>
           <tr>
@@ -545,7 +548,7 @@
         </li>
         <li>
           <strong
-            >5.19 · source-bound canonicalization · CODE-PROVEN / CANARY
+            >5.19 · source-bound canonicalization · CODE-PARTIAL / CANARY
             NOT-PROVEN</strong
           >
           <span>
@@ -562,12 +565,12 @@
             row-local disclosure; без него даже pairwise-commutative triple
             остаётся ordinary branch. Текущий code candidate уже сохраняет
             target-based sequence identity, reversible pair-order proof,
-            material-union guard и deterministic rejection для untrusted fourth
-            disclosure. Exact <code>admin/demo</code> canary на clean source ещё
-            не запускался: он требует source-bound browser/API/DB/Redis/
-            telemetry packet и независимое Sol review. Поэтому лимит нельзя
-            повышать, граф нельзя обрезать, а 5.19 нельзя помечать закрытым по
-            одним тестам.
+            material-union guard и boundary rejection для trusted A/B/C +
+            untrusted fourth disclosure. Exact <code>admin/demo</code> canary на
+            clean source ещё не запускался: он требует source-bound
+            browser/API/DB/Redis/telemetry packet и независимое Sol review.
+            Поэтому лимит нельзя повышать, граф нельзя обрезать, а 5.19 нельзя
+            помечать закрытым по одним тестам.
           </span>
         </li>
         <li>
