@@ -1,3 +1,4 @@
+import type { DiagnosticHostPressure } from "./preflight-diagnostic-host-pressure.ts";
 import { diagnosticSampleFieldsFor } from "./preflight-diagnostic-process-fields.ts";
 import { type DiagnosticProcessSnapshot } from "./preflight-diagnostic-processes.ts";
 import type {
@@ -14,6 +15,7 @@ export function diagnosticSampleForProcess(input: {
   readonly currentOperation: DiagnosticOperation;
   readonly failureKind: DiagnosticFailureKind;
   readonly process: DiagnosticProcessSnapshot;
+  readonly hostPressure?: DiagnosticHostPressure;
 }): DiagnosticSample {
   const processFields = diagnosticSampleFieldsFor(input.process);
   return {
@@ -22,14 +24,14 @@ export function diagnosticSampleForProcess(input: {
     elapsedMs: input.elapsedMs,
     stage: input.stage,
     ...processFields,
-    compressedBytes: null,
-    swapTotalBytes: null,
-    swapUsedBytes: null,
-    swapFreeBytes: null,
-    swapinsDelta: null,
-    swapoutsDelta: null,
-    pageinsDelta: null,
-    pageoutsDelta: null,
+    compressedBytes: input.hostPressure?.compressedBytes ?? null,
+    swapTotalBytes: input.hostPressure?.swapTotalBytes ?? null,
+    swapUsedBytes: input.hostPressure?.swapUsedBytes ?? null,
+    swapFreeBytes: input.hostPressure?.swapFreeBytes ?? null,
+    swapinsDelta: input.hostPressure?.swapinsDelta ?? null,
+    swapoutsDelta: input.hostPressure?.swapoutsDelta ?? null,
+    pageinsDelta: input.hostPressure?.pageinsDelta ?? null,
+    pageoutsDelta: input.hostPressure?.pageoutsDelta ?? null,
     processFootprintBytes: null,
     traceRecords: null,
     harEntries: null,
@@ -39,4 +41,5 @@ export function diagnosticSampleForProcess(input: {
   };
 }
 
+export { createDiagnosticHostPressureSampler } from "./preflight-diagnostic-host-pressure.ts";
 export { readOwnedDiagnosticProcesses } from "./preflight-diagnostic-processes.ts";
