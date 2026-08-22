@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { readSourceArtifact } from "../source/source-artifact.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary-selection.ts";
 import {
+  createDiagnosticHostPressureSampler,
   diagnosticSampleForProcess,
   readOwnedDiagnosticProcesses,
 } from "./diagnostics/preflight-diagnostic-sample.ts";
@@ -73,6 +74,7 @@ test("diagnostic preflight captures one source-bound segment", async ({
       "Diagnostic process sampler did not return the Playwright child",
     );
   let secondaryError: Error | undefined;
+  const hostPressureSampler = createDiagnosticHostPressureSampler();
   const rememberSecondaryError = (error: unknown): void => {
     if (secondaryError !== undefined) return;
     secondaryError = error instanceof Error ? error : new Error(String(error));
@@ -93,7 +95,10 @@ test("diagnostic preflight captures one source-bound segment", async ({
   };
   const startedAt = Date.now();
   const recordSamples = async (): Promise<void> => {
-    const processes = await readOwnedDiagnosticProcesses();
+    const [processes, hostPressure] = await Promise.all([
+      readOwnedDiagnosticProcesses(),
+      hostPressureSampler.read(),
+    ]);
     await Promise.all(
       processes.map((processSnapshot) =>
         sidecar.record(
@@ -104,6 +109,7 @@ test("diagnostic preflight captures one source-bound segment", async ({
             currentOperation: phaseState.operation,
             failureKind: "none",
             process: processSnapshot,
+            hostPressure,
           }),
         ),
       ),
