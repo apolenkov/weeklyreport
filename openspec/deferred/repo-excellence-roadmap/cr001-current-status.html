@@ -220,16 +220,17 @@
 
       <div class="notice">
         <strong
-          >Итог сейчас: свежий runtime дошёл до webServer, но остановился до
-          browser survey.</strong
+          >Итог сейчас: exact-SHA кодовый gate и отдельный webpack startup-smoke
+          прошли, но browser survey ещё не запускался.</strong
         >
         Предыдущий запуск на SHA <code>11c98223</code> дошёл до terminal
         capacity failure в continuation canary, но Sol указал, что
         failure-frontier callback был подключён не к тому режиму. На текущем SHA
-        <code>b494ccb7</code> этот seam удалён, runtime wrapper выровнен на
-        webpack, а локальные gates прошли. Новый exact-SHA Sol code gate ещё
-        ожидается; после него допустим только bounded web-startup smoke.
-        Результат survey не опубликован; полный CR-001 не закрыт.
+        <code>19016d30</code> этот seam удалён, runtime wrapper выровнен на
+        webpack, локальные gates и exact-SHA Sol code gate прошли. Один bounded
+        startup-smoke вернул <code>GET / → 200</code> без Turbopack и
+        font-resolver ошибок. Результат survey не опубликован; полный CR-001 не
+        закрыт.
       </div>
 
       <section class="grid" aria-label="Идентичность текущего среза">
@@ -239,18 +240,18 @@
             <dt>Ветка</dt>
             <dd>campaign/cr-001-20260820</dd>
             <dt>Последний коммит</dt>
-            <dd>b494ccb74429ded7b9185d2ff328fa55176c25fa</dd>
+            <dd>19016d30aae01f8b98625838fc4433c3d073e213</dd>
             <dt>Дерево коммита</dt>
-            <dd>b7873b63e1a0e595e36c75c37e8e637c14968a03</dd>
+            <dd>b188006a3e521f1b9da5982af0098787c7d7b138</dd>
             <dt>Рабочее дерево</dt>
             <dd>
-              чистое дерево; runtime attempt завершён до browser survey, live
-              PASS нет
+              чистое дерево; startup-only smoke завершён, browser survey и live
+              product PASS ещё не доказаны
             </dd>
             <dt>Отпечаток source-пакета</dt>
             <dd>
-              текущий пакет создан для b494ccb7; SHA-256 source-файла
-              <code>02162c76…</code>
+              пакет создан для 19016d30; SHA-256 source-файла
+              <code>e263818c…</code>
             </dd>
           </dl>
         </article>
@@ -258,8 +259,8 @@
           <h2>Что проверено локально</h2>
           <table>
             <tr>
-              <td>Regression для proxy-границы web child</td>
-              <td><span class="state done">1/1 PASS</span></td>
+              <td>Webpack argv regression для web child</td>
+              <td><span class="state done">3/3 PASS</span></td>
             </tr>
             <tr>
               <td>E2E TypeScript на текущем SHA</td>
@@ -270,12 +271,20 @@
               <td><span class="state done">PASS</span></td>
             </tr>
             <tr>
+              <td>Directory architecture</td>
+              <td><span class="state done">24/24 PASS</span></td>
+            </tr>
+            <tr>
               <td>Source.json для exact SHA</td>
               <td><span class="state done">создан и проверен</span></td>
             </tr>
             <tr>
               <td>Sol-review текущего SHA</td>
-              <td><span class="state wait">code gate pending</span></td>
+              <td><span class="state done">PASS</span></td>
+            </tr>
+            <tr>
+              <td>Bounded webpack startup-smoke</td>
+              <td><span class="state done">GET / → 200</span></td>
             </tr>
           </table>
         </article>
@@ -313,7 +322,7 @@
               </td>
             </tr>
             <tr>
-              <td>Изоляция proxy-переменных web child</td>
+              <td>Web child startup boundary</td>
               <td>
                 <span class="state done">source/test-проверено</span>
               </td>
@@ -321,7 +330,8 @@
                 Runtime harness удаляет ровно шесть outbound proxy-переменных
                 перед запуском Next web child; <code>NO_PROXY</code> и остальные
                 значения сохраняются. Узкий тест и локальные type/lint gates
-                прошли; новый runtime ещё не запускался.
+                прошли; startup-only smoke на 19016d30 вернул
+                <code>GET / → 200</code>. Это не browser matrix.
               </td>
             </tr>
             <tr>
@@ -363,7 +373,7 @@
               </td>
             </tr>
             <tr>
-              <td>Текущий exact-SHA capacity launch</td>
+              <td>Предыдущий capacity launch на SHA cac4e90a</td>
               <td><span class="state stop">WEB-SERVER TIMEOUT</span></td>
               <td>
                 План создан с digest
@@ -371,17 +381,19 @@
                 <code>Timed out waiting 360000ms from config.webServer</code>. В
                 логе 6140 ошибок разрешения
                 <code>@vercel/turbopack-next/internal/font/google/font</code>.
-                Временные ресурсы удалены, shared-сервисы не затронуты.
+                Временные ресурсы удалены, shared-сервисы не затронуты; это
+                исторический запуск, не текущий acceptance.
               </td>
             </tr>
             <tr>
               <td>Webpack runtime alignment</td>
-              <td><span class="state wait">local PASS / Sol pending</span></td>
+              <td><span class="state done">Sol PASS / smoke PASS</span></td>
               <td>
                 Runtime wrapper теперь передаёт дочернему Next аргументы
                 <code>dev --webpack -p &lt;port&gt;</code>. Проверены argv,
                 proxy scrub, typecheck, ESLint, Prettier, diff-check и directory
-                architecture; браузер после изменения ещё не запускался.
+                architecture; отдельный startup-smoke на 19016d30 вернул
+                <code>GET / → 200</code>. Это не browser matrix.
               </td>
             </tr>
             <tr>
@@ -402,9 +414,9 @@
                 Для SHA <code>11c98223</code> Sol вынес <code>ITERATE</code>:
                 callback был подключён к continuation canary вопреки 5.18, а
                 план не связывал фактические continuation limits. Этот verdict
-                остаётся историческим. На SHA <code>cac4e90a</code> seam удалён;
-                требуется новый exact-SHA review перед runtime. Cap нельзя
-                повышать или обходить trimming.
+                остаётся историческим. На SHA <code>19016d30</code> seam удалён,
+                кодовый Sol gate и startup-smoke прошли; cap нельзя повышать или
+                обходить trimming.
               </td>
             </tr>
             <tr>
@@ -419,11 +431,10 @@
             </tr>
             <tr>
               <td>Sol gate harness-fix commit</td>
-              <td><span class="state wait">новый review pending</span></td>
+              <td><span class="state done">PASS 19016d30</span></td>
               <td>
-                Старый review проверил только минимальную proxy-границу и право
-                на один canary; он не закрывает текущий SHA, 5.14, 5.15, 5.17,
-                5.19 или весь CR-001.
+                Новый Sol review проверил exact SHA и минимальную webpack
+                границу. Он не закрывает 5.14, 5.15, 5.17, 5.19 или весь CR-001.
               </td>
             </tr>
             <tr>
@@ -478,33 +489,31 @@
           <ol class="path">
             <li class="done">
               <div>
-                <strong>Получить exact-SHA Sol code PASS для b494ccb7.</strong
+                <strong>Получить exact-SHA Sol code PASS для 19016d30.</strong
                 ><br /><span class="small"
-                  >Manifest и локальные gates уже готовы; после любого изменения
-                  старые runtime-материалы считаются историческими. До нового
-                  Sol PASS runtime не запускается.</span
+                  >Manifest, локальные gates и один startup-only smoke готовы;
+                  они не заменяют browser survey или полный CR-001.</span
+                >
+              </div>
+            </li>
+            <li class="done">
+              <div>
+                <strong>Устранить webServer startup blocker.</strong><br /><span
+                  class="small"
+                  >Wrapper выровнен на webpack; startup-smoke доказал только
+                  запуск web-сервера. Повтор capacity survey требует отдельного
+                  решения и evidence-пакета.</span
                 >
               </div>
             </li>
             <li>
               <div>
                 <strong
-                  >Устранить webServer startup blocker и получить новый Sol
-                  gate.</strong
+                  >Повторно привязать 5.14/5.15/5.17 и доказать 5.19.</strong
                 ><br /><span class="small"
-                  >Только после этого повторно привязать 5.14, 5.15 и 5.17;
-                  повтор и изменение лимитов без решения Sol запрещены.</span
-                >
-              </div>
-            </li>
-            <li>
-              <div>
-                <strong>Восстановить pending branch и доказать 5.19.</strong
-                ><br /><span class="small"
-                  >Сначала offline извлечь четыре шага из trace и проверить все
-                  predicates; только затем выбирать диагностический atom или
-                  source-bound repair. Не увеличивать лимит и не вырезать
-                  ветви.</span
+                  >Сначала получить отдельный source-bound runtime packet и
+                  восстановить pending branch; не увеличивать лимит и не
+                  вырезать ветви.</span
                 >
               </div>
             </li>
