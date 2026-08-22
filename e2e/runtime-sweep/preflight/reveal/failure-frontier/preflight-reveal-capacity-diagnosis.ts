@@ -19,7 +19,7 @@ import type {
   SourceBoundCapacityFrontier,
 } from "./preflight-reveal-capacity-frontier-adapter-contract.ts";
 
-export type CapacityDiagnosisReason =
+type CapacityDiagnosisReason =
   | "source-frontier-not-bound"
   | "source-identity-not-bound"
   | "context-not-bound"
@@ -31,7 +31,7 @@ export type CapacityDiagnosisReason =
   | "threshold-not-met"
   | "diagnostic-complete";
 
-export type CapacityFrontierLedgerEntry = Readonly<{
+type CapacityFrontierLedgerEntry = Readonly<{
   readonly controlKey: string;
   readonly preparationIdentity: string;
   readonly pathDigest: string;

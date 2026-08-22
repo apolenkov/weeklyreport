@@ -11,8 +11,8 @@ import { frozenActionBoundaryOutcome } from "./frozen-case-action-boundary.ts";
 const inventoryDomMock = vi.hoisted(() => vi.fn());
 const domControlDisclosureMetadataMock = vi.hoisted(() => vi.fn(() => ({})));
 
-vi.mock("../../dom/dom-inventory.ts", () => ({
-  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+vi.mock("../../dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../dom/dom-inventory.ts")>()),
   domControlDisclosureMetadataFor: domControlDisclosureMetadataMock,
   inventoryDom: inventoryDomMock,
 }));

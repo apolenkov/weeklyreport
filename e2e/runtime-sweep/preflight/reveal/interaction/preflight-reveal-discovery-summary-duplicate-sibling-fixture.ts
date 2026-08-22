@@ -79,11 +79,10 @@ export const duplicateSiblingLifecycleFixture = (): Readonly<{
     disclosure(firstShowKey, SHOW_ACTION, 2, SECOND_PANEL, false),
   ]);
   // The harness deliberately tracks the currently rendered sibling state.
-  // eslint-disable-next-line no-restricted-syntax
-  let current: "root" | typeof AFTER_FIRST_STATE = "root";
+  const state = { current: "root" as "root" | typeof AFTER_FIRST_STATE };
   const attemptedActions: string[] = [];
   const resultFor = (next: "root" | typeof AFTER_FIRST_STATE) => {
-    current = next;
+    state.current = next;
     const nextInventory = next === "root" ? root : afterFirst;
     return {
       url: browserUrlFor(ROUTE),
@@ -97,26 +96,30 @@ export const duplicateSiblingLifecycleFixture = (): Readonly<{
   };
   const harness: RevealExecutionHarness = {
     prepare: () => {
-      current = "root";
+      state.current = "root";
       return Promise.resolve();
     },
     navigate: () => {
-      current = "root";
+      state.current = "root";
       return Promise.resolve();
     },
     currentUrl: () => browserUrlFor(ROUTE),
-    inventory: () => Promise.resolve(current === "root" ? root : afterFirst),
+    inventory: () =>
+      Promise.resolve(state.current === "root" ? root : afterFirst),
     executeReveal: ({ action }) => {
-      attemptedActions.push(`${current}:${action.controlKey}`);
-      if (current === "root" && action.controlKey === firstShowKey)
+      attemptedActions.push(`${state.current}:${action.controlKey}`);
+      if (state.current === "root" && action.controlKey === firstShowKey)
         return Promise.resolve(resultFor(AFTER_FIRST_STATE));
-      if (current === "root" && action.controlKey === secondShowKey)
+      if (state.current === "root" && action.controlKey === secondShowKey)
         return Promise.resolve(resultFor("root"));
-      if (current === AFTER_FIRST_STATE && action.controlKey === firstShowKey)
+      if (
+        state.current === AFTER_FIRST_STATE &&
+        action.controlKey === firstShowKey
+      )
         return Promise.resolve(resultFor(AFTER_FIRST_STATE));
       return Promise.reject(
         new Error(
-          `Unknown duplicate sibling action: ${current}/${action.controlKey}`,
+          `Unknown duplicate sibling action: ${state.current}/${action.controlKey}`,
         ),
       );
     },

@@ -61,8 +61,8 @@ const harness = vi.hoisted(() => ({
 vi.mock("../../../../helpers/e2e-runtime-state-setup.js", () => ({
   reseedE2eRuntimeState: harness.reseed,
 }));
-vi.mock("../../dom/dom-inventory.ts", () => ({
-  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+vi.mock("../../dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../dom/dom-inventory.ts")>()),
   inventoryDom: vi.fn(() => Promise.resolve(harness.inventory)),
 }));
 vi.mock("./frozen-case-live-preparation.ts", () => ({

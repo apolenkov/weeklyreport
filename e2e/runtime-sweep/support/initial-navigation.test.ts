@@ -32,8 +32,8 @@ const harness = vi.hoisted(() => ({
   resolveSettlement: undefined as (() => void) | undefined,
 }));
 
-vi.mock("../replay/dom/dom-inventory.ts", () => ({
-  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+vi.mock("../replay/dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../replay/dom/dom-inventory.ts")>()),
   inventoryDom: vi.fn(),
 }));
 

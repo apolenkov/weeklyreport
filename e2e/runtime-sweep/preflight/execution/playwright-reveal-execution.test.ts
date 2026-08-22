@@ -1,10 +1,7 @@
 import type { Page } from "@playwright/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  DomControlObservation,
-  DomInventory,
-} from "../../replay/dom/dom-inventory.ts";
+import type { DomControlObservation } from "../../replay/dom/dom-inventory.ts";
 import type { Action } from "../../source/contracts.ts";
 import type { RevealNonMutationProof } from "../reveal-path.ts";
 
@@ -18,13 +15,11 @@ const harness = vi.hoisted(() => {
     pageUrl: "https://runtime.invalid/reports",
     overlayHiddenMain: false,
   };
-  const inventory: DomInventory = { controls: [], issues: [] };
   return {
-    inventory,
     inventoryDom: vi.fn(() => {
       if (state.loading) throw new Error("inventory observed loading DOM");
       state.events.push("inventory");
-      return inventory;
+      return { controls: [], issues: [] };
     }),
     snapshotPage: vi.fn(() => ({
       controls: [],
@@ -55,7 +50,10 @@ vi.mock("../../replay/control-actions/control-actions.ts", () => ({
   executeControlAction: harness.executeControlAction,
 }));
 
-vi.mock("../../replay/dom/dom-inventory.ts", () => ({
+vi.mock("../../replay/dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../replay/dom/dom-inventory.ts")
+  >()),
   inventoryDom: harness.inventoryDom,
 }));
 
