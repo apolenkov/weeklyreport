@@ -55,8 +55,10 @@ const safeByteProductFor = (
   multiplier: number,
 ): number | null => {
   if (value === null) return null;
-  const bytes = value * multiplier;
-  return Number.isSafeInteger(bytes) && bytes >= 0 ? bytes : null;
+  const rawBytes = value * multiplier;
+  if (!Number.isFinite(rawBytes) || rawBytes < 0) return null;
+  const bytes = Math.round(rawBytes);
+  return Number.isSafeInteger(bytes) ? bytes : null;
 };
 
 const counterFor = (output: string, label: string): number | null =>

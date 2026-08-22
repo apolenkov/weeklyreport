@@ -17,6 +17,8 @@ Swapouts:                                3.
 
 const SWAP_USAGE =
   "vm.swapusage: total = 7.00G  used = 2.50G  free = 4.50G  (encrypted)";
+const FRACTIONAL_SWAP_USAGE =
+  "vm.swapusage: total = 7168.00M  used = 6540.56M  free = 627.44M  (encrypted)";
 
 describe("Darwin diagnostic host pressure", () => {
   it("parses compressed pages and monotonic page counters", () => {
@@ -34,6 +36,14 @@ describe("Darwin diagnostic host pressure", () => {
       swapTotalBytes: 7 * 1024 ** 3,
       swapUsedBytes: 2.5 * 1024 ** 3,
       swapFreeBytes: 4.5 * 1024 ** 3,
+    });
+  });
+
+  it("rounds fractional Darwin MiB values to integer bytes", () => {
+    expect(parseDarwinSwapUsage(FRACTIONAL_SWAP_USAGE)).toEqual({
+      swapTotalBytes: 7_516_192_768,
+      swapUsedBytes: 6_858_274_243,
+      swapFreeBytes: 657_918_525,
     });
   });
 
