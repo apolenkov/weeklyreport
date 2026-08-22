@@ -510,9 +510,17 @@
     {
       "id": "runtime-preflight",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?!run-runtime-next-server\\.test\\.ts$)(?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
       "concern": "preflight",
       "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-next-server-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-next-server\\.test\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {

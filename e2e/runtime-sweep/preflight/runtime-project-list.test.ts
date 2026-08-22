@@ -8,7 +8,6 @@ import {
   runtimeApiServerCommand,
   runtimeApiServerCwd,
 } from "../../runtime-api-server-command.ts";
-import { runtimeNextChildArguments } from "./run-runtime-next-server.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const ENV_KEYS = [
@@ -250,18 +249,6 @@ test("keeps deterministic runtime projects in dependency order", async () => {
     await rm(archive, { recursive: true, force: true });
   }
   expect(snapshotRuntimeEnvironment()).toEqual(environmentSnapshot);
-});
-
-test("uses the repository's webpack runtime boundary", () => {
-  expect(
-    runtimeNextChildArguments("/repo/node_modules/next/dist/bin/next", 33_105),
-  ).toEqual([
-    "/repo/node_modules/next/dist/bin/next",
-    "dev",
-    "--webpack",
-    "-p",
-    "33105",
-  ]);
 });
 
 test("registers focused observability and submit harness specs", async () => {
