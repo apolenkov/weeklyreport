@@ -63,8 +63,8 @@ vi.mock("../../../support/runtime-api-drain.ts", () => ({
   awaitRuntimeApiDrain: harness.drain,
 }));
 
-vi.mock("../../dom/dom-inventory.ts", () => ({
-  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+vi.mock("../../dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../dom/dom-inventory.ts")>()),
   inventoryDom: vi.fn(() => {
     throw new Error("runner must not re-inventory after phase capture");
   }),

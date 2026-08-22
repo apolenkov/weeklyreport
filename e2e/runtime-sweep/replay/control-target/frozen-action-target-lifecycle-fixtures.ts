@@ -73,7 +73,7 @@ export const postFirstExpansionInventory: DomInventory = {
   issues: [],
 };
 
-export const afterSecondExpansionFromRootInventory: DomInventory = {
+const afterSecondExpansionFromRootInventory: DomInventory = {
   controls: [
     disclosure(FIRST_SHOW_KEY, SHOW_ACTION, 1, FIRST_PANEL, false),
     disclosure(FIRST_HIDE_KEY, HIDE_ACTION, 2, SECOND_PANEL, true),
@@ -81,7 +81,7 @@ export const afterSecondExpansionFromRootInventory: DomInventory = {
   issues: [],
 };
 
-export const afterSecondExpansionFromPostFirstInventory: DomInventory = {
+const afterSecondExpansionFromPostFirstInventory: DomInventory = {
   controls: [
     disclosure(FIRST_HIDE_KEY, HIDE_ACTION, 1, FIRST_PANEL, true),
     disclosure(SECOND_HIDE_KEY, HIDE_ACTION, 2, SECOND_PANEL, true),

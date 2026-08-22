@@ -22,7 +22,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../replay/control-actions/control-actions.ts", () => ({
   executeControlAction: mocks.executeControlAction,
 }));
-vi.mock("../../replay/dom/dom-inventory.ts", () => ({
+vi.mock("../../replay/dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../replay/dom/dom-inventory.ts")
+  >()),
   inventoryDom: mocks.inventoryDom,
 }));
 vi.mock("../../replay/live-control/live-control-observation.ts", () => ({

@@ -19,8 +19,8 @@ const harness = vi.hoisted(() => ({
   networkPolicy: undefined as NetworkEvidencePolicy | undefined,
 }));
 
-vi.mock("../../dom/dom-inventory.ts", () => ({
-  RUNTIME_INTERACTION_EFFECTS: ["client-only", "mutation-required"],
+vi.mock("../../dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../dom/dom-inventory.ts")>()),
   inventoryDom: vi.fn(() => {
     harness.events.push("inventory");
     return Promise.resolve({ controls: [], issues: [] });

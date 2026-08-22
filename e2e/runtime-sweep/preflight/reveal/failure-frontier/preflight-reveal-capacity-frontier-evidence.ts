@@ -22,19 +22,16 @@ export const receiptChainFor = (
   values: readonly unknown[],
   parseReceipt: (value: unknown) => RevealContinuationReceipt,
 ): readonly RevealContinuationReceipt[] => {
-  // The predecessor is intentionally updated as the chain is traversed.
-  // eslint-disable-next-line no-restricted-syntax
-  let predecessor: string | null = null;
-  return values.map((value, index) => {
-    const receipt = parseReceipt(value);
+  const receipts = values.map(parseReceipt);
+  receipts.forEach((receipt, index) => {
+    const predecessor = receipts[index - 1]?.digest ?? null;
     if (
       receipt.sequence !== index + 1 ||
       receipt.predecessorDigest !== predecessor
     )
       throw new Error("receipt chain is missing, reordered, or duplicated");
-    predecessor = receipt.digest;
-    return receipt;
   });
+  return receipts;
 };
 
 export const receiptChainDigestFor = (

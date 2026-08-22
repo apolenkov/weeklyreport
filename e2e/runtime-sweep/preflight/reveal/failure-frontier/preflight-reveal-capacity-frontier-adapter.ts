@@ -24,9 +24,7 @@ import {
 import { assertRevealFailureFrontierPacketReadBack } from "./preflight-reveal-failure-frontier-io.ts";
 
 export type {
-  CapacityFrontierAdapterReason,
   CapacityFrontierAdapterResult,
-  SourceBoundCapacityFrontier,
   SourceBoundCapacityFrontierInput,
 } from "./preflight-reveal-capacity-frontier-adapter-contract.ts";
 
@@ -149,5 +147,3 @@ export const adaptSourceBoundCapacityFrontier = (
     return rejected(RECEIPT_CHAIN_INVALID);
   }
 };
-
-export { receiptChainDigestFor, sourceFrontierDigestFor };
