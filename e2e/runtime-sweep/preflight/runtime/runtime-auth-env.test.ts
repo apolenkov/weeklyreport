@@ -13,6 +13,8 @@ describe("runtimeSweepWebEnvironment", () => {
       http_proxy: "http://127.0.0.1:1091",
       https_proxy: "http://127.0.0.1:1091",
       all_proxy: "http://127.0.0.1:1091",
+      NO_PROXY: "127.0.0.1,localhost",
+      no_proxy: "127.0.0.1,localhost",
     });
 
     const result = runtimeSweepWebEnvironment(source);
@@ -21,6 +23,8 @@ describe("runtimeSweepWebEnvironment", () => {
       NEXT_PUBLIC_API_URL: "http://127.0.0.1:3102",
       NEXT_PUBLIC_AUTH_STUB: "true",
       NEXT_PUBLIC_DISABLE_DEVTOOLS: "true",
+      NO_PROXY: "127.0.0.1,localhost",
+      no_proxy: "127.0.0.1,localhost",
     });
     for (const key of [
       "HTTP_PROXY",
