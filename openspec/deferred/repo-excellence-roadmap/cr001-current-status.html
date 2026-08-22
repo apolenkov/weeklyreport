@@ -220,15 +220,16 @@
 
       <div class="notice">
         <strong
-          >Итог сейчас: свежий runtime остановлен до корректного
-          diagnostic-пути.</strong
+          >Итог сейчас: свежий runtime дошёл до webServer, но остановился до
+          browser survey.</strong
         >
         Предыдущий запуск на SHA <code>11c98223</code> дошёл до terminal
         capacity failure в continuation canary, но Sol указал, что
         failure-frontier callback был подключён не к тому режиму. На текущем SHA
-        <code>cac4e90a</code> этот seam удалён; новый runtime ещё не запускался.
-        Правильный следующий путь — монолитный capacity survey с отдельным
-        diagnostic packet, как требует OpenSpec 5.18. Полный CR-001 не закрыт.
+        <code>cac4e90a</code> этот seam удалён, source manifest и Sol gate
+        прошли. Единственный свежий monolithic capacity survey завершился
+        тайм-аутом webServer: Next/Turbopack не разрешил внутренний font-модуль.
+        Результат survey не опубликован; полный CR-001 не закрыт.
       </div>
 
       <section class="grid" aria-label="Идентичность текущего среза">
@@ -243,13 +244,13 @@
             <dd>4058dc891fedaedcc0d10f4ff7d19ad22b992030</dd>
             <dt>Рабочее дерево</dt>
             <dd>
-              чистое дерево; после исправляющего revert свежего runtime нет,
-              live PASS нет
+              чистое дерево; runtime attempt завершён до browser survey, live
+              PASS нет
             </dd>
             <dt>Отпечаток source-пакета</dt>
             <dd>
-              старый пакет 981d9f7b относится к SHA 11c98223; пакет для cac4e90a
-              ещё нужно пересоздать
+              текущий пакет создан для cac4e90a; SHA-256 source-файла
+              <code>e9be6715…</code>
             </dd>
           </dl>
         </article>
@@ -270,11 +271,11 @@
             </tr>
             <tr>
               <td>Source.json для exact SHA</td>
-              <td><span class="state wait">нужен новый rebind</span></td>
+              <td><span class="state done">создан и проверен</span></td>
             </tr>
             <tr>
               <td>Sol-review текущего SHA</td>
-              <td><span class="state wait">ожидается после revert</span></td>
+              <td><span class="state done">PASS</span></td>
             </tr>
           </table>
         </article>
@@ -350,11 +351,25 @@
             </tr>
             <tr>
               <td>5.17 capacity survey</td>
-              <td><span class="state stop">NOT-PROVEN</span></td>
+              <td><span class="state stop">blocked before browser</span></td>
               <td>
-                На текущем exact SHA terminal empty frontier ещё не получен.
-                После rebind нужно запускать именно монолитный survey; старый
+                Монолитный survey на текущем exact SHA был запущен один раз, но
+                Playwright не дождался webServer за 360000 ms из-за
+                повторяющейся ошибки разрешения Google-font модуля. Нет
+                результата, frontier manifest или browser evidence; старый
                 continuation canary не подменяет этот результат.
+              </td>
+            </tr>
+            <tr>
+              <td>Текущий exact-SHA capacity launch</td>
+              <td><span class="state stop">WEB-SERVER TIMEOUT</span></td>
+              <td>
+                План создан с digest
+                <code>b80ee8f9…</code>; child завершился с exit 1 после
+                <code>Timed out waiting 360000ms from config.webServer</code>. В
+                логе 6140 ошибок разрешения
+                <code>@vercel/turbopack-next/internal/font/google/font</code>.
+                Временные ресурсы удалены, shared-сервисы не затронуты.
               </td>
             </tr>
             <tr>
@@ -455,18 +470,20 @@
                   >Пересоздать source manifest для cac4e90a и получить Sol
                   PASS.</strong
                 ><br /><span class="small"
-                  >После любого изменения старые runtime-материалы считаются
-                  историческими; текущий runtime нельзя начинать до нового
-                  exact-SHA review.</span
+                  >Выполнено. После любого изменения старые runtime-материалы
+                  считаются историческими; для следующего запуска потребуется
+                  новый exact-SHA review.</span
                 >
               </div>
             </li>
             <li>
               <div>
-                <strong>Повторно привязать 5.14, 5.15 и 5.17.</strong
+                <strong
+                  >Устранить webServer startup blocker и получить новый Sol
+                  gate.</strong
                 ><br /><span class="small"
-                  >Проверять можно по отдельности, но один общий writer должен
-                  владеть runtime-ресурсом.</span
+                  >Только после этого повторно привязать 5.14, 5.15 и 5.17;
+                  повтор и изменение лимитов без решения Sol запрещены.</span
                 >
               </div>
             </li>
