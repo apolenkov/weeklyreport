@@ -10,7 +10,6 @@ import {
 import { revealReductionContextFor } from "../guards/preflight-reveal-reduction-context.ts";
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import {
-  type RevealCandidateFailureHandler,
   type RevealDiscoveryState,
   type RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
@@ -49,11 +48,6 @@ const MILLISECONDS_PER_MINUTE = 60_000;
 const DEFAULT_REVEAL_CHUNK_BUDGET_MS =
   MINUTES_PER_CHUNK * MILLISECONDS_PER_MINUTE;
 
-const failureHandlerInputFor = (
-  handler: RevealCandidateFailureHandler | undefined,
-): Pick<RevealQueueInput, "onCandidateFailure"> | Record<never, never> =>
-  handler === undefined ? {} : { onCandidateFailure: handler };
-
 export type RevealContinuationBootstrapResult = Readonly<{
   /** An empty observation carries no receipt and grants no execution authority. */
   readonly status: "BOOTSTRAP";
@@ -89,7 +83,6 @@ export type RevealContinuationInput = Readonly<{
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;
   readonly now?: () => number;
-  readonly onCandidateFailure?: RevealCandidateFailureHandler;
 }>;
 
 export type RevealContinuationInitialState = Readonly<{
@@ -134,7 +127,6 @@ const reducerInputFor = (input: {
   readonly harness: RevealExecutionHarness;
   readonly controlFor: RevealDiscoveryInput["controlFor"];
   readonly source: SourceArtifact;
-  readonly onCandidateFailure?: RevealCandidateFailureHandler;
 }): RevealQueueInput => {
   const reductionContext = revealReductionContextFor({
     source: input.source,
@@ -148,7 +140,6 @@ const reducerInputFor = (input: {
     initialSurface: input.initialSurface,
     harness: input.harness,
     controlFor: input.controlFor,
-    ...failureHandlerInputFor(input.onCandidateFailure),
     plansFor,
     candidatesFor: (inventory) => revealCandidatesFor(inventory, input.route),
     maxDepth: MAX_REVEAL_DEPTH,
@@ -280,7 +271,6 @@ export async function discoverRevealControlsChunk(
     harness: input.harness,
     controlFor: input.controlFor,
     source: input.source,
-    ...failureHandlerInputFor(input.onCandidateFailure),
   });
   if (input.grant !== undefined)
     assertFreshGenesis({
