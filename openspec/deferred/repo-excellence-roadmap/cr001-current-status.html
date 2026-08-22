@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CustomReport / CR-001 — текущее состояние</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17221d;
+        --muted: #5d6c63;
+        --line: #d7e2dc;
+        --paper: #fbfdfb;
+        --green: #117a50;
+        --green-soft: #e5f4ec;
+        --amber: #9a5a00;
+        --amber-soft: #fff3dc;
+        --red: #a33b2f;
+        --red-soft: #fde9e5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: var(--ink);
+        background: linear-gradient(135deg, #eef6f1, #f8fbf9 45%, #edf4f0);
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      h1,
+      h2 {
+        line-height: 1.15;
+        margin: 0;
+      }
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.3rem);
+        max-width: 800px;
+      }
+      h2 {
+        font-size: 1.35rem;
+        margin-bottom: 16px;
+      }
+      p {
+        margin: 0 0 14px;
+      }
+      .eyebrow {
+        color: var(--green);
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .lead {
+        color: var(--muted);
+        font-size: 1.1rem;
+        max-width: 840px;
+        margin-top: 18px;
+      }
+      .notice,
+      .card {
+        background: color-mix(in srgb, var(--paper) 94%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 14px 34px rgb(24 58 40 / 7%);
+      }
+      .notice {
+        margin-top: 28px;
+        padding: 18px 20px;
+        border-left: 5px solid var(--amber);
+        background: var(--amber-soft);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+      .card {
+        padding: 22px;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 8px 14px;
+        margin: 0;
+      }
+      .meta dt {
+        color: var(--muted);
+      }
+      .meta dd {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9rem;
+        overflow-wrap: anywhere;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 12px 10px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      .state {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .done {
+        color: var(--green);
+        background: var(--green-soft);
+      }
+      .wait {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+      .stop {
+        color: var(--red);
+        background: var(--red-soft);
+      }
+      .path {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .path li {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+      .path li::before {
+        content: "";
+        width: 20px;
+        height: 20px;
+        margin-top: 3px;
+        border-radius: 50%;
+        background: var(--amber);
+        box-shadow: 0 0 0 5px var(--amber-soft);
+      }
+      .path li.done::before {
+        background: var(--green);
+        box-shadow: 0 0 0 5px var(--green-soft);
+      }
+      code {
+        font:
+          0.9em ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        background: #edf3ef;
+        padding: 2px 5px;
+        border-radius: 5px;
+      }
+      .small {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      footer {
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      @media (max-width: 760px) {
+        main {
+          padding: 32px 16px 54px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .meta {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+        .meta dd {
+          margin-bottom: 8px;
+        }
+        th,
+        td {
+          padding: 10px 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">CustomReport · CR-001 · срез 22 августа 2026</p>
+      <h1>Что доказано и что ещё нельзя считать готовым</h1>
+      <p class="lead">
+        Это короткая карта текущей работы. Она помогает ориентироваться в
+        порядке шагов, но не заменяет свежие кадры Chrome, независимую проверку
+        интерфейса или итоговое решение Sol.
+      </p>
+
+      <div class="notice">
+        <strong
+          >Итог сейчас: свежий runtime остановлен до корректного
+          diagnostic-пути.</strong
+        >
+        Предыдущий запуск на SHA <code>11c98223</code> дошёл до terminal
+        capacity failure в continuation canary, но Sol указал, что
+        failure-frontier callback был подключён не к тому режиму. На текущем SHA
+        <code>cac4e90a</code> этот seam удалён; новый runtime ещё не запускался.
+        Правильный следующий путь — монолитный capacity survey с отдельным
+        diagnostic packet, как требует OpenSpec 5.18. Полный CR-001 не закрыт.
+      </div>
+
+      <section class="grid" aria-label="Идентичность текущего среза">
+        <article class="card">
+          <h2>Точная версия кода</h2>
+          <dl class="meta">
+            <dt>Ветка</dt>
+            <dd>campaign/cr-001-20260820</dd>
+            <dt>Последний коммит</dt>
+            <dd>cac4e90a22642e2083e3277eb45698052e7a1fb8</dd>
+            <dt>Дерево коммита</dt>
+            <dd>4058dc891fedaedcc0d10f4ff7d19ad22b992030</dd>
+            <dt>Рабочее дерево</dt>
+            <dd>
+              чистое дерево; после исправляющего revert свежего runtime нет,
+              live PASS нет
+            </dd>
+            <dt>Отпечаток source-пакета</dt>
+            <dd>
+              старый пакет 981d9f7b относится к SHA 11c98223; пакет для cac4e90a
+              ещё нужно пересоздать
+            </dd>
+          </dl>
+        </article>
+        <article class="card">
+          <h2>Что проверено локально</h2>
+          <table>
+            <tr>
+              <td>Regression для proxy-границы web child</td>
+              <td><span class="state done">1/1 PASS</span></td>
+            </tr>
+            <tr>
+              <td>E2E TypeScript на текущем SHA</td>
+              <td><span class="state done">PASS</span></td>
+            </tr>
+            <tr>
+              <td>ESLint, Prettier и diff-check</td>
+              <td><span class="state done">PASS</span></td>
+            </tr>
+            <tr>
+              <td>Source.json для exact SHA</td>
+              <td><span class="state wait">нужен новый rebind</span></td>
+            </tr>
+            <tr>
+              <td>Sol-review текущего SHA</td>
+              <td><span class="state wait">ожидается после revert</span></td>
+            </tr>
+          </table>
+        </article>
+      </section>
+
+      <section class="card" style="margin-top: 24px">
+        <h2>Реестр основных этапов</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Этап</th>
+              <th>Состояние</th>
+              <th>Простое объяснение</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Обратная связь владельца</td>
+              <td><span class="state wait">частично сведена</span></td>
+              <td>
+                Требования и повторяющиеся замечания перенесены; полный просмотр
+                всех Pro/Air сессий ещё не доказан.
+              </td>
+            </tr>
+            <tr>
+              <td>OpenSpec implementation ledger</td>
+              <td><span class="state wait">55/67 задач</span></td>
+              <td>
+                Плановые артефакты OpenSpec завершены; 12 задач остаются:
+                source-bound 5.19, полный baseline, Luna-review, adjudication,
+                final resweep и closeout. Галочка задачи не заменяет живое
+                доказательство.
+              </td>
+            </tr>
+            <tr>
+              <td>Изоляция proxy-переменных web child</td>
+              <td>
+                <span class="state done">source/test-проверено</span>
+              </td>
+              <td>
+                Runtime harness удаляет ровно шесть outbound proxy-переменных
+                перед запуском Next web child; <code>NO_PROXY</code> и остальные
+                значения сохраняются. Узкий тест и локальные type/lint gates
+                прошли; новый runtime ещё не запускался.
+              </td>
+            </tr>
+            <tr>
+              <td>5.19 capacity attribution</td>
+              <td>
+                <span class="state wait">diagnostic partial</span>
+              </td>
+              <td>
+                Offline-реконструкция восстановила путь
+                <code
+                  >Collapse Decisions → Product Status → Everyone → Current
+                  Week…</code
+                >. Для первого pending candidate в source- bound inventory
+                отсутствуют <code>aria-controls</code>,
+                <code>aria-expanded</code> и marker независимости. Reduction
+                остаётся запрещённым, но точная причинность переполнения ещё не
+                доказана; cap и ветви не менялись.
+              </td>
+            </tr>
+            <tr>
+              <td>5.14 и 5.15</td>
+              <td><span class="state stop">предыдущий SHA partial</span></td>
+              <td>
+                На старом SHA <code>202ce6d</code> child 0 прошёл за 32.3 минуты
+                и создал YIELD на 1169 receipts; следующий child не дошёл до
+                браузера из-за timeout webServer. Это не evidence для нового SHA
+                и не доказывает continuation equivalence.
+              </td>
+            </tr>
+            <tr>
+              <td>5.17 capacity survey</td>
+              <td><span class="state stop">NOT-PROVEN</span></td>
+              <td>
+                На текущем exact SHA terminal empty frontier ещё не получен.
+                После rebind нужно запускать именно монолитный survey; старый
+                continuation canary не подменяет этот результат.
+              </td>
+            </tr>
+            <tr>
+              <td>Предыдущий canary на SHA 11c98223</td>
+              <td><span class="state stop">CAPACITY-FAILURE</span></td>
+              <td>
+                После исправления seed/archive-boundary два continuation child
+                прошли, но третий упёрся в cap: <code>8272 &gt; 8192</code>,
+                <code>source-control-not-source-bound</code>. Нет
+                <code>PREFLIGHT_CANARY.json</code> и parent PASS; это
+                историческое harness-capacity evidence, не verdict текущего SHA.
+              </td>
+            </tr>
+            <tr>
+              <td>Sol gate repair canary</td>
+              <td><span class="state stop">ITERATE</span></td>
+              <td>
+                Для SHA <code>11c98223</code> Sol вынес <code>ITERATE</code>:
+                callback был подключён к continuation canary вопреки 5.18, а
+                план не связывал фактические continuation limits. Этот verdict
+                остаётся историческим. На SHA <code>cac4e90a</code> seam удалён;
+                требуется новый exact-SHA review перед runtime. Cap нельзя
+                повышать или обходить trimming.
+              </td>
+            </tr>
+            <tr>
+              <td>Подготовка disposable-БД</td>
+              <td><span class="state done">guarded PASS</span></td>
+              <td>
+                На точном loopback-target
+                <code>customreport_e2e</code> применена миграция
+                <code>20260530162224_init</code> через репозиторный guard. Это
+                только подготовка среды, не runtime acceptance.
+              </td>
+            </tr>
+            <tr>
+              <td>Sol gate harness-fix commit</td>
+              <td><span class="state wait">новый review pending</span></td>
+              <td>
+                Старый review проверил только минимальную proxy-границу и право
+                на один canary; он не закрывает текущий SHA, 5.14, 5.15, 5.17,
+                5.19 или весь CR-001.
+              </td>
+            </tr>
+            <tr>
+              <td>Исторический desktop packet</td>
+              <td><span class="state done">51/51 + 18 + L10</span></td>
+              <td>
+                Пакет на чистом SHA <code>0d03068f</code> принят как
+                историческое evidence. Он не переносится автоматически на
+                текущую ветку и не заменяет fresh Chrome captures и independent
+                visual review.
+              </td>
+            </tr>
+            <tr>
+              <td>Свежие кадры Chrome и визуальное ревью</td>
+              <td><span class="state stop">не выполнено</span></td>
+              <td>
+                Нужны все четыре роли, exact SHA, проверка прыжков разметки,
+                scrollY, верхнего меню и независимое ревью всего кадра.
+              </td>
+            </tr>
+            <tr>
+              <td>Redis, данные, безопасность и восстановление</td>
+              <td><span class="state stop">не выполнено</span></td>
+              <td>
+                Это отдельные доказательные линии; тесты интерфейса их не
+                заменяют.
+              </td>
+            </tr>
+            <tr>
+              <td>Очистка репозитория</td>
+              <td><span class="state wait">инвентаризация</span></td>
+              <td>
+                Сначала классификация «оставить / архивировать / удалить», затем
+                осторожная очистка.
+              </td>
+            </tr>
+            <tr>
+              <td>Кандидат, CI, remote и финальный Sol</td>
+              <td><span class="state stop">не начато</span></td>
+              <td>
+                Нужны только после чистой версии, полного runtime-пакета и
+                независимого принятия.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Правильный порядок</h2>
+          <ol class="path">
+            <li class="done">
+              <div>
+                <strong
+                  >Пересоздать source manifest для cac4e90a и получить Sol
+                  PASS.</strong
+                ><br /><span class="small"
+                  >После любого изменения старые runtime-материалы считаются
+                  историческими; текущий runtime нельзя начинать до нового
+                  exact-SHA review.</span
+                >
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Повторно привязать 5.14, 5.15 и 5.17.</strong
+                ><br /><span class="small"
+                  >Проверять можно по отдельности, но один общий writer должен
+                  владеть runtime-ресурсом.</span
+                >
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Восстановить pending branch и доказать 5.19.</strong
+                ><br /><span class="small"
+                  >Сначала offline извлечь четыре шага из trace и проверить все
+                  predicates; только затем выбирать диагностический atom или
+                  source-bound repair. Не увеличивать лимит и не вырезать
+                  ветви.</span
+                >
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong
+                  >Снять полный desktop-пакет и провести визуальное
+                  ревью.</strong
+                ><br /><span class="small"
+                  >Скриншот сам по себе не является ревью.</span
+                >
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong
+                  >Закрыть данные, Redis, безопасность, выпуск и финальный
+                  Sol.</strong
+                >
+              </div>
+            </li>
+          </ol>
+        </article>
+        <article class="card">
+          <h2>Как экономим ресурсы</h2>
+          <ul>
+            <li>
+              Один координатор и один автор изменений для пересекающихся файлов.
+            </li>
+            <li>
+              Luna и детерминированные команды — для рутинного сбора и проверок.
+            </li>
+            <li>
+              Sol — только для архитектуры, спорных решений и контрольных
+              вердиктов.
+            </li>
+            <li>
+              OpenCode — только для узкой, безопасной, читаемой задачи без
+              секретов и runtime-данных.
+            </li>
+            <li>
+              Браузер, база и Redis не запускаются параллельно без разных
+              подтверждённых ресурсов.
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <footer>
+        Источники: активные OpenSpec-изменения, реестр требований владельца,
+        exact-source manifest и archive receipts от 2026-08-22. Статусы «не
+        доказано» намеренно сохранены до появления свежего свидетельства.
+      </footer>
+    </main>
+  </body>
+</html>

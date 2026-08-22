@@ -5,6 +5,8 @@ exploration. **None of this is active work** — nothing here has been
 scheduled, approved, or run. Reopen only by an explicit dedicated command.
 
 - `north-star-roadmap.html` — aspirational epic roadmap (HTML + Mermaid).
+- `cr001-current-status.html` — owner-facing current CR-001 status snapshot;
+  evidence-aware and intentionally not a completion report.
 - `roadmap-execution-engine.md` — design sketch for an autonomous overnight
   execution engine (orchestrator skeleton, AUTO / SUPERVISED / HUMAN_GATE
   epics). Speculative; no engine exists.
