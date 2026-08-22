@@ -250,30 +250,29 @@
       <div class="panel">
         <h3>Identity и граница текущей редакции</h3>
         <p>
-          <strong>Текущий committed base:</strong> <code>HEAD</code>
-          <code>48c2bacfd30be51c13da5549fcf0ee133e62b737</code>, дерево
-          <code>6a3dd98c7547bdd3f76b4fde96a4c0b92f9e5bcc</code>. Это точка
-          отсчёта до этой docs-only правки; она не включает ни диагностический
-          overlay, ни будущую редакцию этого HTML.
+          <strong>Текущий committed source:</strong> <code>HEAD</code>
+          <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code>, дерево
+          <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Это чистая
+          source-bound точка после фиксации harness-атома; она включает
+          диагностический код, но не содержит runtime acceptance.
         </p>
         <p>
-          <strong>Uncommitted diagnostic atom overlay:</strong> локальный
-          source/test атом получил <code>Sol APPROVE</code> как bounded
-          diagnostic-only решение. Он <strong>default-off</strong>, запускается
-          только как diagnostic child и в этой сессии не выполнялся. Его
-          наблюдение ограничено принадлежащими процессами Playwright child и
-          browser; renderer не захватывается. Контракт задаёт, в частности,
-          интервал 1&nbsp;с, не более 3 process identities, 900 samples на
-          процесс, 32 event records и совокупный sidecar не более 2&nbsp;MB.
-          Атом не пишет acceptance artifacts, assignment/journal/segment/canary
-          или parent <code>PASS</code>; он не создаёт runtime evidence и не
-          устанавливает root cause.
+          <strong>Committed diagnostic atom:</strong> harness получил свежий
+          <code>Sol APPROVE</code> на exact dirty candidate и зафиксирован в
+          коммите <code>d47041cf0</code>. Он <strong>default-off</strong>,
+          запускается только явным diagnostic flag и в этой сессии не
+          выполнялся. Receipt source-bound, archive-confined и bounded;
+          проверены per-gauge hysteresis, owned-child termination, pre-resource
+          read-back и forged-receipt negatives. Атом не пишет acceptance
+          artifacts, assignment/journal/segment/canary или parent
+          <code>PASS</code>; он не создаёт runtime evidence и не устанавливает
+          root cause.
         </p>
         <p>
-          <strong>Будущая docs-only правка roadmap:</strong> изменяет только
-          этот HTML-файл. До отдельной фиксации и нового read-back SHA/tree она
-          не образует новый committed source identity и не может считаться
-          <code>runtimeEvidenceSha</code>.
+          <strong>Эта правка roadmap:</strong> обновляет только provenance и
+          текущий host gate в этом HTML-файле. После отдельной фиксации она
+          получит новый docs-only SHA/tree, но всё равно не станет
+          <code>runtimeEvidenceSha</code> без свежего runtime-пакета.
         </p>
       </div>
       <table>
@@ -289,11 +288,12 @@
             <td>Источник исполнения и десктопных доказательств</td>
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
-              Для этой редакции текущий source identity — только committed base,
-              указанный выше. Uncommitted diagnostic atom и будущая docs-only
-              правка не являются runtimeEvidenceSha; свежий exact-SHA capture
-              для них не выполнялся. Исторические repair boundaries с лимитом
-              <code>8192</code> и исходом <code>ITERATE</code> остаются
+              Для этой редакции текущий source identity — committed
+              <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code> с деревом
+              <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Свежий
+              exact-SHA runtime capture для него не выполнялся, поэтому он не
+              является runtimeEvidenceSha. Исторические repair boundaries с
+              лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
               историческими и не переименованы в <code>PASS</code>. Исторический
               принятый desktop-пакет привязан к source SHA
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>
@@ -316,9 +316,10 @@
               <code>L10-top-context</code>. Контрольные суммы, geometry/a11y/
               console/request оракулы и source manifest сохранены. Статус
               означает принятие именно этого bounded packet; его манифест прямо
-              не заявляет independent visual review. OpenSpec 6.3 закрыт только
-              в этой bounded области; независимая визуальная проверка OpenSpec
-              6.4 остаётся <code>NOT-PROVEN</code>.
+              не заявляет independent visual review. Пакет принят как bounded
+              evidence к задаче OpenSpec 6.3, но полный task 6.3 остаётся
+              открытым; независимая визуальная проверка OpenSpec 6.4 остаётся
+              <code>NOT-PROVEN</code>.
             </td>
           </tr>
           <tr>
@@ -339,11 +340,26 @@
             <td>Runtime evidence identity</td>
             <td><span class="status danger">NOT-PROVEN</span></td>
             <td>
-              Для committed base, uncommitted diagnostic atom и будущей
-              docs-only правки нет принятого свежего runtime-bound exact-SHA
-              пакета. Поэтому <code>runtimeEvidenceSha</code> не установлен и не
-              может выводиться из исторического desktop-пакета или
-              диагностического кода/тестов.
+              Для текущего committed source нет принятого свежего runtime-bound
+              exact-SHA пакета. Поэтому <code>runtimeEvidenceSha</code> не
+              установлен и не может выводиться из исторического desktop-пакета,
+              диагностического кода или зелёных тестов.
+            </td>
+          </tr>
+          <tr>
+            <td>Current host eligibility</td>
+            <td>
+              <span class="status danger">BLOCKED / INELIGIBLE_SWAP</span>
+            </td>
+            <td>
+              Свежий read-only snapshot для committed source
+              <code>d47041cf0</code> показал свободную память
+              <strong>83%</strong>, но swap <strong>3807.31M</strong> из
+              <strong>5120.00M</strong>. Для diagnostic envelope разрешено не
+              более <strong>512 MiB</strong>; это примерно
+              <strong>7.44×</strong> выше порога. Sol остановил pre-run gate.
+              Убийство чужих процессов и принудительное освобождение памяти не
+              разрешены.
             </td>
           </tr>
           <tr>
@@ -510,8 +526,8 @@
         <div class="callout warn">
           <strong>Граница проверки:</strong> значение манифеста —
           <code>capture sanity only; no independent visual review claimed</code
-          >. Поэтому пакет является частичной базой для 6.3, но не закрывает 6.3
-          и 6.4.
+          >. Поэтому пакет является bounded evidence к задаче 6.3, но полный
+          task 6.3 и 6.4 остаются открытыми.
         </div>
       </div>
 
@@ -540,12 +556,14 @@
       <div class="callout ok">
         <strong>Следующая рабочая последовательность:</strong>
         <code
-          >new exact source identity → exact 5.19 admin/demo canary → rebind
-          5.14/5.15/5.17 → matrix → review → fixes → final resweep</code
+          >host eligibility → fresh exact 5.14 diagnostic → 5.15 parent-only →
+          5.17 single-child → 5.19 admin/demo canary → matrix → review → fixes →
+          final resweep</code
         >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
-        ограниченной диагностической области; перед полной матрицей 6.2 их
-        знаменатель и exact-SHA provenance нужно повторно связать с новым source
-        identity.
+        ограниченной диагностической области. Текущий source identity уже
+        зафиксирован в <code>d47041cf0</code>, но перед любой browser-работой
+        должен пройти host eligibility и новый Sol pre-run gate; текущий swap
+        превышает порог.
       </div>
       <ol class="sequence">
         <li>
@@ -710,9 +728,9 @@
             Ограниченные runtime/browser/DB/Redis-пакеты уже выполнены только на
             allowlisted disposable target; production, внешняя публикация и
             неизвестные базы не затрагивались. После этой docs-only редакции
-            следующий исполнитель перечитывает новый clean source identity,
-            закрывает exact 5.14/5.15/5.17 canaries, затем делает exact 5.19
-            admin/demo canary, и только после этого берёт 6.2.
+            следующий исполнитель перечитывает clean source identity, ждёт host
+            eligibility и Sol pre-run gate, затем выполняет exact 5.14 → 5.15 →
+            5.17 → 5.19 и только после этого берёт 6.2.
           </li>
         </ul>
       </div>
@@ -720,27 +738,25 @@
       <h2>6. Ближайшее действие владельца</h2>
       <div class="callout">
         <p>
-          Считать ограниченные пакеты 5.14/5.15/5.17 принятыми только в их
+          Считать исторические пакеты 5.14/5.15/5.17 принятыми только в их
           ограниченной области и сохранить их неизменными. После этой docs-only
-          редакции перечитать новый exact source identity, закрыть
-          5.14/5.15/5.17 и перепривязать их к новому runtimeEvidenceSha после
-          его отдельного доказательства. Затем выполнить 5.19 admin/demo canary,
-          подготовить и выполнить полную матрицу 6.2, получить проверку Luna
-          6.3, независимый синтез 6.4 и только затем — исправления и финальный
-          повторный полный sweep. Полное CR-001 пока не закрыто.
+          редакции перечитать clean source identity, дождаться host eligibility
+          и нового Sol pre-run gate, затем выполнить свежую последовательность
+          5.14 → 5.15 → 5.17 → 5.19. Только после этого готовить полную матрицу
+          6.2, проверку Luna 6.3 и независимый синтез 6.4; затем — исправления и
+          финальный повторный полный sweep. Полное CR-001 пока не закрыто.
         </p>
       </div>
 
       <footer>
-        Точка отсчёта этой редакции — committed base
-        <code>48c2bacfd30be51c13da5549fcf0ee133e62b737</code> с деревом
-        <code>6a3dd98c7547bdd3f76b4fde96a4c0b92f9e5bcc</code>; diagnostic atom
-        остаётся uncommitted overlay, а эта docs-only правка ещё не образует
-        новый committed source identity. После её фиксации exact SHA/tree нужно
-        перечитать заново. Дорожная карта не содержит внешних ресурсов или CDN и
-        не выполняет внешних записей. Полное CR-001 закрывается только при
-        одновременном выполнении всех обязательных условий OpenSpec, исполнения,
-        проверки, очистки и выпуска.
+        Точка отсчёта этой редакции — committed source
+        <code>d47041cf0bfd3f84ba7a85db5b5525fb3214b376</code> с деревом
+        <code>52be0f6e3143c4304096c9c677c1e6bdd7bfb960</code>. Diagnostic atom
+        уже committed, но runtimeEvidenceSha ещё не доказан; эта docs-only
+        правка после фиксации получит отдельный SHA/tree. Дорожная карта не
+        содержит внешних ресурсов или CDN и не выполняет внешних записей. Полное
+        CR-001 закрывается только при одновременном выполнении всех обязательных
+        условий OpenSpec, исполнения, проверки, очистки и выпуска.
       </footer>
     </main>
   </body>
