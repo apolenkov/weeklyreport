@@ -113,7 +113,10 @@ const basicEligibilityPredicateFor = (
   if (!SCOPED_DISCLOSURE_TRANSITIONS.has(step.transition))
     return "transition-not-scoped";
   if (step.beforeUrl !== step.afterUrl) return "url-changed";
-  if (hasModalOrBackgroundControl(step.before))
+  if (
+    hasModalOrBackgroundControl(step.before) ||
+    hasModalOrBackgroundControl(step.after)
+  )
     return "modal-or-background-control";
   return undefined;
 };
