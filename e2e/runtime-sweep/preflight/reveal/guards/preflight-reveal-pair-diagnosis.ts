@@ -17,7 +17,9 @@ type PairDiagnosticReason =
   | "context-not-bound"
   | "pair-suffix-not-found"
   | "reverse-order-not-found"
+  | "reverse-order-conflict"
   | "single-order-not-found"
+  | "single-order-conflict"
   | "pair-material-or-url-mismatch"
   | "pair-union-mismatch"
   | "additional-disclosure"
@@ -134,23 +136,28 @@ export const pairReductionDiagnosisFor = (input: {
   if (firstBinding === undefined || secondBinding === undefined)
     return ordinary("pair-suffix-not-found");
   const reverseOrder = [secondBinding.identity, firstBinding.identity];
-  const reverse = pathWithOrderFor(
+  const reverseLookup = pathWithOrderFor(
     branches,
     current.prefixDigest,
     reverseOrder,
   );
-  if (reverse === undefined) return ordinary("reverse-order-not-found");
-  const singles = current.bindings.map(({ identity }) =>
+  if (reverseLookup.kind === "missing")
+    return ordinary("reverse-order-not-found");
+  if (reverseLookup.kind === "conflict")
+    return ordinary("reverse-order-conflict");
+  const singleLookups = current.bindings.map(({ identity }) =>
     pathWithOrderFor(branches, current.prefixDigest, [identity]),
   );
-  const resolvedSingles = singles.filter(
-    (single): single is DisclosurePathEvidence => single !== undefined,
+  if (singleLookups.some(({ kind }) => kind === "conflict"))
+    return ordinary("single-order-conflict");
+  const resolvedSingles = singleLookups.flatMap((lookup) =>
+    lookup.kind === "match" ? [lookup.evidence] : [],
   );
-  if (resolvedSingles.length !== singles.length)
+  if (resolvedSingles.length !== singleLookups.length)
     return ordinary("single-order-not-found");
   return completePairDiagnosticFor({
     current,
-    reverse,
+    reverse: reverseLookup.evidence,
     singles: resolvedSingles,
     requiredSavings,
   });
