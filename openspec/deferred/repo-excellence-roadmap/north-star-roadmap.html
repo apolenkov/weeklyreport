@@ -251,21 +251,21 @@
         <h3>Identity и граница текущей редакции</h3>
         <p>
           <strong>Текущий committed source:</strong> <code>HEAD</code>
-          <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>, дерево
-          <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Это чистая
-          source-bound точка после фиксации 5.19 harness-атома; она включает
-          source-bound canonicalization code, но не содержит runtime acceptance.
+          <code>178da6a4b12bd84a2b8aef565e54da6c5d95bc15</code>, дерево
+          <code>4d5e61b8a268ec74c342774c8ccb088c8136e073</code>. Это чистая
+          source-bound точка после fail-closed фиксации pair-order conflict; она
+          включает source-bound diagnostic guards, но не содержит runtime
+          acceptance.
         </p>
         <p>
-          <strong>Committed harness atoms:</strong> предыдущий diagnostic atom
+          <strong>Committed harness atoms:</strong> исторический diagnostic atom
           <code>d47041cf0</code> остаётся <strong>default-off</strong> и не
-          создаёт runtime evidence. Последний commit
-          <code>ec600c90</code> получил независимый <code>Sol APPROVE</code> и
-          добавляет source-bound canonicalization для 5.19: retained-control и
-          normalized-representative matching, fail-closed duplicate/missing
-          paths и continuation metadata round-trip. Локальный доказательный
-          контур — <strong>23/23</strong> focused tests, typecheck, ESLint,
-          Prettier и diff-check; live canary по-прежнему не выполнялся.
+          создаёт runtime evidence. Текущий commit
+          <code>178da6a4b</code> получил exact-source <code>Sol APPROVE</code>
+          для fail-closed pair-order diagnosis. Локальный proof включает
+          <strong>3 файла / 5 focused tests</strong>, root static tests
+          <strong>283/1511</strong>, typecheck и все <strong>38</strong> lint
+          checks; live canary по-прежнему не выполнялся.
         </p>
         <p>
           <strong>Эта редакция roadmap:</strong> обновляет только provenance,
@@ -288,8 +288,8 @@
             <td><span class="status ok">SOURCE-BOUND</span></td>
             <td>
               Для этой редакции текущий source identity — committed
-              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code> с деревом
-              <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Свежий
+              <code>178da6a4b12bd84a2b8aef565e54da6c5d95bc15</code> с деревом
+              <code>4d5e61b8a268ec74c342774c8ccb088c8136e073</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -352,10 +352,10 @@
             </td>
             <td>
               Свежий read-only snapshot для committed source
-              <code>ec600c90</code> от <code>2026-08-22T23:47:52Z</code> показал
-              swap <strong>3735.31M</strong> из <strong>5120.00M</strong>. Для
+              <code>178da6a4b</code> от <code>2026-08-23</code> показал swap
+              <strong>3535.31M</strong> из <strong>5120.00M</strong>. Для
               diagnostic envelope разрешено не более <strong>512 MiB</strong>;
-              это примерно <strong>7.29×</strong> выше порога. Sol оставил
+              это примерно <strong>6.90×</strong> выше порога. Sol оставил
               pre-run gate <code>INELIGIBLE_SWAP</code>; убийство процессов и
               принудительное освобождение памяти не выполнялись.
             </td>
@@ -387,14 +387,16 @@
             <td><span class="status ok">CODE/TEST/SPEC-PROVEN</span></td>
             <td>
               На текущем commit
-              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>
+              <code>178da6a4b12bd84a2b8aef565e54da6c5d95bc15</code>
               source manifest привязан к дереву
-              <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code>. Focused
-              proof 5.19 — <code>23/23</code>; Sol post-commit review —
-              <code>APPROVE</code>;
+              <code>4d5e61b8a268ec74c342774c8ccb088c8136e073</code>. Pair
+              diagnosis — <code>3 files / 5 tests</code>; root static tests —
+              <code>283/1511</code>; lint — <code>38/38</code>; typecheck —
+              <code>5/5</code>; <code>pnpm format:check</code> — PASS; build с
+              явными loopback URL — <code>5/5</code> задач;
               <code>openspec validate --all --strict</code> —
-              <code>182 passed, 0 failed</code>. Это кодовая и структурная
-              проверка, не browser/runtime acceptance.
+              <code>182 passed, 0 failed</code>. Это кодовая, структурная и
+              build-проверка, не browser/runtime acceptance.
             </td>
           </tr>
           <tr>
@@ -439,7 +441,7 @@
             </td>
             <td>
               На текущем commit
-              <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code>
+              <code>178da6a4b12bd84a2b8aef565e54da6c5d95bc15</code>
               контракт сохраняет toggle metadata в live/continuation surfaces,
               требует
               <code>data-reveal-independence="source-bound-row-local"</code>,
@@ -579,9 +581,11 @@
           final resweep</code
         >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
         ограниченной диагностической области. Текущий source identity уже
-        зафиксирован в <code>d47041cf0</code>, но перед любой browser-работой
-        должен пройти host eligibility и новый Sol pre-run gate; текущий swap
-        превышает порог.
+        зафиксирован в <code>178da6a4b</code>; runtime-план
+        <code>2026-08-23-runtime-plan-178da6a4b</code> получил exact-source Sol
+        <code>APPROVE</code>, но перед любой browser-работой должен пройти host
+        eligibility и новый executable pre-run gate; текущий swap превышает
+        порог.
       </div>
       <ol class="sequence">
         <li>
@@ -704,11 +708,14 @@
           </tr>
           <tr>
             <td>Очистка: <code>REMOVE / MIGRATE / RETAIN</code></td>
-            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td><span class="status warn">PARTIAL-PROVEN</span></td>
             <td>
-              Инвентаризация точного исходника и проверенные решения для
-              отслеживаемого JavaScript, кандидатов на удаление мёртвых рабочих
-              процессов и стендов, а также некурируемой документации.
+              Archive-only inventory привязал exact source, ветки, worktree и
+              stash к решениям <code>REMOVE / MIGRATE / RETAIN</code>. Sol
+              одобрил классификацию и exact local-ref manifest; безопасный
+              <code>git branch -d</code> отказал из-за divergent remote ref.
+              Поэтому ни один ref не удалён, remote не изменён, а полная cleanup
+              closure остаётся <code>NOT-PROVEN</code>.
             </td>
           </tr>
           <tr>
@@ -768,17 +775,17 @@
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>ec600c90ce91bdcf4cf7edb8e6fc42f6bb22e2ad</code> с деревом
-        <code>54f8c8bf3f5a55c2074a37556bf53123a88a110e</code> и source-tree
+        <code>178da6a4b12bd84a2b8aef565e54da6c5d95bc15</code> с деревом
+        <code>4d5e61b8a268ec74c342774c8ccb088c8136e073</code> и source-tree
         digest
         <code
-          >ecc389cee035efdc566e6c61012178a1e5ee66a83338b6a0222a604d089235e7</code
-        >. 5.19 code/test/review proof уже committed, но runtimeEvidenceSha ещё
-        не доказан; эта docs-only правка после фиксации получит отдельный
-        SHA/tree. Дорожная карта не содержит внешних ресурсов или CDN и не
-        выполняет внешних записей. Полное CR-001 закрывается только при
-        одновременном выполнении всех обязательных условий OpenSpec, исполнения,
-        проверки, очистки и выпуска.
+          >faefd3b480355cba13375773f650f82b2a90869569b393c8e8971b882fb06971</code
+        >. Pair-level code/test/review proof уже committed, но
+        runtimeEvidenceSha ещё не доказан; эта docs-only правка после фиксации
+        получит отдельный SHA/tree. Дорожная карта не содержит внешних ресурсов
+        или CDN и не выполняет внешних записей. Полное CR-001 закрывается только
+        при одновременном выполнении всех обязательных условий OpenSpec,
+        исполнения, проверки, очистки и выпуска.
       </footer>
     </main>
   </body>
