@@ -1,10 +1,9 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import * as path from "node:path";
-import { promisify } from "node:util";
 
 import { buildCampaignSource } from "../../manifest/manifest.ts";
 import { createManifestFixture } from "../../manifest/manifest-fixture.ts";
+import { runGitCommand } from "../../source/manifest-source.ts";
 import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   controlFor,
@@ -24,7 +23,6 @@ import type {
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";
 
-const execFileAsync = promisify(execFile);
 const AUTHORITY_KEY_HEX_LENGTH = 64;
 
 export const withCleanSource = async <T>(
@@ -42,12 +40,10 @@ export const withCleanSource = async <T>(
       ["add", "catalog.yaml", "spec.md"],
       ["commit", "--quiet", "-m", "fixture"],
     ] as const)
-      await execFileAsync("git", args, { cwd: fixture.root });
+      await runGitCommand(args, fixture.root);
     const sourceSha = (
-      await execFileAsync("git", ["rev-parse", "HEAD"], {
-        cwd: fixture.root,
-      })
-    ).stdout.trim();
+      await runGitCommand(["rev-parse", "HEAD"], fixture.root)
+    ).trim();
     const source = await buildCampaignSource({
       ...fixture.input,
       sourceSha,

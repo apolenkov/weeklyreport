@@ -1,12 +1,11 @@
-import { execFile } from "node:child_process";
 import { access, mkdtemp, rm } from "node:fs/promises";
 import * as path from "node:path";
-import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
 import { buildCampaignSource } from "../../manifest/manifest.ts";
 import { createManifestFixture } from "../../manifest/manifest-fixture.ts";
+import { runGitCommand } from "../../source/manifest-source.ts";
 import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   controlFor,
@@ -19,8 +18,6 @@ import type { RevealReceiptChunk } from "../reveal/continuation/preflight-reveal
 import { assetsForReceipt } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipt-refs.ts";
 import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
 import { continueChild } from "./preflight-reveal-continuation-parent-results.ts";
-
-const execFileAsync = promisify(execFile);
 
 const zeroProgress = {
   previousGrantDigest: null,
@@ -50,10 +47,8 @@ const initializeCleanFixtureRepository = async (
     ["add", "catalog.yaml", "spec.md"],
     ["commit", "--quiet", "-m", "fixture"],
   ] as const)
-    await execFileAsync("git", args, { cwd: repoRoot });
-  return (
-    await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot })
-  ).stdout.trim();
+    await runGitCommand(args, repoRoot);
+  return (await runGitCommand(["rev-parse", "HEAD"], repoRoot)).trim();
 };
 
 describe("R188 parent genesis reduction", () => {
