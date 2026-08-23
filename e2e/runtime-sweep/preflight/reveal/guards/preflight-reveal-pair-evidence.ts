@@ -5,6 +5,7 @@ import {
   toggleBindingsAnalysisFor,
   uniqueBindingsFor,
 } from "./preflight-reveal-canonicalization.ts";
+import { sameRevealSurfaceMaterial } from "./reveal-surface-material.ts";
 
 const SCOPED_DISCLOSURE_TRANSITIONS = new Set(["none", "open", "cancel"]);
 
@@ -80,21 +81,42 @@ export const pairEvidenceFor = (
   return evidence?.bindings.length === 2 ? evidence : undefined;
 };
 
+export type PathWithOrderLookup = Readonly<
+  | { readonly kind: "missing" }
+  | { readonly kind: "conflict" }
+  | { readonly kind: "match"; readonly evidence: DisclosurePathEvidence }
+>;
+
 export const pathWithOrderFor = (
   branches: readonly BranchView[],
   prefixDigest: string,
   order: readonly string[],
-): DisclosurePathEvidence | undefined => {
-  for (const branch of branches) {
+): PathWithOrderLookup => {
+  const matches = branches.flatMap((branch) => {
     const evidence = disclosurePathEvidenceFor(branch);
-    if (evidence?.prefixDigest !== prefixDigest) continue;
+    if (evidence?.prefixDigest !== prefixDigest) return [];
     if (
-      stableSerialize(evidence.bindings.map(({ identity }) => identity)) ===
+      stableSerialize(evidence.bindings.map(({ identity }) => identity)) !==
       stableSerialize(order)
     )
-      return evidence;
-  }
-  return undefined;
+      return [];
+    return [evidence];
+  });
+  const first = matches[0];
+  if (first === undefined) return { kind: "missing" };
+  const distinctPaths = new Set(
+    matches.map(({ branch }) => branch.path.digest),
+  );
+  if (distinctPaths.size > 1) return { kind: "conflict" };
+  if (
+    matches.some(
+      ({ branch }) =>
+        branch.url !== first.branch.url ||
+        !sameRevealSurfaceMaterial(branch.surface, first.branch.surface),
+    )
+  )
+    return { kind: "conflict" };
+  return { kind: "match", evidence: first };
 };
 
 export const hasAdditionalDisclosureFor = (input: {
