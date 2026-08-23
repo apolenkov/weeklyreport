@@ -1,5 +1,3 @@
-import type { open } from "node:fs/promises";
-
 import type { DiagnosticSidecarManifest } from "./preflight-diagnostic-sidecar-contract.ts";
 
 export class DiagnosticSidecarIOError extends Error {
@@ -20,5 +18,3 @@ export type DiagnosticSidecarInput = Readonly<{
   readonly campaignId: string;
   readonly now: () => Date;
 }>;
-
-export type DiagnosticFileHandle = Awaited<ReturnType<typeof open>>;

@@ -12,7 +12,7 @@ import {
 const MANIFEST_FIXED_POINT_ATTEMPTS = 3;
 const PRIVATE_FILE_MODE = 0o600;
 
-export class DiagnosticSidecarPublicationError extends Error {
+class DiagnosticSidecarPublicationError extends Error {
   override readonly name = "DiagnosticSidecarPublicationError";
 }
 

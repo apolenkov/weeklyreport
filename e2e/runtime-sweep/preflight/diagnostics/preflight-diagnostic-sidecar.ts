@@ -5,9 +5,6 @@ import {
   DiagnosticSidecarIOError,
 } from "./preflight-diagnostic-sidecar-types.ts";
 
-export { assertDiagnosticCampaignBinding } from "./preflight-diagnostic-sidecar-contract.ts";
-export { DiagnosticSidecarIOError } from "./preflight-diagnostic-sidecar-types.ts";
-
 const MAX_SECONDARY_ERROR_CHARS = 512;
 
 const bounded = (value: string | undefined): string | undefined =>
