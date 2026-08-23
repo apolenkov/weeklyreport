@@ -94,10 +94,8 @@ describe("diagnostic host envelope", () => {
 
   it("keeps the approved binary thresholds explicit", () => {
     expect(HOST_ENVELOPE_THRESHOLDS).toMatchObject({
-      baselineRawFreeBytes: 4 * GiB,
       baselineAvailableBytes: 8 * GiB,
       baselineSwapUsedBytes: 512 * MiB,
-      abortRawFreeBytes: 2 * GiB,
       abortAvailableBytes: 4 * GiB,
       abortSwapUsedBytes: 1 * GiB,
       hysteresisSamples: 3,
@@ -105,9 +103,10 @@ describe("diagnostic host envelope", () => {
     });
   });
 
-  it("accepts a healthy runtime sample and resets the breach streak", () => {
+  it("accepts a reclaimable-capacity baseline and resets the breach streak", () => {
     const result = evaluateHostEnvelopeSample({
-      snapshot: healthySample(),
+      snapshot: healthySample({ rawFreeBytes: 0 }),
+      mode: "baseline",
       baselineSwapUsedBytes: 256 * MiB,
       priorCounters: undefined,
       breachStreaks: {
@@ -131,7 +130,7 @@ describe("diagnostic host envelope", () => {
   });
 
   it("requires three consecutive gauge breaches before abort", () => {
-    const sample = healthySample({ rawFreeBytes: 1 * GiB });
+    const sample = healthySample({ rawFreeBytes: 0, availableBytes: 1 * GiB });
     const first = evaluateHostEnvelopeSample({
       snapshot: sample,
       baselineSwapUsedBytes: 256 * MiB,
@@ -154,14 +153,15 @@ describe("diagnostic host envelope", () => {
     expect(first.status).toBe("healthy");
     expect(second.status).toBe("healthy");
     expect(third.status).toBe("breach");
+    expect(third.breachStreaks.rawFreeBytes).toBe(0);
   });
 
   it("does not combine alternating gauge breaches into one hysteresis streak", () => {
     const samples = [
-      healthySample({ rawFreeBytes: 1 * GiB }),
       healthySample({ availableBytes: 1 * GiB }),
-      healthySample({ rawFreeBytes: 1 * GiB }),
+      healthySample({ compressedBytes: 20 * GiB }),
       healthySample({ availableBytes: 1 * GiB }),
+      healthySample({ compressedBytes: 20 * GiB }),
     ];
     let breachStreaks = EMPTY_HOST_ENVELOPE_BREACH_STREAKS;
     let priorCounters = undefined;
@@ -190,16 +190,22 @@ describe("diagnostic host envelope", () => {
     expect(result.reasons).toContain("cumulative counter reset or wrap");
   });
 
-  it("fails closed on missing pressure input", () => {
-    const result = evaluateHostEnvelopeSample({
-      snapshot: healthySample({ pressureFreePercent: null }),
-      baselineSwapUsedBytes: 256 * MiB,
-      priorCounters: undefined,
-      breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
-    });
+  it.each([
+    [{ pressureFreePercent: null }, "invalid"],
+    [{ swapUsedBytes: 2 * GiB }, "breach"],
+  ] as const)(
+    "fails closed for unsafe independent signals",
+    (overrides, status) => {
+      const result = evaluateHostEnvelopeSample({
+        snapshot: healthySample(overrides),
+        baselineSwapUsedBytes: 256 * MiB,
+        priorCounters: undefined,
+        breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
+      });
 
-    expect(result.status).toBe("invalid");
-  });
+      expect(result.status).toBe(status);
+    },
+  );
 
   it("uses an explicit closed flag", () => {
     expect(hostEnvelopeModeFromEnvironment({})).toBe("off");

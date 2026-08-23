@@ -261,6 +261,12 @@
       existing `maxControlsPerSegment` plus-one guard. This remains
       NOT-PROVEN until an exact `admin/demo` canary exercises the contract.
 
+- [x] 5.20 Retain Darwin raw-free pages as receipt telemetry without using them
+      as an independent baseline/runtime veto; keep available memory, pressure,
+      swap and swap growth, compression, malformed-input, and cumulative-counter
+      guards fail-closed, preserve historical raw-free receipt reason tokens,
+      and add focused reclaimable-memory regression coverage.
+
 ## 6. Immutable baseline and adjudication
 
 - [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/
