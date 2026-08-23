@@ -139,6 +139,16 @@ const predicateCasesFor = (): readonly {
     }),
   },
   {
+    predicate: "modal-or-background-control",
+    mutate: (step) => ({
+      ...step,
+      after: withControlFor(step.after, "a", (control) => ({
+        ...control,
+        keyboardFocusScope: "active-modal",
+      })),
+    }),
+  },
+  {
     predicate: "source-control-not-source-bound",
     mutate: (step) => ({
       ...step,

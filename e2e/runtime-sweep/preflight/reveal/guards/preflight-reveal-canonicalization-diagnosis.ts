@@ -1,20 +1,19 @@
-import { stableSerialize } from "../../../support/ids.ts";
 import type { RevealDiscoveryState } from "../interaction/preflight-reveal-branches.ts";
 import {
   type BranchView,
   knownBranchesFor,
-  sequenceFor,
-  type ToggleBinding,
   type ToggleBindingEligibilityPredicate,
   toggleBindingsAnalysisFor,
   uniqueBindingsFor,
   untrustedDisclosureFor,
 } from "./preflight-reveal-canonicalization.ts";
 import {
+  allPairOrdersEquivalentFor,
+  singleProofBranchesFor,
+} from "./preflight-reveal-canonicalization-proof.ts";
+import {
   matchesUnion,
-  type RevealSurfaceMaterial,
   revealSurfaceMaterialFor,
-  sameRevealSurfaceMaterial,
 } from "./reveal-surface-material.ts";
 
 const MIN_CANONICALIZATION_DEPTH = 3;
@@ -65,88 +64,7 @@ export const independentDisclosureReductionCapacityDetailsFor = (
       ? `; reductionSurfaceIndex=${String(diagnosis.surfaceIndex)}`
       : "";
 
-type BranchSequenceLookup = Readonly<
-  | { readonly kind: "missing" }
-  | { readonly kind: "conflict" }
-  | { readonly kind: "match"; readonly branch: BranchView }
->;
-
-type BindingPair = Readonly<{
-  readonly left: ToggleBinding;
-  readonly right: ToggleBinding;
-  readonly leftIndex: number;
-  readonly rightIndex: number;
-}>;
-
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-const branchForSequence = (
-  knownBranches: readonly BranchView[],
-  initialUrl: string,
-  sequence: readonly string[],
-): BranchSequenceLookup => {
-  const matches = knownBranches.filter(
-    (branch) =>
-      branch.path.initialUrl === initialUrl &&
-      stableSerialize(sequenceFor(branch.path)) === stableSerialize(sequence),
-  );
-  const first = matches[0];
-  if (first === undefined) return { kind: "missing" };
-  return matches.every(
-    (match) =>
-      match.url === first.url &&
-      sameRevealSurfaceMaterial(match.surface, first.surface),
-  )
-    ? { kind: "match", branch: first }
-    : { kind: "conflict" };
-};
-
-const bindingPairsFor = (
-  bindings: readonly ToggleBinding[],
-): readonly BindingPair[] =>
-  bindings.flatMap((left, leftIndex) =>
-    bindings.slice(leftIndex + 1).map((right, offset) => ({
-      left,
-      right,
-      leftIndex,
-      rightIndex: leftIndex + offset + 1,
-    })),
-  );
-
-const pairOrderEquivalentFor = (input: {
-  readonly pair: BindingPair;
-  readonly knownBranches: readonly BranchView[];
-  readonly initialUrl: string;
-  readonly root: RevealSurfaceMaterial;
-  readonly singles: readonly BranchView[];
-}): boolean => {
-  const { pair } = input;
-  const forward = branchForSequence(input.knownBranches, input.initialUrl, [
-    pair.left.identity,
-    pair.right.identity,
-  ]);
-  const reverse = branchForSequence(input.knownBranches, input.initialUrl, [
-    pair.right.identity,
-    pair.left.identity,
-  ]);
-  const leftSingle = input.singles[pair.leftIndex];
-  const rightSingle = input.singles[pair.rightIndex];
-  if (
-    forward.kind !== "match" ||
-    reverse.kind !== "match" ||
-    leftSingle === undefined ||
-    rightSingle === undefined ||
-    forward.branch.url !== input.initialUrl ||
-    reverse.branch.url !== input.initialUrl ||
-    !sameRevealSurfaceMaterial(forward.branch.surface, reverse.branch.surface)
-  )
-    return false;
-  return matchesUnion({
-    root: input.root,
-    singles: [leftSingle, rightSingle],
-    actual: revealSurfaceMaterialFor(forward.branch.surface),
-  });
-};
 
 const untrustedDisclosureDiagnosisFor = (
   branch: BranchView,
@@ -180,12 +98,14 @@ export const independentDisclosureReductionDiagnosisFor = (input: {
   if (!uniqueBindingsFor(bindings))
     return { eligible: false, reason: "bindings-not-unique" };
   const initialUrl = input.branch.path.initialUrl;
-  const rootMaterial = revealSurfaceMaterialFor(
-    steps[0]?.before ?? input.branch.surface,
-  );
-  const singleLookups = bindings.map(({ identity }) =>
-    branchForSequence(input.knownBranches, initialUrl, [identity]),
-  );
+  const rootSurface = steps[0]?.before ?? input.branch.surface;
+  const rootMaterial = revealSurfaceMaterialFor(rootSurface);
+  const singleLookups = singleProofBranchesFor({
+    bindings,
+    knownBranches: input.knownBranches,
+    initialUrl,
+    rootSurface,
+  });
   if (singleLookups.some(({ kind }) => kind === "missing"))
     return { eligible: false, reason: "single-branch-missing" };
   if (singleLookups.some(({ kind }) => kind === "conflict"))
@@ -214,15 +134,14 @@ export const independentDisclosureReductionDiagnosisFor = (input: {
   )
     return { eligible: false, reason: "union-mismatch" };
   if (
-    !bindingPairsFor(bindings).every((pair) =>
-      pairOrderEquivalentFor({
-        pair,
-        knownBranches: input.knownBranches,
-        initialUrl,
-        root: rootMaterial,
-        singles: matchedSingles,
-      }),
-    )
+    !allPairOrdersEquivalentFor({
+      bindings,
+      knownBranches: input.knownBranches,
+      initialUrl,
+      root: rootMaterial,
+      rootSurface,
+      singles: matchedSingles,
+    })
   )
     return { eligible: false, reason: "pair-order-missing-or-mismatch" };
   return { eligible: true, reason: "reduction-proven" };
