@@ -46,7 +46,7 @@ Evidence: `customreport-archive/2026-08-17-history-empty-surface-d89b99cf/` bind
 - [x] 6.3 Capture a complete fresh exact-SHA 51-frame + T01-T07 canonical-seeded real-Chrome packet with manifest, checksums, and nonvisual oracles.
 - [ ] 6.4 Obtain two independent full-frame reviews and complete the final acceptance synthesis.
 
-Evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/` is a complete source-bound packet for branch `rescue/exemplary-repository-20260812`, commit `0d03068fae9efc79c062698fd34c41c9810f9af2`, and tree `e21185142e8ba8e3025f1e8eece68a2ccf941f1d`; its manifest records a clean worktree at capture. `MANIFEST.json` records all 51 primary frames, the supplemental `L10-top-context`, and 18 T01-T07 transition records; `FINAL-METRICS.json` records no capture or transition errors and zero blocker issues; `CONTROL-LEDGER.json` records T07 focus/dialog/popover outcomes; and `SHA256SUMS.txt` binds the packet files. The packet is evidence for 6.3 only. Its manifest explicitly says `capture sanity only; no independent visual review claimed`; no two-review synthesis is present, so 6.4 remains NOT-PROVEN and CR-001 remains open.
+Evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/` is a complete historical source-bound packet for branch `rescue/exemplary-repository-20260812`, commit `0d03068fae9efc79c062698fd34c41c9810f9af2`, and tree `e21185142e8ba8e3025f1e8eece68a2ccf941f1d`; its manifest records a clean worktree at capture. `MANIFEST.json` records all 51/51 primary frames, the supplemental `L10-top-context`, and 18 T01-T07 transition records; `FINAL-METRICS.json` records no capture or transition errors and zero blocker issues; `CONTROL-LEDGER.json` records T07 focus/dialog/popover outcomes; and `SHA256SUMS.txt` binds the packet files. The checked 6.3 item preserves this packet as historical bounded provenance only; it is not current acceptance and its `runtimeEvidenceSha` is NOT-PROVEN. Its manifest explicitly says `capture sanity only; no independent visual review claimed`; no two-review synthesis is present, so 6.4 remains NOT-PROVEN and CR-001 remains open.
 
 ## 7. Owner-feedback correction: Head Presentation canvas and carousel
 
@@ -56,3 +56,33 @@ Evidence: `customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-o
 - [x] 7.4 Run focused Vitest, web typecheck, targeted ESLint/Stylelint/Prettier, `git diff --check`, and strict OpenSpec validation.
 
 Evidence: the focused Head carousel/token/skeleton checks and static gates pass on the current worktree. Fresh exact-SHA real-Chrome capture and independent review remain governed by tasks 6.3 and 6.4; this no-runtime tranche does not close them.
+
+### Continuity metadata (2026-08-23)
+
+This note records source and authority continuity only; it does not change task
+checkboxes or establish runtime acceptance.
+
+- The accepted plan gate is the Sol `APPROVE` receipt at
+  `/home/user/work/customreport-archive/2026-08-23-sol-review-ed15dae8-r7/SOL-FULL-PLAN-APPROVAL-R7.json`,
+  with recorded plan SHA
+  `280a70ed6af0593b70329e0dcb2ec0edbd45291f29bf15fb4de3f6c0d86e40ca`.
+- The exact source before this metadata lane was branch
+  `campaign/cr-001-20260820`, HEAD
+  `ed15dae8d3d8c02806c494cf5d76589f0bc85a7a`, tree
+  `6c24d6f3c4203f2525691d39dc60b6cee12a4e13`, with a clean worktree. This
+  lane changes only repository-local metadata and does not produce a new
+  `runtimeEvidenceSha`.
+- Historical packet provenance remains exact and immutable: source SHA
+  `0d03068fae9efc79c062698fd34c41c9810f9af2`, tree
+  `e21185142e8ba8e3025f1e8eece68a2ccf941f1d`, packet path
+  `/home/user/work/customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/`,
+  denominator `51/51` primary frames plus `18` T01-T07 transitions and
+  supplemental `L10-top-context`; `runtimeEvidenceSha` remains NOT-PROVEN.
+- Current tails remain `5.14/5.15/5.17`, pair `1.3/3.1/3.2 + 5.19`,
+  `6.2-6.4`, `7.1-7.4`, `8.1-8.4`, and remote CI/Dependabot. These are
+  continuation obligations, not a closure claim.
+- Standing owner authority permits temporary disposable Bugsink
+  superuser/team/project/membership/API-token lifecycle only in the exact
+  campaign target, with process-only secrets and zero-residue cleanup.
+  Exclusions are production/shared/unknown targets, foreign credentials,
+  merging `main`, and denominator or cap changes without a fresh Sol decision.
