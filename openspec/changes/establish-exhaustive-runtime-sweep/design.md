@@ -443,6 +443,15 @@ The diagnostic R1 capacity benchmark selected four lanes for the 14-core,
 Five, six, and ten lanes were rejected after resource-induced failures; failed
 lane orchestration waited for every sibling and left no owned process or port.
 
+On Darwin, `vm_stat` raw-free pages remain immutable diagnostic telemetry but
+are not an independent eligibility veto: inactive and speculative pages are
+reclaimable capacity. Baseline eligibility therefore fails closed on available
+memory, the system pressure state and free percentage, swap, compressed memory,
+and cumulative-counter integrity. Runtime monitoring retains those same
+signals, swap-growth checks, and gauge hysteresis. This prevents healthy page
+cache use from blocking the campaign without weakening actual pressure,
+reclaimable-capacity, swap, compression, or counter safeguards.
+
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
 `prisma migrate reset`/profile seed; the exact central destructive guard is the
 final authority, with seed validation/stable IDs in the manifest. Native Codex

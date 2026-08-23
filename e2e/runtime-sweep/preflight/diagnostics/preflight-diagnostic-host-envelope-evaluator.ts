@@ -145,8 +145,6 @@ const baselineReasonsFor = (
   snapshot: CompleteHostEnvelopeSnapshot,
 ): string[] => {
   const reasons: string[] = [];
-  if (snapshot.rawFreeBytes < HOST_ENVELOPE_THRESHOLDS.baselineRawFreeBytes)
-    reasons.push("raw free memory below baseline");
   if (snapshot.availableBytes < HOST_ENVELOPE_THRESHOLDS.baselineAvailableBytes)
     reasons.push("available memory below baseline");
   if (
@@ -179,8 +177,6 @@ const runtimeReasonsFor = (
 }> => {
   const reasons: string[] = [];
   const swapGrowthBytes = snapshot.swapUsedBytes - baselineSwapUsedBytes;
-  if (snapshot.rawFreeBytes < HOST_ENVELOPE_THRESHOLDS.abortRawFreeBytes)
-    reasons.push("raw free memory below abort threshold");
   if (snapshot.availableBytes < HOST_ENVELOPE_THRESHOLDS.abortAvailableBytes)
     reasons.push("available memory below abort threshold");
   if (snapshot.pressureFreePercent < HOST_ENVELOPE_THRESHOLDS.abortFreePercent)
@@ -196,8 +192,7 @@ const runtimeReasonsFor = (
   return {
     reasons,
     gaugeBreaches: {
-      rawFreeBytes:
-        snapshot.rawFreeBytes < HOST_ENVELOPE_THRESHOLDS.abortRawFreeBytes,
+      rawFreeBytes: false,
       availableBytes:
         snapshot.availableBytes < HOST_ENVELOPE_THRESHOLDS.abortAvailableBytes,
       pressureFreePercent:

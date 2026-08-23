@@ -338,6 +338,27 @@ empty-frontier result or any acceptance gate.
 - **AND** partial counters, Playwright diagnostics, continuation output, or a
   pre-existing survey file cannot satisfy or weaken acceptance
 
+### Requirement: Darwin host eligibility uses reclaimable capacity signals
+
+The runtime host envelope SHALL retain raw-free page bytes in every snapshot
+and receipt as diagnostic telemetry, but SHALL NOT treat raw-free pages as an
+independent baseline or runtime veto on Darwin. Baseline eligibility SHALL fail
+closed on available memory, system memory-pressure state and free percentage,
+swap use, compressed memory, missing or malformed fields, and cumulative-counter
+integrity. Runtime monitoring SHALL additionally enforce swap growth and the
+declared gauge hysteresis. Historical receipt reason tokens for raw-free
+breaches SHALL remain readable without making them current eligibility rules.
+
+#### Scenario: reclaimable capacity is not mistaken for exhaustion
+
+- **GIVEN** raw-free pages are below the historical threshold while available
+  memory, pressure, swap, compression, and counters are healthy
+- **WHEN** the baseline and runtime evaluator process the snapshot
+- **THEN** raw-free bytes remain recorded but do not create a reason or breach
+  streak
+- **AND** low available memory, warning or critical pressure, excessive swap or
+  swap growth, excessive compression, or invalid input still fails closed
+
 ### Requirement: Independent scoped disclosures use proven equivalence reduction
 
 Reveal discovery SHALL reduce only reversible, read-only, single-target
