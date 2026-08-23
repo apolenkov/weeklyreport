@@ -52,6 +52,19 @@ pnpm build              # turbo run build
 - The docker `web`/`api` containers serve a STALE built image; to live-verify new
   code, run the app from source using `docs/onboarding.md` or `pnpm dev`.
 
+### CR-001 disposable Bugsink authorization
+
+- For the CR-001 runtime campaign only, the owner explicitly authorizes the
+  isolated disposable container `cr001-runtime-286112bc7-bugsink` to create a
+  temporary process-only superuser, team, project, team/project memberships,
+  and API token. Use them only for CR-001 runtime verification; never write
+  secret values to logs, receipts, evidence, Git, or other artifacts.
+- After the verification, delete the API token, memberships, project, team,
+  temporary user, container, and volume, and prove zero residue. This standing
+  authorization applies only to the exact container and lifecycle above. It
+  does not authorize any other credential target, production/shared service,
+  credential rotation or replacement, or reuse beyond this campaign.
+
 ## Database safety
 
 - **The only pre-authorized disposable databases are `customreport_e2e` and the
