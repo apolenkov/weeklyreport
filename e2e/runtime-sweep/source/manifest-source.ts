@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   link,
@@ -10,7 +9,6 @@ import {
   writeFile,
 } from "node:fs/promises";
 import * as path from "node:path";
-import { promisify } from "node:util";
 
 import { assertSourceSha, sha256Hex } from "../support/ids.ts";
 import {
@@ -28,8 +26,16 @@ import {
   type ToolVersions,
   type Viewport,
 } from "./contracts.ts";
+import {
+  type ManifestCommandRunner,
+  ManifestGitError,
+} from "./manifest-git.ts";
 
-const execFileAsync = promisify(execFile);
+export {
+  type ManifestCommandRunner,
+  ManifestGitError,
+  runGitCommand,
+} from "./manifest-git.ts";
 
 export interface SeedProfileDefinitionInput {
   readonly profile: SeedProfile;
@@ -59,11 +65,6 @@ export interface CampaignManifestInput {
   readonly exclusions: readonly Exclusion[];
 }
 
-export type ManifestCommandRunner = (
-  args: readonly string[],
-  cwd: string,
-) => Promise<string>;
-
 export interface CleanSourceIdentity {
   readonly sourceTree: SourceTree;
   readonly treeDigest: string;
@@ -81,29 +82,8 @@ export class SourceShaMismatchError extends Error {
   override readonly name = "SourceShaMismatchError";
 }
 
-export class ManifestGitError extends Error {
-  override readonly name = "ManifestGitError";
-}
-
 export class ManifestWriteError extends Error {
   override readonly name = "ManifestWriteError";
-}
-
-export async function runGitCommand(
-  args: readonly string[],
-  cwd: string,
-): Promise<string> {
-  try {
-    const result = await execFileAsync("git", [...args], { cwd });
-    return result.stdout;
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      throw new ManifestGitError(
-        `git ${args.join(" ")} failed: ${error.message}`,
-      );
-    }
-    throw error;
-  }
 }
 
 export function requirePath(value: string, label: string): string {

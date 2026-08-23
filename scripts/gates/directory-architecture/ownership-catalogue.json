@@ -462,7 +462,7 @@
     {
       "id": "runtime-source",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-source(?:\\.test)?|source-artifact)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-git|manifest-source(?:\\.test)?|source-artifact)\\.ts)$",
       "concern": "source-contracts",
       "role": "implementation",
       "target": "e2e/runtime-sweep/source/$1"

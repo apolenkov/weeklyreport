@@ -1,7 +1,5 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { runGitCommand } from "../../source/manifest-source.ts";
 
-const execFileAsync = promisify(execFile);
 const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const ACTIVE_RUNTIME_OUTPUT =
   /^\?\? apps\/web\/\.next-runtime-(?:preflight|sweep)-\d+\/$/u;
@@ -12,10 +10,7 @@ export type RuntimeLaneSourceCommand = (
   cwd: string,
 ) => Promise<string>;
 
-const runGit: RuntimeLaneSourceCommand = async (args, cwd) => {
-  const result = await execFileAsync("git", [...args], { cwd });
-  return result.stdout;
-};
+const runGit: RuntimeLaneSourceCommand = runGitCommand;
 
 const assertSourceSha = async (
   input: Readonly<{ repoRoot: string; sourceSha: string }>,
