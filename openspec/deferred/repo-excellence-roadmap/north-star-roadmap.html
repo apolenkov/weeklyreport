@@ -311,16 +311,17 @@
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> принят пакет
               <code
                 >2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/</code
-              >: основной знаменатель <strong>51/51 primary frames</strong>,
-              без пропусков, <strong>18 T01-T07 transitions</strong> и отдельный supplemental
-              <code>L10-top-context</code>. Контрольные суммы, geometry/a11y/
-              console/request оракулы и source manifest сохранены. Статус
-              означает принятие именно этого historical bounded packet; его
-              манифест прямо не заявляет independent visual review. Пакет
-              сохраняется только как provenance к checked OpenSpec 6.3, не как
-              current acceptance; <code>runtimeEvidenceSha</code> остаётся
-              <code>NOT-PROVEN</code>, а независимая визуальная проверка
-              OpenSpec 6.4 остаётся <code>NOT-PROVEN</code>.
+              >: основной знаменатель <strong>51/51 primary frames</strong>, без
+              пропусков, <strong>18 T01-T07 transitions</strong> и отдельный
+              supplemental <code>L10-top-context</code>. Контрольные суммы,
+              geometry/a11y/ console/request оракулы и source manifest
+              сохранены. Статус означает принятие именно этого historical
+              bounded packet; его манифест прямо не заявляет independent visual
+              review. Пакет сохраняется только как provenance к checked OpenSpec
+              6.3, не как current acceptance;
+              <code>runtimeEvidenceSha</code> остаётся <code>NOT-PROVEN</code>,
+              а независимая визуальная проверка OpenSpec 6.4 остаётся
+              <code>NOT-PROVEN</code>.
             </td>
           </tr>
           <tr>
@@ -383,7 +384,9 @@
           </tr>
           <tr>
             <td>Current source-only verification tranche</td>
-            <td><span class="status warn">DOCS-ONLY / RUNTIME NOT-PROVEN</span></td>
+            <td>
+              <span class="status warn">DOCS-ONLY / RUNTIME NOT-PROVEN</span>
+            </td>
             <td>
               Для текущего source identity
               <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> /
@@ -447,10 +450,10 @@
             <td><span class="status warn">OPEN</span></td>
             <td>
               Задачи 5.14, 5.15 и 5.17 приняты только в заявленной
-              exact-canary/diagnostic области. Текущие хвосты: pair
-              1.3/3.1/3.2 + 5.19; 6.2-6.4; 7.1-7.4; 8.1-8.4; remote
-              CI/Dependabot; затем разбор результатов, исправления, очистка,
-              выпуск и итоговое принятие Sol.
+              exact-canary/diagnostic области. Текущие хвосты: pair 1.3/3.1/3.2
+              + 5.19; 6.2-6.4; 7.1-7.4; 8.1-8.4; remote CI/Dependabot; затем
+              разбор результатов, исправления, очистка, выпуск и итоговое
+              принятие Sol.
             </td>
           </tr>
         </tbody>
@@ -571,9 +574,9 @@
           final resweep</code
         >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
         ограниченной диагностической области. Текущий source identity уже
-        зафиксирован в <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code>
-        с деревом <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>; Sol
-        plan gate <code>APPROVE</code> сохранён в receipt
+        зафиксирован в <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> с
+        деревом <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>; Sol plan
+        gate <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
         должны пройти host eligibility и новый executable pre-run gate; эта
         continuity-редакция их не выполняет.
@@ -664,12 +667,12 @@
 
       <div class="callout warn">
         <strong>Текущие хвосты:</strong>
-        <code>5.14/5.15/5.17</code> остаются bounded diagnostic boundaries;
-        pair <code>1.3/3.1/3.2 + 5.19</code> остаётся source-bound dependency
-        с <code>5.19</code> CANARY <code>NOT-PROVEN</code>;
-        <code>6.2-6.4</code>, <code>7.1-7.4</code>, <code>8.1-8.4</code> и
-        remote CI/Dependabot остаются открытыми. Ни один хвост не закрывается
-        этой continuity-редакцией.
+        <code>5.14/5.15/5.17</code> остаются bounded diagnostic boundaries; pair
+        <code>1.3/3.1/3.2 + 5.19</code> остаётся source-bound dependency с
+        <code>5.19</code> CANARY <code>NOT-PROVEN</code>; <code>6.2-6.4</code>,
+        <code>7.1-7.4</code>, <code>8.1-8.4</code> и remote CI/Dependabot
+        остаются открытыми. Ни один хвост не закрывается этой
+        continuity-редакцией.
       </div>
 
       <h2>4. Что ещё нельзя считать закрытым</h2>
@@ -760,9 +763,9 @@
           </li>
           <li>
             Standing owner authority допускает временный disposable Bugsink
-            superuser/team/project/membership/API-token lifecycle только в
-            exact campaign target; secrets должны существовать только в
-            process memory и после работы оставлять zero residue.
+            superuser/team/project/membership/API-token lifecycle только в exact
+            campaign target; secrets должны существовать только в process memory
+            и после работы оставлять zero residue.
           </li>
           <li>
             Exclusions: production/shared/unknown targets, foreign credentials,
