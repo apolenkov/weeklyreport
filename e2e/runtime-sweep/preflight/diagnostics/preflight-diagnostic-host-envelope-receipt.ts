@@ -43,10 +43,7 @@ export type DiagnosticHostEnvelopeReceipt = Readonly<{
   readonly closeWithoutManifest: () => Promise<void>;
 }>;
 
-export {
-  type HealthyPreResourceReceipt,
-  readHealthyPreResourceReceipt,
-} from "./receipt/preflight-diagnostic-host-envelope-receipt-reader.ts";
+export { readHealthyPreResourceReceipt } from "./receipt/preflight-diagnostic-host-envelope-receipt-reader.ts";
 
 const reasonCodes = new Map<string, string>([
   ["raw free memory below baseline", "raw-baseline"],
@@ -78,7 +75,7 @@ const reasonCodeFor = (reason: string): string => {
   return missingField === undefined ? "other" : `missing:${missingField}`;
 };
 
-export const reasonCodesFor = (reasons: readonly string[]): readonly string[] =>
+const reasonCodesFor = (reasons: readonly string[]): readonly string[] =>
   reasons.map(reasonCodeFor);
 
 interface ReceiptState {

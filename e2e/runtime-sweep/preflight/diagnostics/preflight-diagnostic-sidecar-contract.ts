@@ -31,7 +31,7 @@ export const DIAGNOSTIC_MAX_SIDECAR_BYTES = 1_850_000;
 export const DIAGNOSTIC_MAX_MANIFEST_BYTES = 100_000;
 export const DIAGNOSTIC_MAX_AGGREGATE_BYTES = 2_000_000;
 
-export const DIAGNOSTIC_STAGES = [
+const DIAGNOSTIC_STAGES = [
   "launch",
   "prepare",
   "navigate",
@@ -40,12 +40,12 @@ export const DIAGNOSTIC_STAGES = [
   "failure",
   "cleanup",
 ] as const;
-export const DIAGNOSTIC_PROCESS_ROLES = [
+const DIAGNOSTIC_PROCESS_ROLES = [
   "playwright-child",
   "browser",
   "renderer",
 ] as const;
-export const DIAGNOSTIC_OPERATIONS = [
+const DIAGNOSTIC_OPERATIONS = [
   "none",
   "prepare",
   "navigate",
@@ -53,7 +53,7 @@ export const DIAGNOSTIC_OPERATIONS = [
   "inventory",
   "cleanup",
 ] as const;
-export const DIAGNOSTIC_FAILURE_KINDS = [
+const DIAGNOSTIC_FAILURE_KINDS = [
   "none",
   "page-crash",
   "page-close",
@@ -64,8 +64,8 @@ export const DIAGNOSTIC_FAILURE_KINDS = [
   "child-exit",
   "unknown",
 ] as const;
-export const DIAGNOSTIC_RECORD_KINDS = ["sample", "event"] as const;
-export const DIAGNOSTIC_PROCESS_CAPTURE_STATUSES = [
+const DIAGNOSTIC_RECORD_KINDS = ["sample", "event"] as const;
+const DIAGNOSTIC_PROCESS_CAPTURE_STATUSES = [
   "CAPTURED",
   "NOT_CAPTURED",
 ] as const;
@@ -74,7 +74,6 @@ export type DiagnosticStage = (typeof DIAGNOSTIC_STAGES)[number];
 export type DiagnosticProcessRole = (typeof DIAGNOSTIC_PROCESS_ROLES)[number];
 export type DiagnosticOperation = (typeof DIAGNOSTIC_OPERATIONS)[number];
 export type DiagnosticFailureKind = (typeof DIAGNOSTIC_FAILURE_KINDS)[number];
-export type DiagnosticRecordKind = (typeof DIAGNOSTIC_RECORD_KINDS)[number];
 export type DiagnosticProcessCaptureStatus =
   (typeof DIAGNOSTIC_PROCESS_CAPTURE_STATUSES)[number];
 
@@ -98,7 +97,7 @@ const nonNegativeInteger = z.number().int().nonnegative();
 const nullableNonNegativeInteger = nonNegativeInteger.nullable();
 const nullableNonNegativeNumber = z.number().nonnegative().nullable();
 
-export const diagnosticSampleSchema = z
+const diagnosticSampleSchema = z
   .object({
     recordKind: z.enum(DIAGNOSTIC_RECORD_KINDS),
     timestampWall: nonNegativeInteger,

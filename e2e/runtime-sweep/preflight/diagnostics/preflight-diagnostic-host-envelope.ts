@@ -29,8 +29,8 @@ const MAX_RECORD_BYTES = 512;
 const MAX_MANIFEST_BYTES = 102_400;
 const MAX_AGGREGATE_BYTES = 1_048_576;
 
-export const HOST_ENVELOPE_MODE_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_HOST_ENVELOPE";
-export const HOST_ENVELOPE_OUTPUT_ROOT_ENV =
+const HOST_ENVELOPE_MODE_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_HOST_ENVELOPE";
+const HOST_ENVELOPE_OUTPUT_ROOT_ENV =
   "RUNTIME_SWEEP_DIAGNOSTIC_PRESSURE_OUTPUT_ROOT";
 
 export const HOST_ENVELOPE_THRESHOLDS = {
@@ -59,7 +59,7 @@ export type HostEnvelopeMode = "off" | "enforce";
 export type HostEnvelopePhase =
   "pre-resource" | "post-infrastructure" | "runtime" | "cleanup";
 export type HostPressureState = "normal" | "warning" | "critical";
-export type HostEnvelopeCommand = "vm_stat" | "sysctl" | "memory_pressure";
+type HostEnvelopeCommand = "vm_stat" | "sysctl" | "memory_pressure";
 
 export type DiagnosticHostEnvelopeSnapshot = Readonly<{
   readonly timestampWall: number;

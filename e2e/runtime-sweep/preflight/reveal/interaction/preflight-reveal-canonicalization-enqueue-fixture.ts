@@ -165,7 +165,7 @@ export const trustedKnownBranchesFor = (): CanonicalFixture => {
   };
 };
 
-export const discoveryStateFor = (
+const discoveryStateFor = (
   current: RevealBranch,
   known: readonly RevealBranch[],
 ): RevealDiscoveryState => ({

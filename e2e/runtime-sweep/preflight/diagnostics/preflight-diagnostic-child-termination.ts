@@ -3,7 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 const TERMINATION_GRACE_MS = 5000;
 const KILL_GRACE_MS = 1000;
 
-export type ProcessSignalSender = (pid: number, signal: NodeJS.Signals) => void;
+type ProcessSignalSender = (pid: number, signal: NodeJS.Signals) => void;
 export type WaitForMilliseconds = (milliseconds: number) => Promise<void>;
 
 export type ChildGroupTerminationInput = Readonly<{
