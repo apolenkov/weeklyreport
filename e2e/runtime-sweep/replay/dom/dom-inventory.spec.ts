@@ -67,6 +67,7 @@ test("inventories visible semantic controls and their metadata", async ({
     "textbox",
     "checkbox",
     "combobox",
+    "button",
     "textbox",
     "button",
     "textbox",
@@ -76,9 +77,11 @@ test("inventories visible semantic controls and their metadata", async ({
   expect(inventory.controls[0]?.href).toBe("/reports");
   expect(inventory.controls[2]?.inputType).toBe("text");
   expect(inventory.controls[4]?.interactionEffect).toBe("mutation-required");
-  expect(inventory.controls[5]?.disclosureIndependence).toBe(
-    "source-bound-row-local",
-  );
+  expect(inventory.controls[5]).toMatchObject({
+    ariaControls: "panel-row",
+    ariaExpanded: false,
+    disclosureIndependence: "source-bound-row-local",
+  });
   expect(inventory.controls[2]?.interactionEffect).toBeUndefined();
   expect(inventory.controls.every((control) => control.visible)).toBe(true);
   expect(inventory.issues).toHaveLength(0);
