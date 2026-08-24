@@ -51,6 +51,7 @@ describe("R188 parent-child process boundary", () => {
           repoRoot,
           archiveRoot,
           canaryPath,
+          baselineReceiptDigest: "d".repeat(64),
           selector: { stateId: state.stateId },
           runPlaywright: () => {
             childCalls += 1;

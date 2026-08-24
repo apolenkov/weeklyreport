@@ -24,6 +24,7 @@ import {
   hostRecordDigestFor,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import {
+  baselineReceiptDigest,
   request,
   responseFor,
 } from "./preflight-reveal-host-checkpoint-test-fixture.ts";
@@ -139,6 +140,7 @@ describe("source-bound host checkpoint identity", () => {
         const client = await createFileBackedHostCheckpointClient({
           archiveRoot: archive,
           root,
+          expectedBaselineReceiptDigest: baselineReceiptDigest,
           watchDirectory: async function* () {
             await writeFile(
               responsePath,
@@ -173,6 +175,7 @@ describe("source-bound host checkpoint identity", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: async function* () {
           await writeFile(responsePath, canonicalHostCheckpointBytes(changed), {
             mode: 0o600,
@@ -205,6 +208,7 @@ describe("source-bound host checkpoint identity", () => {
         const client = await createFileBackedHostCheckpointClient({
           archiveRoot: archive,
           root,
+          expectedBaselineReceiptDigest: baselineReceiptDigest,
           watchDirectory: async function* (_directory, signal) {
             await new Promise<void>((resolve) =>
               signal.addEventListener("abort", () => resolve(), {
@@ -228,6 +232,7 @@ describe("source-bound host checkpoint identity", () => {
         const client = await createFileBackedHostCheckpointClient({
           archiveRoot: archive,
           root,
+          expectedBaselineReceiptDigest: baselineReceiptDigest,
           watchDirectory: async function* (_directory, signal) {
             await new Promise<void>((resolve) =>
               signal.addEventListener("abort", () => resolve(), {
@@ -260,6 +265,7 @@ describe("source-bound host checkpoint identity", () => {
           const client = await createFileBackedHostCheckpointClient({
             archiveRoot: archive,
             root,
+            expectedBaselineReceiptDigest: baselineReceiptDigest,
           });
           const requestBody = {
             ...body(),

@@ -43,6 +43,11 @@ export type DiagnosticHostEnvelopeReceipt = Readonly<{
   readonly closeWithoutManifest: () => Promise<void>;
 }>;
 
+export {
+  type HealthyPostInfrastructureReceipt,
+  type PostInfrastructureReceiptInput,
+  readHealthyPostInfrastructureReceipt,
+} from "./receipt/preflight-diagnostic-host-envelope-post-infrastructure-reader.ts";
 export { readHealthyPreResourceReceipt } from "./receipt/preflight-diagnostic-host-envelope-receipt-reader.ts";
 
 const reasonCodes = new Map<string, string>([

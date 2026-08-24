@@ -44,6 +44,7 @@ const HOST_CHECKPOINT_ROOT_ENV_ALLOWLIST = new Set([
   "e2e/runtime-sweep/preflight/launch/preflight-launcher-support.ts",
   "e2e/runtime-sweep/preflight/launch/preflight-launcher-support.test.ts",
   "e2e/runtime-sweep/preflight/launch/checkpoint/preflight-reveal-host-checkpoint-launch.ts",
+  "e2e/runtime-sweep/preflight/launch/checkpoint/run-runtime-reveal-host-checkpoint-controller.ts",
 ]);
 
 const runtimeSweepSourceFiles = async (
@@ -161,6 +162,15 @@ describe("runtime preflight launcher boundaries", () => {
         );
         expect(canaryEnvironment).not.toHaveProperty(
           "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT",
+        );
+        expect(canaryEnvironment).not.toHaveProperty(
+          "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_MANIFEST",
+        );
+        expect(canaryEnvironment).not.toHaveProperty(
+          "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_DIGEST",
+        );
+        expect(canaryEnvironment).not.toHaveProperty(
+          "RUNTIME_SWEEP_PREFLIGHT_HOST_CONTROLLER_TIMEOUT_MS",
         );
 
         const events: string[] = [];

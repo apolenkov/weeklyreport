@@ -16,6 +16,7 @@ export const runExactAdminDemoRevealCanary = async (input: {
   readonly canaryPath: string;
   readonly selector: PreflightCanarySelector;
   readonly hostCheckpointRoot: string;
+  readonly hostCheckpointBaselineDigest: string;
   readonly runPlaywright: RunPlaywright;
 }): Promise<number> => {
   const expectedRoot = path.join(
@@ -45,6 +46,7 @@ export const runExactAdminDemoRevealCanary = async (input: {
   const requestHostCheckpoint = await createFileBackedHostCheckpointClient({
     archiveRoot: input.archiveRoot,
     root: input.hostCheckpointRoot,
+    expectedBaselineReceiptDigest: input.hostCheckpointBaselineDigest,
   });
   return runPreflightRevealContinuation({
     source: input.source,
@@ -52,6 +54,7 @@ export const runExactAdminDemoRevealCanary = async (input: {
     archiveRoot: input.archiveRoot,
     canaryPath: input.canaryPath,
     selector: input.selector,
+    baselineReceiptDigest: input.hostCheckpointBaselineDigest,
     runPlaywright: input.runPlaywright,
     requestHostCheckpoint,
   });

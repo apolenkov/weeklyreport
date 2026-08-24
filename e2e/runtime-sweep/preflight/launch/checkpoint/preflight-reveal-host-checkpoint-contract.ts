@@ -8,6 +8,8 @@ export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST =
   "PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST" as const;
 export const PREFLIGHT_REVEAL_HOST_CHECKPOINT =
   "PREFLIGHT_REVEAL_HOST_CHECKPOINT" as const;
+export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE =
+  "PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE" as const;
 export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION = 1 as const;
 const KIBIBYTE_BYTES = 1024;
 const MAX_HOST_CHECKPOINT_KIBIBYTES = 16;
@@ -55,6 +57,7 @@ const sampleSchema = z
   .object({
     eventSequence: positiveIntegerSchema,
     timestampWall: finiteNonNegativeSchema,
+    phase: z.literal("runtime"),
     status: z.literal("healthy"),
     reasons: z.array(z.string()),
     breachStreaks: streaksSchema,
@@ -117,6 +120,7 @@ const responseBodySchema = z
     completedChildOrdinal: nonNegativeIntegerSchema,
     requestDigest: digestSchema,
     predecessorCheckpointDigest: digestSchema.nullable(),
+    baselineReceiptDigest: digestSchema,
     controllerObservationTimestamp: finiteNonNegativeSchema,
     sample: sampleSchema,
     coverage: z
@@ -132,6 +136,25 @@ const responseBodySchema = z
   })
   .strict();
 
+const completionBodySchema = z
+  .object({
+    artifact: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE),
+    version: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION),
+    run: runSchema,
+    terminalChildOrdinal: nonNegativeIntegerSchema,
+    lastCheckpointSequence: nonNegativeIntegerSchema,
+    lastResponseDigest: digestSchema.nullable(),
+    receiptHead: digestSchema.nullable(),
+    receiptCount: nonNegativeIntegerSchema,
+    chunkHead: digestSchema.nullable(),
+    chunkCount: nonNegativeIntegerSchema,
+    completedCandidateCount: nonNegativeIntegerSchema,
+    lastSampleSequence: positiveIntegerSchema.nullable(),
+    parentPassDigest: digestSchema,
+    terminalTimestamp: finiteNonNegativeSchema,
+  })
+  .strict();
+
 export type HostCheckpointRun = z.infer<typeof runSchema>;
 export type HostCheckpointRequest = z.infer<typeof requestBodySchema> & {
   readonly requestDigest: string;
@@ -140,6 +163,13 @@ export type HostCheckpointSample = z.infer<typeof sampleSchema>;
 export type HostCheckpointResponse = z.infer<typeof responseBodySchema> & {
   readonly responseDigest: string;
 };
+export type HostCheckpointCompletion = z.infer<typeof completionBodySchema> & {
+  readonly completionDigest: string;
+};
+export type HostCheckpointCompletionBody = Omit<
+  HostCheckpointCompletion,
+  "completionDigest" | "parentPassDigest" | "terminalTimestamp"
+>;
 
 export const hostCheckpointThresholdDigest = (): string =>
   sha256Hex({
@@ -160,6 +190,10 @@ export const requestDigestForBody = (
 export const responseDigestForBody = (
   value: Omit<HostCheckpointResponse, "responseDigest">,
 ): string => bodyDigestFor("response", value);
+
+export const completionDigestForBody = (
+  value: Omit<HostCheckpointCompletion, "completionDigest">,
+): string => bodyDigestFor("completion", value);
 
 export const hostRecordDigestFor = (value: HostCheckpointSample): string =>
   bodyDigestFor("host-record", value);
@@ -191,6 +225,12 @@ export const createHostCheckpointRequest = (
 const assertRequestSequence = (
   parsed: z.infer<typeof requestBodySchema>,
 ): void => {
+  if ((parsed.receiptCount === 0) !== (parsed.receiptHead === null))
+    throw new Error("Host checkpoint receipt head does not match its count");
+  if ((parsed.chunkCount === 0) !== (parsed.chunkHead === null))
+    throw new Error("Host checkpoint chunk head does not match its count");
+  if (parsed.completedCandidateCount === 0)
+    throw new Error("Host checkpoint request has no completed candidates");
   if (parsed.checkpointSequence !== parsed.completedChildOrdinal + 1)
     throw new Error(
       "Host checkpoint request sequence is not the next child ordinal",
@@ -233,6 +273,60 @@ export const createHostCheckpointResponse = (
   assertResponseSequence(parsed);
   return { ...parsed, responseDigest: responseDigestForBody(parsed) };
 };
+const assertCompletionSequence = (
+  parsed: z.infer<typeof completionBodySchema>,
+): void => {
+  if (parsed.terminalChildOrdinal !== parsed.lastCheckpointSequence)
+    throw new Error("Host checkpoint completion child sequence drifted");
+  if (
+    (parsed.lastCheckpointSequence === 0) !==
+    (parsed.lastResponseDigest === null)
+  )
+    throw new Error("Host checkpoint completion response predecessor drifted");
+  if ((parsed.receiptCount === 0) !== (parsed.receiptHead === null))
+    throw new Error(
+      "Host checkpoint completion receipt head does not match its count",
+    );
+  if ((parsed.chunkCount === 0) !== (parsed.chunkHead === null))
+    throw new Error(
+      "Host checkpoint completion chunk head does not match its count",
+    );
+  if ((parsed.receiptCount === 0) !== (parsed.completedCandidateCount === 0))
+    throw new Error(
+      "Host checkpoint completion candidate count does not match its receipt count",
+    );
+  if (
+    (parsed.lastCheckpointSequence === 0) !==
+    (parsed.lastSampleSequence === null)
+  )
+    throw new Error("Host checkpoint completion sample predecessor drifted");
+  if (parsed.terminalTimestamp <= 0)
+    throw new Error("Host checkpoint completion timestamp must be positive");
+};
+export const createHostCheckpointCompletion = (
+  body: z.input<typeof completionBodySchema>,
+): HostCheckpointCompletion => {
+  const parsed = completionBodySchema.parse(body);
+  assertCompletionSequence(parsed);
+  return { ...parsed, completionDigest: completionDigestForBody(parsed) };
+};
+export const parseHostCheckpointCompletion = (
+  value: unknown,
+): HostCheckpointCompletion => {
+  const parsed = completionBodySchema
+    .extend({ completionDigest: digestSchema })
+    .parse(value);
+  const { completionDigest, ...body } = parsed;
+  if (completionDigest !== completionDigestForBody(body))
+    throw new Error("Host checkpoint completion digest mismatch");
+  assertCompletionSequence(body);
+  return parsed;
+};
+
+export const parseCanonicalHostCheckpointCompletion = (
+  text: string,
+): HostCheckpointCompletion =>
+  parseCanonical(text, parseHostCheckpointCompletion);
 
 const assertResponseSequence = (
   parsed: z.infer<typeof responseBodySchema>,

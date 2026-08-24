@@ -74,6 +74,8 @@
     "test:runtime-preflight": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts full",
     "test:runtime-preflight-canary": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts canary",
     "test:runtime-preflight-diagnostic": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight-diagnostic.ts diagnostic",
+    "test:runtime-host-checkpoint-baseline": "tsx e2e/runtime-sweep/preflight/diagnostics/receipt/run-runtime-reveal-host-baseline.ts",
+    "test:runtime-host-checkpoint-controller": "tsx e2e/runtime-sweep/preflight/launch/checkpoint/run-runtime-reveal-host-checkpoint-controller.ts",
     "test:runtime-preflight-capacity-survey": "tsx e2e/runtime-sweep/preflight/run-runtime-capacity-survey.ts",
     "test:runtime-preflight-failure-frontier-replay": "tsx e2e/runtime-sweep/preflight/run-runtime-failure-frontier-replay.ts",
     "test:runtime-preflight-repair": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts repair",

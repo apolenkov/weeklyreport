@@ -15,11 +15,18 @@ import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
 } from "../../preflight-archive-path.ts";
+import { writeHostCheckpointCompletion } from "./preflight-reveal-host-checkpoint-client-completion.ts";
+import {
+  type ClearTimer,
+  type SetTimer,
+  waitForHostCheckpointResponse,
+  type WatchDirectory,
+} from "./preflight-reveal-host-checkpoint-client-wait.ts";
 import {
   canonicalHostCheckpointBytes,
   createHostCheckpointRequest,
   HOST_CHECKPOINT_MAX_BYTES,
-  HOST_CHECKPOINT_TIMEOUT_MS,
+  type HostCheckpointCompletionBody,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
   parseCanonicalHostCheckpointResponse,
@@ -30,16 +37,6 @@ const HOST_ROOT_MODE = 0o700;
 const PERMISSION_MASK = 0o777;
 const REQUEST_CANCELLED_MESSAGE = "Host checkpoint request cancelled";
 const counter = { value: 0 };
-
-type WatchDirectory = (
-  directory: string,
-  signal: AbortSignal,
-) => AsyncIterable<unknown> | Promise<AsyncIterable<unknown>>;
-type SetTimer = (
-  callback: () => void,
-  milliseconds: number,
-) => ReturnType<typeof setTimeout>;
-type ClearTimer = (timer: ReturnType<typeof setTimeout>) => void;
 
 const missing = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === "ENOENT";
@@ -88,7 +85,10 @@ const emptyPrivateRoot = async (
 const writeImmutable = async (
   filePath: string,
   text: string,
+  signal?: AbortSignal,
 ): Promise<void> => {
+  if (signal?.aborted)
+    throw signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE);
   if (Buffer.byteLength(text, "utf8") > HOST_CHECKPOINT_MAX_BYTES)
     throw new Error("Host checkpoint artifact exceeds 16 KiB");
   counter.value += 1;
@@ -100,6 +100,8 @@ const writeImmutable = async (
   try {
     await handle.writeFile(text, "utf8");
     await handle.sync();
+    if (signal?.aborted)
+      throw signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE);
     try {
       await linkTemporary(temporaryPath, filePath);
     } finally {
@@ -155,98 +157,17 @@ const readResponse = async (
   }
 };
 
-const watchForResponse = async (input: {
-  readonly filePath: string;
-  readonly controller: AbortController;
-  readonly watchDirectory: WatchDirectory;
-}): Promise<HostCheckpointResponse> => {
-  if (input.controller.signal.aborted)
-    throw (
-      input.controller.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE)
-    );
-  for await (const _event of await input.watchDirectory(
-    path.dirname(input.filePath),
-    input.controller.signal,
-  )) {
-    const response = await readResponse(input.filePath);
-    if (response !== undefined) {
-      return response;
-    }
-  }
-  throw new Error("Host checkpoint watcher ended without a response");
-};
-
-const waitForResponse = async (input: {
-  readonly filePath: string;
-  readonly signal?: AbortSignal;
-  readonly watchDirectory: WatchDirectory;
-  readonly setTimer: SetTimer;
-  readonly clearTimer: ClearTimer;
-}): Promise<HostCheckpointResponse> => {
-  if (input.signal?.aborted)
-    throw input.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE);
-  const first = await readResponse(input.filePath);
-  if (first !== undefined) return first;
-  if (input.signal?.aborted)
-    throw input.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE);
-  const timeoutError = new Error("Host checkpoint timed out");
-  const controller = new AbortController();
-  const onAbort = (): void => controller.abort(input.signal?.reason);
-  input.signal?.addEventListener("abort", onAbort, { once: true });
-  const timeout = input.setTimer(
-    () => controller.abort(timeoutError),
-    HOST_CHECKPOINT_TIMEOUT_MS,
-  );
-  const aborted = new Promise<never>((_, reject) => {
-    if (controller.signal.aborted) {
-      reject(controller.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE));
-      return;
-    }
-    controller.signal.addEventListener(
-      "abort",
-      () =>
-        reject(
-          controller.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE),
-        ),
-      { once: true },
-    );
-  });
-  void aborted.catch(() => undefined);
-  const watcherPromise: { value?: Promise<HostCheckpointResponse> } = {};
-  try {
-    const watcher = await input.watchDirectory(
-      path.dirname(input.filePath),
-      controller.signal,
-    );
-    const afterWatchSetup = await readResponse(input.filePath);
-    if (afterWatchSetup !== undefined) {
-      controller.abort();
-      return afterWatchSetup;
-    }
-    watcherPromise.value = watchForResponse({
-      filePath: input.filePath,
-      controller,
-      watchDirectory: () => watcher,
-    });
-    return await Promise.race([watcherPromise.value, aborted]);
-  } catch (error: unknown) {
-    if (input.signal?.aborted)
-      throw input.signal.reason ?? new Error(REQUEST_CANCELLED_MESSAGE);
-    if (controller.signal.aborted)
-      throw controller.signal.reason ?? timeoutError;
-    throw error;
-  } finally {
-    input.clearTimer(timeout);
-    input.signal?.removeEventListener("abort", onAbort);
-    controller.abort();
-    await watcherPromise.value?.catch(() => undefined);
-  }
-};
-
-export type RequestHostCheckpoint = (input: {
+export type RequestHostCheckpoint = ((input: {
   readonly request: Omit<HostCheckpointRequest, "requestDigest">;
   readonly signal?: AbortSignal;
-}) => Promise<HostCheckpointResponse | undefined>;
+}) => Promise<HostCheckpointResponse | undefined>) & {
+  complete?: CompleteHostCheckpoint;
+};
+
+export type CompleteHostCheckpoint = (input: {
+  readonly completion: HostCheckpointCompletionBody;
+  readonly signal?: AbortSignal;
+}) => Promise<void>;
 
 export const ensureHostCheckpointRoot = (input: {
   readonly archiveRoot: string;
@@ -256,9 +177,11 @@ export const ensureHostCheckpointRoot = (input: {
 export const createFileBackedHostCheckpointClient = async (input: {
   readonly archiveRoot: string;
   readonly root: string;
+  readonly expectedBaselineReceiptDigest: string;
   readonly watchDirectory?: WatchDirectory;
   readonly setTimer?: SetTimer;
   readonly clearTimer?: ClearTimer;
+  readonly now?: () => number;
 }): Promise<RequestHostCheckpoint> => {
   const root = await emptyPrivateRoot(input.archiveRoot, input.root);
   const watchDirectory =
@@ -267,18 +190,23 @@ export const createFileBackedHostCheckpointClient = async (input: {
       watch(directory, { signal }) as AsyncIterable<unknown>);
   const setTimer = input.setTimer ?? setTimeout;
   const clearTimer = input.clearTimer ?? clearTimeout;
-  return async ({ request: requestBody, signal }) => {
+  const request = (async ({ request: requestBody, signal }) => {
     const request = createHostCheckpointRequest(requestBody);
     const requestPath = requestPathFor(root, request);
     const responsePath = responsePathFor(root, request);
     if ((await readResponse(responsePath)) !== undefined)
       throw new Error("Host checkpoint response already exists");
-    await writeImmutable(requestPath, canonicalHostCheckpointBytes(request));
-    const response = await waitForResponse({
+    await writeImmutable(
+      requestPath,
+      canonicalHostCheckpointBytes(request),
+      signal,
+    );
+    const response = await waitForHostCheckpointResponse({
       filePath: responsePath,
       watchDirectory,
       setTimer,
       clearTimer,
+      readResponse,
       ...(signal === undefined ? {} : { signal }),
     });
     if (response.requestDigest !== request.requestDigest)
@@ -294,8 +222,21 @@ export const createFileBackedHostCheckpointClient = async (input: {
       response.predecessorCheckpointDigest !== request.previousCheckpointDigest
     )
       throw new Error("Host checkpoint response predecessor mismatch");
-    if (response.controllerObservationTimestamp < request.boundaryTimestamp)
+    if (response.baselineReceiptDigest !== input.expectedBaselineReceiptDigest)
+      throw new Error("Host checkpoint response baseline receipt mismatch");
+    if (response.controllerObservationTimestamp <= request.boundaryTimestamp)
       throw new Error("Host checkpoint response predates the request boundary");
     return response;
+  }) as RequestHostCheckpoint;
+  request.complete = async ({ completion, signal }) => {
+    await writeHostCheckpointCompletion({
+      archiveRoot: input.archiveRoot,
+      mailboxRoot: root,
+      completion,
+      now: input.now ?? Date.now,
+      writeImmutable,
+      ...(signal === undefined ? {} : { signal }),
+    });
   };
+  return request;
 };

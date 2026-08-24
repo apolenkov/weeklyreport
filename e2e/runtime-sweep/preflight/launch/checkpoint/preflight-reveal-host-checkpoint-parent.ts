@@ -1,5 +1,6 @@
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import { assertLivePreflightSourceIdentity } from "../../canary/preflight-canary.ts";
+import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
 import type {
   ParentContext,
   ParentProgress,
@@ -7,11 +8,17 @@ import type {
 import { runContinuationChild } from "../preflight-reveal-continuation-parent-child.ts";
 import {
   createHostCheckpointRequest,
+  type HostCheckpointCompletionBody,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
+  PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE,
+  PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 
-const hostCheckpointRunFor = (context: ParentContext) =>
+const HOST_BASELINE_RECORD_COUNT =
+  HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
+
+export const hostCheckpointRunFor = (context: ParentContext) =>
   ({
     campaignId: context.source.campaignId,
     sourceSha: context.source.sourceSha,
@@ -24,9 +31,30 @@ const hostCheckpointRunFor = (context: ParentContext) =>
     stateDigest: sha256Hex(context.selection.state),
     profile: context.selection.state.profile,
     role: context.revealRoute.role,
-    route: context.revealRoute.catalogRoute,
+    route:
+      context.selection.selector.route ??
+      `${context.revealRoute.role}:${context.revealRoute.catalogRoute}`,
     routeDigest: sha256Hex(context.revealRoute),
   }) as const;
+
+const hostCheckpointCompletionFor = (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+  readonly ordinal: number;
+}): HostCheckpointCompletionBody => ({
+  artifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE,
+  version: PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
+  run: hostCheckpointRunFor(input.context),
+  terminalChildOrdinal: input.ordinal,
+  lastCheckpointSequence: input.ordinal,
+  lastResponseDigest: input.progress.previousCheckpointDigest ?? null,
+  receiptHead: input.progress.receiptHead,
+  receiptCount: input.progress.receiptCount,
+  chunkHead: input.progress.chunkHead,
+  chunkCount: input.progress.chunkCount,
+  completedCandidateCount: input.progress.previousCompletedCandidateCount,
+  lastSampleSequence: input.progress.previousSampleSequence ?? null,
+});
 
 const hostCheckpointRequestFor = (input: {
   readonly context: ParentContext;
@@ -74,6 +102,7 @@ const assertCheckpointResponse = (input: {
   readonly request: HostCheckpointRequest;
   readonly response: HostCheckpointResponse;
   readonly boundaryTimestamp: number;
+  readonly baselineReceiptDigest: string;
 }): void => {
   const { request, response } = input;
   if (response.requestDigest !== request.requestDigest)
@@ -82,11 +111,21 @@ const assertCheckpointResponse = (input: {
     throw new Error("Host checkpoint response source identity drifted");
   if (response.predecessorCheckpointDigest !== request.previousCheckpointDigest)
     throw new Error("Host checkpoint predecessor digest is not parent-bound");
-  if (response.controllerObservationTimestamp < input.boundaryTimestamp)
+  if (response.baselineReceiptDigest !== input.baselineReceiptDigest)
+    throw new Error(
+      "Host checkpoint baseline receipt digest is not parent-bound",
+    );
+  const expectedSampleSequence =
+    (request.previousSampleSequence ?? HOST_BASELINE_RECORD_COUNT) + 1;
+  if (response.sample.eventSequence !== expectedSampleSequence)
+    throw new Error(
+      "Host checkpoint sample sequence did not follow the baseline",
+    );
+  if (response.controllerObservationTimestamp <= input.boundaryTimestamp)
     throw new Error(
       "Host checkpoint controller observation predates reduction",
     );
-  if (response.sample.timestampWall < input.boundaryTimestamp)
+  if (response.sample.timestampWall <= input.boundaryTimestamp)
     throw new Error("Host checkpoint sample predates reduction");
   assertResponseProgress({ request, response });
 };
@@ -109,7 +148,16 @@ export const requestHostCheckpointAfterChild = async (input: {
   });
   if (response === undefined)
     throw new Error("Host checkpoint client returned no response");
-  assertCheckpointResponse({ request, response, boundaryTimestamp });
+  if (input.context.baselineReceiptDigest === undefined)
+    throw new Error(
+      "Host checkpoint parent has no expected baseline receipt digest",
+    );
+  assertCheckpointResponse({
+    request,
+    response,
+    boundaryTimestamp,
+    baselineReceiptDigest: input.context.baselineReceiptDigest,
+  });
   await assertLivePreflightSourceIdentity({
     source: input.context.source,
     repoRoot: input.context.repoRoot,
@@ -137,7 +185,21 @@ export const runChildUntilDone = async (input: {
     progress: input.progress,
     ordinal: input.ordinal,
   });
-  if (result.done) return result.exitCode ?? 0;
+  if (result.done) {
+    const exitCode = result.exitCode ?? 0;
+    if (exitCode === 0) {
+      const complete = input.context.requestHostCheckpoint?.complete;
+      if (complete !== undefined)
+        await complete({
+          completion: hostCheckpointCompletionFor({
+            context: input.context,
+            progress: result.progress,
+            ordinal: input.ordinal,
+          }),
+        });
+    }
+    return exitCode;
+  }
   if (input.context.requestHostCheckpoint === undefined)
     throw new Error(
       "Reveal continuation requires a parent-only host checkpoint client before launching the next child",

@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 
+import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
 import { withCleanSealedGrantFixture } from "../preflight-reveal-continuation-parent-test-fixture.ts";
 import type { RequestHostCheckpoint } from "./preflight-reveal-host-checkpoint-client.ts";
 import {
   createHostCheckpointRequest,
   createHostCheckpointResponse,
+  type HostCheckpointCompletionBody,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
   hostCheckpointThresholdDigest,
   hostRecordDigestFor,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { runChildUntilDone } from "./preflight-reveal-host-checkpoint-parent.ts";
+
+const HOST_BASELINE_RECORD_COUNT =
+  HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
 
 const responseFor = (
   body: Omit<HostCheckpointRequest, "requestDigest">,
@@ -22,8 +27,10 @@ const responseFor = (
 ): HostCheckpointResponse => {
   const request = createHostCheckpointRequest(body);
   const sample = {
-    eventSequence: (request.previousSampleSequence ?? 0) + 1,
+    eventSequence:
+      (request.previousSampleSequence ?? HOST_BASELINE_RECORD_COUNT) + 1,
     timestampWall: overrides.sampleTimestamp ?? 200,
+    phase: "runtime" as const,
     status: "healthy" as const,
     reasons: [],
     breachStreaks: {
@@ -67,6 +74,7 @@ const responseFor = (
     predecessorCheckpointDigest: request.previousCheckpointDigest,
     controllerObservationTimestamp:
       overrides.controllerObservationTimestamp ?? 201,
+    baselineReceiptDigest: "d".repeat(64),
     sample,
     coverage: {
       priorSequence: request.previousSampleSequence ?? 0,
@@ -81,7 +89,7 @@ const responseFor = (
 };
 
 const sampleSequenceFor = (request: HostCheckpointRequest): number =>
-  (request.previousSampleSequence ?? 0) + 1;
+  (request.previousSampleSequence ?? HOST_BASELINE_RECORD_COUNT) + 1;
 
 const nonterminalChild = (
   progress: Parameters<typeof runChildUntilDone>[0]["progress"],
@@ -194,14 +202,27 @@ describe("host checkpoint parent sequencing", () => {
     async (exitCode) => {
       await withCleanSealedGrantFixture(async (fixture) => {
         let checkpointCalls = 0;
+        const completions: HostCheckpointCompletionBody[] = [];
         const context = {
           ...fixture.context,
-          requestHostCheckpoint: () => {
-            checkpointCalls += 1;
-            return Promise.reject(
-              new Error("checkpoint must not be requested"),
-            );
-          },
+          requestHostCheckpoint: Object.assign(
+            () => {
+              checkpointCalls += 1;
+              return Promise.reject(
+                new Error("checkpoint must not be requested"),
+              );
+            },
+            {
+              complete: ({
+                completion,
+              }: {
+                readonly completion: HostCheckpointCompletionBody;
+              }) => {
+                completions.push(completion);
+                return Promise.resolve();
+              },
+            },
+          ),
         };
         const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
           () =>
@@ -220,6 +241,7 @@ describe("host checkpoint parent sequencing", () => {
           }),
         ).resolves.toBe(exitCode);
         expect(checkpointCalls).toBe(0);
+        expect(completions).toHaveLength(exitCode === 0 ? 1 : 0);
       });
     },
   );
@@ -270,7 +292,7 @@ describe("host checkpoint parent sequencing", () => {
       });
       expect(requests[1]).toMatchObject({
         checkpointSequence: 2,
-        previousSampleSequence: 1,
+        previousSampleSequence: 61,
       });
       expect(requests[1]?.previousCheckpointDigest).toMatch(/^[0-9a-f]{64}$/u);
     });
