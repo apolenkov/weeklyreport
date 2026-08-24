@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 
 const DIAGNOSTIC_TRACE_MODE_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_TRACE_MODE";
+const DIAGNOSTIC_TIMEOUT_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_TIMEOUT_MS";
 const DIAGNOSTIC_PLAYWRIGHT_ARGUMENTS = [
   "--filter",
   "@customreport/web",
@@ -12,6 +13,19 @@ const DIAGNOSTIC_PLAYWRIGHT_ARGUMENTS = [
 ] as const;
 
 export type DiagnosticTraceMode = "retain-on-failure" | "off";
+
+export const diagnosticTimeoutFromEnvironment = (
+  environment: NodeJS.ProcessEnv,
+): number | undefined => {
+  const value = environment[DIAGNOSTIC_TIMEOUT_ENV];
+  if (value === undefined) return undefined;
+  const timeout = Number(value);
+  if (!Number.isSafeInteger(timeout) || timeout < 1)
+    throw new Error(
+      `${DIAGNOSTIC_TIMEOUT_ENV} must be a positive safe integer; received ${value}`,
+    );
+  return timeout;
+};
 
 class InvalidDiagnosticTraceModeError extends Error {
   override readonly name = "InvalidDiagnosticTraceModeError";
@@ -34,8 +48,10 @@ export const diagnosticTraceModeFromEnvironment = (
 
 export const buildPreflightDiagnosticPlaywrightArguments = (
   traceMode: DiagnosticTraceMode,
+  timeoutMs?: number,
 ): readonly string[] => [
   ...DIAGNOSTIC_PLAYWRIGHT_ARGUMENTS,
+  ...(timeoutMs === undefined ? [] : ["--timeout", String(timeoutMs)]),
   ...(traceMode === "off" ? ["--trace", "off"] : []),
 ];
 
@@ -67,11 +83,12 @@ export const spawnPreflightDiagnosticPlaywrightChild = (input: {
 }): PreflightDiagnosticPlaywrightChild => {
   const launcher = pnpmLauncher();
   const traceMode = diagnosticTraceModeFromEnvironment(input.environment);
+  const timeoutMs = diagnosticTimeoutFromEnvironment(input.environment);
   const child = spawn(
     launcher.command,
     [
       ...launcher.leadingArgs,
-      ...buildPreflightDiagnosticPlaywrightArguments(traceMode),
+      ...buildPreflightDiagnosticPlaywrightArguments(traceMode, timeoutMs),
     ],
     {
       cwd: input.repoRoot,

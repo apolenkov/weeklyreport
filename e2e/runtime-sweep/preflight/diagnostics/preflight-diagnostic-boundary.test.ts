@@ -58,9 +58,11 @@ describe("diagnostic preflight boundary", () => {
     expect(config).toContain("assertDiagnosticOutputPath");
     expect(selection).not.toMatch(/from "\.\/preflight-canary\.ts"/u);
     expect(config).toContain('mode: "retain-on-failure"');
-    expect(config).toContain('screenshot: "off"');
-    expect(config).toContain('video: "off"');
-    expect(config).toContain("contextOptionsWithoutHar");
+    expect(config).toContain('screenshot: "only-on-failure"');
+    expect(config).toContain('video: "retain-on-failure"');
+    expect(config).toContain('content: "omit"');
+    expect(config).toContain('mode: "full"');
+    expect(cli).toContain("assertDiagnosticFailureArtifacts");
     expect(launcher).toContain("playwright.diagnostic.config.ts");
     expect(launcher).not.toContain("playwright.preflight.config.ts");
   });

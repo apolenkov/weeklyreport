@@ -41,8 +41,16 @@ if (
   );
 
 const baseUse = preflightConfig.use ?? {};
-const { recordHar: _recordHar, ...contextOptionsWithoutHar } =
-  baseUse.contextOptions ?? {};
+const baseContextOptions = baseUse.contextOptions ?? {};
+const diagnosticPlaywrightOutputRoot = path.join(outputRoot, "playwright");
+const diagnosticContextOptions = {
+  ...baseContextOptions,
+  recordHar: {
+    path: path.join(diagnosticPlaywrightOutputRoot, "network.har"),
+    content: "omit" as const,
+    mode: "full" as const,
+  },
+};
 const [baseProject] = preflightConfig.projects ?? [];
 if (baseProject === undefined || (preflightConfig.projects?.length ?? 0) !== 1)
   throw new Error("Diagnostic preflight requires one browser project");
@@ -57,7 +65,9 @@ export default defineConfig({
   retries: 0,
   use: {
     ...baseUse,
-    contextOptions: contextOptionsWithoutHar,
+    // Keep the separate bodyless HAR, screenshot, and video as bounded
+    // failure evidence. The trace remains deliberately DOM/resource-light.
+    contextOptions: diagnosticContextOptions,
     trace: {
       mode: "retain-on-failure",
       snapshots: false,
@@ -65,8 +75,8 @@ export default defineConfig({
       sources: true,
       attachments: true,
     },
-    screenshot: "off",
-    video: "off",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   projects: [
     {

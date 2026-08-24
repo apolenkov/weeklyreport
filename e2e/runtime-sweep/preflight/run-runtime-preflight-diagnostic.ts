@@ -4,6 +4,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary-selection.ts";
+import { assertDiagnosticFailureArtifacts } from "./diagnostics/preflight-diagnostic-artifacts.ts";
 import {
   type DiagnosticHostEnvelopeCounters,
   type DiagnosticHostEnvelopeSnapshot,
@@ -205,10 +206,14 @@ if (mode === "host-baseline") {
 
   const hostEnvelopeMode = hostEnvelopeModeFromEnvironment(environment);
   if (hostEnvelopeMode === "off") {
-    process.exitCode = await runPreflightDiagnosticPlaywrightChild({
+    const childExitCode = await runPreflightDiagnosticPlaywrightChild({
       repoRoot,
       environment,
     });
+    if (childExitCode !== 0) {
+      await assertDiagnosticFailureArtifacts({ outputRoot });
+    }
+    process.exitCode = childExitCode;
   } else {
     const pressureOutputRoot =
       hostEnvelopeOutputRootFromEnvironment(environment);
