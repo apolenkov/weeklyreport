@@ -18,7 +18,7 @@ import {
 const HOST_BASELINE_RECORD_COUNT =
   HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
 
-export const hostCheckpointRunFor = (context: ParentContext) =>
+const hostCheckpointRunFor = (context: ParentContext) =>
   ({
     campaignId: context.source.campaignId,
     sourceSha: context.source.sourceSha,
@@ -130,9 +130,7 @@ const assertCheckpointResponse = (input: {
   assertResponseProgress({ request, response });
 };
 
-export const assertHostCheckpointResponse = assertCheckpointResponse;
-
-export const requestHostCheckpointAfterChild = async (input: {
+const requestHostCheckpointAfterChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly ordinal: number;

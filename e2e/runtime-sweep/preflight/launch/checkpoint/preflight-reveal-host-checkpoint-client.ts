@@ -164,7 +164,7 @@ export type RequestHostCheckpoint = ((input: {
   complete?: CompleteHostCheckpoint;
 };
 
-export type CompleteHostCheckpoint = (input: {
+type CompleteHostCheckpoint = (input: {
   readonly completion: HostCheckpointCompletionBody;
   readonly signal?: AbortSignal;
 }) => Promise<void>;

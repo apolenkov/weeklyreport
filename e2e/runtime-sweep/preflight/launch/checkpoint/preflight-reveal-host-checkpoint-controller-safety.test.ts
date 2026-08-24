@@ -1,12 +1,4 @@
-import {
-  chmod,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -16,8 +8,6 @@ import type {
   DiagnosticHostEnvelopeSnapshot,
 } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
 import {
-  canonicalHostCheckpointBytes,
-  createHostCheckpointRequest,
   type HostCheckpointRequest,
   parseCanonicalHostCheckpointResponse,
   PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST,
@@ -25,7 +15,13 @@ import {
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { runHostCheckpointController } from "./preflight-reveal-host-checkpoint-controller.ts";
 import { immutableWrite } from "./preflight-reveal-host-checkpoint-controller-mailbox.ts";
-import { writeTerminalCompletion } from "./preflight-reveal-host-checkpoint-controller-safety-fixture.ts";
+import {
+  responsePathForTest,
+  waitForFile,
+  withMailbox,
+  writeRequest,
+  writeTerminalCompletion,
+} from "./preflight-reveal-host-checkpoint-controller-safety-fixture.ts";
 
 const sourceSha = "a".repeat(40);
 const sourceTree = "b".repeat(40);
@@ -115,58 +111,6 @@ const requestBodyFor = (
   previousSampleSequence: null,
   ...overrides,
 });
-
-const requestPathFor = (root: string, request: HostCheckpointRequest): string =>
-  path.join(
-    root,
-    `HOST_CHECKPOINT_REQUEST.${request.run.attemptId}.${String(request.checkpointSequence)}.json`,
-  );
-const responsePathFor = (
-  root: string,
-  request: HostCheckpointRequest,
-): string =>
-  path.join(
-    root,
-    `HOST_CHECKPOINT_RESPONSE.${request.run.attemptId}.${String(request.checkpointSequence)}.json`,
-  );
-const writeRequest = async (
-  root: string,
-  body: Omit<HostCheckpointRequest, "requestDigest">,
-): Promise<HostCheckpointRequest> => {
-  const request = createHostCheckpointRequest(body);
-  await writeFile(
-    requestPathFor(root, request),
-    canonicalHostCheckpointBytes(request),
-    { mode: 0o600 },
-  );
-  return request;
-};
-const waitForFile = async (filePath: string): Promise<void> => {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    try {
-      await stat(filePath);
-      return;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-  }
-  throw new Error(`Timed out waiting for ${filePath}`);
-};
-const withMailbox = async (
-  callback: (archiveRoot: string, mailboxRoot: string) => Promise<void>,
-): Promise<void> => {
-  const archiveRoot = await mkdtemp(
-    path.join(process.cwd(), ".host-controller-safety-"),
-  );
-  const mailboxRoot = path.join(archiveRoot, "mailbox");
-  await mkdir(mailboxRoot, { mode: 0o700 });
-  await chmod(mailboxRoot, 0o700);
-  try {
-    await callback(archiveRoot, mailboxRoot);
-  } finally {
-    await rm(archiveRoot, { recursive: true, force: true });
-  }
-};
 
 describe("host checkpoint controller safety boundaries", () => {
   it("checks cancellation at the immutable publication boundary", async () => {
@@ -281,7 +225,7 @@ describe("host checkpoint controller safety boundaries", () => {
       const request = await writeRequest(mailboxRoot, requestBodyFor());
       await expect(controller).rejects.toThrow("deadline");
       await expect(
-        stat(responsePathFor(mailboxRoot, request)),
+        stat(responsePathForTest(mailboxRoot, request)),
       ).rejects.toMatchObject({
         code: "ENOENT",
       });
@@ -299,9 +243,9 @@ describe("host checkpoint controller safety boundaries", () => {
         readSnapshot: () => Promise.resolve(snapshotFor(200, 1)),
       });
       const first = await writeRequest(mailboxRoot, requestBodyFor());
-      await waitForFile(responsePathFor(mailboxRoot, first));
+      await waitForFile(responsePathForTest(mailboxRoot, first));
       const firstResponse = parseCanonicalHostCheckpointResponse(
-        await readFile(responsePathFor(mailboxRoot, first), "utf8"),
+        await readFile(responsePathForTest(mailboxRoot, first), "utf8"),
       );
       const second = await writeRequest(
         mailboxRoot,
@@ -320,7 +264,7 @@ describe("host checkpoint controller safety boundaries", () => {
       );
       await expect(controller).rejects.toThrow(/progress did not advance/u);
       await expect(
-        stat(responsePathFor(mailboxRoot, second)),
+        stat(responsePathForTest(mailboxRoot, second)),
       ).rejects.toMatchObject({
         code: "ENOENT",
       });

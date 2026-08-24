@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { stableIdentifierSchema } from "../../../source/contracts.ts";
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
+import { createHostCheckpointSchemas } from "./preflight-reveal-host-checkpoint-contract-schemas.ts";
 
 export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST =
   "PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST" as const;
@@ -13,153 +13,29 @@ export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE =
 export const PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION = 1 as const;
 const KIBIBYTE_BYTES = 1024;
 const MAX_HOST_CHECKPOINT_KIBIBYTES = 16;
-const MAX_PRESSURE_FREE_PERCENT = 100;
 export const HOST_CHECKPOINT_MAX_BYTES =
   MAX_HOST_CHECKPOINT_KIBIBYTES * KIBIBYTE_BYTES;
 export const HOST_CHECKPOINT_TIMEOUT_MS = 5000;
 
-const digestSchema = z.string().regex(/^[0-9a-f]{64}$/u);
-const positiveIntegerSchema = z.number().int().positive();
-const nonNegativeIntegerSchema = z.number().int().nonnegative();
-const finiteNonNegativeSchema = z.number().nonnegative();
-const finitePercentSchema = finiteNonNegativeSchema.max(
-  MAX_PRESSURE_FREE_PERCENT,
-);
+const {
+  digestSchema,
+  runSchema: _runSchema,
+  sampleSchema: _sampleSchema,
+  requestBodySchema,
+  responseBodySchema,
+  completionBodySchema,
+} = createHostCheckpointSchemas({
+  requestArtifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST,
+  responseArtifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT,
+  completionArtifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE,
+  version: PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
+});
 
-const runSchema = z
-  .object({
-    campaignId: z.string().min(1),
-    sourceSha: z.string().regex(/^[0-9a-f]{40}$/u),
-    sourceTree: z.string().regex(/^[0-9a-f]{40}$/u),
-    treeDigest: digestSchema,
-    sourceDigest: digestSchema,
-    planDigest: digestSchema,
-    attemptId: stableIdentifierSchema,
-    stateId: z.string().min(1),
-    stateDigest: digestSchema,
-    profile: z.string().min(1),
-    role: z.string().min(1),
-    route: z.string().min(1),
-    routeDigest: digestSchema,
-  })
-  .strict();
-
-const streaksSchema = z
-  .object({
-    rawFreeBytes: nonNegativeIntegerSchema,
-    availableBytes: nonNegativeIntegerSchema,
-    pressureFreePercent: nonNegativeIntegerSchema,
-    compressedBytes: nonNegativeIntegerSchema,
-  })
-  .strict();
-
-const sampleSchema = z
-  .object({
-    eventSequence: positiveIntegerSchema,
-    timestampWall: finiteNonNegativeSchema,
-    phase: z.literal("runtime"),
-    status: z.literal("healthy"),
-    reasons: z.array(z.string()),
-    breachStreaks: streaksSchema,
-    pressureState: z.literal("normal"),
-    metrics: z
-      .object({
-        rawFreeBytes: finiteNonNegativeSchema,
-        availableBytes: finiteNonNegativeSchema,
-        totalBytes: finiteNonNegativeSchema,
-        swapFreeBytes: finiteNonNegativeSchema,
-        pressureFreePercent: finitePercentSchema,
-        swapUsedBytes: finiteNonNegativeSchema,
-        compressedBytes: finiteNonNegativeSchema,
-        cumulativeCounters: z
-          .object({
-            pageins: nonNegativeIntegerSchema,
-            pageouts: nonNegativeIntegerSchema,
-            swapins: nonNegativeIntegerSchema,
-            swapouts: nonNegativeIntegerSchema,
-          })
-          .strict(),
-      })
-      .strict(),
-    nextCounters: z
-      .object({
-        pageins: nonNegativeIntegerSchema,
-        pageouts: nonNegativeIntegerSchema,
-        swapins: nonNegativeIntegerSchema,
-        swapouts: nonNegativeIntegerSchema,
-      })
-      .strict(),
-  })
-  .strict();
-
-const requestBodySchema = z
-  .object({
-    artifact: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST),
-    version: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION),
-    run: runSchema,
-    checkpointSequence: positiveIntegerSchema,
-    completedChildOrdinal: nonNegativeIntegerSchema,
-    boundaryTimestamp: finiteNonNegativeSchema,
-    receiptHead: digestSchema.nullable(),
-    receiptCount: nonNegativeIntegerSchema,
-    chunkHead: digestSchema.nullable(),
-    chunkCount: nonNegativeIntegerSchema,
-    completedCandidateCount: nonNegativeIntegerSchema,
-    previousCheckpointDigest: digestSchema.nullable(),
-    previousSampleSequence: positiveIntegerSchema.nullable(),
-  })
-  .strict();
-
-const responseBodySchema = z
-  .object({
-    artifact: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT),
-    version: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION),
-    status: z.literal("HEALTHY"),
-    run: runSchema,
-    checkpointSequence: positiveIntegerSchema,
-    completedChildOrdinal: nonNegativeIntegerSchema,
-    requestDigest: digestSchema,
-    predecessorCheckpointDigest: digestSchema.nullable(),
-    baselineReceiptDigest: digestSchema,
-    controllerObservationTimestamp: finiteNonNegativeSchema,
-    sample: sampleSchema,
-    coverage: z
-      .object({
-        priorSequence: nonNegativeIntegerSchema,
-        firstSequence: positiveIntegerSchema,
-        lastSequence: positiveIntegerSchema,
-        coveredCount: positiveIntegerSchema,
-      })
-      .strict(),
-    thresholdDigest: digestSchema,
-    hostRecordDigest: digestSchema,
-  })
-  .strict();
-
-const completionBodySchema = z
-  .object({
-    artifact: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE),
-    version: z.literal(PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION),
-    run: runSchema,
-    terminalChildOrdinal: nonNegativeIntegerSchema,
-    lastCheckpointSequence: nonNegativeIntegerSchema,
-    lastResponseDigest: digestSchema.nullable(),
-    receiptHead: digestSchema.nullable(),
-    receiptCount: nonNegativeIntegerSchema,
-    chunkHead: digestSchema.nullable(),
-    chunkCount: nonNegativeIntegerSchema,
-    completedCandidateCount: nonNegativeIntegerSchema,
-    lastSampleSequence: positiveIntegerSchema.nullable(),
-    parentPassDigest: digestSchema,
-    terminalTimestamp: finiteNonNegativeSchema,
-  })
-  .strict();
-
-export type HostCheckpointRun = z.infer<typeof runSchema>;
+export type HostCheckpointRun = z.infer<typeof _runSchema>;
 export type HostCheckpointRequest = z.infer<typeof requestBodySchema> & {
   readonly requestDigest: string;
 };
-export type HostCheckpointSample = z.infer<typeof sampleSchema>;
+export type HostCheckpointSample = z.infer<typeof _sampleSchema>;
 export type HostCheckpointResponse = z.infer<typeof responseBodySchema> & {
   readonly responseDigest: string;
 };
@@ -191,7 +67,7 @@ export const responseDigestForBody = (
   value: Omit<HostCheckpointResponse, "responseDigest">,
 ): string => bodyDigestFor("response", value);
 
-export const completionDigestForBody = (
+const completionDigestForBody = (
   value: Omit<HostCheckpointCompletion, "completionDigest">,
 ): string => bodyDigestFor("completion", value);
 
@@ -310,7 +186,7 @@ export const createHostCheckpointCompletion = (
   assertCompletionSequence(parsed);
   return { ...parsed, completionDigest: completionDigestForBody(parsed) };
 };
-export const parseHostCheckpointCompletion = (
+const parseHostCheckpointCompletion = (
   value: unknown,
 ): HostCheckpointCompletion => {
   const parsed = completionBodySchema
