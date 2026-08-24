@@ -8,6 +8,7 @@ import {
   preflightCanarySelectorFromEnvironment,
   readPreflightCanaryArtifact,
 } from "./canary/preflight-canary.ts";
+import { runExactAdminDemoRevealCanary } from "./launch/checkpoint/preflight-reveal-host-checkpoint-launch.ts";
 import {
   assertPreflightLaunchGate,
   type PreflightLaunchMode,
@@ -19,7 +20,6 @@ import {
 } from "./launch/preflight-launcher-support.ts";
 import { runPreflightPlaywrightChild } from "./launch/preflight-playwright-child.ts";
 import { runPreflightRepairChain } from "./launch/preflight-repair-chain.ts";
-import { runPreflightRevealContinuation } from "./launch/preflight-reveal-continuation-parent.ts";
 import {
   preflightShardChildEnvironment,
   preparePreflightShardLaunch,
@@ -195,7 +195,7 @@ if (mode === "shard") {
       throw new Error(
         "Reveal continuation parent requires an exact canary selector",
       );
-    return runPreflightRevealContinuation({
+    return runExactAdminDemoRevealCanary({
       source,
       repoRoot,
       archiveRoot,
@@ -204,6 +204,9 @@ if (mode === "shard") {
         requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"),
       ),
       selector,
+      hostCheckpointRoot: requiredEnv(
+        "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT",
+      ),
       runPlaywright,
     });
   };

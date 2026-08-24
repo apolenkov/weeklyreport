@@ -196,6 +196,27 @@ before baseline execution rather than trimming cells.
   exact vertical slice proves canary only, while full/shard journal continuation
   remains NOT-PROVEN and cannot reuse canary results
 
+#### Scenario: the parent proves host health before the next canary child
+
+- **GIVEN** an exact `admin/demo` canary child has emitted a valid nonterminal
+  receipt chunk and the parent has reduced it and sealed the next grant
+- **WHEN** the parent publishes a source-bound host checkpoint request
+- **THEN** the external host controller observes that exact request, evaluates
+  one later sample with the existing 60-sample baseline, unchanged thresholds,
+  and three-sample hysteresis, and publishes a healthy normal response
+- **AND** the request and response are strict canonical newline-terminated JSON
+  no larger than 16 KiB, regular mode-0600 files in a fresh mode-0700
+  archive-confined mailbox, with exact predecessor, sequence, source, state,
+  route, coverage, threshold, and self-digest bindings
+- **AND** the parent waits exactly 5 seconds, validates the response and source
+  identity, and launches the next child only after that response
+- **AND** a missing, stale, duplicate, reordered, gapped, breached,
+  non-normal, malformed, tampered, or pre-dating response terminates the
+  current attempt without launching the next child
+- **AND** the checkpoint root is parent-only, is absent from every Playwright,
+  configuration, web, and API child environment, and carries no resume
+  authority or secret
+
 #### Scenario: an invalid specialized witness fails finalization
 
 - **WHEN** a transition disagrees with its action, a non-`none` fault lacks a

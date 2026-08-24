@@ -281,6 +281,15 @@
       harness exempt, and add a
       source-import architecture regression.
 
+- [ ] 5.22 Add the source-bound parent-only host checkpoint for the exact
+      `admin/demo` canary continuation: strict canonical request/response and
+      immutable file-backed client, post-reduction sequencing before every next
+      child, unchanged 60-sample host baseline/thresholds/hysteresis, exact
+      5-second wait, parent-only environment filtering, external controller/core
+      and test packet, focused failing-first evidence, and the remeasured
+      directory-architecture baseline. Full/shard continuation remains
+      NOT-PROVEN and task 5.19 remains unchecked.
+
 ## 6. Immutable baseline and adjudication
 
 - [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/

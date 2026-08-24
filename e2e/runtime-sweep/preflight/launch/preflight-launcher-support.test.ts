@@ -1,4 +1,11 @@
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
@@ -31,15 +38,70 @@ const withSource = async <T>(
   }
 };
 
+const HOST_CHECKPOINT_ROOT_ENV = "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT";
+const HOST_CHECKPOINT_ROOT_ENV_ALLOWLIST = new Set([
+  "e2e/runtime-sweep/preflight/run-runtime-preflight.ts",
+  "e2e/runtime-sweep/preflight/launch/preflight-launcher-support.ts",
+  "e2e/runtime-sweep/preflight/launch/preflight-launcher-support.test.ts",
+  "e2e/runtime-sweep/preflight/launch/checkpoint/preflight-reveal-host-checkpoint-launch.ts",
+]);
+
+const runtimeSweepSourceFiles = async (
+  directory: string,
+): Promise<string[]> => {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) return runtimeSweepSourceFiles(absolute);
+      if (!/\.(?:mjs|ts|tsx)$/u.test(entry.name)) return [];
+      return [absolute];
+    }),
+  );
+  return nested.flat();
+};
+
 describe("runtime preflight launcher boundaries", () => {
+  it("keeps the host checkpoint root raw reader on the allowlisted parent path", async () => {
+    const root = path.resolve(import.meta.dirname, "..", "..");
+    const files = await runtimeSweepSourceFiles(root);
+    const matches = (
+      await Promise.all(
+        files.map(async (file) =>
+          (await readFile(file, "utf8")).includes(HOST_CHECKPOINT_ROOT_ENV)
+            ? path.relative(path.resolve(root, "..", ".."), file)
+            : undefined,
+        ),
+      )
+    ).filter((file): file is string => file !== undefined);
+    expect(matches.toSorted()).toEqual(
+      [...HOST_CHECKPOINT_ROOT_ENV_ALLOWLIST].toSorted(),
+    );
+  });
+
   it("routes repair canaries through the parent and forbids child-authored PASS", async () => {
-    const [launcher, child] = await Promise.all([
+    const [launcher, child, parent, checkpointParent] = await Promise.all([
       readFile(
         path.resolve(import.meta.dirname, "..", "run-runtime-preflight.ts"),
         "utf8",
       ),
       readFile(
         path.resolve(import.meta.dirname, "..", "preflight-canary.spec.ts"),
+        "utf8",
+      ),
+      readFile(
+        path.resolve(
+          import.meta.dirname,
+          "preflight-reveal-continuation-parent.ts",
+        ),
+        "utf8",
+      ),
+      readFile(
+        path.resolve(
+          import.meta.dirname,
+          "checkpoint",
+          "preflight-reveal-host-checkpoint-parent.ts",
+        ),
         "utf8",
       ),
     ]);
@@ -52,6 +114,19 @@ describe("runtime preflight launcher boundaries", () => {
     );
     expect(child).not.toContain("createPreflightCanaryPass");
     expect(child).not.toContain("runPlaywrightPreflightSegment");
+    const reduced = checkpointParent.indexOf(
+      "const checkpoint = await requestHostCheckpointAfterChild",
+    );
+    const nextChild = checkpointParent.indexOf(
+      "return runChildUntilDone({",
+      reduced,
+    );
+    expect(reduced).toBeGreaterThan(-1);
+    expect(nextChild).toBeGreaterThan(reduced);
+    expect(
+      checkpointParent.indexOf("if (result.done) return", reduced),
+    ).toBeLessThan(reduced);
+    expect(parent).not.toContain("requestHostCheckpointAfterChild");
   });
 
   it("keeps canary independent of a stale journal and creates assignment before repair full", async () => {
@@ -73,11 +148,19 @@ describe("runtime preflight launcher boundaries", () => {
             RUNTIME_SWEEP_PREFLIGHT_ASSIGNMENT: paths.assignmentPath,
             RUNTIME_SWEEP_PREFLIGHT_JOURNAL: paths.journalPath,
             RUNTIME_SWEEP_PREFLIGHT_SEGMENTS: paths.segmentRoot,
+            RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT: path.join(
+              archiveRoot,
+              "5.19-admin-demo",
+              "host-checkpoints",
+            ),
           },
           "canary",
         );
         expect(canaryEnvironment).not.toHaveProperty(
           "RUNTIME_SWEEP_PREFLIGHT_JOURNAL",
+        );
+        expect(canaryEnvironment).not.toHaveProperty(
+          "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT",
         );
 
         const events: string[] = [];
