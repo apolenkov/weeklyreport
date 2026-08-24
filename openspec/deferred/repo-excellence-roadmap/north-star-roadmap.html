@@ -250,13 +250,13 @@
       <div class="panel">
         <h3>Identity и граница текущей редакции</h3>
         <p>
-          <strong>Текущий committed source:</strong> ветка
-          <code>campaign/cr-001-20260820</code>, <code>HEAD</code>
-          <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code>, дерево
-          <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>. Это точная
-          source-bound точка, принятая в границе Sol plan gate; до этой
+          <strong>Текущий product source перед этой docs-only редакцией:</strong>
+          ветка <code>campaign/cr-001-20260820</code>, commit
+          <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code>, дерево
+          <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Это точная
+          source-bound точка после последнего принятого UI-атома; до этой
           metadata-only редакции worktree был чистым. Она не содержит нового
-          runtime acceptance.
+          полного runtime acceptance.
         </p>
         <p>
           <strong>Граница harness-происхождения:</strong> исторический
@@ -289,8 +289,8 @@
             <td>
               Для этой редакции текущий source identity — ветка
               <code>campaign/cr-001-20260820</code>, committed
-              <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> с деревом
-              <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>. Свежий
+              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с деревом
+              <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -389,8 +389,8 @@
             </td>
             <td>
               Для текущего source identity
-              <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> /
-              <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code> этот lane
+              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> /
+              <code>6dd721db67100234d2319d659559d1b60d49f662</code> этот lane
               изменяет только OpenSpec/roadmap metadata. Исторические
               code/test/build receipts не переносятся как current acceptance;
               runtime и browser evidence остаются NOT-PROVEN.
@@ -436,8 +436,8 @@
             </td>
             <td>
               На текущем committed source
-              <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> /
-              <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code> Wave 0 не
+              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> /
+              <code>6dd721db67100234d2319d659559d1b60d49f662</code> Wave 0 не
               выполняет exact <code>admin/demo</code> canary. Исторические
               contract/test/review receipts сохраняются как provenance, но не
               дают current runtime receipt, root-cause verdict или право менять
@@ -544,6 +544,20 @@
         </div>
       </div>
 
+      <div class="callout">
+        <strong>Последний UI-атом на этом product source:</strong> этапы SDLC
+        переведены в отдельные строки полной ширины с иконками и статусными
+        индикаторами. Свежий real-Chrome пакет для этого атома содержит 24
+        строки и 24 индикатора, сохранённые <code>scrollY=0</code>, видимое
+        верхнее меню и отсутствие горизонтального overflow; toggle/focus
+        bounds не изменяются. Артефакты находятся в
+        <code>/home/user/work/customreport-archive/2026-08-24-ui-runtime-reflow/</code>;
+        independent whole-frame review и финальный Sol review имеют статус
+        <code>PASS</code>. Это отдельное UI-доказательство и не заменяет
+        historical desktop packet <code>51/51 + 18 + L10</code>, полный runtime
+        sweep или <code>runtimeEvidenceSha</code>.
+      </div>
+
       <details>
         <summary>
           Техническое происхождение пакета (вторично для решения владельца)
@@ -574,8 +588,8 @@
           final resweep</code
         >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
         ограниченной диагностической области. Текущий source identity уже
-        зафиксирован в <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> с
-        деревом <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>; Sol plan
+        зафиксирован в <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с
+        деревом <code>6dd721db67100234d2319d659559d1b60d49f662</code>; Sol plan
         gate <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
         должны пройти host eligibility и новый executable pre-run gate; эта
@@ -790,8 +804,8 @@
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>ed15dae8d3d8c02806c494cf5d76589f0bc85a7a</code> с деревом
-        <code>6c24d6f3c4203f2525691d39dc60b6cee12a4e13</code>. Pair-level
+        <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с деревом
+        <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Pair-level
         code/test/review and all runtime claims remain separately bounded;
         <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
         после фиксации получит отдельный SHA/tree. Дорожная карта не содержит
