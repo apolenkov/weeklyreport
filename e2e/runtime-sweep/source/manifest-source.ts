@@ -46,6 +46,8 @@ export interface CampaignManifestInput {
   readonly repoRoot: string;
   readonly outputPath: string;
   readonly sourcePath?: string;
+  readonly sourceValidationPath?: string;
+  readonly sourceValidationFileSha256?: string;
   readonly preflightPath?: string;
   readonly campaignId: string;
   readonly sourceSha: string;

@@ -2,12 +2,16 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   runtimeApiServerCommand,
   runtimeApiServerCwd,
 } from "../../runtime-api-server-command.ts";
+
+vi.mock("../source/runtime-source-authority.ts", () => ({
+  assertRuntimeSourceAuthorityFromEnvironment: vi.fn(() => Promise.resolve()),
+}));
 
 const SOURCE_SHA = "a".repeat(40);
 const ENV_KEYS = [

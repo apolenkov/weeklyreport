@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { SeedProfile } from "../../source/contracts.ts";
 import type {
   RuntimeLane,
@@ -51,6 +53,11 @@ export const runtimeLaneProfileEnvironment = (
   RUNTIME_SWEEP_API_PORT: String(input.lane.apiPort),
   RUNTIME_SWEEP_WEB_PORT: String(input.lane.webPort),
   RUNTIME_SWEEP_ARCHIVE: input.lane.archiveRoot,
+  RUNTIME_SWEEP_SOURCE: path.join(input.lane.archiveRoot, "SOURCE.json"),
+  RUNTIME_SWEEP_SOURCE_VALIDATION: path.join(
+    input.lane.archiveRoot,
+    "SOURCE-VALIDATION.json",
+  ),
   RUNTIME_SWEEP_PROFILE: input.profile,
   RUNTIME_SWEEP_SOURCE_SHA: input.assignment.sourceSha,
   RUNTIME_SWEEP_RUN_ID: input.run.runId,

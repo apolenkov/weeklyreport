@@ -50,6 +50,7 @@ const laneSchema = z
 const sourceArtifactsSchema = z
   .object({
     SOURCE: sha256DigestSchema,
+    SOURCE_VALIDATION: sha256DigestSchema,
     PREFLIGHT: sha256DigestSchema,
     MATRIX: sha256DigestSchema,
     MANIFEST: sha256DigestSchema,

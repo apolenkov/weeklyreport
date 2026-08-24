@@ -10,7 +10,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createRuntimeLaneAssignment } from "./runtime-lane-contract.ts";
 import {
@@ -50,6 +50,13 @@ const fixture = async () => {
   };
   return {
     root,
+    authority: {
+      expectedSource: {} as never,
+      receiptFileSha256: digestAt(1),
+    },
+    dependencies: {
+      assertValidatedSource: vi.fn(() => Promise.resolve({} as never)),
+    },
     assignment: createRuntimeLaneAssignment({
       artifact: "RUNTIME_LANE_ASSIGNMENT",
       version: 1,
@@ -59,9 +66,10 @@ const fixture = async () => {
       sourceArchiveRoot: root,
       sourceArtifacts: {
         SOURCE: digestAt(0),
-        PREFLIGHT: digestAt(1),
-        MATRIX: digestAt(2),
-        MANIFEST: digestAt(3),
+        SOURCE_VALIDATION: digestAt(1),
+        PREFLIGHT: digestAt(2),
+        MATRIX: digestAt(3),
+        MANIFEST: digestAt(4),
       },
       profiles: ["minimal"],
       lanes: [
@@ -99,7 +107,7 @@ const fixture = async () => {
 
 describe("runtime lane archive containment", () => {
   it("rejects a parent symlink before creating an external lane", async () => {
-    const { root, assignment } = await fixture();
+    const { root, assignment, authority, dependencies } = await fixture();
     const outside = await realpath(
       await mkdtemp(path.join(os.tmpdir(), "runtime-lane-outside-")),
     );
@@ -107,32 +115,32 @@ describe("runtime lane archive containment", () => {
     await mkdir(path.join(root, "lanes"));
     await symlink(outside, path.join(root, "lanes", "one-cell"));
 
-    await expect(prepareRuntimeLaneArchives(assignment)).rejects.toThrow(
-      /not a regular directory/u,
-    );
+    await expect(
+      prepareRuntimeLaneArchives(assignment, authority, dependencies),
+    ).rejects.toThrow(/not a regular directory/u);
     await expect(access(path.join(outside, "a"))).rejects.toMatchObject({
       code: "ENOENT",
     });
   });
 
   it("rejects a source artifact symlink before creating lane roots", async () => {
-    const { root, assignment } = await fixture();
+    const { root, assignment, authority, dependencies } = await fixture();
     const sourcePath = path.join(root, "SOURCE.json");
     const realSourcePath = path.join(root, "SOURCE.real.json");
     await writeFile(realSourcePath, "SOURCE.json\n", "utf8");
     await rm(sourcePath);
     await symlink(realSourcePath, sourcePath);
 
-    await expect(prepareRuntimeLaneArchives(assignment)).rejects.toThrow(
-      /not a regular file/u,
-    );
+    await expect(
+      prepareRuntimeLaneArchives(assignment, authority, dependencies),
+    ).rejects.toThrow(/not a regular file/u);
     await expect(
       access(assignment.lanes[0]?.archiveRoot ?? ""),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("rejects an existing symlink target after exclusive copy refusal", async () => {
-    const { root, assignment } = await fixture();
+    const { root, assignment, authority, dependencies } = await fixture();
     const firstLane = assignment.lanes[0];
     if (firstLane === undefined) throw new Error("Missing lane A");
     await mkdir(firstLane.archiveRoot, { recursive: true });
@@ -141,8 +149,32 @@ describe("runtime lane archive containment", () => {
       path.join(firstLane.archiveRoot, "SOURCE.json"),
     );
 
-    await expect(prepareRuntimeLaneArchives(assignment)).rejects.toThrow(
-      /not a regular file/u,
+    await expect(
+      prepareRuntimeLaneArchives(assignment, authority, dependencies),
+    ).rejects.toThrow(/not a regular file/u);
+  });
+
+  it("revalidates the canonical source pair before and after every copy", async () => {
+    const { assignment, authority, dependencies } = await fixture();
+
+    await prepareRuntimeLaneArchives(assignment, authority, dependencies);
+
+    expect(dependencies.assertValidatedSource).toHaveBeenCalledTimes(
+      assignment.lanes.length + 1,
     );
+    expect(dependencies.assertValidatedSource).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        expectedReceiptFileSha256: authority.receiptFileSha256,
+        sourcePath: path.join(assignment.sourceArchiveRoot, "SOURCE.json"),
+      }),
+    );
+    for (const lane of assignment.lanes)
+      expect(dependencies.assertValidatedSource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expectedReceiptFileSha256: authority.receiptFileSha256,
+          sourcePath: path.join(lane.archiveRoot, "SOURCE.json"),
+        }),
+      );
   });
 });

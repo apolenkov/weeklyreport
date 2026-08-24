@@ -20,11 +20,15 @@ import {
 
 const SOURCE_ARTIFACTS = [
   "SOURCE.json",
+  "SOURCE-VALIDATION.json",
   "PREFLIGHT.json",
   "MATRIX.json",
   "MANIFEST.json",
 ] as const;
-const MANIFEST_CONTENT_INDEX = SOURCE_ARTIFACTS.length - 1;
+const SOURCE_VALIDATION_CONTENT_INDEX = 1;
+const PREFLIGHT_CONTENT_INDEX = 2;
+const MATRIX_CONTENT_INDEX = 3;
+const MANIFEST_CONTENT_INDEX = 4;
 
 type AssignmentGroup = Readonly<{
   readonly profile: SeedProfile;
@@ -55,8 +59,9 @@ const sourceArtifactDigests = async (
   };
   return {
     SOURCE: digest(contentAt(0)),
-    PREFLIGHT: digest(contentAt(1)),
-    MATRIX: digest(contentAt(2)),
+    SOURCE_VALIDATION: digest(contentAt(SOURCE_VALIDATION_CONTENT_INDEX)),
+    PREFLIGHT: digest(contentAt(PREFLIGHT_CONTENT_INDEX)),
+    MATRIX: digest(contentAt(MATRIX_CONTENT_INDEX)),
     MANIFEST: digest(contentAt(MANIFEST_CONTENT_INDEX)),
   };
 };

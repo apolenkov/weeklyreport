@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import {
   assertLivePreflightSourceIdentity,
   assertPreflightCanaryPassForSource,
@@ -36,6 +36,7 @@ const requiredEnv = (name: string): string => {
 };
 
 const mode = process.argv[2];
+const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
 
 const runShardPreflight = async (): Promise<number> => {
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
@@ -48,6 +49,7 @@ const runShardPreflight = async (): Promise<number> => {
   const launch = await preparePreflightShardLaunch({
     environment: process.env,
     repoRoot,
+    validatedSource: sourceAuthority.source,
   });
   return runPreflightPlaywrightChild({
     repoRoot,
@@ -115,11 +117,11 @@ if (mode === "shard") {
     return outputPath;
   };
 
-  const sourcePath = await assertArchiveFile(
+  await assertArchiveFile(
     "RUNTIME_SWEEP_SOURCE",
     requiredEnv("RUNTIME_SWEEP_SOURCE"),
   );
-  const source = await readSourceArtifact(sourcePath);
+  const source = sourceAuthority.source;
   if (launchMode === "canary")
     await assertArchiveFile(
       "RUNTIME_SWEEP_PREFLIGHT_CANARY",

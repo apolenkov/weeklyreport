@@ -8,7 +8,7 @@ import {
 } from "@playwright/test";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary.ts";
 import {
   assertCapacitySurveyPlanMatchesSource,
@@ -38,6 +38,7 @@ const requiredEnv = (name: string): string => {
 
 const validatedReplayFromEnvironment =
   async (): Promise<ValidatedFailureFrontierReplay> => {
+    const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
     const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
     const archiveRoot = await ensurePreflightArchiveRoot(
       path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE")),
@@ -57,7 +58,7 @@ const validatedReplayFromEnvironment =
         path.join(packetRoot, "FAILURE_FRONTIER.json"),
       ),
     ]);
-    const source = await readSourceArtifact(sourcePath);
+    const source = sourceAuthority.source;
     const plan = await readCapacitySurveyPlan({
       archiveRoot,
       filePath: planPath,

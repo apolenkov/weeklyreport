@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { parseRuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
 import { mergeRuntimeLanes } from "./merge-runtime-lanes.ts";
 
@@ -11,6 +12,7 @@ const requiredEnv = (name: string): string => {
 };
 
 async function main(): Promise<void> {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const assignmentPath = path.resolve(
     requiredEnv("RUNTIME_SWEEP_LANE_ASSIGNMENT"),
   );

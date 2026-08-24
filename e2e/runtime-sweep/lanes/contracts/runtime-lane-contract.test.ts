@@ -21,6 +21,7 @@ const body = (
   sourceArchiveRoot: ROOT,
   sourceArtifacts: {
     SOURCE: DIGEST,
+    SOURCE_VALIDATION: DIGEST,
     PREFLIGHT: DIGEST,
     MATRIX: DIGEST,
     MANIFEST: DIGEST,

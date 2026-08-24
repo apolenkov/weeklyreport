@@ -269,6 +269,61 @@ the `MATRIX.json` limit schema remains limited to `maxCases` and
 - **AND** mutating, recovery, fault, concurrency, infrastructure, and unknown executions receive isolated preparation and never consume the shared prepared state
 - **AND** any non-pass cell stops the group without executing a later cell on uncertain state
 
+### Requirement: Canonical SOURCE authority precedes every runtime effect
+
+The campaign SHALL create `SOURCE.json` only through the canonical
+`buildCampaignSource`/`writeCampaignSource` path. Before packet or gate
+materialization and before any runtime-capable entrypoint may create a
+directory, resolve destructive consent, spawn a child or server, launch a
+browser, or access Docker, PostgreSQL, or Redis, one non-runtime validator
+SHALL rebuild the expected source from the same clean repository inputs,
+parse the supplied source, and require exact equality with the canonical
+serialized bytes. Embedded source-digest validity alone SHALL NOT establish
+canonical origin.
+
+Only a successful exact comparison MAY publish one immutable
+`SOURCE-VALIDATION.json` PASS receipt. The receipt SHALL bind the campaign id,
+clean source SHA/tree/tree digest, source digest, plan digest, exact source-file
+SHA-256 and byte length, validation time, and a self-digest. A failed validation
+SHALL publish no FAIL receipt and SHALL leave an existing receipt unchanged.
+The validator SHALL return the exact receipt-file SHA-256 to the invoking
+process, and every consumer SHALL require that external value in addition to
+the receipt's self-digest.
+Every consumer SHALL recheck both the source and receipt without writing before
+crossing its effect boundary. A copied packet SHALL carry both artifacts and
+repeat the same semantic check over the copied bytes before resource
+initialization.
+
+#### Scenario: stale or synthetic source edits fail before effects
+
+- **WHEN** `campaignId` or any other source field changes with a stale digest,
+  a recalculated digest, reordered or whitespace-drifted bytes, a foreign
+  campaign/SHA/tree, or bytes changed after receipt publication
+- **THEN** validation rejects the source or receipt before packet, gate,
+  filesystem, runtime/browser/server/resource child-process, browser, Docker,
+  database, or Redis effects
+- **AND** no regenerated internal digest or external envelope digest can
+  convert the manual source into canonical authority
+- **AND** read-only Git/tool subprocesses used by the canonical validator are
+  permitted but cannot start product runtime or mutate project state
+
+#### Scenario: only canonical serialization publishes PASS
+
+- **WHEN** the existing canonical builder writes a source for the exact clean
+  campaign SHA and the validator rebuilds the same source
+- **THEN** exact canonical bytes may create one exclusive PASS receipt and a
+  later check may verify it without writing
+- **AND** a missing, tampered, rehashed, foreign, duplicate, or pre-existing
+  receipt cannot be overwritten or accepted as authority
+
+#### Scenario: direct runtime entrypoints cannot bypass source authority
+
+- **WHEN** a preflight, diagnostic, capacity, failure-frontier, manifest,
+  lane, coverage, AI-import, or live Playwright entrypoint is launched directly
+- **THEN** it checks the exact source and receipt before its first side effect
+- **AND** production entrypoints cannot import the raw source reader as an
+  alternate authority path while the static harness remains non-runtime
+
 ### Requirement: Capacity calibration is diagnostic-only and terminal
 
 The campaign SHALL calibrate production reveal limits through a separately

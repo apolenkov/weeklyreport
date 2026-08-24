@@ -60,6 +60,7 @@ const identityFor = (
     sourceArchiveRoot: path.dirname(lane.archiveRoot),
     sourceArtifacts: {
       SOURCE: DIGEST,
+      SOURCE_VALIDATION: DIGEST,
       PREFLIGHT: DIGEST,
       MATRIX: DIGEST,
       MANIFEST: DIGEST,

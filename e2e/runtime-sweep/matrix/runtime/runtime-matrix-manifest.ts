@@ -11,7 +11,8 @@ import {
   type SeedProfile,
   seedProfileSchema,
 } from "../../source/contracts.ts";
-import { readSourceArtifact } from "../../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../../source/runtime-source-authority.ts";
+import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { sha256Hex } from "../../support/ids.ts";
 import {
   assertFrozenResolverOutcomes,
@@ -82,7 +83,7 @@ const readRuntimeArtifacts = async (
 ): Promise<
   Readonly<{
     readonly manifest: CampaignManifest;
-    readonly source: Awaited<ReturnType<typeof readSourceArtifact>>;
+    readonly source: SourceArtifact;
     readonly matrix: FrozenMatrix;
   }>
 > => {
@@ -90,9 +91,7 @@ const readRuntimeArtifacts = async (
   const manifest = campaignManifestSchema.parse(
     JSON.parse(await readFile(manifestPath, "utf8")),
   );
-  const source = await readSourceArtifact(
-    path.join(path.dirname(manifestPath), "SOURCE.json"),
-  );
+  const source = (await assertRuntimeSourceAuthorityFromEnvironment()).source;
   if (source.sourceSha !== manifest.sourceSha)
     throw new RuntimeMatrixManifestError(
       "SOURCE.json source SHA does not match MANIFEST.json",
@@ -153,9 +152,7 @@ const statesFromFrozenCases = (
 const resolverGapsForPlan = (
   routes: CampaignManifest["routes"],
   plan: CampaignMatrixPlan,
-  declarations: Awaited<
-    ReturnType<typeof readSourceArtifact>
-  >["specializedDeclarations"],
+  declarations: SourceArtifact["specializedDeclarations"],
 ): readonly ResolverOutcomeNotApplicable[] =>
   routes.flatMap((route) =>
     route.kind === "resolver"

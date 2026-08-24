@@ -39,7 +39,7 @@ export type CapacityFrontierAdapterResult = Readonly<
 >;
 
 export type SourceBoundCapacityFrontierInput = Readonly<{
-  /** Must come from readSourceArtifact, not an ad-hoc identity object. */
+  /** Must come from canonical runtime source authority, not an ad-hoc identity object. */
   readonly source: SourceArtifact;
   /** Must come from readRevealFailureFrontierPacket after archive read-back. */
   readonly packet: RevealFailureFrontierPacket;

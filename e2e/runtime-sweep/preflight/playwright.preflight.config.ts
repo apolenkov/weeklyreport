@@ -8,6 +8,7 @@ import {
   runtimeApiServerCommand,
   runtimeApiServerCwd,
 } from "../../runtime-api-server-command.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime/runtime-auth-env.ts";
 import { nextDistDirForNextConfig } from "./runtime/runtime-next-dist.ts";
@@ -19,6 +20,7 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
+await assertRuntimeSourceAuthorityFromEnvironment();
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const preflightDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
 assertE2eRuntimeDestructiveTarget(

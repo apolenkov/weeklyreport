@@ -2,7 +2,10 @@ import path from "node:path";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import type { RuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
-import { prepareRuntimeLaneArchives } from "./contracts/runtime-lane-files.ts";
+import {
+  prepareRuntimeLaneArchives,
+  type RuntimeLaneSourceAuthority,
+} from "./contracts/runtime-lane-files.ts";
 import {
   assertRuntimeLaneSource,
   startRuntimeLaneSourceMonitor,
@@ -41,12 +44,14 @@ const redisRunIdFor = (
 };
 
 interface RuntimeLaneRunInitializationDependencies {
+  readonly prepareArchives: typeof prepareRuntimeLaneArchives;
   readonly initializeResources: typeof initializeRuntimeLaneResources;
   readonly createRunIdentity: typeof createRuntimeLaneRunIdentity;
 }
 
 const DEFAULT_RUN_INITIALIZATION_DEPENDENCIES: RuntimeLaneRunInitializationDependencies =
   {
+    prepareArchives: prepareRuntimeLaneArchives,
     initializeResources: initializeRuntimeLaneResources,
     createRunIdentity: createRuntimeLaneRunIdentity,
   };
@@ -54,6 +59,7 @@ const DEFAULT_RUN_INITIALIZATION_DEPENDENCIES: RuntimeLaneRunInitializationDepen
 export const initializeRuntimeLaneRun = async (
   input: Readonly<{
     readonly assignment: RuntimeLaneAssignment;
+    readonly sourceAuthority: RuntimeLaneSourceAuthority;
     readonly baseDatabaseUrl: string;
     readonly redisRecreationAuthorized: boolean;
   }>,
@@ -64,6 +70,7 @@ export const initializeRuntimeLaneRun = async (
     readonly run: RuntimeLaneRunIdentity;
   }>
 > => {
+  await dependencies.prepareArchives(input.assignment, input.sourceAuthority);
   const redisRunIds = await dependencies.initializeResources(input);
   return {
     redisRunIds,
@@ -139,6 +146,7 @@ export async function runRuntimeLanes(
   input: Readonly<{
     readonly assignmentPath: string;
     readonly assignment: RuntimeLaneAssignment;
+    readonly sourceAuthority: RuntimeLaneSourceAuthority;
     readonly baseDatabaseUrl: string;
     readonly redisRecreationAuthorized: boolean;
   }>,
@@ -160,11 +168,11 @@ export async function runRuntimeLanes(
     const bugsinkBaseline = await readRuntimeBugsinkBaseline(observability);
     const { redisRunIds, run } = await initializeRuntimeLaneRun({
       assignment: input.assignment,
+      sourceAuthority: input.sourceAuthority,
       baseDatabaseUrl: input.baseDatabaseUrl,
       redisRecreationAuthorized: input.redisRecreationAuthorized,
     });
     await writeRuntimeLaneRunIdentity(input.assignment, run);
-    await prepareRuntimeLaneArchives(input.assignment);
     await writeRuntimeObservabilityReadiness(
       input.assignment,
       run,

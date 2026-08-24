@@ -267,6 +267,20 @@
       guards fail-closed, preserve historical raw-free receipt reason tokens,
       and add focused reclaimable-memory regression coverage.
 
+- [x] 5.21 Make canonical SOURCE origin a fail-before-effects authority. Rebuild
+      the expected artifact through the existing campaign builder, require exact
+      canonical bytes in addition to the embedded digest, publish one immutable
+      source/SHA/tree/plan/file-bound PASS receipt, and require a read-only
+      receipt recheck before packet/gate materialization and every runtime-capable
+      preflight, manifest, lane, coverage, AI-import, or Playwright entrypoint.
+      Reject stale, foreign, tampered, synthetically rehashed, reordered,
+      whitespace-drifted, post-receipt, missing, duplicate, and overwritten
+      artifacts before directory, runtime/browser/server/resource child,
+      browser, destructive guard, Docker, database, or Redis effects; allow
+      only validator-owned read-only Git/tool subprocesses, keep the static
+      harness exempt, and add a
+      source-import architecture regression.
+
 ## 6. Immutable baseline and adjudication
 
 - [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/

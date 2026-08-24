@@ -2,6 +2,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { readCapacitySurveyPlan } from "./capacity/preflight-capacity-survey-io.ts";
 import { runPreflightFailureFrontierReplayChild } from "./launch/bounded/preflight-failure-frontier-replay-child.ts";
 import {
@@ -38,6 +39,7 @@ const exactPlanMaxDuration = (
 };
 
 export const runRuntimeFailureFrontierReplay = async (): Promise<void> => {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const databaseUrl = requiredEnv("E2E_DATABASE_URL");
   assertE2eRuntimeDestructiveTarget(
     "runtime-failure-frontier-replay-launch",

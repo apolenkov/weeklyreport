@@ -17,6 +17,9 @@ vi.mock(
 vi.mock("./launch/bounded/preflight-failure-frontier-replay-child.ts", () => ({
   runPreflightFailureFrontierReplayChild: vi.fn(),
 }));
+vi.mock("../source/runtime-source-authority.ts", () => ({
+  assertRuntimeSourceAuthorityFromEnvironment: vi.fn(() => Promise.resolve()),
+}));
 
 import { readCapacitySurveyPlan } from "./capacity/preflight-capacity-survey-io.ts";
 import { runPreflightFailureFrontierReplayChild } from "./launch/bounded/preflight-failure-frontier-replay-child.ts";
