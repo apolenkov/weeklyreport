@@ -210,6 +210,19 @@ terminates the current attempt; only cooperative receipt chunks advance to a
 new child. A new parent process starts a fresh attempt and cannot reuse the
 prior in-memory authority secret.
 
+The exact `admin/demo` canary continuation additionally requires a parent-only
+file-backed host checkpoint after each accepted nonterminal child chunk. The
+parent seals the reducer grant first, publishes a source/tree/state/route-bound
+request, and waits exactly five seconds for the external controller to append
+one healthy, normal, later host sample. Requests and responses are strict,
+newline-terminated canonical JSON (16 KiB maximum, mode 0600, immutable
+no-clobber publication) under a fresh mode-0700 archive-confined mailbox. The
+controller keeps the existing 60-sample baseline, evaluator thresholds and
+three-sample hysteresis unchanged; malformed, duplicate, gapped, stale,
+breached, or non-normal observations terminate the parent without launching
+the next child. The checkpoint path is removed from every Playwright/config/web
+and API child environment and carries no resume authority or secret.
+
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after
 each step and reject a path that mutates persisted state. A transition that
