@@ -10,6 +10,7 @@ import {
   runtimeApiServerCommand,
   runtimeApiServerCwd,
 } from "../../runtime-api-server-command.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertSourceSha } from "../support/ids.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
 import { runtimeSweepWebEnvironment } from "./runtime/runtime-auth-env.ts";
@@ -21,6 +22,7 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
+await assertRuntimeSourceAuthorityFromEnvironment();
 const ARCHIVE_ROOT = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const SOURCE_SHA = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
 assertSourceSha(SOURCE_SHA);

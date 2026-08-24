@@ -253,6 +253,32 @@ control and case limits again as a second check; it never trims discovered
 controls or finalized rows. `MATRIX.json` keeps only its existing two limit
 fields because reveal limits govern preflight execution, not matrix shape.
 
+`SOURCE.json` also has one canonical origin boundary. The existing
+`buildCampaignSource`/`writeCampaignSource` path remains the only source
+builder. Before a source can authorize packet construction, a host receipt,
+preflight, matrix finalization, lane planning, resource preparation, replay,
+coverage finalization, or AI import, a non-runtime validator rebuilds the
+expected source from the same clean repository inputs and compares the exact
+canonical serialization with the supplied bytes. A synthetically rehashed
+manual edit is therefore rejected even when its embedded digest is internally
+valid.
+
+Only that exact comparison may publish an immutable
+`SOURCE-VALIDATION.json` PASS receipt. The receipt binds the campaign, clean
+SHA/tree/tree digest, source and plan digests, exact source-file digest and byte
+length, and its own digest. The validator also publishes the receipt file SHA-256
+to the invoking process; every later consumer requires that external value, so
+changing and internally rehashing a receipt cannot create authority.
+Runtime-capable entrypoints check the source and receipt before directory
+creation, destructive guards, runtime/browser/server/resource child processes,
+browser work, or Docker/database/Redis access. The harness-only Playwright
+configuration remains exempt because it imports no live runtime authority.
+Packet materialization must copy both source and receipt and repeat the same
+read-only check over the copied bytes before resource initialization. Read-only
+Git/tool subprocesses used to rebuild the canonical source are part of the
+validator and are not runtime effects. An envelope, host receipt, or Sol gate
+cannot substitute for this source-authority boundary.
+
 Capacity calibration uses a separate diagnostic protocol rather than weakening
 the acceptance runner. A `PREFLIGHT_CAPACITY_SURVEY_PLAN` binds the current
 source SHA/tree/digest, one exact selector and resolved state/route, explicit

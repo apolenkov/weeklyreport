@@ -83,6 +83,7 @@ export const assignmentFor = (root: string): RuntimeLaneAssignment => ({
   sourceArchiveRoot: root,
   sourceArtifacts: {
     SOURCE: "d".repeat(DIGEST_LENGTH),
+    SOURCE_VALIDATION: "1".repeat(DIGEST_LENGTH),
     PREFLIGHT: "e".repeat(DIGEST_LENGTH),
     MATRIX: "f".repeat(DIGEST_LENGTH),
     MANIFEST: "0".repeat(DIGEST_LENGTH),

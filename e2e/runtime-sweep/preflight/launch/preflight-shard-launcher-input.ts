@@ -1,9 +1,7 @@
 import * as path from "node:path";
 
-import {
-  readSourceArtifact,
-  type SourceArtifact,
-} from "../../source/source-artifact.ts";
+import { validateCanonicalRuntimeSource } from "../../source/runtime-source-validation.ts";
+import type { SourceArtifact } from "../../source/source-artifact.ts";
 import {
   assertPreflightArchivePath,
   assertPreflightRegularFile,
@@ -99,6 +97,7 @@ const assertProofSelectors = (
 export const readShardSourceInputs = async (input: {
   readonly environment: NodeJS.ProcessEnv;
   readonly archiveRoot: string;
+  readonly validatedSource: SourceArtifact;
 }): Promise<ShardSourceInputs> => {
   const sourcePath = normalizedPath(input.environment, "RUNTIME_SWEEP_SOURCE");
   const assignmentPath = normalizedPath(
@@ -119,7 +118,10 @@ export const readShardSourceInputs = async (input: {
   await assertPreflightRegularFile(sourcePath);
   await assertPreflightArchivePath(input.archiveRoot, assignmentPath);
   await assertPreflightRegularFile(assignmentPath);
-  const source = await readSourceArtifact(sourcePath);
+  const { source } = await validateCanonicalRuntimeSource({
+    sourcePath,
+    expectedSource: input.validatedSource,
+  });
   const assignment = await readPreflightShardAssignment(assignmentPath);
   assertPreflightShardAssignmentMatchesSource(source, assignment);
   return { sourcePath, assignmentPath, source, assignment };

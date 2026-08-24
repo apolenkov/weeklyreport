@@ -1,4 +1,5 @@
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import {
   MAX_RUNTIME_LANE_COUNT,
   MIN_RUNTIME_LANE_COUNT,
@@ -30,6 +31,7 @@ const laneCountFrom = (value: string): number => {
 };
 
 async function main(): Promise<void> {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const baseDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
   assertE2eRuntimeDestructiveTarget(
     "runtime-lane-infrastructure-cli",

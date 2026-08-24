@@ -3,10 +3,13 @@ import { constants } from "node:fs";
 import { copyFile, lstat, mkdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { assertValidatedRuntimeSource } from "../../source/runtime-source-validation.ts";
+import type { SourceArtifact } from "../../source/source-artifact.ts";
 import type { RuntimeLaneAssignment } from "./runtime-lane-contract.ts";
 
 export const RUNTIME_SOURCE_FILES = [
   ["SOURCE.json", "SOURCE"],
+  ["SOURCE-VALIDATION.json", "SOURCE_VALIDATION"],
   ["PREFLIGHT.json", "PREFLIGHT"],
   ["MATRIX.json", "MATRIX"],
   ["MANIFEST.json", "MANIFEST"],
@@ -28,6 +31,30 @@ const verifyDigest = async (
       `Runtime lane source digest mismatch for ${filePath}: ${actual} != ${expected}`,
     );
 };
+
+export interface RuntimeLaneSourceAuthority {
+  readonly expectedSource: SourceArtifact;
+  readonly receiptFileSha256: string;
+}
+
+interface RuntimeLaneArchiveDependencies {
+  readonly assertValidatedSource: typeof assertValidatedRuntimeSource;
+}
+
+const DEFAULT_RUNTIME_LANE_ARCHIVE_DEPENDENCIES: RuntimeLaneArchiveDependencies =
+  { assertValidatedSource: assertValidatedRuntimeSource };
+
+const assertSemanticSourcePair = (
+  archiveRoot: string,
+  authority: RuntimeLaneSourceAuthority,
+  dependencies: RuntimeLaneArchiveDependencies,
+): Promise<unknown> =>
+  dependencies.assertValidatedSource({
+    sourcePath: path.join(archiveRoot, "SOURCE.json"),
+    receiptPath: path.join(archiveRoot, "SOURCE-VALIDATION.json"),
+    expectedSource: authority.expectedSource,
+    expectedReceiptFileSha256: authority.receiptFileSha256,
+  });
 
 const assertRegularFile = async (filePath: string): Promise<void> => {
   const stat = await lstat(filePath);
@@ -123,8 +150,21 @@ export const assertArchiveChildAfterCreate = async (
 
 export async function prepareRuntimeLaneArchives(
   assignment: RuntimeLaneAssignment,
+  authority: RuntimeLaneSourceAuthority,
+  dependencies: RuntimeLaneArchiveDependencies = DEFAULT_RUNTIME_LANE_ARCHIVE_DEPENDENCIES,
 ): Promise<void> {
   await verifyRuntimeLaneSource(assignment);
+  if (
+    assignment.sourceArtifacts.SOURCE_VALIDATION !== authority.receiptFileSha256
+  )
+    throw new Error(
+      "Runtime lane SOURCE-VALIDATION digest does not match external authority",
+    );
+  await assertSemanticSourcePair(
+    assignment.sourceArchiveRoot,
+    authority,
+    dependencies,
+  );
   await Promise.all(
     assignment.lanes.map(async (lane) => {
       await assertArchiveChildBeforeCreate(
@@ -145,6 +185,7 @@ export async function prepareRuntimeLaneArchives(
           ),
         ),
       );
+      await assertSemanticSourcePair(lane.archiveRoot, authority, dependencies);
     }),
   );
 }

@@ -33,9 +33,9 @@ import {
   writeAtomicManifestPair,
   writeManifestFile,
 } from "../source/manifest-source.ts";
+import { assertValidatedRuntimeSource } from "../source/runtime-source-validation.ts";
 import {
   parseSourceArtifact,
-  readSourceArtifact,
   serializeSourceArtifact,
   type SourceArtifact,
 } from "../source/source-artifact.ts";
@@ -61,7 +61,6 @@ export {
 } from "../source/manifest-source.ts";
 export {
   parseSourceArtifact,
-  readSourceArtifact,
   serializeSourceArtifact,
   type SourceArtifact,
   sourceArtifactSchema,
@@ -232,24 +231,20 @@ const sourceForStageB = async (
       path.join(path.dirname(input.outputPath), "PREFLIGHT.json"),
     "preflightPath",
   );
-  const source = await readSourceArtifact(sourcePath);
-  if (
-    source.sourceSha !== input.sourceSha ||
-    source.campaignId !== input.campaignId
-  )
-    throw new ManifestInputError("SOURCE.json does not match manifest inputs");
-  const { sourceTree, treeDigest } = await cleanSourceIdentity(
-    { ...input, sourceSha: source.sourceSha },
-    runCommand,
+  const receiptPath = requirePath(
+    input.sourceValidationPath ??
+      path.join(path.dirname(input.outputPath), "SOURCE-VALIDATION.json"),
+    "sourceValidationPath",
   );
-  if (sourceTree !== source.sourceTree)
-    throw new ManifestInputError(
-      "SOURCE.json source tree does not match the current clean HEAD",
-    );
-  if (treeDigest !== source.treeDigest)
-    throw new ManifestInputError(
-      "SOURCE.json tree digest does not match the current clean HEAD",
-    );
+  const expectedSource = await buildCampaignSource(input, runCommand);
+  if (input.sourceValidationFileSha256 === undefined)
+    throw new ManifestInputError("sourceValidationFileSha256 is required");
+  const { source } = await assertValidatedRuntimeSource({
+    sourcePath,
+    receiptPath,
+    expectedSource,
+    expectedReceiptFileSha256: input.sourceValidationFileSha256,
+  });
   const preflight = await readPreflightArtifact(preflightPath);
   return { source, preflight };
 };

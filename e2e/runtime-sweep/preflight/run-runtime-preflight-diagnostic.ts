@@ -2,7 +2,7 @@ import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary-selection.ts";
 import {
   type DiagnosticHostEnvelopeCounters,
@@ -46,6 +46,7 @@ if (mode !== "diagnostic" && mode !== "host-baseline")
   );
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
+const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
 const archiveRoot = await ensurePreflightArchiveRoot(
   path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE")),
 );
@@ -113,7 +114,7 @@ const runHostBaseline = async (): Promise<number> => {
   const outputRoot = hostEnvelopeOutputRootFromEnvironment(process.env);
   const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
   await assertPreflightArchivePath(archiveRoot, sourcePath);
-  const source = await readSourceArtifact(sourcePath);
+  const source = sourceAuthority.source;
   await assertLivePreflightSourceIdentity({ source, repoRoot });
   const sourceSha = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
   const sourceTree = requiredEnv("RUNTIME_SWEEP_SOURCE_TREE");
@@ -166,7 +167,7 @@ if (mode === "host-baseline") {
   );
   const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
   await assertPreflightArchivePath(archiveRoot, sourcePath);
-  const source = await readSourceArtifact(sourcePath);
+  const source = sourceAuthority.source;
   await assertLivePreflightSourceIdentity({ source, repoRoot });
   const stateId = requiredEnv("RUNTIME_SWEEP_DIAGNOSTIC_STATE_ID");
   if (!source.plan.states.some((state) => state.stateId === stateId))

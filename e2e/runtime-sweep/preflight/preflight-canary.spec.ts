@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import {
   assertLivePreflightSourceIdentity,
   preflightCanarySelectorFromEnvironment,
@@ -26,7 +26,6 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
 const canaryPath = path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"));
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const databaseUrl = requiredEnv("E2E_DATABASE_URL");
@@ -49,7 +48,7 @@ const continuationDeadlineAt =
 test("exact-state preflight canary reuses the full segment runner", async ({
   page,
 }) => {
-  const source = await readSourceArtifact(sourcePath);
+  const source = (await assertRuntimeSourceAuthorityFromEnvironment()).source;
   const campaignKind = resolvePreflightCampaignKind({
     ...(process.env.RUNTIME_SWEEP_CAMPAIGN_KIND === undefined
       ? {}

@@ -462,7 +462,7 @@
     {
       "id": "runtime-source",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-git|manifest-source(?:\\.test)?|source-artifact)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-git|manifest-source(?:\\.test)?|runtime-source-(?:authority|validation(?:-contract)?)|source-artifact|validate-runtime-source)\\.ts)$",
       "concern": "source-contracts",
       "role": "implementation",
       "target": "e2e/runtime-sweep/source/$1"
@@ -754,6 +754,14 @@
       "concern": "driver-import",
       "role": "implementation",
       "target": "e2e/runtime-sweep/driver/$1"
+    },
+    {
+      "id": "runtime-source-authority-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/(runtime-source-(?:authority-boundary|validation(?:-receipt)?)\\.test\\.ts)$",
+      "concern": "source-authority",
+      "role": "test",
+      "target": "e2e/runtime-sweep/source/$1"
     },
     {
       "id": "runtime-source-contract-tests",

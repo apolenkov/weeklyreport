@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary.ts";
 import { runPlaywrightPreflightSegment } from "./execution/playwright-preflight.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
@@ -23,7 +23,6 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
 const assignmentPath = path.resolve(
   requiredEnv("RUNTIME_SWEEP_PREFLIGHT_SHARD_ASSIGNMENT"),
 );
@@ -44,7 +43,7 @@ const completionPath = path.resolve(
 );
 
 test("source-bound shard publishes only SHARD_COMPLETE", async ({ page }) => {
-  const source = await readSourceArtifact(sourcePath);
+  const source = (await assertRuntimeSourceAuthorityFromEnvironment()).source;
   const assignment = await readPreflightShardAssignment(assignmentPath);
   assertPreflightShardAssignmentMatchesSource(source, assignment);
   const shard = assignment.shards.find(

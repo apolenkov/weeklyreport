@@ -7,10 +7,8 @@ import {
   devices,
 } from "@playwright/test";
 
-import {
-  readSourceArtifact,
-  type SourceArtifact,
-} from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
+import type { SourceArtifact } from "../source/source-artifact.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary.ts";
 import type { CapacitySurveyPlan } from "./capacity/preflight-capacity-survey-contract.ts";
 import {
@@ -142,6 +140,7 @@ const runCapacitySurveyInBrowser = async (input: {
 };
 
 export default async function runCapacitySurveyGlobalSetup(): Promise<void> {
+  const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
   const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
   const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
   const planPath = path.resolve(
@@ -186,7 +185,7 @@ export default async function runCapacitySurveyGlobalSetup(): Promise<void> {
     await ensurePreflightArchiveRoot(exactFailureFrontierRoot);
     await assertFailureFrontierManifestAbsent(exactFailureFrontierRoot);
   }
-  const source = await readSourceArtifact(sourcePath);
+  const source = sourceAuthority.source;
   const plan = await readCapacitySurveyPlan({
     archiveRoot: exactArchiveRoot,
     filePath: planPath,

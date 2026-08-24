@@ -4,10 +4,8 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
-import {
-  readSourceArtifact,
-  type SourceArtifact,
-} from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
+import type { SourceArtifact } from "../source/source-artifact.ts";
 import {
   assertLivePreflightSourceIdentity,
   resolvePreflightCanarySelection,
@@ -266,6 +264,7 @@ const runCapacitySurveyChildAndPublish = async (input: {
 };
 
 export const runRuntimeCapacitySurvey = async (): Promise<void> => {
+  const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
   const repoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
   const databaseUrl = requiredEnv("E2E_DATABASE_URL");
   assertE2eRuntimeDestructiveTarget(
@@ -274,7 +273,7 @@ export const runRuntimeCapacitySurvey = async (): Promise<void> => {
     process.env,
   );
   const paths = await capacitySurveyPaths();
-  const source = await readSourceArtifact(paths.sourcePath);
+  const source = sourceAuthority.source;
   await assertLivePreflightSourceIdentity({
     source,
     repoRoot,

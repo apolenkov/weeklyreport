@@ -41,11 +41,31 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const CATALOG_ROOT = path.join(REPO_ROOT, "e2e", "catalog");
 const OWNER_BOUNDARY = "Owner-declared campaign boundary";
 
-function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
+function requiredEnv(environment: NodeJS.ProcessEnv, name: string): string {
+  const value = environment[name]?.trim();
   if (!value) throw new Error(`Runtime manifest requires ${name}`);
   return value;
 }
+
+const optionalEnv = (
+  environment: NodeJS.ProcessEnv,
+  name: string,
+): string | undefined => {
+  const value = environment[name]?.trim();
+  return value === undefined || value === "" ? undefined : value;
+};
+
+const exactArchiveArtifactPath = (
+  archiveRoot: string,
+  configuredPath: string,
+  name: string,
+  fileName: string,
+): string => {
+  const expected = path.join(archiveRoot, fileName);
+  const actual = path.resolve(configuredPath);
+  if (actual !== expected) throw new Error(`${name} must equal ${expected}`);
+  return actual;
+};
 
 function command(executable: string, args: readonly string[]): string {
   return execFileSync(executable, [...args], {
@@ -222,22 +242,39 @@ async function domainSpecPaths(): Promise<readonly string[]> {
   return [...durable, ...change];
 }
 
-export async function buildRuntimeManifestInput(): Promise<CampaignManifestInput> {
+export async function buildRuntimeManifestInput(
+  environment: NodeJS.ProcessEnv = process.env,
+): Promise<CampaignManifestInput> {
   const catalogs = loadCatalogs();
   const routes = routeDeclarations(catalogs);
+  const archiveRoot = path.resolve(
+    requiredEnv(environment, "RUNTIME_SWEEP_ARCHIVE"),
+  );
+  const sourceValidationFileSha256 = optionalEnv(
+    environment,
+    "RUNTIME_SWEEP_SOURCE_VALIDATION_SHA256",
+  );
   return {
     repoRoot: REPO_ROOT,
-    outputPath: path.join(
-      requiredEnv("RUNTIME_SWEEP_ARCHIVE"),
-      "MANIFEST.json",
+    outputPath: path.join(archiveRoot, "MANIFEST.json"),
+    sourcePath: exactArchiveArtifactPath(
+      archiveRoot,
+      requiredEnv(environment, "RUNTIME_SWEEP_SOURCE"),
+      "RUNTIME_SWEEP_SOURCE",
+      "SOURCE.json",
     ),
-    sourcePath: path.join(requiredEnv("RUNTIME_SWEEP_ARCHIVE"), "SOURCE.json"),
-    preflightPath: path.join(
-      requiredEnv("RUNTIME_SWEEP_ARCHIVE"),
-      "PREFLIGHT.json",
+    sourceValidationPath: exactArchiveArtifactPath(
+      archiveRoot,
+      requiredEnv(environment, "RUNTIME_SWEEP_SOURCE_VALIDATION"),
+      "RUNTIME_SWEEP_SOURCE_VALIDATION",
+      "SOURCE-VALIDATION.json",
     ),
-    campaignId: requiredEnv("RUNTIME_SWEEP_CAMPAIGN_ID"),
-    sourceSha: requiredEnv("RUNTIME_SWEEP_SOURCE_SHA"),
+    ...(sourceValidationFileSha256 === undefined
+      ? {}
+      : { sourceValidationFileSha256 }),
+    preflightPath: path.join(archiveRoot, "PREFLIGHT.json"),
+    campaignId: requiredEnv(environment, "RUNTIME_SWEEP_CAMPAIGN_ID"),
+    sourceSha: requiredEnv(environment, "RUNTIME_SWEEP_SOURCE_SHA"),
     browser: "chromium",
     viewport: { browser: "chromium", width: 1440, height: 900 },
     roles: CANONICAL_ROLES,

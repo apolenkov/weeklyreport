@@ -23,6 +23,7 @@ const assignment = (): RuntimeLaneAssignment =>
     sourceArchiveRoot: ROOT,
     sourceArtifacts: {
       SOURCE: DIGEST,
+      SOURCE_VALIDATION: DIGEST,
       PREFLIGHT: DIGEST,
       MATRIX: DIGEST,
       MANIFEST: DIGEST,
@@ -160,13 +161,22 @@ describe("runtime lane resource initialization", () => {
       .mockRejectedValueOnce(new Error("lane b recreation interrupted"))
       .mockResolvedValueOnce(expected);
     const createRunIdentity = vi.fn(createRuntimeLaneRunIdentity);
+    const prepareArchives = vi.fn(() => Promise.resolve());
     const input = {
       assignment: value,
+      sourceAuthority: {
+        expectedSource: {} as never,
+        receiptFileSha256: DIGEST,
+      },
       baseDatabaseUrl:
         "postgresql://user:secret@127.0.0.1:5432/customreport_e2e",
       redisRecreationAuthorized: true,
     };
-    const dependencies = { initializeResources, createRunIdentity };
+    const dependencies = {
+      prepareArchives,
+      initializeResources,
+      createRunIdentity,
+    };
 
     await expect(initializeRuntimeLaneRun(input, dependencies)).rejects.toThrow(
       /lane b/u,
@@ -177,5 +187,35 @@ describe("runtime lane resource initialization", () => {
     expect(result.redisRunIds).toBe(expected);
     expect(result.run).toEqual(createRunIdentity.mock.results[0]?.value);
     expect(createRunIdentity).toHaveBeenCalledTimes(1);
+    expect(prepareArchives).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not initialize resources when source packet validation fails", async () => {
+    const value = assignment();
+    const initializeResources = vi.fn();
+    const prepareArchives = vi.fn(() =>
+      Promise.reject(new Error("copied receipt is not canonical")),
+    );
+
+    await expect(
+      initializeRuntimeLaneRun(
+        {
+          assignment: value,
+          sourceAuthority: {
+            expectedSource: {} as never,
+            receiptFileSha256: DIGEST,
+          },
+          baseDatabaseUrl:
+            "postgresql://user:secret@127.0.0.1:5432/customreport_e2e",
+          redisRecreationAuthorized: true,
+        },
+        {
+          prepareArchives,
+          initializeResources,
+          createRunIdentity: vi.fn(),
+        },
+      ),
+    ).rejects.toThrow(/receipt is not canonical/u);
+    expect(initializeResources).not.toHaveBeenCalled();
   });
 });

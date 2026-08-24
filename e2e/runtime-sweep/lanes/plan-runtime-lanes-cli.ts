@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { type SeedProfile, seedProfileSchema } from "../source/contracts.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { stableSerialize } from "../support/ids.ts";
 import {
   DEFAULT_RUNTIME_LANE_COUNT,
@@ -51,6 +52,7 @@ const laneCountFrom = (value: string | undefined): number => {
 };
 
 async function main(): Promise<void> {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
   const mode = modeFrom(requiredEnv("RUNTIME_SWEEP_LANE_MODE"));
   const outputPath = path.resolve(

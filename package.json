@@ -69,6 +69,8 @@
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
     "test:runtime-sweep": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/runtime-sweep/preflight/playwright.config.ts",
     "test:runtime-source": "tsx e2e/runtime-sweep/source/create-runtime-manifest.ts",
+    "test:runtime-source-validate": "tsx e2e/runtime-sweep/source/validate-runtime-source.ts create",
+    "test:runtime-source-check": "tsx e2e/runtime-sweep/source/validate-runtime-source.ts check",
     "test:runtime-preflight": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts full",
     "test:runtime-preflight-canary": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight.ts canary",
     "test:runtime-preflight-diagnostic": "tsx e2e/runtime-sweep/preflight/run-runtime-preflight-diagnostic.ts diagnostic",

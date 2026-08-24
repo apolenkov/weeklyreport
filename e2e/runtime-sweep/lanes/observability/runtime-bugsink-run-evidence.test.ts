@@ -22,6 +22,7 @@ const assignmentFor = (sourceArchiveRoot: string): RuntimeLaneAssignment => ({
   sourceArchiveRoot,
   sourceArtifacts: {
     SOURCE: "d".repeat(64),
+    SOURCE_VALIDATION: "1".repeat(64),
     PREFLIGHT: "e".repeat(64),
     MATRIX: "f".repeat(64),
     MANIFEST: "0".repeat(64),

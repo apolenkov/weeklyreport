@@ -141,6 +141,7 @@ export type PreflightShardLaunchPreparation = Readonly<{
 export async function preparePreflightShardLaunch(input: {
   readonly environment: NodeJS.ProcessEnv;
   readonly repoRoot: string;
+  readonly validatedSource: SourceArtifact;
   readonly runCommand?: ManifestCommandRunner;
 }): Promise<PreflightShardLaunchPreparation> {
   assertNoMixedSelectors(input.environment);
@@ -150,6 +151,7 @@ export async function preparePreflightShardLaunch(input: {
   const sourceInputs = await readShardSourceInputs({
     environment: input.environment,
     archiveRoot,
+    validatedSource: input.validatedSource,
   });
   const proofContext = await readShardProofContext({
     environment: input.environment,

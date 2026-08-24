@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import {
   assertPreflightAssignmentMatchesSource,
   readPreflightAssignment,
@@ -18,7 +18,6 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
 const preflightPath = path.resolve(requiredEnv("RUNTIME_SWEEP_PREFLIGHT"));
 const assignmentPath = path.resolve(
   requiredEnv("RUNTIME_SWEEP_PREFLIGHT_ASSIGNMENT"),
@@ -37,7 +36,7 @@ const webOrigin = `http://127.0.0.1:${requiredEnv("E2E_WEB_PORT")}`;
 test("preflight prepares and inventories every nominal source segment", async ({
   page,
 }) => {
-  const source = await readSourceArtifact(sourcePath);
+  const source = (await assertRuntimeSourceAuthorityFromEnvironment()).source;
   const assignment = await readPreflightAssignment(assignmentPath);
   assertPreflightAssignmentMatchesSource(source, assignment);
   const prepare = createPreflightRuntimePreparation({
@@ -60,7 +59,7 @@ test("preflight prepares and inventories every nominal source segment", async ({
         () => undefined,
       ),
     recreateDisposableBoundary: prepare.recreateDisposableBoundary,
-    readSource: () => readSourceArtifact(sourcePath),
+    readSource: () => Promise.resolve(source),
     runState: ({ state, resetRequired }) =>
       runPlaywrightPreflightSegment({
         source,

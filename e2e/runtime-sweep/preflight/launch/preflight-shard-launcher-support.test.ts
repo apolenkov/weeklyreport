@@ -29,14 +29,22 @@ import {
   preparePreflightShardLaunch,
 } from "./preflight-shard-launcher-support.ts";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
-
 type ShardFixture = Readonly<{
   readonly environment: NodeJS.ProcessEnv;
+  readonly source: Awaited<ReturnType<typeof buildCampaignSource>>;
   readonly launch: PreflightShardLaunchPreparation;
   readonly proofPath: string;
   readonly cleanup: () => Promise<void>;
 }>;
-
+const launchInput = (
+  environment: NodeJS.ProcessEnv,
+  source: ShardFixture["source"],
+) => ({
+  environment,
+  repoRoot: REPO_ROOT,
+  validatedSource: source,
+  runCommand: fakeManifestGit(),
+});
 const resourceDirectories = (resources: ReturnType<typeof resourcesFor>) => [
   resources.nextDistDir,
   resources.logDir,
@@ -44,7 +52,6 @@ const resourceDirectories = (resources: ReturnType<typeof resourcesFor>) => [
   resources.outputDir,
   resources.archiveRoot,
 ];
-
 const createShardFixture = async (): Promise<ShardFixture> => {
   const manifestFixture = await createManifestFixture();
   const fixtureRoot = await realpath(
@@ -112,13 +119,12 @@ const createShardFixture = async (): Promise<ShardFixture> => {
     REDIS_PORT: String(proof.resources.redis.port),
     E2E_BULLMQ_PREFIX: proof.resources.queuePrefix,
   };
-  const launch = await preparePreflightShardLaunch({
-    environment,
-    repoRoot: REPO_ROOT,
-    runCommand: fakeManifestGit(),
-  });
+  const launch = await preparePreflightShardLaunch(
+    launchInput(environment, source),
+  );
   return {
     environment,
+    source,
     launch,
     proofPath,
     cleanup: async () => {
@@ -127,7 +133,6 @@ const createShardFixture = async (): Promise<ShardFixture> => {
     },
   };
 };
-
 const withShardFixture = async (
   callback: (fixture: ShardFixture) => Promise<void> | void,
 ): Promise<void> => {
@@ -138,7 +143,6 @@ const withShardFixture = async (
     await fixture.cleanup();
   }
 };
-
 describe("source-bound shard prelaunch", () => {
   it("passes the exact canonical child environment without legacy paths", async () => {
     await withShardFixture(({ environment, launch }) => {
@@ -153,138 +157,122 @@ describe("source-bound shard prelaunch", () => {
         },
         launch,
       );
-      expect(child.RUNTIME_SWEEP_PREFLIGHT_MODE).toBe("shard");
-      expect(child.RUNTIME_SWEEP_SOURCE).toBe(launch.sourcePath);
-      expect(child.RUNTIME_SWEEP_PREFLIGHT_SHARD_ASSIGNMENT).toBe(
-        launch.assignmentPath,
-      );
-      expect(child.RUNTIME_SWEEP_PREFLIGHT_SHARD_RESOURCE_PROOF).toBe(
-        launch.resourceProofPath,
-      );
-      expect(child.RUNTIME_SWEEP_PREFLIGHT_SHARD_JOURNAL).toBe(
-        launch.journalPath,
-      );
-      expect(child.RUNTIME_SWEEP_PREFLIGHT_SHARD_COMPLETION).toBe(
-        launch.completionPath,
-      );
-      expect(child.E2E_API_PORT).toBe(
-        String(launch.resourceProof.resources.api.port),
-      );
-      expect(child.E2E_WEB_PORT).toBe(
-        String(launch.resourceProof.resources.web.port),
-      );
-      expect(child.REDIS_PORT).toBe(
-        String(launch.resourceProof.resources.redis.port),
-      );
-      expect(child.E2E_BULLMQ_PREFIX).toBe(
-        launch.resourceProof.resources.queuePrefix,
-      );
-      expect(child.LOG_DIR).toBe(launch.resourceProof.resources.logDir);
+      expect(child).toMatchObject({
+        RUNTIME_SWEEP_PREFLIGHT_MODE: "shard",
+        RUNTIME_SWEEP_SOURCE: launch.sourcePath,
+        RUNTIME_SWEEP_PREFLIGHT_SHARD_ASSIGNMENT: launch.assignmentPath,
+        RUNTIME_SWEEP_PREFLIGHT_SHARD_RESOURCE_PROOF: launch.resourceProofPath,
+        RUNTIME_SWEEP_PREFLIGHT_SHARD_JOURNAL: launch.journalPath,
+        RUNTIME_SWEEP_PREFLIGHT_SHARD_COMPLETION: launch.completionPath,
+        E2E_API_PORT: String(launch.resourceProof.resources.api.port),
+        E2E_WEB_PORT: String(launch.resourceProof.resources.web.port),
+        REDIS_PORT: String(launch.resourceProof.resources.redis.port),
+        E2E_BULLMQ_PREFIX: launch.resourceProof.resources.queuePrefix,
+        LOG_DIR: launch.resourceProof.resources.logDir,
+        PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+      });
       expect(path.isAbsolute(child.NEXT_DIST_DIR ?? "")).toBe(false);
-      expect(child.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION).toBe("давай");
       expect(child.RUNTIME_SWEEP_PREFLIGHT).toBeUndefined();
       expect(child.RUNTIME_SWEEP_PREFLIGHT_JOURNAL).toBeUndefined();
     });
   });
   it("rejects an unknown logical shard before a child can be spawned", async () => {
-    await withShardFixture(async ({ environment }) => {
+    await withShardFixture(async ({ environment, source }) => {
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_PREFLIGHT_SHARD_ID: "unknown-shard",
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_PREFLIGHT_SHARD_ID: "unknown-shard",
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("Unknown logical shard id");
     });
   });
   it("rejects a stale source selector before a child can be spawned", async () => {
-    await withShardFixture(async ({ environment }) => {
+    await withShardFixture(async ({ environment, source }) => {
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_SOURCE_SHA: "f".repeat(40),
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_SOURCE_SHA: "f".repeat(40),
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("source SHA is stale");
     });
   });
-
   it("rejects a forged proof path before a child can be spawned", async () => {
-    await withShardFixture(async ({ environment, proofPath }) => {
+    await withShardFixture(async ({ environment, proofPath, source }) => {
       const forgedPath = path.join(
         path.dirname(proofPath),
         "forged-proof.json",
       );
       await copyFile(proofPath, forgedPath);
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_PREFLIGHT_SHARD_RESOURCE_PROOF: forgedPath,
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_PREFLIGHT_SHARD_RESOURCE_PROOF: forgedPath,
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("canonical shard path");
     });
   });
-
   it.each([
     ["donor", "RUNTIME_SWEEP_PREFLIGHT_SHARD_DONOR_ID", "Air"],
     ["attempt", "RUNTIME_SWEEP_PREFLIGHT_SHARD_ATTEMPT_ID", "attempt-2"],
   ] as const)(
     "rejects a wrong %s identity before a child can be spawned",
     async (_label, key, value) => {
-      await withShardFixture(async ({ environment }) => {
+      await withShardFixture(async ({ environment, source }) => {
         await expect(
-          preparePreflightShardLaunch({
-            environment: { ...environment, [key]: value },
-            repoRoot: REPO_ROOT,
-            runCommand: fakeManifestGit(),
-          }),
+          preparePreflightShardLaunch(
+            launchInput({ ...environment, [key]: value }, source),
+          ),
         ).rejects.toThrow(/selector does not match/u);
       });
     },
   );
-
   it("rejects mixed shard and canary selectors before reading or spawning", async () => {
-    await withShardFixture(async ({ environment }) => {
+    await withShardFixture(async ({ environment, source }) => {
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_CANARY_STATE_ID: "state-from-canary",
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_CANARY_STATE_ID: "state-from-canary",
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("cannot be mixed");
     });
   });
-
   it("rejects a contradictory preflight mode before reading or spawning", async () => {
-    await withShardFixture(async ({ environment }) => {
+    await withShardFixture(async ({ environment, source }) => {
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_PREFLIGHT_MODE: "full",
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_PREFLIGHT_MODE: "full",
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("cannot use RUNTIME_SWEEP_PREFLIGHT_MODE=full");
     });
   });
-
   it("rejects a forged proof payload through donor binding", async () => {
-    await withShardFixture(async ({ environment, launch }) => {
+    await withShardFixture(async ({ environment, launch, source }) => {
       const { proofDigest: _proofDigest, ...proofBody } = launch.resourceProof;
       const forgedBody = { ...proofBody, donorId: "Air" };
       const forged = {
@@ -298,14 +286,15 @@ describe("source-bound shard prelaunch", () => {
         proof: forged,
       });
       await expect(
-        preparePreflightShardLaunch({
-          environment: {
-            ...environment,
-            RUNTIME_SWEEP_PREFLIGHT_SHARD_DONOR_ID: "Pro",
-          },
-          repoRoot: REPO_ROOT,
-          runCommand: fakeManifestGit(),
-        }),
+        preparePreflightShardLaunch(
+          launchInput(
+            {
+              ...environment,
+              RUNTIME_SWEEP_PREFLIGHT_SHARD_DONOR_ID: "Pro",
+            },
+            source,
+          ),
+        ),
       ).rejects.toThrow("donor selector does not match");
     });
   });

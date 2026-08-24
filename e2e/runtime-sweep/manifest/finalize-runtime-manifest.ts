@@ -1,8 +1,8 @@
-import { buildRuntimeManifestInput } from "../source/create-runtime-manifest.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { writeCampaignManifest } from "./manifest.ts";
 
 async function main(): Promise<void> {
-  const input = await buildRuntimeManifestInput();
+  const { input } = await assertRuntimeSourceAuthorityFromEnvironment();
   await writeCampaignManifest(input);
   console.log(`runtime-manifest PASS ${input.sourceSha}`);
 }

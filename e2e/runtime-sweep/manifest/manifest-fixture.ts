@@ -143,6 +143,7 @@ const inputFor = (
     repoRoot: root,
     outputPath: path.join(root, "MANIFEST.json"),
     sourcePath: path.join(root, "SOURCE.json"),
+    sourceValidationPath: path.join(root, "SOURCE-VALIDATION.json"),
     preflightPath: path.join(root, "PREFLIGHT.json"),
     campaignId: "campaign-1",
     sourceSha: FIXTURE_SOURCE_SHA,

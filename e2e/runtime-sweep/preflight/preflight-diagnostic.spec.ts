@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { readSourceArtifact } from "../source/source-artifact.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { assertLivePreflightSourceIdentity } from "./canary/preflight-canary-selection.ts";
 import {
   createDiagnosticHostPressureSampler,
@@ -28,7 +28,6 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const sourcePath = path.resolve(requiredEnv("RUNTIME_SWEEP_SOURCE"));
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const outputRoot = path.resolve(
   requiredEnv("RUNTIME_SWEEP_DIAGNOSTIC_OUTPUT_ROOT"),
@@ -44,7 +43,7 @@ test("diagnostic preflight captures one source-bound segment", async ({
   page,
   browser,
 }) => {
-  const source = await readSourceArtifact(sourcePath);
+  const source = (await assertRuntimeSourceAuthorityFromEnvironment()).source;
   const state = source.plan.states.find(
     (candidate) => candidate.stateId === stateId,
   );

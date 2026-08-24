@@ -61,6 +61,10 @@ export const preflightShardChildEnvironment = (
     RUNTIME_SWEEP_PREFLIGHT_MODE: "shard",
     RUNTIME_SWEEP_ARCHIVE: launch.archiveRoot,
     RUNTIME_SWEEP_SOURCE: launch.sourcePath,
+    RUNTIME_SWEEP_SOURCE_VALIDATION: path.join(
+      launch.archiveRoot,
+      "SOURCE-VALIDATION.json",
+    ),
     RUNTIME_SWEEP_SOURCE_SHA: launch.source.sourceSha,
     RUNTIME_SWEEP_PREFLIGHT_SHARD_ID: launch.shard.logicalShardId,
     RUNTIME_SWEEP_PREFLIGHT_SHARD_DONOR_ID: proof.donorId,

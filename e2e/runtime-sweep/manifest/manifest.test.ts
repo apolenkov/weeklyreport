@@ -1,4 +1,4 @@
-import { access, readFile, rm, writeFile } from "node:fs/promises";
+import { access, readFile, rm } from "node:fs/promises";
 import * as path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ import {
 import { preflightSessionGroupKey } from "../preflight/runtime/preflight-session.ts";
 import { campaignManifestSchema } from "../source/contracts.ts";
 import { cleanSourceIdentity } from "../source/manifest-source.ts";
+import { writeRuntimeSourceValidationReceipt } from "../source/runtime-source-validation.ts";
 import { sha256Hex } from "../support/ids.ts";
 import {
   buildCampaignManifest,
@@ -45,9 +46,19 @@ const routeAwareNavigation = (): Readonly<{
 
 async function writePreflightFixture(
   input: CampaignManifestInput,
-): Promise<void> {
+): Promise<CampaignManifestInput> {
   const source = await buildCampaignSource(input, fakeManifestGit());
   await writeCampaignSource(input, fakeManifestGit());
+  if (
+    input.sourcePath === undefined ||
+    input.sourceValidationPath === undefined
+  )
+    throw new Error("Source validation fixture paths are required");
+  const receiptFile = await writeRuntimeSourceValidationReceipt({
+    sourcePath: input.sourcePath,
+    receiptPath: input.sourceValidationPath,
+    expectedSource: source,
+  });
   const navigation = routeAwareNavigation();
   const preflight = await runBrowserPreflight({
     source,
@@ -61,6 +72,10 @@ async function writePreflightFixture(
   if (input.preflightPath === undefined)
     throw new Error("Preflight fixture path is required");
   await writePreflightArtifact(input.preflightPath, preflight);
+  return {
+    ...input,
+    sourceValidationFileSha256: receiptFile.receiptFileSha256,
+  };
 }
 
 async function withFixture(
@@ -160,10 +175,11 @@ async function groupsStatePreparationBySessionActor(): Promise<void> {
 
 async function buildsDeterministicManifest(): Promise<void> {
   await withFixture(async ({ input }) => {
-    await writePreflightFixture(input);
-    const first = await buildCampaignManifest(input, fakeManifestGit());
-    const second = await buildCampaignManifest(input, fakeManifestGit());
-    const identity = await cleanSourceIdentity(input, fakeManifestGit());
+    const validatedInput = await writePreflightFixture(input);
+    const git = fakeManifestGit();
+    const first = await buildCampaignManifest(validatedInput, git);
+    const second = await buildCampaignManifest(validatedInput, git);
+    const identity = await cleanSourceIdentity(validatedInput, git);
     expect(second).toEqual(first);
     expect(Object.isFrozen(first)).toBe(true);
     expect(first.sourceSha).toBe(FIXTURE_SOURCE_SHA);
@@ -181,36 +197,36 @@ async function buildsDeterministicManifest(): Promise<void> {
 
 async function rejectsDirtyOrMismatchedSource(): Promise<void> {
   await withFixture(async ({ input }) => {
-    await writePreflightFixture(input);
+    const validatedInput = await writePreflightFixture(input);
     const dirtyGit: ManifestCommandRunner = (args) =>
       args[0] === "status"
         ? Promise.resolve(" M apps/web/src/app/page.tsx\n")
         : Promise.reject(new Error("git should stop at dirty status"));
-    await expect(buildCampaignManifest(input, dirtyGit)).rejects.toThrow(
-      "worktree is not clean",
-    );
+    await expect(
+      buildCampaignManifest(validatedInput, dirtyGit),
+    ).rejects.toThrow("worktree is not clean");
     await expect(
       buildCampaignManifest(
-        { ...input, sourceSha: "A".repeat(40) },
+        { ...validatedInput, sourceSha: "A".repeat(40) },
         fakeManifestGit(),
       ),
-    ).rejects.toThrow("SOURCE.json does not match manifest inputs");
+    ).rejects.toThrow("Source SHA must be exactly 40 lowercase");
 
     const changedTreeGit: ManifestCommandRunner = (args, cwd) => {
       if (args.join(" ") === "rev-parse --verify HEAD^{tree}")
         return Promise.resolve(`${"c".repeat(40)}\n`);
       return fakeManifestGit()(args, cwd);
     };
-    await expect(buildCampaignManifest(input, changedTreeGit)).rejects.toThrow(
-      "source tree does not match",
-    );
+    await expect(
+      buildCampaignManifest(validatedInput, changedTreeGit),
+    ).rejects.toThrow("canonical source builder output");
   });
 }
 
 async function writesOnce(): Promise<void> {
   await withFixture(async ({ input }) => {
-    await writePreflightFixture(input);
-    await writeCampaignManifest(input, fakeManifestGit());
+    const validatedInput = await writePreflightFixture(input);
+    await writeCampaignManifest(validatedInput, fakeManifestGit());
     const text = await readFile(input.outputPath, "utf8");
     expect(text.endsWith("\n")).toBe(true);
     expect(campaignManifestSchema.parse(JSON.parse(text)).sourceSha).toBe(
@@ -220,16 +236,32 @@ async function writesOnce(): Promise<void> {
       FIXTURE_TREE_SHA,
     );
     await expect(
-      writeCampaignManifest(input, fakeManifestGit()),
+      writeCampaignManifest(validatedInput, fakeManifestGit()),
     ).rejects.toThrow("Cannot atomically create campaign artifacts");
   });
 }
 
 async function refusesMissingPreflight(): Promise<void> {
   await withFixture(async ({ root, input }) => {
-    await writeCampaignSource(input, fakeManifestGit());
+    const source = await writeCampaignSource(input, fakeManifestGit());
+    if (
+      input.sourcePath === undefined ||
+      input.sourceValidationPath === undefined
+    )
+      throw new Error("Source validation fixture paths are required");
+    const receiptFile = await writeRuntimeSourceValidationReceipt({
+      sourcePath: input.sourcePath,
+      receiptPath: input.sourceValidationPath,
+      expectedSource: source,
+    });
     await expect(
-      writeCampaignManifest(input, fakeManifestGit()),
+      writeCampaignManifest(
+        {
+          ...input,
+          sourceValidationFileSha256: receiptFile.receiptFileSha256,
+        },
+        fakeManifestGit(),
+      ),
     ).rejects.toThrow("Cannot read PREFLIGHT.json");
     await expect(access(path.join(root, "MATRIX.json"))).rejects.toThrow();
   });
@@ -247,24 +279,6 @@ async function refusesMissingCurrentUrl(): Promise<void> {
     await expect(runBrowserPreflight({ source, harness })).rejects.toThrow(
       "Browser preflight current URL callback is not configured",
     );
-  });
-}
-
-async function preservesFrozenSourceDigest(): Promise<void> {
-  await withFixture(async ({ input }) => {
-    await writePreflightFixture(input);
-    const first = await buildCampaignManifest(input, fakeManifestGit());
-    const catalogPath = input.catalogPaths.at(0);
-    if (catalogPath === undefined) throw new Error("catalog fixture is empty");
-    await writeFile(
-      catalogPath,
-      "role: lead\nroutes:\nchanged: true\n",
-      "utf8",
-    );
-    const second = await buildCampaignManifest(input, fakeManifestGit());
-    expect(second.catalogDigest).toBe(first.catalogDigest);
-    expect(second.domainSpecDigest).toBe(first.domainSpecDigest);
-    expect(second.matrixDigest).toBe(first.matrixDigest);
   });
 }
 
@@ -295,8 +309,4 @@ describe("runtime sweep campaign manifest", () => {
     refusesMissingCurrentUrl,
   );
   it("writes canonical JSON once and refuses an overwrite", writesOnce);
-  it(
-    "preserves the frozen source digest after input files change",
-    preservesFrozenSourceDigest,
-  );
 });

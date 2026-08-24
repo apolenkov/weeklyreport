@@ -83,7 +83,16 @@ The authoritative environment and archive contract is the active
 `establish-exhaustive-runtime-sweep` OpenSpec change. The operator order is:
 
 1. Prove a clean worktree and create immutable `SOURCE.json` with
-   `pnpm test:runtime-source`.
+   `pnpm test:runtime-source`. Then create the exclusive canonical-origin
+   receipt with `pnpm test:runtime-source-validate`, capture its printed
+   `receipt-file-sha256`, and recheck both immutable files with
+   `pnpm test:runtime-source-check`. Every later command requires
+   `RUNTIME_SWEEP_SOURCE=/absolute/archive/root/SOURCE.json` and
+   `RUNTIME_SWEEP_SOURCE_VALIDATION=/absolute/archive/root/SOURCE-VALIDATION.json`
+   plus `RUNTIME_SWEEP_SOURCE_VALIDATION_SHA256=<receipt-file-sha256>`.
+   Initial authority paths must name the canonical origin, never a manually
+   reconstructed artifact. Lane copies are permitted only after the runner
+   verifies their exact digests and repeats the semantic source/receipt check.
 2. Set `RUNTIME_SWEEP_CAMPAIGN_KIND=initial` for the first baseline. After a
    failed preflight, use `repair`, `fix`, or `resweep` and run
    `pnpm test:runtime-preflight-repair`. This supported chain runs the exact
@@ -133,6 +142,8 @@ following exact paths:
 ```bash
 RUNTIME_SWEEP_ARCHIVE=/absolute/archive/root \
 RUNTIME_SWEEP_SOURCE=/absolute/archive/root/SOURCE.json \
+RUNTIME_SWEEP_SOURCE_VALIDATION=/absolute/archive/root/SOURCE-VALIDATION.json \
+RUNTIME_SWEEP_SOURCE_VALIDATION_SHA256=<64-hex-receipt-file-sha256> \
 RUNTIME_SWEEP_CAPACITY_SURVEY_PLAN=/absolute/archive/root/survey/PREFLIGHT_CAPACITY_SURVEY_PLAN.json \
 RUNTIME_SWEEP_FAILURE_FRONTIER_REPLAY_PACKET_ROOT=/absolute/archive/root/failure-frontier \
 RUNTIME_SWEEP_CAPACITY_SURVEY_TEMP_ROOT=/absolute/disposable/temp/root \
