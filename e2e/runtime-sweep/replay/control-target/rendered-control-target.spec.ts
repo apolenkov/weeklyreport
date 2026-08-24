@@ -253,6 +253,18 @@ test("matches a CSS-transformed aria-labelledby inventory name", async ({
 });
 
 test("bounds a slow rendered-name browser probe", async ({ page }) => {
+  const actionTimeoutMs = 1000;
+  const browserProbeBlockMs = 3000;
+  const resultBoundMs = 2000;
+  const probeStartedEvent = "rendered-name-probe:start";
+  const probeCompletedEvent = "rendered-name-probe:complete";
+  let probeDidStart = false;
+  let probeDidComplete = false;
+  page.on("console", (message) => {
+    if (message.text() === probeStartedEvent) probeDidStart = true;
+    if (message.text() !== probeCompletedEvent) return;
+    probeDidComplete = true;
+  });
   await page.setContent(`
     <button type="button"><span style="text-transform: uppercase">Open</span></button>
     <script>
@@ -263,26 +275,43 @@ test("bounds a slow rendered-name browser probe", async ({ page }) => {
       Object.defineProperty(HTMLElement.prototype, "innerText", {
         configurable: true,
         get() {
-          const deadline = performance.now() + 300;
+          console.log(${JSON.stringify(probeStartedEvent)});
+          const deadline = performance.now() + ${String(browserProbeBlockMs)};
           while (performance.now() < deadline) {}
           document.body.dataset.probeComplete = "true";
+          console.log(${JSON.stringify(probeCompletedEvent)});
           return descriptor.get.call(this);
         },
       });
     </script>
   `);
   const startedAt = Date.now();
+  const actionSettlement = clickFrozenButton(
+    page,
+    "button:OPEN:1",
+    "OPEN",
+    actionTimeoutMs,
+  ).then((result) => ({
+    elapsedMs: Date.now() - startedAt,
+    probeCompleted: probeDidComplete,
+    result,
+  }));
 
-  const result = await clickFrozenButton(page, "button:OPEN:1", "OPEN", 50);
+  const [settlement] = await Promise.all([
+    actionSettlement,
+    expect.poll(() => probeDidStart, { timeout: resultBoundMs }).toBe(true),
+  ]);
 
-  expect(result).toMatchObject({
+  expect(settlement.result).toMatchObject({
     status: "not-exercised",
     policy: "unavailable",
   });
-  expect(Date.now() - startedAt).toBeLessThan(200);
+  expect(settlement.elapsedMs).toBeLessThan(resultBoundMs);
+  expect(settlement.probeCompleted).toBe(false);
   await expect(page.locator("body")).toHaveAttribute(
     "data-probe-complete",
     "true",
+    { timeout: browserProbeBlockMs + resultBoundMs },
   );
   const validatorCount = await page.locator("button").evaluateAll(
     (buttons) =>
