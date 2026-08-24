@@ -5,7 +5,7 @@ import {
   type ControlledDiagnosticInput,
   runControlledDiagnostic,
   terminateOwnedChildGroup,
-} from "./run-runtime-preflight-diagnostic-host-envelope.ts";
+} from "../run-runtime-preflight-diagnostic-host-envelope.ts";
 
 const GiB = 1024 ** 3;
 const MiB = 1024 ** 2;

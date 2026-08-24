@@ -223,6 +223,23 @@ breached, or non-normal observations terminate the parent without launching
 the next child. The checkpoint path is removed from every Playwright/config/web
 and API child environment and carries no resume authority or secret.
 
+The external controller consumes a separate strict post-infrastructure baseline
+reader rather than the pre-resource receipt reader. That reader accepts exactly
+60 source/tree/campaign-bound healthy records, regular non-symlink mode-0600
+manifest and payload files, canonical JSONL bytes, complete metrics, monotone
+wall-clock timestamps and cumulative counters, and the unchanged evaluator
+limits. It returns the exact baseline receipt digest, last sample and counters;
+the response echoes that digest so the parent can identify the baseline that
+fed the evaluator. Runtime responses are explicitly marked `phase: runtime`,
+and both controller-observation and sample timestamps must be strictly later
+than the parent request boundary. The controller is one-attempt and in-memory
+only: it accepts the first request and then only the exact next sequence,
+predecessor digest, receipt/chunk heads, counters and sample sequence; it never
+resumes, grants, writes PASS, or persists authority. Mailbox scanning happens
+before and after watcher setup, so a request arriving during setup cannot be
+lost; the CLI has a bounded abort deadline and receives source authority only
+from the exact runtime environment.
+
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after
 each step and reject a path that mutates persisted state. A transition that

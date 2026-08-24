@@ -216,6 +216,17 @@ before baseline execution rather than trimming cells.
 - **AND** the checkpoint root is parent-only, is absent from every Playwright,
   configuration, web, and API child environment, and carries no resume
   authority or secret
+- **AND** the external controller accepts only a strict post-infrastructure
+  baseline of exactly 60 healthy source-bound records, with canonical bytes,
+  complete metrics, monotone timestamps/counters, regular non-symlink mode-0600
+  files, and an exact baseline receipt digest echoed by every runtime response
+- **AND** every runtime response has `phase: runtime`, and both its sample and
+  controller-observation timestamps are strictly later than the request
+  boundary; the controller has one in-memory attempt and cannot resume, grant,
+  publish PASS, or reuse a prior predecessor chain
+- **AND** the controller scans the mailbox before watcher setup and again after
+  setup, with a bounded abort deadline, so a request cannot be lost during
+  watcher installation
 
 #### Scenario: an invalid specialized witness fails finalization
 

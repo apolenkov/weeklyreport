@@ -24,6 +24,7 @@ import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";
 
 const AUTHORITY_KEY_HEX_LENGTH = 64;
+const DIGEST_HEX_LENGTH = 64;
 
 export const withCleanSource = async <T>(
   callback: (input: {
@@ -141,6 +142,7 @@ const contextFixtureFor = (input: {
     repoRoot: process.cwd(),
     archiveRoot: input.archiveRoot,
     canaryPath: path.join(input.archiveRoot, "PREFLIGHT_CANARY.json"),
+    baselineReceiptDigest: "d".repeat(DIGEST_HEX_LENGTH),
     selection: input.selection,
     revealRoute: input.route,
     authorityKey: "a".repeat(AUTHORITY_KEY_HEX_LENGTH),

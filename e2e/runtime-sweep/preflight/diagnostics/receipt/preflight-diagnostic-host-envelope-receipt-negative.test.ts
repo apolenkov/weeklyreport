@@ -8,11 +8,11 @@ import {
   type DiagnosticHostEnvelopeSnapshot,
   EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
   HOST_ENVELOPE_THRESHOLDS,
-} from "./preflight-diagnostic-host-envelope.ts";
+} from "../preflight-diagnostic-host-envelope.ts";
 import {
   createDiagnosticHostEnvelopeReceipt,
   readHealthyPreResourceReceipt,
-} from "./preflight-diagnostic-host-envelope-receipt.ts";
+} from "../preflight-diagnostic-host-envelope-receipt.ts";
 
 const healthySnapshot = (): DiagnosticHostEnvelopeSnapshot => ({
   timestampWall: 1_700_000_000_000,

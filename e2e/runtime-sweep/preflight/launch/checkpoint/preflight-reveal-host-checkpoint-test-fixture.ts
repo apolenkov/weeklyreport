@@ -20,6 +20,7 @@ const SWAP_FREE_GIBIBYTES = 4;
 const CONTROLLER_TIMESTAMP = 201;
 
 export const digest = "a".repeat(DIGEST_LENGTH);
+export const baselineReceiptDigest = "d".repeat(DIGEST_LENGTH);
 export const run = {
   campaignId: "campaign",
   sourceSha: "b".repeat(SOURCE_LENGTH),
@@ -43,7 +44,7 @@ export const request = createHostCheckpointRequest({
   checkpointSequence: 1,
   completedChildOrdinal: 0,
   boundaryTimestamp: 100,
-  receiptHead: null,
+  receiptHead: digest,
   receiptCount: 1,
   chunkHead: digest,
   chunkCount: 1,
@@ -55,6 +56,7 @@ export const request = createHostCheckpointRequest({
 export const sample = {
   eventSequence: 61,
   timestampWall: 200,
+  phase: "runtime" as const,
   status: "healthy" as const,
   reasons: [],
   breachStreaks: {
@@ -92,6 +94,7 @@ export const response = createHostCheckpointResponse({
   requestDigest: request.requestDigest,
   predecessorCheckpointDigest: null,
   controllerObservationTimestamp: 201,
+  baselineReceiptDigest,
   sample,
   coverage: {
     priorSequence: 0,
@@ -133,6 +136,7 @@ export const responseFor = (
     predecessorCheckpointDigest: value.previousCheckpointDigest,
     controllerObservationTimestamp:
       overrides.controllerObservationTimestamp ?? CONTROLLER_TIMESTAMP,
+    baselineReceiptDigest,
     sample: nextSample,
     coverage: {
       priorSequence: value.previousSampleSequence ?? 0,

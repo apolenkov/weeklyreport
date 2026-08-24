@@ -41,7 +41,7 @@ const request = createHostCheckpointRequest({
   checkpointSequence: 1,
   completedChildOrdinal: 0,
   boundaryTimestamp: 100,
-  receiptHead: null,
+  receiptHead: digest,
   receiptCount: 1,
   chunkHead: digest,
   chunkCount: 1,
@@ -52,6 +52,7 @@ const request = createHostCheckpointRequest({
 const sample = {
   eventSequence: 61,
   timestampWall: 200,
+  phase: "runtime" as const,
   status: "healthy" as const,
   reasons: [],
   breachStreaks: {
@@ -88,6 +89,7 @@ const response = createHostCheckpointResponse({
   requestDigest: request.requestDigest,
   predecessorCheckpointDigest: null,
   controllerObservationTimestamp: 201,
+  baselineReceiptDigest: "d".repeat(64),
   sample,
   coverage: {
     priorSequence: 0,

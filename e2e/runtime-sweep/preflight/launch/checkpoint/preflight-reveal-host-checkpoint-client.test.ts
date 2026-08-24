@@ -21,6 +21,7 @@ import {
   type HostCheckpointRequest,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import {
+  baselineReceiptDigest,
   request,
   requestBodyFor,
   response,
@@ -58,6 +59,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
       });
       const responsePath = path.join(
         root,
@@ -96,6 +98,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: () => {
           watchCalls += 1;
           return (async function* () {
@@ -129,6 +132,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: async () => {
           watchCalls += 1;
           await writeFile(
@@ -154,6 +158,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: async function* (_directory, signal) {
           try {
             await new Promise<void>((resolve) =>
@@ -183,12 +188,18 @@ describe("source-bound host checkpoint client", () => {
     });
     await withArchive("cancel", async (archive, root) => {
       const controller = new AbortController();
-      let cleared = false;
-      let closed = false;
+      let clearCalls = 0;
+      let closeCalls = 0;
+      let watcherStartedResolve: (() => void) | undefined;
+      const watcherStarted = new Promise<void>((resolve) => {
+        watcherStartedResolve = resolve;
+      });
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: async function* (_directory, signal) {
+          watcherStartedResolve?.();
           try {
             await new Promise<void>((resolve) =>
               signal.addEventListener("abort", () => resolve(), {
@@ -197,20 +208,21 @@ describe("source-bound host checkpoint client", () => {
             );
             yield undefined;
           } finally {
-            closed = true;
+            closeCalls += 1;
           }
         },
         setTimer: () => setTimeout(() => undefined, 10_000),
         clearTimer: (timer) => {
-          cleared = true;
+          clearCalls += 1;
           clearTimeout(timer);
         },
       });
       const pending = client({ request: body(), signal: controller.signal });
-      setTimeout(() => controller.abort(new Error("parent cancelled")), 10);
+      await watcherStarted;
+      controller.abort(new Error("parent cancelled"));
       await expect(pending).rejects.toThrow("parent cancelled");
-      expect(cleared).toBe(true);
-      expect(closed).toBe(true);
+      expect(clearCalls).toBe(1);
+      expect(closeCalls).toBe(1);
     });
   });
 
@@ -228,6 +240,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
         watchDirectory: async function* () {
           await writeFile(
             responsePath,
@@ -249,6 +262,7 @@ describe("source-bound host checkpoint client", () => {
       const client = await createFileBackedHostCheckpointClient({
         archiveRoot: archive,
         root,
+        expectedBaselineReceiptDigest: baselineReceiptDigest,
       });
       const requestPath = path.join(
         root,

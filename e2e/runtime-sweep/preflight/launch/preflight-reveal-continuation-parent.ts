@@ -52,6 +52,7 @@ export type ParentContext = Readonly<{
   readonly repoRoot: string;
   readonly archiveRoot: string;
   readonly canaryPath: string;
+  readonly baselineReceiptDigest?: string;
   readonly selection: CanarySelection;
   readonly revealRoute: ReturnType<typeof revealRouteFor>;
   readonly authorityKey: string;
@@ -99,6 +100,7 @@ export const runPreflightRevealContinuation = async (input: {
   readonly repoRoot: string;
   readonly archiveRoot: string;
   readonly canaryPath: string;
+  readonly baselineReceiptDigest?: string;
   readonly selector: ContinuationSelector;
   readonly requestHostCheckpoint?: RequestHostCheckpoint;
   readonly now?: () => number;

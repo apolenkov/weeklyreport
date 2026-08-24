@@ -207,6 +207,9 @@ if (mode === "shard") {
       hostCheckpointRoot: requiredEnv(
         "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT",
       ),
+      hostCheckpointBaselineDigest: requiredEnv(
+        "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_DIGEST",
+      ),
       runPlaywright,
     });
   };

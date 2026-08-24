@@ -676,6 +676,14 @@
       "target": "e2e/runtime-sweep/preflight/diagnostics/receipt/$1"
     },
     {
+      "id": "runtime-preflight-diagnostics-runner-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/runners/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/runners/$1"
+    },
+    {
       "id": "runtime-preflight-subconcern-tests",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
