@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Locked chips expose the cross-author risk token through their aria-labelled
-// status button; the chip face itself has no status glyph.
+// status button; the status glyph is decorative and mirrors the same status.
 import "@testing-library/jest-dom/vitest";
 
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
@@ -104,6 +104,33 @@ describe("StageChip — chip box height token", () => {
     expect(button.className).toContain(
       "max-md:min-h-[var(--touch-target-min)]",
     );
+  });
+});
+
+describe("StageChip — stretched row status visualization", () => {
+  it("keeps the status glyph derived from the displayed status", () => {
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "blocked" }} />);
+    const glyph = screen.getByTestId("stage-status-glyph");
+    expect(glyph).toHaveAttribute("aria-hidden", "true");
+    expect(glyph).toHaveAttribute("data-status", "blocked");
+    expect(glyph).toHaveTextContent("✕");
+  });
+
+  it("uses a full-width, left-aligned button with a truncation-safe label", () => {
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
+    const button = screen.getByRole("button");
+    expect(button.className).toContain("w-full");
+    expect(button.className).toContain("justify-start");
+    expect(button.className).toContain("text-left");
+    expect(button.querySelector("span span")?.className).toContain("truncate");
+  });
+
+  it("keeps a visible focus treatment for keyboard users", () => {
+    render(<StageChip stage={{ ...BASE_MINE, status: "on-track" }} />);
+    const button = screen.getByRole("button");
+    expect(button.className).toContain("focus-visible:outline-none");
+    expect(button.className).toContain("focus-visible:ring-2");
+    expect(button.className).toContain("focus-visible:ring-offset-1");
   });
 });
 
