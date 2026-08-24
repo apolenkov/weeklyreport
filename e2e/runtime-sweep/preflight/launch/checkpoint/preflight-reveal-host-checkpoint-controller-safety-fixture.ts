@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import * as path from "node:path";
 
 import { createParentPass } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
@@ -7,11 +15,79 @@ import { writeRevealParentPass } from "../../reveal/continuation/preflight-revea
 import {
   canonicalHostCheckpointBytes,
   createHostCheckpointCompletion,
+  createHostCheckpointRequest,
+  type HostCheckpointRequest,
   type HostCheckpointRun,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { completionPathFor } from "./preflight-reveal-host-checkpoint-controller-mailbox.ts";
 
 const TEST_AUTHORITY_KEY_LENGTH = 64;
+const MAILBOX_MODE = 0o700;
+const WAIT_ATTEMPTS = 100;
+const WAIT_DELAY_MS = 5;
+
+const requestPathForTest = (
+  root: string,
+  request: HostCheckpointRequest,
+): string =>
+  path.join(
+    root,
+    `HOST_CHECKPOINT_REQUEST.${request.run.attemptId}.${String(request.checkpointSequence)}.json`,
+  );
+
+export const responsePathForTest = (
+  root: string,
+  request: HostCheckpointRequest,
+): string =>
+  path.join(
+    root,
+    `HOST_CHECKPOINT_RESPONSE.${request.run.attemptId}.${String(request.checkpointSequence)}.json`,
+  );
+
+export const writeRequest = async (
+  root: string,
+  body: Omit<HostCheckpointRequest, "requestDigest">,
+): Promise<HostCheckpointRequest> => {
+  const request = createHostCheckpointRequest(body);
+  await writeFile(
+    requestPathForTest(root, request),
+    canonicalHostCheckpointBytes(request),
+    { mode: 0o600 },
+  );
+  return request;
+};
+
+export const waitForFile = async (filePath: string): Promise<void> => {
+  for (const attempt of Array.from(
+    { length: WAIT_ATTEMPTS },
+    (_, index) => index,
+  )) {
+    try {
+      await stat(filePath);
+      return;
+    } catch {
+      if (attempt === WAIT_ATTEMPTS - 1) break;
+      await new Promise((resolve) => setTimeout(resolve, WAIT_DELAY_MS));
+    }
+  }
+  throw new Error(`Timed out waiting for ${filePath}`);
+};
+
+export const withMailbox = async (
+  callback: (archiveRoot: string, mailboxRoot: string) => Promise<void>,
+): Promise<void> => {
+  const archiveRoot = await mkdtemp(
+    path.join(process.cwd(), ".host-controller-safety-"),
+  );
+  const mailboxRoot = path.join(archiveRoot, "mailbox");
+  await mkdir(mailboxRoot, { mode: MAILBOX_MODE });
+  await chmod(mailboxRoot, MAILBOX_MODE);
+  try {
+    await callback(archiveRoot, mailboxRoot);
+  } finally {
+    await rm(archiveRoot, { recursive: true, force: true });
+  }
+};
 
 const parentRunFor = (run: HostCheckpointRun, digest: string) => {
   const state = {

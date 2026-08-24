@@ -35,20 +35,19 @@ const collectBaseline = async (input: {
 }): Promise<void> => {
   const sample = input.sample ?? readDarwinHostEnvelopeSnapshot;
   const wait = input.wait ?? ((milliseconds: number) => delay(milliseconds));
-  // eslint-disable-next-line no-restricted-syntax -- counters advance across the ordered baseline
-  let previousCounters: DiagnosticHostEnvelopeCounters | undefined;
-  // eslint-disable-next-line no-restricted-syntax -- the prior sample anchors timestamp monotonicity
-  let previousSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
-  // eslint-disable-next-line no-restricted-syntax -- bounded sample index is required by the receipt contract
-  for (
-    let index = 0;
-    index < HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
-    index += 1
-  ) {
+  const state: {
+    previousCounters: DiagnosticHostEnvelopeCounters | undefined;
+    previousSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
+  } = { previousCounters: undefined, previousSnapshot: undefined };
+  const indexes = Array.from(
+    { length: HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples },
+    (_, index) => index,
+  );
+  for (const index of indexes) {
     const snapshot = await sample("post-infrastructure");
     if (
-      previousSnapshot !== undefined &&
-      snapshot.timestampWall <= previousSnapshot.timestampWall
+      state.previousSnapshot !== undefined &&
+      snapshot.timestampWall <= state.previousSnapshot.timestampWall
     )
       throw new Error(
         `Host baseline timestamp did not advance at sample ${String(index + 1)}`,
@@ -57,7 +56,7 @@ const collectBaseline = async (input: {
       snapshot,
       mode: "baseline",
       baselineSwapUsedBytes: snapshot.swapUsedBytes ?? 0,
-      priorCounters: previousCounters,
+      priorCounters: state.previousCounters,
       breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
     });
     await input.receipt.record({
@@ -71,8 +70,8 @@ const collectBaseline = async (input: {
       evaluation.nextCounters === undefined
     )
       throw new Error(`Host baseline failed at sample ${String(index + 1)}`);
-    previousCounters = evaluation.nextCounters;
-    previousSnapshot = snapshot;
+    state.previousCounters = evaluation.nextCounters;
+    state.previousSnapshot = snapshot;
     if (index + 1 < HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples)
       await wait(HOST_ENVELOPE_THRESHOLDS.sampleIntervalMs);
   }

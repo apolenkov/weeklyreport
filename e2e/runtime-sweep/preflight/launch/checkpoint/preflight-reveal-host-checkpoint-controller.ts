@@ -132,6 +132,8 @@ const initialControllerStateFor = (
   baseline: HealthyPostInfrastructureReceipt,
 ): ControllerState => ({
   attemptId: undefined,
+  responseCount: 0,
+  lastResponseDigest: null,
   expectedSequence: 1,
   previousCheckpointDigest: null,
   previousReceiptHead: null,
@@ -160,12 +162,11 @@ const runControllerLoop = async (input: {
 }): Promise<HostCheckpointControllerResult> => {
   const { controller, state, readSnapshot } = input;
   const seen = new Set<string>();
-  // eslint-disable-next-line no-restricted-syntax -- response count is a bounded one-attempt accumulator
-  let responseCount = 0;
-  // eslint-disable-next-line no-restricted-syntax -- latest response digest is part of the bounded result
-  let lastResponseDigest: string | null = null;
   for (;;) {
-    const atBound = assertControllerCanContinue(controller, responseCount);
+    const atBound = assertControllerCanContinue(
+      controller,
+      state.responseCount,
+    );
     const next = await readNextMessage({
       mailboxRoot: controller.mailboxRoot,
       seen,
@@ -179,13 +180,16 @@ const runControllerLoop = async (input: {
         controller,
         state,
         completion: next.completion,
-        responseCount,
-        lastResponseDigest,
+        responseCount: state.responseCount,
+        lastResponseDigest: state.lastResponseDigest,
       });
-      return { responseCount, lastResponseDigest };
+      return {
+        responseCount: state.responseCount,
+        lastResponseDigest: state.lastResponseDigest,
+      };
     }
     assertRequestBelowBound(atBound);
-    const response = await processHostCheckpointRequest({
+    await processHostCheckpointRequest({
       request: next.request,
       requestPath: next.path,
       state,
@@ -195,8 +199,6 @@ const runControllerLoop = async (input: {
       ...(controller.signal === undefined ? {} : { signal: controller.signal }),
     });
     seen.add(next.name);
-    responseCount += 1;
-    lastResponseDigest = response.responseDigest;
   }
 };
 

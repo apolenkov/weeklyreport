@@ -19,9 +19,9 @@ const TOTAL_GIBIBYTES = 16;
 const SWAP_FREE_GIBIBYTES = 4;
 const CONTROLLER_TIMESTAMP = 201;
 
-export const digest = "a".repeat(DIGEST_LENGTH);
+const digest = "a".repeat(DIGEST_LENGTH);
 export const baselineReceiptDigest = "d".repeat(DIGEST_LENGTH);
-export const run = {
+const run = {
   campaignId: "campaign",
   sourceSha: "b".repeat(SOURCE_LENGTH),
   sourceTree: "c".repeat(SOURCE_LENGTH),
@@ -53,7 +53,7 @@ export const request = createHostCheckpointRequest({
   previousSampleSequence: null,
 });
 
-export const sample = {
+const sample = {
   eventSequence: 61,
   timestampWall: 200,
   phase: "runtime" as const,

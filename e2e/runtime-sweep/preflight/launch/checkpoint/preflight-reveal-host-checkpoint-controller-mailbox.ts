@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   link,
   lstat,
@@ -19,16 +20,13 @@ import type {
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { HOST_CHECKPOINT_MAX_BYTES } from "./preflight-reveal-host-checkpoint-contract.ts";
 
-export const PRIVATE_FILE_MODE = 0o600;
-export const MAILBOX_MODE = 0o700;
+const PRIVATE_FILE_MODE = 0o600;
+const MAILBOX_MODE = 0o700;
 const PERMISSION_MASK = 0o777;
 const REQUEST_PREFIX = "HOST_CHECKPOINT_REQUEST.";
 const RESPONSE_PREFIX = "HOST_CHECKPOINT_RESPONSE.";
 const COMPLETE_PREFIX = "HOST_CHECKPOINT_COMPLETE.";
 const REQUEST_SUFFIX = ".json";
-// eslint-disable-next-line no-restricted-syntax -- unique temporary names are monotonic within this process
-let temporaryCounter = 0;
-
 export type WatchDirectory = (
   directory: string,
   signal: AbortSignal,
@@ -39,7 +37,7 @@ const throwIfAborted = (signal?: AbortSignal): void => {
     throw signal.reason ?? new Error("Host checkpoint controller aborted");
 };
 
-export const missing = (error: unknown): boolean =>
+const missing = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === "ENOENT";
 
 export const assertPrivateFile = async (filePath: string): Promise<void> => {
@@ -113,10 +111,9 @@ export const immutableWrite = async (
   throwIfAborted(options.signal);
   if (Buffer.byteLength(text, "utf8") > HOST_CHECKPOINT_MAX_BYTES)
     throw new Error("Host checkpoint response exceeds 16 KiB");
-  temporaryCounter += 1;
   const temporaryPath = path.join(
     path.dirname(filePath),
-    `.${path.basename(filePath)}.${process.pid}.${String(temporaryCounter)}.tmp`,
+    `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
   );
   const handle = await open(temporaryPath, "wx", PRIVATE_FILE_MODE);
   try {
