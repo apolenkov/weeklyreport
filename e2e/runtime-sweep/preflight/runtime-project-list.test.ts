@@ -278,11 +278,13 @@ test("keeps deterministic runtime projects in dependency order", async () => {
       sources: true,
       attachments: true,
     });
-    expect(diagnosticConfig.use?.screenshot).toBe("off");
-    expect(diagnosticConfig.use?.video).toBe("off");
-    expect(diagnosticConfig.use?.contextOptions).not.toHaveProperty(
-      "recordHar",
-    );
+    expect(diagnosticConfig.use?.screenshot).toBe("only-on-failure");
+    expect(diagnosticConfig.use?.video).toBe("retain-on-failure");
+    expect(diagnosticConfig.use?.contextOptions?.recordHar).toEqual({
+      path: path.join(archive, "diagnostic", "playwright", "network.har"),
+      content: "omit",
+      mode: "full",
+    });
   } finally {
     restoreRuntimeEnvironment(environmentSnapshot);
     await rm(archive, { recursive: true, force: true });
