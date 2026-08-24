@@ -250,10 +250,12 @@
       <div class="panel">
         <h3>Identity и граница текущей редакции</h3>
         <p>
-          <strong>Текущий product source перед этой docs-only редакцией:</strong>
+          <strong
+            >Текущий product source перед этой docs-only редакцией:</strong
+          >
           ветка <code>campaign/cr-001-20260820</code>, commit
-          <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code>, дерево
-          <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Это точная
+          <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code>, дерево
+          <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Это точная
           source-bound точка после последнего принятого UI-атома; до этой
           metadata-only редакции worktree был чистым. Она не содержит нового
           полного runtime acceptance.
@@ -289,8 +291,8 @@
             <td>
               Для этой редакции текущий source identity — ветка
               <code>campaign/cr-001-20260820</code>, committed
-              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с деревом
-              <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Свежий
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -383,17 +385,20 @@
             </td>
           </tr>
           <tr>
-            <td>Current source-only verification tranche</td>
+            <td>Current source-bound diagnostic tranche</td>
             <td>
-              <span class="status warn">DOCS-ONLY / RUNTIME NOT-PROVEN</span>
+              <span class="status warn"
+                >DIAGNOSTIC-PROVEN / FULL RUNTIME NOT-PROVEN</span
+              >
             </td>
             <td>
               Для текущего source identity
-              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> /
-              <code>6dd721db67100234d2319d659559d1b60d49f662</code> этот lane
-              изменяет только OpenSpec/roadmap metadata. Исторические
-              code/test/build receipts не переносятся как current acceptance;
-              runtime и browser evidence остаются NOT-PROVEN.
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> для него
+              выполнен отдельный exact-SHA R182 diagnostic rerun с полным
+              failure-evidence комплектом. Это не переносит исторические
+              code/test/build receipts и не доказывает full runtime, matrix или
+              product acceptance; они остаются NOT-PROVEN.
             </td>
           </tr>
           <tr>
@@ -436,8 +441,8 @@
             </td>
             <td>
               На текущем committed source
-              <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> /
-              <code>6dd721db67100234d2319d659559d1b60d49f662</code> Wave 0 не
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> Wave 0 не
               выполняет exact <code>admin/demo</code> canary. Исторические
               contract/test/review receipts сохраняются как provenance, но не
               дают current runtime receipt, root-cause verdict или право менять
@@ -449,7 +454,9 @@
             <td>Условие остановки CR-001</td>
             <td><span class="status warn">OPEN</span></td>
             <td>
-              Задачи 5.14, 5.15 и 5.17 приняты только в заявленной
+              5.14 теперь имеет свежий exact-SHA диагностический пакет с полным
+              failure-evidence комплектом; это всё ещё не product/runtime
+              acceptance. 5.15 и 5.17 приняты только в заявленной
               exact-canary/diagnostic области. Текущие хвосты: pair 1.3/3.1/3.2
               + 5.19; 6.2-6.4; 7.1-7.4; 8.1-8.4; remote CI/Dependabot; затем
               разбор результатов, исправления, очистка, выпуск и итоговое
@@ -549,10 +556,11 @@
         переведены в отдельные строки полной ширины с иконками и статусными
         индикаторами. Свежий real-Chrome пакет для этого атома содержит 24
         строки и 24 индикатора, сохранённые <code>scrollY=0</code>, видимое
-        верхнее меню и отсутствие горизонтального overflow; toggle/focus
-        bounds не изменяются. Артефакты находятся в
-        <code>/Users/wrk/work/customreport-archive/2026-08-24-ui-runtime-reflow/</code>;
-        independent whole-frame review и финальный Sol review имеют статус
+        верхнее меню и отсутствие горизонтального overflow; toggle/focus bounds
+        не изменяются. Артефакты находятся в
+        <code
+          >/Users/wrk/work/customreport-archive/2026-08-24-ui-runtime-reflow/</code
+        >; independent whole-frame review и финальный Sol review имеют статус
         <code>PASS</code>. Это отдельное UI-доказательство и не заменяет
         historical desktop packet <code>51/51 + 18 + L10</code>, полный runtime
         sweep или <code>runtimeEvidenceSha</code>.
@@ -586,11 +594,13 @@
           >host eligibility → fresh exact 5.14 diagnostic → 5.15 parent-only →
           5.17 single-child → 5.19 admin/demo canary → matrix → review → fixes →
           final resweep</code
-        >. Исторические пакеты 5.14, 5.15 и 5.17 приняты только в их
-        ограниченной диагностической области. Текущий source identity уже
-        зафиксирован в <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с
-        деревом <code>6dd721db67100234d2319d659559d1b60d49f662</code>; Sol plan
-        gate <code>APPROVE</code> сохранён в receipt
+        >. Исторические пакеты 5.15 и 5.17 приняты только в их ограниченной
+        диагностической области; свежий 5.14 packet подтверждает комплект
+        failure-evidence, но не является runtime acceptance. Текущий source
+        identity уже зафиксирован в
+        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>; Sol plan gate
+        <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
         должны пройти host eligibility и новый executable pre-run gate; эта
         continuity-редакция их не выполняет.
@@ -598,16 +608,17 @@
       <ol class="sequence">
         <li>
           <strong
-            >5.14 · ограниченный диагностический пакет ·
-            ACCEPTED-BOUNDED</strong
+            >5.14 · ограниченный диагностический пакет · EVIDENCE-COMPLETE /
+            ACCEPTANCE-OPEN</strong
           >
           <span>
-            Естественный timeout R182 на exact-SHA сохранён в
+            Свежий exact-SHA rerun сохранён в
             <code
-              >2026-08-21-runtime-514-e5105aa9-r182-natural-timeout-corrected</code
-            >: ограниченный контекст отказа без тел ответов; Sol принял пакет
-            как bounded diagnostic фиксацию отказа. Этот пакет не является
-            runtimeEvidenceSha.
+              >2026-08-24-runtime-source-57d9c79a0-r182-diagnostic/r182-rerun</code
+            >: timeout <code>60000 ms</code>, 721-entry bodyless HAR, failure
+            screenshot, video, lean trace и error context; fail-closed validator
+            прошёл. Пакет диагностический и не является
+            <code>runtimeEvidenceSha</code> или product acceptance.
           </span>
         </li>
         <li>
@@ -681,7 +692,8 @@
 
       <div class="callout warn">
         <strong>Текущие хвосты:</strong>
-        <code>5.14/5.15/5.17</code> остаются bounded diagnostic boundaries; pair
+        <code>5.14/5.15/5.17</code> остаются bounded diagnostic boundaries (5.14
+        evidence-complete, acceptance-open); pair
         <code>1.3/3.1/3.2 + 5.19</code> остаётся source-bound dependency с
         <code>5.19</code> CANARY <code>NOT-PROVEN</code>; <code>6.2-6.4</code>,
         <code>7.1-7.4</code>, <code>8.1-8.4</code> и remote CI/Dependabot
@@ -792,8 +804,9 @@
       <h2>6. Ближайшее действие владельца</h2>
       <div class="callout">
         <p>
-          Считать исторические пакеты 5.14/5.15/5.17 принятыми только в их
-          ограниченной области и сохранить их неизменными. После этой docs-only
+          Считать пакеты 5.14/5.15/5.17 принятыми только в их ограниченной
+          области и сохранить их неизменными. Свежий 5.14 evidence packet уже
+          сохранён, но не является runtime acceptance. После этой docs-only
           редакции перечитать clean source identity, дождаться host eligibility
           и нового Sol pre-run gate, затем выполнить свежую последовательность
           5.14 → 5.15 → 5.17 → 5.19. Только после этого готовить полную матрицу
@@ -804,8 +817,8 @@
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>84ade59626d42591bcdac6bccee0c135b93e6a49</code> с деревом
-        <code>6dd721db67100234d2319d659559d1b60d49f662</code>. Pair-level
+        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Pair-level
         code/test/review and all runtime claims remain separately bounded;
         <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
         после фиксации получит отдельный SHA/tree. Дорожная карта не содержит
