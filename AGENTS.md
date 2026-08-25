@@ -79,8 +79,25 @@ pnpm build              # turbo run build
   or blanket disposable-database authorization, and never bypass the guard.
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; run the required seed
   explicitly under the same consent after a successful reset.
-- Treat committed migrations as append-only. A schema-history rewrite requires
-  an explicit reviewed task and must still obey the exact target allowlist above.
+
+### MVP baseline-schema authorization
+
+- This repository is an MVP. The owner explicitly authorizes replacing,
+  squashing, or resetting the committed Prisma migration history to one clean
+  baseline/init schema derived from the current `prisma/schema.prisma`; an
+  incremental upgrade path and preservation of disposable database contents are
+  not required. Do not wait for another owner confirmation for that
+  repository-scoped migration-history rewrite.
+- Perform the rewrite only as a bounded reviewed CR-001/OpenSpec task. Preserve
+  the final domain schema and load-bearing invariants, remove superseded
+  migration history deliberately, and prove the new baseline from an empty
+  exact allowlisted disposable database with the destructive guard and exact
+  per-run consent still active.
+- After applying the baseline, run the explicit seed (Prisma 7 does not do so
+  automatically), prove schema/migration drift is zero, and rerun the relevant
+  database, integration, and runtime gates. Never apply this authorization to
+  production, shared, remote, or unknown databases, and never bypass the
+  existing target validator or consent boundary.
 
 ## Load-Bearing Invariants
 
