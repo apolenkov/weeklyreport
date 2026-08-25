@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import {
   ItemType,
   ItemWorkflowStatus,
@@ -47,6 +45,31 @@ const SEED_STAGE_ROTATION = [
 // lead's two lists do not land on the same stage label.
 const NEXT_ITEM_ROTATION_SHIFT = 100;
 const HEX_RADIX = 16;
+const SEQUENCE_HEX_WIDTH = 3;
+const SEED_UUID_PREFIX = "a0000000-0000-4000-8000-";
+
+const SEED_RECORD_KIND = {
+  item: "5",
+  risk: "9",
+  decision: "7",
+} as const;
+
+export type SeedRecordKind = keyof typeof SEED_RECORD_KIND;
+
+// Child rows must retain the same logical identity and ordering after every
+// disposable database reseed. Keep the lead and ordinal fields padded so this
+// stays a valid UUID and remains lexicographically sortable within a section.
+export function deterministicSeedRecordId(
+  kind: SeedRecordKind,
+  leadIdx: number,
+  ordinal: number,
+): string {
+  const lead = leadIdx.toString(HEX_RADIX).padStart(2, "0");
+  const sequence = ordinal
+    .toString(HEX_RADIX)
+    .padStart(SEQUENCE_HEX_WIDTH, "0");
+  return `${SEED_UUID_PREFIX}000000${SEED_RECORD_KIND[kind]}${lead}${sequence}`;
+}
 
 const stageFor = (leadId: string, idx: number) =>
   leadId === LEAD_1
@@ -123,6 +146,7 @@ function buildItemRows(
   return [
     ...content.currentItems.map((it, idx) => ({
       id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}00${idx + 1}`,
+      stableId: deterministicSeedRecordId("item", leadIdx, idx + 1),
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId:
@@ -138,6 +162,11 @@ function buildItemRows(
     })),
     ...content.nextItems.map((it, idx) => ({
       id: `a0000000-0000-4000-8000-00000005${leadIdx + 1}01${idx + 1}`,
+      stableId: deterministicSeedRecordId(
+        "item",
+        leadIdx,
+        content.currentItems.length + idx + 1,
+      ),
       reportSectionId: sectionId,
       type: ItemType.next,
       projectId:
@@ -165,6 +194,7 @@ async function seedRiskAndDecisions(
     await prisma.risk.create({
       data: {
         id: `a0000000-0000-4000-8000-00000000090${leadIdx + 1}`,
+        stableId: deterministicSeedRecordId("risk", leadIdx, 1),
         reportSectionId: sectionId,
         projectId: lead.productId,
         risk: content.risk.risk,
@@ -177,10 +207,8 @@ async function seedRiskAndDecisions(
   }
   await prisma.decision.createMany({
     data: content.decisions.map((d, dIdx) => ({
-      id:
-        dIdx === 0
-          ? `a0000000-0000-4000-8000-00000000070${leadIdx + 1}`
-          : randomUUID(),
+      id: `a0000000-0000-4000-8000-0000000007${dIdx}${leadIdx + 1}`,
+      stableId: deterministicSeedRecordId("decision", leadIdx, dIdx + 1),
       reportSectionId: sectionId,
       productId: lead.productId,
       text: d.text,

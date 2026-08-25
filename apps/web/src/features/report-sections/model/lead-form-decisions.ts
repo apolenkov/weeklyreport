@@ -26,6 +26,7 @@ export function mapLeadDecisions(
   // with the activity name.
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
+    ...(d.stableId === undefined ? {} : { stableId: d.stableId }),
     productId: d.productId ?? "",
     productName:
       (d.productId ? projectIndex.get(d.productId)?.name : undefined) ??

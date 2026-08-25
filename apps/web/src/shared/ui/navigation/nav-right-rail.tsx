@@ -21,15 +21,15 @@ function RightRailSkeleton() {
   return (
     <>
       <div
-        className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
+        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
         aria-hidden="true"
       />
       <div
-        className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
+        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
         aria-hidden="true"
       />
       <div
-        className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
+        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
         aria-hidden="true"
       />
     </>

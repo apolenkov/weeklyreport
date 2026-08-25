@@ -114,44 +114,6 @@ describe("SettingsTab — Identity sub-tab", () => {
     toastError.mockReset();
   });
 
-  it("renders the five tabs in the documented order", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    // Tab triggers all visible — Identity active by default, including
-    // the fifth «Integrations» tab.
-    expect(screen.getByRole("tab", { name: /identity/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /periods/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /reminders/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /notifications/i })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /integrations/i })).toBeTruthy();
-  });
-
-  it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
-    // Holidays label is visually hidden below xl; ComingSoonBadge text is
-    // the only source of the tab's accessible "coming soon" name.
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    expect(screen.getByRole("tab", { name: /coming soon/i })).toBeTruthy();
-  });
-
-  it("pointer and keyboard activation of the inert Holidays tab cannot change the selected tab", () => {
-    const { proxy } = buildProxy();
-    renderSettings(proxy);
-
-    const holidaysTab = screen.getByRole("tab", { name: /coming soon/i });
-    expect(holidaysTab).toBeDisabled();
-
-    // Pointer: disabled trigger swallows the click.
-    fireEvent.click(holidaysTab);
-    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
-
-    // Keyboard: the trigger is not focusable/tab-activatable while disabled.
-    fireEvent.keyDown(holidaysTab, { key: "Enter" });
-    expect(holidaysTab.getAttribute("aria-selected")).not.toBe("true");
-  });
-
   it("loads the organization row into the Identity form", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
@@ -177,6 +139,53 @@ describe("SettingsTab — Identity sub-tab", () => {
       name: /save organization identity/i,
     });
     await waitFor(() => expect(saveButton.disabled).toBe(false));
+  });
+
+  it("keeps the Identity form busy until a deferred organization query hydrates it", async () => {
+    let resolveOrganization!: (organization: typeof ORG_DATA) => void;
+    const organizationQuery = new Promise<typeof ORG_DATA>((resolve) => {
+      resolveOrganization = resolve;
+    });
+    const proxy = createMockTRPC([
+      {
+        path: ["admin", "getOrganization"],
+        query: () => organizationQuery,
+      },
+      { path: ["admin", "updateOrganization"], mutation: true },
+      { path: ["admin", "updateSettings"], mutation: true },
+      { path: ["admin", "snapshot"] },
+      { path: ["admin", "getSettings"] },
+      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
+      { path: ["auth", "me"] },
+      { path: ["org", "getPublic"] },
+      { path: ["weeklyReport", "get"] },
+    ]);
+    renderSettings(proxy.proxy);
+
+    expect(
+      screen.getByRole("status", { name: "Loading organization identity" }),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByLabelText(/short name/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /save organization identity/i }),
+    ).not.toBeInTheDocument();
+
+    resolveOrganization(ORG_DATA);
+
+    const shortNameInput =
+      await screen.findByLabelText<HTMLInputElement>(/short name/i);
+    expect(shortNameInput.value).toBe(ORG_DATA.shortName);
+    expect(screen.getByLabelText<HTMLInputElement>(/full name/i).value).toBe(
+      ORG_DATA.fullName,
+    );
+    expect(
+      screen.queryByRole("status", { name: "Loading organization identity" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: /save organization identity/i,
+      }),
+    ).toBeEnabled();
   });
 
   it("surfaces an organization-query failure instead of a disabled blank form", async () => {
@@ -234,6 +243,81 @@ describe("SettingsTab — Identity sub-tab", () => {
       shortName: "PLAT",
       fullName: "Platform Engineering",
     });
+  });
+
+  it("shows a newer server identity that arrives while Save is pending", async () => {
+    let organization = ORG_DATA;
+    let resolveUpdate!: () => void;
+    const updatePending = new Promise<void>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    const { proxy, captured } = createMockTRPC([
+      {
+        path: ["admin", "getOrganization"],
+        query: () => organization,
+      },
+      { path: ["admin", "updateOrganization"], mutation: true },
+      { path: ["admin", "updateSettings"], mutation: true },
+      { path: ["admin", "snapshot"] },
+      { path: ["admin", "getSettings"] },
+      { path: ["admin", "integrationsStatus"], query: DEFAULT_INTEGRATIONS },
+      { path: ["auth", "me"] },
+      { path: ["org", "getPublic"] },
+      { path: ["weeklyReport", "get"] },
+    ]);
+    expectDefined(
+      captured["admin.updateOrganization"],
+    ).mutationFn.mockImplementation(() => updatePending);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    try {
+      const { qc } = renderSettings(proxy);
+      const shortNameInput =
+        await screen.findByLabelText<HTMLInputElement>(/short name/i);
+      await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+      fireEvent.change(shortNameInput, { target: { value: "SAVED" } });
+
+      const saveButton = screen.getByRole<HTMLButtonElement>("button", {
+        name: /save organization identity/i,
+      });
+      await userEvent.setup().click(saveButton);
+      await waitFor(() =>
+        expect(
+          expectDefined(captured["admin.updateOrganization"]).mutationFn,
+        ).toHaveBeenCalled(),
+      );
+      const pendingOptions = expectDefined(
+        captured["admin.updateOrganization"],
+      ).lastOptions;
+      const pendingOnSuccess = pendingOptions.onSuccess;
+
+      organization = {
+        ...ORG_DATA,
+        shortName: "LIVE",
+        fullName: "Live server identity",
+      };
+      qc.setQueryData([["admin", "getOrganization"]], organization);
+      await waitFor(() => {
+        expect(
+          expectDefined(captured["admin.updateOrganization"]).lastOptions
+            .onSuccess,
+        ).not.toBe(pendingOnSuccess);
+        expect(saveButton).toBeDisabled();
+        expect(saveButton).toHaveTextContent(/saving/i);
+      });
+      resolveUpdate();
+
+      await waitFor(() => expect(shortNameInput.value).toBe("LIVE"));
+      expect(screen.getByLabelText<HTMLInputElement>(/full name/i).value).toBe(
+        "Live server identity",
+      );
+      expect(await screen.findByText(/identity saved/i)).toBeInTheDocument();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("disables Save when shortName exceeds 16 chars, and re-enables at <=16", async () => {

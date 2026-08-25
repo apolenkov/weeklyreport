@@ -25,6 +25,9 @@
   --color-toggle-active: #3f4a44;
 
   --toolbar-control-h: 2rem;
+  --dashboard-action-h: var(--touch-target-min);
+  --dashboard-summary-action-w: 5.5rem;
+  --dashboard-detail-action-w: 9.25rem;
 
   --color-skeleton: #d8ddd4;
 
@@ -100,10 +103,10 @@
   --color-starbucks-gold: #cba258;
   --color-starbucks-cream: #f2f0eb;
 
-  --color-chart-1: #15803d;
+  --color-chart-1: #166534;
   --color-chart-2: #2563eb;
   --color-chart-3: #9333ea;
-  --color-chart-4: #0891b2;
+  --color-chart-4: #0e7490;
   --color-chart-5: #c2410c;
   --color-chart-6: #a21caf;
 
@@ -172,9 +175,9 @@
   /* Decisions use blue so they cannot be mistaken for green success state. */
   --color-decisions-accent: #4a7494;
 
-  --slide-canvas-max-w: 1088px;
+  --slide-canvas-max-w: 100%;
   --slide-canvas-min-w: 900px;
-  --slide-canvas-min-h: 680px;
+  --slide-canvas-min-h: 360px;
 }
 
 .dark {

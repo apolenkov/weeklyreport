@@ -1,3 +1,4 @@
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { parseImportOptions } from "./import-ai-driver-options.ts";
 import { importAiDriverReports } from "./import-ai-driver-report.ts";
 
@@ -5,6 +6,7 @@ const USAGE =
   "pnpm test:runtime-driver --report <path> [--report <path> ...] --cells <file-or-directory> --output <directory> --transcript <jsonl-path> [--transcript <jsonl-path> ...] [--verification <path>] --source-sha <sha> --profile <profile> --role <role>";
 
 const main = async (): Promise<void> => {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const merged = await importAiDriverReports(
     parseImportOptions(process.argv.slice(2)),
   );

@@ -37,7 +37,12 @@ const TERMINAL_VERDICTS = new Set<CoverageVerdict>([
   "confirmed",
   "excluded",
 ]);
-const REQUIRED_DIMENSIONS = ["function", "accessibility", "visual"] as const;
+const REQUIRED_DIMENSIONS = [
+  "function",
+  "accessibility",
+  "visual",
+  "runtime",
+] as const;
 
 function allEvidence(cell: CoverageCell) {
   return [

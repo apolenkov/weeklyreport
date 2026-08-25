@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   assertDriverShardResult,
   assertExactDriverShardCaseIds,
@@ -21,6 +22,7 @@ const makeCase = (
   role: "lead",
   catalogRoute: route,
   resolvedRoute: route,
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "canonical-identities",
     lifecycle: "open",

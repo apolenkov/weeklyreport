@@ -2,7 +2,7 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import type { MatrixExecutableCase } from "../matrix/matrix-finalizer.ts";
-import { writeFrozenCaseArtifact } from "../replay/frozen-case-artifacts.ts";
+import { writeFrozenCaseArtifact } from "../replay/evidence/frozen-case-artifacts.ts";
 import {
   type EvidenceBundle,
   evidenceBundleSchema,

@@ -4,14 +4,14 @@ import path from "node:path";
 import { parseFrozenMatrix } from "../matrix/matrix-finalizer.ts";
 import { SEED_PROFILES } from "../source/contracts.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
-import type { RuntimeLaneAssignment } from "./runtime-lane-contract.ts";
-import { publishRuntimeLaneMerge } from "./runtime-lane-merge-publication.ts";
+import type { RuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
+import { publishRuntimeLaneMerge } from "./merge/runtime-lane-merge-publication.ts";
 import {
   assignedLaneCases,
   verifyRuntimeLaneCells,
   verifyRuntimeLaneInputs,
-} from "./runtime-lane-merge-validation.ts";
-import { verifyRuntimeLaneObservability } from "./runtime-lane-observability-validation.ts";
+} from "./merge/runtime-lane-merge-validation.ts";
+import { verifyRuntimeLaneObservability } from "./observability/runtime-lane-observability-validation.ts";
 
 const compareStrings = (left: string, right: string): number =>
   left.localeCompare(right);

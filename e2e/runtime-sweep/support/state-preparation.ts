@@ -1,6 +1,6 @@
 import type { ReportStatus } from "@customreport/shared";
 
-import { assertNonProdDestructiveTarget } from "../../../prisma/guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
 import {
   SEED_PROFILE_MANIFESTS,
   type SeedCapability,
@@ -12,6 +12,7 @@ import {
   e2eSetupCommands,
   reseedE2eDatabase,
 } from "../../helpers/e2e-database-setup.js";
+import { sameE2eDatabaseTarget } from "../../helpers/e2e-database-target.ts";
 import {
   REACHABLE_ROUTE_SURFACE_EXPECTATION,
   type RuntimeSurfaceExpectation,
@@ -67,12 +68,21 @@ export type OwnershipStateMutation = Readonly<{ projectId: string; assignments: 
 // prettier-ignore
 export type PermissionSubject = Readonly<{ boundary: PermissionBoundary; actorId: string | null; groupId: string }>;
 // prettier-ignore
+export type RuntimeMutationLogEntry = Readonly<{ id: string; userId: string; role: Role | null; procedure: string; targetId: string | null; status: "success" | "fail"; reason: string | null; ip: string | null; correlationId: string; durationMs: number; createdAt: string }>;
+export type RuntimeMutationSentinel = readonly RuntimeMutationLogEntry[];
+export type ViewerGroupAccessGrant = Readonly<{
+  readonly id: string;
+  readonly viewerUserId: string;
+  readonly groupId: string;
+  readonly canReview: boolean;
+}>;
+// prettier-ignore
 export type StatePreparationPlan = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; routeKey: string | undefined; axes: RuntimeStateAxes; resetCommands: readonly E2eSetupCommand[]; targets: StateTarget; report: ReportStateMutation; section: SectionStateMutation; ownership: OwnershipStateMutation; permission: PermissionSubject; oracle: RuntimeDomainOracle; surface: RuntimeSurfaceExpectation; digest: string }>;
 // prettier-ignore
 export type StatePreparationPlanInput = Readonly<{ profile: SeedProfile; routeRole: Role; routeTarget: RouteBindingTarget; routeKey?: string | undefined; axes: RuntimeStateAxes; repoRoot: string }>;
 
 // prettier-ignore
-export interface RuntimeStateTransaction { updateReport(mutation: ReportStateMutation): Promise<void>; updateSection(mutation: SectionStateMutation): Promise<void>; replaceOwnership(mutation: OwnershipStateMutation): Promise<void>; readSnapshot(targets: StateTarget, permission: PermissionSubject): Promise<RuntimeDatabaseSnapshot> }
+export interface RuntimeStateTransaction { updateReport(mutation: ReportStateMutation): Promise<void>; updateSection(mutation: SectionStateMutation): Promise<void>; replaceOwnership(mutation: OwnershipStateMutation): Promise<void>; readSnapshot(targets: StateTarget, permission: PermissionSubject): Promise<RuntimeDatabaseSnapshot>; readMutationSentinel(): Promise<RuntimeMutationSentinel>; readViewerGroupAccess(viewerUserId: string): Promise<readonly ViewerGroupAccessGrant[]>; removeViewerGroupAccess(viewerUserId: string): Promise<number> }
 // prettier-ignore
 export interface RuntimeStateDatabase { transaction<T>(work: (transaction: RuntimeStateTransaction) => Promise<T>): Promise<T> }
 export type RuntimeStateResetter = (
@@ -81,7 +91,13 @@ export type RuntimeStateResetter = (
 // prettier-ignore
 export type StatePreparationRequest = StatePreparationPlanInput & Readonly<{ databaseUrl: string }>;
 // prettier-ignore
-export type PreparedRuntimeState = Readonly<{ plan: StatePreparationPlan; actual: RuntimeDatabaseSnapshot; observation: RuntimeOracleObservation }>;
+export type PreparedRuntimeState = Readonly<{ plan: StatePreparationPlan; actual: RuntimeDatabaseSnapshot; mutationSentinel: RuntimeMutationSentinel; observation: RuntimeOracleObservation }>;
+export type RuntimeStateMutation<T> = (
+  input: Readonly<{
+    readonly transaction: RuntimeStateTransaction;
+    readonly plan: StatePreparationPlan;
+  }>,
+) => Promise<T>;
 
 function capabilityFor(axes: RuntimeStateAxes): SeedCapability | undefined {
   switch (axes.lifecycle) {
@@ -229,18 +245,25 @@ function assertDatabaseTarget(databaseUrl: string): void {
       "databaseUrl is required",
     );
   }
-  if (databaseUrl === process.env.DATABASE_URL) {
+  if (
+    process.env.DATABASE_URL !== undefined &&
+    sameE2eDatabaseTarget(databaseUrl, process.env.DATABASE_URL)
+  ) {
     throw new RuntimeStateTargetError(
       "same-as-development",
       "E2E database must differ from DATABASE_URL",
     );
   }
   try {
-    const environment =
-      process.env.NODE_ENV === undefined
-        ? { DATABASE_URL: databaseUrl }
-        : { DATABASE_URL: databaseUrl, NODE_ENV: process.env.NODE_ENV };
-    assertNonProdDestructiveTarget("runtime-state-preparation", environment);
+    const environment = {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+    };
+    assertE2eRuntimeDestructiveTarget(
+      "runtime-state-preparation",
+      databaseUrl,
+      environment,
+    );
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw new RuntimeStateTargetError("destructive-guard", error.message);
@@ -249,11 +272,12 @@ function assertDatabaseTarget(databaseUrl: string): void {
   }
 }
 
-export async function prepareRuntimeState(
+export async function prepareRuntimeStateWithMutation<T>(
   request: StatePreparationRequest,
   database: RuntimeStateDatabase,
+  mutation: RuntimeStateMutation<T>,
   resetAndSeed: RuntimeStateResetter = reseedE2eDatabase,
-): Promise<PreparedRuntimeState> {
+): Promise<PreparedRuntimeState & Readonly<{ mutation: T }>> {
   assertDatabaseTarget(request.databaseUrl);
   const plan = buildStatePreparationPlan(request);
   await resetAndSeed({
@@ -265,14 +289,31 @@ export async function prepareRuntimeState(
     await transaction.updateReport(plan.report);
     await transaction.updateSection(plan.section);
     await transaction.replaceOwnership(plan.ownership);
+    const mutationResult = await mutation({ transaction, plan });
     const actual = await transaction.readSnapshot(
       plan.targets,
       plan.permission,
     );
+    const mutationSentinel = await transaction.readMutationSentinel();
     return {
       plan,
       actual,
+      mutationSentinel,
       observation: observeRuntimeDatabase(plan.oracle, actual),
+      mutation: mutationResult,
     };
   });
+}
+
+export async function prepareRuntimeState(
+  request: StatePreparationRequest,
+  database: RuntimeStateDatabase,
+  resetAndSeed: RuntimeStateResetter = reseedE2eDatabase,
+): Promise<PreparedRuntimeState> {
+  return prepareRuntimeStateWithMutation(
+    request,
+    database,
+    () => Promise.resolve(undefined),
+    resetAndSeed,
+  );
 }

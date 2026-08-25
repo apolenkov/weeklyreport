@@ -4,8 +4,10 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
+import { withoutLocalGitEnvironment } from "../../shared/git-environment.ts";
 import type { ReactDoctorBaselineEntry } from "./react-doctor-baseline.ts";
 import {
+  assertReactDoctorScanComplete,
   compareReactDoctorBaseline,
   reactDoctorBaselineIsCurrent,
 } from "./react-doctor-baseline.ts";
@@ -25,7 +27,46 @@ void test("accepts an exact terminal baseline", () => {
 
 interface RuntimeReport {
   readonly diagnostics: readonly { readonly filePath: string }[];
+  readonly reactDetected: boolean;
+  readonly projects: readonly {
+    readonly complete: boolean;
+    readonly directory: string;
+    readonly skippedChecks: readonly string[];
+  }[];
 }
+
+void test("rejects vacuous or incomplete project scans", () => {
+  const validProject = {
+    complete: true,
+    skippedChecks: [] as readonly string[],
+  };
+
+  assert.doesNotThrow(() =>
+    assertReactDoctorScanComplete(true, [validProject]),
+  );
+  assert.throws(
+    () => assertReactDoctorScanComplete(false, [validProject]),
+    /did not detect React/,
+  );
+  assert.throws(
+    () => assertReactDoctorScanComplete(true, []),
+    /no project scans/,
+  );
+  assert.throws(
+    () =>
+      assertReactDoctorScanComplete(true, [
+        { ...validProject, complete: false },
+      ]),
+    /did not complete/,
+  );
+  assert.throws(
+    () =>
+      assertReactDoctorScanComplete(true, [
+        { ...validProject, skippedChecks: ["eslint"] },
+      ]),
+    /skipped checks: eslint/,
+  );
+});
 
 void test("filters generated sweep builds from real full-scan diagnostics", () => {
   const fixtures = [
@@ -68,16 +109,54 @@ void test("filters generated sweep builds from real full-scan diagnostics", () =
         "--blocking",
         "error",
       ],
-      { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+      {
+        encoding: "utf8",
+        env: withoutLocalGitEnvironment({
+          ...process.env,
+          GIT_DIR: join(process.cwd(), ".git"),
+          GIT_INDEX_FILE: join(process.cwd(), ".git", "index"),
+          GIT_PREFIX: "poisoned-prefix",
+          GIT_WORK_TREE: process.cwd(),
+        }),
+        maxBuffer: 16 * 1024 * 1024,
+      },
     );
     const report = JSON.parse(output) as RuntimeReport;
+    const [project] = report.projects;
+    assert.ok(project);
+    assert.equal(report.reactDetected, true);
+    assert.equal(project.complete, true);
+    assert.equal(project.directory, join(process.cwd(), "apps/web"));
+    assert.deepEqual(project.skippedChecks, []);
     assert.equal(
       report.diagnostics.some(
         ({ filePath }) =>
           filePath.includes(".next-sweep") ||
-          filePath.includes(".next-runtime-"),
+          filePath.includes(".next-runtime-") ||
+          filePath.includes("apps/web/openspec"),
       ),
       false,
+    );
+
+    const gateOutput = execFileSync(
+      command,
+      [...leadingArguments, "run", "--silent", "lint:react-doctor"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GIT_DIR: join(process.cwd(), ".git"),
+          GIT_INDEX_FILE: join(process.cwd(), ".git", "index"),
+          GIT_PREFIX: "poisoned-prefix",
+          GIT_WORK_TREE: process.cwd(),
+        },
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    );
+    assert.match(
+      gateOutput,
+      /react-doctor PASS 0 errors, \d+ reviewed warnings/,
     );
   } finally {
     fixtures.forEach((fixture) => {

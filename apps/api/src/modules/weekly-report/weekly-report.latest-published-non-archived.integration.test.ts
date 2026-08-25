@@ -55,7 +55,7 @@ describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integrat
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

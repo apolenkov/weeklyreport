@@ -5,12 +5,16 @@ import path from "node:path";
 
 import { expect, test } from "vitest";
 
+import { pairKeys } from "../matrix/finalization/matrix-finalizer-support.ts";
 import type {
   FrozenMatrix,
   MatrixExecutableCase,
 } from "../matrix/matrix-finalizer.ts";
-import { pairKeys } from "../matrix/matrix-finalizer-support.ts";
-import { type CoverageCell, coverageCellSchema } from "../source/contracts.ts";
+import {
+  type CoverageCell,
+  coverageCellSchema,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
+} from "../source/contracts.ts";
 import { sha256Hex } from "../support/ids.ts";
 import {
   finalizeRuntimeCoverage,
@@ -41,6 +45,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state,
   kind: "executable",
   execution: {
@@ -56,6 +61,9 @@ const matrixBody: Omit<FrozenMatrix, "digest"> = {
   rows: [matrixCase],
   cases: [matrixCase],
   inapplicable: [],
+  revealPaths: [],
+  revealSurfaces: [],
+  revealTransitions: [],
   coveredPairs: [...new Set(pairKeys(matrixCase))].toSorted((a, b) =>
     a.localeCompare(b),
   ),
@@ -83,6 +91,10 @@ const cell: CoverageCell = coverageCellSchema.parse({
     function: { required: false, expectation: "route resolves" },
     accessibility: { required: false, expectation: "controls are usable" },
     visual: { required: false, expectation: "geometry is stable" },
+    runtime: {
+      required: false,
+      expectation: "no service runtime is exercised",
+    },
   },
   controls: [],
   evidence: {

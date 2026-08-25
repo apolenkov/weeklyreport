@@ -1,24 +1,29 @@
 import { randomUUID } from "node:crypto";
 
-import type { ElementHandle, Locator, Page } from "@playwright/test";
+import type { ElementHandle, JSHandle, Locator, Page } from "@playwright/test";
 
 import {
   SUPPORTED_CONTROL_ROLES,
   type SupportedControlRole,
-} from "../control-action-roles.ts";
+} from "../control-actions/control-action-roles.ts";
 import type {
   ControlActionTarget,
   RenderedNameActionLease,
-  RenderedTargetValidator,
-} from "../control-action-types.ts";
-import { ControlActionPolicyError } from "../control-recovery.ts";
+} from "../control-actions/control-action-types.ts";
+import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
+import { cleanupDiscoveryValidator } from "./rendered-control-discovery-cleanup.ts";
+import {
+  EVALUATE_RENDERED_NAME_SCRIPT,
+  evaluateRenderedNameHandle,
+  type RenderedNameEvaluationInput,
+  type RenderedNameEvaluator,
+} from "./rendered-control-name-evaluator.ts";
 import {
   armRenderedNameHandle as armRenderedNameState,
-  RENDERED_TARGET_GUARD_PROPERTY,
   RENDERED_TARGET_VALIDATOR_PROPERTY,
 } from "./rendered-control-state.ts";
 
-export type { RenderedNameActionLease } from "../control-action-types.ts";
+export type { RenderedNameActionLease } from "../control-actions/control-action-types.ts";
 export {
   beginRenderedNameAction,
   cleanupRenderedNameGuard,
@@ -70,8 +75,19 @@ const inventoryRoleSelector = (roleName: string): string => {
   return `:is(${selectors.join(",")})`;
 };
 
+const fullscreenInteractionSelector = (selector: string): string =>
+  `:root:not(:has(:fullscreen)) ${selector}, :fullscreen:is(${selector}), :fullscreen ${selector}`;
+
 const roleTargetLocator = (page: Page, roleName: string): Locator =>
-  page.locator(inventoryRoleSelector(roleName));
+  page.locator(fullscreenInteractionSelector(inventoryRoleSelector(roleName)));
+
+const exactRenderedText = (value: string): RegExp => {
+  const normalized = value
+    .trim()
+    .replaceAll(/\s+/gu, " ")
+    .replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+  return new RegExp(String.raw`^\s*${normalized}\s*$`, "u");
+};
 
 const isSupportedRole = (role: string): role is SupportedControlRole =>
   (SUPPORTED_CONTROL_ROLES as readonly string[]).includes(role);
@@ -89,6 +105,26 @@ export const targetLocator = (
     })
     .and(roleTargetLocator(page, control.ariaRole))
     .nth(occurrenceFrom(control.controlKey) - 1);
+};
+
+/**
+ * Resolve a control using the DOM semantics used by inventoryDom.
+ *
+ * Playwright's accessibility tree can expose a native summary as `generic`
+ * while inventoryDom intentionally records it as an implicit button. The
+ * readiness path therefore adds a summary-only fallback; action execution
+ * continues to use targetLocator and its stricter accessibility intersection.
+ */
+export const inventoryTargetLocator = (
+  page: Page,
+  control: ControlActionTarget,
+): Locator => {
+  const target = targetLocator(page, control);
+  if (control.ariaRole !== "button") return target;
+  const summary = page
+    .locator(fullscreenInteractionSelector("summary:not([role])"))
+    .filter({ hasText: exactRenderedText(control.accessibleName) });
+  return target.or(summary).nth(occurrenceFrom(control.controlKey) - 1);
 };
 
 export const titleTargetLocator = (
@@ -114,108 +150,6 @@ export const hrefTargetLocator = (
     .nth(occurrenceFrom(control.controlKey) - 1);
 };
 
-interface RenderedNameExpectation {
-  readonly generation: string;
-  readonly name: string;
-  readonly roleName: string;
-  readonly roleSelector: string;
-  readonly validatorProperty: string;
-}
-
-const evaluateRenderedName = (
-  element: Node,
-  expected: RenderedNameExpectation,
-): boolean => {
-  if (!(element instanceof HTMLElement)) return false;
-  const normalize = (value: string | null): string =>
-    (value ?? "").replaceAll(/\s+/gu, " ").trim();
-  const readableText = (target: Element): string =>
-    target instanceof HTMLElement && target.innerText
-      ? target.innerText
-      : target.textContent;
-  const inventoryNameFor = (target: HTMLElement): string => {
-    const labelledBy = target.getAttribute("aria-labelledby");
-    if (labelledBy !== null)
-      return normalize(
-        labelledBy
-          .split(/\s+/u)
-          .map((id) => document.getElementById(id))
-          .map((label) => (label === null ? "" : readableText(label)))
-          .join(" "),
-      );
-    const ariaLabel = target.getAttribute("aria-label");
-    if (ariaLabel !== null) return normalize(ariaLabel);
-    const explicitLabel = target.id
-      ? [...document.querySelectorAll("label")].find(
-          (label) => label.htmlFor === target.id,
-        )
-      : undefined;
-    const labelText = (explicitLabel ?? target.closest("label"))?.innerText;
-    if (normalize(labelText ?? null) !== "")
-      return normalize(labelText ?? null);
-    const imageAlt =
-      target.querySelector("img[alt]")?.getAttribute("alt") ?? null;
-    const inputValue =
-      target instanceof HTMLInputElement &&
-      ["button", "image", "reset", "submit"].includes(target.type)
-        ? target.value || target.alt
-        : null;
-    const namedValue = [target.title, imageAlt, inputValue]
-      .map((value) => normalize(value))
-      .find((value) => value !== "");
-    if (namedValue !== undefined) return namedValue;
-    if (expected.roleName === "alertdialog") return "";
-    return normalize(readableText(target));
-  };
-  const matchesCurrent = (): boolean => {
-    const bounds = element.getBoundingClientRect();
-    const style = window.getComputedStyle(element);
-    const visible = [
-      element.closest("[hidden],[aria-hidden='true']") === null,
-      style.display !== "none",
-      !["hidden", "collapse"].includes(style.visibility),
-      Number(style.opacity) !== 0,
-      bounds.width > 0 && bounds.height > 0,
-    ].every(Boolean);
-    return (
-      element.matches(expected.roleSelector) &&
-      visible &&
-      inventoryNameFor(element) === expected.name
-    );
-  };
-  if (!matchesCurrent()) return false;
-  Object.assign(matchesCurrent, { generation: expected.generation });
-  Object.defineProperty(element, expected.validatorProperty, {
-    configurable: true,
-    value: matchesCurrent,
-  });
-  return true;
-};
-
-const cleanupDiscoveryValidator = (
-  handle: ElementHandle<HTMLElement>,
-  generation: string,
-): Promise<void> =>
-  handle.evaluate(
-    (element, expected) => {
-      const guarded = element as HTMLElement & Record<string, unknown>;
-      const validator = guarded[expected.validatorProperty] as
-        RenderedTargetValidator | undefined;
-      const guard = guarded[expected.guardProperty] as
-        { readonly validator?: unknown } | undefined;
-      if (
-        validator?.generation === expected.generation &&
-        guard?.validator !== validator
-      )
-        delete guarded[expected.validatorProperty];
-    },
-    {
-      generation,
-      guardProperty: RENDERED_TARGET_GUARD_PROPERTY,
-      validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
-    },
-  );
-
 export const releaseRenderedNameTarget = async (
   handle: ElementHandle<HTMLElement>,
 ): Promise<void> => {
@@ -230,6 +164,7 @@ export const releaseRenderedNameTarget = async (
 };
 
 const matchingHandle = async (
+  page: Page,
   handles: readonly ElementHandle[],
   expectedName: string,
   roleName: string,
@@ -237,36 +172,60 @@ const matchingHandle = async (
   occurrence: number,
   signal?: AbortSignal,
 ): Promise<ElementHandle<HTMLElement> | undefined> => {
-  const matches: ElementHandle<HTMLElement>[] = [];
-  for (const handle of handles) {
-    if (signal?.aborted === true) {
-      await releaseRenderedNameTarget(handle as ElementHandle<HTMLElement>);
-      continue;
-    }
-    const generation = randomUUID();
-    try {
-      if (
-        await handle.evaluate(evaluateRenderedName, {
+  if (Boolean(signal?.aborted)) {
+    await Promise.all(handles.map((handle) => handle.dispose()));
+    return undefined;
+  }
+  const matchingHandles: ElementHandle<HTMLElement>[] = [];
+  const evaluator: JSHandle<RenderedNameEvaluator> = await page.evaluateHandle(
+    EVALUATE_RENDERED_NAME_SCRIPT,
+  );
+  try {
+    for (const handle of handles) {
+      if (Boolean(signal?.aborted)) {
+        await handle.dispose();
+        continue;
+      }
+      const generation = randomUUID();
+      const renderedHandle = handle as ElementHandle<HTMLElement>;
+      try {
+        const expected: RenderedNameEvaluationInput = {
           generation,
           name: expectedName,
           roleName,
           roleSelector,
           validatorProperty: RENDERED_TARGET_VALIDATOR_PROPERTY,
-        })
-      ) {
-        const renderedHandle = handle as ElementHandle<HTMLElement>;
-        discoveryGenerations.set(renderedHandle, generation);
-        matches.push(renderedHandle);
-        continue;
+        };
+        if (
+          await evaluateRenderedNameHandle(
+            page,
+            renderedHandle,
+            evaluator,
+            expected,
+          )
+        ) {
+          discoveryGenerations.set(renderedHandle, generation);
+          matchingHandles.push(renderedHandle);
+          continue;
+        }
+      } catch {
+        // A detached handle is a stale candidate, never an action target.
       }
-    } catch {
-      // A detached handle is a stale candidate, never an action target.
+      await handle.dispose();
     }
-    await handle.dispose();
+  } finally {
+    await evaluator.dispose();
   }
-  const selected = matches[occurrence - 1];
+  const abortedAfterDiscovery = Boolean(signal?.aborted);
+  if (abortedAfterDiscovery) {
+    await Promise.all(
+      matchingHandles.map((handle) => releaseRenderedNameTarget(handle)),
+    );
+    return undefined;
+  }
+  const selected = matchingHandles[occurrence - 1];
   await Promise.all(
-    matches
+    matchingHandles
       .filter((handle) => handle !== selected)
       .map((handle) => releaseRenderedNameTarget(handle)),
   );
@@ -281,6 +240,7 @@ export const renderedNameTargetHandle = async (
   const expectedName = control.accessibleName.replaceAll(/\s+/gu, " ").trim();
   const roleSelector = inventoryRoleSelector(control.ariaRole);
   const selected = await matchingHandle(
+    page,
     await roleTargetLocator(page, control.ariaRole).elementHandles(),
     expectedName,
     control.ariaRole,

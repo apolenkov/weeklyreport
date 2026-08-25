@@ -3,29 +3,29 @@
   "threshold": 30,
   "sourceIdentity": {
     "scripts": {
-      "gitTree": "d32ea7084045800d0d484f13f2022c1103dde7a8",
-      "pathDigest": "24b89ae7c3d07d3946ddb37de7059cbc888416ae123ea1adf3887cde7c1a3f34",
-      "trackedFiles": 72
+      "gitTree": "d5753df617140a42a5774c5c335ad470948b7567",
+      "pathDigest": "2db8eb397beb257b6d16d913e44253b949927db92f0da94ae8f17bb79dfe123c",
+      "trackedFiles": 73
     },
     "e2e/runtime-sweep": {
-      "gitTree": "fb919151857407e2f21a81545faa3f809b44ca8f",
-      "pathDigest": "a86fa7ab0370bb9631179d8b06283132f687fbaff275c72410d0b744a01761aa",
-      "trackedFiles": 287
+      "gitTree": "65753aacf3482607d8cdadda3dbdde98d191fe31",
+      "pathDigest": "5fc5203c8d824333ee1106e8d8bcf60a2099193701b5862cd3c65a2acc87e9ba",
+      "trackedFiles": 786
     },
     "prisma": {
-      "gitTree": "f473896c4ec975fad58d35552740cc7e5c5791c4",
-      "pathDigest": "b914d4b7a6f140235e6962042313470868353122ef5d248b1893d4aa611d7704",
-      "trackedFiles": 114
+      "gitTree": "4d78c05530c608cb991c71a9bd9876d962ab2668",
+      "pathDigest": "2790f0a5a2f26678a5dae456d0c39914dde42e71d74886243e3242af032476a2",
+      "trackedFiles": 121
     },
     "apps/web/src/shared/ui": {
-      "gitTree": "bf167d940dcaa71f63e1823c90ed645781f5adcb",
-      "pathDigest": "9f26e7368cf9480221fbfd08431b26f808a530309a2ebaecbc0bacd2a172f3db",
-      "trackedFiles": 84
+      "gitTree": "8d56c30aa7f569c8c9f3c3cae5b8e9f4fbff00c1",
+      "pathDigest": "bdbb5ca98f31317776979823c6e09b47f04d78fd338c4e5c7d50e1b94fa899c4",
+      "trackedFiles": 86
     },
     "apps/web/src/features/report-pages": {
-      "gitTree": "a040c0a0b2225f0cd275adffa5c3d05b0ae936fd",
-      "pathDigest": "2f7c574f634661984770dc0eae223e17e834190c6e5073352f2a58515704b3c9",
-      "trackedFiles": 98
+      "gitTree": "869611ddb1b223d8b676de0a3242128f6ae76398",
+      "pathDigest": "bad0da0091be26a40e47609c7947dd2b1207d266cdd64d1e3623a4fac204e846",
+      "trackedFiles": 101
     },
     "apps/web/src/shared/lib": {
       "gitTree": "e9d57ed0a4ab75be69b7021bf4b9279a72feffbe",
@@ -43,14 +43,14 @@
       "trackedFiles": 8
     },
     "packages/shared/src/schemas": {
-      "gitTree": "6ea7aa4c8d5023d7e7a10bb394db81f9d86e793e",
-      "pathDigest": "4fa8950f3fdc7d63cfbe95f28794e385998a189d218b4599f7888b3a77d8b953",
-      "trackedFiles": 56
+      "gitTree": "0a8d48c731919c4e1e49661bd41f8d21456ad772",
+      "pathDigest": "b35cc77914d1cf180cd84bda1fa08ecae19e595ad7eab49b7f4f9c3132de8edc",
+      "trackedFiles": 58
     },
     "apps/api/src/modules": {
-      "gitTree": "4ebb5132cde854d204b8bf9381b2e888d463ad69",
-      "pathDigest": "9b1dc1395f1ed5c5e6a08ff6af504b6cdc1bf0015dadc88d23f3b911e1600f95",
-      "trackedFiles": 427
+      "gitTree": "efbcc9e1e05817e95e198086b46dabfde6881e92",
+      "pathDigest": "dca2ba814067dbb914d8b0e4cb1f9413aae933f4ed23aac6bd9239191ff38838",
+      "trackedFiles": 428
     }
   },
   "directCounts": {
@@ -59,16 +59,14 @@
     "apps/api/src/modules/admin": 60,
     "apps/api/src/modules/reminders": 47,
     "apps/api/src/modules/report-sections/infrastructure": 42,
-    "apps/web/src/features/admin/ui": 73,
+    "apps/web/src/features/admin/ui": 60,
     "apps/web/src/features/dashboard/ui": 32,
     "apps/web/src/features/period/ui": 72,
     "apps/web/src/features/report-sections/model": 47,
     "apps/web/src/features/report-sections/ui": 35,
     "apps/web/src/features/review/ui": 33,
     "apps/web/src/features/slides/model": 34,
-    "apps/web/src/features/slides/ui": 37,
-    "e2e/runtime-sweep/lanes": 32,
-    "e2e/runtime-sweep/replay": 58
+    "apps/web/src/features/slides/ui": 37
   },
   "boundedFlatExceptions": [
     {
@@ -98,7 +96,7 @@
     },
     {
       "directory": "apps/web/src/features/admin/ui",
-      "baseline": 73,
+      "baseline": 60,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
     },
     {
@@ -135,16 +133,6 @@
       "directory": "apps/web/src/features/slides/ui",
       "baseline": 37,
       "reason": "Existing canonical concern boundary; split only with a reviewed consumer map."
-    },
-    {
-      "directory": "e2e/runtime-sweep/lanes",
-      "baseline": 32,
-      "reason": "The runtime lane files share one bounded resource, lease, process, and observability lifecycle; the count may only shrink."
-    },
-    {
-      "directory": "e2e/runtime-sweep/replay",
-      "baseline": 58,
-      "reason": "The reviewed runtime replay concern remains a single cohesive stateful-control boundary; the count may only shrink."
     }
   ]
 }

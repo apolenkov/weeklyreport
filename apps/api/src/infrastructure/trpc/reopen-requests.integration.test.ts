@@ -18,7 +18,7 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     await prisma.reportSection.update({
       where: { id: testData.section.id },
@@ -27,7 +27,7 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

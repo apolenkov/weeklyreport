@@ -38,6 +38,30 @@ const OPEN_LIFECYCLE_ROW: LifecycleGateRow = {
   reopenedAt: null,
 };
 
+describe("ReportSectionsPrismaRepository.getReportPeriodWriteGateForSection", () => {
+  it("returns periodStatus and archived from the owning report", async () => {
+    const findUnique = vi.fn(() =>
+      Promise.resolve({
+        report: { periodStatus: "reopened" as const, archived: true },
+      }),
+    );
+    const prisma = { reportSection: { findUnique } };
+    const repo = new ReportSectionsPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.getReportPeriodWriteGateForSection("section-1"),
+    ).resolves.toEqual({ periodStatus: "reopened", archived: true });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: "section-1" },
+      select: {
+        report: { select: { periodStatus: true, archived: true } },
+      },
+    });
+  });
+});
+
 describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
   function makeTx(
     updateCount: number,

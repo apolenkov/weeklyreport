@@ -1,5 +1,4 @@
 import {
-  type PeriodStatus,
   type ReportSectionReadModel,
   type ReportStatus,
 } from "@customreport/shared";
@@ -8,6 +7,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import {
+  type ReportPeriodWriteGate,
   ReportSectionDomainError,
   type ReportSectionsRepository,
   SectionVersionConflictError,
@@ -46,17 +46,17 @@ function isChildRowDuplicate(error: unknown): boolean {
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  // Selects `report.periodStatus`, not the legacy `Report.status` column that
-  // reopen leaves at `published`, so the reopen-editable states (`open` /
-  // `reopened`) stay distinguishable for both write-path gates.
-  async getReportPeriodStatusForSection(
+  // Selects the complete lifecycle gate, never the legacy `Report.status`
+  // column, so reopened reports remain distinguishable while archives fail
+  // closed in both application prechecks.
+  async getReportPeriodWriteGateForSection(
     sectionId: string,
-  ): Promise<PeriodStatus | null> {
+  ): Promise<ReportPeriodWriteGate | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
-      select: { report: { select: { periodStatus: true } } },
+      select: { report: { select: { periodStatus: true, archived: true } } },
     });
-    return row?.report.periodStatus ?? null;
+    return row?.report ?? null;
   }
 
   // Null (rather than a throw) on a missing report lets the submitSection

@@ -38,6 +38,7 @@ function ReopenRespondActions({
       </button>
       <button
         type="button"
+        data-interaction-effect="mutation-required"
         onClick={onReject}
         disabled={isPending}
         className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-xs font-semibold text-[var(--color-destructive-foreground)] hover:bg-destructive/90 disabled:opacity-50"
@@ -46,6 +47,7 @@ function ReopenRespondActions({
       </button>
       <button
         type="button"
+        data-interaction-effect="mutation-required"
         onClick={onApprove}
         disabled={isPending}
         className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary)] disabled:opacity-50"

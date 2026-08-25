@@ -49,6 +49,7 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
 
     expect(mockReplace).toHaveBeenCalledWith(
       `/reports/${REPORT_ID}?source=status&recovery=0`,
+      { scroll: false },
     );
     expect(screen.getByRole("status")).toHaveTextContent(
       /opening the status report/i,
@@ -67,6 +68,7 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
 
     expect(mockReplace).toHaveBeenCalledWith(
       `/reports/${REPORT_ID}?source=status&recovery=1`,
+      { scroll: false },
     );
   });
 

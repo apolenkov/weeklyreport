@@ -7,6 +7,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+
 const e2eUrl = process.env.E2E_DATABASE_URL;
 if (!e2eUrl) {
   throw new Error(
@@ -15,6 +17,8 @@ if (!e2eUrl) {
   );
 }
 
+assertE2eRuntimeDestructiveTarget("integration-db", e2eUrl, process.env);
+
 const pool = new pg.Pool({ connectionString: e2eUrl });
 const adapter = new PrismaPg(pool);
 
@@ -22,12 +26,21 @@ export const prisma = new PrismaClient({ adapter });
 
 /** Re-runs the configured `full` profile to restore the seeded baseline. */
 export async function resetMutations(): Promise<void> {
+  assertE2eRuntimeDestructiveTarget(
+    "integration-reset-mutations",
+    e2eUrl,
+    process.env,
+  );
   const { execSync } = await import("node:child_process");
   const { findRepoRoot } = await import("../global-setup");
   const repoRoot = findRepoRoot(import.meta.dirname);
   execSync("pnpm exec prisma db seed", {
     cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: e2eUrl },
+    env: {
+      ...process.env,
+      DATABASE_URL: e2eUrl,
+      E2E_DATABASE_URL: e2eUrl,
+    },
     stdio: "pipe",
   });
 }

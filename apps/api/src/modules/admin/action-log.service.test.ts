@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { ActionLogPrismaRepository } from "./action-log.prisma-repository.js";
 import {
   type ActionLogRepository,
   ActionLogService,
@@ -8,10 +9,10 @@ import {
 const ROW = {
   id: "log-1",
   userId: "user-1",
-  role: "lead",
+  role: "lead" as const,
   procedure: "saveDraft",
   targetId: "sec-1",
-  status: "success",
+  status: "success" as const,
   reason: null,
   ip: "127.0.0.1",
   correlationId: "corr-1",
@@ -61,5 +62,88 @@ describe("ActionLogService.list", () => {
 
     expect(page.items).toHaveLength(2);
     expect(page.nextCursor).toBe("log-1");
+  });
+
+  it("normalizes historical reasons and maps only the explicit allowlist", async () => {
+    const listActionLog = vi.fn().mockResolvedValue([
+      {
+        ...ROW,
+        status: "fail",
+        reason: "raw database failure for private@example.com",
+        undocumentedPayload: "must-not-cross",
+      },
+      { ...ROW, id: "log-2", reason: "should-be-null" },
+    ]);
+    const service = new ActionLogService({ listActionLog });
+
+    const page = await service.list({ limit: 20 });
+
+    expect(page.items[0]).toMatchObject({
+      status: "fail",
+      reason: "LEGACY_FAILURE",
+    });
+    expect(page.items[1]).toMatchObject({ status: "success", reason: null });
+    expect(JSON.stringify(page)).not.toContain("raw database failure");
+    expect(JSON.stringify(page)).not.toContain("must-not-cross");
+    expect(JSON.stringify(page)).not.toContain("should-be-null");
+  });
+
+  it("preserves a recognized failure classification", async () => {
+    const listActionLog = vi
+      .fn()
+      .mockResolvedValue([{ ...ROW, status: "fail", reason: "CONFLICT" }]);
+    const service = new ActionLogService({ listActionLog });
+
+    const page = await service.list({ limit: 20 });
+
+    expect(page.items[0]?.reason).toBe("CONFLICT");
+  });
+
+  it("fails closed when a repository row violates the public DTO", async () => {
+    const listActionLog = vi
+      .fn()
+      .mockResolvedValue([{ ...ROW, role: "director" }]);
+    const service = new ActionLogService({ listActionLog });
+
+    await expect(service.list({ limit: 20 })).rejects.toThrow();
+  });
+});
+
+describe("ActionLogPrismaRepository", () => {
+  it("selects only the durable public allowlist", async () => {
+    const findMany = vi.fn(
+      (_query: { readonly select: Readonly<Record<string, boolean>> }) =>
+        Promise.resolve([]),
+    );
+    const repository = new ActionLogPrismaRepository({
+      userActionLog: { findMany },
+    } as never);
+
+    await repository.listActionLog({ limit: 21, cursor: "action-20" });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 21,
+        skip: 1,
+        cursor: { id: "action-20" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          createdAt: true,
+          userId: true,
+          role: true,
+          procedure: true,
+          targetId: true,
+          status: true,
+          reason: true,
+          ip: true,
+          correlationId: true,
+          durationMs: true,
+        },
+      }),
+    );
+    expect(Object.keys(findMany.mock.calls[0]?.[0]?.select ?? {})).toHaveLength(
+      11,
+    );
   });
 });

@@ -4,7 +4,7 @@ import type { AiDriverReport } from "../driver/driver-results-contract.ts";
 import type {
   EnvironmentFeedback,
   EnvironmentHit,
-} from "../preflight/environment-feedback.ts";
+} from "../preflight/observability/environment-feedback.ts";
 import type { CoverageCell } from "../source/contracts.ts";
 import {
   appendEnvironmentCandidates,

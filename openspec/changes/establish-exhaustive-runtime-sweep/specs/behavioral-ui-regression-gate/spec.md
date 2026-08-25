@@ -43,7 +43,8 @@ final campaign gate remains blocking.
 
 #### Scenario: Blocking verdict supersedes phase-1 reporting
 
-- **WHEN** the exhaustive runtime campaign evaluates a role
+- **WHEN** the exhaustive runtime campaign supersedes the former phase-1
+  report-only behavior and evaluates a role
 - **THEN** console, load, network, page, functional, accessibility, and visual
   anomalies block the affected cell and prevent a clean role verdict
 - **AND** the campaign does not add a frozen per-element BDD suite or claim

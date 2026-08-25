@@ -74,6 +74,7 @@ async function writeContributionContent(
   await prisma.item.createMany({
     data: c.items.map((item, itemIdx) => ({
       id: activeItemId(leadIdx, contributionIdx, itemIdx),
+      stableId: activeItemId(leadIdx, contributionIdx, itemIdx),
       reportSectionId: sectionId,
       type: item.type,
       projectId: c.productId,
@@ -89,6 +90,7 @@ async function writeContributionContent(
     await prisma.risk.create({
       data: {
         id: activeRiskId(leadIdx, contributionIdx),
+        stableId: activeRiskId(leadIdx, contributionIdx),
         reportSectionId: sectionId,
         projectId: c.productId,
         risk: c.risk.risk,
@@ -103,6 +105,7 @@ async function writeContributionContent(
     await prisma.decision.create({
       data: {
         id: activeDecisionId(leadIdx, contributionIdx),
+        stableId: activeDecisionId(leadIdx, contributionIdx),
         reportSectionId: sectionId,
         productId: c.productId,
         text: c.decision.text,

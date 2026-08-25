@@ -49,18 +49,21 @@ export const reportSectionFullInclude = {
   },
   // Comments/reviews ride the aggregate; isCurrent derived in mapper.
   items: {
+    orderBy: { stableId: "asc" },
     include: {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },
     },
   },
   risks: {
+    orderBy: { stableId: "asc" },
     include: {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },
     },
   },
   decisions: {
+    orderBy: { stableId: "asc" },
     include: {
       project: { select: { name: true } },
       recordComments: { include: { reviewer: { select: { name: true } } } },

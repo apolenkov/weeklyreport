@@ -7,14 +7,32 @@ import {
   PUBLISHED_REPORT_ID,
 } from "../../../prisma/seeds/support/seed-constants.ts";
 import type { CatalogRoute } from "../../sweep/catalog-parser.ts";
+import { landingDeclarationRequiredFor } from "../../sweep/catalog-parser-landing.ts";
 import {
+  type NetworkEvidencePolicy,
+  type ResolverKey,
   type Role,
-  type RouteBinding,
   type RouteBindingTarget,
   type RouteDeclaration,
   SEED_PROFILES,
   type SeedProfile,
 } from "../source/contracts.ts";
+import {
+  resolverOutcomeKindsFor,
+  routeBindingsForProfiles,
+  routeKindForDeclaration,
+} from "./resolver-outcome-contract.ts";
+import {
+  resolveLandingRoute,
+  type RouteBindingDeclaration,
+  type RouteBindingResult,
+  routeBindingResultForKind,
+} from "./route-binding-landing.ts";
+export {
+  bindingForProfileOrThrow,
+  type RouteBindingDeclaration,
+  type RouteBindingResult,
+} from "./route-binding-landing.ts";
 
 const CURRENT_LIVE_MARKERS = [
   "viewer-live-status",
@@ -23,23 +41,6 @@ const CURRENT_LIVE_MARKERS = [
 ] as const;
 const REPORT_ROUTE_PREFIX = "/reports/";
 const REPORT_ID_PLACEHOLDER = "[reportId]";
-
-export interface RouteBindingDeclaration {
-  readonly role: Role;
-  readonly catalogRoute: string;
-  readonly allowsCurrentLive?: boolean;
-}
-
-export interface RouteBindingResult {
-  readonly role: Role;
-  readonly catalogRoute: string;
-  readonly allowsCurrentLive: boolean;
-  readonly target: RouteBindingTarget;
-  readonly requiredCapability: SeedCapability | null;
-  readonly minimumProfile: SeedProfile;
-  readonly resolvedRoute: string;
-  readonly bindings: readonly RouteBinding[];
-}
 
 export type ProfileCapabilities = Readonly<
   Record<SeedProfile, readonly SeedCapability[]>
@@ -89,10 +90,15 @@ function targetForRoute(
   allowsCurrentLive: boolean,
 ): RouteBindingTarget {
   if (
+    (role === "lead" && catalogRoute === "/lead/report") ||
+    ((role === "head" || role === "admin") && catalogRoute === "/head/report")
+  )
+    return "active";
+  if (
     role === "viewer" &&
-    allowsCurrentLive &&
     (catalogRoute === "/reports/latest" ||
-      catalogRoute === `${REPORT_ROUTE_PREFIX}${REPORT_ID_PLACEHOLDER}`)
+      (allowsCurrentLive &&
+        catalogRoute === `${REPORT_ROUTE_PREFIX}${REPORT_ID_PLACEHOLDER}`))
   ) {
     return "active";
   }
@@ -150,46 +156,25 @@ function resolveRoute(
   return resolved;
 }
 
-function bindingForProfile(
-  profile: SeedProfile,
-  minimumProfile: SeedProfile,
-  target: RouteBindingTarget,
-  requiredCapability: SeedCapability | null,
-  resolvedRoute: string,
-  profileCapabilities: ProfileCapabilities,
-): RouteBinding {
-  const hasCapability =
-    requiredCapability === null ||
-    profileCapabilities[profile].includes(requiredCapability);
-  if (hasCapability) {
-    return {
-      status: "assigned",
-      profile,
-      target,
-      requiredCapability,
-      resolvedRoute,
-      rationale:
-        profile === minimumProfile
-          ? requiredCapability
-            ? `Smallest profile declaring ${requiredCapability}`
-            : "Smallest profile for a route without a seed capability"
-          : `Profile extends ${minimumProfile} and exercises the same route with additional seeded state`,
-    };
-  }
-  return {
-    status: "not-applicable",
-    profile,
-    target,
-    requiredCapability,
-    resolvedRoute,
-    reason: `Profile does not declare required capability ${requiredCapability}`,
-  };
+function requireResolverKey(resolverKey: ResolverKey | null): ResolverKey {
+  if (resolverKey === null)
+    throw new Error("Resolver route is missing its resolver key");
+  return resolverKey;
 }
 
 export function bindRouteDeclaration(
   declaration: RouteBindingDeclaration,
   profileCapabilities: ProfileCapabilities = DEFAULT_PROFILE_CAPABILITIES,
 ): RouteBindingResult {
+  const { kind, resolverKey } = routeKindForDeclaration(declaration);
+  if (
+    kind === "unconditional" &&
+    declaration.landingRoute === undefined &&
+    landingDeclarationRequiredFor(declaration.role, declaration.catalogRoute)
+  )
+    throw new Error(
+      `Intentional redirect alias ${declaration.role}:${declaration.catalogRoute} requires an exact landing route declaration`,
+    );
   const allowsCurrentLive = declaration.allowsCurrentLive ?? false;
   const target = targetForRoute(
     declaration.role,
@@ -202,17 +187,31 @@ export function bindRouteDeclaration(
     profileCapabilities,
   );
   const resolvedRoute = resolveRoute(declaration.catalogRoute, target);
-  const bindings = SEED_PROFILES.map((profile) =>
-    bindingForProfile(
-      profile,
-      minimumProfile,
-      target,
-      requiredCapability,
-      resolvedRoute,
-      profileCapabilities,
-    ),
-  );
-  return {
+  const resolverOutcomes =
+    kind === "resolver"
+      ? resolverOutcomeKindsFor(requireResolverKey(resolverKey))
+      : [];
+  const landingRoute =
+    kind === "resolver"
+      ? undefined
+      : resolveLandingRoute(
+          declaration.catalogRoute,
+          declaration.landingRoute,
+          target,
+          resolveRoute,
+        );
+  const bindings = routeBindingsForProfiles({
+    minimumProfile,
+    kind,
+    resolverKey,
+    resolverOutcomes,
+    target,
+    requiredCapability,
+    resolvedRoute,
+    landingRoute,
+    profileCapabilities,
+  });
+  const common = {
     role: declaration.role,
     catalogRoute: declaration.catalogRoute,
     allowsCurrentLive,
@@ -222,6 +221,14 @@ export function bindRouteDeclaration(
     resolvedRoute,
     bindings,
   };
+  return routeBindingResultForKind({
+    common,
+    kind,
+    resolverKey,
+    resolverOutcomes,
+    landingRoute,
+    requiredCapability,
+  });
 }
 
 export function bindCatalogRoute(
@@ -233,45 +240,41 @@ export function bindCatalogRoute(
     {
       role,
       catalogRoute: catalog.route,
+      ...(catalog.landing === undefined
+        ? {}
+        : { landingRoute: catalog.landing }),
       allowsCurrentLive: allowsViewerCurrentLive(catalog, role),
     },
     profileCapabilities,
   );
 }
 
-export function bindingForProfileOrThrow(
-  binding: RouteBindingResult,
-  profile: SeedProfile,
-): Extract<RouteBinding, { status: "assigned" }> {
-  const assignment = binding.bindings.find(
-    (candidate): candidate is Extract<RouteBinding, { status: "assigned" }> =>
-      candidate.profile === profile && candidate.status === "assigned",
-  );
-  if (!assignment) {
-    const selected = binding.bindings.find(
-      (candidate) => candidate.profile === profile,
-    );
-    const reason =
-      selected?.status === "not-applicable"
-        ? selected.reason
-        : "unknown binding";
-    throw new Error(
-      `${binding.role} ${binding.catalogRoute} is not assigned to ${profile}: ${reason}`,
-    );
-  }
-  return assignment;
-}
-
 export function routeDeclarationFromCatalog(
   catalog: CatalogRoute,
   role: Role,
+  networkPolicy: NetworkEvidencePolicy | null,
   profileCapabilities: ProfileCapabilities = DEFAULT_PROFILE_CAPABILITIES,
 ): RouteDeclaration {
   const binding = bindCatalogRoute(catalog, role, profileCapabilities);
+  if (binding.kind === "resolver")
+    return {
+      role: binding.role,
+      catalogRoute: binding.catalogRoute,
+      kind: binding.kind,
+      resolverKey: binding.resolverKey,
+      resolverOutcomes: binding.resolverOutcomes,
+      resolvedRoute: binding.resolvedRoute,
+      networkPolicy,
+      allowsCurrentLive: binding.allowsCurrentLive,
+      bindings: binding.bindings,
+    };
   return {
     role: binding.role,
     catalogRoute: binding.catalogRoute,
+    kind: binding.kind,
     resolvedRoute: binding.resolvedRoute,
+    landingRoute: binding.landingRoute,
+    networkPolicy,
     allowsCurrentLive: binding.allowsCurrentLive,
     bindings: binding.bindings,
   };

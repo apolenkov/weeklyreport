@@ -1,0 +1,264 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  type EvidenceBundle,
+  type NetworkEvidencePolicy,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
+} from "../../../source/contracts.ts";
+import type { DomInventory } from "../../dom/dom-inventory.ts";
+import type { FrozenPhaseInput } from "./frozen-case-live-capture.ts";
+import { captureFrozenPhase } from "./frozen-case-live-capture.ts";
+
+const harness = vi.hoisted(() => ({
+  events: [] as string[],
+  frame: undefined as object | undefined,
+  resolveNavigation: undefined as ((frame: object) => void) | undefined,
+  delayMs: 10,
+  navigationPath: "/",
+  actionSucceeded: undefined as boolean | undefined,
+  networkPolicy: undefined as NetworkEvidencePolicy | undefined,
+}));
+
+vi.mock("../../dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../dom/dom-inventory.ts")>()),
+  inventoryDom: vi.fn(() => {
+    harness.events.push("inventory");
+    return Promise.resolve({ controls: [], issues: [] });
+  }),
+}));
+
+vi.mock("../../../evidence/evidence-capture.ts", () => ({
+  captureRouteEvidence: vi.fn(
+    (input: {
+      readonly functionalAssertion: {
+        readonly actual: { readonly actionSucceeded: boolean };
+      };
+      readonly networkPolicy: NetworkEvidencePolicy;
+    }) => {
+      harness.events.push("evidence");
+      harness.actionSucceeded =
+        input.functionalAssertion.actual.actionSucceeded;
+      harness.networkPolicy = input.networkPolicy;
+      const bundle: EvidenceBundle = {
+        before: [],
+        action: [],
+        after: [],
+        observations: [],
+        inapplicable: [],
+      };
+      return Promise.resolve({ bundle });
+    },
+  ),
+}));
+
+vi.mock("../../evidence/frozen-case-artifacts.ts", () => ({
+  writeFrozenCaseArtifact: vi.fn(() =>
+    Promise.resolve({
+      artifactId: "control-action",
+      kind: "control-action",
+      dimension: "runtime",
+      archivePath: "/archive/control-actions.json",
+      digest: "a".repeat(64),
+      capturedAt: "2026-08-05T00:00:00.000Z",
+      cellId: "case-sign-out",
+      sourceSha: "a".repeat(40),
+      profile: "minimal",
+      role: "admin",
+      catalogRoute: "/head/report",
+      resolvedRoute: "/head/report",
+    }),
+  ),
+}));
+
+vi.mock("./frozen-case-live-actions.ts", () => ({
+  actionFor: () => ({
+    controlKey: "button:Sign%20out:1",
+    operation: "click",
+    safety: "read-only",
+    transition: "none",
+  }),
+  runAction: vi.fn(() => {
+    harness.events.push("action-result");
+    setTimeout(() => {
+      harness.events.push("navigation-start");
+      if (harness.frame !== undefined)
+        harness.resolveNavigation?.(harness.frame);
+    }, harness.delayMs);
+    return Promise.resolve({
+      status: "pass",
+      controlKey: "button:Sign%20out:1",
+      observation: { kind: "network", detail: "logout request" },
+    });
+  }),
+}));
+
+const fakeInput = (page: object): FrozenPhaseInput =>
+  ({
+    page,
+    source: { revealTransitionsByDigest: new Map() },
+    matrixCase: {
+      caseId: "case-sign-out",
+      sourceSha: "a".repeat(40),
+      profile: "minimal",
+      role: "admin",
+      catalogRoute: "/head/report",
+      resolvedRoute: "/head/report",
+      networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
+      execution: {
+        kind: "control",
+        action: {
+          controlKey: "button:Sign%20out:1",
+          operation: "click",
+          safety: "read-only",
+          transition: "none",
+        },
+      },
+    },
+    runtime: {},
+    prepared: {
+      plan: {
+        surface: {
+          productContent: "available",
+          productActions: "exercise",
+          productActionsReason: null,
+          shell: "required",
+        },
+      },
+    },
+    route: "/head/report",
+    responseStatus: 200,
+    phase: "action",
+    eventCursor: {
+      consoleMessages: 0,
+      pageErrors: 0,
+      requestFailures: 0,
+      responses: 0,
+    },
+    initialEvents: {
+      startedAt: "2026-08-07T00:00:00.000Z",
+      cursor: {
+        consoleMessages: 0,
+        pageErrors: 0,
+        requestFailures: 0,
+        responses: 0,
+      },
+      collector: {
+        cursor: () => ({
+          consoleMessages: 0,
+          pageErrors: 0,
+          requestFailures: 0,
+          responses: 0,
+        }),
+        waitForIdle: () => Promise.resolve(),
+        consumeSince: () => ({
+          records: {
+            consoleMessages: [],
+            pageErrors: [],
+            requestFailures: [],
+            responses: [],
+          },
+          cursor: {
+            consoleMessages: 0,
+            pageErrors: 0,
+            requestFailures: 0,
+            responses: 0,
+          },
+        }),
+        snapshotSince: () => ({
+          consoleMessages: [],
+          pageErrors: [],
+          requestFailures: [],
+          responses: [],
+        }),
+      },
+    },
+  }) as unknown as FrozenPhaseInput;
+
+const navigationPage = (pageState: { url: string }, mainFrame: object) => ({
+  url: () => pageState.url,
+  mainFrame: () => mainFrame,
+  waitForURL: vi.fn(
+    (predicate: (url: URL) => boolean) =>
+      new Promise<void>((resolve) => {
+        harness.events.push("observer-armed");
+        harness.resolveNavigation = (frame) => {
+          if (frame !== mainFrame) return;
+          pageState.url = `http://127.0.0.1:3105${harness.navigationPath}`;
+          if (predicate(new URL(pageState.url))) resolve();
+        };
+      }),
+  ),
+  waitForLoadState: vi.fn(() => {
+    harness.events.push("settled");
+    return Promise.resolve();
+  }),
+  waitForFunction: vi.fn(() => Promise.resolve()),
+});
+
+describe("frozen action evidence capture", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("shares the captured phase inventory with the frozen-case consumer", async () => {
+    const observed: { value?: DomInventory } = {};
+
+    await captureFrozenPhase({
+      ...fakeInput({}),
+      phase: "before",
+      onInventory: (inventory) => {
+        observed.value = inventory;
+      },
+    });
+
+    expect(observed.value).toEqual({ controls: [], issues: [] });
+    expect(harness.networkPolicy).toBe(NO_ROUTE_CACHE_CONTRACT_POLICY);
+  });
+
+  it("waits for delayed sign-out navigation beyond the ordinary action grace", async () => {
+    harness.events.length = 0;
+    harness.frame = undefined;
+    harness.resolveNavigation = undefined;
+    harness.delayMs = 150;
+    harness.navigationPath = "/";
+    harness.actionSucceeded = undefined;
+    const mainFrame = {};
+    harness.frame = mainFrame;
+    const pageState = { url: "http://127.0.0.1:3105/head/report" };
+    const page = navigationPage(pageState, mainFrame);
+
+    const capture = captureFrozenPhase(fakeInput(page));
+    await vi.advanceTimersByTimeAsync(harness.delayMs);
+    const result = await capture;
+    expect(result.bundle.action).toHaveLength(1);
+
+    expect(harness.events).toEqual([
+      "action-result",
+      "observer-armed",
+      "navigation-start",
+      "settled",
+      "inventory",
+      "evidence",
+    ]);
+    expect(harness.actionSucceeded).toBe(true);
+  });
+
+  it("fails closed when sign out settles at an unexpected pathname", async () => {
+    harness.events.length = 0;
+    harness.frame = undefined;
+    harness.resolveNavigation = undefined;
+    harness.delayMs = 10;
+    harness.navigationPath = "/login";
+    harness.actionSucceeded = undefined;
+    const mainFrame = {};
+    harness.frame = mainFrame;
+    const pageState = { url: "http://127.0.0.1:3105/head/report" };
+    const page = navigationPage(pageState, mainFrame);
+
+    const capture = captureFrozenPhase(fakeInput(page));
+    await vi.advanceTimersByTimeAsync(harness.delayMs);
+    const result = await capture;
+
+    expect(result.bundle.action).toHaveLength(1);
+    expect(harness.actionSucceeded).toBe(false);
+  });
+});

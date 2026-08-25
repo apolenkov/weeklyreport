@@ -1,16 +1,16 @@
 import { mkdir } from "node:fs/promises";
 
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
 import {
   type AxeContextResults,
   axeEvidenceFor,
   finalizeAxeContext,
   prepareAxeContext,
-} from "../replay/axe-context.ts";
-import { inventoryDom } from "../replay/dom-inventory.ts";
+} from "../replay/keyboard/axe-context.ts";
 import {
   captureKeyboardTrace,
   type KeyboardTrace,
-} from "../replay/keyboard-evidence.ts";
+} from "../replay/keyboard/keyboard-evidence.ts";
 import { evidenceBundleSchema, type EvidenceRef } from "../source/contracts.ts";
 import {
   captureGeometry,

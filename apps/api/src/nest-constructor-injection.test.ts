@@ -17,7 +17,7 @@ interface ConstructorInventoryEntry {
 
 const apiSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)));
 const nestPackagePrefixes = ["@nestjs/", "nestjs-"] as const;
-const CONSTRUCTOR_INVENTORY_TIMEOUT_MS = 15_000;
+const CONSTRUCTOR_INVENTORY_TIMEOUT_MS = 60_000;
 
 const collectSourceFiles = (directory: string): readonly string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

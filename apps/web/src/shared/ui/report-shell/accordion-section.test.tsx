@@ -90,6 +90,48 @@ describe("AccordionSection — group commands", () => {
   });
 });
 
+describe("AccordionSection — responsive disclosure geometry", () => {
+  it("floors the trailing disclosure at the touch target in both states", () => {
+    render(
+      <AccordionSection
+        icon={HIDDEN_ICON}
+        title="Risks"
+        actions={<span>Actions</span>}
+      >
+        <p>Panel body</p>
+      </AccordionSection>,
+    );
+
+    const compactDesktopClasses = ["h-10", "w-10"];
+    const mobileTouchTargetClasses = [
+      "max-md:min-h-[var(--touch-target-min)]",
+      "max-md:min-w-[var(--touch-target-min)]",
+    ];
+    const disclosure = screen.getByRole("button", {
+      name: "Collapse Risks",
+    });
+
+    // jsdom does not evaluate media queries; these classes pin the mobile
+    // floor while h-10/w-10 preserve the compact desktop geometry.
+    expect(disclosure).toHaveClass(
+      ...compactDesktopClasses,
+      ...mobileTouchTargetClasses,
+    );
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(disclosure);
+
+    const collapsedDisclosure = screen.getByRole("button", {
+      name: "Expand Risks",
+    });
+    expect(collapsedDisclosure).toHaveClass(
+      ...compactDesktopClasses,
+      ...mobileTouchTargetClasses,
+    );
+    expect(collapsedDisclosure).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 function section(groupExpanded: boolean) {
   return (
     <AccordionSection

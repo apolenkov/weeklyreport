@@ -6,9 +6,10 @@ import {
   evidenceBundleSchema,
   type EvidenceRef,
   evidenceRefSchema,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
   type Oracle,
 } from "../../source/contracts.ts";
-import { replayFrozenCase } from "../frozen-case-evidence.ts";
+import { replayFrozenCase } from "../evidence/frozen-case-evidence.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const CASE_ID = "case-recovery-verdict";
@@ -17,6 +18,7 @@ const ORACLE: Oracle = {
   function: { required: true, expectation: "action succeeds" },
   accessibility: { required: true, expectation: "controls remain usable" },
   visual: { required: true, expectation: "geometry is reviewed" },
+  runtime: { required: true, expectation: "runtime telemetry is clean" },
 };
 
 const matrixCase: MatrixExecutableCase = {
@@ -27,6 +29,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",

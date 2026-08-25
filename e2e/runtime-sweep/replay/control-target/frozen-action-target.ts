@@ -1,5 +1,5 @@
 import type { Action } from "../../source/contracts.ts";
-import type { DomControlObservation } from "../dom-inventory.ts";
+import type { DomControlObservation } from "../dom/dom-inventory.ts";
 
 const DOM_ORDER_WIDTH = 4;
 

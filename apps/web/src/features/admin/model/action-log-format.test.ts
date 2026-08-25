@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { formatTimestamp } from "./action-log-format";
+import { formatTimestamp, statusLabel } from "./action-log-format";
 
 // `formatTimestamp` renders in the viewer's zone, so the expected strings only
 // hold with the zone pinned; each block restores the ambient TZ afterwards.
@@ -51,4 +51,10 @@ describe("formatTimestamp on unusable input", () => {
       expect(formatTimestamp(input)).toBe("-");
     },
   );
+});
+
+describe("statusLabel", () => {
+  it("maps the durable fail status to Error", () => {
+    expect(statusLabel("fail")).toBe("Error");
+  });
 });

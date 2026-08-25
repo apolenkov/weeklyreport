@@ -141,6 +141,7 @@ function DecisionCardActions({
         className={EDIT_BUTTON_CLASS}
         onClick={() => onEdit(decision)}
         aria-label="Edit decision"
+        data-record-stable-id={decision.stableId}
       >
         <EditIcon />
       </button>

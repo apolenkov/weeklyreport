@@ -137,6 +137,7 @@ export async function createRateLimits(options: {
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
   clientLogsLimiter: RequestHandler;
+  shutdownRateLimitStore: () => Promise<void>;
 }> {
   const { logger, isTest, env, redis } = options;
 
@@ -160,9 +161,24 @@ export async function createRateLimits(options: {
   client?.on("error", reportStoreError);
   // The factory owns only clients it created itself. Injected clients belong to
   // their callers, which retain connection lifecycle control for tests/apps.
-  if (redis === undefined && client !== undefined) {
-    await client.connect();
+  const ownedClient = redis === undefined ? client : undefined;
+  if (ownedClient !== undefined) {
+    try {
+      await ownedClient.connect();
+    } catch (error: unknown) {
+      ownedClient.disconnect();
+      throw error;
+    }
   }
+
+  const ownedClientState = { closed: false };
+  const shutdownRateLimitStore = (): Promise<void> => {
+    if (!ownedClientState.closed && ownedClient !== undefined) {
+      ownedClientState.closed = true;
+      ownedClient.disconnect();
+    }
+    return Promise.resolve();
+  };
 
   const storeFor = (bucket: string): Store | undefined =>
     client
@@ -190,5 +206,6 @@ export async function createRateLimits(options: {
     vitalsLimiter: limiterFor("vitals", VITALS_LIMIT_PER_MINUTE),
     // Public, Caddy-unmatched ingress: own per-IP bucket caps app.log floods.
     clientLogsLimiter: limiterFor("client-logs", CLIENT_LOGS_LIMIT_PER_MINUTE),
+    shutdownRateLimitStore,
   };
 }

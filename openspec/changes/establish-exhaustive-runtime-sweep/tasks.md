@@ -16,6 +16,9 @@
 - [x] 1.6 Add the discriminated execution contract and one centralized legal-row
       policy; reject transition/action mismatch, missing fault ids, fabricated
       `none` witnesses, and unreasoned specialized-axis omissions.
+- [x] 1.7 Bind the canonical source to both the raw 40-character Git tree object
+      id and the existing tree digest; reject legacy or tampered source artifacts
+      instead of backfilling identity from the live worktree.
 
 ## 2. API, database, and deterministic state preparation
 
@@ -78,6 +81,29 @@
       excluding only the explicit browser/Next.js SDK signature allowlist from
       failure counts, and require a frozen submit transition to execute the
       scoped confirmation action before recovery.
+- [x] 3.14 Freeze every deterministically reachable post-transition control and
+      its canonical reveal path plus exact raw semantic surface (including
+      `order`/`domOrderKey`) into `PREFLIGHT.json` before finalizing `MATRIX.json`;
+      retain raw transition/action-surface bindings, derive a material semantic
+      projection only for branch/visited accounting, prove each preparation
+      step is database-non-mutating, replay the path before the target action,
+      reject ambiguous paths, and fail a cell on any unknown, missing,
+      non-positional, or relative-order drift instead of trimming discovery
+      evidence or appending drift as passing evidence.
+- [x] 3.15 Bind read-only preparation reuse to the exact canonical state-plan
+      digest and full route identity, prove every preparation axis changes the
+      key while case/action identity alone may reuse, and stop the whole
+      campaign when any executor resolves a non-pass cell.
+- [x] 3.16 Require an explicit runtime oracle for every coverage cell and make
+      terminal ledger validation reject missing runtime evidence unless the
+      cell carries the typed reasoned inapplicable entry allowed by the spec.
+- [x] 3.17 Bind an explicit route network policy or reviewed `null` declaration
+      into source, case identity, and matrix digest; propagate the effective
+      policy into ordinary and specialized capture without a permissive default.
+- [x] 3.18 Bind independent reveal material-edge/action and control/case limits
+      to version-2 SOURCE.json, propagate reveal limits into production
+      preflight, reject control overflow before canary PASS, and retain the
+      finalizer's no-trimming second check with focused overflow/tamper tests.
 
 ## 4. Native Codex Luna Max review and fail-closed import
 
@@ -117,10 +143,167 @@
       exact source/evidence/coverage validation in the merger. Benchmark
       increasing lane counts with one-cell and full-group canaries before the
       immutable full run.
+- [x] 5.5 Require one non-forgeable, exact-environment Redis mutation
+      authorization across every public preparation and replay entrypoint; bind
+      create/start/remove to immutable container IDs and re-prove the complete
+      identity after each bounded readiness wait with mocked fail-before-mutation
+      controls.
+- [x] 5.6 Add separate guard-only PostgreSQL and Redis target-plan commands that
+      derive every canonical lane target, reject unsafe/equal/ambiguous inputs,
+      emit typed `destructiveOperationsAllowed=false` evidence, and prove by
+      source-level controls that no mutation-capable primitive is reachable.
+- [x] 5.7 Bind immediate product effects into the frozen semantic control
+      surface, exclude `mutation-required` controls only from reveal
+      preparation, and retain their ordinary runtime matrix coverage.
+- [x] 5.8 Mark reopen decision buttons as `mutation-required`, preserve Cancel as
+      client-only, and cover the metadata and classification in product and
+      Chromium tests.
+- [x] 5.9 Bind every intentional catalog redirect alias to one exact landing URL
+      in `SOURCE.json`; make preflight prove the initial landing and use only its
+      pathname as the reveal boundary, with negative tests for missing, wrong,
+      and later cross-path navigation.
+- [x] 5.10 Add an immutable exact-state preflight canary that reuses the full
+      preparation/navigation/inventory/reveal/non-mutation implementation and
+      blocks repair/resweep full preflight until the failed segment passes at
+      the current clean source identity.
+- [x] 5.11 Model resolver-route outcomes as state-bound, source-digest-bound
+      expectations: visible current, published fallback, empty, query error,
+      and anonymous. Cover the minimum applicable profile, record typed
+      inapplicable role-permission boundaries (including minimal where the
+      capability is absent), keep the resolver outcome model explicit rather
+      than assigning one unconditional exact landing route, and implement
+      `viewer-status-empty` plus `viewer-status-query-error` as frozen
+      route-local specialized resolver scenarios with guarded disposable-state
+      preparation, exact retry/non-mutation proof, and end-to-end artifact
+      identity.
+- [x] 5.12 Add a source/plan/assignment-bound append-only preflight journal and
+      exact state-boundary resume. Reject stale, foreign, duplicate, reordered,
+      truncated, tampered, started-only, failed, ambiguous, or digest-drifted
+      entries; never resume inside a state; publish canonical `PREFLIGHT.json`
+      only after the validated ordered union exactly covers the full source plan.
+- [x] 5.13 Replace the broad destructive database suffix/override path with one
+      exact loopback disposable-target validator and per-run consent boundary;
+      apply it before Prisma, pg, Redis, database creation, reset/seed/cleanup,
+      and child-process operations across E2E, runtime lanes, direct profiles,
+      reset-hard, wipe-manual-uat, and policy backfill. Add fail-before-primitive
+      negatives, exact CI targets, onboarding/runtime docs, and the durable
+      destructive-db-guard delta.
+- [x] 5.14 Bound exhaustive preflight diagnostic amplification by retaining the
+      failed call/source trace, a separate full network HAR without response
+      bodies, failure screenshot, video, and error context without per-call
+      trace DOM snapshots/screenshots; prove the policy does not trim reveal or
+      runtime-cell coverage and rerun the exact R182 timeout state before
+      marking this task complete.
+- [x] 5.15 Preserve completed reveal-discovery candidates across bounded child
+      chunks with immutable terminal-candidate receipt chunks containing only
+      disjoint suffixes and a pure deterministic parent-owned reducer: amend
+      the contract/design, bind source/tree/plan/state/selector/route/
+      initial-surface identities and a fresh parent attempt, enforce canonical
+      receipt/chunk digests, atomic archive-confined raw IO, parent-only HMAC
+      execution grants, and source-derived finite no-progress guards.
+      Permit one authority-free receiptless bootstrap only for ordinal zero,
+      no grant, a zero chain, and a parent-revalidated empty initial frontier;
+      require the parent to re-derive its genesis, source bounds, reducer state,
+      and controls before signing the zero-chain parent PASS.
+      Recreate a fresh disposable database/browser boundary, replay the next
+      branch's canonical path, and prove uninterrupted versus split equivalence
+      plus tamper, reorder, omission, duplicate, stale-source, synthetic
+      rehash, last-candidate, and canonical IO rejection. The child emits no
+      PASS; the parent alone reduces the suffix to an empty frontier and writes
+      the parent PASS/canary PASS. Any nonzero child exit terminates the current
+      attempt. This implementation is exact-canary-only; full/shard journal
+      continuation remains explicitly NOT-PROVEN and no grant, chunk, or
+      canary artifact crosses execution scope.
+- [x] 5.16 Enforce `maxControlsPerSegment` inside the shared pure reveal queue
+      before accepting dynamic control registration or extending the queue;
+      prove exact-limit success, plus-one rejection, and live/parent-replay
+      parity without trimming controls or emitting continuation/canary evidence
+      on overflow.
+- [x] 5.17 Add a separately identified, exact-source, single-child capacity
+      survey with explicit graph, wall-time, per-file, and aggregate archive
+      limits. Disable HAR, trace, video, screenshots, continuation assets, and
+      every canary/journal/PASS writer. It may publish terminal counts only
+      after the monolithic reveal queue proves an empty frontier, never writes
+      or satisfies acceptance evidence, and must be completed before replacing
+      the production reveal limits. Renew a near-expiry cached actor session
+      from its actual browser-cookie expiry without changing the product auth
+      TTL, reject route drift before inventory comparison, run browser work
+      outside active Playwright `TestInfo`, traverse with iterative cursors, and
+      retain only fixed-interval scalar heap/cardinality progress samples.
+
+- [x] 5.18 Preserve one terminal-candidate failure from an exact capacity survey
+      in a separately rooted, diagnostic-only failure-frontier packet. Add an
+      optional default-off callback before candidate-cursor advancement that
+      receives the pre-candidate state, branch, canonical candidate list,
+      failing index/identity and original error, publishes bounded immutable
+      branch/path/inventory/surface/candidate-list evidence, and rethrows the
+      original error without emitting RESULT, continuation, resume, grant,
+      PASS, canary, journal, matrix or acceptance authority. Bind exact source,
+      plan, selector, state and route identity; enforce a 64 KiB manifest,
+      depth 8, at most 64 assets, 8 MiB per asset and 64 MiB aggregate bounds;
+      require archive confinement, regular non-symlink files, write-last atomic
+      manifest publication and digest read-back. Add missing, duplicate, stale,
+      foreign, reorder, tamper, symlink, path-escape, partial-write and every
+      bound negative. Add a fresh-state focused Chromium replay that restores
+      the saved path, re-derives and exactly matches the canonical candidate,
+      invokes the unchanged whole-surface boundary without executing the final
+      action, and emits only diagnostic terminal classifications.
+
+- [ ] 5.19 Add source-bound canonicalization for independent reversible
+      `aria-controls`-scoped disclosures. Retain toggle metadata in live and
+      continuation inventories, require the explicit
+      `data-reveal-independence="source-bound-row-local"` contract in every
+      candidate step, execute and record both `A → B` and `B → A` for disjoint
+      targets, require equal material surfaces and URL before reducing deeper
+      combinations to the material union, retain every row-local control, and
+      keep modal/coupled/URL-changing/incomplete/untrusted controls ordinary.
+      Add deterministic four-toggle rejection coverage and preserve the
+      existing `maxControlsPerSegment` plus-one guard. This remains
+      NOT-PROVEN until an exact `admin/demo` canary exercises the contract.
+
+- [x] 5.20 Retain Darwin raw-free pages as receipt telemetry without using them
+      as an independent baseline/runtime veto; keep available memory, pressure,
+      swap and swap growth, compression, malformed-input, and cumulative-counter
+      guards fail-closed, preserve historical raw-free receipt reason tokens,
+      and add focused reclaimable-memory regression coverage.
+
+- [x] 5.21 Make canonical SOURCE origin a fail-before-effects authority. Rebuild
+      the expected artifact through the existing campaign builder, require exact
+      canonical bytes in addition to the embedded digest, publish one immutable
+      source/SHA/tree/plan/file-bound PASS receipt, and require a read-only
+      receipt recheck before packet/gate materialization and every runtime-capable
+      preflight, manifest, lane, coverage, AI-import, or Playwright entrypoint.
+      Reject stale, foreign, tampered, synthetically rehashed, reordered,
+      whitespace-drifted, post-receipt, missing, duplicate, and overwritten
+      artifacts before directory, runtime/browser/server/resource child,
+      browser, destructive guard, Docker, database, or Redis effects; allow
+      only validator-owned read-only Git/tool subprocesses, keep the static
+      harness exempt, and add a
+      source-import architecture regression.
+
+- [x] 5.22 Add the source-bound parent-only host checkpoint for the exact
+      `admin/demo` canary continuation: strict canonical request/response and
+      immutable file-backed client, post-reduction sequencing before every next
+      child, unchanged 60-sample host baseline/thresholds/hysteresis, exact
+      5-second wait, parent-only environment filtering, external controller/core
+      and test packet, focused failing-first evidence, and the remeasured
+      directory-architecture baseline. Full/shard continuation remains
+      NOT-PROVEN and task 5.19 remains unchecked.
+
+- [x] 5.23 Replace the miscalibrated absolute Darwin swap-used veto with the
+      reviewed historical-swap telemetry/current-pressure contract, anchored
+      swap growth/activity and swap-free headroom; bound the one-worker
+      exact-canary continuation by 60 seconds, 256 terminal candidates, 1,024
+      reveal actions, a 90-second process-group wall and final-child checkpoint.
+      Verify focused regressions for stable historical swap PASS; low headroom,
+      growth, pressure, malformed/reset counters and sustained churn failures;
+      producer/reader 60-sample anchor equivalence; all three cooperative
+      yields; tampered limits; hard group kill with no resumable artifact; and
+      exactly one healthy checkpoint after every child including terminal.
 
 ## 6. Immutable baseline and adjudication
 
-- [ ] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/
+- [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/
       profile/matrix digests, tool versions, exclusions, and environment liveness.
 - [ ] 6.2 Run the complete deterministic Playwright matrix sequentially across
       all declared roles, routes, states, controls, transitions, and controlled
@@ -142,8 +325,8 @@
 - [ ] 7.3 Run the entire declared deterministic Playwright matrix again at one
       final SHA, then run bounded native Codex Luna Max review batches through
       the explicit import/verifier path; require every final cell to pass with
-      complete function/a11y/visual evidence and zero unresolved or confirmed
-      gaps.
+      complete function/a11y/visual/runtime evidence and zero unresolved or
+      confirmed gaps.
 - [ ] 7.4 Adjudicate the final request/log/correlation timelines and transition
       screenshot pairs; publish request/cache/performance findings and prove
       zero undeclared Bugsink/Loki/API/worker/browser errors before the stop

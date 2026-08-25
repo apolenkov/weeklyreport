@@ -1,8 +1,14 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
-import { assertNonProdDestructiveTarget } from "../../prisma/guards/_destructive-guard.js";
 import type { SeedProfile } from "../../prisma/seeds/profiles/seed-profile-contract.js";
+import {
+  assertStrictNonProdDatabaseTarget,
+  E2eDatabaseSetupError,
+  sameE2eDatabaseTarget,
+} from "./e2e-database-target.ts";
+
+export { E2eDatabaseSetupError } from "./e2e-database-target.ts";
 
 export interface E2eDatabaseSetup {
   readonly databaseUrl: string;
@@ -18,10 +24,6 @@ export type E2eDatabaseSetupInput = Omit<E2eDatabaseSetup, "mode">;
 export interface E2eSetupCommand {
   readonly args: readonly string[];
   readonly executable: string;
-}
-
-export class E2eDatabaseSetupError extends Error {
-  override readonly name = "E2eDatabaseSetupError";
 }
 
 export function e2eSetupCommands(
@@ -53,13 +55,26 @@ export function e2eSetupCommands(
 }
 
 export function setupE2eDatabase(input: E2eDatabaseSetup): void {
-  if (input.databaseUrl === process.env.DATABASE_URL) {
+  const developerDatabaseUrl = process.env.DATABASE_URL;
+  if (
+    developerDatabaseUrl !== undefined &&
+    sameE2eDatabaseTarget(input.databaseUrl, developerDatabaseUrl)
+  ) {
     throw new E2eDatabaseSetupError(
       "E2E_DATABASE_URL must differ from DATABASE_URL",
     );
   }
-  const env = { ...process.env, DATABASE_URL: input.databaseUrl };
-  assertNonProdDestructiveTarget("e2e-global-setup", env);
+  assertStrictNonProdDatabaseTarget(
+    "e2e-global-setup",
+    input.databaseUrl,
+    process.env.NODE_ENV,
+  );
+
+  const env = {
+    ...process.env,
+    DATABASE_URL: input.databaseUrl,
+    E2E_DATABASE_URL: input.databaseUrl,
+  };
 
   for (const command of e2eSetupCommands(
     input.repoRoot,

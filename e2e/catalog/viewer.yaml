@@ -70,6 +70,7 @@ routes:
         note: "The Back-to-Archive button is absent because History lives in the nav; the Agent-review coming-soon control stays under the deferred-feature pattern. The viewer toolbar control set is otherwise unchanged."
   - route: /reports/[reportId]/present
     access: [viewer]
+    landing: "/reports/[reportId]?mode=slides"
     intents:
       - id: viewer-present-redirects-to-slides
         intent: "Legacy presentation deep link resolves to inline slides mode"
@@ -79,6 +80,7 @@ routes:
         note: "The standalone slide deck (section nav, fullscreen, 'Status Presentation' title) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [viewer]
+    landing: "/reports"
     intents:
       - id: viewer-history-redirect
         intent: "Access legacy /reports/history bookmark and be redirected to current location"

@@ -2,6 +2,7 @@
 
 import type { ProjectActivity } from "@customreport/shared";
 
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type { AdminUserView } from "../model/admin-types";
 import { ActivityLeadsEditor } from "./activity-leads-editor";
 
@@ -78,7 +79,8 @@ function ActivityRowActions({
   return (
     <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
       <span className="text-xs text-[var(--color-muted-foreground)]">
-        {activity.leadIds.length} leads
+        {activity.leadIds.length}{" "}
+        {pluralize(activity.leadIds.length, "lead", "leads")}
       </span>
       <button
         type="button"

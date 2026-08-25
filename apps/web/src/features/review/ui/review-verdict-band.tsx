@@ -3,6 +3,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import type { SectionReviewRow } from "../model/section-review-rows";
+import { isSubmittedReviewableSection } from "../model/section-review-rows";
 import { SectionVerdictControl } from "./section-verdict-control";
 
 function statusLabel(status: ReportSectionReadModel["status"]): string {
@@ -18,7 +19,7 @@ export function ReviewVerdictBand({
   readonly sections: readonly SectionReviewRow[];
   readonly onMutated: () => void;
 }) {
-  const actionable = sections.filter((section) => section.canReview);
+  const actionable = sections.filter(isSubmittedReviewableSection);
   if (actionable.length === 0) return null;
 
   return (
@@ -46,7 +47,7 @@ export function ReviewVerdictBand({
             reportSectionId={section.reportSectionId}
             version={section.version}
             reviews={section.reviews}
-            canReview={section.canReview}
+            canReview={isSubmittedReviewableSection(section)}
             onMutated={onMutated}
           />
         </div>

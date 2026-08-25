@@ -290,21 +290,21 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::80:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::81:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
       "rationale": "The control is wrapped by the local FieldLabel component, which renders a label with htmlFor matching the control id (period-start, period-end, or period-deadline). The JSX-only analyzer misses this cross-component association; adding a duplicate aria-label would be redundant."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::106:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::113:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
       "rationale": "The control is wrapped by the local FieldLabel component, which renders a label with htmlFor matching the control id (period-start, period-end, or period-deadline). The JSX-only analyzer misses this cross-component association; adding a duplicate aria-label would be redundant."
     },
     {
-      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::141:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
+      "id": "src/features/period/ui/periods-tab-dialog-fields.tsx::150:7::react-doctor/control-has-associated-label::f26bf2b7b0ccaf69ae1baa84626ffc342fc5d1fe5fde5bd6792f6981921d7c55",
       "file": "src/features/period/ui/periods-tab-dialog-fields.tsx",
       "rule": "control-has-associated-label",
       "verdict": "overturn",
@@ -325,7 +325,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::23:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
+      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::25:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
       "file": "src/features/report-pages/ui/head/head-report-shell.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -444,7 +444,7 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts::9:1::react-doctor/no-barrel-import::db3ee6b9e7bb423b6f0aead3c0b3e9face99c7e9b1a5d2c994d72964afbf05b0",
+      "id": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts::10:1::react-doctor/no-barrel-import::db3ee6b9e7bb423b6f0aead3c0b3e9face99c7e9b1a5d2c994d72964afbf05b0",
       "file": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -633,7 +633,7 @@
       "rationale": "This report projection applies separate filtering and mapping to bounded sections/products. The explicit immutable pipeline is intentional and does not warrant a speculative reducer."
     },
     {
-      "id": "src/features/report-sections/model/next-week-columns.ts::40:7::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
+      "id": "src/features/report-sections/model/next-week-columns.ts::41:7::react-doctor/js-combine-iterations::354e0e3bad85305452c7b6059e78ce48326c2e08520d75ec84e337a14e9a7f9e",
       "file": "src/features/report-sections/model/next-week-columns.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
@@ -1074,7 +1074,7 @@
       "rationale": "DialogSurface uses the shared useDialogFocus hook, which traps Tab/Shift+Tab, handles Escape, restores focus, and tests role/aria-modal behavior. Native dialog is not a drop-in replacement for this established compatibility contract; the warning is a false positive."
     },
     {
-      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::28:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::29:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
       "file": "src/shared/ui/report-shell/segmented-toggle.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",

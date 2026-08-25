@@ -57,6 +57,7 @@ export const cell = (cellId = "cell-a"): CoverageCell => ({
     function: { required: true, expectation: "the action succeeds" },
     accessibility: { required: true, expectation: "the control is named" },
     visual: { required: true, expectation: "the layout is stable" },
+    runtime: { required: true, expectation: "runtime telemetry is clean" },
   },
   controls: [],
   evidence: {

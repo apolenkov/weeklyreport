@@ -101,9 +101,9 @@ function WeeklyReportHeader({
     <header
       data-layout-key="weekly-report-header"
       data-layout-stability="position-size"
-      className="flex flex-wrap items-center justify-between gap-4"
+      className="flex flex-wrap items-center justify-between gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]"
     >
-      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-3 sm:basis-auto">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
           Status Report
         </h1>

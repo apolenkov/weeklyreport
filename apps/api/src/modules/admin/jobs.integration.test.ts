@@ -31,7 +31,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
   let worker: Worker<unknown, unknown>;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     const options = {
       ...getBullMQOptions(REDIS_ENV),
@@ -59,7 +59,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

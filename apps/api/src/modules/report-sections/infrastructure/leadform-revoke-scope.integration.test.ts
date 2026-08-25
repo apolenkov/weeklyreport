@@ -25,7 +25,7 @@ describe("lead-form revoke scope (integration)", () => {
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     repo = new LeadFormPrismaRepository(prisma as never);
 
@@ -62,7 +62,7 @@ describe("lead-form revoke scope (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

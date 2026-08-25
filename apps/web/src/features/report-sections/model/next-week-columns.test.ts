@@ -149,4 +149,109 @@ describe("splitItemBoard — two-level split", () => {
       ["b"],
     ]);
   });
+
+  it("appends one column for an orphan product and keeps its stored label and row", () => {
+    const rows = [
+      productItem({ id: "assigned-row" }),
+      productItem({
+        id: "orphan-row",
+        parent: { kind: "product", id: "p-orphan" },
+        productId: "p-orphan",
+        productName: "Historical Portal",
+      }),
+    ];
+
+    const board = splitItemBoard(PRODUCTS, rows);
+
+    expect(board.productColumns.map((column) => column.productId)).toEqual([
+      "p1",
+      "p-orphan",
+    ]);
+    expect(expectDefined(board.productColumns[1]).productName).toBe(
+      "Historical Portal",
+    );
+    expect(
+      expectDefined(board.productColumns[1]).items.map((item) => item.id),
+    ).toEqual(["orphan-row"]);
+  });
+
+  it("keeps one stored-product column when the current assignment list is empty", () => {
+    const rows = [
+      productItem({
+        id: "historical-build",
+        parent: { kind: "product", id: "p-historical" },
+        productId: "p-historical",
+        productName: "Historical Platform",
+        stageNames: ["Build"],
+      }),
+      productItem({
+        id: "historical-run",
+        parent: { kind: "product", id: "p-historical" },
+        productId: "p-historical",
+        productName: "Historical Platform",
+        stageNames: ["Run"],
+      }),
+    ];
+
+    const board = splitItemBoard([], rows);
+
+    expect(board.productColumns).toHaveLength(1);
+    expect(expectDefined(board.productColumns[0])).toMatchObject({
+      key: "p-historical",
+      productId: "p-historical",
+      productName: "Historical Platform",
+    });
+    expect(
+      expectDefined(board.productColumns[0]).items.map((item) => item.id),
+    ).toEqual(["historical-build", "historical-run"]);
+  });
+
+  it("appends orphan products in first-seen order without duplicates or dropped rows", () => {
+    const rows = [
+      productItem({ id: "assigned-row" }),
+      productItem({
+        id: "orphan-b-1",
+        parent: { kind: "product", id: "p-orphan-b" },
+        productId: "p-orphan-b",
+        productName: "Legacy Billing",
+      }),
+      productItem({
+        id: "orphan-a",
+        parent: { kind: "product", id: "p-orphan-a" },
+        productId: "p-orphan-a",
+        productName: "Legacy Analytics",
+      }),
+      productItem({
+        id: "orphan-b-2",
+        parent: { kind: "product", id: "p-orphan-b" },
+        productId: "p-orphan-b",
+        productName: "Legacy Billing (stale label)",
+      }),
+    ];
+
+    const board = splitItemBoard(PRODUCTS, rows);
+    const productColumns = board.productColumns;
+
+    expect(productColumns.map((column) => column.productId)).toEqual([
+      "p1",
+      "p-orphan-b",
+      "p-orphan-a",
+    ]);
+    expect(productColumns.map((column) => column.productName)).toEqual([
+      "Portal",
+      "Legacy Billing",
+      "Legacy Analytics",
+    ]);
+    expect(
+      productColumns.map((column) => column.items.map((item) => item.id)),
+    ).toEqual([["assigned-row"], ["orphan-b-1", "orphan-b-2"], ["orphan-a"]]);
+
+    const renderedProductItemIds = productColumns.flatMap((column) =>
+      column.items.map((item) => item.id),
+    );
+    expect(renderedProductItemIds).toHaveLength(rows.length);
+    expect(new Set(renderedProductItemIds)).toEqual(
+      new Set(rows.map((row) => row.id)),
+    );
+  });
 });

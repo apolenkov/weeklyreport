@@ -162,6 +162,7 @@ const reportSectionReadModelObjectSchema = z.object({
   reviews: z.array(sectionReviewViewSchema.readonly()).readonly().default([]),
   // Live weekly-report UI hints only — server re-derives group for mutations.
   groupId: z.uuid().nullable().optional(),
+  groupName: z.string().min(1).nullable().optional(),
   canReview: z.boolean().optional(),
 });
 

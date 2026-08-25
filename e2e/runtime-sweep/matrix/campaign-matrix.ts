@@ -13,16 +13,16 @@ import {
   campaignMatrixConstraints,
   nominalLifecycleForRoute,
   permissionsForRole,
-} from "./campaign-matrix-constraints.ts";
+} from "./coverage-model/campaign-matrix-constraints.ts";
+import {
+  excludedStateCombinations,
+  witnessCapability,
+} from "./coverage-model/matrix-coverage.ts";
 import {
   compilePairwiseMatrix,
   type MatrixInapplicable,
   type PairwiseState,
 } from "./matrix.ts";
-import {
-  excludedStateCombinations,
-  witnessCapability,
-} from "./matrix-coverage.ts";
 
 const DEFAULT_WITNESS: SeedCapability = "canonical-identities";
 const NOMINAL_PERMISSION = "allowed" as const;

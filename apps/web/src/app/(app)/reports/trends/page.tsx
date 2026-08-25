@@ -95,7 +95,7 @@ export default function TrendsPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
+      className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
     >
       <h1 className="text-2xl font-semibold">Trends</h1>
 

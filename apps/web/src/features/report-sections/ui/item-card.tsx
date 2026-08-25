@@ -56,7 +56,7 @@ export function ItemCard(props: ItemCardProps) {
   return (
     <div
       data-testid="item-card"
-      className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[var(--color-border-strong)] hover:shadow-[0_2px_8px_var(--color-highlight-shadow)]"
+      className="group relative flex min-w-0 flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[var(--color-border-strong)] hover:shadow-[0_2px_8px_var(--color-highlight-shadow)]"
       style={cardContainerStyle({
         isPlanned,
         isBlocked,
@@ -105,7 +105,7 @@ interface ItemCardHeaderRowProps extends ItemCardProps {
 function ItemCardHeaderRow(props: ItemCardHeaderRowProps) {
   const { item, badge, alarmLocked, lockAuthorName, publishedLocked } = props;
   return (
-    <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
+    <div className="mb-2 flex min-w-0 shrink-0 flex-wrap items-start justify-between gap-2 md:flex-nowrap">
       <ItemCardBadges
         badge={badge}
         alarmLocked={alarmLocked}

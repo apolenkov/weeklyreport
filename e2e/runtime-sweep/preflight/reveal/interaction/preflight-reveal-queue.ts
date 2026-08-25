@@ -1,0 +1,244 @@
+import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
+import { sameRevealSurfaceMaterial } from "../guards/reveal-surface-material.ts";
+import {
+  branchFor,
+  restoreRevealBranch,
+} from "./preflight-reveal-branch-execution.ts";
+import {
+  controlsWithTransition,
+  enqueueChangedBranch,
+  type RevealBranch,
+  type RevealCandidate,
+  revealCandidateAlreadyProcessed,
+  type RevealCandidateTerminalResult,
+  type RevealDiscoveryState,
+  type RevealPureQueueInput,
+  type RevealQueueChunkResult,
+  type RevealQueueInput,
+} from "./preflight-reveal-branches.ts";
+import {
+  processCandidates,
+  type RevealCandidateProcessingResult,
+  type RevealQueueYieldHandler,
+} from "./preflight-reveal-queue-candidates.ts";
+import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
+
+const freezeCandidateInput = async (
+  harness: RevealQueueInput["harness"],
+  candidate: RevealCandidate,
+): Promise<RevealCandidate> => {
+  const operation = candidate.action.operation;
+  if (operation !== "fill" && operation !== "select") return candidate;
+  if (candidate.representativeInput !== undefined) return candidate;
+  if (operation === "fill")
+    throw new RevealDiscoveryError(
+      `Fill reveal lacks a frozen representative input: ${candidate.action.controlKey}`,
+    );
+  const freeze = harness.freezeRepresentativeInput;
+  if (freeze === undefined)
+    throw new RevealDiscoveryError(
+      `Select reveal cannot freeze a representative input: ${candidate.action.controlKey}`,
+    );
+  const representativeInput = await freeze({
+    control: candidate.control,
+    action: candidate.action,
+  });
+  if (representativeInput?.kind !== "select")
+    throw new RevealDiscoveryError(
+      `Select reveal lacks a frozen representative input: ${candidate.action.controlKey}`,
+    );
+  return { ...candidate, representativeInput };
+};
+
+export const freezeRevealCandidateInputs = (
+  input: RevealQueueInput,
+  candidates: readonly RevealCandidate[],
+): Promise<readonly RevealCandidate[]> =>
+  freezeRevealCandidateInputsForHarness(input.harness, candidates);
+
+export const freezeRevealCandidateInputsForHarness = (
+  harness: RevealQueueInput["harness"],
+  candidates: readonly RevealCandidate[],
+): Promise<readonly RevealCandidate[]> =>
+  Promise.all(
+    candidates.map((candidate) => freezeCandidateInput(harness, candidate)),
+  );
+
+const processRevealCandidate = async (input: {
+  readonly queueInput: RevealQueueInput;
+  readonly current: RevealBranch;
+  readonly state: RevealDiscoveryState;
+  readonly candidate: RevealCandidate;
+  readonly restoredBranch?: RevealBranch;
+}): Promise<
+  Readonly<{
+    readonly state: RevealDiscoveryState;
+    readonly executed: boolean;
+    readonly terminal?: RevealCandidateTerminalResult;
+  }>
+> => {
+  const { queueInput, current, state, candidate } = input;
+  if (revealCandidateAlreadyProcessed(state, current, candidate))
+    return { state, executed: false };
+  if (
+    state.actionCount + current.path.steps.length + 1 >
+    queueInput.maxRevealActions
+  )
+    throw new RevealDiscoveryError("Reveal action bound exceeded");
+  const result = await branchFor({
+    harness: queueInput.harness,
+    state: queueInput.state,
+    route: queueInput.route,
+    initialSurface: queueInput.initialSurface,
+    branch: current,
+    candidate,
+    ...(input.restoredBranch === undefined
+      ? {}
+      : { restoredBranch: input.restoredBranch }),
+  });
+  const materialChanged =
+    result.explore &&
+    !(
+      sameRevealSurfaceMaterial(current.surface, result.branch.surface) &&
+      current.url === result.branch.url
+    );
+  const terminal: RevealCandidateTerminalResult = {
+    candidate,
+    result,
+    candidateIndex: state.currentCandidateIndex ?? 0,
+    materialChanged,
+  };
+  return {
+    state: applyRevealCandidateResult({
+      input: queueInput,
+      state,
+      current,
+      terminal,
+    }),
+    executed: true,
+    terminal,
+  };
+};
+
+/**
+ * Applies one terminal candidate without browser work. Live execution and
+ * receipt replay share this registration and bound-accounting path.
+ */
+export const applyRevealCandidateResult = (input: {
+  readonly input: RevealPureQueueInput;
+  readonly state: RevealDiscoveryState;
+  readonly current: RevealBranch;
+  readonly terminal: RevealCandidateTerminalResult;
+}): RevealDiscoveryState => {
+  const { input: queueInput, state, current, terminal } = input;
+  const actionCount = state.actionCount + current.path.steps.length + 1;
+  if (actionCount > queueInput.maxRevealActions)
+    throw new RevealDiscoveryError("Reveal action bound exceeded");
+  const branchCount = state.branchCount + (terminal.materialChanged ? 1 : 0);
+  if (
+    terminal.materialChanged &&
+    branchCount > queueInput.maxRevealMaterialEdges
+  )
+    throw new RevealDiscoveryError("Reveal material edge bound exceeded");
+  const transitioned: RevealDiscoveryState = {
+    ...state,
+    controls: controlsWithTransition(
+      state.controls,
+      current,
+      terminal.candidate.action,
+      terminal.result.transition,
+      terminal.result.branch.surface,
+    ),
+    actionCount,
+    branchCount,
+  };
+  if (!terminal.materialChanged) return transitioned;
+  return enqueueChangedBranch({
+    queueInput,
+    state: transitioned,
+    current,
+    branch: terminal.result.branch,
+    action: terminal.candidate.action,
+  });
+};
+
+const currentBranchFor = (state: RevealDiscoveryState): RevealBranch => {
+  const current = state.currentBranch ?? state.queue[0];
+  if (current !== undefined) return current;
+  throw new RevealDiscoveryError("Reveal queue cursor is missing its branch");
+};
+
+const processCurrentRevealBranch = async (input: {
+  readonly queueInput: RevealQueueInput;
+  readonly state: RevealDiscoveryState;
+  readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
+}): Promise<RevealCandidateProcessingResult> => {
+  const current = currentBranchFor(input.state);
+  const remaining = input.state.currentBranch
+    ? input.state.queue
+    : input.state.queue.slice(1);
+  const unfrozenCandidates =
+    input.state.currentCandidates ??
+    candidatesForImmediateReveal(input.queueInput, current);
+  const requiresLiveRestore = unfrozenCandidates.some(
+    (candidate) =>
+      candidate.action.operation === "select" &&
+      candidate.representativeInput === undefined,
+  );
+  const restoredBranch = requiresLiveRestore
+    ? await restoreRevealBranch({
+        harness: input.queueInput.harness,
+        state: input.queueInput.state,
+        route: input.queueInput.route,
+        initialSurface: input.queueInput.initialSurface,
+        branch: current,
+      })
+    : undefined;
+  const candidates = await freezeRevealCandidateInputs(
+    input.queueInput,
+    unfrozenCandidates,
+  );
+  return processCandidates(
+    {
+      queueInput: input.queueInput,
+      state: {
+        ...input.state,
+        queue: remaining,
+        currentBranch: current,
+        currentCandidates: candidates,
+        currentCandidateIndex: input.state.currentCandidateIndex ?? 0,
+      },
+      current,
+      candidates,
+      index: input.state.currentCandidateIndex ?? 0,
+      ...(restoredBranch === undefined ? {} : { restoredBranch }),
+      ...(input.shouldYieldAfterCandidate === undefined
+        ? {}
+        : { shouldYieldAfterCandidate: input.shouldYieldAfterCandidate }),
+    },
+    processRevealCandidate,
+  );
+};
+
+export const processRevealQueueChunk = async (
+  input: RevealQueueInput,
+  state: RevealDiscoveryState,
+  shouldYieldAfterCandidate?: RevealQueueYieldHandler,
+): Promise<RevealQueueChunkResult> => {
+  const cursor = { state };
+  while (
+    cursor.state.currentBranch !== undefined ||
+    cursor.state.queue.length > 0
+  ) {
+    const processed = await processCurrentRevealBranch({
+      queueInput: input,
+      state: cursor.state,
+      ...(shouldYieldAfterCandidate === undefined
+        ? {}
+        : { shouldYieldAfterCandidate }),
+    });
+    if (processed.yielded !== undefined) return processed.yielded;
+    cursor.state = processed.state;
+  }
+  return { state: { ...cursor.state, queue: [] }, completed: true };
+};

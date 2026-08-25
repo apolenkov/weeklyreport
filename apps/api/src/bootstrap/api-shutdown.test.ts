@@ -30,6 +30,10 @@ const dependenciesFor = (
       },
     },
     logger,
+    shutdownRateLimitStore: () => {
+      order.push("rate-limit-redis-shutdown");
+      return Promise.resolve();
+    },
     shutdownOtel: () => {
       order.push("otel-shutdown");
       return Promise.resolve();
@@ -82,6 +86,7 @@ describe("API shutdown", () => {
 
     expect(order).toEqual([
       "app-close",
+      "rate-limit-redis-shutdown",
       "log:API shutdown log barrier reached",
       "file-flush",
       "otel-shutdown",
@@ -105,6 +110,7 @@ describe("API shutdown", () => {
       "API shutdown telemetry drain failed",
     );
     expect(order).toContain("file-flush");
+    expect(order).toContain("rate-limit-redis-shutdown");
     expect(order).toContain("otel-shutdown");
     expect(order).toContain("sentry-close");
     expect(order).not.toContain("completion-write");
@@ -130,6 +136,7 @@ describe("API shutdown", () => {
     await rejection;
 
     expect(order).toContain("file-flush");
+    expect(order).toContain("rate-limit-redis-shutdown");
     expect(order).toContain("otel-shutdown");
     expect(order).toContain("sentry-close");
     expect(order).not.toContain("completion-write");
@@ -149,6 +156,25 @@ describe("API shutdown", () => {
     );
 
     expect(order).toContain("log:API shutdown log barrier reached");
+    expect(order).not.toContain("completion-write");
+  });
+
+  it("attempts later drains when the rate-limit Redis shutdown fails", async () => {
+    const order: string[] = [];
+    const dependencies = dependenciesFor(order, {
+      shutdownRateLimitStore: () => {
+        order.push("rate-limit-redis-shutdown-failed");
+        return Promise.reject(new Error("rate-limit Redis failed"));
+      },
+    });
+
+    await expect(shutdownApi(dependencies)).rejects.toThrow(
+      "API shutdown telemetry drain failed",
+    );
+
+    expect(order).toContain("file-flush");
+    expect(order).toContain("otel-shutdown");
+    expect(order).toContain("sentry-close");
     expect(order).not.toContain("completion-write");
   });
 

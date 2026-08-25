@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
-import type { StatefulControlOperation } from "../control-action-policy.ts";
-import { ControlActionPolicyError } from "../control-recovery.ts";
+import { ControlActionPolicyError } from "../recovery/control-recovery.ts";
+import type { StatefulControlOperation } from "./control-action-policy.ts";
 
 const CONFIRMATION_NAMES: Readonly<Record<StatefulControlOperation, RegExp>> = {
   publish: /publish/i,

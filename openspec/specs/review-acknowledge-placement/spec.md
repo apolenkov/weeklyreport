@@ -13,13 +13,17 @@ The review-acknowledge control MUST be presented, for a publish-capable reviewer
 cluster on the report header line — not as a separate standalone band above the
 report body (head HF1) — so "review → acknowledge → publish & lock" reads as one
 sequence. The control is
-`apps/web/src/components/weekly-report/review/review-acknowledge-bar.tsx`, rendered
-by `weekly-report-page.tsx` via `AcknowledgeSurface`. Relocation MUST NOT turn
+`apps/web/src/features/review/ui/review-acknowledge-bar.tsx`, rendered by
+`apps/web/src/features/report-pages/ui/weekly/weekly-report-page-content.tsx` via
+`AcknowledgeSurface`. Relocation MUST NOT turn
 acknowledgement into a publish precondition: Publish & Lock MUST remain available
 regardless of whether the reviewer has acknowledged — this is the plain reading of
 the walkthrough note, which asks to co-locate the control, not to add a new gate.
 The acknowledge action's own semantics MUST be unchanged by the move: it stays a
-per-group acknowledge, and the head/admin "Seen by" roster still renders.
+per-group acknowledge, and the head/admin "Seen by" roster still renders. Every
+per-group acknowledgement action MUST also include a stable human-readable group
+label in its visible text and accessible name. Two actions for different groups
+MUST NOT render as indistinguishable `Acknowledge` buttons.
 
 #### Scenario: the acknowledge control renders in the publish cluster
 
@@ -39,3 +43,9 @@ per-group acknowledge, and the head/admin "Seen by" roster still renders.
 - **WHEN** a head acknowledges a group from the relocated control
 - **THEN** the per-group acknowledgement is recorded and the head/admin "Seen by"
   roster updates, exactly as before the move
+
+#### Scenario: multi-group viewer can identify each acknowledgement target
+
+- **WHEN** a viewer with access to two groups opens a live report
+- **THEN** each per-group acknowledgement control visibly names its target group
+- **AND** each control has a distinct accessible name

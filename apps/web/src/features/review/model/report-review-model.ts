@@ -24,7 +24,7 @@ export type CurrentRole = Role | null;
 
 export interface ReviewModel {
   readonly context: AccordionReviewContext | undefined;
-  readonly groups: { readonly groupId: string }[];
+  readonly groups: { readonly groupId: string; readonly label: string }[];
   readonly sections: SectionReviewRow[];
   readonly isHeadOrAdmin: boolean;
 }
@@ -47,11 +47,19 @@ export function isReviewEnabled(
 
 export function distinctReviewGroups(
   sections: WeeklyReportReadModel["leadSections"],
-): { groupId: string }[] {
-  const ids = sections
-    .map((section) => section.groupId)
-    .filter((groupId): groupId is string => Boolean(groupId));
-  return [...new Set(ids)].map((groupId) => ({ groupId }));
+): { groupId: string; label: string }[] {
+  const labelsByGroupId = new Map<string, string>();
+  for (const section of sections) {
+    const groupId = section.groupId;
+    if (!groupId) continue;
+    const label = section.groupName;
+    if (!label) throw new Error(`Live review group ${groupId} has no label`);
+    const priorLabel = labelsByGroupId.get(groupId);
+    if (priorLabel && priorLabel !== label)
+      throw new Error(`Live review group ${groupId} has conflicting labels`);
+    labelsByGroupId.set(groupId, label);
+  }
+  return [...labelsByGroupId].map(([groupId, label]) => ({ groupId, label }));
 }
 
 // Empty model when review is disabled so the page mounts zero review affordances.

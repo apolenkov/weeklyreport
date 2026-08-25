@@ -6,10 +6,10 @@ import { controlEvidence } from "../../matrix/runtime-matrix-evidence.ts";
 import {
   assertSpecializedCaseBinding,
   captureSpecializedEventWindows,
-} from "../../matrix/specialized-case-emission.ts";
-import { inventoryDom } from "../../replay/dom-inventory.ts";
-import { writeFrozenCaseArtifact } from "../../replay/frozen-case-artifacts.ts";
-import { type FrozenCaseReplayResult } from "../../replay/frozen-case-evidence.ts";
+} from "../../matrix/specialized/specialized-case-emission.ts";
+import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
+import { writeFrozenCaseArtifact } from "../../replay/evidence/frozen-case-artifacts.ts";
+import { type FrozenCaseReplayResult } from "../../replay/evidence/frozen-case-evidence.ts";
 import { coverageCellSchema, type Oracle } from "../../source/contracts.ts";
 import {
   loadInitialSection,

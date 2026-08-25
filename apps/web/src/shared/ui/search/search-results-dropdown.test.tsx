@@ -20,20 +20,43 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
   };
 }
 
-function renderDropdown(hits: SearchHit[]) {
+function renderDropdown(
+  hits: SearchHit[],
+  state: { readonly isError?: boolean; readonly isFetching?: boolean } = {},
+) {
   render(
     <SearchResultsDropdown
       resultsId="search-results"
       hits={hits}
       activeIndex={-1}
-      isError={false}
-      isFetching={false}
+      isError={state.isError ?? false}
+      isFetching={state.isFetching ?? false}
       isViewer={false}
       onHoverHit={vi.fn()}
       onSelectHit={vi.fn()}
     />,
   );
 }
+
+describe("SearchResultsDropdown — loading semantics", () => {
+  it("exposes the debounced query as a busy status", () => {
+    renderDropdown([], { isFetching: true });
+
+    expect(
+      screen.getByRole("status", { name: "Searching reports" }),
+    ).toHaveAttribute("aria-busy", "true");
+  });
+
+  it.each([
+    { name: "error", hits: [], state: { isError: true } },
+    { name: "empty", hits: [], state: {} },
+    { name: "ready", hits: [makeHit()], state: {} },
+  ])("does not retain the busy marker for $name results", ({ hits, state }) => {
+    renderDropdown(hits, state);
+
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+});
 
 describe("SearchResultsDropdown — created date presentation", () => {
   it("renders the created date through the UTC formatter, independent of the browser timezone", () => {

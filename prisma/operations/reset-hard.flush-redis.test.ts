@@ -1,4 +1,9 @@
+import net from "node:net";
+
 import { describe, expect, it, vi } from "vitest";
+
+const pgMock = vi.hoisted(() => ({ Pool: vi.fn() }));
+vi.mock("pg", () => ({ default: pgMock }));
 
 import {
   registerMockRedisTeardown,
@@ -10,8 +15,10 @@ import {
 async function loadResetHard(): Promise<typeof import("./reset-hard.js")> {
   vi.stubEnv(
     "DATABASE_URL",
-    "postgresql://test:test@127.0.0.1:5432/customreport_test",
+    "postgresql://test:test@127.0.0.1:5432/customreport_e2e",
   );
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
   return import("./reset-hard.js");
 }
 
@@ -34,6 +41,55 @@ function configureRedis(port: number): void {
 registerMockRedisTeardown();
 
 describe("flushRedis", () => {
+  it("rejects an unsafe database before opening the Redis socket", async () => {
+    let connections = 0;
+    const server = net.createServer(() => {
+      connections += 1;
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      server.close();
+      throw new Error("Expected a TCP test server address");
+    }
+    configureRedis(address.port);
+    const flushRedis = await loadFlushRedis();
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://test:test@127.0.0.1:5432/customreport_dev",
+    );
+    try {
+      await expect(flushRedis()).rejects.toThrow(/not one of/u);
+      expect(connections).toBe(0);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
+
+  it("rejects an unsafe database before constructing a Prisma pool", async () => {
+    const { runResetHard } = await loadResetHard();
+    const originalProfile = process.argv[2];
+    process.argv[2] = "full";
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://test:test@127.0.0.1:5432/customreport_dev",
+    );
+    try {
+      await expect(runResetHard()).rejects.toThrow(/not one of/u);
+      expect(pgMock.Pool).not.toHaveBeenCalled();
+    } finally {
+      process.argv.splice(
+        2,
+        1,
+        ...(originalProfile === undefined ? [] : [originalProfile]),
+      );
+    }
+  });
+
   it("resolves after an observed +OK reply", async () => {
     const server = await startMockRedisServer("+OK\r\n");
     configureRedis(server.port);

@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { isEntrypoint } from "../../guards/_entrypoint.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import { parseSeedProfile } from "./seed-profile-contract.js";
@@ -12,6 +13,7 @@ import { validateSeedProfile } from "./seed-profile-validator.js";
 async function main(): Promise<void> {
   const profile = parseSeedProfile(process.argv[2]);
   const databaseUrl = requireEnv("DATABASE_URL");
+  assertE2eRuntimeDestructive("seed-profile-validate");
   const pool = new pg.Pool({ connectionString: databaseUrl });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   try {

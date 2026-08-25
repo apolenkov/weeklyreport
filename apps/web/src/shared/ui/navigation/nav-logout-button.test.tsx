@@ -15,6 +15,17 @@ describe("NavLogoutButton", () => {
     vi.unstubAllGlobals();
   });
 
+  it("uses the shared responsive toolbar geometry", () => {
+    render(<NavLogoutButton />);
+
+    const button = screen.getByRole("button", { name: "Sign out" });
+    expect(button).toHaveClass(
+      "h-[var(--toolbar-control-h)]",
+      "min-w-[var(--toolbar-control-h)]",
+      "w-10",
+    );
+  });
+
   it("reports a rejected logout and keeps the current page", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
     vi.stubGlobal("fetch", fetchMock);

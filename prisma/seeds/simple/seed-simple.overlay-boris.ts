@@ -27,6 +27,7 @@ async function seedSalesSlice(prisma: PrismaClient): Promise<void> {
   await prisma.item.create({
     data: {
       id: "a0000000-0000-4000-8000-000000007001",
+      stableId: "a0000000-0000-4000-8000-000000007001",
       reportSectionId: SECTION_ID,
       type: ItemType.next,
       projectId: PROD_CRM_SALES,
@@ -40,6 +41,7 @@ async function seedSalesSlice(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009001",
+      stableId: "a0000000-0000-4000-8000-000000009001",
       reportSectionId: SECTION_ID,
       projectId: PROD_CRM_SALES,
       risk: "Sales API rate-limit на пиках нагрузки",
@@ -54,6 +56,7 @@ async function seedSalesSlice(prisma: PrismaClient): Promise<void> {
 const CRM_ITEMS = [
   {
     id: "a0000000-0000-4000-8000-000000007002",
+    stableId: "a0000000-0000-4000-8000-000000007002",
     reportSectionId: SECTION_ID,
     type: ItemType.current,
     projectId: PROD_CRM,
@@ -66,6 +69,7 @@ const CRM_ITEMS = [
   },
   {
     id: "a0000000-0000-4000-8000-000000007003",
+    stableId: "a0000000-0000-4000-8000-000000007003",
     reportSectionId: SECTION_ID,
     type: ItemType.next,
     projectId: PROD_CRM,
@@ -82,6 +86,7 @@ async function seedCrmSlice(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009002",
+      stableId: "a0000000-0000-4000-8000-000000009002",
       reportSectionId: SECTION_ID,
       projectId: PROD_CRM,
       risk: "Требования к аналитическому модулю не финализированы до старта разработки",
@@ -94,6 +99,7 @@ async function seedCrmSlice(prisma: PrismaClient): Promise<void> {
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-000000007004",
+      stableId: "a0000000-0000-4000-8000-000000007004",
       reportSectionId: SECTION_ID,
       productId: PROD_CRM,
       text: "Утвердить структуру аналитического API до начала разработки",
@@ -111,6 +117,7 @@ async function seedPaymentsSlice(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009003",
+      stableId: "a0000000-0000-4000-8000-000000009003",
       reportSectionId: SECTION_ID,
       projectId: PROD_PAYMENTS,
       risk: "Интеграция с платёжным шлюзом не согласована с командой Ольги",
@@ -123,6 +130,7 @@ async function seedPaymentsSlice(prisma: PrismaClient): Promise<void> {
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-000000007005",
+      stableId: "a0000000-0000-4000-8000-000000007005",
       reportSectionId: SECTION_ID,
       productId: PROD_PAYMENTS,
       text: "Согласовать SLA платёжного API для мобильного чек-аута",

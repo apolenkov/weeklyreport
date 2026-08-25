@@ -29,8 +29,8 @@ describe("ProductGroupChips", () => {
     useQueryMock.mockReturnValue({ isLoading: true, data: undefined });
     render(<ProductGroupChips productId={PRODUCT_ID} />);
     expect(
-      screen.getByTestId("product-group-chips-loading"),
-    ).toBeInTheDocument();
+      screen.getByRole("status", { name: "Loading product groups" }),
+    ).toHaveAttribute("aria-busy", "true");
   });
 
   it('renders "No groups" when the product has no attached groups', () => {
@@ -38,6 +38,7 @@ describe("ProductGroupChips", () => {
     render(<ProductGroupChips productId={PRODUCT_ID} />);
     expect(screen.getByTestId("product-group-chips-empty")).toBeInTheDocument();
     expect(screen.getByText("No groups")).toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it("distinguishes a failed query from an empty group list", () => {
@@ -53,6 +54,7 @@ describe("ProductGroupChips", () => {
     expect(
       screen.queryByTestId("product-group-chips-empty"),
     ).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it("renders one pill per attached group, preserving server order", () => {
@@ -81,5 +83,6 @@ describe("ProductGroupChips", () => {
     expect(items).toHaveLength(2);
     expect(Array.from(items).at(0)?.textContent).toBe("Platform");
     expect(Array.from(items).at(1)?.textContent).toBe("Integrations");
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 });

@@ -1,8 +1,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import postcss from "postcss";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+
+const MAIN_CONTENT_FOCUS_SELECTOR = "#main-content:focus";
+const OUTLINE_LONGHANDS = new Set([
+  "outline-color",
+  "outline-style",
+  "outline-width",
+]);
 
 const MAIN_CONTENT_ROUTES = [
   "src/app/login-page.client.tsx",
@@ -94,6 +102,49 @@ export function hasFocusableMainContentTarget(source: string): boolean {
   return targets.length > 0 && targets.every((isFocusable) => isFocusable);
 }
 
+export function hasMainContentFocusPresentation(source: string): boolean {
+  const root = postcss.parse(source);
+  let matchingSelectorRuleCount = 0;
+  let validRuleCount = 0;
+
+  root.walkRules((rule) => {
+    if (rule.selector.trim() !== MAIN_CONTENT_FOCUS_SELECTOR) return;
+
+    matchingSelectorRuleCount += 1;
+    const parent = rule.parent;
+    if (
+      parent?.type !== "atrule" ||
+      parent.name !== "layer" ||
+      parent.params.trim() !== "base"
+    )
+      return;
+
+    let outlineDeclarationCount = 0;
+    let outlineLonghandCount = 0;
+    let validOutlineDeclarationCount = 0;
+    rule.walkDecls((declaration) => {
+      if (declaration.prop === "outline") {
+        outlineDeclarationCount += 1;
+        if (declaration.value.trim() === "none" && !declaration.important) {
+          validOutlineDeclarationCount += 1;
+        }
+      } else if (OUTLINE_LONGHANDS.has(declaration.prop)) {
+        outlineLonghandCount += 1;
+      }
+    });
+
+    if (
+      outlineDeclarationCount === 1 &&
+      validOutlineDeclarationCount === 1 &&
+      outlineLonghandCount === 0
+    ) {
+      validRuleCount += 1;
+    }
+  });
+
+  return matchingSelectorRuleCount === 1 && validRuleCount === 1;
+}
+
 function hasFocusableMainContentRoute(path: string): boolean {
   return hasFocusableMainContentTarget(
     readFileSync(resolve(process.cwd(), path), "utf8"),
@@ -135,4 +186,67 @@ describe("main-content skip-link focus contract", () => {
     "$path exposes a programmatically focusable main target",
     (path) => expect(hasFocusableMainContentRoute(path)).toBe(true),
   );
+});
+
+describe("main-content focus presentation contract", () => {
+  it("recognizes one exact landmark rule in the base layer", () => {
+    expect(
+      hasMainContentFocusPresentation(
+        "@layer base { #main-content:focus { outline: none; } }",
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["an unrelated selector", ".card:focus { outline: none; }"],
+    ["a broad main selector", "main:focus { outline: none; }"],
+    ["a universal focus selector", "*:focus { outline: none; }"],
+    [
+      "the exact selector outside the base layer",
+      "#main-content:focus { outline: none; }",
+    ],
+  ])("rejects %s", (_description, source) => {
+    expect(hasMainContentFocusPresentation(source)).toBe(false);
+  });
+
+  it("rejects the wrong outline value", () => {
+    expect(
+      hasMainContentFocusPresentation(
+        "@layer base { #main-content:focus { outline: auto; } }",
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects duplicate landmark presentation owners", () => {
+    expect(
+      hasMainContentFocusPresentation(
+        "@layer base { #main-content:focus { outline: none; } #main-content:focus { outline: none; } }",
+      ),
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      "an important declaration",
+      "@layer base { #main-content:focus { outline: none !important; } }",
+    ],
+    [
+      "an overriding outline longhand",
+      "@layer base { #main-content:focus { outline: none; outline-style: solid; } }",
+    ],
+    [
+      "a second owner outside the base layer",
+      "@layer base { #main-content:focus { outline: none; } } #main-content:focus { outline: solid; }",
+    ],
+  ])("rejects %s", (_description, source) => {
+    expect(hasMainContentFocusPresentation(source)).toBe(false);
+  });
+
+  it("requires the application stylesheet to own the landmark presentation", () => {
+    expect(
+      hasMainContentFocusPresentation(
+        readFileSync(resolve(process.cwd(), "src/styles/app.css"), "utf8"),
+      ),
+    ).toBe(true);
+  });
 });

@@ -35,12 +35,12 @@ describe("PdfExportPrismaRepository (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   it("createExportJob creates and returns job", async () => {
@@ -84,6 +84,7 @@ describe("PdfExportPrismaRepository (integration)", () => {
     );
 
     const completedChecksum = "sha256:deadbeef";
+    const completedArtifactUrl = `/pdfs/${TEST_IDS.pdfJob2}.pdf`;
     const updated = await repo.saveExportJob({
       jobId: TEST_IDS.pdfJob2,
       reportId: testData.report.id,
@@ -92,20 +93,18 @@ describe("PdfExportPrismaRepository (integration)", () => {
       completedAt: new Date(),
       checksum: completedChecksum,
       templateVersion: "phase-2-pdf-v1",
-      artifactUrl: "/exports/report-2026-04-07.pdf",
+      artifactUrl: completedArtifactUrl,
     });
 
     expect(updated.status).toBe("completed");
-    expect(updated.artifactUrl).toBe("/exports/report-2026-04-07.pdf");
+    expect(updated.artifactUrl).toBe(completedArtifactUrl);
     expect(updated.checksum).toBe(completedChecksum);
 
     const dbJob = await prisma.pdfExportJob.findUnique({
       where: { id: TEST_IDS.pdfJob2 },
     });
     expect(expectDefined(dbJob).status).toBe("completed");
-    expect(expectDefined(dbJob).filePath).toBe(
-      "/exports/report-2026-04-07.pdf",
-    );
+    expect(expectDefined(dbJob).filePath).toBe(completedArtifactUrl);
     expect(expectDefined(dbJob).checksum).toBe(completedChecksum);
 
     // The checksum round-trips through a fresh read, not just the write path.
@@ -125,7 +124,7 @@ describe("cookie seam — service against real Prisma repo", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     vi.stubEnv("AUTH_DEV_MODE", "false");
     vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "true");
     vi.stubEnv(
@@ -139,7 +138,7 @@ describe("cookie seam — service against real Prisma repo", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

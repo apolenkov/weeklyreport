@@ -1,12 +1,12 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { EnvironmentFeedback } from "../preflight/environment-feedback.ts";
-import { assertEnvironmentFeedbackLive } from "../preflight/environment-feedback.ts";
+import type { EnvironmentFeedback } from "../preflight/observability/environment-feedback.ts";
+import { assertEnvironmentFeedbackLive } from "../preflight/observability/environment-feedback.ts";
 import {
   observeEnvironmentFeedback,
   readEnvironmentObserverConfig,
-} from "../preflight/environment-observer.ts";
+} from "../preflight/observability/environment-observer.ts";
 import type { CoverageCell } from "../source/contracts.ts";
 import { appendEnvironmentCandidates } from "../support/candidate-verification.ts";
 import {

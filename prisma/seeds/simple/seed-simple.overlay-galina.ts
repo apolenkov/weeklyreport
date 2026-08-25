@@ -13,6 +13,7 @@ const SECTION_ID = "a0000000-0000-4000-8000-000000000409";
 const ITEMS = [
   {
     id: "a0000000-0000-4000-8000-000000007020",
+    stableId: "a0000000-0000-4000-8000-000000007020",
     reportSectionId: SECTION_ID,
     type: ItemType.current,
     projectId: PROD_CRM,
@@ -25,6 +26,7 @@ const ITEMS = [
   },
   {
     id: "a0000000-0000-4000-8000-000000007021",
+    stableId: "a0000000-0000-4000-8000-000000007021",
     reportSectionId: SECTION_ID,
     type: ItemType.next,
     projectId: PROD_CRM,
@@ -41,6 +43,7 @@ export async function seedGalinaOverlay(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009020",
+      stableId: "a0000000-0000-4000-8000-000000009020",
       reportSectionId: SECTION_ID,
       projectId: PROD_CRM,
       risk: "Figma-прототип не согласован с PM — риск переработки верстки",
@@ -53,6 +56,7 @@ export async function seedGalinaOverlay(prisma: PrismaClient): Promise<void> {
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-000000007022",
+      stableId: "a0000000-0000-4000-8000-000000007022",
       reportSectionId: SECTION_ID,
       productId: PROD_CRM,
       text: "Принять Material Design 3 как базовую дизайн-систему для портала",

@@ -16,7 +16,7 @@ function ReportsLatestShell({ children }: { readonly children: ReactNode }) {
       tabIndex={-1}
       className="min-h-screen bg-[var(--color-background)]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {children}
       </div>
     </main>
@@ -46,7 +46,12 @@ function ReportsLatestContent() {
 
   useEffect(() => {
     if (reportId) {
-      router.replace(`/reports/${reportId}?source=status&recovery=${recovery}`);
+      router.replace(
+        `/reports/${reportId}?source=status&recovery=${recovery}`,
+        {
+          scroll: false,
+        },
+      );
     }
   }, [reportId, router, recovery]);
 

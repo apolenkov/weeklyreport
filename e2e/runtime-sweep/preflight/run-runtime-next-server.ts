@@ -8,7 +8,7 @@ import {
   prepareRuntimeNextDist,
   releaseRuntimeNextDist,
   type RuntimeNextLane,
-} from "./runtime-next-dist.ts";
+} from "./runtime/runtime-next-dist.ts";
 
 const MAX_PORT = 65_535;
 
@@ -17,6 +17,11 @@ export const runtimeNextServerCommand = (
   port: string | number,
 ): string =>
   `pnpm exec tsx e2e/runtime-sweep/preflight/run-runtime-next-server.ts ${lane} ${port}`;
+
+export const runtimeNextChildArguments = (
+  nextCli: string,
+  port: string | number,
+): readonly string[] => [nextCli, "dev", "--webpack", "-p", String(port)];
 
 const parsePort = (value: string | undefined): number => {
   const port = Number(value);
@@ -54,7 +59,7 @@ const runRuntimeNextServer = async (): Promise<void> => {
   try {
     const child = spawn(
       process.execPath,
-      [nextCli, "dev", "-p", String(port)],
+      [...runtimeNextChildArguments(nextCli, port)],
       {
         cwd: webRoot,
         env: { ...process.env, NEXT_DIST_DIR: distDirectory },

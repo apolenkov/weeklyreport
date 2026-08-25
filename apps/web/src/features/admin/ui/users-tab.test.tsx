@@ -176,6 +176,18 @@ describe("UsersTab — invalidation contract", () => {
 });
 
 describe("UsersTab — group change confirmation", () => {
+  it("keeps the only selected owning group visible but not editable", () => {
+    renderTab([], [GROUP]);
+    openDialog();
+
+    const groupSelect = screen.getByLabelText(/owning group/i);
+    expect(groupSelect).toBeDisabled();
+    expect(groupSelect).toHaveValue(GROUP.id);
+    expect(
+      within(groupSelect).getByRole("option", { name: GROUP.name }),
+    ).toBeInTheDocument();
+  });
+
   it("defers the save mutation until the shared dialog is confirmed", async () => {
     const otherGroup: AdminGroupView = {
       ...GROUP,
@@ -208,6 +220,39 @@ describe("UsersTab — group change confirmation", () => {
         expect.anything(),
       ),
     );
+  });
+
+  it("keeps an archived selected group visible while allowing a switch to an active group", async () => {
+    const archivedGroup: AdminGroupView = {
+      ...GROUP,
+      id: "g-archived",
+      name: "Legacy",
+      archived: true,
+    };
+    const archivedUser: AdminUserView = {
+      ...USER,
+      groupId: archivedGroup.id,
+      department: archivedGroup.name,
+    };
+    renderTab([archivedUser], [GROUP, archivedGroup]);
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: /edit ivanova alice/i }),
+    );
+
+    const groupSelect = screen.getByLabelText(/owning group/i);
+    expect(groupSelect).toBeEnabled();
+    expect(groupSelect).toHaveValue(archivedGroup.id);
+    expect(
+      within(groupSelect).getByRole("option", {
+        name: `${archivedGroup.name} (archived)`,
+      }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(groupSelect, GROUP.id);
+
+    expect(groupSelect).toHaveValue(GROUP.id);
   });
 });
 

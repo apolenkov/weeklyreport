@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 import { eventsFor } from "../matrix/runtime-matrix-evidence.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   captureNetwork,
   controlledFault,
@@ -18,9 +19,12 @@ test("fails network evidence for an unexpected HTTP error response", async ({
 }, testInfo) => {
   await page.setContent('<main><button type="button">Continue</button></main>');
 
-  const result = await captureNetwork(page, testInfo, [
-    errorResponse("report.get"),
-  ]);
+  const result = await captureNetwork(
+    page,
+    testInfo,
+    [errorResponse("report.get")],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
+  );
 
   expect(networkOutcome(result)).toBe("fail");
 });
@@ -34,6 +38,7 @@ test("permits a declared HTTP error during a controlled fault phase", async ({
     page,
     testInfo,
     [errorResponse("period.publish")],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
     controlledFault,
   );
 
@@ -49,6 +54,7 @@ test("rejects an additional HTTP error during a controlled fault phase", async (
     page,
     testInfo,
     [errorResponse("period.publish"), errorResponse("user.get")],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
     controlledFault,
   );
 
@@ -71,8 +77,8 @@ test("rejects an unrelated server error during a controlled fault phase", async 
     page,
     testInfo,
     [errorResponse("period.publish")],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
     controlledFault,
-    undefined,
     logPath,
   );
   const serverLog = result.bundle.observations.find(
@@ -99,7 +105,7 @@ test("rejects a correlated slow server operation", async ({
     page,
     testInfo,
     [responseRecord("report.get")],
-    undefined,
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
     undefined,
     logPath,
   );
@@ -116,9 +122,12 @@ test("fails an API response without a correlation id", async ({
 }, testInfo) => {
   await page.setContent('<main><button type="button">Continue</button></main>');
 
-  const result = await captureNetwork(page, testInfo, [
-    responseRecord("report.get", { correlationId: null }),
-  ]);
+  const result = await captureNetwork(
+    page,
+    testInfo,
+    [responseRecord("report.get", { correlationId: null })],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
+  );
 
   expect(networkOutcome(result)).toBe("fail");
 });
@@ -138,8 +147,8 @@ test("fails slow, repeated, and cache-contract API requests", async ({
     page,
     testInfo,
     [responseRecord("report.get"), responseRecord("report.get")],
-    undefined,
     policy,
+    undefined,
   );
   const observation = result.bundle.observations.find(
     ({ observationId }) => observationId === "network",
@@ -172,8 +181,8 @@ test("groups retry attempts by operation when technical query values change", as
     page,
     testInfo,
     [first, second],
-    undefined,
     policy,
+    undefined,
   );
   const observation = result.bundle.observations.find(
     ({ observationId }) => observationId === "network",
@@ -256,7 +265,7 @@ test("keeps the response ledger open until delayed API work settles", async ({
       page,
       testInfo,
       events.responses,
-      undefined,
+      NO_ROUTE_CACHE_CONTRACT_POLICY,
       undefined,
       undefined,
       events.waitForIdle,
@@ -280,7 +289,12 @@ test("freezes geometry before keyboard traversal scrolls the page", async ({
         onfocus="document.querySelector('main').style.transform='translateY(-500px)'">Bottom</button>
     </main>
   `);
-  const result = await captureNetwork(page, testInfo, []);
+  const result = await captureNetwork(
+    page,
+    testInfo,
+    [],
+    NO_ROUTE_CACHE_CONTRACT_POLICY,
+  );
   const ref = result.all.find(({ kind }) => kind === "geometry");
   if (ref === undefined) throw new Error("Geometry evidence is missing");
   const geometry = JSON.parse(await readFile(ref.archivePath, "utf8")) as {

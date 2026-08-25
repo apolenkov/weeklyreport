@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useFullscreen } from "../../../../../shared/hooks/browser/use-fullscreen";
+import type { SlideDensity } from "../../../../slides";
 import { useLeadFormData } from "./use-lead-form-data";
 
 interface UseLeadFormShellInput {
@@ -28,6 +29,9 @@ export function useLeadFormShell({
   // LeadSlidesClient (deck root div).
   const deckRef = useRef<HTMLDivElement>(null);
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  // Hosted slides keep density in the report context toolbar; standalone
+  // LeadSlidesClient owns its local fallback state.
+  const [density, setDensity] = useState<SlideDensity>("document");
   // Single fullscreen owner: threads toggle into toolbar + LeadSlidesClient
   // (local hook disabled) so one `f` listener exists; gated to slides mode.
   const slidesFullscreen = useFullscreen(
@@ -35,5 +39,12 @@ export function useLeadFormShell({
     fullscreenToggleRef,
     isSlidesMode,
   );
-  return { data, deckRef, fullscreenToggleRef, slidesFullscreen };
+  return {
+    data,
+    deckRef,
+    density,
+    fullscreenToggleRef,
+    setDensity,
+    slidesFullscreen,
+  };
 }

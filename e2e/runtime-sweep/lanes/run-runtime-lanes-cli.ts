@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
+import { parseRuntimeLaneAssignment } from "./contracts/runtime-lane-contract.ts";
 import { runRuntimeLanes } from "./run-runtime-lanes.ts";
-import { parseRuntimeLaneAssignment } from "./runtime-lane-contract.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -11,7 +13,13 @@ const requiredEnv = (name: string): string => {
 };
 
 async function main(): Promise<void> {
-  requiredEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION");
+  const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
+  const baseDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lanes-cli",
+    baseDatabaseUrl,
+    process.env,
+  );
   const assignmentPath = path.resolve(
     requiredEnv("RUNTIME_SWEEP_LANE_ASSIGNMENT"),
   );
@@ -21,7 +29,13 @@ async function main(): Promise<void> {
   await runRuntimeLanes({
     assignmentPath,
     assignment,
-    baseDatabaseUrl: requiredEnv("E2E_DATABASE_URL"),
+    sourceAuthority: {
+      expectedSource: sourceAuthority.source,
+      receiptFileSha256: sourceAuthority.receiptFileSha256,
+    },
+    baseDatabaseUrl,
+    redisRecreationAuthorized:
+      requiredEnv("RUNTIME_SWEEP_REDIS_RECREATE") === "true",
   });
   console.log(
     `runtime-lanes PASS mode=${assignment.mode} digest=${assignment.assignmentDigest}`,

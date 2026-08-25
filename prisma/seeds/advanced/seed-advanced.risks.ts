@@ -22,6 +22,7 @@ const SEVERITY_BLOCKED = "blocked";
 
 interface RiskRow {
   readonly id: string;
+  readonly stableId: string;
   readonly reportSectionId: string;
   readonly projectId: string;
   readonly risk: string;
@@ -46,6 +47,7 @@ const RISK_SEQ = {
 const RISK_ROWS: readonly RiskRow[] = [
   {
     id: riskId(RISK_SEQ.partnerRateLimit),
+    stableId: riskId(RISK_SEQ.partnerRateLimit),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
     projectId: PRODUCT_MARKETING_PORTAL,
     risk: "Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике",
@@ -57,6 +59,7 @@ const RISK_ROWS: readonly RiskRow[] = [
   },
   {
     id: riskId(RISK_SEQ.etlMemoryLeak),
+    stableId: riskId(RISK_SEQ.etlMemoryLeak),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_PRIMARY),
     projectId: PRODUCT_ANALYTICS_HUB,
     risk: "Memory leak в ETL — OOM на больших экстрактах (>2M строк)",
@@ -68,6 +71,7 @@ const RISK_ROWS: readonly RiskRow[] = [
   },
   {
     id: riskId(RISK_SEQ.pgBouncerDowntime),
+    stableId: riskId(RISK_SEQ.pgBouncerDowntime),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_IGOR),
     projectId: PRODUCT_INTERNAL_BI,
     risk: "Миграция PgBouncer требует ~30 мин downtime в проде",
@@ -79,6 +83,7 @@ const RISK_ROWS: readonly RiskRow[] = [
   },
   {
     id: riskId(RISK_SEQ.wafFalsePositives),
+    stableId: riskId(RISK_SEQ.wafFalsePositives),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_DMITRY),
     projectId: PRODUCT_SECURITY_GATEWAY,
     risk: "Тюнинг WAF может выдавать false positives на пиковой нагрузке",
@@ -91,6 +96,7 @@ const RISK_ROWS: readonly RiskRow[] = [
   // deriveEffectiveStageStatus shows its chip at-risk from this risk alone.
   {
     id: riskId(RISK_SEQ.testingEnvironment),
+    stableId: riskId(RISK_SEQ.testingEnvironment),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA),
     projectId: PRODUCT_PAYMENT_GATEWAY,
     risk: "Нестабильность Testing-окружения при нагрузочных прогонах",
@@ -104,6 +110,7 @@ const RISK_ROWS: readonly RiskRow[] = [
   // `in_progress` and its blocked pill DERIVES from this risk.
   {
     id: riskId(RISK_SEQ.devOpsBlocked),
+    stableId: riskId(RISK_SEQ.devOpsBlocked),
     reportSectionId: sectionId(ACTIVE_SUFFIX, LEAD_SLOT_OLGA),
     projectId: PRODUCT_PAYMENT_GATEWAY,
     risk: "Настройка DevOps-конвейера заблокирована ожиданием Dev-фикса",

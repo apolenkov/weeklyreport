@@ -1,5 +1,5 @@
-import { writeFrozenCaseArtifact } from "../../replay/frozen-case-artifacts.ts";
-import type { FrozenCaseReplayResult } from "../../replay/frozen-case-evidence.ts";
+import { writeFrozenCaseArtifact } from "../../replay/evidence/frozen-case-artifacts.ts";
+import type { FrozenCaseReplayResult } from "../../replay/evidence/frozen-case-evidence.ts";
 import type { EvidenceRef } from "../../source/contracts.ts";
 import { coverageCellSchema } from "../../source/contracts.ts";
 import type { FaultDeclaration } from "./fault-injection.ts";

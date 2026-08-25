@@ -1,10 +1,12 @@
 // PDF top-line totals must count floored trafficLight (not raw projectStatuses)
 // so cards and totals agree inside the same document.
+import type { PdfExportJob } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   PdfExportPrismaRepository,
+  PdfExportStateConflictError,
   toAssembledReport,
   UnsupportedPdfExportStatusError,
 } from "./pdf-export.prisma-repository";
@@ -17,6 +19,83 @@ const OWNED_PRODUCT = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
 const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
 const RISK_ID = "e421b0e4-caac-4218-9f40-d062f523b86b";
 const STAGE_NAME = "Development";
+const EXPORT_JOB_ID = "759b2767-0f86-41e2-b025-49730ca010e4";
+const EXPORT_CREATED_AT = new Date("2026-06-09T00:00:00Z");
+const EXPORT_ARTIFACT_URL = `/pdfs/${EXPORT_JOB_ID}.pdf`;
+
+interface PdfExportRow {
+  id: string;
+  reportId: string;
+  status: string;
+  templateVersion: string;
+  filePath: string | null;
+  checksum: string | null;
+  error: string | null;
+  requestedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function exportRow(overrides: Partial<PdfExportRow> = {}): PdfExportRow {
+  return {
+    id: EXPORT_JOB_ID,
+    reportId: REPORT_ID,
+    status: "pending",
+    templateVersion: "phase-2-pdf-v1",
+    filePath: null,
+    checksum: null,
+    error: null,
+    requestedBy: AUTHOR_ID,
+    createdAt: EXPORT_CREATED_AT,
+    updatedAt: EXPORT_CREATED_AT,
+    ...overrides,
+  };
+}
+
+function completedExportJob(
+  overrides: Partial<PdfExportJob> = {},
+): PdfExportJob {
+  return {
+    jobId: EXPORT_JOB_ID,
+    reportId: REPORT_ID,
+    status: "completed",
+    requestedAt: EXPORT_CREATED_AT,
+    completedAt: EXPORT_CREATED_AT,
+    checksum: "checksum-a",
+    templateVersion: "phase-2-pdf-v1",
+    artifactUrl: EXPORT_ARTIFACT_URL,
+    ...overrides,
+  };
+}
+
+function createAtomicPdfExportPrisma(initial: PdfExportRow) {
+  let current = structuredClone(initial);
+  const updateMany = vi.fn(
+    (input: {
+      where: { id: string; status: string };
+      data: Partial<PdfExportRow>;
+    }) => {
+      if (
+        current.id !== input.where.id ||
+        current.status !== input.where.status
+      ) {
+        return { count: 0 };
+      }
+      current = {
+        ...current,
+        ...input.data,
+        updatedAt: new Date("2026-06-09T00:00:01Z"),
+      };
+      return { count: 1 };
+    },
+  );
+  const findUnique = vi.fn(() => current);
+
+  return {
+    pdfExportJob: { updateMany, findUnique },
+    readCurrent: () => current,
+  };
+}
 
 function reportRow(severity: "blocked" | "at-risk") {
   return {
@@ -256,5 +335,234 @@ describe("PdfExportPrismaRepository template provenance", () => {
       ),
     ).rejects.toBeInstanceOf(PdfExportDomainError);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("PdfExportPrismaRepository terminal-state CAS", () => {
+  it.each([
+    ["queued", { status: "queued" }],
+    ["failed", { status: "failed" }],
+    ["null artifact URL", { artifactUrl: null }],
+    ["wrong artifact URL", { artifactUrl: "/exports/other.pdf" }],
+    ["null checksum", { checksum: null }],
+  ])(
+    "rejects %s completion before any database write",
+    async (_label, overrides) => {
+      const updateMany = vi.fn();
+      const prisma = {
+        pdfExportJob: { updateMany },
+      } as unknown as PrismaService;
+      const repo = new PdfExportPrismaRepository(prisma);
+
+      await expect(
+        repo.saveExportJob(
+          completedExportJob(overrides as Partial<PdfExportJob>),
+        ),
+      ).rejects.toBeInstanceOf(PdfExportDomainError);
+      expect(updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("moves a pending job to completed with one guarded update", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const findUnique = vi.fn().mockResolvedValue(
+      exportRow({
+        status: "completed",
+        filePath: EXPORT_ARTIFACT_URL,
+        checksum: "checksum-a",
+        updatedAt: new Date("2026-06-09T00:00:01Z"),
+      }),
+    );
+    const prisma = {
+      pdfExportJob: { updateMany, findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(
+      repo.saveExportJob(completedExportJob()),
+    ).resolves.toMatchObject({
+      status: "completed",
+      artifactUrl: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: EXPORT_JOB_ID, status: "pending" },
+      data: {
+        status: "completed",
+        filePath: EXPORT_ARTIFACT_URL,
+        checksum: "checksum-a",
+        error: null,
+      },
+    });
+  });
+
+  it("moves a pending job to failed while clearing artifact fields", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      pdfExportJob: { updateMany },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await repo.markExportFailed(EXPORT_JOB_ID, "browser crashed");
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: EXPORT_JOB_ID, status: "pending" },
+      data: {
+        status: "failed",
+        filePath: null,
+        checksum: null,
+        error: "browser crashed",
+      },
+    });
+  });
+
+  it.each(["completed", "failed"] as const)(
+    "treats a failure after %s as an idempotent no-op",
+    async (status) => {
+      const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+      const findUnique = vi.fn().mockResolvedValue(
+        exportRow({
+          status,
+          ...(status === "completed"
+            ? {
+                filePath: EXPORT_ARTIFACT_URL,
+                checksum: "checksum-a",
+              }
+            : { error: "browser crashed" }),
+        }),
+      );
+      const prisma = {
+        pdfExportJob: { updateMany, findUnique },
+      } as unknown as PrismaService;
+      const repo = new PdfExportPrismaRepository(prisma);
+
+      await expect(
+        repo.markExportFailed(EXPORT_JOB_ID, "late failure"),
+      ).resolves.toBeUndefined();
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: EXPORT_JOB_ID },
+      });
+    },
+  );
+
+  it("rejects a failure for a missing job after the guarded update misses", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const prisma = {
+      pdfExportJob: { updateMany, findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(
+      repo.markExportFailed(EXPORT_JOB_ID, "browser crashed"),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
+  });
+
+  it("does not overwrite a completed job when failure loses the terminal race", async () => {
+    const prisma = createAtomicPdfExportPrisma(exportRow());
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await repo.saveExportJob(completedExportJob());
+    await repo.markExportFailed(EXPORT_JOB_ID, "late failure");
+
+    expect(prisma.readCurrent()).toMatchObject({
+      status: "completed",
+      filePath: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
+      error: null,
+    });
+  });
+
+  it("treats an identical completed artifact as an idempotent completion", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const findUnique = vi.fn().mockResolvedValue(
+      exportRow({
+        status: "completed",
+        filePath: EXPORT_ARTIFACT_URL,
+        checksum: "checksum-a",
+      }),
+    );
+    const prisma = {
+      pdfExportJob: { updateMany, findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(
+      repo.saveExportJob(completedExportJob()),
+    ).resolves.toMatchObject({
+      status: "completed",
+      artifactUrl: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: EXPORT_JOB_ID },
+    });
+  });
+
+  it("rejects completion when failure won the terminal race", async () => {
+    const prisma = createAtomicPdfExportPrisma(
+      exportRow({
+        status: "failed",
+        error: "browser crashed",
+      }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.saveExportJob(completedExportJob()),
+    ).rejects.toBeInstanceOf(PdfExportStateConflictError);
+    expect(prisma.readCurrent()).toMatchObject({
+      status: "failed",
+      filePath: null,
+      checksum: null,
+      error: "browser crashed",
+    });
+  });
+
+  it("rejects a different completion after another artifact won", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const findUnique = vi.fn().mockResolvedValue(
+      exportRow({
+        status: "completed",
+        filePath: `/pdfs/${EXPORT_JOB_ID}-other.pdf`,
+        checksum: "checksum-b",
+      }),
+    );
+    const prisma = {
+      pdfExportJob: { updateMany, findUnique },
+    } as unknown as PrismaService;
+    const repo = new PdfExportPrismaRepository(prisma);
+
+    await expect(
+      repo.saveExportJob(completedExportJob()),
+    ).rejects.toBeInstanceOf(PdfExportStateConflictError);
+  });
+
+  it("does not accept an incoherent completed row as an idempotent retry", async () => {
+    const prisma = createAtomicPdfExportPrisma(
+      exportRow({
+        status: "completed",
+        filePath: EXPORT_ARTIFACT_URL,
+        checksum: "checksum-a",
+        error: "stale failure",
+      }),
+    );
+    const repo = new PdfExportPrismaRepository(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      repo.saveExportJob(completedExportJob()),
+    ).rejects.toBeInstanceOf(PdfExportStateConflictError);
+    expect(prisma.readCurrent()).toMatchObject({
+      status: "completed",
+      filePath: EXPORT_ARTIFACT_URL,
+      checksum: "checksum-a",
+      error: "stale failure",
+    });
   });
 });

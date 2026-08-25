@@ -14,14 +14,14 @@ import type {
   RequestFailureRecord,
   ResponseRecord,
 } from "../evidence/evidence-types.ts";
-import { inventoryDom } from "../replay/dom-inventory.ts";
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
 import type { CoverageCell } from "../source/contracts.ts";
 import {
   normalizedRuntimeRequestUrl,
   registerRuntimeRequest,
   type RuntimeRequestStart,
   runtimeRequestTiming,
-} from "./runtime-matrix-request-evidence.ts";
+} from "./runtime/runtime-matrix-request-evidence.ts";
 export type RuntimeEventRecords = Readonly<{
   readonly consoleMessages: readonly ConsoleRecord[];
   readonly pageErrors: readonly PageErrorRecord[];

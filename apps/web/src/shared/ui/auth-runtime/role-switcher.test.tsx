@@ -59,6 +59,16 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     vi.unstubAllEnvs();
   });
 
+  it("gives the icon-only trigger a discernible accessible name", () => {
+    primeHooks("head");
+
+    render(<DevRoleSwitcher />);
+
+    expect(
+      screen.getByRole("button", { name: "Switch development role" }),
+    ).toHaveAttribute("title", "Switch development role");
+  });
+
   it("renders the reset controls for an admin dev session", async () => {
     primeHooks("admin");
     const user = userEvent.setup();

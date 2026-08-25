@@ -13,6 +13,7 @@ const SECTION_ID = "a0000000-0000-4000-8000-000000000408";
 const ITEMS = [
   {
     id: "a0000000-0000-4000-8000-000000007010",
+    stableId: "a0000000-0000-4000-8000-000000007010",
     reportSectionId: SECTION_ID,
     type: ItemType.current,
     projectId: PROD_CRM,
@@ -25,6 +26,7 @@ const ITEMS = [
   },
   {
     id: "a0000000-0000-4000-8000-000000007011",
+    stableId: "a0000000-0000-4000-8000-000000007011",
     reportSectionId: SECTION_ID,
     type: ItemType.next,
     projectId: PROD_CRM,
@@ -41,6 +43,7 @@ export async function seedVictorOverlay(prisma: PrismaClient): Promise<void> {
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-000000009010",
+      stableId: "a0000000-0000-4000-8000-000000009010",
       reportSectionId: SECTION_ID,
       projectId: PROD_CRM,
       risk: "Нет согласованной модели данных — аналитика блокирует разработку",
@@ -53,6 +56,7 @@ export async function seedVictorOverlay(prisma: PrismaClient): Promise<void> {
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-000000007012",
+      stableId: "a0000000-0000-4000-8000-000000007012",
       reportSectionId: SECTION_ID,
       productId: PROD_CRM,
       text: "Использовать GraphQL вместо REST для аналитического слоя",

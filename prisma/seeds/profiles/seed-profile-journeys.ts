@@ -135,7 +135,10 @@ async function runFullJourney(prisma: PrismaClient): Promise<void> {
   requireTrue(activities > 0, "full includes project activities");
   requireTrue(reopen > 0, "full includes a reopen request");
   requireTrue(policies > 0, "full includes policy examples");
-  requireTrue(actionLogs > 0, "full includes action-log examples");
+  requireTrue(
+    actionLogs === ACTION_LOG_IDS.length,
+    "full includes every profile-owned action-log example",
+  );
   requireTrue(settings !== null, "full includes application settings");
 }
 

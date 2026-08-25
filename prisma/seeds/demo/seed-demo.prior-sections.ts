@@ -40,6 +40,7 @@ async function writePriorContribution(
   await prisma.item.create({
     data: {
       id: priorItemId(reportIdx, leadIdx, index),
+      stableId: priorItemId(reportIdx, leadIdx, index),
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId: c.productId,

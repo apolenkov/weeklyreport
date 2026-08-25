@@ -84,52 +84,27 @@ function CompletenessPill({
   );
 }
 
-// Teal when either side of the gap is an own stage, so a lead's own run
-// through the pipeline stays visually connected.
-function StageArrow({ isOwnEdge }: { readonly isOwnEdge: boolean }) {
-  return (
-    <div
-      className="flex items-center text-lg font-bold"
-      style={{
-        height: STAGE_CHIP_BOX_HEIGHT,
-        color: isOwnEdge
-          ? "var(--color-starbucks-accent)"
-          : "var(--color-muted-foreground)",
-      }}
-    >
-      &rarr;
-    </div>
-  );
-}
-
 type StageChipProps = ComponentProps<typeof StageChip>;
 
 function StageStep({
   stage,
-  showArrow,
-  isOwnEdge,
   rawStatus,
   readOnly,
   onStatusChange,
 }: {
   readonly stage: StageChipProps["stage"];
-  readonly showArrow: boolean;
-  readonly isOwnEdge: boolean;
   readonly rawStatus: StageChipProps["rawStatus"];
   readonly readOnly: boolean;
   readonly onStatusChange: StageChipProps["onStatusChange"];
 }) {
   return (
-    <div className="flex items-start gap-2">
-      {showArrow && <StageArrow isOwnEdge={isOwnEdge} />}
-      <div className="relative">
-        <StageChip
-          stage={stage}
-          rawStatus={rawStatus}
-          readOnly={readOnly}
-          onStatusChange={onStatusChange}
-        />
-      </div>
+    <div data-testid="sdlc-stage-row" className="w-full min-w-0">
+      <StageChip
+        stage={stage}
+        rawStatus={rawStatus}
+        readOnly={readOnly}
+        onStatusChange={onStatusChange}
+      />
     </div>
   );
 }
@@ -157,16 +132,14 @@ function StagesRow({
   } = view;
 
   return (
-    <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
-      {visibleStages.map((stage, idx) => (
+    <div
+      className="w-full space-y-2 pb-1"
+      style={{ minHeight: STAGE_CHIP_BOX_HEIGHT }}
+    >
+      {visibleStages.map((stage) => (
         <StageStep
           key={stage.stageName}
           stage={stage}
-          showArrow={idx > 0}
-          isOwnEdge={
-            stage.ownership === "mine" ||
-            visibleStages[idx - 1]?.ownership === "mine"
-          }
           rawStatus={
             rawProduct.stages.find((rs) => rs.stageName === stage.stageName)
               ?.status ?? stage.status

@@ -105,6 +105,14 @@ describe("lead queue contextual actions", () => {
       screen.getByRole("button", { name: "Request Changes" }),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Revoke" })).toBeVisible();
+
+    const actionGroup = screen.getByLabelText("Lead actions");
+    expect(actionGroup).toHaveClass(
+      "[&>a]:h-[var(--dashboard-action-h)]",
+      "[&>a]:w-[var(--dashboard-detail-action-w)]",
+      "[&>button]:h-[var(--dashboard-action-h)]",
+      "[&>button]:w-[var(--dashboard-detail-action-w)]",
+    );
   });
 
   it("keeps a published content row navigation-only", () => {

@@ -20,7 +20,7 @@ const ASSIGNEE_FONT_WEIGHT_MINE = 600;
 const ASSIGNEE_FONT_WEIGHT_OTHER = 400;
 
 const CHIP_BASE_CLASSES =
-  "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150";
+  "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-start gap-2 text-left text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1";
 const CHIP_EDITABLE_CLASSES =
   "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_var(--card-surface-border)]";
 const CHIP_EMPTY_CLASSES =
@@ -115,7 +115,7 @@ function StageIconGlyph({ stageName }: { readonly stageName: string }) {
   if (!StageIcon) return null;
   return (
     <StageIcon
-      className="mr-1 inline-block h-[12px] w-[12px] align-[-1px]"
+      className="inline-block h-[12px] w-[12px] shrink-0"
       aria-hidden="true"
     />
   );
@@ -203,7 +203,7 @@ export function StageChip({
   }
 
   return (
-    <div className="flex flex-col items-center gap-1 min-w-[90px]">
+    <div className="flex w-full min-w-0 flex-col items-stretch gap-1">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -216,16 +216,29 @@ export function StageChip({
             aria-disabled={!isEditable}
             tabIndex={isEditable || isLocked ? 0 : -1}
           >
-            {/* Status via color only; lock is a corner badge, not a third inline icon. */}
-            <StageIconGlyph stageName={stage.stageName} />
-            {stageShortLabel(stage.stageName)}
+            <span className="flex min-w-0 items-center gap-2 truncate">
+              <StageIconGlyph stageName={stage.stageName} />
+              <span className="min-w-0 truncate">
+                {stageShortLabel(stage.stageName)}
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              data-testid="stage-status-glyph"
+              data-status={stage.status}
+              className="ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current/25 text-[11px] font-bold"
+            >
+              {STATUS_CONFIG[stage.status].icon}
+            </span>
             {isLocked && <LockBadge />}
           </button>
         </TooltipTrigger>
         <TooltipContent>{chipTitle(stage, coverageSuffix)}</TooltipContent>
       </Tooltip>
 
-      <AssigneeLabel stage={stage} />
+      <span className="self-start px-2">
+        <AssigneeLabel stage={stage} />
+      </span>
     </div>
   );
 }

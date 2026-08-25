@@ -1,7 +1,9 @@
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 import { captureRouteEvidence } from "../evidence/evidence-capture.ts";
-import { inventoryDom } from "../replay/dom-inventory.ts";
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
+import { waitForRevealSurfaceReady } from "../replay/navigation.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import {
   LEAD_FORM_UNAVAILABLE_MARKER,
   observeRuntimeSurface,
@@ -37,6 +39,7 @@ const captureSurfaceEvidence = async (
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     responseStatus: 200,
     capturedAt: "2026-08-05T00:00:00.000Z",
     functionalAssertion: {
@@ -112,4 +115,15 @@ test("fails functional evidence when the unavailable marker is absent", async ({
       ({ observationId }) => observationId === "functional",
     )?.outcome,
   ).toBe("fail");
+});
+
+test("evaluates overlay-aware reveal readiness in the browser context", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <main id="main-content" aria-hidden="true"><h1>Users</h1></main>
+    <div role="menu"><button role="menuitem">Delete user</button></div>
+  `);
+
+  await expect(waitForRevealSurfaceReady(page)).resolves.toBeUndefined();
 });

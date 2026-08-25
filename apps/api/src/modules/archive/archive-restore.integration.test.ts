@@ -38,7 +38,7 @@ describe("Archive → restore round-trip (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     await prisma.report.update({
       where: { id: testData.report.id },
@@ -53,7 +53,7 @@ describe("Archive → restore round-trip (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

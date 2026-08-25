@@ -24,7 +24,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
   const repository = new SearchPrismaRepository(prisma as never);
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.create({
       data: { id: GROUP_ID, name: "Search Precision Group" },
     });
@@ -100,7 +100,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

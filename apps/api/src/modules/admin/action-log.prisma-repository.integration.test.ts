@@ -22,7 +22,7 @@ describe("ActionLogPrismaRepository composite keyset (integration)", () => {
   const repository = new ActionLogPrismaRepository(prisma as never);
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     // Inserted in ascending-id order so the heap order opposes the expected
     // DESC traversal: without the id tiebreaker, equal-createdAt rows come
     // back in insertion order and the assertion below fails.
@@ -41,7 +41,7 @@ describe("ActionLogPrismaRepository composite keyset (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

@@ -12,7 +12,7 @@ import { AdminTabSkeleton } from "./admin-skeleton";
 import { GroupsTab } from "./groups-tab";
 import { JobsTab } from "./jobs-tab";
 import { ProductsTab } from "./products-tab";
-import { RemindersTab } from "./reminders-tab";
+import { RemindersTab } from "./reminders/reminders-tab";
 import { SettingsTab } from "./settings-tab";
 import { UsersTab } from "./users-tab";
 

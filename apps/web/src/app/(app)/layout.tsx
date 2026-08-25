@@ -12,7 +12,9 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
       <NavBar />
-      <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
+      <div className="operational-paper-shell min-h-screen">
+        <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
+      </div>
     </SessionProvider>
   );
 }

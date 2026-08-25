@@ -462,7 +462,7 @@
     {
       "id": "runtime-source",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-source(?:\\.test)?|source-artifact)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/(?:source/)?((?:contracts(?:-types)?|contracts\\.test|create-runtime-manifest|manifest-git|manifest-source(?:\\.test)?|runtime-source-(?:authority|validation(?:-contract)?)|source-artifact|validate-runtime-source)\\.ts)$",
       "concern": "source-contracts",
       "role": "implementation",
       "target": "e2e/runtime-sweep/source/$1"
@@ -484,11 +484,99 @@
       "target": "e2e/runtime-sweep/matrix/$1"
     },
     {
+      "id": "runtime-matrix-reveal-transition",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/(reveal-transition\\.ts)$",
+      "concern": "matrix",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/matrix/$1"
+    },
+    {
+      "id": "runtime-matrix-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/((?:coverage-model|finalization|policy|runtime|specialized))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "matrix",
+      "role": "test",
+      "target": "e2e/runtime-sweep/matrix/$1/$2"
+    },
+    {
+      "id": "runtime-matrix-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/matrix/((?:coverage-model|finalization|policy|runtime|specialized))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "matrix",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/matrix/$1/$2"
+    },
+    {
       "id": "runtime-preflight",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
+      "pattern": "^e2e/runtime-sweep/(?:preflight/)?((?!run-runtime-next-server\\.test\\.ts$)(?:playwright|preflight|runtime-(?:auth-env|next-dist|surface|project-list)|run-runtime-next-server|prisma-state-database|environment-)[^/]*)$",
       "concern": "preflight",
       "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-next-server-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-next-server\\.test\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(reveal-path(?:-(?:convergence|url))?\\.test\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(reveal-path(?:-validation)?\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-support-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:run-runtime-preflight(?:-diagnostic)?|runtime-observability-policy)\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-capacity-survey-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(capacity/.+|run-runtime-capacity-survey)\\.test\\.ts$",
+      "concern": "preflight-capacity-survey",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1.test.ts"
+    },
+    {
+      "id": "runtime-preflight-capacity-survey-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(capacity/(?!.*\\.test\\.ts$).+|run-runtime-capacity-survey)\\.ts$",
+      "concern": "preflight-capacity-survey",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1.ts"
+    },
+    {
+      "id": "runtime-preflight-failure-frontier-entrypoint-test",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-failure-frontier-replay\\.test\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1"
+    },
+    {
+      "id": "runtime-preflight-failure-frontier-entrypoint",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/(run-runtime-failure-frontier-replay\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "entrypoint",
       "target": "e2e/runtime-sweep/preflight/$1"
     },
     {
@@ -514,6 +602,118 @@
       "concern": "preflight",
       "role": "test",
       "target": "e2e/runtime-sweep/preflight/target/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-continuation-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/(?:checkpoint|contracts|receipts|tests))?)/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-reveal-continuation",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-reveal-contract-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(reveal-surface-contract\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-continuation-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/(continuation(?:/(?:checkpoint|contracts|receipts|tests))?)/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight-reveal-continuation",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-fixtures",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/(.+-test-support\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "fixture",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-reveal-failure-frontier-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/reveal/failure-frontier/((?!.*(?:\\.test|\\.spec|-test-support)\\.ts$).+\\.ts)$",
+      "concern": "preflight-reveal-failure-frontier",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/reveal/failure-frontier/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/([^/]+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/((?!.*(?:\\.test|\\.spec)\\.ts$)[^/]+\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-sidecar-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/sidecar/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/sidecar/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-sidecar-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/sidecar/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/sidecar/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-receipt-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/receipt/(.+\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/receipt/$1"
+    },
+    {
+      "id": "runtime-preflight-diagnostics-runner-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/diagnostics/runners/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight-diagnostics",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/diagnostics/runners/$1"
+    },
+    {
+      "id": "runtime-preflight-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "preflight",
+      "role": "test",
+      "target": "e2e/runtime-sweep/preflight/$1/$2"
+    },
+    {
+      "id": "runtime-preflight-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/preflight/((?:artifacts|canary|execution|journal|launch|runtime|shards|state|reveal/(?:guards|interaction|paths)))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "preflight",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/preflight/$1/$2"
     },
     {
       "id": "runtime-lanes-tests",
@@ -556,12 +756,52 @@
       "target": "e2e/runtime-sweep/scenarios/infrastructure/$1"
     },
     {
+      "id": "runtime-resolver-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/scenarios/resolver/((?:resolver-empty-preparation|resolver-navigation|resolver-query-fault|resolver-runner(?:-support)?)\\.test\\.ts)$",
+      "concern": "resolver",
+      "role": "test",
+      "target": "e2e/runtime-sweep/scenarios/resolver/$1"
+    },
+    {
+      "id": "runtime-resolver-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/scenarios/resolver/((?:resolver-empty-runner|resolver-navigation|resolver-query-error-runner|resolver-query-fault|resolver-runner-(?:guards|lifecycle|support)|resolver-runner)\\.ts)$",
+      "concern": "resolver",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/scenarios/resolver/$1"
+    },
+    {
       "id": "runtime-driver",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:driver/)?((?:driver-|import-ai-driver-)[^/]*)$",
       "concern": "driver-import",
       "role": "implementation",
       "target": "e2e/runtime-sweep/driver/$1"
+    },
+    {
+      "id": "runtime-source-authority-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/(runtime-source-(?:authority-boundary|validation(?:-receipt)?)\\.test\\.ts)$",
+      "concern": "source-authority",
+      "role": "test",
+      "target": "e2e/runtime-sweep/source/$1"
+    },
+    {
+      "id": "runtime-source-contract-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/((?:contracts-landing|route-network-policy|source-artifact(?:-io)?)\\.test\\.ts)$",
+      "concern": "source-contracts",
+      "role": "test",
+      "target": "e2e/runtime-sweep/source/$1"
+    },
+    {
+      "id": "runtime-source-contract-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/source/((?:contracts-fixture|contracts-route-schemas|network-policy-contracts|route-network-policy)\\.ts)$",
+      "concern": "source-contracts",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/source/$1"
     },
     {
       "id": "runtime-evidence",
@@ -590,7 +830,7 @@
     {
       "id": "runtime-live-control-actions-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-actions/(.+\\.spec\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/(.+(?:\\.test|\\.spec)\\.ts)$",
       "concern": "live-replay",
       "role": "test",
       "target": "e2e/runtime-sweep/replay/control-actions/$1"
@@ -598,10 +838,26 @@
     {
       "id": "runtime-live-control-actions-implementation",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-actions/((?!.*\\.spec\\.ts$).+\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-actions/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/control-actions/$1"
+    },
+    {
+      "id": "runtime-live-control-subconcern-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:dom|frozen-case/(?:live|validation)|frozen-reveal|keyboard|live-control))/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/$1/$2"
+    },
+    {
+      "id": "runtime-live-control-subconcern-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/((?:dom|frozen-case/(?:live|validation)|frozen-reveal|keyboard|live-control))/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
+      "concern": "live-replay",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/replay/$1/$2"
     },
     {
       "id": "runtime-live-control-evidence",
@@ -644,9 +900,17 @@
       "target": "e2e/runtime-sweep/replay/test-fixtures/$1"
     },
     {
-      "id": "runtime-control-target",
+      "id": "runtime-control-target-tests",
       "scope": "runtime-sweep",
-      "pattern": "^e2e/runtime-sweep/replay/control-target/((?:frozen-action-target(?:\\.test)?|rendered-control-(?:action-guard|generation|state|target(?:-safety)?)(?:\\.spec)?)\\.ts)$",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/(.+(?:\\.test|\\.spec)\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/control-target/$1"
+    },
+    {
+      "id": "runtime-control-target-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/control-target/((?!.*(?:\\.test|\\.spec)\\.ts$).+\\.ts)$",
       "concern": "live-replay",
       "role": "implementation",
       "target": "e2e/runtime-sweep/replay/control-target/$1"
@@ -660,6 +924,14 @@
       "target": "e2e/runtime-sweep/replay/browser-state/$1"
     },
     {
+      "id": "runtime-live-control-native-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/replay/native/(control-actions-form\\.spec\\.ts)$",
+      "concern": "live-replay",
+      "role": "test",
+      "target": "e2e/runtime-sweep/replay/native/$1"
+    },
+    {
       "id": "runtime-action-navigation-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/support/(action-navigation-contract\\.ts)$",
@@ -671,6 +943,22 @@
       "id": "runtime-state-support",
       "scope": "runtime-sweep",
       "pattern": "^e2e/runtime-sweep/(?:support/)?((?:state-|candidate-verification|initial-navigation|route-binding|ids)[^/]*)$",
+      "concern": "support",
+      "role": "implementation",
+      "target": "e2e/runtime-sweep/support/$1"
+    },
+    {
+      "id": "runtime-resolver-support-tests",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/support/(resolver-outcome-(?:contract|expectations)\\.test\\.ts)$",
+      "concern": "support",
+      "role": "test",
+      "target": "e2e/runtime-sweep/support/$1"
+    },
+    {
+      "id": "runtime-resolver-support-implementation",
+      "scope": "runtime-sweep",
+      "pattern": "^e2e/runtime-sweep/support/((?:resolver-outcome-(?:contract|expectations|matrix-state)|resolver-recovery-expectations|runtime-api-drain)\\.ts)$",
       "concern": "support",
       "role": "implementation",
       "target": "e2e/runtime-sweep/support/$1"
@@ -758,7 +1046,7 @@
     {
       "id": "prisma-operations",
       "scope": "prisma",
-      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|reset-hard|wipe-manual-uat)[^/]*)$",
+      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|create-e2e-database|migrate-deploy|migrate-reset|reset-hard|wipe-manual-uat)[^/]*)$",
       "concern": "database-operations",
       "role": "entrypoint",
       "target": "prisma/operations/$1"
@@ -1089,9 +1377,17 @@
     {
       "id": "shared-schemas-admin-implementation",
       "scope": "shared-schemas",
-      "pattern": "^packages/shared/src/schemas/(?:admin/)?(report-admin\\.schema\\.ts)$",
+      "pattern": "^packages/shared/src/schemas/(?:admin/)?((?:action-log|report-admin)\\.schema\\.ts)$",
       "concern": "admin-contract",
       "role": "implementation",
+      "target": "packages/shared/src/schemas/admin/$1"
+    },
+    {
+      "id": "shared-schemas-admin-tests",
+      "scope": "shared-schemas",
+      "pattern": "^packages/shared/src/schemas/(?:admin/)?(action-log\\.schema\\.test\\.ts)$",
+      "concern": "admin-contract",
+      "role": "test",
       "target": "packages/shared/src/schemas/admin/$1"
     },
     {

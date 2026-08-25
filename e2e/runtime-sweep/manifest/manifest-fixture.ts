@@ -10,7 +10,7 @@ import {
 
 const SHA_LENGTH = 40;
 export const FIXTURE_SOURCE_SHA = "a".repeat(SHA_LENGTH);
-const FIXTURE_TREE_SHA = "b".repeat(SHA_LENGTH);
+export const FIXTURE_TREE_SHA = "b".repeat(SHA_LENGTH);
 
 export const fakeManifestGit = (): ManifestCommandRunner => (args) => {
   const command = args.join(" ");
@@ -41,23 +41,41 @@ const definition = () => ({
 });
 
 const fixtureRoutes = () => [
-  { role: "lead" as const, catalogRoute: "/lead", resolvedRoute: "/lead" },
+  {
+    role: "lead" as const,
+    catalogRoute: "/lead",
+    resolvedRoute: "/lead",
+    networkPolicy: null,
+  },
   {
     role: "lead" as const,
     catalogRoute: "/lead/report/[reportId]",
     resolvedRoute: `/lead/report/${ACTIVE_REPORT_ID}`,
+    networkPolicy: null,
   },
-  { role: "head" as const, catalogRoute: "/head", resolvedRoute: "/head" },
+  {
+    role: "head" as const,
+    catalogRoute: "/head",
+    resolvedRoute: "/head",
+    networkPolicy: null,
+  },
   {
     role: "head" as const,
     catalogRoute: "/head/report/[reportId]",
     resolvedRoute: `/head/report/${ACTIVE_REPORT_ID}`,
+    networkPolicy: null,
   },
-  { role: "admin" as const, catalogRoute: "/admin", resolvedRoute: "/admin" },
+  {
+    role: "admin" as const,
+    catalogRoute: "/admin",
+    resolvedRoute: "/admin",
+    networkPolicy: null,
+  },
   {
     role: "viewer" as const,
     catalogRoute: "/reports",
     resolvedRoute: "/reports",
+    networkPolicy: null,
   },
 ];
 
@@ -125,6 +143,7 @@ const inputFor = (
     repoRoot: root,
     outputPath: path.join(root, "MANIFEST.json"),
     sourcePath: path.join(root, "SOURCE.json"),
+    sourceValidationPath: path.join(root, "SOURCE-VALIDATION.json"),
     preflightPath: path.join(root, "PREFLIGHT.json"),
     campaignId: "campaign-1",
     sourceSha: FIXTURE_SOURCE_SHA,
@@ -150,7 +169,12 @@ const inputFor = (
     catalogPaths: [catalogPath],
     domainSpecPaths: [specPath],
     matrixDeclaration: matrixDeclaration(),
-    matrixLimits: { maxCases: 10_000, maxControlsPerSegment: 128 },
+    matrixLimits: {
+      maxRevealMaterialEdges: 2048,
+      maxRevealActions: 16_384,
+      maxCases: 10_000,
+      maxControlsPerSegment: 128,
+    },
     exclusions: exclusions(),
   };
 };

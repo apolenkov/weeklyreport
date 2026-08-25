@@ -80,7 +80,12 @@ function PeriodSelectTrigger({
     handleTriggerKeyDown,
   } = listbox;
   return (
-    <div className="relative min-w-0 flex-1 md:w-[24ch] md:flex-none">
+    <div
+      className={[
+        "relative min-w-0 flex-1 md:flex-none",
+        selectedSubmitted ? "md:w-[32ch]" : "md:w-[24ch]",
+      ].join(" ")}
+    >
       <button
         ref={triggerRef}
         type="button"

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PUBLISHED_REPORT_ID } from "../../../prisma/seeds/support/seed-constants.ts";
 import type { RuntimeDatabaseSnapshot } from "./state-oracle.ts";
@@ -6,6 +6,7 @@ import {
   buildStatePreparationPlan,
   ImpossibleRuntimeStateError,
   prepareRuntimeState,
+  type RuntimeMutationSentinel,
   type RuntimeStateAxes,
   type RuntimeStateDatabase,
   RuntimeStateTargetError,
@@ -39,10 +40,15 @@ function snapshotFor(plan: StatePreparationPlan): RuntimeDatabaseSnapshot {
       periodStatus: plan.report.periodStatus,
       archived: plan.report.archived,
     },
-    section: plan.section.state,
+    section: { ...plan.section.state, version: 1 },
     ownership: {
       targetOwnerId: plan.targets.ownerId,
       owners: plan.ownership.assignments.map(({ userId }) => userId),
+      assignments: plan.ownership.assignments.map(({ stageId, userId }) => ({
+        id: `assignment-${stageId}`,
+        stageId,
+        userId,
+      })),
     },
     permission: {
       actorId: plan.permission.actorId,
@@ -58,6 +64,7 @@ function fakeDatabase(
   events: string[],
   snapshot: RuntimeDatabaseSnapshot,
   capturedTarget?: { value?: Pick<StateTarget, "reportId" | "sectionId"> },
+  mutationSentinel: RuntimeMutationSentinel = [],
 ): RuntimeStateDatabase {
   const transaction: RuntimeStateTransaction = {
     updateReport: () =>
@@ -83,6 +90,9 @@ function fakeDatabase(
         }
         return snapshot;
       }),
+    readMutationSentinel: () => Promise.resolve(mutationSentinel),
+    readViewerGroupAccess: () => Promise.resolve([]),
+    removeViewerGroupAccess: () => Promise.resolve(0),
   };
   return {
     transaction: async (work) => {
@@ -92,6 +102,9 @@ function fakeDatabase(
   };
 }
 
+beforeEach(() => {
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+});
 afterEach(() => vi.unstubAllEnvs());
 describe("runtime state preparation policy", () => {
   it("maps an allowed boundary to the canonical actor for each route role", () => {
@@ -227,6 +240,7 @@ describe("runtime state preparation mutations", () => {
       "read",
     ]);
     expect(result.observation.matches).toBe(true);
+    expect(result.mutationSentinel).toEqual([]);
   });
 
   it("fails closed when profile reseeding fails before the transaction", async () => {

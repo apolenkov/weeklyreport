@@ -1,6 +1,4 @@
-import { createHash } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { Inject, Injectable } from "@nestjs/common";
@@ -13,11 +11,22 @@ import type { AppLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/index.js";
 import { ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
+import {
+  createDefaultPdfArtifactStore,
+  type PdfArtifactAttempt,
+  type PdfArtifactStore,
+} from "./pdf-export.artifact-store.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
   extractTraceId,
   type JobTraceContext,
 } from "./worker-observability.js";
+
+export {
+  createDefaultPdfArtifactStore,
+  type PdfArtifactAttempt,
+  type PdfArtifactStore,
+} from "./pdf-export.artifact-store.js";
 
 // Cap the render navigation so a hung print page fails the job instead of
 // pinning a Chromium tab (and its Redis lock) indefinitely.
@@ -26,7 +35,6 @@ const PAGE_GOTO_TIMEOUT_MS = 60_000;
 // Cap how long the worker waits for the print template's terminal render marker
 // after the DOM is available before failing the job.
 const PRINT_READY_TIMEOUT_MS = 30_000;
-
 // Must stay in sync with the web print template's PRINT_STATE tokens
 // (print-report-template.tsx). Worker captures only "ready"; loading/error
 // markers must never be checksummed as a completed export.
@@ -146,19 +154,12 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
         page.pdf({ format: "A4", printBackground: true }),
       );
 
-      // Resolve to an absolute path so the API's static /pdfs mount and this
-      // worker write to the same directory regardless of the process cwd.
       const outputDir = resolve(this.env.PDF_OUTPUT_DIR);
-      await mkdir(outputDir, { recursive: true });
-
-      const filePath = join(outputDir, `${jobId}.pdf`);
-      const checksum = createHash("sha256").update(pdfBuffer).digest("hex");
       const artifactUrl = pdfArtifactUrl(jobId);
       await this.persistCompletedArtifact({
         artifactUrl,
-        checksum,
-        filePath,
         jobId,
+        outputDir,
         pdfBuffer,
       });
     } finally {
@@ -181,32 +182,75 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     }
   }
 
-  private async persistCompletedArtifact(input: {
+  protected async persistCompletedArtifact(input: {
     artifactUrl: string;
-    checksum: string;
-    filePath: string;
     jobId: string;
+    outputDir: string;
     pdfBuffer: Buffer;
   }): Promise<void> {
+    const artifactStore = this.createArtifactStore();
+    const attempt = await artifactStore.createAttempt(
+      input.outputDir,
+      input.jobId,
+      input.pdfBuffer,
+    );
+
     try {
-      // Async I/O: a multi-MB PDF write must not block the event loop, which
-      // also serves other queue workers on this process.
-      await writeFile(input.filePath, input.pdfBuffer);
+      const checksum = await artifactStore.publishAndHash(attempt);
       await this.pdfExportService.markExportCompleted(
         input.jobId,
         input.artifactUrl,
-        input.checksum,
+        checksum,
       );
     } catch (error) {
-      try {
-        await rm(input.filePath, { force: true });
-      } catch (cleanupError) {
-        throw new AggregateError(
-          [error, cleanupError],
-          `failed to persist or remove PDF artifact for job ${input.jobId}`,
-        );
-      }
+      await this.cleanupFailedAttempt(
+        artifactStore,
+        attempt,
+        input.jobId,
+        error,
+      );
       throw error;
+    }
+
+    await this.cleanupCompletedAttempt(artifactStore, attempt, input.jobId);
+  }
+
+  protected createArtifactStore(): PdfArtifactStore {
+    return createDefaultPdfArtifactStore();
+  }
+
+  private async cleanupFailedAttempt(
+    artifactStore: PdfArtifactStore,
+    attempt: PdfArtifactAttempt,
+    jobId: string,
+    originalError: unknown,
+  ): Promise<void> {
+    try {
+      await artifactStore.cleanupAttempt(attempt);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [originalError, cleanupError],
+        `failed to persist or remove PDF attempt for job ${jobId}`,
+      );
+    }
+  }
+
+  private async cleanupCompletedAttempt(
+    artifactStore: PdfArtifactStore,
+    attempt: PdfArtifactAttempt,
+    jobId: string,
+  ): Promise<void> {
+    try {
+      await artifactStore.cleanupAttempt(attempt);
+    } catch (cleanupError) {
+      this.logger.warn("pdf-export attempt cleanup failed after completion", {
+        jobId,
+        tempPath: attempt.tempPath,
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError),
+      });
     }
   }
 

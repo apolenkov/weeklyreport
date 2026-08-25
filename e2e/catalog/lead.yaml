@@ -34,6 +34,7 @@ routes:
         note: "Visible in the role-switcher grid showing four role tiles (Lead, Head, Admin, Viewer); clicking Lead tile applies the default lead email and dev-login path"
   - route: /lead/report
     access: [lead, head, admin]
+    landing: "/lead/report/[reportId]"
     intents:
       - id: lead-report-bare-redirect
         intent: "Legacy bare report route redirects to canonical addressed form"
@@ -181,6 +182,7 @@ routes:
         note: "This is the explicit navigation back to the form surface."
   - route: /lead/history
     access: [lead, head, admin]
+    landing: "/reports"
     intents:
       - id: lead-history-redirect
         intent: "legacy /lead/history redirects to /reports?tab=drafts"
@@ -244,6 +246,7 @@ routes:
         note: "Simple navigation link, no mutation or state change. Allows the lead to exit the report view and return to the archive list."
   - route: /reports/[reportId]/present
     access: [lead, head, admin, viewer]
+    landing: "/reports/[reportId]?mode=slides"
     intents:
       - id: lead-present-redirects-to-slides
         intent: "Legacy presentation deep link resolves to inline slides mode"
@@ -253,6 +256,7 @@ routes:
         note: "The standalone slide deck (section nav, fullscreen, 'Status Presentation' title, HeadPresentClient wrapper) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [lead, head, admin, viewer]
+    landing: "/reports"
     intents:
       - id: lead-reports-history-redirect
         intent: "Legacy reports-history URL lands on the merged reports published tab"

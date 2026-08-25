@@ -28,6 +28,21 @@ describe("LeadSubmitReadinessSummary", () => {
     expect(onSubmit).toHaveBeenCalledOnce();
   });
 
+  it("keeps the submit action at the mobile touch-target floor", () => {
+    render(<LeadSubmitReadinessSummary readiness={ready} onSubmit={vi.fn()} />);
+
+    const submit = screen.getByRole("button", { name: "Submit report" });
+    expect(submit.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+    expect(submit.className).toContain(
+      "max-md:min-w-[var(--touch-target-min)]",
+    );
+    // The existing compact desktop floor remains unconditional; only the
+    // mobile minimum is responsive.
+    expect(submit.className).toContain("min-h-10");
+  });
+
   it("lists auto-promotions without treating them as blockers", () => {
     render(
       <LeadSubmitReadinessSummary

@@ -8,6 +8,7 @@ interface CreatePeriodFieldsProps {
   readonly onPeriodStartChange: (value: string) => void;
   readonly periodEnd: string;
   readonly onPeriodEndChange: (value: string) => void;
+  readonly isEdit: boolean;
   readonly periodEndError: string | null;
   readonly deadline: string;
   readonly onDeadlineChange: (value: string) => void;
@@ -93,21 +94,29 @@ function PeriodStartField({
 function PeriodEndField({
   periodEnd,
   onPeriodEndChange,
+  isEdit,
   periodEndError,
 }: Pick<
   CreatePeriodFieldsProps,
-  "periodEnd" | "onPeriodEndChange" | "periodEndError"
+  "periodEnd" | "onPeriodEndChange" | "isEdit" | "periodEndError"
 >) {
   return (
     <div>
       <FieldLabel htmlFor="period-end">
-        Period end <OptionalHint />
+        Period end
+        {isEdit ? (
+          <span className="text-[var(--color-destructive-emphasis)]">*</span>
+        ) : (
+          <OptionalHint />
+        )}
       </FieldLabel>
       <input
         id="period-end"
         type="date"
         value={periodEnd}
         onChange={(e) => onPeriodEndChange(e.target.value)}
+        required={isEdit}
+        aria-required={isEdit}
         aria-invalid={periodEndError !== null}
         aria-describedby={periodEndError ? "period-end-error" : undefined}
         data-testid="periods-create-end"

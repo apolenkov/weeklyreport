@@ -88,8 +88,10 @@ export function createRepository(
           : null,
       );
     },
-    getReportPeriodStatusForSection() {
-      return Promise.resolve(periodStatus);
+    getReportPeriodWriteGateForSection() {
+      return Promise.resolve(
+        periodStatus === null ? null : { periodStatus, archived: false },
+      );
     },
     getReportMeta: reportMetaReader(OPEN_REPORT_META),
     getPublishedLineage() {

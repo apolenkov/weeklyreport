@@ -1,12 +1,12 @@
-import type { ControlActionAttempt } from "../control-action-executor.ts";
+import type { ControlActionAttempt } from "../control-actions/control-action-executor.ts";
 import type {
   ControlActionAttemptOutcome,
   ControlActionExecution,
   ControlActionInput,
   ControlActionRecoveryOutcome,
-} from "../control-action-types.ts";
-import type { ControlActionRecovery } from "../control-recovery.ts";
-import { recoverControlAction } from "../control-recovery.ts";
+} from "../control-actions/control-action-types.ts";
+import type { ControlActionRecovery } from "./control-recovery.ts";
+import { recoverControlAction } from "./control-recovery.ts";
 
 const attemptStatus = (
   attempt: ControlActionAttempt,

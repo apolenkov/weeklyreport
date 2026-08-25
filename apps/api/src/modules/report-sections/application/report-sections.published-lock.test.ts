@@ -87,8 +87,8 @@ function createRepository(
     getSectionById() {
       return Promise.resolve(structuredClone(section));
     },
-    getReportPeriodStatusForSection() {
-      return Promise.resolve("open");
+    getReportPeriodWriteGateForSection() {
+      return Promise.resolve({ periodStatus: "open", archived: false });
     },
     getReportMeta: reportMetaReader(OPEN_REPORT_META),
     getPublishedLineage() {

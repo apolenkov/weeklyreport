@@ -5,7 +5,7 @@ import {
   MAX_SHORT_NAME_LENGTH,
 } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
@@ -34,29 +34,45 @@ function useSaveOrgIdentity(onSaved: () => void) {
   );
 }
 
+interface IdentityDraft {
+  readonly shortName: string;
+  readonly fullName: string;
+}
+
 function useOrgIdentityForm() {
   const trpc = useTRPC();
   const orgQ = useQuery(trpc.admin.getOrganization.queryOptions());
 
-  const [shortName, setShortName] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [isDirty, setIsDirty] = useState(false);
-
-  // Seed only fresh server data: skip while dirty (refetch must not clobber
-  // edits) and skip already-seeded refs — else post-save dirty flip re-fires
-  // against pre-save cache and the field flickers back.
-  const lastSeeded = useRef<typeof orgQ.data>(undefined);
-  useEffect(() => {
-    if (orgQ.data && !isDirty && orgQ.data !== lastSeeded.current) {
-      lastSeeded.current = orgQ.data;
-      setShortName(orgQ.data.shortName);
-      setFullName(orgQ.data.fullName);
+  const [draft, setDraft] = useState<IdentityDraft>();
+  const [submitted, setSubmitted] = useState<{
+    readonly baseIdentity: string;
+    readonly value: IdentityDraft;
+  }>();
+  const pendingSave = useRef<{
+    readonly baseIdentity: string;
+    readonly value: IdentityDraft;
+  } | null>(null);
+  const serverIdentity = orgQ.data
+    ? JSON.stringify([orgQ.data.shortName, orgQ.data.fullName])
+    : undefined;
+  // Keep the submitted values visible until invalidation returns the changed
+  // server identity. Initial query data needs no state-seeding effect.
+  const submittedValue =
+    submitted !== undefined && submitted.baseIdentity === serverIdentity
+      ? submitted.value
+      : undefined;
+  const values = draft ?? submittedValue ?? orgQ.data;
+  const shortName = values?.shortName ?? "";
+  const fullName = values?.fullName ?? "";
+  const updateOrgMut = useSaveOrgIdentity(() => {
+    if (pendingSave.current !== null) {
+      setSubmitted(pendingSave.current);
     }
-  }, [orgQ.data, isDirty]);
-
-  const updateOrgMut = useSaveOrgIdentity(() => setIsDirty(false));
+    setDraft(undefined);
+  });
   const shortNameOver = shortName.length > MAX_SHORT_NAME_LENGTH;
   const fullNameOver = fullName.length > MAX_FULL_NAME_LENGTH;
+  const isHydrated = !orgQ.isLoading && orgQ.data !== undefined;
 
   return {
     shortName,
@@ -67,27 +83,33 @@ function useOrgIdentityForm() {
     isSaved: updateOrgMut.isSuccess,
     loadError: orgQ.isError,
     isLoading: orgQ.isLoading,
+    isHydrated,
     canSave:
       !updateOrgMut.isPending &&
-      !orgQ.isLoading &&
+      isHydrated &&
       !orgQ.isError &&
       shortName.trim().length > 0 &&
       fullName.trim().length > 0 &&
       !shortNameOver &&
       !fullNameOver,
     editShortName: (next: string) => {
-      setIsDirty(true);
-      setShortName(next);
+      setSubmitted(undefined);
+      setDraft({ shortName: next, fullName });
     },
     editFullName: (next: string) => {
-      setIsDirty(true);
-      setFullName(next);
+      setSubmitted(undefined);
+      setDraft({ shortName, fullName: next });
     },
-    save: () =>
-      updateOrgMut.mutate({
+    save: () => {
+      const input = {
         shortName: shortName.trim(),
         fullName: fullName.trim(),
-      }),
+      };
+      if (serverIdentity !== undefined) {
+        pendingSave.current = { baseIdentity: serverIdentity, value: input };
+      }
+      updateOrgMut.mutate(input);
+    },
   };
 }
 
@@ -190,6 +212,21 @@ export function IdentitySubTab() {
         >
           Organization identity could not be loaded. Refresh the page and try
           again.
+        </p>
+      </div>
+    );
+  }
+
+  if (!form.isHydrated) {
+    return (
+      <div className="max-w-lg space-y-5">
+        <p
+          className="text-sm text-[var(--color-muted-foreground)]"
+          role="status"
+          aria-busy="true"
+          aria-label="Loading organization identity"
+        >
+          Loading organization identity
         </p>
       </div>
     );

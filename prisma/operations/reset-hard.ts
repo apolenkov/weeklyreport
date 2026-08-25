@@ -12,18 +12,17 @@ import { config as loadEnv } from "dotenv";
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
-// The imports below read DATABASE_URL at module-evaluation time, so they must
-// stay under loadEnv — hoisting them to the top block breaks the script.
+// Keep the Prisma imports below loadEnv so this script still resolves the repo
+// root environment consistently when launched from the API workspace.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../guards/_destructive-guard.js";
 import { isEntrypoint } from "../guards/_entrypoint.js";
 import { requireEnv } from "../guards/_require-env.js";
 import { parseSeedProfile } from "../seeds/profiles/seed-profile-contract.js";
 
-const DATABASE_URL = requireEnv("DATABASE_URL");
 interface RedisEndpoint {
   readonly host: string;
   readonly port: number;
@@ -37,10 +36,6 @@ const REDIS_FLUSHALL_TIMEOUT_MS = 5000;
 // keys. Refuse unless the operator explicitly authorises this endpoint as
 // disposable; a shared dev Redis must not lose unrelated data.
 const REDIS_DISPOSABLE_AUTHORISATION = "RESET_HARD_REDIS_DISPOSABLE";
-
-const pool = new pg.Pool({ connectionString: DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 function getRedisEndpoint(): RedisEndpoint {
   const redisUrl = process.env.REDIS_URL;
@@ -95,6 +90,7 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
 }
 
 export async function flushRedis(): Promise<void> {
+  assertE2eRuntimeDestructive("reset-hard-flush-redis");
   const env = (process as { env: Record<string, string | undefined> }).env;
   if (env[REDIS_DISPOSABLE_AUTHORISATION] !== "yes") {
     throw new Error(
@@ -157,7 +153,7 @@ export function quotePgIdentifier(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
-async function truncateAll(): Promise<void> {
+async function truncateAll(prisma: PrismaClient): Promise<void> {
   // Discover every table in the public schema except prisma's bookkeeping
   // table — schema drift between repo and DB doesn't break the wipe this way.
   const rows = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
@@ -180,72 +176,75 @@ async function truncateAll(): Promise<void> {
   );
 }
 
-async function main(): Promise<void> {
+export async function runResetHard(): Promise<void> {
   const profile = parseSeedProfile(process.argv[2]);
-  assertNonProdDestructive("reset-hard");
+  assertE2eRuntimeDestructive("reset-hard");
+  const databaseUrl = requireEnv("DATABASE_URL");
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-  console.log("[reset-hard] Starting hard reset…");
-  console.log(
-    `[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`,
-  );
-
-  // Apply any pending migrations first so schema matches Prisma client.
-  // This prevents "not-null constraint" errors from schema drift.
-  console.log("[reset-hard] Applying pending migrations…");
-  // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only DB reset; shell:false set
-  const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
-    stdio: "inherit",
-    shell: false,
-    cwd: REPO_ROOT,
-    env: { ...process.env },
-  });
-  if (migrate.status !== 0) {
-    throw new Error(
-      `prisma migrate deploy failed with exit code ${migrate.status ?? "unknown"}`,
+  try {
+    console.log("[reset-hard] Starting hard reset…");
+    console.log(
+      `[reset-hard] DATABASE_URL: ${databaseUrl.replace(/:[^:@]*@/, ":***@")}`,
     );
-  }
 
-  await truncateAll();
-  await flushRedis();
-
-  console.log(`[reset-hard] Re-seeding profile ${profile}…`);
-  const seed = spawnSync(
-    // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only seeding; shell:false set
-    "pnpm",
-    [
-      "--filter",
-      "@customreport/api",
-      "exec",
-      "tsx",
-      "../../prisma/seeds/profiles/seed-profile.ts",
-      profile,
-    ],
-    {
+    // Apply any pending migrations first so schema matches Prisma client.
+    // This prevents "not-null constraint" errors from schema drift.
+    console.log("[reset-hard] Applying pending migrations…");
+    // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only DB reset; shell:false set
+    const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
       stdio: "inherit",
       shell: false,
       cwd: REPO_ROOT,
       env: { ...process.env },
-    },
-  );
-  if (seed.status !== 0) {
-    throw new Error(
-      `seed profile ${profile} exited with code ${seed.status ?? "unknown"}`,
-    );
-  }
+    });
+    if (migrate.status !== 0) {
+      throw new Error(
+        `prisma migrate deploy failed with exit code ${migrate.status ?? "unknown"}`,
+      );
+    }
 
-  console.log(
-    "[reset-hard] Done. Database + Redis are at the post-seed baseline.",
-  );
+    await truncateAll(prisma);
+    await flushRedis();
+
+    console.log(`[reset-hard] Re-seeding profile ${profile}…`);
+    const seed = spawnSync(
+      // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only seeding; shell:false set
+      "pnpm",
+      [
+        "--filter",
+        "@customreport/api",
+        "exec",
+        "tsx",
+        "../../prisma/seeds/profiles/seed-profile.ts",
+        profile,
+      ],
+      {
+        stdio: "inherit",
+        shell: false,
+        cwd: REPO_ROOT,
+        env: { ...process.env },
+      },
+    );
+    if (seed.status !== 0) {
+      throw new Error(
+        `seed profile ${profile} exited with code ${seed.status ?? "unknown"}`,
+      );
+    }
+
+    console.log(
+      "[reset-hard] Done. Database + Redis are at the post-seed baseline.",
+    );
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+  }
 }
 
 if (isEntrypoint(import.meta.url)) {
-  void main()
-    .catch((error: unknown) => {
-      console.error("[reset-hard] FAILED:", error);
-      process.exitCode = 1;
-    })
-    .finally(async () => {
-      await prisma.$disconnect();
-      await pool.end();
-    });
+  void runResetHard().catch((error: unknown) => {
+    console.error("[reset-hard] FAILED:", error);
+    process.exitCode = 1;
+  });
 }

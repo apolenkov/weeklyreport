@@ -9,6 +9,7 @@ export * from "./name/user-name";
 export * from "./object/omit-undefined-properties";
 export * from "./organization/default-reporting-group";
 export * from "./period/reopen-window";
+export * from "./schemas/admin/action-log.schema";
 export * from "./schemas/analytics/analytics";
 export * from "./schemas/auth/auth";
 export * from "./schemas/integrations/integrations";

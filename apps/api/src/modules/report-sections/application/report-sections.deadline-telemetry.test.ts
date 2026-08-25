@@ -105,8 +105,8 @@ describe("ReportSectionsService — deadline gate", () => {
             : null,
         );
       },
-      getReportPeriodStatusForSection() {
-        return Promise.resolve("open");
+      getReportPeriodWriteGateForSection() {
+        return Promise.resolve({ periodStatus: "open", archived: false });
       },
       getReportMeta,
       getPublishedLineage() {
@@ -298,8 +298,8 @@ describe("ReportSectionsService — product telemetry", () => {
           id === current.reportSectionId ? structuredClone(current) : null,
         );
       },
-      getReportPeriodStatusForSection() {
-        return Promise.resolve("open");
+      getReportPeriodWriteGateForSection() {
+        return Promise.resolve({ periodStatus: "open", archived: false });
       },
       getReportMeta() {
         return Promise.resolve({ status: "draft" as const, deadline });

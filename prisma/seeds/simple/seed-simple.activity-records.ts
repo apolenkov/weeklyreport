@@ -40,6 +40,7 @@ export async function seedActivityParentedRecords(
   await prisma.item.create({
     data: {
       id: "a0000000-0000-4000-8000-00000000ac10",
+      stableId: "a0000000-0000-4000-8000-00000000ac10",
       reportSectionId: POPULATED_ACTIVITY_SECTION_ID,
       type: ItemType.current,
       projectId: null,
@@ -54,6 +55,7 @@ export async function seedActivityParentedRecords(
   await prisma.risk.create({
     data: {
       id: "a0000000-0000-4000-8000-00000000ad10",
+      stableId: "a0000000-0000-4000-8000-00000000ad10",
       reportSectionId: POPULATED_ACTIVITY_SECTION_ID,
       projectId: null,
       activityId: POPULATED_ACTIVITY_ID,
@@ -67,6 +69,7 @@ export async function seedActivityParentedRecords(
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-00000000ae10",
+      stableId: "a0000000-0000-4000-8000-00000000ae10",
       reportSectionId: POPULATED_ACTIVITY_SECTION_ID,
       productId: null,
       activityId: POPULATED_ACTIVITY_ID,
@@ -124,6 +127,7 @@ async function seedActivityOnlyRecords(prisma: PrismaClient): Promise<void> {
   await prisma.item.create({
     data: {
       id: "a0000000-0000-4000-8000-00000000ace0",
+      stableId: "a0000000-0000-4000-8000-00000000ace0",
       reportSectionId: ACTIVITY_ONLY_SECTION_ID,
       type: ItemType.current,
       projectId: null,
@@ -138,6 +142,7 @@ async function seedActivityOnlyRecords(prisma: PrismaClient): Promise<void> {
   await prisma.decision.create({
     data: {
       id: "a0000000-0000-4000-8000-00000000aee0",
+      stableId: "a0000000-0000-4000-8000-00000000aee0",
       reportSectionId: ACTIVITY_ONLY_SECTION_ID,
       productId: null,
       activityId: ACTIVITY_ONLY_ID,
