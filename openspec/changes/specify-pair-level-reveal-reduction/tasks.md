@@ -7,7 +7,7 @@
 - [x] 1.2 Prove the exact six directed pair orders for three-toggle fixtures,
       disjoint target bindings, URL/material equality, and retention of both paths
       plus every row-local control; reject duplicates, missing orders, or conflicts.
-- [ ] 1.3 Measure deterministic registration savings before allowing any
+- [x] 1.3 Measure deterministic registration savings before allowing any
       reduction; require at least seven avoided registrations for the observed
       `8199` versus `8192` boundary and keep an ordinary fail-closed result when
       the threshold is not proven.
@@ -24,7 +24,7 @@
 
 ## 3. Exact-SHA evidence gates
 
-- [ ] 3.1 Run the exact changed-file diagnostics and repository gates at the
+- [x] 3.1 Run the exact changed-file diagnostics and repository gates at the
       implementation SHA: `pnpm typecheck`, `pnpm lint`, targeted runtime-sweep
       tests, and `pnpm test`; record source/tree digests and obtain a fresh Sol
       code gate.
