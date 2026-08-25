@@ -1,26 +1,26 @@
 import { rm } from "node:fs/promises";
 import * as path from "node:path";
 
-import { stableSerialize } from "../../support/ids.ts";
-import { assertLivePreflightSourceIdentity } from "../canary/preflight-canary.ts";
-import { strictRouteFor } from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
+import { stableSerialize } from "../../../support/ids.ts";
+import { assertLivePreflightSourceIdentity } from "../../canary/preflight-canary.ts";
+import { strictRouteFor } from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import {
+  REVEAL_CONTINUATION_LIMITS,
+  revealContinuationLimitEnvironment,
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
 import {
   assertRevealContinuationOutputAbsent,
   hydrateRevealContinuationAssets,
   readRevealContinuationArtifact,
-} from "../reveal/continuation/preflight-reveal-continuation-io.ts";
-import {
-  REVEAL_CONTINUATION_LIMITS,
-  revealContinuationLimitEnvironment,
-} from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
   reducerStateDigestFor,
   reducerStateSnapshotFor,
-} from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import {
   assertRevealExecutionGrantAuthority,
   assertRevealExecutionGrantSource,
-} from "../reveal/continuation/preflight-reveal-continuation-validators.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-validators.ts";
 import type {
   ParentContext,
   ParentProgress,

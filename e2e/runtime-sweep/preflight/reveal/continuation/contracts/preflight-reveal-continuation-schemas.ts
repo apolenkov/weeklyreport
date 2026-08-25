@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { revealTransitionSchema } from "../../../matrix/reveal-transition.ts";
-import { actionSchema } from "../../../source/contracts.ts";
-import { revealNonMutationProofSchema } from "../../reveal-path.ts";
+import { revealTransitionSchema } from "../../../../matrix/reveal-transition.ts";
+import { actionSchema } from "../../../../source/contracts.ts";
+import { revealNonMutationProofSchema } from "../../../reveal-path.ts";
 import {
   branchSchema,
   candidateListSchema,

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { matrixPreflightControlSchema } from "../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
-import { RUNTIME_DISCLOSURE_INDEPENDENCE } from "../../../replay/dom/dom-inventory.ts";
-import { actionSchema } from "../../../source/contracts.ts";
+import { matrixPreflightControlSchema } from "../../../../matrix/finalization/matrix-finalizer-preflight-contract.ts";
+import { RUNTIME_DISCLOSURE_INDEPENDENCE } from "../../../../replay/dom/dom-inventory.ts";
+import { actionSchema } from "../../../../source/contracts.ts";
 import {
   revealNonMutationProofSchema,
   revealSurfaceSchema,
-} from "../../reveal-path.ts";
+} from "../../../reveal-path.ts";
 import {
   assetRefSchema,
   canonicalRelativeUrlSchema,

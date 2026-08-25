@@ -1,24 +1,24 @@
 import * as path from "node:path";
 
-import { stableSerialize } from "../../support/ids.ts";
+import { stableSerialize } from "../../../support/ids.ts";
+import { createRevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import type {
+  RevealExecutionGrant,
+  RevealReceiptChunk,
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   assertRevealContinuationAssetPresent,
   readRevealContinuationAsset,
   writeRevealContinuationAsset,
-} from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
-import { createRevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
-import { genesisForState } from "../reveal/continuation/preflight-reveal-continuation-genesis.ts";
-import { assetsForGrant } from "../reveal/continuation/preflight-reveal-continuation-grant-assets.ts";
-import { writeRevealContinuationGrant } from "../reveal/continuation/preflight-reveal-continuation-io.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import { genesisForState } from "../../reveal/continuation/preflight-reveal-continuation-genesis.ts";
+import { assetsForGrant } from "../../reveal/continuation/preflight-reveal-continuation-grant-assets.ts";
+import { writeRevealContinuationGrant } from "../../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
   reducerStateDigestFor,
   reducerStateSnapshotFor,
-} from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import type {
-  RevealExecutionGrant,
-  RevealReceiptChunk,
-} from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
-import { MAX_REVEAL_DEPTH } from "../reveal-path.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { MAX_REVEAL_DEPTH } from "../../reveal-path.ts";
 import type {
   ParentContext,
   ParentProgress,

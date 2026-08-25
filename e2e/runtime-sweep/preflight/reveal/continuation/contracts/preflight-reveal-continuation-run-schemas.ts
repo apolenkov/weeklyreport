@@ -9,7 +9,7 @@ import {
   sourceShaSchema,
   sourceTreeSchema,
   stableIdentifierSchema,
-} from "../../../source/contracts.ts";
+} from "../../../../source/contracts.ts";
 import {
   canonicalRelativeUrlSchema,
   resolverOutcomeExpectationSchema,

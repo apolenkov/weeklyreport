@@ -4,13 +4,13 @@ import { describe, expect, it } from "vitest";
 
 import { sha256Hex } from "../../../support/ids.ts";
 import {
+  runIdentityFor,
+  strictRouteFor,
+} from "../continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import {
   createParentPass,
   createRevealBootstrap,
 } from "../continuation/preflight-reveal-continuation-artifacts.ts";
-import {
-  runIdentityFor,
-  strictRouteFor,
-} from "../continuation/preflight-reveal-continuation-contract-factories.ts";
 import {
   controlsDigestFor,
   reducerStateDigestFor,

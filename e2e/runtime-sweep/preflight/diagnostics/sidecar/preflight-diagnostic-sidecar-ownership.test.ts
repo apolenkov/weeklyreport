@@ -4,7 +4,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { diagnosticProcessRoleFor } from "./preflight-diagnostic-processes.ts";
+import { diagnosticProcessRoleFor } from "../preflight-diagnostic-processes.ts";
 import { createDiagnosticSidecar } from "./preflight-diagnostic-sidecar.ts";
 import {
   type DiagnosticSample,

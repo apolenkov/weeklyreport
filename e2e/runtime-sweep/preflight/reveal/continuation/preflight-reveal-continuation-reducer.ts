@@ -1,14 +1,14 @@
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
 import type { RevealDiscoveryState } from "../interaction/preflight-reveal-branches.ts";
+import type {
+  RevealContinuationFrontier,
+  RevealContinuationReceipt,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { RevealContinuationReplayError } from "./preflight-reveal-continuation-errors.ts";
 import {
   applyReceipt,
   type RevealReducerInput,
 } from "./preflight-reveal-continuation-reducer-apply.ts";
-import type {
-  RevealContinuationFrontier,
-  RevealContinuationReceipt,
-} from "./preflight-reveal-continuation-schemas.ts";
 export { reducerStateForCheckpoint } from "./checkpoint/preflight-reveal-continuation-checkpoint-hydration.ts";
 export {
   controlsDigestFor,

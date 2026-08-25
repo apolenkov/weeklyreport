@@ -2,7 +2,7 @@ import { stableSerialize } from "../../../support/ids.ts";
 import type {
   RevealBranchAsset,
   RevealCandidateList,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import type { RevealBranch } from "../interaction/preflight-reveal-branches.ts";
 import {
   RevealFailureFrontierError,

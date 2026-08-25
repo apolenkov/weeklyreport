@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { withCleanSealedGrantFixture } from "../preflight-reveal-continuation-parent-test-fixture.ts";
+import { withCleanSealedGrantFixture } from "../continuation/preflight-reveal-continuation-parent-test-fixture.ts";
 import { runChildUntilDone } from "./preflight-reveal-host-checkpoint-parent.ts";
 
 describe("terminal publication fail-closed boundary", () => {
   it("rejects a successful terminal child without a checkpoint client", async () => {
     await withCleanSealedGrantFixture(async (fixture) => {
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         () =>
           Promise.resolve({
             done: true,
@@ -29,7 +29,7 @@ describe("terminal publication fail-closed boundary", () => {
 
   it("rejects a successful terminal child without a publisher", async () => {
     await withCleanSealedGrantFixture(async (fixture) => {
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         () =>
           Promise.resolve({
             done: true,

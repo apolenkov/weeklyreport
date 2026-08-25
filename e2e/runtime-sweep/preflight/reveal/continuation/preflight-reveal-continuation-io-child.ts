@@ -2,13 +2,6 @@ import * as path from "node:path";
 
 import { stableSerialize } from "../../../support/ids.ts";
 import { assertPreflightArchivePath } from "../../preflight-archive-path.ts";
-import { readBoundedRegularFile } from "./io/preflight-reveal-continuation-bounded-file.ts";
-import {
-  parseRevealBootstrap,
-  parseRevealReceiptChunk,
-} from "./preflight-reveal-continuation-artifacts.ts";
-import { MAX_ASSET_BYTES } from "./preflight-reveal-continuation-assets.ts";
-import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 import {
   PREFLIGHT_REVEAL_BOOTSTRAP,
   PREFLIGHT_REVEAL_EXECUTION_GRANT,
@@ -16,7 +9,14 @@ import {
   PREFLIGHT_REVEAL_RECEIPT_CHUNK,
   type RevealBootstrap,
   type RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { readBoundedRegularFile } from "./io/preflight-reveal-continuation-bounded-file.ts";
+import {
+  parseRevealBootstrap,
+  parseRevealReceiptChunk,
+} from "./preflight-reveal-continuation-artifacts.ts";
+import { MAX_ASSET_BYTES } from "./preflight-reveal-continuation-assets.ts";
+import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 
 const missingFile = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === "ENOENT";

@@ -4,7 +4,7 @@ import {
   sha256DigestSchema,
   sourceShaSchema,
   sourceTreeSchema,
-} from "../../source/contracts.ts";
+} from "../../../source/contracts.ts";
 import {
   assertDiagnosticOutputPath,
   DiagnosticSidecarContractError,

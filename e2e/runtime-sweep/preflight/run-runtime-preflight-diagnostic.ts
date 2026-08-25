@@ -19,11 +19,11 @@ import {
   createDiagnosticHostEnvelopeReceipt,
   readHealthyPreResourceReceipt,
 } from "./diagnostics/preflight-diagnostic-host-envelope-receipt.ts";
+import { runControlledDiagnostic } from "./diagnostics/run-runtime-preflight-diagnostic-host-envelope.ts";
 import {
   assertDiagnosticCampaignBinding,
   assertDiagnosticOutputPath,
-} from "./diagnostics/preflight-diagnostic-sidecar-contract.ts";
-import { runControlledDiagnostic } from "./diagnostics/run-runtime-preflight-diagnostic-host-envelope.ts";
+} from "./diagnostics/sidecar/preflight-diagnostic-sidecar-contract.ts";
 import { runPreflightDiagnosticPlaywrightChild } from "./launch/preflight-diagnostic-playwright-child.ts";
 import {
   assertPreflightArchivePath,

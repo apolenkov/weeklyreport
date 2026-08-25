@@ -3,10 +3,11 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { ParentContext } from "../../../launch/preflight-reveal-continuation-parent.ts";
-import { sealGrant } from "../../../launch/preflight-reveal-continuation-parent-grant.ts";
-import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
+import type { ParentContext } from "../../../launch/continuation/preflight-reveal-continuation-parent.ts";
+import { sealGrant } from "../../../launch/continuation/preflight-reveal-continuation-parent-grant.ts";
+import { parentReplayContextFor } from "../../../launch/continuation/preflight-reveal-continuation-parent-replay.ts";
 import { revealCandidatesFor } from "../../interaction/preflight-reveal-discovery.ts";
+import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "../contracts/preflight-reveal-continuation-schemas.ts";
 import { parseRevealTerminalReceipt } from "../preflight-reveal-continuation-artifacts.ts";
 import { rememberedRevealContinuationAsset } from "../preflight-reveal-continuation-assets.ts";
 import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
@@ -23,7 +24,6 @@ import {
   reducerStateForCheckpoint,
   replayRevealContinuation,
 } from "../preflight-reveal-continuation-reducer.ts";
-import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "../preflight-reveal-continuation-schemas.ts";
 import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 describe("R188 parent-owned reducer authenticity", () => {

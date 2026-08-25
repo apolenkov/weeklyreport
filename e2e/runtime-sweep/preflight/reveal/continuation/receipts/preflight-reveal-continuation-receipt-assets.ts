@@ -12,13 +12,6 @@ import type {
 } from "../../interaction/preflight-reveal-branches.ts";
 import { revealCandidateIdsFor } from "../../interaction/preflight-reveal-candidate-identity.ts";
 import {
-  assetRefFor,
-  rememberRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "../preflight-reveal-continuation-assets.ts";
-import { R188_ZERO_DIGEST } from "../preflight-reveal-continuation-digests.ts";
-import { serializableInventoryFor } from "../preflight-reveal-continuation-inventory.ts";
-import {
   candidateListSchema,
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
@@ -29,7 +22,14 @@ import {
   type RevealBranchAsset,
   type RevealCandidateList,
   type RevealPathNode,
-} from "../preflight-reveal-continuation-schemas.ts";
+} from "../contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  assetRefFor,
+  rememberRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "../preflight-reveal-continuation-assets.ts";
+import { R188_ZERO_DIGEST } from "../preflight-reveal-continuation-digests.ts";
+import { serializableInventoryFor } from "../preflight-reveal-continuation-inventory.ts";
 
 export {
   revealCandidateIdentityFor,

@@ -2,14 +2,14 @@ import type { Page } from "@playwright/test";
 
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { stableSerialize } from "../../support/ids.ts";
-import { strictRouteFor } from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
-import type { RevealContinuationCooperativeLimits } from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
+import { strictRouteFor } from "../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import type { RevealContinuationCooperativeLimits } from "../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
+import type { RevealExecutionGrant } from "../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   assertRevealExecutionGrantInput,
   discoverRevealControlsChunk,
   type RevealContinuationChunkResult,
 } from "../reveal/continuation/preflight-reveal-continuation-runner.ts";
-import type { RevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
 import { assertRevealExecutionGrantSource } from "../reveal/continuation/preflight-reveal-continuation-validators.ts";
 import {
   assertInitialLanding,

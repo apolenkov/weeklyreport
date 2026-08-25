@@ -12,6 +12,10 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  runIdentityFor,
+  strictRouteFor,
+} from "../contracts/preflight-reveal-continuation-contract-factories.ts";
+import {
   readBoundedBytes,
   readBoundedRegularFile,
 } from "../io/preflight-reveal-continuation-bounded-file.ts";
@@ -20,10 +24,6 @@ import {
   parseRevealParentPass,
 } from "../preflight-reveal-continuation-artifacts.ts";
 import { MAX_ASSET_BYTES } from "../preflight-reveal-continuation-assets.ts";
-import {
-  runIdentityFor,
-  strictRouteFor,
-} from "../preflight-reveal-continuation-contract-factories.ts";
 import {
   controlFor,
   inventoryFor,

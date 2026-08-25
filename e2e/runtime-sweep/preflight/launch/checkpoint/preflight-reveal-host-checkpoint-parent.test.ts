@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { withCleanSealedGrantFixture } from "../preflight-reveal-continuation-parent-test-fixture.ts";
+import { withCleanSealedGrantFixture } from "../continuation/preflight-reveal-continuation-parent-test-fixture.ts";
 import type { RequestHostCheckpoint } from "./preflight-reveal-host-checkpoint-client.ts";
 import {
   type HostCheckpointCompletionBody,
@@ -33,7 +33,7 @@ describe("host checkpoint parent sequencing", () => {
           return Promise.resolve(responseFor(input.request));
         },
       };
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         (input) => {
           childCalls += 1;
           events.push(`child${childCalls - 1}`);
@@ -97,7 +97,7 @@ describe("host checkpoint parent sequencing", () => {
         now: () => 100,
         requestHostCheckpoint: checkpoint,
       };
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         () => {
           childCalls += 1;
           return Promise.resolve(nonterminalChild(fixture.validProgress));
@@ -143,7 +143,7 @@ describe("host checkpoint parent sequencing", () => {
         requestHostCheckpoint: () =>
           Promise.reject(new Error("controller rejected final checkpoint")),
       };
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         () =>
           Promise.resolve({
             done: true,
@@ -198,7 +198,7 @@ describe("host checkpoint parent sequencing", () => {
             },
           ),
         };
-        const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+        const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
           () =>
             Promise.resolve({
               done: true,
@@ -249,7 +249,7 @@ describe("host checkpoint parent sequencing", () => {
           );
         },
       };
-      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+      const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         (input) => {
           childCalls += 1;
           return Promise.resolve(

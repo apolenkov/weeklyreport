@@ -1,27 +1,27 @@
-import { stableSerialize } from "../../support/ids.ts";
+import { stableSerialize } from "../../../support/ids.ts";
 import {
   assertLivePreflightSourceIdentity,
   assertPreflightCanaryPassForSource,
   createPreflightCanaryPass,
   readPreflightCanaryArtifact,
   writePreflightCanaryArtifact,
-} from "../canary/preflight-canary.ts";
+} from "../../canary/preflight-canary.ts";
 import {
   runIdentityFor,
   strictRouteFor,
-} from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
-import { R188_ZERO_DIGEST } from "../reveal/continuation/preflight-reveal-continuation-digests.ts";
-import { reducerStateDigestFor } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
 import type {
   RevealContinuationFrontier,
   RevealExecutionGrant,
   RevealReceiptChunk,
-} from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { R188_ZERO_DIGEST } from "../../reveal/continuation/preflight-reveal-continuation-digests.ts";
+import { reducerStateDigestFor } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import {
   branchForRef,
   frontierFor,
-} from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
-import { revealCandidatesFor } from "../reveal/interaction/preflight-reveal-discovery.ts";
+} from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+import { revealCandidatesFor } from "../../reveal/interaction/preflight-reveal-discovery.ts";
 import type {
   ParentContext,
   ParentProgress,

@@ -1,13 +1,16 @@
 import { open, readFile } from "node:fs/promises";
 import * as path from "node:path";
 
-import { sourceShaSchema, sourceTreeSchema } from "../../source/contracts.ts";
+import {
+  sourceShaSchema,
+  sourceTreeSchema,
+} from "../../../source/contracts.ts";
 import {
   assertPreflightArchivePath,
   assertPreflightRegularFile,
   ensurePreflightArchiveDirectory,
   ensurePreflightArchiveRoot,
-} from "../preflight-archive-path.ts";
+} from "../../preflight-archive-path.ts";
 import { assertDiagnosticSidecarManifestAccounting } from "./preflight-diagnostic-sidecar-accounting.ts";
 import {
   assertDiagnosticOutputPath,

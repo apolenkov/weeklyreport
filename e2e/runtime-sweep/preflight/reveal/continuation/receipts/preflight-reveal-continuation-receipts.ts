@@ -8,13 +8,6 @@ import type {
   RevealDiscoveryState,
 } from "../../interaction/preflight-reveal-branches.ts";
 import {
-  assetRefFor,
-  rememberedRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "../preflight-reveal-continuation-assets.ts";
-import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
-import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
-import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CONTINUATION_VERSION,
   PREFLIGHT_REVEAL_SURFACE,
@@ -22,7 +15,14 @@ import {
   receiptSchema,
   type RevealContinuationFrontier,
   type RevealContinuationReceipt,
-} from "../preflight-reveal-continuation-schemas.ts";
+} from "../contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  assetRefFor,
+  rememberedRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "../preflight-reveal-continuation-assets.ts";
+import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
+import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
 import {
   branchAssetFor,
   candidateFrontierFor,

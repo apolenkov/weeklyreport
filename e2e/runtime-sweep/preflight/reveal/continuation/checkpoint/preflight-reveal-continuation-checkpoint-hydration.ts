@@ -8,6 +8,13 @@ import type {
 import { revealCandidatesFor } from "../../interaction/preflight-reveal-discovery.ts";
 import type { RevealRoute } from "../../interaction/preflight-reveal-types.ts";
 import {
+  PREFLIGHT_REVEAL_CANDIDATE_LIST,
+  PREFLIGHT_REVEAL_CONTROL,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
+  type RevealExecutionGrant,
+  type RevealReducerCheckpoint,
+} from "../contracts/preflight-reveal-continuation-schemas.ts";
+import {
   assetRefFor,
   rememberedRevealContinuationAsset,
 } from "../preflight-reveal-continuation-assets.ts";
@@ -15,13 +22,6 @@ import { canonicalCandidatesForList } from "../preflight-reveal-continuation-can
 import { controlsDigestFor } from "../preflight-reveal-continuation-checkpoint.ts";
 import { registrationsForCheckpoint } from "../preflight-reveal-continuation-checkpoint-registration.ts";
 import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
-import {
-  PREFLIGHT_REVEAL_CANDIDATE_LIST,
-  PREFLIGHT_REVEAL_CONTROL,
-  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
-  type RevealExecutionGrant,
-  type RevealReducerCheckpoint,
-} from "../preflight-reveal-continuation-schemas.ts";
 import { branchForRef } from "../receipts/preflight-reveal-continuation-receipts.ts";
 
 const candidatesForCheckpoint = (input: {

@@ -1,9 +1,4 @@
 import {
-  readRevealContinuationAsset,
-  rememberRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "./preflight-reveal-continuation-assets.ts";
-import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_CONTROL,
@@ -15,7 +10,12 @@ import {
   type RevealContinuationReceipt,
   type RevealExecutionGrant,
   type RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  readRevealContinuationAsset,
+  rememberRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "./preflight-reveal-continuation-assets.ts";
 
 interface AssetQueue {
   readonly pending: {

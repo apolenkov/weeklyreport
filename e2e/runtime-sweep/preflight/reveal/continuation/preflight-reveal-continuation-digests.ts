@@ -7,7 +7,7 @@ import type {
   RevealExecutionGrant,
   RevealParentPass,
   RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
 
 const R188_HASH_DOMAIN = "customreport/runtime-sweep/reveal/v5";
 export const R188_DIGEST_LENGTH = sha256Hex("").length;

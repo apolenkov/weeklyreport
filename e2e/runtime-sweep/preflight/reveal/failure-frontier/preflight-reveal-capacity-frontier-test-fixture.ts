@@ -11,13 +11,13 @@ import {
   revealSurfaceFor,
 } from "../../reveal-path.ts";
 import {
+  runIdentityFor,
+  strictRouteFor,
+} from "../continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import {
   createParentPass,
   createRevealBootstrap,
 } from "../continuation/preflight-reveal-continuation-artifacts.ts";
-import {
-  runIdentityFor,
-  strictRouteFor,
-} from "../continuation/preflight-reveal-continuation-contract-factories.ts";
 import {
   controlFor,
   inventoryFor,

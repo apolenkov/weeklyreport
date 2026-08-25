@@ -3,8 +3,8 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createRevealBootstrap } from "../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
-import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import { createRevealBootstrap } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
+import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   controlFor,
   inventoryFor,
@@ -12,11 +12,11 @@ import {
   runChunk,
   selectionFor,
   withSource,
-} from "../reveal/continuation/preflight-reveal-continuation-fixture.ts";
-import { genesisMismatchFor } from "../reveal/continuation/preflight-reveal-continuation-genesis.ts";
-import { assetsForGenesis } from "../reveal/continuation/preflight-reveal-continuation-grant-assets.ts";
-import { replayRevealContinuation } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-fixture.ts";
+import { genesisMismatchFor } from "../../reveal/continuation/preflight-reveal-continuation-genesis.ts";
+import { assetsForGenesis } from "../../reveal/continuation/preflight-reveal-continuation-grant-assets.ts";
+import { replayRevealContinuation } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
 import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
 import { validateEmptyBootstrap } from "./preflight-reveal-continuation-parent-bootstrap.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";

@@ -9,9 +9,9 @@ import {
   runChunk,
   selectionFor,
   withSource,
-} from "../reveal/continuation/preflight-reveal-continuation-fixture.ts";
-import { replayRevealContinuation } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-fixture.ts";
+import { replayRevealContinuation } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
 import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";

@@ -111,8 +111,8 @@ function createRepository(
           : null,
       );
     },
-    getReportPeriodStatusForSection() {
-      return Promise.resolve("open");
+    getReportPeriodWriteGateForSection() {
+      return Promise.resolve({ periodStatus: "open", archived: false });
     },
     getReportMeta: reportMetaReader(OPEN_REPORT_META),
     getPublishedLineage() {
@@ -339,7 +339,8 @@ describe("ReportSectionsService", () => {
   describe("saveDraft — published report guard", () => {
     it("rejects editing a section when the period is published", async () => {
       const repo = createRepository(baseSection);
-      repo.getReportPeriodStatusForSection = () => Promise.resolve("published");
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "published", archived: false });
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
@@ -369,9 +370,25 @@ describe("ReportSectionsService", () => {
       });
     });
 
+    it("rejects editing an archived section while its period status is open", async () => {
+      const repo = createRepository(baseSection);
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "open", archived: true });
+      const saveSection = vi.spyOn(repo, "saveSection");
+      const service = new ReportSectionsService(repo, testGraceSettings);
+
+      await expect(
+        service.saveDraft(validDraftFor(baseSection), baseSection.authorId),
+      ).rejects.toMatchObject({
+        code: "SECTION_ALREADY_SUBMITTED",
+        message: "Cannot edit sections of a published report.",
+      });
+      expect(saveSection).not.toHaveBeenCalled();
+    });
+
     it("allows editing when the period is open", async () => {
       const repo = createRepository(baseSection);
-      // getReportPeriodStatusForSection already returns 'open' by default.
+      // The default write gate is non-archived and open.
       const service = new ReportSectionsService(repo, testGraceSettings);
 
       const saved = await service.saveDraft(
@@ -403,7 +420,8 @@ describe("ReportSectionsService", () => {
       // The reopen transition leaves the legacy Report.status at 'published'
       // while flipping the canonical periodStatus to 'reopened'. The gate must
       // follow periodStatus regardless of the divergent legacy value.
-      repo.getReportPeriodStatusForSection = () => Promise.resolve("reopened");
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "reopened", archived: false });
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
@@ -431,11 +449,11 @@ describe("ReportSectionsService", () => {
       expect(saved.projects[0]?.trafficLight).toBe("green");
     });
 
-    it("reads editability via getReportPeriodStatusForSection keyed on the section id", async () => {
+    it("reads editability via getReportPeriodWriteGateForSection keyed on the section id", async () => {
       const repo = createRepository(baseSection);
       const calls: string[] = [];
-      const original = repo.getReportPeriodStatusForSection.bind(repo);
-      repo.getReportPeriodStatusForSection = async (sectionId: string) => {
+      const original = repo.getReportPeriodWriteGateForSection.bind(repo);
+      repo.getReportPeriodWriteGateForSection = async (sectionId: string) => {
         calls.push(sectionId);
         return original(sectionId);
       };
@@ -538,7 +556,8 @@ describe("ReportSectionsService", () => {
 
     it("rejects submitting a draft section on a published period", async () => {
       const repo = createRepository(greenSection);
-      repo.getReportPeriodStatusForSection = () => Promise.resolve("published");
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "published", archived: false });
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 
@@ -548,6 +567,24 @@ describe("ReportSectionsService", () => {
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot submit sections of a published report.",
       });
+    });
+
+    it("rejects an archived reopened period before deadline lookup or mutation", async () => {
+      const repo = createRepository(greenSection);
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "reopened", archived: true });
+      const getReportMeta = vi.spyOn(repo, "getReportMeta");
+      const saveSection = vi.spyOn(repo, "saveSection");
+      const service = new ReportSectionsService(repo, testGraceSettings);
+
+      await expect(
+        service.submitSection(submitPayload, baseSection.authorId),
+      ).rejects.toMatchObject({
+        code: "SECTION_ALREADY_SUBMITTED",
+        message: "Cannot submit sections of a published report.",
+      });
+      expect(getReportMeta).not.toHaveBeenCalled();
+      expect(saveSection).not.toHaveBeenCalled();
     });
 
     it("succeeds submitting a draft section on an open period", async () => {
@@ -566,7 +603,8 @@ describe("ReportSectionsService", () => {
 
     it("succeeds submitting a draft section on a reopened period", async () => {
       const repo = createRepository(greenSection);
-      repo.getReportPeriodStatusForSection = () => Promise.resolve("reopened");
+      repo.getReportPeriodWriteGateForSection = () =>
+        Promise.resolve({ periodStatus: "reopened", archived: false });
 
       const service = new ReportSectionsService(repo, testGraceSettings);
 

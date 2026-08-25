@@ -1,19 +1,19 @@
 import * as path from "node:path";
 
-import { createParentPass } from "../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
-import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import type { RevealReceiptChunk } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { createParentPass } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
+import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   hydrateRevealContinuationAssets,
   writeRevealParentPass,
-} from "../reveal/continuation/preflight-reveal-continuation-io.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
   controlsDigestFor,
   reducerCheckpointAssetsFor,
   reduceRevealReceiptSuffix,
   reducerStateDigestFor,
-} from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import type { RevealReceiptChunk } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
-import { assertReceiptChunkContract } from "../reveal/continuation/preflight-reveal-continuation-validators.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { assertReceiptChunkContract } from "../../reveal/continuation/preflight-reveal-continuation-validators.ts";
 import type {
   ParentContext,
   ParentProgress,

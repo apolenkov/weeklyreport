@@ -1,5 +1,9 @@
 import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
 import type { SourceArtifact } from "../../../source/source-artifact.ts";
+import type {
+  RevealContinuationRoute,
+  RevealExecutionGrant,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
 import {
   constantTimeEqualHex,
   grantDigestForBody,
@@ -8,10 +12,6 @@ import {
   R188_ZERO_DIGEST,
 } from "./preflight-reveal-continuation-digests.ts";
 import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import type {
-  RevealContinuationRoute,
-  RevealExecutionGrant,
-} from "./preflight-reveal-continuation-schemas.ts";
 import { assertRunIdentityForGrant } from "./preflight-reveal-continuation-validators-receipts.ts";
 
 export {

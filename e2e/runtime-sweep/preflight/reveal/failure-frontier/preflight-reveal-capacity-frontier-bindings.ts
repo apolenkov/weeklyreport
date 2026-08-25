@@ -3,7 +3,7 @@ import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import type {
   RevealBootstrap,
   RevealParentPass,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import type { RevealReductionContext } from "../guards/preflight-reveal-reduction-context.ts";
 import { revealReductionContextFor } from "../guards/preflight-reveal-reduction-context.ts";
 import type {

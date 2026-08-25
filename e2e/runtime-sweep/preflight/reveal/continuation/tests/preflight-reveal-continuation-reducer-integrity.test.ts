@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parentReplayContextFor } from "../../../launch/preflight-reveal-continuation-parent-replay.ts";
+import { parentReplayContextFor } from "../../../launch/continuation/preflight-reveal-continuation-parent-replay.ts";
 import { parseRevealTerminalReceipt } from "../preflight-reveal-continuation-artifacts.ts";
 import { receiptDigestForBody } from "../preflight-reveal-continuation-digests.ts";
 import {

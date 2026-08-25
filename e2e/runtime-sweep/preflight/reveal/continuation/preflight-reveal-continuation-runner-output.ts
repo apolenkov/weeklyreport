@@ -1,9 +1,9 @@
-import { writeRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
-import { assetsForGenesis } from "./preflight-reveal-continuation-grant-assets.ts";
 import type {
   RevealBootstrap,
   RevealContinuationReceipt,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { writeRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
+import { assetsForGenesis } from "./preflight-reveal-continuation-grant-assets.ts";
 import { assetsForReceipt } from "./receipts/preflight-reveal-continuation-receipts.ts";
 
 export const writeBootstrapAssets = async (input: {

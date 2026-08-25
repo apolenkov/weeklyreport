@@ -11,13 +11,13 @@ import {
   resolvePreflightCanarySelection,
 } from "./canary/preflight-canary.ts";
 import { runPlaywrightPreflightRevealContinuationChunk } from "./execution/playwright-preflight-continuation.ts";
+import { revealContinuationLimitsFromEnvironment } from "./reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
 import {
   hydrateRevealContinuationAssets,
   readRevealContinuationGrant,
   writeRevealBootstrap,
   writeRevealReceiptChunk,
 } from "./reveal/continuation/preflight-reveal-continuation-io.ts";
-import { revealContinuationLimitsFromEnvironment } from "./reveal/continuation/preflight-reveal-continuation-limits.ts";
 import { assertRevealExecutionGrantInput } from "./reveal/continuation/preflight-reveal-continuation-runner.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 

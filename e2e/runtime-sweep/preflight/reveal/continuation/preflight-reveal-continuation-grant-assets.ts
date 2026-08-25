@@ -1,9 +1,4 @@
 import {
-  rememberedRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "./preflight-reveal-continuation-assets.ts";
-import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_CONTROL,
@@ -12,7 +7,12 @@ import {
   PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
   PREFLIGHT_REVEAL_SURFACE,
   type RevealExecutionGrant,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  rememberedRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "./preflight-reveal-continuation-assets.ts";
+import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 
 const requiredAsset = (
   artifact: RevealContinuationAsset["artifact"],

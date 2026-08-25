@@ -1,15 +1,15 @@
-import type { CampaignMatrixState } from "../../matrix/campaign-matrix.ts";
-import type { DomInventory } from "../../replay/dom/dom-inventory.ts";
-import type { SourceArtifact } from "../../source/source-artifact.ts";
-import { preflightControlForPlan } from "../execution/playwright-preflight-support.ts";
-import type { RevealReducerInput } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
+import type { DomInventory } from "../../../replay/dom/dom-inventory.ts";
+import type { SourceArtifact } from "../../../source/source-artifact.ts";
+import { preflightControlForPlan } from "../../execution/playwright-preflight-support.ts";
+import type { RevealReducerInput } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import {
   initialRevealStateFor,
   plansFor,
   revealCandidatesFor,
-} from "../reveal/interaction/preflight-reveal-discovery.ts";
-import type { RevealRoute } from "../reveal/interaction/preflight-reveal-types.ts";
-import { MAX_REVEAL_DEPTH, revealSurfaceFor } from "../reveal-path.ts";
+} from "../../reveal/interaction/preflight-reveal-discovery.ts";
+import type { RevealRoute } from "../../reveal/interaction/preflight-reveal-types.ts";
+import { MAX_REVEAL_DEPTH, revealSurfaceFor } from "../../reveal-path.ts";
 
 export type ParentReplayContext = Readonly<{
   readonly initialState: ReturnType<typeof initialRevealStateFor>;

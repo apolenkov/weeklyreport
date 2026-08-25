@@ -3,9 +3,9 @@ import { z } from "zod";
 import {
   resolverOutcomeIdentitySchema,
   sha256DigestSchema,
-} from "../../../source/contracts.ts";
-import { canonicalRevealUrlFor } from "../../reveal-path.ts";
-import { R188_WIRE_VERSION } from "./preflight-reveal-continuation-digests.ts";
+} from "../../../../source/contracts.ts";
+import { canonicalRevealUrlFor } from "../../../reveal-path.ts";
+import { R188_WIRE_VERSION } from "../preflight-reveal-continuation-digests.ts";
 
 /** R197 wire version. Legacy continuation records without record lineage are rejected. */
 export const PREFLIGHT_REVEAL_CONTINUATION_VERSION = R188_WIRE_VERSION;

@@ -8,6 +8,12 @@ import {
   ensurePreflightArchiveDirectory,
 } from "../../preflight-archive-path.ts";
 import {
+  type RevealBootstrap,
+  type RevealExecutionGrant,
+  type RevealParentPass,
+  type RevealReceiptChunk,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
   parseRevealBootstrap,
   parseRevealExecutionGrant,
   parseRevealParentPass,
@@ -16,12 +22,6 @@ import {
 import { serializeV4 } from "./preflight-reveal-continuation-artifacts.ts";
 import { MAX_ASSET_BYTES } from "./preflight-reveal-continuation-assets.ts";
 import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import {
-  type RevealBootstrap,
-  type RevealExecutionGrant,
-  type RevealParentPass,
-  type RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
 
 const PRIVATE_FILE_MODE = 0o600;
 const MAX_ARTIFACT_BYTES = MAX_ASSET_BYTES;

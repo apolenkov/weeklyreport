@@ -23,24 +23,24 @@ import type {
   RevealExecutionHarness,
   RevealRoute,
 } from "../interaction/preflight-reveal-types.ts";
-import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
-import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
-import { strictRouteFor } from "./preflight-reveal-continuation-contract-factories.ts";
-import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
+import { strictRouteFor } from "./contracts/preflight-reveal-continuation-contract-factories.ts";
 import {
   assertCooperativeRevealContinuationLimits,
   type RevealContinuationCooperativeLimits,
-} from "./preflight-reveal-continuation-limits.ts";
+} from "./contracts/preflight-reveal-continuation-limits.ts";
+import type {
+  RevealContinuationRoute,
+  RevealExecutionGrant,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
+import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
+import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
 import {
   reducerStateDigestFor,
   reducerStateForCheckpoint,
 } from "./preflight-reveal-continuation-reducer.ts";
 import { executeRevealContinuationChunk } from "./preflight-reveal-continuation-runner-execution.ts";
-import type {
-  RevealContinuationRoute,
-  RevealExecutionGrant,
-} from "./preflight-reveal-continuation-schemas.ts";
-import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./preflight-reveal-continuation-schemas.ts";
 import {
   assertRevealExecutionGrantInput as assertGrantInput,
   assertRevealExecutionGrantSource,
@@ -55,7 +55,7 @@ const DEFAULT_REVEAL_CHUNK_BUDGET_MS =
 export type RevealContinuationBootstrapResult = Readonly<{
   /** An empty observation carries no receipt and grants no execution authority. */
   readonly status: "BOOTSTRAP";
-  readonly bootstrap: import("./preflight-reveal-continuation-schemas.ts").RevealBootstrap;
+  readonly bootstrap: import("./contracts/preflight-reveal-continuation-schemas.ts").RevealBootstrap;
   readonly controls: readonly MatrixPreflightControl[];
   readonly completedCandidateCount: 0;
 }>;
@@ -64,7 +64,7 @@ export type RevealContinuationReceiptChunkResult = Readonly<{
   /** The child emits only a raw suffix; the parent owns PASS. */
   readonly status: "CHUNK";
   readonly completed: boolean;
-  readonly chunk: import("./preflight-reveal-continuation-schemas.ts").RevealReceiptChunk;
+  readonly chunk: import("./contracts/preflight-reveal-continuation-schemas.ts").RevealReceiptChunk;
   readonly controls?: readonly MatrixPreflightControl[];
   readonly completedCandidateCount: number;
 }>;

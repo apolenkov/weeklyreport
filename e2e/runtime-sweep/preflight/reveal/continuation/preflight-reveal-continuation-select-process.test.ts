@@ -5,9 +5,9 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import type { ParentContext } from "../../launch/preflight-reveal-continuation-parent.ts";
-import { sealGrant } from "../../launch/preflight-reveal-continuation-parent-grant.ts";
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
+import type { ParentContext } from "../../launch/continuation/preflight-reveal-continuation-parent.ts";
+import { sealGrant } from "../../launch/continuation/preflight-reveal-continuation-parent-grant.ts";
+import { parentReplayContextFor } from "../../launch/continuation/preflight-reveal-continuation-parent-replay.ts";
 import {
   controlFor,
   inventoryFor,

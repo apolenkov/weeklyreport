@@ -16,7 +16,7 @@ import {
   PREFLIGHT_REVEAL_PATH_NODE,
   PREFLIGHT_REVEAL_SURFACE,
   representativeInputSchema,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 
 export const PREFLIGHT_REVEAL_FAILURE_FRONTIER =
   "PREFLIGHT_REVEAL_FAILURE_FRONTIER" as const;

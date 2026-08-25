@@ -3,17 +3,17 @@ import type { SourceArtifact } from "../../../source/source-artifact.ts";
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import { isUnchangedRevealNonMutationProof } from "../../reveal-path.ts";
 import {
+  type RevealContinuationReceipt,
+  type RevealContinuationRoute,
+  type RevealReceiptChunk,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
   chunkDigestForBody,
   constantTimeEqualHex,
   R188_DIGEST_LENGTH,
   receiptDigestForBody,
 } from "./preflight-reveal-continuation-digests.ts";
 import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import {
-  type RevealContinuationReceipt,
-  type RevealContinuationRoute,
-  type RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
 
 const digestError = (label: string): never => {
   throw new RevealContinuationError(

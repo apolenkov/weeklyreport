@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { diagnosticSampleForProcess } from "./preflight-diagnostic-sample.ts";
-import { serializeDiagnosticSample } from "./preflight-diagnostic-sidecar-contract.ts";
+import { serializeDiagnosticSample } from "./sidecar/preflight-diagnostic-sidecar-contract.ts";
 
 describe("diagnostic sample host pressure", () => {
   it("reuses one complete host snapshot without exceeding the record bound", () => {
