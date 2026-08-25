@@ -84,6 +84,7 @@ const baseline = {
   recordCount: 60 as const,
   payloadBytes: 1,
   baselineReceiptDigest,
+  firstSnapshot: snapshotFor(91, 0, "post-infrastructure"),
   lastSnapshot: snapshotFor(150, 0, "post-infrastructure"),
   lastCounters: {
     pageins: 100,
@@ -134,7 +135,7 @@ describe("host checkpoint controller safety boundaries", () => {
     });
   });
 
-  it("accepts only a source-bound terminal completion after the parent PASS", async () => {
+  it("rejects terminal completion that skipped the final host checkpoint", async () => {
     await withMailbox(async (archiveRoot, mailboxRoot) => {
       const controller = runHostCheckpointController({
         archiveRoot,
@@ -155,10 +156,7 @@ describe("host checkpoint controller safety boundaries", () => {
           })();
         },
       });
-      await expect(controller).resolves.toEqual({
-        responseCount: 0,
-        lastResponseDigest: null,
-      });
+      await expect(controller).rejects.toThrow(/terminal child ordinal/u);
     });
   });
 

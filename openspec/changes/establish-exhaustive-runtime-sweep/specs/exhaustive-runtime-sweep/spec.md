@@ -431,20 +431,56 @@ The runtime host envelope SHALL retain raw-free page bytes in every snapshot
 and receipt as diagnostic telemetry, but SHALL NOT treat raw-free pages as an
 independent baseline or runtime veto on Darwin. Baseline eligibility SHALL fail
 closed on available memory, system memory-pressure state and free percentage,
-swap use, compressed memory, missing or malformed fields, and cumulative-counter
-integrity. Runtime monitoring SHALL additionally enforce swap growth and the
-declared gauge hysteresis. Historical receipt reason tokens for raw-free
-breaches SHALL remain readable without making them current eligibility rules.
+swap-free headroom, compressed memory, missing or malformed fields, and
+cumulative-counter integrity. Absolute swap-used occupancy SHALL remain
+canonical telemetry and a digest-bound baseline value, but SHALL NOT be an
+independent baseline or runtime veto. Runtime monitoring SHALL additionally
+enforce swap growth relative to the first accepted sample of the fresh
+post-infrastructure baseline, sustained swap activity, and the declared gauge
+hysteresis. The baseline anchor SHALL NOT be reset by later baseline samples.
+Historical receipt reason tokens for raw-free and absolute swap-used breaches
+SHALL remain readable without making them current eligibility rules.
 
 #### Scenario: reclaimable capacity is not mistaken for exhaustion
 
-- **GIVEN** raw-free pages are below the historical threshold while available
-  memory, pressure, swap, compression, and counters are healthy
+- **GIVEN** raw-free pages are below the historical threshold or absolute
+  swap-used occupancy is above its historical threshold while available
+  memory, pressure, swap-free headroom, swap growth/activity, compression, and
+  counters are healthy
 - **WHEN** the baseline and runtime evaluator process the snapshot
-- **THEN** raw-free bytes remain recorded but do not create a reason or breach
-  streak
-- **AND** low available memory, warning or critical pressure, excessive swap or
-  swap growth, excessive compression, or invalid input still fails closed
+- **THEN** raw-free bytes and absolute swap-used occupancy remain recorded but
+  do not independently create a reason or breach streak
+- **AND** low available memory, warning or critical pressure, insufficient
+  swap-free headroom, excessive attempt-relative swap growth, sustained swap
+  activity, excessive compression, or invalid input still fails closed
+
+### Requirement: Exact-canary continuation refreshes its browser process at bounded terminal boundaries
+
+The exact `admin/demo` continuation SHALL use one headless Playwright worker
+and SHALL yield only after a complete terminal candidate when the first of its
+source/plan-bound soft wall-time, completed-candidate, or reveal-action-delta
+limits is reached. Every yielded suffix SHALL be sealed by the parent reducer
+and followed by one healthy source/baseline/predecessor-bound host checkpoint
+before another child starts. The same checkpoint SHALL be required after the
+successful terminal child before parent completion. A hard process-group
+deadline, crash, missing artifact, unhealthy checkpoint, or failure inside a
+candidate SHALL terminate the attempt as NOT-PROVEN without a grant, resume,
+completion, or PASS.
+
+#### Scenario: a bounded child yields without losing accepted progress
+
+- **WHEN** a child reaches any declared soft limit after a terminal candidate
+- **THEN** it publishes only the disjoint terminal receipt suffix and exits
+  successfully after closing its Playwright-owned browser process
+- **AND** the parent launches no successor until the reducer and host
+  checkpoint both accept the exact suffix
+
+#### Scenario: the terminal child also requires current host evidence
+
+- **WHEN** a child exhausts the exact canary frontier successfully
+- **THEN** the parent requests and validates exactly one post-child host
+  checkpoint before publishing completion or PASS
+- **AND** a missing, unhealthy, stale, or malformed response blocks completion
 
 ### Requirement: Independent scoped disclosures use proven equivalence reduction
 

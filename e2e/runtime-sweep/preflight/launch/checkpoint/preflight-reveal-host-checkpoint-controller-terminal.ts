@@ -132,7 +132,7 @@ export const assertTerminalCompletion = async (input: {
 }): Promise<void> => {
   const { completion, state } = input;
   assertRunIdentity(completion.run, input.controller);
-  if (completion.terminalChildOrdinal !== input.responseCount)
+  if (completion.terminalChildOrdinal + 1 !== input.responseCount)
     throw new Error(
       "Host checkpoint terminal child ordinal does not close the response count",
     );

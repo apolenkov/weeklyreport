@@ -12,7 +12,6 @@ import {
 } from "../interaction/preflight-reveal-queue.ts";
 import type { RevealQueueYieldInput } from "../interaction/preflight-reveal-queue-candidates.ts";
 import { createRevealBootstrap } from "./preflight-reveal-continuation-artifacts.ts";
-import { writeRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
 import {
   createRevealReceiptChunk,
   runIdentityFor,
@@ -20,7 +19,7 @@ import {
 } from "./preflight-reveal-continuation-contract-factories.ts";
 import { R188_ZERO_DIGEST } from "./preflight-reveal-continuation-digests.ts";
 import { genesisForState } from "./preflight-reveal-continuation-genesis.ts";
-import { assetsForGenesis } from "./preflight-reveal-continuation-grant-assets.ts";
+import { REVEAL_CONTINUATION_LIMITS } from "./preflight-reveal-continuation-limits.ts";
 import {
   controlsDigestFor,
   emptyInitialFrontierStateFor,
@@ -32,15 +31,16 @@ import type {
   RevealContinuationInitialState,
   RevealContinuationInput,
 } from "./preflight-reveal-continuation-runner.ts";
-import type { RevealContinuationReceipt } from "./preflight-reveal-continuation-schemas.ts";
+import {
+  writeBootstrapAssets,
+  writeReceiptAssets,
+} from "./preflight-reveal-continuation-runner-output.ts";
 import type {
+  RevealContinuationReceipt,
   RevealExecutionGrant,
   RevealReceiptChunk,
 } from "./preflight-reveal-continuation-schemas.ts";
-import {
-  assetsForReceipt,
-  receiptForTerminal,
-} from "./receipts/preflight-reveal-continuation-receipts.ts";
+import { receiptForTerminal } from "./receipts/preflight-reveal-continuation-receipts.ts";
 
 const controlsSorted = (
   controls: readonly MatrixPreflightControl[],
@@ -177,6 +177,7 @@ const terminalHandlerFor =
     readonly progress: Progress;
     readonly deadlineAt: number;
     readonly now: () => number;
+    readonly startingActionCount: number;
   }): ((boundary: RevealQueueYieldInput) => Promise<boolean>) =>
   async (boundary: RevealQueueYieldInput): Promise<boolean> => {
     const sequence =
@@ -184,7 +185,13 @@ const terminalHandlerFor =
       input.progress.receipts.length +
       1;
     input.progress.completedCandidateCount += 1;
-    const shouldYield = input.now() >= input.deadlineAt;
+    const limits =
+      input.continuation.cooperativeLimits ?? REVEAL_CONTINUATION_LIMITS;
+    const shouldYield =
+      input.now() >= input.deadlineAt ||
+      input.progress.receipts.length + 1 >= limits.maxTerminalCandidates ||
+      boundary.state.actionCount - input.startingActionCount >=
+        limits.maxRevealActionDelta;
     const nextFrontier =
       shouldYield && boundary.continuation !== undefined
         ? await frozenNextFrontierFor({
@@ -211,30 +218,10 @@ const terminalHandlerFor =
     return shouldYield;
   };
 
-const writeBootstrapAssets = async (input: {
-  readonly archiveRoot: string | undefined;
-  readonly result: RevealContinuationBootstrapResult;
-}): Promise<void> => {
-  if (input.archiveRoot === undefined) return;
-  for (const asset of assetsForGenesis(input.result.bootstrap.genesis))
-    await writeRevealContinuationAsset({
-      archiveRoot: input.archiveRoot,
-      asset,
-    });
-};
-
-const writeReceiptAssets = async (input: {
-  readonly archiveRoot: string | undefined;
-  readonly receipts: readonly RevealContinuationReceipt[];
-}): Promise<void> => {
-  if (input.archiveRoot === undefined) return;
-  for (const receipt of input.receipts)
-    for (const asset of assetsForReceipt(receipt))
-      await writeRevealContinuationAsset({
-        archiveRoot: input.archiveRoot,
-        asset,
-      });
-};
+const progressFor = (grant: RevealExecutionGrant | undefined): Progress => ({
+  completedCandidateCount: grant?.frontier.completedCandidateCount ?? 0,
+  receipts: [],
+});
 
 export const executeRevealContinuationChunk = async (input: {
   readonly input: RevealContinuationInput;
@@ -264,10 +251,8 @@ export const executeRevealContinuationChunk = async (input: {
       return bootstrap;
     }
   }
-  const progress: Progress = {
-    completedCandidateCount: input.grant?.frontier.completedCandidateCount ?? 0,
-    receipts: [],
-  };
+  const progress = progressFor(input.grant);
+  const startingActionCount = input.state.actionCount;
   const result = await processRevealQueueChunk(
     input.queueInput,
     input.state,
@@ -279,6 +264,7 @@ export const executeRevealContinuationChunk = async (input: {
       progress,
       deadlineAt: input.deadlineAt,
       now: input.now,
+      startingActionCount,
     }),
   );
   if (progress.receipts.length === 0)

@@ -60,6 +60,7 @@ const sample = {
     availableBytes: 0,
     pressureFreePercent: 0,
     compressedBytes: 0,
+    swapActivity: 0,
   },
   pressureState: "normal" as const,
   metrics: {
@@ -102,6 +103,30 @@ const response = createHostCheckpointResponse({
 });
 
 describe("source-bound host checkpoint contract", () => {
+  it("accepts the exact first-child empty-bootstrap checkpoint", () => {
+    const emptyBootstrap = createHostCheckpointRequest({
+      artifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST,
+      version: PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
+      run,
+      checkpointSequence: 1,
+      completedChildOrdinal: 0,
+      boundaryTimestamp: 100,
+      receiptHead: null,
+      receiptCount: 0,
+      chunkHead: null,
+      chunkCount: 0,
+      completedCandidateCount: 0,
+      previousCheckpointDigest: null,
+      previousSampleSequence: null,
+    });
+
+    expect(
+      parseCanonicalHostCheckpointRequest(
+        canonicalHostCheckpointBytes(emptyBootstrap),
+      ),
+    ).toEqual(emptyBootstrap);
+  });
+
   it("round-trips canonical request and response bytes", () => {
     const { requestDigest: _requestDigest, ...requestBody } = request;
     const { responseDigest: _responseDigest, ...responseBody } = response;

@@ -290,6 +290,17 @@
       directory-architecture baseline. Full/shard continuation remains
       NOT-PROVEN and task 5.19 remains unchecked.
 
+- [x] 5.23 Replace the miscalibrated absolute Darwin swap-used veto with the
+      reviewed historical-swap telemetry/current-pressure contract, anchored
+      swap growth/activity and swap-free headroom; bound the one-worker
+      exact-canary continuation by 60 seconds, 256 terminal candidates, 1,024
+      reveal actions, a 90-second process-group wall and final-child checkpoint.
+      Verify focused regressions for stable historical swap PASS; low headroom,
+      growth, pressure, malformed/reset counters and sustained churn failures;
+      producer/reader 60-sample anchor equivalence; all three cooperative
+      yields; tampered limits; hard group kill with no resumable artifact; and
+      exactly one healthy checkpoint after every child including terminal.
+
 ## 6. Immutable baseline and adjudication
 
 - [x] 6.1 Freeze a clean-source manifest containing full SHA/tree, catalog/spec/

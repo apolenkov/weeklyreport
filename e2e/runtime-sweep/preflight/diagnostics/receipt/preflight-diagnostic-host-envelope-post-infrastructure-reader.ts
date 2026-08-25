@@ -60,6 +60,7 @@ export type HealthyPostInfrastructureReceipt = Readonly<{
   readonly recordCount: typeof POST_INFRASTRUCTURE_RECORD_COUNT;
   readonly payloadBytes: number;
   readonly baselineReceiptDigest: string;
+  readonly firstSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly lastSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly lastCounters: DiagnosticHostEnvelopeCounters;
 }>;
@@ -152,6 +153,7 @@ export const readHealthyPostInfrastructureReceipt = async (
     recordCount: records.recordCount,
     payloadBytes,
     baselineReceiptDigest: digestFor(manifestBytes, payload),
+    firstSnapshot: records.firstSnapshot,
     lastSnapshot: records.lastSnapshot,
     lastCounters: records.lastCounters,
   };

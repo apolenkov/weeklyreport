@@ -30,6 +30,14 @@ inside each page. The gap is visible in `e2e/sweep/catalog-sweep.spec.ts`,
   PASS. No raw or sealed continuation can authorize a full-preflight launch.
   Full/shard journal continuation remains explicitly NOT-PROVEN in this change
   and cannot reuse canary artifacts.
+- Make that continuation economical on a constrained Darwin host: keep one
+  headless Playwright worker, refresh the child/browser process at bounded
+  time, terminal-candidate, or reveal-action boundaries, and require a
+  parent-owned host checkpoint after every successful child, including the
+  terminal child. Treat absolute swap occupancy as canonical telemetry rather
+  than a standalone veto; fail closed on current pressure, reclaimable
+  capacity, compression, swap headroom, attempt-relative growth/activity, and
+  counter integrity.
 - Preserve the first terminal-candidate failure of a diagnostic capacity survey
   in a separately identified, bounded failure-frontier packet before attempting
   another opaque full traversal. The packet binds the exact source, plan,

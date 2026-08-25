@@ -188,15 +188,21 @@ describe("R188 parent genesis reduction", () => {
       expect(result.progress.receiptCount).toBe(1);
       expect(result.progress.chunkCount).toBe(1);
       expect(result.progress.grant).toBeUndefined();
-      await expect(
-        access(
-          path.join(
-            archiveRoot,
-            "continuation",
-            "PREFLIGHT_REVEAL_PARENT_PASS.attempt-fixture.0.json",
-          ),
-        ),
-      ).resolves.toBeUndefined();
+      const passPath = path.join(
+        archiveRoot,
+        "continuation",
+        "PREFLIGHT_REVEAL_PARENT_PASS.attempt-fixture.0.json",
+      );
+      await expect(access(passPath)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(canaryPath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+
+      if (result.publishTerminalArtifacts === undefined)
+        throw new Error("Complete parent result has no terminal publisher");
+      await result.publishTerminalArtifacts();
+
+      await expect(access(passPath)).resolves.toBeUndefined();
       await expect(access(canaryPath)).resolves.toBeUndefined();
     } finally {
       await Promise.all([

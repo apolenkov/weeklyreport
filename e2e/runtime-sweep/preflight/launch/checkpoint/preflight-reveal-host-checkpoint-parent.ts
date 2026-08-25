@@ -46,7 +46,7 @@ const hostCheckpointCompletionFor = (input: {
   version: PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
   run: hostCheckpointRunFor(input.context),
   terminalChildOrdinal: input.ordinal,
-  lastCheckpointSequence: input.ordinal,
+  lastCheckpointSequence: input.ordinal + 1,
   lastResponseDigest: input.progress.previousCheckpointDigest ?? null,
   receiptHead: input.progress.receiptHead,
   receiptCount: input.progress.receiptCount,
@@ -163,6 +163,39 @@ const requestHostCheckpointAfterChild = async (input: {
   return response;
 };
 
+const finishTerminalChild = async (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+  readonly ordinal: number;
+  readonly exitCode: number;
+  readonly publishTerminalArtifacts?: () => Promise<void>;
+}): Promise<number> => {
+  if (input.exitCode !== 0) return input.exitCode;
+  if (input.context.requestHostCheckpoint === undefined)
+    throw new Error(
+      "Successful terminal child requires a parent-only host checkpoint client",
+    );
+  if (input.publishTerminalArtifacts === undefined)
+    throw new Error("Successful terminal child has no terminal publisher");
+  const checkpoint = await requestHostCheckpointAfterChild(input);
+  const completedProgress = {
+    ...input.progress,
+    previousCheckpointDigest: checkpoint.responseDigest,
+    previousSampleSequence: checkpoint.sample.eventSequence,
+  };
+  await input.publishTerminalArtifacts();
+  const complete = input.context.requestHostCheckpoint.complete;
+  if (complete !== undefined)
+    await complete({
+      completion: hostCheckpointCompletionFor({
+        context: input.context,
+        progress: completedProgress,
+        ordinal: input.ordinal,
+      }),
+    });
+  return input.exitCode;
+};
+
 export const runChildUntilDone = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
@@ -183,21 +216,16 @@ export const runChildUntilDone = async (input: {
     progress: input.progress,
     ordinal: input.ordinal,
   });
-  if (result.done) {
-    const exitCode = result.exitCode ?? 0;
-    if (exitCode === 0) {
-      const complete = input.context.requestHostCheckpoint?.complete;
-      if (complete !== undefined)
-        await complete({
-          completion: hostCheckpointCompletionFor({
-            context: input.context,
-            progress: result.progress,
-            ordinal: input.ordinal,
-          }),
-        });
-    }
-    return exitCode;
-  }
+  if (result.done)
+    return finishTerminalChild({
+      context: input.context,
+      progress: result.progress,
+      ordinal: input.ordinal,
+      exitCode: result.exitCode ?? 0,
+      ...(result.publishTerminalArtifacts === undefined
+        ? {}
+        : { publishTerminalArtifacts: result.publishTerminalArtifacts }),
+    });
   if (input.context.requestHostCheckpoint === undefined)
     throw new Error(
       "Reveal continuation requires a parent-only host checkpoint client before launching the next child",

@@ -27,7 +27,7 @@ import {
   zeroDigest,
 } from "./preflight-reveal-continuation-parent-support.ts";
 
-export const completeParent = async (input: {
+export const completeParent = (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly chunk: RevealReceiptChunk;
@@ -38,7 +38,11 @@ export const completeParent = async (input: {
   readonly nextProgress: ParentProgress;
   readonly ordinal: number;
 }): Promise<
-  Readonly<{ readonly done: true; readonly progress: ParentProgress }>
+  Readonly<{
+    readonly done: true;
+    readonly progress: ParentProgress;
+    readonly publishTerminalArtifacts: () => Promise<void>;
+  }>
 > => {
   if (
     input.reduced.state.controls.length >
@@ -47,11 +51,7 @@ export const completeParent = async (input: {
     throw new Error(
       `R192 parent reducer controls exceed maxControlsPerSegment (${String(input.context.source.matrixLimits.maxControlsPerSegment)})`,
     );
-  for (const asset of reducerCheckpointAssetsFor(input.reduced.state))
-    await writeRevealContinuationAsset({
-      archiveRoot: input.context.archiveRoot,
-      asset,
-    });
+  const assets = reducerCheckpointAssetsFor(input.reduced.state);
   const pass = createParentPass({
     run: input.chunk.run,
     chain: chainFor({ progress: input.progress, chunk: input.chunk }),
@@ -65,13 +65,26 @@ export const completeParent = async (input: {
     "continuation",
     `PREFLIGHT_REVEAL_PARENT_PASS.${input.context.attemptId}.${String(input.ordinal)}.json`,
   );
-  await writeRevealParentPass({
-    archiveRoot: input.context.archiveRoot,
-    filePath: passPath,
-    pass,
+  return Promise.resolve({
+    done: true,
+    progress: input.nextProgress,
+    publishTerminalArtifacts: async () => {
+      for (const asset of assets)
+        await writeRevealContinuationAsset({
+          archiveRoot: input.context.archiveRoot,
+          asset,
+        });
+      await writeRevealParentPass({
+        archiveRoot: input.context.archiveRoot,
+        filePath: passPath,
+        pass,
+      });
+      await writeCompleteCanary({
+        context: input.context,
+        replay: input.reduced,
+      });
+    },
   });
-  await writeCompleteCanary({ context: input.context, replay: input.reduced });
-  return { done: true, progress: input.nextProgress };
 };
 
 const assertChunkBinding = (input: {
@@ -102,7 +115,11 @@ export const continueChild = async (input: {
   readonly chunk: RevealReceiptChunk;
   readonly ordinal: number;
 }): Promise<
-  Readonly<{ readonly done: boolean; readonly progress: ParentProgress }>
+  Readonly<{
+    readonly done: boolean;
+    readonly progress: ParentProgress;
+    readonly publishTerminalArtifacts?: () => Promise<void>;
+  }>
 > => {
   const { context, progress, chunk } = input;
   assertChunkRun({ context, chunk });

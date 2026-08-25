@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import * as path from "node:path";
 
 import { stableSerialize } from "../../support/ids.ts";
@@ -8,6 +9,10 @@ import {
   hydrateRevealContinuationAssets,
   readRevealContinuationArtifact,
 } from "../reveal/continuation/preflight-reveal-continuation-io.ts";
+import {
+  REVEAL_CONTINUATION_LIMITS,
+  revealContinuationLimitEnvironment,
+} from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
 import {
   reducerStateDigestFor,
   reducerStateSnapshotFor,
@@ -126,6 +131,38 @@ const prepareParentGrant = async (input: {
   });
 };
 
+const runBoundedContinuationChild = async (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+  readonly outputPath: string;
+}): Promise<number> => {
+  const { context, progress, outputPath } = input;
+  const limits = context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
+  try {
+    return await context.runPlaywright(
+      "canary",
+      undefined,
+      {
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT: outputPath,
+        ...continuationEnvironmentFor(progress),
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ID:
+          context.attemptId,
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT: String(
+          Date.now() + limits.softWallMs - limits.yieldReserveMs,
+        ),
+        ...revealContinuationLimitEnvironment(limits),
+      },
+      {
+        maxDurationMs: limits.hardWallMs,
+        terminationGraceMs: limits.killGraceMs,
+      },
+    );
+  } catch (error: unknown) {
+    await rm(outputPath, { force: true });
+    throw error;
+  }
+};
+
 export const runContinuationChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
@@ -135,6 +172,7 @@ export const runContinuationChild = async (input: {
     readonly done: boolean;
     readonly progress: ParentProgress;
     readonly exitCode?: number;
+    readonly publishTerminalArtifacts?: () => Promise<void>;
   }>
 > => {
   const { context, progress } = input;
@@ -148,14 +186,10 @@ export const runContinuationChild = async (input: {
     archiveRoot: context.archiveRoot,
     filePath: outputPath,
   });
-  const childCode = await context.runPlaywright("canary", undefined, {
-    RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT: outputPath,
-    ...continuationEnvironmentFor(progress),
-    RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ID: context.attemptId,
-    RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT: String(
-      Date.now() + context.chunkBudgetMs,
-    ),
-    RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHUNK_MS: context.chunkBudget,
+  const childCode = await runBoundedContinuationChild({
+    context,
+    progress,
+    outputPath,
   });
   await assertLivePreflightSourceIdentity({
     source: context.source,

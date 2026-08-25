@@ -7,6 +7,10 @@ import {
   resolvePreflightCanarySelection,
 } from "../canary/preflight-canary.ts";
 import { revealRouteFor } from "../execution/playwright-preflight-support.ts";
+import {
+  REVEAL_CONTINUATION_LIMITS,
+  revealContinuationLimitsFromEnvironment,
+} from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
 import type { RevealReducerInput } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import type { RevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
 import type { RevealDiscoveryState } from "../reveal/interaction/preflight-reveal-branches.ts";
@@ -17,10 +21,6 @@ import type { PreflightFullPaths } from "./preflight-launcher-support.ts";
 
 const AUTHORITY_KEY_BYTES = 32;
 const ATTEMPT_ID_BYTES = 16;
-const MINUTES_PER_CHUNK = 30;
-const MILLISECONDS_PER_MINUTE = 60_000;
-const MAX_CHUNK_BUDGET_MS = MINUTES_PER_CHUNK * MILLISECONDS_PER_MINUTE;
-
 export type ContinuationSelector = ReturnType<
   typeof preflightCanarySelectorFromEnvironment
 >;
@@ -29,6 +29,10 @@ export type RunPlaywright = (
   mode: PreflightLaunchMode,
   fullPreflight?: PreflightFullPaths,
   extraEnvironment?: NodeJS.ProcessEnv,
+  bounds?: Readonly<{
+    readonly maxDurationMs: number;
+    readonly terminationGraceMs: number;
+  }>,
 ) => Promise<number>;
 
 /** Parent-only mutable state; no cumulative receipt array crosses the child boundary. */
@@ -59,6 +63,7 @@ export type ParentContext = Readonly<{
   readonly attemptId: string;
   readonly chunkBudget: string;
   readonly chunkBudgetMs: number;
+  readonly continuationLimits?: typeof REVEAL_CONTINUATION_LIMITS;
   readonly requestHostCheckpoint?: RequestHostCheckpoint;
   readonly now?: () => number;
   readonly runPlaywright: RunPlaywright;
@@ -76,25 +81,6 @@ const assertFreshCanary = async (canaryPath: string): Promise<void> => {
   }
 };
 
-const chunkBudgetFor = (): Readonly<{
-  readonly value: string;
-  readonly milliseconds: number;
-}> => {
-  const value =
-    process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHUNK_MS?.trim() ??
-    String(MAX_CHUNK_BUDGET_MS);
-  const milliseconds = Number(value);
-  if (
-    !Number.isSafeInteger(milliseconds) ||
-    milliseconds <= 0 ||
-    milliseconds > MAX_CHUNK_BUDGET_MS
-  )
-    throw new Error(
-      "Reveal continuation chunk budget must be a positive integer no greater than 30 minutes",
-    );
-  return { value, milliseconds };
-};
-
 export const runPreflightRevealContinuation = async (input: {
   readonly source: SourceArtifact;
   readonly repoRoot: string;
@@ -107,7 +93,7 @@ export const runPreflightRevealContinuation = async (input: {
   readonly runPlaywright: RunPlaywright;
 }): Promise<number> => {
   await assertFreshCanary(input.canaryPath);
-  const budget = chunkBudgetFor();
+  const limits = revealContinuationLimitsFromEnvironment(process.env);
   const selection = resolvePreflightCanarySelection({
     source: input.source,
     selector: input.selector,
@@ -118,8 +104,9 @@ export const runPreflightRevealContinuation = async (input: {
     revealRoute: revealRouteFor(selection.route),
     authorityKey: randomBytes(AUTHORITY_KEY_BYTES).toString("hex"),
     attemptId: `reveal-attempt-${randomBytes(ATTEMPT_ID_BYTES).toString("hex")}`,
-    chunkBudget: budget.value,
-    chunkBudgetMs: budget.milliseconds,
+    chunkBudget: String(limits.softWallMs),
+    chunkBudgetMs: limits.softWallMs,
+    continuationLimits: limits,
   };
   const maxChildren = input.source.matrixLimits.maxRevealActions + 1;
   const progress: ParentProgress = {

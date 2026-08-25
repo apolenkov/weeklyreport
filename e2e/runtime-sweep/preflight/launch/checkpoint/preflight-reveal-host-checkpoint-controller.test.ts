@@ -68,6 +68,7 @@ const baseline = {
   recordCount: 60 as const,
   payloadBytes: 1,
   baselineReceiptDigest,
+  firstSnapshot: baselineSnapshot(),
   lastSnapshot: baselineSnapshot(),
   lastCounters: {
     pageins: 100,

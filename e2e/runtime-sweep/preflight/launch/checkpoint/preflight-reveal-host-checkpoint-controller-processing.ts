@@ -9,6 +9,7 @@ import {
   canonicalHostCheckpointBytes,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
+  isEmptyBootstrapCheckpointRequest,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import type { HostCheckpointControllerIdentity } from "./preflight-reveal-host-checkpoint-controller.ts";
 import {
@@ -71,16 +72,24 @@ const assertProgress = (
     throw new Error("Host checkpoint child ordinal drifted");
   if (request.previousCheckpointDigest !== state.previousCheckpointDigest)
     throw new Error("Host checkpoint predecessor digest drifted");
+  const isInitialEmptyBootstrap =
+    state.responseCount === 0 &&
+    state.previousReceiptCount === 0 &&
+    state.previousChunkCount === 0 &&
+    state.previousCompletedCandidateCount === 0 &&
+    isEmptyBootstrapCheckpointRequest(request);
   if (
-    request.receiptCount <= state.previousReceiptCount ||
-    request.chunkCount <= state.previousChunkCount ||
-    request.completedCandidateCount <= state.previousCompletedCandidateCount ||
-    request.chunkHead === null ||
-    (state.previousReceiptCount > 0 && request.receiptHead === null) ||
-    (state.previousReceiptHead !== null &&
-      request.receiptHead === state.previousReceiptHead) ||
-    (state.previousChunkHead !== null &&
-      request.chunkHead === state.previousChunkHead)
+    !isInitialEmptyBootstrap &&
+    (request.receiptCount <= state.previousReceiptCount ||
+      request.chunkCount <= state.previousChunkCount ||
+      request.completedCandidateCount <=
+        state.previousCompletedCandidateCount ||
+      request.chunkHead === null ||
+      (state.previousReceiptCount > 0 && request.receiptHead === null) ||
+      (state.previousReceiptHead !== null &&
+        request.receiptHead === state.previousReceiptHead) ||
+      (state.previousChunkHead !== null &&
+        request.chunkHead === state.previousChunkHead))
   )
     throw new Error(
       "Host checkpoint receipt or chunk progress did not advance",
@@ -103,7 +112,7 @@ const establishAttempt = (
     throw new Error("Host checkpoint attempt identity drifted");
 };
 
-const readAndEvaluateRuntimeSample = async (input: {
+export const readAndEvaluateRuntimeSample = async (input: {
   readonly request: HostCheckpointRequest;
   readonly state: ControllerState;
   readonly baseline: HealthyPostInfrastructureReceipt;
@@ -122,7 +131,7 @@ const readAndEvaluateRuntimeSample = async (input: {
   const evaluation = evaluateHostEnvelopeSample({
     snapshot,
     mode: "runtime",
-    baselineSwapUsedBytes: input.baseline.lastSnapshot.swapUsedBytes ?? 0,
+    baselineSwapUsedBytes: input.baseline.firstSnapshot.swapUsedBytes ?? 0,
     priorCounters: input.state.previousCounters,
     breachStreaks: input.state.breachStreaks,
   });

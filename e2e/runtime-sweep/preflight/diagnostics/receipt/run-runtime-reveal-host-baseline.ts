@@ -24,7 +24,7 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const collectBaseline = async (input: {
+export const collectRevealHostBaseline = async (input: {
   readonly receipt: Awaited<
     ReturnType<typeof createDiagnosticHostEnvelopeReceipt>
   >;
@@ -37,8 +37,13 @@ const collectBaseline = async (input: {
   const wait = input.wait ?? ((milliseconds: number) => delay(milliseconds));
   const state: {
     previousCounters: DiagnosticHostEnvelopeCounters | undefined;
+    firstSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
     previousSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
-  } = { previousCounters: undefined, previousSnapshot: undefined };
+  } = {
+    previousCounters: undefined,
+    firstSnapshot: undefined,
+    previousSnapshot: undefined,
+  };
   const indexes = Array.from(
     { length: HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples },
     (_, index) => index,
@@ -55,7 +60,8 @@ const collectBaseline = async (input: {
     const evaluation = evaluateHostEnvelopeSample({
       snapshot,
       mode: "baseline",
-      baselineSwapUsedBytes: snapshot.swapUsedBytes ?? 0,
+      baselineSwapUsedBytes:
+        state.firstSnapshot?.swapUsedBytes ?? snapshot.swapUsedBytes ?? 0,
       priorCounters: state.previousCounters,
       breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
     });
@@ -71,6 +77,7 @@ const collectBaseline = async (input: {
     )
       throw new Error(`Host baseline failed at sample ${String(index + 1)}`);
     state.previousCounters = evaluation.nextCounters;
+    state.firstSnapshot ??= snapshot;
     state.previousSnapshot = snapshot;
     if (index + 1 < HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples)
       await wait(HOST_ENVELOPE_THRESHOLDS.sampleIntervalMs);
@@ -97,7 +104,7 @@ export const runRuntimeRevealHostBaseline = async (): Promise<number> => {
     campaignId,
   });
   try {
-    await collectBaseline({ receipt });
+    await collectRevealHostBaseline({ receipt });
     const paths = await receipt.finalize({
       status: "healthy",
       reason: "post-infrastructure host checkpoint baseline passed",

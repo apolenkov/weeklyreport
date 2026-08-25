@@ -209,6 +209,10 @@ interface RunChunkInput {
   readonly expectedGrantDigest?: string;
   readonly now?: () => number;
   readonly deadlineAt?: number;
+  readonly cooperativeLimits?: Readonly<{
+    readonly maxTerminalCandidates: number;
+    readonly maxRevealActionDelta: number;
+  }>;
 }
 
 const harnessInputFor = (input: RunChunkInput) => ({
@@ -262,6 +266,9 @@ const discoverInputFor = (
   executionScope: "canary" as const,
   attemptId: "attempt-fixture",
   ...(input.deadlineAt === undefined ? {} : { deadlineAt: input.deadlineAt }),
+  ...(input.cooperativeLimits === undefined
+    ? {}
+    : { cooperativeLimits: input.cooperativeLimits }),
   ...(input.now === undefined ? {} : { now: input.now }),
 });
 

@@ -54,6 +54,7 @@ const createSampleSchema = ({
       availableBytes: nonNegativeIntegerSchema,
       pressureFreePercent: nonNegativeIntegerSchema,
       compressedBytes: nonNegativeIntegerSchema,
+      swapActivity: nonNegativeIntegerSchema,
     })
     .strict();
   return z
