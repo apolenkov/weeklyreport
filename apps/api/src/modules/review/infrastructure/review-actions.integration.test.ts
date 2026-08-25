@@ -42,7 +42,7 @@ describe("review-actions (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     admin = await prisma.user.create({
       data: {
@@ -57,7 +57,7 @@ describe("review-actions (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

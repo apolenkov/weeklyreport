@@ -27,19 +27,29 @@ import type {
   matrixExecutionSchema,
   matrixInapplicableSchema,
   matrixObservationSchema,
+  networkEvidencePolicySchema,
+  oracleDimensionSchema,
   oracleSchema,
   ownershipDensitySchema,
   permissionBoundarySchema,
+  resolverKeySchema,
+  resolverOutcomeIdentitySchema,
+  resolverOutcomeInapplicableSchema,
+  resolverOutcomeKindSchema,
   roleSchema,
   routeBindingSchema,
   routeBindingTargetSchema,
   routeDeclarationSchema,
+  routeKindSchema,
   SEED_COUNT_DIMENSIONS,
   seedCapabilitySchema,
   seedCountBoundSchema,
   seedProfileBindingSchema,
   seedProfileDefinitionSchema,
   seedProfileSchema,
+  sourceBoundResolverOutcomeSchema,
+  sourceCapacitySchema,
+  sourceTreeSchema,
   stableIdentifierSchema,
   stateAxesSchema,
   stateKindSchema,
@@ -55,6 +65,8 @@ export type SeedCountDimension = (typeof SEED_COUNT_DIMENSIONS)[number];
 export type SeedCountBound = z.infer<typeof seedCountBoundSchema>;
 export type SeedProfileDefinition = z.infer<typeof seedProfileDefinitionSchema>;
 export type SeedProfileBinding = z.infer<typeof seedProfileBindingSchema>;
+export type SourceCapacity = z.infer<typeof sourceCapacitySchema>;
+export type SourceTree = z.infer<typeof sourceTreeSchema>;
 export type LifecycleState = z.infer<typeof lifecycleStateSchema>;
 export type SubmissionState = z.infer<typeof submissionStateSchema>;
 export type OwnershipDensity = z.infer<typeof ownershipDensitySchema>;
@@ -83,17 +95,37 @@ export type MatrixExecution = z.infer<typeof matrixExecutionSchema>;
 export type MatrixExecutionInapplicable = z.infer<
   typeof matrixInapplicableSchema
 >;
+export type NetworkEvidencePolicy = z.infer<typeof networkEvidencePolicySchema>;
+export type OracleDimension = z.infer<typeof oracleDimensionSchema>;
 export type Oracle = z.infer<typeof oracleSchema>;
 export type EvidenceRef = z.infer<typeof evidenceRefSchema>;
 export type EvidenceBundle = z.infer<typeof evidenceBundleSchema>;
 export type DOMControl = z.infer<typeof domControlSchema>;
 export type RouteBindingTarget = z.infer<typeof routeBindingTargetSchema>;
+export type RouteKind = z.infer<typeof routeKindSchema>;
+export type ResolverKey = z.infer<typeof resolverKeySchema>;
+export type ResolverOutcomeKind = z.infer<typeof resolverOutcomeKindSchema>;
+export type ResolverOutcomeIdentity = z.infer<
+  typeof resolverOutcomeIdentitySchema
+>;
+export type SourceBoundResolverOutcome = z.infer<
+  typeof sourceBoundResolverOutcomeSchema
+>;
+export type ResolverOutcomeInapplicable = z.infer<
+  typeof resolverOutcomeInapplicableSchema
+>;
+
 export type RouteBinding = z.infer<typeof routeBindingSchema>;
 export interface RouteDeclarationInput {
   readonly role: Role;
   readonly catalogRoute: string;
   readonly resolvedRoute: string;
+  readonly landingRoute?: string | undefined;
+  readonly networkPolicy: NetworkEvidencePolicy | null;
   readonly allowsCurrentLive?: boolean | undefined;
+  readonly kind?: RouteKind | undefined;
+  readonly resolverKey?: ResolverKey | undefined;
+  readonly resolverOutcomes?: readonly ResolverOutcomeKind[] | undefined;
 }
 export type RouteDeclaration = z.infer<typeof routeDeclarationSchema>;
 export type Exclusion = z.infer<typeof exclusionSchema>;

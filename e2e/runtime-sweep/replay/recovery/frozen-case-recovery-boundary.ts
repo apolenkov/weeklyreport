@@ -6,8 +6,8 @@ import type {
 import type {
   ControlActionAttemptOutcome,
   ControlActionRecoveryOutcome,
-} from "../control-action-types.ts";
-import type { ControlActionRecoveryBoundary } from "../control-actions.ts";
+} from "../control-actions/control-action-types.ts";
+import type { ControlActionRecoveryBoundary } from "../control-actions/control-actions.ts";
 
 export type FrozenRuntimeEvidenceWindow = Readonly<{
   readonly startedAt: string;

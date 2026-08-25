@@ -1,8 +1,9 @@
 # Repo-excellence roadmap (DEFERRED / DRAFT)
 
 Parked planning artifacts from the 2026-06-22 "exemplary repository"
-exploration. **None of this is active work** — nothing here has been
-scheduled, approved, or run. Reopen only by an explicit dedicated command.
+exploration. The aspirational roadmap remains deferred: it is not an active
+implementation campaign. The owner-facing CR-001 projection below is a status
+record and does not replace the OpenSpec source of truth.
 
 - `north-star-roadmap.html` — aspirational epic roadmap (HTML + Mermaid).
 - `cr001-current-status.html` — owner-facing current CR-001 status snapshot;

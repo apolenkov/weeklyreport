@@ -8,16 +8,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PeriodStatus, type Prisma, PrismaClient, Role } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../guards/_destructive-guard.js";
 import { isEntrypoint } from "../guards/_entrypoint.js";
 import { requireEnv } from "../guards/_require-env.js";
 import { seedBaseline } from "./wipe-manual-uat.seed-baseline.js";
 import { seedActivePeriod } from "./wipe-manual-uat.seed-period.js";
 import { wipeAll } from "./wipe-manual-uat.wipe.js";
-
-const pool = new pg.Pool({ connectionString: requireEnv("DATABASE_URL") });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 // A local FLUSHDB answers in milliseconds; this only bounds a hung socket.
 const REDIS_FLUSH_TIMEOUT_MS = 5000;
@@ -43,6 +39,7 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
 export async function flushRedisDb(): Promise<
   { flushed: true } | { flushed: false; reason: string }
 > {
+  assertE2eRuntimeDestructive("wipe-manual-uat-flush-redis");
   if (process.env.MANUAL_UAT_WIPE_FLUSH_REDIS === "false") {
     return { flushed: false, reason: "disabled-by-env" };
   }
@@ -152,30 +149,33 @@ export function assertRedisFlushOutcome(
   }
 }
 
-async function main() {
-  assertNonProdDestructive("wipe-manual-uat");
+export async function runWipeManualUat(): Promise<void> {
+  assertE2eRuntimeDestructive("wipe-manual-uat");
+  const databaseUrl = requireEnv("DATABASE_URL");
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-  const result = await prisma.$transaction(wipeAndReseed, {
-    timeout: WIPE_TX_TIMEOUT_MS,
-    maxWait: WIPE_TX_MAX_WAIT_MS,
-  });
+  try {
+    const result = await prisma.$transaction(wipeAndReseed, {
+      timeout: WIPE_TX_TIMEOUT_MS,
+      maxWait: WIPE_TX_MAX_WAIT_MS,
+    });
 
-  const redis = await flushRedisDb();
-  assertRedisFlushOutcome(redis);
+    const redis = await flushRedisDb();
+    assertRedisFlushOutcome(redis);
 
-  console.log(
-    `[wipe-manual-uat] Done: ${JSON.stringify({ ...result, redis })}`,
-  );
+    console.log(
+      `[wipe-manual-uat] Done: ${JSON.stringify({ ...result, redis })}`,
+    );
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+  }
 }
 
 if (isEntrypoint(import.meta.url)) {
-  void main()
-    .catch((error: unknown) => {
-      console.error("[wipe-manual-uat] Failed:", error);
-      process.exitCode = 1;
-    })
-    .finally(async () => {
-      await prisma.$disconnect();
-      await pool.end();
-    });
+  void runWipeManualUat().catch((error: unknown) => {
+    console.error("[wipe-manual-uat] Failed:", error);
+    process.exitCode = 1;
+  });
 }

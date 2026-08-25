@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { assertNonProdDestructive } from "../../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { isEntrypoint } from "../../guards/_entrypoint.js";
 import {
   assertManifestLadder,
@@ -11,7 +11,7 @@ import { runSeedProfile } from "./seed-profile-runner.js";
 export function main(argv: readonly string[] = process.argv): void {
   const profile = parseSeedProfile(argv[2]);
   assertManifestLadder();
-  assertNonProdDestructive(`seed-profile:${profile}`);
+  assertE2eRuntimeDestructive(`seed-profile:${profile}`);
   runSeedProfile(profile);
 }
 

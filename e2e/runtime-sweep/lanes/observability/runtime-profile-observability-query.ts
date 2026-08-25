@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { RuntimeObservabilityConfig } from "../runtime-observability-readiness.ts";
+import type { RuntimeObservabilityConfig } from "./runtime-observability-readiness.ts";
 import {
   countKey,
   discrepanciesFor,

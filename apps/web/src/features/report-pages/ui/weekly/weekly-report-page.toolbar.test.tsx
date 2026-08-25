@@ -192,6 +192,11 @@ describe("WeeklyReportPage — shared period toolbar", () => {
     expect(heading.closest("[data-layout-key='report-page']")).not.toBeNull();
     // Document actions live on the header line, NOT inside the toolbar.
     const docGroup = screen.getByRole("group", { name: "Document actions" });
+    expect(heading.closest("header")).toHaveClass(
+      "lg:grid",
+      "lg:grid-cols-[minmax(0,1fr)_auto]",
+    );
+    expect(docGroup).toHaveClass("justify-end");
     expect(
       within(toolbar).queryByRole("group", { name: "Document actions" }),
     ).toBeNull();

@@ -161,7 +161,7 @@ for shell sections, and `p-5`/`p-6` (20/24px) for report/card surfaces.
 
 ### Page geometry
 
-- The shared navigation and primary app frame use `max-w-6xl` (72rem / 1152px)
+- The shared navigation and primary app frame use `max-w-7xl` (80rem / 1280px)
   with `px-4` (16px), `sm:px-6` (24px), and `lg:px-8` (32px).
 - Report shells use vertical `space-y-4`; page headers wrap with `gap-4` and
   document actions stay in a labelled `DocumentActionGroup`.
@@ -173,13 +173,19 @@ for shell sections, and `p-5`/`p-6` (20/24px) for report/card surfaces.
 - The default toolbar control height is `--toolbar-control-h: 2rem` (32px).
   Under `width < 48rem` (768px), it becomes `--touch-target-min: 44px`.
   Primary mobile controls explicitly use the 44px minimum.
+- Dashboard queue actions use two stable component tokens:
+  `--dashboard-summary-action-w: 5.5rem` for each summary-row action track and
+  `--dashboard-detail-action-w: 9.25rem` for each expanded-row action cell.
+  Both tiers use `--dashboard-action-h: var(--touch-target-min)` so labels,
+  icons, pending copy, and disclosure state never change the outer geometry.
 - Standard Tailwind breakpoints are used in components: `sm` 640px, `md`
   768px, `lg` 1024px, and `xl` 1280px. The CSS media query for toolbar density
   is explicitly below 48rem.
-- Presentation targets a 1088 × 680 desktop canvas, with a 900px minimum width
-  and a 680px minimum height. The canvas and its content-driven rows grow
-  vertically when needed, so the 16:10 target never clips complete record text.
-  Slide canvases use 20px padding.
+- Presentation uses the full available desktop report-frame width, with a 900px
+  minimum width and a tokenized 360px minimum height. The canvas and its
+  content-driven rows grow vertically when needed, so compact decks do not
+  reserve poster-like blank space or clip complete record text. Slide canvases
+  use 20px padding.
 - The body has a layered white-to-transparent wash over a 32px square grid.
   `operational-paper-shell` adds a white vertical wash, 10rem green vertical
   rhythm, 2rem paper lines, and a quiet gold wash.
@@ -210,7 +216,9 @@ The state contracts below describe what the current code already provides.
   pointer guard, decorative SVGs hidden from the accessibility tree, and 44px
   `touch`/mobile sizing.
 - **Motion/layout**: compact rounded-md package buttons; report actions use
-  rounded-pill clusters and flex-wrap rows.
+  rounded-pill clusters and flex-wrap rows. Within a Dashboard queue tier,
+  controls fill the complete tokenized action cell and share one height;
+  content length must not shrink or enlarge an individual control.
 
 ### Card and surface primitives
 

@@ -1,9 +1,11 @@
 "use client";
 
 import type { WeeklyReportGetResponse } from "@customreport/shared";
+import { ComingSoonControl } from "@customreport/ui/components/coming-soon-control";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useContext, useMemo } from "react";
+import { LayoutTemplate } from "lucide-react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
@@ -28,7 +30,11 @@ import {
   PeriodNavigator,
 } from "../../../period";
 import type { ReportPeriod } from "../../../report-sections";
-import { HeadSlidesClient } from "../../../slides";
+import {
+  HeadSlidesClient,
+  type SlideDensity,
+  SlideDensityControl,
+} from "../../../slides";
 import { WeeklyReportPage } from "../weekly/weekly-report-page";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
@@ -68,6 +74,53 @@ function HeadDepartmentLabel() {
 
 const HEAD_DEPARTMENT_LABEL = <HeadDepartmentLabel />;
 
+function HeadContextTrailing({
+  urlState,
+  reportId,
+  mode,
+  density,
+  onDensityChange,
+}: {
+  readonly urlState: ReportShellUrlState;
+  readonly reportId: string;
+  readonly mode: HeadReportShellProps["mode"];
+  readonly density: SlideDensity;
+  readonly onDensityChange: (density: SlideDensity) => void;
+}) {
+  const { buildQuery, scope, setScope } = urlState;
+  return (
+    <div
+      className="flex min-w-0 flex-wrap items-center gap-1.5"
+      data-testid="head-context-trailing"
+    >
+      <AgentReviewComingSoon compact />
+      <ScopeToggle
+        value={scope}
+        onChange={setScope}
+        allowedScopes={["product", "lead"]}
+      />
+      <ViewModeToggle
+        editHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
+        slidesHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
+        mode={mode === "slides" ? "slides" : "edit"}
+        desktopLabels
+      />
+      {mode === "slides" ? (
+        <>
+          <ComingSoonControl
+            icon={LayoutTemplate}
+            label="Slide templates"
+            ariaLabel="Slide templates are coming soon"
+            testId="slide-templates-coming-soon"
+            compact
+          />
+          <SlideDensityControl value={density} onChange={onDensityChange} />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 // Toolbar hosts the single Agent-review placeholder in both modes.
 function HeadContextControls({
   periods,
@@ -76,6 +129,8 @@ function HeadContextControls({
   urlState,
   historyError,
   historyLoading,
+  density,
+  onDensityChange,
 }: {
   readonly periods: readonly ReportPeriod[];
   readonly reportId: string;
@@ -83,9 +138,10 @@ function HeadContextControls({
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
   readonly historyLoading: boolean;
+  readonly density: SlideDensity;
+  readonly onDensityChange: (density: SlideDensity) => void;
 }) {
-  const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
-    urlState;
+  const { buildQuery, includeArchive, setIncludeArchive } = urlState;
   const urlBuilder = useCallback(
     (periodId: string) =>
       `/head/report/${encodeURIComponent(periodId)}${buildQuery({})}`,
@@ -109,26 +165,13 @@ function HeadContextControls({
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
-      <AgentReviewComingSoon compact />
-      <ScopeToggle
-        value={scope}
-        onChange={setScope}
-        allowedScopes={["product", "lead"]}
+      <HeadContextTrailing
+        urlState={urlState}
+        reportId={reportId}
+        mode={mode}
+        density={density}
+        onDensityChange={onDensityChange}
       />
-      <ViewModeToggle
-        editHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
-        slidesHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
-        mode={mode === "slides" ? "slides" : "edit"}
-      />
-    </>
-  );
-}
-
-function HeadDocumentActionsSkeleton() {
-  return (
-    <>
-      <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
-      <Skeleton className="h-[var(--toolbar-control-h)] w-36 rounded-[var(--radius-pill)]" />
     </>
   );
 }
@@ -148,20 +191,21 @@ function SlidesModeHeader({
     <header
       data-layout-key="weekly-report-header"
       data-layout-stability="position-size"
-      className="flex min-h-36 flex-wrap items-center justify-between gap-4 sm:min-h-0"
+      className="flex min-h-36 flex-wrap items-center justify-between gap-4 sm:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto]"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div className="min-w-0">
-          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-            Status Report
-          </h1>
-        </div>
+        <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+          Status Report
+        </h1>
         {headerContextLabel}
       </div>
       {/* Header hosts document actions; deck already covers slide nav. */}
       <DocumentActionGroup>
         {isLoading ? (
-          <HeadDocumentActionsSkeleton />
+          <>
+            <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+            <Skeleton className="h-[var(--toolbar-control-h)] w-36 rounded-[var(--radius-pill)]" />
+          </>
         ) : (
           <>
             {exportPdf}
@@ -173,21 +217,10 @@ function SlidesModeHeader({
   );
 }
 
-// Declared data-loading seam — not the hook's raw return type.
-interface HeadPeriodData {
-  readonly periods: readonly ReportPeriod[];
-  readonly displayed: WeeklyReportGetResponse | undefined;
-  readonly historyError: boolean;
-  readonly isLoading: boolean;
-}
-
 // History omits the active week, so the displayed and active periods are fetched
 // separately and prepended. Both use WeeklyReportPage's key, so RQ dedupes; the
 // active fetch carries no reportId so the navigator can always return to it.
-function useHeadPeriodData(
-  reportId: string,
-  includeArchive: boolean,
-): HeadPeriodData {
+function useHeadPeriodData(reportId: string, includeArchive: boolean) {
   const trpc = useTRPC();
   const historyQ = useQuery(
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
@@ -217,14 +250,15 @@ function useHeadPeriodData(
 // `undefined` (not a null-rendering element) when there is no period, so the
 // action groups receive no child at all.
 function renderExportPdf(
-  displayed: HeadPeriodData["displayed"],
+  displayed: WeeklyReportGetResponse | undefined,
 ): React.ReactNode {
-  return displayed && displayed.status !== "no-period" ? (
+  if (!displayed || displayed.status === "no-period") return undefined;
+  return (
     <ExportPdfButton
       reportId={displayed.reportId}
       periodStatus={displayed.periodStatus}
     />
-  ) : undefined;
+  );
 }
 
 export function HeadReportShell({
@@ -234,6 +268,7 @@ export function HeadReportShell({
 }: HeadReportShellProps) {
   // Scope + archive filter in the URL so refresh/shared links restore them.
   const urlState = useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
+  const [density, setDensity] = useState<SlideDensity>("document");
   const { periods, displayed, historyError, isLoading } = useHeadPeriodData(
     reportId,
     urlState.includeArchive,
@@ -249,6 +284,8 @@ export function HeadReportShell({
       urlState={urlState}
       historyError={historyError}
       historyLoading={isLoading}
+      density={density}
+      onDensityChange={setDensity}
     />
   );
 
@@ -271,7 +308,12 @@ export function HeadReportShell({
             contextControls={contextControls}
             layoutKey="report-context-toolbar"
           />
-          <HeadSlidesClient reportId={reportId} scope={urlState.scope} />
+          <HeadSlidesClient
+            reportId={reportId}
+            scope={urlState.scope}
+            density={density}
+            onDensityChange={setDensity}
+          />
         </>
       ) : (
         <div className="min-w-0">

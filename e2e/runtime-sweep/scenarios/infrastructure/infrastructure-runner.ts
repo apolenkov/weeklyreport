@@ -10,13 +10,13 @@ import {
   captureSpecializedPagePhase,
   initialSpecializedNavigation,
   type SpecializedRuntimeEventWindow,
-} from "../../matrix/specialized-case-emission.ts";
-import { inventoryDom } from "../../replay/dom-inventory.ts";
-import { writeFrozenCaseArtifact } from "../../replay/frozen-case-artifacts.ts";
+} from "../../matrix/specialized/specialized-case-emission.ts";
+import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
+import { writeFrozenCaseArtifact } from "../../replay/evidence/frozen-case-artifacts.ts";
 import {
   captureFrozenCasePhases,
   type FrozenCaseReplayResult,
-} from "../../replay/frozen-case-evidence.ts";
+} from "../../replay/evidence/frozen-case-evidence.ts";
 import {
   coverageCellSchema,
   type EvidenceBundle,

@@ -11,9 +11,13 @@ import { ViewModeToggle } from "../../../../../shared/ui/report-shell/view-mode-
 import { PeriodNavigator } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
-import { SlideFullscreenButton } from "../../../../slides";
+import {
+  type SlideDensity,
+  SlideDensityControl,
+  SlideFullscreenButton,
+} from "../../../../slides";
 import { CollapseIcon } from "./lead-form-icons";
-import { RecordVisibilityToggle } from "./record-visibility-toggle";
+import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;
 type LeadSubmittedAt = ComponentProps<
@@ -30,6 +34,8 @@ interface LeadFormToolbarControlsProps {
   readonly isForeignSlidesDeck: boolean;
   readonly isSlidesMode: boolean;
   readonly targetReportId: string | null;
+  readonly density: SlideDensity;
+  readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: SlidesFullscreen;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
   readonly groupExpanded: boolean;
@@ -46,6 +52,8 @@ export function LeadFormToolbarControls({
   isForeignSlidesDeck,
   isSlidesMode,
   targetReportId,
+  density,
+  onDensityChange,
   slidesFullscreen,
   fullscreenToggleRef,
   groupExpanded,
@@ -70,10 +78,13 @@ export function LeadFormToolbarControls({
             isForeignSlidesDeck={isForeignSlidesDeck}
             isSlidesMode={isSlidesMode}
             targetReportId={targetReportId}
+            desktopLabels
           />
           <ToolbarTrailingSlot
             viewModel={viewModel}
             isSlidesMode={isSlidesMode}
+            density={density}
+            onDensityChange={onDensityChange}
             slidesFullscreen={slidesFullscreen}
             fullscreenToggleRef={fullscreenToggleRef}
             groupExpanded={groupExpanded}
@@ -130,6 +141,7 @@ interface ToolbarViewClusterProps {
   readonly isForeignSlidesDeck: boolean;
   readonly isSlidesMode: boolean;
   readonly targetReportId: string | null;
+  readonly desktopLabels: boolean;
 }
 
 function ToolbarViewCluster({
@@ -138,6 +150,7 @@ function ToolbarViewCluster({
   isForeignSlidesDeck,
   isSlidesMode,
   targetReportId,
+  desktopLabels,
 }: ToolbarViewClusterProps) {
   const editHref = targetReportId
     ? `/lead/report/${encodeURIComponent(targetReportId)}`
@@ -157,6 +170,7 @@ function ToolbarViewCluster({
         mode={isSlidesMode ? "slides" : "edit"}
         editHref={editHref}
         slidesHref={targetReportId ? `${editHref}?mode=slides` : "/lead/report"}
+        desktopLabels={desktopLabels}
       />
     </>
   );
@@ -165,19 +179,23 @@ function ToolbarViewCluster({
 interface ToolbarTrailingSlotProps {
   readonly viewModel: LeadFormLoadedViewModel;
   readonly isSlidesMode: boolean;
+  readonly density: SlideDensity;
+  readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: SlidesFullscreen;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
   readonly groupExpanded: boolean;
   readonly setGroupExpanded: (update: (prev: boolean) => boolean) => void;
 }
 
-// Fixed-width trailing slot so the row never shifts across modes. In edit mode
-// it holds collapse/expand-all: the slot stays reserved and merely disabled
-// when the report has nothing to collapse, so adding or removing sections
-// in-session never shifts the row.
+// The trailing cluster keeps density beside fullscreen in slides mode. In edit
+// mode it holds collapse/expand-all: the slot stays reserved and merely
+// disabled when the report has nothing to collapse, so adding or removing
+// sections in-session never shifts the row.
 function ToolbarTrailingSlot({
   viewModel,
   isSlidesMode,
+  density,
+  onDensityChange,
   slidesFullscreen,
   fullscreenToggleRef,
   groupExpanded,
@@ -185,11 +203,14 @@ function ToolbarTrailingSlot({
 }: ToolbarTrailingSlotProps) {
   if (isSlidesMode) {
     return (
-      <SlideFullscreenButton
-        isFullscreen={slidesFullscreen.isFullscreen}
-        onToggle={slidesFullscreen.toggle}
-        buttonRef={fullscreenToggleRef}
-      />
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <SlideDensityControl value={density} onChange={onDensityChange} />
+        <SlideFullscreenButton
+          isFullscreen={slidesFullscreen.isFullscreen}
+          onToggle={slidesFullscreen.toggle}
+          buttonRef={fullscreenToggleRef}
+        />
+      </div>
     );
   }
 

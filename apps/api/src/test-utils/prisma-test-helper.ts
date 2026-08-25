@@ -2,32 +2,31 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import {
+  assertE2eRuntimeDestructiveTarget,
+  type DestructiveTargetEnv,
+  sameLocalPostgresDatabaseTarget,
+} from "../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../lib/env.js";
+
+const SCRIPT_NAME = "api-integration-test";
 
 let pool: pg.Pool | null = null;
 let prismaInstance: PrismaClient | null = null;
+let prismaDatabaseUrl: string | null = null;
 
-// Require `_test` DB name (stricter than _destructive-guard's localhost trust).
-// Guard is not imported: outside rootDir + incompatible contract. See
-// openspec/specs/destructive-db-guard/spec.md.
-export function assertTestDatabaseUrl(url: string): void {
-  // WHATWG URL so userinfo never leaks; path-less/unparseable → "" fails `_test`.
-  const dbName = extractDatabaseName(url);
-  if (!dbName.endsWith("_test")) {
+export function assertTestDatabaseUrl(
+  url: string,
+  environment: DestructiveTargetEnv = process.env,
+): void {
+  assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, url, environment);
+  if (
+    environment.DATABASE_URL !== undefined &&
+    sameLocalPostgresDatabaseTarget(SCRIPT_NAME, url, environment.DATABASE_URL)
+  ) {
     throw new Error(
-      `cleanDatabase refused: DATABASE_URL points at "${dbName}", which does not end with "_test". ` +
-        `Point DATABASE_URL at the dedicated integration-test database (e.g. customreport_test).`,
+      "[api-integration-test] E2E_DATABASE_URL must differ from DATABASE_URL.",
     );
-  }
-}
-
-// "" for path-less/unparseable — never a credentials fragment.
-function extractDatabaseName(url: string): string {
-  try {
-    const { pathname } = new URL(url);
-    return (pathname.split("/").pop() ?? "").toLowerCase();
-  } catch {
-    return "";
   }
 }
 
@@ -64,21 +63,36 @@ async function discoverTables(prisma: PrismaClient): Promise<string> {
 }
 
 export function createTestPrisma(): PrismaClient {
+  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+  assertTestDatabaseUrl(databaseUrl);
+  if (
+    prismaInstance !== null &&
+    (prismaDatabaseUrl === null ||
+      !sameLocalPostgresDatabaseTarget(
+        SCRIPT_NAME,
+        prismaDatabaseUrl,
+        databaseUrl,
+      ))
+  ) {
+    throw new Error(
+      "createTestPrisma: the existing client belongs to a different E2E database target",
+    );
+  }
   if (!prismaInstance) {
     pool = new pg.Pool({
-      connectionString: requireEnv(process.env, "DATABASE_URL"),
+      connectionString: databaseUrl,
     });
     const adapter = new PrismaPg(pool);
     prismaInstance = new PrismaClient({ adapter });
+    prismaDatabaseUrl = databaseUrl;
   }
   return prismaInstance;
 }
 
 // TRUNCATE ACCESS EXCLUSIVE is safe only with --fileParallelism=false;
 // concurrent holders (dev API / Studio on _test) hang beforeEach silently.
-export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
-  assertTestDatabaseUrl(requireEnv(process.env, "DATABASE_URL"));
-
+export async function cleanDatabase(): Promise<void> {
+  const prisma = createTestPrisma();
   const list = await discoverTables(prisma);
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`,
@@ -86,13 +100,16 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
 }
 
 export async function disconnectTestPrisma(): Promise<void> {
-  if (prismaInstance) {
-    await prismaInstance.$disconnect();
-    prismaInstance = null;
-  }
-  if (pool) {
-    await pool.end();
-    pool = null;
+  const activePrisma = prismaInstance;
+  const activePool = pool;
+  prismaInstance = null;
+  pool = null;
+  prismaDatabaseUrl = null;
+  memoizedTableList = null;
+  try {
+    if (activePrisma) await activePrisma.$disconnect();
+  } finally {
+    if (activePool) await activePool.end();
   }
 }
 

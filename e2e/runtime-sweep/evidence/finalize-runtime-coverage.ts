@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { assertFrozenMatrixCoverage } from "../matrix/matrix-coverage.ts";
+import { assertFrozenMatrixCoverage } from "../matrix/coverage-model/matrix-coverage.ts";
 import {
   type FrozenMatrix,
   parseFrozenMatrix,

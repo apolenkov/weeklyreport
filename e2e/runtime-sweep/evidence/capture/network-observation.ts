@@ -15,12 +15,6 @@ import { isExpectedObservabilityAbort } from "../expected-observability-abort.ts
 type Observation = z.infer<typeof evidenceObservationSchema>;
 
 const OK_STATUS_LIMIT = 400;
-const DEFAULT_NETWORK_POLICY = {
-  maxRepeatedApiRequests: 3,
-  retryStormThreshold: 5,
-  slowRequestThresholdMs: 5000,
-  cacheExpectedOperations: [],
-} as const;
 
 const faultUrlMatches = (url: string, expected: ExpectedFault): boolean =>
   url.includes(`/trpc/${expected.operation}`);
@@ -63,7 +57,7 @@ const apiOperationKey = (
 
 const networkFailures = (input: EvidenceCaptureInput) => {
   const responses = input.responses ?? [];
-  const policy = input.networkPolicy ?? DEFAULT_NETWORK_POLICY;
+  const policy = input.networkPolicy;
   const expectedObservabilityAbortCount = input.requestFailures.filter(
     (failure) =>
       isExpectedObservabilityAbort(failure, responses, input.bugsinkDsn),

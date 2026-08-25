@@ -1,11 +1,13 @@
 "use client";
 
+import type { AdminActionLogEvent } from "@customreport/shared";
 import { useMemo, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { useCursorPagination } from "../client";
-import { ActionLogRow, type ActionLogRowData } from "./action-log-row";
+import { matchesActionLogSearch } from "../model/action-log-model";
+import { ActionLogRow } from "./action-log-row";
 import { ActionLogSkeleton } from "./action-log-skeleton";
 
 const PAGE_SIZE = 20;
@@ -16,12 +18,13 @@ const COLUMN_HEADERS = [
   "Procedure",
   "Status",
   "Reference",
+  "Details",
 ] as const;
 
 function ActionLogTable({
   rows,
 }: {
-  readonly rows: readonly ActionLogRowData[];
+  readonly rows: readonly AdminActionLogEvent[];
 }) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[var(--shadow-card-resting)]">
@@ -98,7 +101,7 @@ function LoadMoreButton({
 
 function useActionLogPagination() {
   const trpc = useTRPC();
-  return useCursorPagination<ActionLogRowData>(
+  return useCursorPagination<AdminActionLogEvent>(
     (input) =>
       trpc.admin.actionLog.list.infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
@@ -111,27 +114,13 @@ function useActionLogPagination() {
   );
 }
 
-// Search is a substring match over every displayed column of a loaded row.
-function matchesNeedle(row: ActionLogRowData, needle: string): boolean {
-  return [
-    row.userId,
-    row.role ?? "",
-    row.procedure,
-    row.targetId ?? "",
-    row.status,
-    row.reason ?? "",
-    row.correlationId,
-  ]
-    .join(" ")
-    .toLowerCase()
-    .includes(needle);
-}
-
-function useActionLogRows(rows: readonly ActionLogRowData[], search: string) {
+function useActionLogRows(
+  rows: readonly AdminActionLogEvent[],
+  search: string,
+) {
   return useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((row) => matchesNeedle(row, needle));
+    if (!search.trim()) return rows;
+    return rows.filter((row) => matchesActionLogSearch(row, search));
   }, [rows, search]);
 }
 

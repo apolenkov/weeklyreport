@@ -14,6 +14,7 @@ import { DecisionCard } from "./decision-card";
 
 const BASE_DECISION: DecisionEntry = {
   id: "d1",
+  stableId: "88888888-8888-4888-8888-888888888888",
   productId: "p1",
   productName: "CRM",
   text: "Adopt new framework",
@@ -51,6 +52,43 @@ afterEach(() => {
 });
 
 describe("DecisionCard deadline chip", () => {
+  it("exposes durable record lineage without changing the edit accessible name", () => {
+    render(
+      <DecisionCard
+        decision={BASE_DECISION}
+        readOnly={false}
+        publishedLocked={false}
+        onEdit={noop}
+        onDelete={noop}
+      />,
+    );
+
+    const edit = screen.getByRole("button", { name: "Edit decision" });
+    expect(edit).toHaveAttribute("aria-label", "Edit decision");
+    expect(edit).toHaveAttribute(
+      "data-record-stable-id",
+      "88888888-8888-4888-8888-888888888888",
+    );
+    expect(BASE_DECISION.id).not.toBe(BASE_DECISION.stableId);
+  });
+
+  it("omits record lineage for a new decision that has not been persisted", () => {
+    const { stableId: _stableId, ...newDecision } = BASE_DECISION;
+    render(
+      <DecisionCard
+        decision={newDecision}
+        readOnly={false}
+        publishedLocked={false}
+        onEdit={noop}
+        onDelete={noop}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Edit decision" }),
+    ).not.toHaveAttribute("data-record-stable-id");
+  });
+
   it.each(["UTC", "America/New_York", "Asia/Tokyo", "Pacific/Kiritimati"])(
     "renders the stored UTC day in %s",
     (timeZone) => {

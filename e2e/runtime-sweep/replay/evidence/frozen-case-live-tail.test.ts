@@ -1,12 +1,12 @@
 import { expect, test, vi } from "vitest";
 
 import { evidenceBundleSchema, type Oracle } from "../../source/contracts.ts";
-import { replayFrozenCase } from "../frozen-case-evidence.ts";
-import type { FrozenCaseLiveRuntime } from "../frozen-case-live-actions.ts";
+import type { FrozenCaseLiveRuntime } from "../frozen-case/live/frozen-case-live-actions.ts";
 import { matrixCase } from "../test-fixtures/frozen-case-live-runner.test-fixture.ts";
+import { replayFrozenCase } from "./frozen-case-evidence.ts";
 import { attachLateRuntimeEvents } from "./frozen-case-live-tail.ts";
 
-vi.mock("../frozen-case-artifacts.ts", () => ({
+vi.mock("./frozen-case-artifacts.ts", () => ({
   writeFrozenCaseArtifact: vi.fn(() =>
     Promise.resolve({
       artifactId: "late-runtime-events",
@@ -47,6 +47,7 @@ const ORACLE: Oracle = {
   function: { required: true, expectation: "state matches" },
   accessibility: { required: true, expectation: "controls are usable" },
   visual: { required: true, expectation: "geometry is stable" },
+  runtime: { required: true, expectation: "runtime telemetry is clean" },
 };
 const BUGSINK_DSN = "http://runtime@bugsink.test/1";
 const runtime = {
@@ -108,6 +109,24 @@ test("turns a delayed after-phase transport failure into a non-pass cell", async
   expect(result.issues).toContain(
     `${matrixCase.caseId} after observation network failed: Late network event detected after the after-phase snapshot`,
   );
+});
+
+test("turns a frozen action-surface drift into an owning-cell failure", () => {
+  const issue = "frozen after action surface has unknown controls: button:new";
+  const result = replayFrozenCase(matrixCase, {
+    caseId: matrixCase.caseId,
+    oracle: ORACLE,
+    controls: [],
+    evidence: {
+      before: cleanBundle(),
+      action: cleanBundle(),
+      after: cleanBundle(),
+    },
+    runtimeIssues: [issue],
+  });
+
+  expect(result.cell.verdict).toBe("fail");
+  expect(result.issues).toContain(issue);
 });
 
 test("keeps an exact late Sentry abort with a successful response as passing raw evidence", async () => {

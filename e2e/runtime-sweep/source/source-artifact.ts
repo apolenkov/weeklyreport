@@ -6,7 +6,7 @@ import type { CampaignMatrixPlan } from "../matrix/campaign-matrix.ts";
 import {
   assertSpecializedDeclarations,
   SPECIALIZED_DECLARATION_COUNT,
-} from "../matrix/specialized-declarations.ts";
+} from "../matrix/specialized/specialized-declarations.ts";
 import { sha256Hex, stableSerialize } from "../support/ids.ts";
 import {
   actionOperationSchema,
@@ -16,9 +16,11 @@ import {
   faultModeSchema,
   matrixAxesSchema,
   matrixConstraintIdSchema,
+  resolverOutcomeKindSchema,
   roleSchema,
   seedProfileSchema,
   sha256DigestSchema,
+  sourceCapacitySchema,
   stableIdentifierSchema,
 } from "./contracts.ts";
 import { freezeDeep, writeManifestFile } from "./manifest-source.ts";
@@ -87,9 +89,63 @@ const specializedObservationDeclarationSchema = specializedDeclarationBaseSchema
   })
   .strict();
 
+const resolverSpecializedDeclarationSchema = z
+  .object({
+    declarationId: z.enum(["viewer-status-empty", "viewer-status-query-error"]),
+    kind: z.literal("resolver"),
+    outcome: resolverOutcomeKindSchema.refine(
+      (value) => value === "empty" || value === "query-error",
+    ),
+    recoveryOutcome: resolverOutcomeKindSchema
+      .refine((value) => value === "empty" || value === "visible-current")
+      .nullable(),
+    faultId: stableIdentifierSchema.nullable(),
+    faultMode: z.enum(["none", "api-error"]),
+    executionKind: z.enum(["navigation", "fault"]),
+    profile: z.literal("demo"),
+    role: z.literal("viewer"),
+    catalogRoute: z.literal("/reports/latest"),
+    operation: z.literal("navigate"),
+    safety: z.literal("read-only"),
+    transition: z.literal("none"),
+    resolverOperation: z.literal("reports.latestForViewer"),
+    proof: specializedProofSchema,
+  })
+  .strict()
+  .superRefine((declaration, context) => {
+    if (
+      declaration.outcome === "empty" &&
+      (declaration.faultId !== null ||
+        declaration.faultMode !== "none" ||
+        declaration.executionKind !== "navigation")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message:
+          "Empty resolver declarations are navigation-only and fault-free",
+      });
+    }
+    if (
+      declaration.outcome === "query-error" &&
+      (declaration.faultId === null ||
+        declaration.faultMode !== "api-error" ||
+        declaration.executionKind !== "fault" ||
+        declaration.recoveryOutcome !== "visible-current")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message:
+          "Query-error resolver declarations require one api-error fault",
+      });
+    }
+  });
+
 export const specializedDeclarationSchema = z.union([
   specializedActionDeclarationSchema,
   specializedObservationDeclarationSchema,
+  resolverSpecializedDeclarationSchema,
 ]);
 
 const sourceFieldsSchema = campaignManifestSchema.omit({ matrixDigest: true });
@@ -97,14 +153,9 @@ const sourceFieldsSchema = campaignManifestSchema.omit({ matrixDigest: true });
 export const sourceArtifactSchema = z
   .object({
     artifact: z.literal("SOURCE"),
-    version: z.literal(1),
+    version: z.literal(2),
     ...sourceFieldsSchema.shape,
-    matrixLimits: z
-      .object({
-        maxCases: z.number().int().positive(),
-        maxControlsPerSegment: z.number().int().positive(),
-      })
-      .strict(),
+    matrixLimits: sourceCapacitySchema,
     plan: campaignMatrixPlanSchema,
     specializedDeclarations: z
       .array(specializedDeclarationSchema)
@@ -131,6 +182,16 @@ const bodyForDigest = (
 };
 
 export function parseSourceArtifact(value: unknown): SourceArtifact {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "version" in value &&
+    value.version === 1
+  ) {
+    throw new SourceArtifactError(
+      "SOURCE.json version 1 is legacy and cannot launch; regenerate a version 2 source artifact",
+    );
+  }
   const parsed = sourceArtifactSchema.parse(value);
   assertSpecializedDeclarations(parsed.specializedDeclarations);
   if (sha256Hex(bodyForDigest(parsed)) !== parsed.sourceDigest)
@@ -146,8 +207,14 @@ export const serializeSourceArtifact = (artifact: SourceArtifact): string =>
 export async function readSourceArtifact(
   filePath: string,
 ): Promise<SourceArtifact> {
+  const text = await readFile(filePath, "utf8").catch((error: unknown) => {
+    const missing =
+      error instanceof Error && "code" in error && error.code === "ENOENT";
+    if (!missing) throw error;
+    throw new SourceArtifactError(`Cannot read SOURCE.json: ${error.message}`);
+  });
   try {
-    return parseSourceArtifact(JSON.parse(await readFile(filePath, "utf8")));
+    return parseSourceArtifact(JSON.parse(text));
   } catch (error: unknown) {
     if (error instanceof SourceArtifactError) throw error;
     throw new SourceArtifactError(

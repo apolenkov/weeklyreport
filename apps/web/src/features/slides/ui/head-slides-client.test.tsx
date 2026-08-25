@@ -171,6 +171,22 @@ describe("HeadSlidesClient — density control", () => {
     fireEvent.click(document);
     expect(document).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("accepts shell-owned density without rendering a second deck toolbar", () => {
+    render(
+      <HeadSlidesClient
+        reportId="report-a"
+        enableActivity={false}
+        density="presentation"
+        onDensityChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("group", { name: "Slide density" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("status-slide-deck")).toBeInTheDocument();
+  });
 });
 
 describe("HeadSlidesClient — activity fallback states", () => {

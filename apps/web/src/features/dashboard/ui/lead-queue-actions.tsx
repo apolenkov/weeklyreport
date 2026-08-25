@@ -114,7 +114,7 @@ function SecondaryActionSet({
 }) {
   return (
     <div
-      className="flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center gap-2 [&>a]:h-[var(--dashboard-action-h)] [&>a]:w-[var(--dashboard-detail-action-w)] [&>a]:justify-center [&>button]:h-[var(--dashboard-action-h)] [&>button]:w-[var(--dashboard-detail-action-w)] [&>button]:justify-center"
       aria-label="Lead actions"
     >
       {actions.showOpen ? (

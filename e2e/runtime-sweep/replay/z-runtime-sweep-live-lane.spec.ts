@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { compactFailedCellSummary } from "../evidence/failure-summary.ts";
-import { loadRuntimeLaneSelection } from "../lanes/runtime-lane-selection.ts";
+import { loadRuntimeLaneSelection } from "../lanes/resources/runtime-lane-selection.ts";
 import { parseFrozenMatrix } from "../matrix/matrix-finalizer.ts";
 import {
   assertFreshRuntimeManifest,
@@ -16,12 +16,12 @@ import { seedProfileSchema } from "../source/contracts.ts";
 import {
   type FrozenCaseLiveRuntime,
   runFrozenCases,
-} from "./frozen-case-live-runner.ts";
+} from "./frozen-case/live/frozen-case-live-runner.ts";
 import {
   createFrozenCaseLiveShardPlan,
   type FrozenCaseLiveShard,
   selectFrozenCasesForReplay,
-} from "./frozen-case-live-shards.ts";
+} from "./frozen-case/live/frozen-case-live-shards.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -34,6 +34,7 @@ const SOURCE_SHA = requiredEnv("RUNTIME_SWEEP_SOURCE_SHA");
 const PROFILE = seedProfileSchema.parse(requiredEnv("RUNTIME_SWEEP_PROFILE"));
 const DATABASE_URL = requiredEnv("E2E_DATABASE_URL");
 const BASE_URL = requiredEnv("RUNTIME_SWEEP_BASE_URL");
+const API_URL = `http://127.0.0.1:${requiredEnv("RUNTIME_SWEEP_API_PORT")}`;
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const MAX_CELLS = Math.min(
   DEFAULT_RUNTIME_MATRIX_MAX_CELLS,
@@ -115,6 +116,7 @@ test.describe("replays every frozen runtime case in matrix order", () => {
       const runtime: FrozenCaseLiveRuntime = {
         archiveRoot: ARCHIVE_ROOT,
         apiLogPath: path.join(ARCHIVE_ROOT, "api-log", PROFILE, "app.log"),
+        apiURL: API_URL,
         baseURL: BASE_URL,
         bugsinkDsn: requiredEnv("RUNTIME_SWEEP_BUGSINK_DSN"),
         databaseUrl: DATABASE_URL,

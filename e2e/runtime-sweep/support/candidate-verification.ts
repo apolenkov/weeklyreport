@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { AiDriverReport } from "../driver/driver-results-contract.ts";
-import type { EnvironmentFeedback } from "../preflight/environment-feedback.ts";
+import type { EnvironmentFeedback } from "../preflight/observability/environment-feedback.ts";
 import {
   type CoverageCell,
   roleSchema,

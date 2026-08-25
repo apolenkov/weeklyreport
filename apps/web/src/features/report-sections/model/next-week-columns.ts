@@ -12,7 +12,8 @@ type BoardColumnParent = Exclude<
 >;
 
 // One column per assigned product so empty products still get a "+ Add" CTA;
-// falls back to stage-tag grouping when `products` is not supplied.
+// an explicitly empty assignment list still groups stored rows by product id.
+// Stage-tag grouping is only for callers that do not supply product data.
 export interface ItemColumn {
   readonly key: string;
   readonly parent: BoardColumnParent;
@@ -75,6 +76,37 @@ function groupByProduct(
   return Map.groupBy(items, groupKeyFor);
 }
 
+function productColumnsFor(
+  products: readonly Product[],
+  productRows: readonly ProductKanbanItem[],
+): ItemColumn[] {
+  const assignedProductIds = new Set(products.map((product) => product.id));
+  const rowsByProductId = Map.groupBy(productRows, (item) => item.productId);
+  const assignedColumns = products.map((product) => ({
+    key: product.id,
+    parent: { kind: "product", id: product.id } as const,
+    productId: product.id,
+    productName: product.name,
+    activityId: null,
+    items: rowsByProductId.get(product.id) ?? [],
+  }));
+  const orphanColumns: ItemColumn[] = [];
+  for (const [productId, orphanItems] of rowsByProductId) {
+    if (assignedProductIds.has(productId)) continue;
+    const firstItem = orphanItems.at(0);
+    if (!firstItem) continue;
+    orphanColumns.push({
+      key: productId,
+      parent: { kind: "product", id: productId },
+      productId,
+      productName: firstItem.productName,
+      activityId: null,
+      items: orphanItems,
+    });
+  }
+  return [...assignedColumns, ...orphanColumns];
+}
+
 // Product columns in the shared grid; activity lanes in a lighter block below
 // (activities are their own row, never peer product columns).
 export function splitItemBoard(
@@ -89,16 +121,9 @@ export function splitItemBoard(
     (it): it is ActivityKanbanItem => it.parent.kind === "activity",
   );
   const lanes = activityLanes(activityRows, activities);
-  if (products && products.length > 0) {
+  if (products !== undefined) {
     return {
-      productColumns: products.map((p) => ({
-        key: p.id,
-        parent: { kind: "product", id: p.id },
-        productId: p.id,
-        productName: p.name,
-        activityId: null,
-        items: productRows.filter((it) => it.productId === p.id),
-      })),
+      productColumns: productColumnsFor(products, productRows),
       activityLanes: lanes,
     };
   }

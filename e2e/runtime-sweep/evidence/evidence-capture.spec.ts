@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test, type TestInfo } from "@playwright/test";
 
-import { inventoryDom } from "../replay/dom-inventory.ts";
+import { inventoryDom } from "../replay/dom/dom-inventory.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../source/contracts.ts";
 import { captureRouteEvidence } from "./evidence-capture.ts";
 import type {
   EvidenceCaptureInput,
@@ -61,6 +62,7 @@ const capture = async (
     consoleMessages: [],
     pageErrors: [],
     requestFailures: [],
+    networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
     responseStatus: 200,
     capturedAt: "2026-08-04T00:00:00.000Z",
     ...optional,

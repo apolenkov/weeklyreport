@@ -101,7 +101,7 @@ describe("Analytics day-range matching (integration)", () => {
   }
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     repo = new AnalyticsPrismaRepository(prisma as never);
     await prisma.reportingGroup.create({
       data: { id: DR_GROUP, name: "DR Group", description: "Date-range group" },
@@ -281,7 +281,7 @@ describe("Analytics group scoping (integration)", () => {
   let headA: UserSession;
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
     repo = new AnalyticsPrismaRepository(prisma as never);
 
@@ -359,7 +359,7 @@ describe("Analytics group scoping (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

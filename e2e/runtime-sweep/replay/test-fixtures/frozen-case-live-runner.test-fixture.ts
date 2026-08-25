@@ -1,5 +1,6 @@
 import type { MatrixExecutableCase } from "../../matrix/matrix-finalizer.ts";
-import type { DomInventory } from "../dom-inventory.ts";
+import { NO_ROUTE_CACHE_CONTRACT_POLICY } from "../../source/contracts.ts";
+import type { DomInventory } from "../dom/dom-inventory.ts";
 
 const SOURCE_SHA_LENGTH = 40;
 
@@ -30,6 +31,7 @@ export const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",

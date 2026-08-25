@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   link,
@@ -10,7 +9,6 @@ import {
   writeFile,
 } from "node:fs/promises";
 import * as path from "node:path";
-import { promisify } from "node:util";
 
 import { assertSourceSha, sha256Hex } from "../support/ids.ts";
 import {
@@ -21,13 +19,23 @@ import {
   type RouteDeclarationInput,
   type SeedProfile,
   type SeedProfileDefinition,
+  type SourceCapacity,
+  type SourceTree,
+  sourceTreeSchema,
   type StateKind,
   type ToolVersions,
   type Viewport,
 } from "./contracts.ts";
+import {
+  type ManifestCommandRunner,
+  ManifestGitError,
+} from "./manifest-git.ts";
 
-const execFileAsync = promisify(execFile);
-const SOURCE_TREE_PATTERN = /^[0-9a-f]{40}$/u;
+export {
+  type ManifestCommandRunner,
+  ManifestGitError,
+  runGitCommand,
+} from "./manifest-git.ts";
 
 export interface SeedProfileDefinitionInput {
   readonly profile: SeedProfile;
@@ -38,6 +46,8 @@ export interface CampaignManifestInput {
   readonly repoRoot: string;
   readonly outputPath: string;
   readonly sourcePath?: string;
+  readonly sourceValidationPath?: string;
+  readonly sourceValidationFileSha256?: string;
   readonly preflightPath?: string;
   readonly campaignId: string;
   readonly sourceSha: string;
@@ -53,17 +63,14 @@ export interface CampaignManifestInput {
   readonly catalogPaths: readonly string[];
   readonly domainSpecPaths: readonly string[];
   readonly matrixDeclaration: MatrixDeclaration;
-  readonly matrixLimits: Readonly<{
-    readonly maxCases: number;
-    readonly maxControlsPerSegment: number;
-  }>;
+  readonly matrixLimits: SourceCapacity;
   readonly exclusions: readonly Exclusion[];
 }
 
-export type ManifestCommandRunner = (
-  args: readonly string[],
-  cwd: string,
-) => Promise<string>;
+export interface CleanSourceIdentity {
+  readonly sourceTree: SourceTree;
+  readonly treeDigest: string;
+}
 
 export class ManifestInputError extends Error {
   override readonly name = "ManifestInputError";
@@ -77,29 +84,8 @@ export class SourceShaMismatchError extends Error {
   override readonly name = "SourceShaMismatchError";
 }
 
-export class ManifestGitError extends Error {
-  override readonly name = "ManifestGitError";
-}
-
 export class ManifestWriteError extends Error {
   override readonly name = "ManifestWriteError";
-}
-
-export async function runGitCommand(
-  args: readonly string[],
-  cwd: string,
-): Promise<string> {
-  try {
-    const result = await execFileAsync("git", [...args], { cwd });
-    return result.stdout;
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      throw new ManifestGitError(
-        `git ${args.join(" ")} failed: ${error.message}`,
-      );
-    }
-    throw error;
-  }
 }
 
 export function requirePath(value: string, label: string): string {
@@ -158,10 +144,10 @@ export async function digestFiles(
   );
 }
 
-export async function cleanTreeDigest(
+export async function cleanSourceIdentity(
   input: CampaignManifestInput,
   runCommand: ManifestCommandRunner,
-): Promise<string> {
+): Promise<CleanSourceIdentity> {
   assertSourceSha(input.sourceSha);
   const status = await runCommand(
     ["status", "--porcelain=v1", "--untracked-files=all"],
@@ -172,7 +158,7 @@ export async function cleanTreeDigest(
   const head = (
     await runCommand(["rev-parse", "--verify", "HEAD"], input.repoRoot)
   ).trim();
-  if (!SOURCE_TREE_PATTERN.test(head))
+  if (!sourceTreeSchema.safeParse(head).success)
     throw new ManifestGitError("git HEAD is not a full lowercase commit SHA");
   if (head !== input.sourceSha)
     throw new SourceShaMismatchError(
@@ -181,9 +167,20 @@ export async function cleanTreeDigest(
   const tree = (
     await runCommand(["rev-parse", "--verify", "HEAD^{tree}"], input.repoRoot)
   ).trim();
-  if (!SOURCE_TREE_PATTERN.test(tree))
+  const parsedTree = sourceTreeSchema.safeParse(tree);
+  if (!parsedTree.success)
     throw new ManifestGitError("git HEAD tree is not a full lowercase SHA");
-  return sha256Hex({ sourceSha: input.sourceSha, tree });
+  return {
+    sourceTree: parsedTree.data,
+    treeDigest: sha256Hex({ sourceSha: input.sourceSha, tree }),
+  };
+}
+
+export async function cleanTreeDigest(
+  input: CampaignManifestInput,
+  runCommand: ManifestCommandRunner,
+): Promise<string> {
+  return (await cleanSourceIdentity(input, runCommand)).treeDigest;
 }
 
 export async function writeManifestFile(

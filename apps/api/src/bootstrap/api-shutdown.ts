@@ -7,6 +7,7 @@ import type { AppLogger } from "../lib/logger.js";
 export interface ApiShutdownDependencies {
   readonly app: Pick<INestApplication, "close">;
   readonly logger: AppLogger;
+  readonly shutdownRateLimitStore: () => Promise<void>;
   readonly shutdownOtel: () => Promise<void>;
   readonly shutdownSentry: (timeoutMs: number) => Promise<void>;
   readonly writeCompletion?: () => Promise<void>;
@@ -57,8 +58,14 @@ const runShutdownSequence = async (
   const closeFailures = await attempt([], "app close", CLOSE_TIMEOUT_MS, () =>
     dependencies.app.close(),
   );
-  const barrierFailures = await attempt(
+  const rateLimitFailures = await attempt(
     closeFailures,
+    "rate-limit Redis shutdown",
+    CLOSE_TIMEOUT_MS,
+    dependencies.shutdownRateLimitStore,
+  );
+  const barrierFailures = await attempt(
+    rateLimitFailures,
     "log barrier",
     LOG_FLUSH_TIMEOUT_MS,
     () =>

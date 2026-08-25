@@ -1,10 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import type { Action } from "../../source/contracts.ts";
-import { executeControlAction } from "../control-actions.ts";
-import type { ControlActionRecovery } from "../control-recovery.ts";
-import { snapshotPage } from "../live-control-observation.ts";
-import { observerFor } from "../live-control-records.ts";
+import { snapshotPage } from "../live-control/live-control-observation.ts";
+import { observerFor } from "../live-control/live-control-records.ts";
+import type { ControlActionRecovery } from "../recovery/control-recovery.ts";
+import { executeControlAction } from "./control-actions.ts";
 
 const recoveryFixture = (events: string[]): ControlActionRecovery => ({
   databaseUrl: "postgres://localhost/customreport_e2e",

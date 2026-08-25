@@ -6,12 +6,12 @@ import type { SeedProfile } from "../../source/contracts.ts";
 import type {
   RuntimeLane,
   RuntimeLaneAssignment,
-} from "../runtime-lane-contract.ts";
+} from "../contracts/runtime-lane-contract.ts";
 import {
   type RuntimeLaneRunIdentity,
   runtimeProfileServiceName,
-} from "../runtime-lane-run-identity.ts";
-import type { RuntimeObservabilityConfig } from "../runtime-observability-readiness.ts";
+} from "../profiles/runtime-lane-run-identity.ts";
+import type { RuntimeObservabilityConfig } from "./runtime-observability-readiness.ts";
 import { readRuntimeProfileLog } from "./runtime-profile-log-reader.ts";
 import {
   countsFor,

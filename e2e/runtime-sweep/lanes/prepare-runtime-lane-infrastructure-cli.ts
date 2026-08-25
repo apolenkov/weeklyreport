@@ -1,9 +1,15 @@
-import { prepareRuntimeLaneInfrastructure } from "./prepare-runtime-lane-infrastructure.ts";
+import { assertE2eRuntimeDestructiveTarget } from "../../../prisma/guards/_destructive-guard.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import {
   MAX_RUNTIME_LANE_COUNT,
   MIN_RUNTIME_LANE_COUNT,
   runtimeLaneResources,
-} from "./runtime-lane-contract.ts";
+} from "./contracts/runtime-lane-contract.ts";
+import { prepareRuntimeLaneInfrastructure } from "./prepare-runtime-lane-infrastructure.ts";
+import {
+  consumeRuntimeLaneRedisRecreationAuthorization,
+  requireRuntimeLaneRedisRecreationAuthorization,
+} from "./redis/runtime-lane-redis-authorization.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -25,10 +31,20 @@ const laneCountFrom = (value: string): number => {
 };
 
 async function main(): Promise<void> {
+  await assertRuntimeSourceAuthorityFromEnvironment();
+  const baseDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(
+    "runtime-lane-infrastructure-cli",
+    baseDatabaseUrl,
+    process.env,
+  );
+  consumeRuntimeLaneRedisRecreationAuthorization(
+    requireRuntimeLaneRedisRecreationAuthorization(),
+  );
   const laneCount = laneCountFrom(requiredEnv("RUNTIME_SWEEP_LANE_COUNT"));
   const result = await prepareRuntimeLaneInfrastructure({
     resources: runtimeLaneResources(laneCount),
-    baseDatabaseUrl: requiredEnv("E2E_DATABASE_URL"),
+    baseDatabaseUrl,
   });
   console.log(
     `runtime-lane-infrastructure PASS lanes=${laneCount} databases-created=${result.databasesCreated} redis-created=${result.redisCreated} redis-started=${result.redisStarted} redis-ready=${result.redisReady}`,

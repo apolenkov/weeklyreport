@@ -4,6 +4,7 @@ import path from "node:path";
 import type { DbRole } from "@customreport/shared";
 import { type BrowserContext, expect, test } from "@playwright/test";
 
+import { assertE2eRuntimeDestructiveTarget } from "../../prisma/guards/_destructive-guard.ts";
 import type { SeedProfile } from "../../prisma/seeds/profiles/seed-profile-contract.js";
 import { findRepoRoot } from "../integration/global-setup.js";
 
@@ -20,6 +21,11 @@ if (!apiPort) {
 const apiUrl = `http://127.0.0.1:${apiPort}`;
 
 function seedProfile(profile: SeedProfile): void {
+  assertE2eRuntimeDestructiveTarget(
+    `seed-profile-smoke:${profile}`,
+    databaseUrl,
+    process.env,
+  );
   execFileSync(
     process.execPath,
     [
@@ -30,7 +36,11 @@ function seedProfile(profile: SeedProfile): void {
     ],
     {
       cwd: repoRoot,
-      env: { ...process.env, DATABASE_URL: databaseUrl },
+      env: {
+        ...process.env,
+        DATABASE_URL: databaseUrl,
+        E2E_DATABASE_URL: databaseUrl,
+      },
       stdio: "inherit",
     },
   );

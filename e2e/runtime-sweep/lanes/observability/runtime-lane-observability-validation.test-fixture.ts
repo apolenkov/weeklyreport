@@ -2,12 +2,12 @@ import { mkdir, mkdtemp, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { RuntimeLaneAssignment } from "../runtime-lane-contract.ts";
-import { writeRuntimeLaneObservabilityManifest } from "../runtime-lane-observability-manifest.ts";
+import type { RuntimeLaneAssignment } from "../contracts/runtime-lane-contract.ts";
 import {
   type RuntimeLaneRunIdentity,
   writeRuntimeLaneRunIdentity,
-} from "../runtime-lane-run-identity.ts";
+} from "../profiles/runtime-lane-run-identity.ts";
+import { writeRuntimeLaneObservabilityManifest } from "./runtime-lane-observability-manifest.ts";
 
 const SOURCE_SHA_LENGTH = 40;
 const DIGEST_LENGTH = 64;
@@ -83,6 +83,7 @@ export const assignmentFor = (root: string): RuntimeLaneAssignment => ({
   sourceArchiveRoot: root,
   sourceArtifacts: {
     SOURCE: "d".repeat(DIGEST_LENGTH),
+    SOURCE_VALIDATION: "1".repeat(DIGEST_LENGTH),
     PREFLIGHT: "e".repeat(DIGEST_LENGTH),
     MATRIX: "f".repeat(DIGEST_LENGTH),
     MANIFEST: "0".repeat(DIGEST_LENGTH),

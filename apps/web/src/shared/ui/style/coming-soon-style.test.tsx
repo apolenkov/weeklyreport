@@ -78,7 +78,8 @@ describe("shared coming-soon primitive owns the inert button chrome", () => {
     const button = screen.getByTestId("primitive-nav");
     expect(button).toHaveClass(...INERT_CLASSES);
     expect(button).toHaveClass(
-      "h-8",
+      "h-[var(--toolbar-control-h)]",
+      "min-w-[var(--toolbar-control-h)]",
       "w-10",
       "px-0",
       "rounded-[var(--radius-pill)]",

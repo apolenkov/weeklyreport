@@ -6,7 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertNonProdDestructive } from "../../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import { isEntrypoint } from "../../guards/_entrypoint.js";
 import { requireEnv } from "../../guards/_require-env.js";
 import { SEED_PROFILES, type SeedProfile } from "./seed-profile-contract.js";
@@ -43,7 +43,7 @@ async function proveProfile(
 }
 
 async function main(): Promise<void> {
-  assertNonProdDestructive("seed-profile-proof");
+  assertE2eRuntimeDestructive("seed-profile-proof");
   const databaseUrl = requireEnv("DATABASE_URL");
 
   for (const profile of SEED_PROFILES) {

@@ -18,6 +18,34 @@ export interface ReactDoctorBaselineDiff {
   readonly invalidEntries: readonly ReactDoctorBaselineEntry[];
 }
 
+export interface ReactDoctorProjectResult {
+  readonly complete: boolean;
+  readonly skippedChecks: readonly string[];
+}
+
+export function assertReactDoctorScanComplete(
+  reactDetected: boolean,
+  projects: readonly ReactDoctorProjectResult[],
+): void {
+  if (!reactDetected) {
+    throw new Error("React Doctor did not detect React");
+  }
+  if (projects.length === 0) {
+    throw new Error("React Doctor returned no project scans");
+  }
+  if (projects.some((project) => !project.complete)) {
+    throw new Error("React Doctor did not complete every project scan");
+  }
+  const skippedChecks = projects.flatMap((project) => project.skippedChecks);
+  if (skippedChecks.length > 0) {
+    throw new Error(
+      `React Doctor skipped checks: ${skippedChecks
+        .toSorted((left, right) => left.localeCompare(right))
+        .join(", ")}`,
+    );
+  }
+}
+
 function duplicates(values: readonly string[]): readonly string[] {
   const counts = Map.groupBy(values, (value) => value);
   return [...counts]

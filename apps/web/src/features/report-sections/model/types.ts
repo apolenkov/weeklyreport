@@ -97,6 +97,7 @@ export interface RiskEntry {
 
 export interface DecisionEntry {
   readonly id: string;
+  readonly stableId?: string | undefined;
   readonly productId: string;
   readonly productName: string;
   readonly activityId?: string | null | undefined;

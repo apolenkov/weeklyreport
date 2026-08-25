@@ -27,6 +27,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { actionLogCatalogFindings } from "./catalog-content-contract.ts";
 import {
   CANONICAL_ROLES,
   type Catalog,
@@ -277,6 +278,12 @@ function main(): void {
     ...hygieneFindings(catalogs),
     ...roleConsistencyFindings(catalogs),
     ...guardConsistencyFindings(catalogs),
+    ...actionLogCatalogFindings(
+      fs.readFileSync(path.resolve(CATALOG_DIR, "admin.yaml"), "utf8"),
+      ["README.md", "_generation-notes.md"]
+        .map((file) => fs.readFileSync(path.resolve(CATALOG_DIR, file), "utf8"))
+        .join("\n"),
+    ),
   ];
 
   if (findings.length > 0) {

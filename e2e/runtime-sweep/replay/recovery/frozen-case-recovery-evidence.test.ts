@@ -10,7 +10,7 @@ vi.mock("../../evidence/server-log-evidence.ts", () => ({
   collectServerLogEvidence: harness.collect,
 }));
 
-vi.mock("../frozen-case-artifacts.ts", () => ({
+vi.mock("../evidence/frozen-case-artifacts.ts", () => ({
   writeFrozenCaseArtifact: vi.fn(() =>
     Promise.resolve({
       artifactId: "recovery-ref",

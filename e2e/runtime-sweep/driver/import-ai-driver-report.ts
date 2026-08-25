@@ -19,7 +19,7 @@ import {
   verifyImportedCandidates,
 } from "./import-ai-driver-options.ts";
 export type { ImportOptions } from "./import-ai-driver-options.ts";
-import { readEnvironmentObserverConfig } from "../preflight/environment-observer.ts";
+import { readEnvironmentObserverConfig } from "../preflight/observability/environment-observer.ts";
 import { type CoverageCell, coverageCellSchema } from "../source/contracts.ts";
 import {
   CandidateVerificationError,

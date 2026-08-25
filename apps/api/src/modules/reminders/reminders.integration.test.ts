@@ -21,7 +21,7 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     testData = await seedTestData(prisma);
 
     await prisma.reminderRule.create({
@@ -38,7 +38,7 @@ describe("RemindersPrismaRepository (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

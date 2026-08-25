@@ -7,7 +7,7 @@ exports[`LeadForm view-mode toggle > shows Edit link and Slides link in edit mod
   role="group"
 >
   <a
-    class="inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors w-[calc(var(--toolbar-control-h)-0.25rem)] bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]"
+    class="inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors w-[calc(var(--toolbar-control-h)-0.25rem)] lg:w-auto lg:min-w-[68px] lg:px-2.5 bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]"
     href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     title="Edit"
   >
@@ -32,13 +32,13 @@ exports[`LeadForm view-mode toggle > shows Edit link and Slides link in edit mod
       />
     </svg>
     <span
-      class="sr-only"
+      class="sr-only lg:not-sr-only"
     >
       Edit
     </span>
   </a>
   <a
-    class="inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors w-[calc(var(--toolbar-control-h)-0.25rem)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+    class="inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors w-[calc(var(--toolbar-control-h)-0.25rem)] lg:w-auto lg:min-w-[68px] lg:px-2.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
     href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?mode=slides"
     title="Slides"
   >
@@ -85,7 +85,7 @@ exports[`LeadForm view-mode toggle > shows Edit link and Slides link in edit mod
       />
     </svg>
     <span
-      class="sr-only"
+      class="sr-only lg:not-sr-only"
     >
       Slides
     </span>

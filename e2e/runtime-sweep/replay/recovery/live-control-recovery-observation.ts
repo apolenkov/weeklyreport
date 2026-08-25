@@ -1,8 +1,8 @@
 import type {
   ControlActionAttemptOutcome,
   ControlActionRecoveryBoundary,
-} from "../control-actions.ts";
-import type { LiveControlObservation } from "../live-control-planning.ts";
+} from "../control-actions/control-actions.ts";
+import type { LiveControlObservation } from "../live-control/live-control-planning.ts";
 
 type RecoveryObservationResult =
   | Readonly<{

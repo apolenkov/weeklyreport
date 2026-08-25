@@ -12,7 +12,7 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "../../packages/shared/src/admin/reminder-policy-time.js";
-import { assertNonProdDestructive } from "../guards/_destructive-guard.js";
+import { assertE2eRuntimeDestructive } from "../guards/_destructive-guard.js";
 import { requireEnv } from "../guards/_require-env.js";
 
 // Load .env from repo root regardless of cwd.
@@ -109,7 +109,7 @@ async function applyAll(
 }
 
 async function main(): Promise<void> {
-  assertNonProdDestructive("backfill-policy-rules");
+  assertE2eRuntimeDestructive("backfill-policy-rules");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });

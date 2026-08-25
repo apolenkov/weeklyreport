@@ -1,13 +1,15 @@
 // Characterization pins for the cross-author derive helpers behind
 // getCrossAuthors / getCrossAuthorContent: grouping, display forms, risk-derived
 // stage precedence, shared-product scoping, and severity narrowing.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
   buildCrossAuthorStatusRows,
   deriveForeignStageStatus,
   indexForeignSections,
 } from "./lead-form-cross-author.derive";
+import { fetchForeignContentSections } from "./lead-form-cross-author.fetch";
 import {
   buildCrossAuthorContentRows,
   groupCrossAuthorAuthors,
@@ -19,6 +21,31 @@ const PROJECT_1 = "11111111-1111-4111-8111-111111111111";
 const PROJECT_2 = "22222222-2222-4222-8222-222222222222";
 const STAGE_DEV = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const STAGE_TEST = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+describe("fetchForeignContentSections", () => {
+  it("orders every nested record collection by durable identity", async () => {
+    interface ForeignContentQueryArgs {
+      readonly select: {
+        readonly items: { readonly orderBy?: unknown };
+        readonly risks: { readonly orderBy?: unknown };
+        readonly decisions: { readonly orderBy?: unknown };
+      };
+    }
+    const findMany = vi.fn<
+      (args: ForeignContentQueryArgs) => Promise<readonly unknown[]>
+    >(() => Promise.resolve([]));
+    const prisma = {
+      reportSection: { findMany },
+    } as unknown as PrismaService;
+
+    await fetchForeignContentSections(prisma, "report-id", ["author-id"]);
+
+    const query = findMany.mock.calls[0]?.[0];
+    expect(query?.select.items.orderBy).toEqual({ stableId: "asc" });
+    expect(query?.select.risks.orderBy).toEqual({ stableId: "asc" });
+    expect(query?.select.decisions.orderBy).toEqual({ stableId: "asc" });
+  });
+});
 
 describe("deriveForeignStageStatus", () => {
   const dev = "Development";

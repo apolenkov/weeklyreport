@@ -92,6 +92,7 @@ async function seedPublishedSection(
     data: [
       {
         id: currentItemId,
+        stableId: currentItemId,
         reportSectionId: sectionId,
         type: ItemType.current,
         projectId: lead.productId,
@@ -103,6 +104,7 @@ async function seedPublishedSection(
       },
       {
         id: nextItemId,
+        stableId: nextItemId,
         reportSectionId: sectionId,
         type: ItemType.next,
         projectId: lead.productId,
@@ -147,6 +149,7 @@ function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
   return [
     {
       id: currentItemId,
+      stableId: currentItemId,
       reportSectionId: sectionId,
       type: ItemType.current,
       projectId: lead.productId,
@@ -161,6 +164,7 @@ function buildArchiveItemRows(lead: LeadCfg, ctx: ArchiveSectionContext) {
     },
     {
       id: nextItemId,
+      stableId: nextItemId,
       reportSectionId: sectionId,
       type: ItemType.next,
       projectId: lead.productId,

@@ -35,7 +35,9 @@ export function useCanonicalReportRedirect({
     const authorQuery = focusedAuthorId
       ? `?authorId=${encodeURIComponent(focusedAuthorId)}`
       : "";
-    router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`);
+    router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`, {
+      scroll: false,
+    });
   }, [
     enabled,
     reportId,

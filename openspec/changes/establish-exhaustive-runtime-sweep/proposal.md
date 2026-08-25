@@ -21,6 +21,30 @@ inside each page. The gap is visible in `e2e/sweep/catalog-sweep.spec.ts`,
   publish canonical coverage.
 - Keep the immutable baseline separate from fixes; rerun affected cells after
   each fix and the full matrix before completion.
+- Preserve completed reveal-discovery work across bounded child restarts. An
+  exact-canary continuation uses immutable terminal-candidate receipt chunks
+  containing disjoint suffixes and a pure parent-owned reducer, is
+  source/state/selector/route/surface bound, durable, and valid only at a
+  terminal completed-candidate boundary. The child emits no PASS; the parent
+  alone seals execution grants, reduces an empty frontier, and writes canary
+  PASS. No raw or sealed continuation can authorize a full-preflight launch.
+  Full/shard journal continuation remains explicitly NOT-PROVEN in this change
+  and cannot reuse canary artifacts.
+- Make that continuation economical on a constrained Darwin host: keep one
+  headless Playwright worker, refresh the child/browser process at bounded
+  time, terminal-candidate, or reveal-action boundaries, and require a
+  parent-owned host checkpoint after every successful child, including the
+  terminal child. Treat absolute swap occupancy as canonical telemetry rather
+  than a standalone veto; fail closed on current pressure, reclaimable
+  capacity, compression, swap headroom, attempt-relative growth/activity, and
+  counter integrity.
+- Preserve the first terminal-candidate failure of a diagnostic capacity survey
+  in a separately identified, bounded failure-frontier packet before attempting
+  another opaque full traversal. The packet binds the exact source, plan,
+  selector, state, route, branch, canonical candidate list and failing index,
+  but never grants continuation, resume, PASS, canary, capacity-result or
+  acceptance authority. A focused replay must re-derive the saved candidate
+  from fresh exact-source state instead of trusting a serialized raw action.
 - Keep native Codex `gpt-5.6-luna` Max reviews bounded to canonical role/profile
   evidence batches. Reports use the `native-codex` provider contract, emit
   candidates only, and require an explicit verifier import before any merge;

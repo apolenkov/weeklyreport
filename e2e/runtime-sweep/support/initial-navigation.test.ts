@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { initialNavigation } from "../replay/frozen-case-live-capture.ts";
+import { initialNavigation } from "../replay/frozen-case/live/frozen-case-live-capture.ts";
 
 const harness = vi.hoisted(() => ({
   events: [] as string[],
@@ -32,7 +32,8 @@ const harness = vi.hoisted(() => ({
   resolveSettlement: undefined as (() => void) | undefined,
 }));
 
-vi.mock("../replay/dom-inventory.ts", () => ({
+vi.mock("../replay/dom/dom-inventory.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../replay/dom/dom-inventory.ts")>()),
   inventoryDom: vi.fn(),
 }));
 
@@ -40,11 +41,11 @@ vi.mock("../evidence/evidence-capture.ts", () => ({
   captureRouteEvidence: vi.fn(),
 }));
 
-vi.mock("../replay/frozen-case-artifacts.ts", () => ({
+vi.mock("../replay/evidence/frozen-case-artifacts.ts", () => ({
   writeFrozenCaseArtifact: vi.fn(),
 }));
 
-vi.mock("../replay/frozen-case-live-actions.ts", () => ({
+vi.mock("../replay/frozen-case/live/frozen-case-live-actions.ts", () => ({
   actionFor: vi.fn(() => undefined),
   runAction: vi.fn(),
 }));
@@ -100,10 +101,12 @@ describe("frozen-case initial navigation", () => {
     const settlement = new Promise<void>((resolve) => {
       harness.resolveSettlement = resolve;
     });
+    let currentUrl = "about:blank";
     const page = {
-      url: () => "about:blank",
+      url: () => currentUrl,
       goto: vi.fn(() => {
         harness.events.push("goto");
+        currentUrl = "http://127.0.0.1:3105/head/report";
         return Promise.resolve({ status: () => 201 });
       }),
       waitForLoadState: vi.fn(async (state: string) => {
@@ -116,7 +119,12 @@ describe("frozen-case initial navigation", () => {
       waitForFunction: vi.fn(() => Promise.resolve()),
     } as unknown as Page;
 
-    const navigation = initialNavigation(page, "/head/report");
+    const navigation = initialNavigation(
+      page,
+      "/head/report",
+      "/head/report",
+      "http://127.0.0.1:3105",
+    );
     await settlementStarted;
 
     harness.runtimeEvents.consoleMessages.push({

@@ -66,7 +66,13 @@ function ArchiveBody({
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   if (isLoading) {
     return (
-      <div className={PLACEHOLDER_CLASS} data-testid="periods-archive-loading">
+      <div
+        className={PLACEHOLDER_CLASS}
+        role="status"
+        aria-busy="true"
+        aria-label="Loading archived periods"
+        data-testid="periods-archive-loading"
+      >
         Loading archive…
       </div>
     );

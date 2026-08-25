@@ -68,16 +68,21 @@ export class SectionVersionConflictError extends Error {
   }
 }
 
+export interface ReportPeriodWriteGate {
+  periodStatus: PeriodStatus;
+  archived: boolean;
+}
+
 export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel | null>;
-  // Canonical period status keyed on the section id. Both write paths decide
-  // editability from this — never the legacy Report.status column — so reopen
-  // editing works and the published lock holds. Mirrors the lead-form port lookup.
-  getReportPeriodStatusForSection(
+  // Canonical lifecycle facts keyed on the section id. Both write paths decide
+  // editability from this tuple — never the legacy Report.status column — so
+  // reopen editing works while archived and published reports stay locked.
+  getReportPeriodWriteGateForSection(
     sectionId: string,
-  ): Promise<PeriodStatus | null>;
+  ): Promise<ReportPeriodWriteGate | null>;
   // Deadline-aware variant. Null means the report does not exist — the deadline
   // gate treats that as a NOT_FOUND integrity failure, never a free pass.
   // Required: an unimplemented reader would silently disable the deadline gate.
@@ -179,12 +184,15 @@ export class ReportSectionsService {
   }
 
   private assertPeriodEditable(
-    periodStatus: PeriodStatus | null,
+    gate: ReportPeriodWriteGate | null,
     action: "edit" | "submit",
   ): void {
-    if (periodStatus === null)
-      throw new ReportSectionNotFoundError("Missing report.");
-    if (periodStatus === "open" || periodStatus === "reopened") return;
+    if (gate === null) throw new ReportSectionNotFoundError("Missing report.");
+    if (
+      !gate.archived &&
+      (gate.periodStatus === "open" || gate.periodStatus === "reopened")
+    )
+      return;
 
     throw new ReportSectionDomainError(
       "SECTION_ALREADY_SUBMITTED",
@@ -246,11 +254,11 @@ export class ReportSectionsService {
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
-    const periodStatus = await this.repository.getReportPeriodStatusForSection(
+    const writeGate = await this.repository.getReportPeriodWriteGateForSection(
       section.reportSectionId,
     );
 
-    this.assertPeriodEditable(periodStatus, "edit");
+    this.assertPeriodEditable(writeGate, "edit");
 
     if (section.status === "submitted") {
       throw new ReportSectionDomainError(
@@ -290,11 +298,11 @@ export class ReportSectionsService {
     // Gate the destructive delete-recreate on the canonical period status, not
     // the legacy Report.status column: a section can sit in `draft` under a
     // published period, and submitting would rewrite rows the snapshot froze.
-    const periodStatus = await this.repository.getReportPeriodStatusForSection(
+    const writeGate = await this.repository.getReportPeriodWriteGateForSection(
       section.reportSectionId,
     );
 
-    this.assertPeriodEditable(periodStatus, "submit");
+    this.assertPeriodEditable(writeGate, "submit");
 
     // Deadline gate runs BEFORE the content validator: a past-deadline submit
     // with late forbidden returns 403 even for a valid payload, while missing

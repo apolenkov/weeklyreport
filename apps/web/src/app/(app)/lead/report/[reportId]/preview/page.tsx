@@ -20,7 +20,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
         tabIndex={-1}
         className="min-h-screen bg-[var(--color-background)]"
       >
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <header className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">

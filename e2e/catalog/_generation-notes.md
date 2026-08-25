@@ -70,6 +70,12 @@ NOTE: the hallucinated-controls class (mutations on a read-only route) is NOT
 deterministically checkable — it needs the adversarial review (or human) to read
 the component. The review caught it; keep that review step on every regeneration.
 
+## Grounding rule for generated product claims
+
+Generated controls, fields, retention, and access claims require live source or an accepted OpenSpec change. Review the route component, API DTO, durable model,
+and accepted change before retaining such prose. Reject or correct unsupported
+claims; never implement an invented field solely to make generated text true.
+
 WARNING: these four roles' catalogs were hand-fixed AFTER generation. A plain
 re-run of the generator will reproduce the route-hygiene defects only if Discover
 still misbehaves (now guarded), but will NOT know about the head present-view

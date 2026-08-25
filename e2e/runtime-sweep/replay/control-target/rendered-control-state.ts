@@ -5,7 +5,7 @@ import type { ElementHandle } from "@playwright/test";
 import type {
   RenderedNameActionLease,
   RenderedTargetValidator,
-} from "../control-action-types.ts";
+} from "../control-actions/control-action-types.ts";
 
 export const RENDERED_TARGET_VALIDATOR_PROPERTY =
   "__runtimeSweepActionValidator";

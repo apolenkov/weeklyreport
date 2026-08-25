@@ -100,10 +100,23 @@ describe("runtime state oracle", () => {
         status: "submitted",
         submittedAt: "present",
         verdict: "approved",
+        version: 1,
       },
       ownership: {
         targetOwnerId: "lead-owner",
         owners: ["lead-owner", "lead-foreign"],
+        assignments: [
+          {
+            id: "assignment-stage-a",
+            stageId: "stage-a",
+            userId: "lead-owner",
+          },
+          {
+            id: "assignment-stage-b",
+            stageId: "stage-b",
+            userId: "lead-foreign",
+          },
+        ],
       },
       permission: {
         actorId: "lead-owner",

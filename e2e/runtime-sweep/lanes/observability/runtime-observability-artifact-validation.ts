@@ -7,8 +7,8 @@ import { z } from "zod";
 
 import { sha256DigestSchema, sourceShaSchema } from "../../source/contracts.ts";
 import { stableSerialize } from "../../support/ids.ts";
-import type { RuntimeLaneAssignment } from "../runtime-lane-contract.ts";
-import type { RuntimeLaneRunIdentity } from "../runtime-lane-run-identity.ts";
+import type { RuntimeLaneAssignment } from "../contracts/runtime-lane-contract.ts";
+import type { RuntimeLaneRunIdentity } from "../profiles/runtime-lane-run-identity.ts";
 
 const counterSchema = z
   .object({ digested: z.number().int(), stored: z.number().int() })

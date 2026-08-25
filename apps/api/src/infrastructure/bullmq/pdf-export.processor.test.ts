@@ -67,32 +67,43 @@ vi.mock("playwright", () => ({
   },
 }));
 
-vi.mock("node:fs/promises", () => ({
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
-  rm: vi.fn(),
-}));
-
-vi.mock("node:crypto", () => ({
-  createHash: vi.fn(),
-}));
-
-import { createHash } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-
 import { Worker } from "bullmq";
 import { chromium } from "playwright";
 
 import type { EnvConfig } from "../config/env.schema";
-import { PdfExportProcessor as ProductionPdfExportProcessor } from "./pdf-export.processor.js";
+import {
+  type PdfArtifactAttempt,
+  type PdfArtifactStore,
+  PdfExportProcessor as ProductionPdfExportProcessor,
+} from "./pdf-export.processor.js";
+
+function createMockArtifactStore(checksum = "abc123hash") {
+  const attempt: PdfArtifactAttempt = {
+    tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
+    canonicalPath: "artifact-test-temp/job-1.pdf",
+  };
+  return {
+    createAttempt: vi.fn().mockResolvedValue(attempt),
+    publishAndHash: vi.fn().mockResolvedValue(checksum),
+    cleanupAttempt: vi.fn().mockResolvedValue(undefined),
+  } satisfies PdfArtifactStore;
+}
 
 class PdfExportProcessor extends ProductionPdfExportProcessor {
+  private readonly artifactStore: PdfArtifactStore;
+
   constructor(
     service: ConstructorParameters<typeof ProductionPdfExportProcessor>[0],
     env: EnvConfig,
     logger: AppLogger = createNullLogger(),
+    artifactStore: PdfArtifactStore = createMockArtifactStore(),
   ) {
     super(service, env, logger, null);
+    this.artifactStore = artifactStore;
+  }
+
+  protected override createArtifactStore(): PdfArtifactStore {
+    return this.artifactStore;
   }
 }
 
@@ -170,11 +181,6 @@ function setupMocks() {
   };
 
   vi.mocked(chromium.launch).mockResolvedValue(mockBrowser as never);
-
-  vi.mocked(createHash).mockReturnValue({
-    update: vi.fn().mockReturnThis(),
-    digest: vi.fn().mockReturnValue("abc123hash"),
-  } as never);
 
   return { mockPage, mockBrowser, mockContext };
 }
@@ -261,7 +267,13 @@ describe("PdfExportProcessor.processJob", () => {
   it("marks export completed with correct args", async () => {
     setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const artifactStore = createMockArtifactStore();
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      artifactStore,
+    );
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -275,14 +287,20 @@ describe("PdfExportProcessor.processJob", () => {
       "/pdfs/job-1.pdf",
       "abc123hash",
     );
-    // Artifact I/O stays async so a large PDF write never blocks the event loop.
-    expect(mkdir).toHaveBeenCalledWith(
+    expect(artifactStore.createAttempt).toHaveBeenCalledWith(
       expect.stringMatching(/storage\/pdfs-test$/),
-      { recursive: true },
-    );
-    expect(writeFile).toHaveBeenCalledWith(
-      expect.stringMatching(/storage\/pdfs-test\/job-1\.pdf$/),
+      "job-1",
       Buffer.from("pdf-bytes"),
+    );
+    expect(artifactStore.publishAndHash).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canonicalPath: "artifact-test-temp/job-1.pdf",
+      }),
+    );
+    expect(artifactStore.cleanupAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
+      }),
     );
   });
 
@@ -371,7 +389,6 @@ describe("PdfExportProcessor.processJob", () => {
     ).rejects.toThrow("font timeout");
 
     expect(mockPage.pdf).not.toHaveBeenCalled();
-    expect(writeFile).not.toHaveBeenCalled();
     expect(mockService.markExportCompleted).not.toHaveBeenCalled();
   });
 
@@ -416,17 +433,22 @@ describe("PdfExportProcessor.processJob", () => {
     ).rejects.toThrow(/ready state/i);
 
     expect(mockPage.pdf).not.toHaveBeenCalled();
-    expect(writeFile).not.toHaveBeenCalled();
     expect(mockService.markExportCompleted).not.toHaveBeenCalled();
   });
 
   it("removes the artifact when completion persistence fails", async () => {
     const { mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
+    const artifactStore = createMockArtifactStore();
     mockService.markExportCompleted.mockRejectedValue(
       new Error("database unavailable"),
     );
-    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      createNullLogger(),
+      artifactStore,
+    );
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -437,10 +459,11 @@ describe("PdfExportProcessor.processJob", () => {
       (processor as unknown as ProcessorTestSeam).processJob(job),
     ).rejects.toThrow("database unavailable");
 
-    expect(writeFile).toHaveBeenCalledOnce();
-    expect(rm).toHaveBeenCalledWith(
-      expect.stringMatching(/storage\/pdfs-test\/job-1\.pdf$/),
-      { force: true },
+    expect(artifactStore.createAttempt).toHaveBeenCalledOnce();
+    expect(artifactStore.cleanupAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempPath: "artifact-test-temp/.job-1.attempt.pdf.tmp",
+      }),
     );
     expect(mockBrowser.close).toHaveBeenCalledOnce();
   });
@@ -521,6 +544,5 @@ describe("PdfExportProcessor.onModuleInit", () => {
       "browser missing",
     );
     expect(mockService.markExportCompleted).not.toHaveBeenCalled();
-    expect(writeFile).not.toHaveBeenCalled();
   });
 });

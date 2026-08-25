@@ -28,7 +28,7 @@ describe("ActivityPrismaRepository (integration)", () => {
   };
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await prisma.reportingGroup.createMany({
       data: [
         { id: groupA, name: "Core Development", description: null },
@@ -89,7 +89,7 @@ describe("ActivityPrismaRepository (integration)", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

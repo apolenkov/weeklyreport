@@ -24,6 +24,9 @@ Read the design first — this README only pins the _format_:
   cheap to regenerate; do not hand-maintain it as a permanent artifact. The one
   worked example below is the _format contract_ the generator must emit, not the
   catalog itself.
+- **Grounded before accepted.** Generated controls, fields, retention, and
+  access claims require live source or an accepted OpenSpec change. Human
+  review rejects unsupported prose instead of implementing it as a requirement.
 - **Not a BDD runner.** Given/When/Then is plain prose a Driver (human or AI
   agent) reads. The repo adds no `cucumber` / `playwright-bdd` dependency.
 - **Not an authz matrix.** A per-role catalog lists only the routes that role can

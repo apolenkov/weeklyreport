@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { executeControlAction } from "../control-actions.ts";
+import { executeControlAction } from "../control-actions/control-actions.ts";
 
 const harness = vi.hoisted(() => ({
   events: [] as string[],
@@ -11,7 +11,7 @@ const harness = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../control-action-executor.ts", () => ({
+vi.mock("../control-actions/control-action-executor.ts", () => ({
   executeControlAttempt: vi.fn(() => {
     harness.events.push("attempt");
     return Promise.resolve("pass");
@@ -27,6 +27,13 @@ vi.mock("../control-target/rendered-control-target.ts", () => ({
 }));
 
 describe("control action recovery evidence boundary", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
   it("brackets reset and baseline recovery after the action attempt", async () => {
     harness.events.length = 0;
     const execution = await executeControlAction({

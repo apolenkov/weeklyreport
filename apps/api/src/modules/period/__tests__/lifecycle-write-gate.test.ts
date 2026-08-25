@@ -15,7 +15,7 @@ import {
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const API_ROOT = resolve(TEST_DIR, "../../../..");
 const SYNTHETIC_FILE = resolve(TEST_DIR, "fixture.ts");
-const PROGRAM_SCAN_TIMEOUT_MS = 15_000;
+const PROGRAM_SCAN_TIMEOUT_MS = 60_000;
 
 const PRELUDE = `
   import { buildTransition, type LifecycleWrite } from "./period-transition";

@@ -66,6 +66,11 @@ jobs:
 
       # This matches pre-push and includes the root Prisma-script suite that a
       # bare `turbo test` omits.
+      # The root test also runs the runtime Playwright harness, so the browser
+      # must be installed in this job rather than relying on the later E2E job.
+      - name: Install Playwright browsers
+        run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
+
       - name: Unit Tests
         run: pnpm test
 
@@ -98,7 +103,7 @@ jobs:
         env:
           POSTGRES_USER: customreport
           POSTGRES_PASSWORD: localdev
-          POSTGRES_DB: customreport_test
+          POSTGRES_DB: customreport_e2e_lane_a_test
         ports:
           - 5432:5432
         options: >-
@@ -120,7 +125,7 @@ jobs:
     # Playwright owns all Web/API URLs. Job-level URL values would leak into
     # login fixtures and bypass its isolated port contract.
     env:
-      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_test
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e_lane_a_test
       REDIS_HOST: localhost
       REDIS_PORT: 6379
       REDIS_MAXMEMORY_BYTES: 209715200
@@ -150,13 +155,29 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
+      # Integration and Playwright cleanup share this distinct disposable DB.
+      - name: Create E2E database
+        env:
+          E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+        run: pnpm exec tsx prisma/operations/create-e2e-database.ts
+
       - name: Run database migrations
-        run: pnpm exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+        run: pnpm exec tsx prisma/operations/migrate-deploy.ts
 
       - name: Seed database
+        env:
+          DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm exec tsx prisma/seed.ts
 
       - name: Integration Tests
+        env:
+          E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm --filter=@customreport/api test:integration
 
       # Playwright belongs to apps/web under pnpm's isolated node linker.
@@ -166,13 +187,10 @@ jobs:
       - name: Build shared packages
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
-      # Global setup destructively resets only its dedicated E2E database.
-      - name: Create E2E database
-        run: PGPASSWORD=localdev psql -h localhost -U customreport -d postgres -c "CREATE DATABASE customreport_e2e"
-
       - name: Run E2E tests
         env:
           E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm test:e2e:integration
 
       # The GitHub reporter writes traces, screenshots, and videos here.
@@ -198,7 +216,7 @@ jobs:
         env:
           POSTGRES_USER: customreport
           POSTGRES_PASSWORD: localdev
-          POSTGRES_DB: customreport_reset_check
+          POSTGRES_DB: customreport_e2e
         ports:
           - 5432:5432
         options: >-
@@ -208,7 +226,8 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_reset_check
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+      NODE_ENV: test
 
     steps:
       - name: Checkout
@@ -227,8 +246,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: prisma migrate reset (fresh DB, no seed)
-        run: pnpm exec prisma migrate reset --force
+      - name: prisma migrate reset (exact disposable E2E DB, no seed)
+        env:
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+        run: pnpm exec tsx prisma/operations/migrate-reset.ts
 
       - name: prisma generate (post-reset)
         run: pnpm exec prisma generate

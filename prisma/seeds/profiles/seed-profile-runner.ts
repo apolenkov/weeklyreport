@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { assertE2eRuntimeDestructive } from "../../guards/_destructive-guard.js";
 import type { SeedProfile } from "./seed-profile-contract.js";
 
 interface SeedStep {
@@ -25,6 +26,9 @@ export function seedStepsFor(profile: SeedProfile): readonly SeedStep[] {
 }
 
 export function runSeedProfile(profile: SeedProfile): void {
+  // Keep the child-process boundary guarded even when a caller imports this
+  // runner directly instead of going through seed-profile.ts.
+  assertE2eRuntimeDestructive(`seed-profile:${profile}`);
   const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
   const steps = [
     ...seedStepsFor(profile),

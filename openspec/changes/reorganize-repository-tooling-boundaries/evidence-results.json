@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-05T21:15:36.000Z",
+  "generatedAt": "2026-08-25T19:12:49.000Z",
   "commands": [
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
       "exitCode": 0,
-      "sourceDigest": "db871b2df8376d209b4c1d94ece50903072920bd2c9ccc028bd360ebc9a1f43a",
-      "summary": "3 files and 56 PDF unit tests passed",
-      "rerunAt": "2026-08-04T06:04:49.542Z"
+      "sourceDigest": "148a4b3665f3ebd90ae795bcad796eb9a914cecae54e708074def640e6189863",
+      "summary": "3 files and 64 PDF unit tests passed",
+      "rerunAt": "2026-08-14T00:59:35.000Z"
     },
     {
-      "command": "set -a; . ./.env.test; set +a; PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='Databases (`_dev`/`_test`/`_uat`) are disposable.' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
+      "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test REDIS_HOST=127.0.0.1 REDIS_PORT=6396 NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
       "exitCode": 0,
-      "sourceDigest": "ca53163b1bdcfe59171351130b6ea7d0e63e7541e4ecc825c6131f04c2bc270a",
+      "sourceDigest": "2d21118e0cce10d6b2290e55f926cc2b4ac38e7210603da8b3524d4d6ec00c38",
       "summary": "2 PDF integration tests passed against the reset disposable E2E database, including worker completion and a readable persisted artifact",
-      "rerunAt": "2026-08-04T06:06:05.266Z"
+      "rerunAt": "2026-08-14T01:00:01.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/auth/saml.samlify.test.ts src/modules/auth/saml.fixtures.test.ts src/modules/auth/auth.routes.saml-rejection.test.ts",
@@ -61,30 +61,30 @@
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/period/__tests__/lifecycle-write-gate.test.ts src/modules/period/domain/period-transition.test.ts",
       "exitCode": 0,
-      "sourceDigest": "0729a7626d825d5dce1087763fbd44ca7472be94834269deb9501be91a95ca23",
+      "sourceDigest": "3750b0c08620fd5d37ead05e8c5d937bb7f2bf11f3524a177033ba8d1bc9abc0",
       "summary": "2 files and 31 lifecycle ownership tests passed",
-      "rerunAt": "2026-08-04T06:06:23.762Z"
+      "rerunAt": "2026-08-15T18:09:22.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/project-activity/project-activity.transaction.test.ts src/modules/project-activity/project-activity.prisma-repository.concurrent.test.ts",
       "exitCode": 0,
-      "sourceDigest": "8ed634b76a6c0253fbb10d4a49c9c043c80c958437e2d228bc872590f06e586a",
+      "sourceDigest": "71e0bf01b4922d3ea759f5c48ae2a848a969c3828f6d0bdce4ad400854050edf",
       "summary": "2 files and 11 transaction-boundary tests passed",
-      "rerunAt": "2026-08-04T06:06:25.701Z"
+      "rerunAt": "2026-08-14T00:39:56.000Z"
     },
     {
-      "command": "set -a; . ./.env.test; set +a; DATABASE_URL=\"${E2E_DATABASE_URL%/*}/customreport_test\" pnpm --filter @customreport/api exec vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false src/modules/project-activity/project-activity.concurrency.integration.test.ts",
+      "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e_lane_a_test NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/api exec vitest run --config vitest.integration.config.ts --reporter=verbose --fileParallelism=false src/modules/project-activity/project-activity.concurrency.integration.test.ts",
       "exitCode": 0,
-      "sourceDigest": "dc75db685d92c60f1ceea761c34b4f2704a83cba743acf985f8dee65cd1c4877",
+      "sourceDigest": "393eb1eb5932dfe0aa433cd8c53a687944577489fcccc20f53b168c2f84261cf",
       "summary": "4 real PostgreSQL project-activity concurrency tests passed",
-      "rerunAt": "2026-08-04T06:06:29.107Z"
+      "rerunAt": "2026-08-14T00:40:29.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/report-sections/infrastructure/report-sections.prisma-repository.test.ts src/modules/report-sections/application/report-sections.submit.test.ts src/modules/report-sections/application/report-sections.contract.test.ts",
       "exitCode": 0,
-      "sourceDigest": "5d4691295236187828c852a4b9ca6fedcd1397c3a34c3c9b0605442065b94d4d",
-      "summary": "3 files and 84 report-section lifecycle gate tests passed",
-      "rerunAt": "2026-08-04T06:06:31.090Z"
+      "sourceDigest": "24ee2d7dedb9832ed44b048f3030498feb5493575cace1b4551d3b952203453e",
+      "summary": "3 files and 88 report-section lifecycle gate tests passed",
+      "rerunAt": "2026-08-25T19:12:49.000Z"
     },
     {
       "command": "pnpm --filter @customreport/shared exec vitest run src/schemas/period/period-lifecycle.schema.test.ts src/schemas/period/period.schema.test.ts src/schemas/report/report.period-stage.test.ts src/schemas/report/report.read-models.test.ts",

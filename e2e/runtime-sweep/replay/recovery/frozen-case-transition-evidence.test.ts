@@ -13,12 +13,13 @@ import {
   evidenceBundleSchema,
   type EvidenceRef,
   evidenceRefSchema,
+  NO_ROUTE_CACHE_CONTRACT_POLICY,
 } from "../../source/contracts.ts";
 import {
   type CompleteFrozenCaseEvidence,
   transitionEvidenceSelection,
-} from "../frozen-case-evidence.ts";
-import { phaseIssues } from "../frozen-case-phase-validation.ts";
+} from "../evidence/frozen-case-evidence.ts";
+import { phaseIssues } from "../frozen-case/validation/frozen-case-phase-validation.ts";
 
 const SOURCE_SHA = "a".repeat(40);
 const CASE_ID = "case-stateful-transition";
@@ -32,6 +33,7 @@ const matrixCase: MatrixExecutableCase = {
   role: "lead",
   catalogRoute: "/lead/report",
   resolvedRoute: "/lead/report",
+  networkPolicy: NO_ROUTE_CACHE_CONTRACT_POLICY,
   state: {
     profileCapability: "editable-active-report",
     lifecycle: "open",

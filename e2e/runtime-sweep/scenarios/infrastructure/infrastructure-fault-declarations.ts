@@ -29,15 +29,15 @@ export const INFRASTRUCTURE_FAULT_DECLARATIONS = Object.freeze([
     faultId: "rate-limit-redis-unavailable",
     subsystem: "rate-limit-redis",
     testFile:
-      "apps/api/src/infrastructure/throttler/rate-limit.middleware.test.ts",
-    testName: "enforces the auth budget locally while Redis is unavailable",
+      "apps/api/src/infrastructure/throttler/rate-limit-readiness.test.ts",
+    testName: "falls back once and returns to Redis after a post-start outage",
     operation: "auth rate-limit request",
     cleanupOracle:
       "The test closes its ephemeral HTTP server in a finally block after the bounded request burst.",
     nonMutationOracle:
-      "Redis command rejection never bypasses the local budget: five requests return 204 and the sixth returns 429 without a persistence write.",
+      "A two-command raw Redis outage becomes one logical store failure without bypassing the local budget or writing product data.",
     recoveryOracle:
-      "The degraded local enforcement path remains observable through the successful 204 responses while the Redis-backed store is unavailable.",
+      "The same limiter completes a later shared EVALSHA after recovery while the stricter local count still yields five 204 responses and one 429.",
   }),
   declaration({
     faultId: "smtp-transport-unavailable",

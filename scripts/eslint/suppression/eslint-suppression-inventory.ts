@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
+import { withoutLocalGitEnvironment } from "../../shared/git-environment.ts";
 import { parseComments } from "../shared/eslint-parser-comments.ts";
 
 type SuppressionScope = "file" | "next-line" | "line";
@@ -198,7 +199,11 @@ export const readSuppressionInventoryAtCommit = (
       return execFileSync(
         GIT,
         ["grep", "-l", "eslint-disable", commit, "--", "*.ts", "*.tsx"],
-        { cwd, encoding: "utf8" },
+        {
+          cwd,
+          encoding: "utf8",
+          env: withoutLocalGitEnvironment(process.env),
+        },
       );
     } catch (error) {
       if (error instanceof Error && "status" in error && error.status === 1)
@@ -218,6 +223,7 @@ export const readSuppressionInventoryAtCommit = (
         execFileSync(GIT, ["show", `${commit}:${path}`], {
           cwd,
           encoding: "utf8",
+          env: withoutLocalGitEnvironment(process.env),
         }),
       ),
     )

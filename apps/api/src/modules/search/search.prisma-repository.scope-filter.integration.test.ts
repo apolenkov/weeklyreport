@@ -131,7 +131,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
   });
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
 
     await prisma.reportingGroup.createMany({
       data: [
@@ -205,7 +205,7 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 

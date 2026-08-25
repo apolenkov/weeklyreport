@@ -23,15 +23,18 @@ const INACTIVE_CLASS =
 interface SegmentOptions {
   // Icon-only segment — square, no min-width. Consumer must supply aria-label.
   readonly iconOnly?: boolean;
+  readonly desktopLabels?: boolean;
 }
 
 export function segmentClassName(
   active: boolean,
-  { iconOnly = false }: SegmentOptions = {},
+  { iconOnly = false, desktopLabels = false }: SegmentOptions = {},
 ): string {
-  const shape = iconOnly
-    ? "w-[calc(var(--toolbar-control-h)-0.25rem)]"
-    : "min-w-[64px] px-3";
+  const shape = desktopLabels
+    ? "w-[calc(var(--toolbar-control-h)-0.25rem)] lg:w-auto lg:min-w-[68px] lg:px-2.5"
+    : iconOnly
+      ? "w-[calc(var(--toolbar-control-h)-0.25rem)]"
+      : "min-w-[64px] px-3";
   return `inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors ${shape} ${
     active ? ACTIVE_CLASS : INACTIVE_CLASS
   }`;

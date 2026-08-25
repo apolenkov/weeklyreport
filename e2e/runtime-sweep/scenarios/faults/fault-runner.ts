@@ -10,12 +10,12 @@ import {
   captureSpecializedPagePhase,
   initialSpecializedNavigation,
   type SpecializedRuntimeEventWindow,
-} from "../../matrix/specialized-case-emission.ts";
-import { inventoryDom } from "../../replay/dom-inventory.ts";
+} from "../../matrix/specialized/specialized-case-emission.ts";
+import { inventoryDom } from "../../replay/dom/dom-inventory.ts";
 import {
   captureFrozenCasePhases,
   type FrozenCaseReplayResult,
-} from "../../replay/frozen-case-evidence.ts";
+} from "../../replay/evidence/frozen-case-evidence.ts";
 import { type EvidenceBundle, type Oracle } from "../../source/contracts.ts";
 import { FAULT_DECLARATIONS } from "./fault-declarations.ts";
 import { type FaultDeclaration, withFault } from "./fault-injection.ts";

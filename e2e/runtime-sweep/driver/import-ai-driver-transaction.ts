@@ -1,4 +1,4 @@
-import type { EnvironmentObserverConfig } from "../preflight/environment-observer.ts";
+import type { EnvironmentObserverConfig } from "../preflight/observability/environment-observer.ts";
 import type { CoverageCell } from "../source/contracts.ts";
 import {
   prepareReport,

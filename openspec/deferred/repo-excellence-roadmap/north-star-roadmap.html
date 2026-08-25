@@ -3,18 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CustomReport — North-Star Roadmap (эталонный репозиторий)</title>
+    <title>CustomReport — дорожная карта владельца CR-001</title>
     <style>
       :root {
-        --bg: #0f1116;
-        --card: #181b22;
-        --ink: #e7e9ee;
-        --muted: #9aa3b2;
-        --line: #2a2f3a;
-        --accent: #6ea8fe;
-        --green: #4ec98b;
-        --amber: #e6b94e;
-        --red: #e06c75;
+        --bg: #f4f6f8;
+        --surface: #ffffff;
+        --ink: #17202a;
+        --muted: #536170;
+        --line: #d7dee7;
+        --accent: #2457a6;
+        --accent-soft: #eaf1ff;
+        --ok: #176b43;
+        --ok-soft: #e7f6ee;
+        --warn: #875b00;
+        --warn-soft: #fff5d8;
+        --danger: #9c2f32;
+        --danger-soft: #fdebed;
+        --code: #edf1f5;
       }
       * {
         box-sizing: border-box;
@@ -27,66 +32,92 @@
           16px/1.55 -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
-          Roboto,
           sans-serif;
       }
       .wrap {
-        max-width: 980px;
+        max-width: 1080px;
         margin: 0 auto;
-        padding: 32px 20px 80px;
+        padding: 32px 20px 72px;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.25;
       }
       h1 {
-        font-size: 30px;
-        margin: 0 0 4px;
+        margin: 0 0 8px;
+        font-size: clamp(28px, 4vw, 42px);
       }
       h2 {
-        font-size: 22px;
-        margin: 40px 0 8px;
+        margin: 36px 0 12px;
+        padding-bottom: 7px;
         border-bottom: 1px solid var(--line);
-        padding-bottom: 6px;
+        font-size: 24px;
       }
       h3 {
-        font-size: 17px;
-        margin: 22px 0 6px;
+        margin: 22px 0 7px;
+        font-size: 18px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      .eyebrow {
+        margin: 0 0 6px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
       .lead {
+        max-width: 820px;
         color: var(--muted);
-        margin: 0 0 24px;
+        font-size: 18px;
       }
-      .northstar {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-left: 3px solid var(--accent);
-        border-radius: 8px;
+      .panel,
+      .callout {
+        margin: 16px 0;
         padding: 16px 18px;
-        margin: 16px 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
       }
-      .pill {
+      .callout {
+        border-left: 4px solid var(--accent);
+        background: var(--accent-soft);
+      }
+      .callout.warn {
+        border-left-color: var(--warn);
+        background: var(--warn-soft);
+      }
+      .callout.ok {
+        border-left-color: var(--ok);
+        background: var(--ok-soft);
+      }
+      .status {
         display: inline-block;
-        font-size: 12px;
-        padding: 1px 8px;
+        padding: 2px 8px;
         border-radius: 999px;
-        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .status.ok {
+        color: var(--ok);
+        background: var(--ok-soft);
+      }
+      .status.warn {
+        color: var(--warn);
+        background: var(--warn-soft);
+      }
+      .status.danger {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+      .status.neutral {
         color: var(--muted);
-      }
-      .epic {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 14px 16px;
-        margin: 10px 0;
-      }
-      .epic h4 {
-        margin: 0 0 6px;
-        font-size: 15px;
-      }
-      .epic .meta {
-        color: var(--muted);
-        font-size: 13px;
-        margin: 2px 0;
-      }
-      .epic .done {
-        color: var(--green);
+        background: var(--code);
       }
       table {
         width: 100%;
@@ -96,837 +127,705 @@
       }
       th,
       td {
-        text-align: left;
-        padding: 8px 10px;
+        padding: 9px 10px;
         border-bottom: 1px solid var(--line);
+        text-align: left;
         vertical-align: top;
       }
       th {
         color: var(--muted);
-        font-weight: 600;
+        font-weight: 700;
       }
       code {
-        background: #11141a;
         padding: 1px 5px;
         border-radius: 4px;
-        font-size: 13px;
+        background: var(--code);
+        font-size: 0.9em;
+        overflow-wrap: anywhere;
       }
-      .mermaid {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px;
-        margin: 16px 0;
+      .path {
+        overflow-wrap: anywhere;
       }
-      .note {
+      .muted,
+      .secondary {
         color: var(--muted);
+      }
+      .secondary {
         font-size: 14px;
       }
-      .tag-green {
-        color: var(--green);
+      .sequence {
+        display: grid;
+        gap: 10px;
+        margin: 14px 0;
+        padding: 0;
+        list-style: none;
       }
-      .tag-amber {
-        color: var(--amber);
+      .sequence li {
+        display: grid;
+        grid-template-columns: minmax(130px, 180px) 1fr;
+        gap: 14px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
       }
-      .tag-red {
-        color: var(--red);
+      .sequence strong {
+        color: var(--accent);
+      }
+      .tail {
+        border-left: 3px solid var(--warn);
+        padding-left: 12px;
+      }
+      details {
+        margin: 12px 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      summary {
+        cursor: pointer;
+        padding: 11px 14px;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      details > div {
+        padding: 0 14px 14px;
       }
       footer {
+        margin-top: 42px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
         color: var(--muted);
         font-size: 13px;
-        margin-top: 48px;
-        border-top: 1px solid var(--line);
-        padding-top: 16px;
+      }
+      @media (max-width: 700px) {
+        .wrap {
+          padding: 24px 14px 56px;
+        }
+        .sequence li {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <h1>CustomReport — North-Star Roadmap</h1>
-      <p class="lead">
-        Дорога к эталонному репозиторию: учебно-эталонный, production-ready, по
-        best practices. Версия-черновик от 2026-06-22 · коммит
-        <code>f7cb2c56</code>.
-      </p>
+    <main class="wrap">
+      <header>
+        <p class="eyebrow">
+          CustomReport · CR-001 · дорожная карта для владельца
+        </p>
+        <h1>
+          От десктоп-пакета к проверяемому условию остановки
+          <code>exemplary</code>
+        </h1>
+        <p class="lead">
+          Этот документ фиксирует текущую точку, происхождение доказательств и
+          ближайшую очередь. Он не является заявлением о завершении CR-001:
+          исполнение, независимая визуальная проверка, очистка и цепочка выпуска
+          остаются отдельными воротами.
+        </p>
+        <div class="callout warn">
+          <strong>Текущий статус:</strong>
+          <span class="status warn">ACTIVE / IN_PROGRESS / NOT ACCEPTED</span>
+          <p>
+            Десктопный MVP можно показывать в границах точного пакета ниже.
+            Полное CR-001 и цель <code>exemplary</code> не закрыты.
+          </p>
+        </div>
+        <div class="callout">
+          <strong>Жёсткая граница принятия:</strong>
+          <code>runtimeEvidenceSha</code> имеет статус
+          <span class="status danger">NOT-PROVEN</span>. Полный runtime, полная
+          матрица, выпуск, <code>remote tip</code> и CR-001 также имеют статус
+          <span class="status danger">NOT-PROVEN</span>.
+        </div>
+      </header>
 
-      <div class="northstar">
-        <strong>North-star (одна фраза):</strong> репозиторий, который новый
-        инженер любого уровня читает как учебник, поднимает за 30 минут и
-        безопасно выкатывает в production — где каждая строка возводится к идее
-        продукта, а качество держится автоматическими воротами, а не ревью на
-        глаз.
-      </div>
-      <p class="note">
-        Эталоны, к которым привязаны оси: ISO/IEC 25010 и CodeScene (код),
-        C4-модель + Clean/Hexagonal + ADR (архитектура), DDD + трассируемость
-        (связь с идеей), DORA + 12-factor + OWASP ASVS (процессы/production),
-        Testing-Trophy + observability (разработка/обучение).
-      </p>
-
-      <h2>0. Уже принятое доказательство интерфейса</h2>
-      <div class="northstar">
-        <strong>Исторический срез для компьютера принят:</strong> 51 из 51
-        основных кадров, дополнительный контекст <code>L10-top-context</code> и
-        18 переходов. Это подтверждает конкретный чистый снимок кода, но не
-        текущую ветку и не закрывает весь CR-001.
+      <h2>1. Точка отсчёта</h2>
+      <div class="panel">
+        <h3>Identity и граница текущей редакции</h3>
+        <p>
+          <strong
+            >Текущий product source перед этой docs-only редакцией:</strong
+          >
+          ветка <code>campaign/cr-001-20260820</code>, commit
+          <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code>, дерево
+          <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Это точная
+          source-bound точка после последнего принятого UI-атома; до этой
+          metadata-only редакции worktree был чистым. Она не содержит нового
+          полного runtime acceptance.
+        </p>
+        <p>
+          <strong>Граница harness-происхождения:</strong> исторический
+          diagnostic atom <code>d47041cf0</code> остаётся
+          <strong>default-off</strong> и не создаёт runtime evidence. Этот
+          continuity lane не запускает browser/runtime и не переносит старые
+          focused tests, lint, typecheck или canary как доказательство для
+          текущего source identity.
+        </p>
+        <p>
+          <strong>Эта редакция roadmap:</strong> обновляет только provenance,
+          authority, tails и текущую границу source identity в этом HTML-файле.
+          После отдельной фиксации она получит новый docs-only SHA/tree, но всё
+          равно не станет <code>runtimeEvidenceSha</code> без свежего
+          runtime-пакета.
+        </p>
       </div>
       <table>
-        <tr>
-          <th>Параметр</th>
-          <th>Зафиксированный факт</th>
-        </tr>
-        <tr>
-          <td>Источник</td>
-          <td>
+        <thead>
+          <tr>
+            <th>Область</th>
+            <th>Статус</th>
+            <th>Что именно доказано</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Источник исполнения и десктопных доказательств</td>
+            <td><span class="status ok">SOURCE-BOUND</span></td>
+            <td>
+              Для этой редакции текущий source identity — ветка
+              <code>campaign/cr-001-20260820</code>, committed
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Свежий
+              exact-SHA runtime capture для него не выполнялся, поэтому он не
+              является runtimeEvidenceSha. Исторические repair boundaries с
+              лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
+              историческими и не переименованы в <code>PASS</code>. Исторический
+              принятый desktop-пакет привязан к source SHA
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>
+              с деревом
+              <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>; он остаётся
+              ограниченной доказательной базой и не подменяет свежий exact-SHA
+              capture после этой редакции.
+            </td>
+          </tr>
+          <tr>
+            <td>Десктопный пакет, OpenSpec 6.3</td>
+            <td><span class="status ok">ACCEPTED-BOUNDED</span></td>
+            <td>
+              На историческом exact source
+              <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code> принят пакет
+              <code
+                >2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/</code
+              >: основной знаменатель <strong>51/51 primary frames</strong>, без
+              пропусков, <strong>18 T01-T07 transitions</strong> и отдельный
+              supplemental <code>L10-top-context</code>. Контрольные суммы,
+              geometry/a11y/ console/request оракулы и source manifest
+              сохранены. Статус означает принятие именно этого historical
+              bounded packet; его манифест прямо не заявляет independent visual
+              review. Пакет сохраняется только как provenance к checked OpenSpec
+              6.3, не как current acceptance;
+              <code>runtimeEvidenceSha</code> остаётся <code>NOT-PROVEN</code>,
+              а независимая визуальная проверка OpenSpec 6.4 остаётся
+              <code>NOT-PROVEN</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Historical bounded runtime slice</td>
+            <td>
+              <span class="status warn">NOT-PROVEN AS runtimeEvidenceSha</span>
+            </td>
+            <td>
+              Исторический bounded source завершил один real Chromium canary для
+              <code>admin / minimal / /admin</code>: parent <code>PASS</code>,
+              <code>BRANCH_EXHAUSTED</code>, 277 continuation receipts и 390
+              control observations. Это один исторический bounded slice; он не
+              является текущим <code>runtimeEvidenceSha</code>, полным runtime
+              или полной матрицей.
+            </td>
+          </tr>
+          <tr>
+            <td>Runtime evidence identity</td>
+            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td>
+              Для текущего committed source нет принятого свежего runtime-bound
+              exact-SHA пакета. Поэтому <code>runtimeEvidenceSha</code> не
+              установлен и не может выводиться из исторического desktop-пакета,
+              диагностического кода или зелёных тестов.
+            </td>
+          </tr>
+          <tr>
+            <td>Current host eligibility</td>
+            <td>
+              <span class="status warn">NOT-PROVEN IN THIS LANE</span>
+            </td>
+            <td>
+              Wave 0 continuity не выполняет host eligibility или executable
+              pre-run gate. Следующий runtime-исполнитель должен перечитать
+              exact source identity и получить свежий Sol pre-run result; старые
+              host snapshots не переносятся на текущий SHA.
+            </td>
+          </tr>
+          <tr>
+            <td>Независимая визуальная проверка, OpenSpec 6.4</td>
+            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td>
+              Пакет фиксирует только проверку целостности съёмки и прямо
+              указывает, что независимая визуальная проверка не заявлена. Нужны
+              два отчёта проверки и итоговый синтез.
+            </td>
+          </tr>
+          <tr>
+            <td>Exact-HEAD verification tranche</td>
+            <td><span class="status warn">PARTIAL-PROVEN</span></td>
+            <td>
+              На историческом SHA <code>e898f92fa</code> прошли production build
+              (<code>5/5</code>), integration (<code>52 passed</code>), UAT
+              (<code>5 passed</code>, роли <code>51/0</code> маршрутов и
+              аномалий) и <code>openspec validate --all --strict</code>
+              (<code>181/0</code>). Пакеты сохранены в archive; это
+              функциональная и структурная проверка, не полная runtime-матрица и
+              не visual/release acceptance.
+            </td>
+          </tr>
+          <tr>
+            <td>Current source-bound diagnostic tranche</td>
+            <td>
+              <span class="status warn"
+                >DIAGNOSTIC-PROVEN / FULL RUNTIME NOT-PROVEN</span
+              >
+            </td>
+            <td>
+              Для текущего source identity
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> для него
+              выполнен отдельный exact-SHA R182 diagnostic rerun с полным
+              failure-evidence комплектом. Это не переносит исторические
+              code/test/build receipts и не доказывает full runtime, matrix или
+              product acceptance; они остаются NOT-PROVEN.
+            </td>
+          </tr>
+          <tr>
+            <td>Исторический exact-SHA preflight</td>
+            <td><span class="status danger">BLOCKED / NOT-PROVEN</span></td>
+            <td>
+              На исторических runtime-bound repair-sources, последний из которых
+              — <code>43df65c31e9df7e055027b77df3e047740b34235</code> (дерево
+              <code>d2d3c80453e0fd15cbe9e636c63a0e5f07ec5131</code>), exact
+              <code>admin/demo</code> canary дошёл до continuation queue и
+              fail-closed остановился на <code>8199 &gt; 8192</code> после
+              примерно 15 минут. PASS, continuation authority и segment artifact
+              не опубликованы. Это подтверждает работу capacity guard, но не
+              доказывает terminal canonicalization; repair остаётся
+              <code>NOT-PROVEN</code>. Sol ранее подтвердил, что одной pairwise
+              эвристики недостаточно: нужен явный source-bound контракт
+              <code>data-reveal-independence="source-bound-row-local"</code>.
+              Тот же exact Sol gate нашёл в реальном ActionLog смену имени
+              <code>Show -&gt; Hide</code>: <code>controlKey</code> строится из
+              accessible name, поэтому after-control не находится по старому
+              ключу. Это наблюдение об identity в harness; root cause не
+              установлен. В историческом code candidate сохранены source-bound
+              target identity по <code>aria-controls</code>, reversible
+              pair-order checks, material-union guard и regression для
+              Show-to-Hide. Добавлена также boundary-проверка trusted A/B/C +
+              untrusted D: ветка остаётся ordinary, D сохраняется, а plus-one
+              cap остаётся fail-closed. Это закрывает только часть локального
+              кодового контура 5.19, но не его acceptance: exact
+              <code>admin/demo</code> canary на новом clean source ещё не
+              выполнен. Поэтому canonicalization остаётся
+              <code>CODE-PARTIAL / CANARY NOT-PROVEN</code>, а старые capacity
+              boundary и Sol <code>ITERATE</code> receipts не переименовываются
+              в PASS.
+            </td>
+          </tr>
+          <tr>
+            <td>OpenSpec 5.19 source-bound canonicalization</td>
+            <td>
+              <span class="status warn">CANARY NOT-PROVEN</span>
+            </td>
+            <td>
+              На текущем committed source
+              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
+              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> Wave 0 не
+              выполняет exact <code>admin/demo</code> canary. Исторические
+              contract/test/review receipts сохраняются как provenance, но не
+              дают current runtime receipt, root-cause verdict или право менять
+              лимит/граф. Требуются source-bound browser/API/DB/Redis/telemetry
+              packet и независимое Sol review.
+            </td>
+          </tr>
+          <tr>
+            <td>Условие остановки CR-001</td>
+            <td><span class="status warn">OPEN</span></td>
+            <td>
+              5.14 теперь имеет свежий exact-SHA диагностический пакет с полным
+              failure-evidence комплектом; это всё ещё не product/runtime
+              acceptance. 5.15 и 5.17 приняты только в заявленной
+              exact-canary/diagnostic области. Текущие хвосты: pair 1.3/3.1/3.2
+              + 5.19; 6.2-6.4; 7.1-7.4; 8.1-8.4; remote CI/Dependabot; затем
+              разбор результатов, исправления, очистка, выпуск и итоговое
+              принятие Sol.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>2. Принятый десктопный пакет для <code>exact-SHA</code></h2>
+      <div class="panel">
+        <p>
+          <strong>Канонический пакет:</strong>
+          <code class="path"
+            >/Users/wrk/work/customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final/</code
+          >
+        </p>
+        <p>
+          Пакет является частичной базой для задачи 6.3: он фиксирует, что
+          именно было снято и проверено в Chrome, запущенном из исходников. Он
+          не подменяет независимую проверку, принятие
+          <code>runtime-sweep</code> или доказательство выпуска.
+        </p>
+        <p>
+          <strong>Свежий runtime-пакет на последнем runtime baseline:</strong>
+          <code class="path"
+            >/Users/wrk/work/customreport-archive/2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code
+          >. Он относится к одному Admin/minimal canary и не является заменой
+          desktop-пакету или полной матрице.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Артефакт</th>
+              <th>Назначение</th>
+              <th>Результат повторного чтения</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>final/MANIFEST.json</code></td>
+              <td>Исходник, знаменатель, браузер, файлы и происхождение</td>
+              <td>
+                51 основных кадров; дополнительный <code>L10-top-context</code>;
+                18 переходов; пропущенных основных кадров нет
+              </td>
+            </tr>
+            <tr>
+              <td><code>final/FINAL-METRICS.json</code></td>
+              <td>
+                Пофреймовые функциональные, <code>a11y</code>, геометрические и
+                рантайм-оракулы
+              </td>
+              <td>
+                Ошибок съёмки и переходов нет; в сводке пакета нет блокирующих
+                проблем
+              </td>
+            </tr>
+            <tr>
+              <td><code>final/TRANSITION-METRICS.json</code></td>
+              <td>Доказательства переходов и загрузки T01–T07</td>
+              <td>
+                Записи переходов привязаны к исходнику и сохранены в финальном
+                манифесте
+              </td>
+            </tr>
+            <tr>
+              <td><code>final/CONTROL-LEDGER.json</code></td>
+              <td>
+                Результаты клавиатуры, диалогов, всплывающих панелей и
+                безопасных действий
+              </td>
+              <td>
+                Доказательства фокуса, диалога и всплывающей панели для T07;
+                одна запись реестра контролов
+              </td>
+            </tr>
+            <tr>
+              <td><code>SHA256SUMS.txt</code></td>
+              <td>Неизменяемый список контрольных сумм артефактов</td>
+              <td>Файлы пакета привязаны контрольными суммами</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          <strong>Граница проверки:</strong> значение манифеста —
+          <code>capture sanity only; no independent visual review claimed</code
+          >. Поэтому checked 6.3 сохраняется только как historical bounded
+          provenance; current acceptance не установлено. OpenSpec 6.4 остаётся
+          <code>NOT-PROVEN</code> и открытым до двух independent full-frame
+          reviews и итогового synthesis.
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Последний UI-атом на этом product source:</strong> этапы SDLC
+        переведены в отдельные строки полной ширины с иконками и статусными
+        индикаторами. Свежий real-Chrome пакет для этого атома содержит 24
+        строки и 24 индикатора, сохранённые <code>scrollY=0</code>, видимое
+        верхнее меню и отсутствие горизонтального overflow; toggle/focus bounds
+        не изменяются. Артефакты находятся в
+        <code
+          >/Users/wrk/work/customreport-archive/2026-08-24-ui-runtime-reflow/</code
+        >; independent whole-frame review и финальный Sol review имеют статус
+        <code>PASS</code>. Это отдельное UI-доказательство и не заменяет
+        historical desktop packet <code>51/51 + 18 + L10</code>, полный runtime
+        sweep или <code>runtimeEvidenceSha</code>.
+      </div>
+
+      <details>
+        <summary>
+          Техническое происхождение пакета (вторично для решения владельца)
+        </summary>
+        <div class="secondary">
+          <p>
+            Браузер: Google Chrome Stable, с видимым окном, версия
+            <code>151.0.7922.169</code>; область просмотра CSS
+            <code>1980x1178</code>. Web и API запущены из исходников; Docker
+            предоставлял только зависимости PostgreSQL и Redis. Защищённой
+            одноразовой базой была <code>customreport_e2e</code>. Учётные данные
+            не входят в эту дорожную карту.
+          </p>
+          <p>
+            Попытки пакета сохраняют заблокированный запуск и последующие чистые
+            замены T05 и T03/T04. Это происхождение полезно для аудита, но не
+            отменяет требования независимой проверки.
+          </p>
+        </div>
+      </details>
+
+      <h2>3. Следующая очередь исполнения</h2>
+      <div class="callout ok">
+        <strong>Следующая рабочая последовательность:</strong>
+        <code
+          >host eligibility → fresh exact 5.14 diagnostic → 5.15 parent-only →
+          5.17 single-child → 5.19 admin/demo canary → matrix → review → fixes →
+          final resweep</code
+        >. Исторические пакеты 5.15 и 5.17 приняты только в их ограниченной
+        диагностической области; свежий 5.14 packet подтверждает комплект
+        failure-evidence, но не является runtime acceptance. Текущий source
+        identity уже зафиксирован в
+        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>; Sol plan gate
+        <code>APPROVE</code> сохранён в receipt
+        <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
+        должны пройти host eligibility и новый executable pre-run gate; эта
+        continuity-редакция их не выполняет.
+      </div>
+      <ol class="sequence">
+        <li>
+          <strong
+            >5.14 · ограниченный диагностический пакет · EVIDENCE-COMPLETE /
+            ACCEPTANCE-OPEN</strong
+          >
+          <span>
+            Свежий exact-SHA rerun сохранён в
             <code
-              >/Users/wrk/work/customreport-archive/2026-08-18-desktop-ui-acceptance-180ba64c/post-owner-fix-0d03068fa/final</code
-            >
-          </td>
-        </tr>
-        <tr>
-          <td>Версия исходников</td>
-          <td>
-            чистое дерево, коммит
-            <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>, дерево
-            <code>e21185142e8ba8e3025f1e8eece68a2ccf941f1d</code>
-          </td>
-        </tr>
-        <tr>
-          <td>Браузер и размер</td>
-          <td>
-            Google Chrome Stable 151.0.7922.169, 1980×1178, с открытым окном
-          </td>
-        </tr>
-        <tr>
-          <td>Основные кадры</td>
-          <td class="tag-green">51/51, пропусков и дублей нет</td>
-        </tr>
-        <tr>
-          <td>Дополнительный кадр</td>
-          <td><code>L10-top-context</code></td>
-        </tr>
-        <tr>
-          <td>Переходы</td>
-          <td class="tag-green">18/18, ошибок переходов нет</td>
-        </tr>
-        <tr>
-          <td>Блокирующие проблемы в пакете</td>
-          <td class="tag-green">0</td>
-        </tr>
-      </table>
-      <p class="note">
-        Этот пакет остаётся историческим подтверждающим материалом: после
-        изменений кода его нельзя автоматически переносить на текущую ветку
-        <code>campaign/cr-001-20260820</code>. Для завершения CR-001 потребуется
-        повторить нужный набор на свежем точном снимке и провести независимое
-        ревью всего кадра.
-      </p>
-
-      <h2>1. Карта осей и эпиков</h2>
-      <pre class="mermaid">
-mindmap
-  root((Эталонный репозиторий))
-    Качество кода
-      E1.1 Снять мёртвые поблажки
-      E1.2 Декомпозиция горячих точек
-      E1.3 knip + jscpd в гейт
-      E1.4 Ноль поблажек как инвариант
-    Архитектура
-      E2.1 C4-диаграммы + ADR
-      E2.2 Границы слоёв как тест CI
-      E2.3 Закрыть Prisma-leak
-      E2.4 Единый источник для enum
-    Связь с идеей
-      E3.1 Документ видения продукта
-      E3.2 Матрица способность-спека-тест
-      E3.3 Полный глоссарий CONTEXT.md
-    Процессы и Production
-      E4.1 Зрелость CI/CD
-      E4.2 DORA-метрики
-      E4.3 Production-readiness чеклист
-      E4.4 Безопасность OWASP ASVS
-      E4.5 DoD + Release + CHANGELOG
-    Разработка и обучение
-      E5.1 Онбординг за 30 минут
-      E5.2 Здоровье тест-пирамиды
-      E5.3 Полнота наблюдаемости
-      E5.4 Учебный тур по коду
-      </pre>
-
-      <h2>2. Последовательность (фазы и зависимости)</h2>
-      <p class="note">
-        Принцип: понятность раньше переделки. Сначала сделать код читаемым и
-        прослеживаемым (низкий риск), затем упрощать и закреплять границы, и
-        только потом — production. Каждая фаза опирается на предыдущую.
-      </p>
-      <pre class="mermaid">
-flowchart TD
-  F0["Фаза 0 — Аудит<br/>карта здоровья + снятие мёртвых поблажек"]
-  F1["Фаза 1 — Понятность<br/>C4, видение, глоссарий, онбординг"]
-  F2["Фаза 2 — Качество кода<br/>декомпозиция, knip/jscpd, enum-SSOT"]
-  F3["Фаза 3 — Границы как закон<br/>fitness-функции, Prisma-leak, трассировка"]
-  F4["Фаза 4 — Production-Ready<br/>CI/CD, DORA, ASVS, наблюдаемость"]
-  F5["Фаза 5 — Инвариант<br/>ноль поблажек, постоянные ворота"]
-  F0 --> F1 --> F2 --> F3 --> F4 --> F5
-</pre>
-
-      <h2>3. Каденс исполнения (защита от поломок)</h2>
-      <ul>
-        <li>
-          <strong>Один эпик = одно grilled OpenSpec-изменение.</strong> Никаких
-          массовых проходов.
+              >2026-08-24-runtime-source-57d9c79a0-r182-diagnostic/r182-rerun</code
+            >: timeout <code>60000 ms</code>, 721-entry bodyless HAR, failure
+            screenshot, video, lean trace и error context; fail-closed validator
+            прошёл. Пакет диагностический и не является
+            <code>runtimeEvidenceSha</code> или product acceptance.
+          </span>
         </li>
         <li>
-          <strong>Гейт зелёный между эпиками</strong> (<code>typecheck</code> +
-          <code>lint</code> + <code>test</code>).
-        </li>
-        <li>
-          <strong>Горячая зона — характеризующий тест первым</strong> (фиксирует
-          поведение до правки).
-        </li>
-        <li>
-          <strong>Карта здоровья кода — не разрешение на рефакторинг.</strong>
-          Каждая строка карты → свой эпик.
-        </li>
-      </ul>
-      <p class="note">
-        Это прямой урок прошлого: «армейский» массовый рефакторинг прошёл гейт,
-        но сломал поведение.
-      </p>
-
-      <h2>4. Эпики по осям</h2>
-
-      <h3>
-        Ось 1 — Качество кода <span class="pill">ISO 25010 · CodeScene</span>
-      </h3>
-      <div class="epic">
-        <h4>
-          E1.1 — Снять мёртвые поблажки
-          <span class="done">✓ начато (7 снято 2026-06-22)</span>
-        </h4>
-        <div class="meta">
-          Зачем: устаревшие исключения в линтере молча гасят правила.
-        </div>
-        <div class="meta">
-          Готово, когда: каждое снятое исключение не ломает гейт; остаток — в
-          карте.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E1.2 — Декомпозиция горячих точек</h4>
-        <div class="meta">
-          Зачем: lead-form (#1, 1322 стр., cognitive 55) и trpc.router (#2) —
-          главный долг.
-        </div>
-        <div class="meta">
-          Готово, когда: топ-точки живут под стандартом 300/20/15 без
-          исключения; поведение неизменно (характеризующий тест).
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E1.3 — Мёртвый код и дубли в гейт</h4>
-        <div class="meta">
-          Зачем: измерения, которых сейчас нет (knip / jscpd).
-        </div>
-        <div class="meta">
-          Готово, когда: оба инструмента в CI с framework-aware конфигом; ноль
-          ложных от Nest/Next/tRPC.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E1.4 — Ноль поблажек как инвариант</h4>
-        <div class="meta">Зачем: конечная цель — пустой список исключений.</div>
-        <div class="meta">
-          Готово, когда: блоки per-file exemptions пусты; ratchet не даёт новым
-          появиться.
-        </div>
-      </div>
-
-      <h3>
-        Ось 2 — Архитектура <span class="pill">C4 · Clean/Hexagonal · ADR</span>
-      </h3>
-      <div class="epic">
-        <h4>E2.1 — C4-диаграммы + дополнить ADR</h4>
-        <div class="meta">
-          Готово, когда: есть Context/Container/Component-диаграммы; ключевые
-          решения — в <code>docs/adr</code>.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>
-          E2.2 — Границы слоёв как тест CI
-          <span class="pill">fitness function</span>
-        </h4>
-        <div class="meta">
-          Готово, когда: запрещённый импорт через границу = красный CI
-          (eslint-boundaries / dependency-cruiser), не ревью на глаз.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E2.3 — Закрыть утечку Prisma-типов</h4>
-        <div class="meta">
-          Готово, когда: репозитории возвращают доменные типы, не сырые
-          Prisma-строки (см. <code>repository-scope-guard</code>).
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E2.4 — Единый источник для traffic-light/enum</h4>
-        <div class="meta">
-          Готово, когда: <code>TrafficLightStatus</code> из
-          <code>packages/shared</code> — единственный; ноль локальных
-          перетипизаций.
-        </div>
-      </div>
-
-      <h3>
-        Ось 3 — Связь с идеей
-        <span class="pill">DDD · трассируемость · OpenSpec</span>
-      </h3>
-      <div class="epic">
-        <h4>E3.1 — Документ видения продукта</h4>
-        <div class="meta">
-          Готово, когда: есть явный north-star продукта (проблема, пользователи,
-          ценность), на который ссылаются спеки.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E3.2 — Матрица способность → спека → код → тест</h4>
-        <div class="meta">
-          Готово, когда: каждая способность прослеживается до спеки и до теста;
-          пробелы видимы.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E3.3 — Полный глоссарий <code>CONTEXT.md</code></h4>
-        <div class="meta">
-          Готово, когда: все доменные термины определены однозначно; код
-          использует их же имена.
-        </div>
-      </div>
-
-      <h3>
-        Ось 4 — Процессы и Production
-        <span class="pill">DORA · 12-factor · OWASP ASVS</span>
-      </h3>
-      <div class="epic">
-        <h4>E4.1 — Зрелость CI/CD</h4>
-        <div class="meta">
-          Готово, когда: стадии (lint/type/test/build/e2e), кэш,
-          превью-окружения, авто-откат.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E4.2 — DORA-метрики</h4>
-        <div class="meta">
-          Готово, когда: частота деплоя, lead time, % сбоев, время
-          восстановления — измеряются автоматически.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E4.3 — Production-readiness чеклист</h4>
-        <div class="meta">
-          Готово, когда: secrets/конфиг по 12-factor, миграции append-only,
-          бэкапы, health/readiness, лимиты — закрыты.
-        </div>
-        <div class="meta tag-amber">
-          ⚠ Здесь снимается режим «MVP: база одноразовая» — это явный переход.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E4.4 — Безопасность (OWASP ASVS baseline)</h4>
-        <div class="meta">
-          Готово, когда: ASVS-базовый уровень пройден;
-          <code>dependency-audit</code> в CI; SAML/authz проверены.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E4.5 — Definition of Done + Release + CHANGELOG</h4>
-        <div class="meta">
-          Готово, когда: DoD кодифицирован, Conventional Commits + SemVer +
-          генерируемый CHANGELOG.
-        </div>
-      </div>
-
-      <h3>
-        Ось 5 — Разработка и обучение
-        <span class="pill">Testing-Trophy · observability · DX</span>
-      </h3>
-      <div class="epic">
-        <h4>E5.1 — Онбординг за 30 минут</h4>
-        <div class="meta">
-          Готово, когда: один скрипт поднимает всё; README-quickstart; новый
-          человек видит данные за полчаса.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E5.2 — Здоровье тест-пирамиды</h4>
-        <div class="meta">
-          Готово, когда: баланс unit/integration/e2e осознан; цель покрытия;
-          проба mutation-теста на ядре.
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E5.3 — Полнота наблюдаемости</h4>
-        <div class="meta">
-          Готово, когда: трассы ↔ логи ↔ ошибки связаны (OTel/Sentry/LGTM уже
-          есть — закрыть пробелы).
-        </div>
-      </div>
-      <div class="epic">
-        <h4>E5.4 — Учебный тур по коду</h4>
-        <div class="meta">
-          Готово, когда: есть «архитектурный тур» (как читать репозиторий) + ADR
-          как учебник принятых решений.
-        </div>
-      </div>
-
-      <h2>5. Что уже сделано</h2>
-      <table>
-        <tr>
-          <th>Артефакт</th>
-          <th>Статус</th>
-        </tr>
-        <tr>
-          <td>Карта здоровья кода (<code>docs/code-health-map.md</code>)</td>
-          <td class="tag-green">готова — 40 модулей ранжированы</td>
-        </tr>
-        <tr>
-          <td>OpenSpec-изменение <code>code-health-audit-map</code></td>
-          <td class="tag-green">применено, гейт зелёный</td>
-        </tr>
-        <tr>
-          <td>E1.1 — снятие 7 мёртвых поблажек</td>
-          <td class="tag-green">сделано, lint+typecheck зелёные</td>
-        </tr>
-        <tr>
-          <td>Дизайн движка (<code>docs/roadmap-execution-engine.md</code>)</td>
-          <td class="tag-green">готов — 20 эпиков, скелет оркестратора</td>
-        </tr>
-        <tr>
-          <td>
-            Разведка инструментов (<code>docs/tooling-recommendations.md</code>)
-          </td>
-          <td class="tag-green">готова — 1 INSTALL + first-party CONSIDER</td>
-        </tr>
-      </table>
-
-      <h2>6. Движок ночного исполнения</h2>
-      <p class="note">
-        Ты запускаешь один оркестратор-Workflow <code>roadmap-grind</code> и
-        уходишь. Он идёт по эпикам в порядке зависимостей, между ними — зелёный
-        гейт-чекпойнт, при падении возобновляется с последнего чекпойнта (читает
-        зафиксированный git, не память агента). Полный дизайн и скелет
-        оркестратора: <code>docs/roadmap-execution-engine.md</code>.
-      </p>
-      <p>
-        <span class="tag-green">AUTO 4</span> ·
-        <span class="tag-amber">SUPERVISED 10</span> ·
-        <span class="tag-red">HUMAN_GATE 6</span>
-        &nbsp;<span class="note"
-          >(скептик понизил E4.4 SAML/authz и E5.3 горячий OTel-путь до
-          HUMAN_GATE ⬇)</span
-        >
-      </p>
-      <pre class="mermaid">
-flowchart TD
-    Start([Запуск оркестратора roadmap-grind]) --> Resume{Есть незавершённый прогон}
-    Resume -->|да| LastGreen[Возобновить с последнего зелёного чекпойнта из git]
-    Resume -->|нет| FreshQueue[Построить очередь эпиков по dependsOn]
-    LastGreen --> Pick
-    FreshQueue --> Pick
-
-    Pick{Очередь не пуста} -->|нет| Finalize[Финальные гейты, перезапуск стенда, утренний отчёт]
-    Pick -->|да| Next[Взять следующий эпик готовый по зависимостям]
-    Next --> DepCheck{Зависимости выполнены}
-    DepCheck -->|нет| Skip[Отложить эпик, взять следующий независимый] --> Pick
-    DepCheck -->|да| Idem{Уже сделано archived или merged}
-    Idem -->|да| Pick
-    Idem -->|нет| Worktree[Создать git-worktree, cwd залочен на путь worktree]
-
-    Worktree --> Classify{Класс автономности}
-
-    Classify -->|AUTO| RunAuto[Skill-исполнитель в worktree]
-    Classify -->|SUPERVISED| RunSup[Skill-исполнитель в worktree]
-    Classify -->|HUMAN_GATE| GrillFirst[Plan-grill - свежий Opus-скептик пока нет Codex]
-
-    GrillFirst --> CharTest[Characterization-тест ПЕРВЫМ, зелёный на ДО-коде]
-    CharTest --> RunHG[Skill-исполнитель в worktree, поведение-сохраняющий срез]
-
-    RunAuto --> Audit[Аудит эпика - поведенческий оракул]
-    RunSup --> Audit
-    RunHG --> Audit
-
-    Audit --> Gate{4 гейта зелёные typecheck lint test build}
-    Gate -->|RED| Halt[Остановить fail-closed, переоткрыть это изменение] --> EnqFix[Очередь человеку: красный гейт] --> Pick
-    Gate -->|GREEN| Behavior{Поведенческий оракул совпал, golden-master не разошёлся}
-    Behavior -->|нет| Halt
-    Behavior -->|да| Branch{Класс автономности}
-
-    Branch -->|AUTO| CommitArchive[Коммит + openspec-archive = чекпойнт] --> Pick
-    Branch -->|SUPERVISED| OpenPR[Ветка + Pull Request, НЕ мёржить] --> EnqReview[Очередь человеку: ревью PR] --> Pick
-    Branch -->|HUMAN_GATE| Pause[Пауза в точке решения] --> EnqDecision[Очередь человеку: одобрить дизайн и diff] --> Pick
-
-    Finalize --> Done([Отчёт готов, без авто-push в main])
-      </pre>
-
-      <h3>Три класса автономности</h3>
-      <ul>
-        <li>
-          <span class="tag-green">AUTO</span> — идёт ночью без присмотра: коммит
-          + архив. Доки, аудиты, мёртвый код, снятие поблажек.
-        </li>
-        <li>
-          <span class="tag-amber">SUPERVISED</span> — агент доводит до ветки и
-          открывает PR, НЕ мёржит; ждёт твоё ревью.
-        </li>
-        <li>
-          <span class="tag-red">HUMAN_GATE</span> — пауза в точке решения;
-          рискованное (горячий код, SAML, схема/миграции) сам не доводит.
-        </li>
-      </ul>
-
-      <h3>Карта эпиков по исполнителю и автономии</h3>
-      <table>
-        <tr>
-          <th>id</th>
-          <th>Ось</th>
-          <th>Исполнитель (кратко)</th>
-          <th>Автономия</th>
-          <th>Риск</th>
-        </tr>
-        <tr>
-          <td><code>E2.1</code></td>
-          <td>Архитектура</td>
-          <td>
-            /deep-research (best-practice C4 + Structurizr/Mermaid direction,
-            capture-only memo) -&gt; /o…
-          </td>
-          <td class="tag-green">AUTO</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E2.2</code></td>
-          <td>Архитектура</td>
-          <td>
-            /grill-with-docs-codex (grill the boundary-RULE DESIGN against
-            CONTEXT.md + the C4 layer g…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E2.3</code></td>
-          <td>Архитектура</td>
-          <td>
-            /grill-with-docs-codex (high-stakes: data-access layer; lock the
-            domain-type target shape …
-          </td>
-          <td class="tag-red">HUMAN_GATE</td>
-          <td>HIGH</td>
-        </tr>
-        <tr>
-          <td><code>E2.4</code></td>
-          <td>Архитектура</td>
-          <td>
-            /grill-me-codex (lock scope: SSOT
-            `trafficLightStatusSchema`/`TrafficLightStatus` ALREADY …
-          </td>
-          <td class="tag-red">HUMAN_GATE</td>
-          <td>HIGH</td>
-        </tr>
-        <tr>
-          <td><code>E1.1</code></td>
-          <td>Качество кода (Code Quality)</td>
-          <td>
-            openspec-ff-change (one tiny change per OBSOLETE-table row, never
-            batched) -&gt; openspec-app…
-          </td>
-          <td class="tag-green">AUTO</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E1.2</code></td>
-          <td>Качество кода (Code Quality)</td>
-          <td>
-            PER MODULE, two SEPARATE grilled changes (lead-form.tsx and
-            trpc.router.ts are distinct co…
-          </td>
-          <td class="tag-red">HUMAN_GATE</td>
-          <td>HIGH</td>
-        </tr>
-        <tr>
-          <td><code>E1.3</code></td>
-          <td>Качество кода (Code Quality)</td>
-          <td>
-            deep-research (framework-aware knip/jscpd config best practices for
-            Nest DI / Next page-la…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E1.4</code></td>
-          <td>Качество кода (Code Quality)</td>
-          <td>
-            openspec-ff-change -&gt; author a ratchet enforcement test/script
-            (no automated one exists to…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E4.1</code></td>
-          <td>Процессы и Production (DORA · 12-factor · OWASP ASVS) — Ось 4</td>
-          <td>
-            openspec-propose → openspec-apply-change (edit
-            .github/workflows/ci.yml: add deps cache, e…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E4.2</code></td>
-          <td>Процессы и Production (DORA · 12-factor · OWASP ASVS) — Ось 4</td>
-          <td>
-            deep-research (DORA-for-low-deploy-cadence best practice,
-            capture-only memo) → openspec-pr…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E4.3</code></td>
-          <td>Процессы и Production (DORA · 12-factor · OWASP ASVS) — Ось 4</td>
-          <td>
-            grill-with-docs-codex (Codex DEGRADED until Jun 25 → fresh-session
-            Opus skeptic, never a r…
-          </td>
-          <td class="tag-red">HUMAN_GATE</td>
-          <td>HIGH</td>
-        </tr>
-        <tr>
-          <td><code>E4.4</code></td>
-          <td>Процессы и Production (DORA · 12-factor · OWASP ASVS) — Ось 4</td>
-          <td>
-            deep-research (OWASP ASVS baseline mapping memo, capture-only) →
-            openspec-propose → opensp…
-          </td>
-          <td class="tag-red">HUMAN_GATE ⬇</td>
-          <td>HIGH</td>
-        </tr>
-        <tr>
-          <td><code>E4.5</code></td>
-          <td>Процессы и Production (DORA · 12-factor · OWASP ASVS) — Ось 4</td>
-          <td>
-            openspec-ff-change → openspec-apply-change. SUB-PART A (AUTO, pure
-            docs): codify DoD doc u…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E5.1</code></td>
-          <td>
-            Разработка и обучение (Ось 5 — Testing-Trophy / observability / DX).
-            Verified repo state: onboarding doc exists (docs/onboarding.md, RU)
-            but no single bootstrap script; vitest coverage floors already wired
-            (api 80/70/80/80, web 70/60/70/70) but NO mutation tool (no
-            stryker); OTel + Sentry/Bugsink + LGTM live with
-            error-trace-correlation already archived as a spec. Discriminator
-            applied per advisor: does completing the epic EDIT hot product
-            runtime code? None refactors product domain code; observability is
-            NOT on the escalate-list (auth/SAML/prisma/concurrency/destructive)
-            -&gt; no epic is HUMAN_GATE. Mutation testing mutates a sandbox COPY
-            (not real code), so E5.2 is tooling+audit, SUPERVISED only for the
-            new-devDependency hazard, NOT hot-code. Each of E5.1/E5.2/E5.3 =
-            cheap AUTO audit + SUPERVISED remediation; schema is one row per
-            epic so autonomy = the remediation ceiling. E5.4 is the only
-            fully-AUTO (docs-only) epic. Codex quota-blocked until 2026-06-25
-            -&gt; all grill/codex-review steps degrade to a FRESH-SESSION Opus
-            skeptic (never a resumed approving session). No auto-push to main:
-            branch + PR, SUPERVISED merge.
-          </td>
-          <td>
-            openspec-propose (well-specified, no grill) -&gt;
-            openspec-apply-change: author ONE bootstrap…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E5.2</code></td>
-          <td>
-            Разработка и обучение (Ось 5 — Testing-Trophy / observability / DX).
-            Verified repo state: onboarding doc exists (docs/onboarding.md, RU)
-            but no single bootstrap script; vitest coverage floors already wired
-            (api 80/70/80/80, web 70/60/70/70) but NO mutation tool (no
-            stryker); OTel + Sentry/Bugsink + LGTM live with
-            error-trace-correlation already archived as a spec. Discriminator
-            applied per advisor: does completing the epic EDIT hot product
-            runtime code? None refactors product domain code; observability is
-            NOT on the escalate-list (auth/SAML/prisma/concurrency/destructive)
-            -&gt; no epic is HUMAN_GATE. Mutation testing mutates a sandbox COPY
-            (not real code), so E5.2 is tooling+audit, SUPERVISED only for the
-            new-devDependency hazard, NOT hot-code. Each of E5.1/E5.2/E5.3 =
-            cheap AUTO audit + SUPERVISED remediation; schema is one row per
-            epic so autonomy = the remediation ceiling. E5.4 is the only
-            fully-AUTO (docs-only) epic. Codex quota-blocked until 2026-06-25
-            -&gt; all grill/codex-review steps degrade to a FRESH-SESSION Opus
-            skeptic (never a resumed approving session). No auto-push to main:
-            branch + PR, SUPERVISED merge.
-          </td>
-          <td>
-            openspec-propose -&gt; optional deep-research (Stryker config +
-            Testing-Trophy balance, captu…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E5.3</code></td>
-          <td>
-            Разработка и обучение (Ось 5 — Testing-Trophy / observability / DX).
-            Verified repo state: onboarding doc exists (docs/onboarding.md, RU)
-            but no single bootstrap script; vitest coverage floors already wired
-            (api 80/70/80/80, web 70/60/70/70) but NO mutation tool (no
-            stryker); OTel + Sentry/Bugsink + LGTM live with
-            error-trace-correlation already archived as a spec. Discriminator
-            applied per advisor: does completing the epic EDIT hot product
-            runtime code? None refactors product domain code; observability is
-            NOT on the escalate-list (auth/SAML/prisma/concurrency/destructive)
-            -&gt; no epic is HUMAN_GATE. Mutation testing mutates a sandbox COPY
-            (not real code), so E5.2 is tooling+audit, SUPERVISED only for the
-            new-devDependency hazard, NOT hot-code. Each of E5.1/E5.2/E5.3 =
-            cheap AUTO audit + SUPERVISED remediation; schema is one row per
-            epic so autonomy = the remediation ceiling. E5.4 is the only
-            fully-AUTO (docs-only) epic. Codex quota-blocked until 2026-06-25
-            -&gt; all grill/codex-review steps degrade to a FRESH-SESSION Opus
-            skeptic (never a resumed approving session). No auto-push to main:
-            branch + PR, SUPERVISED merge.
-          </td>
-          <td>
-            grill-with-docs-codex (Codex half DEGRADED -&gt; fresh-Opus skeptic)
-            on the gap-closure plan …
-          </td>
-          <td class="tag-red">HUMAN_GATE ⬇</td>
-          <td>MED</td>
-        </tr>
-        <tr>
-          <td><code>E5.4</code></td>
-          <td>
-            Разработка и обучение (Ось 5 — Testing-Trophy / observability / DX).
-            Verified repo state: onboarding doc exists (docs/onboarding.md, RU)
-            but no single bootstrap script; vitest coverage floors already wired
-            (api 80/70/80/80, web 70/60/70/70) but NO mutation tool (no
-            stryker); OTel + Sentry/Bugsink + LGTM live with
-            error-trace-correlation already archived as a spec. Discriminator
-            applied per advisor: does completing the epic EDIT hot product
-            runtime code? None refactors product domain code; observability is
-            NOT on the escalate-list (auth/SAML/prisma/concurrency/destructive)
-            -&gt; no epic is HUMAN_GATE. Mutation testing mutates a sandbox COPY
-            (not real code), so E5.2 is tooling+audit, SUPERVISED only for the
-            new-devDependency hazard, NOT hot-code. Each of E5.1/E5.2/E5.3 =
-            cheap AUTO audit + SUPERVISED remediation; schema is one row per
-            epic so autonomy = the remediation ceiling. E5.4 is the only
-            fully-AUTO (docs-only) epic. Codex quota-blocked until 2026-06-25
-            -&gt; all grill/codex-review steps degrade to a FRESH-SESSION Opus
-            skeptic (never a resumed approving session). No auto-push to main:
-            branch + PR, SUPERVISED merge.
-          </td>
-          <td>
-            openspec-propose -&gt; openspec-apply-change: author the docs/ code
-            tour (&#x27;how to read this r…
-          </td>
-          <td class="tag-green">AUTO</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E3.1</code></td>
-          <td>Связь с идеей (DDD · трассируемость · OpenSpec) — Axis 3</td>
-          <td>
-            openspec-ff-change (author a tracked &#x27;product-vision-doc&#x27;
-            change: proposal-&gt;specs-&gt;design-…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E3.2</code></td>
-          <td>Связь с идеей (DDD · трассируемость · OpenSpec) — Axis 3</td>
-          <td>
-            openspec-ff-change (&#x27;capability-traceability-matrix&#x27;)
-            -&gt; openspec-apply-change generates d…
-          </td>
-          <td class="tag-green">AUTO</td>
-          <td>LOW</td>
-        </tr>
-        <tr>
-          <td><code>E3.3</code></td>
-          <td>Связь с идеей (DDD · трассируемость · OpenSpec) — Axis 3</td>
-          <td>
-            grill-with-docs-codex (Codex half DEGRADED until Jun 25 -&gt;
-            substitute FRESH-SESSION Opus s…
-          </td>
-          <td class="tag-amber">SUPERVISED</td>
-          <td>LOW</td>
-        </tr>
-      </table>
-
-      <h2>7. Слой инструментов (что доставить извне)</h2>
-      <p class="note">
-        Почти всё полезное — уже first-party в подключённом маркетплейсе
-        <code>anthropics/claude-plugins-official</code>, поэтому наращивание
-        идёт без стороннего кода. Сторонний скилл/MCP = чужой код с доступом к
-        репозиторию: ставлю только по твоему «да», приоритет — first-party.
-        Полный список: <code>docs/tooling-recommendations.md</code>.
-      </p>
-      <h3>Поставить</h3>
-      <table>
-        <tr>
-          <th>Плагин</th>
-          <th>Зачем</th>
-          <th>Команда</th>
-        </tr>
-        <tr>
-          <td><code>pr-review-toolkit</code></td>
-          <td>мульти-агентное ревью PR (оси 1+4)</td>
-          <td>
+          <strong
+            >5.15 · ограниченный контур продолжения · ACCEPTED-BOUNDED</strong
+          >
+          <span>
+            Исторический пакет Admin/minimal на exact-SHA
+            <code>2026-08-20-runtime-514-e5105aa9-admin-rerun7</code> дал
+            parent-only <code>PASS</code> и <code>PREFLIGHT_CANARY</code>.
+            Текущий повтор на <code>b0b8a9f40</code> сохранён отдельно в
             <code
-              >claude plugin install
-              pr-review-toolkit@claude-plugins-official</code
+              >2026-08-21-runtime-514-b0b8a9f40-admin-canary-repair-otel</code
             >
-          </td>
-        </tr>
+            и также завершился <code>PASS</code> с
+            <code>BRANCH_EXHAUSTED</code>. Полное или shard-продолжение остаётся
+            отдельным контуром <code>NOT-PROVEN</code>.
+          </span>
+        </li>
+        <li>
+          <strong>5.17 · исследование ёмкости · ACCEPTED-BOUNDED</strong>
+          <span>
+            На историческом exact-source initial preflight guard сохранил
+            границу
+            <code>8199 &gt; 8192</code>. Последующий single-child survey с
+            допуском <code>65536</code> controls истёк по стене
+            <code>600000ms</code> и не создал terminal result. Пакет принят
+            только как диагностический; лимит нельзя менять по этому числу.
+          </span>
+        </li>
+        <li>
+          <strong
+            >5.19 · source-bound canonicalization · CODE-PARTIAL / CANARY
+            NOT-PROVEN</strong
+          >
+          <span>
+            На странице Action Log seed показывает
+            <code>20 loaded+</code> строк, а каждая
+            <code>ActionLogRow</code> хранит независимый
+            <code>useState(false)</code> для раскрытия деталей. Несколько
+            раскрытий одновременно дают аддитивный powerset-граф: при
+            <code>maxDepth=4</code> это уже
+            <code>1+20+190+1140+4845=6196</code> reachable subsets. Это
+            показывает рост harness-графа, но не разрешает trim и не
+            устанавливает root cause. Введён source-bound контракт
+            <code>data-reveal-independence="source-bound-row-local"</code> для
+            row-local disclosure; без него даже pairwise-commutative triple
+            остаётся ordinary branch. Исторический code candidate сохраняет
+            target-based sequence identity, reversible pair-order proof,
+            material-union guard и boundary rejection для trusted A/B/C +
+            untrusted fourth disclosure. Exact <code>admin/demo</code> canary на
+            новом clean source ещё не запускался: он требует source-bound
+            browser/API/DB/Redis/telemetry packet и независимое Sol review.
+            Поэтому лимит нельзя повышать, граф нельзя обрезать, а 5.19 нельзя
+            помечать закрытым по одним тестам.
+          </span>
+        </li>
+        <li>
+          <strong>Полная матрица · после causal boundary</strong>
+          <span>
+            Манифест 6.1 уже заморожен исторически. Сначала связать его с
+            текущим exact source и обновлёнными runtime-contracts, затем
+            выполнить заявленную матрицу, импортировать независимые пакеты,
+            разобрать находки, исправить подтверждённые пробелы и повторить
+            полный и затронутый
+            <code>affected/full sweep</code> на одном финальном SHA
+            доказательств исполнения.
+          </span>
+        </li>
+      </ol>
+
+      <div class="callout warn">
+        <strong>Текущие хвосты:</strong>
+        <code>5.14/5.15/5.17</code> остаются bounded diagnostic boundaries (5.14
+        evidence-complete, acceptance-open); pair
+        <code>1.3/3.1/3.2 + 5.19</code> остаётся source-bound dependency с
+        <code>5.19</code> CANARY <code>NOT-PROVEN</code>; <code>6.2-6.4</code>,
+        <code>7.1-7.4</code>, <code>8.1-8.4</code> и remote CI/Dependabot
+        остаются открытыми. Ни один хвост не закрывается этой
+        continuity-редакцией.
+      </div>
+
+      <h2>4. Что ещё нельзя считать закрытым</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Хвост</th>
+            <th>Статус</th>
+            <th>Минимальное доказательство закрытия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>OpenSpec 6.4: две независимые проверки полного кадра</td>
+            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td>
+              Два отчёта, каждый на точном исходнике/дереве и полном кадре;
+              затем итоговый синтез без нерешённых блокирующих проблем.
+            </td>
+          </tr>
+          <tr>
+            <td>Рантайм OpenSpec 5.14, 5.15, 5.17</td>
+            <td><span class="status ok">PROVEN-BOUNDED</span></td>
+            <td>
+              Каждый ограниченный gate имеет отдельный пакет exact-SHA и
+              принятую границу; full/shard continuation и полная матрица не
+              входят в этот статус.
+            </td>
+          </tr>
+          <tr>
+            <td>Матрица всего продукта и разбор результатов</td>
+            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td>
+              Замороженный знаменатель, все ячейки, корреляция телеметрии,
+              импорт проверок и ноль нерешённых находок.
+            </td>
+          </tr>
+          <tr>
+            <td>Очистка: <code>REMOVE / MIGRATE / RETAIN</code></td>
+            <td><span class="status warn">PARTIAL-PROVEN</span></td>
+            <td>
+              Archive-only inventory привязал exact source, ветки, worktree и
+              stash к решениям <code>REMOVE / MIGRATE / RETAIN</code>. Sol
+              одобрил классификацию и exact local-ref manifest; безопасный
+              <code>git branch -d</code> отказал из-за divergent remote ref.
+              Поэтому ни один ref не удалён, remote не изменён, а полная cleanup
+              closure остаётся <code>NOT-PROVEN</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Выпуск и закрытие по схеме <code>two-SHA</code></td>
+            <td><span class="status danger">NOT-PROVEN</span></td>
+            <td>
+              Обязательные статические и интеграционные/UAT/рантайм-ворота,
+              чистый путь публикации, повторное чтение <code>remote tip</code>,
+              CI и Dependabot, а также проверенная связь закрытия только по
+              метаданным.
+            </td>
+          </tr>
+        </tbody>
       </table>
-      <h3>Рассмотреть (first-party)</h3>
-      <p class="note">
-        <code>semgrep</code> (SAST/секреты, ось 4) ·
-        <code>github</code> (issues/PR/CI, оси 3+4) ·
-        <code>prisma</code> (schema/миграции, ось 2) ·
-        <code>code-modernization</code> (ось 2) ·
-        <code>hookify</code> (guardrail-хуки, ось 4) ·
-        <code>session-report</code> /
-        <code>learning-output-style</code> (учебность, оси 3+5). Все:
-        <code>claude plugin install &lt;name&gt;@claude-plugins-official</code>.
-      </p>
-      <p class="note tag-amber">
-        Не подтверждено (НЕ ставить как факт): Grafana/Postgres MCP,
-        wshobson/agents, compound-engineering, C4/Mermaid-скиллы — проверю
-        отдельно перед установкой.
-      </p>
+
+      <h2>5. Правила продолжения</h2>
+      <div class="panel">
+        <ul>
+          <li>
+            Любая правка исходника продукта, исполнения или стенда делает
+            десктопный пакет историческим; съёмку и проверку нужно привязать к
+            новому точному SHA.
+          </li>
+          <li>
+            Допустим только прямой потомок с изменениями лишь в метаданных, если
+            отдельная проверка докажет, что он не меняет продукт, сборку,
+            <code>seed</code>, стенд, исполнение или поведение развёртывания.
+          </li>
+          <li>
+            OpenSpec и частный <code>backlog</code> остаются источниками истины
+            для состояния задач; эта HTML-страница является только проекцией для
+            владельца.
+          </li>
+          <li>
+            Ограниченные runtime/browser/DB/Redis-пакеты уже выполнены только на
+            allowlisted disposable target; production, внешняя публикация и
+            неизвестные базы не затрагивались. После этой docs-only редакции
+            следующий исполнитель перечитывает clean source identity, ждёт host
+            eligibility и Sol pre-run gate, затем выполняет exact 5.14 → 5.15 →
+            5.17 → 5.19 и только после этого берёт 6.2.
+          </li>
+          <li>
+            Standing owner authority допускает временный disposable Bugsink
+            superuser/team/project/membership/API-token lifecycle только в exact
+            campaign target; secrets должны существовать только в process memory
+            и после работы оставлять zero residue.
+          </li>
+          <li>
+            Exclusions: production/shared/unknown targets, foreign credentials,
+            merge в <code>main</code> и изменения denominator/cap без fresh Sol
+            decision. Эта дорожная карта не расширяет эти границы.
+          </li>
+        </ul>
+      </div>
+
+      <h2>6. Ближайшее действие владельца</h2>
+      <div class="callout">
+        <p>
+          Считать пакеты 5.14/5.15/5.17 принятыми только в их ограниченной
+          области и сохранить их неизменными. Свежий 5.14 evidence packet уже
+          сохранён, но не является runtime acceptance. После этой docs-only
+          редакции перечитать clean source identity, дождаться host eligibility
+          и нового Sol pre-run gate, затем выполнить свежую последовательность
+          5.14 → 5.15 → 5.17 → 5.19. Только после этого готовить полную матрицу
+          6.2, проверку Luna 6.3 и независимый синтез 6.4; затем — исправления и
+          финальный повторный полный sweep. Полное CR-001 пока не закрыто.
+        </p>
+      </div>
 
       <footer>
-        Черновик. Привязки к эталонам и порядок фаз — предмет уточнения.
-        Следующий шаг по решению: глубокий ресёрч best-practices и закрепление
-        как durable OpenSpec-изменение <code>north-star-roadmap</code>. Каждая
-        ось — отдельные grilled-изменения; ничего не выполняется массово или
-        параллельно.
+        Точка отсчёта этой редакции — committed source
+        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
+        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Pair-level
+        code/test/review and all runtime claims remain separately bounded;
+        <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
+        после фиксации получит отдельный SHA/tree. Дорожная карта не содержит
+        внешних ресурсов или CDN и не выполняет внешних записей. Полное CR-001
+        закрывается только при одновременном выполнении всех обязательных
+        условий OpenSpec, исполнения, проверки, очистки и выпуска.
       </footer>
-    </div>
-
-    <script type="module">
-      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({ startOnLoad: true, theme: "dark" });
-    </script>
+    </main>
   </body>
 </html>

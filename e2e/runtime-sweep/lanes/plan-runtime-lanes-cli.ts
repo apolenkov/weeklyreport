@@ -2,14 +2,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { type SeedProfile, seedProfileSchema } from "../source/contracts.ts";
+import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { stableSerialize } from "../support/ids.ts";
-import { planRuntimeLanes } from "./plan-runtime-lanes.ts";
 import {
   DEFAULT_RUNTIME_LANE_COUNT,
   MAX_RUNTIME_LANE_COUNT,
   MIN_RUNTIME_LANE_COUNT,
   type RuntimeLaneMode,
-} from "./runtime-lane-contract.ts";
+} from "./contracts/runtime-lane-contract.ts";
+import { planRuntimeLanes } from "./plan-runtime-lanes.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -51,6 +52,7 @@ const laneCountFrom = (value: string | undefined): number => {
 };
 
 async function main(): Promise<void> {
+  await assertRuntimeSourceAuthorityFromEnvironment();
   const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
   const mode = modeFrom(requiredEnv("RUNTIME_SWEEP_LANE_MODE"));
   const outputPath = path.resolve(

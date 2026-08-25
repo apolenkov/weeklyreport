@@ -20,6 +20,17 @@ import {
   TESTING_STAGE_ID,
   UNOWNED_PROJECT,
 } from "./__tests__/report-sections-prisma-harness";
+import { reportSectionFullInclude } from "./report-sections.include";
+
+describe("reportSectionFullInclude", () => {
+  it("orders child records by their unique durable identity", () => {
+    expect(reportSectionFullInclude.items.orderBy).toEqual({ stableId: "asc" });
+    expect(reportSectionFullInclude.risks.orderBy).toEqual({ stableId: "asc" });
+    expect(reportSectionFullInclude.decisions.orderBy).toEqual({
+      stableId: "asc",
+    });
+  });
+});
 
 // A project's name comes from its own row, not from the ownership join, so a
 // project a risk merely references still carries its real name.

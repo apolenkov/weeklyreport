@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -355,6 +355,64 @@ describe("LeadForm mode-adaptive trailing control", () => {
       screen.queryByRole("button", { name: "Expand all sections" }),
     ).toBeNull();
     expect(screen.queryByText("Toggle All")).toBeNull();
+  });
+
+  it("slides mode: hosts one reversible density control with desktop view labels", async () => {
+    mockPathname = `/lead/report/${REPORT_ID}`;
+    const { Wrapper } = buildHarness({
+      myHistory: [
+        {
+          sectionId: SECTION_ID,
+          reportId: REPORT_ID,
+          periodStart: new Date("2026-06-15T00:00:00Z"),
+          periodEnd: new Date("2026-06-21T00:00:00Z"),
+          reportStatus: "open",
+          sectionStatus: "draft",
+          submittedAt: null,
+          publishedAt: null,
+        },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="slides" />
+      </Wrapper>,
+    );
+
+    const contextControls = await screen.findByRole("group", {
+      name: "Context controls",
+    });
+    expect(screen.getByText("Existing item")).toBeInTheDocument();
+    expect(within(contextControls).getByText("Edit")).toHaveClass(
+      "sr-only",
+      "lg:not-sr-only",
+    );
+    expect(within(contextControls).getByText("Slides")).toHaveClass(
+      "sr-only",
+      "lg:not-sr-only",
+    );
+    expect(
+      within(contextControls).getByRole("group", { name: "Slide density" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("group", { name: "Slide density" }),
+    ).toHaveLength(1);
+
+    const presentation = within(contextControls).getByRole("button", {
+      name: "Presentation",
+    });
+    fireEvent.click(presentation);
+    expect(presentation).toHaveAttribute("aria-pressed", "true");
+
+    const document = within(contextControls).getByRole("button", {
+      name: "Document",
+    });
+    fireEvent.click(document);
+    expect(document).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getAllByRole("group", { name: "Slide density" }),
+    ).toHaveLength(1);
+    expect(screen.getByText("Existing item")).toBeInTheDocument();
   });
 
   it("+ Add stays present (and enabled) when the lead switches to slides mode", async () => {

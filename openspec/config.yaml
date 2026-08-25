@@ -68,9 +68,14 @@ context: |
   - Deferred user-facing features use `ComingSoonBadge` from
     `@customreport/ui`; deferred backend paths throw
     `Error('Not implemented — see TODO(<ref>)')`
-  - Non-prod `POSTGRES_DB` and the database name inside `DATABASE_URL` must
-    suffix with `_uat`, `_dev`, or `_test` when the host is not truly local;
-    `prisma/guards/_destructive-guard.ts` parses `DATABASE_URL`
+  - E2E/runtime destructive operations use the one exact validator in
+    `prisma/guards/_destructive-guard.ts`: loopback only, raw URL path exactly
+    `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, no query/fragment
+    or encoded aliases, `NODE_ENV != production`, and exact per-run
+    `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; no
+    `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
+  - Manual UAT/dev operations use the same exact target contract; production
+    restore remains a separate entrypoint and contract
   - Treat committed Prisma migrations as append-only. A history rewrite needs
     an explicit reviewed task and is allowed only for the exact disposable DB
     targets in `AGENTS.md`; the destructive guard and per-run consent still apply

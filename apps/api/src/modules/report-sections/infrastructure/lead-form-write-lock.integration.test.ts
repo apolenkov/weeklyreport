@@ -29,11 +29,11 @@ describe("lead-form published-period write locks (integration)", () => {
   const publishedAt = new Date("2026-07-22T12:00:00.000Z");
 
   beforeEach(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase();
     await disconnectTestPrisma();
   });
 
