@@ -240,6 +240,19 @@ before and after watcher setup, so a request arriving during setup cannot be
 lost; the CLI has a bounded abort deadline and receives source authority only
 from the exact runtime environment.
 
+The resource-aware continuation keeps one headless Playwright worker and gives
+each child three cooperative source/plan-bound limits: a 60-second soft wall,
+256 completed terminal candidates, and 1,024 reveal-action delta. It reserves
+10 seconds for cooperative publication and teardown, enforces a 90-second hard
+process-group wall with 10 seconds of kill grace, and retains the overall
+30-minute attempt/controller deadline plus the global 16,384-action limit.
+The child evaluates all three soft limits only after a terminal candidate; the
+first reached limit seals a disjoint suffix. A hard expiry inside a candidate
+kills the owned process group and terminates the attempt without a grant.
+Every successful child, including the child that exhausts the frontier, is
+followed by the same five-second host checkpoint before the parent may launch a
+successor or publish completion.
+
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after
 each step and reject a path that mutates persisted state. A transition that
@@ -499,14 +512,22 @@ The diagnostic R1 capacity benchmark selected four lanes for the 14-core,
 Five, six, and ten lanes were rejected after resource-induced failures; failed
 lane orchestration waited for every sibling and left no owned process or port.
 
-On Darwin, `vm_stat` raw-free pages remain immutable diagnostic telemetry but
-are not an independent eligibility veto: inactive and speculative pages are
-reclaimable capacity. Baseline eligibility therefore fails closed on available
-memory, the system pressure state and free percentage, swap, compressed memory,
-and cumulative-counter integrity. Runtime monitoring retains those same
-signals, swap-growth checks, and gauge hysteresis. This prevents healthy page
-cache use from blocking the campaign without weakening actual pressure,
-reclaimable-capacity, swap, compression, or counter safeguards.
+On Darwin, `vm_stat` raw-free pages and absolute `swapUsedBytes` remain
+immutable digest-bound diagnostic telemetry but are not independent
+eligibility vetoes: inactive and speculative pages are reclaimable capacity,
+and historical swap occupancy does not by itself establish current pressure.
+Baseline eligibility therefore fails closed on available memory, the system
+pressure state and free percentage, at least 512 MiB of swap-free headroom,
+compressed memory, and cumulative-counter integrity. The first accepted sample
+of the fresh 60-sample post-infrastructure baseline anchors swap growth for the
+whole attempt; neither the producer nor reader may re-anchor it on later
+records. Runtime monitoring aborts immediately on pressure or more than 512 MiB
+of positive swap growth, uses the existing three-sample hysteresis for
+available/free-percentage/compression gauges, and treats three consecutive
+samples with positive swap-out or bidirectional swap churn as a breach.
+Missing, reset, decreasing, or malformed counters remain invalid. This admits
+stable historical swap without weakening current pressure, capacity,
+compression, swap-headroom, growth, activity, or counter safeguards.
 
 Require a distinct, permitted non-production `E2E_DATABASE_URL` before
 `prisma migrate reset`/profile seed; the exact central destructive guard is the

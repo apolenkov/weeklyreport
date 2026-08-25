@@ -30,6 +30,7 @@ export type ControlledDiagnosticChild = Readonly<{
 }>;
 
 type BaselineResult = Readonly<{
+  readonly firstSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly lastSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly counters: DiagnosticHostEnvelopeCounters;
 }>;
@@ -142,7 +143,7 @@ const monitorChild = async (input: {
     const snapshot = await input.readSnapshot("runtime");
     const evaluation = evaluateHostEnvelopeSample({
       snapshot,
-      baselineSwapUsedBytes: input.baseline.lastSnapshot.swapUsedBytes ?? 0,
+      baselineSwapUsedBytes: input.baseline.firstSnapshot.swapUsedBytes ?? 0,
       priorCounters: input.state.previousCounters,
       breachStreaks: input.state.breachStreaks,
     });

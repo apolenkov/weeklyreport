@@ -27,10 +27,11 @@ const RECORD_KEYS = [
 ] as const;
 export const POST_INFRASTRUCTURE_RECORD_COUNT = 60;
 const MAX_PRESSURE_FREE_PERCENT = 100;
-const REQUIRED_BREACH_STREAK_COUNT = 4;
+const REQUIRED_BREACH_STREAK_COUNT = 5;
 
 export type HealthyPostInfrastructureRecords = Readonly<{
   readonly recordCount: typeof POST_INFRASTRUCTURE_RECORD_COUNT;
+  readonly firstSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly lastSnapshot: DiagnosticHostEnvelopeSnapshot;
   readonly lastCounters: DiagnosticHostEnvelopeCounters;
 }>;
@@ -137,6 +138,7 @@ export const readHealthyPostInfrastructureRecords = (
   const snapshots = recordsFor(payload);
   const folded = snapshots.reduce<{
     readonly priorCounters: DiagnosticHostEnvelopeCounters | undefined;
+    readonly firstSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
     readonly lastSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
   }>(
     (state, snapshot, index) => {
@@ -150,7 +152,8 @@ export const readHealthyPostInfrastructureRecords = (
       const evaluation = evaluateHostEnvelopeSample({
         snapshot,
         mode: "baseline",
-        baselineSwapUsedBytes: snapshot.swapUsedBytes ?? 0,
+        baselineSwapUsedBytes:
+          state.firstSnapshot?.swapUsedBytes ?? snapshot.swapUsedBytes ?? 0,
         priorCounters: state.priorCounters,
         breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
       });
@@ -163,15 +166,25 @@ export const readHealthyPostInfrastructureRecords = (
         );
       return {
         priorCounters: evaluation.nextCounters,
+        firstSnapshot: state.firstSnapshot ?? snapshot,
         lastSnapshot: snapshot,
       };
     },
-    { priorCounters: undefined, lastSnapshot: undefined },
+    {
+      priorCounters: undefined,
+      firstSnapshot: undefined,
+      lastSnapshot: undefined,
+    },
   );
-  if (folded.lastSnapshot === undefined || folded.priorCounters === undefined)
+  if (
+    folded.firstSnapshot === undefined ||
+    folded.lastSnapshot === undefined ||
+    folded.priorCounters === undefined
+  )
     throw new Error("Host baseline has no samples");
   return {
     recordCount: POST_INFRASTRUCTURE_RECORD_COUNT,
+    firstSnapshot: folded.firstSnapshot,
     lastSnapshot: folded.lastSnapshot,
     lastCounters: folded.priorCounters,
   };

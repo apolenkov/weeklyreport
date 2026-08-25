@@ -7,6 +7,7 @@ type BoundedPlaywrightChildInput = Readonly<{
   environment: NodeJS.ProcessEnv;
   maxDurationMs: number;
   terminationGraceMs: number;
+  acceptNonzeroExit?: boolean;
 }>;
 
 class PreflightBoundedPlaywrightChildError extends Error {
@@ -73,10 +74,13 @@ const waitForBoundedPlaywrightChild = (
   child: ChildProcess,
   input: Pick<
     BoundedPlaywrightChildInput,
-    "operationName" | "maxDurationMs" | "terminationGraceMs"
+    | "operationName"
+    | "maxDurationMs"
+    | "terminationGraceMs"
+    | "acceptNonzeroExit"
   >,
-): Promise<void> =>
-  new Promise<void>((resolve, reject) => {
+): Promise<number> =>
+  new Promise<number>((resolve, reject) => {
     const state: {
       timedOut: boolean;
       escalation: NodeJS.Timeout | undefined;
@@ -123,7 +127,7 @@ const waitForBoundedPlaywrightChild = (
     child.once("exit", (code, signal) => {
       if (state.timedOut) return;
       clearTimers();
-      if (code !== 0) {
+      if (code !== 0 && input.acceptNonzeroExit !== true) {
         reject(
           new PreflightBoundedPlaywrightChildError(
             `${input.operationName} child exited code=${String(code)} signal=${String(signal)}`,
@@ -131,13 +135,13 @@ const waitForBoundedPlaywrightChild = (
         );
         return;
       }
-      resolve();
+      resolve(code ?? 1);
     });
   });
 
 export const runBoundedPlaywrightChild = (
   input: BoundedPlaywrightChildInput,
-): Promise<void> => {
+): Promise<number> => {
   assertBoundedPlaywrightDuration(
     input.operationName,
     "maxDurationMs",

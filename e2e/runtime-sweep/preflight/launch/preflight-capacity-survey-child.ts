@@ -25,5 +25,5 @@ export function runPreflightCapacitySurveyChild(input: {
     environment: input.environment,
     maxDurationMs: input.maxDurationMs,
     terminationGraceMs: input.terminationGraceMs ?? STOP_GRACE_MS,
-  });
+  }).then(() => undefined);
 }

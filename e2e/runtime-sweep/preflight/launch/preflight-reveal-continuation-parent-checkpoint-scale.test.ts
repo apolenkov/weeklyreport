@@ -93,6 +93,7 @@ describe("R192 compact parent checkpoint scale", () => {
       });
 
       expect(result.done).toBe(true);
+      await result.publishTerminalArtifacts();
       await expect(
         access(
           path.join(

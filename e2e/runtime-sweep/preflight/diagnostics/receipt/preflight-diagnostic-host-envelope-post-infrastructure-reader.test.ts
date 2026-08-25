@@ -28,7 +28,7 @@ const snapshotFor = (index: number): DiagnosticHostEnvelopeSnapshot => ({
   availableBytes: 12 * 1024 ** 3,
   totalBytes: 36 * 1024 ** 3,
   compressedBytes: 4 * 1024 ** 3,
-  swapUsedBytes: 256 * 1024 ** 2,
+  swapUsedBytes: 2 * 1024 ** 3 + index * 1024,
   swapFreeBytes: 4 * 1024 ** 3,
   pressureFreePercent: 80,
   pressureState: "normal",
@@ -83,6 +83,7 @@ describe("strict post-infrastructure host checkpoint baseline reader", () => {
       });
       expect(baseline.recordCount).toBe(60);
       expect(baseline.baselineReceiptDigest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(baseline.firstSnapshot.swapUsedBytes).toBe(2 * 1024 ** 3);
       expect(baseline.lastSnapshot.timestampWall).toBe(1_700_000_000_059);
       expect(baseline.lastCounters.pageins).toBe(159);
     });

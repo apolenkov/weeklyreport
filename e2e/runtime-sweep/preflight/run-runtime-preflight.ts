@@ -181,6 +181,10 @@ if (mode === "shard") {
     preflightMode: PreflightLaunchMode,
     fullPreflight?: PreflightFullPaths,
     extraEnvironment?: NodeJS.ProcessEnv,
+    bounds?: Readonly<{
+      readonly maxDurationMs: number;
+      readonly terminationGraceMs: number;
+    }>,
   ): Promise<number> =>
     runPreflightPlaywrightChild({
       repoRoot,
@@ -188,6 +192,7 @@ if (mode === "shard") {
         ...preflightChildEnvironment(process.env, preflightMode, fullPreflight),
         ...extraEnvironment,
       },
+      ...(bounds === undefined ? {} : { bounds }),
     });
 
   const runRevealCanary = (): Promise<number> => {

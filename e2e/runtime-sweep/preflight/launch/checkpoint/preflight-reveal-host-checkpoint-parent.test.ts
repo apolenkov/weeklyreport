@@ -1,95 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
 import { withCleanSealedGrantFixture } from "../preflight-reveal-continuation-parent-test-fixture.ts";
 import type { RequestHostCheckpoint } from "./preflight-reveal-host-checkpoint-client.ts";
 import {
-  createHostCheckpointRequest,
-  createHostCheckpointResponse,
   type HostCheckpointCompletionBody,
   type HostCheckpointRequest,
-  type HostCheckpointResponse,
-  hostCheckpointThresholdDigest,
-  hostRecordDigestFor,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { runChildUntilDone } from "./preflight-reveal-host-checkpoint-parent.ts";
-
-const HOST_BASELINE_RECORD_COUNT =
-  HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
-
-const responseFor = (
-  body: Omit<HostCheckpointRequest, "requestDigest">,
-  overrides: Readonly<{
-    readonly checkpointSequence?: number;
-    readonly controllerObservationTimestamp?: number;
-    readonly sampleTimestamp?: number;
-  }> = {},
-): HostCheckpointResponse => {
-  const request = createHostCheckpointRequest(body);
-  const sample = {
-    eventSequence:
-      (request.previousSampleSequence ?? HOST_BASELINE_RECORD_COUNT) + 1,
-    timestampWall: overrides.sampleTimestamp ?? 200,
-    phase: "runtime" as const,
-    status: "healthy" as const,
-    reasons: [],
-    breachStreaks: {
-      rawFreeBytes: 0,
-      availableBytes: 0,
-      pressureFreePercent: 0,
-      compressedBytes: 0,
-    },
-    pressureState: "normal" as const,
-    metrics: {
-      rawFreeBytes: 10 * 1024 ** 3,
-      availableBytes: 9 * 1024 ** 3,
-      totalBytes: 16 * 1024 ** 3,
-      swapFreeBytes: 4 * 1024 ** 3,
-      pressureFreePercent: 80,
-      swapUsedBytes: 0,
-      compressedBytes: 1024,
-      cumulativeCounters: {
-        pageins: sampleSequenceFor(request),
-        pageouts: 50,
-        swapins: 2,
-        swapouts: 1,
-      },
-    },
-    nextCounters: {
-      pageins: sampleSequenceFor(request),
-      pageouts: 50,
-      swapins: 2,
-      swapouts: 1,
-    },
-  };
-  return createHostCheckpointResponse({
-    artifact: "PREFLIGHT_REVEAL_HOST_CHECKPOINT",
-    version: 1,
-    status: "HEALTHY",
-    run: request.run,
-    checkpointSequence:
-      overrides.checkpointSequence ?? request.checkpointSequence,
-    completedChildOrdinal: request.completedChildOrdinal,
-    requestDigest: request.requestDigest,
-    predecessorCheckpointDigest: request.previousCheckpointDigest,
-    controllerObservationTimestamp:
-      overrides.controllerObservationTimestamp ?? 201,
-    baselineReceiptDigest: "d".repeat(64),
-    sample,
-    coverage: {
-      priorSequence: request.previousSampleSequence ?? 0,
-      firstSequence: (request.previousSampleSequence ?? 0) + 1,
-      lastSequence: sample.eventSequence,
-      coveredCount:
-        sample.eventSequence - (request.previousSampleSequence ?? 0),
-    },
-    thresholdDigest: hostCheckpointThresholdDigest(),
-    hostRecordDigest: hostRecordDigestFor(sample),
-  });
-};
-
-const sampleSequenceFor = (request: HostCheckpointRequest): number =>
-  (request.previousSampleSequence ?? HOST_BASELINE_RECORD_COUNT) + 1;
+import { responseFor } from "./preflight-reveal-host-checkpoint-parent-test-fixture.ts";
 
 const nonterminalChild = (
   progress: Parameters<typeof runChildUntilDone>[0]["progress"],
@@ -99,11 +17,11 @@ const nonterminalChild = (
 });
 
 describe("host checkpoint parent sequencing", () => {
-  it("orders child0, accepted reduction, checkpoint, then child1", async () => {
+  it("checkpoints after every successful child including the terminal child", async () => {
     await withCleanSealedGrantFixture(async (fixture) => {
       const events: string[] = [];
       let childCalls = 0;
-      let requestBody: Omit<HostCheckpointRequest, "requestDigest"> | undefined;
+      const requests: Omit<HostCheckpointRequest, "requestDigest">[] = [];
       const context = {
         ...fixture.context,
         now: () => 100,
@@ -111,18 +29,26 @@ describe("host checkpoint parent sequencing", () => {
           readonly request: Omit<HostCheckpointRequest, "requestDigest">;
         }) => {
           events.push("checkpoint");
-          requestBody = input.request;
+          requests.push(input.request);
           return Promise.resolve(responseFor(input.request));
         },
       };
       const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
-        () => {
+        (input) => {
           childCalls += 1;
           events.push(`child${childCalls - 1}`);
           return Promise.resolve(
             childCalls === 1
               ? nonterminalChild(fixture.validProgress)
-              : { done: true, progress: fixture.validProgress, exitCode: 0 },
+              : {
+                  done: true,
+                  progress: input.progress,
+                  exitCode: 0,
+                  publishTerminalArtifacts: () => {
+                    events.push("publish");
+                    return Promise.resolve();
+                  },
+                },
           );
         };
       await expect(
@@ -134,8 +60,14 @@ describe("host checkpoint parent sequencing", () => {
           runChild,
         }),
       ).resolves.toBe(0);
-      expect(events).toEqual(["child0", "checkpoint", "child1"]);
-      expect(requestBody).toMatchObject({
+      expect(events).toEqual([
+        "child0",
+        "checkpoint",
+        "child1",
+        "checkpoint",
+        "publish",
+      ]);
+      expect(requests[0]).toMatchObject({
         checkpointSequence: 1,
         completedChildOrdinal: 0,
         receiptHead: fixture.validProgress.receiptHead,
@@ -146,6 +78,11 @@ describe("host checkpoint parent sequencing", () => {
           fixture.validProgress.previousCompletedCandidateCount,
         previousCheckpointDigest: null,
         previousSampleSequence: null,
+      });
+      expect(requests[1]).toMatchObject({
+        checkpointSequence: 2,
+        completedChildOrdinal: 1,
+        previousSampleSequence: 61,
       });
     });
   });
@@ -197,20 +134,57 @@ describe("host checkpoint parent sequencing", () => {
       ),
     ));
 
+  it("does not publish terminal artifacts when the final checkpoint fails", async () => {
+    await withCleanSealedGrantFixture(async (fixture) => {
+      let published = false;
+      const context = {
+        ...fixture.context,
+        now: () => 100,
+        requestHostCheckpoint: () =>
+          Promise.reject(new Error("controller rejected final checkpoint")),
+      };
+      const runChild: typeof import("../preflight-reveal-continuation-parent-child.ts").runContinuationChild =
+        () =>
+          Promise.resolve({
+            done: true,
+            progress: fixture.validProgress,
+            exitCode: 0,
+            publishTerminalArtifacts: () => {
+              published = true;
+              return Promise.resolve();
+            },
+          });
+
+      await expect(
+        runChildUntilDone({
+          context,
+          progress: fixture.validProgress,
+          ordinal: 0,
+          maxChildren: 1,
+          runChild,
+        }),
+      ).rejects.toThrow(/rejected final checkpoint/u);
+      expect(published).toBe(false);
+    });
+  });
+
   it.each([0, 23] as const)(
-    "does not request a checkpoint after terminal/failed child %s",
+    "requires a final checkpoint only for a successful terminal child %s",
     async (exitCode) => {
       await withCleanSealedGrantFixture(async (fixture) => {
         let checkpointCalls = 0;
         const completions: HostCheckpointCompletionBody[] = [];
         const context = {
           ...fixture.context,
+          now: () => 100,
           requestHostCheckpoint: Object.assign(
-            () => {
+            ({
+              request,
+            }: {
+              readonly request: Omit<HostCheckpointRequest, "requestDigest">;
+            }) => {
               checkpointCalls += 1;
-              return Promise.reject(
-                new Error("checkpoint must not be requested"),
-              );
+              return Promise.resolve(responseFor(request));
             },
             {
               complete: ({
@@ -230,6 +204,9 @@ describe("host checkpoint parent sequencing", () => {
               done: true,
               progress: fixture.validProgress,
               exitCode,
+              ...(exitCode === 0
+                ? { publishTerminalArtifacts: () => Promise.resolve() }
+                : {}),
             });
         await expect(
           runChildUntilDone({
@@ -240,8 +217,14 @@ describe("host checkpoint parent sequencing", () => {
             runChild,
           }),
         ).resolves.toBe(exitCode);
-        expect(checkpointCalls).toBe(0);
+        expect(checkpointCalls).toBe(exitCode === 0 ? 1 : 0);
         expect(completions).toHaveLength(exitCode === 0 ? 1 : 0);
+        if (exitCode === 0)
+          expect(completions[0]).toMatchObject({
+            terminalChildOrdinal: 0,
+            lastCheckpointSequence: 1,
+            lastSampleSequence: 61,
+          });
       });
     },
   );
@@ -272,7 +255,12 @@ describe("host checkpoint parent sequencing", () => {
           return Promise.resolve(
             childCalls < 3
               ? nonterminalChild(input.progress)
-              : { done: true, progress: input.progress, exitCode: 0 },
+              : {
+                  done: true,
+                  progress: input.progress,
+                  exitCode: 0,
+                  publishTerminalArtifacts: () => Promise.resolve(),
+                },
           );
         };
       await expect(
@@ -284,7 +272,7 @@ describe("host checkpoint parent sequencing", () => {
           runChild,
         }),
       ).resolves.toBe(0);
-      expect(requests).toHaveLength(2);
+      expect(requests).toHaveLength(3);
       expect(requests[0]).toMatchObject({
         checkpointSequence: 1,
         previousCheckpointDigest: null,
@@ -295,6 +283,11 @@ describe("host checkpoint parent sequencing", () => {
         previousSampleSequence: 61,
       });
       expect(requests[1]?.previousCheckpointDigest).toMatch(/^[0-9a-f]{64}$/u);
+      expect(requests[2]).toMatchObject({
+        checkpointSequence: 3,
+        previousSampleSequence: 62,
+      });
+      expect(requests[2]?.previousCheckpointDigest).toMatch(/^[0-9a-f]{64}$/u);
     });
   });
 });

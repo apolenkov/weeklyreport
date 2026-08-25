@@ -28,6 +28,10 @@ import { canonicalCandidatesForList } from "./preflight-reveal-continuation-cand
 import { strictRouteFor } from "./preflight-reveal-continuation-contract-factories.ts";
 import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
 import {
+  assertCooperativeRevealContinuationLimits,
+  type RevealContinuationCooperativeLimits,
+} from "./preflight-reveal-continuation-limits.ts";
+import {
   reducerStateDigestFor,
   reducerStateForCheckpoint,
 } from "./preflight-reveal-continuation-reducer.ts";
@@ -82,6 +86,7 @@ export type RevealContinuationInput = Readonly<{
   readonly expectedGrantDigest?: string;
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;
+  readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
   readonly now?: () => number;
 }>;
 
@@ -241,6 +246,7 @@ export async function discoverRevealControlsChunk(
   });
   const budgetMs = input.chunkBudgetMs ?? DEFAULT_REVEAL_CHUNK_BUDGET_MS;
   assertBudget(budgetMs);
+  assertCooperativeRevealContinuationLimits(input.cooperativeLimits);
   const now = input.now ?? Date.now;
   const deadlineAt = input.deadlineAt ?? now() + budgetMs;
   if (!Number.isSafeInteger(deadlineAt))

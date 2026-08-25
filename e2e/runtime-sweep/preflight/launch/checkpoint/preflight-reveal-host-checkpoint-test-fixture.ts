@@ -64,6 +64,7 @@ const sample = {
     availableBytes: 0,
     pressureFreePercent: 0,
     compressedBytes: 0,
+    swapActivity: 0,
   },
   pressureState: "normal" as const,
   metrics: {

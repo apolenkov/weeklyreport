@@ -47,6 +47,30 @@ export type HostCheckpointCompletionBody = Omit<
   "completionDigest" | "parentPassDigest" | "terminalTimestamp"
 >;
 
+export const isEmptyBootstrapCheckpointRequest = (
+  value: Pick<
+    HostCheckpointRequest,
+    | "checkpointSequence"
+    | "completedChildOrdinal"
+    | "receiptHead"
+    | "receiptCount"
+    | "chunkHead"
+    | "chunkCount"
+    | "completedCandidateCount"
+    | "previousCheckpointDigest"
+    | "previousSampleSequence"
+  >,
+): boolean =>
+  value.checkpointSequence === 1 &&
+  value.completedChildOrdinal === 0 &&
+  value.receiptHead === null &&
+  value.receiptCount === 0 &&
+  value.chunkHead === null &&
+  value.chunkCount === 0 &&
+  value.completedCandidateCount === 0 &&
+  value.previousCheckpointDigest === null &&
+  value.previousSampleSequence === null;
+
 export const hostCheckpointThresholdDigest = (): string =>
   sha256Hex({
     domain: "customreport/runtime-sweep/host-checkpoint/thresholds/v1",
@@ -105,7 +129,10 @@ const assertRequestSequence = (
     throw new Error("Host checkpoint receipt head does not match its count");
   if ((parsed.chunkCount === 0) !== (parsed.chunkHead === null))
     throw new Error("Host checkpoint chunk head does not match its count");
-  if (parsed.completedCandidateCount === 0)
+  if (
+    parsed.completedCandidateCount === 0 &&
+    !isEmptyBootstrapCheckpointRequest(parsed)
+  )
     throw new Error("Host checkpoint request has no completed candidates");
   if (parsed.checkpointSequence !== parsed.completedChildOrdinal + 1)
     throw new Error(
@@ -152,7 +179,15 @@ export const createHostCheckpointResponse = (
 const assertCompletionSequence = (
   parsed: z.infer<typeof completionBodySchema>,
 ): void => {
-  if (parsed.terminalChildOrdinal !== parsed.lastCheckpointSequence)
+  const hasFinalCheckpoint =
+    parsed.lastCheckpointSequence === parsed.terminalChildOrdinal + 1;
+  const legacyZeroCheckpointBootstrap =
+    parsed.terminalChildOrdinal === 0 &&
+    parsed.lastCheckpointSequence === 0 &&
+    parsed.receiptCount === 0 &&
+    parsed.chunkCount === 0 &&
+    parsed.completedCandidateCount === 0;
+  if (!hasFinalCheckpoint && !legacyZeroCheckpointBootstrap)
     throw new Error("Host checkpoint completion child sequence drifted");
   if (
     (parsed.lastCheckpointSequence === 0) !==

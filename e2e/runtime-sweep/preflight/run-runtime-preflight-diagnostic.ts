@@ -60,16 +60,19 @@ const collectBaseline = async (input: {
   >;
 }): Promise<
   Readonly<{
+    readonly firstSnapshot: DiagnosticHostEnvelopeSnapshot;
     readonly lastSnapshot: DiagnosticHostEnvelopeSnapshot;
     readonly counters: DiagnosticHostEnvelopeCounters;
   }>
 > => {
   const state: {
     previousCounters: DiagnosticHostEnvelopeCounters | undefined;
+    firstSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
     lastSnapshot: DiagnosticHostEnvelopeSnapshot | undefined;
     breachStreaks: typeof EMPTY_HOST_ENVELOPE_BREACH_STREAKS;
   } = {
     previousCounters: undefined,
+    firstSnapshot: undefined,
     lastSnapshot: undefined,
     breachStreaks: EMPTY_HOST_ENVELOPE_BREACH_STREAKS,
   };
@@ -81,7 +84,8 @@ const collectBaseline = async (input: {
     const evaluation = evaluateHostEnvelopeSample({
       snapshot,
       mode: "baseline",
-      baselineSwapUsedBytes: snapshot.swapUsedBytes ?? 0,
+      baselineSwapUsedBytes:
+        state.firstSnapshot?.swapUsedBytes ?? snapshot.swapUsedBytes ?? 0,
       priorCounters: state.previousCounters,
       breachStreaks: state.breachStreaks,
     });
@@ -100,13 +104,22 @@ const collectBaseline = async (input: {
       );
     state.previousCounters = evaluation.nextCounters;
     state.breachStreaks = evaluation.breachStreaks;
+    state.firstSnapshot ??= snapshot;
     state.lastSnapshot = snapshot;
     if (index + 1 < input.sampleCount)
       await delay(HOST_ENVELOPE_THRESHOLDS.sampleIntervalMs);
   }
-  if (state.lastSnapshot === undefined || state.previousCounters === undefined)
+  if (
+    state.firstSnapshot === undefined ||
+    state.lastSnapshot === undefined ||
+    state.previousCounters === undefined
+  )
     throw new Error("Host envelope baseline produced no samples");
-  return { lastSnapshot: state.lastSnapshot, counters: state.previousCounters };
+  return {
+    firstSnapshot: state.firstSnapshot,
+    lastSnapshot: state.lastSnapshot,
+    counters: state.previousCounters,
+  };
 };
 
 const runHostBaseline = async (): Promise<number> => {

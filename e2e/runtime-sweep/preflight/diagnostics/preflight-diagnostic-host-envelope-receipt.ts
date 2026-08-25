@@ -50,6 +50,7 @@ const reasonCodes = new Map<string, string>([
   ["available memory below baseline", "available-baseline"],
   ["memory pressure free percentage below baseline", "pressure-free-baseline"],
   ["swap used above baseline", "swap-baseline"],
+  ["swap free below minimum headroom", "swap-free-minimum"],
   ["compressed memory above baseline", "compressed-baseline"],
   ["raw free memory below abort threshold", "raw-abort"],
   ["available memory below abort threshold", "available-abort"],
@@ -59,6 +60,7 @@ const reasonCodes = new Map<string, string>([
   ],
   ["swap used above abort threshold", "swap-abort"],
   ["swap growth above abort threshold", "swap-growth-abort"],
+  ["sustained swap activity", "swap-activity"],
   ["compressed memory above abort threshold", "compressed-abort"],
   ["memory pressure state is not normal", "pressure-state"],
   ["missing cumulative counter", "missing-counter"],
@@ -114,6 +116,7 @@ export const serializeHostEnvelopeRecord = (
       input.breachStreaks.availableBytes,
       input.breachStreaks.pressureFreePercent,
       input.breachStreaks.compressedBytes,
+      input.breachStreaks.swapActivity,
     ],
   })}\n`;
   if (Buffer.byteLength(text, "utf8") > HOST_ENVELOPE_THRESHOLDS.maxRecordBytes)

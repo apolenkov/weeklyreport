@@ -160,7 +160,11 @@ export const completeEmptyBootstrap = async (input: {
   readonly bootstrap: RevealBootstrap;
   readonly ordinal: number;
 }): Promise<
-  Readonly<{ readonly done: true; readonly progress: ParentProgress }>
+  Readonly<{
+    readonly done: true;
+    readonly progress: ParentProgress;
+    readonly publishTerminalArtifacts: () => Promise<void>;
+  }>
 > => {
   assertInitialProgress(input);
   const replay = await validateEmptyBootstrap(input);
@@ -171,11 +175,7 @@ export const completeEmptyBootstrap = async (input: {
     throw new Error(
       `R192 parent reducer controls exceed maxControlsPerSegment (${String(input.context.source.matrixLimits.maxControlsPerSegment)})`,
     );
-  for (const asset of reducerCheckpointAssetsFor(replay.state))
-    await writeRevealContinuationAsset({
-      archiveRoot: input.context.archiveRoot,
-      asset,
-    });
+  const assets = reducerCheckpointAssetsFor(replay.state);
   const pass = createParentPass({
     run: input.bootstrap.run,
     chain: {
@@ -189,15 +189,26 @@ export const completeEmptyBootstrap = async (input: {
     controlsCount: replay.state.controls.length,
     authorityKey: input.context.authorityKey,
   });
-  await writeRevealParentPass({
-    archiveRoot: input.context.archiveRoot,
-    filePath: path.join(
-      input.context.archiveRoot,
-      "continuation",
-      `PREFLIGHT_REVEAL_PARENT_PASS.${input.context.attemptId}.${String(input.ordinal)}.json`,
-    ),
-    pass,
-  });
-  await writeCompleteCanary({ context: input.context, replay });
-  return { done: true, progress: input.progress };
+  const passPath = path.join(
+    input.context.archiveRoot,
+    "continuation",
+    `PREFLIGHT_REVEAL_PARENT_PASS.${input.context.attemptId}.${String(input.ordinal)}.json`,
+  );
+  return {
+    done: true,
+    progress: input.progress,
+    publishTerminalArtifacts: async () => {
+      for (const asset of assets)
+        await writeRevealContinuationAsset({
+          archiveRoot: input.context.archiveRoot,
+          asset,
+        });
+      await writeRevealParentPass({
+        archiveRoot: input.context.archiveRoot,
+        filePath: passPath,
+        pass,
+      });
+      await writeCompleteCanary({ context: input.context, replay });
+    },
+  };
 };

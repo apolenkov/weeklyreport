@@ -1,16 +1,20 @@
 import { spawn } from "node:child_process";
 
-const requiredEnv = (name: string): string => {
-  const value = process.env[name]?.trim();
+import { runBoundedPlaywrightChild } from "./bounded/preflight-bounded-playwright-child.ts";
+
+const requiredEnv = (environment: NodeJS.ProcessEnv, name: string): string => {
+  const value = environment[name]?.trim();
   if (!value) throw new Error(`Runtime preflight launcher requires ${name}`);
   return value;
 };
 
-const pnpmLauncher = (): Readonly<{
+const pnpmLauncher = (
+  environment: NodeJS.ProcessEnv,
+): Readonly<{
   readonly command: string;
   readonly leadingArgs: readonly string[];
 }> => {
-  const executable = requiredEnv("npm_execpath");
+  const executable = requiredEnv(environment, "npm_execpath");
   return /\.[cm]?js$/u.test(executable)
     ? { command: process.execPath, leadingArgs: [executable] }
     : { command: executable, leadingArgs: [] };
@@ -19,8 +23,23 @@ const pnpmLauncher = (): Readonly<{
 export const runPreflightPlaywrightChild = (input: {
   readonly repoRoot: string;
   readonly environment: NodeJS.ProcessEnv;
+  readonly bounds?: Readonly<{
+    readonly maxDurationMs: number;
+    readonly terminationGraceMs: number;
+  }>;
 }): Promise<number> => {
-  const launcher = pnpmLauncher();
+  if (input.bounds !== undefined)
+    return runBoundedPlaywrightChild({
+      operationName: "Reveal continuation",
+      configPath:
+        "../../e2e/runtime-sweep/preflight/playwright.preflight.config.ts",
+      repoRoot: input.repoRoot,
+      environment: input.environment,
+      maxDurationMs: input.bounds.maxDurationMs,
+      terminationGraceMs: input.bounds.terminationGraceMs,
+      acceptNonzeroExit: true,
+    });
+  const launcher = pnpmLauncher(input.environment);
   const child = spawn(
     launcher.command,
     [

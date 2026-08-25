@@ -14,7 +14,6 @@ const HOST_PRESSURE_MAX_BUFFER = 16_384;
 const FOUR_GIBIBYTES = 4_294_967_296;
 const EIGHT_GIBIBYTES = 8_589_934_592;
 const TWELVE_GIBIBYTES = 12_884_901_888;
-const ONE_GIBIBYTE = 1_073_741_824;
 const FIVE_HUNDRED_TWELVE_MEBIBYTES = 536_870_912;
 const BASELINE_FREE_PERCENT = 25;
 const ABORT_FREE_PERCENT = 15;
@@ -35,11 +34,10 @@ const HOST_ENVELOPE_OUTPUT_ROOT_ENV =
 export const HOST_ENVELOPE_THRESHOLDS = {
   baselineAvailableBytes: EIGHT_GIBIBYTES,
   baselineFreePercent: BASELINE_FREE_PERCENT,
-  baselineSwapUsedBytes: FIVE_HUNDRED_TWELVE_MEBIBYTES,
+  minimumSwapFreeBytes: FIVE_HUNDRED_TWELVE_MEBIBYTES,
   baselineCompressedBytes: EIGHT_GIBIBYTES,
   abortAvailableBytes: FOUR_GIBIBYTES,
   abortFreePercent: ABORT_FREE_PERCENT,
-  abortSwapUsedBytes: ONE_GIBIBYTE,
   abortSwapGrowthBytes: FIVE_HUNDRED_TWELVE_MEBIBYTES,
   abortCompressedBytes: TWELVE_GIBIBYTES,
   preResourceBaselineSamples: PRE_RESOURCE_BASELINE_SAMPLES,
@@ -87,6 +85,7 @@ export type HostEnvelopeBreachStreaks = Readonly<{
   readonly availableBytes: number;
   readonly pressureFreePercent: number;
   readonly compressedBytes: number;
+  readonly swapActivity: number;
 }>;
 
 export const EMPTY_HOST_ENVELOPE_BREACH_STREAKS: HostEnvelopeBreachStreaks = {
@@ -94,6 +93,7 @@ export const EMPTY_HOST_ENVELOPE_BREACH_STREAKS: HostEnvelopeBreachStreaks = {
   availableBytes: 0,
   pressureFreePercent: 0,
   compressedBytes: 0,
+  swapActivity: 0,
 };
 
 export type HostEnvelopeEvaluation = Readonly<{

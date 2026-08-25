@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { stableSerialize } from "../../support/ids.ts";
 import { strictRouteFor } from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
+import type { RevealContinuationCooperativeLimits } from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
 import {
   assertRevealExecutionGrantInput,
   discoverRevealControlsChunk,
@@ -45,6 +46,7 @@ interface ContinuationChunkInput {
   readonly attemptId: string;
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;
+  readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
   readonly now?: () => number;
 }
 
@@ -141,6 +143,9 @@ export async function runPlaywrightPreflightRevealContinuationChunk(
     ...(input.chunkBudgetMs === undefined
       ? {}
       : { chunkBudgetMs: input.chunkBudgetMs }),
+    ...(input.cooperativeLimits === undefined
+      ? {}
+      : { cooperativeLimits: input.cooperativeLimits }),
     ...(input.now === undefined ? {} : { now: input.now }),
   });
   if (

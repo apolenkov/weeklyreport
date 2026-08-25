@@ -51,6 +51,7 @@ const baseInput = (
   campaignId: "cr-001-test",
   collectBaseline: () =>
     Promise.resolve({
+      firstSnapshot: snapshot(),
       lastSnapshot: snapshot(),
       counters: { pageins: 100, pageouts: 10, swapins: 20, swapouts: 30 },
     }),

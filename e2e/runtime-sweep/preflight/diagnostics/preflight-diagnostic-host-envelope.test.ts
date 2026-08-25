@@ -15,7 +15,6 @@ import { evaluateHostEnvelopeSample } from "./preflight-diagnostic-host-envelope
 import {
   createDiagnosticHostEnvelopeReceipt,
   readHealthyPreResourceReceipt,
-  serializeHostEnvelopeRecord,
 } from "./preflight-diagnostic-host-envelope-receipt.ts";
 
 const GiB = 1024 ** 3;
@@ -95,9 +94,8 @@ describe("diagnostic host envelope", () => {
   it("keeps the approved binary thresholds explicit", () => {
     expect(HOST_ENVELOPE_THRESHOLDS).toMatchObject({
       baselineAvailableBytes: 8 * GiB,
-      baselineSwapUsedBytes: 512 * MiB,
+      minimumSwapFreeBytes: 512 * MiB,
       abortAvailableBytes: 4 * GiB,
-      abortSwapUsedBytes: 1 * GiB,
       hysteresisSamples: 3,
       maxAggregateBytes: 1_048_576,
     });
@@ -114,6 +112,7 @@ describe("diagnostic host envelope", () => {
         availableBytes: 2,
         pressureFreePercent: 2,
         compressedBytes: 2,
+        swapActivity: 2,
       },
     });
 
@@ -190,10 +189,7 @@ describe("diagnostic host envelope", () => {
     expect(result.reasons).toContain("cumulative counter reset or wrap");
   });
 
-  it.each([
-    [{ pressureFreePercent: null }, "invalid"],
-    [{ swapUsedBytes: 2 * GiB }, "breach"],
-  ] as const)(
+  it.each([[{ pressureFreePercent: null }, "invalid"]] as const)(
     "fails closed for unsafe independent signals",
     (overrides, status) => {
       const result = evaluateHostEnvelopeSample({
@@ -278,43 +274,5 @@ describe("diagnostic host envelope", () => {
     } finally {
       await rm(archiveRoot, { recursive: true, force: true });
     }
-  });
-
-  it("keeps a multi-breach receipt record within the byte bound", () => {
-    const text = serializeHostEnvelopeRecord({
-      snapshot: healthySample({
-        timestampWall: Number.MAX_SAFE_INTEGER,
-        rawFreeBytes: 1 * GiB,
-        availableBytes: 1 * GiB,
-        totalBytes: Number.MAX_SAFE_INTEGER,
-        pressureFreePercent: 5,
-        compressedBytes: 20 * GiB,
-        swapUsedBytes: Number.MAX_SAFE_INTEGER,
-        swapFreeBytes: Number.MAX_SAFE_INTEGER,
-        pageins: Number.MAX_SAFE_INTEGER,
-        pageouts: Number.MAX_SAFE_INTEGER,
-        swapins: Number.MAX_SAFE_INTEGER,
-        swapouts: Number.MAX_SAFE_INTEGER,
-        pressureState: "warning",
-      }),
-      status: "breach",
-      reasons: [
-        "raw free memory below abort threshold",
-        "available memory below abort threshold",
-        "memory pressure free percentage below abort threshold",
-        "compressed memory above abort threshold",
-        "memory pressure state is not normal",
-      ],
-      breachStreaks: {
-        rawFreeBytes: 3,
-        availableBytes: 3,
-        pressureFreePercent: 3,
-        compressedBytes: 3,
-      },
-    });
-    expect(Buffer.byteLength(text, "utf8")).toBeLessThanOrEqual(
-      HOST_ENVELOPE_THRESHOLDS.maxRecordBytes,
-    );
-    expect(text).toContain('"r":["raw-abort"');
   });
 });

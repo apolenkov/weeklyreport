@@ -151,8 +151,8 @@ const baselineReasonsFor = (
     snapshot.pressureFreePercent < HOST_ENVELOPE_THRESHOLDS.baselineFreePercent
   )
     reasons.push("memory pressure free percentage below baseline");
-  if (snapshot.swapUsedBytes > HOST_ENVELOPE_THRESHOLDS.baselineSwapUsedBytes)
-    reasons.push("swap used above baseline");
+  if (snapshot.swapFreeBytes < HOST_ENVELOPE_THRESHOLDS.minimumSwapFreeBytes)
+    reasons.push("swap free below minimum headroom");
   if (
     snapshot.compressedBytes > HOST_ENVELOPE_THRESHOLDS.baselineCompressedBytes
   )
@@ -165,6 +165,7 @@ const baselineReasonsFor = (
 const runtimeReasonsFor = (
   snapshot: CompleteHostEnvelopeSnapshot,
   baselineSwapUsedBytes: number,
+  priorCounters: DiagnosticHostEnvelopeCounters | undefined,
 ): Readonly<{
   readonly reasons: readonly string[];
   readonly gaugeBreaches: Readonly<{
@@ -172,19 +173,23 @@ const runtimeReasonsFor = (
     readonly availableBytes: boolean;
     readonly pressureFreePercent: boolean;
     readonly compressedBytes: boolean;
+    readonly swapActivity: boolean;
   }>;
   readonly immediate: boolean;
 }> => {
   const reasons: string[] = [];
   const swapGrowthBytes = snapshot.swapUsedBytes - baselineSwapUsedBytes;
+  const swapActivity =
+    priorCounters !== undefined && snapshot.swapouts > priorCounters.swapouts;
   if (snapshot.availableBytes < HOST_ENVELOPE_THRESHOLDS.abortAvailableBytes)
     reasons.push("available memory below abort threshold");
   if (snapshot.pressureFreePercent < HOST_ENVELOPE_THRESHOLDS.abortFreePercent)
     reasons.push("memory pressure free percentage below abort threshold");
-  if (snapshot.swapUsedBytes > HOST_ENVELOPE_THRESHOLDS.abortSwapUsedBytes)
-    reasons.push("swap used above abort threshold");
+  if (snapshot.swapFreeBytes < HOST_ENVELOPE_THRESHOLDS.minimumSwapFreeBytes)
+    reasons.push("swap free below minimum headroom");
   if (swapGrowthBytes > HOST_ENVELOPE_THRESHOLDS.abortSwapGrowthBytes)
     reasons.push("swap growth above abort threshold");
+  if (swapActivity) reasons.push("sustained swap activity");
   if (snapshot.compressedBytes > HOST_ENVELOPE_THRESHOLDS.abortCompressedBytes)
     reasons.push("compressed memory above abort threshold");
   if (snapshot.pressureState !== "normal")
@@ -201,10 +206,11 @@ const runtimeReasonsFor = (
       compressedBytes:
         snapshot.compressedBytes >
         HOST_ENVELOPE_THRESHOLDS.abortCompressedBytes,
+      swapActivity,
     },
     immediate:
       snapshot.pressureState !== "normal" ||
-      snapshot.swapUsedBytes > HOST_ENVELOPE_THRESHOLDS.abortSwapUsedBytes ||
+      snapshot.swapFreeBytes < HOST_ENVELOPE_THRESHOLDS.minimumSwapFreeBytes ||
       swapGrowthBytes > HOST_ENVELOPE_THRESHOLDS.abortSwapGrowthBytes,
   };
 };
@@ -216,6 +222,7 @@ const runtimeBreachStreaksFor = (input: {
     readonly availableBytes: boolean;
     readonly pressureFreePercent: boolean;
     readonly compressedBytes: boolean;
+    readonly swapActivity: boolean;
   }>;
 }): HostEnvelopeBreachStreaks => ({
   rawFreeBytes: nextStreakFor(
@@ -233,6 +240,10 @@ const runtimeBreachStreaksFor = (input: {
   compressedBytes: nextStreakFor(
     input.prior.compressedBytes,
     input.gaugeBreaches.compressedBytes,
+  ),
+  swapActivity: nextStreakFor(
+    input.prior.swapActivity,
+    input.gaugeBreaches.swapActivity,
   ),
 });
 
@@ -276,6 +287,7 @@ export const evaluateHostEnvelopeSample = (input: {
   const runtime = runtimeReasonsFor(
     completeSnapshot,
     input.baselineSwapUsedBytes,
+    input.priorCounters,
   );
   if (runtime.reasons.length === 0)
     return {

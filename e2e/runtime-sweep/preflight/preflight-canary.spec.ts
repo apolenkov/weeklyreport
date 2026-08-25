@@ -17,6 +17,7 @@ import {
   writeRevealBootstrap,
   writeRevealReceiptChunk,
 } from "./reveal/continuation/preflight-reveal-continuation-io.ts";
+import { revealContinuationLimitsFromEnvironment } from "./reveal/continuation/preflight-reveal-continuation-limits.ts";
 import { assertRevealExecutionGrantInput } from "./reveal/continuation/preflight-reveal-continuation-runner.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
@@ -44,6 +45,7 @@ const continuationExpectedGrantDigest =
   process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_EXPECTED_GRANT_DIGEST?.trim();
 const continuationDeadlineAt =
   process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT?.trim();
+const continuationLimits = revealContinuationLimitsFromEnvironment(process.env);
 
 test("exact-state preflight canary reuses the full segment runner", async ({
   page,
@@ -138,10 +140,11 @@ test("exact-state preflight canary reuses the full segment runner", async ({
     ...(continuationDeadlineAt === undefined
       ? {}
       : { deadlineAt: Number(continuationDeadlineAt) }),
-    chunkBudgetMs: Number(
-      process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHUNK_MS ??
-        String(30 * 60_000),
-    ),
+    chunkBudgetMs: continuationLimits.softWallMs,
+    cooperativeLimits: {
+      maxTerminalCandidates: continuationLimits.maxTerminalCandidates,
+      maxRevealActionDelta: continuationLimits.maxRevealActionDelta,
+    },
   });
   if (chunk.status === "BOOTSTRAP")
     await writeRevealBootstrap({
