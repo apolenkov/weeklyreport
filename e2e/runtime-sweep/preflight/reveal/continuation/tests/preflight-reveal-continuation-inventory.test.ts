@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  inventoryAssetSchema,
+  PREFLIGHT_REVEAL_CONTINUATION_VERSION,
+  PREFLIGHT_REVEAL_INVENTORY,
+} from "../contracts/preflight-reveal-continuation-schemas.ts";
 import { inventoryFor } from "../preflight-reveal-continuation-fixture.ts";
 import {
   domInventoryFor,
   serializableInventoryFor,
 } from "../preflight-reveal-continuation-inventory.ts";
-import {
-  inventoryAssetSchema,
-  PREFLIGHT_REVEAL_CONTINUATION_VERSION,
-  PREFLIGHT_REVEAL_INVENTORY,
-} from "../preflight-reveal-continuation-schemas.ts";
 
 const RECORD_STABLE_ID = "88888888-8888-4888-8888-888888888888";
 const DIGEST = "a".repeat(64);

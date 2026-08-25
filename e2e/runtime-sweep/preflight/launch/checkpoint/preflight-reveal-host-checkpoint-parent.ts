@@ -4,8 +4,8 @@ import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic
 import type {
   ParentContext,
   ParentProgress,
-} from "../preflight-reveal-continuation-parent.ts";
-import { runContinuationChild } from "../preflight-reveal-continuation-parent-child.ts";
+} from "../continuation/preflight-reveal-continuation-parent.ts";
+import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
 import {
   createHostCheckpointRequest,
   type HostCheckpointCompletionBody,

@@ -4,9 +4,9 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { sha256Hex } from "../../../support/ids.ts";
-import type { ParentContext } from "../../launch/preflight-reveal-continuation-parent.ts";
-import { sealGrant } from "../../launch/preflight-reveal-continuation-parent-grant.ts";
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
+import type { ParentContext } from "../../launch/continuation/preflight-reveal-continuation-parent.ts";
+import { sealGrant } from "../../launch/continuation/preflight-reveal-continuation-parent-grant.ts";
+import { parentReplayContextFor } from "../../launch/continuation/preflight-reveal-continuation-parent-replay.ts";
 import { parseRevealTerminalReceipt } from "./preflight-reveal-continuation-artifacts.ts";
 import { receiptDigestForBody } from "./preflight-reveal-continuation-digests.ts";
 import {

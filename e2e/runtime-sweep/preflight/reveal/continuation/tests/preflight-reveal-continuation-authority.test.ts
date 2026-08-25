@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { continueChild } from "../../../launch/preflight-reveal-continuation-parent-results.ts";
+import { continueChild } from "../../../launch/continuation/preflight-reveal-continuation-parent-results.ts";
 import {
   persistChunkAssets,
   withSealedGrantFixture,
-} from "../../../launch/preflight-reveal-continuation-parent-test-fixture.ts";
+} from "../../../launch/continuation/preflight-reveal-continuation-parent-test-fixture.ts";
 import {
   inventoryFor,
   runChunk,

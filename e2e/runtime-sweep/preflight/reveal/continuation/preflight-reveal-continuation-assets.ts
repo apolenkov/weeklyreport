@@ -7,12 +7,6 @@ import {
   assertPreflightArchivePath,
   ensurePreflightArchiveDirectory,
 } from "../../preflight-archive-path.ts";
-import { readBoundedRegularFile } from "./io/preflight-reveal-continuation-bounded-file.ts";
-import {
-  contentDigestFor,
-  R188_DIGEST_LENGTH,
-} from "./preflight-reveal-continuation-digests.ts";
-import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 import {
   branchSchema,
   candidateListSchema,
@@ -35,7 +29,13 @@ import {
   type RevealReducerCheckpoint,
   type RevealSurfaceAsset,
   surfaceAssetSchema,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { readBoundedRegularFile } from "./io/preflight-reveal-continuation-bounded-file.ts";
+import {
+  contentDigestFor,
+  R188_DIGEST_LENGTH,
+} from "./preflight-reveal-continuation-digests.ts";
+import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 
 const REF_PATTERN = new RegExp(
   `^[0-9a-f]{${String(R188_DIGEST_LENGTH)}}$`,

@@ -5,7 +5,7 @@ import type {
   RevealDiscoveryState,
   RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
-import type { RevealExecutionGrant } from "./preflight-reveal-continuation-schemas.ts";
+import type { RevealExecutionGrant } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import {
   branchAssetFor,
   candidateListAssetFor,

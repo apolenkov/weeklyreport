@@ -6,7 +6,7 @@ import type {
   DiagnosticOperation,
   DiagnosticSample,
   DiagnosticStage,
-} from "./preflight-diagnostic-sidecar-contract.ts";
+} from "./sidecar/preflight-diagnostic-sidecar-contract.ts";
 
 export function diagnosticSampleForProcess(input: {
   readonly recordKind: DiagnosticSample["recordKind"];

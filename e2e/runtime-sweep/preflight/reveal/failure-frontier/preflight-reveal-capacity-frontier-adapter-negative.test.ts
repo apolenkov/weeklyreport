@@ -3,18 +3,18 @@ import { rm } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 import { stableSerialize } from "../../../support/ids.ts";
-import {
-  type RevealContinuationAsset,
-  writeRevealContinuationAsset,
-} from "../continuation/preflight-reveal-continuation-assets.ts";
-import type { RevealBootstrap } from "../continuation/preflight-reveal-continuation-schemas.ts";
+import type { RevealBootstrap } from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_INVENTORY,
   PREFLIGHT_REVEAL_PATH_NODE,
   PREFLIGHT_REVEAL_SURFACE,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  type RevealContinuationAsset,
+  writeRevealContinuationAsset,
+} from "../continuation/preflight-reveal-continuation-assets.ts";
 import {
   branchAssetFor,
   candidateFrontierFor,

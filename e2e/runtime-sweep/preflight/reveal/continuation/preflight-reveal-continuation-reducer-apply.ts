@@ -12,11 +12,11 @@ import {
   nextContinuationFor,
   type RevealContinuation,
 } from "../interaction/preflight-reveal-queue-candidates.ts";
+import type { RevealContinuationReceipt } from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
 import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
 import { RevealContinuationReplayError } from "./preflight-reveal-continuation-errors.ts";
-import type { RevealContinuationReceipt } from "./preflight-reveal-continuation-schemas.ts";
-import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./preflight-reveal-continuation-schemas.ts";
 import { assertReceiptContract } from "./preflight-reveal-continuation-validators.ts";
 import { revealCandidateIdentityFor } from "./receipts/preflight-reveal-continuation-receipt-assets.ts";
 import {

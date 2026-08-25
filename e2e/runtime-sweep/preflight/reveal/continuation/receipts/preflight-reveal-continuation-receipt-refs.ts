@@ -5,12 +5,6 @@ import {
 } from "../../../reveal-path.ts";
 import type { RevealBranch } from "../../interaction/preflight-reveal-branches.ts";
 import {
-  rememberedRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "../preflight-reveal-continuation-assets.ts";
-import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
-import { domInventoryFor } from "../preflight-reveal-continuation-inventory.ts";
-import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_INVENTORY,
@@ -19,7 +13,13 @@ import {
   type RevealBranchAsset,
   type RevealContinuationReceipt,
   type RevealPathNode,
-} from "../preflight-reveal-continuation-schemas.ts";
+} from "../contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  rememberedRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "../preflight-reveal-continuation-assets.ts";
+import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
+import { domInventoryFor } from "../preflight-reveal-continuation-inventory.ts";
 
 const pathNodesFor = (input: {
   readonly node: RevealPathNode;

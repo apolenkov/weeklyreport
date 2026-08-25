@@ -2,7 +2,7 @@ import type {
   DomControlObservation,
   DomInventory,
 } from "../../../replay/dom/dom-inventory.ts";
-import type { SerializableRevealInventory } from "./preflight-reveal-continuation-schemas.ts";
+import type { SerializableRevealInventory } from "./contracts/preflight-reveal-continuation-schemas.ts";
 
 const serializableCache = new WeakMap<object, SerializableRevealInventory>();
 

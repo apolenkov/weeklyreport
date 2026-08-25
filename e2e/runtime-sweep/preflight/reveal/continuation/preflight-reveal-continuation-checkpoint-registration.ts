@@ -3,9 +3,9 @@ import {
   revealControlPreparationIdentityFor,
   surfaceSignatureFor,
 } from "../../reveal-path.ts";
+import type { RevealReducerCheckpoint } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { contentDigestFor } from "./preflight-reveal-continuation-digests.ts";
 import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import type { RevealReducerCheckpoint } from "./preflight-reveal-continuation-schemas.ts";
 
 const controlsByIdentityFor = (
   controls: readonly MatrixPreflightControl[],

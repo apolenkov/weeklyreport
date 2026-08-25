@@ -1,3 +1,4 @@
+import type { RevealContinuationReceipt } from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   parseRevealBootstrap,
   parseRevealParentPass,
@@ -9,7 +10,6 @@ import {
   reducerStateDigestFor,
   replayRevealContinuation,
 } from "../continuation/preflight-reveal-continuation-reducer.ts";
-import type { RevealContinuationReceipt } from "../continuation/preflight-reveal-continuation-schemas.ts";
 import type {
   CapacityFrontierAdapterReason,
   CapacityFrontierAdapterResult,

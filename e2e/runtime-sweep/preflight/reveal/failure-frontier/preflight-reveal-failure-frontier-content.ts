@@ -1,10 +1,6 @@
 import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import type { CapacitySurveyPlan } from "../../capacity/preflight-capacity-survey-contract.ts";
 import {
-  rememberedRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "../continuation/preflight-reveal-continuation-assets.ts";
-import {
   PREFLIGHT_REVEAL_BRANCH,
   PREFLIGHT_REVEAL_CANDIDATE_LIST,
   PREFLIGHT_REVEAL_INVENTORY,
@@ -12,7 +8,11 @@ import {
   PREFLIGHT_REVEAL_SURFACE,
   type RevealBranchAsset,
   type RevealCandidateList,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  rememberedRevealContinuationAsset,
+  type RevealContinuationAsset,
+} from "../continuation/preflight-reveal-continuation-assets.ts";
 import { candidateListDigestFor } from "../continuation/receipts/preflight-reveal-continuation-receipt-assets.ts";
 import type { RevealCandidateFailure } from "../interaction/preflight-reveal-branches.ts";
 import {

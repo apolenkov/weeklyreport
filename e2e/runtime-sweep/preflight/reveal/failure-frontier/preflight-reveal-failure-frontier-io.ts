@@ -6,13 +6,13 @@ import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
 } from "../../preflight-archive-path.ts";
+import type { RevealCandidateList } from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   readRevealContinuationAsset,
   rememberRevealContinuationAsset,
   type RevealContinuationAsset,
 } from "../continuation/preflight-reveal-continuation-assets.ts";
 import { RevealContinuationError } from "../continuation/preflight-reveal-continuation-errors.ts";
-import type { RevealCandidateList } from "../continuation/preflight-reveal-continuation-schemas.ts";
 import {
   assetsForCandidateFrontier,
   branchForRef,

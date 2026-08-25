@@ -6,7 +6,7 @@ import type { PreflightCanarySelector } from "../../canary/preflight-canary-cont
 import {
   type RunPlaywright,
   runPreflightRevealContinuation,
-} from "../preflight-reveal-continuation-parent.ts";
+} from "../continuation/preflight-reveal-continuation-parent.ts";
 import { createFileBackedHostCheckpointClient } from "./preflight-reveal-host-checkpoint-client.ts";
 
 export const runExactAdminDemoRevealCanary = async (input: {

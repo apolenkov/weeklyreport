@@ -1,28 +1,28 @@
 import * as path from "node:path";
 
-import { stableSerialize } from "../../support/ids.ts";
-import { createParentPass } from "../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
-import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import { stableSerialize } from "../../../support/ids.ts";
 import {
   runIdentityFor,
   strictRouteFor,
-} from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
-import { genesisForState } from "../reveal/continuation/preflight-reveal-continuation-genesis.ts";
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import type { RevealBootstrap } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { createParentPass } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
+import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import { genesisForState } from "../../reveal/continuation/preflight-reveal-continuation-genesis.ts";
 import {
   hydrateRevealContinuationAssets,
   writeRevealParentPass,
-} from "../reveal/continuation/preflight-reveal-continuation-io.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-io.ts";
 import {
   controlsDigestFor,
   emptyInitialFrontierStateFor,
   reducerCheckpointAssetsFor,
   reducerStateDigestFor,
-} from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import type { RevealBootstrap } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
-import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
-import type { RevealDiscoveryState } from "../reveal/interaction/preflight-reveal-branches.ts";
-import { compareRevealControlIdentity } from "../reveal-path.ts";
-import { MAX_REVEAL_DEPTH } from "../reveal-path.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-reveal-branches.ts";
+import { compareRevealControlIdentity } from "../../reveal-path.ts";
+import { MAX_REVEAL_DEPTH } from "../../reveal-path.ts";
 import type {
   ParentContext,
   ParentProgress,

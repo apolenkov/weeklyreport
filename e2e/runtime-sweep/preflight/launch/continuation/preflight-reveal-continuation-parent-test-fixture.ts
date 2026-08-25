@@ -1,21 +1,21 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import * as path from "node:path";
 
-import { buildCampaignSource } from "../../manifest/manifest.ts";
-import { createManifestFixture } from "../../manifest/manifest-fixture.ts";
-import { runGitCommand } from "../../source/manifest-source.ts";
-import { writeRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
+import { buildCampaignSource } from "../../../manifest/manifest.ts";
+import { createManifestFixture } from "../../../manifest/manifest-fixture.ts";
+import { runGitCommand } from "../../../source/manifest-source.ts";
+import type { RevealReceiptChunk } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
   controlFor,
   inventoryFor,
   runChunk,
   selectionFor,
   withSource,
-} from "../reveal/continuation/preflight-reveal-continuation-fixture.ts";
-import { replayRevealContinuation } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import type { RevealReceiptChunk } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
-import { assetsForReceipt } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipt-refs.ts";
-import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-fixture.ts";
+import { replayRevealContinuation } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import { assetsForReceipt } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipt-refs.ts";
+import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
 import type {
   ParentContext,
   ParentProgress,

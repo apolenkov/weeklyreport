@@ -9,8 +9,8 @@ import {
   runChunk,
   selectionFor,
   withSource,
-} from "../reveal/continuation/preflight-reveal-continuation-fixture.ts";
-import { branchForRef } from "../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-fixture.ts";
+import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";
 
 describe("R188 pure parent replay", () => {
@@ -18,7 +18,7 @@ describe("R188 pure parent replay", () => {
     const source = await readFile(
       path.join(
         process.cwd(),
-        "e2e/runtime-sweep/preflight/launch/preflight-reveal-continuation-parent-replay.ts",
+        "e2e/runtime-sweep/preflight/launch/continuation/preflight-reveal-continuation-parent-replay.ts",
       ),
       "utf8",
     );

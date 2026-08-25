@@ -11,15 +11,20 @@ import {
   processRevealQueueChunk,
 } from "../interaction/preflight-reveal-queue.ts";
 import type { RevealQueueYieldInput } from "../interaction/preflight-reveal-queue-candidates.ts";
-import { createRevealBootstrap } from "./preflight-reveal-continuation-artifacts.ts";
 import {
   createRevealReceiptChunk,
   runIdentityFor,
   strictRouteFor,
-} from "./preflight-reveal-continuation-contract-factories.ts";
+} from "./contracts/preflight-reveal-continuation-contract-factories.ts";
+import { REVEAL_CONTINUATION_LIMITS } from "./contracts/preflight-reveal-continuation-limits.ts";
+import type {
+  RevealContinuationReceipt,
+  RevealExecutionGrant,
+  RevealReceiptChunk,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { createRevealBootstrap } from "./preflight-reveal-continuation-artifacts.ts";
 import { R188_ZERO_DIGEST } from "./preflight-reveal-continuation-digests.ts";
 import { genesisForState } from "./preflight-reveal-continuation-genesis.ts";
-import { REVEAL_CONTINUATION_LIMITS } from "./preflight-reveal-continuation-limits.ts";
 import {
   controlsDigestFor,
   emptyInitialFrontierStateFor,
@@ -35,11 +40,6 @@ import {
   writeBootstrapAssets,
   writeReceiptAssets,
 } from "./preflight-reveal-continuation-runner-output.ts";
-import type {
-  RevealContinuationReceipt,
-  RevealExecutionGrant,
-  RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
 import { receiptForTerminal } from "./receipts/preflight-reveal-continuation-receipts.ts";
 
 const controlsSorted = (

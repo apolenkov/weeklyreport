@@ -81,52 +81,61 @@ compare-and-set and stays `SectionVersionConflictError` → `CONFLICT`.
 
 ### Requirement: Submit rejects writes on a published period
 
-`submitSection` MUST reject the write when the section's report `periodStatus` is
-`"published"`, applying the check before the destructive `saveSection`
-delete-recreate. This closes the case of a section still in `draft` inside a
-published report — which occurs systematically for every section of a
-reopen-then-republished period, since publishing does not flip section statuses.
-The already-submitted rejection stays where it is (`validateSubmitInput`) and is
-NOT duplicated into this gate.
+`submitSection` MUST reject the write when the section's report is archived or
+its canonical `periodStatus` is not `"open"` or `"reopened"`. The application
+precheck MUST apply this complete predicate before metadata lookup, validation,
+and the destructive `saveSection` delete-recreate. The locked transaction gate
+MUST independently apply the same predicate so a lifecycle change between the
+precheck and mutation still fails closed. The already-submitted rejection stays
+where it is (`validateSubmitInput`) and is NOT duplicated into this gate.
 
 #### Scenario: Draft section of a published period cannot be submitted
 
 - **WHEN** a lead submits a section that is still `draft` while its report
   `periodStatus` is `"published"` (for example a never-submitted lead within the
   grace window, or any section of a republished-after-reopen period)
-- **THEN** `submitSection` rejects the call before `saveSection` runs, and the
-  section's live `item` / `risk` / `decision` rows are left unchanged, so they do
-  not diverge from the frozen `publishedSnapshot`
+- **THEN** `submitSection` rejects the call before metadata lookup, validation,
+  or `saveSection` runs
+- **AND** the section's live `item` / `risk` / `decision` rows are left unchanged
+
+#### Scenario: Archived editable-status section cannot be submitted
+
+- **WHEN** a lead submits a draft section whose report is archived while its
+  `periodStatus` still reads `"open"` or `"reopened"`
+- **THEN** `submitSection` rejects the call at the application precheck before
+  metadata lookup, validation, or mutation
 
 #### Scenario: Submit succeeds on an editable period
 
-- **WHEN** a lead submits a valid `draft` section whose report `periodStatus` is
-  `"open"` or `"reopened"`
+- **WHEN** a lead submits a valid `draft` section whose report is not archived
+  and whose `periodStatus` is `"open"` or `"reopened"`
 - **THEN** `submitSection` proceeds through the existing validation and persists
   the submitted section
 
 ### Requirement: Both write paths read one shared period-status lookup
 
-Both `saveDraft` and `submitSection` MUST obtain `periodStatus` through a single
-section-keyed lookup on the `ReportSectionsRepository` port, mirroring the
-existing `getReportPeriodStatusForSection` shape the lead-form path uses, rather
-than each re-deriving the value or reading the legacy status column. Automated
-coverage MUST assert both the reopened-autosave and published-submit behaviors.
+Both `saveDraft` and `submitSection` MUST obtain the canonical lifecycle facts
+through one section-keyed lookup on the `ReportSectionsRepository` port. The
+lookup MUST return both `periodStatus` and `archived`, or `null` when the owning
+tuple cannot be resolved. Neither write path may re-derive editability or read
+the legacy `Report.status` column. Automated coverage MUST assert reopened,
+published, and archived behavior.
 
 #### Scenario: Write paths do not consult the legacy status column
 
-- **WHEN** the `saveDraft` and `submitSection` gates are inspected
-- **THEN** each reads `periodStatus` via the shared section-keyed lookup
-- **AND** neither decides editability from `getReportStatus` / the legacy
+- **WHEN** the `saveDraft` and `submitSection` application gates are inspected
+- **THEN** each reads `periodStatus` and `archived` via the shared section-keyed
+  lookup
+- **AND** neither decides editability from `getReportStatus` or the legacy
   `Report.status` column
 
 #### Scenario: Automated tests pin the two behaviors
 
 - **WHEN** the report-sections test suite runs
-- **THEN** at least one test asserts that a draft save on a `reopened` period
-  succeeds even though the legacy status column reads `"published"`
-- **AND** at least one test asserts that a submit against a `draft` section of a
-  `published` period is rejected and leaves its child rows unchanged
+- **THEN** at least one test asserts that a draft save on a non-archived
+  `reopened` period succeeds even though the legacy status is `"published"`
+- **AND** tests assert that archived `open` and archived `reopened` periods are
+  rejected before later submit work or mutation
 
 ### Requirement: Section writes admit only a proven editable period tuple
 

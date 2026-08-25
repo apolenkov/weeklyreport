@@ -4,7 +4,7 @@ import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import type {
   RevealBootstrap,
   RevealContinuationReceipt,
-} from "../continuation/preflight-reveal-continuation-schemas.ts";
+} from "../continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   branchAssetFor,
   candidateListAssetFor,

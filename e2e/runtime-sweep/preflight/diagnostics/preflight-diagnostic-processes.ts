@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import type { DiagnosticProcessRole } from "./preflight-diagnostic-sidecar-contract.ts";
+import type { DiagnosticProcessRole } from "./sidecar/preflight-diagnostic-sidecar-contract.ts";
 
 const execFileAsync = promisify(execFile);
 const PS_TIMEOUT_MS = 250;

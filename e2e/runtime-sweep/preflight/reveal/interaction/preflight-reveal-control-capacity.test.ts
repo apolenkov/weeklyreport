@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { preflightControlForPlan } from "../../execution/playwright-preflight-support.ts";
-import { parentReplayContextFor } from "../../launch/preflight-reveal-continuation-parent-replay.ts";
+import { parentReplayContextFor } from "../../launch/continuation/preflight-reveal-continuation-parent-replay.ts";
 import {
   controlFor,
   inventoryFor,

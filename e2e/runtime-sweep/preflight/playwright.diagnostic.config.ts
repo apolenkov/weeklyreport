@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
-import { assertDiagnosticOutputPath } from "./diagnostics/preflight-diagnostic-sidecar-contract.ts";
+import { assertDiagnosticOutputPath } from "./diagnostics/sidecar/preflight-diagnostic-sidecar-contract.ts";
 import preflightConfig from "./playwright.preflight.config.ts";
 
 if (process.env.RUNTIME_SWEEP_PREFLIGHT_MODE !== "diagnostic")

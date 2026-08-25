@@ -15,7 +15,7 @@ import {
   reducerStateDigestFor,
 } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import { branchForRef } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
-import { parentReplayContextFor } from "../preflight-reveal-continuation-parent-replay.ts";
+import { parentReplayContextFor } from "../continuation/preflight-reveal-continuation-parent-replay.ts";
 import { createFileBackedHostCheckpointClient } from "./preflight-reveal-host-checkpoint-client.ts";
 import {
   canonicalHostCheckpointBytes,

@@ -1,13 +1,5 @@
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import {
-  bootstrapDigestForBody,
-  canonicalBytesFor,
-  hmacFor,
-  parentPassDigestForBody,
-  R188_ZERO_DIGEST,
-} from "./preflight-reveal-continuation-digests.ts";
-import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
-import {
   bootstrapSchema,
   executionGrantSchema,
   parentPassSchema,
@@ -19,7 +11,15 @@ import {
   type RevealExecutionGrant,
   type RevealParentPass,
   type RevealReceiptChunk,
-} from "./preflight-reveal-continuation-schemas.ts";
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  bootstrapDigestForBody,
+  canonicalBytesFor,
+  hmacFor,
+  parentPassDigestForBody,
+  R188_ZERO_DIGEST,
+} from "./preflight-reveal-continuation-digests.ts";
+import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
 import {
   assertExecutionGrantContract,
   assertReceiptChunkContract,

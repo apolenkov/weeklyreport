@@ -5,8 +5,8 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { rememberedRevealContinuationAsset } from "../reveal/continuation/preflight-reveal-continuation-assets.ts";
-import { PREFLIGHT_REVEAL_REDUCER_CHECKPOINT } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
+import { PREFLIGHT_REVEAL_REDUCER_CHECKPOINT } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { rememberedRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import { withSealedGrantFixture } from "./preflight-reveal-continuation-parent-test-fixture.ts";
 
 const runHydrationChild = async (input: {

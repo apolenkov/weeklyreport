@@ -16,6 +16,7 @@ import {
 } from "../../execution/playwright-preflight-support.ts";
 import type { RevealNonMutationProof } from "../../reveal-path.ts";
 import type { RevealExecutionHarness } from "../interaction/preflight-reveal-types.ts";
+import type { RevealExecutionGrant } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import {
   selectFreezerFor,
   type SelectRepresentative,
@@ -26,7 +27,6 @@ import {
   type RevealContinuationChunkResult,
   type RevealContinuationReceiptChunkResult,
 } from "./preflight-reveal-continuation-runner.ts";
-import type { RevealExecutionGrant } from "./preflight-reveal-continuation-schemas.ts";
 
 const ORIGIN = "http://127.0.0.1:3205";
 const DATABASE_DIGEST_LENGTH = 64;

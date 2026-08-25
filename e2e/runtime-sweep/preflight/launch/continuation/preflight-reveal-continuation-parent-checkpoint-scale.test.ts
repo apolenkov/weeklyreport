@@ -3,11 +3,11 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_CONTROLS_PER_SEGMENT } from "../../matrix/matrix-limits.ts";
+import { DEFAULT_MAX_CONTROLS_PER_SEGMENT } from "../../../matrix/matrix-limits.ts";
 import {
   reducerStateForCheckpoint,
   reducerStateSnapshotFor,
-} from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+} from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import {
   amplifiedStateFor,
   coherentSegmentStateFor,
@@ -15,7 +15,7 @@ import {
   distinctStateFor,
   MAX_ARTIFACT_BYTES,
   R191_SURFACE_CONTROL_COUNT,
-} from "./checkpoint/preflight-reveal-continuation-parent-checkpoint-scale-fixture.ts";
+} from "../checkpoint/preflight-reveal-continuation-parent-checkpoint-scale-fixture.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import { completeParent } from "./preflight-reveal-continuation-parent-results.ts";
 import {

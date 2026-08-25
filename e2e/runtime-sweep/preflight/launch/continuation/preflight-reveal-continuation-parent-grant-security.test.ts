@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { createRevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-contract-factories.ts";
-import { grantDigestForBody } from "../reveal/continuation/preflight-reveal-continuation-digests.ts";
-import type { RevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
+import { createRevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
+import type { RevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { grantDigestForBody } from "../../reveal/continuation/preflight-reveal-continuation-digests.ts";
 import type {
   ParentContext,
   ParentProgress,

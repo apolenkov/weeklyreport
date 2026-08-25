@@ -3,8 +3,8 @@ import type {
   RevealBranch,
   RevealCandidate,
 } from "../interaction/preflight-reveal-branches.ts";
+import type { RevealCandidateList } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { RevealContinuationReplayError } from "./preflight-reveal-continuation-errors.ts";
-import type { RevealCandidateList } from "./preflight-reveal-continuation-schemas.ts";
 import {
   candidateListDigestFor,
   revealCandidateIdentityFor,

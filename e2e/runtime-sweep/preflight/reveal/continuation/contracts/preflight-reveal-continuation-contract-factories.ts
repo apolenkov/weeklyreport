@@ -1,18 +1,18 @@
-import type { CampaignMatrixState } from "../../../matrix/campaign-matrix.ts";
-import type { SourceArtifact } from "../../../source/source-artifact.ts";
-import { sha256Hex } from "../../../support/ids.ts";
-import type { RevealRoute } from "../interaction/preflight-reveal-types.ts";
+import type { CampaignMatrixState } from "../../../../matrix/campaign-matrix.ts";
+import type { SourceArtifact } from "../../../../source/source-artifact.ts";
+import { sha256Hex } from "../../../../support/ids.ts";
+import type { RevealRoute } from "../../interaction/preflight-reveal-types.ts";
 import {
   parseRevealExecutionGrant,
   parseRevealReceiptChunk,
-} from "./preflight-reveal-continuation-artifacts.ts";
+} from "../preflight-reveal-continuation-artifacts.ts";
 import {
   chunkDigestForBody,
   grantDigestForBody,
   hmacFor,
   R188_ZERO_DIGEST,
-} from "./preflight-reveal-continuation-digests.ts";
-import { RevealContinuationError } from "./preflight-reveal-continuation-errors.ts";
+} from "../preflight-reveal-continuation-digests.ts";
+import { RevealContinuationError } from "../preflight-reveal-continuation-errors.ts";
 import {
   executionGrantSchema,
   PREFLIGHT_REVEAL_CONTINUATION_VERSION,

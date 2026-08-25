@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-14T01:00:19.000Z",
+  "generatedAt": "2026-08-25T19:12:49.000Z",
   "commands": [
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
@@ -82,9 +82,9 @@
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/report-sections/infrastructure/report-sections.prisma-repository.test.ts src/modules/report-sections/application/report-sections.submit.test.ts src/modules/report-sections/application/report-sections.contract.test.ts",
       "exitCode": 0,
-      "sourceDigest": "5d4691295236187828c852a4b9ca6fedcd1397c3a34c3c9b0605442065b94d4d",
-      "summary": "3 files and 84 report-section lifecycle gate tests passed",
-      "rerunAt": "2026-08-04T06:06:31.090Z"
+      "sourceDigest": "24ee2d7dedb9832ed44b048f3030498feb5493575cace1b4551d3b952203453e",
+      "summary": "3 files and 88 report-section lifecycle gate tests passed",
+      "rerunAt": "2026-08-25T19:12:49.000Z"
     },
     {
       "command": "pnpm --filter @customreport/shared exec vitest run src/schemas/period/period-lifecycle.schema.test.ts src/schemas/period/period.schema.test.ts src/schemas/report/report.period-stage.test.ts src/schemas/report/report.read-models.test.ts",

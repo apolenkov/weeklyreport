@@ -76,8 +76,8 @@ function createRepository(
       const section = store.get(reportSectionId);
       return Promise.resolve(section ? structuredClone(section) : null);
     },
-    getReportPeriodStatusForSection() {
-      return Promise.resolve("open");
+    getReportPeriodWriteGateForSection() {
+      return Promise.resolve({ periodStatus: "open", archived: false });
     },
     getReportMeta: reportMetaReader(OPEN_REPORT_META),
     getPublishedLineage() {

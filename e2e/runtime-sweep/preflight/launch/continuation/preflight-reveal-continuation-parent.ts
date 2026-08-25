@@ -1,23 +1,23 @@
 import { randomBytes } from "node:crypto";
 import { access } from "node:fs/promises";
 
-import type { SourceArtifact } from "../../source/source-artifact.ts";
+import type { SourceArtifact } from "../../../source/source-artifact.ts";
 import {
   preflightCanarySelectorFromEnvironment,
   resolvePreflightCanarySelection,
-} from "../canary/preflight-canary.ts";
-import { revealRouteFor } from "../execution/playwright-preflight-support.ts";
+} from "../../canary/preflight-canary.ts";
+import { revealRouteFor } from "../../execution/playwright-preflight-support.ts";
 import {
   REVEAL_CONTINUATION_LIMITS,
   revealContinuationLimitsFromEnvironment,
-} from "../reveal/continuation/preflight-reveal-continuation-limits.ts";
-import type { RevealReducerInput } from "../reveal/continuation/preflight-reveal-continuation-reducer.ts";
-import type { RevealExecutionGrant } from "../reveal/continuation/preflight-reveal-continuation-schemas.ts";
-import type { RevealDiscoveryState } from "../reveal/interaction/preflight-reveal-branches.ts";
-import type { RequestHostCheckpoint } from "./checkpoint/preflight-reveal-host-checkpoint-client.ts";
-import { runChildUntilDone } from "./checkpoint/preflight-reveal-host-checkpoint-parent.ts";
-import type { PreflightLaunchMode } from "./preflight-launch-guard.ts";
-import type { PreflightFullPaths } from "./preflight-launcher-support.ts";
+} from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
+import type { RevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import type { RevealReducerInput } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
+import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-reveal-branches.ts";
+import type { RequestHostCheckpoint } from "../checkpoint/preflight-reveal-host-checkpoint-client.ts";
+import { runChildUntilDone } from "../checkpoint/preflight-reveal-host-checkpoint-parent.ts";
+import type { PreflightLaunchMode } from "../preflight-launch-guard.ts";
+import type { PreflightFullPaths } from "../preflight-launcher-support.ts";
 
 const AUTHORITY_KEY_BYTES = 32;
 const ATTEMPT_ID_BYTES = 16;

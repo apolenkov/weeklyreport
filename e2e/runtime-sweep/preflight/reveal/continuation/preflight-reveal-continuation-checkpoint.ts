@@ -2,6 +2,14 @@ import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import type { RevealDiscoveryState } from "../interaction/preflight-reveal-branches.ts";
 import {
+  PREFLIGHT_REVEAL_CONTINUATION_VERSION,
+  PREFLIGHT_REVEAL_CONTROL,
+  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
+  type RevealControlAsset,
+  type RevealExecutionGrant,
+  type RevealReducerCheckpoint,
+} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import {
   assetRefFor,
   rememberRevealContinuationAsset,
   type RevealContinuationAsset,
@@ -10,14 +18,6 @@ import {
   contentDigestFor,
   R188_ZERO_DIGEST,
 } from "./preflight-reveal-continuation-digests.ts";
-import {
-  PREFLIGHT_REVEAL_CONTINUATION_VERSION,
-  PREFLIGHT_REVEAL_CONTROL,
-  PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
-  type RevealControlAsset,
-  type RevealExecutionGrant,
-  type RevealReducerCheckpoint,
-} from "./preflight-reveal-continuation-schemas.ts";
 import {
   branchAssetFor,
   candidateListAssetFor,

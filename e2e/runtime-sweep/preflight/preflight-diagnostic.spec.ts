@@ -12,13 +12,13 @@ import {
 import {
   createDiagnosticSidecar,
   diagnosticFailureFor,
-} from "./diagnostics/preflight-diagnostic-sidecar.ts";
+} from "./diagnostics/sidecar/preflight-diagnostic-sidecar.ts";
 import {
   assertDiagnosticCampaignBinding,
   DIAGNOSTIC_SAMPLE_INTERVAL_MS,
   type DiagnosticOperation,
   type DiagnosticStage,
-} from "./diagnostics/preflight-diagnostic-sidecar-contract.ts";
+} from "./diagnostics/sidecar/preflight-diagnostic-sidecar-contract.ts";
 import { runPlaywrightPreflightSegment } from "./execution/playwright-preflight.ts";
 import { createPreflightRuntimePreparation } from "./runtime/preflight-runtime-setup.ts";
 
