@@ -93,6 +93,7 @@ describe("runtime preflight launcher boundaries", () => {
       readFile(
         path.resolve(
           import.meta.dirname,
+          "continuation",
           "preflight-reveal-continuation-parent.ts",
         ),
         "utf8",
