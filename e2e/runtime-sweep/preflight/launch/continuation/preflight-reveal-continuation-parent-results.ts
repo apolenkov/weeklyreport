@@ -145,6 +145,8 @@ export const continueChild = async (input: {
     receiptCount: chunk.receiptCount,
     chunkHead: chunk.chunkDigest,
     chunkCount: chunk.predecessorChunkCount + 1,
+    previousCheckpointDigest: progress.previousCheckpointDigest ?? null,
+    previousSampleSequence: progress.previousSampleSequence ?? null,
     reducerInput: replayContext.queueInput,
     reducerState: reduced.state,
   };
