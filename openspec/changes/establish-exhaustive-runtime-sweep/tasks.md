@@ -276,7 +276,11 @@
       parent-authored PASS, reserves the remaining 6 minutes solely for
       termination, teardown, and verified zero residue, and is not retried
       after timeout, incomplete frontier, lineage mismatch, missing PASS, or
-      cleanup residue.
+      cleanup residue. Before that attempt, the stock launcher must reject an
+      equal parent `DATABASE_URL`/`E2E_DATABASE_URL` before Playwright spawn,
+      and controller settlement may collapse only an exact primary failure or
+      an `AbortError` caused by that same object; independent cleanup failures
+      remain aggregated.
 
 - [x] 5.20 Retain Darwin raw-free pages as receipt telemetry without using them
       as an independent baseline/runtime veto; keep available memory, pressure,

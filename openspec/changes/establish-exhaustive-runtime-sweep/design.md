@@ -245,6 +245,12 @@ before and after watcher setup, so a request arriving during setup cannot be
 lost; the CLI has a bounded abort deadline and receives source authority only
 from the exact runtime environment.
 
+Parent failure remains the primary lifecycle error. Controller settlement may
+collapse only the same error object or an `AbortError` whose `cause` is that
+exact primary object. An `AbortError` without that cause, one with a different
+cause, an arbitrary same-message error, or a nonzero controller exit remains an
+independent cleanup failure and is aggregated with the primary error.
+
 The resource-aware continuation keeps one headless Playwright worker and gives
 each child three cooperative source/plan-bound limits: a 60-second soft wall,
 256 completed terminal candidates, and 1,024 reveal-action delta. It reserves
@@ -587,6 +593,13 @@ final authority, with seed validation/stable IDs in the manifest. Native Codex
 deterministic browser/database state. Codex owns scheduling, reset/reseed,
 manifest, ledger, merge, adjudication, and gate; read-only verifiers may
 parallelize only through explicitly imported results.
+
+The stock canary/full launcher repeats the pure distinct-target assertion while
+building the Playwright child environment. An absent parent `DATABASE_URL` is
+valid because the Playwright web-server configuration supplies the guarded
+E2E target explicitly to the API child; an equal parent value fails before any
+Playwright, browser, or product-server child is spawned. Shard preparation
+retains its separate persisted resource proof and child-environment contract.
 
 ### Exact disposable database boundary
 

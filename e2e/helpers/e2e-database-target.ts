@@ -125,6 +125,19 @@ export const sameE2eDatabaseTarget = (
   );
 };
 
+export const assertDistinctE2eDatabaseTarget = (
+  e2eDatabaseUrl: string,
+  developerDatabaseUrl: string | undefined,
+): void => {
+  if (
+    developerDatabaseUrl !== undefined &&
+    sameE2eDatabaseTarget(e2eDatabaseUrl, developerDatabaseUrl)
+  )
+    throw new E2eDatabaseSetupError(
+      "E2E_DATABASE_URL must differ from DATABASE_URL",
+    );
+};
+
 export const assertStrictNonProdDatabaseTarget = (
   scriptName: string,
   databaseUrl: string,

@@ -63,6 +63,39 @@ const runtimeSweepSourceFiles = async (
 };
 
 describe("runtime preflight launcher boundaries", () => {
+  it("rejects an equal developer and E2E database before building a child environment", () => {
+    expect(() =>
+      preflightChildEnvironment(
+        {
+          DATABASE_URL: "postgresql://localhost/customreport_e2e",
+          E2E_DATABASE_URL: "postgresql://127.0.0.1/customreport_e2e",
+        },
+        "canary",
+      ),
+    ).toThrow("E2E_DATABASE_URL must differ from DATABASE_URL");
+  });
+
+  it.each([
+    [undefined, "postgresql://localhost/customreport_e2e"],
+    [
+      "postgresql://localhost/customreport_e2e_lane_a_test",
+      "postgresql://localhost/customreport_e2e",
+    ],
+  ])(
+    "accepts an absent or distinct developer database before building a child environment",
+    (databaseUrl, e2eDatabaseUrl) => {
+      expect(() =>
+        preflightChildEnvironment(
+          {
+            ...(databaseUrl === undefined ? {} : { DATABASE_URL: databaseUrl }),
+            E2E_DATABASE_URL: e2eDatabaseUrl,
+          },
+          "canary",
+        ),
+      ).not.toThrow();
+    },
+  );
+
   it("keeps the host checkpoint root raw reader on the allowlisted parent path", async () => {
     const root = path.resolve(import.meta.dirname, "..", "..");
     const files = await runtimeSweepSourceFiles(root);

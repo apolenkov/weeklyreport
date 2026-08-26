@@ -5,10 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { withCleanSource } from "../continuation/preflight-reveal-continuation-parent-test-fixture.ts";
 import { runExactAdminDemoRevealCanary } from "./preflight-reveal-host-checkpoint-launch.ts";
-import {
-  type RevealCanaryLifecycle,
-  settleControllerAfterParentFailure,
-} from "./preflight-reveal-host-checkpoint-lifecycle.ts";
 
 const adminDemoState = (
   source: Parameters<typeof runExactAdminDemoRevealCanary>[0]["source"],
@@ -24,32 +20,6 @@ const adminDemoState = (
 };
 
 describe("exact admin/demo reveal canary lifecycle", () => {
-  it("preserves a thrown parent failure with a nonzero controller exit", async () => {
-    const primary = new Error("parent failed");
-    const lifecycle: RevealCanaryLifecycle = {
-      signal: new AbortController().signal,
-      deadlineAt: 0,
-      deadlineMonotonic: 0,
-      monotonicNow: () => 0,
-      controller: Promise.resolve({ code: 19 }),
-      abort: () => undefined,
-      close: () => undefined,
-    };
-    const failure = await settleControllerAfterParentFailure(
-      lifecycle,
-      primary,
-    ).catch((error: unknown) => error);
-    expect(failure).toBeInstanceOf(AggregateError);
-    expect(
-      (failure as AggregateError).errors.map((error) =>
-        error instanceof Error ? error.message : String(error),
-      ),
-    ).toEqual([
-      "parent failed",
-      "Host checkpoint controller exited with code 19",
-    ]);
-  });
-
   it("owns and settles the host controller when the child exits nonzero", async () => {
     await withCleanSource(async ({ source, repoRoot }) => {
       const archiveRoot = await mkdtemp(

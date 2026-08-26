@@ -3,9 +3,8 @@ import path from "node:path";
 
 import type { SeedProfile } from "../../prisma/seeds/profiles/seed-profile-contract.js";
 import {
+  assertDistinctE2eDatabaseTarget,
   assertStrictNonProdDatabaseTarget,
-  E2eDatabaseSetupError,
-  sameE2eDatabaseTarget,
 } from "./e2e-database-target.ts";
 
 export { E2eDatabaseSetupError } from "./e2e-database-target.ts";
@@ -55,15 +54,7 @@ export function e2eSetupCommands(
 }
 
 export function setupE2eDatabase(input: E2eDatabaseSetup): void {
-  const developerDatabaseUrl = process.env.DATABASE_URL;
-  if (
-    developerDatabaseUrl !== undefined &&
-    sameE2eDatabaseTarget(input.databaseUrl, developerDatabaseUrl)
-  ) {
-    throw new E2eDatabaseSetupError(
-      "E2E_DATABASE_URL must differ from DATABASE_URL",
-    );
-  }
+  assertDistinctE2eDatabaseTarget(input.databaseUrl, process.env.DATABASE_URL);
   assertStrictNonProdDatabaseTarget(
     "e2e-global-setup",
     input.databaseUrl,
