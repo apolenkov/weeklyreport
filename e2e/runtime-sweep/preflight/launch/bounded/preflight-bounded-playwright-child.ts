@@ -1,9 +1,6 @@
 import { type ChildProcess } from "node:child_process";
 
-import {
-  launchNestedOwnedProcess,
-  nestedProcessOwnershipFor,
-} from "./preflight-nested-process-ownership.ts";
+import { spawnDetachedProcessGroup } from "./preflight-detached-process-group.ts";
 
 type BoundedPlaywrightChildInput = Readonly<{
   operationName: string;
@@ -14,6 +11,19 @@ type BoundedPlaywrightChildInput = Readonly<{
   terminationGraceMs: number;
   acceptNonzeroExit?: boolean;
 }>;
+
+type BoundedWaitInput = Pick<
+  BoundedPlaywrightChildInput,
+  "operationName" | "maxDurationMs" | "terminationGraceMs" | "acceptNonzeroExit"
+>;
+
+interface BoundedWaitState {
+  timedOut: boolean;
+  settled: boolean;
+  deadline: NodeJS.Timeout | undefined;
+  escalation: NodeJS.Timeout | undefined;
+  terminationErrors: unknown[];
+}
 
 class PreflightBoundedPlaywrightChildError extends Error {
   override readonly name = "PreflightBoundedPlaywrightChildError";
@@ -58,74 +68,118 @@ export const boundedPlaywrightArgs = (
   configPath,
 ];
 
+const signalOrRecord = (
+  signalOwned: (signal: NodeJS.Signals) => void,
+  signal: NodeJS.Signals,
+  failures: unknown[],
+): void => {
+  try {
+    signalOwned(signal);
+  } catch (error: unknown) {
+    failures.push(error);
+  }
+};
+
+const timeoutFailureFor = (
+  input: BoundedWaitInput,
+  terminationErrors: readonly unknown[],
+): Error => {
+  const timeoutError = new PreflightBoundedPlaywrightChildError(
+    `${input.operationName} exceeded maxDurationMs=${String(input.maxDurationMs)}`,
+  );
+  return terminationErrors.length === 0
+    ? timeoutError
+    : new AggregateError(
+        [timeoutError, ...terminationErrors],
+        `${input.operationName} process-group termination failed`,
+      );
+};
+
+const armBoundedChildTimeout = (input: {
+  readonly state: BoundedWaitState;
+  readonly signalOwned: (signal: NodeJS.Signals) => void;
+  readonly wait: BoundedWaitInput;
+  readonly reject: (error: unknown) => void;
+}): NodeJS.Timeout =>
+  setTimeout(() => {
+    input.state.timedOut = true;
+    signalOrRecord(input.signalOwned, "SIGINT", input.state.terminationErrors);
+    input.state.escalation = setTimeout(() => {
+      signalOrRecord(
+        input.signalOwned,
+        "SIGKILL",
+        input.state.terminationErrors,
+      );
+      input.reject(
+        timeoutFailureFor(input.wait, input.state.terminationErrors),
+      );
+    }, input.wait.terminationGraceMs);
+  }, input.wait.maxDurationMs);
+
 const waitForBoundedPlaywrightChild = (
   child: ChildProcess,
   signalOwned: (signal: NodeJS.Signals) => void,
-  input: Pick<
-    BoundedPlaywrightChildInput,
-    | "operationName"
-    | "maxDurationMs"
-    | "terminationGraceMs"
-    | "acceptNonzeroExit"
-  >,
+  input: BoundedWaitInput,
 ): Promise<number> =>
   new Promise<number>((resolve, reject) => {
-    const state: {
-      timedOut: boolean;
-      escalation: NodeJS.Timeout | undefined;
-      terminationErrors: unknown[];
-    } = { timedOut: false, escalation: undefined, terminationErrors: [] };
-    const clearTimers = (): void => {
-      clearTimeout(deadline);
-      if (state.escalation !== undefined) clearTimeout(state.escalation);
+    const state: BoundedWaitState = {
+      timedOut: false,
+      settled: false,
+      deadline: undefined,
+      escalation: undefined,
+      terminationErrors: [],
     };
-    const deadline = setTimeout(() => {
-      state.timedOut = true;
-      try {
-        signalOwned("SIGINT");
-      } catch (error: unknown) {
-        state.terminationErrors.push(error);
-      }
-      state.escalation = setTimeout(() => {
-        try {
-          signalOwned("SIGKILL");
-        } catch (error: unknown) {
-          state.terminationErrors.push(error);
-        }
-        const timeoutError = new PreflightBoundedPlaywrightChildError(
-          `${input.operationName} exceeded maxDurationMs=${String(input.maxDurationMs)}`,
-        );
-        reject(
-          state.terminationErrors.length === 0
-            ? timeoutError
-            : new AggregateError(
-                [timeoutError, ...state.terminationErrors],
-                `${input.operationName} process-group termination failed`,
-              ),
-        );
-      }, input.terminationGraceMs);
-    }, input.maxDurationMs);
-    child.once("error", (error) => {
+    const cleanup = (): void => {
+      if (state.deadline !== undefined) clearTimeout(state.deadline);
+      if (state.escalation !== undefined) clearTimeout(state.escalation);
+      child.off("error", onError);
+      child.off("exit", onExit);
+    };
+    const settleResolve = (exitCode: number): void => {
+      if (state.settled) return;
+      state.settled = true;
+      cleanup();
+      resolve(exitCode);
+    };
+    const settleReject = (error: unknown): void => {
+      if (state.settled) return;
+      state.settled = true;
+      cleanup();
+      reject(error);
+    };
+    const onError = (error: Error): void => {
       if (state.timedOut) {
         state.terminationErrors.push(error);
         return;
       }
-      clearTimers();
-      reject(error);
-    });
-    child.once("exit", (code, signal) => {
+      settleReject(error);
+    };
+    const onExit = (
+      code: number | null,
+      signal: NodeJS.Signals | null,
+    ): void => {
       if (state.timedOut) return;
-      clearTimers();
       if (code !== 0 && input.acceptNonzeroExit !== true) {
-        reject(
+        settleReject(
           new PreflightBoundedPlaywrightChildError(
             `${input.operationName} child exited code=${String(code)} signal=${String(signal)}`,
           ),
         );
         return;
       }
-      resolve(code ?? 1);
-    });
+      settleResolve(code ?? 1);
+    };
+    child.once("error", onError);
+    child.once("exit", onExit);
+    if (child.exitCode !== null || child.signalCode !== null)
+      onExit(child.exitCode, child.signalCode);
+    if (!state.settled)
+      state.deadline = armBoundedChildTimeout({
+        state,
+        signalOwned,
+        wait: input,
+        reject: settleReject,
+      });
   });
 
 export const runBoundedPlaywrightChild = async (
@@ -146,21 +200,13 @@ export const runBoundedPlaywrightChild = async (
   const args = [
     ...boundedPlaywrightArgs(launcher.leadingArgs, input.configPath),
   ];
-  const ownership = nestedProcessOwnershipFor(
-    input.operationName,
-    input.environment,
-  );
-  if (ownership === undefined)
-    throw new PreflightBoundedPlaywrightChildError(
-      `${input.operationName} bounded launch requires nested process ownership`,
-    );
-  const owned = await launchNestedOwnedProcess({
+  const owned = await spawnDetachedProcessGroup({
     operationName: input.operationName,
-    ownership,
     command,
     args,
     repoRoot: input.repoRoot,
     environment: input.environment,
+    closeGraceMs: input.terminationGraceMs,
   });
   try {
     const exitCode = await waitForBoundedPlaywrightChild(

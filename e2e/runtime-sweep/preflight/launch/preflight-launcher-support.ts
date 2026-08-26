@@ -5,6 +5,7 @@ import {
   ensurePreflightArchiveDirectory,
   ensurePreflightArchiveRoot,
 } from "../preflight-archive-path.ts";
+import { withoutLegacyOwnershipEnvironment } from "./bounded/preflight-detached-process-group.ts";
 
 export type PreflightFullPaths = Readonly<{
   readonly preflightPath: string;
@@ -64,12 +65,14 @@ export function preflightChildEnvironment(
   mode: "canary" | "full",
   paths?: PreflightFullPaths,
 ): NodeJS.ProcessEnv {
-  const filtered = Object.fromEntries(
-    Object.entries(inherited).filter(
-      ([key]) =>
-        !PREFLIGHT_ARTIFACT_ENV_KEYS.includes(
-          key as (typeof PREFLIGHT_ARTIFACT_ENV_KEYS)[number],
-        ),
+  const filtered = withoutLegacyOwnershipEnvironment(
+    Object.fromEntries(
+      Object.entries(inherited).filter(
+        ([key]) =>
+          !PREFLIGHT_ARTIFACT_ENV_KEYS.includes(
+            key as (typeof PREFLIGHT_ARTIFACT_ENV_KEYS)[number],
+          ),
+      ),
     ),
   );
   return {

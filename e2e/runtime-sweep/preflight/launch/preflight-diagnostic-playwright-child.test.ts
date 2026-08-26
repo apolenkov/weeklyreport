@@ -1,15 +1,13 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createNestedProcessOwnershipFixture } from "./bounded/preflight-nested-process-ownership.test-support.ts";
 import {
   buildPreflightDiagnosticPlaywrightArguments,
   diagnosticTimeoutFromEnvironment,
   diagnosticTraceModeFromEnvironment,
-  runPreflightDiagnosticPlaywrightChild,
   spawnPreflightDiagnosticPlaywrightChild,
 } from "./preflight-diagnostic-playwright-child.ts";
 
@@ -39,24 +37,6 @@ const readWhenPresent = async (filePath: string): Promise<string> => {
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error("Diagnostic command did not publish its environment");
-};
-
-const terminateReadyLauncher = async (root: string): Promise<void> => {
-  const deadline = Date.now() + 2000;
-  while (Date.now() < deadline) {
-    const readyName = (await readdir(root)).find((entry) =>
-      entry.endsWith(".ready"),
-    );
-    if (readyName !== undefined) {
-      const ready = JSON.parse(
-        await readFile(path.join(root, readyName), "utf8"),
-      ) as { readonly pgid: number };
-      process.kill(-ready.pgid, "SIGTERM");
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  throw new Error("Owned diagnostic launcher did not publish READY");
 };
 
 describe("diagnostic Playwright child trace boundary", () => {
@@ -107,19 +87,18 @@ describe("diagnostic Playwright child trace boundary", () => {
     ).toThrow(/positive safe integer/u);
   });
 
-  it("fails before spawning when nested ownership is not fully configured", async () => {
+  it("preserves a spawn setup failure", async () => {
     await expect(
       spawnPreflightDiagnosticPlaywrightChild({
         repoRoot: process.cwd(),
         environment: {
-          npm_execpath: "/not-started.mjs",
-          RUNTIME_SWEEP_NESTED_OWNED_COMMAND_LAUNCHER: "/partial.mjs",
+          npm_execpath: path.join(tmpdir(), "missing-pnpm-executable"),
         },
       }),
-    ).rejects.toThrow(/complete nested process ownership environment/u);
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("uses the same birth-bound handle for rollback and gone assertion", async () => {
+  it("owns one detached process group and strips legacy ownership variables", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "diagnostic-owned-child-"));
     const command = path.join(root, "diagnostic-command.mjs");
     const observedEnvironment = path.join(root, "observed-environment.json");
@@ -136,10 +115,13 @@ describe("diagnostic Playwright child trace boundary", () => {
       | Awaited<ReturnType<typeof spawnPreflightDiagnosticPlaywrightChild>>
       | undefined;
     try {
-      const ownership = await createNestedProcessOwnershipFixture(root);
       launched = await spawnPreflightDiagnosticPlaywrightChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: command, ...ownership },
+        environment: {
+          npm_execpath: command,
+          RUNTIME_SWEEP_NESTED_OBSOLETE: "remove",
+          CR001_OWNED_OBSOLETE: "remove",
+        },
       });
       await expect(readWhenPresent(observedEnvironment)).resolves.toBe("[]");
       launched.signal("SIGTERM");
@@ -155,28 +137,18 @@ describe("diagnostic Playwright child trace boundary", () => {
     }
   });
 
-  it("preserves the child failure when caller cleanup also fails", async () => {
+  it("reports a signalled child and leaves no owned group", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "diagnostic-primary-"));
     const command = path.join(root, "diagnostic-command.mjs");
     await writeFile(command, "setInterval(() => undefined, 1000);", "utf8");
     try {
-      const ownership = await createNestedProcessOwnershipFixture(root, {
-        failGone: true,
-      });
-      const running = runPreflightDiagnosticPlaywrightChild({
+      const launched = await spawnPreflightDiagnosticPlaywrightChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: command, ...ownership },
+        environment: { npm_execpath: command },
       });
-      await terminateReadyLauncher(root);
-      const failure = await running.catch((error: unknown) => error);
-      expect(failure).toBeInstanceOf(AggregateError);
-      expect(
-        (failure as AggregateError).errors.some(
-          (error) =>
-            error instanceof Error &&
-            /terminated by signal SIGTERM/iu.test(error.message),
-        ),
-      ).toBe(true);
+      launched.signal("SIGTERM");
+      await expect(launched.completion).rejects.toThrow(/SIGTERM/iu);
+      await expect(launched.close()).resolves.toBeUndefined();
     } finally {
       await rm(root, { force: true, recursive: true });
     }
