@@ -113,7 +113,14 @@ export const groupOwnershipFor = (input: {
 export const classifyProcessGroupPermission = (input: {
   readonly leader: ProcessGroupLeaderOwnership;
   readonly members: ProcessGroupMemberOwnership;
+  /** True only when this classification follows an EPERM liveness/signal probe. */
+  readonly permissionDenied?: boolean;
 }): Exclude<ProcessGroupCleanupClassification, "CLEAN"> => {
+  // EPERM means that the kernel did not prove the group absent.  An exited
+  // direct child is therefore not enough to downgrade the cleanup uncertainty
+  // to ESRCH_ALREADY_GONE.
+  if (input.permissionDenied === true && input.leader !== "LIVE")
+    return "OWNERSHIP_UNPROVEN";
   if (input.leader === "GONE") return "ESRCH_ALREADY_GONE";
   if (input.leader !== "LIVE" || input.members !== "OWNED")
     return "OWNERSHIP_UNPROVEN";
@@ -153,18 +160,22 @@ const permissionFailureFor = (input: {
   readonly child: ChildProcess;
   readonly ownership: ProcessGroupOwnership;
   readonly detail: string;
-}): ProcessGroupCleanupError =>
-  new ProcessGroupCleanupError(
+}): ProcessGroupCleanupError => {
+  const leader = leaderOwnershipFor(input);
+  const members = groupOwnershipFor({
+    operationName: input.operationName,
+    ownership: input.ownership,
+  });
+  return new ProcessGroupCleanupError(
     input.operationName,
     classifyProcessGroupPermission({
-      leader: leaderOwnershipFor(input),
-      members: groupOwnershipFor({
-        operationName: input.operationName,
-        ownership: input.ownership,
-      }),
+      leader,
+      members,
+      permissionDenied: true,
     }),
     input.detail,
   );
+};
 
 export const processGroupStatusFor = (input: {
   readonly operationName: string;

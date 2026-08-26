@@ -11,11 +11,103 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { REVEAL_CONTINUATION_LIMITS } from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
 import type { ParentProgress } from "./preflight-reveal-continuation-parent.ts";
 import { runPreflightRevealContinuation } from "./preflight-reveal-continuation-parent.ts";
-import { withCleanSource } from "./preflight-reveal-continuation-parent-test-fixture.ts";
+import {
+  assertRevealContinuationChildBudget,
+  runContinuationChild,
+} from "./preflight-reveal-continuation-parent-child.ts";
+import {
+  withCleanSealedGrantFixture,
+  withCleanSource,
+} from "./preflight-reveal-continuation-parent-test-fixture.ts";
 
 describe("R188 parent-child process boundary", () => {
+  it.each([
+    REVEAL_CONTINUATION_LIMITS.hardWallMs +
+      REVEAL_CONTINUATION_LIMITS.killGraceMs -
+      1,
+    0,
+  ])(
+    "rejects a child without a full cooperative budget (%s ms)",
+    (remainingMs) => {
+      expect(() =>
+        assertRevealContinuationChildBudget({
+          remainingMs,
+          hardWallMs: REVEAL_CONTINUATION_LIMITS.hardWallMs,
+          killGraceMs: REVEAL_CONTINUATION_LIMITS.killGraceMs,
+        }),
+      ).toThrow("INSUFFICIENT_REMAINING_BUDGET");
+    },
+  );
+
+  it("accepts an unbounded parent clock as sufficient budget", () => {
+    expect(() =>
+      assertRevealContinuationChildBudget({
+        remainingMs: Number.POSITIVE_INFINITY,
+        hardWallMs: REVEAL_CONTINUATION_LIMITS.hardWallMs,
+        killGraceMs: REVEAL_CONTINUATION_LIMITS.killGraceMs,
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts exactly one complete child window", () => {
+    expect(() =>
+      assertRevealContinuationChildBudget({
+        remainingMs:
+          REVEAL_CONTINUATION_LIMITS.hardWallMs +
+          REVEAL_CONTINUATION_LIMITS.killGraceMs,
+        hardWallMs: REVEAL_CONTINUATION_LIMITS.hardWallMs,
+        killGraceMs: REVEAL_CONTINUATION_LIMITS.killGraceMs,
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    REVEAL_CONTINUATION_LIMITS.hardWallMs +
+      REVEAL_CONTINUATION_LIMITS.killGraceMs -
+      1,
+    0,
+  ])(
+    "checks the remaining budget before grant hydration, output checks, or browser launch (%s ms)",
+    async (remainingMs) => {
+      await withCleanSealedGrantFixture(async (fixture) => {
+        const browserCalls = { value: 0 };
+        const outputPath = path.join(
+          fixture.archiveRoot,
+          "continuation",
+          `PREFLIGHT_REVEAL_CONTINUATION.${fixture.context.attemptId}.1.json`,
+        );
+        await mkdir(path.dirname(outputPath), { recursive: true });
+        await writeFile(outputPath, "stale\n", "utf8");
+        const context = {
+          ...fixture.context,
+          functionalDeadlineMonotonic: remainingMs,
+          deadlineMonotonic: remainingMs + 9999,
+          monotonicNow: () => 0,
+          runPlaywright: () => {
+            browserCalls.value += 1;
+            return Promise.resolve(0);
+          },
+        };
+
+        await expect(
+          runContinuationChild({
+            context,
+            progress: {
+              ...fixture.validProgress,
+              previousGrantDigest: "f".repeat(64),
+            },
+            ordinal: 1,
+          }),
+        ).rejects.toThrow("INSUFFICIENT_REMAINING_BUDGET");
+        expect(browserCalls.value).toBe(0);
+        await expect(readFile(outputPath, "utf8")).resolves.toBe("stale\n");
+      });
+    },
+  );
+
   it("forbids the production continuation child from authoring canonical canary evidence", async () => {
     const source = await readFile(
       path.join(

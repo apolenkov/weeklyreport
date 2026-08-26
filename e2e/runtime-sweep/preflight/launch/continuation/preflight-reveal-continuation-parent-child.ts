@@ -38,6 +38,18 @@ import { frontierForState } from "./preflight-reveal-continuation-parent-support
 
 const CHILD_EXECUTION_ID_BYTES = 32;
 
+export const assertRevealContinuationChildBudget = (input: {
+  readonly remainingMs: number;
+  readonly hardWallMs: number;
+  readonly killGraceMs: number;
+}): void => {
+  const requiredMs = input.hardWallMs + input.killGraceMs;
+  if (Number.isNaN(input.remainingMs) || input.remainingMs < requiredMs)
+    throw new Error(
+      `INSUFFICIENT_REMAINING_BUDGET remainingMs=${String(input.remainingMs)} requiredMs=${String(requiredMs)}`,
+    );
+};
+
 const continuationEnvironmentFor = (
   progress: ParentProgress,
 ): NodeJS.ProcessEnv => {
@@ -149,8 +161,13 @@ const runBoundedContinuationChild = async (input: {
 }): Promise<number> => {
   const { context, progress, outputPath } = input;
   const limits = context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
-  assertRevealContinuationActive(context, limits.killGraceMs);
   const remainingMs = remainingRevealContinuationMs(context);
+  assertRevealContinuationChildBudget({
+    remainingMs,
+    hardWallMs: limits.hardWallMs,
+    killGraceMs: limits.killGraceMs,
+  });
+  assertRevealContinuationActive(context);
   const maxDurationMs = Math.min(
     limits.hardWallMs,
     remainingMs - limits.killGraceMs,
@@ -206,6 +223,12 @@ export const runContinuationChild = async (input: {
   }>
 > => {
   const { context, progress } = input;
+  const limits = context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
+  assertRevealContinuationChildBudget({
+    remainingMs: remainingRevealContinuationMs(context),
+    hardWallMs: limits.hardWallMs,
+    killGraceMs: limits.killGraceMs,
+  });
   assertRevealContinuationActive(context);
   const childExecutionId = randomBytes(CHILD_EXECUTION_ID_BYTES).toString(
     "hex",
