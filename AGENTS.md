@@ -18,6 +18,28 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 - `prisma` — schema, single init migration, seeds, destructive guard
 - `openspec` — active backlog (`changes/`) + durable specs (`specs/`)
 
+### MVP lifecycle authorization
+
+- This repository is an actively developed MVP. Its local product data,
+  generated artifacts, disposable runtime resources, and test environments are
+  reproducible from source, schema, migrations, and seeds; preserving their
+  contents is not a product requirement.
+- Within this repository and its dedicated archive, the owner authorizes
+  proactive cleanup of obsolete generated/session artifacts, replacement or
+  removal of superseded MVP code and configuration, and creation, reset,
+  reseeding, or removal of the exact disposable resources allowed below. Do not
+  pause for another owner confirmation when those actions are necessary to
+  complete an already accepted CustomReport task.
+- Keep one canonical repository, preserve useful Git history and unrelated
+  worktree changes, use explicit targets, and record decision-grade changes in
+  Git or the external archive as appropriate. Prefer recoverable deletion when
+  it does not obstruct the task.
+- This standing MVP authorization never applies to production, shared or
+  unknown services, non-project files, real user data, external writes, or the
+  creation, rotation, revocation, replacement, or disclosure of credentials.
+  Those boundaries still require the exact authority defined by the global
+  instructions or a separate owner decision.
+
 ## Commands
 
 Use `pnpm` from the repo root (Node >=26). Never `npm`/Yarn.
