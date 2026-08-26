@@ -1,47 +1,30 @@
 import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registration.ts";
+import { processCandidateIteration } from "./candidates/preflight-reveal-candidate-iteration.ts";
+import {
+  type RevealCandidateProcessingResult,
+  type RevealContinuation,
+  type RevealQueueYieldHandler,
+} from "./candidates/preflight-reveal-queue-contracts.ts";
 import {
   type RevealBranch,
   type RevealCandidate,
   revealCandidateAlreadyProcessed,
-  type RevealCandidateTerminalResult,
   type RevealDiscoveryState,
   type RevealPureQueueInput,
-  type RevealQueueChunkResult,
   type RevealQueueInput,
 } from "./preflight-reveal-branches.ts";
+import type { CandidateProcessor } from "./preflight-reveal-queue-failure-boundary.ts";
 import {
-  type CandidateProcessor,
-  processCandidateAtFailureBoundary,
-} from "./preflight-reveal-queue-failure-boundary.ts";
-import { yieldAfterTerminal } from "./preflight-reveal-queue-yield.ts";
-import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
+  type CandidateLoopCursor,
+  type RevealBranchReusePolicy,
+} from "./restoration/preflight-reveal-branch-reuse-policy.ts";
 
-export type RevealContinuation = Readonly<{
-  readonly state: RevealDiscoveryState;
-  readonly currentBranch: RevealBranch;
-  readonly remainingQueue: readonly RevealBranch[];
-  readonly candidates: readonly RevealCandidate[];
-  readonly nextCandidateIndex: number;
-}>;
-
-export type RevealQueueYieldInput = Readonly<{
-  readonly state: RevealDiscoveryState;
-  readonly currentBranch: RevealBranch;
-  readonly remainingQueue: readonly RevealBranch[];
-  readonly candidates: readonly RevealCandidate[];
-  readonly nextCandidateIndex: number;
-  readonly terminal: RevealCandidateTerminalResult;
-  readonly continuation?: RevealContinuation;
-}>;
-
-export type RevealQueueYieldHandler = (
-  input: RevealQueueYieldInput,
-) => Promise<boolean> | boolean;
-
-export type RevealCandidateProcessingResult = Readonly<{
-  state: RevealDiscoveryState;
-  yielded?: RevealQueueChunkResult;
-}>;
+export type {
+  RevealCandidateProcessingResult,
+  RevealContinuation,
+  RevealQueueYieldHandler,
+  RevealQueueYieldInput,
+} from "./candidates/preflight-reveal-queue-contracts.ts";
 
 export const candidatesAtBoundary = (
   input: RevealPureQueueInput,
@@ -89,66 +72,42 @@ export const nextContinuationFor = (
   return undefined;
 };
 
-const terminalContinuationFor = (input: {
-  readonly queueInput: RevealQueueInput;
+interface MutableCandidateCursor {
+  state: RevealDiscoveryState;
+  restoredBranch: RevealBranch | undefined;
+  restorationScope: CandidateLoopCursor["restorationScope"];
+}
+
+const initialCandidateCursorFor = (input: {
   readonly state: RevealDiscoveryState;
-  readonly candidates: readonly RevealCandidate[];
-  readonly nextCandidateIndex: number;
-}): RevealContinuation | undefined =>
-  input.nextCandidateIndex < input.candidates.length
-    ? undefined
-    : nextContinuationFor(input.queueInput, input.state);
-
-const processExecutedCandidate = async (input: {
-  readonly queueInput: RevealQueueInput;
-  readonly state: RevealDiscoveryState;
-  readonly current: RevealBranch;
-  readonly candidates: readonly RevealCandidate[];
-  readonly nextCandidateIndex: number;
-  readonly terminal: RevealCandidateTerminalResult;
-  readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
-}): Promise<RevealQueueChunkResult | undefined> => {
-  const continuation = terminalContinuationFor({
-    queueInput: input.queueInput,
-    state: input.state,
-    candidates: input.candidates,
-    nextCandidateIndex: input.nextCandidateIndex,
-  });
-  return yieldAfterTerminal({
-    state: input.state,
-    current: input.current,
-    candidates: input.candidates,
-    nextCandidateIndex: input.nextCandidateIndex,
-    terminal: input.terminal,
-    ...(input.shouldYieldAfterCandidate === undefined
-      ? {}
-      : { shouldYieldAfterCandidate: input.shouldYieldAfterCandidate }),
-    ...(continuation === undefined ? {} : { continuation }),
-  });
-};
-
-const requiredCandidateAt = (
-  candidates: readonly RevealCandidate[],
-  index: number,
-): RevealCandidate => {
-  const candidate = candidates[index];
-  if (candidate !== undefined) return candidate;
-  throw new RevealDiscoveryError(
-    `Reveal candidate ${String(index)} is missing from its ordered list`,
-  );
-};
-
-const candidateCursorState = (
-  state: RevealDiscoveryState,
-  current: RevealBranch,
-  candidates: readonly RevealCandidate[],
-  nextCandidateIndex: number,
-): RevealDiscoveryState => ({
-  ...state,
-  currentBranch: current,
-  currentCandidates: candidates,
-  currentCandidateIndex: nextCandidateIndex,
+  readonly restoredBranch?: RevealBranch;
+}): MutableCandidateCursor => ({
+  state: input.state,
+  restoredBranch: input.restoredBranch,
+  restorationScope: input.restoredBranch === undefined ? undefined : "generic",
 });
+
+const immutableCandidateCursorFor = (
+  cursor: MutableCandidateCursor,
+): CandidateLoopCursor => ({
+  state: cursor.state,
+  ...(cursor.restoredBranch === undefined
+    ? {}
+    : { restoredBranch: cursor.restoredBranch }),
+  ...(cursor.restorationScope === undefined
+    ? {}
+    : { restorationScope: cursor.restorationScope }),
+});
+
+const branchReusePropertyFor = (
+  branchReuse: RevealBranchReusePolicy | undefined,
+): Readonly<{ branchReuse?: RevealBranchReusePolicy }> =>
+  branchReuse === undefined ? {} : { branchReuse };
+
+const yieldHandlerPropertyFor = (
+  shouldYieldAfterCandidate: RevealQueueYieldHandler | undefined,
+): Readonly<{ shouldYieldAfterCandidate?: RevealQueueYieldHandler }> =>
+  shouldYieldAfterCandidate === undefined ? {} : { shouldYieldAfterCandidate };
 
 export const processCandidates = async (
   input: {
@@ -158,6 +117,7 @@ export const processCandidates = async (
     readonly candidates: readonly RevealCandidate[];
     readonly index: number;
     readonly restoredBranch?: RevealBranch;
+    readonly branchReuse?: RevealBranchReusePolicy;
     readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
   },
   processCandidate: CandidateProcessor,
@@ -168,47 +128,31 @@ export const processCandidates = async (
     candidates,
     index,
     restoredBranch,
+    branchReuse,
     shouldYieldAfterCandidate,
   } = input;
-  const cursor: {
-    state: RevealDiscoveryState;
-    restoredBranch: RevealBranch | undefined;
-  } = { state: input.state, restoredBranch };
+  const cursor = initialCandidateCursorFor({
+    state: input.state,
+    ...(restoredBranch === undefined ? {} : { restoredBranch }),
+  });
   for (const [offset] of candidates.slice(index).entries()) {
     const candidateIndex = index + offset;
-    const candidate = requiredCandidateAt(candidates, candidateIndex);
-    const result = await processCandidateAtFailureBoundary({
+    const result = await processCandidateIteration({
       queueInput,
+      cursor: immutableCandidateCursorFor(cursor),
       current,
-      state: cursor.state,
       candidates,
       candidateIndex,
-      candidate,
-      ...(cursor.restoredBranch === undefined
-        ? {}
-        : { restoredBranch: cursor.restoredBranch }),
+      nextContinuation: nextContinuationFor,
+      ...branchReusePropertyFor(branchReuse),
+      ...yieldHandlerPropertyFor(shouldYieldAfterCandidate),
       processCandidate,
     });
-    cursor.state = candidateCursorState(
-      result.state,
-      current,
-      candidates,
-      candidateIndex + 1,
-    );
-    if (!result.executed || result.terminal === undefined) continue;
-    cursor.restoredBranch = undefined;
-    const yielded = await processExecutedCandidate({
-      queueInput,
-      state: cursor.state,
-      current,
-      candidates,
-      nextCandidateIndex: candidateIndex + 1,
-      terminal: result.terminal,
-      ...(shouldYieldAfterCandidate === undefined
-        ? {}
-        : { shouldYieldAfterCandidate }),
-    });
-    if (yielded !== undefined) return { state: cursor.state, yielded };
+    cursor.state = result.cursor.state;
+    cursor.restoredBranch = result.cursor.restoredBranch;
+    cursor.restorationScope = result.cursor.restorationScope;
+    if (result.yielded !== undefined)
+      return { state: cursor.state, yielded: result.yielded };
   }
   const {
     currentBranch: _currentBranch,

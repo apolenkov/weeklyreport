@@ -442,6 +442,38 @@ proof is persisted in the same exact-source continuation state. An untrusted
 fourth disclosure keeps the preceding triple ordinary even when every observed
 single and pair appears commutative.
 
+#### Verified branch-local inverse restoration
+
+Directed-pair discovery may avoid repeating branch preparation inside one
+uninterrupted child, but it does not reduce the candidate or receipt
+denominator. The child fully replays the canonical source branch before the
+first reused peer and after every process, checkpoint, or cooperative-yield
+boundary. Reuse is limited to a non-self read-only click between eligible
+`source-bound-row-local` controls with distinct valid targets, boolean expanded
+states, an unchanged URL, and no modal, background, mutation, or overlapping
+target coupling.
+
+After recording terminal candidate `B`, and only when the child will continue
+without yielding, the harness executes the exact inverse of `B` as a replay
+operation. It binds the inverse by the stable `aria-controls` target rather
+than an occurrence-derived control key, proves an unchanged database oracle,
+and requires exact equality of the canonical URL, full inventory, and full
+surface with source branch `A`. The inverse is preparation only: it is not a
+candidate, pair proof, retained control, path rewrite, registration saving, or
+acceptance result. Candidate and receipt order remain identical to full replay.
+
+A missing, duplicate, disabled, or changed inverse target; URL, inventory,
+surface, or database drift; timeout; signal; or inverse execution failure aborts
+the child before publishing its suffix. No grant, PASS, or resumable state may
+cross that failure. Reuse never crosses child/checkpoint/yield boundaries and
+never applies to ordinary, self-inverse, URL-changing, modal, incomplete,
+overlapping, untrusted, or mutation-required controls.
+
+The existing action budget remains conservative. For branch depth `d >= 1`
+and `k >= 1` reused candidates, physical actions are `d + 2k - 1`, while the
+unchanged logical debit is `k(d + 1)`. Their difference is
+`(d - 1)(k - 1) >= 0`, so inverse restoration introduces no unbudgeted action.
+
 ### Typed coverage cell and evidence identity
 
 The implementation may choose JSONL or an equivalent typed store, but the

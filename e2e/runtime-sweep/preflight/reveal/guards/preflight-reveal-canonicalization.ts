@@ -55,7 +55,7 @@ const hasModalOrBackgroundControl = (surface: RevealSurface): boolean =>
       keyboardFocusScope === "background",
   );
 
-const isSourceBoundDisclosure = (
+export const isSourceBoundDisclosureControl = (
   control: RevealSurfaceControl | undefined,
 ): control is RevealSurfaceControl =>
   control?.ariaRole === "button" &&
@@ -84,7 +84,7 @@ const sourceBoundIdentityFor = (targetId: string): string =>
 
 const sequenceKeyForStep = (step: RevealPath["steps"][number]): string => {
   const source = sourceControlFor(step.before, step.controlKey);
-  return isSourceBoundDisclosure(source) &&
+  return isSourceBoundDisclosureControl(source) &&
     hasValidTargetId(source.ariaControls)
     ? sourceBoundIdentityFor(source.ariaControls)
     : step.controlKey;
@@ -132,7 +132,7 @@ const toggleBindingAnalysisForStep = (
     };
 
   const source = sourceControlFor(step.before, step.controlKey);
-  if (!isSourceBoundDisclosure(source))
+  if (!isSourceBoundDisclosureControl(source))
     return {
       kind: "ineligible",
       predicate: "source-control-not-source-bound",
@@ -147,7 +147,8 @@ const toggleBindingAnalysisForStep = (
     };
   const beforeMatches = step.before.controls.filter(
     (control) =>
-      isSourceBoundDisclosure(control) && control.ariaControls === targetId,
+      isSourceBoundDisclosureControl(control) &&
+      control.ariaControls === targetId,
   );
   if (beforeMatches.length !== 1 || beforeMatches[0] !== source)
     return { kind: "ineligible", predicate: "before-target-not-unique" };

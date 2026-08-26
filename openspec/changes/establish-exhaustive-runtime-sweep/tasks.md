@@ -260,6 +260,18 @@
       Add deterministic four-toggle rejection coverage and preserve the
       existing `maxControlsPerSegment` plus-one guard. This remains
       NOT-PROVEN until an exact `admin/demo` canary exercises the contract.
+      Within the same task, add a pure eligibility/inverse-restoration contract
+      and a 20-toggle operation-count proof; implement a branch-local verified
+      restore callback/token in branch execution; invoke the exact inverse only
+      after a terminal candidate will not yield; and reuse the restored branch
+      only after exact URL, full-inventory, full-surface, and non-mutation
+      equality. Keep self and ordinary controls on full replay, never serialize
+      reused state, preserve candidate/receipt ordering and the conservative
+      action debit, and add negative continuation/publication tests for target,
+      state, URL, inventory, surface, database, timeout, signal, and inverse
+      execution drift. Before a new exact canary, publish focused timing and
+      operation evidence that the whole source-derived frontier fits the
+      30-minute attempt with reserve.
 
 - [x] 5.20 Retain Darwin raw-free pages as receipt telemetry without using them
       as an independent baseline/runtime veto; keep available memory, pressure,

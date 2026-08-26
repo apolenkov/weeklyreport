@@ -507,6 +507,38 @@ insufficient evidence of higher-order independence.
   material union representative
 - **AND** the source-bound `maxControlsPerSegment` is unchanged
 
+#### Scenario: eligible peer candidates may reuse a verified exact branch
+
+- **GIVEN** one uninterrupted child has fully replayed canonical source branch
+  `A` and the next candidate `B` is a distinct eligible source-bound row-local
+  disclosure with a disjoint target
+- **WHEN** the harness records the ordinary terminal candidate receipt for `B`
+  and no checkpoint or cooperative yield will follow it
+- **THEN** the harness MAY execute the exact inverse of `B` as replay-only
+  preparation bound by `aria-controls`
+- **AND** reuse is permitted only after the inverse proves an unchanged database
+  oracle and exact equality of URL, full inventory, and full surface with `A`
+- **AND** the inverse creates no candidate, receipt, pair inference, retained
+  control, path rewrite, registration saving, or acceptance result
+- **AND** candidate and receipt order remains identical to full branch replay
+- **AND** both `A -> B` and `B -> A` remain full authoritative paths and
+  receipts; no directed pair is inferred from inverse restoration
+- **AND** the unchanged logical reveal-action debit is greater than or equal to
+  the physical replay plus inverse action count
+
+#### Scenario: inverse restoration drift fails before continuation publication
+
+- **WHEN** the inverse target is missing, duplicated, disabled, self-referential,
+  ordinary, overlapping, untrusted, incomplete, modal, URL-changing, or
+  mutation-required, or its expanded state, URL, full inventory, full surface,
+  or database oracle differs from canonical branch `A`
+- **THEN** branch-local reuse is forbidden or the child fails closed before
+  publishing its continuation suffix
+- **AND** timeout, signal, or inverse execution failure likewise publishes no
+  grant, PASS, or resumable state
+- **AND** no reused browser state crosses a process, child, checkpoint, or
+  cooperative-yield boundary; the next child fully replays the canonical branch
+
 #### Scenario: coupled or incomplete disclosures stay exhaustive
 
 - **WHEN** a disclosure lacks one target id or boolean `aria-expanded`, changes

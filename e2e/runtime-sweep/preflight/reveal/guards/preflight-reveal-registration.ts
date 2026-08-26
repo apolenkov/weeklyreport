@@ -11,7 +11,32 @@ import type {
   RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
 import { RevealDiscoveryError } from "../interaction/preflight-reveal-types.ts";
-import { revealSurfaceMaterialFor } from "./reveal-surface-material.ts";
+import { isSourceBoundDisclosureControl } from "./preflight-reveal-canonicalization.ts";
+import {
+  revealSurfaceMaterialControlFor,
+  revealSurfaceMaterialFor,
+  revealSurfaceMaterialIdentityFor,
+  revealSurfaceMaterialSignatureFor,
+} from "./reveal-surface-material.ts";
+
+type MaterialControl = ReturnType<typeof revealSurfaceMaterialControlFor>;
+
+const materialIdentityFor = (
+  control: RevealSurface["controls"][number],
+): string =>
+  revealSurfaceMaterialIdentityFor(revealSurfaceMaterialControlFor(control));
+
+const uniqueMaterialControlsFor = (
+  controls: readonly MaterialControl[],
+): ReadonlyMap<string, MaterialControl> | undefined => {
+  const result = new Map<string, MaterialControl>();
+  for (const control of controls) {
+    const identity = revealSurfaceMaterialIdentityFor(control);
+    if (result.has(identity)) return undefined;
+    result.set(identity, control);
+  }
+  return result;
+};
 
 export const controlsForImmediateReveal = (
   branch: RevealBranch,
@@ -19,41 +44,55 @@ export const controlsForImmediateReveal = (
   const step = branch.path.steps.at(-1);
   if (step === undefined || step.beforeUrl !== step.afterUrl)
     return branch.surface.controls;
-  const previous = new Map(
-    revealSurfaceMaterialFor(step.before).controls.map((control) => [
-      control.controlKey,
-      control,
-    ]),
-  );
-  const current = revealSurfaceMaterialFor(branch.surface);
+  const previousMaterial = revealSurfaceMaterialFor(step.before);
+  const currentMaterial = revealSurfaceMaterialFor(branch.surface);
+  const previous = uniqueMaterialControlsFor(previousMaterial.controls);
+  const current = uniqueMaterialControlsFor(currentMaterial.controls);
+  if (previous === undefined || current === undefined)
+    return branch.surface.controls;
   const sharedControlKeys = new Set(
-    current.controls
-      .map(({ controlKey }) => controlKey)
-      .filter((controlKey) => previous.has(controlKey)),
+    currentMaterial.controls
+      .map(revealSurfaceMaterialIdentityFor)
+      .filter((identity) => previous.has(identity)),
   );
   const relativeOrderFor = (
-    controls: readonly (typeof current.controls)[number][],
+    controls: readonly MaterialControl[],
   ): readonly string[] =>
     controls
-      .filter(({ controlKey }) => sharedControlKeys.has(controlKey))
-      .map(({ controlKey }) => controlKey);
+      .map(revealSurfaceMaterialIdentityFor)
+      .filter((identity) => sharedControlKeys.has(identity));
   if (
-    stableSerialize(
-      relativeOrderFor(revealSurfaceMaterialFor(step.before).controls),
-    ) !== stableSerialize(relativeOrderFor(current.controls))
+    stableSerialize(relativeOrderFor(previousMaterial.controls)) !==
+    stableSerialize(relativeOrderFor(currentMaterial.controls))
   )
     return branch.surface.controls;
-  return branch.surface.controls.filter((control) => {
-    const prior = previous.get(control.controlKey);
-    const actual = current.controls.find(
-      ({ controlKey }) => controlKey === control.controlKey,
-    );
-    return (
-      prior === undefined ||
-      actual === undefined ||
-      stableSerialize(prior) !== stableSerialize(actual)
-    );
-  });
+  const changedIdentities = new Set(
+    currentMaterial.controls.flatMap((control) => {
+      const identity = revealSurfaceMaterialIdentityFor(control);
+      const prior = previous.get(identity);
+      return prior === undefined ||
+        revealSurfaceMaterialSignatureFor(prior) !==
+          revealSurfaceMaterialSignatureFor(control)
+        ? [identity]
+        : [];
+    }),
+  );
+  return branch.surface.controls.filter((control) =>
+    changedIdentities.has(materialIdentityFor(control)),
+  );
+};
+
+const controlsForDirectedDisclosurePairs = (
+  branch: RevealBranch,
+): readonly RevealSurface["controls"][number][] => {
+  const step = branch.path.steps.at(-1);
+  if (step === undefined || step.beforeUrl !== step.afterUrl) return [];
+  const source = step.before.controls.find(
+    ({ controlKey }) => controlKey === step.controlKey,
+  );
+  return isSourceBoundDisclosureControl(source)
+    ? branch.surface.controls.filter(isSourceBoundDisclosureControl)
+    : [];
 };
 
 export const candidatesForImmediateReveal = (
@@ -61,7 +100,10 @@ export const candidatesForImmediateReveal = (
   branch: RevealBranch,
 ): readonly RevealCandidate[] => {
   const eligibleKeys = new Set(
-    controlsForImmediateReveal(branch).map(({ controlKey }) => controlKey),
+    [
+      ...controlsForImmediateReveal(branch),
+      ...controlsForDirectedDisclosurePairs(branch),
+    ].map(({ controlKey }) => controlKey),
   );
   return input
     .candidatesFor(branch.inventory)
