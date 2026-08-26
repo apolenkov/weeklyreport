@@ -129,7 +129,7 @@ export const persistentServerLaunchSpecsFor = (input: {
     "@customreport/web",
     "exec",
     "tsx",
-    "e2e/runtime-sweep/preflight/run-runtime-next-server.ts",
+    "../../e2e/runtime-sweep/preflight/run-runtime-next-server.ts",
     "preflight",
     String(input.webPort),
   ] as const;
