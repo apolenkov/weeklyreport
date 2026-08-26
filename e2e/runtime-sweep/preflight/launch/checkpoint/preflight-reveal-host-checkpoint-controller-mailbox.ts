@@ -27,6 +27,7 @@ const REQUEST_PREFIX = "HOST_CHECKPOINT_REQUEST.";
 const RESPONSE_PREFIX = "HOST_CHECKPOINT_RESPONSE.";
 const COMPLETE_PREFIX = "HOST_CHECKPOINT_COMPLETE.";
 const REQUEST_SUFFIX = ".json";
+const REQUEST_RESCAN_INTERVAL_MS = 250;
 export type WatchDirectory = (
   directory: string,
   signal: AbortSignal,
@@ -160,6 +161,24 @@ const requestNamesFor = async (
     .toSorted((left, right) => left.localeCompare(right));
 };
 
+const waitForRescan = async (signal: AbortSignal): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, REQUEST_RESCAN_INTERVAL_MS);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      reject(signal.reason ?? new Error("Host checkpoint controller aborted"));
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
 export const waitForRequest = async (input: {
   readonly mailboxRoot: string;
   readonly seen: ReadonlySet<string>;
@@ -190,14 +209,30 @@ export const waitForRequest = async (input: {
     throwIfAborted(input.signal);
     const afterWatch = await scan();
     if (afterWatch !== undefined) return afterWatch;
-    for await (const _event of watcher) {
-      throwIfAborted(input.signal);
-      const next = await scan();
-      if (next !== undefined) return next;
+    const watcherPromise = (async (): Promise<string | undefined> => {
+      for await (const _event of watcher) {
+        throwIfAborted(input.signal);
+        const next = await scan();
+        if (next !== undefined) return next;
+      }
+      return undefined;
+    })();
+    const rescanPromise = (async (): Promise<string> => {
+      for (;;) {
+        await waitForRescan(watcherController.signal);
+        const next = await scan();
+        if (next !== undefined) return next;
+      }
+    })();
+    try {
+      const watched = await Promise.race([watcherPromise, rescanPromise]);
+      if (watched !== undefined) return watched;
+      return await rescanPromise;
+    } finally {
+      watcherController.abort();
+      void watcherPromise.catch(() => undefined);
+      void rescanPromise.catch(() => undefined);
     }
-    throw new Error(
-      "Host checkpoint controller watcher ended without a request",
-    );
   } finally {
     watcherController.abort();
     input.signal?.removeEventListener("abort", abort);
