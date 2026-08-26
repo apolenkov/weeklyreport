@@ -98,7 +98,7 @@ const assertResponseProgress = (input: {
     throw new Error("Host checkpoint response sequence drifted");
 };
 
-const assertHostCheckpointResponseForRequest = (input: {
+export const assertHostCheckpointResponseForRequest = (input: {
   readonly request: HostCheckpointRequest;
   readonly response: HostCheckpointResponse;
   readonly boundaryTimestamp: number;
