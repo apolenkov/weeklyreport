@@ -253,6 +253,16 @@ Every successful child, including the child that exhausts the frontier, is
 followed by the same five-second host checkpoint before the parent may launch a
 successor or publish completion.
 
+The exact production canary may serve as both the focused timing proof and the
+task-5.19 acceptance attempt, avoiding a duplicate rehearsal, only as one
+fail-closed attempt. Its 30-minute supervisor window is partitioned into at
+most 24 minutes from the first runtime effect through parent-authored canary
+PASS, followed by 6 minutes reserved solely for controller termination,
+teardown, source read-back, and verified zero residue. The timing proof uses
+the unchanged child restart, replay, grant, receipt, checkpoint, and terminal
+publication path. A timeout, non-empty frontier, inconsistent lineage, missing
+PASS, or any residue is NOT-PROVEN and permits no retry at that source.
+
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after
 each step and reject a path that mutates persisted state. A transition that

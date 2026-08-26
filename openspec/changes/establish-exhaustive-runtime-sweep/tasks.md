@@ -269,9 +269,14 @@
       reused state, preserve candidate/receipt ordering and the conservative
       action debit, and add negative continuation/publication tests for target,
       state, URL, inventory, surface, database, timeout, signal, and inverse
-      execution drift. Before a new exact canary, publish focused timing and
-      operation evidence that the whole source-derived frontier fits the
-      30-minute attempt with reserve.
+      execution drift. Publish focused timing and operation evidence that the
+      whole source-derived frontier fits the 30-minute attempt with reserve.
+      This MAY be the same single exact production canary that closes the task
+      only when it is fail-closed at 24 minutes from first runtime effect to
+      parent-authored PASS, reserves the remaining 6 minutes solely for
+      termination, teardown, and verified zero residue, and is not retried
+      after timeout, incomplete frontier, lineage mismatch, missing PASS, or
+      cleanup residue.
 
 - [x] 5.20 Retain Darwin raw-free pages as receipt telemetry without using them
       as an independent baseline/runtime veto; keep available memory, pressure,

@@ -228,6 +228,21 @@ before baseline execution rather than trimming cells.
   setup, with a bounded abort deadline, so a request cannot be lost during
   watcher installation
 
+#### Scenario: one production canary proves timing and acceptance without a duplicate rehearsal
+
+- **GIVEN** the exact `admin/demo` canary uses the unchanged production child,
+  replay, continuation, grant, receipt, and five-second checkpoint topology
+- **WHEN** one source-bound attempt starts its first runtime effect
+- **THEN** the parent MAY use that same attempt as the focused timing proof and
+  task-5.19 acceptance only if the complete frontier is empty and the
+  parent-authored canary PASS is published within 24 minutes
+- **AND** the remaining 6 minutes of the 30-minute supervisor window are used
+  only for controller termination, teardown, exact source read-back, and
+  verified zero process, listener, container, and volume residue
+- **AND** timeout, incomplete frontier, receipt/chunk/grant lineage mismatch,
+  missing PASS, or cleanup residue is NOT-PROVEN and the attempt is not retried
+  at that source
+
 #### Scenario: an invalid specialized witness fails finalization
 
 - **WHEN** a transition disagrees with its action, a non-`none` fault lacks a
