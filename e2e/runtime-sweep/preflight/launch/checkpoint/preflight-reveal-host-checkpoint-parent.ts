@@ -5,6 +5,7 @@ import type {
   ParentContext,
   ParentProgress,
 } from "../continuation/preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationActive } from "../continuation/preflight-reveal-continuation-parent.ts";
 import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
 import {
   createHostCheckpointRequest,
@@ -135,6 +136,7 @@ const requestHostCheckpointAfterChild = async (input: {
   readonly progress: ParentProgress;
   readonly ordinal: number;
 }): Promise<HostCheckpointResponse> => {
+  assertRevealContinuationActive(input.context);
   const boundaryTimestamp = input.context.now?.() ?? Date.now();
   const request = hostCheckpointRequestFor({
     ...input,
@@ -143,7 +145,11 @@ const requestHostCheckpointAfterChild = async (input: {
   const { requestDigest: _requestDigest, ...requestBody } = request;
   const response = await input.context.requestHostCheckpoint?.({
     request: requestBody,
+    ...(input.context.signal === undefined
+      ? {}
+      : { signal: input.context.signal }),
   });
+  assertRevealContinuationActive(input.context);
   if (response === undefined)
     throw new Error("Host checkpoint client returned no response");
   if (input.context.baselineReceiptDigest === undefined)
@@ -183,7 +189,9 @@ const finishTerminalChild = async (input: {
     previousCheckpointDigest: checkpoint.responseDigest,
     previousSampleSequence: checkpoint.sample.eventSequence,
   };
+  assertRevealContinuationActive(input.context);
   await input.publishTerminalArtifacts();
+  assertRevealContinuationActive(input.context);
   const complete = input.context.requestHostCheckpoint.complete;
   if (complete !== undefined)
     await complete({
@@ -192,7 +200,11 @@ const finishTerminalChild = async (input: {
         progress: completedProgress,
         ordinal: input.ordinal,
       }),
+      ...(input.context.signal === undefined
+        ? {}
+        : { signal: input.context.signal }),
     });
+  assertRevealContinuationActive(input.context);
   return input.exitCode;
 };
 
@@ -203,6 +215,7 @@ export const runChildUntilDone = async (input: {
   readonly maxChildren: number;
   readonly runChild?: typeof runContinuationChild;
 }): Promise<number> => {
+  assertRevealContinuationActive(input.context);
   if (input.ordinal >= input.maxChildren)
     throw new Error(
       `Reveal continuation exceeded its source-derived child guard of ${String(input.maxChildren)}`,
@@ -216,6 +229,7 @@ export const runChildUntilDone = async (input: {
     progress: input.progress,
     ordinal: input.ordinal,
   });
+  assertRevealContinuationActive(input.context);
   if (result.done)
     return finishTerminalChild({
       context: input.context,

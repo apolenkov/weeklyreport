@@ -8,17 +8,20 @@ import {
   runPreflightRevealContinuation,
 } from "../continuation/preflight-reveal-continuation-parent.ts";
 import { createFileBackedHostCheckpointClient } from "./preflight-reveal-host-checkpoint-client.ts";
+import {
+  createRevealCanaryLifecycle,
+  type RunHostCheckpointController,
+  settleControllerAfterParentExit,
+  settleControllerAfterParentFailure,
+} from "./preflight-reveal-host-checkpoint-lifecycle.ts";
+import { runRuntimeRevealHostCheckpointController } from "./run-runtime-reveal-host-checkpoint-controller.ts";
 
-export const runExactAdminDemoRevealCanary = async (input: {
+const assertExactAdminDemoLaunch = (input: {
   readonly source: SourceArtifact;
-  readonly repoRoot: string;
   readonly archiveRoot: string;
-  readonly canaryPath: string;
-  readonly selector: PreflightCanarySelector;
   readonly hostCheckpointRoot: string;
-  readonly hostCheckpointBaselineDigest: string;
-  readonly runPlaywright: RunPlaywright;
-}): Promise<number> => {
+  readonly selector: PreflightCanarySelector;
+}): void => {
   const expectedRoot = path.join(
     input.archiveRoot,
     "5.19-admin-demo",
@@ -43,19 +46,49 @@ export const runExactAdminDemoRevealCanary = async (input: {
     throw new Error(
       "Reveal host checkpoint continuation is only enabled for the exact admin/demo canary",
     );
+};
+
+export const runExactAdminDemoRevealCanary = async (input: {
+  readonly source: SourceArtifact;
+  readonly repoRoot: string;
+  readonly archiveRoot: string;
+  readonly canaryPath: string;
+  readonly selector: PreflightCanarySelector;
+  readonly hostCheckpointRoot: string;
+  readonly hostCheckpointBaselineDigest: string;
+  readonly runPlaywright: RunPlaywright;
+  readonly runHostCheckpointController?: RunHostCheckpointController;
+}): Promise<number> => {
+  assertExactAdminDemoLaunch(input);
   const requestHostCheckpoint = await createFileBackedHostCheckpointClient({
     archiveRoot: input.archiveRoot,
     root: input.hostCheckpointRoot,
     expectedBaselineReceiptDigest: input.hostCheckpointBaselineDigest,
   });
-  return runPreflightRevealContinuation({
-    source: input.source,
-    repoRoot: input.repoRoot,
-    archiveRoot: input.archiveRoot,
-    canaryPath: input.canaryPath,
-    selector: input.selector,
-    baselineReceiptDigest: input.hostCheckpointBaselineDigest,
-    runPlaywright: input.runPlaywright,
-    requestHostCheckpoint,
-  });
+  const lifecycle = createRevealCanaryLifecycle(
+    input.runHostCheckpointController ??
+      runRuntimeRevealHostCheckpointController,
+  );
+  try {
+    const exitCode = await runPreflightRevealContinuation({
+      source: input.source,
+      repoRoot: input.repoRoot,
+      archiveRoot: input.archiveRoot,
+      canaryPath: input.canaryPath,
+      selector: input.selector,
+      baselineReceiptDigest: input.hostCheckpointBaselineDigest,
+      runPlaywright: input.runPlaywright,
+      requestHostCheckpoint,
+      signal: lifecycle.signal,
+      deadlineAt: lifecycle.deadlineAt,
+      deadlineMonotonic: lifecycle.deadlineMonotonic,
+      monotonicNow: lifecycle.monotonicNow,
+    }).catch((error: unknown) =>
+      settleControllerAfterParentFailure(lifecycle, error),
+    );
+    await settleControllerAfterParentExit(lifecycle, exitCode);
+    return exitCode;
+  } finally {
+    lifecycle.close();
+  }
 };

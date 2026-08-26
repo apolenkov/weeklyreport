@@ -1,7 +1,5 @@
-import {
-  boundedPlaywrightArgs,
-  runBoundedPlaywrightChild,
-} from "./bounded/preflight-bounded-playwright-child.ts";
+import { runBoundedPlaywrightChild } from "./bounded/preflight-bounded-playwright-child.ts";
+import { boundedPlaywrightArgs } from "./bounded/preflight-bounded-playwright-command.ts";
 
 const STOP_GRACE_MS = 10_000;
 const CONFIG_PATH =

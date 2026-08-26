@@ -26,6 +26,7 @@ export const runPreflightPlaywrightChild = (input: {
   readonly bounds?: Readonly<{
     readonly maxDurationMs: number;
     readonly terminationGraceMs: number;
+    readonly signal?: AbortSignal;
   }>;
 }): Promise<number> => {
   if (input.bounds !== undefined)
@@ -37,6 +38,9 @@ export const runPreflightPlaywrightChild = (input: {
       environment: input.environment,
       maxDurationMs: input.bounds.maxDurationMs,
       terminationGraceMs: input.bounds.terminationGraceMs,
+      ...(input.bounds.signal === undefined
+        ? {}
+        : { signal: input.bounds.signal }),
       acceptNonzeroExit: true,
     });
   const launcher = pnpmLauncher(input.environment);

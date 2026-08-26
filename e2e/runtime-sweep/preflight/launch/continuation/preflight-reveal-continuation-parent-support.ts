@@ -27,6 +27,7 @@ import type {
   ParentContext,
   ParentProgress,
 } from "./preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
 import {
   type ParentReplayContext,
   parentReplayContextFor,
@@ -148,6 +149,7 @@ export const writeCompleteCanary = async (input: {
         specialized: [],
       },
     }),
+    () => assertRevealContinuationActive(input.context),
   );
   await assertLivePreflightSourceIdentity({
     source: input.context.source,

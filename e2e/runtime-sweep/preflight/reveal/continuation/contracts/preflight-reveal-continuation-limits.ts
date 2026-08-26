@@ -7,6 +7,13 @@ export const REVEAL_CONTINUATION_LIMITS = {
   killGraceMs: 10_000,
 } as const;
 
+const MAX_ATTEMPT_MINUTES = 24;
+const SECONDS_PER_MINUTE = 60;
+const MILLISECONDS_PER_SECOND = 1000;
+
+export const REVEAL_CONTINUATION_ATTEMPT_MAX_MS =
+  MAX_ATTEMPT_MINUTES * SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+
 export type RevealContinuationCooperativeLimits = Readonly<{
   readonly maxTerminalCandidates: number;
   readonly maxRevealActionDelta: number;

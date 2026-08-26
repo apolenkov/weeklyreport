@@ -95,6 +95,35 @@ describe("bounded reveal continuation Playwright child", () => {
     }
   });
 
+  it("terminates the owned process group when the parent signal aborts", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "reveal-child-abort-"));
+    const launcher = path.join(root, "launcher.mjs");
+    await writeFile(
+      launcher,
+      [
+        'process.on("SIGINT", () => process.exit(0));',
+        "setInterval(() => undefined, 1000);",
+      ].join("\n"),
+      "utf8",
+    );
+    const controller = new AbortController();
+    try {
+      const run = runPreflightPlaywrightChild({
+        repoRoot: process.cwd(),
+        environment: { npm_execpath: launcher },
+        bounds: {
+          maxDurationMs: 10_000,
+          terminationGraceMs: 100,
+          signal: controller.signal,
+        },
+      });
+      setTimeout(() => controller.abort(new Error("owner stop")), 100);
+      await expect(run).rejects.toThrow("owner stop");
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
   it("reports residue without signalling after the group leader exits", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "reveal-child-residue-"));
     const launcher = path.join(root, "launcher.mjs");

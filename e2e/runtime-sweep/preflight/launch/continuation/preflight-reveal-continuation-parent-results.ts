@@ -23,6 +23,7 @@ import type {
   ParentContext,
   ParentProgress,
 } from "./preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import {
   assertChunkRun,
@@ -74,16 +75,21 @@ export const completeParent = (input: {
     done: true,
     progress: input.nextProgress,
     publishTerminalArtifacts: async () => {
-      for (const asset of assets)
+      for (const asset of assets) {
+        assertRevealContinuationActive(input.context);
         await writeRevealContinuationAsset({
           archiveRoot: input.context.archiveRoot,
           asset,
         });
+      }
+      assertRevealContinuationActive(input.context);
       await writeRevealParentPass({
         archiveRoot: input.context.archiveRoot,
         filePath: passPath,
         pass,
+        commitGuard: () => assertRevealContinuationActive(input.context),
       });
+      assertRevealContinuationActive(input.context);
       await writeCompleteCanary({
         context: input.context,
         replay: input.reduced,
