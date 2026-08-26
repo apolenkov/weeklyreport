@@ -18,6 +18,7 @@ import {
 } from "./preflight-persistent-server-lease-contract.ts";
 import { withoutLeaseEnvironment } from "./preflight-persistent-server-lease-environment.ts";
 import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
+import { runtimeTraceSamplingEnvironment } from "./runtime-observability-policy.ts";
 
 export type PersistentServerLaunchEnvironment = Readonly<{
   readonly api: NodeJS.ProcessEnv;
@@ -95,6 +96,8 @@ export const persistentServerEnvironmentsFor = (input: {
       LOG_LEVEL: input.inherited.LOG_LEVEL ?? "info",
       LOG_DIR: path.join(input.archiveRoot, "api-log", "preflight"),
       RUNTIME_SWEEP_API_DRAIN: "true",
+      OTEL_SDK_DISABLED: "false",
+      ...runtimeTraceSamplingEnvironment,
       HEAP_HEALTH_THRESHOLD_BYTES:
         input.inherited.HEAP_HEALTH_THRESHOLD_BYTES ?? "1610612736",
     },
