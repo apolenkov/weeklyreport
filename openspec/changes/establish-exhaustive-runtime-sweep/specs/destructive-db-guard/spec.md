@@ -86,6 +86,16 @@ carry `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`.
   is missing
 - **THEN** cleanup refuses before `pg`, Prisma, or child-process execution
 
+#### Scenario: Runtime preflight rejects an equal parent target before Playwright
+
+- **WHEN** the stock canary or full launcher receives equal canonical targets
+  in `DATABASE_URL` and `E2E_DATABASE_URL`
+- **THEN** its pure admission check fails before a Playwright, browser, or
+  product-server child is spawned
+- **AND** an absent parent `DATABASE_URL` or a distinct canonical target passes
+  this comparison while the existing destructive target and consent guards
+  remain mandatory
+
 ### Requirement: DATABASE_URL and POSTGRES_DB must be consistent
 
 CI services and environment examples MUST keep `POSTGRES_DB` and the final

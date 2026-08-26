@@ -1,3 +1,4 @@
+import { assertDistinctE2eDatabaseTarget } from "../../../helpers/e2e-database-target.ts";
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { readOrCreatePreflightAssignment } from "../artifacts/preflight-assignment.ts";
 import {
@@ -65,6 +66,9 @@ export function preflightChildEnvironment(
   mode: "canary" | "full",
   paths?: PreflightFullPaths,
 ): NodeJS.ProcessEnv {
+  const e2eDatabaseUrl = inherited.E2E_DATABASE_URL?.trim();
+  if (e2eDatabaseUrl !== undefined && e2eDatabaseUrl !== "")
+    assertDistinctE2eDatabaseTarget(e2eDatabaseUrl, inherited.DATABASE_URL);
   const filtered = withoutLegacyOwnershipEnvironment(
     Object.fromEntries(
       Object.entries(inherited).filter(

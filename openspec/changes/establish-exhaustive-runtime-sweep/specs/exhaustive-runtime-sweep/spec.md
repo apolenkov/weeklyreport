@@ -248,6 +248,10 @@ before baseline execution rather than trimming cells.
 - **AND** timeout, incomplete frontier, receipt/chunk/grant lineage mismatch,
   missing PASS, or cleanup residue is NOT-PROVEN and the attempt is not retried
   at that source
+- **AND** cancellation-derived controller cleanup is collapsed only when its
+  `AbortError.cause` is the exact parent failure object; an uncaused,
+  differently caused, same-message, or nonzero-controller failure remains
+  independently blocking
 
 #### Scenario: an invalid specialized witness fails finalization
 

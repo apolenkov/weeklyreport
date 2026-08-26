@@ -22,6 +22,16 @@ export type RevealCanaryLifecycle = Readonly<{
 const abortReasonFor = (signal: NodeJS.Signals): Error =>
   new Error(`Reveal canary interrupted by ${signal}`);
 
+const isObjectReference = (value: unknown): value is object =>
+  value !== null && (typeof value === "object" || typeof value === "function");
+
+const isDerivedAbort = (error: unknown, primary: unknown): boolean =>
+  isObjectReference(primary) &&
+  (error === primary ||
+    (error instanceof Error &&
+      error.name === "AbortError" &&
+      error.cause === primary));
+
 export const createRevealCanaryLifecycle = (
   runController: RunHostCheckpointController,
 ): RevealCanaryLifecycle => {
@@ -69,7 +79,7 @@ export const settleControllerAfterParentExit = async (
   const outcome = await lifecycle.controller;
   if ("error" in outcome) {
     if (parentFailure === undefined) throw outcome.error;
-    if (outcome.error === parentFailure) return;
+    if (isDerivedAbort(outcome.error, parentFailure)) return;
     throw new AggregateError(
       [parentFailure, outcome.error],
       "Reveal continuation and controller cleanup both failed",
@@ -93,7 +103,7 @@ export const settleControllerAfterParentFailure = async (
   lifecycle.abort(primary);
   const outcome = await lifecycle.controller;
   if ("error" in outcome) {
-    if (outcome.error === primary) throw primary;
+    if (isDerivedAbort(outcome.error, primary)) throw primary;
     throw new AggregateError(
       [primary, outcome.error],
       "Reveal canary and host-checkpoint controller both failed",
