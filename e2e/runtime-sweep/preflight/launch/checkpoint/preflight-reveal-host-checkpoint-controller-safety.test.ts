@@ -14,7 +14,10 @@ import {
   PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 import { runHostCheckpointController } from "./preflight-reveal-host-checkpoint-controller.ts";
-import { immutableWrite } from "./preflight-reveal-host-checkpoint-controller-mailbox.ts";
+import {
+  immutableWrite,
+  waitForRequest,
+} from "./preflight-reveal-host-checkpoint-controller-mailbox.ts";
 import {
   responsePathForTest,
   waitForFile,
@@ -113,6 +116,23 @@ const requestBodyFor = (
   ...overrides,
 });
 
+const waitForAbort = (signal: AbortSignal): Promise<void> =>
+  new Promise<void>((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    signal.addEventListener("abort", () => resolve(), { once: true });
+  });
+
+const watchWithoutEvents = (
+  signal: AbortSignal,
+): AsyncGenerator<never, void, void> =>
+  (async function* (): AsyncGenerator<never, void, void> {
+    await waitForAbort(signal);
+    yield* [];
+  })();
+
 describe("host checkpoint controller safety boundaries", () => {
   it("checks cancellation at the immutable publication boundary", async () => {
     await withMailbox(async (_archiveRoot, mailboxRoot) => {
@@ -202,6 +222,24 @@ describe("host checkpoint controller safety boundaries", () => {
       );
       await exhausted;
       expect(setupCalls).toBe(2);
+    });
+  });
+
+  it("rescans periodically when the filesystem watcher loses an event", async () => {
+    await withMailbox(async (_archiveRoot, mailboxRoot) => {
+      const delayedRequest = setTimeout(() => {
+        void writeRequest(mailboxRoot, requestBodyFor());
+      }, 10);
+      try {
+        const name = await waitForRequest({
+          mailboxRoot,
+          seen: new Set<string>(),
+          watchDirectory: (_directory, signal) => watchWithoutEvents(signal),
+        });
+        expect(name).toMatch(/^HOST_CHECKPOINT_REQUEST\./u);
+      } finally {
+        clearTimeout(delayedRequest);
+      }
     });
   });
 

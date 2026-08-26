@@ -181,5 +181,16 @@ describe("host checkpoint baseline anchor", () => {
           ),
       }),
     ).rejects.toThrow(/swap growth/u);
+
+    await expect(
+      readAndEvaluateRuntimeSample({
+        request,
+        state,
+        baseline,
+        snapshotTimeoutMs: 20,
+        readSnapshot: () =>
+          new Promise<DiagnosticHostEnvelopeSnapshot>(() => undefined),
+      }),
+    ).rejects.toThrow("Host checkpoint snapshot timed out after 20ms");
   });
 });

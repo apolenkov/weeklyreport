@@ -7,6 +7,7 @@ import { evaluateHostEnvelopeSample } from "../../diagnostics/preflight-diagnost
 import type { HealthyPostInfrastructureReceipt } from "../../diagnostics/receipt/preflight-diagnostic-host-envelope-post-infrastructure-reader.ts";
 import {
   canonicalHostCheckpointBytes,
+  HOST_CHECKPOINT_TIMEOUT_MS,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
   isEmptyBootstrapCheckpointRequest,
@@ -19,6 +20,8 @@ import {
   responsePathFor,
 } from "./preflight-reveal-host-checkpoint-controller-mailbox.ts";
 import { responseFor } from "./preflight-reveal-host-checkpoint-controller-response.ts";
+
+const HOST_CHECKPOINT_SNAPSHOT_TIMEOUT_MS = 3000;
 
 export interface ControllerState {
   attemptId: string | undefined;
@@ -119,11 +122,37 @@ export const readAndEvaluateRuntimeSample = async (input: {
   readonly readSnapshot: (
     phase: "runtime",
   ) => Promise<DiagnosticHostEnvelopeSnapshot>;
+  readonly snapshotTimeoutMs?: number;
 }): Promise<{
   readonly snapshot: DiagnosticHostEnvelopeSnapshot;
   readonly evaluation: ReturnType<typeof evaluateHostEnvelopeSample>;
 }> => {
-  const snapshot = await input.readSnapshot("runtime");
+  const timeoutMs =
+    input.snapshotTimeoutMs ?? HOST_CHECKPOINT_SNAPSHOT_TIMEOUT_MS;
+  if (
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs <= 0 ||
+    timeoutMs >= HOST_CHECKPOINT_TIMEOUT_MS
+  )
+    throw new Error(
+      "Host checkpoint snapshot timeout must be a positive integer below the client timeout",
+    );
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const snapshotTimeout = new Promise<never>((_, reject) => {
+    const rejectOnTimeout = (): void =>
+      reject(
+        new Error(
+          `Host checkpoint snapshot timed out after ${String(timeoutMs)}ms`,
+        ),
+      );
+    if (timeoutSignal.aborted) rejectOnTimeout();
+    else
+      timeoutSignal.addEventListener("abort", rejectOnTimeout, { once: true });
+  });
+  const snapshot = await Promise.race([
+    input.readSnapshot("runtime"),
+    snapshotTimeout,
+  ]);
   if (snapshot.phase !== "runtime")
     throw new Error("Host checkpoint snapshot phase is not runtime");
   if (snapshot.timestampWall <= input.request.boundaryTimestamp)
@@ -185,6 +214,7 @@ export const processHostCheckpointRequest = async (input: {
   readonly readSnapshot: (
     phase: "runtime",
   ) => Promise<DiagnosticHostEnvelopeSnapshot>;
+  readonly snapshotTimeoutMs?: number;
   readonly signal?: AbortSignal;
 }): Promise<HostCheckpointResponse> => {
   const { request, state } = input;
