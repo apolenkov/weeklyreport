@@ -4,8 +4,14 @@ import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic
 import type {
   ParentContext,
   ParentProgress,
+  RevealContinuationTerminalizationPermit,
+  RevealContinuationTerminalPublicationCommit,
 } from "../continuation/preflight-reveal-continuation-parent.ts";
-import { assertRevealContinuationActive } from "../continuation/preflight-reveal-continuation-parent.ts";
+import {
+  assertRevealContinuationActive,
+  assertRevealContinuationTerminalizationActive,
+  createRevealContinuationTerminalizationPermit,
+} from "../continuation/preflight-reveal-continuation-parent.ts";
 import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
 import {
   createHostCheckpointRequest,
@@ -174,7 +180,9 @@ const finishTerminalChild = async (input: {
   readonly progress: ParentProgress;
   readonly ordinal: number;
   readonly exitCode: number;
-  readonly publishTerminalArtifacts?: () => Promise<void>;
+  readonly publishTerminalArtifacts?: (
+    permit: RevealContinuationTerminalizationPermit,
+  ) => Promise<RevealContinuationTerminalPublicationCommit>;
 }): Promise<number> => {
   if (input.exitCode !== 0) return input.exitCode;
   if (input.context.requestHostCheckpoint === undefined)
@@ -184,27 +192,42 @@ const finishTerminalChild = async (input: {
   if (input.publishTerminalArtifacts === undefined)
     throw new Error("Successful terminal child has no terminal publisher");
   const checkpoint = await requestHostCheckpointAfterChild(input);
+  const complete = input.context.requestHostCheckpoint.complete;
+  if (complete === undefined)
+    throw new Error(
+      "Successful terminal child requires a parent-only host checkpoint completion client",
+    );
   const completedProgress = {
     ...input.progress,
     previousCheckpointDigest: checkpoint.responseDigest,
     previousSampleSequence: checkpoint.sample.eventSequence,
   };
-  assertRevealContinuationActive(input.context);
-  await input.publishTerminalArtifacts();
-  assertRevealContinuationActive(input.context);
-  const complete = input.context.requestHostCheckpoint.complete;
-  if (complete !== undefined)
-    await complete({
-      completion: hostCheckpointCompletionFor({
-        context: input.context,
-        progress: completedProgress,
-        ordinal: input.ordinal,
-      }),
-      ...(input.context.signal === undefined
-        ? {}
-        : { signal: input.context.signal }),
-    });
-  assertRevealContinuationActive(input.context);
+  // The final checkpoint is the last browser/host boundary. Only durable
+  // terminal publication may use the remaining cumulative-deadline grace.
+  const permit = createRevealContinuationTerminalizationPermit({
+    attemptId: input.context.attemptId,
+    terminalChildOrdinal: input.ordinal,
+    finalCheckpointDigest: checkpoint.responseDigest,
+  });
+  assertRevealContinuationTerminalizationActive(input.context, permit);
+  const commit = await input.publishTerminalArtifacts(permit);
+  if (typeof commit !== "function")
+    throw new Error(
+      "Successful terminal child publisher did not return a terminal commit",
+    );
+  assertRevealContinuationTerminalizationActive(input.context, permit);
+  await complete({
+    completion: hostCheckpointCompletionFor({
+      context: input.context,
+      progress: completedProgress,
+      ordinal: input.ordinal,
+    }),
+    ...(input.context.signal === undefined
+      ? {}
+      : { signal: input.context.signal }),
+  });
+  assertRevealContinuationTerminalizationActive(input.context, permit);
+  await commit();
   return input.exitCode;
 };
 

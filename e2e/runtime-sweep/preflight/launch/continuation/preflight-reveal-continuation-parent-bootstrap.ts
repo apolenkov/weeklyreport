@@ -27,8 +27,10 @@ import { MAX_REVEAL_DEPTH } from "../../reveal-path.ts";
 import type {
   ParentContext,
   ParentProgress,
+  RevealContinuationTerminalizationPermit,
+  RevealContinuationTerminalPublicationCommit,
 } from "./preflight-reveal-continuation-parent.ts";
-import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationTerminalizationActive } from "./preflight-reveal-continuation-parent.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";
 import { writeCompleteCanary } from "./preflight-reveal-continuation-parent-support.ts";
 
@@ -160,6 +162,46 @@ export const validateEmptyBootstrap = async (input: {
   return { state, completedCandidateCount: 0 };
 };
 
+const publishEmptyBootstrapArtifacts = async (input: {
+  readonly context: ParentContext;
+  readonly permit: RevealContinuationTerminalizationPermit;
+  readonly assets: ReturnType<typeof reducerCheckpointAssetsFor>;
+  readonly pass: ReturnType<typeof createParentPass>;
+  readonly passPath: string;
+  readonly replay: Readonly<{
+    readonly state: RevealDiscoveryState;
+    readonly completedCandidateCount: 0;
+  }>;
+}): Promise<RevealContinuationTerminalPublicationCommit> => {
+  for (const asset of input.assets) {
+    assertRevealContinuationTerminalizationActive(input.context, input.permit);
+    await writeRevealContinuationAsset({
+      archiveRoot: input.context.archiveRoot,
+      asset,
+    });
+  }
+  assertRevealContinuationTerminalizationActive(input.context, input.permit);
+  await writeRevealParentPass({
+    archiveRoot: input.context.archiveRoot,
+    filePath: input.passPath,
+    pass: input.pass,
+    commitGuard: () =>
+      assertRevealContinuationTerminalizationActive(
+        input.context,
+        input.permit,
+      ),
+  });
+  return writeCompleteCanary({
+    context: input.context,
+    replay: input.replay,
+    commitGuard: () =>
+      assertRevealContinuationTerminalizationActive(
+        input.context,
+        input.permit,
+      ),
+  });
+};
+
 export const completeEmptyBootstrap = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
@@ -169,7 +211,9 @@ export const completeEmptyBootstrap = async (input: {
   Readonly<{
     readonly done: true;
     readonly progress: ParentProgress;
-    readonly publishTerminalArtifacts: () => Promise<void>;
+    readonly publishTerminalArtifacts: (
+      permit: RevealContinuationTerminalizationPermit,
+    ) => Promise<RevealContinuationTerminalPublicationCommit>;
   }>
 > => {
   assertInitialProgress(input);
@@ -206,19 +250,14 @@ export const completeEmptyBootstrap = async (input: {
   return {
     done: true,
     progress: input.progress,
-    publishTerminalArtifacts: async () => {
-      for (const asset of assets)
-        await writeRevealContinuationAsset({
-          archiveRoot: input.context.archiveRoot,
-          asset,
-        });
-      await writeRevealParentPass({
-        archiveRoot: input.context.archiveRoot,
-        filePath: passPath,
+    publishTerminalArtifacts: (permit) =>
+      publishEmptyBootstrapArtifacts({
+        context: input.context,
+        permit,
+        assets,
         pass,
-        commitGuard: () => assertRevealContinuationActive(input.context),
-      });
-      await writeCompleteCanary({ context: input.context, replay });
-    },
+        passPath,
+        replay,
+      }),
   };
 };

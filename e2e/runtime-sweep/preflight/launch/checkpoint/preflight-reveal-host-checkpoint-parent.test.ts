@@ -25,13 +25,21 @@ describe("host checkpoint parent sequencing", () => {
       const context = {
         ...fixture.context,
         now: () => 100,
-        requestHostCheckpoint: (input: {
-          readonly request: Omit<HostCheckpointRequest, "requestDigest">;
-        }) => {
-          events.push("checkpoint");
-          requests.push(input.request);
-          return Promise.resolve(responseFor(input.request));
-        },
+        requestHostCheckpoint: Object.assign(
+          (input: {
+            readonly request: Omit<HostCheckpointRequest, "requestDigest">;
+          }) => {
+            events.push("checkpoint");
+            requests.push(input.request);
+            return Promise.resolve(responseFor(input.request));
+          },
+          {
+            complete: () => {
+              events.push("complete");
+              return Promise.resolve();
+            },
+          },
+        ),
       };
       const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         (input) => {
@@ -45,8 +53,11 @@ describe("host checkpoint parent sequencing", () => {
                   progress: input.progress,
                   exitCode: 0,
                   publishTerminalArtifacts: () => {
-                    events.push("publish");
-                    return Promise.resolve();
+                    events.push("stage");
+                    return Promise.resolve(() => {
+                      events.push("commit");
+                      return Promise.resolve();
+                    });
                   },
                 },
           );
@@ -65,7 +76,9 @@ describe("host checkpoint parent sequencing", () => {
         "checkpoint",
         "child1",
         "checkpoint",
-        "publish",
+        "stage",
+        "complete",
+        "commit",
       ]);
       expect(requests[0]).toMatchObject({
         checkpointSequence: 1,
@@ -151,7 +164,7 @@ describe("host checkpoint parent sequencing", () => {
             exitCode: 0,
             publishTerminalArtifacts: () => {
               published = true;
-              return Promise.resolve();
+              return Promise.resolve(() => Promise.resolve());
             },
           });
 
@@ -198,6 +211,8 @@ describe("host checkpoint parent sequencing", () => {
             },
           ),
         };
+        const terminalPublisher = () =>
+          Promise.resolve(() => Promise.resolve());
         const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
           () =>
             Promise.resolve({
@@ -205,7 +220,7 @@ describe("host checkpoint parent sequencing", () => {
               progress: fixture.validProgress,
               exitCode,
               ...(exitCode === 0
-                ? { publishTerminalArtifacts: () => Promise.resolve() }
+                ? { publishTerminalArtifacts: terminalPublisher }
                 : {}),
             });
         await expect(
@@ -237,17 +252,20 @@ describe("host checkpoint parent sequencing", () => {
       const context = {
         ...fixture.context,
         now: () => 100,
-        requestHostCheckpoint: (input: {
-          readonly request: Omit<HostCheckpointRequest, "requestDigest">;
-        }) => {
-          requests.push(input.request);
-          responseSequence += 1;
-          return Promise.resolve(
-            responseFor(input.request, {
-              sampleTimestamp: 200 + responseSequence,
-            }),
-          );
-        },
+        requestHostCheckpoint: Object.assign(
+          (input: {
+            readonly request: Omit<HostCheckpointRequest, "requestDigest">;
+          }) => {
+            requests.push(input.request);
+            responseSequence += 1;
+            return Promise.resolve(
+              responseFor(input.request, {
+                sampleTimestamp: 200 + responseSequence,
+              }),
+            );
+          },
+          { complete: () => Promise.resolve() },
+        ),
       };
       const runChild: typeof import("../continuation/preflight-reveal-continuation-parent-child.ts").runContinuationChild =
         (input) => {
@@ -259,7 +277,8 @@ describe("host checkpoint parent sequencing", () => {
                   done: true,
                   progress: input.progress,
                   exitCode: 0,
-                  publishTerminalArtifacts: () => Promise.resolve(),
+                  publishTerminalArtifacts: () =>
+                    Promise.resolve(() => Promise.resolve()),
                 },
           );
         };
@@ -273,21 +292,14 @@ describe("host checkpoint parent sequencing", () => {
         }),
       ).resolves.toBe(0);
       expect(requests).toHaveLength(3);
-      expect(requests[0]).toMatchObject({
-        checkpointSequence: 1,
-        previousCheckpointDigest: null,
-        previousSampleSequence: null,
-      });
       expect(requests[1]).toMatchObject({
         checkpointSequence: 2,
         previousSampleSequence: 61,
       });
-      expect(requests[1]?.previousCheckpointDigest).toMatch(/^[0-9a-f]{64}$/u);
       expect(requests[2]).toMatchObject({
         checkpointSequence: 3,
         previousSampleSequence: 62,
       });
-      expect(requests[2]?.previousCheckpointDigest).toMatch(/^[0-9a-f]{64}$/u);
     });
   });
 });

@@ -16,7 +16,10 @@ import {
   withSource,
 } from "../../reveal/continuation/preflight-reveal-continuation-fixture.ts";
 import { assetsForReceipt } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipt-refs.ts";
-import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
+import {
+  createRevealContinuationTerminalizationPermit,
+  type ParentContext,
+} from "./preflight-reveal-continuation-parent.ts";
 import { continueChild } from "./preflight-reveal-continuation-parent-results.ts";
 
 const zeroProgress = {
@@ -217,7 +220,14 @@ describe("R188 parent genesis reduction", () => {
 
       if (result.publishTerminalArtifacts === undefined)
         throw new Error("Complete parent result has no terminal publisher");
-      await result.publishTerminalArtifacts();
+      const commit = await result.publishTerminalArtifacts(
+        createRevealContinuationTerminalizationPermit({
+          attemptId: "attempt-fixture",
+          terminalChildOrdinal: 0,
+          finalCheckpointDigest: "d".repeat(64),
+        }),
+      );
+      await commit();
 
       await expect(access(passPath)).resolves.toBeUndefined();
       await expect(access(canaryPath)).resolves.toBeUndefined();

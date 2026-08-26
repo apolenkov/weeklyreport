@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { access } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
+import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 
 import type { SourceArtifact } from "../../../source/source-artifact.ts";
@@ -27,6 +28,9 @@ import type { PreflightFullPaths } from "../preflight-launcher-support.ts";
 
 const AUTHORITY_KEY_BYTES = 32;
 const ATTEMPT_ID_BYTES = 16;
+const TERMINALIZATION_PERMIT: unique symbol = Symbol(
+  "reveal-continuation-terminalization",
+);
 export type ContinuationSelector = ReturnType<
   typeof preflightCanarySelectorFromEnvironment
 >;
@@ -77,26 +81,89 @@ export type ParentContext = Readonly<{
   readonly requestHostCheckpoint?: RequestHostCheckpoint;
   readonly now?: () => number;
   readonly monotonicNow?: () => number;
+  /** The cumulative attempt deadline; terminal publication may use this. */
   readonly deadlineAt?: number;
   readonly deadlineMonotonic?: number;
+  /** Normal browser/checkpoint work must finish before terminalization grace. */
+  readonly functionalDeadlineAt?: number;
+  readonly functionalDeadlineMonotonic?: number;
   readonly signal?: AbortSignal;
   readonly runPlaywright: RunPlaywright;
 }>;
 
+export type RevealContinuationTerminalizationPermit = Readonly<{
+  readonly [TERMINALIZATION_PERMIT]: boolean;
+  readonly attemptId: string;
+  readonly terminalChildOrdinal: number;
+  readonly finalCheckpointDigest: string;
+}>;
+
+export type RevealContinuationTerminalPublicationCommit = () => Promise<void>;
+
+export const createRevealContinuationTerminalizationPermit = (input: {
+  readonly attemptId: string;
+  readonly terminalChildOrdinal: number;
+  readonly finalCheckpointDigest: string;
+}): RevealContinuationTerminalizationPermit => ({
+  [TERMINALIZATION_PERMIT]: true,
+  ...input,
+});
+
 export const remainingRevealContinuationMs = (
-  context: Pick<ParentContext, "deadlineMonotonic" | "monotonicNow">,
-): number =>
-  context.deadlineMonotonic === undefined || context.monotonicNow === undefined
-    ? Number.POSITIVE_INFINITY
-    : Math.floor(context.deadlineMonotonic - context.monotonicNow());
+  context: Pick<
+    ParentContext,
+    "deadlineMonotonic" | "functionalDeadlineMonotonic" | "monotonicNow"
+  >,
+): number => {
+  const deadline =
+    context.functionalDeadlineMonotonic ?? context.deadlineMonotonic;
+  if (deadline === undefined || context.monotonicNow === undefined)
+    return Number.POSITIVE_INFINITY;
+  return Math.floor(deadline - context.monotonicNow());
+};
 
 export const assertRevealContinuationActive = (
-  context: Pick<ParentContext, "deadlineMonotonic" | "monotonicNow" | "signal">,
+  context: Pick<
+    ParentContext,
+    | "deadlineMonotonic"
+    | "functionalDeadlineMonotonic"
+    | "monotonicNow"
+    | "signal"
+  >,
   reserveMs = 0,
 ): void => {
   if (context.signal?.aborted)
     throw context.signal.reason ?? new Error("Reveal continuation aborted");
   if (remainingRevealContinuationMs(context) <= reserveMs)
+    throw new Error("Reveal continuation 24-minute deadline exceeded");
+};
+
+/**
+ * Terminalization is deliberately narrower than normal continuation work.
+ * It is valid only after the last host checkpoint and until the cumulative
+ * attempt deadline. No browser action or new checkpoint may call this guard.
+ */
+export const assertRevealContinuationTerminalizationActive = (
+  context: Pick<
+    ParentContext,
+    "attemptId" | "deadlineMonotonic" | "monotonicNow" | "signal"
+  >,
+  permit: RevealContinuationTerminalizationPermit,
+): void => {
+  if (
+    !permit[TERMINALIZATION_PERMIT] ||
+    permit.attemptId !== context.attemptId ||
+    permit.terminalChildOrdinal < 0 ||
+    permit.finalCheckpointDigest.length === 0
+  )
+    throw new Error("Reveal continuation terminalization permit is invalid");
+  if (context.signal?.aborted)
+    throw context.signal.reason ?? new Error("Reveal continuation aborted");
+  if (
+    context.deadlineMonotonic !== undefined &&
+    context.monotonicNow !== undefined &&
+    Math.floor(context.deadlineMonotonic - context.monotonicNow()) <= 0
+  )
     throw new Error("Reveal continuation 24-minute deadline exceeded");
 };
 
@@ -110,7 +177,91 @@ const assertFreshCanary = async (canaryPath: string): Promise<void> => {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
       throw error;
   }
+  const canaryDirectory = path.dirname(canaryPath);
+  const pendingPrefix = `.${path.basename(canaryPath)}.`;
+  const entries = await readdir(canaryDirectory).catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT")
+      return [] as const;
+    throw error;
+  });
+  if (
+    entries.some(
+      (entry) => entry.startsWith(pendingPrefix) && entry.endsWith(".pending"),
+    )
+  )
+    throw new Error(
+      "A continuation attempt cannot start while a staged terminal canary publication is pending; inspect or remove the incomplete attempt explicitly",
+    );
 };
+
+const assertDeadlineNumber = (name: string, value: number): void => {
+  if (!Number.isFinite(value))
+    throw new Error(`${name} must be a finite deadline`);
+};
+
+const attemptDeadlinesFor = (input: {
+  readonly deadlineAt?: number;
+  readonly deadlineMonotonic?: number;
+  readonly functionalDeadlineAt?: number;
+  readonly functionalDeadlineMonotonic?: number;
+  readonly now: () => number;
+  readonly monotonicNow: () => number;
+  readonly reserveMs: number;
+}): Readonly<{
+  readonly deadlineAt: number;
+  readonly deadlineMonotonic: number;
+  readonly functionalDeadlineAt: number;
+  readonly functionalDeadlineMonotonic: number;
+}> => {
+  const deadlineAt =
+    input.deadlineAt ?? input.now() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
+  const deadlineMonotonic =
+    input.deadlineMonotonic ??
+    input.monotonicNow() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
+  const functionalDeadlineAt =
+    input.functionalDeadlineAt ?? deadlineAt - input.reserveMs;
+  const functionalDeadlineMonotonic =
+    input.functionalDeadlineMonotonic ?? deadlineMonotonic - input.reserveMs;
+  assertDeadlineNumber("deadlineAt", deadlineAt);
+  assertDeadlineNumber("deadlineMonotonic", deadlineMonotonic);
+  assertDeadlineNumber("functionalDeadlineAt", functionalDeadlineAt);
+  assertDeadlineNumber(
+    "functionalDeadlineMonotonic",
+    functionalDeadlineMonotonic,
+  );
+  if (
+    functionalDeadlineAt !== deadlineAt - input.reserveMs ||
+    functionalDeadlineMonotonic !== deadlineMonotonic - input.reserveMs
+  )
+    throw new Error(
+      "Functional deadlines must equal cumulative deadlines minus the source-bound publication reserve",
+    );
+  if (
+    functionalDeadlineAt >= deadlineAt ||
+    functionalDeadlineMonotonic >= deadlineMonotonic
+  )
+    throw new Error("Functional deadlines must precede cumulative deadlines");
+  return {
+    deadlineAt,
+    deadlineMonotonic,
+    functionalDeadlineAt,
+    functionalDeadlineMonotonic,
+  };
+};
+
+const initialParentProgress = (): ParentProgress => ({
+  previousGrantDigest: null,
+  previousCompletedCandidateCount: 0,
+  receiptHead: null,
+  receiptCount: 0,
+  chunkHead: null,
+  chunkCount: 0,
+  operationHead: null,
+  operationChunkCount: 0,
+  operationTotals: zeroRevealOperationTotals(),
+  previousCheckpointDigest: null,
+  previousSampleSequence: null,
+});
 
 export const runPreflightRevealContinuation = async (input: {
   readonly source: SourceArtifact;
@@ -124,6 +275,8 @@ export const runPreflightRevealContinuation = async (input: {
   readonly monotonicNow?: () => number;
   readonly deadlineAt?: number;
   readonly deadlineMonotonic?: number;
+  readonly functionalDeadlineAt?: number;
+  readonly functionalDeadlineMonotonic?: number;
   readonly signal?: AbortSignal;
   readonly runPlaywright: RunPlaywright;
 }): Promise<number> => {
@@ -135,18 +288,18 @@ export const runPreflightRevealContinuation = async (input: {
   });
   const now = input.now ?? Date.now;
   const monotonicNow = input.monotonicNow ?? performance.now.bind(performance);
-  const deadlineAt =
-    input.deadlineAt ?? now() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
-  const deadlineMonotonic =
-    input.deadlineMonotonic ??
-    monotonicNow() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
+  const deadlines = attemptDeadlinesFor({
+    ...input,
+    now,
+    monotonicNow,
+    reserveMs: limits.yieldReserveMs,
+  });
   const signal = input.signal ?? new AbortController().signal;
   const context: ParentContext = {
     ...input,
     now,
     monotonicNow,
-    deadlineAt,
-    deadlineMonotonic,
+    ...deadlines,
     signal,
     selection,
     revealRoute: revealRouteFor(selection.route),
@@ -158,22 +311,9 @@ export const runPreflightRevealContinuation = async (input: {
   };
   assertRevealContinuationActive(context);
   const maxChildren = input.source.matrixLimits.maxRevealActions + 1;
-  const progress: ParentProgress = {
-    previousGrantDigest: null,
-    previousCompletedCandidateCount: 0,
-    receiptHead: null,
-    receiptCount: 0,
-    chunkHead: null,
-    chunkCount: 0,
-    operationHead: null,
-    operationChunkCount: 0,
-    operationTotals: zeroRevealOperationTotals(),
-    previousCheckpointDigest: null,
-    previousSampleSequence: null,
-  };
   return runChildUntilDone({
     context,
-    progress,
+    progress: initialParentProgress(),
     ordinal: 0,
     maxChildren,
   });

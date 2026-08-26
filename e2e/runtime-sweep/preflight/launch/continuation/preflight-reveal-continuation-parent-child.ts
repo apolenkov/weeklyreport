@@ -25,6 +25,8 @@ import {
 import type {
   ParentContext,
   ParentProgress,
+  RevealContinuationTerminalizationPermit,
+  RevealContinuationTerminalPublicationCommit,
 } from "./preflight-reveal-continuation-parent.ts";
 import {
   assertRevealContinuationActive,
@@ -155,7 +157,9 @@ const runBoundedContinuationChild = async (input: {
   );
   const childDeadlineAt = Math.min(
     (context.now?.() ?? Date.now()) + limits.softWallMs - limits.yieldReserveMs,
-    (context.deadlineAt ?? Number.POSITIVE_INFINITY) - limits.killGraceMs,
+    (context.functionalDeadlineAt ??
+      context.deadlineAt ??
+      Number.POSITIVE_INFINITY) - limits.killGraceMs,
   );
   try {
     return await context.runPlaywright(
@@ -196,7 +200,9 @@ export const runContinuationChild = async (input: {
     readonly done: boolean;
     readonly progress: ParentProgress;
     readonly exitCode?: number;
-    readonly publishTerminalArtifacts?: () => Promise<void>;
+    readonly publishTerminalArtifacts?: (
+      permit: RevealContinuationTerminalizationPermit,
+    ) => Promise<RevealContinuationTerminalPublicationCommit>;
   }>
 > => {
   const { context, progress } = input;
