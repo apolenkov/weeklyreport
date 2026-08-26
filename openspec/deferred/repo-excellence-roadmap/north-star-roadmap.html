@@ -320,8 +320,8 @@
             >Текущий product source перед этой docs-only редакцией:</strong
           >
           ветка <code>campaign/cr-001-20260820</code>, commit
-          <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code>, дерево
-          <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. До этой
+          <code>29f0a323a907c074bd379012fe04d2a2a31373f1</code>, дерево
+          <code>11a8611fb5e566052ca4264d0b63f49bf8b21672</code>. До этой
           roadmap-only редакции worktree был чистым. Три файла Status-карусели
           на этом commit имеют те же Git blob identities, что и в принятом
           desktop source <code>0d03068fa…</code>; это доказывает отсутствие code
@@ -337,19 +337,28 @@
           текущего source identity.
         </p>
         <p>
-          <strong>Репозиторий:</strong> активная новая линия находится в
-          <code>/Users/wrk/work/weeklyreport</code> на <code>62d48a28…</code>.
-          <code>/Users/wrk/work/customreport-exemplary</code> остаётся старым
-          linked worktree на <code>4c0a9790…</code>. До cleanup они не
-          смешиваются; единственный канонический каталог будет выбран по полной
-          истории и затем лишние копии будут удалены только recoverable-путём.
+          <strong>Репозиторий:</strong> единственный канонический рабочий
+          каталог — <code>/Users/wrk/work/weeklyreport</code>. Старый linked
+          worktree <code>/Users/wrk/work/customreport-exemplary</code> удалён
+          штатной командой Git, а прежний каталог
+          <code>/Users/wrk/work/customreport</code> recoverable-перемещён в
+          <code
+            >/Users/wrk/.Trash/customreport-superseded-20260826-9d484229</code
+          >. Перед этим полная история и stash сохранены проверенными Git bundle
+          в
+          <code
+            >customreport-archive/2026-08-26-repository-consolidation-9d484229</code
+          >.
         </p>
         <p>
           <strong>Эта редакция roadmap:</strong> фиксирует новую границу
           экономии: R13 сохранён как последний bespoke process-registry packet.
           После Sol <code>NO-GO</code> R13 не запускался, R14 не создаётся, а
           живое доказательство переносится на минимальную стандартную границу
-          Playwright/runtime без сокращения продуктового denominator.
+          Playwright/runtime без сокращения продуктового denominator. На commit
+          <code>29f0a323a</code> сам READY/ARM/registry слой уже удалён: 1 570
+          строк убрано, 511 добавлено, Sol дал <code>GO</code>, live-run не
+          выполнялся.
         </p>
       </div>
       <table>
@@ -367,8 +376,8 @@
             <td>
               Для этой редакции текущий source identity — ветка
               <code>campaign/cr-001-20260820</code>, committed
-              <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
-              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. Свежий
+              <code>29f0a323a907c074bd379012fe04d2a2a31373f1</code> с деревом
+              <code>11a8611fb5e566052ca4264d0b63f49bf8b21672</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -461,17 +470,17 @@
             </td>
           </tr>
           <tr>
-            <td>Current source-bound diagnostic tranche</td>
+            <td>Последний source-bound diagnostic tranche</td>
             <td>
               <span class="status warn"
                 >DIAGNOSTIC-PROVEN / FULL RUNTIME NOT-PROVEN</span
               >
             </td>
             <td>
-              Для текущего source identity
+              Для предыдущего source identity
               <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> /
-              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code> для него
-              выполнен отдельный exact-SHA R182 diagnostic rerun с полным
+              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code> выполнен
+              отдельный exact-SHA R182 diagnostic rerun с полным
               failure-evidence комплектом. Это не переносит исторические
               code/test/build receipts и не доказывает full runtime, matrix или
               product acceptance; они остаются NOT-PROVEN.
@@ -517,17 +526,18 @@
             </td>
             <td>
               На текущем committed source
-              <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> /
-              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code> source и
+              <code>29f0a323a907c074bd379012fe04d2a2a31373f1</code> /
+              <code>11a8611fb5e566052ca4264d0b63f49bf8b21672</code> source и
               детерминированные тесты контракта готовы, но live canary не
               выполнен. R8, R9 и R11 fail-closed остановились до первого
               runtime-effect; R12 и R13 получили Sol <code>NO-GO</code> и не
-              запускались. R13 — последняя итерация bespoke process-registry:
-              R14 не создаётся. Следующее доказательство должно использовать
-              минимальную стандартную границу Playwright/runtime, сохранить
-              exact <code>admin/demo</code>, 20 row-local toggles, ordered-pair
-              denominator, 24-минутную рабочую границу и 6 минут на проверенную
-              очистку.
+              запускались. R13 — последняя итерация bespoke process-registry;
+              сам registry/READY/ARM код теперь удалён и принят Sol на
+              <code>29f0a323a</code>. R14 не создаётся. Следующее доказательство
+              должно использовать минимальную стандартную границу
+              Playwright/runtime, сохранить exact <code>admin/demo</code>, 20
+              row-local toggles, ordered-pair denominator, 24-минутную рабочую
+              границу и 6 минут на проверенную очистку.
             </td>
           </tr>
           <tr>
@@ -671,15 +681,14 @@
       <div class="callout ok">
         <strong>Следующая рабочая последовательность:</strong>
         <code
-          >canonical repository → standard 5.19 admin/demo canary → role/profile
-          batches → product findings → fresh desktop review → final gates →
-          release</code
+          >product/spec findings → thin 5.19 admin/demo one-shot → role/profile
+          batches → fresh desktop review → final gates → release</code
         >. Тестовый контур больше не развивается как самостоятельный продукт:
         R13 закрывает bespoke packet line, R14 запрещён текущим owner decision.
         При этом denominator CR-001 не сокращается. Текущий source identity
         перед этой roadmap-only правкой зафиксирован в
-        <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
-        <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>; Sol plan gate
+        <code>29f0a323a907c074bd379012fe04d2a2a31373f1</code> с деревом
+        <code>11a8611fb5e566052ca4264d0b63f49bf8b21672</code>; Sol plan gate
         <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
         должен пройти короткую source/target/ports preflight и новый Sol review;
@@ -743,8 +752,9 @@
             недоказанную стабильность live-member set. R13 не запускался;
             evidence сохранён в
             <code>2026-08-26-runtime-evidence-62d48a28-single-5.19-r13/</code>.
-            Следующий дизайн обязан убрать registry/READY/ARM append chain, а не
-            чинить его очередной итерацией.
+            Registry/READY/ARM append chain удалён на <code>29f0a323a</code> и
+            заменён одной стандартной bounded process-group границей. Sol принял
+            diff; live canary этим коммитом не выполнялся.
           </span>
         </li>
         <li>
@@ -821,19 +831,13 @@
           </tr>
           <tr>
             <td>Единственный канонический каталог репозитория</td>
+            <td><span class="status ok">PROVEN / RECOVERABLE</span></td>
             <td>
-              <span class="status warn">DECISION REQUIRED BY EVIDENCE</span>
-            </td>
-            <td>
-              Новая непрерывная история находится в
-              <code>/Users/wrk/work/weeklyreport</code> на
-              <code>62d48a28…</code>; старый linked worktree
-              <code>/Users/wrk/work/customreport-exemplary</code> остаётся на
-              <code>4c0a9790…</code>. Перед удалением нужно зафиксировать
-              ancestry/ref/worktree manifest, выбрать единственный canonical
-              root и доказать, что все уникальные commits и authority artifacts
-              сохранены. После этого лишние каталоги удаляются recoverable и
-              выполняется повторное чтение refs/worktrees/stashes.
+              Канонический root — <code>/Users/wrk/work/weeklyreport</code>.
+              Старый linked worktree удалён, прежний repository root находится в
+              Trash, а unique refs и stash сохранены и проверены двумя Git
+              bundle. Архив доказательств остаётся отдельным каталогом и не
+              является второй копией рабочего репозитория.
             </td>
           </tr>
           <tr>
@@ -893,19 +897,19 @@
       <div class="callout">
         <p>
           От владельца сейчас не требуется ручное действие. Исполнитель сначала
-          завершает доказательную классификацию двух репозиторных каталогов,
-          затем получает Sol-решение по минимальной стандартной границе 5.19.
-          После единственного успешного admin/demo canary запускаются
-          role/profile batches, свежий desktop review, финальные gates и
-          release. Полное CR-001 пока не закрыто; R13 не является product
-          failure, а R14 не входит в план.
+          использует единственный канонический репозиторий, закрывает уже
+          выявленные продуктовые и спецификационные хвосты, затем получает
+          Sol-решение по тонкой стандартной границе 5.19. После единственного
+          успешного admin/demo canary запускаются role/profile batches, свежий
+          desktop review, финальные gates и release. Полное CR-001 пока не
+          закрыто; R13 не является product failure, а R14 не входит в план.
         </p>
       </div>
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
-        <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. Pair-level
+        <code>29f0a323a907c074bd379012fe04d2a2a31373f1</code> с деревом
+        <code>11a8611fb5e566052ca4264d0b63f49bf8b21672</code>. Pair-level
         code/test/review and all runtime claims remain separately bounded;
         <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
         после фиксации получит отдельный SHA/tree. Дорожная карта не содержит
