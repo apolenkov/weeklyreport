@@ -18,28 +18,6 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
 - `prisma` — schema, single init migration, seeds, destructive guard
 - `openspec` — active backlog (`changes/`) + durable specs (`specs/`)
 
-### MVP lifecycle authorization
-
-- This repository is an actively developed MVP. Its local product data,
-  generated artifacts, disposable runtime resources, and test environments are
-  reproducible from source, schema, migrations, and seeds; preserving their
-  contents is not a product requirement.
-- Within this repository and its dedicated archive, the owner authorizes
-  proactive cleanup of obsolete generated/session artifacts, replacement or
-  removal of superseded MVP code and configuration, and creation, reset,
-  reseeding, or removal of the exact disposable resources allowed below. Do not
-  pause for another owner confirmation when those actions are necessary to
-  complete an already accepted CustomReport task.
-- Keep one canonical repository, preserve useful Git history and unrelated
-  worktree changes, use explicit targets, and record decision-grade changes in
-  Git or the external archive as appropriate. Prefer recoverable deletion when
-  it does not obstruct the task.
-- This standing MVP authorization never applies to production, shared or
-  unknown services, non-project files, real user data, external writes, or the
-  creation, rotation, revocation, replacement, or disclosure of credentials.
-  Those boundaries still require the exact authority defined by the global
-  instructions or a separate owner decision.
-
 ## Commands
 
 Use `pnpm` from the repo root (Node >=26). Never `npm`/Yarn.
@@ -74,24 +52,14 @@ pnpm build              # turbo run build
 - The docker `web`/`api` containers serve a STALE built image; to live-verify new
   code, run the app from source using `docs/onboarding.md` or `pnpm dev`.
 
-### CR-001 disposable Bugsink authorization
-
-- For the CR-001 runtime campaign only, the owner explicitly authorizes the
-  isolated disposable container `cr001-runtime-286112bc7-bugsink` to create a
-  temporary process-only superuser, team, project, team/project memberships,
-  and API token. Use them only for CR-001 runtime verification; never write
-  secret values to logs, receipts, evidence, Git, or other artifacts.
-- After the verification, delete the API token, memberships, project, team,
-  temporary user, container, and volume, and prove zero residue. This standing
-  authorization applies only to the exact container and lifecycle above. It
-  does not authorize any other credential target, production/shared service,
-  credential rotation or replacement, or reuse beyond this campaign.
-
 ## Database safety
 
-- **The only pre-authorized disposable databases are `customreport_e2e` and the
-  runtime-lane targets `customreport_e2e_lane_[a-o]_test`.** Reset, reseed, and
-  migration replay are allowed only for those exact non-production targets.
+- This file records safety boundaries, not standing permission for destructive
+  work or credential lifecycle. Obtain task-specific authority before reset,
+  reseed, migration-history rewrite, deletion, or credential operations.
+- **The only disposable database candidates are `customreport_e2e` and the
+  runtime-lane targets `customreport_e2e_lane_[a-o]_test`.** Destructive database
+  work may target only those exact non-production databases.
   Resolve the target from `E2E_DATABASE_URL` (or the command's explicit
   database URL), prove that it is not production, shared, or unknown, and
   require `prisma/guards/_destructive-guard.ts` to accept it before every
@@ -101,25 +69,6 @@ pnpm build              # turbo run build
   or blanket disposable-database authorization, and never bypass the guard.
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; run the required seed
   explicitly under the same consent after a successful reset.
-
-### MVP baseline-schema authorization
-
-- This repository is an MVP. The owner explicitly authorizes replacing,
-  squashing, or resetting the committed Prisma migration history to one clean
-  baseline/init schema derived from the current `prisma/schema.prisma`; an
-  incremental upgrade path and preservation of disposable database contents are
-  not required. Do not wait for another owner confirmation for that
-  repository-scoped migration-history rewrite.
-- Perform the rewrite only as a bounded reviewed CR-001/OpenSpec task. Preserve
-  the final domain schema and load-bearing invariants, remove superseded
-  migration history deliberately, and prove the new baseline from an empty
-  exact allowlisted disposable database with the destructive guard and exact
-  per-run consent still active.
-- After applying the baseline, run the explicit seed (Prisma 7 does not do so
-  automatically), prove schema/migration drift is zero, and rerun the relevant
-  database, integration, and runtime gates. Never apply this authorization to
-  production, shared, remote, or unknown databases, and never bypass the
-  existing target validator or consent boundary.
 
 ## Load-Bearing Invariants
 
