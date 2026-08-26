@@ -2,7 +2,9 @@ import { candidatesForImmediateReveal } from "../guards/preflight-reveal-registr
 import { sameRevealSurfaceMaterial } from "../guards/reveal-surface-material.ts";
 import {
   branchFor,
+  canReuseRevealBranchForCandidate,
   restoreRevealBranch,
+  restoreRevealBranchLocally,
 } from "./preflight-reveal-branch-execution.ts";
 import {
   controlsWithTransition,
@@ -212,6 +214,21 @@ const processCurrentRevealBranch = async (input: {
       candidates,
       index: input.state.currentCandidateIndex ?? 0,
       ...(restoredBranch === undefined ? {} : { restoredBranch }),
+      branchReuse: {
+        canReuseFor: ({ branch, candidate }) =>
+          canReuseRevealBranchForCandidate(branch, candidate),
+        restoreAfter: ({ branch, terminal }) =>
+          restoreRevealBranchLocally({
+            context: {
+              harness: input.queueInput.harness,
+              state: input.queueInput.state,
+              route: input.queueInput.route,
+              initialSurface: input.queueInput.initialSurface,
+            },
+            source: branch,
+            terminal,
+          }),
+      },
       ...(input.shouldYieldAfterCandidate === undefined
         ? {}
         : { shouldYieldAfterCandidate: input.shouldYieldAfterCandidate }),

@@ -6,6 +6,7 @@ import {
 } from "../../reveal-path.ts";
 import * as reductionDiagnosis from "../guards/preflight-reveal-canonicalization-diagnosis.ts";
 import {
+  candidatesForImmediateReveal,
   controlsForImmediateReveal,
   registerDynamicControls,
   registerVisitedRevealState,
@@ -130,6 +131,30 @@ const allImmediateControlsRetainedFor = (input: {
     }),
   );
 
+const dynamicRegistrationFor = (input: {
+  readonly queueInput: RevealPureQueueInput;
+  readonly state: RevealDiscoveryState;
+  readonly current: RevealBranch;
+  readonly branch: RevealBranch;
+  readonly immediateControls: readonly SourceBoundControl[];
+}) => {
+  const registrationKeys = new Set([
+    ...input.immediateControls.map(({ controlKey }) => controlKey),
+    ...candidatesForImmediateReveal(input.queueInput, input.branch).map(
+      ({ control }) => control.controlKey,
+    ),
+  ]);
+  const registrationControls = input.branch.surface.controls.filter(
+    ({ controlKey }) => registrationKeys.has(controlKey),
+  );
+  return registerDynamicControls(
+    input.state,
+    input.branch,
+    input.current,
+    registrationControls,
+  );
+};
+
 export const enqueueChangedBranch = (input: {
   readonly queueInput: RevealPureQueueInput;
   readonly state: RevealDiscoveryState;
@@ -162,12 +187,13 @@ export const enqueueChangedBranch = (input: {
       ...state,
       visitedStatePaths: visited.visitedStatePaths,
     };
-  const registration = registerDynamicControls(
+  const registration = dynamicRegistrationFor({
+    queueInput,
     state,
-    branch,
     current,
+    branch,
     immediateControls,
-  );
+  });
   const plans = queueInput
     .plansFor(branch.inventory)
     .filter(({ control }) =>

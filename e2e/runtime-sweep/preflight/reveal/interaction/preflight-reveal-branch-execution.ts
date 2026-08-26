@@ -258,3 +258,8 @@ export const branchFor = async (
   };
   return { branch, transition, explore };
 };
+
+export {
+  canReuseRevealBranchForCandidate,
+  restoreRevealBranchLocally,
+} from "./restoration/preflight-reveal-branch-local-restoration.ts";
