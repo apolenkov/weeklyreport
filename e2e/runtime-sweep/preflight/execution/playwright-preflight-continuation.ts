@@ -44,6 +44,8 @@ interface ContinuationChunkInput {
   readonly grant?: RevealExecutionGrant;
   readonly expectedGrantDigest?: string;
   readonly attemptId: string;
+  readonly childExecutionId: string;
+  readonly childOrdinal: number;
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;
   readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
@@ -139,6 +141,8 @@ export async function runPlaywrightPreflightRevealContinuationChunk(
         }),
     executionScope: "canary",
     attemptId: input.attemptId,
+    childExecutionId: input.childExecutionId,
+    childOrdinal: input.childOrdinal,
     ...(input.deadlineAt === undefined ? {} : { deadlineAt: input.deadlineAt }),
     ...(input.chunkBudgetMs === undefined
       ? {}

@@ -16,8 +16,8 @@ import { RevealDiscoveryError } from "../preflight-reveal-types.ts";
 import {
   type CandidateIterationResult,
   type CandidateLoopCursor,
-  restoredBranchAfterTerminal,
-  restoredBranchForCandidate,
+  restorationLeaseAfterTerminal,
+  restorationLeaseForCandidate,
   type RevealBranchReusePolicy,
 } from "../restoration/preflight-reveal-branch-reuse-policy.ts";
 import type {
@@ -101,7 +101,7 @@ const afterExecutedCandidate = async (input: {
 }): Promise<CandidateIterationResult> => {
   const yielded = await processExecutedCandidate(input);
   if (yielded !== undefined) return { cursor: { state: input.state }, yielded };
-  const restoredBranch = await restoredBranchAfterTerminal({
+  const restorationLease = await restorationLeaseAfterTerminal({
     ...(input.branchReuse === undefined ? {} : { policy: input.branchReuse }),
     state: input.state,
     current: input.current,
@@ -112,9 +112,9 @@ const afterExecutedCandidate = async (input: {
   return {
     cursor: {
       state: input.state,
-      ...(restoredBranch === undefined
+      ...(restorationLease === undefined
         ? {}
-        : { restoredBranch, restorationScope: "branch-local" as const }),
+        : { restorationLease, restorationScope: "branch-local" as const }),
     },
   };
 };
@@ -123,13 +123,15 @@ const retainedCursorFor = (
   state: RevealDiscoveryState,
   cursor: CandidateLoopCursor,
   restoredBranch: RevealBranch | undefined,
+  restorationLease: CandidateLoopCursor["restorationLease"],
 ): CandidateIterationResult => ({
   cursor: {
     state,
-    ...(restoredBranch === undefined
+    ...(restoredBranch === undefined ? {} : { restoredBranch }),
+    ...(restorationLease === undefined
       ? {}
       : {
-          restoredBranch,
+          restorationLease,
           ...(cursor.restorationScope === undefined
             ? {}
             : { restorationScope: cursor.restorationScope }),
@@ -149,17 +151,19 @@ export const processCandidateIteration = async (input: {
   readonly processCandidate: CandidateProcessor;
 }): Promise<CandidateIterationResult> => {
   const candidate = requiredCandidateAt(input.candidates, input.candidateIndex);
-  const restoredBranch = restoredBranchForCandidate({
+  const restorationLease = restorationLeaseForCandidate({
     ...(input.branchReuse === undefined ? {} : { policy: input.branchReuse }),
     current: input.current,
     candidate,
-    ...(input.cursor.restoredBranch === undefined
+    ...(input.cursor.restorationLease === undefined
       ? {}
-      : { restoredBranch: input.cursor.restoredBranch }),
+      : { restorationLease: input.cursor.restorationLease }),
     ...(input.cursor.restorationScope === undefined
       ? {}
       : { restorationScope: input.cursor.restorationScope }),
   });
+  const restoredBranch =
+    restorationLease === undefined ? input.cursor.restoredBranch : undefined;
   const result = await processCandidateAtFailureBoundary({
     queueInput: input.queueInput,
     current: input.current,
@@ -168,6 +172,7 @@ export const processCandidateIteration = async (input: {
     candidateIndex: input.candidateIndex,
     candidate,
     ...(restoredBranch === undefined ? {} : { restoredBranch }),
+    ...(restorationLease === undefined ? {} : { restorationLease }),
     processCandidate: input.processCandidate,
   });
   const state = candidateCursorState(
@@ -177,7 +182,12 @@ export const processCandidateIteration = async (input: {
     input.candidateIndex + 1,
   );
   if (!result.executed || result.terminal === undefined)
-    return retainedCursorFor(state, input.cursor, restoredBranch);
+    return retainedCursorFor(
+      state,
+      input.cursor,
+      restoredBranch,
+      restorationLease,
+    );
   return afterExecutedCandidate({
     ...input,
     state,

@@ -10,5 +10,5 @@ export type RevealActionResult = Readonly<{
 
 export type RevealExecutionContext = Pick<
   RevealQueueInput,
-  "harness" | "state" | "route" | "initialSurface"
+  "harness" | "state" | "route" | "initialSurface" | "operationRecorder"
 >;

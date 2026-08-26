@@ -11,6 +11,7 @@ import {
   revealStepFor,
   revealSurfaceFor,
 } from "../../../reveal-path.ts";
+import { createRevealOperationRecorder } from "../evidence/preflight-reveal-operation-recorder.ts";
 import type {
   RevealBranch,
   RevealCandidate,
@@ -189,19 +190,27 @@ describe("branch-local inverse restoration", () => {
       inventory: () => Promise.resolve(currentInventory),
       executeReveal,
     };
-
-    await expect(
-      restoreRevealBranchLocally({
-        context: {
-          harness,
-          state,
-          route: { resolvedRoute: "/admin" },
-          initialSurface: rootSurface,
-        },
-        source,
-        terminal,
-      }),
-    ).resolves.toMatchObject({
+    const operationRecorder = createRevealOperationRecorder({
+      childExecutionId: "e".repeat(64),
+      childOrdinal: 0,
+    });
+    operationRecorder.recordCandidate({
+      source,
+      candidate: terminal.candidate,
+    });
+    const lease = await restoreRevealBranchLocally({
+      context: {
+        harness,
+        state,
+        route: { resolvedRoute: "/admin" },
+        initialSurface: rootSurface,
+        operationRecorder,
+      },
+      source,
+      terminal,
+    });
+    if (lease === undefined) throw new Error("Restoration lease is missing");
+    expect(operationRecorder.branchForLease(lease)).toMatchObject({
       inventory: sourceInventory,
       surface: source.surface,
       url,
@@ -259,6 +268,14 @@ describe("branch-local inverse restoration", () => {
         });
       },
     };
+    const operationRecorder = createRevealOperationRecorder({
+      childExecutionId: "e".repeat(64),
+      childOrdinal: 0,
+    });
+    operationRecorder.recordCandidate({
+      source,
+      candidate: terminal.candidate,
+    });
 
     await expect(
       restoreRevealBranchLocally({
@@ -267,6 +284,7 @@ describe("branch-local inverse restoration", () => {
           state,
           route: { resolvedRoute: "/admin" },
           initialSurface: rootSurface,
+          operationRecorder,
         },
         source,
         terminal,

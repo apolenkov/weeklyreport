@@ -100,79 +100,35 @@ export const branchLocalInverseActionBudgetFor = (input: {
   return { physical, charged };
 };
 
-const inverseActionFor = (input: {
-  readonly source: RevealBranch;
-  readonly terminal: RevealCandidateTerminalResult;
-}): Action => {
-  const target = candidateTargetFor(input.source, input.terminal.candidate);
-  const terminalTarget = singleStepBindingTargetFor(
-    input.terminal.result.branch,
-  );
-  if (target === undefined || terminalTarget !== target)
-    throw new RevealDiscoveryError(
-      "Branch-local inverse terminal binding drifted",
-    );
-  const matches = input.terminal.result.branch.surface.controls.filter(
-    (control) =>
-      isSourceBoundDisclosureControl(control) &&
-      control.ariaControls === target,
-  );
-  const control = matches.length === 1 ? matches[0] : undefined;
-  if (control === undefined || typeof control.ariaExpanded !== "boolean")
-    throw new RevealDiscoveryError(
-      "Branch-local inverse target is missing or ambiguous",
-    );
-  return {
-    controlKey: control.controlKey,
-    operation: "click",
-    safety: "read-only",
-    transition: control.ariaExpanded ? "cancel" : "open",
-  };
-};
-
-export const restoreRevealBranchLocally = async (input: {
+const restoredBranchForExecution = async (input: {
   readonly context: RevealExecutionContext;
   readonly source: RevealBranch;
-  readonly terminal: RevealCandidateTerminalResult;
-}): Promise<RevealBranch | undefined> => {
-  if (!canReuseRevealBranchForCandidate(input.source, input.terminal.candidate))
-    return undefined;
-  const terminalBranch = input.terminal.result.branch;
-  const action = inverseActionFor({
-    source: input.source,
-    terminal: input.terminal,
-  });
-  const boundary = await liveRevealActionBoundary(
-    input.context.harness,
-    terminalBranch,
-    action,
-  );
-  const execution = await input.context.harness.executeReveal({
-    executionKind: "replay",
-    control: boundary.control,
-    action,
-    preparation: terminalBranch.preparation,
-  });
+  readonly terminalBranch: RevealBranch;
+  readonly execution: Awaited<
+    ReturnType<RevealExecutionContext["harness"]["executeReveal"]>
+  >;
+  readonly rawUrl: string;
+}): Promise<RevealBranch> => {
   const initialExecutionUrl = liveRevealExecutionUrl(
     input.context.harness,
-    execution.url,
-    boundary.rawUrl,
+    input.execution.url,
+    input.rawUrl,
   );
   assertRoutePath(input.context.route, initialExecutionUrl);
-  assertNonMutation(execution);
-  const immediateSurface = revealSurfaceFor(execution.inventory.controls);
+  assertNonMutation(input.execution);
+  const immediateSurface = revealSurfaceFor(input.execution.inventory.controls);
   const inventory =
     input.context.harness.waitForRevealSurfaceReady === undefined ||
     stableSerialize(immediateSurface) === stableSerialize(input.source.surface)
-      ? execution.inventory
+      ? input.execution.inventory
       : await input.context.harness
           .waitForRevealSurfaceReady(input.source.surface, immediateSurface)
           .then(async () => input.context.harness.inventory());
   const surface = revealSurfaceFor(inventory.controls);
   const settledExecutionUrl = liveRevealExecutionUrl(
     input.context.harness,
-    execution.url,
-    boundary.rawUrl,
+    input.execution.url,
+    input.rawUrl,
   );
   if (
     settledExecutionUrl !== input.source.url ||
@@ -187,6 +143,86 @@ export const restoreRevealBranchLocally = async (input: {
     inventory,
     surface,
     url: settledExecutionUrl,
-    preparation: terminalBranch.preparation,
+    preparation: input.terminalBranch.preparation,
   };
+};
+
+export const inverseRestorationBindingFor = (input: {
+  readonly source: RevealBranch;
+  readonly candidate: RevealCandidate;
+  readonly terminalBranch: RevealBranch;
+}): Readonly<{ readonly action: Action; readonly target: string }> => {
+  const target = candidateTargetFor(input.source, input.candidate);
+  const terminalTarget = singleStepBindingTargetFor(input.terminalBranch);
+  if (target === undefined || terminalTarget !== target)
+    throw new RevealDiscoveryError(
+      "Branch-local inverse terminal binding drifted",
+    );
+  const matches = input.terminalBranch.surface.controls.filter(
+    (control) =>
+      isSourceBoundDisclosureControl(control) &&
+      control.ariaControls === target,
+  );
+  const control = matches.length === 1 ? matches[0] : undefined;
+  if (control === undefined || typeof control.ariaExpanded !== "boolean")
+    throw new RevealDiscoveryError(
+      "Branch-local inverse target is missing or ambiguous",
+    );
+  return {
+    target,
+    action: {
+      controlKey: control.controlKey,
+      operation: "click",
+      safety: "read-only",
+      transition: control.ariaExpanded ? "cancel" : "open",
+    },
+  };
+};
+
+export const restoreRevealBranchLocally = async (input: {
+  readonly context: RevealExecutionContext;
+  readonly source: RevealBranch;
+  readonly terminal: RevealCandidateTerminalResult;
+}): Promise<
+  | import("../evidence/preflight-reveal-operation-recorder.ts").VerifiedBranchRestorationLease
+  | undefined
+> => {
+  if (
+    input.context.operationRecorder === undefined ||
+    !canReuseRevealBranchForCandidate(input.source, input.terminal.candidate)
+  )
+    return undefined;
+  const terminalBranch = input.terminal.result.branch;
+  const inverse = inverseRestorationBindingFor({
+    source: input.source,
+    candidate: input.terminal.candidate,
+    terminalBranch,
+  });
+  const boundary = await liveRevealActionBoundary(
+    input.context.harness,
+    terminalBranch,
+    inverse.action,
+  );
+  const execution = await input.context.harness.executeReveal({
+    executionKind: "replay",
+    control: boundary.control,
+    action: inverse.action,
+    preparation: terminalBranch.preparation,
+  });
+  const restored = await restoredBranchForExecution({
+    context: input.context,
+    source: input.source,
+    terminalBranch,
+    execution,
+    rawUrl: boundary.rawUrl,
+  });
+  return input.context.operationRecorder.createRestorationLease({
+    source: input.source,
+    terminal: terminalBranch,
+    restored,
+    candidate: input.terminal.candidate,
+    inverseAction: inverse.action,
+    ariaControlsTarget: inverse.target,
+    nonMutation: execution.nonMutation,
+  });
 };

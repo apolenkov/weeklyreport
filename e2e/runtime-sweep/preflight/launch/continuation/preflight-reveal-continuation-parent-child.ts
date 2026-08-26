@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
 import * as path from "node:path";
 
@@ -28,6 +29,8 @@ import type {
 import { completeEmptyBootstrap } from "./preflight-reveal-continuation-parent-bootstrap.ts";
 import { continueChild } from "./preflight-reveal-continuation-parent-results.ts";
 import { frontierForState } from "./preflight-reveal-continuation-parent-support.ts";
+
+const CHILD_EXECUTION_ID_BYTES = 32;
 
 const continuationEnvironmentFor = (
   progress: ParentProgress,
@@ -135,6 +138,8 @@ const runBoundedContinuationChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly outputPath: string;
+  readonly childExecutionId: string;
+  readonly childOrdinal: number;
 }): Promise<number> => {
   const { context, progress, outputPath } = input;
   const limits = context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
@@ -147,6 +152,11 @@ const runBoundedContinuationChild = async (input: {
         ...continuationEnvironmentFor(progress),
         RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ID:
           context.attemptId,
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHILD_EXECUTION_ID:
+          input.childExecutionId,
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHILD_ORDINAL: String(
+          input.childOrdinal,
+        ),
         RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT: String(
           Date.now() + limits.softWallMs - limits.yieldReserveMs,
         ),
@@ -176,6 +186,9 @@ export const runContinuationChild = async (input: {
   }>
 > => {
   const { context, progress } = input;
+  const childExecutionId = randomBytes(CHILD_EXECUTION_ID_BYTES).toString(
+    "hex",
+  );
   await prepareParentGrant({ context, progress });
   const outputPath = path.join(
     context.archiveRoot,
@@ -190,6 +203,8 @@ export const runContinuationChild = async (input: {
     context,
     progress,
     outputPath,
+    childExecutionId,
+    childOrdinal: input.ordinal,
   });
   await assertLivePreflightSourceIdentity({
     source: context.source,
@@ -214,5 +229,6 @@ export const runContinuationChild = async (input: {
     progress,
     chunk: childArtifact.chunk,
     ordinal: input.ordinal,
+    expectedChildExecutionId: childExecutionId,
   });
 };

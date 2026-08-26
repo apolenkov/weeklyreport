@@ -24,6 +24,7 @@ import {
   type RevealQueueYieldHandler,
 } from "./preflight-reveal-queue-candidates.ts";
 import { RevealDiscoveryError } from "./preflight-reveal-types.ts";
+import type { RevealBranchReusePolicy } from "./restoration/preflight-reveal-branch-reuse-policy.ts";
 
 const freezeCandidateInput = async (
   harness: RevealQueueInput["harness"],
@@ -72,6 +73,7 @@ const processRevealCandidate = async (input: {
   readonly state: RevealDiscoveryState;
   readonly candidate: RevealCandidate;
   readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: import("./evidence/preflight-reveal-operation-recorder.ts").VerifiedBranchRestorationLease;
 }): Promise<
   Readonly<{
     readonly state: RevealDiscoveryState;
@@ -92,11 +94,17 @@ const processRevealCandidate = async (input: {
     state: queueInput.state,
     route: queueInput.route,
     initialSurface: queueInput.initialSurface,
+    ...(queueInput.operationRecorder === undefined
+      ? {}
+      : { operationRecorder: queueInput.operationRecorder }),
     branch: current,
     candidate,
     ...(input.restoredBranch === undefined
       ? {}
       : { restoredBranch: input.restoredBranch }),
+    ...(input.restorationLease === undefined
+      ? {}
+      : { restorationLease: input.restorationLease }),
   });
   const materialChanged =
     result.explore &&
@@ -170,6 +178,47 @@ const currentBranchFor = (state: RevealDiscoveryState): RevealBranch => {
   throw new RevealDiscoveryError("Reveal queue cursor is missing its branch");
 };
 
+const restoredBranchFor = async (input: {
+  readonly queueInput: RevealQueueInput;
+  readonly branch: RevealBranch;
+  readonly required: boolean;
+}): Promise<RevealBranch | undefined> =>
+  input.required
+    ? restoreRevealBranch({
+        harness: input.queueInput.harness,
+        state: input.queueInput.state,
+        route: input.queueInput.route,
+        initialSurface: input.queueInput.initialSurface,
+        ...(input.queueInput.operationRecorder === undefined
+          ? {}
+          : { operationRecorder: input.queueInput.operationRecorder }),
+        branch: input.branch,
+      })
+    : undefined;
+
+const branchReuseFor = (
+  queueInput: RevealQueueInput,
+): RevealBranchReusePolicy | undefined => {
+  const operationRecorder = queueInput.operationRecorder;
+  if (operationRecorder === undefined) return undefined;
+  return {
+    canReuseFor: ({ branch, candidate }) =>
+      canReuseRevealBranchForCandidate(branch, candidate),
+    restoreAfter: ({ branch, terminal }) =>
+      restoreRevealBranchLocally({
+        context: {
+          harness: queueInput.harness,
+          state: queueInput.state,
+          route: queueInput.route,
+          initialSurface: queueInput.initialSurface,
+          operationRecorder,
+        },
+        source: branch,
+        terminal,
+      }),
+  };
+};
+
 const processCurrentRevealBranch = async (input: {
   readonly queueInput: RevealQueueInput;
   readonly state: RevealDiscoveryState;
@@ -187,19 +236,16 @@ const processCurrentRevealBranch = async (input: {
       candidate.action.operation === "select" &&
       candidate.representativeInput === undefined,
   );
-  const restoredBranch = requiresLiveRestore
-    ? await restoreRevealBranch({
-        harness: input.queueInput.harness,
-        state: input.queueInput.state,
-        route: input.queueInput.route,
-        initialSurface: input.queueInput.initialSurface,
-        branch: current,
-      })
-    : undefined;
+  const restoredBranch = await restoredBranchFor({
+    queueInput: input.queueInput,
+    branch: current,
+    required: requiresLiveRestore,
+  });
   const candidates = await freezeRevealCandidateInputs(
     input.queueInput,
     unfrozenCandidates,
   );
+  const branchReuse = branchReuseFor(input.queueInput);
   return processCandidates(
     {
       queueInput: input.queueInput,
@@ -214,21 +260,7 @@ const processCurrentRevealBranch = async (input: {
       candidates,
       index: input.state.currentCandidateIndex ?? 0,
       ...(restoredBranch === undefined ? {} : { restoredBranch }),
-      branchReuse: {
-        canReuseFor: ({ branch, candidate }) =>
-          canReuseRevealBranchForCandidate(branch, candidate),
-        restoreAfter: ({ branch, terminal }) =>
-          restoreRevealBranchLocally({
-            context: {
-              harness: input.queueInput.harness,
-              state: input.queueInput.state,
-              route: input.queueInput.route,
-              initialSurface: input.queueInput.initialSurface,
-            },
-            source: branch,
-            terminal,
-          }),
-      },
+      ...(branchReuse === undefined ? {} : { branchReuse }),
       ...(input.shouldYieldAfterCandidate === undefined
         ? {}
         : { shouldYieldAfterCandidate: input.shouldYieldAfterCandidate }),

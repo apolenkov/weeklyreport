@@ -83,6 +83,8 @@ export type RevealContinuationInput = Readonly<{
   readonly grant?: RevealExecutionGrant;
   readonly executionScope: "canary";
   readonly attemptId: string;
+  readonly childExecutionId: string;
+  readonly childOrdinal: number;
   readonly expectedGrantDigest?: string;
   readonly deadlineAt?: number;
   readonly chunkBudgetMs?: number;

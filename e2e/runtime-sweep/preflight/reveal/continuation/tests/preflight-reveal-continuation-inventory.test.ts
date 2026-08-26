@@ -84,6 +84,6 @@ describe("R197 continuation inventory lineage contract", () => {
     expect(
       inventoryAssetSchema.safeParse({ ...body, version: 4 }).success,
     ).toBe(false);
-    expect(PREFLIGHT_REVEAL_CONTINUATION_VERSION).toBe(5);
+    expect(PREFLIGHT_REVEAL_CONTINUATION_VERSION).toBe(6);
   });
 });

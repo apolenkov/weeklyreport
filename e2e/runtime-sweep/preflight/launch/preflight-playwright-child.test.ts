@@ -4,6 +4,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { createNestedProcessOwnershipFixture } from "./bounded/preflight-nested-process-ownership.test-support.ts";
 import { runPreflightPlaywrightChild } from "./preflight-playwright-child.ts";
 
 const processExists = (pid: number): boolean => {
@@ -45,16 +46,43 @@ describe("bounded reveal continuation Playwright child", () => {
       "utf8",
     );
     try {
+      const ownership = await createNestedProcessOwnershipFixture(root);
       await expect(
         runPreflightPlaywrightChild({
           repoRoot: process.cwd(),
-          environment: { npm_execpath: launcher },
+          environment: { npm_execpath: launcher, ...ownership },
           bounds: { maxDurationMs: 250, terminationGraceMs: 50 },
         }),
       ).rejects.toThrow(/exceeded maxDurationMs=250/iu);
       const descendantPid = Number(await readFile(descendantPidPath, "utf8"));
       expect(Number.isSafeInteger(descendantPid)).toBe(true);
       await waitForProcessExit(descendantPid);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("preserves the timeout when caller cleanup also fails", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "reveal-child-primary-"));
+    const launcher = path.join(root, "launcher.mjs");
+    await writeFile(launcher, "setInterval(() => undefined, 1000);", "utf8");
+    try {
+      const ownership = await createNestedProcessOwnershipFixture(root, {
+        failGone: true,
+      });
+      const failure = await runPreflightPlaywrightChild({
+        repoRoot: process.cwd(),
+        environment: { npm_execpath: launcher, ...ownership },
+        bounds: { maxDurationMs: 100, terminationGraceMs: 50 },
+      }).catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(AggregateError);
+      expect(
+        (failure as AggregateError).errors.some(
+          (error) =>
+            error instanceof Error &&
+            /exceeded maxDurationMs=100/iu.test(error.message),
+        ),
+      ).toBe(true);
     } finally {
       await rm(root, { force: true, recursive: true });
     }

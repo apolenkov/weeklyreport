@@ -9,7 +9,7 @@ import type {
   RevealReceiptChunk,
 } from "./contracts/preflight-reveal-continuation-schemas.ts";
 
-const R188_HASH_DOMAIN = "customreport/runtime-sweep/reveal/v5";
+const R188_HASH_DOMAIN = "customreport/runtime-sweep/reveal/v6";
 export const R188_DIGEST_LENGTH = sha256Hex("").length;
 export const R188_ZERO_DIGEST = "0".repeat(R188_DIGEST_LENGTH);
 const R188_VERSION_SEGMENT = R188_HASH_DOMAIN.split("/").at(-1);
@@ -57,6 +57,10 @@ export const grantDigestForBody = (
 export const chunkDigestForBody = (
   body: Omit<RevealReceiptChunk, "chunkDigest">,
 ): string => domainDigestFor("receipt-chunk", body);
+
+export const operationEvidenceDigestForBody = (
+  body: Omit<RevealReceiptChunk["operationEvidence"], "operationDigest">,
+): string => domainDigestFor("operation-evidence", body);
 
 export const bootstrapDigestForBody = (
   body: Omit<RevealBootstrap, "bootstrapDigest">,

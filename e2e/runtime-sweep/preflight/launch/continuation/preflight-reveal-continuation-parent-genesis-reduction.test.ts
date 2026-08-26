@@ -26,6 +26,17 @@ const zeroProgress = {
   receiptCount: 0,
   chunkHead: null,
   chunkCount: 0,
+  operationHead: null,
+  operationChunkCount: 0,
+  operationTotals: {
+    fullReplayActions: 0,
+    candidateActions: 0,
+    inverseActions: 0,
+    successfulRestorations: 0,
+    consumedLeases: 0,
+    physicalActions: 0,
+    chargedActions: 0,
+  },
 } as const;
 
 const persistChunkAssets = async (
@@ -102,6 +113,7 @@ describe("R188 parent genesis reduction", () => {
           progress: zeroProgress,
           chunk: chunkResult.result.chunk,
           ordinal: 0,
+          expectedChildExecutionId: "e".repeat(64),
         });
 
         expect(result.done).toBe(false);
@@ -121,6 +133,10 @@ describe("R188 parent genesis reduction", () => {
           receiptCount: chunkResult.result.chunk.receiptCount,
           chunkHead: chunkResult.result.chunk.chunkDigest,
           chunkCount: 1,
+          operationHead:
+            chunkResult.result.chunk.operationEvidence.operationDigest,
+          operationChunkCount: 1,
+          operationTotals: chunkResult.result.chunk.operationEvidence.summary,
         });
         expect(result.progress.inputPath).toBeDefined();
         await expect(
@@ -182,6 +198,7 @@ describe("R188 parent genesis reduction", () => {
         progress: zeroProgress,
         chunk: chunkResult.result.chunk,
         ordinal: 0,
+        expectedChildExecutionId: "e".repeat(64),
       });
 
       expect(result.done).toBe(true);

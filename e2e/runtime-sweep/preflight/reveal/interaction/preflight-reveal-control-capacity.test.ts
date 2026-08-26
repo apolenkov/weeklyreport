@@ -245,6 +245,8 @@ describe("shared reveal control capacity", () => {
             controlFor: preflightControlForPlan,
             executionScope: "canary",
             attemptId: "attempt-control-overflow",
+            childExecutionId: "e".repeat(64),
+            childOrdinal: 0,
             deadlineAt: 10_000,
             now: () => 0,
           }),

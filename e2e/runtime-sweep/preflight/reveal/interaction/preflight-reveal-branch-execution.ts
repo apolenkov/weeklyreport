@@ -1,5 +1,5 @@
 import { revealTransitionFor } from "../../../matrix/reveal-transition.ts";
-import { stableSerialize } from "../../../support/ids.ts";
+import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
 import {
   type RevealPath,
   revealPathFor,
@@ -15,6 +15,7 @@ import {
   sameRevealRoutePath,
 } from "../guards/preflight-reveal-guards.ts";
 import { sameRevealSurface } from "../guards/preflight-reveal-registration.ts";
+import type { VerifiedBranchRestorationLease } from "./evidence/preflight-reveal-operation-recorder.ts";
 import {
   liveRevealActionBoundary,
   liveRevealExecutionUrl,
@@ -42,6 +43,7 @@ const replayStep = async (input: {
   readonly route: RevealQueueInput["route"];
   readonly current: RevealBranch;
   readonly step: RevealPath["steps"][number];
+  readonly operationRecorder?: RevealExecutionContext["operationRecorder"];
 }): Promise<RevealBranch> => {
   const { current, step } = input;
   if (current.url !== step.beforeUrl)
@@ -97,6 +99,7 @@ const replayStep = async (input: {
     throw new RevealDiscoveryError(
       `Reveal path after URL drifted for ${step.controlKey}`,
     );
+  input.operationRecorder?.recordReplayStep(sha256Hex(step));
   return {
     path: current.path,
     inventory: settledInventory,
@@ -128,6 +131,9 @@ const replayBranch = async (
           route: input.route,
           current,
           step,
+          ...(input.operationRecorder === undefined
+            ? {}
+            : { operationRecorder: input.operationRecorder }),
         }),
       ),
     Promise.resolve<RevealBranch>({
@@ -207,13 +213,27 @@ export const branchFor = async (
     readonly branch: RevealBranch;
     readonly candidate: RevealCandidate;
     readonly restoredBranch?: RevealBranch;
+    readonly restorationLease?: VerifiedBranchRestorationLease;
   },
 ): Promise<RevealActionResult> => {
   const reset =
-    input.restoredBranch ??
-    (await replayBranch({ ...input, path: input.branch.path }));
+    input.restorationLease === undefined
+      ? (input.restoredBranch ??
+        (await replayBranch({ ...input, path: input.branch.path })))
+      : input.operationRecorder?.branchForLease(input.restorationLease);
+  if (reset === undefined)
+    throw new RevealDiscoveryError(
+      "Branch-local restoration lease requires an operation recorder",
+    );
   const { execution, executionUrl, surface, transition } =
     await executeCandidate(input, reset);
+  input.operationRecorder?.recordCandidate({
+    source: input.branch,
+    candidate: input.candidate,
+    ...(input.restorationLease === undefined
+      ? {}
+      : { lease: input.restorationLease }),
+  });
   const explore = sameRevealRoutePath(input.route, executionUrl);
   if (!explore)
     return {

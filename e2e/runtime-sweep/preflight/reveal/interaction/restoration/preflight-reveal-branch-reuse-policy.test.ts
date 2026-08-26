@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { revealTransitionFor } from "../../../../matrix/reveal-transition.ts";
 import { makePlan } from "../../../capacity/preflight-capacity-survey-test-support.ts";
 import { revealPathFor, revealSurfaceFor } from "../../../reveal-path.ts";
+import { createRevealOperationRecorder } from "../evidence/preflight-reveal-operation-recorder.ts";
 import type {
   RevealBranch,
   RevealCandidate,
@@ -58,6 +59,23 @@ const branch: RevealBranch = {
   inventory,
   surface,
   url: "/admin?tab=actions",
+};
+
+const restorationLeaseFor = () => {
+  const recorder = createRevealOperationRecorder({
+    childExecutionId: "f".repeat(64),
+    childOrdinal: 0,
+  });
+  recorder.recordCandidate({ source: branch, candidate: first });
+  return recorder.createRestorationLease({
+    source: branch,
+    terminal: branch,
+    restored: branch,
+    candidate: first,
+    inverseAction: first.action,
+    ariaControlsTarget: "fixture-target",
+    nonMutation: proof,
+  });
 };
 
 const initialState = (): RevealDiscoveryState => ({
@@ -118,8 +136,10 @@ const terminalFor = (
 
 const processorFor =
   (received: boolean[], processed: string[] = []): CandidateProcessor =>
-  ({ state, candidate, restoredBranch }) => {
-    received.push(restoredBranch === branch);
+  ({ state, candidate, restoredBranch, restorationLease }) => {
+    received.push(
+      restoredBranch === branch || restorationLease?.branch === branch,
+    );
     processed.push(candidate.control.accessibleName);
     return Promise.resolve({
       state,
@@ -133,7 +153,7 @@ describe("branch reuse queue policy", () => {
     const received: boolean[] = [];
     const processed: string[] = [];
     const restored = vi.fn<RevealBranchReusePolicy["restoreAfter"]>(() =>
-      Promise.resolve(branch),
+      Promise.resolve(restorationLeaseFor()),
     );
     const policy: RevealBranchReusePolicy = {
       canReuseFor: () => true,
@@ -163,7 +183,7 @@ describe("branch reuse queue policy", () => {
   it("never restores or serializes reused state across a yield", async () => {
     const received: boolean[] = [];
     const restored = vi.fn<RevealBranchReusePolicy["restoreAfter"]>(() =>
-      Promise.resolve(branch),
+      Promise.resolve(restorationLeaseFor()),
     );
 
     const result = await processCandidates(
@@ -194,7 +214,7 @@ describe("branch reuse queue policy", () => {
   it("keeps the next ordinary candidate on full replay", async () => {
     const received: boolean[] = [];
     const restored = vi.fn<RevealBranchReusePolicy["restoreAfter"]>(() =>
-      Promise.resolve(branch),
+      Promise.resolve(restorationLeaseFor()),
     );
 
     await processCandidates(

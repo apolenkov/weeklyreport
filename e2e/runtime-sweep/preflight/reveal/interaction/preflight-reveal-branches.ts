@@ -103,6 +103,7 @@ export interface RevealQueueInput {
   readonly maxRevealActions: number;
   readonly maxControlsPerSegment: number;
   readonly onCandidateFailure?: RevealCandidateFailureHandler;
+  readonly operationRecorder?: import("./evidence/preflight-reveal-operation-recorder.ts").RevealOperationRecorder;
 }
 
 export type RevealPureQueueInput = Omit<RevealQueueInput, "harness">;

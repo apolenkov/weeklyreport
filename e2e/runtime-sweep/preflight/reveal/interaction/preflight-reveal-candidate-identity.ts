@@ -11,7 +11,7 @@ type CandidateIdentity = Pick<
   "action" | "representativeInput"
 >;
 
-const branchIdentityFor = (branch: BranchIdentity): string =>
+const revealBranchIdentityFor = (branch: BranchIdentity): string =>
   sha256Hex({
     path: branch.path.digest,
     surface: branch.surface.digest,
@@ -23,7 +23,7 @@ export const revealCandidateIdentityFor = (input: {
   readonly candidate: CandidateIdentity;
 }): string =>
   sha256Hex({
-    branch: branchIdentityFor(input.branch),
+    branch: revealBranchIdentityFor(input.branch),
     action: input.candidate.action,
     representativeInput: input.candidate.representativeInput ?? null,
   });

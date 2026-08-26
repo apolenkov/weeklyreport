@@ -29,6 +29,17 @@ const zeroProgress = {
   receiptCount: 0,
   chunkHead: null,
   chunkCount: 0,
+  operationHead: null,
+  operationChunkCount: 0,
+  operationTotals: {
+    fullReplayActions: 0,
+    candidateActions: 0,
+    inverseActions: 0,
+    successfulRestorations: 0,
+    consumedLeases: 0,
+    physicalActions: 0,
+    chargedActions: 0,
+  },
 } as const;
 
 const decisionInventoryFor = (stableIds: readonly [string, string]) => ({

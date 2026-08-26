@@ -1,3 +1,4 @@
+import type { VerifiedBranchRestorationLease } from "../evidence/preflight-reveal-operation-recorder.ts";
 import {
   type RevealBranch,
   type RevealCandidate,
@@ -10,6 +11,7 @@ import {
 export type CandidateLoopCursor = Readonly<{
   readonly state: RevealDiscoveryState;
   readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: VerifiedBranchRestorationLease;
   readonly restorationScope?: "generic" | "branch-local";
 }>;
 
@@ -26,7 +28,7 @@ export type RevealBranchReusePolicy = Readonly<{
   readonly restoreAfter: (input: {
     readonly branch: RevealBranch;
     readonly terminal: RevealCandidateTerminalResult;
-  }) => Promise<RevealBranch | undefined>;
+  }) => Promise<VerifiedBranchRestorationLease | undefined>;
 }>;
 
 const nextPendingCandidateFor = (input: {
@@ -42,14 +44,14 @@ const nextPendingCandidateFor = (input: {
         !revealCandidateAlreadyProcessed(input.state, input.current, candidate),
     );
 
-export const restoredBranchForCandidate = (input: {
+export const restorationLeaseForCandidate = (input: {
   readonly policy?: RevealBranchReusePolicy;
   readonly current: RevealBranch;
   readonly candidate: RevealCandidate;
-  readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: VerifiedBranchRestorationLease;
   readonly restorationScope?: CandidateLoopCursor["restorationScope"];
-}): RevealBranch | undefined =>
-  input.restoredBranch === undefined ||
+}): VerifiedBranchRestorationLease | undefined =>
+  input.restorationLease === undefined ||
   (input.restorationScope === "branch-local" &&
     input.policy !== undefined &&
     !input.policy.canReuseFor({
@@ -57,16 +59,16 @@ export const restoredBranchForCandidate = (input: {
       candidate: input.candidate,
     }))
     ? undefined
-    : input.restoredBranch;
+    : input.restorationLease;
 
-export const restoredBranchAfterTerminal = async (input: {
+export const restorationLeaseAfterTerminal = async (input: {
   readonly policy?: RevealBranchReusePolicy;
   readonly state: RevealDiscoveryState;
   readonly current: RevealBranch;
   readonly candidates: readonly RevealCandidate[];
   readonly nextCandidateIndex: number;
   readonly terminal: RevealCandidateTerminalResult;
-}): Promise<RevealBranch | undefined> => {
+}): Promise<VerifiedBranchRestorationLease | undefined> => {
   if (input.policy === undefined) return undefined;
   const nextCandidate = nextPendingCandidateFor(input);
   if (

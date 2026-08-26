@@ -162,6 +162,7 @@ export const createRevealReceiptChunk = (input: {
   readonly predecessorChunkHead: string | null;
   readonly predecessorChunkCount: number;
   readonly chunkSequence: number;
+  readonly operationEvidence: RevealReceiptChunk["operationEvidence"];
   readonly receipts: readonly RevealContinuationReceipt[];
 }): RevealReceiptChunk => {
   const body = {
@@ -177,6 +178,7 @@ export const createRevealReceiptChunk = (input: {
     predecessorChunkHead: input.predecessorChunkHead,
     predecessorChunkCount: input.predecessorChunkCount,
     chunkSequence: input.chunkSequence,
+    operationEvidence: input.operationEvidence,
     receipts: input.receipts,
     authorityTag: null,
   } satisfies Parameters<typeof receiptChunkBodySchema.parse>[0];

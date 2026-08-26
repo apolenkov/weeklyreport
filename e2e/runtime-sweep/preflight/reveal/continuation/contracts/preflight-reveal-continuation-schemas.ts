@@ -34,12 +34,27 @@ import {
 export * from "./preflight-reveal-continuation-asset-schemas.ts";
 export * from "./preflight-reveal-continuation-schema-primitives.ts";
 
+const operationTotalsSchema = z
+  .object({
+    fullReplayActions: nonNegativeIntegerSchema,
+    candidateActions: nonNegativeIntegerSchema,
+    inverseActions: nonNegativeIntegerSchema,
+    successfulRestorations: nonNegativeIntegerSchema,
+    consumedLeases: nonNegativeIntegerSchema,
+    physicalActions: nonNegativeIntegerSchema,
+    chargedActions: nonNegativeIntegerSchema,
+  })
+  .strict();
+
 const chainHeadsSchema = z
   .object({
     receiptHead: assetRefSchema.nullable(),
     receiptCount: nonNegativeIntegerSchema,
     chunkHead: assetRefSchema.nullable(),
     chunkCount: nonNegativeIntegerSchema,
+    operationHead: assetRefSchema.nullable(),
+    operationChunkCount: nonNegativeIntegerSchema,
+    operationTotals: operationTotalsSchema,
   })
   .strict();
 const continuationBoundsSchema = z
@@ -91,6 +106,66 @@ const reducerStateSnapshotSchema = z
   .object({
     checkpointRef: assetRefSchema,
   })
+  .strict();
+
+const operationBranchProofSchema = z
+  .object({
+    pathDigest: assetRefSchema,
+    surfaceDigest: assetRefSchema,
+    inventoryDigest: assetRefSchema,
+    url: canonicalRelativeUrlSchema,
+  })
+  .strict();
+const inverseRestorationSchema = z
+  .object({
+    leaseId: assetRefSchema,
+    afterReceiptDigest: assetRefSchema,
+    inverseAction: actionSchema,
+    ariaControlsTarget: z.string().min(1),
+    source: operationBranchProofSchema,
+    terminal: operationBranchProofSchema,
+    restored: operationBranchProofSchema,
+    nonMutation: revealNonMutationProofSchema,
+    consumedByReceiptDigest: assetRefSchema,
+  })
+  .strict()
+  .superRefine((proof, context) => {
+    if (JSON.stringify(proof.source) !== JSON.stringify(proof.restored))
+      context.addIssue({
+        code: "custom",
+        message: "Inverse restoration must restore the exact source branch",
+      });
+  });
+const operationEvidenceSchema = z
+  .object({
+    runDigest: assetRefSchema,
+    childExecutionId: assetRefSchema,
+    childOrdinal: nonNegativeIntegerSchema,
+    chunkSequence: positiveIntegerSchema,
+    grantDigest: assetRefSchema,
+    predecessorChunkHead: assetRefSchema.nullable(),
+    predecessorOperationDigest: assetRefSchema.nullable(),
+    candidateOperations: z
+      .array(
+        z
+          .object({
+            receiptDigest: assetRefSchema,
+            candidateId: assetRefSchema,
+            source: operationBranchProofSchema,
+            preparation: z.enum(["FULL_REPLAY", "INVERSE_LEASE"]),
+            replayStepDigests: z.array(assetRefSchema).readonly(),
+            candidateActionDigest: assetRefSchema,
+            consumedLeaseId: assetRefSchema.nullable(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .readonly(),
+    inverseRestorations: z.array(inverseRestorationSchema).readonly(),
+    summary: operationTotalsSchema,
+  })
+  .strict()
+  .extend({ operationDigest: assetRefSchema })
   .strict();
 
 const receiptBodySchema = z
@@ -158,6 +233,7 @@ export const receiptChunkBodySchema = z
     predecessorChunkHead: assetRefSchema.nullable(),
     predecessorChunkCount: nonNegativeIntegerSchema,
     chunkSequence: positiveIntegerSchema,
+    operationEvidence: operationEvidenceSchema,
     receipts: z.array(receiptSchema).min(1).readonly(),
     authorityTag: z.null(),
   })
