@@ -8,6 +8,7 @@ import {
   failureFrontierReplayPlaywrightArgs,
   runPreflightFailureFrontierReplayChild,
 } from "./preflight-failure-frontier-replay-child.ts";
+import { createNestedProcessOwnershipFixture } from "./preflight-nested-process-ownership.test-support.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -77,11 +78,14 @@ describe("failure-frontier replay browser child", () => {
       ].join("\n"),
       "utf8",
     );
+    const ownership = await createNestedProcessOwnershipFixture(
+      path.dirname(leader),
+    );
 
     await expect(
       runPreflightFailureFrontierReplayChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: leader },
+        environment: { npm_execpath: leader, ...ownership },
         maxDurationMs: 250,
         terminationGraceMs: 50,
       }),

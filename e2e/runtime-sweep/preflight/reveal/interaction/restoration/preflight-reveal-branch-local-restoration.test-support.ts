@@ -10,6 +10,7 @@ import {
   revealStepFor,
   revealSurfaceFor,
 } from "../../../reveal-path.ts";
+import { createRevealOperationRecorder } from "../evidence/preflight-reveal-operation-recorder.ts";
 import type {
   RevealBranch,
   RevealCandidate,
@@ -168,17 +169,27 @@ export const restoreBranchLocallyForFailure = (
   harness: RevealExecutionHarness,
   input: ReturnType<typeof branchLocalFailureFixture>,
   terminal = input.terminal,
-) =>
-  restoreRevealBranchLocally({
+) => {
+  const operationRecorder = createRevealOperationRecorder({
+    childExecutionId: "e".repeat(DIGEST_LENGTH),
+    childOrdinal: 0,
+  });
+  operationRecorder.recordCandidate({
+    source: input.source,
+    candidate: terminal.candidate,
+  });
+  return restoreRevealBranchLocally({
     context: {
       harness,
       state,
       route: { resolvedRoute: "/admin" },
       initialSurface: input.rootSurface,
+      operationRecorder,
     },
     source: input.source,
     terminal,
   });
+};
 
 export const boundaryHarnessFor = (
   inventory: DomInventory,

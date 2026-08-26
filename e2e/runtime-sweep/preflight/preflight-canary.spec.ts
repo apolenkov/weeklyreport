@@ -41,6 +41,10 @@ const continuationOutputPath =
   process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_OUTPUT?.trim();
 const continuationAttemptId =
   process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ID?.trim();
+const continuationChildExecutionId =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHILD_EXECUTION_ID?.trim();
+const continuationChildOrdinal =
+  process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHILD_ORDINAL?.trim();
 const continuationExpectedGrantDigest =
   process.env.RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_EXPECTED_GRANT_DIGEST?.trim();
 const continuationDeadlineAt =
@@ -95,6 +99,15 @@ test("exact-state preflight canary reuses the full segment runner", async ({
   if (continuationAttemptId === undefined)
     throw new Error("Reveal continuation child requires a parent attempt id");
   if (
+    continuationChildExecutionId === undefined ||
+    continuationChildOrdinal === undefined ||
+    !Number.isSafeInteger(Number(continuationChildOrdinal)) ||
+    Number(continuationChildOrdinal) < 0
+  )
+    throw new Error(
+      "Reveal continuation child requires a parent execution identity and ordinal",
+    );
+  if (
     (continuationInputPath === undefined) !==
     (continuationExpectedGrantDigest === undefined)
   )
@@ -132,6 +145,8 @@ test("exact-state preflight canary reuses the full segment runner", async ({
     prepare,
     ...(grant === undefined ? {} : { grant }),
     attemptId: continuationAttemptId,
+    childExecutionId: continuationChildExecutionId,
+    childOrdinal: Number(continuationChildOrdinal),
     ...(continuationExpectedGrantDigest === undefined
       ? {}
       : {

@@ -1,6 +1,11 @@
 import * as path from "node:path";
 
+import { sha256Hex } from "../../../support/ids.ts";
 import type { RevealReceiptChunk } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  addRevealOperationTotals,
+  reduceRevealOperationEvidence,
+} from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
 import { createParentPass } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
 import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import {
@@ -109,11 +114,59 @@ const assertChunkBinding = (input: {
     );
 };
 
+const reduceAcceptedChunk = (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+  readonly chunk: RevealReceiptChunk;
+  readonly ordinal: number;
+  readonly expectedChildExecutionId: string;
+}) => {
+  const replay = contextForChunk(input);
+  const reduced = reduceRevealReceiptSuffix({
+    queueInput: replay.queueInput,
+    state: replay.initialState,
+    receipts: input.chunk.receipts,
+    predecessorCompletedCandidateCount:
+      input.progress.previousCompletedCandidateCount,
+    predecessorDigest: input.progress.receiptHead,
+  });
+  const operation = reduceRevealOperationEvidence({
+    queueInput: replay.queueInput,
+    chunk: input.chunk,
+    expectedChildExecutionId: input.expectedChildExecutionId,
+    expectedChildOrdinal: input.ordinal,
+    expectedRunDigest: sha256Hex(input.chunk.run),
+    expectedGrantDigest: input.progress.grant?.grantDigest ?? zeroDigest,
+    predecessorOperationDigest: input.progress.operationHead,
+    predecessorActionCount: replay.initialState.actionCount,
+  });
+  const progress: ParentProgress = {
+    previousCompletedCandidateCount: reduced.completedCandidateCount,
+    previousGrantDigest: input.progress.previousGrantDigest,
+    receiptHead: reduced.receiptHead,
+    receiptCount: input.chunk.receiptCount,
+    chunkHead: input.chunk.chunkDigest,
+    chunkCount: input.chunk.predecessorChunkCount + 1,
+    operationHead: operation.operationDigest,
+    operationChunkCount: input.progress.operationChunkCount + 1,
+    operationTotals: addRevealOperationTotals(
+      input.progress.operationTotals,
+      operation.totals,
+    ),
+    previousCheckpointDigest: input.progress.previousCheckpointDigest ?? null,
+    previousSampleSequence: input.progress.previousSampleSequence ?? null,
+    reducerInput: replay.queueInput,
+    reducerState: reduced.state,
+  };
+  return { replay, reduced, progress };
+};
+
 export const continueChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly chunk: RevealReceiptChunk;
   readonly ordinal: number;
+  readonly expectedChildExecutionId: string;
 }): Promise<
   Readonly<{
     readonly done: boolean;
@@ -123,46 +176,33 @@ export const continueChild = async (input: {
 > => {
   const { context, progress, chunk } = input;
   assertChunkRun({ context, chunk });
+  if (
+    chunk.operationEvidence.childExecutionId !==
+      input.expectedChildExecutionId ||
+    chunk.operationEvidence.childOrdinal !== input.ordinal
+  )
+    throw new Error("R188 child operation evidence execution identity drifted");
   assertReceiptChunkContract(chunk);
   await hydrateRevealContinuationAssets({
     archiveRoot: context.archiveRoot,
     chunk,
   });
   assertChunkBinding({ progress, chunk });
-  const replayContext = contextForChunk({ context, progress, chunk });
-  const reduced = reduceRevealReceiptSuffix({
-    queueInput: replayContext.queueInput,
-    state: replayContext.initialState,
-    receipts: chunk.receipts,
-    predecessorCompletedCandidateCount:
-      progress.previousCompletedCandidateCount,
-    predecessorDigest: progress.receiptHead,
-  });
-  const nextProgress: ParentProgress = {
-    previousCompletedCandidateCount: reduced.completedCandidateCount,
-    previousGrantDigest: progress.previousGrantDigest,
-    receiptHead: reduced.receiptHead,
-    receiptCount: chunk.receiptCount,
-    chunkHead: chunk.chunkDigest,
-    chunkCount: chunk.predecessorChunkCount + 1,
-    previousCheckpointDigest: progress.previousCheckpointDigest ?? null,
-    previousSampleSequence: progress.previousSampleSequence ?? null,
-    reducerInput: replayContext.queueInput,
-    reducerState: reduced.state,
-  };
+  const accepted = reduceAcceptedChunk(input);
+  const { reduced } = accepted;
   if (reduced.status === "COMPLETE")
     return completeParent({
       context,
       progress,
       chunk,
       reduced,
-      nextProgress,
+      nextProgress: accepted.progress,
       ordinal: input.ordinal,
     });
   const sealed = await sealGrant({
     context,
     progress,
-    replay: replayContext,
+    replay: accepted.replay,
     state: reduced.state,
     chunk,
     ordinal: input.ordinal,
@@ -170,7 +210,7 @@ export const continueChild = async (input: {
   return {
     done: false,
     progress: {
-      ...nextProgress,
+      ...accepted.progress,
       inputPath: sealed.path,
       previousGrantDigest: sealed.grant.grantDigest,
       grant: sealed.grant,

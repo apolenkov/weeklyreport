@@ -25,6 +25,25 @@ import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-r
 
 const AUTHORITY_KEY_HEX_LENGTH = 64;
 const DIGEST_HEX_LENGTH = 64;
+const zeroProgress: ParentProgress = {
+  previousGrantDigest: null,
+  previousCompletedCandidateCount: 0,
+  receiptHead: null,
+  receiptCount: 0,
+  chunkHead: null,
+  chunkCount: 0,
+  operationHead: null,
+  operationChunkCount: 0,
+  operationTotals: {
+    fullReplayActions: 0,
+    candidateActions: 0,
+    inverseActions: 0,
+    successfulRestorations: 0,
+    consumedLeases: 0,
+    physicalActions: 0,
+    chargedActions: 0,
+  },
+};
 
 export const withCleanSource = async <T>(
   callback: (input: {
@@ -180,14 +199,7 @@ const sealedFixtureForSource = async <T>(
     });
     const sealed = await sealGrant({
       context: contextFixture.context,
-      progress: {
-        previousGrantDigest: null,
-        previousCompletedCandidateCount: 0,
-        receiptHead: null,
-        receiptCount: 0,
-        chunkHead: null,
-        chunkCount: 0,
-      },
+      progress: zeroProgress,
       replay: open.replay,
       state: open.reduced.state,
       chunk: open.chunk,
@@ -201,6 +213,9 @@ const sealedFixtureForSource = async <T>(
       receiptCount: sealed.grant.chain.receiptCount,
       chunkHead: sealed.grant.chain.chunkHead,
       chunkCount: sealed.grant.chain.chunkCount,
+      operationHead: sealed.grant.chain.operationHead,
+      operationChunkCount: sealed.grant.chain.operationChunkCount,
+      operationTotals: sealed.grant.chain.operationTotals,
       grant: sealed.grant,
       genesis: sealed.grant.genesis,
       reducerState: open.reduced.state,

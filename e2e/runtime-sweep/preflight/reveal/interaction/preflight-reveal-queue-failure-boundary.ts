@@ -1,3 +1,4 @@
+import type { VerifiedBranchRestorationLease } from "./evidence/preflight-reveal-operation-recorder.ts";
 import {
   type RevealBranch,
   type RevealCandidate,
@@ -14,6 +15,7 @@ export type CandidateProcessor = (input: {
   readonly state: RevealDiscoveryState;
   readonly candidate: RevealCandidate;
   readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: VerifiedBranchRestorationLease;
 }) => Promise<{
   readonly state: RevealDiscoveryState;
   readonly executed: boolean;
@@ -28,6 +30,7 @@ export const processCandidateAtFailureBoundary = async (input: {
   readonly candidateIndex: number;
   readonly candidate: RevealCandidate;
   readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: VerifiedBranchRestorationLease;
   readonly processCandidate: CandidateProcessor;
 }): ReturnType<CandidateProcessor> => {
   const state = { ...input.state, currentCandidateIndex: input.candidateIndex };
@@ -40,6 +43,9 @@ export const processCandidateAtFailureBoundary = async (input: {
       ...(input.restoredBranch === undefined
         ? {}
         : { restoredBranch: input.restoredBranch }),
+      ...(input.restorationLease === undefined
+        ? {}
+        : { restorationLease: input.restorationLease }),
     });
   } catch (originalError: unknown) {
     const handler = input.queueInput.onCandidateFailure;

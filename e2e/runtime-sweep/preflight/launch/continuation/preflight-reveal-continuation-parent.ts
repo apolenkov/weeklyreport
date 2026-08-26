@@ -12,6 +12,10 @@ import {
   revealContinuationLimitsFromEnvironment,
 } from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
 import type { RevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import {
+  type RevealOperationTotals,
+  zeroRevealOperationTotals,
+} from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
 import type { RevealReducerInput } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-reveal-branches.ts";
 import type { RequestHostCheckpoint } from "../checkpoint/preflight-reveal-host-checkpoint-client.ts";
@@ -44,6 +48,9 @@ export type ParentProgress = Readonly<{
   readonly receiptCount: number;
   readonly chunkHead: string | null;
   readonly chunkCount: number;
+  readonly operationHead: string | null;
+  readonly operationChunkCount: number;
+  readonly operationTotals: RevealOperationTotals;
   readonly previousCheckpointDigest?: string | null;
   readonly previousSampleSequence?: number | null;
   readonly grant?: RevealExecutionGrant;
@@ -116,6 +123,9 @@ export const runPreflightRevealContinuation = async (input: {
     receiptCount: 0,
     chunkHead: null,
     chunkCount: 0,
+    operationHead: null,
+    operationChunkCount: 0,
+    operationTotals: zeroRevealOperationTotals(),
     previousCheckpointDigest: null,
     previousSampleSequence: null,
   };

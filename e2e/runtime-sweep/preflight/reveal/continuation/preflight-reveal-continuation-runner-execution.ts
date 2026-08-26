@@ -1,5 +1,7 @@
-import type { MatrixPreflightControl } from "../../../matrix/finalization/matrix-finalizer-contract.ts";
-import { compareRevealControlIdentity } from "../../reveal-path.ts";
+import {
+  createRevealOperationRecorder,
+  type RevealOperationRecorder,
+} from "../interaction/evidence/preflight-reveal-operation-recorder.ts";
 import { restoreRevealBranch } from "../interaction/preflight-reveal-branch-execution.ts";
 import type {
   RevealDiscoveryState,
@@ -18,13 +20,18 @@ import {
 } from "./contracts/preflight-reveal-continuation-contract-factories.ts";
 import { REVEAL_CONTINUATION_LIMITS } from "./contracts/preflight-reveal-continuation-limits.ts";
 import type {
-  RevealContinuationReceipt,
   RevealExecutionGrant,
   RevealReceiptChunk,
 } from "./contracts/preflight-reveal-continuation-schemas.ts";
+import { createRevealOperationEvidence } from "./operation/preflight-reveal-operation-evidence.ts";
 import { createRevealBootstrap } from "./preflight-reveal-continuation-artifacts.ts";
+import { sortedRevealControls } from "./preflight-reveal-continuation-controls.ts";
 import { R188_ZERO_DIGEST } from "./preflight-reveal-continuation-digests.ts";
 import { genesisForState } from "./preflight-reveal-continuation-genesis.ts";
+import {
+  type RevealContinuationProgress,
+  revealContinuationProgressFor,
+} from "./preflight-reveal-continuation-progress.ts";
 import {
   controlsDigestFor,
   emptyInitialFrontierStateFor,
@@ -41,29 +48,6 @@ import {
   writeReceiptAssets,
 } from "./preflight-reveal-continuation-runner-output.ts";
 import { receiptForTerminal } from "./receipts/preflight-reveal-continuation-receipts.ts";
-
-const controlsSorted = (
-  controls: readonly MatrixPreflightControl[],
-): readonly MatrixPreflightControl[] =>
-  controls.toSorted((left, right) =>
-    compareRevealControlIdentity(
-      {
-        controlKey: left.controlKey,
-        revealPathDigest: left.revealPath.digest,
-        expectedSurfaceDigest: left.expectedSurface.digest,
-      },
-      {
-        controlKey: right.controlKey,
-        revealPathDigest: right.revealPath.digest,
-        expectedSurfaceDigest: right.expectedSurface.digest,
-      },
-    ),
-  );
-
-interface Progress {
-  readonly receipts: RevealContinuationReceipt[];
-  completedCandidateCount: number;
-}
 
 const frozenNextFrontierFor = async (input: {
   readonly queueInput: RevealQueueInput;
@@ -95,10 +79,11 @@ const frozenNextFrontierFor = async (input: {
 
 const chunkFor = (input: {
   readonly input: RevealContinuationInput;
-  readonly initial: RevealContinuationInitialState;
   readonly grant: RevealExecutionGrant | undefined;
   readonly result: RevealQueueChunkResult;
-  readonly progress: Progress;
+  readonly progress: RevealContinuationProgress;
+  readonly operationRecorder: RevealOperationRecorder;
+  readonly startingActionCount: number;
 }): RevealReceiptChunk => {
   const receipts = input.progress.receipts;
   const last = receipts.at(-1);
@@ -115,9 +100,21 @@ const chunkFor = (input: {
   const previousReceiptCount = input.grant?.chain.receiptCount ?? 0;
   const previousChunkHead = input.grant?.chain.chunkHead ?? null;
   const previousChunkCount = input.grant?.chain.chunkCount ?? 0;
+  const chunkSequence = previousChunkCount + 1;
+  const grantDigest = input.grant?.grantDigest ?? R188_ZERO_DIGEST;
+  const operationEvidence = createRevealOperationEvidence({
+    run,
+    snapshot: input.operationRecorder.snapshot(),
+    chunkSequence,
+    grantDigest,
+    predecessorChunkHead: previousChunkHead,
+    predecessorOperationDigest: input.grant?.chain.operationHead ?? null,
+    predecessorActionCount: input.startingActionCount,
+    receipts,
+  });
   return createRevealReceiptChunk({
     run,
-    grantDigest: input.grant?.grantDigest ?? R188_ZERO_DIGEST,
+    grantDigest,
     status: input.result.completed ? "BRANCH_EXHAUSTED" : "YIELD",
     predecessorReceiptHead: previousReceiptHead,
     predecessorReceiptCount: previousReceiptCount,
@@ -125,7 +122,8 @@ const chunkFor = (input: {
     receiptCount: previousReceiptCount + receipts.length,
     predecessorChunkHead: previousChunkHead,
     predecessorChunkCount: previousChunkCount,
-    chunkSequence: previousChunkCount + 1,
+    chunkSequence,
+    operationEvidence,
     receipts,
   });
 };
@@ -136,7 +134,7 @@ const bootstrapFor = (input: {
   readonly queueInput: RevealQueueInput;
   readonly state: RevealDiscoveryState;
 }): RevealContinuationBootstrapResult => {
-  const controls = controlsSorted(input.state.controls);
+  const controls = sortedRevealControls(input.state.controls);
   const bootstrap = createRevealBootstrap({
     run: runIdentityFor({
       source: input.input.source,
@@ -174,7 +172,7 @@ const terminalHandlerFor =
     readonly queueInput: RevealQueueInput;
     readonly grant: RevealExecutionGrant | undefined;
     readonly initial: RevealContinuationInitialState;
-    readonly progress: Progress;
+    readonly progress: RevealContinuationProgress;
     readonly deadlineAt: number;
     readonly now: () => number;
     readonly startingActionCount: number;
@@ -218,10 +216,31 @@ const terminalHandlerFor =
     return shouldYield;
   };
 
-const progressFor = (grant: RevealExecutionGrant | undefined): Progress => ({
-  completedCandidateCount: grant?.frontier.completedCandidateCount ?? 0,
-  receipts: [],
-});
+const bootstrapWhenEmpty = async (input: {
+  readonly input: RevealContinuationInput;
+  readonly initial: RevealContinuationInitialState;
+  readonly queueInput: RevealQueueInput;
+  readonly state: RevealDiscoveryState;
+  readonly grant?: RevealExecutionGrant;
+}): Promise<RevealContinuationBootstrapResult | undefined> => {
+  if (input.grant !== undefined) return undefined;
+  const emptyState = emptyInitialFrontierStateFor({
+    queueInput: input.queueInput,
+    state: input.state,
+  });
+  if (emptyState === undefined) return undefined;
+  const bootstrap = bootstrapFor({
+    input: input.input,
+    initial: input.initial,
+    queueInput: input.queueInput,
+    state: emptyState,
+  });
+  await writeBootstrapAssets({
+    archiveRoot: input.input.archiveRoot,
+    result: bootstrap,
+  });
+  return bootstrap;
+};
 
 export const executeRevealContinuationChunk = async (input: {
   readonly input: RevealContinuationInput;
@@ -232,33 +251,21 @@ export const executeRevealContinuationChunk = async (input: {
   readonly deadlineAt: number;
   readonly now: () => number;
 }): Promise<RevealContinuationChunkResult> => {
-  if (input.grant === undefined) {
-    const emptyState = emptyInitialFrontierStateFor({
-      queueInput: input.queueInput,
-      state: input.state,
-    });
-    if (emptyState !== undefined) {
-      const bootstrap = bootstrapFor({
-        input: input.input,
-        initial: input.initial,
-        queueInput: input.queueInput,
-        state: emptyState,
-      });
-      await writeBootstrapAssets({
-        archiveRoot: input.input.archiveRoot,
-        result: bootstrap,
-      });
-      return bootstrap;
-    }
-  }
-  const progress = progressFor(input.grant);
+  const bootstrap = await bootstrapWhenEmpty(input);
+  if (bootstrap !== undefined) return bootstrap;
+  const progress = revealContinuationProgressFor(input.grant);
   const startingActionCount = input.state.actionCount;
+  const operationRecorder = createRevealOperationRecorder({
+    childExecutionId: input.input.childExecutionId,
+    childOrdinal: input.input.childOrdinal,
+  });
+  const queueInput = { ...input.queueInput, operationRecorder };
   const result = await processRevealQueueChunk(
-    input.queueInput,
+    queueInput,
     input.state,
     terminalHandlerFor({
       continuation: input.input,
-      queueInput: input.queueInput,
+      queueInput,
       grant: input.grant,
       initial: input.initial,
       progress,
@@ -273,10 +280,11 @@ export const executeRevealContinuationChunk = async (input: {
     );
   const chunk = chunkFor({
     input: input.input,
-    initial: input.initial,
     grant: input.grant,
     result,
     progress,
+    operationRecorder,
+    startingActionCount,
   });
   await writeReceiptAssets({
     archiveRoot: input.input.archiveRoot,
@@ -287,7 +295,7 @@ export const executeRevealContinuationChunk = async (input: {
     chunk,
     completed: result.completed,
     ...(result.completed
-      ? { controls: controlsSorted(result.state.controls) }
+      ? { controls: sortedRevealControls(result.state.controls) }
       : {}),
     completedCandidateCount: progress.completedCandidateCount,
   };

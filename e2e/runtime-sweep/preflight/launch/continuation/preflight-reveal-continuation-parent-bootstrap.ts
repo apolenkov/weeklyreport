@@ -6,6 +6,7 @@ import {
   strictRouteFor,
 } from "../../reveal/continuation/contracts/preflight-reveal-continuation-contract-factories.ts";
 import type { RevealBootstrap } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { zeroRevealOperationTotals } from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
 import { createParentPass } from "../../reveal/continuation/preflight-reveal-continuation-artifacts.ts";
 import { writeRevealContinuationAsset } from "../../reveal/continuation/preflight-reveal-continuation-assets.ts";
 import { genesisForState } from "../../reveal/continuation/preflight-reveal-continuation-genesis.ts";
@@ -62,7 +63,11 @@ const assertInitialProgress = (input: {
     input.progress.receiptHead !== null ||
     input.progress.receiptCount !== 0 ||
     input.progress.chunkHead !== null ||
-    input.progress.chunkCount !== 0
+    input.progress.chunkCount !== 0 ||
+    input.progress.operationHead !== null ||
+    input.progress.operationChunkCount !== 0 ||
+    stableSerialize(input.progress.operationTotals) !==
+      stableSerialize(zeroRevealOperationTotals())
   )
     throw new Error(
       "R188 empty bootstrap is valid only at the initial zero-chain boundary",
@@ -183,6 +188,9 @@ export const completeEmptyBootstrap = async (input: {
       receiptCount: 0,
       chunkHead: null,
       chunkCount: 0,
+      operationHead: null,
+      operationChunkCount: 0,
+      operationTotals: zeroRevealOperationTotals(),
     },
     reducerStateDigest: reducerStateDigestFor(replay.state),
     controlsDigest: controlsDigestFor(controlsSorted(replay.state)),

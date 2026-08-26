@@ -9,7 +9,6 @@ import type {
   DomControlObservation,
   DomInventory,
 } from "../../../replay/dom/dom-inventory.ts";
-import { resolvePreflightCanarySelection } from "../../canary/preflight-canary.ts";
 import {
   preflightControlForPlan,
   revealRouteFor,
@@ -29,9 +28,10 @@ import {
 } from "./preflight-reveal-continuation-runner.ts";
 
 const ORIGIN = "http://127.0.0.1:3205";
-const DATABASE_DIGEST_LENGTH = 64;
-const DATABASE_DIGEST = "d".repeat(DATABASE_DIGEST_LENGTH);
-const DOM_ORDER_WIDTH = 4;
+const DIGEST_LENGTH = 64;
+const DATABASE_DIGEST = "d".repeat(DIGEST_LENGTH),
+  DOM_ORDER_WIDTH = 4;
+const FIXTURE_CHILD_EXECUTION_ID = "e".repeat(DIGEST_LENGTH);
 
 export const controlFor = (
   controlKey: string,
@@ -265,6 +265,8 @@ const discoverInputFor = (
     : { expectedGrantDigest: input.expectedGrantDigest }),
   executionScope: "canary" as const,
   attemptId: "attempt-fixture",
+  childExecutionId: FIXTURE_CHILD_EXECUTION_ID,
+  childOrdinal: input.grant ? 1 : 0,
   ...(input.deadlineAt === undefined ? {} : { deadlineAt: input.deadlineAt }),
   ...(input.cooperativeLimits === undefined
     ? {}
@@ -303,13 +305,4 @@ export const runBootstrap = async (
   return { result, events: harness.events };
 };
 
-export const selectionFor = (
-  source: Awaited<ReturnType<typeof buildCampaignSource>>,
-  stateId: string,
-) => {
-  const selection = resolvePreflightCanarySelection({
-    source,
-    selector: { stateId },
-  });
-  return { selection, route: revealRouteFor(selection.route) };
-};
+export { selectionFor } from "./preflight-reveal-continuation-fixture-selection.ts";

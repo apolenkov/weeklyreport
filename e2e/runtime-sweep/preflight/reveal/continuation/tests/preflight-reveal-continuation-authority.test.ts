@@ -45,6 +45,7 @@ describe("R188 parent chain authority boundary", () => {
           },
           chunk,
           ordinal: 1,
+          expectedChildExecutionId: "e".repeat(64),
         }),
       ).rejects.toThrow(/grant binding/u);
       await expect(
@@ -56,6 +57,7 @@ describe("R188 parent chain authority boundary", () => {
           },
           chunk,
           ordinal: 1,
+          expectedChildExecutionId: "e".repeat(64),
         }),
       ).rejects.toThrow(/predecessor chain/u);
       await expect(
@@ -67,6 +69,7 @@ describe("R188 parent chain authority boundary", () => {
           },
           chunk,
           ordinal: 1,
+          expectedChildExecutionId: "e".repeat(64),
         }),
       ).rejects.toThrow(/predecessor chain/u);
 
@@ -75,6 +78,7 @@ describe("R188 parent chain authority boundary", () => {
         progress: fixture.validProgress,
         chunk,
         ordinal: 1,
+        expectedChildExecutionId: "e".repeat(64),
       });
       expect(accepted.done).toBe(false);
       expect(accepted.progress.genesis).toEqual(fixture.validProgress.genesis);
@@ -87,8 +91,11 @@ describe("R188 parent chain authority boundary", () => {
           progress: accepted.progress,
           chunk,
           ordinal: 2,
+          expectedChildExecutionId: "e".repeat(64),
         }),
-      ).rejects.toThrow(/grant binding|predecessor chain/u);
+      ).rejects.toThrow(
+        /grant binding|predecessor chain|operation evidence execution identity/u,
+      );
     });
   });
 });

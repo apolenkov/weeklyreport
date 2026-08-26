@@ -15,6 +15,7 @@ import type {
   RevealExecutionGrant,
   RevealReceiptChunk,
 } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
+import { addRevealOperationTotals } from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
 import { R188_ZERO_DIGEST } from "../../reveal/continuation/preflight-reveal-continuation-digests.ts";
 import { reducerStateDigestFor } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import {
@@ -41,6 +42,12 @@ export const chainFor = (input: {
   receiptCount: input.chunk.receiptCount,
   chunkHead: input.chunk.chunkDigest,
   chunkCount: input.chunk.predecessorChunkCount + 1,
+  operationHead: input.chunk.operationEvidence.operationDigest,
+  operationChunkCount: input.progress.operationChunkCount + 1,
+  operationTotals: addRevealOperationTotals(
+    input.progress.operationTotals,
+    input.chunk.operationEvidence.summary,
+  ),
 });
 
 export const assertChunkRun = (input: {

@@ -5,6 +5,7 @@ import {
   type RevealContinuation,
   type RevealQueueYieldHandler,
 } from "./candidates/preflight-reveal-queue-contracts.ts";
+import type { VerifiedBranchRestorationLease } from "./evidence/preflight-reveal-operation-recorder.ts";
 import {
   type RevealBranch,
   type RevealCandidate,
@@ -75,16 +76,22 @@ export const nextContinuationFor = (
 interface MutableCandidateCursor {
   state: RevealDiscoveryState;
   restoredBranch: RevealBranch | undefined;
+  restorationLease: VerifiedBranchRestorationLease | undefined;
   restorationScope: CandidateLoopCursor["restorationScope"];
 }
 
 const initialCandidateCursorFor = (input: {
   readonly state: RevealDiscoveryState;
   readonly restoredBranch?: RevealBranch;
+  readonly restorationLease?: VerifiedBranchRestorationLease;
 }): MutableCandidateCursor => ({
   state: input.state,
   restoredBranch: input.restoredBranch,
-  restorationScope: input.restoredBranch === undefined ? undefined : "generic",
+  restorationLease: input.restorationLease,
+  restorationScope:
+    input.restoredBranch === undefined && input.restorationLease === undefined
+      ? undefined
+      : "generic",
 });
 
 const immutableCandidateCursorFor = (
@@ -94,6 +101,9 @@ const immutableCandidateCursorFor = (
   ...(cursor.restoredBranch === undefined
     ? {}
     : { restoredBranch: cursor.restoredBranch }),
+  ...(cursor.restorationLease === undefined
+    ? {}
+    : { restorationLease: cursor.restorationLease }),
   ...(cursor.restorationScope === undefined
     ? {}
     : { restorationScope: cursor.restorationScope }),
@@ -117,6 +127,7 @@ export const processCandidates = async (
     readonly candidates: readonly RevealCandidate[];
     readonly index: number;
     readonly restoredBranch?: RevealBranch;
+    readonly restorationLease?: VerifiedBranchRestorationLease;
     readonly branchReuse?: RevealBranchReusePolicy;
     readonly shouldYieldAfterCandidate?: RevealQueueYieldHandler;
   },
@@ -128,12 +139,14 @@ export const processCandidates = async (
     candidates,
     index,
     restoredBranch,
+    restorationLease,
     branchReuse,
     shouldYieldAfterCandidate,
   } = input;
   const cursor = initialCandidateCursorFor({
     state: input.state,
     ...(restoredBranch === undefined ? {} : { restoredBranch }),
+    ...(restorationLease === undefined ? {} : { restorationLease }),
   });
   for (const [offset] of candidates.slice(index).entries()) {
     const candidateIndex = index + offset;
@@ -150,6 +163,7 @@ export const processCandidates = async (
     });
     cursor.state = result.cursor.state;
     cursor.restoredBranch = result.cursor.restoredBranch;
+    cursor.restorationLease = result.cursor.restorationLease;
     cursor.restorationScope = result.cursor.restorationScope;
     if (result.yielded !== undefined)
       return { state: cursor.state, yielded: result.yielded };

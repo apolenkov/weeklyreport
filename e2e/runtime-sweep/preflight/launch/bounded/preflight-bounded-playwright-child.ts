@@ -1,4 +1,9 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess } from "node:child_process";
+
+import {
+  launchNestedOwnedProcess,
+  nestedProcessOwnershipFor,
+} from "./preflight-nested-process-ownership.ts";
 
 type BoundedPlaywrightChildInput = Readonly<{
   operationName: string;
@@ -28,23 +33,6 @@ const launcherFor = (
     : { command: executable, leadingArgs: [] };
 };
 
-const signalProcessGroup = (
-  child: ChildProcess,
-  signal: NodeJS.Signals,
-): void => {
-  if (child.pid === undefined) {
-    child.kill(signal);
-    return;
-  }
-  try {
-    process.kill(-child.pid, signal);
-  } catch (error: unknown) {
-    const code =
-      error instanceof Error && "code" in error ? String(error.code) : "";
-    if (code !== "ESRCH") throw error;
-  }
-};
-
 const assertBoundedPlaywrightDuration = (
   operationName: string,
   name: string,
@@ -72,6 +60,7 @@ export const boundedPlaywrightArgs = (
 
 const waitForBoundedPlaywrightChild = (
   child: ChildProcess,
+  signalOwned: (signal: NodeJS.Signals) => void,
   input: Pick<
     BoundedPlaywrightChildInput,
     | "operationName"
@@ -93,13 +82,13 @@ const waitForBoundedPlaywrightChild = (
     const deadline = setTimeout(() => {
       state.timedOut = true;
       try {
-        signalProcessGroup(child, "SIGINT");
+        signalOwned("SIGINT");
       } catch (error: unknown) {
         state.terminationErrors.push(error);
       }
       state.escalation = setTimeout(() => {
         try {
-          signalProcessGroup(child, "SIGKILL");
+          signalOwned("SIGKILL");
         } catch (error: unknown) {
           state.terminationErrors.push(error);
         }
@@ -139,7 +128,7 @@ const waitForBoundedPlaywrightChild = (
     });
   });
 
-export const runBoundedPlaywrightChild = (
+export const runBoundedPlaywrightChild = async (
   input: BoundedPlaywrightChildInput,
 ): Promise<number> => {
   assertBoundedPlaywrightDuration(
@@ -153,15 +142,35 @@ export const runBoundedPlaywrightChild = (
     input.terminationGraceMs,
   );
   const launcher = launcherFor(input.operationName, input.environment);
-  const child = spawn(
-    launcher.command,
-    [...boundedPlaywrightArgs(launcher.leadingArgs, input.configPath)],
-    {
-      cwd: input.repoRoot,
-      detached: true,
-      env: input.environment,
-      stdio: "inherit",
-    },
+  const command = launcher.command;
+  const args = [
+    ...boundedPlaywrightArgs(launcher.leadingArgs, input.configPath),
+  ];
+  const ownership = nestedProcessOwnershipFor(
+    input.operationName,
+    input.environment,
   );
-  return waitForBoundedPlaywrightChild(child, input);
+  if (ownership === undefined)
+    throw new PreflightBoundedPlaywrightChildError(
+      `${input.operationName} bounded launch requires nested process ownership`,
+    );
+  const owned = await launchNestedOwnedProcess({
+    operationName: input.operationName,
+    ownership,
+    command,
+    args,
+    repoRoot: input.repoRoot,
+    environment: input.environment,
+  });
+  try {
+    const exitCode = await waitForBoundedPlaywrightChild(
+      owned.child,
+      owned.signal,
+      input,
+    );
+    await owned.close();
+    return exitCode;
+  } catch (error: unknown) {
+    return owned.abort(error);
+  }
 };

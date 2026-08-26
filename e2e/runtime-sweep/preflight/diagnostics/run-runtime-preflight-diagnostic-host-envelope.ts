@@ -25,8 +25,10 @@ import {
 export { terminateOwnedChildGroup } from "./preflight-diagnostic-child-termination.ts";
 
 export type ControlledDiagnosticChild = Readonly<{
-  readonly pid: number | undefined;
   readonly completion: Promise<number>;
+  readonly signal: (signal: NodeJS.Signals) => void;
+  readonly close: () => Promise<void>;
+  readonly abort: (primary: unknown) => Promise<never>;
 }>;
 
 type BaselineResult = Readonly<{
@@ -54,8 +56,7 @@ export type ControlledDiagnosticInput = Readonly<{
   readonly spawnChild?: (input: {
     readonly repoRoot: string;
     readonly environment: NodeJS.ProcessEnv;
-    readonly detached: true;
-  }) => ControlledDiagnosticChild;
+  }) => ControlledDiagnosticChild | Promise<ControlledDiagnosticChild>;
   readonly readSnapshot?: typeof readDarwinHostEnvelopeSnapshot;
   readonly wait?: WaitForMilliseconds;
   readonly terminateChildGroup?: (
@@ -100,9 +101,24 @@ const finalStatusFor = (input: {
   return "inconclusive";
 };
 
+const childLifecycleFailureFor = async (
+  child: ControlledDiagnosticChild | undefined,
+  primaryFailure: Error | undefined,
+): Promise<Error | undefined> => {
+  if (child === undefined) return undefined;
+  try {
+    if (primaryFailure === undefined) await child.close();
+    else await child.abort(primaryFailure);
+    return undefined;
+  } catch (error: unknown) {
+    return errorFor(error);
+  }
+};
+
 const finishControlledDiagnostic = async (input: {
   readonly state: ControlledDiagnosticState;
   readonly receipt: DiagnosticHostEnvelopeReceipt;
+  readonly child: ControlledDiagnosticChild | undefined;
 }): Promise<void> => {
   const { state, receipt } = input;
   state.monitorStopped = true;
@@ -113,9 +129,15 @@ const finishControlledDiagnostic = async (input: {
   }
   const childFailure = childFailureFor(state);
   const primaryFailure = primaryFailureFor(state, childFailure);
-  const finalStatus = finalStatusFor({ state, primaryFailure });
+  const lifecycleFailure = await childLifecycleFailureFor(
+    input.child,
+    primaryFailure,
+  );
+  const finalFailure = lifecycleFailure ?? primaryFailure;
+  const finalStatus = finalStatusFor({ state, primaryFailure: finalFailure });
   const reason =
     primaryFailure?.message ??
+    lifecycleFailure?.message ??
     (state.childExitCode === undefined
       ? "diagnostic child did not produce an exit code"
       : `child exit ${state.childExitCode}`);
@@ -124,7 +146,7 @@ const finishControlledDiagnostic = async (input: {
   } catch (error: unknown) {
     state.receiptError = errorFor(error);
   }
-  if (primaryFailure !== undefined) throw primaryFailure;
+  if (finalFailure !== undefined) throw finalFailure;
   if (state.receiptError !== undefined) throw state.receiptError;
 };
 
@@ -133,7 +155,7 @@ const monitorChild = async (input: {
   readonly baseline: BaselineResult;
   readonly receipt: DiagnosticHostEnvelopeReceipt;
   readonly state: ControlledDiagnosticState;
-  readonly requestTermination: (pid: number | undefined) => Promise<void>;
+  readonly requestTermination: () => Promise<void>;
   readonly readSnapshot: typeof readDarwinHostEnvelopeSnapshot;
   readonly wait: WaitForMilliseconds;
 }): Promise<void> => {
@@ -162,7 +184,7 @@ const monitorChild = async (input: {
       input.state.monitorError ??= new Error(
         `Host envelope ${evaluation.status}: ${evaluation.reasons.join(", ")}`,
       );
-      await input.requestTermination(input.child.pid);
+      await input.requestTermination();
       return;
     }
   }
@@ -200,8 +222,8 @@ const requestTerminationFor = (input: {
   input.state.terminationRequested = true;
   input.state.terminationTask = input
     .terminate({
-      pid: input.child.pid,
       completion: input.child.completion,
+      signal: input.child.signal,
     })
     .catch((error: unknown) => {
       input.rememberMonitorError(error);
@@ -218,6 +240,19 @@ const rememberMonitorErrorFor = (
   state.monitorError ??= errorFor(error);
 };
 
+const spawnControlledDiagnosticChild = async (input: {
+  readonly repoRoot: string;
+  readonly environment: NodeJS.ProcessEnv;
+}): Promise<ControlledDiagnosticChild> => {
+  const launched = await spawnPreflightDiagnosticPlaywrightChild(input);
+  return {
+    signal: launched.signal,
+    close: launched.close,
+    abort: launched.abort,
+    completion: launched.completion,
+  };
+};
+
 export const runControlledDiagnostic = async (
   input: ControlledDiagnosticInput,
 ): Promise<number> => {
@@ -231,6 +266,7 @@ export const runControlledDiagnostic = async (
     campaignId: input.campaignId,
   });
   const state = createControlledDiagnosticState();
+  const lifecycle: { child?: ControlledDiagnosticChild } = {};
   const rememberMonitorError = (error: unknown): void =>
     rememberMonitorErrorFor(state, error);
   try {
@@ -239,36 +275,25 @@ export const runControlledDiagnostic = async (
       sampleCount: HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples,
       receipt,
     });
-    const child = input.spawnChild
-      ? input.spawnChild({
-          repoRoot: input.repoRoot,
-          environment: input.environment,
-          detached: true,
-        })
-      : (() => {
-          const launched = spawnPreflightDiagnosticPlaywrightChild({
-            repoRoot: input.repoRoot,
-            environment: input.environment,
-            detached: true,
-          });
-          return {
-            pid: launched.child.pid ?? undefined,
-            completion: launched.completion,
-          };
-        })();
+    const spawnChild = input.spawnChild ?? spawnControlledDiagnosticChild;
+    const runningChild = await spawnChild({
+      repoRoot: input.repoRoot,
+      environment: input.environment,
+    });
+    lifecycle.child = runningChild;
     const readSnapshot = input.readSnapshot ?? readDarwinHostEnvelopeSnapshot;
     const wait = input.wait ?? ((milliseconds: number) => delay(milliseconds));
     const terminate = input.terminateChildGroup ?? terminateOwnedChildGroup;
     const requestTermination = () =>
       requestTerminationFor({
         state,
-        child,
+        child: runningChild,
         terminate,
         rememberMonitorError,
       });
     state.previousCounters = baseline.counters;
     state.monitorTask = monitorChild({
-      child,
+      child: runningChild,
       baseline,
       receipt,
       state,
@@ -279,11 +304,15 @@ export const runControlledDiagnostic = async (
       rememberMonitorError(error);
       return requestTermination();
     });
-    await observeChildCompletion({ child, state });
+    await observeChildCompletion({ child: runningChild, state });
   } catch (error: unknown) {
     rememberMonitorError(error);
   } finally {
-    await finishControlledDiagnostic({ state, receipt });
+    await finishControlledDiagnostic({
+      state,
+      receipt,
+      child: lifecycle.child,
+    });
   }
   return state.monitorError === undefined ? (state.childExitCode ?? 1) : 1;
 };

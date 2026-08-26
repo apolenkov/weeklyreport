@@ -4,6 +4,7 @@ import * as path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createNestedProcessOwnershipFixture } from "./bounded/preflight-nested-process-ownership.test-support.ts";
 import {
   capacitySurveyPlaywrightArgs,
   runPreflightCapacitySurveyChild,
@@ -62,19 +63,25 @@ describe("capacity survey browser child", () => {
 
   it("accepts a zero exit and rejects a nonzero exit", async () => {
     const success = await executableFor("process.exit(0);\n");
+    const successOwnership = await createNestedProcessOwnershipFixture(
+      path.dirname(success),
+    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: success },
+        environment: { npm_execpath: success, ...successOwnership },
         maxDurationMs: 5000,
       }),
     ).resolves.toBeUndefined();
 
     const failure = await executableFor("process.exit(7);\n");
+    const failureOwnership = await createNestedProcessOwnershipFixture(
+      path.dirname(failure),
+    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: failure },
+        environment: { npm_execpath: failure, ...failureOwnership },
         maxDurationMs: 5000,
       }),
     ).rejects.toThrow(/exited code=7/iu);
@@ -84,10 +91,13 @@ describe("capacity survey browser child", () => {
     const stalled = await executableFor(
       "setInterval(() => undefined, 1000);\n",
     );
+    const ownership = await createNestedProcessOwnershipFixture(
+      path.dirname(stalled),
+    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: stalled },
+        environment: { npm_execpath: stalled, ...ownership },
         maxDurationMs: 25,
         terminationGraceMs: 25,
       }),
@@ -111,11 +121,14 @@ describe("capacity survey browser child", () => {
       ].join("\n"),
       "utf8",
     );
+    const ownership = await createNestedProcessOwnershipFixture(
+      path.dirname(leader),
+    );
 
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: leader },
+        environment: { npm_execpath: leader, ...ownership },
         maxDurationMs: 250,
         terminationGraceMs: 50,
       }),

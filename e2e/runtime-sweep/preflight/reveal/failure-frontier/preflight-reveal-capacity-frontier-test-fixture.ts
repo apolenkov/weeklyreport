@@ -48,6 +48,23 @@ import {
 } from "./preflight-reveal-capacity-frontier-test-support.ts";
 
 const AUTHORITY_KEY_LENGTH = 64;
+const zeroChain = {
+  receiptHead: null,
+  receiptCount: 0,
+  chunkHead: null,
+  chunkCount: 0,
+  operationHead: null,
+  operationChunkCount: 0,
+  operationTotals: {
+    fullReplayActions: 0,
+    candidateActions: 0,
+    inverseActions: 0,
+    successfulRestorations: 0,
+    consumedLeases: 0,
+    physicalActions: 0,
+    chargedActions: 0,
+  },
+} as const;
 
 type BranchFixture = Readonly<{
   readonly branch: RevealBranch;
@@ -172,12 +189,7 @@ export const continuationArtifactsFor = (input: {
   });
   const parentPass = createParentPass({
     run,
-    chain: {
-      receiptHead: null,
-      receiptCount: 0,
-      chunkHead: null,
-      chunkCount: 0,
-    },
+    chain: zeroChain,
     reducerStateDigest,
     controlsDigest: controlsDigestFor(input.discoveryState.controls),
     controlsCount: input.discoveryState.controls.length,
