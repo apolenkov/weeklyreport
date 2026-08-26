@@ -17,6 +17,7 @@ import {
   requestDigestForBody,
   responseDigestForBody,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
+import { assertHostCheckpointResponseForRequest } from "./preflight-reveal-host-checkpoint-parent.ts";
 
 const digest = "a".repeat(64);
 const run = {
@@ -103,6 +104,25 @@ const response = createHostCheckpointResponse({
 });
 
 describe("source-bound host checkpoint contract", () => {
+  it("exposes the exact parent assertion to source-bound verifiers", () => {
+    expect(() =>
+      assertHostCheckpointResponseForRequest({
+        request,
+        response,
+        boundaryTimestamp: request.boundaryTimestamp,
+        baselineReceiptDigest: "d".repeat(64),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertHostCheckpointResponseForRequest({
+        request,
+        response: { ...response, requestDigest: "0".repeat(64) },
+        boundaryTimestamp: request.boundaryTimestamp,
+        baselineReceiptDigest: "d".repeat(64),
+      }),
+    ).toThrow(/not bound to its request/u);
+  });
+
   it("accepts the exact first-child empty-bootstrap checkpoint", () => {
     const emptyBootstrap = createHostCheckpointRequest({
       artifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST,
