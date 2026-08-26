@@ -8,6 +8,12 @@ const READY_POLL_MS = 20;
 const ARM_DEADLINE_MS = 5000;
 const PRIVATE_FILE_MODE = 0o600;
 
+export type NestedProcessOwnershipPaths = Readonly<{
+  readonly readyPath: string;
+  readonly armPath: string;
+  readonly resultPath: string;
+}>;
+
 export type OwnedProcessReady = Readonly<{
   version: 1;
   nonce: string;

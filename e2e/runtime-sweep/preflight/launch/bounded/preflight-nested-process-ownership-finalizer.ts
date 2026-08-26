@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 
 import {
   assertOwnedProcessResult,
+  type NestedProcessOwnershipPaths,
   type OwnedProcessReady,
 } from "./preflight-nested-process-ownership-protocol.ts";
 
@@ -11,12 +12,6 @@ const COMMAND_TIMEOUT_MS = 5000;
 const CHILD_EXIT_GRACE_MS = 1000;
 const REGISTRY_FLAG = "--registry";
 const EXPECTED_CWD_FLAG = "--expected-cwd";
-
-export type NestedProcessOwnershipPaths = Readonly<{
-  readonly readyPath: string;
-  readonly armPath: string;
-  readonly resultPath: string;
-}>;
 
 export type NestedProcessOwnershipFinalizerInput = Readonly<{
   readonly operationName: string;
@@ -32,16 +27,10 @@ export type NestedProcessOwnershipFinalizerInput = Readonly<{
   readonly armDigest: () => string | undefined;
 }>;
 
-type NestedProcessOwnershipCommandInput = Readonly<{
-  readonly operationName: string;
-  readonly ownership: Readonly<{
-    readonly registry: string;
-    readonly registryTool: string;
-    readonly rollbackTool: string;
-  }>;
-  readonly paths: NestedProcessOwnershipPaths;
-  readonly repoRoot: string;
-}>;
+type NestedProcessOwnershipCommandInput = Pick<
+  NestedProcessOwnershipFinalizerInput,
+  "operationName" | "ownership" | "paths" | "repoRoot"
+>;
 
 export type NestedProcessOwnershipHandle = Readonly<{
   readonly child: ChildProcess;
