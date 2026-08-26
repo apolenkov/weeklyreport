@@ -1,9 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 
-import {
-  launchNestedOwnedProcess,
-  nestedProcessOwnershipFor,
-} from "./bounded/preflight-nested-process-ownership.ts";
+import { spawnDetachedProcessGroup } from "./bounded/preflight-detached-process-group.ts";
 
 const DIAGNOSTIC_TRACE_MODE_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_TRACE_MODE";
 const DIAGNOSTIC_TIMEOUT_ENV = "RUNTIME_SWEEP_DIAGNOSTIC_TIMEOUT_MS";
@@ -89,8 +86,16 @@ export type PreflightDiagnosticPlaywrightChild = Readonly<{
 
 const completionFor = (child: ChildProcess): Promise<number> =>
   new Promise<number>((resolve, reject) => {
+    const state = { settled: false };
+    const cleanup = (): void => {
+      child.off("error", onError);
+      child.off("exit", onExit);
+    };
     const settle = (): void => {
+      if (state.settled) return;
       if (child.signalCode !== null) {
+        state.settled = true;
+        cleanup();
         reject(
           new Error(
             `Diagnostic preflight terminated by signal ${child.signalCode}`,
@@ -99,11 +104,24 @@ const completionFor = (child: ChildProcess): Promise<number> =>
         return;
       }
       if (child.exitCode !== null) {
+        state.settled = true;
+        cleanup();
         resolve(child.exitCode);
       }
     };
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
+    const onError = (error: Error): void => {
+      if (state.settled) return;
+      state.settled = true;
+      cleanup();
+      reject(error);
+    };
+    const onExit = (
+      code: number | null,
+      signal: NodeJS.Signals | null,
+    ): void => {
+      if (state.settled) return;
+      state.settled = true;
+      cleanup();
       if (signal !== null) {
         reject(
           new Error(`Diagnostic preflight terminated by signal ${signal}`),
@@ -111,7 +129,9 @@ const completionFor = (child: ChildProcess): Promise<number> =>
         return;
       }
       resolve(code ?? 1);
-    });
+    };
+    child.once("error", onError);
+    child.once("exit", onExit);
     settle();
   });
 
@@ -119,20 +139,11 @@ export const spawnPreflightDiagnosticPlaywrightChild = async (input: {
   readonly repoRoot: string;
   readonly environment: NodeJS.ProcessEnv;
 }): Promise<PreflightDiagnosticPlaywrightChild> => {
-  const ownership = nestedProcessOwnershipFor(
-    DIAGNOSTIC_OPERATION_NAME,
-    input.environment,
-  );
-  if (ownership === undefined)
-    throw new Error(
-      `${DIAGNOSTIC_OPERATION_NAME} requires nested process ownership`,
-    );
   const launcher = pnpmLauncher(input.environment);
   const traceMode = diagnosticTraceModeFromEnvironment(input.environment);
   const timeoutMs = diagnosticTimeoutFromEnvironment(input.environment);
-  const owned = await launchNestedOwnedProcess({
+  const owned = await spawnDetachedProcessGroup({
     operationName: DIAGNOSTIC_OPERATION_NAME,
-    ownership,
     command: launcher.command,
     args: [
       ...launcher.leadingArgs,

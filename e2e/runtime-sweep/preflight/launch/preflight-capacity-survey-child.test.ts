@@ -4,7 +4,6 @@ import * as path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createNestedProcessOwnershipFixture } from "./bounded/preflight-nested-process-ownership.test-support.ts";
 import {
   capacitySurveyPlaywrightArgs,
   runPreflightCapacitySurveyChild,
@@ -63,25 +62,19 @@ describe("capacity survey browser child", () => {
 
   it("accepts a zero exit and rejects a nonzero exit", async () => {
     const success = await executableFor("process.exit(0);\n");
-    const successOwnership = await createNestedProcessOwnershipFixture(
-      path.dirname(success),
-    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: success, ...successOwnership },
+        environment: { npm_execpath: success },
         maxDurationMs: 5000,
       }),
     ).resolves.toBeUndefined();
 
     const failure = await executableFor("process.exit(7);\n");
-    const failureOwnership = await createNestedProcessOwnershipFixture(
-      path.dirname(failure),
-    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: failure, ...failureOwnership },
+        environment: { npm_execpath: failure },
         maxDurationMs: 5000,
       }),
     ).rejects.toThrow(/exited code=7/iu);
@@ -91,20 +84,17 @@ describe("capacity survey browser child", () => {
     const stalled = await executableFor(
       "setInterval(() => undefined, 1000);\n",
     );
-    const ownership = await createNestedProcessOwnershipFixture(
-      path.dirname(stalled),
-    );
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: stalled, ...ownership },
+        environment: { npm_execpath: stalled },
         maxDurationMs: 25,
         terminationGraceMs: 25,
       }),
     ).rejects.toThrow(/exceeded maxDurationMs=25/iu);
   });
 
-  it("keeps SIGKILL escalation armed after the group leader exits", async () => {
+  it("keeps SIGKILL escalation armed while the group leader is live", async () => {
     const leader = await executableFor("// replaced below\n");
     const descendantPidPath = path.join(path.dirname(leader), "descendant.pid");
     const descendantBody =
@@ -116,19 +106,15 @@ describe("capacity survey browser child", () => {
         'import { writeFileSync } from "node:fs";',
         `const descendant = spawn(process.execPath, ["-e", ${JSON.stringify(descendantBody)}], { stdio: "ignore" });`,
         `writeFileSync(${JSON.stringify(descendantPidPath)}, String(descendant.pid));`,
-        'process.on("SIGINT", () => process.exit(0));',
+        'process.on("SIGINT", () => undefined);',
         "setInterval(() => undefined, 1000);",
       ].join("\n"),
       "utf8",
     );
-    const ownership = await createNestedProcessOwnershipFixture(
-      path.dirname(leader),
-    );
-
     await expect(
       runPreflightCapacitySurveyChild({
         repoRoot: process.cwd(),
-        environment: { npm_execpath: leader, ...ownership },
+        environment: { npm_execpath: leader },
         maxDurationMs: 250,
         terminationGraceMs: 50,
       }),
