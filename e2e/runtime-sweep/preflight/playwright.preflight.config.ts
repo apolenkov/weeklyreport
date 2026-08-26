@@ -10,6 +10,12 @@ import {
 } from "../../runtime-api-server-command.ts";
 import { assertRuntimeSourceAuthorityFromEnvironment } from "../source/runtime-source-authority.ts";
 import { runtimeNextServerCommand } from "./run-runtime-next-server.ts";
+import {
+  assertPersistentServerLeaseIdentity,
+  persistentServerLeaseEnvironmentState,
+  PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ENV,
+  readPersistentServerLease,
+} from "./runtime/preflight-persistent-server-lease.ts";
 import { runtimeSweepWebEnvironment } from "./runtime/runtime-auth-env.ts";
 import { nextDistDirForNextConfig } from "./runtime/runtime-next-dist.ts";
 import { runtimeTraceSamplingEnvironment } from "./runtime/runtime-observability-policy.ts";
@@ -20,7 +26,7 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-await assertRuntimeSourceAuthorityFromEnvironment();
+const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
 const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
 const preflightDatabaseUrl = requiredEnv("E2E_DATABASE_URL");
 assertE2eRuntimeDestructiveTarget(
@@ -29,6 +35,54 @@ assertE2eRuntimeDestructiveTarget(
   process.env,
 );
 const canaryMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "canary";
+const persistentServerLeaseEnvironment = persistentServerLeaseEnvironmentState(
+  process.env,
+);
+const hasPersistentServerLease = persistentServerLeaseEnvironment !== undefined;
+if (hasPersistentServerLease && !canaryMode)
+  throw new Error(
+    "Persistent preflight server lease is allowed only in canary mode",
+  );
+if (hasPersistentServerLease) {
+  const childAttemptId = requiredEnv(PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ENV);
+  const leaseRelative = path.relative(
+    archiveRoot,
+    persistentServerLeaseEnvironment.path,
+  );
+  if (
+    leaseRelative === "" ||
+    leaseRelative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(leaseRelative)
+  )
+    throw new Error(
+      "Persistent preflight server lease must be inside the archive root",
+    );
+  if (
+    persistentServerLeaseEnvironment.campaignId !==
+      sourceAuthority.source.campaignId ||
+    persistentServerLeaseEnvironment.sourceTree !==
+      sourceAuthority.source.sourceTree
+  )
+    throw new Error(
+      "Persistent preflight server lease environment is not source-bound",
+    );
+  if (persistentServerLeaseEnvironment.attemptId !== childAttemptId)
+    throw new Error(
+      "Persistent preflight server lease environment is not bound to this continuation child",
+    );
+  const leaseFile = await readPersistentServerLease({
+    path: persistentServerLeaseEnvironment.path,
+    digest: persistentServerLeaseEnvironment.digest,
+  });
+  assertPersistentServerLeaseIdentity(leaseFile.lease, {
+    campaignId: sourceAuthority.source.campaignId,
+    attemptId: childAttemptId,
+    sourceSha: sourceAuthority.source.sourceSha,
+    sourceTree: sourceAuthority.source.sourceTree,
+    apiPort: Number(requiredEnv("E2E_API_PORT")),
+    webPort: Number(requiredEnv("E2E_WEB_PORT")),
+  });
+}
 const shardMode = process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "shard";
 const capacitySurveyMode =
   process.env.RUNTIME_SWEEP_PREFLIGHT_MODE === "capacity-survey";
@@ -206,27 +260,29 @@ export default defineConfig({
       },
     },
   ],
-  webServer: [
-    {
-      ...apiServer,
-      command: runtimeApiServerCommand,
-      cwd: runtimeApiServerCwd,
-      gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
-      env: {
-        ...apiServer.env,
-        ...shardApiEnvironment,
-        ...preflightApiObservabilityEnvironment,
-        LOG_DIR: preflightApiLogDir,
-        LOG_LEVEL: "info",
-        RUNTIME_SWEEP_API_DRAIN: "true",
-      },
-    },
-    {
-      ...webServer,
-      command: preflightWebServerCommand,
-      cwd: REPO_ROOT,
-      gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
-      env: preflightWebEnvironment,
-    },
-  ],
+  webServer: hasPersistentServerLease
+    ? []
+    : [
+        {
+          ...apiServer,
+          command: runtimeApiServerCommand,
+          cwd: runtimeApiServerCwd,
+          gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
+          env: {
+            ...apiServer.env,
+            ...shardApiEnvironment,
+            ...preflightApiObservabilityEnvironment,
+            LOG_DIR: preflightApiLogDir,
+            LOG_LEVEL: "info",
+            RUNTIME_SWEEP_API_DRAIN: "true",
+          },
+        },
+        {
+          ...webServer,
+          command: preflightWebServerCommand,
+          cwd: REPO_ROOT,
+          gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
+          env: preflightWebEnvironment,
+        },
+      ],
 });

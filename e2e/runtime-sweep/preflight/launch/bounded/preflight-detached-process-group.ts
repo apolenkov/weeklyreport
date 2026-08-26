@@ -264,11 +264,17 @@ export const spawnDetachedProcessGroup = async (input: {
   readonly command: string;
   readonly args: readonly string[];
   readonly repoRoot: string;
+  /**
+   * An explicitly owned working directory for a process that is not launched
+   * from the repository root.  The default preserves the original launcher
+   * contract for Playwright and all existing callers.
+   */
+  readonly cwd?: string;
   readonly environment: NodeJS.ProcessEnv;
   readonly closeGraceMs?: number;
 }): Promise<DetachedProcessGroupHandle> => {
   const child = spawn(input.command, [...input.args], {
-    cwd: input.repoRoot,
+    cwd: input.cwd ?? input.repoRoot,
     detached: true,
     env: withoutLegacyOwnershipEnvironment(input.environment),
     stdio: "inherit",

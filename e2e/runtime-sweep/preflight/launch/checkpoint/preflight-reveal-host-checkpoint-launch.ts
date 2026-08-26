@@ -57,6 +57,12 @@ export const runExactAdminDemoRevealCanary = async (input: {
   readonly hostCheckpointRoot: string;
   readonly hostCheckpointBaselineDigest: string;
   readonly runPlaywright: RunPlaywright;
+  readonly beforeRun?: Parameters<
+    typeof runPreflightRevealContinuation
+  >[0]["beforeRun"];
+  readonly afterRun?: Parameters<
+    typeof runPreflightRevealContinuation
+  >[0]["afterRun"];
   readonly runHostCheckpointController?: RunHostCheckpointController;
 }): Promise<number> => {
   assertExactAdminDemoLaunch(input);
@@ -83,6 +89,8 @@ export const runExactAdminDemoRevealCanary = async (input: {
       deadlineAt: lifecycle.deadlineAt,
       deadlineMonotonic: lifecycle.deadlineMonotonic,
       monotonicNow: lifecycle.monotonicNow,
+      ...(input.beforeRun === undefined ? {} : { beforeRun: input.beforeRun }),
+      ...(input.afterRun === undefined ? {} : { afterRun: input.afterRun }),
     }).catch((error: unknown) =>
       settleControllerAfterParentFailure(lifecycle, error),
     );
