@@ -28,6 +28,12 @@ import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
 } from "./preflight-archive-path.ts";
+import {
+  assertPersistentServerLeaseAttemptBinding,
+  type PersistentServerLeaseHandle,
+  PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ENV,
+  startPersistentPreflightServers,
+} from "./runtime/preflight-persistent-server-lease.ts";
 
 const requiredEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -177,6 +183,10 @@ if (mode === "shard") {
 
   const initialFullPreflight =
     mode === "full" ? await prepareFullPreflight() : undefined;
+  const runtimeState: {
+    persistentServerLease?: PersistentServerLeaseHandle;
+    activeRevealAttemptId?: string;
+  } = {};
   const runPlaywright = (
     preflightMode: PreflightLaunchMode,
     fullPreflight?: PreflightFullPaths,
@@ -184,16 +194,43 @@ if (mode === "shard") {
     bounds?: Readonly<{
       readonly maxDurationMs: number;
       readonly terminationGraceMs: number;
+      readonly signal?: AbortSignal;
     }>,
   ): Promise<number> =>
-    runPreflightPlaywrightChild({
-      repoRoot,
-      environment: {
-        ...preflightChildEnvironment(process.env, preflightMode, fullPreflight),
-        ...extraEnvironment,
-      },
-      ...(bounds === undefined ? {} : { bounds }),
-    });
+    (async () => {
+      const lease = runtimeState.persistentServerLease;
+      if (preflightMode === "canary") {
+        if (
+          lease === undefined ||
+          runtimeState.activeRevealAttemptId === undefined
+        )
+          throw new Error(
+            "Reveal continuation child cannot start without an active persistent server lease",
+          );
+        assertPersistentServerLeaseAttemptBinding({
+          leaseAttemptId: lease.lease.attemptId,
+          activeAttemptId: runtimeState.activeRevealAttemptId,
+          childAttemptId:
+            extraEnvironment?.[
+              PREFLIGHT_REVEAL_CONTINUATION_ATTEMPT_ENV
+            ]?.trim(),
+        });
+        await lease.assertLive();
+      }
+      const environment = preflightChildEnvironment(
+        process.env,
+        preflightMode,
+        fullPreflight,
+      );
+      if (extraEnvironment !== undefined)
+        Object.assign(environment, extraEnvironment);
+      if (lease !== undefined) Object.assign(environment, lease.environment);
+      return runPreflightPlaywrightChild({
+        repoRoot,
+        environment,
+        ...(bounds === undefined ? {} : { bounds }),
+      });
+    })();
 
   const runRevealCanary = (): Promise<number> => {
     if (selector === undefined)
@@ -216,6 +253,24 @@ if (mode === "shard") {
         "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_DIGEST",
       ),
       runPlaywright,
+      beforeRun: async (context) => {
+        runtimeState.activeRevealAttemptId = context.attemptId;
+        runtimeState.persistentServerLease =
+          await startPersistentPreflightServers({
+            repoRoot,
+            archiveRoot,
+            source,
+            attemptId: context.attemptId,
+            environment: process.env,
+            ...(context.signal === undefined ? {} : { signal: context.signal }),
+          });
+      },
+      afterRun: async () => {
+        const lease = runtimeState.persistentServerLease;
+        delete runtimeState.persistentServerLease;
+        delete runtimeState.activeRevealAttemptId;
+        if (lease !== undefined) await lease.close();
+      },
     });
   };
 

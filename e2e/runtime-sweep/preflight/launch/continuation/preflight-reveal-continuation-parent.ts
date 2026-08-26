@@ -15,16 +15,13 @@ import {
   revealContinuationLimitsFromEnvironment,
 } from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
 import type { RevealExecutionGrant } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
-import {
-  type RevealOperationTotals,
-  zeroRevealOperationTotals,
-} from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
+import type { RevealOperationTotals } from "../../reveal/continuation/operation/preflight-reveal-operation-evidence-reducer.ts";
 import type { RevealReducerInput } from "../../reveal/continuation/preflight-reveal-continuation-reducer.ts";
 import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-reveal-branches.ts";
 import type { RequestHostCheckpoint } from "../checkpoint/preflight-reveal-host-checkpoint-client.ts";
-import { runChildUntilDone } from "../checkpoint/preflight-reveal-host-checkpoint-parent.ts";
 import type { PreflightLaunchMode } from "../preflight-launch-guard.ts";
 import type { PreflightFullPaths } from "../preflight-launcher-support.ts";
+import { runRevealContinuationWithRuntime } from "./preflight-reveal-continuation-parent-runtime.ts";
 
 const AUTHORITY_KEY_BYTES = 32;
 const ATTEMPT_ID_BYTES = 16;
@@ -249,20 +246,6 @@ const attemptDeadlinesFor = (input: {
   };
 };
 
-const initialParentProgress = (): ParentProgress => ({
-  previousGrantDigest: null,
-  previousCompletedCandidateCount: 0,
-  receiptHead: null,
-  receiptCount: 0,
-  chunkHead: null,
-  chunkCount: 0,
-  operationHead: null,
-  operationChunkCount: 0,
-  operationTotals: zeroRevealOperationTotals(),
-  previousCheckpointDigest: null,
-  previousSampleSequence: null,
-});
-
 export const runPreflightRevealContinuation = async (input: {
   readonly source: SourceArtifact;
   readonly repoRoot: string;
@@ -278,6 +261,10 @@ export const runPreflightRevealContinuation = async (input: {
   readonly functionalDeadlineAt?: number;
   readonly functionalDeadlineMonotonic?: number;
   readonly signal?: AbortSignal;
+  /** Prepare campaign-owned runtime dependencies after the attempt deadline exists. */
+  readonly beforeRun?: (context: ParentContext) => Promise<void>;
+  /** Release campaign-owned runtime dependencies even when the child fails. */
+  readonly afterRun?: (context: ParentContext) => Promise<void>;
   readonly runPlaywright: RunPlaywright;
 }): Promise<number> => {
   await assertFreshCanary(input.canaryPath);
@@ -311,10 +298,10 @@ export const runPreflightRevealContinuation = async (input: {
   };
   assertRevealContinuationActive(context);
   const maxChildren = input.source.matrixLimits.maxRevealActions + 1;
-  return runChildUntilDone({
+  return runRevealContinuationWithRuntime({
     context,
-    progress: initialParentProgress(),
-    ordinal: 0,
     maxChildren,
+    ...(input.beforeRun === undefined ? {} : { beforeRun: input.beforeRun }),
+    ...(input.afterRun === undefined ? {} : { afterRun: input.afterRun }),
   });
 };
