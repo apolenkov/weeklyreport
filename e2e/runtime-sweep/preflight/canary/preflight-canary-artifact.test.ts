@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
@@ -181,6 +181,17 @@ describe("exact-state preflight canary artifact", () => {
         await expect(
           writePreflightCanaryArtifact(artifactPath, pass),
         ).rejects.toThrow("Cannot create immutable campaign manifest");
+        const expiredPath = path.join(root, "PREFLIGHT_CANARY.expired.json");
+        const guardState = { calls: 0 };
+        await expect(
+          writePreflightCanaryArtifact(expiredPath, pass, () => {
+            guardState.calls += 1;
+            if (guardState.calls > 1) throw new Error("deadline expired");
+          }),
+        ).rejects.toThrow("deadline expired");
+        await expect(access(expiredPath)).rejects.toMatchObject({
+          code: "ENOENT",
+        });
       } finally {
         await rm(root, { recursive: true, force: true });
       }

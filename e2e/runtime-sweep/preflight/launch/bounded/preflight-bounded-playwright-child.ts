@@ -1,5 +1,6 @@
 import { type ChildProcess } from "node:child_process";
 
+import { boundedPlaywrightArgs } from "./preflight-bounded-playwright-command.ts";
 import { spawnDetachedProcessGroup } from "./preflight-detached-process-group.ts";
 
 type BoundedPlaywrightChildInput = Readonly<{
@@ -10,6 +11,7 @@ type BoundedPlaywrightChildInput = Readonly<{
   maxDurationMs: number;
   terminationGraceMs: number;
   acceptNonzeroExit?: boolean;
+  signal?: AbortSignal;
 }>;
 
 type BoundedWaitInput = Pick<
@@ -23,6 +25,7 @@ interface BoundedWaitState {
   deadline: NodeJS.Timeout | undefined;
   escalation: NodeJS.Timeout | undefined;
   terminationErrors: unknown[];
+  terminationReason: unknown;
 }
 
 class PreflightBoundedPlaywrightChildError extends Error {
@@ -54,20 +57,6 @@ const assertBoundedPlaywrightDuration = (
     );
 };
 
-export const boundedPlaywrightArgs = (
-  leadingArgs: readonly string[],
-  configPath: string,
-): readonly string[] => [
-  ...leadingArgs,
-  "--filter",
-  "@customreport/web",
-  "exec",
-  "playwright",
-  "test",
-  "--config",
-  configPath,
-];
-
 const signalOrRecord = (
   signalOwned: (signal: NodeJS.Signals) => void,
   signal: NodeJS.Signals,
@@ -80,60 +69,151 @@ const signalOrRecord = (
   }
 };
 
-const timeoutFailureFor = (
+const terminationFailureFor = (
   input: BoundedWaitInput,
+  reason: unknown,
   terminationErrors: readonly unknown[],
-): Error => {
-  const timeoutError = new PreflightBoundedPlaywrightChildError(
-    `${input.operationName} exceeded maxDurationMs=${String(input.maxDurationMs)}`,
-  );
+): unknown => {
+  const primary =
+    reason ??
+    new PreflightBoundedPlaywrightChildError(
+      `${input.operationName} was terminated`,
+    );
   return terminationErrors.length === 0
-    ? timeoutError
+    ? primary
     : new AggregateError(
-        [timeoutError, ...terminationErrors],
+        [primary, ...terminationErrors],
         `${input.operationName} process-group termination failed`,
       );
 };
 
-const armBoundedChildTimeout = (input: {
+const beginBoundedChildTermination = (input: {
+  readonly state: BoundedWaitState;
+  readonly signalOwned: (signal: NodeJS.Signals) => void;
+  readonly wait: BoundedWaitInput;
+  readonly reason: unknown;
+  readonly reject: (error: unknown) => void;
+}): void => {
+  if (input.state.timedOut || input.state.settled) return;
+  input.state.timedOut = true;
+  input.state.terminationReason = input.reason;
+  signalOrRecord(input.signalOwned, "SIGINT", input.state.terminationErrors);
+  input.state.escalation = setTimeout(() => {
+    signalOrRecord(input.signalOwned, "SIGKILL", input.state.terminationErrors);
+    input.reject(
+      terminationFailureFor(
+        input.wait,
+        input.state.terminationReason,
+        input.state.terminationErrors,
+      ),
+    );
+  }, input.wait.terminationGraceMs);
+};
+
+const failureForChildExit = (input: {
+  readonly state: BoundedWaitState;
+  readonly wait: BoundedWaitInput;
+  readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
+}): unknown => {
+  if (input.state.timedOut)
+    return terminationFailureFor(
+      input.wait,
+      input.state.terminationReason,
+      input.state.terminationErrors,
+    );
+  if (input.code !== 0 && input.wait.acceptNonzeroExit !== true)
+    return new PreflightBoundedPlaywrightChildError(
+      `${input.wait.operationName} child exited code=${String(input.code)} signal=${String(input.signal)}`,
+    );
+  return undefined;
+};
+
+const initialBoundedWaitState = (): BoundedWaitState => ({
+  timedOut: false,
+  settled: false,
+  deadline: undefined,
+  escalation: undefined,
+  terminationErrors: [],
+  terminationReason: undefined,
+});
+
+const armBoundedChildDeadline = (input: {
   readonly state: BoundedWaitState;
   readonly signalOwned: (signal: NodeJS.Signals) => void;
   readonly wait: BoundedWaitInput;
   readonly reject: (error: unknown) => void;
 }): NodeJS.Timeout =>
-  setTimeout(() => {
-    input.state.timedOut = true;
-    signalOrRecord(input.signalOwned, "SIGINT", input.state.terminationErrors);
-    input.state.escalation = setTimeout(() => {
-      signalOrRecord(
-        input.signalOwned,
-        "SIGKILL",
-        input.state.terminationErrors,
-      );
-      input.reject(
-        timeoutFailureFor(input.wait, input.state.terminationErrors),
-      );
-    }, input.wait.terminationGraceMs);
-  }, input.wait.maxDurationMs);
+  setTimeout(
+    () =>
+      beginBoundedChildTermination({
+        ...input,
+        reason: new PreflightBoundedPlaywrightChildError(
+          `${input.wait.operationName} exceeded maxDurationMs=${String(input.wait.maxDurationMs)}`,
+        ),
+      }),
+    input.wait.maxDurationMs,
+  );
+
+const boundedAbortHandler =
+  (input: {
+    readonly state: BoundedWaitState;
+    readonly signalOwned: (signal: NodeJS.Signals) => void;
+    readonly wait: BoundedWaitInput;
+    readonly signal?: AbortSignal;
+    readonly reject: (error: unknown) => void;
+  }): (() => void) =>
+  () =>
+    beginBoundedChildTermination({
+      state: input.state,
+      signalOwned: input.signalOwned,
+      wait: input.wait,
+      reason:
+        input.signal?.reason ??
+        new Error(`${input.wait.operationName} aborted`),
+      reject: input.reject,
+    });
+
+const armBoundedChildWait = (input: {
+  readonly child: ChildProcess;
+  readonly state: BoundedWaitState;
+  readonly signalOwned: (signal: NodeJS.Signals) => void;
+  readonly wait: BoundedWaitInput;
+  readonly signal?: AbortSignal;
+  readonly onAbort: () => void;
+  readonly onError: (error: Error) => void;
+  readonly onExit: (code: number | null, signal: NodeJS.Signals | null) => void;
+  readonly reject: (error: unknown) => void;
+}): void => {
+  input.child.once("error", input.onError);
+  input.child.once("exit", input.onExit);
+  input.signal?.addEventListener("abort", input.onAbort, { once: true });
+  if (input.child.exitCode !== null || input.child.signalCode !== null)
+    input.onExit(input.child.exitCode, input.child.signalCode);
+  if (!input.state.settled && input.signal?.aborted) input.onAbort();
+  if (!input.state.settled)
+    input.state.deadline = armBoundedChildDeadline({
+      state: input.state,
+      signalOwned: input.signalOwned,
+      wait: input.wait,
+      reject: input.reject,
+    });
+};
 
 const waitForBoundedPlaywrightChild = (
   child: ChildProcess,
   signalOwned: (signal: NodeJS.Signals) => void,
   input: BoundedWaitInput,
+  signal?: AbortSignal,
 ): Promise<number> =>
   new Promise<number>((resolve, reject) => {
-    const state: BoundedWaitState = {
-      timedOut: false,
-      settled: false,
-      deadline: undefined,
-      escalation: undefined,
-      terminationErrors: [],
-    };
+    const state = initialBoundedWaitState();
     const cleanup = (): void => {
       if (state.deadline !== undefined) clearTimeout(state.deadline);
       if (state.escalation !== undefined) clearTimeout(state.escalation);
       child.off("error", onError);
       child.off("exit", onExit);
+      signal?.removeEventListener("abort", onAbort);
     };
     const settleResolve = (exitCode: number): void => {
       if (state.settled) return;
@@ -147,6 +227,13 @@ const waitForBoundedPlaywrightChild = (
       cleanup();
       reject(error);
     };
+    const onAbort = boundedAbortHandler({
+      state,
+      signalOwned,
+      wait: input,
+      ...(signal === undefined ? {} : { signal }),
+      reject: settleReject,
+    });
     const onError = (error: Error): void => {
       if (state.timedOut) {
         state.terminationErrors.push(error);
@@ -156,35 +243,38 @@ const waitForBoundedPlaywrightChild = (
     };
     const onExit = (
       code: number | null,
-      signal: NodeJS.Signals | null,
+      exitSignal: NodeJS.Signals | null,
     ): void => {
-      if (state.timedOut) return;
-      if (code !== 0 && input.acceptNonzeroExit !== true) {
-        settleReject(
-          new PreflightBoundedPlaywrightChildError(
-            `${input.operationName} child exited code=${String(code)} signal=${String(signal)}`,
-          ),
-        );
+      const failure = failureForChildExit({
+        state,
+        wait: input,
+        code,
+        signal: exitSignal,
+      });
+      if (failure !== undefined) {
+        settleReject(failure);
         return;
       }
       settleResolve(code ?? 1);
     };
-    child.once("error", onError);
-    child.once("exit", onExit);
-    if (child.exitCode !== null || child.signalCode !== null)
-      onExit(child.exitCode, child.signalCode);
-    if (!state.settled)
-      state.deadline = armBoundedChildTimeout({
-        state,
-        signalOwned,
-        wait: input,
-        reject: settleReject,
-      });
+    armBoundedChildWait({
+      child,
+      state,
+      signalOwned,
+      wait: input,
+      ...(signal === undefined ? {} : { signal }),
+      onAbort,
+      onError,
+      onExit,
+      reject: settleReject,
+    });
   });
 
 export const runBoundedPlaywrightChild = async (
   input: BoundedPlaywrightChildInput,
 ): Promise<number> => {
+  if (input.signal?.aborted)
+    throw input.signal.reason ?? new Error(`${input.operationName} aborted`);
   assertBoundedPlaywrightDuration(
     input.operationName,
     "maxDurationMs",
@@ -213,6 +303,7 @@ export const runBoundedPlaywrightChild = async (
       owned.child,
       owned.signal,
       input,
+      input.signal,
     );
     await owned.close();
     return exitCode;

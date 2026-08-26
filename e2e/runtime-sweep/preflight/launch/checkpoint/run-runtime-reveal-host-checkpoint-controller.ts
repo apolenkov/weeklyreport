@@ -36,68 +36,91 @@ const timeoutFromEnvironment = (): number => {
   return value;
 };
 
-export const runRuntimeRevealHostCheckpointController =
-  async (): Promise<number> => {
-    const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
-    const selection = resolvePreflightCanarySelection({
-      source: sourceAuthority.source,
-      selector: preflightCanarySelectorFromEnvironment(process.env),
-    });
-    const revealRoute = revealRouteFor(selection.route);
-    const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
-    const mailboxRoot = path.resolve(
-      requiredEnv("RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT"),
+const controllerAbortFor = (input: {
+  readonly signal?: AbortSignal;
+}): Readonly<{ signal: AbortSignal; close: () => void }> => {
+  const controller = new AbortController();
+  const relayAbort = (): void =>
+    controller.abort(
+      input.signal?.reason ?? new Error("Host checkpoint controller aborted"),
     );
-    const baselineManifest = path.resolve(
-      requiredEnv("RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_MANIFEST"),
+  input.signal?.addEventListener("abort", relayAbort, { once: true });
+  if (input.signal?.aborted) relayAbort();
+  const timeout =
+    input.signal === undefined
+      ? setTimeout(
+          () =>
+            controller.abort(
+              new Error("Host checkpoint controller deadline exceeded"),
+            ),
+          timeoutFromEnvironment(),
+        )
+      : undefined;
+  return {
+    signal: controller.signal,
+    close: () => {
+      if (timeout !== undefined) clearTimeout(timeout);
+      input.signal?.removeEventListener("abort", relayAbort);
+    },
+  };
+};
+
+export const runRuntimeRevealHostCheckpointController = async (
+  input: { readonly signal?: AbortSignal } = {},
+): Promise<number> => {
+  const sourceAuthority = await assertRuntimeSourceAuthorityFromEnvironment();
+  const selection = resolvePreflightCanarySelection({
+    source: sourceAuthority.source,
+    selector: preflightCanarySelectorFromEnvironment(process.env),
+  });
+  const revealRoute = revealRouteFor(selection.route);
+  const archiveRoot = path.resolve(requiredEnv("RUNTIME_SWEEP_ARCHIVE"));
+  const mailboxRoot = path.resolve(
+    requiredEnv("RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT"),
+  );
+  const baselineManifest = path.resolve(
+    requiredEnv("RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_BASELINE_MANIFEST"),
+  );
+  const campaignId = requiredEnv("RUNTIME_SWEEP_DIAGNOSTIC_CAMPAIGN_ID");
+  if (campaignId !== sourceAuthority.source.campaignId)
+    throw new Error(
+      "Host checkpoint controller campaign does not match SOURCE.json",
     );
-    const campaignId = requiredEnv("RUNTIME_SWEEP_DIAGNOSTIC_CAMPAIGN_ID");
-    if (campaignId !== sourceAuthority.source.campaignId)
-      throw new Error(
-        "Host checkpoint controller campaign does not match SOURCE.json",
-      );
-    const baseline = await readHealthyPostInfrastructureReceipt({
+  const baseline = await readHealthyPostInfrastructureReceipt({
+    archiveRoot,
+    manifestPath: baselineManifest,
+    sourceSha: sourceAuthority.source.sourceSha,
+    sourceTree: sourceAuthority.source.sourceTree,
+    campaignId,
+  });
+  const abort = controllerAbortFor(input);
+  try {
+    await runHostCheckpointController({
       archiveRoot,
-      manifestPath: baselineManifest,
+      mailboxRoot,
       sourceSha: sourceAuthority.source.sourceSha,
       sourceTree: sourceAuthority.source.sourceTree,
       campaignId,
+      treeDigest: sourceAuthority.source.treeDigest,
+      sourceDigest: sourceAuthority.source.sourceDigest,
+      planDigest: sourceAuthority.source.plan.digest,
+      stateId: selection.state.stateId,
+      stateDigest: sha256Hex(selection.state),
+      profile: selection.state.profile,
+      role: revealRoute.role,
+      route:
+        selection.selector.route ??
+        `${revealRoute.role}:${revealRoute.catalogRoute}`,
+      routeDigest: sha256Hex(revealRoute),
+      baseline,
+      signal: abort.signal,
+      maxCheckpoints: sourceAuthority.source.matrixLimits.maxRevealActions,
     });
-    const abortController = new AbortController();
-    const timeout = setTimeout(
-      () =>
-        abortController.abort(
-          new Error("Host checkpoint controller deadline exceeded"),
-        ),
-      timeoutFromEnvironment(),
-    );
-    try {
-      await runHostCheckpointController({
-        archiveRoot,
-        mailboxRoot,
-        sourceSha: sourceAuthority.source.sourceSha,
-        sourceTree: sourceAuthority.source.sourceTree,
-        campaignId,
-        treeDigest: sourceAuthority.source.treeDigest,
-        sourceDigest: sourceAuthority.source.sourceDigest,
-        planDigest: sourceAuthority.source.plan.digest,
-        stateId: selection.state.stateId,
-        stateDigest: sha256Hex(selection.state),
-        profile: selection.state.profile,
-        role: revealRoute.role,
-        route:
-          selection.selector.route ??
-          `${revealRoute.role}:${revealRoute.catalogRoute}`,
-        routeDigest: sha256Hex(revealRoute),
-        baseline,
-        signal: abortController.signal,
-        maxCheckpoints: sourceAuthority.source.matrixLimits.maxRevealActions,
-      });
-      return 0;
-    } finally {
-      clearTimeout(timeout);
-    }
-  };
+    return 0;
+  } finally {
+    abort.close();
+  }
+};
 
 if (
   process.argv[1] !== undefined &&

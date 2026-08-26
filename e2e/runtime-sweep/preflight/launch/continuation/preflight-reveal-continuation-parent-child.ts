@@ -26,6 +26,10 @@ import type {
   ParentContext,
   ParentProgress,
 } from "./preflight-reveal-continuation-parent.ts";
+import {
+  assertRevealContinuationActive,
+  remainingRevealContinuationMs,
+} from "./preflight-reveal-continuation-parent.ts";
 import { completeEmptyBootstrap } from "./preflight-reveal-continuation-parent-bootstrap.ts";
 import { continueChild } from "./preflight-reveal-continuation-parent-results.ts";
 import { frontierForState } from "./preflight-reveal-continuation-parent-support.ts";
@@ -143,6 +147,16 @@ const runBoundedContinuationChild = async (input: {
 }): Promise<number> => {
   const { context, progress, outputPath } = input;
   const limits = context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
+  assertRevealContinuationActive(context, limits.killGraceMs);
+  const remainingMs = remainingRevealContinuationMs(context);
+  const maxDurationMs = Math.min(
+    limits.hardWallMs,
+    remainingMs - limits.killGraceMs,
+  );
+  const childDeadlineAt = Math.min(
+    (context.now?.() ?? Date.now()) + limits.softWallMs - limits.yieldReserveMs,
+    (context.deadlineAt ?? Number.POSITIVE_INFINITY) - limits.killGraceMs,
+  );
   try {
     return await context.runPlaywright(
       "canary",
@@ -157,14 +171,14 @@ const runBoundedContinuationChild = async (input: {
         RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_CHILD_ORDINAL: String(
           input.childOrdinal,
         ),
-        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT: String(
-          Date.now() + limits.softWallMs - limits.yieldReserveMs,
-        ),
+        RUNTIME_SWEEP_PREFLIGHT_REVEAL_CONTINUATION_DEADLINE_AT:
+          String(childDeadlineAt),
         ...revealContinuationLimitEnvironment(limits),
       },
       {
-        maxDurationMs: limits.hardWallMs,
+        maxDurationMs,
         terminationGraceMs: limits.killGraceMs,
+        ...(context.signal === undefined ? {} : { signal: context.signal }),
       },
     );
   } catch (error: unknown) {
@@ -186,6 +200,7 @@ export const runContinuationChild = async (input: {
   }>
 > => {
   const { context, progress } = input;
+  assertRevealContinuationActive(context);
   const childExecutionId = randomBytes(CHILD_EXECUTION_ID_BYTES).toString(
     "hex",
   );
@@ -206,6 +221,7 @@ export const runContinuationChild = async (input: {
     childExecutionId,
     childOrdinal: input.ordinal,
   });
+  assertRevealContinuationActive(context);
   await assertLivePreflightSourceIdentity({
     source: context.source,
     repoRoot: context.repoRoot,

@@ -8,6 +8,10 @@ import {
   ensurePreflightArchiveDirectory,
 } from "../../preflight-archive-path.ts";
 import {
+  type PublicationCommitGuard,
+  publishDeadlineBound,
+} from "../../preflight-deadline-publication.ts";
+import {
   type RevealBootstrap,
   type RevealExecutionGrant,
   type RevealParentPass,
@@ -71,10 +75,13 @@ const linkOrVerifyArtifact = async (input: {
   readonly temporaryPath: string;
   readonly filePath: string;
   readonly text: string;
+  readonly markOwned: () => void;
 }): Promise<void> => {
   try {
     await link(input.temporaryPath, input.filePath);
+    input.markOwned();
     await unlink(input.temporaryPath);
+    return;
   } catch (error: unknown) {
     const isExisting =
       error instanceof Error && "code" in error && error.code === "EEXIST";
@@ -94,6 +101,7 @@ const writeImmutableJson = async (input: {
   readonly filePath: string;
   readonly value: unknown;
   readonly parse: (value: unknown) => unknown;
+  readonly commitGuard?: PublicationCommitGuard;
 }): Promise<void> => {
   const root = path.resolve(input.archiveRoot);
   const filePath = path.resolve(input.filePath);
@@ -112,7 +120,18 @@ const writeImmutableJson = async (input: {
   await assertPreflightArchivePath(root, temporaryPath);
   try {
     await writeTemporaryArtifact({ temporaryPath, text });
-    await linkOrVerifyArtifact({ temporaryPath, filePath, text });
+    await publishDeadlineBound({
+      ...(input.commitGuard === undefined ? {} : { guard: input.commitGuard }),
+      publish: async (markOwned) => {
+        await linkOrVerifyArtifact({
+          temporaryPath,
+          filePath,
+          text,
+          markOwned,
+        });
+      },
+      rollback: () => unlink(filePath),
+    });
   } catch (error: unknown) {
     await unlink(temporaryPath).catch(() => undefined);
     if (error instanceof RevealContinuationError) throw error;
@@ -233,12 +252,16 @@ export const writeRevealParentPass = async (input: {
   readonly archiveRoot: string;
   readonly filePath: string;
   readonly pass: RevealParentPass;
+  readonly commitGuard?: PublicationCommitGuard;
 }): Promise<void> =>
   writeImmutableJson({
     archiveRoot: input.archiveRoot,
     filePath: input.filePath,
     value: input.pass,
     parse: parseRevealParentPass,
+    ...(input.commitGuard === undefined
+      ? {}
+      : { commitGuard: input.commitGuard }),
   });
 
 export { hydrateRevealContinuationAssets } from "./preflight-reveal-continuation-hydration.ts";

@@ -1,4 +1,5 @@
 import {
+  access,
   mkdtemp,
   readFile,
   realpath,
@@ -34,6 +35,7 @@ import {
 import {
   assertRevealContinuationOutputAbsent,
   readRevealContinuationArtifact,
+  writeRevealParentPass,
   writeRevealReceiptChunk,
 } from "../preflight-reveal-continuation-io.ts";
 
@@ -83,8 +85,8 @@ describe("R188 v3 continuation boundaries and immutable IO", () => {
     }
   });
 
-  it("creates a parent PASS with a canonical parseable digest", async () => {
-    await withSource((source) => {
+  it("rolls back a parent PASS when its commit deadline expires", async () => {
+    await withSource(async (source) => {
       const state = source.plan.states[0];
       if (state === undefined) throw new Error("Fixture has no source state");
       const { route } = selectionFor(source, state.stateId);
@@ -119,7 +121,33 @@ describe("R188 v3 continuation boundaries and immutable IO", () => {
         authorityKey: "a".repeat(64),
       });
       expect(parseRevealParentPass(pass)).toEqual(pass);
-      return Promise.resolve();
+      const archiveRoot = await mkdtemp(
+        path.join(process.cwd(), ".r188-parent-pass-deadline-"),
+      );
+      const passPath = path.join(
+        archiveRoot,
+        "continuation",
+        "PARENT_PASS.json",
+      );
+      const guardState = { calls: 0 };
+      try {
+        await expect(
+          writeRevealParentPass({
+            archiveRoot,
+            filePath: passPath,
+            pass,
+            commitGuard: () => {
+              guardState.calls += 1;
+              if (guardState.calls > 1) throw new Error("deadline expired");
+            },
+          }),
+        ).rejects.toThrow("deadline expired");
+        await expect(access(passPath)).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      } finally {
+        await rm(archiveRoot, { recursive: true, force: true });
+      }
     });
   });
 

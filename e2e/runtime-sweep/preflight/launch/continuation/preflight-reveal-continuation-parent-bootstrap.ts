@@ -28,6 +28,7 @@ import type {
   ParentContext,
   ParentProgress,
 } from "./preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
 import { parentReplayContextFor } from "./preflight-reveal-continuation-parent-replay.ts";
 import { writeCompleteCanary } from "./preflight-reveal-continuation-parent-support.ts";
 
@@ -215,6 +216,7 @@ export const completeEmptyBootstrap = async (input: {
         archiveRoot: input.context.archiveRoot,
         filePath: passPath,
         pass,
+        commitGuard: () => assertRevealContinuationActive(input.context),
       });
       await writeCompleteCanary({ context: input.context, replay });
     },

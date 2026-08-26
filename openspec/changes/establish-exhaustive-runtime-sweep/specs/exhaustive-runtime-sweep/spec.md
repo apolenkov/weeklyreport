@@ -236,6 +236,12 @@ before baseline execution rather than trimming cells.
 - **THEN** the parent MAY use that same attempt as the focused timing proof and
   task-5.19 acceptance only if the complete frontier is empty and the
   parent-authored canary PASS is published within 24 minutes
+- **AND** the stock canary command starts and owns the in-process host
+  controller, applies one monotonic 24-minute deadline across all continuation
+  children and checkpoints, and forwards deadline, `SIGINT`, and `SIGTERM`
+  cancellation to the active owned process group and controller
+- **AND** each child hard wall is capped by the remaining parent time minus
+  kill grace, and parent PASS or canary publication is forbidden after expiry
 - **AND** the remaining 6 minutes of the 30-minute supervisor window are used
   only for controller termination, teardown, exact source read-back, and
   verified zero process, listener, container, and volume residue

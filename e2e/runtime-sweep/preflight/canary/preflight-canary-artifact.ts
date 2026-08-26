@@ -1,6 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { link, readFile, unlink } from "node:fs/promises";
+import * as path from "node:path";
 
-import { freezeDeep, writeManifestFile } from "../../source/manifest-source.ts";
+import {
+  freezeDeep,
+  ManifestWriteError,
+  writeManifestFile,
+} from "../../source/manifest-source.ts";
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { sha256Hex, stableSerialize } from "../../support/ids.ts";
 import {
@@ -8,6 +13,10 @@ import {
   compactPreflightRevealData,
   type CompactPreflightSegment,
 } from "../artifacts/preflight-artifact-reveal.ts";
+import {
+  type PublicationCommitGuard,
+  publishDeadlineBound,
+} from "../preflight-deadline-publication.ts";
 import {
   type CanaryFailurePhase,
   PREFLIGHT_CANARY_VIEWPORT,
@@ -36,6 +45,7 @@ const errorFor = (
     : { name: "Error", message: String(error) };
 
 const currentTimestamp = (): string => new Date().toISOString();
+const canaryTemporaryCounter = { value: 0 };
 
 const compactSegmentFor = (
   segment: Parameters<typeof compactPreflightRevealData>[0][number],
@@ -164,14 +174,39 @@ export async function readPreflightCanaryArtifact(
   }
 }
 
-export const writePreflightCanaryArtifact = (
+export const writePreflightCanaryArtifact = async (
   filePath: string,
   artifact: PreflightCanaryArtifact,
-): Promise<void> =>
-  writeManifestFile(
-    filePath,
+  commitGuard?: PublicationCommitGuard,
+): Promise<void> => {
+  canaryTemporaryCounter.value += 1;
+  const temporaryPath = path.join(
+    path.dirname(filePath),
+    `.${path.basename(filePath)}.${String(process.pid)}.${String(canaryTemporaryCounter.value)}.tmp`,
+  );
+  await writeManifestFile(
+    temporaryPath,
     `${stableSerialize(parsePreflightCanaryArtifact(artifact))}\n`,
   );
+  try {
+    await publishDeadlineBound({
+      ...(commitGuard === undefined ? {} : { guard: commitGuard }),
+      publish: async (markOwned) => {
+        await link(temporaryPath, filePath);
+        markOwned();
+        await unlink(temporaryPath);
+      },
+      rollback: () => unlink(filePath),
+    });
+  } catch (error: unknown) {
+    await unlink(temporaryPath).catch(() => undefined);
+    if (error instanceof Error && "code" in error && error.code === "EEXIST")
+      throw new ManifestWriteError(
+        `Cannot create immutable campaign manifest at ${filePath}: ${error.message}`,
+      );
+    throw error;
+  }
+};
 
 type MatrixPreflightSegment = Parameters<
   typeof compactPreflightRevealData
