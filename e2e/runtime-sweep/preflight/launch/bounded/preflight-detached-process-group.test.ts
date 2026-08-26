@@ -1,10 +1,40 @@
-import { describe, expect, it } from "vitest";
+import type { ChildProcess } from "node:child_process";
+
+import { describe, expect, it, vi } from "vitest";
 
 import {
   assertSpawnOwnership,
   classifyProcessGroupPermission,
+  combineFailures,
   ProcessGroupCleanupError,
 } from "./preflight-detached-process-group.ts";
+import {
+  processGroupStatusFor,
+  signalProcessGroup,
+} from "./preflight-detached-process-group-ownership.ts";
+
+const goneChild = {
+  pid: 1234,
+  exitCode: 0,
+  signalCode: null,
+} as unknown as ChildProcess;
+
+const goneOwnership = {
+  pid: 1234,
+  pgid: 1234,
+  startToken: "",
+} as const;
+
+const withPermissionDeniedKill = (callback: () => void): void => {
+  const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+    throw Object.assign(new Error("permission denied"), { code: "EPERM" });
+  });
+  try {
+    callback();
+  } finally {
+    kill.mockRestore();
+  }
+};
 
 describe("detached process-group ownership classification", () => {
   it.each([
@@ -21,6 +51,55 @@ describe("detached process-group ownership classification", () => {
     },
   );
 
+  it("does not call an EPERM liveness probe an already-gone group", () => {
+    expect(
+      classifyProcessGroupPermission({
+        leader: "GONE",
+        members: "OWNED",
+        permissionDenied: true,
+      }),
+    ).toBe("OWNERSHIP_UNPROVEN");
+  });
+
+  it("classifies a direct EPERM status probe with a gone leader as unproven", () => {
+    let failure: unknown;
+    withPermissionDeniedKill(() => {
+      try {
+        processGroupStatusFor({
+          operationName: "reveal-child",
+          child: goneChild,
+          ownership: goneOwnership,
+        });
+      } catch (error: unknown) {
+        failure = error;
+      }
+    });
+    expect(failure).toBeInstanceOf(ProcessGroupCleanupError);
+    expect((failure as ProcessGroupCleanupError).classification).toBe(
+      "OWNERSHIP_UNPROVEN",
+    );
+  });
+
+  it("classifies a direct EPERM signal with a gone leader as unproven", () => {
+    let failure: unknown;
+    withPermissionDeniedKill(() => {
+      try {
+        signalProcessGroup({
+          operationName: "reveal-child",
+          child: goneChild,
+          ownership: goneOwnership,
+          signal: "SIGTERM",
+        });
+      } catch (error: unknown) {
+        failure = error;
+      }
+    });
+    expect(failure).toBeInstanceOf(ProcessGroupCleanupError);
+    expect((failure as ProcessGroupCleanupError).classification).toBe(
+      "OWNERSHIP_UNPROVEN",
+    );
+  });
+
   it("keeps cleanup classification separate from the primary error", () => {
     const primary = new Error("child timed out");
     const cleanup = new ProcessGroupCleanupError(
@@ -34,6 +113,31 @@ describe("detached process-group ownership classification", () => {
     );
     expect(aggregate.errors).toEqual([primary, cleanup]);
     expect(cleanup.classification).toBe("OWNERSHIP_UNPROVEN");
+  });
+
+  it("keeps a nested termination failure intact and points to its root timeout", () => {
+    const timeout = new Error("child timed out");
+    const terminationFailure = new AggregateError(
+      [timeout, new Error("SIGINT cleanup uncertainty")],
+      "process-group termination failed",
+    );
+    const cleanup = new ProcessGroupCleanupError(
+      "reveal-child",
+      "OWNERSHIP_UNPROVEN",
+      "process-group liveness probe returned EPERM",
+    );
+
+    const failure = combineFailures("reveal-child", terminationFailure, [
+      cleanup,
+    ]);
+    expect(failure).toBeInstanceOf(AggregateError);
+    const failures = (failure as AggregateError).errors as readonly unknown[];
+    expect(failures[0]).toBe(terminationFailure);
+    expect(failures[1]).toBe(cleanup);
+    expect(failure.message).toBe(
+      "child timed out; reveal-child secondary cleanup failures=1",
+    );
+    expect((failure as AggregateError).cause).toBe(timeout);
   });
 
   it("fails closed when a spawned leader has no launch start token", () => {

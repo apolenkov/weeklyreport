@@ -46,15 +46,25 @@ const waitForProcessGroupExit = async (
 const errorFor = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
-const combineFailures = (
+const rootFailureFor = (error: Error): Error => {
+  if (!(error instanceof AggregateError)) return error;
+  const failures = error.errors as readonly unknown[];
+  const first = failures[0];
+  return first === undefined ? error : rootFailureFor(errorFor(first));
+};
+
+export const combineFailures = (
   operationName: string,
   primary: unknown,
   cleanupFailures: readonly unknown[],
 ): Error => {
   if (cleanupFailures.length === 0) return errorFor(primary);
+  const primaryError = errorFor(primary);
+  const rootPrimary = rootFailureFor(primaryError);
   return new AggregateError(
-    [errorFor(primary), ...cleanupFailures.map(errorFor)],
-    `${operationName} process-group cleanup failed after: ${errorFor(primary).message}`,
+    [primaryError, ...cleanupFailures.map(errorFor)],
+    `${rootPrimary.message}; ${operationName} secondary cleanup failures=${String(cleanupFailures.length)}`,
+    { cause: rootPrimary },
   );
 };
 

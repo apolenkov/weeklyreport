@@ -161,6 +161,17 @@ describe("bounded reveal continuation Playwright child", () => {
           /leader exited with live process-group descendants/iu.test(message),
         ),
       ).toBe(true);
+      expect(failure).toBeInstanceOf(AggregateError);
+      const failures = (failure as AggregateError).errors as readonly unknown[];
+      const primary = failures[0];
+      expect(primary).toBeInstanceOf(Error);
+      expect((primary as Error).message).toMatch(
+        /exceeded maxDurationMs=500/iu,
+      );
+      expect((failure as AggregateError).message).toMatch(
+        /exceeded maxDurationMs=500/iu,
+      );
+      expect((failure as AggregateError).cause).toBe(primary);
       descendantPid = Number(await readFile(descendantPidPath, "utf8"));
       expect(Number.isSafeInteger(descendantPid)).toBe(true);
       expect(processExists(descendantPid)).toBe(true);
