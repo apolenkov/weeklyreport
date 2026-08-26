@@ -1,3 +1,6 @@
+import { link, unlink } from "node:fs/promises";
+import * as path from "node:path";
+
 import { stableSerialize } from "../../../support/ids.ts";
 import {
   assertLivePreflightSourceIdentity,
@@ -6,6 +9,11 @@ import {
   readPreflightCanaryArtifact,
   writePreflightCanaryArtifact,
 } from "../../canary/preflight-canary.ts";
+import {
+  assertPreflightArchivePath,
+  ensurePreflightArchiveRoot,
+} from "../../preflight-archive-path.ts";
+import { publishDeadlineBound } from "../../preflight-deadline-publication.ts";
 import {
   runIdentityFor,
   strictRouteFor,
@@ -26,6 +34,7 @@ import { revealCandidatesFor } from "../../reveal/interaction/preflight-reveal-d
 import type {
   ParentContext,
   ParentProgress,
+  RevealContinuationTerminalPublicationCommit,
 } from "./preflight-reveal-continuation-parent.ts";
 import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
 import {
@@ -125,19 +134,78 @@ export const frontierForState = (input: {
   });
 };
 
+const stagedCanaryPathFor = (context: ParentContext): string =>
+  path.join(
+    path.dirname(context.canaryPath),
+    `.${path.basename(context.canaryPath)}.${context.attemptId}.pending`,
+  );
+
+const unlinkIfPresent = async (filePath: string): Promise<void> => {
+  try {
+    await unlink(filePath);
+  } catch (error: unknown) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+      throw error;
+  }
+};
+
+const commitStagedCanary =
+  (input: {
+    readonly context: ParentContext;
+    readonly stagedPath: string;
+    readonly commitGuard: () => void;
+    readonly cleanupPending?: () => Promise<void>;
+  }): RevealContinuationTerminalPublicationCommit =>
+  async () => {
+    input.commitGuard();
+    const archiveRoot = await ensurePreflightArchiveRoot(
+      input.context.archiveRoot,
+    );
+    await assertPreflightArchivePath(archiveRoot, input.context.canaryPath);
+    await assertPreflightArchivePath(archiveRoot, input.stagedPath);
+    await publishDeadlineBound({
+      guard: input.commitGuard,
+      publish: async (markOwned) => {
+        await link(input.stagedPath, input.context.canaryPath);
+        markOwned();
+        await assertLivePreflightSourceIdentity({
+          source: input.context.source,
+          repoRoot: input.context.repoRoot,
+        });
+      },
+      rollback: () => unlinkIfPresent(input.context.canaryPath),
+    });
+    // The canonical link is now the linearization point.  Do not run a
+    // deadline guard after it; pending-marker cleanup must not revoke PASS.
+    await (
+      input.cleanupPending ?? (() => unlinkIfPresent(input.stagedPath))
+    )().catch(() => undefined);
+  };
+
 export const writeCompleteCanary = async (input: {
   readonly context: ParentContext;
   readonly replay: Readonly<{
     readonly state: Parameters<typeof reducerStateDigestFor>[0];
     readonly completedCandidateCount: number;
   }>;
-}): Promise<void> => {
+  readonly commitGuard?: () => void;
+  readonly cleanupPending?: () => Promise<void>;
+}): Promise<RevealContinuationTerminalPublicationCommit> => {
+  const commitGuard =
+    input.commitGuard ?? (() => assertRevealContinuationActive(input.context));
+  commitGuard();
   await assertLivePreflightSourceIdentity({
     source: input.context.source,
     repoRoot: input.context.repoRoot,
   });
+  const stagedPath = stagedCanaryPathFor(input.context);
+  const archiveRoot = await ensurePreflightArchiveRoot(
+    input.context.archiveRoot,
+  );
+  await assertPreflightArchivePath(archiveRoot, input.context.canaryPath);
+  await assertPreflightArchivePath(archiveRoot, stagedPath);
   await writePreflightCanaryArtifact(
-    input.context.canaryPath,
+    stagedPath,
     createPreflightCanaryPass({
       source: input.context.source,
       selection: input.context.selection,
@@ -149,15 +217,26 @@ export const writeCompleteCanary = async (input: {
         specialized: [],
       },
     }),
-    () => assertRevealContinuationActive(input.context),
+    commitGuard,
   );
+  commitGuard();
   await assertLivePreflightSourceIdentity({
     source: input.context.source,
     repoRoot: input.context.repoRoot,
   });
+  commitGuard();
   assertPreflightCanaryPassForSource({
     source: input.context.source,
-    canary: await readPreflightCanaryArtifact(input.context.canaryPath),
+    canary: await readPreflightCanaryArtifact(stagedPath),
     stateId: input.context.selection.state.stateId,
+  });
+  commitGuard();
+  return commitStagedCanary({
+    context: input.context,
+    stagedPath,
+    commitGuard,
+    ...(input.cleanupPending === undefined
+      ? {}
+      : { cleanupPending: input.cleanupPending }),
   });
 };

@@ -92,6 +92,45 @@ describe("R188 parent-child process boundary", () => {
     });
   });
 
+  it("does not silently resume an incomplete staged terminal publication", async () => {
+    await withCleanSource(async ({ source, repoRoot }) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("Fixture has no source state");
+      const archiveRoot = await mkdtemp(
+        path.join(process.cwd(), ".r188-pending-terminal-"),
+      );
+      try {
+        const canaryPath = path.join(archiveRoot, "PREFLIGHT_CANARY.json");
+        await writeFile(
+          path.join(
+            archiveRoot,
+            ".PREFLIGHT_CANARY.json.reveal-attempt-old.pending",
+          ),
+          "incomplete\n",
+          "utf8",
+        );
+        let childCalls = 0;
+        await expect(
+          runPreflightRevealContinuation({
+            source,
+            repoRoot,
+            archiveRoot,
+            canaryPath,
+            baselineReceiptDigest: "d".repeat(64),
+            selector: { stateId: state.stateId },
+            runPlaywright: () => {
+              childCalls += 1;
+              return Promise.resolve(0);
+            },
+          }),
+        ).rejects.toThrow(/staged terminal canary publication is pending/u);
+        expect(childCalls).toBe(0);
+      } finally {
+        await rm(archiveRoot, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("removes a child result after a hard-wall failure so it cannot resume", async () => {
     await withCleanSource(async ({ source, repoRoot }) => {
       const state = source.plan.states[0];

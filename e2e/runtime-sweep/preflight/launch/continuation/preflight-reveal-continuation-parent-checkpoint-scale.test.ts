@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { access, stat } from "node:fs/promises";
 import * as path from "node:path";
 
@@ -16,8 +17,10 @@ import {
   MAX_ARTIFACT_BYTES,
   R191_SURFACE_CONTROL_COUNT,
 } from "../checkpoint/preflight-reveal-continuation-parent-checkpoint-scale-fixture.ts";
+import { createRevealContinuationTerminalizationPermit } from "./preflight-reveal-continuation-parent.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import { completeParent } from "./preflight-reveal-continuation-parent-results.ts";
+import { writeCompleteCanary } from "./preflight-reveal-continuation-parent-support.ts";
 import {
   withCleanSealedGrantFixture,
   withSealedGrantFixture,
@@ -93,7 +96,14 @@ describe("R192 compact parent checkpoint scale", () => {
       });
 
       expect(result.done).toBe(true);
-      await result.publishTerminalArtifacts();
+      const commit = await result.publishTerminalArtifacts(
+        createRevealContinuationTerminalizationPermit({
+          attemptId: "attempt-fixture",
+          terminalChildOrdinal: 4,
+          finalCheckpointDigest: "d".repeat(64),
+        }),
+      );
+      await commit();
       await expect(
         access(
           path.join(
@@ -104,6 +114,84 @@ describe("R192 compact parent checkpoint scale", () => {
         ),
       ).resolves.toBeUndefined();
       await expect(access(fixture.context.canaryPath)).resolves.toBeUndefined();
+    });
+  });
+
+  it("keeps the staged canary when the final commit deadline expires", async () => {
+    await withCleanSealedGrantFixture(async (fixture) => {
+      const reducerState = fixture.validProgress.reducerState;
+      if (reducerState === undefined)
+        throw new Error("Scale fixture has no parent reducer state");
+      const state = completedStateFor(
+        coherentSegmentStateFor(reducerState, R191_SURFACE_CONTROL_COUNT),
+      );
+      const context = {
+        ...fixture.context,
+        deadlineMonotonic: 100,
+        monotonicNow: () => (existsSync(fixture.context.canaryPath) ? 101 : 0),
+      };
+      const result = await completeParent({
+        context,
+        progress: fixture.validProgress,
+        chunk: fixture.chunk,
+        reduced: {
+          state,
+          completedCandidateCount:
+            fixture.validProgress.previousCompletedCandidateCount,
+        },
+        nextProgress: { ...fixture.validProgress, reducerState: state },
+        ordinal: 5,
+      });
+      const commit = await result.publishTerminalArtifacts(
+        createRevealContinuationTerminalizationPermit({
+          attemptId: "attempt-fixture",
+          terminalChildOrdinal: 5,
+          finalCheckpointDigest: "d".repeat(64),
+        }),
+      );
+      await expect(commit()).rejects.toThrow(/24-minute deadline exceeded/u);
+      await expect(access(fixture.context.canaryPath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(
+          path.join(
+            fixture.archiveRoot,
+            ".PREFLIGHT_CANARY.json.attempt-fixture.pending",
+          ),
+        ),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  it("keeps a visible pending residue when post-commit cleanup fails", async () => {
+    await withCleanSealedGrantFixture(async (fixture) => {
+      const reducerState = fixture.validProgress.reducerState;
+      if (reducerState === undefined)
+        throw new Error("Scale fixture has no parent reducer state");
+      const state = completedStateFor(
+        coherentSegmentStateFor(reducerState, R191_SURFACE_CONTROL_COUNT),
+      );
+      const commit = await writeCompleteCanary({
+        context: fixture.context,
+        replay: {
+          state,
+          completedCandidateCount:
+            fixture.validProgress.previousCompletedCandidateCount,
+        },
+        cleanupPending: () =>
+          Promise.reject(new Error("simulated pending cleanup failure")),
+      });
+      await expect(commit()).resolves.toBeUndefined();
+      await expect(access(fixture.context.canaryPath)).resolves.toBeUndefined();
+      await expect(
+        access(
+          path.join(
+            fixture.archiveRoot,
+            ".PREFLIGHT_CANARY.json.attempt-fixture.pending",
+          ),
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 

@@ -181,7 +181,7 @@ describe("source-bound host checkpoint response rescan", () => {
         filePath: path.join(root, "response.json"),
         watchDirectory: async function* (_directory, signal) {
           await new Promise<void>((resolve) =>
-            signal.addEventListener("abort", resolve, { once: true }),
+            signal.addEventListener("abort", () => resolve(), { once: true }),
           );
           yield undefined;
         },
@@ -214,7 +214,7 @@ describe("source-bound host checkpoint response rescan", () => {
         watchDirectory: async function* (_directory, signal) {
           watcherStartedResolve?.();
           await new Promise<void>((resolve) =>
-            signal.addEventListener("abort", resolve, { once: true }),
+            signal.addEventListener("abort", () => resolve(), { once: true }),
           );
           yield undefined;
         },

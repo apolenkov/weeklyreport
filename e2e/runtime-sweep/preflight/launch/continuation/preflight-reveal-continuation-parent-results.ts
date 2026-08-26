@@ -22,8 +22,10 @@ import { assertReceiptChunkContract } from "../../reveal/continuation/preflight-
 import type {
   ParentContext,
   ParentProgress,
+  RevealContinuationTerminalizationPermit,
+  RevealContinuationTerminalPublicationCommit,
 } from "./preflight-reveal-continuation-parent.ts";
-import { assertRevealContinuationActive } from "./preflight-reveal-continuation-parent.ts";
+import { assertRevealContinuationTerminalizationActive } from "./preflight-reveal-continuation-parent.ts";
 import { sealGrant } from "./preflight-reveal-continuation-parent-grant.ts";
 import {
   assertChunkRun,
@@ -47,7 +49,9 @@ export const completeParent = (input: {
   Readonly<{
     readonly done: true;
     readonly progress: ParentProgress;
-    readonly publishTerminalArtifacts: () => Promise<void>;
+    readonly publishTerminalArtifacts: (
+      permit: RevealContinuationTerminalizationPermit,
+    ) => Promise<RevealContinuationTerminalPublicationCommit>;
   }>
 > => {
   if (
@@ -74,25 +78,28 @@ export const completeParent = (input: {
   return Promise.resolve({
     done: true,
     progress: input.nextProgress,
-    publishTerminalArtifacts: async () => {
+    publishTerminalArtifacts: async (permit) => {
       for (const asset of assets) {
-        assertRevealContinuationActive(input.context);
+        assertRevealContinuationTerminalizationActive(input.context, permit);
         await writeRevealContinuationAsset({
           archiveRoot: input.context.archiveRoot,
           asset,
         });
       }
-      assertRevealContinuationActive(input.context);
+      assertRevealContinuationTerminalizationActive(input.context, permit);
       await writeRevealParentPass({
         archiveRoot: input.context.archiveRoot,
         filePath: passPath,
         pass,
-        commitGuard: () => assertRevealContinuationActive(input.context),
+        commitGuard: () =>
+          assertRevealContinuationTerminalizationActive(input.context, permit),
       });
-      assertRevealContinuationActive(input.context);
-      await writeCompleteCanary({
+      assertRevealContinuationTerminalizationActive(input.context, permit);
+      return writeCompleteCanary({
         context: input.context,
         replay: input.reduced,
+        commitGuard: () =>
+          assertRevealContinuationTerminalizationActive(input.context, permit),
       });
     },
   });
@@ -177,7 +184,9 @@ export const continueChild = async (input: {
   Readonly<{
     readonly done: boolean;
     readonly progress: ParentProgress;
-    readonly publishTerminalArtifacts?: () => Promise<void>;
+    readonly publishTerminalArtifacts?: (
+      permit: RevealContinuationTerminalizationPermit,
+    ) => Promise<RevealContinuationTerminalPublicationCommit>;
   }>
 > => {
   const { context, progress, chunk } = input;

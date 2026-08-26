@@ -129,6 +129,39 @@ const abortPromiseFor = (controller: AbortController): Promise<never> => {
   return aborted;
 };
 
+type WatchPreparation =
+  | Readonly<{ readonly response: HostCheckpointResponse }>
+  | Readonly<{ readonly watcher: AsyncIterable<unknown> }>;
+
+const prepareWatch = async (input: {
+  readonly filePath: string;
+  readonly controller: AbortController;
+  readonly aborted: Promise<never>;
+  readonly timeoutError: Error;
+  readonly watchDirectory: WatchDirectory;
+  readonly readResponse: (
+    filePath: string,
+  ) => Promise<HostCheckpointResponse | undefined>;
+}): Promise<WatchPreparation> => {
+  const first = await Promise.race([
+    input.readResponse(input.filePath),
+    input.aborted,
+  ]);
+  if (first !== undefined) return { response: first };
+  if (input.controller.signal.aborted)
+    throw input.controller.signal.reason ?? input.timeoutError;
+  const watcher = await Promise.race([
+    input.watchDirectory(path.dirname(input.filePath), input.controller.signal),
+    input.aborted,
+  ]);
+  const afterWatchSetup = await Promise.race([
+    input.readResponse(input.filePath),
+    input.aborted,
+  ]);
+  if (afterWatchSetup !== undefined) return { response: afterWatchSetup };
+  return { watcher };
+};
+
 export const waitForHostCheckpointResponse = async (input: {
   readonly filePath: string;
   readonly signal?: AbortSignal;
@@ -146,30 +179,25 @@ export const waitForHostCheckpointResponse = async (input: {
   const onAbort = (): void => controller.abort(input.signal?.reason);
   input.signal?.addEventListener("abort", onAbort, { once: true });
   const aborted = abortPromiseFor(controller);
-  const watcherPromise: { value?: Promise<HostCheckpointResponse> } = {};
+  const watcherPromise: {
+    value?: Promise<HostCheckpointResponse | undefined>;
+  } = {};
   const timeout = input.setTimer(
     () => controller.abort(timeoutError),
     HOST_CHECKPOINT_TIMEOUT_MS,
   );
   try {
-    const first = await Promise.race([
-      input.readResponse(input.filePath),
+    const preparation = await prepareWatch({
+      filePath: input.filePath,
+      controller,
       aborted,
-    ]);
-    if (first !== undefined) return first;
-    if (controller.signal.aborted)
-      throw controller.signal.reason ?? timeoutError;
-    const watcher = await Promise.race([
-      input.watchDirectory(path.dirname(input.filePath), controller.signal),
-      aborted,
-    ]);
-    const afterWatchSetup = await Promise.race([
-      input.readResponse(input.filePath),
-      aborted,
-    ]);
-    if (afterWatchSetup !== undefined) return afterWatchSetup;
+      timeoutError,
+      watchDirectory: input.watchDirectory,
+      readResponse: input.readResponse,
+    });
+    if ("response" in preparation) return preparation.response;
     watcherPromise.value = readWatchedResponse({
-      watcher,
+      watcher: preparation.watcher,
       controller,
       filePath: input.filePath,
       readResponse: input.readResponse,
