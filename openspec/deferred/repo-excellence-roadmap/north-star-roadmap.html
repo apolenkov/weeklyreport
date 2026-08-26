@@ -3,23 +3,43 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="plannotator-theme" content="host" />
     <title>CustomReport — дорожная карта владельца CR-001</title>
     <style>
       :root {
-        --bg: #f4f6f8;
-        --surface: #ffffff;
-        --ink: #17202a;
-        --muted: #536170;
-        --line: #d7dee7;
-        --accent: #2457a6;
-        --accent-soft: #eaf1ff;
-        --ok: #176b43;
-        --ok-soft: #e7f6ee;
-        --warn: #875b00;
-        --warn-soft: #fff5d8;
-        --danger: #9c2f32;
-        --danger-soft: #fdebed;
-        --code: #edf1f5;
+        --background: oklch(0.97 0.005 260);
+        --foreground: oklch(0.18 0.02 260);
+        --card: oklch(1 0 0);
+        --card-foreground: oklch(0.18 0.02 260);
+        --primary: oklch(0.5 0.25 280);
+        --primary-foreground: oklch(1 0 0);
+        --secondary: oklch(0.5 0.18 180);
+        --muted-surface: oklch(0.92 0.01 260);
+        --muted-foreground: oklch(0.4 0.02 260);
+        --accent-color: oklch(0.6 0.22 50);
+        --destructive: oklch(0.5 0.25 25);
+        --success: oklch(0.45 0.2 150);
+        --warning: oklch(0.55 0.18 85);
+        --border: oklch(0.88 0.01 260);
+        --code-bg: oklch(0.92 0.01 260);
+        --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+        --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+        --font-display: ui-serif, Georgia, "Times New Roman", serif;
+        --radius: 0.625rem;
+        --bg: var(--background);
+        --surface: var(--card);
+        --ink: var(--foreground);
+        --muted: var(--muted-foreground);
+        --line: var(--border);
+        --accent: var(--primary);
+        --accent-soft: color-mix(in oklab, var(--primary) 10%, var(--card));
+        --ok: var(--success);
+        --ok-soft: color-mix(in oklab, var(--success) 12%, var(--card));
+        --warn: var(--warning);
+        --warn-soft: color-mix(in oklab, var(--warning) 13%, var(--card));
+        --danger: var(--destructive);
+        --danger-soft: color-mix(in oklab, var(--destructive) 11%, var(--card));
+        --code: var(--code-bg);
       }
       * {
         box-sizing: border-box;
@@ -28,11 +48,7 @@
         margin: 0;
         background: var(--bg);
         color: var(--ink);
-        font:
-          16px/1.55 -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
+        font: 15px/1.65 var(--font-sans);
       }
       .wrap {
         max-width: 1080px;
@@ -42,6 +58,8 @@
       h1,
       h2,
       h3 {
+        font-family: var(--font-display);
+        font-weight: 500;
         line-height: 1.25;
       }
       h1 {
@@ -62,6 +80,7 @@
         margin: 8px 0;
       }
       .eyebrow {
+        font-family: var(--font-mono);
         margin: 0 0 6px;
         color: var(--accent);
         font-size: 13px;
@@ -102,6 +121,35 @@
         font-weight: 700;
         letter-spacing: 0.02em;
         white-space: nowrap;
+      }
+      .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        margin: 24px 0;
+      }
+      .stat-card {
+        padding: 16px 18px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        text-align: center;
+      }
+      .stat-value {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        line-height: 1.15;
+      }
+      .stat-label {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
       .status.ok {
         color: var(--ok);
@@ -244,6 +292,24 @@
           матрица, выпуск, <code>remote tip</code> и CR-001 также имеют статус
           <span class="status danger">NOT-PROVEN</span>.
         </div>
+        <div class="summary-strip" aria-label="Ключевые показатели CR-001">
+          <div class="stat-card">
+            <span class="stat-value">59 / 71</span>
+            <span class="stat-label">OpenSpec выполнено</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">12</span>
+            <span class="stat-label">Обязательных хвостов</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">51 / 51</span>
+            <span class="stat-label">Historical desktop frames</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">R13</span>
+            <span class="stat-label">Последний bespoke packet</span>
+          </div>
+        </div>
       </header>
 
       <h2>1. Точка отсчёта</h2>
@@ -254,11 +320,13 @@
             >Текущий product source перед этой docs-only редакцией:</strong
           >
           ветка <code>campaign/cr-001-20260820</code>, commit
-          <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code>, дерево
-          <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Это точная
-          source-bound точка после последнего принятого UI-атома; до этой
-          metadata-only редакции worktree был чистым. Она не содержит нового
-          полного runtime acceptance.
+          <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code>, дерево
+          <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. До этой
+          roadmap-only редакции worktree был чистым. Три файла Status-карусели
+          на этом commit имеют те же Git blob identities, что и в принятом
+          desktop source <code>0d03068fa…</code>; это доказывает отсутствие code
+          drift в карусели, но не заменяет fresh Chrome capture на текущем exact
+          SHA.
         </p>
         <p>
           <strong>Граница harness-происхождения:</strong> исторический
@@ -269,11 +337,19 @@
           текущего source identity.
         </p>
         <p>
-          <strong>Эта редакция roadmap:</strong> обновляет только provenance,
-          authority, tails и текущую границу source identity в этом HTML-файле.
-          После отдельной фиксации она получит новый docs-only SHA/tree, но всё
-          равно не станет <code>runtimeEvidenceSha</code> без свежего
-          runtime-пакета.
+          <strong>Репозиторий:</strong> активная новая линия находится в
+          <code>/home/user/work/weeklyreport</code> на <code>62d48a28…</code>.
+          <code>/home/user/work/customreport-exemplary</code> остаётся старым
+          linked worktree на <code>4c0a9790…</code>. До cleanup они не
+          смешиваются; единственный канонический каталог будет выбран по полной
+          истории и затем лишние копии будут удалены только recoverable-путём.
+        </p>
+        <p>
+          <strong>Эта редакция roadmap:</strong> фиксирует новую границу
+          экономии: R13 сохранён как последний bespoke process-registry packet.
+          После Sol <code>NO-GO</code> R13 не запускался, R14 не создаётся, а
+          живое доказательство переносится на минимальную стандартную границу
+          Playwright/runtime без сокращения продуктового denominator.
         </p>
       </div>
       <table>
@@ -291,8 +367,8 @@
             <td>
               Для этой редакции текущий source identity — ветка
               <code>campaign/cr-001-20260820</code>, committed
-              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
-              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Свежий
+              <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
+              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. Свежий
               exact-SHA runtime capture для него не выполнялся, поэтому он не
               является runtimeEvidenceSha. Исторические repair boundaries с
               лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
@@ -393,8 +469,8 @@
             </td>
             <td>
               Для текущего source identity
-              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
-              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> для него
+              <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> /
+              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code> для него
               выполнен отдельный exact-SHA R182 diagnostic rerun с полным
               failure-evidence комплектом. Это не переносит исторические
               code/test/build receipts и не доказывает full runtime, matrix или
@@ -441,13 +517,17 @@
             </td>
             <td>
               На текущем committed source
-              <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> /
-              <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code> Wave 0 не
-              выполняет exact <code>admin/demo</code> canary. Исторические
-              contract/test/review receipts сохраняются как provenance, но не
-              дают current runtime receipt, root-cause verdict или право менять
-              лимит/граф. Требуются source-bound browser/API/DB/Redis/telemetry
-              packet и независимое Sol review.
+              <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> /
+              <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code> source и
+              детерминированные тесты контракта готовы, но live canary не
+              выполнен. R8, R9 и R11 fail-closed остановились до первого
+              runtime-effect; R12 и R13 получили Sol <code>NO-GO</code> и не
+              запускались. R13 — последняя итерация bespoke process-registry:
+              R14 не создаётся. Следующее доказательство должно использовать
+              минимальную стандартную границу Playwright/runtime, сохранить
+              exact <code>admin/demo</code>, 20 row-local toggles, ordered-pair
+              denominator, 24-минутную рабочую границу и 6 минут на проверенную
+              очистку.
             </td>
           </tr>
           <tr>
@@ -591,19 +671,19 @@
       <div class="callout ok">
         <strong>Следующая рабочая последовательность:</strong>
         <code
-          >host eligibility → fresh exact 5.14 diagnostic → 5.15 parent-only →
-          5.17 single-child → 5.19 admin/demo canary → matrix → review → fixes →
-          final resweep</code
-        >. Исторические пакеты 5.15 и 5.17 приняты только в их ограниченной
-        диагностической области; свежий 5.14 packet подтверждает комплект
-        failure-evidence, но не является runtime acceptance. Текущий source
-        identity уже зафиксирован в
-        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
-        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>; Sol plan gate
+          >canonical repository → standard 5.19 admin/demo canary → role/profile
+          batches → product findings → fresh desktop review → final gates →
+          release</code
+        >. Тестовый контур больше не развивается как самостоятельный продукт:
+        R13 закрывает bespoke packet line, R14 запрещён текущим owner decision.
+        При этом denominator CR-001 не сокращается. Текущий source identity
+        перед этой roadmap-only правкой зафиксирован в
+        <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
+        <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>; Sol plan gate
         <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
-        должны пройти host eligibility и новый executable pre-run gate; эта
-        continuity-редакция их не выполняет.
+        должен пройти короткую source/target/ports preflight и новый Sol review;
+        эта roadmap-редакция live-эффектов не выполняет.
       </div>
       <ol class="sequence">
         <li>
@@ -651,29 +731,20 @@
         </li>
         <li>
           <strong
-            >5.19 · source-bound canonicalization · CODE-PARTIAL / CANARY
+            >5.19 · source-bound canonicalization · CODE/TEST READY / CANARY
             NOT-PROVEN</strong
           >
           <span>
-            На странице Action Log seed показывает
-            <code>20 loaded+</code> строк, а каждая
-            <code>ActionLogRow</code> хранит независимый
-            <code>useState(false)</code> для раскрытия деталей. Несколько
-            раскрытий одновременно дают аддитивный powerset-граф: при
-            <code>maxDepth=4</code> это уже
-            <code>1+20+190+1140+4845=6196</code> reachable subsets. Это
-            показывает рост harness-графа, но не разрешает trim и не
-            устанавливает root cause. Введён source-bound контракт
-            <code>data-reveal-independence="source-bound-row-local"</code> для
-            row-local disclosure; без него даже pairwise-commutative triple
-            остаётся ordinary branch. Исторический code candidate сохраняет
-            target-based sequence identity, reversible pair-order proof,
-            material-union guard и boundary rejection для trusted A/B/C +
-            untrusted fourth disclosure. Exact <code>admin/demo</code> canary на
-            новом clean source ещё не запускался: он требует source-bound
-            browser/API/DB/Redis/telemetry packet и независимое Sol review.
-            Поэтому лимит нельзя повышать, граф нельзя обрезать, а 5.19 нельзя
-            помечать закрытым по одним тестам.
+            Source-bound row-local контракт, target-based identity, reversible
+            pair-order proof, parent-derived operation evidence и отрицательные
+            проверки сохранены в product source. Ночной цикл доказал не дефект
+            продукта, а непропорциональную сложность внешнего packet lifecycle:
+            R13 Sol-review нашёл нелинеаризованный concurrent refresh и
+            недоказанную стабильность live-member set. R13 не запускался;
+            evidence сохранён в
+            <code>2026-08-26-runtime-evidence-62d48a28-single-5.19-r13/</code>.
+            Следующий дизайн обязан убрать registry/READY/ARM append chain, а не
+            чинить его очередной итерацией.
           </span>
         </li>
         <li>
@@ -749,6 +820,23 @@
             </td>
           </tr>
           <tr>
+            <td>Единственный канонический каталог репозитория</td>
+            <td>
+              <span class="status warn">DECISION REQUIRED BY EVIDENCE</span>
+            </td>
+            <td>
+              Новая непрерывная история находится в
+              <code>/home/user/work/weeklyreport</code> на
+              <code>62d48a28…</code>; старый linked worktree
+              <code>/home/user/work/customreport-exemplary</code> остаётся на
+              <code>4c0a9790…</code>. Перед удалением нужно зафиксировать
+              ancestry/ref/worktree manifest, выбрать единственный canonical
+              root и доказать, что все уникальные commits и authority artifacts
+              сохранены. После этого лишние каталоги удаляются recoverable и
+              выполняется повторное чтение refs/worktrees/stashes.
+            </td>
+          </tr>
+          <tr>
             <td>Выпуск и закрытие по схеме <code>two-SHA</code></td>
             <td><span class="status danger">NOT-PROVEN</span></td>
             <td>
@@ -780,12 +868,12 @@
             владельца.
           </li>
           <li>
-            Ограниченные runtime/browser/DB/Redis-пакеты уже выполнены только на
+            Ограниченные runtime/browser/DB/Redis-пакеты выполнялись только на
             allowlisted disposable target; production, внешняя публикация и
-            неизвестные базы не затрагивались. После этой docs-only редакции
-            следующий исполнитель перечитывает clean source identity, ждёт host
-            eligibility и Sol pre-run gate, затем выполняет exact 5.14 → 5.15 →
-            5.17 → 5.19 и только после этого берёт 6.2.
+            неизвестные базы не затрагивались. Следующий live-исполнитель
+            перечитывает canonical repo и clean source identity, проходит
+            короткий host/target gate и Sol review, затем выполняет exact 5.19
+            стандартным контуром и только после этого берёт 6.2.
           </li>
           <li>
             Standing owner authority допускает временный disposable Bugsink
@@ -804,21 +892,20 @@
       <h2>6. Ближайшее действие владельца</h2>
       <div class="callout">
         <p>
-          Считать пакеты 5.14/5.15/5.17 принятыми только в их ограниченной
-          области и сохранить их неизменными. Свежий 5.14 evidence packet уже
-          сохранён, но не является runtime acceptance. После этой docs-only
-          редакции перечитать clean source identity, дождаться host eligibility
-          и нового Sol pre-run gate, затем выполнить свежую последовательность
-          5.14 → 5.15 → 5.17 → 5.19. Только после этого готовить полную матрицу
-          6.2, проверку Luna 6.3 и независимый синтез 6.4; затем — исправления и
-          финальный повторный полный sweep. Полное CR-001 пока не закрыто.
+          От владельца сейчас не требуется ручное действие. Исполнитель сначала
+          завершает доказательную классификацию двух репозиторных каталогов,
+          затем получает Sol-решение по минимальной стандартной границе 5.19.
+          После единственного успешного admin/demo canary запускаются
+          role/profile batches, свежий desktop review, финальные gates и
+          release. Полное CR-001 пока не закрыто; R13 не является product
+          failure, а R14 не входит в план.
         </p>
       </div>
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>57d9c79a015e1c08b4026530e813e0dc8b59973b</code> с деревом
-        <code>3d1cef41fa2fd771ae717037b82cb73fb3d35590</code>. Pair-level
+        <code>62d48a28e11eaad554f88e132ffb65c15889ed84</code> с деревом
+        <code>cf63eaef43729afca6a318d92d656282ffc7cdcf</code>. Pair-level
         code/test/review and all runtime claims remain separately bounded;
         <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
         после фиксации получит отдельный SHA/tree. Дорожная карта не содержит
