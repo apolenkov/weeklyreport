@@ -74,8 +74,10 @@ or broaden the transaction unnecessarily.
 The Head report toolbar owns exactly one Agent-review placeholder in both form
 and slides modes; the nested slide article does not duplicate it. The Head page
 assembly remains behind `features/report-pages`, while `report-sections` remains
-a lower-level slice. The obsolete contradictory clauses are updated or removed
-rather than moving working code back to an older architecture.
+a lower-level model/primitive slice. Lead, weekly, and Head page assemblies stay
+in `features/report-pages`; the viewer shell stays in `features/viewer`. The
+obsolete contradictory clauses are updated or removed rather than moving
+working code back to an older architecture.
 
 ### 4. Preserve load-bearing invariants
 

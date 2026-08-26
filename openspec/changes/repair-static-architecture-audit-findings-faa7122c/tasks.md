@@ -19,12 +19,12 @@
 
 - [x] 3.1 Sync the full section lifecycle precheck contract into `report-section-write-gates` and verify the archived-open/reopened scenarios are present.
 - [x] 3.2 Sync the single outer Head toolbar Agent-review ownership into `deferred-feature-pattern` and verify the obsolete nested-slide ownership statement is absent.
-- [x] 3.3 Remove the superseded Head-shell-in-`report-sections` requirement from `directory-architecture-standard`, retain `features/report-pages` as owner, and verify no contradictory requirement remains.
-- [x] 3.4 Run `pnpm exec openspec validate --all --strict` and verify every active and durable specification passes.
+- [x] 3.3 Remove every superseded page-assembly mapping from `directory-architecture-standard`; retain `features/report-sections` for model/primitives, `features/report-pages` for lead/weekly/Head assemblies, and `features/viewer` for the viewer shell.
+- [x] 3.4 Sync the corrected delta to the durable spec, run `pnpm exec openspec validate --all --strict`, and verify no contradictory ownership requirement remains.
 
 ## 4. Static close and independent acceptance
 
 - [x] 4.1 Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm depcruise`, and `pnpm knip`; verify every command exits zero and retain the exact SHA/tree with the results.
-- [x] 4.2 Inspect `git diff --check`, the complete scoped diff, changed-file inventory, and rename detection; verify no unrelated file, generated artifact, compatibility shim, or relaxed gate entered the change.
-- [x] 4.3 Obtain Sol critical review of the final diff and evidence packet; close this change only on an explicit PASS with no unresolved material finding.
+- [x] 4.2 Inspect `git diff --check` and the complete spec-only diff; verify no implementation file, compatibility shim, or relaxed gate entered the correction.
+- [x] 4.3 Obtain fresh Sol critical review of the corrected artifacts and durable spec; close this change only on an explicit PASS with no unresolved material finding.
 - [x] 4.4 Report browser, runtime, database, Redis, Docker, visual, release, and full CR-001 acceptance as `NOT-PROVEN` by this static change rather than treating static PASS as product completion.

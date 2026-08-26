@@ -518,32 +518,20 @@ domain-specific UI. The relocation MUST be behavior-neutral.
 ### Requirement: The lead domain MUST dissolve into its canonical slices, not a `features/lead` slice
 
 The legacy `apps/web/src/components/lead/` tree MUST NOT survive as a single
-`features/lead` slice. Its files MUST relocate to the canonical domain slice each
-belongs to, per the 2026-07-02 relocation mapping (archived out of the repo): the
-report-section rendering core (`lead-form`, `item-card*`, `item-edit-dialog`,
-`next-week-section`, the item-board kit `board-column-header`/`board-empty-state`/
-`activity-lanes-block`, `stage-chip`, and the kernel model files `mock-data`,
-`stage-tags`, `stage-chip-config`, `next-week-columns`, `item-card-style`,
-`record-parent`, `stage-ownership`) MUST live under `features/report-sections/{ui,model}`;
-the period-navigation and SDLC-pipeline files MUST live under `features/period/{ui,model}`;
-the risk/review files under `features/review/ui`; `pdf-export-coming-soon` under
-`features/pdf-export/ui`; `version-coming-soon` under `features/admin/ui`; and the
-generic `confirm-delete-dialog` under `shared/ui/dialogs/` (rule-of-2). The relocation
-MUST be behavior-neutral.
+`features/lead` slice. Page-level lead form composition MUST live under
+`features/report-pages/ui/lead/`. Reusable report-section UI primitives and
+domain model MUST live under `features/report-sections/{ui,model}`; period
+navigation and SDLC-pipeline files MUST live under `features/period/{ui,model}`;
+risk/review files under `features/review/ui`; `pdf-export-coming-soon` under
+`features/pdf-export/ui`; `version-coming-soon` under `features/admin/ui`; and
+the generic `confirm-delete-dialog` under `shared/ui/dialogs/` (rule-of-2). The
+relocation MUST be behavior-neutral.
 
-The kernel files with wide external fan-in (`mock-data`, `stage-tags`,
-`stage-chip-config`) MUST reside in `features/report-sections/model/`, not
-`shared/`, because they encode report-section domain logic rather than
-business-agnostic helpers; their consumers outside the slice (hooks, lib mappers,
-head/viewer/weekly-report/slides) import them at their `report-sections/model`
-path.
-
-Because this is a multi-home dissolve (not a single clean slice), it MUST NOT
-enable cross-slice enforcement for the affected slices in this change: no
-`webSlices` entry and no zone-5 `except` are added for `report-sections`,
-`period`, or `review`. The pre-existing and newly-surfaced cross-slice imports
-(e.g. `report-sections` ↔ `period` ↔ `review`) stay unenforced until a dedicated
-boundaries slice, following the `admin` dissolve precedent.
+The kernel files with wide external fan-in (`stage-tags`, `stage-chip-config`)
+MUST reside in `features/report-sections/model/`, not `shared/`, because they
+encode report-section domain logic rather than business-agnostic helpers.
+Consumers outside the slice MUST use the `features/report-sections` facade
+rather than importing its internals.
 
 #### Scenario: components/lead no longer exists
 
@@ -555,26 +543,19 @@ boundaries slice, following the `admin` dissolve precedent.
 #### Scenario: report-sections becomes a slice, unblocking dependents
 
 - **WHEN** the relocation is applied
-- **THEN** `features/report-sections/` exists with the report-section core under
-  `ui/` and the kernel model files under `model/`
-- **AND** `head-report-shell`, `viewer-report-shell`, and the `weekly-report`
-  dissolution can now target `features/report-sections/`
+- **THEN** `features/report-sections/` owns reusable report-section model and UI
+  primitives behind its facade
+- **AND** lead, weekly, and Head page assemblies live in `features/report-pages`
+- **AND** `viewer-report-shell` lives in `features/viewer`
 
 #### Scenario: kernel files are report-sections model, not shared
 
-- **WHEN** a consumer outside the report-sections slice (a hook, a lib mapper, or
-  the head/viewer/weekly-report/slides code) uses `mock-data`, `stage-tags`, or
+- **WHEN** a consumer outside the report-sections slice uses `stage-tags` or
   `stage-chip-config`
-- **THEN** it imports them from `features/report-sections/model/*`
-- **AND** none of these kernel files reside under `shared/`
-
-#### Scenario: the dissolve does not enable cross-slice enforcement
-
-- **WHEN** `eslint.config.ts` is evaluated after the relocation
-- **THEN** the `webSlices` array gains no `report-sections`, `period`, or `review`
-  entry, and no zone-5 `except` is added for their mutual cross-slice imports
-- **AND** the 10 path-pinned complexity/max-lines exemptions reference the files'
-  new homes, not `components/lead/*`
+- **THEN** the implementations reside in `features/report-sections/model/*`
+- **AND** the consumer reaches the required export through the
+  `features/report-sections` facade
+- **AND** none of these kernel files resides under `shared/`
 
 ### Requirement: The viewer report shell MUST form its own `features/viewer` slice
 
@@ -595,27 +576,30 @@ behavior-neutral.
 ### Requirement: The weekly-report tree MUST dissolve into its canonical slices
 
 The legacy `apps/web/src/components/weekly-report/` tree MUST NOT survive as a
-`features/weekly-report` slice. Its files MUST relocate to the canonical domain
-each belongs to, per the 2026-07-02 relocation mapping (archived out of the repo):
-the assembled-report rendering core (`activity-status-strip`, `portfolio-overview-table`,
-`product-accordion`, `weekly-report-page`, `weekly-report-skeleton`) under
-`features/report-sections/ui`; `export-pdf-button` under `features/pdf-export/ui`;
-the publish/reopen controls (`head-publish-lock-action`, `publish-lock-button`)
-under `features/period/ui`; the review-mode components under `features/review/ui`
-and the pure mapper `section-review-rows` under `features/review/model`. The
-relocation MUST be behavior-neutral, and the `components/weekly-report/` tree MUST
-NOT survive it.
+`features/weekly-report` slice. Page-level weekly report composition — including
+`weekly-report-page`, `weekly-report-skeleton`, and `product-accordion` — MUST
+live under `features/report-pages/ui/`. Reusable assembled-report primitives
+such as `activity-status-strip` and `portfolio-overview-table` MUST live under
+`features/report-sections/ui/`; their pure projection and grouping model MUST
+live under `features/report-sections/model/`. Export, period-lifecycle, and
+review-owned controls MUST live under their respective feature slices. The
+relocation MUST be behavior-neutral, and the legacy tree MUST NOT survive it.
 
 #### Scenario: components/weekly-report no longer exists
 
 - **WHEN** the relocation is applied
 - **THEN** `apps/web/src/components/weekly-report/` no longer exists
-- **AND** each former file resides under `features/<domain>/{ui,model}/` per the mapping
+- **AND** each former file resides under its canonical feature owner
 
-#### Scenario: consumers import the assembled report from report-sections
+#### Scenario: consumers import the assembled report from report-pages
 
-- **WHEN** the head or viewer report shell renders the weekly report page
-- **THEN** it imports `WeeklyReportPage` from `features/report-sections/ui/*`
+- **WHEN** the Head or viewer report shell renders the weekly report page
+- **THEN** the Head same-slice composition imports `WeeklyReportPage` through a
+  relative module path within `features/report-pages`
+- **AND** the viewer shell imports `WeeklyReportPage` from the
+  `features/report-pages` facade
+- **AND** `features/report-pages` consumes report-section model and primitives
+  through the `features/report-sections` facade
 - **AND** no code imports `components/weekly-report/*`
 
 ### Requirement: Business-agnostic web primitives MUST live in `shared/`, not the `components/` root
