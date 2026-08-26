@@ -6,9 +6,9 @@ import {
   assertNestedProcessRegistered,
   createNestedProcessOwnershipFinalizer,
   type NestedProcessOwnershipHandle,
-  type NestedProcessOwnershipPaths,
 } from "./preflight-nested-process-ownership-finalizer.ts";
 import {
+  type NestedProcessOwnershipPaths,
   readyReceiptFor,
   writeArm,
 } from "./preflight-nested-process-ownership-protocol.ts";
