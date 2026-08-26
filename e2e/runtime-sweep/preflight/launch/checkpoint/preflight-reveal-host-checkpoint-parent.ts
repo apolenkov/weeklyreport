@@ -98,7 +98,7 @@ const assertResponseProgress = (input: {
     throw new Error("Host checkpoint response sequence drifted");
 };
 
-const assertCheckpointResponse = (input: {
+export const assertHostCheckpointResponseForRequest = (input: {
   readonly request: HostCheckpointRequest;
   readonly response: HostCheckpointResponse;
   readonly boundaryTimestamp: number;
@@ -150,7 +150,7 @@ const requestHostCheckpointAfterChild = async (input: {
     throw new Error(
       "Host checkpoint parent has no expected baseline receipt digest",
     );
-  assertCheckpointResponse({
+  assertHostCheckpointResponseForRequest({
     request,
     response,
     boundaryTimestamp,
