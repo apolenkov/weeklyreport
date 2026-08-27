@@ -37,14 +37,17 @@ const progressFor = (count: number): ParentProgress => ({
 });
 
 const notifyCleanup = (context: ParentContext, ordinal: number): void => {
-  context.onChildCleanup?.({
+  const runtimeEvidence = {
     status: "PASS",
     ownership: "OWNED",
     processGroup: "GONE",
     pid: 20_000 + ordinal,
     pgid: 20_000 + ordinal,
     childOrdinal: ordinal,
-  });
+    uid: 501,
+    startToken: `opaque-start-${String(ordinal)}`,
+  } as const;
+  context.onChildCleanup?.(runtimeEvidence);
 };
 
 describe("reveal aggregate continuation", () => {
@@ -139,6 +142,26 @@ describe("reveal aggregate continuation", () => {
         expect(completion.status).toBe("COMPLETE");
         expect(completion.completedCandidateCount).toBe(16_384);
         expect(completion.partitionReceiptDigests).toHaveLength(2);
+        const firstReceipt = JSON.parse(
+          await readFile(
+            path.join(
+              archiveRoot,
+              "continuation",
+              "PREFLIGHT_REVEAL_AGGREGATE_PARTITION_RECEIPT.aggregate-fixture.partition-0001.json",
+            ),
+            "utf8",
+          ),
+        ) as { cleanupEvidence: readonly Record<string, unknown>[] };
+        expect(firstReceipt.cleanupEvidence).toEqual([
+          {
+            status: "PASS",
+            ownership: "OWNED",
+            processGroup: "GONE",
+            pid: 20_000,
+            pgid: 20_000,
+            childOrdinal: 0,
+          },
+        ]);
         expect(events).toEqual(["cleanup", "publication"]);
       } finally {
         await rm(archiveRoot, { recursive: true, force: true });

@@ -5,6 +5,10 @@ import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runPreflightPlaywrightChild } from "./preflight-playwright-child.ts";
+import {
+  preflightPlaywrightChildCleanupEvidenceFor,
+  preflightPlaywrightChildCleanupWithOrdinalFor,
+} from "./preflight-playwright-child-cleanup.ts";
 
 const processExists = (pid: number): boolean => {
   try {
@@ -181,5 +185,37 @@ describe("bounded reveal continuation Playwright child", () => {
       if (descendantPid !== undefined) await waitForProcessExit(descendantPid);
       await rm(root, { force: true, recursive: true });
     }
+  });
+});
+
+describe("preflight Playwright child cleanup evidence", () => {
+  it("projects internal process ownership onto the public receipt contract", () => {
+    const ownership = {
+      pid: 20_001,
+      pgid: 20_001,
+      uid: 501,
+      startToken: "opaque-start-token",
+    } as const;
+
+    expect(preflightPlaywrightChildCleanupEvidenceFor(ownership)).toEqual({
+      status: "PASS",
+      ownership: "OWNED",
+      processGroup: "GONE",
+      pid: 20_001,
+      pgid: 20_001,
+    });
+    expect(
+      preflightPlaywrightChildCleanupWithOrdinalFor({
+        ...ownership,
+        childOrdinal: 7,
+      }),
+    ).toEqual({
+      status: "PASS",
+      ownership: "OWNED",
+      processGroup: "GONE",
+      pid: 20_001,
+      pgid: 20_001,
+      childOrdinal: 7,
+    });
   });
 });
