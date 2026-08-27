@@ -13,5 +13,5 @@
 
 - [x] 3.1 Run focused Vitest coverage, `pnpm --filter @customreport/web typecheck`, scoped ESLint, scoped Prettier, and `git diff --check`.
 - [x] 3.2 Run `openspec validate fix-lead-form-load-recovery --strict`.
-- [ ] 3.3 Capture and manually review source-bound R41 browser evidence with zero unexpected console, page, or request failures.
-- [ ] 3.4 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm format:check` before marking the change complete.
+- [x] 3.3 Capture and manually review source-bound R41 browser evidence with zero unexpected console, page, or request failures.
+- [x] 3.4 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm format:check` before marking the change complete.
