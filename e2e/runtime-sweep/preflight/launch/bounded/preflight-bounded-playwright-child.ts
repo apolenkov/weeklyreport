@@ -1,6 +1,9 @@
 import { type ChildProcess } from "node:child_process";
 
-import type { ObservePreflightPlaywrightChildCleanup } from "../preflight-playwright-child-cleanup.ts";
+import {
+  type ObservePreflightPlaywrightChildCleanup,
+  preflightPlaywrightChildCleanupEvidenceFor,
+} from "../preflight-playwright-child-cleanup.ts";
 import { boundedPlaywrightArgs } from "./preflight-bounded-playwright-command.ts";
 import { spawnDetachedProcessGroup } from "./preflight-detached-process-group.ts";
 
@@ -304,12 +307,9 @@ export const runBoundedPlaywrightChild = async (
       input.signal,
     );
     await owned.close();
-    input.onCleanup?.({
-      ...owned.ownership,
-      status: "PASS",
-      ownership: "OWNED",
-      processGroup: "GONE",
-    });
+    input.onCleanup?.(
+      preflightPlaywrightChildCleanupEvidenceFor(owned.ownership),
+    );
     return exitCode;
   } catch (error: unknown) {
     return owned.abort(error);

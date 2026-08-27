@@ -10,7 +10,7 @@ import {
 } from "../continuation/preflight-reveal-continuation-parent.ts";
 import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
 import type { RevealPartitionCleanupEvidence } from "../continuation/preflight-reveal-continuation-partition-contract.ts";
-import type { PreflightPlaywrightChildCleanupEvidence } from "../preflight-playwright-child-cleanup.ts";
+import { preflightPlaywrightChildCleanupWithOrdinalFor } from "../preflight-playwright-child-cleanup.ts";
 import { runRevealContinuationChildWithBudget } from "./budget/preflight-reveal-host-checkpoint-budget-runner.ts";
 import {
   type PreparedTerminalChildPublication,
@@ -29,9 +29,7 @@ export type RevealPartitionExecutionResult = Readonly<{
   readonly terminalPublication?: PreparedTerminalChildPublication["publishTerminalArtifacts"];
 }>;
 
-type PartitionCleanupEvidence = PreflightPlaywrightChildCleanupEvidence & {
-  readonly childOrdinal: number;
-};
+type PartitionCleanupEvidence = RevealPartitionCleanupEvidence;
 type PartitionOutcomeInput = Pick<
   RevealPartitionExecutionResult,
   "progress" | "startChildOrdinal" | "cleanupEvidence"
@@ -105,7 +103,9 @@ const runPartitionChild = async (input: {
     ...input.context,
     onChildCleanup: (evidence) => {
       input.context.onChildCleanup?.(evidence);
-      cleanupEvidence.push(evidence);
+      cleanupEvidence.push(
+        preflightPlaywrightChildCleanupWithOrdinalFor(evidence),
+      );
     },
   };
   await assertLivePreflightSourceIdentity({
