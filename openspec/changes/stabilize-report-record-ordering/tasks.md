@@ -18,6 +18,6 @@
 ## 4. Verification and evidence
 
 - [x] 4.1 Run focused Vitest suites for the API include, seed identities, and continuation genesis, plus changed-file ESLint.
-- [ ] 4.2 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`; record exact outcomes against the committed source.
+- [x] 4.2 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`; record exact outcomes against the committed source.
 - [ ] 4.3 Commit the complete repair atomically, prove a clean branch/HEAD/tree snapshot, and run the exact-SHA full-profile continuation canary.
 - [ ] 4.4 Record the canary source, parent grant, independent reset/reseed, fresh-genesis acceptance, frontier continuation, terminal verdict, and cleanup evidence in the external archive.
