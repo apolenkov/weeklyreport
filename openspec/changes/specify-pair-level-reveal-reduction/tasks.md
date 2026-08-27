@@ -28,7 +28,7 @@
       implementation SHA: `pnpm typecheck`, `pnpm lint`, targeted runtime-sweep
       tests, and `pnpm test`; record source/tree digests and obtain a fresh Sol
       code gate.
-- [ ] 3.2 Only after the code gate, run one bounded exact `admin/demo` canary
+- [x] 3.2 Only after the code gate, run one bounded exact `admin/demo` canary
       against the declared disposable target and classify registration savings,
       live target binding, and 5.19 independently; no retry or cap increase.
 - [x] 3.3 Keep visual matrix, Redis TOCTOU, release, and full CR-001 closure
