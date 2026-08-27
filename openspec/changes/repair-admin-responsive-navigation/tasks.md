@@ -26,15 +26,15 @@
 
 ## 5. Exact-Source Browser Evidence
 
-- [ ] 5.1 Freeze HEAD, tree, complete tracked-plus-sorted-untracked patch digest, rendered-source hashes, fixture/resource identities, and the inventory before launching Chrome.
-- [ ] 5.2 On Pro, use Chrome stable to exercise normal-entry navigation, every working Settings section, disabled Holidays, non-zero/max-display status variants, active and focused states, and geometry at 375, 768, 1023, 1024, and 1280 CSS px.
-- [ ] 5.3 If the `lg` pill strip does not fit at 1024 with maximum-display counts, move the breakpoint and repeat the boundary run rather than weakening the contract.
-- [ ] 5.4 Materialize an exact secret-scanned candidate bundle for the authorized Air lane, prove Air identity/source parity, and run only non-conflicting read-only/check gates there; classify unavailable or stale Air evidence as incomplete.
-- [ ] 5.5 Store the fresh per-frame evidence ledger and cleanup receipts in `customreport-archive`, including separate scoped-behavior, whole-surface, and evidence-validity verdict fields.
+- [x] 5.1 Freeze HEAD, tree, complete tracked-plus-sorted-untracked patch digest, rendered-source hashes, fixture/resource identities, and the inventory before launching Chrome.
+- [x] 5.2 On Pro, use Chrome stable to exercise normal-entry navigation, every working Settings section, disabled Holidays, non-zero/max-display status variants, active and focused states, and geometry at 375, 768, 1023, 1024, and 1280 CSS px.
+- [x] 5.3 If the `lg` pill strip does not fit at 1024 with maximum-display counts, move the breakpoint and repeat the boundary run rather than weakening the contract.
+- [x] 5.4 Materialize an exact secret-scanned candidate bundle for the authorized Air lane, prove Air identity/source parity, and run only non-conflicting read-only/check gates there; classify unavailable or stale Air evidence as incomplete.
+- [x] 5.5 Store the fresh per-frame evidence ledger and cleanup receipts in `customreport-archive`, including separate scoped-behavior, whole-surface, and evidence-validity verdict fields.
 
 ## 6. Independent Review
 
-- [ ] 6.1 Dispatch two fresh independent Sol visual reviewers without an upstream PASS narrative; require both to open every enumerated frame and return per-frame whole-surface traces.
-- [ ] 6.2 Run one bounded sanitized OpenCode Pro advisory review of the consequential patch if the managed external gate remains eligible; Sol adjudicates every finding.
-- [ ] 6.3 Repair every accepted product/evidence blocker, recapture affected frames, then obtain a fresh complete approving round on one exact source identity.
-- [ ] 6.4 Re-run `pnpm exec openspec validate repair-admin-responsive-navigation --strict`, reconcile the checklist and archive index, and leave archive/commit/push/merge/publication untouched pending explicit authorization.
+- [x] 6.1 Dispatch two fresh independent Sol visual reviewers without an upstream PASS narrative; require both to open every enumerated frame and return per-frame whole-surface traces.
+- [x] 6.2 Run one bounded sanitized OpenCode Pro advisory review of the consequential patch if the managed external gate remains eligible; Sol adjudicates every finding.
+- [x] 6.3 Repair every accepted product/evidence blocker, recapture affected frames, then obtain a fresh complete approving round on one exact source identity.
+- [x] 6.4 Re-run `pnpm exec openspec validate repair-admin-responsive-navigation --strict`, reconcile the checklist and archive index, and leave archive/commit/push/merge/publication untouched pending explicit authorization.
