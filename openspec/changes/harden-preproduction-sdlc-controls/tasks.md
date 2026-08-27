@@ -30,7 +30,7 @@
 
 - [x] 4.1 Run the targeted configuration-hygiene tests and parse every workflow
       through the new policy checker.
-- [ ] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
+- [x] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
       `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and the
       repository build with its required explicit API URLs.
 - [ ] 4.3 Freeze a new source SHA and repeat source-bound preflight, visual,
