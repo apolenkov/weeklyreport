@@ -19,6 +19,12 @@ export const runRevealContinuationChildWithBudget = async (input: {
   readonly runChild: typeof runContinuationChild;
   readonly remainingMs: number;
   readonly assertTerminalPublicationActive: () => void;
+  /**
+   * Aggregate partitions may close a window before launching the next child.
+   * The handler is intentionally limited to the pre-launch guard; budget
+   * errors raised by the child itself remain terminal diagnostics.
+   */
+  readonly onPrelaunchBudgetExhausted?: () => void | Promise<void>;
 }): Promise<Awaited<ReturnType<typeof runContinuationChild>> | undefined> => {
   const limits = input.context.continuationLimits ?? REVEAL_CONTINUATION_LIMITS;
   try {
@@ -29,6 +35,10 @@ export const runRevealContinuationChildWithBudget = async (input: {
     });
   } catch (error: unknown) {
     if (!isPublishableRevealContinuationBudgetError(error)) throw error;
+    if (input.onPrelaunchBudgetExhausted !== undefined) {
+      await input.onPrelaunchBudgetExhausted();
+      return undefined;
+    }
     await publishRevealContinuationBudgetFailure({
       context: input.context,
       progress: input.progress,

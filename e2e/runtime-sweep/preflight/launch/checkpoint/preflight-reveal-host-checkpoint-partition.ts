@@ -32,6 +32,15 @@ export type RevealPartitionExecutionResult = Readonly<{
 type PartitionCleanupEvidence = PreflightPlaywrightChildCleanupEvidence & {
   readonly childOrdinal: number;
 };
+type PartitionOutcomeInput = Pick<
+  RevealPartitionExecutionResult,
+  "progress" | "startChildOrdinal" | "cleanupEvidence"
+> & { readonly ordinal: number };
+type PartitionChildResult = Readonly<{
+  readonly result: Awaited<ReturnType<typeof runContinuationChild>> | undefined;
+  readonly cleanupEvidence: readonly PartitionCleanupEvidence[];
+  readonly budgetExhaustedBeforeLaunch: boolean;
+}>;
 
 const assertPartitionCleanupEvidence = (input: {
   readonly evidence: readonly RevealPartitionCleanupEvidence[];
@@ -86,16 +95,12 @@ const assertPartitionInput = (input: {
 const runPartitionChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
+  readonly startChildOrdinal: number;
   readonly ordinal: number;
   readonly runChild: typeof runContinuationChild;
-}): Promise<
-  Readonly<{
-    readonly result:
-      Awaited<ReturnType<typeof runContinuationChild>> | undefined;
-    readonly cleanupEvidence: readonly PartitionCleanupEvidence[];
-  }>
-> => {
+}): Promise<PartitionChildResult> => {
   const cleanupEvidence: PartitionCleanupEvidence[] = [];
+  const budgetBoundary = { value: false };
   const context: ParentContext = {
     ...input.context,
     onChildCleanup: (evidence) => {
@@ -115,8 +120,19 @@ const runPartitionChild = async (input: {
     remainingMs: remainingRevealContinuationMs(context),
     assertTerminalPublicationActive: () =>
       assertRevealContinuationTerminalPublicationActive(context),
+    ...(input.ordinal > input.startChildOrdinal
+      ? {
+          onPrelaunchBudgetExhausted: () => {
+            budgetBoundary.value = true;
+          },
+        }
+      : {}),
   });
-  return { result, cleanupEvidence };
+  return {
+    result,
+    cleanupEvidence,
+    budgetExhaustedBeforeLaunch: budgetBoundary.value,
+  };
 };
 
 const checkpointProgress = async (input: {
@@ -170,6 +186,36 @@ const prepareCompletedChild = async (input: {
   };
 };
 
+const budgetBoundaryResultFor = (
+  input: PartitionOutcomeInput,
+): RevealPartitionExecutionResult => {
+  if (input.ordinal <= input.startChildOrdinal)
+    throw new Error(
+      "Aggregate partition budget boundary requires a completed child",
+    );
+  return {
+    status: "BOUNDARY",
+    progress: input.progress,
+    startChildOrdinal: input.startChildOrdinal,
+    nextOrdinal: input.ordinal,
+    completedChildOrdinal: input.ordinal - 1,
+    exitCode: 0,
+    cleanupEvidence: input.cleanupEvidence,
+  };
+};
+
+const failedPartitionResultFor = (
+  input: PartitionOutcomeInput,
+): RevealPartitionExecutionResult => ({
+  status: "COMPLETE",
+  progress: input.progress,
+  startChildOrdinal: input.startChildOrdinal,
+  nextOrdinal: input.ordinal,
+  completedChildOrdinal: input.ordinal,
+  exitCode: 1,
+  cleanupEvidence: input.cleanupEvidence,
+});
+
 const runPartitionStep = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
@@ -187,31 +233,34 @@ const runPartitionStep = async (input: {
       `Reveal aggregate continuation exceeded its source-derived child guard of ${String(input.maxChildren)}`,
     );
   const child = await runPartitionChild(input);
-  const result = child.result;
   const cleanupEvidence = [...input.cleanupEvidence, ...child.cleanupEvidence];
-  if (result === undefined)
-    return {
-      status: "COMPLETE",
+  if (child.result === undefined && child.budgetExhaustedBeforeLaunch) {
+    return budgetBoundaryResultFor({
       progress: input.progress,
       startChildOrdinal: input.startChildOrdinal,
-      nextOrdinal: input.ordinal,
-      completedChildOrdinal: input.ordinal,
-      exitCode: 1,
+      ordinal: input.ordinal,
       cleanupEvidence,
-    };
-  if (result.done)
+    });
+  }
+  if (child.result === undefined)
+    return failedPartitionResultFor({
+      progress: input.progress,
+      startChildOrdinal: input.startChildOrdinal,
+      ordinal: input.ordinal,
+      cleanupEvidence,
+    });
+  if (child.result.done)
     return prepareCompletedChild({
       context: input.context,
       progress: input.progress,
       startChildOrdinal: input.startChildOrdinal,
       ordinal: input.ordinal,
-      result,
+      result: child.result,
       cleanupEvidence,
     });
-  assertRevealContinuationActive(input.context);
   const progress = await checkpointProgress({
     context: input.context,
-    progress: result.progress,
+    progress: child.result.progress,
     ordinal: input.ordinal,
   });
   if (
@@ -231,7 +280,6 @@ const runPartitionStep = async (input: {
   return runPartitionStep({
     ...input,
     progress,
-    startChildOrdinal: input.startChildOrdinal,
     ordinal: input.ordinal + 1,
     cleanupEvidence,
   });
