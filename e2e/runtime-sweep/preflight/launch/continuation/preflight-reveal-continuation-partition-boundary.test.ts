@@ -109,7 +109,7 @@ describe("reveal aggregate partition boundaries", () => {
     },
   );
 
-  it("rejects a non-empty boundary below the partition limit", () => {
+  it("rejects a non-empty boundary without candidate progress", () => {
     expect(() =>
       createRevealPartitionReceipt({
         plan: plan(),
@@ -119,7 +119,7 @@ describe("reveal aggregate partition boundaries", () => {
         authorityKey: AUTHORITY_KEY,
         startChildOrdinal: 0,
         endChildOrdinal: 0,
-        endCandidateCount: 1,
+        endCandidateCount: 0,
         startCheckpointDigest: null,
         endCheckpointDigest: sha256Hex("checkpoint-underflow"),
         startSampleSequence: null,

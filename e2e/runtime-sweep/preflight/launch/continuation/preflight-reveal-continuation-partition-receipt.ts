@@ -66,8 +66,7 @@ const assertReceiptRange = (
   if (
     input.endCandidateCount < input.state.completedCandidateCount ||
     input.endCandidateCount > entry.maxEndCandidateCountExclusive ||
-    (input.frontier === "non-empty" &&
-      candidateDelta < input.plan.partitionCandidateLimit)
+    candidateDelta < 1
   )
     throw new Error("Aggregate partition receipt candidate range is invalid");
 };

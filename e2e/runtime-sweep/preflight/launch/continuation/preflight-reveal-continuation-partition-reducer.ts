@@ -116,8 +116,7 @@ const assertReceiptProgress = (input: ReductionInput): void => {
   if (
     receipt.endCandidateCount < receipt.startCandidateCount ||
     receipt.endCandidateCount > entry.maxEndCandidateCountExclusive ||
-    (receipt.frontier === "non-empty" &&
-      candidateDelta < input.plan.partitionCandidateLimit)
+    candidateDelta < 1
   )
     throw new Error("Aggregate partition receipt does not close a valid range");
   assertPartitionChainProgress(state.chain, receipt.endChain);
