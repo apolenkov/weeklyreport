@@ -2,14 +2,11 @@ import {
   type DraftSaveInput,
   type DraftSavePayload,
   draftSaveSchema,
-  type DraftSaveValidationError,
   MS_PER_HOUR,
   MS_PER_SECOND,
   type MyHistoryEntry,
-  type PeriodStatus,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
-  type ReportStatus,
   type SubmitSectionInput,
   type SubmitSectionPayload,
   submitSectionSchema,
@@ -20,102 +17,32 @@ import {
 } from "@customreport/shared";
 
 import { createServiceLogger } from "../../../lib/logger-service.js";
-import {
-  buildMyHistoryEntries,
-  type MyHistorySectionRow,
-} from "../domain/my-history.js";
+import { buildMyHistoryEntries } from "../domain/my-history.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { mergeSection } from "../domain/report-section-merge.js";
+import {
+  type GetGraceSettings,
+  type ReportPeriodWriteGate,
+  ReportSectionAccessError,
+  ReportSectionDomainError,
+  ReportSectionNotFoundError,
+  type ReportSectionsRepository,
+} from "./report-sections.contract.js";
 import {
   NOOP_REPORT_SECTIONS_TELEMETRY,
   type ReportSectionsTelemetry,
 } from "./report-sections-telemetry.port.js";
 
-export class ReportSectionDomainError extends Error {
-  constructor(
-    readonly code: DraftSaveValidationError["code"],
-    message: string,
-  ) {
-    super(message);
-    this.name = "ReportSectionDomainError";
-  }
-}
-
-export class ReportSectionAccessError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ReportSectionAccessError";
-  }
-}
-
-// The report or section a write targets is gone. Extends Error directly (never
-// ReportSectionDomainError) so the mapper table's one-row-per-error invariant
-// holds and this surfaces as NOT_FOUND, not the BAD_REQUEST validation code.
-export class ReportSectionNotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ReportSectionNotFoundError";
-  }
-}
-
-// Raised when a write's expected version no longer matches the stored row (a
-// concurrent writer advanced it). Distinct from ReportSectionDomainError so the
-// error-mapper surfaces CONFLICT (409) and the client reloads and retries.
-export class SectionVersionConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SectionVersionConflictError";
-  }
-}
-
-export interface ReportPeriodWriteGate {
-  periodStatus: PeriodStatus;
-  archived: boolean;
-}
-
-export interface ReportSectionsRepository {
-  getSectionById(
-    reportSectionId: string,
-  ): Promise<ReportSectionReadModel | null>;
-  // Canonical lifecycle facts keyed on the section id. Both write paths decide
-  // editability from this tuple — never the legacy Report.status column — so
-  // reopen editing works while archived and published reports stay locked.
-  getReportPeriodWriteGateForSection(
-    sectionId: string,
-  ): Promise<ReportPeriodWriteGate | null>;
-  // Deadline-aware variant. Null means the report does not exist — the deadline
-  // gate treats that as a NOT_FOUND integrity failure, never a free pass.
-  // Required: an unimplemented reader would silently disable the deadline gate.
-  getReportMeta(
-    reportId: string,
-  ): Promise<{ status: ReportStatus; deadline: Date | null } | null>;
-  // Resolve which CURRENT item/decision lineages have appeared in a published
-  // report — the delete-lock reference set, required so an omitting repository
-  // fails to compile. Risks are excluded: a risk is re-raised, not carried.
-  getPublishedLineage(section: ReportSectionReadModel): Promise<{
-    itemStableIds: readonly string[];
-    decisionStableIds: readonly string[];
-  }>;
-  saveSection(
-    section: ReportSectionReadModel,
-    expectedVersion: number,
-  ): Promise<ReportSectionReadModel>;
-  // Every section authored by `authorId`, newest reporting-period first
-  // (periodStart desc, createdAt tiebreak) — the raw rows behind myHistory.
-  // See buildMyHistoryEntries for why the ordering must match compiledHistory.
-  getMyHistoryRows(authorId: string): Promise<readonly MyHistorySectionRow[]>;
-}
-
-// DI token binding the ReportSectionsRepository port to its adapter at the
-// module boundary — the service depends on the port, not the prisma class.
-export const REPORT_SECTIONS_REPOSITORY = Symbol("ReportSectionsRepository");
-
-// Minimal AppSettings shape for grace + late-submission rules, read through a
-// callback so unit tests pass a tiny stub without standing up the admin module.
-export type GetGraceSettings = () => Promise<{
-  gracePeriodHours: number;
-  allowLateSubmissions: boolean;
-}>;
+export {
+  type GetGraceSettings,
+  REPORT_SECTIONS_REPOSITORY,
+  type ReportPeriodWriteGate,
+  ReportSectionAccessError,
+  ReportSectionDomainError,
+  ReportSectionNotFoundError,
+  type ReportSectionsRepository,
+  SectionVersionConflictError,
+} from "./report-sections.contract.js";
 
 export class ReportSectionsService {
   private readonly logger = createServiceLogger("ReportSectionsService");

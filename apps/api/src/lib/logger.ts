@@ -262,31 +262,19 @@ class AppLoggerImpl implements AppLogger {
   }
 }
 
-class NullLogger implements AppLogger {
-  debug(): void {
-    /* noop */
-  }
-  info(): void {
-    /* noop */
-  }
-  warn(): void {
-    /* noop */
-  }
-  error(): void {
-    /* noop */
-  }
-  child(): AppLogger {
-    return this;
-  }
-  flush(): Promise<void> {
-    return Promise.resolve();
-  }
-}
+const nullLogger: AppLogger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+  child: () => nullLogger,
+  flush: () => Promise.resolve(),
+};
 
 export function createAppLogger(options: LoggerOptions = {}): AppLogger {
   return new AppLoggerImpl(options);
 }
 
 export function createNullLogger(): AppLogger {
-  return new NullLogger();
+  return nullLogger;
 }

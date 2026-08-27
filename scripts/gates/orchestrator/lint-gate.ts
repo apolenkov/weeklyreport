@@ -101,7 +101,7 @@ const CHECKS: readonly Check[] = [
   },
   {
     script: "lint:exemplary-floor",
-    what: "exemplary-floor three-counter ratchet",
+    what: "exemplary-floor catalogue and structural ratchet",
   },
   {
     script: "lint:type-cycles:test",

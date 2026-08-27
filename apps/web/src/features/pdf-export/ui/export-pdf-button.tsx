@@ -20,6 +20,39 @@ interface ExportPdfButtonProps {
   readonly periodStatus: PeriodStatus;
 }
 
+function exportButtonClassName(isGenerating: boolean): string {
+  return isGenerating
+    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] disabled:opacity-100"
+    : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
+}
+
+function ExportActionButton({
+  disabled,
+  isGenerating,
+  onExport,
+  className,
+  describedBy,
+}: {
+  readonly disabled: boolean;
+  readonly isGenerating: boolean;
+  readonly onExport: () => void;
+  readonly className: string;
+  readonly describedBy?: string | undefined;
+}) {
+  return (
+    <ToolbarIconButton
+      aria-label="Export PDF"
+      onClick={onExport}
+      disabled={disabled}
+      aria-busy={isGenerating}
+      aria-describedby={describedBy}
+      className={className}
+    >
+      {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
+    </ToolbarIconButton>
+  );
+}
+
 // Disabled while editable (incl. reopen): backend exports only the
 // published read model.
 export function ExportPdfButton({
@@ -30,9 +63,7 @@ export function ExportPdfButton({
     usePdfExportJob({ reportId, periodStatus });
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
-  const buttonClassName = isGenerating
-    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] disabled:opacity-100"
-    : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
+  const buttonClassName = exportButtonClassName(isGenerating);
 
   return (
     <>
@@ -48,16 +79,13 @@ export function ExportPdfButton({
                 tabIndex={0}
                 className={DISABLED_TRIGGER_CLASS}
               >
-                <ToolbarIconButton
-                  aria-label="Export PDF"
-                  onClick={handleExport}
+                <ExportActionButton
                   disabled={disabled}
-                  aria-busy={isGenerating}
-                  aria-describedby={disabledReasonId}
+                  isGenerating={isGenerating}
+                  onExport={handleExport}
                   className={buttonClassName}
-                >
-                  {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
-                </ToolbarIconButton>
+                  describedBy={disabledReasonId}
+                />
               </span>
             </TooltipTrigger>
             <TooltipContent side="bottom" align="center" sideOffset={6}>
@@ -66,15 +94,12 @@ export function ExportPdfButton({
           </Tooltip>
         </TooltipProvider>
       ) : (
-        <ToolbarIconButton
-          aria-label="Export PDF"
-          onClick={handleExport}
+        <ExportActionButton
           disabled={disabled}
-          aria-busy={isGenerating}
+          isGenerating={isGenerating}
+          onExport={handleExport}
           className={buttonClassName}
-        >
-          {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
-        </ToolbarIconButton>
+        />
       )}
       {!isExportable ? (
         <span id={disabledReasonId} className="sr-only">

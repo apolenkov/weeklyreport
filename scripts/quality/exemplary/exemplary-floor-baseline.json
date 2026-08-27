@@ -1,8 +1,270 @@
 {
-  "filesOnFloor": 977,
-  "productTotal": 977,
-  "overrideBlocks": 23,
+  "filesOnFloor": 1003,
+  "productTotal": 1003,
+  "overrideBlocks": 22,
   "liveSuppressions": 5,
+  "structural": {
+    "denominatorFileCount": 1001,
+    "total": {
+      "findingCount": 0,
+      "affectedFileCount": 0,
+      "byRule": {
+        "max-lines": 0,
+        "max-lines-per-function": 0,
+        "complexity": 0,
+        "sonarjs/cognitive-complexity": 0
+      }
+    },
+    "bySlice": {
+      "api-report-sections-application": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-report-sections-infrastructure": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-bullmq": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-throttler-lib": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-admin": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-pdf-export": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-project-activity": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-reminders": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-shared": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-admin": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-dashboard-organization": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-period": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-report-pages-head-lead": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-report-pages-weekly": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-report-sections-model": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-report-sections-ui": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-review-viewer": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-slides-pdf-export": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "shared": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "ui": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "api-remainder": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      },
+      "web-remainder": {
+        "findingCount": 0,
+        "affectedFileCount": 0,
+        "byRule": {
+          "max-lines": 0,
+          "max-lines-per-function": 0,
+          "complexity": 0,
+          "sonarjs/cognitive-complexity": 0
+        }
+      }
+    },
+    "inlineSuppressions": 0,
+    "perFileWeakenings": 0,
+    "notStrictConfigFileCount": 0,
+    "notStrictConfigBySlice": {
+      "api-report-sections-application": 0,
+      "api-report-sections-infrastructure": 0,
+      "api-bullmq": 0,
+      "api-throttler-lib": 0,
+      "api-admin": 0,
+      "api-pdf-export": 0,
+      "api-project-activity": 0,
+      "api-reminders": 0,
+      "web-shared": 0,
+      "web-admin": 0,
+      "web-dashboard-organization": 0,
+      "web-period": 0,
+      "web-report-pages-head-lead": 0,
+      "web-report-pages-weekly": 0,
+      "web-report-sections-model": 0,
+      "web-report-sections-ui": 0,
+      "web-review-viewer": 0,
+      "web-slides-pdf-export": 0,
+      "shared": 0,
+      "ui": 0,
+      "api-remainder": 0,
+      "web-remainder": 0
+    }
+  },
   "justifiedRegressions": [
     {
       "counter": "filesOnFloor",

@@ -38,14 +38,24 @@ export function resolveDecisionFormSeed(
   decision: DecisionEntry | null,
   defaultOwner: string | undefined,
 ): DecisionFormSeed {
+  if (!decision) {
+    return {
+      text: "",
+      owner: defaultOwner ?? "",
+      impact: "",
+      deadline: "",
+      stageNames: [],
+    };
+  }
+
   return {
-    text: decision?.text ?? "",
+    text: decision.text,
     // Owner is not user-editable: a decision is always owned by its author —
     // the current lead on create, the saved owner on edit.
-    owner: decision?.owner ?? defaultOwner ?? "",
-    impact: decision?.impact ?? "",
-    deadline: decision?.deadline ?? "",
-    stageNames: decision?.stageNames ? [...decision.stageNames] : [],
+    owner: decision.owner,
+    impact: decision.impact,
+    deadline: decision.deadline ?? "",
+    stageNames: decision.stageNames ? [...decision.stageNames] : [],
   };
 }
 

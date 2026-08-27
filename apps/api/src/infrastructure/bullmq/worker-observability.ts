@@ -98,6 +98,21 @@ export function extractTraceId(ctx: JobTraceContext): string | undefined {
     : undefined;
 }
 
+export function describeJobFailureTrace(ctx: JobTraceContext | undefined) {
+  const correlationId = ctx?.correlationId;
+  const traceparent = ctx?.traceparent;
+  const traceId = ctx ? extractTraceId(ctx) : undefined;
+  return {
+    correlationId,
+    traceparent,
+    traceId,
+    logFields: {
+      ...(correlationId ? { correlationId } : {}),
+      ...(traceId ? { traceId } : {}),
+    },
+  };
+}
+
 // Workers sit outside main.ts's request pipeline; seed with the same CLS so
 // job-scoped logs resolve correlationId like in-request logs.
 export function createWorkerLogger(

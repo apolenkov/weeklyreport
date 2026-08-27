@@ -4,114 +4,9 @@ import {
   MAX_FULL_NAME_LENGTH,
   MAX_SHORT_NAME_LENGTH,
 } from "@customreport/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
-import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import {
-  CheckIcon,
-  revalidateOrgLandingPage,
-} from "../../../shared/ui/settings/settings-tab";
-
-function useSaveOrgIdentity(onSaved: () => void) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
-
-  return useMutation(
-    trpc.admin.updateOrganization.mutationOptions({
-      onSuccess: async () => {
-        onSaved();
-        invalidateAdmin(qc, trpc);
-        toast.success("Organization identity saved");
-        await revalidateOrgLandingPage();
-      },
-      onError: (err) => {
-        toast.error(err.message);
-      },
-    }),
-  );
-}
-
-interface IdentityDraft {
-  readonly shortName: string;
-  readonly fullName: string;
-}
-
-function useOrgIdentityForm() {
-  const trpc = useTRPC();
-  const orgQ = useQuery(trpc.admin.getOrganization.queryOptions());
-
-  const [draft, setDraft] = useState<IdentityDraft>();
-  const [submitted, setSubmitted] = useState<{
-    readonly baseIdentity: string;
-    readonly value: IdentityDraft;
-  }>();
-  const pendingSave = useRef<{
-    readonly baseIdentity: string;
-    readonly value: IdentityDraft;
-  } | null>(null);
-  const serverIdentity = orgQ.data
-    ? JSON.stringify([orgQ.data.shortName, orgQ.data.fullName])
-    : undefined;
-  // Keep the submitted values visible until invalidation returns the changed
-  // server identity. Initial query data needs no state-seeding effect.
-  const submittedValue =
-    submitted !== undefined && submitted.baseIdentity === serverIdentity
-      ? submitted.value
-      : undefined;
-  const values = draft ?? submittedValue ?? orgQ.data;
-  const shortName = values?.shortName ?? "";
-  const fullName = values?.fullName ?? "";
-  const updateOrgMut = useSaveOrgIdentity(() => {
-    if (pendingSave.current !== null) {
-      setSubmitted(pendingSave.current);
-    }
-    setDraft(undefined);
-  });
-  const shortNameOver = shortName.length > MAX_SHORT_NAME_LENGTH;
-  const fullNameOver = fullName.length > MAX_FULL_NAME_LENGTH;
-  const isHydrated = !orgQ.isLoading && orgQ.data !== undefined;
-
-  return {
-    shortName,
-    fullName,
-    shortNameOver,
-    fullNameOver,
-    isSaving: updateOrgMut.isPending,
-    isSaved: updateOrgMut.isSuccess,
-    loadError: orgQ.isError,
-    isLoading: orgQ.isLoading,
-    isHydrated,
-    canSave:
-      !updateOrgMut.isPending &&
-      isHydrated &&
-      !orgQ.isError &&
-      shortName.trim().length > 0 &&
-      fullName.trim().length > 0 &&
-      !shortNameOver &&
-      !fullNameOver,
-    editShortName: (next: string) => {
-      setSubmitted(undefined);
-      setDraft({ shortName: next, fullName });
-    },
-    editFullName: (next: string) => {
-      setSubmitted(undefined);
-      setDraft({ shortName, fullName: next });
-    },
-    save: () => {
-      const input = {
-        shortName: shortName.trim(),
-        fullName: fullName.trim(),
-      };
-      if (serverIdentity !== undefined) {
-        pendingSave.current = { baseIdentity: serverIdentity, value: input };
-      }
-      updateOrgMut.mutate(input);
-    },
-  };
-}
+import { CheckIcon } from "../../../shared/ui/settings/settings-tab";
+import { useOrgIdentityForm } from "./use-org-identity-form";
 
 // Labelled text input with the hint and a live length counter; the counter
 // turns red once the value is past its cap (only reachable from server data —
@@ -199,39 +94,39 @@ function SaveIdentityRow({
   );
 }
 
-export function IdentitySubTab() {
-  const form = useOrgIdentityForm();
+type OrgIdentityFormModel = ReturnType<typeof useOrgIdentityForm>;
 
-  if (form.loadError) {
-    return (
-      <div className="max-w-lg space-y-5">
-        <p
-          className="text-sm text-[var(--color-destructive)]"
-          role="alert"
-          data-testid="org-identity-load-error"
-        >
-          Organization identity could not be loaded. Refresh the page and try
-          again.
-        </p>
-      </div>
-    );
-  }
+function IdentityLoadError() {
+  return (
+    <div className="max-w-lg space-y-5">
+      <p
+        className="text-sm text-[var(--color-destructive)]"
+        role="alert"
+        data-testid="org-identity-load-error"
+      >
+        Organization identity could not be loaded. Refresh the page and try
+        again.
+      </p>
+    </div>
+  );
+}
 
-  if (!form.isHydrated) {
-    return (
-      <div className="max-w-lg space-y-5">
-        <p
-          className="text-sm text-[var(--color-muted-foreground)]"
-          role="status"
-          aria-busy="true"
-          aria-label="Loading organization identity"
-        >
-          Loading organization identity
-        </p>
-      </div>
-    );
-  }
+function IdentityLoading() {
+  return (
+    <div className="max-w-lg space-y-5">
+      <p
+        className="text-sm text-[var(--color-muted-foreground)]"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading organization identity"
+      >
+        Loading organization identity
+      </p>
+    </div>
+  );
+}
 
+function IdentityFields({ form }: { readonly form: OrgIdentityFormModel }) {
   return (
     <div className="max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -268,4 +163,11 @@ export function IdentitySubTab() {
       />
     </div>
   );
+}
+
+export function IdentitySubTab() {
+  const form = useOrgIdentityForm();
+  if (form.loadError) return <IdentityLoadError />;
+  if (!form.isHydrated) return <IdentityLoading />;
+  return <IdentityFields form={form} />;
 }

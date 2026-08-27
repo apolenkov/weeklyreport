@@ -89,11 +89,7 @@ function toPeriodPolicyPatch(draft: AppSettings) {
   };
 }
 
-export function PeriodsSubTab({
-  serverSettings,
-}: {
-  readonly serverSettings: AppSettings;
-}) {
+function usePeriodPolicyForm(serverSettings: AppSettings) {
   const { draft, setDraft, markClean } =
     useServerSeededDraft<AppSettings>(serverSettings);
   const updateSettingsMut = useUpdateSettingsMut("Period policy");
@@ -102,28 +98,44 @@ export function PeriodsSubTab({
   );
 
   function handleValidityChange(id: string, valid: boolean) {
-    setInvalidFields((prev) => {
-      if (valid) {
-        if (!prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      }
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
+    setInvalidFields((previous) => {
+      const next = new Set(previous);
+      valid ? next.delete(id) : next.add(id);
       return next;
     });
   }
 
   function handleSave() {
     updateSettingsMut.mutate(toPeriodPolicyPatch(draft), {
-      onSuccess: () => markClean(),
+      onSuccess: markClean,
     });
   }
 
-  const isSaving = updateSettingsMut.isPending;
-  const hasInvalidField = invalidFields.size > 0;
+  return {
+    draft,
+    setDraft,
+    handleValidityChange,
+    handleSave,
+    hasInvalidField: invalidFields.size > 0,
+    isSaving: updateSettingsMut.isPending,
+    isSaved: updateSettingsMut.isSuccess,
+  };
+}
+
+export function PeriodsSubTab({
+  serverSettings,
+}: {
+  readonly serverSettings: AppSettings;
+}) {
+  const {
+    draft,
+    setDraft,
+    handleValidityChange,
+    handleSave,
+    hasInvalidField,
+    isSaving,
+    isSaved,
+  } = usePeriodPolicyForm(serverSettings);
 
   return (
     <div className="max-w-lg space-y-5">
@@ -157,7 +169,7 @@ export function PeriodsSubTab({
 
       <SavePeriodPolicyRow
         isSaving={isSaving}
-        isSaved={updateSettingsMut.isSuccess}
+        isSaved={isSaved}
         disabled={hasInvalidField}
         onSave={handleSave}
       />

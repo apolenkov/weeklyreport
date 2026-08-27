@@ -411,32 +411,6 @@ export const coreConfig: Linter.Config[] = [
       complexity: ["error", 20],
     },
   },
-  // The 70-line function budget from docs/exemplary-code-standard.md, declared
-  // only now that the backlog it describes is closed — 69 files and 92
-  // violations down to the one vendored bundle below. Declaring a ratchet ahead
-  // of the work turns the gate red for everyone and gets it widened back out.
-  // Tests are exempt: a describe callback is not a function in the sense this
-  // rule measures, so the budget would fire on every one of them. Test file
-  // SIZE is bounded instead, by the tests' own `max-lines` ceiling below.
-  {
-    files: [
-      "apps/*/src/**/*.{ts,tsx}",
-      "packages/*/src/**/*.{ts,tsx}",
-      "e2e/**/*.{ts,tsx}",
-    ],
-    ignores: [
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "**/__tests__/**",
-      "apps/*/src/test-utils/**",
-    ],
-    rules: {
-      "max-lines-per-function": [
-        "error",
-        { max: 70, skipBlankLines: true, skipComments: true, IIFEs: true },
-      ],
-    },
-  },
   // `prisma/` has no tsconfig of its own, so projectService would parse it under
   // the config-less default project, where `node:*` resolves to `any` and every
   // seed helper trips no-unsafe-*. Use the project `lint:prisma:typecheck` uses.

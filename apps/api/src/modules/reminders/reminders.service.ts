@@ -1,7 +1,6 @@
 import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
-  type AdminReminderRule,
   type PaginatedResult,
   type PaginationInput,
 } from "@customreport/shared";
@@ -17,8 +16,8 @@ import type {
   ReminderExecutionPayload,
   RemindersRepository,
 } from "./reminders.types.js";
-import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import {
+  buildExecutionCandidate,
   type EnqueueContext,
   enqueueOrMarkFailed,
   recordExecutionOnConflict,
@@ -37,26 +36,6 @@ export { ReminderDomainError, ReminderScopeError };
 interface ReminderExecutionResult {
   readonly execution: AdminReminderExecution;
   readonly outcome: "created" | "revived" | "deduplicated";
-}
-
-// Fresh id + queued status per attempt; the dedupe key is what the unique
-// index collides on, so a losing insert still returns the winning row.
-function buildExecutionCandidate(
-  rule: AdminReminderRule,
-  recipientEmail: string,
-  payload: ReminderExecutionPayload | undefined,
-): AdminReminderExecution {
-  return adminReminderExecutionSchema.parse({
-    id: crypto.randomUUID(),
-    ruleId: rule.id,
-    reportId: rule.reportId,
-    dedupeKey: resolveReminderDedupeKey(rule, recipientEmail, payload),
-    status: "queued",
-    scheduledFor: rule.fireAt,
-    sentAt: null,
-    recipientEmail,
-    errorMessage: null,
-  });
 }
 
 export class RemindersService {

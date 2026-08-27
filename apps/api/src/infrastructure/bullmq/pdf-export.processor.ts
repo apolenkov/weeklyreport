@@ -7,6 +7,7 @@ import { ClsService } from "nestjs-cls";
 import { chromium, type Page } from "playwright";
 
 import { APP_LOGGER } from "../../lib/audit-logger.js";
+import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/index.js";
 import { ENV_CONFIG } from "../config/config.module.js";
@@ -18,7 +19,7 @@ import {
 } from "./pdf-export.artifact-store.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
-  extractTraceId,
+  describeJobFailureTrace,
   type JobTraceContext,
 } from "./worker-observability.js";
 
@@ -76,30 +77,8 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     job: Job<PdfExportJobData> | undefined,
     error: Error,
   ): void => {
-    const correlationId = job?.data.correlationId;
-    const traceId = job ? extractTraceId(job.data) : undefined;
-    const correlation = {
-      ...(correlationId ? { correlationId } : {}),
-      ...(traceId ? { traceId } : {}),
-    };
-
-    if (job?.data.jobId) {
-      const maxAttempts = job.opts.attempts ?? 1;
-      if (job.attemptsMade >= maxAttempts) {
-        void this.pdfExportService
-          .markExportFailed(job.data.jobId, error.message)
-          .catch((markError: unknown) => {
-            this.logger.error("pdf-export failed-state update failed", {
-              jobId: job.data.jobId,
-              ...correlation,
-              error:
-                markError instanceof Error
-                  ? markError.message
-                  : String(markError),
-            });
-          });
-      }
-    }
+    const { logFields: correlation } = describeJobFailureTrace(job?.data);
+    this.markTerminalFailure(job, error, correlation);
 
     this.logger.error("pdf-export job failed", {
       jobId: job?.data.jobId,
@@ -109,6 +88,25 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       error: error.message,
     });
   };
+
+  private markTerminalFailure(
+    job: Job<PdfExportJobData> | undefined,
+    error: Error,
+    correlation: Readonly<Record<string, string>>,
+  ): void {
+    if (!job?.data.jobId) return;
+    const maxAttempts = job.opts.attempts ?? 1;
+    if (job.attemptsMade < maxAttempts) return;
+    void this.pdfExportService
+      .markExportFailed(job.data.jobId, error.message)
+      .catch((markError: unknown) => {
+        this.logger.error("pdf-export failed-state update failed", {
+          jobId: job.data.jobId,
+          ...correlation,
+          error: errorMessage(markError),
+        });
+      });
+  }
 
   protected readonly processJob = async (
     job: Job<PdfExportJobData>,

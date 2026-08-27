@@ -56,6 +56,32 @@ interface ProductToggleRowProps {
   readonly onToggle: (productId: string, nextChecked: boolean) => void;
 }
 
+function isLockedByOtherGroup(
+  owningGroup: OwningGroup | undefined,
+  groupId: string,
+  checked: boolean,
+): boolean {
+  return Boolean(owningGroup && owningGroup.id !== groupId && !checked);
+}
+
+function lockedProductHint(
+  owningGroup: OwningGroup | undefined,
+  locked: boolean,
+): string | undefined {
+  return locked && owningGroup
+    ? `Already attached to ${owningGroup.name}`
+    : undefined;
+}
+
+function describedByHint(
+  hintId: string,
+  locked: boolean,
+  ownershipLoading: boolean,
+  ownershipError: boolean,
+): string | undefined {
+  return locked || ownershipLoading || ownershipError ? hintId : undefined;
+}
+
 // A product has exactly one owning group — other-group products show locked.
 function ProductToggleRow({
   product,
@@ -67,13 +93,12 @@ function ProductToggleRow({
   ownershipError,
   onToggle,
 }: ProductToggleRowProps) {
-  const lockedByOtherGroup = Boolean(
-    owningGroup && owningGroup.id !== groupId && !checked,
+  const lockedByOtherGroup = isLockedByOtherGroup(
+    owningGroup,
+    groupId,
+    checked,
   );
-  const lockedHint =
-    lockedByOtherGroup && owningGroup
-      ? `Already attached to ${owningGroup.name}`
-      : undefined;
+  const lockedHint = lockedProductHint(owningGroup, lockedByOtherGroup);
   const hintId = `group-product-hint-${product.id}`;
   // A failed ownership read must not present products as free-to-attach.
   const disabled =
@@ -94,11 +119,12 @@ function ProductToggleRow({
           disabled={disabled}
           onChange={(e) => onToggle(product.id, e.target.checked)}
           aria-label={`Toggle ${product.name}`}
-          aria-describedby={
-            lockedByOtherGroup || ownershipLoading || ownershipError
-              ? hintId
-              : undefined
-          }
+          aria-describedby={describedByHint(
+            hintId,
+            lockedByOtherGroup,
+            ownershipLoading,
+            ownershipError,
+          )}
           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <ProductRowLabel

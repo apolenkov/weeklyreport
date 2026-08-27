@@ -32,7 +32,10 @@ import { LeadFormToolbarControls } from "../chrome/lead-form-toolbar-controls";
 import { LeadStickyCompletionActions } from "../chrome/lead-sticky-completion-actions";
 import { LeadSubmitReadinessSummary } from "../chrome/lead-submit-readiness-summary";
 import type { QuickAddKind } from "../chrome/quick-add-button";
-import { useHeaderActionsVisibility } from "../chrome/use-header-actions-visibility";
+import {
+  type CompletionPresentation,
+  useCompletionPresentation,
+} from "./presentation/use-completion-presentation";
 
 type LeadFormLoadedActions = LeadFormEditSectionsActions &
   LeadFormDialogsQuickAdd & {
@@ -79,54 +82,6 @@ export interface LeadFormLoadedProps {
   readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: FullscreenHandle;
   readonly unsetOwnStageCount: number;
-}
-
-interface CompletionPresentation {
-  readonly completionActions: {
-    readonly autosave: AutosaveSnapshot;
-    readonly onAdd: (kind: QuickAddKind) => void;
-    readonly addDisabled: boolean;
-    readonly onSubmit: () => void;
-    readonly submitDisabled: boolean;
-    readonly submitDisabledReason: string | undefined;
-  };
-  readonly headerActionsVisible: boolean;
-  readonly readiness: LeadSubmitReadiness;
-  readonly sentinelRef: (node: HTMLDivElement | null) => void;
-  readonly showCompletionSurface: boolean;
-  readonly showStickyCompletion: boolean;
-}
-
-function useCompletionPresentation(
-  props: LeadFormLoadedProps,
-): CompletionPresentation {
-  const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
-  const readiness = props.submitReadiness;
-  const completionActions = {
-    autosave: props.autosave,
-    onAdd: props.draftActions.onQuickAdd,
-    addDisabled: props.viewModel.products.length === 0,
-    // A blocker is a product-scoped risk; with no product to attach it to the
-    // quick-add option is inert until the section gains one.
-    disabledQuickAddKinds:
-      props.viewModel.products.length === 0
-        ? new Set<QuickAddKind>(["blocker"])
-        : undefined,
-    onSubmit: props.writeActions.handleSubmit,
-    submitDisabled: !readiness.canOpenConfirmation,
-    submitDisabledReason: readiness.blockingIssues[0]?.label,
-  };
-  const showCompletionSurface =
-    !props.isSlidesMode && !props.viewModel.isReadOnly;
-  const showStickyCompletion = showCompletionSurface && !headerActionsVisible;
-  return {
-    completionActions,
-    headerActionsVisible,
-    readiness,
-    sentinelRef,
-    showCompletionSurface,
-    showStickyCompletion,
-  };
 }
 
 function LoadedChrome({
@@ -228,7 +183,15 @@ function LoadedReportContent({
 }
 
 export function LeadFormLoaded(props: LeadFormLoadedProps) {
-  const completion = useCompletionPresentation(props);
+  const completion = useCompletionPresentation({
+    autosave: props.autosave,
+    products: props.viewModel.products,
+    onQuickAdd: props.draftActions.onQuickAdd,
+    handleSubmit: props.writeActions.handleSubmit,
+    readiness: props.submitReadiness,
+    isSlidesMode: props.isSlidesMode,
+    isReadOnly: props.viewModel.isReadOnly,
+  });
   const byPeriod = props.data.byPeriodData;
   if (!byPeriod) return null;
 

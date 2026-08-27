@@ -2,7 +2,6 @@ import type {
   PeriodStatus,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import Link from "next/link";
 
 import type {
   LeadOverviewRow,
@@ -19,6 +18,7 @@ import {
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../../review";
+import { NoSubmissionsEmptyState } from "./weekly-report-empty-state";
 import {
   AcknowledgeSurface,
   ReportAccordionBody,
@@ -53,32 +53,6 @@ export interface ReportContentProps {
   readonly scrollTargetProductId: string | undefined;
   readonly focusedLeadId: string | undefined;
   readonly onNavigateOverview: (targetId: string) => void;
-}
-
-function NoSubmissionsEmptyState({
-  periodLabel,
-}: {
-  readonly periodLabel: string;
-}) {
-  return (
-    <div
-      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
-      data-testid="empty-submissions-state"
-    >
-      <p className="text-base font-semibold text-[var(--color-foreground)]">
-        No submissions yet for {periodLabel}
-      </p>
-      <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
-        Leads have not filed their sections for this period.
-      </p>
-      <Link
-        href="/reports?tab=published"
-        className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
-      >
-        View archived reports in Archive &rarr;
-      </Link>
-    </div>
-  );
 }
 
 type ReportTopSurfacesProps = Pick<

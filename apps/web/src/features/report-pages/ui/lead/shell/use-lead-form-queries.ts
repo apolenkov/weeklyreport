@@ -7,12 +7,9 @@ import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-quer
 import type { SessionUser } from "../../../../../shared/lib/auth/session-provider";
 import { getClientErrorDetails } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
-import { crossAuthorContentFetchEnabled } from "../../../../report-sections";
-import type { RecordVisibility } from "../../../../report-sections/client";
-import { useRecordVisibility } from "../../../../report-sections/client";
+import { buildLeadFormReportsView } from "./presentation/lead-form-report-view";
 import {
   deriveActiveIds,
-  deriveDeckVisibility,
   deriveTargetReportId,
 } from "./use-lead-form-data-helpers";
 
@@ -106,9 +103,7 @@ function useLeadFormSectionRetry(refetchSection: () => Promise<unknown>) {
   return { byPeriodRetrying, retrySection };
 }
 
-// Owns every report-scoped read. `view` is plain data so no react-query type
-// reaches the lead-form UI seam; `errorSources` is the narrow failure slice.
-export function useLeadFormReports({
+function useLeadFormReportQueries({
   pinnedReportId,
   sectionFetchEnabled,
 }: {
@@ -148,116 +143,60 @@ export function useLeadFormReports({
     byPeriodQ.isError && isLeadFormUnavailableError(byPeriodQ.error);
 
   return {
+    activeQ,
+    activeReportId,
+    activeSectionId,
+    targetReportId,
+    byPeriodQ,
+    byPeriodRetrying,
+    refetchSection,
+    retrySection,
+    historyQ,
+    viewSettingsQ,
+    crossAuthorsQ,
+    sectionUnavailable,
+  };
+}
+
+// Owns every report-scoped read and exposes only plain view/error slices.
+export function useLeadFormReports(input: {
+  readonly pinnedReportId: string | undefined;
+  readonly sectionFetchEnabled: boolean;
+}) {
+  const queries = useLeadFormReportQueries(input);
+  const { activeQ, byPeriodQ, historyQ, viewSettingsQ, crossAuthorsQ } =
+    queries;
+  return {
     errorSources: {
       activeQ,
       byPeriodQ: {
-        isError: byPeriodQ.isError && !sectionUnavailable,
+        isError: byPeriodQ.isError && !queries.sectionUnavailable,
         error: byPeriodQ.error,
       },
       historyQ,
       viewSettingsQ,
       crossAuthorsQ,
     },
-    view: {
+    view: buildLeadFormReportsView({
       activeData: activeQ.data,
-      activeReportId,
-      targetReportId,
-      // Pinned report: use loaded section id (active may not match); else active.
-      sectionIdForActions:
-        byPeriodQ.data?.section.reportSectionId ?? activeSectionId,
+      activeReportId: queries.activeReportId,
+      activeSectionId: queries.activeSectionId,
+      targetReportId: queries.targetReportId,
       byPeriodData: byPeriodQ.data,
-      sectionUnavailable,
-      // Keep the primary read's terminal state separate from `byPeriodData`:
-      // TanStack Query can retain cached data after a failed refetch, but the
-      // lead form must fail closed until a later read succeeds.
-      byPeriodError:
-        (byPeriodQ.isError && !sectionUnavailable) || byPeriodRetrying,
-      byPeriodFetching: byPeriodQ.isFetching || byPeriodRetrying,
-      refetchSection,
-      retrySection,
+      sectionUnavailable: queries.sectionUnavailable,
+      byPeriodIsError: byPeriodQ.isError,
+      byPeriodIsFetching: byPeriodQ.isFetching,
+      byPeriodRetrying: queries.byPeriodRetrying,
+      refetchSection: queries.refetchSection,
+      retrySection: queries.retrySection,
       historyData: historyQ.data,
-      unifiedView: viewSettingsQ.data?.unifiedActivityView === true,
-      crossAuthors: crossAuthorsQ.data ?? [],
-      isLoading: activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading,
-    },
-  };
-}
-
-// Namespaced by user + report so Everyone cannot bleed across users/reports.
-export function useDeckVisibility({
-  currentUserId,
-  targetReportId,
-  isSlidesMode,
-  slidesAuthorId,
-}: {
-  readonly currentUserId: string | null;
-  readonly targetReportId: string | null;
-  readonly isSlidesMode: boolean;
-  readonly slidesAuthorId: string | null;
-}): {
-  recordVisibility: RecordVisibility;
-  visibilityHydrated: boolean;
-  setRecordVisibility: (next: RecordVisibility) => void;
-  isEveryone: boolean;
-  isForeignSlidesDeck: boolean;
-  toolbarVisibility: RecordVisibility;
-} {
-  const {
-    visibility: recordVisibility,
-    hydrated: visibilityHydrated,
-    setVisibility: setRecordVisibility,
-  } = useRecordVisibility(currentUserId, targetReportId);
-
-  return {
-    recordVisibility,
-    visibilityHydrated,
-    setRecordVisibility,
-    isEveryone: recordVisibility === "everyone",
-    ...deriveDeckVisibility({
-      isSlidesMode,
-      slidesAuthorId,
-      currentUserId,
-      recordVisibility,
+      settingsData: viewSettingsQ.data,
+      crossAuthors: crossAuthorsQ.data,
+      loadingStates: [
+        activeQ.isLoading,
+        byPeriodQ.isLoading,
+        historyQ.isLoading,
+      ],
     }),
-  };
-}
-
-// Full-content only after hydrated Everyone; foreign slides never fetch.
-export function useCrossAuthorContent({
-  targetReportId,
-  visibilityHydrated,
-  isEveryone,
-  isForeignSlidesDeck,
-}: {
-  readonly targetReportId: string | null;
-  readonly visibilityHydrated: boolean;
-  readonly isEveryone: boolean;
-  readonly isForeignSlidesDeck: boolean;
-}) {
-  const trpc = useTRPC();
-  const enabled = crossAuthorContentFetchEnabled({
-    hasReport: targetReportId !== null,
-    visibilityHydrated,
-    isEveryone,
-    isOwnDeck: !isForeignSlidesDeck,
-  });
-  const query = useQuery({
-    ...trpc.leadForm.crossAuthorContent.queryOptions({
-      reportId: targetReportId ?? "",
-    }),
-    enabled,
-  });
-  // Foreign rows are auxiliary content, but a failed read must still surface
-  // instead of silently reading as "no co-owner content".
-  useQueryErrorHandler(query, {
-    event: "leadForm.crossAuthorContent.load_failed",
-    component: "LeadForm",
-    procedure: "leadForm.crossAuthorContent",
-    context: { reportId: targetReportId || null },
-    toastPrefix: "Failed to load co-owner content",
-  });
-  return {
-    data: query.data,
-    isPending: enabled && query.isPending,
   };
 }

@@ -17,18 +17,10 @@ interface UseLeadFormChromeInput {
   readonly history: readonly MyHistoryEntry[] | undefined;
 }
 
-// Mirrors the root metadata template (`%s · ${orgName}`); absent organization
-// resolves to the canonical tenant-neutral placeholder, never a product brand.
-export function useLeadFormChrome({
-  pinnedReportId,
-  activeReportId,
+function useLeadFormDocumentTitle({
   byPeriodData,
   history,
-}: UseLeadFormChromeInput): {
-  selectedPeriodId: string | null;
-  showArchivePeriods: boolean;
-  setShowArchivePeriods: (next: boolean) => void;
-} {
+}: Pick<UseLeadFormChromeInput, "byPeriodData" | "history">) {
   const titleBrand =
     useContext(SessionContext)?.organization?.fullName ??
     DEFAULT_ORGANIZATION_IDENTITY.fullName;
@@ -52,7 +44,16 @@ export function useLeadFormChrome({
       document.title = previous;
     };
   }, [titleHistoryEntry, titleBrand]);
+}
 
+function useArchivePeriodVisibility({
+  pinnedReportId,
+  activeReportId,
+  history,
+}: Pick<
+  UseLeadFormChromeInput,
+  "pinnedReportId" | "activeReportId" | "history"
+>) {
   // Manual archive toggle is paired with the period it was made on; other
   // periods fall back to auto-expand when the selected period is archived.
   const [archiveToggle, setArchiveToggle] = useState<{
@@ -71,4 +72,14 @@ export function useLeadFormChrome({
     setArchiveToggle({ periodId: selectedPeriodId ?? "", value: next });
 
   return { selectedPeriodId, showArchivePeriods, setShowArchivePeriods };
+}
+
+// Mirrors the root metadata template and keeps archive visibility report-scoped.
+export function useLeadFormChrome(input: UseLeadFormChromeInput): {
+  selectedPeriodId: string | null;
+  showArchivePeriods: boolean;
+  setShowArchivePeriods: (next: boolean) => void;
+} {
+  useLeadFormDocumentTitle(input);
+  return useArchivePeriodVisibility(input);
 }

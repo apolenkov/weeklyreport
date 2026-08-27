@@ -1,6 +1,7 @@
 import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
+  type AdminReminderRule,
 } from "@customreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
@@ -8,6 +9,8 @@ import type {
   RemindersEnqueuer,
   RemindersTelemetry,
 } from "./reminders.ports.js";
+import type { ReminderExecutionPayload } from "./reminders.types.js";
+import { resolveReminderDedupeKey } from "./reminders-dedupe-key.js";
 import {
   buildQueuePayload,
   type ReminderQueueJobData,
@@ -19,6 +22,24 @@ export interface EnqueueContext {
   readonly telemetry: RemindersTelemetry;
   readonly logger: AppLogger;
   readonly markExecutionFailed: (id: string, message: string) => Promise<void>;
+}
+
+export function buildExecutionCandidate(
+  rule: AdminReminderRule,
+  recipientEmail: string,
+  payload: ReminderExecutionPayload | undefined,
+): AdminReminderExecution {
+  return adminReminderExecutionSchema.parse({
+    id: crypto.randomUUID(),
+    ruleId: rule.id,
+    reportId: rule.reportId,
+    dedupeKey: resolveReminderDedupeKey(rule, recipientEmail, payload),
+    status: "queued",
+    scheduledFor: rule.fireAt,
+    sentAt: null,
+    recipientEmail,
+    errorMessage: null,
+  });
 }
 
 async function addJob(

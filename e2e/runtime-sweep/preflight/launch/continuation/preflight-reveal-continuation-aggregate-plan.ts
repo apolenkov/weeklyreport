@@ -3,8 +3,6 @@ import { REVEAL_CONTINUATION_LIMITS } from "../../reveal/continuation/contracts/
 import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
 import {
   createRevealPartitionPlan,
-  PREFLIGHT_REVEAL_AGGREGATE_CANDIDATE_RANGE_POLICY,
-  PREFLIGHT_REVEAL_AGGREGATE_DEADLINE_POLICY,
   type RevealPartitionPlan,
 } from "./preflight-reveal-continuation-partition.ts";
 
@@ -23,11 +21,6 @@ const AGGREGATE_TEARDOWN_RESERVE_MS =
   AGGREGATE_TEARDOWN_MINUTES * MILLISECONDS_PER_MINUTE;
 export const PREFLIGHT_REVEAL_AGGREGATE_TEARDOWN_RESERVE_MS =
   AGGREGATE_TEARDOWN_RESERVE_MS;
-export {
-  PREFLIGHT_REVEAL_AGGREGATE_CANDIDATE_RANGE_POLICY,
-  PREFLIGHT_REVEAL_AGGREGATE_DEADLINE_POLICY,
-};
-
 export const aggregatePartitionPlanForContext = (input: {
   readonly context: ParentContext;
   readonly partitionCandidateLimit?: number;
@@ -57,7 +50,7 @@ export const aggregatePartitionPlanForContext = (input: {
     teardownReserveMs: input.teardownReserveMs ?? AGGREGATE_TEARDOWN_RESERVE_MS,
   });
 
-export const aggregatePartitionSupervisorMaxMsFor = (
+const aggregatePartitionSupervisorMaxMsFor = (
   plan: RevealPartitionPlan,
 ): number => plan.supervisorMaxMs;
 

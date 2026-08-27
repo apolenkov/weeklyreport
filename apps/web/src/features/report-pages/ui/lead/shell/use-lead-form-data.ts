@@ -6,12 +6,14 @@ import { useContext } from "react";
 import { isHeadLike } from "../../../../../shared/lib/auth/role-predicates";
 import type { SessionUser } from "../../../../../shared/lib/auth/session-provider";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import {
+  useCrossAuthorContent,
+  useDeckVisibility,
+} from "./presentation/use-lead-form-visibility";
 import { deriveSessionActors } from "./use-lead-form-data-helpers";
 import { useLeadFormForeignContentPurge } from "./use-lead-form-foreign-content-purge";
 import type { LeadFormErrorSources } from "./use-lead-form-queries";
 import {
-  useCrossAuthorContent,
-  useDeckVisibility,
   useLeadFormLoadErrors,
   useLeadFormReports,
 } from "./use-lead-form-queries";

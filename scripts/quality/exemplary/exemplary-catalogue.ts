@@ -17,6 +17,9 @@ import {
   ratchetViolations,
   readFloorBaseline,
 } from "./exemplary-floor-ratchet.ts";
+import { structuralFloorSnapshot } from "./exemplary-structural-snapshot.ts";
+import { STRUCTURAL_PRODUCT_ROOTS } from "./exemplary-structure-contract.ts";
+import { measureStructuralInventory } from "./exemplary-structure-inventory.ts";
 
 // A file standing on one of these has a budget switched off for it. Which block
 // granted the relaxation does not matter here; that it exists does.
@@ -277,18 +280,24 @@ const previousBaseline = (): FloorSnapshot | undefined => {
   return parseFloorSnapshot(git(["show", `HEAD^:${BASELINE_RELATIVE_PATH}`]));
 };
 
-const snapshotOf = (rows: readonly Row[]): FloorSnapshot => {
+const snapshotOf = async (rows: readonly Row[]): Promise<FloorSnapshot> => {
   const product = rows.filter((row) => row.kind === "product");
   return {
     filesOnFloor: product.filter((row) => row.cls === "A").length,
     productTotal: product.length,
     overrideBlocks: countOverrideBlocks(),
     liveSuppressions: rows.reduce((sum, row) => sum + row.suppressions, 0),
+    structural: structuralFloorSnapshot(
+      await measureStructuralInventory({
+        denominator: "product",
+        scopes: STRUCTURAL_PRODUCT_ROOTS,
+      }),
+    ),
   };
 };
 
-const checkRatchet = (rows: readonly Row[]): void => {
-  const actual = snapshotOf(rows);
+const checkRatchet = async (rows: readonly Row[]): Promise<void> => {
+  const actual = await snapshotOf(rows);
   const baseline = readFloorBaseline(`${REPO_ROOT}${BASELINE_RELATIVE_PATH}`);
   const previous = previousBaseline();
   const violations = ratchetViolations(actual, baseline, previous);
@@ -321,7 +330,7 @@ if (unknownArgs.length > 0)
 const rows = await buildRows();
 report(rows);
 if (args.includes("--check")) {
-  checkRatchet(rows);
+  await checkRatchet(rows);
 } else {
   const outputDir = catalogueOutputPath(false);
   // The non-check branch can never produce the null (check-mode) result; an

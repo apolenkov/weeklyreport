@@ -42,6 +42,33 @@ function FieldErrorMessage({
   );
 }
 
+function useInitialTextareaFocus(
+  focusOnMount: boolean,
+  elementRef: Exclude<Ref<HTMLTextAreaElement>, null>,
+): void {
+  useEffect(() => {
+    if (!focusOnMount) return;
+    const node = "current" in elementRef ? elementRef.current : null;
+    node?.focus();
+  }, [focusOnMount, elementRef]);
+}
+
+function textareaClassName(fill: boolean, hasError: boolean): string {
+  const fillClass = fill ? "flex-1 " : "";
+  const borderClass = hasError
+    ? TEXTAREA_BORDER_ERROR
+    : TEXTAREA_BORDER_DEFAULT;
+  return `w-full ${fillClass}resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${borderClass}`;
+}
+
+function minHeightStyle(
+  minHeightPx: number | undefined,
+): { readonly minHeight: string } | undefined {
+  return minHeightPx === undefined
+    ? undefined
+    : { minHeight: `${minHeightPx}px` };
+}
+
 export function RecordTextareaField({
   id,
   label,
@@ -61,14 +88,7 @@ export function RecordTextareaField({
   // React writes the element into this ref (the caller's when given, else the
   // field's own), so the focus effect only ever READS .current.
   const elementRef = textareaRef ?? ownRef;
-
-  // Initial focus for modal dialogs, driven imperatively instead of the
-  // autoFocus attribute so the shared field owns the focus contract.
-  useEffect(() => {
-    if (!focusOnMount) return;
-    const node = "current" in elementRef ? elementRef.current : null;
-    node?.focus();
-  }, [focusOnMount, elementRef]);
+  useInitialTextareaFocus(focusOnMount, elementRef);
 
   return (
     <div className={fill ? "flex flex-1 flex-col" : undefined}>
@@ -85,14 +105,8 @@ export function RecordTextareaField({
         ref={elementRef}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
-        className={`w-full ${fill ? "flex-1 " : ""}resize-y rounded-xl border bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-          error ? TEXTAREA_BORDER_ERROR : TEXTAREA_BORDER_DEFAULT
-        }`}
-        style={
-          minHeightPx !== undefined
-            ? { minHeight: `${minHeightPx}px` }
-            : undefined
-        }
+        className={textareaClassName(fill, Boolean(error))}
+        style={minHeightStyle(minHeightPx)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

@@ -6,6 +6,8 @@ import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
+import { useDialogFocus } from "./dialog-focus";
+
 /** Owns open state shared by a dialog trigger and content panel. */
 function Dialog({
   ...props
@@ -70,9 +72,6 @@ type DialogContentProps = React.ComponentProps<
   readonly restoreFocusToPrevious?: boolean | undefined;
 };
 
-const focusedElement = (): HTMLElement | null =>
-  document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
 /**
  * Dialog panel with owned portal, overlay, focus targets, and optional close control.
  */
@@ -89,7 +88,13 @@ function DialogContent({
   onCloseAutoFocus,
   ...props
 }: Readonly<DialogContentProps>) {
-  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+  const focus = useDialogFocus({
+    initialFocusRef,
+    restoreFocusRef,
+    restoreFocusToPrevious,
+    onOpenAutoFocus,
+    onCloseAutoFocus,
+  });
 
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -100,26 +105,8 @@ function DialogContent({
           "fixed top-1/2 left-1/2 z-(--layer-overlay) grid w-full max-w-[calc(100%-var(--spacing)*8)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className,
         )}
-        onOpenAutoFocus={(event) => {
-          previousFocusRef.current = restoreFocusToPrevious
-            ? focusedElement()
-            : null;
-          onOpenAutoFocus?.(event);
-          if (event.defaultPrevented) return;
-          if (!initialFocusRef?.current) return;
-          event.preventDefault();
-          initialFocusRef.current.focus();
-        }}
-        onCloseAutoFocus={(event) => {
-          onCloseAutoFocus?.(event);
-          if (event.defaultPrevented) return;
-          const target =
-            restoreFocusRef?.current ??
-            (restoreFocusToPrevious ? previousFocusRef.current : null);
-          if (!target) return;
-          event.preventDefault();
-          target.focus();
-        }}
+        onOpenAutoFocus={focus.onOpenAutoFocus}
+        onCloseAutoFocus={focus.onCloseAutoFocus}
         {...props}
       >
         {children}

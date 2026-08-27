@@ -4,7 +4,6 @@ import type {
   AdminSnapshot,
   AdminUser,
   AppSettings,
-  DraftPeriodState,
   GroupProduct,
   GroupProductEdgeInput,
   PeriodState,
@@ -167,21 +166,9 @@ export class AdminPrismaRepository implements AdminRepository {
   }
 
   async createPeriodManual(
-    input: {
-      periodStart: Date;
-      periodEnd: Date;
-      deadline: Date;
-      weekLabel: string | null;
-      periodState: DraftPeriodState;
-    },
+    input: Parameters<AdminRepository["createPeriodManual"]>[0],
     now?: Date,
-  ): Promise<{
-    id: string;
-    periodStart: Date;
-    periodEnd: Date;
-    deadline: Date;
-    periodState: DraftPeriodState;
-  }> {
+  ): ReturnType<AdminRepository["createPeriodManual"]> {
     const created = await periodLifecycle.createPeriodManual(
       this.prisma,
       input,
@@ -195,33 +182,15 @@ export class AdminPrismaRepository implements AdminRepository {
     return created;
   }
 
-  readPeriodById(periodId: string): Promise<{
-    id: string;
-    periodStart: Date;
-    periodEnd: Date;
-    deadline: Date | null;
-    weekLabel: string | null;
-    periodState: PeriodState;
-  } | null> {
+  readPeriodById(
+    periodId: string,
+  ): ReturnType<AdminRepository["readPeriodById"]> {
     return periodQueries.readPeriodById(this.prisma, periodId);
   }
 
-  updatePeriodManual(input: {
-    reportId: string;
-    data: {
-      periodStart?: Date;
-      periodEnd?: Date;
-      deadline?: Date | null;
-      weekLabel?: string | null;
-    };
-  }): Promise<{
-    id: string;
-    periodStart: Date;
-    periodEnd: Date;
-    deadline: Date | null;
-    weekLabel: string | null;
-    periodState: PeriodState;
-  }> {
+  updatePeriodManual(
+    input: Parameters<AdminRepository["updatePeriodManual"]>[0],
+  ): ReturnType<AdminRepository["updatePeriodManual"]> {
     return periodLifecycle.updatePeriodManual(this.prisma, input);
   }
 

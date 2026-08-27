@@ -8,7 +8,7 @@
 
 - [x] 2.1 Add a RED primary-navigation contract for complementary compact/wide breakpoints, canonical option order and URLs, token-driven focus classes, and non-zero Reopen/DLQ parity.
 - [x] 2.2 Add a RED Settings test proving the compact selector and wide Radix list share one active panel, every working section is reachable, and Holidays stays visibly deferred and inert.
-- [ ] 2.3 Add a source-bound responsive browser harness that derives its inventory from affected states and asserts zero document overflow, complete active/focused bounds, destination reachability, and status parity at 375, 768, 1023, 1024, and 1280 CSS px.
+- [x] 2.3 Add a source-bound responsive browser harness that derives its inventory from affected states and asserts zero document overflow, complete active/focused bounds, destination reachability, and status parity at 375, 768, 1023, 1024, and 1280 CSS px.
 
 ## 3. Web Implementation
 

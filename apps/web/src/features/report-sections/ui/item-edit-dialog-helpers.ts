@@ -162,6 +162,17 @@ interface ItemSaveCommonArgs {
   readonly trimmedPausedReason: string;
 }
 
+function buildItemSaveCommon(args: ItemSaveCommonArgs) {
+  return {
+    id: args.item?.id ?? crypto.randomUUID(),
+    text: args.trimmed,
+    status: args.status,
+    author: args.item?.author ?? args.currentUserName ?? "",
+    priorityRank: args.priorityRank ?? null,
+    pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
+  };
+}
+
 export function buildActivityItemSave(
   args: ItemSaveCommonArgs & {
     readonly selectedActivity: ParentActivityOption | undefined;
@@ -169,19 +180,15 @@ export function buildActivityItemSave(
     readonly activityId: string;
   },
 ): KanbanItem {
+  const activityName =
+    args.selectedActivity?.name ?? args.initial.activityName ?? "";
   return {
-    id: args.item?.id ?? crypto.randomUUID(),
+    ...buildItemSaveCommon(args),
     parent: { kind: "activity", id: args.activityId },
     productId: null,
-    productName: args.selectedActivity?.name ?? args.initial.activityName ?? "",
+    productName: activityName,
     activityId: args.activityId,
-    activityName:
-      args.selectedActivity?.name ?? args.initial.activityName ?? "",
-    text: args.trimmed,
-    status: args.status,
-    author: args.item?.author ?? args.currentUserName ?? "",
-    priorityRank: args.priorityRank ?? null,
-    pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
+    activityName,
   };
 }
 
@@ -192,7 +199,7 @@ export function buildProductItemSave(
   },
 ): KanbanItem {
   return {
-    id: args.item?.id ?? crypto.randomUUID(),
+    ...buildItemSaveCommon(args),
     parent: { kind: "product", id: args.product.id },
     productId: args.product.id,
     productName: args.product.name,
@@ -201,10 +208,5 @@ export function buildProductItemSave(
       args.effectiveStageNames.length > 0
         ? canonicalStageNames(args.effectiveStageNames)
         : undefined,
-    text: args.trimmed,
-    status: args.status,
-    author: args.item?.author ?? args.currentUserName ?? "",
-    priorityRank: args.priorityRank ?? null,
-    pausedReason: args.status === "paused" ? args.trimmedPausedReason : null,
   };
 }

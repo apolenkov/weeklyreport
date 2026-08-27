@@ -31,5 +31,5 @@ void test("the modular policy surface preserves the ratcheted override count", (
     0,
   );
 
-  assert.equal(count, 23);
+  assert.equal(count, 22);
 });

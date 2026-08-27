@@ -14,14 +14,9 @@ import {
   type SlideDensity,
   slidesForDensity,
 } from "../model/slide-density-pagination";
-import {
-  DeckFullscreenOverlay,
-  DeckToolbarControls,
-} from "./deck-fullscreen-overlay";
-import { SlideDensityControl } from "./slide-density-control";
+import { LeadSlidesDeckView } from "./lead/lead-slides-deck-view";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
-import { StatusSlideDeck } from "./status-slide-deck";
 import { useLeadSlidesData } from "./use-lead-slides-data";
 import { useSlideInlineEditor } from "./use-slide-inline-editor";
 
@@ -84,12 +79,6 @@ function clampSelectedIndex(raw: number, slideCount: number): number {
   return raw >= 0 && raw < slideCount ? raw : 0;
 }
 
-function deckSurfaceClass(isFullscreen: boolean): string | undefined {
-  return isFullscreen
-    ? "h-screen overflow-auto bg-[var(--color-background)] p-4"
-    : "min-w-0 max-w-full";
-}
-
 // Standalone decks own the fullscreen hook; a host that threads its own state wins.
 // Refs stay owned by the caller so no ref travels inside the returned object.
 function useDeckFullscreen({
@@ -112,8 +101,6 @@ function useDeckFullscreen({
     onToggle: externalOnToggle ?? localFs.toggle,
   };
 }
-
-type DeckFullscreen = ReturnType<typeof useDeckFullscreen>;
 
 // Slides, inline-edit dialogs and the placeholder that replaces the deck.
 function useLeadSlidesDeck({
@@ -160,91 +147,6 @@ function useLeadSlidesDeck({
       hasTargetReport: Boolean(leadSlides.targetReportId),
     }),
   };
-}
-
-type LeadSlidesDeck = ReturnType<typeof useLeadSlidesDeck>;
-
-function DeckToolbar({
-  density,
-  onDensityChange,
-  showDensity,
-  showFullscreenControls,
-  fullscreen,
-  toggleRef,
-}: {
-  readonly density: SlideDensity;
-  readonly onDensityChange: (next: SlideDensity) => void;
-  readonly showDensity: boolean;
-  readonly showFullscreenControls: boolean;
-  readonly fullscreen: DeckFullscreen;
-  readonly toggleRef: RefObject<HTMLButtonElement | null>;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      {showDensity ? (
-        <SlideDensityControl value={density} onChange={onDensityChange} />
-      ) : null}
-      {showFullscreenControls ? (
-        <DeckToolbarControls
-          isFullscreen={fullscreen.isFullscreen}
-          onToggle={fullscreen.onToggle}
-          toggleRef={toggleRef}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function LeadSlidesDeckView({
-  deckRef,
-  toggleRef,
-  fullscreen,
-  deck,
-  density,
-  showDensityControl,
-  onDensityChange,
-  selectedIndex,
-  onSelect,
-}: {
-  readonly deckRef: RefObject<HTMLDivElement | null>;
-  readonly toggleRef: RefObject<HTMLButtonElement | null>;
-  readonly fullscreen: DeckFullscreen;
-  readonly deck: Omit<LeadSlidesDeck, "placeholder">;
-  readonly density: SlideDensity;
-  readonly showDensityControl: boolean;
-  readonly onDensityChange: (next: SlideDensity) => void;
-  readonly selectedIndex: number;
-  readonly onSelect: (next: number) => void;
-}) {
-  const deckToolbar =
-    showDensityControl || deck.showFullscreenControls ? (
-      <DeckToolbar
-        density={density}
-        onDensityChange={onDensityChange}
-        showDensity={showDensityControl}
-        showFullscreenControls={deck.showFullscreenControls}
-        fullscreen={fullscreen}
-        toggleRef={toggleRef}
-      />
-    ) : undefined;
-
-  return (
-    <div ref={deckRef} className={deckSurfaceClass(fullscreen.isFullscreen)}>
-      <StatusSlideDeck
-        slides={deck.slides}
-        selectedIndex={selectedIndex}
-        onSelect={onSelect}
-        mode="lead"
-        onRowActivate={deck.onRowActivate}
-        toolbar={deckToolbar}
-      />
-      <DeckFullscreenOverlay
-        isFullscreen={fullscreen.isFullscreen}
-        onToggle={fullscreen.onToggle}
-      />
-      {deck.dialogs}
-    </div>
-  );
 }
 
 export function LeadSlidesClient({

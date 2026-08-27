@@ -53,6 +53,39 @@ function GridIcon() {
   );
 }
 
+function PortfolioOverviewGrid({
+  props,
+  sortedProducts,
+}: {
+  readonly props: PortfolioOverviewTableProps;
+  readonly sortedProducts: readonly WeeklyPortfolioProduct[];
+}) {
+  return (
+    <div className="min-h-0">
+      <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
+        {props.scope === "lead"
+          ? props.leads.map((lead) => (
+              <LeadOverviewCard
+                key={lead.id}
+                lead={lead}
+                onNavigate={props.onNavigate}
+              />
+            ))
+          : sortedProducts.map((product) => (
+              <ProductOverviewCard
+                key={product.id}
+                product={product}
+                controlsDetails={
+                  props.mountedProductIds?.has(product.id) === true
+                }
+                onNavigate={props.onNavigate}
+              />
+            ))}
+      </div>
+    </div>
+  );
+}
+
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
   // Lead rows arrive pre-sorted from the mapper; product rows sort here.
@@ -95,31 +128,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
         </div>
       </div>
 
-      {/* No overflow-hidden here: the cards' hover ring (box-shadow 0 0 0 2px)
-          extends past each card and the top row's would be clipped. This
-          wrapper has no collapse animation, so it has no reason to clip. */}
-      <div className="min-h-0">
-        <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
-          {isLead
-            ? leads.map((lead) => (
-                <LeadOverviewCard
-                  key={lead.id}
-                  lead={lead}
-                  onNavigate={props.onNavigate}
-                />
-              ))
-            : sortedProducts.map((product) => (
-                <ProductOverviewCard
-                  key={product.id}
-                  product={product}
-                  controlsDetails={
-                    props.mountedProductIds?.has(product.id) === true
-                  }
-                  onNavigate={props.onNavigate}
-                />
-              ))}
-        </div>
-      </div>
+      <PortfolioOverviewGrid props={props} sortedProducts={sortedProducts} />
     </div>
   );
 }

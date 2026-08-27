@@ -27,22 +27,11 @@ interface ConfirmDeleteDialogProps {
 // never deletes. Portal escapes overflow:hidden ancestors.
 export function ConfirmDeleteDialog({
   open,
-  title,
-  preview,
-  subtitle,
-  consequence,
-  confirmLabel = "Delete",
-  reversible = false,
-  tone = "destructive",
   isPending = false,
   onConfirm,
   onCancel,
-  triggerRef,
+  ...contentProps
 }: ConfirmDeleteDialogProps) {
-  const cancelRef = useRef<HTMLButtonElement | null>(null);
-  const titleId = useId();
-  const previewId = useId();
-
   const guardedCancel = isPending ? () => undefined : onCancel;
   const guardedConfirm = isPending ? () => undefined : onConfirm;
 
@@ -53,43 +42,78 @@ export function ConfirmDeleteDialog({
         if (!nextOpen) guardedCancel();
       }}
     >
-      <DialogContent
-        showCloseButton={false}
-        className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
-        overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"
-        initialFocusRef={isPending ? undefined : cancelRef}
-        restoreFocusRef={triggerRef}
-        restoreFocusToPrevious={true}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={previewId}
-        onEscapeKeyDown={(event) => {
-          if (isPending) event.preventDefault();
-        }}
-        onInteractOutside={(event) => {
-          if (isPending) event.preventDefault();
-        }}
-      >
-        <ConfirmDeleteBody
-          title={title}
-          preview={preview}
-          subtitle={subtitle}
-          consequence={consequence}
-          reversible={reversible}
-          titleId={titleId}
-          previewId={previewId}
-        />
-        <ConfirmDeleteActions
-          cancelRef={cancelRef}
-          confirmLabel={confirmLabel}
-          tone={tone}
-          isPending={isPending}
-          onConfirm={guardedConfirm}
-          onCancel={guardedCancel}
-        />
-      </DialogContent>
+      <ConfirmDeleteContent
+        {...contentProps}
+        isPending={isPending}
+        onConfirm={guardedConfirm}
+        onCancel={guardedCancel}
+      />
     </Dialog>
+  );
+}
+
+interface ConfirmDeleteContentProps extends Omit<
+  ConfirmDeleteDialogProps,
+  "open" | "onConfirm" | "onCancel"
+> {
+  readonly isPending: boolean;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}
+
+function ConfirmDeleteContent({
+  title,
+  preview,
+  subtitle,
+  consequence,
+  confirmLabel = "Delete",
+  reversible = false,
+  tone = "destructive",
+  isPending,
+  onConfirm,
+  onCancel,
+  triggerRef,
+}: ConfirmDeleteContentProps) {
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const titleId = useId();
+  const previewId = useId();
+  const preventWhilePending = (event: Event) => {
+    if (isPending) event.preventDefault();
+  };
+
+  return (
+    <DialogContent
+      showCloseButton={false}
+      className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
+      overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"
+      initialFocusRef={isPending ? undefined : cancelRef}
+      restoreFocusRef={triggerRef}
+      restoreFocusToPrevious={true}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={previewId}
+      onEscapeKeyDown={preventWhilePending}
+      onInteractOutside={preventWhilePending}
+    >
+      <ConfirmDeleteBody
+        title={title}
+        preview={preview}
+        subtitle={subtitle}
+        consequence={consequence}
+        reversible={reversible}
+        titleId={titleId}
+        previewId={previewId}
+      />
+      <ConfirmDeleteActions
+        cancelRef={cancelRef}
+        confirmLabel={confirmLabel}
+        tone={tone}
+        isPending={isPending}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    </DialogContent>
   );
 }
 

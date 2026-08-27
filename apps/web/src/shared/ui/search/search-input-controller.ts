@@ -76,6 +76,13 @@ interface KeyDownArgs {
   readonly navigateTo: (url: string) => void;
 }
 
+function activeTargetUrl(args: KeyDownArgs): string | null {
+  const hit = args.hits.at(args.activeIndex);
+  if (!hit) return null;
+  const target = targetUrlFor(hit, args.isViewer);
+  return target.kind === "navigable" ? target.url : null;
+}
+
 // Escape always clears; arrows and Enter only act on an open, non-empty list.
 function keyDownHandler(args: KeyDownArgs) {
   return (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -92,12 +99,10 @@ function keyDownHandler(args: KeyDownArgs) {
       e.preventDefault();
       args.moveActive(-1);
     } else if (e.key === "Enter") {
-      const hit = args.hits.at(args.activeIndex);
-      if (hit) {
+      const targetUrl = activeTargetUrl(args);
+      if (targetUrl) {
         e.preventDefault();
-        const target = targetUrlFor(hit, args.isViewer);
-        // An unavailable hit must not navigate anywhere (no "#" jump).
-        if (target.kind === "navigable") args.navigateTo(target.url);
+        args.navigateTo(targetUrl);
       }
     }
   };

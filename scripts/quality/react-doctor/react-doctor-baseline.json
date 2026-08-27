@@ -143,15 +143,15 @@
       "rationale": "The reports trends route already next/dynamic-loads this concrete chart module, so recharts is not part of the initial route bundle. Dynamically importing recharts again inside the chart would duplicate the route-level split and complicate the chart module contract."
     },
     {
-      "id": "src/features/dashboard/model/dashboard-leads.ts::15:1::react-doctor/no-barrel-import::faecc93929f3c59391d63f4e66ec675f1f43637fcfb99c1a8e233477707baa2e",
-      "file": "src/features/dashboard/model/dashboard-leads.ts",
+      "id": "src/features/dashboard/model/dashboard-lead-state.ts::12:1::react-doctor/no-barrel-import::faecc93929f3c59391d63f4e66ec675f1f43637fcfb99c1a8e233477707baa2e",
+      "file": "src/features/dashboard/model/dashboard-lead-state.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/dashboard/model/dashboard-leads.ts::75:10::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "src/features/dashboard/model/dashboard-leads.ts",
+      "id": "src/features/dashboard/model/dashboard-lead-state.ts::58:10::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
+      "file": "src/features/dashboard/model/dashboard-lead-state.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
       "rationale": "This filter/map pipeline processes a bounded dashboard projection with distinct selection and transformation steps. The immutable form is clearer and the source collection is not a measured hot path; replacing it with a reducer would trade readability for an unverified micro-optimization."
@@ -325,7 +325,14 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::25:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
+      "id": "src/features/report-pages/ui/head/head-report-chrome.tsx::18:1::react-doctor/no-barrel-import::d801067fabb1f0d4b55566dd98ea06f8f819cf73bd8cc2c2ca7f73411eae45e1",
+      "file": "src/features/report-pages/ui/head/head-report-chrome.tsx",
+      "rule": "no-barrel-import",
+      "verdict": "overturn",
+      "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
+    },
+    {
+      "id": "src/features/report-pages/ui/head/head-report-shell.tsx::13:1::react-doctor/no-barrel-import::68974ff83022329a159830efce9575192221945918ad0ccc44ecfcf9be226aeb",
       "file": "src/features/report-pages/ui/head/head-report-shell.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -339,21 +346,21 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::16:1::react-doctor/no-barrel-import::27e612a385b65459208d197b8a11d024891a911cc070d81d629904260359c7b2",
+      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::8:1::react-doctor/no-barrel-import::27e612a385b65459208d197b8a11d024891a911cc070d81d629904260359c7b2",
       "file": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::113:5::react-doctor/no-derived-state::af95efebf24c0989551c964ca11299d0a78cd88bc3c95631b40b314736041a69",
+      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::79:5::react-doctor/no-derived-state::af95efebf24c0989551c964ca11299d0a78cd88bc3c95631b40b314736041a69",
       "file": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx",
       "rule": "no-derived-state",
       "verdict": "overturn",
       "rationale": "This state is the bridge's one-shot risk-prefill signal: an effect consumes a monotonically increasing external value, opens the risk dialog once, and then records the consumed value. It is intentional event synchronization, not render-derived state; removing it would drop a requested prefill."
     },
     {
-      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::288:14::react-doctor/only-export-components::2250ae2734dad0c4548ff83697c84ff88478b16b0dc2815efe4d90ff71757bef",
+      "id": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx::254:14::react-doctor/only-export-components::2250ae2734dad0c4548ff83697c84ff88478b16b0dc2815efe4d90ff71757bef",
       "file": "src/features/report-pages/ui/lead/bridges/lead-form-sync-bridge.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",
@@ -444,8 +451,8 @@
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts::10:1::react-doctor/no-barrel-import::db3ee6b9e7bb423b6f0aead3c0b3e9face99c7e9b1a5d2c994d72964afbf05b0",
-      "file": "src/features/report-pages/ui/lead/shell/use-lead-form-queries.ts",
+      "id": "src/features/report-pages/ui/lead/shell/presentation/use-lead-form-visibility.ts::7:1::react-doctor/no-barrel-import::ea0f137c674ddee36e2efdebb158137ee709d49e6ee694a20d4734f45d35d008",
+      "file": "src/features/report-pages/ui/lead/shell/presentation/use-lead-form-visibility.ts",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
@@ -486,7 +493,7 @@
       "rationale": "This redirect is guarded and data-dependent (canonical report/lead recovery), with loading or not-found handling before navigation. The app currently performs authenticated browser tRPC reads, so a server redirect would require a different data boundary; the generic client-redirect warning is not a present flash bug."
     },
     {
-      "id": "src/features/report-pages/ui/weekly/weekly-report-content.tsx::11:1::react-doctor/no-barrel-import::49a5d88ed4d8d9933b47b1d56ca1ca2751b611634114d293874968e53fa3a7dd",
+      "id": "src/features/report-pages/ui/weekly/weekly-report-content.tsx::10:1::react-doctor/no-barrel-import::49a5d88ed4d8d9933b47b1d56ca1ca2751b611634114d293874968e53fa3a7dd",
       "file": "src/features/report-pages/ui/weekly/weekly-report-content.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -514,7 +521,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/report-pages/ui/weekly/weekly-report-page.tsx::10:1::react-doctor/no-barrel-import::f91d8c6d8b12a906023ed34579a9b55368fec8ef661af54751ec61501a824389",
+      "id": "src/features/report-pages/ui/weekly/weekly-report-page.tsx::9:1::react-doctor/no-barrel-import::f91d8c6d8b12a906023ed34579a9b55368fec8ef661af54751ec61501a824389",
       "file": "src/features/report-pages/ui/weekly/weekly-report-page.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -584,7 +591,7 @@
       "rationale": "The immutable pipeline names distinct bounded domain stages over per-report data. No measured hot path justifies replacing the readable filter/map or nested projection with a denser reducer; the warning is not an actionable defect."
     },
     {
-      "id": "src/features/report-sections/model/lead-form-items.ts::25:10::react-doctor/js-combine-iterations::0e9e6be21d42b8bc789109142b92b7be082fee15b342d7bf37a3a8dbe9ae9602",
+      "id": "src/features/report-sections/model/lead-form-items.ts::81:10::react-doctor/js-combine-iterations::0e9e6be21d42b8bc789109142b92b7be082fee15b342d7bf37a3a8dbe9ae9602",
       "file": "src/features/report-sections/model/lead-form-items.ts",
       "rule": "js-combine-iterations",
       "verdict": "overturn",
@@ -934,7 +941,7 @@
       "rationale": "The explicit role=list/listitem structure is intentional: grouped status clusters need direct listitem children and the source comment documents why native ul/li would create the wrong accessibility tree. The tag heuristic is a false positive for this composition."
     },
     {
-      "id": "src/features/slides/ui/slide-article-header.tsx::153:13::react-doctor/no-array-index-as-key::4355749737c20ecca42e88a124407ac8602be73048f4c3deb95ffd199427279c",
+      "id": "src/features/slides/ui/slide-article-header.tsx::170:13::react-doctor/no-array-index-as-key::4355749737c20ecca42e88a124407ac8602be73048f4c3deb95ffd199427279c",
       "file": "src/features/slides/ui/slide-article-header.tsx",
       "rule": "no-array-index-as-key",
       "verdict": "overturn",
@@ -1032,15 +1039,15 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/viewer/ui/viewer-report-shell.tsx::17:1::react-doctor/no-barrel-import::46f8051cd55bd10ffe1a2459d67fc1e0a0abfccc853bb4c64b93f185f32c8e39",
+      "id": "src/features/viewer/ui/viewer-report-shell.tsx::15:1::react-doctor/no-barrel-import::46f8051cd55bd10ffe1a2459d67fc1e0a0abfccc853bb4c64b93f185f32c8e39",
       "file": "src/features/viewer/ui/viewer-report-shell.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/viewer/ui/viewer-report-shell.tsx::183:7::react-doctor/nextjs-no-client-side-redirect::e954564883fc8ee5e8662fa96e8a847414693952312b0a5614eedbddc3259e1e",
-      "file": "src/features/viewer/ui/viewer-report-shell.tsx",
+      "id": "src/features/viewer/ui/use-status-entry-recovery.ts::30:7::react-doctor/nextjs-no-client-side-redirect::e954564883fc8ee5e8662fa96e8a847414693952312b0a5614eedbddc3259e1e",
+      "file": "src/features/viewer/ui/use-status-entry-recovery.ts",
       "rule": "nextjs-no-client-side-redirect",
       "verdict": "overturn",
       "rationale": "This redirect is guarded and data-dependent (canonical report/lead recovery), with loading or not-found handling before navigation. The app currently performs authenticated browser tRPC reads, so a server redirect would require a different data boundary; the generic client-redirect warning is not a present flash bug."

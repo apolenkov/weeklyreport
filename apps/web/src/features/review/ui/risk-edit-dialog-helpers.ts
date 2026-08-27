@@ -96,6 +96,21 @@ export function resolveRiskParentName(args: {
 
 type RiskSaveEntry = RiskEntry & { impact: string; mitigation: string };
 
+type RiskDialogState =
+  | { open: false }
+  | {
+      open: true;
+      mode: "create";
+      seedProductId?: string | undefined;
+      seedActivityId?: string | undefined;
+    }
+  | { open: true; mode: "edit"; entity: RiskSaveEntry };
+
+interface RiskDialogCreatePrefill {
+  readonly stageNames?: readonly string[] | undefined;
+  readonly severity?: RiskSeverity | undefined;
+}
+
 // Activity-parented: empty productId, no stage (activities own no SDLC stage).
 export function buildActivityRiskEntry(args: {
   readonly existingId: string | undefined;
@@ -145,29 +160,40 @@ export function buildProductRiskEntry(args: {
 // Map dialog-lifecycle + chip-raise prefill onto RiskEditDialog seed props
 // so the section wires the dialog with one spread instead of mode ternaries.
 export function deriveRiskDialogSeedProps(
-  dialogState:
-    | { open: false }
-    | {
-        open: true;
-        mode: "create";
-        seedProductId?: string | undefined;
-        seedActivityId?: string | undefined;
-      }
-    | { open: true; mode: "edit"; entity: RiskSaveEntry },
-  createPrefill: {
-    stageNames?: readonly string[] | undefined;
-    severity?: RiskSeverity | undefined;
-  } | null,
+  dialogState: RiskDialogState,
+  createPrefill: RiskDialogCreatePrefill | null,
 ) {
-  const creating = dialogState.open && dialogState.mode === "create";
-  const editing = dialogState.open && dialogState.mode === "edit";
+  if (!dialogState.open) {
+    return {
+      risk: null,
+      defaultProductId: undefined,
+      defaultActivityId: undefined,
+      initialStageNames: undefined,
+      initialSeverity: undefined,
+      initialImpact: "",
+      initialMitigation: "",
+    };
+  }
+
+  if (dialogState.mode === "edit") {
+    return {
+      risk: dialogState.entity,
+      defaultProductId: undefined,
+      defaultActivityId: undefined,
+      initialStageNames: undefined,
+      initialSeverity: undefined,
+      initialImpact: dialogState.entity.impact,
+      initialMitigation: dialogState.entity.mitigation,
+    };
+  }
+
   return {
-    risk: editing ? dialogState.entity : null,
-    defaultProductId: creating ? dialogState.seedProductId : undefined,
-    defaultActivityId: creating ? dialogState.seedActivityId : undefined,
-    initialStageNames: creating ? createPrefill?.stageNames : undefined,
-    initialSeverity: creating ? createPrefill?.severity : undefined,
-    initialImpact: editing ? dialogState.entity.impact : "",
-    initialMitigation: editing ? dialogState.entity.mitigation : "",
+    risk: null,
+    defaultProductId: dialogState.seedProductId,
+    defaultActivityId: dialogState.seedActivityId,
+    initialStageNames: createPrefill?.stageNames,
+    initialSeverity: createPrefill?.severity,
+    initialImpact: "",
+    initialMitigation: "",
   };
 }

@@ -26,6 +26,24 @@ export interface GetByPeriodResult {
   };
 }
 
+const isHeadLikeRole = (role: Role | undefined): boolean =>
+  role === "head" || role === "admin";
+
+const isCrossAuthorRequest = (
+  requestedAuthorId: string | undefined,
+  userId: string,
+): requestedAuthorId is string =>
+  requestedAuthorId !== undefined && requestedAuthorId !== userId;
+
+const selectSectionAuthor = (
+  userId: string,
+  requestedAuthorId: string | undefined,
+  mayReadRequestedAuthor: boolean,
+): string =>
+  requestedAuthorId !== undefined && mayReadRequestedAuthor
+    ? requestedAuthorId
+    : userId;
+
 export async function readByPeriod(
   repository: LeadFormRepository,
   reportId: string,
@@ -71,7 +89,7 @@ async function resolveSectionAuthor(
   sectionAuthorId: string;
   isHeadCrossRead: boolean;
 }> {
-  const isHeadLike = role === "head" || role === "admin";
+  const isHeadLike = isHeadLikeRole(role);
   // One shared non-archived set gates AND scopes the lead cross-author read
   // (null = not granted, incl. archived-only sharing or no report access). The
   // head branch is group-scoped below; admin is global by design.
@@ -85,10 +103,8 @@ async function resolveSectionAuthor(
   // A head is a single-group role: it may read another author's section only
   // inside its own reporting group. `requestedAuthorId` is a client URL param,
   // so bound it before the target section is loaded. admin is exempt (global).
-  const isHeadCrossRead =
-    role === "head" &&
-    requestedAuthorId !== undefined &&
-    requestedAuthorId !== userId;
+  const crossAuthorRequest = isCrossAuthorRequest(requestedAuthorId, userId);
+  const isHeadCrossRead = role === "head" && crossAuthorRequest;
   if (isHeadCrossRead) {
     await assertHeadTargetInGroup(repository, userId, requestedAuthorId);
   }
@@ -97,10 +113,7 @@ async function resolveSectionAuthor(
   // the caller's own section, which would mislabel the form as the target's.
   // Report access (own section) is checked first: a caller with no section in
   // the report stays on the NOT_FOUND path (no existence oracle).
-  const isForeignLeadRead =
-    !isHeadLike &&
-    requestedAuthorId !== undefined &&
-    requestedAuthorId !== userId;
+  const isForeignLeadRead = !isHeadLike && crossAuthorRequest;
   if (isForeignLeadRead && sharedScope === null) {
     const ownSection = await repository.getSectionForPeriod(reportId, userId);
     if (ownSection) {
@@ -109,10 +122,11 @@ async function resolveSectionAuthor(
       );
     }
   }
-  const sectionAuthorId =
-    requestedAuthorId !== undefined && (isHeadLike || sharedScope !== null)
-      ? requestedAuthorId
-      : userId;
+  const sectionAuthorId = selectSectionAuthor(
+    userId,
+    requestedAuthorId,
+    isHeadLike || sharedScope !== null,
+  );
   return { sharedScope, sectionAuthorId, isHeadCrossRead };
 }
 

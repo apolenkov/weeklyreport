@@ -1,15 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { CrossAuthorEntry } from "../../../../period";
@@ -26,6 +18,12 @@ import {
 export type { RiskPrefillRequest } from "../../../../report-sections";
 import { useStatusRiskSync } from "../../../../report-sections/client";
 import { RisksSection } from "../../../../review";
+import {
+  BridgeContext,
+  type BridgeContextValue,
+  type StagesForProduct,
+  useBridgeContext,
+} from "./lead-form-sync-context";
 
 // A chip whose displayed severity is floored by a covering risk cannot author
 // or lower that status. The lead changes an at-risk or blocked stage by editing
@@ -38,39 +36,7 @@ const COVERED_STAGE_HINT_MESSAGE =
 
 // Chip-raise payload routed into RisksSection: each `signal` increment opens
 // exactly one prefilled RiskEditDialog.
-export type StagesForProduct = (productId: string) => readonly string[];
-
-interface BridgeContextValue {
-  products: readonly Product[];
-  risks: readonly RiskEntry[];
-  readOnly: boolean;
-  activities?: readonly { id: string; name: string }[];
-  stagesForProduct?: StagesForProduct;
-  sectionAuthorName?: string;
-  risksAddSignal?: number;
-  crossAuthors?: readonly CrossAuthorEntry[];
-  visibilityMode?: "mine" | "everyone";
-  displayRisks?: readonly RiskEntry[];
-  riskPrefill: RiskPrefillRequest | null;
-  handleStageStatusChange: (
-    productId: string,
-    stageName: string,
-    newStatus: StageStatus,
-  ) => void;
-  handleRisksChange: (next: readonly RiskEntry[]) => void;
-}
-
-const BridgeContext = createContext<BridgeContextValue | null>(null);
-
-function useBridgeContext(componentName: string): BridgeContextValue {
-  const ctx = useContext(BridgeContext);
-  if (!ctx) {
-    throw new Error(
-      `${componentName} must be rendered inside <LeadFormSyncBridge.Provider>.`,
-    );
-  }
-  return ctx;
-}
+export type { StagesForProduct } from "./lead-form-sync-context";
 
 interface LeadFormSyncBridgeProviderProps {
   readonly products: readonly Product[];

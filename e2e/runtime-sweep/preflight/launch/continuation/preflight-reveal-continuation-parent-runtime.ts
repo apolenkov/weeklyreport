@@ -8,8 +8,6 @@ import type { ParentContext } from "./preflight-reveal-continuation-parent.ts";
 import { initialParentProgress } from "./preflight-reveal-continuation-parent-progress.ts";
 import type { RevealPartitionPlan } from "./preflight-reveal-continuation-partition.ts";
 
-export { initialParentProgress } from "./preflight-reveal-continuation-parent-progress.ts";
-
 const runChildrenForInput = (input: {
   readonly context: ParentContext;
   readonly maxChildren: number;

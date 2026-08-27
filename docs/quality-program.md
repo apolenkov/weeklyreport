@@ -35,8 +35,9 @@ verifiable in this repository (commands, configs, and specs are linked).
   (verdicts: 97 exemplary / 943 good / 124 needs-attention / 2 defect at scan
   time). Its entire actionable backlog was implemented and archived.
 - **Exemplary standard rollout (ongoing).** Campaign to bring every file to
-  `docs/exemplary-code-standard.md` (file ≤ 300 lines, functions ≤ 70,
-  cognitive complexity < 10, zero mutation, no silent config fallbacks).
+  `docs/exemplary-code-standard.md` (file ≤ 230 lines, functions ≤ 57,
+  cyclomatic complexity ≤ 10, cognitive complexity < 10, zero mutation, no
+  silent config fallbacks).
   Waves are implemented by orchestrated agent lanes, each wave passes two
   independent adversarial reviews plus the full gate before commit.
   Progress ledger: `openspec/changes/repair-exhaustive-audit-exemplary-quality/`.

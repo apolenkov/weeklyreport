@@ -1,0 +1,140 @@
+{
+  "decision": "submitted",
+  "stage": "facts",
+  "result": {
+    "stage": "facts",
+    "title": "Reconstruct the complete CustomReport history and roadmap",
+    "goalSlug": "repository-history-backlog-reconstruction",
+    "facts": [
+      {
+        "id": "fact-1",
+        "text": "A frozen source manifest enumerates every discovered active and archived Codex JSONL session, relevant working-directory root, historical handoff or audit artifact, planning record and requested read-only external source, with identity, location, time range, size or event count, inclusion status and reason.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-2",
+        "text": "Session relevance is determined from session metadata and semantic owner-message review; repeated project instructions or broad keyword matches alone never establish relevance or completeness.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-3",
+        "text": "Every locally accessible Pro and Air source is parsed and accounted for, while each inaccessible or missing Air source is listed with its known session identity, last observed provenance and exact recovery action; full cross-machine completeness is never claimed while a required Air raw source remains unavailable.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-4",
+        "text": "The owner-feedback registry contains every substantive owner message in source order with a stable event ID, session ID, timestamp, source hash, context, feedback type, faithful meaning, assistant decision or response, resulting evidence and current disposition; secrets are redacted with visible markers rather than copied.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-5",
+        "text": "Repeated owner messages remain separate source events, and every derived feedback cluster, requirement or decision links back to all supporting and conflicting source-event IDs.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-6",
+        "text": "Every discovered substantive owner event has exactly one terminal disposition: actionable product requirement, actionable collaboration or process issue, accepted decision, unresolved question, uncommitted idea or inbox item, positive or neutral feedback, superseded or rejected intent, duplicate emphasis, or evidence-backed out-of-scope item.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-7",
+        "text": "Historical ledgers and assistant completion claims are retained as evidence inputs but are independently reconciled; none is treated as complete or current merely because an earlier artifact called it exhaustive, approved or done.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-8",
+        "text": "The reconstruction performs both history-to-repository and repository-to-history reconciliation against a frozen current Git commit and tree, current OpenSpec specs and changes, maintained code and tests, Git history and the existing backlog, identifying both unimplemented owner intent and active work with no recovered owner-intent source.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-9",
+        "text": "Every material requirement and backlog item uses one evidence-calibrated status from CURRENT_PROVEN, HISTORICALLY_PROVEN, CLAIMED_DONE, PARTIAL, OPEN, BLOCKED, SUPERSEDED or UNKNOWN, and cites the exact code, test, live, review, remote or source-gap evidence supporting that status.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-10",
+        "text": "The final package contains separate but cross-linked product and collaboration/process backlogs; each actionable record has a stable ID, title, source links, current status, priority rationale, dependencies, owner, next action, acceptance condition and blocking effect.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-11",
+        "text": "The roadmap orders work by prerequisite, blocking effect, owner impact, risk and uncertainty reduction rather than chronology, and distinguishes immediate truth-restoration work, current closure work, later product improvements and explicitly deferred ideas.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      },
+      {
+        "id": "fact-12",
+        "text": "A research decision log compares plausible source-selection, feedback-classification, deduplication, status and prioritization approaches, records rejected alternatives and explains the selected method before the final backlog is derived.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      },
+      {
+        "id": "fact-13",
+        "text": "The final human-facing package is written in Russian with English stable IDs, statuses and machine-readable fields, and includes a source-coverage manifest, owner-feedback registry, requirement and decision ledger, current-state matrix, product backlog, process backlog, uncertainty register, roadmap and concise executive answer to where the project stands.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-14",
+        "text": "Deterministic validators prove manifest accounting, unique identities, allowed statuses, source-to-ledger linkage, terminal disposition coverage, backlog schema and internal links; an independent review separately checks semantic fidelity, status calibration and roadmap coherence.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-15",
+        "text": "The reconstruction writes only its reviewed goal package and a new dated directory under the external CustomReport archive; it previews but does not update the canonical backlog, OpenSpec, product code, Git refs or external systems without a separate owner-approved follow-up.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-16",
+        "text": "Completion requires zero unaccounted discovered sources, zero undispositioned substantive owner events, zero actionable records without evidence-calibrated status and next action, all required validators passing, independent review approval and every inaccessible required source remaining explicitly visible rather than silently excluded.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      }
+    ],
+    "factsMarkdown": "# Facts\n\n- A frozen source manifest enumerates every discovered active and archived Codex JSONL session, relevant working-directory root, historical handoff or audit artifact, planning record and requested read-only external source, with identity, location, time range, size or event count, inclusion status and reason.\n- Session relevance is determined from session metadata and semantic owner-message review; repeated project instructions or broad keyword matches alone never establish relevance or completeness.\n- Every locally accessible Pro and Air source is parsed and accounted for, while each inaccessible or missing Air source is listed with its known session identity, last observed provenance and exact recovery action; full cross-machine completeness is never claimed while a required Air raw source remains unavailable.\n- The owner-feedback registry contains every substantive owner message in source order with a stable event ID, session ID, timestamp, source hash, context, feedback type, faithful meaning, assistant decision or response, resulting evidence and current disposition; secrets are redacted with visible markers rather than copied.\n- Repeated owner messages remain separate source events, and every derived feedback cluster, requirement or decision links back to all supporting and conflicting source-event IDs.\n- Every discovered substantive owner event has exactly one terminal disposition: actionable product requirement, actionable collaboration or process issue, accepted decision, unresolved question, uncommitted idea or inbox item, positive or neutral feedback, superseded or rejected intent, duplicate emphasis, or evidence-backed out-of-scope item.\n- Historical ledgers and assistant completion claims are retained as evidence inputs but are independently reconciled; none is treated as complete or current merely because an earlier artifact called it exhaustive, approved or done.\n- The reconstruction performs both history-to-repository and repository-to-history reconciliation against a frozen current Git commit and tree, current OpenSpec specs and changes, maintained code and tests, Git history and the existing backlog, identifying both unimplemented owner intent and active work with no recovered owner-intent source.\n- Every material requirement and backlog item uses one evidence-calibrated status from CURRENT_PROVEN, HISTORICALLY_PROVEN, CLAIMED_DONE, PARTIAL, OPEN, BLOCKED, SUPERSEDED or UNKNOWN, and cites the exact code, test, live, review, remote or source-gap evidence supporting that status.\n- The final package contains separate but cross-linked product and collaboration/process backlogs; each actionable record has a stable ID, title, source links, current status, priority rationale, dependencies, owner, next action, acceptance condition and blocking effect.\n- The roadmap orders work by prerequisite, blocking effect, owner impact, risk and uncertainty reduction rather than chronology, and distinguishes immediate truth-restoration work, current closure work, later product improvements and explicitly deferred ideas.\n- A research decision log compares plausible source-selection, feedback-classification, deduplication, status and prioritization approaches, records rejected alternatives and explains the selected method before the final backlog is derived.\n- The final human-facing package is written in Russian with English stable IDs, statuses and machine-readable fields, and includes a source-coverage manifest, owner-feedback registry, requirement and decision ledger, current-state matrix, product backlog, process backlog, uncertainty register, roadmap and concise executive answer to where the project stands.\n- Deterministic validators prove manifest accounting, unique identities, allowed statuses, source-to-ledger linkage, terminal disposition coverage, backlog schema and internal links; an independent review separately checks semantic fidelity, status calibration and roadmap coherence.\n- The reconstruction writes only its reviewed goal package and a new dated directory under the external CustomReport archive; it previews but does not update the canonical backlog, OpenSpec, product code, Git refs or external systems without a separate owner-approved follow-up.\n- Completion requires zero unaccounted discovered sources, zero undispositioned substantive owner events, zero actionable records without evidence-calibrated status and next action, all required validators passing, independent review approval and every inaccessible required source remaining explicitly visible rather than silently excluded."
+  }
+}

@@ -49,6 +49,25 @@ const getActiveElement = (): HTMLElement | null =>
 const activeElementForDialog = (open: boolean): HTMLElement | null =>
   open ? getActiveElement() : null;
 
+function resolveRestoreTarget(
+  container: HTMLElement | null,
+  activeElement: HTMLElement | null,
+  opener: HTMLElement | null,
+  trigger: HTMLElement | null,
+): HTMLElement | null {
+  if (trigger) return trigger;
+  if (!container?.contains(activeElement)) return activeElement;
+  return container.contains(opener) ? null : opener;
+}
+
+function focusDialogSurface(
+  container: HTMLElement | null,
+  activeElement: HTMLElement | null,
+): void {
+  if (!container || container.contains(activeElement)) return;
+  (focusableWithin(container)[0] ?? container).focus();
+}
+
 // Shared non-Radix modal focus: trap Tab, Escape-close, restore to opener.
 export function useDialogFocus({
   open,
@@ -61,20 +80,14 @@ export function useDialogFocus({
   useEffect(() => {
     if (!open) return;
     const container = containerRef.current;
-    const activeElement = document.activeElement as HTMLElement | null;
-    const focusIsInside = container?.contains(activeElement) ?? false;
-
-    // triggerRef wins. When autoFocus already sits inside the container, the
-    // captured opener is the only remaining outside anchor.
-    const openerOutside =
-      opener && container && !container.contains(opener) ? opener : null;
-    const restoreTarget: HTMLElement | null =
-      triggerRef?.current ?? (focusIsInside ? openerOutside : activeElement);
-
-    // Respect an inner autoFocus: only pull focus in when nothing inside holds it yet.
-    if (container && !focusIsInside) {
-      (focusableWithin(container)[0] ?? container).focus();
-    }
+    const activeElement = getActiveElement();
+    const restoreTarget = resolveRestoreTarget(
+      container,
+      activeElement,
+      opener,
+      triggerRef?.current ?? null,
+    );
+    focusDialogSurface(container, activeElement);
 
     return () => {
       restoreTarget?.focus();

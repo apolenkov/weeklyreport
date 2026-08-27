@@ -76,6 +76,40 @@ export function SlideGridHeader({
   );
 }
 
+function PriorityAuthorBadge({
+  author,
+  showAuthorBadge,
+}: {
+  readonly author: GridAuthor | undefined;
+  readonly showAuthorBadge: boolean;
+}) {
+  if (!showAuthorBadge) return null;
+  if (author === undefined) {
+    return (
+      <span
+        data-testid="slide-priority-author-badge"
+        title="Unknown author"
+        className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+        style={{ background: "var(--color-muted)" }}
+      >
+        <span aria-hidden="true">?</span>
+        <span className="sr-only">Unknown author</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      data-testid="slide-priority-author-badge"
+      title={author.name}
+      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
+      style={{ background: authorSlotBackground(author) }}
+    >
+      <span aria-hidden="true">{author.initials}</span>
+      <span className="sr-only">{author.name}</span>
+    </span>
+  );
+}
+
 function PriorityCard({
   card,
   author,
@@ -109,27 +143,10 @@ function PriorityCard({
         <span className="truncate text-[11px] text-[var(--color-muted-foreground)]">
           {card.productName}
         </span>
-        {showAuthorBadge && author !== undefined ? (
-          <span
-            data-testid="slide-priority-author-badge"
-            title={author.name}
-            className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
-            style={{ background: authorSlotBackground(author) }}
-          >
-            <span aria-hidden="true">{author.initials}</span>
-            <span className="sr-only">{author.name}</span>
-          </span>
-        ) : showAuthorBadge ? (
-          <span
-            data-testid="slide-priority-author-badge"
-            title="Unknown author"
-            className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
-            style={{ background: "var(--color-muted)" }}
-          >
-            <span aria-hidden="true">?</span>
-            <span className="sr-only">Unknown author</span>
-          </span>
-        ) : null}
+        <PriorityAuthorBadge
+          author={author}
+          showAuthorBadge={showAuthorBadge}
+        />
       </div>
     </div>
   );

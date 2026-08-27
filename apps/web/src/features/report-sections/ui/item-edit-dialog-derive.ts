@@ -44,48 +44,73 @@ interface ItemEditDerivedFields {
   readonly rankOptions: number[];
 }
 
-// Pure form derivation — no hooks, unit-testable without React.
-export function deriveItemEditFields(
+interface ItemParentFields {
+  readonly isActivityParent: boolean;
+  readonly parentId: string | undefined;
+  readonly selectedActivity: ParentActivityOption | undefined;
+  readonly parentName: string;
+}
+
+function deriveItemParentFields(
   args: DeriveItemEditFieldsArgs,
-): ItemEditDerivedFields {
+): ItemParentFields {
   const isActivityParent = args.parent.kind === "activity";
   const parentId =
     args.parent.kind === "unresolved" ? undefined : args.parent.id;
   const selectedActivity = parentId
-    ? args.activities.find((a) => a.id === parentId)
+    ? args.activities.find((activity) => activity.id === parentId)
     : undefined;
   const selectedProduct = parentId
-    ? args.products.find((p) => p.id === parentId)
+    ? args.products.find((product) => product.id === parentId)
     : undefined;
-  const parentName = resolveItemParentName({
+  return {
     isActivityParent,
+    parentId,
     selectedActivity,
-    selectedProduct,
-    initial: args.initial,
-  });
-  const headerVerb = args.isCreate ? "Add Item" : "Edit Item";
+    parentName: resolveItemParentName({
+      isActivityParent,
+      selectedActivity,
+      selectedProduct,
+      initial: args.initial,
+    }),
+  };
+}
 
-  // Product parents need a stage when owned stages exist; activity parents have none.
-  const availableStages = isActivityParent
+function deriveItemStageFields(
+  args: DeriveItemEditFieldsArgs,
+  parent: ItemParentFields,
+) {
+  const availableStages = parent.isActivityParent
     ? []
-    : parentId
-      ? (args.stagesForProduct?.(parentId) ?? [])
+    : parent.parentId
+      ? (args.stagesForProduct?.(parent.parentId) ?? [])
       : [];
   const effectiveStageNames = computeEffectiveStageNames(
     args.stageNames,
     availableStages,
   );
-  const isDeadEnd =
-    !isActivityParent &&
-    isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames);
+  return {
+    availableStages,
+    effectiveStageNames,
+    isDeadEnd:
+      !parent.isActivityParent &&
+      isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
+    statusSlot: resolveStatusSlot({
+      isActivityParent: parent.isActivityParent,
+      productId: parent.isActivityParent ? null : parent.parentId,
+      stageNames: effectiveStageNames,
+      status: args.status,
+      risks: args.risks,
+    }),
+  };
+}
 
-  const statusSlot = resolveStatusSlot({
-    isActivityParent,
-    productId: isActivityParent ? null : parentId,
-    stageNames: effectiveStageNames,
-    status: args.status,
-    risks: args.risks,
-  });
+// Pure form derivation — no hooks, unit-testable without React.
+export function deriveItemEditFields(
+  args: DeriveItemEditFieldsArgs,
+): ItemEditDerivedFields {
+  const parent = deriveItemParentFields(args);
+  const stage = deriveItemStageFields(args, parent);
 
   // Ranks already taken by OTHER items. The item's own current rank is
   // excluded so the user can keep it without seeing a false "taken" marker.
@@ -99,14 +124,11 @@ export function deriveItemEditFields(
   const rankOptions = buildRankOptions(args.item?.priorityRank ?? null);
 
   return {
-    isActivityParent,
-    selectedActivity,
-    parentName,
-    headerVerb,
-    availableStages,
-    effectiveStageNames,
-    isDeadEnd,
-    statusSlot,
+    isActivityParent: parent.isActivityParent,
+    selectedActivity: parent.selectedActivity,
+    parentName: parent.parentName,
+    headerVerb: args.isCreate ? "Add Item" : "Edit Item",
+    ...stage,
     takenRanks,
     rankOptions,
   };

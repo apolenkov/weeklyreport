@@ -230,7 +230,7 @@
     {
       "id": "scripts-quality-exemplary-tests",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue-output|exemplary-file-kind|exemplary-floor-ratchet)\\.test\\.ts)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue-output|exemplary-file-kind|exemplary-floor-ratchet|exemplary-structure|exemplary-structure-probe)\\.test\\.ts)$",
       "concern": "quality-exemplary",
       "role": "test",
       "target": "scripts/quality/exemplary/$1"
@@ -238,7 +238,7 @@
     {
       "id": "scripts-quality-exemplary-implementation",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-file-kind|exemplary-floor-ratchet)\\.ts)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-file-kind|exemplary-floor-ratchet|exemplary-structure-contract|exemplary-structure-inventory|exemplary-structure-probe|exemplary-structure-baseline|exemplary-structure-final|exemplary-structural-snapshot)\\.ts)$",
       "concern": "quality-exemplary",
       "role": "implementation",
       "target": "scripts/quality/exemplary/$1"
@@ -246,7 +246,7 @@
     {
       "id": "scripts-quality-exemplary-entrypoint",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?(exemplary-catalogue\\.ts)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue|exemplary-structure-cli|exemplary-structure-probe-cli)\\.ts)$",
       "concern": "quality-exemplary",
       "role": "entrypoint",
       "target": "scripts/quality/exemplary/$1"
@@ -254,7 +254,7 @@
     {
       "id": "scripts-quality-exemplary-data",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?(exemplary-floor-baseline\\.json)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-floor-baseline|exemplary-structure-baseline|exemplary-structure-final)\\.json)$",
       "concern": "quality-exemplary",
       "role": "data",
       "target": "scripts/quality/exemplary/$1"

@@ -49,6 +49,20 @@ function SearchHitMetaRow({ hit }: { readonly hit: SearchHit }) {
   );
 }
 
+function SearchHitContent({ hit }: { readonly hit: SearchHit }) {
+  return (
+    <>
+      <SearchHitMetaRow hit={hit} />
+      <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+        {hit.title}
+      </div>
+      <div className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
+        {renderSnippet(hit.snippet)}
+      </div>
+    </>
+  );
+}
+
 function SearchHitOption({
   hit,
   optionId,
@@ -78,13 +92,7 @@ function SearchHitOption({
         title="Destination unavailable"
         className="flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left last:border-b-0 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <SearchHitMetaRow hit={hit} />
-        <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-          {hit.title}
-        </div>
-        <div className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
-          {renderSnippet(hit.snippet)}
-        </div>
+        <SearchHitContent hit={hit} />
       </button>
     );
   }
@@ -102,13 +110,7 @@ function SearchHitOption({
           : "bg-[var(--color-card)] hover:bg-[var(--color-success)]"
       }`}
     >
-      <SearchHitMetaRow hit={hit} />
-      <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-        {hit.title}
-      </div>
-      <div className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">
-        {renderSnippet(hit.snippet)}
-      </div>
+      <SearchHitContent hit={hit} />
     </button>
   );
 }
