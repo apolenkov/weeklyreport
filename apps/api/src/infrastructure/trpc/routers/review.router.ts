@@ -13,6 +13,7 @@ import type { ReviewActionsService } from "../../../modules/review/index.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
 import { withDomainErrorMapping } from "../trpc.error-mapper.js";
 import {
+  captureMutationAuditInputMiddleware,
   headProcedure,
   leadershipProcedure,
   router,
@@ -35,6 +36,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     // Group-level "seen" receipt — any access-holder (scope check only).
     acknowledge: leadershipProcedure
       .input(reviewAcknowledgeInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
           deps.reviewActionsService.acknowledge(ctx.session, input),
@@ -53,6 +55,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     // Per-record comment — designated reviewer for the record's group.
     comment: leadershipProcedure
       .input(reviewCommentInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
           deps.reviewActionsService.comment(ctx.session, input),
@@ -61,6 +64,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
 
     deleteComment: leadershipProcedure
       .input(reviewDeleteCommentInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
           deps.reviewActionsService.deleteComment(ctx.session, input),
@@ -70,6 +74,7 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
     // Per-section verdict; `changes_requested` auto-un-submits, race-safe.
     verdict: leadershipProcedure
       .input(reviewVerdictInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
           deps.reviewActionsService.verdict(ctx.session, input),

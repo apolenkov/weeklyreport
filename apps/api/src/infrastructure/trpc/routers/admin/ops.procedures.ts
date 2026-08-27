@@ -11,7 +11,11 @@ import { z } from "zod";
 import type { ActionLogService } from "../../../../modules/admin/index.js";
 import type { JobsService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { adminProcedure, router } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+  router,
+} from "../../trpc.middleware.js";
 
 const MAX_FAILED_JOBS_LIMIT = 200;
 
@@ -99,6 +103,7 @@ function createJobsRouter(deps: AdminOpsDeps) {
 
     retryFailed: adminProcedure
       .input(retryFailedInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           return await requireJobsService(deps).retryFailed(input);

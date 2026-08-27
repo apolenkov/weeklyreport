@@ -7,7 +7,11 @@ import {
 
 import type { ProjectActivityService } from "../../../modules/project-activity/index.js";
 import { withDomainErrorMapping } from "../trpc.error-mapper.js";
-import { adminProcedure, router } from "../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+  router,
+} from "../trpc.middleware.js";
 
 export interface ProjectActivityRouterDeps {
   readonly projectActivityService: ProjectActivityService;
@@ -25,18 +29,21 @@ export function createProjectActivityRouter(deps: ProjectActivityRouterDeps) {
 
     create: adminProcedure
       .input(projectActivityCreateSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() => deps.projectActivityService.create(input)),
       ),
 
     update: adminProcedure
       .input(projectActivityUpdateSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() => deps.projectActivityService.update(input)),
       ),
 
     archive: adminProcedure
       .input(projectActivityArchiveSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectActivityService.archive(input),
@@ -45,6 +52,7 @@ export function createProjectActivityRouter(deps: ProjectActivityRouterDeps) {
 
     attachLead: adminProcedure
       .input(projectActivityLeadEdgeSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(async () => {
           await deps.projectActivityService.attachLead(input);
@@ -54,6 +62,7 @@ export function createProjectActivityRouter(deps: ProjectActivityRouterDeps) {
 
     detachLead: adminProcedure
       .input(projectActivityLeadEdgeSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(async () => {
           await deps.projectActivityService.detachLead(input);

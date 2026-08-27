@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import type { ReopenRequestAdminService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { headProcedure } from "../../trpc.middleware.js";
+import {
+  captureMutationAuditInputMiddleware,
+  headProcedure,
+} from "../../trpc.middleware.js";
 
 const MAX_REOPEN_NOTE_LENGTH = 500;
 
@@ -42,6 +45,7 @@ export function createReopenRequestsProcedures(deps: ReopenRequestsDeps) {
       }),
     respondReopenRequest: headProcedure
       .input(respondReopenRequestInput)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
           return await deps.reopenRequestAdminService.respondReopenRequest({

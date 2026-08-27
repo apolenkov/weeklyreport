@@ -72,9 +72,9 @@ function collectAuditTargets(value: unknown, targets: string[]): void {
 
 // All identities named by the mutation input, deduplicated in discovery order.
 // An empty result means the input named no known identity key.
-function extractAuditTargets(raw: unknown): readonly string[] {
+function extractAuditTargets(decodedInput: unknown): readonly string[] {
   const targets: string[] = [];
-  collectAuditTargets(raw, targets);
+  collectAuditTargets(decodedInput, targets);
   return [...new Set(targets)];
 }
 
@@ -123,7 +123,10 @@ async function persistUserActionLog(
 
 interface MutationAuditRecord {
   readonly procedure: string;
-  readonly rawInput: unknown;
+  // Only the procedure parser's output may reach target extraction. Raw
+  // transport input can contain unknown keys that Zod strips before the
+  // resolver and must never become durable audit metadata.
+  readonly decodedInput: unknown;
   readonly status: "success" | "fail";
   // Fixed framework classification only. Error messages can contain decoded
   // input or database metadata and never cross into either audit sink.
@@ -138,7 +141,7 @@ export async function recordMutationAudit(
   ctx: TrpcContext,
   record: MutationAuditRecord,
 ): Promise<void> {
-  const targets = extractAuditTargets(record.rawInput);
+  const targets = extractAuditTargets(record.decodedInput);
   const target = targets[0];
   const userId = ctx.session?.userId ?? ANONYMOUS_USER_ID;
   const role = ctx.session?.role ?? null;

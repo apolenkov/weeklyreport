@@ -4,7 +4,12 @@ import { z } from "zod";
 import type { PeriodAdminService } from "../../../modules/admin/index.js";
 import type { ArchiveService } from "../../../modules/archive/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
-import { anyRoleProcedure, headProcedure, router } from "../trpc.middleware.js";
+import {
+  anyRoleProcedure,
+  captureMutationAuditInputMiddleware,
+  headProcedure,
+  router,
+} from "../trpc.middleware.js";
 
 export interface ArchiveRouterDeps {
   archiveService: ArchiveService;
@@ -57,25 +62,31 @@ function buildDetailProcedure(deps: ArchiveRouterDeps) {
 }
 
 function buildArchiveReportProcedure(deps: ArchiveRouterDeps) {
-  return headProcedure.input(reportIdInput).mutation(async ({ input }) => {
-    try {
-      await deps.periodAdminService.archivePeriod(input.reportId);
-      return { success: true as const };
-    } catch (error) {
-      throw mapDomainError(error);
-    }
-  });
+  return headProcedure
+    .input(reportIdInput)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(async ({ input }) => {
+      try {
+        await deps.periodAdminService.archivePeriod(input.reportId);
+        return { success: true as const };
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
 }
 
 function buildUnarchiveReportProcedure(deps: ArchiveRouterDeps) {
-  return headProcedure.input(reportIdInput).mutation(async ({ input }) => {
-    try {
-      await deps.periodAdminService.unarchivePeriod(input.reportId);
-      return { success: true as const };
-    } catch (error) {
-      throw mapDomainError(error);
-    }
-  });
+  return headProcedure
+    .input(reportIdInput)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(async ({ input }) => {
+      try {
+        await deps.periodAdminService.unarchivePeriod(input.reportId);
+        return { success: true as const };
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
 }
 
 export function createArchiveRouter(deps: ArchiveRouterDeps) {

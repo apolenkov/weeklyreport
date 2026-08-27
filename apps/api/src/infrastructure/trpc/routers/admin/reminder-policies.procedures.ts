@@ -7,7 +7,10 @@ import { z } from "zod";
 
 import type { ReminderAdminService } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { adminProcedure } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+} from "../../trpc.middleware.js";
 
 export interface AdminReminderPoliciesDeps {
   readonly reminderAdminService: ReminderAdminService;
@@ -16,6 +19,7 @@ export interface AdminReminderPoliciesDeps {
 // Rules are scheduler-derived from ReminderPolicy; mutation is blocked.
 const saveReminderRule = adminProcedure
   .input(adminReminderRuleSchema)
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => {
     throw new TRPCError({
       code: "METHOD_NOT_SUPPORTED",
@@ -26,6 +30,7 @@ const saveReminderRule = adminProcedure
 
 const deleteReminderRule = adminProcedure
   .input(z.object({ ruleId: z.uuid() }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => {
     // Rules may disappear only as part of permanent policy removal, which
     // deletes the policy and its derived rows as one domain operation.
@@ -50,6 +55,7 @@ function buildListPolicies(deps: AdminReminderPoliciesDeps) {
 function buildSavePolicy(deps: AdminReminderPoliciesDeps) {
   return adminProcedure
     .input(reminderPolicySchema)
+    .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ ctx, input }) => {
       try {
         const existed = await deps.reminderAdminService.policyExists(input.id);
@@ -73,6 +79,7 @@ function buildSavePolicy(deps: AdminReminderPoliciesDeps) {
 function buildRemovePolicy(deps: AdminReminderPoliciesDeps) {
   return adminProcedure
     .input(z.object({ id: z.uuid() }))
+    .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ ctx, input }) => {
       try {
         const result = await deps.reminderAdminService.removePolicy(input.id);

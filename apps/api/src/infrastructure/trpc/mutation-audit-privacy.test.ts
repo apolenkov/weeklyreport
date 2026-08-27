@@ -5,7 +5,11 @@ import { z } from "zod";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { createNullLogger } from "../../lib/logger.js";
-import { leadProcedure, router } from "./trpc.middleware.js";
+import {
+  captureMutationAuditInputMiddleware,
+  leadProcedure,
+  router,
+} from "./trpc.middleware.js";
 
 const PRIVATE_INPUT = {
   id: "safe-target-id",
@@ -38,24 +42,34 @@ const privateInputSchema = z.object({
 });
 
 const privacyRouter = router({
-  succeeds: leadProcedure.input(privateInputSchema).mutation(() => "ok"),
-  fails: leadProcedure.input(privateInputSchema).mutation(({ input }) => {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: [
-        input.reportText,
-        input.reviewComment,
-        input.profileName,
-        input.telegramContent,
-        input.telegramChatId,
-        input.credential,
-        input.token,
-        input.cookie,
-        input.body,
-        'Prisma.reportSection.create({ data: "internal-db-metadata" })',
-      ].join(" | "),
-    });
-  }),
+  succeeds: leadProcedure
+    .input(privateInputSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(() => "ok"),
+  fails: leadProcedure
+    .input(privateInputSchema)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(({ input }) => {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: [
+          input.reportText,
+          input.reviewComment,
+          input.profileName,
+          input.telegramContent,
+          input.telegramChatId,
+          input.credential,
+          input.token,
+          input.cookie,
+          input.body,
+          'Prisma.reportSection.create({ data: "internal-db-metadata" })',
+        ].join(" | "),
+      });
+    }),
+  stripsUnknown: leadProcedure
+    .input(z.object({ safe: z.string() }))
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(() => "ok"),
 });
 
 const SESSION: UserSession = {
@@ -129,5 +143,35 @@ describe("mutation audit privacy boundary", () => {
     });
     expectPrivateValuesAbsent(mutation.mock.calls);
     expectPrivateValuesAbsent(create.mock.calls);
+  });
+
+  it("never derives a target from an unknown key stripped by the input schema", async () => {
+    const { caller, create, mutation } = makeCaller();
+
+    await caller.stripsUnknown({
+      safe: "ok",
+      id: "unknown-top-level-id",
+      nested: { id: "unknown-nested-id" },
+    } as { safe: string });
+
+    const event = mutation.mock.calls[0]?.[0] as
+      Record<string, unknown> | undefined;
+    expect(event).not.toHaveProperty("target");
+    expect(event).not.toHaveProperty("targets");
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ targetId: null }) as unknown,
+    });
+    expect(JSON.stringify(mutation.mock.calls)).not.toContain(
+      "unknown-nested-id",
+    );
+    expect(JSON.stringify(mutation.mock.calls)).not.toContain(
+      "unknown-top-level-id",
+    );
+    expect(JSON.stringify(create.mock.calls)).not.toContain(
+      "unknown-nested-id",
+    );
+    expect(JSON.stringify(create.mock.calls)).not.toContain(
+      "unknown-top-level-id",
+    );
   });
 });

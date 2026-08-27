@@ -9,6 +9,7 @@ import {
 } from "../../../modules/report-sections/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
+  captureMutationAuditInputMiddleware,
   headProcedure,
   protectedProcedure,
   router,
@@ -96,6 +97,7 @@ function fillFromProcedure(deps: LeadFormRouterDeps) {
         version: z.number().int().min(1),
       }),
     )
+    .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ input, ctx }) => {
       try {
         return await deps.leadFormService.fillFrom(
@@ -115,6 +117,7 @@ function fillFromProcedure(deps: LeadFormRouterDeps) {
 function revokeProcedure(deps: LeadFormRouterDeps) {
   return headProcedure
     .input(z.object({ reportSectionId: z.uuid() }))
+    .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ input, ctx }) => {
       try {
         return await deps.leadFormService.revokeSubmission(
@@ -131,17 +134,20 @@ function revokeProcedure(deps: LeadFormRouterDeps) {
 // Bulk revoke is bounded to the head's own group inside a multi-group report
 // (admin scope is {} → global).
 function revokeAllSubmittedProcedure(deps: LeadFormRouterDeps) {
-  return headProcedure.input(reportIdInput).mutation(async ({ input, ctx }) => {
-    try {
-      return await deps.leadFormService.revokeAllSubmitted(
-        input.reportId,
-        ctx.session.userId,
-        groupScopeFilter(ctx.session, "reportSection"),
-      );
-    } catch (error) {
-      throw mapDomainError(error);
-    }
-  });
+  return headProcedure
+    .input(reportIdInput)
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await deps.leadFormService.revokeAllSubmitted(
+          input.reportId,
+          ctx.session.userId,
+          groupScopeFilter(ctx.session, "reportSection"),
+        );
+      } catch (error) {
+        throw mapDomainError(error);
+      }
+    });
 }
 
 function requestReopenProcedure(deps: LeadFormRouterDeps) {
@@ -152,6 +158,7 @@ function requestReopenProcedure(deps: LeadFormRouterDeps) {
         reason: z.string().max(MAX_REOPEN_REASON_LENGTH).optional(),
       }),
     )
+    .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ input, ctx }) => {
       try {
         return await deps.leadFormService.requestReopen(
