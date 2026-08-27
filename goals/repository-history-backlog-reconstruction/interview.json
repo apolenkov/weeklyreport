@@ -1,0 +1,118 @@
+{
+  "stage": "interview",
+  "title": "Reconstruct the complete CustomReport history and roadmap",
+  "goalSlug": "repository-history-backlog-reconstruction",
+  "questions": [
+    {
+      "id": "source-universe",
+      "prompt": "Which sources must the reconstruction cover?",
+      "description": "The source universe must be broad enough to find feedback that was never copied into a backlog.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Inventory every locally discoverable active and archived Codex session, then select relevant sessions by metadata and semantic content rather than broad keyword matches. Include Pro and Air roots, related working directories, historical handoffs and audit artifacts, the current repository, Git and OpenSpec, the existing cross-session backlog, and available read-only GitHub, Jira or Confluence evidence used only to verify current status.",
+      "recommendedOptionIds": [
+        "local-sessions",
+        "pro-air",
+        "archives",
+        "repository",
+        "planning",
+        "external-readonly"
+      ],
+      "options": [
+        { "id": "local-sessions", "label": "All local Codex sessions" },
+        { "id": "pro-air", "label": "Pro and Air roots" },
+        { "id": "archives", "label": "Handoffs and audit archives" },
+        { "id": "repository", "label": "Current repository and Git" },
+        { "id": "planning", "label": "OpenSpec and existing backlog" },
+        {
+          "id": "external-readonly",
+          "label": "Read-only external status evidence"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "feedback-preservation",
+      "prompt": "How should owner feedback be preserved and consolidated?",
+      "description": "A raw completeness layer prevents deduplication from hiding repeated emphasis or misunderstandings.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Retain every substantive owner message as an ordered source event with session identity, timestamp, context, feedback type, meaning, response or decision, resulting evidence and current disposition. Preserve repetitions in the source registry; deduplicate only in a derived requirement layer that links back to every source event. Exclude only non-substantive greetings and tool noise, while accounting for each exclusion.",
+      "recommendedOptionIds": ["zero-loss-layered"],
+      "options": [
+        { "id": "zero-loss-layered", "label": "Zero-loss layered registry" },
+        { "id": "deduplicated-only", "label": "Deduplicated summary only" }
+      ],
+      "required": true
+    },
+    {
+      "id": "truth-and-status",
+      "prompt": "What evidence is required before an item is called complete?",
+      "description": "Historical assistant claims and old green checks may describe a different source tree.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Bind every material status to evidence and use distinct CURRENT_PROVEN, HISTORICALLY_PROVEN, CLAIMED_DONE, PARTIAL, OPEN, BLOCKED, SUPERSEDED and UNKNOWN states. Verify current claims against the present Git tree, code, OpenSpec, deterministic checks and applicable live or external read-backs. Never convert missing Air data, stale artifacts or an assistant statement into current proof.",
+      "recommendedOptionIds": [
+        "source-bound",
+        "current-vs-historical",
+        "unknown-visible",
+        "two-way-reconcile"
+      ],
+      "options": [
+        { "id": "source-bound", "label": "Source-bound evidence" },
+        {
+          "id": "current-vs-historical",
+          "label": "Separate current and historical proof"
+        },
+        { "id": "unknown-visible", "label": "Keep gaps explicit" },
+        {
+          "id": "two-way-reconcile",
+          "label": "Reconcile history and repository both ways"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "deliverables",
+      "prompt": "What should the final reconstruction deliver?",
+      "description": "The output must answer where the project stands and what should happen next without mixing evidence with interpretation.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Produce a source-coverage manifest, complete owner-feedback registry, deduplicated requirement and decision ledger, current-state reconciliation matrix, separate but linked product and collaboration/process backlogs, an uncertainty and inaccessible-source register, and a dependency-ordered roadmap with priorities, acceptance evidence and next actions. Human-facing analysis is Russian; stable IDs, statuses and machine-readable fields are English.",
+      "recommendedOptionIds": [
+        "coverage",
+        "feedback",
+        "requirements",
+        "state",
+        "backlogs",
+        "gaps",
+        "roadmap"
+      ],
+      "options": [
+        { "id": "coverage", "label": "Source coverage manifest" },
+        { "id": "feedback", "label": "Owner feedback registry" },
+        { "id": "requirements", "label": "Requirement and decision ledger" },
+        { "id": "state", "label": "Current-state matrix" },
+        { "id": "backlogs", "label": "Product and process backlogs" },
+        { "id": "gaps", "label": "Unknown and source-gap register" },
+        { "id": "roadmap", "label": "Dependency-ordered roadmap" }
+      ],
+      "required": true
+    },
+    {
+      "id": "authority-boundary",
+      "prompt": "What may this reconstruction change?",
+      "description": "The analysis should not silently turn historical ideas into implementation authority.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Keep collection, analysis and repository verification read-only. Write research artifacts to the external CustomReport archive and this reviewed goal package only. Treat the existing backlog as an input, not complete truth; preview the reconstructed master backlog for owner approval before any later canonical backlog, OpenSpec, product code or external-system update.",
+      "recommendedOptionIds": ["analysis-first"],
+      "options": [
+        {
+          "id": "analysis-first",
+          "label": "Analysis and reviewed preview only"
+        },
+        {
+          "id": "write-through",
+          "label": "Update planning systems immediately"
+        }
+      ],
+      "required": true
+    }
+  ]
+}

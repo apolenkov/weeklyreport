@@ -22,12 +22,12 @@ const longSource = Array.from(
   (_unused, index) => `export const line${index} = ${index};`,
 ).join("\n");
 const functionAtBudget = `export function atBudget(): number {
-${Array.from({ length: 67 }, (_unused, index) => `  const value${index} = ${index};`).join("\n")}
-  return value66;
+${Array.from({ length: 54 }, (_unused, index) => `  const value${index} = ${index};`).join("\n")}
+  return value53;
 }`;
 const functionOverBudget = `export function overBudget(): number {
-${Array.from({ length: 68 }, (_unused, index) => `  const value${index} = ${index};`).join("\n")}
-  return value67;
+${Array.from({ length: 55 }, (_unused, index) => `  const value${index} = ${index};`).join("\n")}
+  return value54;
 }`;
 const complexSource = `export function classify(values) {
   if (values[0]) return 0;

@@ -272,7 +272,6 @@ export const runRevealContinuationWithAggregatePartitions = async (input: {
   });
 };
 
-export { aggregatePartitionDeadlinesFor } from "./preflight-reveal-continuation-aggregate-deadline.ts";
 export {
   aggregatePartitionAttemptMaxMsFor,
   aggregatePartitionPlanForContext,

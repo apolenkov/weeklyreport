@@ -21,6 +21,44 @@ interface DraftFieldProps {
   readonly onValidityChange?: (id: string, valid: boolean) => void;
 }
 
+function useReopenWindowState({
+  draft,
+  setDraft,
+  onValidityChange,
+}: DraftFieldProps) {
+  const [raw, setRaw] = useState(() => String(draft.reopenWindowHours));
+  const [error, setError] = useState<string | null>(null);
+  const [committedValue, setCommittedValue] = useState(draft.reopenWindowHours);
+  if (committedValue !== draft.reopenWindowHours) {
+    setCommittedValue(draft.reopenWindowHours);
+    setRaw(String(draft.reopenWindowHours));
+    setError(null);
+  }
+
+  function handleChange(text: string) {
+    setRaw(text);
+    const parsed = /^\d+$/.test(text.trim())
+      ? Number.parseInt(text.trim(), 10)
+      : null;
+    if (
+      parsed === null ||
+      parsed < REOPEN_WINDOW_HOURS_MIN ||
+      parsed > REOPEN_WINDOW_HOURS_MAX
+    ) {
+      setError(
+        `Whole number between ${REOPEN_WINDOW_HOURS_MIN} and ${REOPEN_WINDOW_HOURS_MAX} required`,
+      );
+      onValidityChange?.("reopen-window-hours", false);
+      return;
+    }
+    setError(null);
+    onValidityChange?.("reopen-window-hours", true);
+    setDraft({ ...draft, reopenWindowHours: parsed });
+  }
+
+  return { raw, error, handleChange };
+}
+
 function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
   return (
     <div>
@@ -83,37 +121,11 @@ function ReopenWindowField({
   setDraft,
   onValidityChange,
 }: DraftFieldProps) {
-  const [raw, setRaw] = useState(() => String(draft.reopenWindowHours));
-  const [error, setError] = useState<string | null>(null);
-  // Render-phase adjust: reseed raw text when the committed value changes
-  // externally (e.g. after Save) without an effect.
-  const [committedValue, setCommittedValue] = useState(draft.reopenWindowHours);
-  if (committedValue !== draft.reopenWindowHours) {
-    setCommittedValue(draft.reopenWindowHours);
-    setRaw(String(draft.reopenWindowHours));
-    setError(null);
-  }
-
-  function handleChange(text: string) {
-    setRaw(text);
-    const parsed = /^\d+$/.test(text.trim())
-      ? Number.parseInt(text.trim(), 10)
-      : null;
-    if (
-      parsed === null ||
-      parsed < REOPEN_WINDOW_HOURS_MIN ||
-      parsed > REOPEN_WINDOW_HOURS_MAX
-    ) {
-      setError(
-        `Whole number between ${REOPEN_WINDOW_HOURS_MIN} and ${REOPEN_WINDOW_HOURS_MAX} required`,
-      );
-      onValidityChange?.("reopen-window-hours", false);
-      return;
-    }
-    setError(null);
-    onValidityChange?.("reopen-window-hours", true);
-    setDraft({ ...draft, reopenWindowHours: parsed });
-  }
+  const { raw, error, handleChange } = useReopenWindowState({
+    draft,
+    setDraft,
+    ...(onValidityChange === undefined ? {} : { onValidityChange }),
+  });
 
   return (
     <div

@@ -1,0 +1,38 @@
+{
+  "source": {
+    "branch": "campaign/cr-001-20260820",
+    "sha": "823b239cdc80312ecdf9eee3fd44b8a0618bffa4",
+    "tree": "c9381080cf9ab529ce16a579a94fc9c0b3cb2189"
+  },
+  "product": {
+    "fileCount": 975,
+    "fileDigest": "2d47b332b36be6a95668b330fab2629138c79f66ec6af70d2579336801150157",
+    "findingCount": 67,
+    "affectedFileCount": 60,
+    "byRule": {
+      "max-lines": 23,
+      "max-lines-per-function": 16,
+      "complexity": 27,
+      "sonarjs/cognitive-complexity": 1
+    },
+    "configDigest": "61f7da0333efcf890a668fcb60e2a12b0facabbe668d8fac53775de5345bc751",
+    "classification": "REAL",
+    "inlineSuppressions": 0,
+    "perFileWeakenings": 0
+  },
+  "control": {
+    "fileCount": 1643,
+    "fileDigest": "af8d442c36f22170791200484cb9a8b306c8fa61fa884d14c185e9d0e2aaca91",
+    "findingCount": 822,
+    "affectedFileCount": 405,
+    "byRule": {
+      "max-lines": 178,
+      "max-lines-per-function": 601,
+      "complexity": 38,
+      "sonarjs/cognitive-complexity": 5
+    },
+    "configDigest": "61f7da0333efcf890a668fcb60e2a12b0facabbe668d8fac53775de5345bc751",
+    "classification": "REJECTED_SCOPE_CONTROL"
+  },
+  "archiveEvidence": "/Users/wrk/work/customreport-archive/2026-08-27-code-excellence-baseline-823b239c/EVIDENCE.md"
+}

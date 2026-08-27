@@ -63,6 +63,45 @@ interface MetaRowProps {
   readonly emptyStageChip?: EmptyStageChip;
 }
 
+function resolveEmptyStageChip(
+  kind: EmptyStageChip,
+): EmptyStageChipSpec | null {
+  return kind === "none" ? null : EMPTY_STAGE_CHIPS[kind];
+}
+
+function stageChipTitle(
+  stageTags: readonly string[],
+  emptyChip: EmptyStageChipSpec | null,
+): string {
+  return stageTags.length === 0
+    ? (emptyChip?.label ?? "")
+    : stageTags.join(", ");
+}
+
+function AuthorMeta({
+  authorName,
+  foreign,
+}: {
+  readonly authorName: string | null | undefined;
+  readonly foreign: boolean;
+}) {
+  const showReadOnly = foreign && Boolean(authorName);
+  return (
+    <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+      {authorName ?? ""}
+      {showReadOnly && (
+        <span
+          role="img"
+          aria-label="Read-only — authored by another lead"
+          title="Read-only — authored by another lead"
+        >
+          {" 🔒"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function MetaRow({
   authorName,
   stageTags,
@@ -71,10 +110,8 @@ export function MetaRow({
   foreign = false,
   emptyStageChip = "all-stages",
 }: MetaRowProps) {
-  const emptyChip =
-    emptyStageChip === "none" ? null : EMPTY_STAGE_CHIPS[emptyStageChip];
-  const title =
-    stageTags.length === 0 ? (emptyChip?.label ?? "") : stageTags.join(", ");
+  const emptyChip = resolveEmptyStageChip(emptyStageChip);
+  const title = stageChipTitle(stageTags, emptyChip);
 
   return (
     <div
@@ -82,18 +119,7 @@ export function MetaRow({
       role="group"
       aria-label={ariaLabel}
     >
-      <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
-        {authorName ?? ""}
-        {foreign && authorName ? (
-          <span
-            role="img"
-            aria-label="Read-only — authored by another lead"
-            title="Read-only — authored by another lead"
-          >
-            {" 🔒"}
-          </span>
-        ) : null}
-      </span>
+      <AuthorMeta authorName={authorName} foreign={foreign} />
       <StageChips stageTags={stageTags} emptyChip={emptyChip} title={title} />
     </div>
   );

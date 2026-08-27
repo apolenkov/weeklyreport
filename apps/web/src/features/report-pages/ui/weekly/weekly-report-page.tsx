@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   DocumentActionGroup,
@@ -9,43 +8,18 @@ import {
 } from "../../../../shared/ui/report-shell/report-toolbar";
 import { PeriodNavigator, PublishLockButton } from "../../../period";
 import { ArchiveRestoreActions } from "./archive-restore-actions";
-import type { WeeklyReportPageState } from "./use-weekly-report-page";
 import { useWeeklyReportPage } from "./use-weekly-report-page";
 import { ReportContent } from "./weekly-report-content";
+import type {
+  ReadyWeeklyReportPage,
+  WeeklyReportPageProps,
+} from "./weekly-report-page.types";
 import {
   AcknowledgeSurface,
   CenteredNotice,
   ToolbarExportControl,
 } from "./weekly-report-page-content";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
-
-// The loaded page model; the terminal states are handled before any of the
-// sections below render, so they only ever see the ready variant.
-type ReadyWeeklyReportPage = Extract<WeeklyReportPageState, { kind: "ready" }>;
-
-interface WeeklyReportPageProps {
-  // Concrete report UUID; when set the query targets that report.
-  readonly reportId?: string | undefined;
-  // Auto-redirect to `/head/report/<reportId>` once known; off on `[reportId]`.
-  // `canonicalBasePath` (default `/head/report`) selects the addressed surface.
-  readonly redirectToCanonical?: boolean | undefined;
-  readonly canonicalBasePath?: string | undefined;
-  readonly authorId?: string | undefined;
-  // "product" accordion list, or "lead" grouping (shared products appear under each).
-  readonly scope?: "product" | "lead" | undefined;
-  // Shell-supplied Document-action leading controls (before archive/publish).
-  // When omitted the page renders Export itself (ComingSoon for lead).
-  readonly documentActionsLeading?: ReactNode | undefined;
-  // Full Context-control row from the shell; replaces the default period nav.
-  // Mutually exclusive with `contextControlsLeading`.
-  readonly contextControls?: ReactNode | undefined;
-  // Controls prepended before the page's default period navigator.
-  readonly contextControlsLeading?: ReactNode | undefined;
-  // Header-line label (not a control) — stays out of the two action rows.
-  readonly headerContextLabel?: ReactNode | undefined;
-  // Keeps the client-query loading chrome aligned with the owning shell.
-  readonly loadingAudience?: "head" | "viewer" | undefined;
-}
 
 function PeriodLifecycleActions({
   page,

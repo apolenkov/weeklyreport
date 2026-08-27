@@ -2,7 +2,7 @@
 
 import type { PeriodListItem } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   formatPeriodLabel,
@@ -11,70 +11,16 @@ import {
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
 import { usePeriodMutations } from "../model/use-period-mutations";
+import {
+  type PeriodDialogState,
+  usePeriodDialogState,
+} from "./dialogs/use-period-dialog-state";
 import { PeriodsActiveSection } from "./periods-active-section";
 import { PeriodsArchiveSection } from "./periods-archive-section";
 import { PeriodsTabDialogs } from "./periods-tab-dialogs";
 import { PlusIcon } from "./periods-tab-icons";
 
 type PeriodMutations = ReturnType<typeof usePeriodMutations>;
-
-interface PeriodDialogState {
-  readonly showCreate: boolean;
-  readonly editingRow: PeriodListItem | null;
-  readonly deleteConfirm: PeriodListItem | null;
-  readonly openCreate: () => void;
-  readonly closeCreate: () => void;
-  readonly openEdit: (row: PeriodListItem) => void;
-  readonly closeEdit: () => void;
-  readonly requestDelete: (row: PeriodListItem) => void;
-  readonly closeDelete: () => void;
-}
-
-// Returns a capture callback: call it while opening a dialog to remember the
-// element that opened it, so focus can return there once `openState` clears.
-function useRestoreFocusOnClose(openState: unknown) {
-  const triggerRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!openState && triggerRef.current) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
-  }, [openState]);
-
-  return () => {
-    triggerRef.current = document.activeElement as HTMLElement;
-  };
-}
-
-function usePeriodDialogState(): PeriodDialogState {
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
-    null,
-  );
-
-  const captureCreateTrigger = useRestoreFocusOnClose(showCreate);
-  const captureEditTrigger = useRestoreFocusOnClose(editingRow);
-
-  return {
-    showCreate,
-    editingRow,
-    deleteConfirm,
-    openCreate: () => {
-      captureCreateTrigger();
-      setShowCreate(true);
-    },
-    closeCreate: () => setShowCreate(false),
-    openEdit: (row) => {
-      captureEditTrigger();
-      setEditingRow(row);
-    },
-    closeEdit: () => setEditingRow(null),
-    requestDelete: setDeleteConfirm,
-    closeDelete: () => setDeleteConfirm(null),
-  };
-}
 
 function filterPeriodRows(
   rows: readonly PeriodListItem[],

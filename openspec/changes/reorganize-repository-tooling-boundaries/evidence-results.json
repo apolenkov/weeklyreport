@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-25T19:12:49.000Z",
+  "generatedAt": "2026-08-27T12:53:18.000Z",
   "commands": [
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
       "exitCode": 0,
-      "sourceDigest": "148a4b3665f3ebd90ae795bcad796eb9a914cecae54e708074def640e6189863",
+      "sourceDigest": "66cdcd240575370f349b3f28b9b2409b2c795adbe513ab6f0626f08acda6858b",
       "summary": "3 files and 64 PDF unit tests passed",
-      "rerunAt": "2026-08-14T00:59:35.000Z"
+      "rerunAt": "2026-08-27T12:51:24.000Z"
     },
     {
       "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test REDIS_HOST=127.0.0.1 REDIS_PORT=6396 NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
       "exitCode": 0,
-      "sourceDigest": "2d21118e0cce10d6b2290e55f926cc2b4ac38e7210603da8b3524d4d6ec00c38",
+      "sourceDigest": "1eaa08bda2176c56fc628ad25ee8a18180478525a5d13f8db8b7a086777a76b4",
       "summary": "2 PDF integration tests passed against the reset disposable E2E database, including worker completion and a readable persisted artifact",
-      "rerunAt": "2026-08-14T01:00:01.000Z"
+      "rerunAt": "2026-08-27T12:52:46.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/auth/saml.samlify.test.ts src/modules/auth/saml.fixtures.test.ts src/modules/auth/auth.routes.saml-rejection.test.ts",
@@ -47,9 +47,9 @@
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/admin/admin-period-unarchive.test.ts",
       "exitCode": 0,
-      "sourceDigest": "14688f4c2013a9247fa747e525e4b8ecfd379ecfc207d59d77afd45eb5e7f2e3",
+      "sourceDigest": "75979678e487dcf4dd2e5b89be3be1279c405f30754e81a6f4f678b69f14d5b7",
       "summary": "7 unarchive compare-and-set tests passed",
-      "rerunAt": "2026-08-04T06:06:15.887Z"
+      "rerunAt": "2026-08-27T12:51:24.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/auth/user-session.active-workspace.test.ts",

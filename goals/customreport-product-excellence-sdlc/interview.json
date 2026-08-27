@@ -1,0 +1,73 @@
+{
+  "stage": "interview",
+  "title": "CustomReport product excellence through SDLC",
+  "goalSlug": "customreport-product-excellence-sdlc",
+  "questions": [
+    {
+      "id": "product-definition",
+      "prompt": "What does \"exemplary product\" mean for CustomReport?",
+      "description": "The proposed definition keeps the product outcome primary and treats environment work only as supporting proof.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "A coherent architecture; explicit, enforced code-style rules for formatting, naming, module boundaries, public APIs, duplication and suppressions; maintainable, safe code; complete user-facing flows with accessible, responsive UX; deterministic automated tests and live product proof; operationally observable and recoverable delivery; and documentation that enables the team to change the product safely.",
+      "recommendedOptionIds": [
+        "architecture",
+        "code-style",
+        "code",
+        "product-ux",
+        "tests",
+        "operations",
+        "documentation"
+      ],
+      "options": [
+        { "id": "architecture", "label": "Architecture and domain boundaries" },
+        { "id": "code-style", "label": "Enforced code style and consistency" },
+        { "id": "code", "label": "Code quality and maintainability" },
+        { "id": "product-ux", "label": "User flows, UX and accessibility" },
+        { "id": "tests", "label": "Testability and test evidence" },
+        { "id": "operations", "label": "DevOps, observability and recovery" },
+        {
+          "id": "documentation",
+          "label": "Product and engineering documentation"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "scope-boundary",
+      "prompt": "How should runtime and infrastructure work be constrained?",
+      "description": "This decides whether environment activity is an end in itself or only evidence for product quality.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Use only the minimal isolated runtime, CI and observability work needed to prove product behavior, resilience and release readiness. Do not pursue standalone environment optimization unless it blocks a product-quality requirement.",
+      "recommendedOptionIds": ["evidence-only"],
+      "options": [
+        { "id": "evidence-only", "label": "Environment is product-proof only" },
+        { "id": "equal-stream", "label": "Environment is an equal workstream" }
+      ],
+      "required": true
+    },
+    {
+      "id": "completion-bar",
+      "prompt": "What must be true before we call the goal complete?",
+      "description": "The recommended bar prevents local green checks or historical evidence from substituting for product readiness.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Every active product requirement and accepted OpenSpec change is reconciled; no blocking architecture, code-quality, functional, accessibility, data-integrity, observability or recovery finding remains; targeted and full required checks pass; fresh source-bound live evidence covers the applicable product denominator; release/CI evidence is current; and an independent final review passes.",
+      "recommendedOptionIds": [
+        "requirements",
+        "quality",
+        "checks",
+        "live",
+        "release",
+        "review"
+      ],
+      "options": [
+        { "id": "requirements", "label": "All active requirements reconciled" },
+        { "id": "quality", "label": "No blocking product-quality findings" },
+        { "id": "checks", "label": "Required deterministic checks pass" },
+        { "id": "live", "label": "Fresh live evidence covers the product" },
+        { "id": "release", "label": "Current release and CI proof" },
+        { "id": "review", "label": "Independent final review" }
+      ],
+      "required": true
+    }
+  ]
+}

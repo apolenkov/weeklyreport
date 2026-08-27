@@ -10,7 +10,7 @@ import type { AdminTelemetry } from "./admin-telemetry.port.js";
 import {
   type ReopenRequestListItem,
   toReopenRequestListItem,
-} from "./period-admin.envelope.js";
+} from "./reopen-request/envelope.js";
 
 export interface ListReopenRequestsArgs {
   readonly status?: ReopenRequestStatusFilter;

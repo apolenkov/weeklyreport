@@ -8,12 +8,64 @@ export type LeadDecisionEntry = DecisionEntry;
 export type LeadPriorityEntry = PriorityEntry;
 
 type SectionItem = ReportSectionReadModel["items"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
 
 function clampRank(rank: number): number {
   // Keep ranks ≥ 1 (schema requires a positive int) but no upper clamp —
   // the priority list is variable-length, so any rank is renderable.
   if (rank < 1 || !Number.isInteger(rank)) return 1;
   return rank;
+}
+
+function resolveDecisionProductName(
+  decision: SectionDecision,
+  projectIndex: ReturnType<typeof buildProjectIndex>,
+  activityNameById: ReturnType<typeof buildActivityIndex>,
+): string {
+  if (decision.productId) {
+    return projectIndex.get(decision.productId)?.name ?? "Group";
+  }
+  if (decision.activityId) {
+    return activityNameById.get(decision.activityId) ?? "Unknown";
+  }
+  return "Group";
+}
+
+function resolveDecisionActivity(
+  decision: SectionDecision,
+  activityNameById: ReturnType<typeof buildActivityIndex>,
+) {
+  if (!decision.activityId) return {};
+  return {
+    activityId: decision.activityId,
+    activityName: activityNameById.get(decision.activityId) ?? "Unknown",
+  };
+}
+
+function mapDecision(
+  decision: SectionDecision,
+  index: number,
+  projectIndex: ReturnType<typeof buildProjectIndex>,
+  activityNameById: ReturnType<typeof buildActivityIndex>,
+): LeadDecisionEntry {
+  return {
+    id: decision.id ?? `decision-${index}`,
+    ...(decision.stableId === undefined ? {} : { stableId: decision.stableId }),
+    productId: decision.productId ?? "",
+    productName: resolveDecisionProductName(
+      decision,
+      projectIndex,
+      activityNameById,
+    ),
+    ...resolveDecisionActivity(decision, activityNameById),
+    text: decision.text,
+    owner: decision.owner,
+    impact: decision.impact,
+    deadline: decision.deadline
+      ? toIsoDateString(new Date(decision.deadline))
+      : null,
+    stageNames: decision.stageNames,
+  };
 }
 
 export function mapLeadDecisions(
@@ -24,27 +76,9 @@ export function mapLeadDecisions(
   // Product-parented, legacy parentless ("Group"), AND activity-parented
   // decisions all render in the Decisions section — activity rows labeled
   // with the activity name.
-  return section.decisions.map((d, idx) => ({
-    id: d.id ?? `decision-${idx}`,
-    ...(d.stableId === undefined ? {} : { stableId: d.stableId }),
-    productId: d.productId ?? "",
-    productName:
-      (d.productId ? projectIndex.get(d.productId)?.name : undefined) ??
-      (d.activityId != null
-        ? (activityNameById.get(d.activityId) ?? "Unknown")
-        : "Group"),
-    ...(d.activityId != null
-      ? {
-          activityId: d.activityId,
-          activityName: activityNameById.get(d.activityId) ?? "Unknown",
-        }
-      : {}),
-    text: d.text,
-    owner: d.owner,
-    impact: d.impact,
-    deadline: d.deadline ? toIsoDateString(new Date(d.deadline)) : null,
-    stageNames: d.stageNames,
-  }));
+  return section.decisions.map((decision, index) =>
+    mapDecision(decision, index, projectIndex, activityNameById),
+  );
 }
 
 export function mapLeadPriorities(

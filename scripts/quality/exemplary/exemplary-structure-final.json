@@ -1,0 +1,27 @@
+{
+  "source": {
+    "branch": "campaign/cr-001-20260820",
+    "sha": "823b239cdc80312ecdf9eee3fd44b8a0618bffa4",
+    "tree": "c9381080cf9ab529ce16a579a94fc9c0b3cb2189",
+    "binding": "WORKTREE"
+  },
+  "product": {
+    "fileCount": 1001,
+    "fileDigest": "787af73933ddc89ddc6c0062da45237a5d187ba43b62527e7afe4278174c7e1a",
+    "contentDigest": "fd041a472baf9fd9ed41c6a14b6e4f30130682f3060171fc2484f1fc9a793dce",
+    "findingCount": 0,
+    "affectedFileCount": 0,
+    "byRule": {
+      "max-lines": 0,
+      "max-lines-per-function": 0,
+      "complexity": 0,
+      "sonarjs/cognitive-complexity": 0
+    },
+    "configDigest": "61f7da0333efcf890a668fcb60e2a12b0facabbe668d8fac53775de5345bc751",
+    "classification": "REAL",
+    "inlineSuppressions": 0,
+    "perFileWeakenings": 0,
+    "notStrictConfigFileCount": 0
+  },
+  "archiveEvidence": "/Users/wrk/work/customreport-archive/2026-08-27-code-excellence-final-823b239c/EVIDENCE.md"
+}

@@ -143,6 +143,10 @@ function slideDeckFallback(state: SlideDeckState): ReactElement | null {
   return null;
 }
 
+function clampSelectedIndex(raw: number, slideCount: number): number {
+  return raw >= 0 && raw < slideCount ? raw : 0;
+}
+
 export function HeadSlidesClient({
   reportId,
   scope = "lead",
@@ -167,10 +171,7 @@ export function HeadSlidesClient({
   // Two-sided clamp derived at render — see lead-slides-client: a negative
   // index from an empty-deck arrow press must clamp too, not just an
   // out-of-range one.
-  const selectedIndex =
-    rawSelectedIndex >= 0 && rawSelectedIndex < slides.length
-      ? rawSelectedIndex
-      : 0;
+  const selectedIndex = clampSelectedIndex(rawSelectedIndex, slides.length);
 
   const fallback = slideDeckFallback({
     isWeeklyLoading: weeklyQ.isLoading,

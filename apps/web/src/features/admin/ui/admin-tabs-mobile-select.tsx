@@ -55,6 +55,30 @@ function MobileAlertLink({
   );
 }
 
+interface MobileAlertProps extends Omit<
+  MobileAlertLinkProps,
+  "accessibleCount"
+> {
+  readonly singularCount: string;
+  readonly pluralCount: string;
+}
+
+function MobileAlert({
+  count,
+  singularCount,
+  pluralCount,
+  ...linkProps
+}: MobileAlertProps) {
+  if (count <= 0) return null;
+  return (
+    <MobileAlertLink
+      {...linkProps}
+      count={count}
+      accessibleCount={count === 1 ? singularCount : `${count} ${pluralCount}`}
+    />
+  );
+}
+
 function AdminTabsMobileAlerts() {
   const trpc = useTRPC();
   const reopenCountQuery = useQuery(
@@ -74,32 +98,22 @@ function AdminTabsMobileAlerts() {
 
   return (
     <nav aria-label="Admin alerts" className="flex flex-wrap gap-3 lg:hidden">
-      {reopenCount > 0 ? (
-        <MobileAlertLink
-          accessibleCount={
-            reopenCount === 1
-              ? "1 pending reopen request"
-              : `${reopenCount} pending reopen requests`
-          }
-          count={reopenCount}
-          href="/admin?tab=reopen"
-          label="Reopen"
-          testId="mobile-reopen-tab-count"
-        />
-      ) : null}
-      {dlqCount > 0 ? (
-        <MobileAlertLink
-          accessibleCount={
-            dlqCount === 1
-              ? "1 failed job in DLQ"
-              : `${dlqCount} failed jobs in DLQ`
-          }
-          count={dlqCount}
-          href="/admin?tab=jobs"
-          label="Jobs"
-          testId="mobile-jobs-tab-count"
-        />
-      ) : null}
+      <MobileAlert
+        singularCount="1 pending reopen request"
+        pluralCount="pending reopen requests"
+        count={reopenCount}
+        href="/admin?tab=reopen"
+        label="Reopen"
+        testId="mobile-reopen-tab-count"
+      />
+      <MobileAlert
+        singularCount="1 failed job in DLQ"
+        pluralCount="failed jobs in DLQ"
+        count={dlqCount}
+        href="/admin?tab=jobs"
+        label="Jobs"
+        testId="mobile-jobs-tab-count"
+      />
     </nav>
   );
 }

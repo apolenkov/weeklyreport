@@ -1,13 +1,19 @@
 import { readFileSync } from "node:fs";
 
+import {
+  parseStructuralFloorSnapshot,
+  type StructuralFloorSnapshot,
+} from "./exemplary-structural-snapshot.ts";
+
 export interface FloorSnapshot {
   readonly filesOnFloor: number;
   readonly productTotal: number;
   readonly overrideBlocks: number;
   readonly liveSuppressions: number;
+  readonly structural?: StructuralFloorSnapshot;
 }
 
-type Counter = keyof FloorSnapshot;
+type Counter = Exclude<keyof FloorSnapshot, "structural">;
 type RatchetCounter = Exclude<Counter, "productTotal">;
 
 interface JustifiedRegression {
@@ -54,6 +60,55 @@ const historyRegression = (
   return current > previous;
 };
 
+const stable = (value: unknown): string => {
+  if (value === undefined) return "undefined";
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item))
+      return item;
+    return Object.fromEntries(
+      Object.entries(item).sort(([left], [right]) => left.localeCompare(right)),
+    );
+  });
+};
+
+const structuralCounterEntries = (
+  snapshot: StructuralFloorSnapshot,
+): readonly (readonly [string, number])[] => [
+  ["total.findingCount", snapshot.total.findingCount],
+  ["total.affectedFileCount", snapshot.total.affectedFileCount],
+  ...Object.entries(snapshot.total.byRule).map(
+    ([rule, count]) => [`total.byRule.${rule}`, count] as const,
+  ),
+  ...Object.entries(snapshot.bySlice).flatMap(([slice, counts]) => [
+    [`bySlice.${slice}.findingCount`, counts.findingCount] as const,
+    [`bySlice.${slice}.affectedFileCount`, counts.affectedFileCount] as const,
+    ...Object.entries(counts.byRule).map(
+      ([rule, count]) => [`bySlice.${slice}.byRule.${rule}`, count] as const,
+    ),
+  ]),
+  ["inlineSuppressions", snapshot.inlineSuppressions],
+  ["perFileWeakenings", snapshot.perFileWeakenings],
+  ["notStrictConfigFileCount", snapshot.notStrictConfigFileCount],
+  ...Object.entries(snapshot.notStrictConfigBySlice).map(
+    ([slice, count]) => [`notStrictConfigBySlice.${slice}`, count] as const,
+  ),
+];
+
+const structuralHistoryViolations = (
+  current: StructuralFloorSnapshot,
+  previous: StructuralFloorSnapshot,
+): readonly string[] => {
+  const previousCounts = new Map(structuralCounterEntries(previous));
+  return structuralCounterEntries(current).flatMap(([counter, count]) => {
+    const previousCount = previousCounts.get(counter);
+    return previousCount !== undefined && count > previousCount
+      ? [
+          `structural baseline regressed: ${counter} ${previousCount} -> ${count}`,
+        ]
+      : [];
+  });
+};
+
 export const ratchetViolations = (
   actual: FloorSnapshot,
   baseline: FloorBaseline,
@@ -82,6 +137,16 @@ export const ratchetViolations = (
       ).map(
         (counter) =>
           `baseline regressed: ${counter} ${previousBaseline[counter]} -> ${baseline[counter]}`,
+      )),
+  ...(stable(actual.structural) === stable(baseline.structural)
+    ? []
+    : ["current structural snapshot does not match baseline"]),
+  ...(previousBaseline?.structural === undefined ||
+  baseline.structural === undefined
+    ? []
+    : structuralHistoryViolations(
+        baseline.structural,
+        previousBaseline.structural,
       )),
 ];
 
@@ -142,6 +207,9 @@ export const parseFloorSnapshot = (raw: string): FloorBaseline => {
     productTotal,
     overrideBlocks,
     liveSuppressions,
+    ...(record.structural === undefined
+      ? {}
+      : { structural: parseStructuralFloorSnapshot(record.structural) }),
     ...(justifiedRegressions.length === 0 ? {} : { justifiedRegressions }),
   };
 };

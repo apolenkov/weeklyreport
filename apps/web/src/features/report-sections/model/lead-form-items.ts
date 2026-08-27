@@ -12,6 +12,62 @@ export type LeadKanbanItem = KanbanItem & {
 // Truncation length for a fallback id's embedded text fragment.
 const ID_TEXT_FRAGMENT_LENGTH = 8;
 
+type SectionItem = ReportSectionReadModel["items"][number];
+
+function buildLeadItemCommon(
+  item: SectionItem,
+  section: ReportSectionReadModel,
+  itemType: "current" | "next",
+) {
+  return {
+    id:
+      item.id ??
+      `${itemType}-${item.projectId ?? item.activityId ?? "row"}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
+    status: deriveItemStatus({
+      workflowStatus: item.workflowStatus,
+      type: item.type,
+    }),
+    text: item.text,
+    author: section.authorName,
+    ...(item.stageNames ? { stageNames: item.stageNames } : {}),
+    priorityRank: item.priorityRank ?? null,
+    pausedReason: item.pausedReason ?? null,
+  };
+}
+
+function mapLeadItem(
+  item: SectionItem,
+  section: ReportSectionReadModel,
+  itemType: "current" | "next",
+  projectIndex: ReturnType<typeof buildProjectIndex>,
+  activityNameById: ReturnType<typeof buildActivityIndex>,
+): LeadKanbanItem[] {
+  const common = buildLeadItemCommon(item, section, itemType);
+  if (item.activityId != null) {
+    const activityName = activityNameById.get(item.activityId) ?? "Unknown";
+    return [
+      {
+        ...common,
+        parent: { kind: "activity" as const, id: item.activityId },
+        productId: null,
+        productName: activityName,
+        activityId: item.activityId,
+        activityName,
+      },
+    ];
+  }
+  if (item.projectId == null) return [];
+  return [
+    {
+      ...common,
+      parent: { kind: "product" as const, id: item.projectId },
+      productId: item.projectId,
+      productName: projectIndex.get(item.projectId)?.name ?? "Unknown",
+      activityId: null,
+    },
+  ];
+}
+
 export function mapLeadItems(
   section: ReportSectionReadModel,
   itemType: "current" | "next",
@@ -28,46 +84,7 @@ export function mapLeadItems(
         item.type === itemType &&
         (item.projectId != null || item.activityId != null),
     )
-    .flatMap<LeadKanbanItem>((item): LeadKanbanItem[] => {
-      const status = deriveItemStatus({
-        workflowStatus: item.workflowStatus,
-        type: item.type,
-      });
-      const common = {
-        id:
-          item.id ??
-          `${itemType}-${item.projectId ?? item.activityId ?? "row"}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
-        status,
-        text: item.text,
-        author: section.authorName,
-        ...(item.stageNames ? { stageNames: item.stageNames } : {}),
-        priorityRank: item.priorityRank ?? null,
-        pausedReason: item.pausedReason ?? null,
-      };
-      if (item.activityId != null) {
-        const activityName = activityNameById.get(item.activityId) ?? "Unknown";
-        return [
-          {
-            ...common,
-            parent: { kind: "activity" as const, id: item.activityId },
-            productId: null,
-            productName: activityName,
-            activityId: item.activityId,
-            activityName,
-          },
-        ];
-      }
-      if (item.projectId != null) {
-        return [
-          {
-            ...common,
-            parent: { kind: "product" as const, id: item.projectId },
-            productId: item.projectId,
-            productName: projectIndex.get(item.projectId)?.name ?? "Unknown",
-            activityId: null,
-          },
-        ];
-      }
-      return [];
-    });
+    .flatMap((item) =>
+      mapLeadItem(item, section, itemType, projectIndex, activityNameById),
+    );
 }

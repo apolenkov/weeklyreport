@@ -14,7 +14,7 @@ import type { EnvConfig } from "../config/env.schema";
 import { EMAIL_PORT, type EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
-  extractTraceId,
+  describeJobFailureTrace,
   type JobTraceContext,
 } from "./worker-observability.js";
 
@@ -107,9 +107,8 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     job: Job<EmailReminderJobData> | undefined,
     error: Error,
   ): void => {
-    const correlationId = job?.data.correlationId;
-    const traceparent = job?.data.traceparent;
-    const traceId = job ? extractTraceId(job.data) : undefined;
+    const { correlationId, logFields, traceparent, traceId } =
+      describeJobFailureTrace(job?.data);
     if (traceparent !== undefined && traceId === undefined) {
       // A malformed traceparent means the enqueuer emitted a bad carrier —
       // reject it loudly so the linkage gap is diagnosable, not silent.
@@ -123,8 +122,7 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
     this.logger.error("email-reminder job failed", {
       executionId: job?.data.executionId,
       attempt: job?.attemptsMade,
-      ...(correlationId ? { correlationId } : {}),
-      ...(traceId ? { traceId } : {}),
+      ...logFields,
       error: error.message,
     });
   };

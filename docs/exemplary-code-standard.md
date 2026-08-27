@@ -2,7 +2,8 @@
 
 Status: LIVE — the ratchets in §2 are enforced via `eslint.config.ts` and the
 pre-commit/pre-push hooks (see below). This document defines the active targets
-(function size ≤70 lines, cognitive complexity <10) and the rollout workflow.
+(file size ≤230 lines, function size ≤57 lines, cyclomatic complexity ≤10,
+cognitive complexity <10) and the maintenance workflow.
 
 ---
 
@@ -67,17 +68,17 @@ All rows below are live in `eslint.config.ts` today:
 
 | Area                                                                                                 | Ratified rule                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max-lines` (skipBlankLines, skipComments)                                                           | **300** for production source, enforced `error` repo-wide. Existing oversize files stay in the explicit exemption block until their module teardown lands.                                                                                                                                                                                               |
-| `max-lines-per-function`                                                                             | **70** for production source, enforced `error`; tests and test utilities use their separately measured file-size policy.                                                                                                                                                                                                                                 |
-| `sonarjs/cognitive-complexity`                                                                       | **10** for production source, enforced `error` repo-wide.                                                                                                                                                                                                                                                                                                |
-| `complexity` (cyclomatic)                                                                            | **20**, enforced `error` repo-wide. Do not lower this to 10; cognitive complexity is the readability gate.                                                                                                                                                                                                                                               |
+| `max-lines` (skipBlankLines, skipComments)                                                           | **230** for maintained product source, enforced `error` across `apps/api/src`, `apps/web/src`, `packages/shared/src`, and `packages/ui/src`.                                                                                                                                                                                                             |
+| `max-lines-per-function`                                                                             | **57** for maintained product source, enforced `error`; tests and test utilities use their separately measured role policy.                                                                                                                                                                                                                              |
+| `sonarjs/cognitive-complexity`                                                                       | **Below 10** for maintained product source (`9` is the configured maximum), enforced `error`.                                                                                                                                                                                                                                                            |
+| `complexity` (cyclomatic)                                                                            | **10** for maintained product source, enforced `error`.                                                                                                                                                                                                                                                                                                  |
 | `prefer-const` / `no-var`                                                                            | Global `error`.                                                                                                                                                                                                                                                                                                                                          |
 | `no let`                                                                                             | `no-restricted-syntax` bans `let` in production source (`apps/api`, `apps/web`, `packages/shared`, `packages/ui`), enforced `error`. Tests, `src/test-utils`, seeds, e2e, and tooling stay out of scope. A load-bearing mutable binding survives only behind an inline disable with a concrete WHY.                                                      |
 | `no-param-reassign`                                                                                  | Global `props:false` (parameter rebinding banned), enforced `error`. `trpc.session-hydration.ts` is stricter with `props:true` because caller-owned `UserSession` mutation can leak authz/session scope.                                                                                                                                                 |
 | `functional/immutable-data`                                                                          | Enforced `error`, scoped to pure layers only: `apps/api/src/modules/**/domain/**/*.ts` and `packages/shared/src/**/*.ts`, excluding tests, with `ignoreClasses:true` and `ignoreImmediateMutation:true`. Not repo-wide by design; infra/UI/Prisma builders/React refs are intentionally out of scope.                                                    |
 | Import-boundary zones (hexagon domain purity, port-type boundary, api cross-module, web cross-slice) | Enforced `error` via `import-x/no-restricted-paths` and `@typescript-eslint/no-restricted-imports`, ratcheted with per-consumer allowlists that shrink monotonically; `eslint-disable` of these specific rules is banned repo-wide (`@eslint-community/eslint-comments/no-restricted-disable`), so the config allowlist is the only grandfathering path. |
 | `pnpm lint` posture                                                                                  | `--max-warnings 0` — zero errors AND zero warnings gate the pre-push hook (see below).                                                                                                                                                                                                                                                                   |
-| Per-folder/per-file exempt lists in `src`                                                            | Explicit justified exemptions remain where the code is not yet decomposed. Removing an exemption is a done-signal for that file/module, not a license to silence the rule locally.                                                                                                                                                                       |
+| Per-folder/per-file structural exemptions in maintained product source                               | **None.** Inline structural suppressions and path-specific weakenings fail the floor ratchet. Separately measured roles are classified with an owner and rationale rather than hidden behind a product-path exemption.                                                                                                                                   |
 
 Gate wiring: `.husky/pre-commit` runs lint-staged on staged files — ESLint
 `--fix` (which carries `local/no-comment-archaeology` over comments and test
@@ -86,8 +87,8 @@ titles), Stylelint for CSS, and Prettier. `.husky/pre-push` runs
 `pnpm uat:audit --check`, and `CI=true pnpm test`; the same core commands run in
 the push, pull-request, and manual-dispatch jobs in `.github/workflows/ci.yml`.
 
-The current `scripts/gates/orchestrator/lint-gate.ts` contains 38 checks and runs all of them by
-default; `pnpm lint --fail-fast` is the explicit opt-in to stop
+The current `scripts/gates/orchestrator/lint-gate.ts` runs every configured
+check by default; `pnpm lint --fail-fast` is the explicit opt-in to stop
 after the first failure. The aggregate includes the Prettier scope probe
 (`pnpm lint:prettier-scope:test`), while the formatter owner itself remains the
 separate `pnpm format:check` command. This distinction is intentional in the
@@ -102,8 +103,9 @@ external `~/work/customreport-archive/2026-07-30-exhaustive-style-audit/TOOLCHAI
 and verified against the current tree; where rules conflict, document a
 one-line WHY for the deliberate opt-out (never a blanket disable).
 
-Tests keep their size/complexity exemption (long arrange/act/assert is fine), but
-NOT the type-aware safety rules.
+Tests, fixtures, generated sources, config, and tooling use explicit
+separately measured role policies; they do not weaken the maintained-product
+floor and still keep their applicable type-aware safety rules.
 
 ## 3. Rollout method (per folder — the proven sequence)
 
@@ -113,11 +115,12 @@ Use this sequence for each folder:
    wrongly OWNS (cross-domain logic/persistence).
 2. **Delegate out via injection** — move it home; receive a narrow injected fn
    wired in the composition root. The other module stops importing this one.
-3. **Split god-files** into single-purpose files until each is ≤ 300 lines.
-4. **Extract functions** until each is ≤ 70 lines and cognitive complexity < 10.
+3. **Split god-files** into single-purpose files until each is ≤ 230 lines.
+4. **Extract functions** until each is ≤ 57 lines, cyclomatic complexity ≤ 10,
+   and cognitive complexity < 10.
 5. **Kill fallbacks/magic, enforce immutability** per §1.
-6. **Remove the folder's exemptions** from `eslint.config.ts`; confirm green
-   without them. The done-signal is BOTH gates: exemption-free lint AND a
+6. **Confirm the global maintained-product floor applies** through effective
+   config and planted probes. The done-signal is BOTH gates: exemption-free lint AND a
    comment-policy review pass (§1.3) — no lint rule judges comment noise, so
    lint-green alone is NOT comment-clean. Post-sweep drift is caught by
    standing PR review (reviewer/agent diligence), not by waiting for the next
@@ -134,9 +137,10 @@ Use this sequence for each folder:
 3. `apps/web/src/*` (components, then app routes)
 4. `packages/shared`, `packages/ui`
 
-Do the global ESLint threshold tightening LAST as a single ratchet step, after
-every folder is already compliant — otherwise the tree goes red everywhere at
-once. Until then, tighten per-folder via local overrides that you then delete.
+The initial rollout tightened one measured slice at a time and enabled the
+global maintained-product authority only after every slice reached zero. New
+product paths inherit that authority immediately; there is no transitional
+per-folder override phase anymore.
 
 ## 5. OpenSpec backlog (≈34 active changes)
 
@@ -158,11 +162,11 @@ once. Until then, tighten per-folder via local overrides that you then delete.
 
 ## 7. Done definition (whole repo)
 
-- `src` follows the active §2 ratchets: `max-lines` 300 with explicit justified
-  exemptions, cyclomatic complexity 20, production-source `no let`, global
+- maintained product `src` follows the active §2 ratchets: `max-lines` 230,
+  function size 57, cyclomatic complexity 10, cognitive complexity below 10,
+  zero structural exemptions, production-source `no let`, global
   `prefer-const` / `no-var` / `no-param-reassign`, and scoped
-  `functional/immutable-data` for pure layers. Function size 70 and cognitive
-  complexity 10 are active ESLint gates for production source.
+  `functional/immutable-data` for pure layers.
 - `pnpm lint` runs clean with `--max-warnings 0` — **zero errors AND zero
   warnings** across the repo (a warning is a failure, not an acceptable state).
 - Zero config fallbacks/defaults for product-critical values; boot fails loud.

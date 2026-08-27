@@ -1,0 +1,201 @@
+# CustomReport product-excellence execution plan
+
+## Solution approach
+
+Bring the product to one coherent, source-bound standard in product-sized
+increments. Architecture and readability lead every increment; tests, isolated
+runtime, observability and CI prove the result rather than becoming independent
+infrastructure workstreams. Each increment owns one product surface, its
+OpenSpec requirements, its regression tests and its cleanup, and leaves the
+tree no weaker than it found it.
+
+The accepted final standard is stricter than the current live ratchet. Current
+documentation describes production limits of 300 lines per file, 70 lines per
+function and cyclomatic complexity 20. The target is file length at most 230,
+function length at most 57, cyclomatic complexity at most 10 and cognitive
+complexity below 10. A dedicated OpenSpec change and strict delta-spec
+validation must approve those targets before they supersede the durable
+standard. They will then be introduced through a measured baseline and
+monotonically shrinking exemptions; no unmeasured rule or blanket override is
+allowed.
+
+## Ordered plan
+
+1. Establish one product denominator and an owned backlog.
+
+   - First propose, review and strictly validate one dedicated OpenSpec change
+     that owns the stricter file/function/cyclomatic/cognitive limits and their
+     exact maintained-scope classification. It must update the durable
+     `lint-max-strictness-standard` requirements before any documentation or
+     enforcement change claims the new numbers.
+   - Reconcile every non-archived incomplete change in `openspec/changes/` with
+     the durable requirements in `openspec/specs/`. Group them by product
+     surface: report record ordering; lead recovery; PDF export; admin
+     navigation and products; action-log search; desktop composition and
+     hierarchy; mobile touch/overflow; confirmation dialogs; runtime-sweep
+     correctness; and repository-tooling boundaries.
+   - Use `docs/architecture/TARGET-STRUCTURE-2026-07-02.md`,
+     `docs/exemplary-code-standard.md`, `docs/quality-program.md` and
+     `docs/sdlc.md` as the current quality baseline. Record for each requirement
+     its owner, product behavior, code path, test, live proof and closeout
+     condition.
+   - Classify each older or overlapping OpenSpec change as implement, merge into
+     its canonical successor, or explicitly close with evidence. Never delete a
+     requirement merely because a later branch has similar code.
+
+   Verification: `openspec list`; `openspec validate --all --strict`; a
+   requirement-to-evidence ledger with no unowned active item.
+
+2. Measure the current architecture and code-style debt before tightening it.
+
+   - Use `eslint-config/core.ts`, `eslint-config/overrides.ts`,
+     `eslint-config/immutability.ts`, `eslint-config/boundaries.ts`,
+     `.dependency-cruiser.cjs`, `scripts/gates/directory-architecture/` and
+     `scripts/quality/exemplary/` as the enforcement owners.
+   - Following the exemplary-audit procedure, measure every proposed stricter
+     rule at its shipping options, prove every zero with a temporary planted
+     violation, and classify every signal as REAL, VACUOUS, CONFIG or NOISE.
+   - Produce a folder-by-folder baseline for `apps/api/src`, `apps/web/src`,
+     `packages/shared/src` and `packages/ui/src`: file length, function length,
+     cyclomatic and cognitive complexity, mutable writes, suppressions,
+     relaxed ESLint config, dependency cycles, fan-in and unreferenced product
+     paths. Classify generated, test, fixture and externally constrained
+     adapters explicitly.
+
+   Verification: the actual gate invocations and probe outputs are archived;
+   all counts identify rule, options, file count and exit code; no claim relies
+   on an unproven zero.
+
+3. Finish the architecture by product domain, not through a big-bang rewrite.
+
+   - In `apps/api/src/modules/`, complete the existing modular-monolith pattern:
+     invariant-bearing domains keep pure domain logic, application services and
+     explicit ports/adapters; thin CRUD domains stay deliberately flat. Preserve
+     the period dual-state and canonical tRPC middleware-chain invariants.
+   - In `apps/web/src/`, make `app/` routing-only and move product behavior into
+     the `features/<domain>/{ui,model,api}` slices defined by the target
+     architecture; keep business-agnostic code in `shared/` and retain
+     `packages/shared` as contracts and `packages/ui` as presentation-only.
+   - Remove boundary allowlists only after the relevant domain is compliant.
+     Extend ownership and dependency checks in
+     `scripts/gates/directory-architecture/` and `eslint-config/boundaries.ts`
+     only when the measured module graph proves that the rule can detect a real
+     violation.
+
+   Verification: targeted domain tests, `pnpm lint:directory-architecture`,
+   `pnpm depcruise`, affected typechecks, and a review of public imports and
+   write paths against the target architecture.
+
+4. Land the strict code standard and remove product debt in the same increments.
+
+   - Refactor each owned domain until every maintained production function is at
+     most 57 lines, every maintained production file is at most 230 lines,
+     cyclomatic complexity is at most 10 and cognitive complexity is below 10.
+     Extract named pure operations rather than splitting code mechanically.
+   - Make product code immutable by default: eliminate `let`, parameter/property
+     mutation and hidden state where a new value, reducer or narrow effect
+     boundary is clearer. A remaining adapter mutation must be explicitly
+     classified and justified, never hidden by an inline disable.
+   - Remove stale comments, obsolete TODO/FIXME/HACK markers, duplicate helpers,
+     unused exports and unreferenced paths. For every candidate, use a
+     REMOVE/MIGRATE/RETAIN decision with references before changing it.
+   - Update `docs/exemplary-code-standard.md`, `eslint-config/*.ts`, policy
+     probes under `scripts/eslint/policy/`, and exemplary-floor baselines only
+     together with the fixes or a shrinking counted baseline. Do not create a
+     per-file exemption list to make the numbers pass.
+
+   Verification: measured rule probes, `pnpm lint:eslint`,
+   `pnpm lint:directory-architecture`, `pnpm knip`, `pnpm depcruise`,
+   `pnpm lint:exemplary-floor`, and a clean full `pnpm lint` table after each
+   bounded domain batch.
+
+5. Close product behavior and UX/accessibility changes surface by surface.
+
+   - Implement and verify the active user-facing OpenSpec changes: stable report
+     ordering, disabled PDF-export reason and artifact race, lead-form load
+     recovery, action-log search/detail behavior, admin responsive navigation,
+     desktop report composition/hierarchy, Radix confirmations, and every
+     mobile touch-target/overflow repair.
+   - For each surface, update the relevant web feature, API module and shared
+     contract before duplicating types; add a focused regression test that
+     failed before the repair; then capture source-bound browser evidence for
+     keyboard, semantic, visual and responsive behavior.
+   - Treat no horizontal overflow, 44x44 px mobile targets, role authorization,
+     request/error behavior and data integrity as product assertions, not
+     screenshot impressions.
+
+   Verification: the focused Vitest/Playwright commands named in each change,
+   `pnpm test:e2e:integration`, `pnpm test:uat`, source-bound browser captures,
+   console/page/request checks, and independent frame review where the OpenSpec
+   requires it.
+
+6. Use runtime and observability only to prove the product's resilience.
+
+   - Complete `establish-exhaustive-runtime-sweep` and its dependent reveal
+     changes with a new source SHA/tree after the r16 terminal packet. Derive
+     the outer canary budget from the aggregate partition plan, obtain a fresh
+     Sol pre-live gate, and never retry a terminal campaign.
+   - Run the complete applicable Chromium denominator only after static and
+     targeted product gates are green. Prove continuation lineage, empty
+     frontier, parent-authored PASS, Redis TOCTOU/outage/recovery behavior,
+     logs/traces/errors and zero residue. Do not treat a partial canary as
+     product acceptance.
+   - Keep databases, Redis, containers and telemetry isolated and disposable
+     solely for this proof. Stop for owner direction if target identity is not
+     provably disposable or if a production/shared resource is required.
+
+   Verification: fresh SOURCE/SOURCE-VALIDATION/MATRIX/MANIFEST artifacts for
+   one SHA/tree; complete role/profile/route/state/control/transition/fault
+   coverage with zero missing, skipped or unknown cells; empty frontier and
+   parent PASS; browser/API/worker/database/Redis/Loki/OpenTelemetry/Bugsink
+   evidence; and teardown receipts proving no owned agents, processes, ports,
+   containers, volumes, worktrees or secrets remain.
+
+7. Make delivery and documentation match the finished product.
+
+   - Reconcile `.github/workflows/ci.yml`, local hooks, `docs/operations.md`,
+     `docs/onboarding.md`, `docs/sdlc.md`, architecture docs and durable OpenSpec
+     specs with the final code and recovery paths. Keep runtime session evidence
+     in `~/work/customreport-archive/`, not in `docs/`.
+   - Verify that the required deterministic checks, integration/E2E/UAT jobs,
+     migration/seed proof and source-built runtime checks exercise the actual
+     product. Treat GitHub protection, dependency/security settings and any
+     production release controls as external authority: inspect and record them,
+     but request the owner before changing unavailable account-level controls.
+
+   Verification: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
+   `pnpm test`, `pnpm build`, `pnpm test:e2e:integration`, `pnpm test:uat`,
+   `openspec validate --all --strict`, exact remote-tip equality, CI read-back,
+   Dependabot read-back and reviewed current documentation.
+
+8. Perform exact-final acceptance and close only the evidence that is complete.
+
+   - Freeze one final clean source SHA/tree; re-run all required affected gates
+     and source-bound product evidence at that identity. Reconcile every fact in
+     `facts.md` to a concrete artifact rather than to an intent or old result.
+   - Obtain independent final Sol review for architecture, code quality,
+     product behavior, accessibility, data integrity, observability and release
+     evidence. Repair every accepted blocker and repeat only the affected proof
+     on the new identity.
+   - Sync/validate durable specs, archive only completed OpenSpec changes, update
+     the closeout evidence and leave no owned worktree, process, listener,
+     container, volume, credential or unresolved requirement behind.
+
+   Verification: a final requirement-by-requirement audit, source/tree digest
+   equality across evidence, all stated commands PASS, no remaining active
+   blocking task, independent Sol PASS and `required remainder = 0`.
+
+## Risks and explicit stop conditions
+
+- The accepted `230/57/10` standard is stricter than the current live
+  `300/70/20` ratchet. It must be measured and ratcheted per folder; a global
+  config flip before the fixes would create a red, non-actionable tree.
+- The active OpenSpec list contains overlapping visual, mobile, runtime and
+  tooling work. The denominator must be reconciled before closing any item, or
+  duplicate changes will produce contradictory evidence.
+- The r16 canary is immutable `FAIL_NOT_PROVEN`; only a new source/tree, packet,
+  Sol gate and source-derived supervisor budget may create a new attempt.
+- Production/shared/unknown data, credentials, account-level GitHub controls,
+  main merge and unavailable required remote authority are outside the standing
+  repository workflow. Stop and request the owner before crossing any of those
+  boundaries.

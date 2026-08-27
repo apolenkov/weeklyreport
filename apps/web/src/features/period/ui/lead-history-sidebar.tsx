@@ -1,6 +1,10 @@
 "use client";
 
 import type { HistoryEntry } from "../../report-sections";
+import {
+  deriveHistoryStats,
+  type HistoryStats,
+} from "./history/lead-history-stats";
 
 interface LeadHistorySidebarProps {
   readonly entries: readonly HistoryEntry[];
@@ -8,50 +12,6 @@ interface LeadHistorySidebarProps {
   readonly showStatus?: boolean;
   // Head/viewer surfaces use third-person copy for another person's section.
   readonly viewerMode?: boolean;
-}
-
-// Completed for stats: lead "submitted" or compiled "published"/"archived"
-// (compiled history never carries "submitted" — see mapCompiledHistoryEntries).
-const COMPLETED_WEEK_STATUSES: ReadonlySet<HistoryEntry["status"]> = new Set([
-  "submitted",
-  "published",
-  "archived",
-]);
-function isCompletedWeek(entry: HistoryEntry): boolean {
-  return COMPLETED_WEEK_STATUSES.has(entry.status);
-}
-
-const PERCENT_MAX = 100;
-
-type HistoryStats = ReturnType<typeof deriveHistoryStats>;
-
-// Aggregates cover COMPLETED weeks only, so a half-filled draft never dilutes
-// the averages the rail advertises.
-function deriveHistoryStats(entries: readonly HistoryEntry[]) {
-  const total = entries.length;
-  const submittedEntries = entries.filter(isCompletedWeek);
-  const submitted = submittedEntries.length;
-  const sum = (pick: (entry: HistoryEntry) => number): number =>
-    submittedEntries.reduce((acc, entry) => acc + pick(entry), 0);
-
-  // Pattern: longest run of consecutive submitted weeks at the top of the list
-  // (entries are newest-first per `mapHistoryEntries`). Captures "current
-  // streak" — the number that matters at a glance.
-  const firstIncompleteIndex = entries.findIndex((e) => !isCompletedWeek(e));
-
-  return {
-    total,
-    submitted,
-    onTimeRate: total === 0 ? 0 : Math.round((submitted / total) * PERCENT_MAX),
-    draftCount: total - submitted,
-    totalGreen: sum((e) => e.trafficLights.green),
-    totalYellow: sum((e) => e.trafficLights.yellow),
-    totalRed: sum((e) => e.trafficLights.red),
-    totalRisks: sum((e) => e.riskCount),
-    avgItems:
-      submitted === 0 ? 0 : Math.round(sum((e) => e.itemCount) / submitted),
-    streak: firstIncompleteIndex === -1 ? total : firstIncompleteIndex,
-  };
 }
 
 // Every number is derived from `entries`, so the rail stays a pure

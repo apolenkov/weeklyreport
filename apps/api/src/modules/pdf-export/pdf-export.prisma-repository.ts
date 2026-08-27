@@ -1,25 +1,23 @@
 import {
-  type AssembledReport,
-  assembledReportSchema,
   type PdfExportJob,
   pdfExportJobSchema,
   type UserSession,
 } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { canReadReport } from "../../lib/report-read-access.js";
 import {
-  computePortfolioOverviewFromReadSections,
-  mapPrismaToReportSection,
-  reportSectionFullInclude,
-} from "../report-sections/index.js";
+  reportFullInclude,
+  toAssembledReport,
+} from "./pdf-export.assembled-report.js";
 import {
   PdfExportDomainError,
   type PdfExportJobRecord,
   type PdfExportRepository,
 } from "./pdf-export.service.js";
+
+export { toAssembledReport } from "./pdf-export.assembled-report.js";
 
 const pdfStatusToDb: Record<
   PdfExportJob["status"],
@@ -79,16 +77,13 @@ function toDomainStatus(status: string): PdfExportJob["status"] {
   return domainStatus;
 }
 
-const reportFullInclude = {
-  sections: { include: reportSectionFullInclude },
-  publishedBy: true,
-} as const;
-
 @Injectable()
 export class PdfExportPrismaRepository implements PdfExportRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getPublishedReport(reportId: string): Promise<AssembledReport | null> {
+  async getPublishedReport(
+    reportId: string,
+  ): ReturnType<PdfExportRepository["getPublishedReport"]> {
     const report = await this.prisma.report.findUnique({
       where: {
         id: reportId,
@@ -255,26 +250,4 @@ function toExportJob(row: PdfExportJobRow): PdfExportJobRecord {
     }),
     requestedBy: row.requestedBy,
   };
-}
-
-export function toAssembledReport(
-  report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
-): AssembledReport {
-  const sections = report.sections.map(mapPrismaToReportSection);
-  // Top-line totals from floored trafficLight (not raw projectStatuses) so
-  // cards and totals agree; re-applies the mapper's own-risk floor.
-  const portfolio = computePortfolioOverviewFromReadSections(sections);
-
-  return assembledReportSchema.parse({
-    reportId: report.id,
-    periodStart: report.periodStart,
-    periodEnd: report.periodEnd,
-    deadline: report.deadline,
-    status: report.status,
-    publishedAt: report.publishedAt,
-    publishedById: report.publishedById,
-    publishedByName: report.publishedBy?.name ?? null,
-    portfolioOverview: portfolio,
-    sections,
-  });
 }

@@ -4,11 +4,13 @@ import {
   type RiskSeverity,
 } from "@customreport/shared";
 
-import type {
-  PrismaReportSectionWithRelations as SectionRow,
-  RecordCommentRow,
-  SectionReviewRow,
-} from "./report-sections.include";
+import {
+  toDecisionViews,
+  toItemViews,
+  toReviewViews,
+  toRiskViews,
+} from "./mappers/report-sections.record-views.js";
+import type { PrismaReportSectionWithRelations as SectionRow } from "./report-sections.include";
 import {
   aggregateStageTraffic,
   asTraffic,
@@ -51,32 +53,6 @@ function groupAuthorAssignmentsByProject(
       },
     ),
   );
-}
-
-// Project the joined RecordComment rows onto the read-model comment view
-// (flat; reviewer display name rides along).
-function toCommentViews(comments: readonly RecordCommentRow[]) {
-  return comments.map((comment) => ({
-    id: comment.id,
-    reviewerId: comment.reviewerId,
-    reviewerName: comment.reviewer.name,
-    text: comment.text,
-    createdAt: comment.createdAt,
-  }));
-}
-
-// Project section verdicts onto the read-model view. A verdict is CURRENT only
-// while it judged the section's current version — a re-submission bumps
-// `version` and auto-stales any prior verdict, no clearing.
-function toReviewViews(reviews: readonly SectionReviewRow[], version: number) {
-  return reviews.map((review) => ({
-    reviewerId: review.reviewerId,
-    reviewerName: review.reviewer.name,
-    verdict: review.verdict === "approved" ? "approved" : "changes_requested",
-    judgedVersion: review.judgedVersion,
-    isCurrent: review.judgedVersion === version,
-    createdAt: review.createdAt,
-  }));
 }
 
 // Name-only for referenced-but-unowned projects (incl. archived); no extra query.
@@ -177,63 +153,6 @@ function toProjectViews(row: SectionRow, owned: OwnedProjects) {
   return [...owned.values()]
     .map((group) => toProjectView(group, ctx))
     .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru"));
-}
-
-function toItemViews(items: SectionRow["items"]) {
-  return items.map((i) => ({
-    id: i.id,
-    // Durable lineage key — surfaced so the client round-trips it back and
-    // saveSection's recreate preserves it instead of re-minting.
-    stableId: i.stableId,
-    // XOR parent — exactly one is non-null; both flat on the top-level array,
-    // discriminated by which FK is set (activity rows carry `activityId`).
-    projectId: i.projectId,
-    activityId: i.activityId,
-    type: i.type,
-    text: i.text,
-    tag: i.tag,
-    workflowStatus: i.workflowStatus,
-    carriedOver: i.carriedOver,
-    priorityRank: i.priorityRank ?? null,
-    pausedReason: i.pausedReason ?? null,
-    stageNames: i.stageNames.length > 0 ? i.stageNames : undefined,
-    comments: toCommentViews(i.recordComments),
-  }));
-}
-
-function toRiskViews(risks: SectionRisks) {
-  return risks.map((r) => ({
-    id: r.id,
-    stableId: r.stableId,
-    // XOR parent (see items above).
-    projectId: r.projectId,
-    activityId: r.activityId,
-    risk: r.risk,
-    impact: r.impact,
-    mitigation: r.mitigation,
-    // Validated by reportSectionReadModelSchema.parse below (Zod enforces the
-    // two-value vocabulary at runtime; the DB CHECK is the write-side backstop).
-    severity: r.severity,
-    stageNames: r.stageNames.length > 0 ? r.stageNames : undefined,
-    comments: toCommentViews(r.recordComments),
-  }));
-}
-
-function toDecisionViews(decisions: SectionRow["decisions"]) {
-  return decisions.map((d) => ({
-    id: d.id,
-    stableId: d.stableId,
-    text: d.text,
-    owner: d.owner,
-    deadline: d.deadline,
-    impact: d.impact,
-    resolvedAt: d.resolvedAt,
-    stageNames: d.stageNames.length > 0 ? d.stageNames : undefined,
-    // XOR parent (full parity — an activity owns decisions too).
-    productId: d.productId ?? undefined,
-    activityId: d.activityId ?? undefined,
-    comments: toCommentViews(d.recordComments),
-  }));
 }
 
 // Keep mid-period archived activity rows listed (history); name-sorted.

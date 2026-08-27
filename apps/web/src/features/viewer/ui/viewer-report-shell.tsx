@@ -3,11 +3,9 @@
 import type { WeeklyReportGetResponse } from "@customreport/shared";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
-import { getClientErrorDetails } from "../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import {
   DocumentActionGroup,
@@ -19,15 +17,14 @@ import { WeeklyReportPage } from "../../report-pages";
 import { HeadSlidesClient } from "../../slides";
 import { deriveViewerPeriods } from "./derive-viewer-periods";
 import {
+  useStatusEntryRecovery,
+  VIEWER_STRIP_PARAMS,
+} from "./use-status-entry-recovery";
+import {
   deriveViewerAuthority,
   ViewerAuthorityLabel,
 } from "./viewer-authority-label";
 import { ViewerShellControls } from "./viewer-shell-controls";
-
-// Module-scope so the reference is stable across renders — a fresh literal would
-// churn the hook's `buildQuery` memoization. The viewer strips the one-shot
-// Status-entry markers on every in-shell navigation.
-const VIEWER_STRIP_PARAMS: readonly string[] = ["source", "recovery"];
 
 interface ViewerReportShellProps {
   readonly reportId: string;
@@ -158,33 +155,6 @@ function ViewerReportBody({
       )}
     </div>
   );
-}
-
-// Status-entry race recovers once via /reports/latest; direct/History failures
-// are terminal. The page fetch shares this query key, so recovering here is
-// sufficient and avoids a duplicate redirect.
-function useStatusEntryRecovery(displayedQuery: {
-  readonly isError: boolean;
-  readonly error: unknown;
-}): boolean {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const isInvalidLink =
-    displayedQuery.isError &&
-    getClientErrorDetails(displayedQuery.error).isInvalidLink;
-  const shouldRecover =
-    isInvalidLink &&
-    searchParams.get("source") === "status" &&
-    searchParams.get("recovery") !== "1";
-
-  useEffect(() => {
-    if (shouldRecover) {
-      router.replace("/reports/latest?recovery=1");
-    }
-  }, [shouldRecover, router]);
-
-  return shouldRecover;
 }
 
 // A no-period response carries neither an authority state nor an exportable

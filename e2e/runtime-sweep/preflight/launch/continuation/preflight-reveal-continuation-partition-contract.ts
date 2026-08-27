@@ -6,25 +6,25 @@ import type { RevealExecutionGrant } from "../../reveal/continuation/contracts/p
 import { chainHeadsSchema } from "../../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
 
 /** A partition is an execution window, not an independent coverage claim. */
-export const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_PLAN =
+const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_PLAN =
   "PREFLIGHT_REVEAL_AGGREGATE_PARTITION_PLAN" as const;
-export const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_RECEIPT =
+const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_RECEIPT =
   "PREFLIGHT_REVEAL_AGGREGATE_PARTITION_RECEIPT" as const;
-export const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_COMPLETE =
+const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_COMPLETE =
   "PREFLIGHT_REVEAL_AGGREGATE_PARTITION_COMPLETE" as const;
 export const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_VERSION = 2 as const;
 /** The plan seals the range rule; receipts seal the exact predecessor/end pair. */
-export const PREFLIGHT_REVEAL_AGGREGATE_CANDIDATE_RANGE_POLICY =
+const PREFLIGHT_REVEAL_AGGREGATE_CANDIDATE_RANGE_POLICY =
   "predecessor-end-contiguous-with-single-terminal-overshoot" as const;
 /** Functional time is per partition; only the final reserve is supervisor-wide. */
-export const PREFLIGHT_REVEAL_AGGREGATE_DEADLINE_POLICY =
+const PREFLIGHT_REVEAL_AGGREGATE_DEADLINE_POLICY =
   "partition-functional-budget-plus-global-teardown-reserve" as const;
 export const PREFLIGHT_REVEAL_AGGREGATE_PARTITION_CLEANUP_SCOPE =
   "CHILD_PROCESS_GROUPS" as const;
 export const PREFLIGHT_REVEAL_AGGREGATE_COMPLETION_SCOPE =
   "COVERAGE_ONLY" as const;
 /** A final child can add at most the source-bound cooperative candidate limit. */
-export const REVEAL_PARTITION_MAX_TERMINAL_OVERSHOOT =
+const REVEAL_PARTITION_MAX_TERMINAL_OVERSHOOT =
   REVEAL_CONTINUATION_LIMITS.maxTerminalCandidates - 1;
 
 const PARTITION_ID_WIDTH = 4;
@@ -72,7 +72,7 @@ const planBodySchema = z
   })
   .strict();
 
-export const revealPartitionPlanSchema = planBodySchema
+const revealPartitionPlanSchema = planBodySchema
   .extend({ partitionPlanDigest: digestSchema })
   .strict();
 

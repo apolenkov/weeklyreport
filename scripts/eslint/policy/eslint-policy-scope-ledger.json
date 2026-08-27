@@ -23,31 +23,6 @@
     },
     {
       "configIndex": 3,
-      "id": "product-function-budget",
-      "classification": "enforcement",
-      "files": [
-        "apps/*/src/**/*.{ts,tsx}",
-        "packages/*/src/**/*.{ts,tsx}",
-        "e2e/**/*.{ts,tsx}"
-      ],
-      "ignores": [
-        "**/*.test.{ts,tsx}",
-        "**/*.spec.{ts,tsx}",
-        "**/__tests__/**",
-        "apps/*/src/test-utils/**"
-      ],
-      "positive": "apps/api/src/main.ts",
-      "negative": "apps/api/src/app.module.fence.test.ts",
-      "marker": {
-        "kind": "rule",
-        "name": "max-lines-per-function",
-        "positive": "error",
-        "negative": "absent"
-      },
-      "evidence": "Applies the 70-line production-function budget while test files use their own file-size policy."
-    },
-    {
-      "configIndex": 4,
       "id": "prisma-project",
       "classification": "specialization",
       "files": ["prisma/**/*.ts"],
@@ -62,7 +37,7 @@
       "evidence": "Prisma entrypoints have no discoverable local tsconfig and require tsconfig.prisma.json for sound Node typing."
     },
     {
-      "configIndex": 5,
+      "configIndex": 4,
       "id": "product-comment-policy",
       "classification": "policy",
       "files": [
@@ -83,7 +58,7 @@
       "evidence": "Enforces the product-source comment policy without rejecting plan-shaped labels in repository tooling."
     },
     {
-      "configIndex": 6,
+      "configIndex": 5,
       "id": "tooling-project",
       "classification": "specialization",
       "files": ["scripts/**/*.ts", "tools/**/*.ts"],
@@ -98,7 +73,7 @@
       "evidence": "Scripts and tools have no discoverable local tsconfig and require the same project used by their dedicated typecheck."
     },
     {
-      "configIndex": 7,
+      "configIndex": 6,
       "id": "sonar",
       "classification": "enforcement",
       "files": ["**/*.{ts,tsx,js,jsx,mjs}"],
@@ -114,7 +89,7 @@
       "evidence": "Activates the measured SonarJS production preset for every lintable JavaScript and TypeScript surface."
     },
     {
-      "configIndex": 8,
+      "configIndex": 7,
       "id": "package-public-jsdoc",
       "classification": "policy",
       "files": ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
@@ -130,7 +105,7 @@
       "evidence": "Requires contracts on consumed package exports without imposing public-API documentation semantics on application internals."
     },
     {
-      "configIndex": 9,
+      "configIndex": 8,
       "id": "next",
       "classification": "enforcement",
       "files": ["apps/web/**/*.{ts,tsx}"],
@@ -146,7 +121,7 @@
       "evidence": "Next 16 no longer wires these rules through next lint, so the web surface must install the plugin explicitly."
     },
     {
-      "configIndex": 10,
+      "configIndex": 9,
       "id": "web-api-runtime-boundary",
       "classification": "policy",
       "files": ["apps/web/**/*.{ts,tsx}"],
@@ -162,7 +137,7 @@
       "evidence": "Prevents runtime API graph imports into the browser while allowing the AppRouter type-only seam."
     },
     {
-      "configIndex": 12,
+      "configIndex": 11,
       "id": "api-cross-module",
       "classification": "policy",
       "files": ["apps/api/src/**/*.ts"],
@@ -178,7 +153,7 @@
       "evidence": "Production API modules may consume sibling modules only through their public entrypoints; test wiring is explicitly outside that boundary."
     },
     {
-      "configIndex": 13,
+      "configIndex": 12,
       "id": "api-infrastructure-entrypoints",
       "classification": "policy",
       "files": [
@@ -198,7 +173,7 @@
       "evidence": "Infrastructure and bootstrap code consume module contracts through explicit module entrypoints."
     },
     {
-      "configIndex": 14,
+      "configIndex": 13,
       "id": "web-cross-slice",
       "classification": "policy",
       "files": ["apps/web/src/features/**/*.{ts,tsx}"],
@@ -218,7 +193,7 @@
       "evidence": "Production feature slices may consume siblings only through their index barrels; test composition remains free to wire fixtures."
     },
     {
-      "configIndex": 15,
+      "configIndex": 14,
       "id": "api-domain-purity",
       "classification": "policy",
       "files": [
@@ -242,7 +217,7 @@
       "evidence": "Pure domain and named admin port files cannot depend on Prisma, Nest, queues, mail, or Redis adapters."
     },
     {
-      "configIndex": 16,
+      "configIndex": 15,
       "id": "repository-port-types",
       "classification": "policy",
       "files": [
@@ -278,7 +253,7 @@
       "evidence": "The explicit port-contract inventory prevents Prisma-generated types from leaking through module interfaces."
     },
     {
-      "configIndex": 17,
+      "configIndex": 16,
       "id": "production-let-ban",
       "classification": "enforcement",
       "files": [
@@ -305,7 +280,7 @@
       "evidence": "Production source uses an immutability ratchet while imperative test and fixture code is outside the regime."
     },
     {
-      "configIndex": 18,
+      "configIndex": 17,
       "id": "report-page-prop-seam",
       "classification": "policy",
       "files": ["apps/web/src/features/report-pages/ui/**/*.{ts,tsx}"],
@@ -326,7 +301,7 @@
       "evidence": "Adds a report-page-only hook ReturnType seam guard while preserving the broader production let ban."
     },
     {
-      "configIndex": 19,
+      "configIndex": 18,
       "id": "session-param-immutability",
       "classification": "policy",
       "files": ["apps/api/src/infrastructure/trpc/trpc.session-hydration.ts"],
@@ -342,7 +317,7 @@
       "evidence": "The auth hydration chokepoint forbids mutation of caller-owned session properties more strictly than ordinary functions."
     },
     {
-      "configIndex": 20,
+      "configIndex": 19,
       "id": "pure-layer-immutability",
       "classification": "enforcement",
       "files": [
@@ -361,7 +336,7 @@
       "evidence": "Deep immutability is enforceable in pure domain/shared layers without outlawing adapter and UI mutation idioms."
     },
     {
-      "configIndex": 21,
+      "configIndex": 20,
       "id": "api-module-tacit-style",
       "classification": "enforcement",
       "files": ["apps/api/src/modules/**/*.ts"],
@@ -377,7 +352,7 @@
       "evidence": "The arity-aware point-free rule is safe in API modules but would erase predicate narrowing or create this-binding risk elsewhere."
     },
     {
-      "configIndex": 22,
+      "configIndex": 21,
       "id": "ui-domain-boundary",
       "classification": "policy",
       "files": ["packages/ui/**/*.{ts,tsx}"],
@@ -393,7 +368,7 @@
       "evidence": "UI primitives receive shaped data and cannot import product-domain schemas."
     },
     {
-      "configIndex": 24,
+      "configIndex": 23,
       "id": "config-data-budgets",
       "classification": "specialization",
       "files": ["**/*.config.ts", "eslint-config/*.ts"],
@@ -409,7 +384,7 @@
       "evidence": "Declarative root and eslint-config policy modules are exempt from product code-size/complexity/literal budgets; setup and tool files remain gated."
     },
     {
-      "configIndex": 25,
+      "configIndex": 24,
       "id": "test-policy",
       "classification": "specialization",
       "files": [
@@ -431,7 +406,7 @@
       "evidence": "Tests replace unsafe generic method handling with Vitest-aware enforcement and use measured test-specific budgets rather than a blanket pass."
     },
     {
-      "configIndex": 26,
+      "configIndex": 25,
       "id": "literal-data",
       "classification": "policy",
       "files": ["apps/api/src/test-utils/**"],
@@ -447,7 +422,7 @@
       "evidence": "Test infrastructure contains fixture literals whose names would add indirection; production metrics and UI primitives remain under ordinary numeric-literal enforcement."
     },
     {
-      "configIndex": 27,
+      "configIndex": 26,
       "id": "uat-fixture-vocabulary",
       "classification": "policy",
       "files": ["apps/web/uat-suite/inventory.mjs"],
@@ -463,7 +438,7 @@
       "evidence": "Repeated strings are UAT fixture vocabulary (inventory.mjs only); helpers.mjs is the adjacent negative outside that override, while ordinary tooling remains under duplicate-string enforcement."
     },
     {
-      "configIndex": 28,
+      "configIndex": 27,
       "id": "uat-inline-inventory",
       "classification": "policy",
       "files": ["apps/web/uat-suite/inventory.mjs"],
@@ -479,7 +454,7 @@
       "evidence": "The inventory classifier must remain inline because it executes inside page.evaluate; other UAT scripts retain the complexity ceiling."
     },
     {
-      "configIndex": 29,
+      "configIndex": 28,
       "id": "playwright-fixture-use",
       "classification": "specialization",
       "files": ["e2e/**/*.ts"],
@@ -493,6 +468,41 @@
         "negative": "error"
       },
       "evidence": "Playwright names its provider callback use; React Hooks otherwise mistakes the fixture contract for a hook."
+    },
+    {
+      "configIndex": 29,
+      "id": "maintained-product-structure",
+      "classification": "enforcement",
+      "files": [
+        "apps/api/src/**/*.{ts,tsx,js,jsx,mjs,cjs}",
+        "apps/web/src/**/*.{ts,tsx,js,jsx,mjs,cjs}",
+        "packages/shared/src/**/*.{ts,tsx,js,jsx,mjs,cjs}",
+        "packages/ui/src/**/*.{ts,tsx,js,jsx,mjs,cjs}"
+      ],
+      "ignores": [
+        "**/*.test.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*.spec.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/__tests__/**",
+        "**/test-utils/**",
+        "**/__fixtures__/**",
+        "**/fixture/**",
+        "**/fixtures/**",
+        "**/*.fixture.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*.fixtures.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*-fixture.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*-test-fixture.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/generated/**",
+        "**/*.generated.{ts,tsx,js,jsx,mjs,cjs}"
+      ],
+      "positive": "apps/api/src/main.ts",
+      "negative": "scripts/gates/orchestrator/lint-gate.ts",
+      "marker": {
+        "kind": "rule-options",
+        "name": "max-lines",
+        "positiveContains": "230",
+        "negativeExcludes": "230"
+      },
+      "evidence": "All API and web product source plus shared and UI package source are pinned to the boundary-proven 230/57/10/<10 structural floor; test, fixture, generated, and tooling roles remain separately measured."
     }
   ]
 }

@@ -5,6 +5,40 @@ import type { RiskEntry } from "./types";
 
 export type LeadRiskEntry = RiskEntry;
 
+type SectionRisk = ReportSectionReadModel["risks"][number];
+
+function requireRiskId(risk: SectionRisk): string {
+  const id: unknown = risk.id ?? risk.stableId;
+  if (typeof id === "string" && id.length > 0) return id;
+  throw new Error(
+    `Risk is missing both id and stableId (project ${risk.projectId ?? "none"}) — cannot map corrupt legacy lineage`,
+  );
+}
+
+function mapRisk(
+  risk: SectionRisk,
+  projectIndex: ReturnType<typeof buildProjectIndex>,
+  activityNameById: ReturnType<typeof buildActivityIndex>,
+): LeadRiskEntry {
+  const activityName = risk.activityId
+    ? (activityNameById.get(risk.activityId) ?? "Unknown")
+    : undefined;
+  const productName = risk.projectId
+    ? projectIndex.get(risk.projectId)?.name
+    : undefined;
+  return {
+    id: requireRiskId(risk),
+    productId: risk.projectId ?? "",
+    productName: productName ?? activityName ?? "Unknown",
+    ...(risk.activityId ? { activityId: risk.activityId, activityName } : {}),
+    stageNames: risk.stageNames,
+    severity: risk.severity,
+    text: risk.risk,
+    impact: risk.impact,
+    mitigation: risk.mitigation,
+  };
+}
+
 // `text` is only the risk field — impact/mitigation stay on the row but are not
 // shown. Handlers keep non-empty defaults for safeText({min:1}) on those fields.
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
@@ -14,36 +48,5 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   // activity name, beside product risks.
   return section.risks
     .filter((r) => r.projectId != null || r.activityId != null)
-    .map((r) => {
-      const id = r.id ?? r.stableId;
-      if (id == null) {
-        // The API always emits the DB primary key as id; a row with neither id
-        // nor stableId is corrupt lineage that must not be dressed as identity.
-        throw new Error(
-          `Risk is missing both id and stableId (project ${
-            r.projectId ?? "none"
-          }) — cannot map corrupt legacy lineage`,
-        );
-      }
-      const activityName =
-        r.activityId != null
-          ? (activityNameById.get(r.activityId) ?? "Unknown")
-          : undefined;
-      const project =
-        r.projectId != null ? projectIndex.get(r.projectId) : undefined;
-      return {
-        id,
-        productId: r.projectId ?? "",
-        productName: project?.name ?? activityName ?? "Unknown",
-        ...(r.activityId != null
-          ? { activityId: r.activityId, activityName }
-          : {}),
-        // Stage array from DB; legacy rows fall back to undefined.
-        stageNames: r.stageNames,
-        severity: r.severity,
-        text: r.risk,
-        impact: r.impact,
-        mitigation: r.mitigation,
-      };
-    });
+    .map((risk) => mapRisk(risk, projectIndex, activityNameById));
 }

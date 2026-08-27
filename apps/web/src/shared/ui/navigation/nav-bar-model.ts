@@ -14,6 +14,57 @@ interface NavBarModel {
   readonly sessionLoading: boolean;
 }
 
+type SessionUser = SessionState["user"];
+type SessionOrganization = SessionState["organization"];
+
+interface VisibleSession {
+  readonly user: SessionUser;
+  readonly organization: SessionOrganization;
+  readonly loading: boolean;
+}
+
+function resolveVisibleSession(
+  user: SessionUser,
+  organization: SessionOrganization,
+  sessionLoading: boolean,
+  hydrated: boolean,
+): VisibleSession {
+  return {
+    user: hydrated ? user : null,
+    organization: hydrated ? organization : null,
+    loading: sessionLoading || !hydrated,
+  };
+}
+
+function linksForRole(role: Role | null): readonly NavLink[] {
+  return role === null
+    ? []
+    : NAV_LINKS.filter((link) => link.roles.includes(role));
+}
+
+function initialsForUser(user: SessionUser): string {
+  if (!user) return "?";
+  return initialsFromParts({
+    lastName: user.lastName,
+    firstName: user.firstName,
+    name: user.name,
+  });
+}
+
+function buildIdentityMeta(
+  organization: SessionOrganization,
+  user: SessionUser,
+  role: Role | null,
+  loading: boolean,
+): string {
+  const organizationName =
+    !loading && organization !== null ? organization.shortName : null;
+  const roleLabel = role ? ROLE_LABEL[role] : null;
+  return [organizationName, user?.reportingGroupName, roleLabel]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
+}
+
 export function buildNavBarModel({
   user,
   organization,
@@ -25,42 +76,26 @@ export function buildNavBarModel({
   readonly sessionLoading: boolean;
   readonly hydrated: boolean;
 }): NavBarModel {
-  const visibleUser = hydrated ? user : null;
-  const visibleOrganization = hydrated ? organization : null;
-  const visibleSessionLoading = sessionLoading || !hydrated;
-
-  const role: Role | null = visibleUser?.role ?? null;
-  const visibleLinks: readonly NavLink[] =
-    role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
-
-  const initials = visibleUser
-    ? initialsFromParts({
-        lastName: visibleUser.lastName,
-        firstName: visibleUser.firstName,
-        name: visibleUser.name,
-      })
-    : "?";
-  const roleLabel = role ? ROLE_LABEL[role] : "";
-
-  // Gate the brand string on a resolved org so the pill shows a skeleton
-  // while the session query is in-flight instead of flashing the default
-  // 'ORG' identity and popping to the real tenant brand on every cold reload.
-  const orgResolved = !visibleSessionLoading && visibleOrganization !== null;
-  const identityMeta = [
-    orgResolved ? visibleOrganization.shortName : null,
-    visibleUser?.reportingGroupName,
-    roleLabel,
-  ]
-    .filter((part): part is string => Boolean(part))
-    .join(" · ");
+  const visible = resolveVisibleSession(
+    user,
+    organization,
+    sessionLoading,
+    hydrated,
+  );
+  const role: Role | null = visible.user?.role ?? null;
 
   return {
     role,
-    visibleLinks,
-    initials,
-    userName: visibleUser ? visibleUser.name : null,
-    homeLabel: visibleUser ? `${visibleUser.name} home` : "Profile loading",
-    identityMeta,
-    sessionLoading: visibleSessionLoading,
+    visibleLinks: linksForRole(role),
+    initials: initialsForUser(visible.user),
+    userName: visible.user?.name ?? null,
+    homeLabel: visible.user ? `${visible.user.name} home` : "Profile loading",
+    identityMeta: buildIdentityMeta(
+      visible.organization,
+      visible.user,
+      role,
+      visible.loading,
+    ),
+    sessionLoading: visible.loading,
   };
 }

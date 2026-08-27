@@ -45,6 +45,23 @@ function toggleStage(selected: readonly string[], stage: string): string[] {
     : [...selected, stage];
 }
 
+function deriveStageScopePresentation(
+  selected: readonly string[],
+  stages: readonly string[],
+  previewSeverity: "at-risk" | "blocked" | undefined,
+  required: boolean,
+) {
+  const isMultiChoice = stages.length >= 2;
+  return {
+    bannerText:
+      isMultiChoice && previewSeverity
+        ? computeBannerText(selected, previewSeverity, required)
+        : "",
+    showScopeHint:
+      !required && !previewSeverity && selected.length === 0 && isMultiChoice,
+  };
+}
+
 export function StageMultiSelect({
   id,
   value,
@@ -61,13 +78,12 @@ export function StageMultiSelect({
   const isSelected = (stage: string) => isStageSelected(selected, stage);
   const toggle = (stage: string) => onChange(toggleStage(selected, stage));
 
-  const isMultiChoice = stages.length >= 2;
-  const bannerText =
-    isMultiChoice && previewSeverity
-      ? computeBannerText(selected, previewSeverity, required)
-      : "";
-  const showScopeHint =
-    !required && !previewSeverity && selected.length === 0 && isMultiChoice;
+  const { bannerText, showScopeHint } = deriveStageScopePresentation(
+    selected,
+    stages,
+    previewSeverity,
+    required,
+  );
 
   return (
     <fieldset

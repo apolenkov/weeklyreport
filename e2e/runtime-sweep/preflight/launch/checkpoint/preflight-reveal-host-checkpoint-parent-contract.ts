@@ -11,7 +11,7 @@ import {
   PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
 
-export const hostCheckpointRunFor = (context: ParentContext) =>
+const hostCheckpointRunFor = (context: ParentContext) =>
   ({
     campaignId: context.source.campaignId,
     sourceSha: context.source.sourceSha,

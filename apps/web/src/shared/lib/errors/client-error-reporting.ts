@@ -72,30 +72,52 @@ function readErrorData(error: unknown): Record<string, unknown> | null {
     : null;
 }
 
-export function getClientErrorDetails(error: unknown): ClientErrorDetails {
-  const data = readErrorData(error);
-  const meta =
-    error instanceof TRPCClientError &&
-    error.meta &&
-    typeof error.meta === "object"
-      ? error.meta
-      : null;
-  const requestIdFromShape =
-    typeof data?.requestId === "string" ? data.requestId : null;
-  const requestIdFromHeader = readResponseHeader(
-    meta?.response,
-    "x-request-id",
-  );
-  const httpStatus =
-    typeof data?.httpStatus === "number" ? data.httpStatus : null;
-  const trpcCode = typeof data?.code === "string" ? data.code : null;
-  const requestId = requestIdFromShape ?? requestIdFromHeader;
-  const message = error instanceof Error ? error.message : "";
+function readErrorMeta(error: unknown): Record<string, unknown> | null {
+  if (!(error instanceof TRPCClientError)) return null;
+  const meta: unknown = error.meta;
+  return meta && typeof meta === "object"
+    ? (meta as Record<string, unknown>)
+    : null;
+}
 
-  const isInternal =
+function readStringProperty(
+  value: Record<string, unknown> | null,
+  key: string,
+): string | null {
+  const property = value?.[key];
+  return typeof property === "string" ? property : null;
+}
+
+function readNumberProperty(
+  value: Record<string, unknown> | null,
+  key: string,
+): number | null {
+  const property = value?.[key];
+  return typeof property === "number" ? property : null;
+}
+
+function computeIsInternal(
+  trpcCode: string | null,
+  httpStatus: number | null,
+  message: string,
+): boolean {
+  return (
     trpcCode === "INTERNAL_SERVER_ERROR" ||
     (httpStatus !== null && httpStatus >= SERVER_ERROR_STATUS_MIN) ||
-    message === "Unexpected error";
+    message === "Unexpected error"
+  );
+}
+
+export function getClientErrorDetails(error: unknown): ClientErrorDetails {
+  const data = readErrorData(error);
+  const meta = readErrorMeta(error);
+  const requestId =
+    readStringProperty(data, "requestId") ??
+    readResponseHeader(meta?.response, "x-request-id");
+  const httpStatus = readNumberProperty(data, "httpStatus");
+  const trpcCode = readStringProperty(data, "code");
+  const message = error instanceof Error ? error.message : "";
+  const isInternal = computeIsInternal(trpcCode, httpStatus, message);
 
   const isDeterministicClientError =
     !isInternal && computeIsDeterministicClientError(httpStatus, trpcCode);

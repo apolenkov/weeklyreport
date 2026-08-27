@@ -5,8 +5,13 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { ensureFallbackReportingGroup } from "../organization/index.js";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
-import { audienceToPrisma } from "./admin-enum-mappers";
 import { getSnapshot } from "./admin-snapshot.queries";
+import {
+  applyPoliciesToNewPeriods,
+  type NewlyCreatedPeriod,
+  upsertReminderPolicies,
+  upsertReminderRules,
+} from "./admin-snapshot/reminders.js";
 
 async function upsertGroups(
   tx: Prisma.TransactionClient,
@@ -138,11 +143,6 @@ async function upsertProjects(
   }
 }
 
-interface NewlyCreatedPeriod {
-  id: string;
-  deadline: Date;
-}
-
 async function upsertPeriods(
   tx: Prisma.TransactionClient,
   periods: AdminSnapshot["periods"],
@@ -160,81 +160,6 @@ async function upsertPeriods(
       : accumulated;
   }, Promise.resolve([]));
   return { newlyCreatedPeriods };
-}
-
-async function upsertReminderPolicies(
-  tx: Prisma.TransactionClient,
-  policies: AdminSnapshot["policies"],
-): Promise<void> {
-  // Restored BEFORE the rules so a rule's non-null policyId FK resolves on a
-  // fresh database. Unlike saveReminderPolicy, this does not cascade `active`
-  // onto rule statuses — the snapshot carries each rule's own status.
-  for (const policy of policies) {
-    const data = {
-      kind: policy.kind,
-      offsetMinutes: policy.offsetMinutes,
-      timezone: policy.timezone,
-      audience: audienceToPrisma[policy.audience],
-      active: policy.active,
-      validFrom: policy.validFrom,
-      validUntil: policy.validUntil,
-    };
-    await tx.reminderPolicy.upsert({
-      where: { id: policy.id },
-      create: { id: policy.id, ...data },
-      update: data,
-    });
-  }
-}
-
-async function upsertReminderRules(
-  tx: Prisma.TransactionClient,
-  reminderRules: AdminSnapshot["reminderRules"],
-  currentRules: Awaited<ReturnType<PrismaService["reminderRule"]["findMany"]>>,
-): Promise<void> {
-  const currentRuleIds = new Set(currentRules.map((r) => r.id));
-
-  for (const rule of reminderRules) {
-    const ruleData = {
-      policyId: rule.policyId,
-      kind: rule.kind,
-      fireAt: rule.fireAt,
-      timezone: rule.timezone,
-      status: rule.status,
-      version: rule.version,
-      reportId: rule.reportId ?? null,
-    };
-
-    if (currentRuleIds.has(rule.id)) {
-      await tx.reminderRule.update({
-        where: { id: rule.id },
-        data: ruleData,
-      });
-    } else {
-      await tx.reminderRule.create({
-        data: { id: rule.id, ...ruleData },
-      });
-    }
-  }
-}
-
-// Policy ids the snapshot itself already wrote a rule row for, per report.
-// The applicator skips these pairs so a restored rule status is not clobbered;
-// a report absent from the map yields `undefined`, meaning "skip nothing".
-function groupRestoredPolicyIdsByReport(
-  reminderRules: AdminSnapshot["reminderRules"],
-): ReadonlyMap<string, ReadonlySet<string>> {
-  return reminderRules.reduce<ReadonlyMap<string, ReadonlySet<string>>>(
-    (byReport, rule) => {
-      if (!rule.reportId || !rule.policyId) return byReport;
-      const merged = new Set([
-        ...(byReport.get(rule.reportId) ?? []),
-        rule.policyId,
-      ]);
-      return new Map(byReport).set(rule.reportId, merged);
-    },
-    new Map(),
-  );
 }
 
 // Additive-only whole-snapshot restore in one txn; removals use remove* primitives.
@@ -270,19 +195,11 @@ export async function saveSnapshot(
   // Post-commit so applicator failure cannot roll back periods. Skip pairs the
   // snapshot already wrote (would clobber restored status) and pass `now` so
   // already-elapsed instants from an old snapshot are not re-dispatched.
-  if (policyApplicator) {
-    const restoredPolicyIdsByReport = groupRestoredPolicyIdsByReport(
-      snapshot.reminderRules,
-    );
-    const now = new Date();
-    for (const newPeriod of newlyCreatedPeriods) {
-      await policyApplicator.applyToPeriod(
-        newPeriod,
-        now,
-        restoredPolicyIdsByReport.get(newPeriod.id),
-      );
-    }
-  }
+  await applyPoliciesToNewPeriods(
+    policyApplicator,
+    snapshot.reminderRules,
+    newlyCreatedPeriods,
+  );
 
   return getSnapshot(prisma);
 }

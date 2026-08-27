@@ -145,6 +145,14 @@ function ProductCardBody({
   );
 }
 
+function isProductEmpty(product: WeeklyPortfolioProduct): boolean {
+  return (
+    product.currentWeekCount === 0 &&
+    product.nextWeekCount === 0 &&
+    product.riskCount === 0
+  );
+}
+
 export function ProductOverviewCard({
   product,
   onNavigate,
@@ -154,10 +162,7 @@ export function ProductOverviewCard({
   readonly onNavigate: (productId: string) => void;
   readonly controlsDetails: boolean;
 }) {
-  const isEmpty =
-    product.currentWeekCount === 0 &&
-    product.nextWeekCount === 0 &&
-    product.riskCount === 0;
+  const isEmpty = isProductEmpty(product);
   return (
     <button
       type="button"

@@ -19,6 +19,42 @@ const FIELD_ERROR_CLASS = "mt-1 text-xs text-[var(--color-destructive)]";
 const TOGGLE_CARD_CLASS =
   "flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)]";
 
+interface NumberFieldStateArgs {
+  readonly id: string;
+  readonly bounds: IntegerBounds;
+  readonly value: number;
+  readonly onChange: (value: number) => void;
+  readonly onValidityChange?: (id: string, valid: boolean) => void;
+}
+
+function useNumberFieldState(args: NumberFieldStateArgs) {
+  const [raw, setRaw] = useState(() => String(args.value));
+  const [error, setError] = useState<string | null>(null);
+  const [committedValue, setCommittedValue] = useState(args.value);
+  if (committedValue !== args.value) {
+    setCommittedValue(args.value);
+    setRaw(String(args.value));
+    setError(null);
+  }
+
+  function handleChange(text: string) {
+    setRaw(text);
+    const parsed = parseIntegerInBounds(text, args.bounds);
+    if (parsed === null) {
+      setError(
+        `Whole number between ${args.bounds.min} and ${args.bounds.max} required`,
+      );
+      args.onValidityChange?.(args.id, false);
+      return;
+    }
+    setError(null);
+    args.onValidityChange?.(args.id, true);
+    args.onChange(parsed);
+  }
+
+  return { raw, error, handleChange };
+}
+
 // Keeps the raw draft text and commits only a parsed in-bounds integer; invalid
 // input surfaces an inline error instead of silently becoming a fallback value
 // (no-fallback policy). onValidityChange lets the parent gate Save on validity.
@@ -39,29 +75,13 @@ export function NumberField({
   readonly hint: ReactNode;
   readonly onValidityChange?: (id: string, valid: boolean) => void;
 }) {
-  const [raw, setRaw] = useState(() => String(value));
-  const [error, setError] = useState<string | null>(null);
-  // Render-phase adjust: reseed raw text when the committed value changes
-  // externally (e.g. after Save) without an effect.
-  const [committedValue, setCommittedValue] = useState(value);
-  if (committedValue !== value) {
-    setCommittedValue(value);
-    setRaw(String(value));
-    setError(null);
-  }
-
-  const handleChange = (text: string) => {
-    setRaw(text);
-    const parsed = parseIntegerInBounds(text, bounds);
-    if (parsed === null) {
-      setError(`Whole number between ${bounds.min} and ${bounds.max} required`);
-      onValidityChange?.(id, false);
-      return;
-    }
-    setError(null);
-    onValidityChange?.(id, true);
-    onChange(parsed);
-  };
+  const { raw, error, handleChange } = useNumberFieldState({
+    id,
+    bounds,
+    value,
+    onChange,
+    ...(onValidityChange === undefined ? {} : { onValidityChange }),
+  });
 
   return (
     <div>

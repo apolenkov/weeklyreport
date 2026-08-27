@@ -33,6 +33,21 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 // IETF draft-7 RateLimit response headers (express-rate-limit standardHeaders).
 const RATE_LIMIT_STANDARD_HEADERS = "draft-7" as const;
 
+interface RateLimitFactoryOptions {
+  logger: AppLogger;
+  isTest: boolean;
+  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
+  redis?: Redis;
+}
+
+interface RateLimitHandlers {
+  authLimiter: RequestHandler;
+  trpcLimiter: RequestHandler;
+  vitalsLimiter: RequestHandler;
+  clientLogsLimiter: RequestHandler;
+  shutdownRateLimitStore: () => Promise<void>;
+}
+
 // Host/port via buildRedisConnectionOptions (never raw process.env) so a
 // missing var fails at the boot fence; lazyConnect lets the factory own the
 // explicit readiness boundary below.
@@ -125,30 +140,52 @@ function buildBaseConfig(logger: AppLogger): Partial<Options> {
   };
 }
 
-// Per-IP limiters for public ingress; Caddy-unmatched routes need their own
-// bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
-export async function createRateLimits(options: {
-  logger: AppLogger;
-  isTest: boolean;
-  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
-  redis?: Redis;
-}): Promise<{
-  authLimiter: RequestHandler;
-  trpcLimiter: RequestHandler;
-  vitalsLimiter: RequestHandler;
-  clientLogsLimiter: RequestHandler;
-  shutdownRateLimitStore: () => Promise<void>;
-}> {
-  const { logger, isTest, env, redis } = options;
-
-  const client = redis ?? buildStoreClient(env);
+const requireProductionClient = (
+  isTest: boolean,
+  client: Redis | undefined,
+): void => {
   if (!isTest && client === undefined) {
-    // Silent MemoryStore fallback would reset every bucket per process — the
-    // ingress limiters would enforce nothing after a restart. Fail boot loud.
     throw new Error(
       "Rate-limit Redis store is required outside test mode: REDIS_HOST/REDIS_PORT env or an injected redis client is missing.",
     );
   }
+};
+
+const connectOwnedClient = async (
+  injectedClient: Redis | undefined,
+  client: Redis | undefined,
+): Promise<Redis | undefined> => {
+  const ownedClient = injectedClient === undefined ? client : undefined;
+  if (ownedClient === undefined) return undefined;
+  try {
+    await ownedClient.connect();
+    return ownedClient;
+  } catch (error: unknown) {
+    ownedClient.disconnect();
+    throw error;
+  }
+};
+
+const shutdownFor = (ownedClient: Redis | undefined) => {
+  const state = { closed: false };
+  return (): Promise<void> => {
+    if (!state.closed && ownedClient !== undefined) {
+      state.closed = true;
+      ownedClient.disconnect();
+    }
+    return Promise.resolve();
+  };
+};
+
+// Per-IP limiters for public ingress; Caddy-unmatched routes need their own
+// bucket. Test-mode limits come from TEST_MODE_LIMIT_PER_MINUTE above.
+export async function createRateLimits(
+  options: RateLimitFactoryOptions,
+): Promise<RateLimitHandlers> {
+  const { logger, isTest, env, redis } = options;
+
+  const client = redis ?? buildStoreClient(env);
+  requireProductionClient(isTest, client);
 
   const reportStoreError = (error: unknown): void => {
     rateLimitStoreErrorsTotal.inc();
@@ -159,26 +196,9 @@ export async function createRateLimits(options: {
   };
 
   client?.on("error", reportStoreError);
-  // The factory owns only clients it created itself. Injected clients belong to
-  // their callers, which retain connection lifecycle control for tests/apps.
-  const ownedClient = redis === undefined ? client : undefined;
-  if (ownedClient !== undefined) {
-    try {
-      await ownedClient.connect();
-    } catch (error: unknown) {
-      ownedClient.disconnect();
-      throw error;
-    }
-  }
-
-  const ownedClientState = { closed: false };
-  const shutdownRateLimitStore = (): Promise<void> => {
-    if (!ownedClientState.closed && ownedClient !== undefined) {
-      ownedClientState.closed = true;
-      ownedClient.disconnect();
-    }
-    return Promise.resolve();
-  };
+  // Injected clients retain their caller-owned connection lifecycle.
+  const ownedClient = await connectOwnedClient(redis, client);
+  const shutdownRateLimitStore = shutdownFor(ownedClient);
 
   const storeFor = (bucket: string): Store | undefined =>
     client
