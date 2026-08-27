@@ -34,16 +34,24 @@ const isDerivedAbort = (error: unknown, primary: unknown): boolean =>
 
 export const createRevealCanaryLifecycle = (
   runController: RunHostCheckpointController,
+  maxDurationMs = REVEAL_CONTINUATION_ATTEMPT_MAX_MS,
 ): RevealCanaryLifecycle => {
+  if (!Number.isSafeInteger(maxDurationMs) || maxDurationMs < 1)
+    throw new Error(
+      "Reveal canary lifecycle duration must be a safe positive integer",
+    );
   const owner = new AbortController();
   const onInterrupt = (): void => owner.abort(abortReasonFor("SIGINT"));
   const onTerminate = (): void => owner.abort(abortReasonFor("SIGTERM"));
   process.once("SIGINT", onInterrupt);
   process.once("SIGTERM", onTerminate);
+  const deadlineMessage =
+    maxDurationMs === REVEAL_CONTINUATION_ATTEMPT_MAX_MS
+      ? "Reveal continuation 24-minute deadline exceeded"
+      : "Reveal continuation aggregate deadline exceeded";
   const deadline = setTimeout(
-    () =>
-      owner.abort(new Error("Reveal continuation 24-minute deadline exceeded")),
-    REVEAL_CONTINUATION_ATTEMPT_MAX_MS,
+    () => owner.abort(new Error(deadlineMessage)),
+    maxDurationMs,
   );
   const controller = runController({ signal: owner.signal }).then(
     (code) => ({ code }) as const,
@@ -54,8 +62,8 @@ export const createRevealCanaryLifecycle = (
   );
   return {
     signal: owner.signal,
-    deadlineAt: Date.now() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS,
-    deadlineMonotonic: performance.now() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS,
+    deadlineAt: Date.now() + maxDurationMs,
+    deadlineMonotonic: performance.now() + maxDurationMs,
     monotonicNow: performance.now.bind(performance),
     controller,
     abort: (reason) => owner.abort(reason),

@@ -231,23 +231,39 @@ before baseline execution rather than trimming cells.
 #### Scenario: one production canary proves timing and acceptance without a duplicate rehearsal
 
 - **GIVEN** the exact `admin/demo` canary uses the unchanged production child,
-  replay, continuation, grant, receipt, and five-second checkpoint topology
-- **WHEN** one source-bound attempt starts its first runtime effect
+  replay, continuation, grant, receipt, checkpoint, and terminal-publication
+  topology
+- **WHEN** one source-bound aggregate attempt starts its first runtime effect
 - **THEN** the parent MAY use that same attempt as the focused timing proof and
-  task-5.19 acceptance only if the complete frontier is empty and the
-  parent-authored canary PASS is published within 24 minutes
-- **AND** the stock canary command starts and owns the in-process host
-  controller, applies one monotonic 24-minute deadline across all continuation
-  children and checkpoints, and forwards deadline, `SIGINT`, and `SIGTERM`
-  cancellation to the active owned process group and controller
-- **AND** each child hard wall is capped by the remaining parent time minus
-  kill grace, and parent PASS or canary publication is forbidden after expiry
-- **AND** the remaining 6 minutes of the 30-minute supervisor window are used
-  only for controller termination, teardown, exact source read-back, and
-  verified zero process, listener, container, and volume residue
+  task-5.19 acceptance only when the complete source-derived frontier is empty
+  and the parent-authored aggregate canary PASS is published before the
+  source-bound supervisor deadline
+- **AND** the aggregate attempt consists of one ordered sequence of partition
+  receipts; every receipt carries a `partitionPlanDigest` that transitively
+  identifies the exact source/tree/plan, while the receipt itself binds its
+  predecessor and its half-open cumulative candidate-count range
+  `[startCandidateCount, endCandidateCount)`, with no overlap or gap and only
+  the declared single terminal overshoot permitted
+- **AND** the accepted plan binds `partitionMaxMs=4_500_000`,
+  `teardownReserveMs=360_000`, and a derived
+  `supervisorMaxMs = maxPartitions * partitionMaxMs + teardownReserveMs`; a
+  caller cannot replace any of these values for an individual partition
+- **AND** ordinary candidate work, checkpoint waits, and starting a new child
+  stop at the aggregate supervisor deadline minus
+  `teardownReserveMs`; once a terminal result is known, its terminal
+  checkpoint response and permit-bound publication may use the outer deadline,
+  after which only controller settlement, teardown, exact source read-back, and
+  verified zero-residue checks may continue
+- **AND** aggregate completion is `COVERAGE_ONLY`; the partition child-cleanup
+  scope is recorded separately, and a full supervisor zero-process, listener,
+  container, and volume residue proof is required independently before
+  acceptance
+- **AND** the parent-attempt HMAC/authority tag is ephemeral in-memory
+  anti-tamper state and is never treated as an archived public signature or
+  reusable continuation authority
 - **AND** timeout, incomplete frontier, receipt/chunk/grant lineage mismatch,
-  missing PASS, or cleanup residue is NOT-PROVEN and the attempt is not retried
-  at that source
+  missing publication, terminal publication failure, or cleanup residue is
+  NOT-PROVEN and the aggregate attempt is not retried at that source
 - **AND** cancellation-derived controller cleanup is collapsed only when its
   `AbortError.cause` is the exact parent failure object; an uncaused,
   differently caused, same-message, or nonzero-controller failure remains

@@ -19,6 +19,7 @@ import {
   preparePreflightFullPaths,
 } from "./launch/preflight-launcher-support.ts";
 import { runPreflightPlaywrightChild } from "./launch/preflight-playwright-child.ts";
+import type { PreflightPlaywrightChildCleanupEvidence } from "./launch/preflight-playwright-child-cleanup.ts";
 import { runPreflightRepairChain } from "./launch/preflight-repair-chain.ts";
 import {
   preflightShardChildEnvironment,
@@ -195,6 +196,9 @@ if (mode === "shard") {
       readonly maxDurationMs: number;
       readonly terminationGraceMs: number;
       readonly signal?: AbortSignal;
+      readonly onCleanup?: (
+        evidence: PreflightPlaywrightChildCleanupEvidence,
+      ) => void;
     }>,
   ): Promise<number> =>
     (async () => {
@@ -232,6 +236,14 @@ if (mode === "shard") {
       });
     })();
 
+  const closePersistentServerLease = async (): Promise<void> => {
+    const lease = runtimeState.persistentServerLease;
+    if (lease === undefined) return;
+    await lease.close();
+    delete runtimeState.persistentServerLease;
+    delete runtimeState.activeRevealAttemptId;
+  };
+
   const runRevealCanary = (): Promise<number> => {
     if (selector === undefined)
       throw new Error(
@@ -246,6 +258,7 @@ if (mode === "shard") {
         requiredEnv("RUNTIME_SWEEP_PREFLIGHT_CANARY"),
       ),
       selector,
+      aggregatePartitions: true,
       hostCheckpointRoot: requiredEnv(
         "RUNTIME_SWEEP_PREFLIGHT_HOST_CHECKPOINT_ROOT",
       ),
@@ -265,11 +278,9 @@ if (mode === "shard") {
             ...(context.signal === undefined ? {} : { signal: context.signal }),
           });
       },
+      beforeAggregateTerminalPublication: closePersistentServerLease,
       afterRun: async () => {
-        const lease = runtimeState.persistentServerLease;
-        delete runtimeState.persistentServerLease;
-        delete runtimeState.activeRevealAttemptId;
-        if (lease !== undefined) await lease.close();
+        await closePersistentServerLease();
       },
     });
   };

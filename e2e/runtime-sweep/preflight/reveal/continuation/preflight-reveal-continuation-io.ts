@@ -184,6 +184,24 @@ const readCanonicalJson = async <T>(input: {
   }
 };
 
+/** Write a strict, immutable continuation-family JSON artifact with a caller-owned schema. */
+export const writeRevealContinuationJson = async <T>(input: {
+  readonly archiveRoot: string;
+  readonly filePath: string;
+  readonly value: T;
+  readonly parse: (value: unknown) => T;
+  readonly commitGuard?: PublicationCommitGuard;
+}): Promise<void> =>
+  writeImmutableJson({
+    archiveRoot: input.archiveRoot,
+    filePath: input.filePath,
+    value: input.value,
+    parse: input.parse,
+    ...(input.commitGuard === undefined
+      ? {}
+      : { commitGuard: input.commitGuard }),
+  });
+
 export async function assertRevealContinuationOutputAbsent(input: {
   readonly archiveRoot: string;
   readonly filePath: string;

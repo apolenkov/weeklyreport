@@ -251,15 +251,18 @@ exact primary object. An `AbortError` without that cause, one with a different
 cause, an arbitrary same-message error, or a nonzero controller exit remains an
 independent cleanup failure and is aggregated with the primary error.
 
-The resource-aware continuation keeps one headless Playwright worker and gives
-each child three cooperative source/plan-bound limits: a 60-second soft wall,
-256 completed terminal candidates, and 1,024 reveal-action delta. It reserves
-10 seconds for cooperative publication and teardown, enforces a 90-second hard
-process-group wall with 10 seconds of kill grace, and retains the global
-16,384-action limit. The parent additionally enforces one monotonic 24-minute
-deadline across every child and checkpoint. Each child hard wall is capped by
-the smaller of 90 seconds and the remaining parent time minus kill grace, and
-no parent PASS or canary may be published after that deadline.
+The resource-aware single-state continuation keeps one headless Playwright
+worker and gives each child three cooperative source/plan-bound limits: a
+60-second soft wall, 256 completed terminal candidates, and 1,024 reveal-action
+delta. It reserves 10 seconds for cooperative publication and teardown,
+enforces a 90-second hard process-group wall with 10 seconds of kill grace,
+and retains the global 16,384-action limit. For this ordinary single-state
+path, the parent additionally enforces one monotonic 24-minute deadline across
+every child and checkpoint. Each child hard wall is capped by the smaller of
+90 seconds and the remaining parent time minus kill grace, and no parent PASS
+or canary may be published after that deadline. The aggregate exact canary
+path below uses its own source-bound partition plan instead of this single-
+state deadline.
 The child evaluates all three soft limits only after a terminal candidate; the
 first reached limit seals a disjoint suffix. A hard expiry inside a candidate
 kills the owned process group and terminates the attempt without a grant.
@@ -269,14 +272,25 @@ successor or publish completion.
 
 The exact production canary may serve as both the focused timing proof and the
 task-5.19 acceptance attempt, avoiding a duplicate rehearsal, only as one
-fail-closed attempt. Its 30-minute supervisor window is partitioned into at
-most 24 minutes from the first runtime effect through parent-authored canary
-PASS. The external supervisor's remaining 6 minutes are reserved solely for
-controller settlement, teardown, source read-back, and verified zero residue.
-The timing proof uses
-the unchanged child restart, replay, grant, receipt, checkpoint, and terminal
-publication path. A timeout, non-empty frontier, inconsistent lineage, missing
-PASS, or any residue is NOT-PROVEN and permits no retry at that source.
+fail-closed aggregate attempt. The accepted plan binds
+`partitionMaxMs=4_500_000` and `teardownReserveMs=360_000`; its derived
+`supervisorMaxMs` is `maxPartitions * partitionMaxMs + teardownReserveMs`.
+The attempt is one ordered sequence of partition receipts whose
+`partitionPlanDigest` transitively binds the exact source/tree/plan. Each
+receipt carries the exact predecessor and a half-open cumulative candidate-count
+range `[startCandidateCount, endCandidateCount)`; ranges are contiguous,
+non-overlapping, and allow only the declared single terminal overshoot. Normal
+candidate work, checkpoint waits,
+and new-child starts are capped by the outer supervisor deadline minus the
+teardown reserve. A terminal checkpoint response and permit-bound publication
+retain the uncapped outer terminal deadline; after publication, only controller
+settlement, teardown, source read-back, and verified zero-residue checks may
+continue. Aggregate completion is coverage-only, while full supervisor
+zero-residue evidence is separate. The parent-attempt HMAC is ephemeral
+in-memory anti-tamper state, not an archived public signature or reusable
+authority. A timeout, non-empty frontier, inconsistent lineage, missing or
+failed publication, or any residue is NOT-PROVEN and permits no retry at that
+source.
 
 Every reveal-path step is a preparation activation, not a second product
 action. Preflight and replay compare the exact database oracle before and after

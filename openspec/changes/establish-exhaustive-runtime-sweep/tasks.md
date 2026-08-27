@@ -269,14 +269,28 @@
       reused state, preserve candidate/receipt ordering and the conservative
       action debit, and add negative continuation/publication tests for target,
       state, URL, inventory, surface, database, timeout, signal, and inverse
-      execution drift. Publish focused timing and operation evidence that the
-      whole source-derived frontier fits the 30-minute attempt with reserve.
-      This MAY be the same single exact production canary that closes the task
-      only when it is fail-closed at 24 minutes from first runtime effect to
-      parent-authored PASS, reserves the remaining 6 minutes solely for
-      termination, teardown, and verified zero residue, and is not retried
-      after timeout, incomplete frontier, lineage mismatch, missing PASS, or
-      cleanup residue. Before that attempt, the stock launcher must reject an
+      execution drift. Publish focused timing and operation evidence for one
+      source-bound aggregate attempt made of ordered partition receipts. Each
+      receipt must carry a `partitionPlanDigest` that transitively binds the
+      exact source/tree/plan; the receipt itself must bind an exact predecessor
+      and a half-open cumulative candidate-count range
+      `[startCandidateCount, endCandidateCount)`; ranges must be contiguous and
+      non-overlapping, with only the declared single terminal overshoot. Bind
+      `partitionMaxMs=4_500_000`,
+      `teardownReserveMs=360_000`, and the derived
+      `supervisorMaxMs = maxPartitions * partitionMaxMs + teardownReserveMs`.
+      Normal candidate work, checkpoint waits, and new-child starts must stop
+      before the teardown reserve; terminal checkpoint response and
+      permit-bound publication may use the outer deadline, after which only
+      controller settlement, teardown, source read-back, and verified
+      zero-residue checks may continue. Completion is coverage-only and full
+      supervisor zero-residue evidence is separate. The parent-attempt HMAC is
+      ephemeral anti-tamper state, not an archived public signature or reusable
+      authority. A single exact production canary may close the task only when
+      its frontier is empty and parent-authored aggregate PASS is published;
+      timeout, incomplete frontier, lineage mismatch, missing or failed
+      publication, or cleanup residue is NOT-PROVEN and is not retried.
+      Before that attempt, the stock launcher must reject an
       equal parent `DATABASE_URL`/`E2E_DATABASE_URL` before Playwright spawn,
       and controller settlement may collapse only an exact primary failure or
       an `AbortError` caused by that same object; independent cleanup failures
