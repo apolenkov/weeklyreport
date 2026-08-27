@@ -5,8 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import { readPreflightCanaryArtifact } from "../../../canary/preflight-canary.ts";
 import { REVEAL_CONTINUATION_LIMITS } from "../../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
+import { RevealContinuationBudgetError } from "../../continuation/preflight-reveal-continuation-budget-error.ts";
+import { initialParentProgress } from "../../continuation/preflight-reveal-continuation-parent-progress.ts";
 import { withCleanSealedGrantFixture } from "../../continuation/preflight-reveal-continuation-parent-test-fixture.ts";
 import { runChildUntilDone } from "../preflight-reveal-host-checkpoint-parent.ts";
+import { runRevealContinuationChildWithBudget } from "./preflight-reveal-host-checkpoint-budget-runner.ts";
 
 describe("host checkpoint parent child-budget diagnostic", () => {
   it("rejects a post-checkpoint diagnostic without checkpoint bindings", async () => {
@@ -204,6 +207,44 @@ describe("host checkpoint parent child-budget diagnostic", () => {
         reason: "INSUFFICIENT_REMAINING_BUDGET",
       });
       expect(canary.frontier).not.toBeNull();
+    });
+  });
+
+  it("keeps a budget error after browser launch terminal in aggregate mode", async () => {
+    await withCleanSealedGrantFixture(async (fixture) => {
+      const budgetError = new RevealContinuationBudgetError({
+        remainingMs: 88_499,
+        requiredMs: 100_000,
+      });
+      let boundaryCalls = 0;
+      const context = {
+        ...fixture.context,
+        runPlaywright: () => Promise.reject(budgetError),
+      };
+      await expect(
+        runRevealContinuationChildWithBudget({
+          context,
+          progress: initialParentProgress(),
+          ordinal: 0,
+          runChild: async ({ context: childContext }) => {
+            await childContext.runPlaywright("canary");
+            throw new Error("unreachable");
+          },
+          remainingMs: 100_000,
+          assertTerminalPublicationActive: () => undefined,
+          onPrelaunchBudgetExhausted: () => {
+            boundaryCalls += 1;
+          },
+        }),
+      ).resolves.toBeUndefined();
+      expect(boundaryCalls).toBe(0);
+      await expect(
+        readPreflightCanaryArtifact(context.canaryPath),
+      ).resolves.toMatchObject({
+        status: "FAIL_NOT_PROVEN",
+        functionalRemainingMs: 88_499,
+        requiredChildWindowMs: 100_000,
+      });
     });
   });
 });

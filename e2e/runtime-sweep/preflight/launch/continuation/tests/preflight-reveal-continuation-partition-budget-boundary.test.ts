@@ -8,6 +8,7 @@ import { selectionFor } from "../../../reveal/continuation/preflight-reveal-cont
 import type { RequestHostCheckpoint } from "../../checkpoint/preflight-reveal-host-checkpoint-client.ts";
 import { responseFor } from "../../checkpoint/preflight-reveal-host-checkpoint-parent-test-fixture.ts";
 import { runChildUntilPartitionBoundary } from "../../checkpoint/preflight-reveal-host-checkpoint-partition.ts";
+import { RevealContinuationBudgetError } from "../preflight-reveal-continuation-budget-error.ts";
 import type {
   ParentContext,
   ParentProgress,
@@ -198,6 +199,64 @@ describe("aggregate partition budget boundaries", () => {
           },
         });
         expect(childCalls).toBe(1);
+        expect(result).toMatchObject({
+          status: "BOUNDARY",
+          completedChildOrdinal: 0,
+          nextOrdinal: 1,
+          exitCode: 0,
+          progress: { previousCompletedCandidateCount: 1 },
+        });
+        await expect(access(context.canaryPath)).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      } finally {
+        await rm(archiveRoot, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("turns an inner pre-launch budget race into a partial partition boundary", async () => {
+    await withCleanSource(async ({ source, repoRoot }) => {
+      const archiveRoot = await mkdtemp(
+        path.join(process.cwd(), ".r-aggregate-inner-budget-boundary-"),
+      );
+      try {
+        const context = contextFor({
+          source,
+          repoRoot,
+          archiveRoot,
+          monotonicNow: () => 0,
+        });
+        let childCalls = 0;
+        const result = await runChildUntilPartitionBoundary({
+          context,
+          progress: initialParentProgress(),
+          ordinal: 0,
+          maxChildren: 2,
+          partitionStartCandidateCount: 0,
+          partitionCandidateLimit: 1024,
+          runChild: ({ context: childContext, ordinal }) => {
+            childCalls += 1;
+            if (ordinal > 0)
+              throw new RevealContinuationBudgetError({
+                remainingMs: 88_499,
+                requiredMs: 100_000,
+              });
+            childContext.onChildCleanup?.({
+              status: "PASS",
+              ownership: "OWNED",
+              processGroup: "GONE",
+              pid: 21_000,
+              pgid: 21_000,
+              childOrdinal: ordinal,
+            });
+            return Promise.resolve({
+              done: false,
+              progress: progressFor(1),
+            });
+          },
+        });
+        expect(childCalls).toBe(2);
         expect(result).toMatchObject({
           status: "BOUNDARY",
           completedChildOrdinal: 0,
