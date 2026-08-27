@@ -15,7 +15,10 @@ import { captureJobTraceContext } from "../../../bullmq/worker-observability.js"
 import type { EnvConfig } from "../../../config/env.schema";
 import { clearOrgCache } from "../../trpc.context.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { adminProcedure } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+} from "../../trpc.middleware.js";
 
 export interface AdminSettingsDeps {
   readonly snapshotAdminService: SnapshotAdminService;
@@ -70,6 +73,7 @@ function createSnapshotSettingsProcedures(deps: AdminSettingsDeps) {
     }),
     updateSettings: adminProcedure
       .input(appSettingsUpdateSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           return await deps.snapshotAdminService.updateSettings(
@@ -96,6 +100,7 @@ function createTelegramSettingsProcedures(deps: AdminSettingsDeps) {
     // Retry lives on job options so producers stay free of queue semantics.
     testTelegramSend: adminProcedure
       .input(adminTestTelegramSendSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
           const job = await requireTelegramOutboundQueue(deps).add(
@@ -127,6 +132,7 @@ function createOrganizationProcedures(deps: AdminSettingsDeps) {
     // Read before-state in the same call so audit has previous and new identity.
     updateOrganization: adminProcedure
       .input(organizationUpdateSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ ctx, input }) => {
         try {
           const organizationService = requireOrganizationService(deps);

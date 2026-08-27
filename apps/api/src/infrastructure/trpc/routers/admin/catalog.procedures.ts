@@ -7,7 +7,10 @@ import { z } from "zod";
 
 import type { ProjectAdminService } from "../../../../modules/admin/index.js";
 import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
-import { adminProcedure } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+} from "../../trpc.middleware.js";
 
 export interface AdminCatalogDeps {
   readonly projectAdminService: ProjectAdminService;
@@ -17,6 +20,7 @@ function reportingGroupProcedures(deps: AdminCatalogDeps) {
   return {
     saveReportingGroup: adminProcedure
       .input(reportingGroupSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.upsertReportingGroup(input),
@@ -25,6 +29,7 @@ function reportingGroupProcedures(deps: AdminCatalogDeps) {
 
     archiveReportingGroup: adminProcedure
       .input(z.object({ groupId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.archiveReportingGroup(input.groupId),
@@ -37,6 +42,7 @@ function projectProcedures(deps: AdminCatalogDeps) {
   return {
     saveProject: adminProcedure
       .input(adminProjectSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.upsertProject(input),
@@ -45,6 +51,7 @@ function projectProcedures(deps: AdminCatalogDeps) {
 
     deleteProject: adminProcedure
       .input(z.object({ projectId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.removeProject(input.projectId),
@@ -63,6 +70,7 @@ function stageAssignmentProcedures(deps: AdminCatalogDeps) {
           projectId: z.uuid(),
         }),
       )
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.saveStageAssignment(input),
@@ -71,6 +79,7 @@ function stageAssignmentProcedures(deps: AdminCatalogDeps) {
 
     deleteStageAssignment: adminProcedure
       .input(z.object({ id: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.deleteStageAssignment(input.id),
@@ -109,6 +118,7 @@ function groupProductEdgeProcedures(deps: AdminCatalogDeps) {
   return {
     attachProductToGroup: adminProcedure
       .input(groupProductEdgeInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.attachProductToGroup(input),
@@ -117,6 +127,7 @@ function groupProductEdgeProcedures(deps: AdminCatalogDeps) {
 
     detachProductFromGroup: adminProcedure
       .input(groupProductEdgeInputSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.projectAdminService.detachProductFromGroup(input),

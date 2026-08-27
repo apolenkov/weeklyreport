@@ -1,10 +1,14 @@
 ## Context
 
 See `proposal.md` for motivation and the two delta specs for the behavioral
-contract. Today `mutationAuditMiddleware` passes the decoded input and the
-thrown message to `recordMutationAudit`. The input is walked only for target
-ids, but the failure message is merely whitespace-collapsed, email-redacted,
-and length-bounded before both the AppLogger event and `UserActionLog` write.
+contract. The original `mutationAuditMiddleware` read transport input through
+`getRawInput()` after the resolver and passed it to `recordMutationAudit`.
+Because tRPC's route-specific `.input(...)` parser runs later in the middleware
+chain, an unknown nested `id` could be stripped before the resolver yet still
+be discovered by the recursive audit target extractor. The same middleware
+also passed the thrown message; that message was merely whitespace-collapsed,
+email-redacted, and length-bounded before both the AppLogger event and
+`UserActionLog` write.
 The list repository selects the whole Prisma row, the service spreads it into
 the tRPC response, and the web row type silently drops `ip` and `durationMs`.
 The UI filters loaded rows but omits timestamp and displayed labels from its
@@ -49,7 +53,31 @@ result.error.message -> partial sanitizer -> mutation audit envelope
 
 ## Decisions
 
-### D1 - Failure `reason` becomes a classification, never an error message
+### D1 - Target extraction receives only post-validation input
+
+Keep the canonical outer mutation-audit middleware in every protected role
+chain, but give it a request-local input state. Every parsed mutation attaches
+one shared capture middleware immediately after its final `.input(...)`. That
+capture point receives tRPC's decoded output after validation, transforms, and
+unknown-key stripping. The outer middleware reads only that state; input-parser
+failures and mutations without input produce no target rather than falling back
+to transport data.
+
+The role-coverage inventory admits the shared capture middleware as tRPC
+plumbing and independently rejects every non-auth/non-AI parsed mutation that
+lacks it or places it before its final parser. This preserves the eight
+canonical base-chain identities while making the privacy boundary fail closed
+for new routes.
+
+Alternative rejected: continue walking `getRawInput()` and redact sensitive
+keys. Unknown properties are not part of the procedure contract, and an
+arbitrary key named `id` can look exactly like a legitimate target.
+
+Alternative rejected: re-run each route's parser from the audit middleware.
+Parser functions may transform values or carry effects; tRPC already provides
+the authoritative decoded value at the post-input middleware point.
+
+### D2 - Failure `reason` becomes a classification, never an error message
 
 The middleware will pass `result.error.code`, not `result.error.message`, into
 the mutation audit recorder. Success writes `reason: null`; failure writes one
@@ -72,7 +100,7 @@ Alternative rejected: migrate or delete historical `reason` values. The API
 normalization closes exposure immediately without a destructive operation or
 schema-history change, while rollback remains possible.
 
-### D2 - One shared strict DTO defines the complete public allowlist
+### D3 - One shared strict DTO defines the complete public allowlist
 
 Add strict shared schemas for one admin action-log event and its cursor page.
 The event schema enumerates exactly the existing Prisma fields and the fixed
@@ -89,7 +117,7 @@ Alternative rejected: keep the inferred router output alone. Compile-time
 inference does not reject an extra runtime field and cannot serve as a
 security allowlist.
 
-### D3 - Disclosure is a second table row owned by one semantic button
+### D4 - Disclosure is a second table row owned by one semantic button
 
 Each summary row owns a button with `aria-expanded` and `aria-controls`. When
 open, an adjacent full-width table row contains a labelled detail region and a
@@ -106,7 +134,7 @@ correlation-copy action.
 Alternative rejected: show JSON from `JSON.stringify(row)`. That would couple
 the clipboard boundary to whatever fields the query object happens to acquire.
 
-### D4 - Search uses one pure representation builder over loaded rows
+### D5 - Search uses one pure representation builder over loaded rows
 
 Move the predicate into a tested model helper. Its corpus contains raw and
 displayed values for procedure and status, both ISO and formatted timestamp,
@@ -123,7 +151,7 @@ Alternative rejected: add server-side search in this change. It would require
 a separate query contract, database indexes and full-history semantics, none of
 which the owner or catalog requested.
 
-### D5 - Multi-page proof uses deterministic non-production seed data
+### D6 - Multi-page proof uses deterministic non-production seed data
 
 The full disposable fixture will own at least 21 non-proof Action Log events
 with stable ids and timestamps. Repository integration tests retain the
@@ -136,7 +164,7 @@ No production seed or runtime mutation is part of implementation verification.
 Any later live recapture must use the exact disposable database guard and be
 bound to one source patch digest.
 
-### D6 - Catalog correction is specific and review-backed
+### D7 - Catalog correction is specific and review-backed
 
 `admin-actions-view` will replace `raw payload` with `whitelisted event
 details` and enumerate the observable loaded-row search/pagination behavior.
@@ -146,10 +174,11 @@ generated field or control needs live-source or accepted-OpenSpec support;
 semantic grounding remains a human review obligation because a generic parser
 cannot infer product meaning.
 
-### D7 - Load-bearing invariants remain unchanged
+### D8 - Load-bearing invariants remain unchanged
 
 - **Role-coverage gate:** preserved; `admin.actionLog.list` remains on the
-  existing `adminProcedure`, with no new procedure or hand-rolled middleware.
+  existing `adminProcedure`. The shared post-input capture is recognized only
+  as exact-identity plumbing after one of the eight canonical base chains.
 - **Period dual-state:** untouched; no report or period writer changes.
 - **Destructive DB guard:** untouched; no migration or destructive command.
 - **Deferred-feature pattern:** untouched; this is an implemented admin surface,

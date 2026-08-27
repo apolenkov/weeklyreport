@@ -8,6 +8,7 @@ import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { auditPersistFailuresTotal } from "../metrics/metrics.registry.js";
 import {
   adminProcedure,
+  captureMutationAuditInputMiddleware,
   leadProcedure,
   protectedProcedure,
   router,
@@ -67,22 +68,27 @@ const adminSession = {
 
 const userTargetMutation = adminProcedure
   .input(z.object({ userId: z.uuid() }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => "ok");
 
 const groupProductTargetMutation = adminProcedure
   .input(z.object({ groupId: z.uuid(), productId: z.uuid() }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => "ok");
 
 const nestedTargetMutation = adminProcedure
   .input(z.object({ data: z.object({ sectionId: z.uuid() }) }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => "ok");
 
 const reviewVerdictMutation = adminProcedure
   .input(z.object({ reportSectionId: z.uuid(), verdict: z.string() }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => "ok");
 
 const piiFailingMutation = leadProcedure
   .input(z.object({ id: z.string() }))
+  .use(captureMutationAuditInputMiddleware)
   .mutation(() => {
     throw new TRPCError({
       code: "BAD_REQUEST",
@@ -93,10 +99,12 @@ const piiFailingMutation = leadProcedure
 const auditTestRouter = router({
   saveDraft: leadProcedure
     .input(z.object({ sectionId: z.string(), text: z.string() }))
+    .use(captureMutationAuditInputMiddleware)
     .mutation(({ input }) => ({ id: input.sectionId, ok: true })),
 
   failingMutation: leadProcedure
     .input(z.object({ id: z.string() }))
+    .use(captureMutationAuditInputMiddleware)
     .mutation(() => {
       throw new TRPCError({ code: "BAD_REQUEST", message: "boom" });
     }),

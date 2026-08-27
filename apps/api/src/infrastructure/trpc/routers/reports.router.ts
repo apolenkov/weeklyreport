@@ -9,6 +9,7 @@ import type { WeeklyReportService } from "../../../modules/weekly-report/index.j
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   anyRoleProcedure,
+  captureMutationAuditInputMiddleware,
   protectedProcedure,
   router,
 } from "../trpc.middleware.js";
@@ -44,6 +45,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
 
     saveDraft: protectedProcedure
       .input(draftSaveSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
           return await deps.reportSectionsService.saveDraft(
@@ -57,6 +59,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
 
     submit: protectedProcedure
       .input(submitSectionSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
           return await deps.reportSectionsService.submitSection(

@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import type { PdfExportService } from "../../../modules/pdf-export/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
-import { leadershipProcedure, router } from "../trpc.middleware.js";
+import {
+  captureMutationAuditInputMiddleware,
+  leadershipProcedure,
+  router,
+} from "../trpc.middleware.js";
 
 export interface PdfExportRouterDeps {
   pdfExportService: PdfExportService;
@@ -15,6 +19,7 @@ export function createPdfExportRouter(deps: PdfExportRouterDeps) {
     // print page matches their in-app view (full vs group slice).
     request: leadershipProcedure
       .input(z.object({ reportId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
           return await deps.pdfExportService.requestPdfExport(

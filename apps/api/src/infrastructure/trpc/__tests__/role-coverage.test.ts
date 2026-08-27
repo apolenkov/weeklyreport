@@ -8,6 +8,7 @@ import type { TrpcContext } from "../trpc.context.js";
 import {
   adminProcedure,
   anyRoleProcedure,
+  captureMutationAuditInputMiddleware,
   headProcedure,
   leadershipProcedure,
   leadProcedure,
@@ -31,6 +32,11 @@ function captureChain(starter: unknown): readonly unknown[] {
 
 const ANY_ROLE_CHAIN = captureChain(anyRoleProcedure);
 const LEADERSHIP_CHAIN = captureChain(leadershipProcedure);
+const CAPTURE_MUTATION_AUDIT_INPUT = (
+  captureMutationAuditInputMiddleware as unknown as {
+    _middlewares: readonly unknown[];
+  }
+)._middlewares[0];
 
 const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "publicProcedure", chain: captureChain(publicProcedure) },
@@ -53,8 +59,11 @@ const TRPC_PLUMBING_MIDDLEWARE_NAMES = new Set([
 ]);
 
 function isPlumbingMiddleware(middleware: unknown): boolean {
-  return TRPC_PLUMBING_MIDDLEWARE_NAMES.has(
-    (middleware as { name?: string } | undefined)?.name ?? "",
+  return (
+    middleware === CAPTURE_MUTATION_AUDIT_INPUT ||
+    TRPC_PLUMBING_MIDDLEWARE_NAMES.has(
+      (middleware as { name?: string } | undefined)?.name ?? "",
+    )
   );
 }
 
@@ -70,7 +79,7 @@ function isProcedureChainAllowed(middlewares: readonly unknown[]): boolean {
 }
 
 interface LeafProcedure {
-  _def: { middlewares: readonly unknown[] };
+  _def: { middlewares: readonly unknown[]; type?: string };
 }
 
 function isLeafProcedure(node: unknown): node is LeafProcedure {
@@ -126,6 +135,32 @@ describe("default-deny coverage gate", () => {
     }
 
     expect(offending).toEqual([]);
+  });
+
+  it("every parsed audited mutation captures decoded input after validation", () => {
+    const appRouter = createAppRouter(createStubAppRouterDeps());
+    const uncaptured = collectLeafProcedures(appRouter)
+      .filter(([path, leaf]) => {
+        if (leaf._def.type !== "mutation") return false;
+        if (path.startsWith("auth.") || path.startsWith("ai.")) return false;
+        const inputIndexes = leaf._def.middlewares
+          .map((middleware, index) => ({ middleware, index }))
+          .filter(
+            ({ middleware }) =>
+              (middleware as { name?: string } | undefined)?.name ===
+              "inputValidatorMiddleware",
+          )
+          .map(({ index }) => index);
+        if (inputIndexes.length === 0) return false;
+        const finalInputIndex = inputIndexes.at(-1);
+        const captureIndex = leaf._def.middlewares.indexOf(
+          CAPTURE_MUTATION_AUDIT_INPUT,
+        );
+        return captureIndex <= (finalInputIndex ?? -1);
+      })
+      .map(([path]) => path);
+
+    expect(uncaptured).toEqual([]);
   });
 
   it("mutation test: a procedure built on bare t.procedure triggers the gate", async () => {

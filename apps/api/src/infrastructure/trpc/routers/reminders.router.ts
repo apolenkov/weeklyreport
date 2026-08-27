@@ -5,7 +5,11 @@ import { z } from "zod";
 import type { RemindersService } from "../../../modules/reminders/index.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
-import { headProcedure, router } from "../trpc.middleware.js";
+import {
+  captureMutationAuditInputMiddleware,
+  headProcedure,
+  router,
+} from "../trpc.middleware.js";
 
 const DEFAULT_EXECUTION_LIST_LIMIT = 20;
 
@@ -59,6 +63,7 @@ function createDispatchPendingProcedure(deps: RemindersRouterDeps) {
         leadId: z.uuid().optional(),
       }),
     )
+    .use(captureMutationAuditInputMiddleware)
     .output(
       z.object({
         dispatched: z.number().int().nonnegative(),

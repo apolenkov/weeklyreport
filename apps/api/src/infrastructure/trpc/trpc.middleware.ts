@@ -88,25 +88,65 @@ export const loggingMiddleware = t.middleware(
   },
 );
 
+interface MutationAuditInputState {
+  captured: boolean;
+  decodedInput: unknown;
+}
+
+const MUTATION_AUDIT_INPUT_STATE = Symbol("mutationAuditInputState");
+
+type MutationAuditContext = TrpcContext & {
+  readonly [MUTATION_AUDIT_INPUT_STATE]?: MutationAuditInputState;
+};
+
 const mutationAuditMiddleware = t.middleware(
-  async ({ ctx, next, path, type, getRawInput }) => {
+  async ({ ctx, next, path, type }) => {
     if (type !== "mutation") return next();
     if (path.startsWith("auth.")) return next();
     if (path.startsWith("ai.")) return next();
 
     const start = performance.now();
-    const result = await next();
+    const inputState: MutationAuditInputState = {
+      captured: false,
+      decodedInput: undefined,
+    };
+    const result = await next({
+      ctx: { [MUTATION_AUDIT_INPUT_STATE]: inputState },
+    });
     const duration = Math.round(performance.now() - start);
 
     await recordMutationAudit(ctx, {
       procedure: path,
-      rawInput: await readOptionalRawInput(getRawInput),
+      decodedInput: inputState.captured ? inputState.decodedInput : undefined,
       status: result.ok ? "success" : "fail",
       failureCode: result.ok ? null : result.error.code,
       durationMs: duration,
     });
 
     return result;
+  },
+);
+
+// Attach immediately after a mutation's final `.input(...)`. At that point
+// tRPC has completed validation and unknown-key stripping, so the outer audit
+// middleware can extract identifiers without inspecting transport input.
+export const captureMutationAuditInputMiddleware = t.middleware(
+  ({ ctx, input, next, type }) => {
+    if (type === "mutation") {
+      const inputState = (ctx as MutationAuditContext)[
+        MUTATION_AUDIT_INPUT_STATE
+      ];
+      if (!inputState) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "Mutation audit input capture is outside the canonical chain",
+        });
+      }
+      inputState.captured = true;
+      inputState.decodedInput = input;
+    }
+    return next();
   },
 );
 

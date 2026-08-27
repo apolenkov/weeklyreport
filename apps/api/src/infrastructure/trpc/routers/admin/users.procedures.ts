@@ -6,7 +6,10 @@ import type {
   SnapshotAdminService,
 } from "../../../../modules/admin/index.js";
 import { mapDomainError } from "../../trpc.error-mapper.js";
-import { adminProcedure } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+} from "../../trpc.middleware.js";
 
 export interface AdminUsersDeps {
   readonly snapshotAdminService: SnapshotAdminService;
@@ -19,6 +22,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
   return {
     saveUser: adminProcedure
       .input(adminUserSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           return await deps.snapshotAdminService.upsertUser(input);
@@ -29,6 +33,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
 
     deleteUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           return await deps.snapshotAdminService.removeUser(input.userId);
@@ -40,6 +45,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
     // Redis revoke so in-flight JWTs fail immediately (not only JWT TTL).
     deactivateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           const result = await deps.snapshotAdminService.deactivateUser(
@@ -55,6 +61,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
     // Clear Redis revoke so new logins are not blocked by a stale revoke set.
     activateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input }) => {
         try {
           const result = await deps.snapshotAdminService.activateUser(

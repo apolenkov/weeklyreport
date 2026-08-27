@@ -15,7 +15,10 @@ import {
   runAutoCarryOverWithRetry,
 } from "../../../../modules/carry-over/index.js";
 import { withDomainErrorMapping } from "../../trpc.error-mapper.js";
-import { adminProcedure } from "../../trpc.middleware.js";
+import {
+  adminProcedure,
+  captureMutationAuditInputMiddleware,
+} from "../../trpc.middleware.js";
 import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
@@ -62,6 +65,7 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
   return {
     createPeriodManual: adminProcedure
       .input(adminCreatePeriodManualSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ ctx, input }) =>
         withDomainErrorMapping(async () => {
           const result =
@@ -91,6 +95,7 @@ function createManualPeriodProcedures(deps: AdminPeriodsDeps) {
     // Audit only on non-empty diff so no-op PATCHes stay out of SIEM.
     updatePeriodManual: adminProcedure
       .input(adminUpdatePeriodManualSchema)
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ ctx, input }) =>
         withDomainErrorMapping(async () => {
           const { result, diff } =
@@ -130,6 +135,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     // Atomic archived=true + periodState=archived (dual-state invariant).
     archivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.periodAdminService.archivePeriod(input.periodId),
@@ -139,6 +145,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     // column lost the pre-archive distinction when overwritten with archived.
     unarchivePeriod: adminProcedure
       .input(z.object({ periodId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.periodAdminService.unarchivePeriod(input.periodId),
@@ -147,6 +154,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
     // Guard: published periods cannot be deleted.
     deleteReport: adminProcedure
       .input(z.object({ reportId: z.uuid() }))
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) =>
         withDomainErrorMapping(() =>
           deps.periodAdminService.deleteReport(input.reportId),

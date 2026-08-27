@@ -11,6 +11,7 @@ import { z } from "zod";
 import { errorMessage } from "../../../lib/error-message.js";
 import type { EnvConfig } from "../../config/env.schema";
 import {
+  captureMutationAuditInputMiddleware,
   protectedProcedure,
   publicProcedure,
   router,
@@ -130,6 +131,7 @@ export function createDevRouter(deps: DevRouterDeps) {
           variant: z.enum(["minimal", "demo", "full", "stress"]),
         }),
       )
+      .use(captureMutationAuditInputMiddleware)
       .mutation(({ input }) => {
         assertDevMode(deps.env);
         // Run Prisma reset as a child process so "wipe & reseed" is a
