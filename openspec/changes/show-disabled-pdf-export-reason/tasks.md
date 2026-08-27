@@ -8,5 +8,5 @@
 
 - [x] 2.1 Run the focused PDF button tests, `pnpm --filter @customreport/web typecheck`, scoped ESLint, scoped Prettier, and `git diff --check`.
 - [x] 2.2 Run `openspec validate show-disabled-pdf-export-reason --strict`.
-- [ ] 2.3 Recapture and manually review source-bound C47 browser evidence with the exact prerequisite visible.
-- [ ] 2.4 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm format:check` before marking the change complete.
+- [x] 2.3 Recapture and manually review source-bound C47 browser evidence with the exact prerequisite visible.
+- [x] 2.4 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm format:check` before marking the change complete.
