@@ -58,7 +58,7 @@
 - [x] 4.4 Add or update the DS24 executable browser oracle to expand one row,
       verify/copy only safe details, search by displayed timestamp, load the
       second page, and repeat the terminal source/product-path guard.
-- [ ] 4.5 After repository verification on one unchanged patch digest, recapture
+- [x] 4.5 After repository verification on one unchanged patch digest, recapture
       DS24 and update the external desktop README, visual review, requirement
       adjudication, manifest, and archive index with the refined classification.
 
@@ -70,10 +70,10 @@
 - [x] 5.2 Run `pnpm catalog:check`,
       `pnpm exec openspec validate harden-action-log-details-and-search --strict`,
       and `pnpm exec openspec validate --all --strict` on the same patch.
-- [ ] 5.3 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and the
+- [x] 5.3 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and the
       focused guarded integration/browser evidence command on the same patch;
       record every exit without promoting a narrower green check.
-- [ ] 5.4 Recompute the full tracked-plus-sorted-untracked patch digest, prove
+- [x] 5.4 Recompute the full tracked-plus-sorted-untracked patch digest, prove
       product-path status and source identity did not drift during verification,
       and obtain an independent terminal review of security, accessibility,
       catalog, and requirement coverage before declaring the change apply-done.
