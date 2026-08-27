@@ -14,6 +14,10 @@ import {
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { preflightSegmentSchema } from "../artifacts/preflight-artifact.ts";
 import type { PreflightRoute } from "../execution/playwright-preflight-support.ts";
+import {
+  chainHeadsSchema,
+  frontierSchema,
+} from "../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import { revealPathSchema, revealSurfaceSchema } from "../reveal-path.ts";
 
 export const PREFLIGHT_CANARY_VIEWPORT = {
@@ -77,6 +81,7 @@ const canaryFailurePhaseSchema = z.enum([
   "inventory",
   "reveal",
   "non-mutation",
+  "continuation",
   "unknown",
 ]);
 
@@ -129,10 +134,35 @@ const canaryBlockedSchema = z
   })
   .strict();
 
+const canaryBudgetFailureSchema = z
+  .object({
+    ...canaryIdentityShape,
+    status: z.literal("FAIL_NOT_PROVEN"),
+    route: canaryRouteSchema,
+    phase: z.literal("continuation"),
+    error: canaryErrorSchema,
+    attemptId: stableIdentifierSchema,
+    nextChildOrdinal: z.number().int().nonnegative(),
+    lastCheckpointDigest: sha256DigestSchema.nullable(),
+    lastCheckpointSequence: z.number().int().nonnegative().nullable(),
+    lastSampleSequence: z.number().int().nonnegative().nullable(),
+    grantDigest: sha256DigestSchema,
+    frontierDigest: sha256DigestSchema,
+    frontier: frontierSchema.nullable(),
+    reducerStateDigest: sha256DigestSchema,
+    chain: chainHeadsSchema,
+    functionalRemainingMs: z.number(),
+    requiredChildWindowMs: z.number().int().positive(),
+    reason: z.literal("INSUFFICIENT_REMAINING_BUDGET"),
+    canaryDigest: sha256DigestSchema,
+  })
+  .strict();
+
 export const preflightCanaryArtifactSchema = z.discriminatedUnion("status", [
   canaryPassSchema,
   canaryFailureSchema,
   canaryBlockedSchema,
+  canaryBudgetFailureSchema,
 ]);
 
 export type PreflightCanarySelector = z.infer<
@@ -140,6 +170,10 @@ export type PreflightCanarySelector = z.infer<
 >;
 export type PreflightCanaryArtifact = z.infer<
   typeof preflightCanaryArtifactSchema
+>;
+export type PreflightCanaryBudgetFailure = Extract<
+  PreflightCanaryArtifact,
+  { readonly status: "FAIL_NOT_PROVEN" }
 >;
 export type PreflightCanarySelection = Readonly<{
   readonly selector: PreflightCanarySelector;

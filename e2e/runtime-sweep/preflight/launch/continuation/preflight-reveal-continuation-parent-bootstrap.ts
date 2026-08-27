@@ -24,6 +24,7 @@ import { branchForRef } from "../../reveal/continuation/receipts/preflight-revea
 import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-reveal-branches.ts";
 import { compareRevealControlIdentity } from "../../reveal-path.ts";
 import { MAX_REVEAL_DEPTH } from "../../reveal-path.ts";
+import { assertRevealContinuationInitialProgress } from "./preflight-reveal-continuation-initial-progress.ts";
 import type {
   ParentContext,
   ParentProgress,
@@ -49,33 +50,6 @@ const controlsSorted = (state: RevealDiscoveryState) =>
       },
     ),
   );
-
-const assertInitialProgress = (input: {
-  readonly progress: ParentProgress;
-  readonly ordinal: number;
-}): void => {
-  if (
-    input.ordinal !== 0 ||
-    input.progress.grant !== undefined ||
-    input.progress.inputPath !== undefined ||
-    input.progress.genesis !== undefined ||
-    input.progress.reducerState !== undefined ||
-    input.progress.reducerInput !== undefined ||
-    input.progress.previousGrantDigest !== null ||
-    input.progress.previousCompletedCandidateCount !== 0 ||
-    input.progress.receiptHead !== null ||
-    input.progress.receiptCount !== 0 ||
-    input.progress.chunkHead !== null ||
-    input.progress.chunkCount !== 0 ||
-    input.progress.operationHead !== null ||
-    input.progress.operationChunkCount !== 0 ||
-    stableSerialize(input.progress.operationTotals) !==
-      stableSerialize(zeroRevealOperationTotals())
-  )
-    throw new Error(
-      "R188 empty bootstrap is valid only at the initial zero-chain boundary",
-    );
-};
 
 const assertRunBinding = (input: {
   readonly context: ParentContext;
@@ -216,7 +190,7 @@ export const completeEmptyBootstrap = async (input: {
     ) => Promise<RevealContinuationTerminalPublicationCommit>;
   }>
 > => {
-  assertInitialProgress(input);
+  assertRevealContinuationInitialProgress(input);
   const replay = await validateEmptyBootstrap(input);
   if (
     replay.state.controls.length >

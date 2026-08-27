@@ -306,8 +306,8 @@
             <span class="stat-label">Historical desktop frames</span>
           </div>
           <div class="stat-card">
-            <span class="stat-value">R13</span>
-            <span class="stat-label">Последний bespoke packet</span>
+            <span class="stat-value">R15</span>
+            <span class="stat-label">Последний canary packet</span>
           </div>
         </div>
       </header>
@@ -320,8 +320,8 @@
             >Текущий product source перед этой docs-only редакцией:</strong
           >
           ветка <code>campaign/cr-001-20260820</code>, commit
-          <code>24244c6087685578b5345845d669c2980fb0b454</code>, дерево
-          <code>65675cbcda053279a873d592c06d834a6b94fcfe</code>. До этой
+          <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code>, дерево
+          <code>fde360634736ba3d1d63af27096bfcd83f2b2433</code>. До этой
           roadmap-only редакции worktree был чистым. Три файла Status-карусели
           на этом commit имеют те же Git blob identities, что и в принятом
           desktop source <code>0d03068fa…</code>; это доказывает отсутствие code
@@ -351,14 +351,16 @@
           >.
         </p>
         <p>
-          <strong>Эта редакция roadmap:</strong> фиксирует новую границу
-          экономии: R13 сохранён как последний bespoke process-registry packet.
-          После Sol <code>NO-GO</code> R13 не запускался, R14 не создаётся, а
-          живое доказательство переносится на минимальную стандартную границу
-          Playwright/runtime без сокращения продуктового denominator. На commit
-          <code>29f0a323a</code> сам READY/ARM/registry слой уже удалён: 1 570
-          строк убрано, 511 добавлено, Sol дал <code>GO</code>, live-run не
-          выполнялся.
+          <strong>Эта редакция roadmap:</strong> фиксирует экономную границу:
+          bespoke process-registry больше не развивается, а живое доказательство
+          переносится на минимальную стандартную границу Playwright/runtime без
+          сокращения продуктового denominator. После удаления READY/ARM/registry
+          слоя на commit <code>29f0a323a</code> (1 570 строк убрано, 511
+          добавлено) Sol допустил стандартный canary. R14 исторически
+          остановился на отсутствующем <code>OTEL_SERVICE_NAME</code>; свежий
+          R15 добавил это значение и динамический поиск <code>unlink</code>,
+          после чего 19 browser-сегментов прошли, но terminal frontier не успел
+          завершиться в 24-минутном бюджете. R15 не повторяется.
         </p>
       </div>
       <table>
@@ -376,11 +378,12 @@
             <td>
               Для этой редакции текущий source identity — ветка
               <code>campaign/cr-001-20260820</code>, committed
-              <code>24244c6087685578b5345845d669c2980fb0b454</code> с деревом
-              <code>65675cbcda053279a873d592c06d834a6b94fcfe</code>. Свежий
-              exact-SHA runtime capture для него не выполнялся, поэтому он не
-              является runtimeEvidenceSha. Исторические repair boundaries с
-              лимитом <code>8192</code> и исходом <code>ITERATE</code> остаются
+              <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code> с деревом
+              <code>fde360634736ba3d1d63af27096bfcd83f2b2433</code>. Свежий
+              exact-SHA R15 canary дошёл до Chromium, но не опубликовал полный
+              terminal frontier, поэтому этот source всё ещё не является
+              runtimeEvidenceSha. Исторические repair boundaries с лимитом
+              <code>8192</code> и исходом <code>ITERATE</code> остаются
               историческими и не переименованы в <code>PASS</code>. Исторический
               принятый desktop-пакет привязан к source SHA
               <code>0d03068fae9efc79c062698fd34c41c9810f9af2</code>
@@ -438,13 +441,16 @@
           <tr>
             <td>Current host eligibility</td>
             <td>
-              <span class="status warn">NOT-PROVEN IN THIS LANE</span>
+              <span class="status warn">BOUNDED-PROVEN / ACCEPTANCE OPEN</span>
             </td>
             <td>
-              Wave 0 continuity не выполняет host eligibility или executable
-              pre-run gate. Следующий runtime-исполнитель должен перечитать
-              exact source identity и получить свежий Sol pre-run result; старые
-              host snapshots не переносятся на текущий SHA.
+              Для R15 свежий 60-сэмпловый host baseline и 19 parent-only
+              checkpoint-наблюдений были source/tree/campaign-bound и здоровыми;
+              после остановки независимое чтение подтвердило отсутствие
+              контейнеров, процессов и слушающих портов. Это bounded host
+              evidence, а не разрешение переносить старый runtimeEvidenceSha:
+              каждый новый source-bound запуск всё равно требует нового Sol
+              pre-run result.
             </td>
           </tr>
           <tr>
@@ -512,8 +518,9 @@
               untrusted D: ветка остаётся ordinary, D сохраняется, а plus-one
               cap остаётся fail-closed. Это закрывает только часть локального
               кодового контура 5.19, но не его acceptance: exact
-              <code>admin/demo</code> canary на новом clean source ещё не
-              выполнен. Поэтому canonicalization остаётся
+              <code>admin/demo</code> canary на новом clean source был выполнен
+              в R15, однако terminal frontier не опубликован из-за ограничения
+              бюджета. Поэтому canonicalization остаётся
               <code>CODE-PARTIAL / CANARY NOT-PROVEN</code>, а старые capacity
               boundary и Sol <code>ITERATE</code> receipts не переименовываются
               в PASS.
@@ -526,18 +533,17 @@
             </td>
             <td>
               На текущем committed source
-              <code>24244c6087685578b5345845d669c2980fb0b454</code> /
-              <code>65675cbcda053279a873d592c06d834a6b94fcfe</code> source и
-              детерминированные тесты контракта готовы, но live canary не
-              выполнен. R8, R9 и R11 fail-closed остановились до первого
-              runtime-effect; R12 и R13 получили Sol <code>NO-GO</code> и не
-              запускались. R13 — последняя итерация bespoke process-registry;
-              сам registry/READY/ARM код теперь удалён и принят Sol на
-              <code>29f0a323a</code>. R14 не создаётся. Следующее доказательство
-              должно использовать минимальную стандартную границу
-              Playwright/runtime, сохранить exact <code>admin/demo</code>, 20
-              row-local toggles, ordered-pair denominator, 24-минутную рабочую
-              границу и 6 минут на проверенную очистку.
+              <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code> /
+              <code>fde360634736ba3d1d63af27096bfcd83f2b2433</code> source и
+              детерминированные тесты контракта готовы. R15 получил Sol
+              <code>GO_PRE_LIVE_CANARY</code> и дошёл до живого Chromium: 19/19
+              checkpoint-сегментов и 19 Playwright <code>1 passed</code>, но
+              fail-closed остановился перед terminal publication на
+              <code>INSUFFICIENT_REMAINING_BUDGET</code>
+              (<code>76945ms &lt; 100000ms</code>). Cleanup прошёл, однако
+              acceptance task 5.19 остаётся <code>NOT-PROVEN</code>. R15 не
+              повторяется; следующий атом должен исправить terminal receipt и
+              доказать, что frozen frontier помещается в budget.
             </td>
           </tr>
           <tr>
@@ -684,11 +690,12 @@
           >product/spec findings → thin 5.19 admin/demo one-shot → role/profile
           batches → fresh desktop review → final gates → release</code
         >. Тестовый контур больше не развивается как самостоятельный продукт:
-        R13 закрывает bespoke packet line, R14 запрещён текущим owner decision.
-        При этом denominator CR-001 не сокращается. Текущий source identity
-        перед этой roadmap-only правкой зафиксирован в
-        <code>24244c6087685578b5345845d669c2980fb0b454</code> с деревом
-        <code>65675cbcda053279a873d592c06d834a6b94fcfe</code>; Sol plan gate
+        R13 закрыл bespoke packet line, R14 является историческим неудачным
+        запуском, а R15 завершён как NOT-PROVEN без повтора. При этом
+        denominator CR-001 не сокращается. Текущий source identity перед этой
+        roadmap-only правкой зафиксирован в
+        <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code> с деревом
+        <code>fde360634736ba3d1d63af27096bfcd83f2b2433</code>; Sol plan gate
         <code>APPROVE</code> сохранён в receipt
         <code>SOL-FULL-PLAN-APPROVAL-R7.json</code>. Перед любой browser-работой
         должен пройти короткую source/target/ports preflight и новый Sol review;
@@ -746,15 +753,13 @@
           <span>
             Source-bound row-local контракт, target-based identity, reversible
             pair-order proof, parent-derived operation evidence и отрицательные
-            проверки сохранены в product source. Ночной цикл доказал не дефект
-            продукта, а непропорциональную сложность внешнего packet lifecycle:
-            R13 Sol-review нашёл нелинеаризованный concurrent refresh и
-            недоказанную стабильность live-member set. R13 не запускался;
-            evidence сохранён в
-            <code>2026-08-26-runtime-evidence-62d48a28-single-5.19-r13/</code>.
-            Registry/READY/ARM append chain удалён на <code>29f0a323a</code> и
-            заменён одной стандартной bounded process-group границей. Sol принял
-            diff; live canary этим коммитом не выполнялся.
+            проверки сохранены в product source. Registry/READY/ARM append chain
+            удалён на <code>29f0a323a</code> и заменён стандартной bounded
+            process-group границей. На exact source
+            <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code> R15 получил
+            независимый Sol допуск и выполнил 19/19 browser-сегментов, но
+            continuation fail-closed остановился до terminal empty frontier
+            из-за недостатка бюджета. Cleanup доказан, полная acceptance — нет.
           </span>
         </li>
         <li>
@@ -897,19 +902,19 @@
       <div class="callout">
         <p>
           От владельца сейчас не требуется ручное действие. Исполнитель сначала
-          использует единственный канонический репозиторий, закрывает уже
-          выявленные продуктовые и спецификационные хвосты, затем получает
-          Sol-решение по тонкой стандартной границе 5.19. После единственного
-          успешного admin/demo canary запускаются role/profile batches, свежий
+          использует единственный канонический репозиторий и новый source-bound
+          campaign для исправления terminal receipt/budget boundary, затем
+          получает свежий Sol-допуск и выполняет ровно один canary. Только после
+          доказанного empty frontier запускаются role/profile batches, свежий
           desktop review, финальные gates и release. Полное CR-001 пока не
-          закрыто; R13 не является product failure, а R14 не входит в план.
+          закрыто; R15 не является product failure и не повторяется.
         </p>
       </div>
 
       <footer>
         Точка отсчёта этой редакции — committed source
-        <code>24244c6087685578b5345845d669c2980fb0b454</code> с деревом
-        <code>65675cbcda053279a873d592c06d834a6b94fcfe</code>. Pair-level
+        <code>ac02c43d36aa7dfa5fe8915a6b38fd0b3e41bee1</code> с деревом
+        <code>fde360634736ba3d1d63af27096bfcd83f2b2433</code>. Pair-level
         code/test/review and all runtime claims remain separately bounded;
         <code>runtimeEvidenceSha</code> ещё не доказан. Эта docs-only правка
         после фиксации получит отдельный SHA/tree. Дорожная карта не содержит

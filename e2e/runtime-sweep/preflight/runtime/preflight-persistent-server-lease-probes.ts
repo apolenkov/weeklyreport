@@ -4,7 +4,6 @@ import {
   assertPersistentServerLeaseIdentity,
   type PersistentServerLease,
   type PersistentServerLeaseExpected,
-  type PersistentServerLeaseFile,
   type PersistentServerLeaseProbe,
   type PersistentServerLeaseServer,
   readPersistentServerLease,
@@ -63,7 +62,7 @@ const processSnapshotFor = (pid: number): ProcessSnapshot => {
   return snapshot;
 };
 
-export const assertPersistentServerProcessGroupLive = (
+const assertPersistentServerProcessGroupLive = (
   server: PersistentServerLeaseServer,
 ): void => {
   try {
@@ -146,7 +145,7 @@ export const assertPersistentServerListenerOwned = (
   }
 };
 
-export const assertPersistentServerHealthy = async (
+const assertPersistentServerHealthy = async (
   server: PersistentServerLeaseServer,
   signal?: AbortSignal,
 ): Promise<void> => {
@@ -302,14 +301,4 @@ const processGroupGone = (server: PersistentServerLeaseServer): boolean => {
     if (code === "ESRCH") return true;
     throw error;
   }
-};
-
-export const assertPersistentServerLeaseFile = async (input: {
-  readonly path: string;
-  readonly digest: string;
-  readonly expected: PersistentServerLeaseExpected;
-}): Promise<PersistentServerLeaseFile> => {
-  const file = await readPersistentServerLease(input);
-  assertPersistentServerLeaseIdentity(file.lease, input.expected);
-  return file;
 };

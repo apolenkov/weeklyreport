@@ -22,6 +22,7 @@ import {
   assertRevealExecutionGrantAuthority,
   assertRevealExecutionGrantSource,
 } from "../../reveal/continuation/preflight-reveal-continuation-validators.ts";
+import { RevealContinuationBudgetError } from "./preflight-reveal-continuation-budget-error.ts";
 import type {
   ParentContext,
   ParentProgress,
@@ -45,9 +46,10 @@ export const assertRevealContinuationChildBudget = (input: {
 }): void => {
   const requiredMs = input.hardWallMs + input.killGraceMs;
   if (Number.isNaN(input.remainingMs) || input.remainingMs < requiredMs)
-    throw new Error(
-      `INSUFFICIENT_REMAINING_BUDGET remainingMs=${String(input.remainingMs)} requiredMs=${String(requiredMs)}`,
-    );
+    throw new RevealContinuationBudgetError({
+      remainingMs: input.remainingMs,
+      requiredMs,
+    });
 };
 
 const continuationEnvironmentFor = (
@@ -133,19 +135,42 @@ const assertGrantReplayState = (input: {
     throw new Error("R188 sealed grant reducer state snapshot is stale");
 };
 
+export const assertSealedContinuationGrant = (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+}): void => {
+  const { context, progress } = input;
+  const replayState = progress.reducerState;
+  if (
+    progress.grant === undefined ||
+    replayState === undefined ||
+    progress.reducerInput === undefined
+  )
+    throw new Error(
+      "R188 post-checkpoint budget diagnostic requires the complete sealed grant state",
+    );
+  assertGrantIdentity({ context, progress, replayState });
+  assertGrantReplayState({ context, progress, replayState });
+  const progressChain = {
+    receiptHead: progress.receiptHead,
+    receiptCount: progress.receiptCount,
+    chunkHead: progress.chunkHead,
+    chunkCount: progress.chunkCount,
+    operationHead: progress.operationHead,
+    operationChunkCount: progress.operationChunkCount,
+    operationTotals: progress.operationTotals,
+  };
+  if (stableSerialize(progress.grant.chain) !== stableSerialize(progressChain))
+    throw new Error("R188 post-checkpoint grant chain is not parent-derived");
+};
+
 const prepareParentGrant = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
 }): Promise<void> => {
   const { context, progress } = input;
   if (progress.grant === undefined) return;
-  const replayState = progress.reducerState;
-  if (replayState === undefined || progress.reducerInput === undefined)
-    throw new Error(
-      "R188 sealed grant requires the complete parent reducer state before child launch",
-    );
-  assertGrantIdentity({ context, progress, replayState });
-  assertGrantReplayState({ context, progress, replayState });
+  assertSealedContinuationGrant(input);
   await hydrateRevealContinuationAssets({
     archiveRoot: context.archiveRoot,
     grant: progress.grant,

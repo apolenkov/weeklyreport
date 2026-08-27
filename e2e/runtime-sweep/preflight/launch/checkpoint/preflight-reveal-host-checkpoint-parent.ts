@@ -10,9 +10,12 @@ import type {
 import {
   assertRevealContinuationActive,
   assertRevealContinuationTerminalizationActive,
+  assertRevealContinuationTerminalPublicationActive,
   createRevealContinuationTerminalizationPermit,
+  remainingRevealContinuationMs,
 } from "../continuation/preflight-reveal-continuation-parent.ts";
 import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
+import { runRevealContinuationChildWithBudget } from "./budget/preflight-reveal-host-checkpoint-budget-runner.ts";
 import {
   createHostCheckpointRequest,
   type HostCheckpointCompletionBody,
@@ -247,11 +250,17 @@ export const runChildUntilDone = async (input: {
     source: input.context.source,
     repoRoot: input.context.repoRoot,
   });
-  const result = await (input.runChild ?? runContinuationChild)({
+  const runChild = input.runChild ?? runContinuationChild;
+  const result = await runRevealContinuationChildWithBudget({
     context: input.context,
     progress: input.progress,
     ordinal: input.ordinal,
+    runChild,
+    remainingMs: remainingRevealContinuationMs(input.context),
+    assertTerminalPublicationActive: () =>
+      assertRevealContinuationTerminalPublicationActive(input.context),
   });
+  if (result === undefined) return 1;
   assertRevealContinuationActive(input.context);
   if (result.done)
     return finishTerminalChild({

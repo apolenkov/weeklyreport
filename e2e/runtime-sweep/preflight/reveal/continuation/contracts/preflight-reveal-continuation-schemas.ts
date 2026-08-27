@@ -46,7 +46,7 @@ const operationTotalsSchema = z
   })
   .strict();
 
-const chainHeadsSchema = z
+export const chainHeadsSchema = z
   .object({
     receiptHead: assetRefSchema.nullable(),
     receiptCount: nonNegativeIntegerSchema,
@@ -81,7 +81,7 @@ const genesisRefsSchema = z
     url: canonicalRelativeUrlSchema,
   })
   .strict();
-const frontierSchema = z
+export const frontierSchema = z
   .object({
     branchRef: assetRefSchema,
     branchDigest: assetRefSchema,

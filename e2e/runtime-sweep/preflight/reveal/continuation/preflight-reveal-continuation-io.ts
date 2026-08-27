@@ -4,13 +4,13 @@ import * as path from "node:path";
 import { freezeDeep } from "../../../source/manifest-source.ts";
 import { stableSerialize } from "../../../support/ids.ts";
 import {
+  type PublicationCommitGuard,
+  publishDeadlineBound,
+} from "../../launch/preflight-deadline-publication.ts";
+import {
   assertPreflightArchivePath,
   ensurePreflightArchiveDirectory,
 } from "../../preflight-archive-path.ts";
-import {
-  type PublicationCommitGuard,
-  publishDeadlineBound,
-} from "../../preflight-deadline-publication.ts";
 import {
   type RevealBootstrap,
   type RevealExecutionGrant,

@@ -9,23 +9,28 @@ import {
 import type { SourceArtifact } from "../../source/source-artifact.ts";
 import { sha256Hex, stableSerialize } from "../../support/ids.ts";
 import {
-  assertCompactPreflightRevealData,
   compactPreflightRevealData,
   type CompactPreflightSegment,
 } from "../artifacts/preflight-artifact-reveal.ts";
 import {
   type PublicationCommitGuard,
   publishDeadlineBound,
-} from "../preflight-deadline-publication.ts";
+} from "../launch/preflight-deadline-publication.ts";
+import type { RevealExecutionGrant } from "../reveal/continuation/contracts/preflight-reveal-continuation-schemas.ts";
 import {
   type CanaryFailurePhase,
   PREFLIGHT_CANARY_VIEWPORT,
   type PreflightCanaryArtifact,
   preflightCanaryArtifactSchema,
+  type PreflightCanaryBudgetFailure,
   PreflightCanaryError,
   type PreflightCanarySelection,
   type PreflightCanarySelector,
 } from "./preflight-canary-contract.ts";
+import {
+  assertPreflightCanaryBudgetFailureContents,
+  assertPreflightCanaryPassContents,
+} from "./preflight-canary-validation.ts";
 
 const digestBody = (
   artifact: PreflightCanaryArtifact,
@@ -112,48 +117,15 @@ const assertArtifactViewport = (parsed: PreflightCanaryArtifact): void => {
     );
 };
 
-const assertPassContents = (
-  parsed: Extract<PreflightCanaryArtifact, { status: "PASS" }>,
-): void => {
-  if (parsed.segment.state.stateId !== parsed.selector.stateId)
-    throw new PreflightCanaryError(
-      "PREFLIGHT_CANARY.json segment does not match its selector",
-    );
-  if (
-    parsed.segmentDigest !==
-    sha256Hex({
-      segment: parsed.segment,
-      revealPaths: parsed.revealPaths,
-      revealSurfaces: parsed.revealSurfaces,
-      revealTransitions: parsed.revealTransitions,
-    })
-  )
-    throw new PreflightCanaryError(
-      "PREFLIGHT_CANARY.json segment digest does not match contents",
-    );
-  try {
-    assertCompactPreflightRevealData({
-      segments: [parsed.segment],
-      revealPaths: parsed.revealPaths,
-      revealSurfaces: parsed.revealSurfaces,
-      revealTransitions: parsed.revealTransitions,
-    });
-  } catch (error: unknown) {
-    throw new PreflightCanaryError(
-      `PREFLIGHT_CANARY.json reveal data is invalid: ${
-        error instanceof Error ? error.message : "invalid reveal metadata"
-      }`,
-    );
-  }
-};
-
 export function parsePreflightCanaryArtifact(
   value: unknown,
 ): PreflightCanaryArtifact {
   const parsed = preflightCanaryArtifactSchema.parse(value);
   assertArtifactDigest(parsed);
   assertArtifactViewport(parsed);
-  if (parsed.status === "PASS") assertPassContents(parsed);
+  if (parsed.status === "PASS") assertPreflightCanaryPassContents(parsed);
+  if (parsed.status === "FAIL_NOT_PROVEN")
+    assertPreflightCanaryBudgetFailureContents(parsed);
   return freezeDeep(parsed);
 }
 
@@ -279,4 +251,54 @@ export function createPreflightCanaryFailure(input: {
       error: errorFor(input.error),
     }),
   );
+}
+
+export function createPreflightCanaryBudgetFailure(input: {
+  readonly source: SourceArtifact;
+  readonly selection: PreflightCanarySelection;
+  readonly attemptId: string;
+  readonly nextChildOrdinal: number;
+  readonly lastCheckpointDigest: string | null;
+  readonly lastCheckpointSequence: number | null;
+  readonly lastSampleSequence: number | null;
+  readonly grantDigest: string;
+  readonly frontier: PreflightCanaryBudgetFailure["frontier"];
+  readonly reducerStateDigest: string;
+  readonly chain: RevealExecutionGrant["chain"];
+  readonly functionalRemainingMs: number;
+  readonly requiredChildWindowMs: number;
+  readonly error: unknown;
+  readonly capturedAt?: string;
+}): PreflightCanaryBudgetFailure {
+  const artifact = parsePreflightCanaryArtifact(
+    bodyWithCanaryDigest({
+      ...identityFor(
+        input.source,
+        input.selection.selector,
+        input.capturedAt ?? currentTimestamp(),
+      ),
+      status: "FAIL_NOT_PROVEN" as const,
+      route: routeForSelection(input.selection),
+      phase: "continuation" as const,
+      error: errorFor(input.error),
+      attemptId: input.attemptId,
+      nextChildOrdinal: input.nextChildOrdinal,
+      lastCheckpointDigest: input.lastCheckpointDigest,
+      lastCheckpointSequence: input.lastCheckpointSequence,
+      lastSampleSequence: input.lastSampleSequence,
+      grantDigest: input.grantDigest,
+      frontierDigest: sha256Hex(input.frontier),
+      frontier: input.frontier,
+      reducerStateDigest: input.reducerStateDigest,
+      chain: input.chain,
+      functionalRemainingMs: input.functionalRemainingMs,
+      requiredChildWindowMs: input.requiredChildWindowMs,
+      reason: "INSUFFICIENT_REMAINING_BUDGET" as const,
+    }),
+  );
+  if (artifact.status !== "FAIL_NOT_PROVEN")
+    throw new PreflightCanaryError(
+      "Budget failure factory produced a non-diagnostic canary",
+    );
+  return artifact;
 }

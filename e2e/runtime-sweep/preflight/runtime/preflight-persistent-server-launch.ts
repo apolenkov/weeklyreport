@@ -41,7 +41,7 @@ const SECRET_KEYS_NOT_NEEDED_BY_PREFLIGHT: ReadonlySet<string> = new Set([
   "SMTP_FROM",
 ]);
 
-export const pnpmLauncherFor = (
+const pnpmLauncherFor = (
   environment: NodeJS.ProcessEnv,
 ): Readonly<{
   readonly command: string;
