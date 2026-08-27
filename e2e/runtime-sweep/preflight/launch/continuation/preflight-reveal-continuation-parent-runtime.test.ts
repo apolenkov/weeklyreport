@@ -3,6 +3,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { aggregatePartitionPlanForContext } from "./preflight-reveal-continuation-aggregate.ts";
 import { runRevealContinuationWithRuntime } from "./preflight-reveal-continuation-parent-runtime.ts";
 import { withCleanSealedGrantFixture } from "./preflight-reveal-continuation-parent-test-fixture.ts";
 
@@ -49,6 +50,48 @@ describe("reveal continuation runtime cleanup", () => {
             afterRun: cleanupFailure,
           }),
         ).rejects.toThrow("lease cleanup failed");
+      } finally {
+        await rm(archiveRoot, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("does not publish aggregate PASS when outer cleanup fails", async () => {
+    await withCleanSealedGrantFixture(async (fixture) => {
+      const archiveRoot = await mkdtemp(
+        path.join(process.cwd(), ".r188-runtime-aggregate-cleanup-"),
+      );
+      try {
+        const events: string[] = [];
+        const context = {
+          ...fixture.context,
+          archiveRoot,
+          beforeAggregateTerminalPublication: () => {
+            events.push("prepare");
+            return Promise.resolve();
+          },
+        };
+        const plan = aggregatePartitionPlanForContext({
+          context,
+          partitionCandidateLimit: context.source.matrixLimits.maxRevealActions,
+        });
+        const failure = await runRevealContinuationWithRuntime({
+          context,
+          aggregatePlan: plan,
+          maxChildren: 1,
+          runAggregatePartitions: async ({ context: aggregateContext }) => {
+            await aggregateContext.beforeAggregateTerminalPublication?.();
+            events.push("publication");
+            return 0;
+          },
+          afterRun: () => {
+            events.push("after");
+            return Promise.reject(new Error("outer cleanup failed"));
+          },
+        }).catch((error: unknown) => error);
+        expect(failure).toBeInstanceOf(Error);
+        expect((failure as Error).message).toBe("outer cleanup failed");
+        expect(events).toEqual(["prepare", "after"]);
       } finally {
         await rm(archiveRoot, { recursive: true, force: true });
       }

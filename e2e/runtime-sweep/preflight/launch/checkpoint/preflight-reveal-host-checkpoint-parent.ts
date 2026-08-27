@@ -1,4 +1,4 @@
-import { sha256Hex, stableSerialize } from "../../../support/ids.ts";
+import { stableSerialize } from "../../../support/ids.ts";
 import { assertLivePreflightSourceIdentity } from "../../canary/preflight-canary.ts";
 import { HOST_ENVELOPE_THRESHOLDS } from "../../diagnostics/preflight-diagnostic-host-envelope.ts";
 import type {
@@ -17,76 +17,16 @@ import {
 import { runContinuationChild } from "../continuation/preflight-reveal-continuation-parent-child.ts";
 import { runRevealContinuationChildWithBudget } from "./budget/preflight-reveal-host-checkpoint-budget-runner.ts";
 import {
-  createHostCheckpointRequest,
-  type HostCheckpointCompletionBody,
   type HostCheckpointRequest,
   type HostCheckpointResponse,
-  PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE,
-  PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
 } from "./preflight-reveal-host-checkpoint-contract.ts";
+import {
+  hostCheckpointCompletionFor,
+  hostCheckpointRequestFor,
+} from "./preflight-reveal-host-checkpoint-parent-contract.ts";
 
 const HOST_BASELINE_RECORD_COUNT =
   HOST_ENVELOPE_THRESHOLDS.postInfrastructureBaselineSamples;
-
-const hostCheckpointRunFor = (context: ParentContext) =>
-  ({
-    campaignId: context.source.campaignId,
-    sourceSha: context.source.sourceSha,
-    sourceTree: context.source.sourceTree,
-    treeDigest: context.source.treeDigest,
-    sourceDigest: context.source.sourceDigest,
-    planDigest: context.source.plan.digest,
-    attemptId: context.attemptId,
-    stateId: context.selection.state.stateId,
-    stateDigest: sha256Hex(context.selection.state),
-    profile: context.selection.state.profile,
-    role: context.revealRoute.role,
-    route:
-      context.selection.selector.route ??
-      `${context.revealRoute.role}:${context.revealRoute.catalogRoute}`,
-    routeDigest: sha256Hex(context.revealRoute),
-  }) as const;
-
-const hostCheckpointCompletionFor = (input: {
-  readonly context: ParentContext;
-  readonly progress: ParentProgress;
-  readonly ordinal: number;
-}): HostCheckpointCompletionBody => ({
-  artifact: PREFLIGHT_REVEAL_HOST_CHECKPOINT_COMPLETE,
-  version: PREFLIGHT_REVEAL_HOST_CHECKPOINT_VERSION,
-  run: hostCheckpointRunFor(input.context),
-  terminalChildOrdinal: input.ordinal,
-  lastCheckpointSequence: input.ordinal + 1,
-  lastResponseDigest: input.progress.previousCheckpointDigest ?? null,
-  receiptHead: input.progress.receiptHead,
-  receiptCount: input.progress.receiptCount,
-  chunkHead: input.progress.chunkHead,
-  chunkCount: input.progress.chunkCount,
-  completedCandidateCount: input.progress.previousCompletedCandidateCount,
-  lastSampleSequence: input.progress.previousSampleSequence ?? null,
-});
-
-const hostCheckpointRequestFor = (input: {
-  readonly context: ParentContext;
-  readonly progress: ParentProgress;
-  readonly ordinal: number;
-  readonly boundaryTimestamp: number;
-}): HostCheckpointRequest =>
-  createHostCheckpointRequest({
-    artifact: "PREFLIGHT_REVEAL_HOST_CHECKPOINT_REQUEST",
-    version: 1,
-    run: hostCheckpointRunFor(input.context),
-    checkpointSequence: input.ordinal + 1,
-    completedChildOrdinal: input.ordinal,
-    boundaryTimestamp: input.boundaryTimestamp,
-    receiptHead: input.progress.receiptHead,
-    receiptCount: input.progress.receiptCount,
-    chunkHead: input.progress.chunkHead,
-    chunkCount: input.progress.chunkCount,
-    completedCandidateCount: input.progress.previousCompletedCandidateCount,
-    previousCheckpointDigest: input.progress.previousCheckpointDigest ?? null,
-    previousSampleSequence: input.progress.previousSampleSequence ?? null,
-  });
 
 const assertResponseProgress = (input: {
   readonly request: HostCheckpointRequest;
@@ -140,10 +80,12 @@ export const assertHostCheckpointResponseForRequest = (input: {
   assertResponseProgress({ request, response });
 };
 
-const requestHostCheckpointAfterChild = async (input: {
+export const requestHostCheckpointAfterChild = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly ordinal: number;
+  /** The final checkpoint may complete during terminalization grace. */
+  readonly terminal?: boolean;
 }): Promise<HostCheckpointResponse> => {
   assertRevealContinuationActive(input.context);
   const boundaryTimestamp = input.context.now?.() ?? Date.now();
@@ -158,7 +100,9 @@ const requestHostCheckpointAfterChild = async (input: {
       ? {}
       : { signal: input.context.signal }),
   });
-  assertRevealContinuationActive(input.context);
+  if (input.terminal === true)
+    assertRevealContinuationTerminalPublicationActive(input.context);
+  else assertRevealContinuationActive(input.context);
   if (response === undefined)
     throw new Error("Host checkpoint client returned no response");
   if (input.context.baselineReceiptDigest === undefined)
@@ -178,7 +122,13 @@ const requestHostCheckpointAfterChild = async (input: {
   return response;
 };
 
-const finishTerminalChild = async (input: {
+export type PreparedTerminalChildPublication = Readonly<{
+  readonly exitCode: number;
+  readonly progress: ParentProgress;
+  readonly publishTerminalArtifacts?: () => Promise<number>;
+}>;
+
+export const prepareTerminalChildPublication = async (input: {
   readonly context: ParentContext;
   readonly progress: ParentProgress;
   readonly ordinal: number;
@@ -186,15 +136,22 @@ const finishTerminalChild = async (input: {
   readonly publishTerminalArtifacts?: (
     permit: RevealContinuationTerminalizationPermit,
   ) => Promise<RevealContinuationTerminalPublicationCommit>;
-}): Promise<number> => {
-  if (input.exitCode !== 0) return input.exitCode;
+}): Promise<PreparedTerminalChildPublication> => {
+  if (input.exitCode !== 0)
+    return { exitCode: input.exitCode, progress: input.progress };
   if (input.context.requestHostCheckpoint === undefined)
     throw new Error(
       "Successful terminal child requires a parent-only host checkpoint client",
     );
   if (input.publishTerminalArtifacts === undefined)
     throw new Error("Successful terminal child has no terminal publisher");
-  const checkpoint = await requestHostCheckpointAfterChild(input);
+  const publishTerminalArtifacts = input.publishTerminalArtifacts;
+  const checkpoint = await requestHostCheckpointAfterChild({
+    context: input.context,
+    progress: input.progress,
+    ordinal: input.ordinal,
+    terminal: true,
+  });
   const complete = input.context.requestHostCheckpoint.complete;
   if (complete === undefined)
     throw new Error(
@@ -213,25 +170,47 @@ const finishTerminalChild = async (input: {
     finalCheckpointDigest: checkpoint.responseDigest,
   });
   assertRevealContinuationTerminalizationActive(input.context, permit);
-  const commit = await input.publishTerminalArtifacts(permit);
-  if (typeof commit !== "function")
-    throw new Error(
-      "Successful terminal child publisher did not return a terminal commit",
-    );
-  assertRevealContinuationTerminalizationActive(input.context, permit);
-  await complete({
-    completion: hostCheckpointCompletionFor({
-      context: input.context,
-      progress: completedProgress,
-      ordinal: input.ordinal,
-    }),
-    ...(input.context.signal === undefined
-      ? {}
-      : { signal: input.context.signal }),
-  });
-  assertRevealContinuationTerminalizationActive(input.context, permit);
-  await commit();
-  return input.exitCode;
+  return {
+    exitCode: input.exitCode,
+    progress: completedProgress,
+    publishTerminalArtifacts: async () => {
+      assertRevealContinuationTerminalizationActive(input.context, permit);
+      const commit = await publishTerminalArtifacts(permit);
+      if (typeof commit !== "function")
+        throw new Error(
+          "Successful terminal child publisher did not return a terminal commit",
+        );
+      assertRevealContinuationTerminalizationActive(input.context, permit);
+      await complete({
+        completion: hostCheckpointCompletionFor({
+          context: input.context,
+          progress: completedProgress,
+          ordinal: input.ordinal,
+        }),
+        ...(input.context.signal === undefined
+          ? {}
+          : { signal: input.context.signal }),
+      });
+      assertRevealContinuationTerminalizationActive(input.context, permit);
+      await commit();
+      return input.exitCode;
+    },
+  };
+};
+
+const finishTerminalChild = async (input: {
+  readonly context: ParentContext;
+  readonly progress: ParentProgress;
+  readonly ordinal: number;
+  readonly exitCode: number;
+  readonly publishTerminalArtifacts?: (
+    permit: RevealContinuationTerminalizationPermit,
+  ) => Promise<RevealContinuationTerminalPublicationCommit>;
+}): Promise<number> => {
+  const prepared = await prepareTerminalChildPublication(input);
+  return prepared.publishTerminalArtifacts === undefined
+    ? prepared.exitCode
+    : prepared.publishTerminalArtifacts();
 };
 
 export const runChildUntilDone = async (input: {

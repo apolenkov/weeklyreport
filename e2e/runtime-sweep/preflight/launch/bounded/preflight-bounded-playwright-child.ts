@@ -1,5 +1,6 @@
 import { type ChildProcess } from "node:child_process";
 
+import type { ObservePreflightPlaywrightChildCleanup } from "../preflight-playwright-child-cleanup.ts";
 import { boundedPlaywrightArgs } from "./preflight-bounded-playwright-command.ts";
 import { spawnDetachedProcessGroup } from "./preflight-detached-process-group.ts";
 
@@ -12,6 +13,7 @@ type BoundedPlaywrightChildInput = Readonly<{
   terminationGraceMs: number;
   acceptNonzeroExit?: boolean;
   signal?: AbortSignal;
+  onCleanup?: ObservePreflightPlaywrightChildCleanup;
 }>;
 
 type BoundedWaitInput = Pick<
@@ -286,14 +288,10 @@ export const runBoundedPlaywrightChild = async (
     input.terminationGraceMs,
   );
   const launcher = launcherFor(input.operationName, input.environment);
-  const command = launcher.command;
-  const args = [
-    ...boundedPlaywrightArgs(launcher.leadingArgs, input.configPath),
-  ];
   const owned = await spawnDetachedProcessGroup({
     operationName: input.operationName,
-    command,
-    args,
+    command: launcher.command,
+    args: boundedPlaywrightArgs(launcher.leadingArgs, input.configPath),
     repoRoot: input.repoRoot,
     environment: input.environment,
     closeGraceMs: input.terminationGraceMs,
@@ -306,6 +304,12 @@ export const runBoundedPlaywrightChild = async (
       input.signal,
     );
     await owned.close();
+    input.onCleanup?.({
+      ...owned.ownership,
+      status: "PASS",
+      ownership: "OWNED",
+      processGroup: "GONE",
+    });
     return exitCode;
   } catch (error: unknown) {
     return owned.abort(error);

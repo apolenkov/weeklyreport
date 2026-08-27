@@ -141,6 +141,7 @@ describe("runtime preflight launcher boundaries", () => {
       ),
     ]);
     expect(launcher).toMatch(/runCanary:\s*runRevealCanary/u);
+    expect(launcher).toMatch(/aggregatePartitions:\s*true/u);
     expect(launcher).not.toMatch(
       /runCanary:\s*\(\)\s*=>\s*runPlaywright\("canary"\)/u,
     );

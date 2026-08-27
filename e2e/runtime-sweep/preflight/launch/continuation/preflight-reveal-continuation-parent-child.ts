@@ -225,6 +225,11 @@ const runBoundedContinuationChild = async (input: {
         maxDurationMs,
         terminationGraceMs: limits.killGraceMs,
         ...(context.signal === undefined ? {} : { signal: context.signal }),
+        onCleanup: (evidence) =>
+          context.onChildCleanup?.({
+            ...evidence,
+            childOrdinal: input.childOrdinal,
+          }),
       },
     );
   } catch (error: unknown) {

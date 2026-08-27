@@ -1,12 +1,24 @@
 import * as path from "node:path";
 
 import type { SourceArtifact } from "../../../source/source-artifact.ts";
+import { sha256Hex } from "../../../support/ids.ts";
 import { resolvePreflightCanarySelection } from "../../canary/preflight-canary.ts";
 import type { PreflightCanarySelector } from "../../canary/preflight-canary-contract.ts";
+import { revealRouteFor } from "../../execution/playwright-preflight-support.ts";
+import {
+  aggregatePartitionAttemptMaxMsFor,
+  PREFLIGHT_REVEAL_AGGREGATE_PARTITION_CANDIDATE_LIMIT,
+  PREFLIGHT_REVEAL_AGGREGATE_PARTITION_MAX_MS,
+  PREFLIGHT_REVEAL_AGGREGATE_TEARDOWN_RESERVE_MS,
+} from "../continuation/preflight-reveal-continuation-aggregate.ts";
 import {
   type RunPlaywright,
   runPreflightRevealContinuation,
 } from "../continuation/preflight-reveal-continuation-parent.ts";
+import {
+  createRevealPartitionPlan,
+  type RevealPartitionPlan,
+} from "../continuation/preflight-reveal-continuation-partition.ts";
 import { createFileBackedHostCheckpointClient } from "./preflight-reveal-host-checkpoint-client.ts";
 import {
   createRevealCanaryLifecycle,
@@ -48,6 +60,37 @@ const assertExactAdminDemoLaunch = (input: {
     );
 };
 
+const aggregatePlanForInput = (input: {
+  readonly source: SourceArtifact;
+  readonly selector: PreflightCanarySelector;
+}): RevealPartitionPlan => {
+  const selection = resolvePreflightCanarySelection({
+    source: input.source,
+    selector: input.selector,
+  });
+  const revealRoute = revealRouteFor(selection.route);
+  return createRevealPartitionPlan({
+    campaignId: input.source.campaignId,
+    sourceSha: input.source.sourceSha,
+    sourceTree: input.source.sourceTree,
+    sourceDigest: input.source.sourceDigest,
+    planDigest: input.source.plan.digest,
+    stateId: selection.state.stateId,
+    stateDigest: sha256Hex(selection.state),
+    profile: selection.state.profile,
+    role: revealRoute.role,
+    route:
+      selection.selector.route ??
+      `${revealRoute.role}:${revealRoute.catalogRoute}`,
+    routeDigest: sha256Hex(revealRoute),
+    maxRevealActions: input.source.matrixLimits.maxRevealActions,
+    partitionCandidateLimit:
+      PREFLIGHT_REVEAL_AGGREGATE_PARTITION_CANDIDATE_LIMIT,
+    partitionMaxMs: PREFLIGHT_REVEAL_AGGREGATE_PARTITION_MAX_MS,
+    teardownReserveMs: PREFLIGHT_REVEAL_AGGREGATE_TEARDOWN_RESERVE_MS,
+  });
+};
+
 export const runExactAdminDemoRevealCanary = async (input: {
   readonly source: SourceArtifact;
   readonly repoRoot: string;
@@ -63,9 +106,18 @@ export const runExactAdminDemoRevealCanary = async (input: {
   readonly afterRun?: Parameters<
     typeof runPreflightRevealContinuation
   >[0]["afterRun"];
+  readonly beforeAggregateTerminalPublication?: Parameters<
+    typeof runPreflightRevealContinuation
+  >[0]["beforeAggregateTerminalPublication"];
   readonly runHostCheckpointController?: RunHostCheckpointController;
+  /** Use the source-bound aggregate partition runner instead of one 24-minute attempt. */
+  readonly aggregatePartitions?: boolean;
 }): Promise<number> => {
   assertExactAdminDemoLaunch(input);
+  const aggregatePlan: RevealPartitionPlan | undefined =
+    input.aggregatePartitions === true
+      ? aggregatePlanForInput(input)
+      : undefined;
   const requestHostCheckpoint = await createFileBackedHostCheckpointClient({
     archiveRoot: input.archiveRoot,
     root: input.hostCheckpointRoot,
@@ -74,6 +126,9 @@ export const runExactAdminDemoRevealCanary = async (input: {
   const lifecycle = createRevealCanaryLifecycle(
     input.runHostCheckpointController ??
       runRuntimeRevealHostCheckpointController,
+    aggregatePlan === undefined
+      ? undefined
+      : aggregatePartitionAttemptMaxMsFor(aggregatePlan),
   );
   try {
     const exitCode = await runPreflightRevealContinuation({
@@ -89,8 +144,15 @@ export const runExactAdminDemoRevealCanary = async (input: {
       deadlineAt: lifecycle.deadlineAt,
       deadlineMonotonic: lifecycle.deadlineMonotonic,
       monotonicNow: lifecycle.monotonicNow,
+      ...(aggregatePlan === undefined ? {} : { aggregatePlan }),
       ...(input.beforeRun === undefined ? {} : { beforeRun: input.beforeRun }),
       ...(input.afterRun === undefined ? {} : { afterRun: input.afterRun }),
+      ...(input.beforeAggregateTerminalPublication === undefined
+        ? {}
+        : {
+            beforeAggregateTerminalPublication:
+              input.beforeAggregateTerminalPublication,
+          }),
     }).catch((error: unknown) =>
       settleControllerAfterParentFailure(lifecycle, error),
     );

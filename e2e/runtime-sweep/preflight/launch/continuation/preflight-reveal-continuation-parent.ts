@@ -10,7 +10,6 @@ import {
 } from "../../canary/preflight-canary.ts";
 import { revealRouteFor } from "../../execution/playwright-preflight-support.ts";
 import {
-  REVEAL_CONTINUATION_ATTEMPT_MAX_MS,
   REVEAL_CONTINUATION_LIMITS,
   revealContinuationLimitsFromEnvironment,
 } from "../../reveal/continuation/contracts/preflight-reveal-continuation-limits.ts";
@@ -21,6 +20,8 @@ import type { RevealDiscoveryState } from "../../reveal/interaction/preflight-re
 import type { RequestHostCheckpoint } from "../checkpoint/preflight-reveal-host-checkpoint-client.ts";
 import type { PreflightLaunchMode } from "../preflight-launch-guard.ts";
 import type { PreflightFullPaths } from "../preflight-launcher-support.ts";
+import type { PreflightPlaywrightChildCleanupEvidence } from "../preflight-playwright-child-cleanup.ts";
+import { attemptDeadlinesFor } from "./preflight-reveal-continuation-parent-deadline.ts";
 import { runRevealContinuationWithRuntime } from "./preflight-reveal-continuation-parent-runtime.ts";
 
 const AUTHORITY_KEY_BYTES = 32;
@@ -43,6 +44,9 @@ export type RunPlaywright = (
     readonly maxDurationMs: number;
     readonly terminationGraceMs: number;
     readonly signal?: AbortSignal;
+    readonly onCleanup?: (
+      evidence: PreflightPlaywrightChildCleanupEvidence,
+    ) => void;
   }>,
 ) => Promise<number>;
 
@@ -84,11 +88,22 @@ export type ParentContext = Readonly<{
   /** The cumulative attempt deadline; terminal publication may use this. */
   readonly deadlineAt?: number;
   readonly deadlineMonotonic?: number;
+  /** Aggregate partitions keep the uncapped supervisor deadline for terminalization. */
+  readonly terminalDeadlineAt?: number;
+  readonly terminalDeadlineMonotonic?: number;
   /** Normal browser/checkpoint work must finish before terminalization grace. */
   readonly functionalDeadlineAt?: number;
   readonly functionalDeadlineMonotonic?: number;
   readonly signal?: AbortSignal;
   readonly runPlaywright: RunPlaywright;
+  readonly onChildCleanup?: (
+    evidence: PreflightPlaywrightChildCleanupEvidence & {
+      readonly childOrdinal: number;
+    },
+  ) => void;
+  /** Close and verify attempt-owned runtime dependencies before any terminal PASS. */
+  readonly beforeAggregateTerminalPublication?: () => Promise<void>;
+  readonly aggregatePlan?: import("./preflight-reveal-continuation-partition.ts").RevealPartitionPlan;
 }>;
 
 export type RevealContinuationTerminalizationPermit = Readonly<{
@@ -140,14 +155,22 @@ export const assertRevealContinuationActive = (
 
 /** Diagnostic terminal publication may consume the reserved functional window. */
 export const assertRevealContinuationTerminalPublicationActive = (
-  context: Pick<ParentContext, "deadlineMonotonic" | "monotonicNow" | "signal">,
+  context: Pick<
+    ParentContext,
+    | "deadlineMonotonic"
+    | "terminalDeadlineMonotonic"
+    | "monotonicNow"
+    | "signal"
+  >,
 ): void => {
+  const deadlineMonotonic =
+    context.terminalDeadlineMonotonic ?? context.deadlineMonotonic;
   if (context.signal?.aborted)
     throw context.signal.reason ?? new Error(REVEAL_CONTINUATION_ABORTED);
   if (
-    context.deadlineMonotonic !== undefined &&
+    deadlineMonotonic !== undefined &&
     context.monotonicNow !== undefined &&
-    Math.floor(context.deadlineMonotonic - context.monotonicNow()) <= 0
+    Math.floor(deadlineMonotonic - context.monotonicNow()) <= 0
   )
     throw new Error(REVEAL_CONTINUATION_DEADLINE_EXCEEDED);
 };
@@ -160,10 +183,16 @@ export const assertRevealContinuationTerminalPublicationActive = (
 export const assertRevealContinuationTerminalizationActive = (
   context: Pick<
     ParentContext,
-    "attemptId" | "deadlineMonotonic" | "monotonicNow" | "signal"
+    | "attemptId"
+    | "deadlineMonotonic"
+    | "terminalDeadlineMonotonic"
+    | "monotonicNow"
+    | "signal"
   >,
   permit: RevealContinuationTerminalizationPermit,
 ): void => {
+  const deadlineMonotonic =
+    context.terminalDeadlineMonotonic ?? context.deadlineMonotonic;
   if (
     !permit[TERMINALIZATION_PERMIT] ||
     permit.attemptId !== context.attemptId ||
@@ -174,9 +203,9 @@ export const assertRevealContinuationTerminalizationActive = (
   if (context.signal?.aborted)
     throw context.signal.reason ?? new Error(REVEAL_CONTINUATION_ABORTED);
   if (
-    context.deadlineMonotonic !== undefined &&
+    deadlineMonotonic !== undefined &&
     context.monotonicNow !== undefined &&
-    Math.floor(context.deadlineMonotonic - context.monotonicNow()) <= 0
+    Math.floor(deadlineMonotonic - context.monotonicNow()) <= 0
   )
     throw new Error(REVEAL_CONTINUATION_DEADLINE_EXCEEDED);
 };
@@ -208,60 +237,17 @@ const assertFreshCanary = async (canaryPath: string): Promise<void> => {
     );
 };
 
-const assertDeadlineNumber = (name: string, value: number): void => {
-  if (!Number.isFinite(value))
-    throw new Error(`${name} must be a finite deadline`);
-};
-
-const attemptDeadlinesFor = (input: {
-  readonly deadlineAt?: number;
-  readonly deadlineMonotonic?: number;
-  readonly functionalDeadlineAt?: number;
-  readonly functionalDeadlineMonotonic?: number;
-  readonly now: () => number;
-  readonly monotonicNow: () => number;
-  readonly reserveMs: number;
-}): Readonly<{
-  readonly deadlineAt: number;
-  readonly deadlineMonotonic: number;
-  readonly functionalDeadlineAt: number;
-  readonly functionalDeadlineMonotonic: number;
-}> => {
-  const deadlineAt =
-    input.deadlineAt ?? input.now() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
-  const deadlineMonotonic =
-    input.deadlineMonotonic ??
-    input.monotonicNow() + REVEAL_CONTINUATION_ATTEMPT_MAX_MS;
-  const functionalDeadlineAt =
-    input.functionalDeadlineAt ?? deadlineAt - input.reserveMs;
-  const functionalDeadlineMonotonic =
-    input.functionalDeadlineMonotonic ?? deadlineMonotonic - input.reserveMs;
-  assertDeadlineNumber("deadlineAt", deadlineAt);
-  assertDeadlineNumber("deadlineMonotonic", deadlineMonotonic);
-  assertDeadlineNumber("functionalDeadlineAt", functionalDeadlineAt);
-  assertDeadlineNumber(
-    "functionalDeadlineMonotonic",
-    functionalDeadlineMonotonic,
-  );
-  if (
-    functionalDeadlineAt !== deadlineAt - input.reserveMs ||
-    functionalDeadlineMonotonic !== deadlineMonotonic - input.reserveMs
-  )
-    throw new Error(
-      "Functional deadlines must equal cumulative deadlines minus the source-bound publication reserve",
-    );
-  if (
-    functionalDeadlineAt >= deadlineAt ||
-    functionalDeadlineMonotonic >= deadlineMonotonic
-  )
-    throw new Error("Functional deadlines must precede cumulative deadlines");
-  return {
-    deadlineAt,
-    deadlineMonotonic,
-    functionalDeadlineAt,
-    functionalDeadlineMonotonic,
-  };
-};
+const runtimeOptionsFor = (input: {
+  readonly aggregatePlan?: ParentContext["aggregatePlan"];
+  readonly beforeRun?: (context: ParentContext) => Promise<void>;
+  readonly afterRun?: (context: ParentContext) => Promise<void>;
+}) => ({
+  ...(input.aggregatePlan === undefined
+    ? {}
+    : { aggregatePlan: input.aggregatePlan }),
+  ...(input.beforeRun === undefined ? {} : { beforeRun: input.beforeRun }),
+  ...(input.afterRun === undefined ? {} : { afterRun: input.afterRun }),
+});
 
 export const runPreflightRevealContinuation = async (input: {
   readonly source: SourceArtifact;
@@ -278,10 +264,12 @@ export const runPreflightRevealContinuation = async (input: {
   readonly functionalDeadlineAt?: number;
   readonly functionalDeadlineMonotonic?: number;
   readonly signal?: AbortSignal;
+  readonly aggregatePlan?: import("./preflight-reveal-continuation-partition.ts").RevealPartitionPlan;
   /** Prepare campaign-owned runtime dependencies after the attempt deadline exists. */
   readonly beforeRun?: (context: ParentContext) => Promise<void>;
   /** Release campaign-owned runtime dependencies even when the child fails. */
   readonly afterRun?: (context: ParentContext) => Promise<void>;
+  readonly beforeAggregateTerminalPublication?: () => Promise<void>;
   readonly runPlaywright: RunPlaywright;
 }): Promise<number> => {
   await assertFreshCanary(input.canaryPath);
@@ -312,13 +300,15 @@ export const runPreflightRevealContinuation = async (input: {
     chunkBudget: String(limits.softWallMs),
     chunkBudgetMs: limits.softWallMs,
     continuationLimits: limits,
+    ...(input.aggregatePlan === undefined
+      ? {}
+      : { aggregatePlan: input.aggregatePlan }),
   };
   assertRevealContinuationActive(context);
   const maxChildren = input.source.matrixLimits.maxRevealActions + 1;
   return runRevealContinuationWithRuntime({
     context,
     maxChildren,
-    ...(input.beforeRun === undefined ? {} : { beforeRun: input.beforeRun }),
-    ...(input.afterRun === undefined ? {} : { afterRun: input.afterRun }),
+    ...runtimeOptionsFor(input),
   });
 };
