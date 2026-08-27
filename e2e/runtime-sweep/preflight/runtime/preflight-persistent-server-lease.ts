@@ -29,12 +29,8 @@ import { assertPersistentServerLease } from "./preflight-persistent-server-lease
 export * from "./preflight-persistent-server-lease-contract.ts";
 export * from "./preflight-persistent-server-lease-environment.ts";
 export {
-  assertPersistentServerHealthy,
   assertPersistentServerLease,
-  assertPersistentServerLeaseFile,
   assertPersistentServerListenerOwned,
-  assertPersistentServerProcessGroupLive,
-  waitForPersistentServerHealth,
   waitForPersistentServerNoResidue,
 } from "./preflight-persistent-server-lease-probes.ts";
 

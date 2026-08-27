@@ -13,7 +13,6 @@ import {
   assertPreflightArchivePath,
   ensurePreflightArchiveRoot,
 } from "../../preflight-archive-path.ts";
-import { publishDeadlineBound } from "../../preflight-deadline-publication.ts";
 import {
   runIdentityFor,
   strictRouteFor,
@@ -31,6 +30,7 @@ import {
   frontierFor,
 } from "../../reveal/continuation/receipts/preflight-reveal-continuation-receipts.ts";
 import { revealCandidatesFor } from "../../reveal/interaction/preflight-reveal-discovery.ts";
+import { publishDeadlineBound } from "../preflight-deadline-publication.ts";
 import type {
   ParentContext,
   ParentProgress,

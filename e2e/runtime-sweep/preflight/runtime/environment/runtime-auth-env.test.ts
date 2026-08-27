@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { runtimeSweepWebEnvironment } from "./runtime-auth-env.ts";
+import { runtimeSweepWebEnvironment } from "../runtime-auth-env.ts";
 
 describe("runtimeSweepWebEnvironment", () => {
   it("keeps anonymous login stable without weakening the proxy guard", () => {

@@ -25,6 +25,9 @@ import { runRevealContinuationWithRuntime } from "./preflight-reveal-continuatio
 
 const AUTHORITY_KEY_BYTES = 32;
 const ATTEMPT_ID_BYTES = 16;
+const REVEAL_CONTINUATION_ABORTED = "Reveal continuation aborted";
+const REVEAL_CONTINUATION_DEADLINE_EXCEEDED =
+  "Reveal continuation 24-minute deadline exceeded";
 const TERMINALIZATION_PERMIT: unique symbol = Symbol(
   "reveal-continuation-terminalization",
 );
@@ -130,9 +133,23 @@ export const assertRevealContinuationActive = (
   reserveMs = 0,
 ): void => {
   if (context.signal?.aborted)
-    throw context.signal.reason ?? new Error("Reveal continuation aborted");
+    throw context.signal.reason ?? new Error(REVEAL_CONTINUATION_ABORTED);
   if (remainingRevealContinuationMs(context) <= reserveMs)
-    throw new Error("Reveal continuation 24-minute deadline exceeded");
+    throw new Error(REVEAL_CONTINUATION_DEADLINE_EXCEEDED);
+};
+
+/** Diagnostic terminal publication may consume the reserved functional window. */
+export const assertRevealContinuationTerminalPublicationActive = (
+  context: Pick<ParentContext, "deadlineMonotonic" | "monotonicNow" | "signal">,
+): void => {
+  if (context.signal?.aborted)
+    throw context.signal.reason ?? new Error(REVEAL_CONTINUATION_ABORTED);
+  if (
+    context.deadlineMonotonic !== undefined &&
+    context.monotonicNow !== undefined &&
+    Math.floor(context.deadlineMonotonic - context.monotonicNow()) <= 0
+  )
+    throw new Error(REVEAL_CONTINUATION_DEADLINE_EXCEEDED);
 };
 
 /**
@@ -155,13 +172,13 @@ export const assertRevealContinuationTerminalizationActive = (
   )
     throw new Error("Reveal continuation terminalization permit is invalid");
   if (context.signal?.aborted)
-    throw context.signal.reason ?? new Error("Reveal continuation aborted");
+    throw context.signal.reason ?? new Error(REVEAL_CONTINUATION_ABORTED);
   if (
     context.deadlineMonotonic !== undefined &&
     context.monotonicNow !== undefined &&
     Math.floor(context.deadlineMonotonic - context.monotonicNow()) <= 0
   )
-    throw new Error("Reveal continuation 24-minute deadline exceeded");
+    throw new Error(REVEAL_CONTINUATION_DEADLINE_EXCEEDED);
 };
 
 const assertFreshCanary = async (canaryPath: string): Promise<void> => {

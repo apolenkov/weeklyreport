@@ -13,7 +13,7 @@ const expiringClock = (): (() => number) => {
   const state = { calls: 0 };
   return () => {
     state.calls += 1;
-    return state.calls < 4 ? 0 : 100;
+    return state.calls < 5 ? 0 : 100_001;
   };
 };
 
@@ -58,8 +58,8 @@ describe("host checkpoint parent cumulative deadline", () => {
             ...fixture.context,
             now: () => 100,
             monotonicNow: expiringClock(),
-            deadlineMonotonic: 50,
-            deadlineAt: 150,
+            deadlineMonotonic: 100_000,
+            deadlineAt: 100_150,
             signal,
             requestHostCheckpoint: Object.assign(
               ({
@@ -94,8 +94,8 @@ describe("host checkpoint parent cumulative deadline", () => {
             ...fixture.context,
             now: () => 100,
             monotonicNow: expiringClock(),
-            deadlineMonotonic: 50,
-            deadlineAt: 150,
+            deadlineMonotonic: 100_000,
+            deadlineAt: 100_150,
             signal: new AbortController().signal,
             requestHostCheckpoint: ({
               request,
@@ -124,7 +124,7 @@ describe("host checkpoint parent cumulative deadline", () => {
   it("allows only terminal publication inside the reserved grace", async () => {
     await withCleanSealedGrantFixture(async (fixture) => {
       const evidence = { published: false };
-      const clockValues = [0, 10, 10, 10, 60, 60] as const;
+      const clockValues = [0, 10, 10, 10, 10, 60, 60] as const;
       let clockIndex = 0;
       const monotonicNow = () =>
         clockValues[Math.min(clockIndex++, clockValues.length - 1)] ?? 60;
@@ -134,9 +134,9 @@ describe("host checkpoint parent cumulative deadline", () => {
             ...fixture.context,
             now: () => 100,
             monotonicNow,
-            functionalDeadlineMonotonic: 50,
-            deadlineMonotonic: 100,
-            deadlineAt: 200,
+            functionalDeadlineMonotonic: 100_010,
+            deadlineMonotonic: 100_100,
+            deadlineAt: 100_200,
             signal: new AbortController().signal,
             requestHostCheckpoint: Object.assign(
               ({ request }: Parameters<RequestHostCheckpoint>[0]) =>
@@ -166,7 +166,7 @@ describe("host checkpoint parent cumulative deadline", () => {
   it("rejects terminal publication after the cumulative deadline", async () => {
     await withCleanSealedGrantFixture(async (fixture) => {
       const evidence = { published: false };
-      const clockValues = [0, 10, 10, 10, 110] as const;
+      const clockValues = [0, 10, 10, 10, 100_110] as const;
       let clockIndex = 0;
       const monotonicNow = () =>
         clockValues[Math.min(clockIndex++, clockValues.length - 1)] ?? 110;
@@ -176,9 +176,9 @@ describe("host checkpoint parent cumulative deadline", () => {
             ...fixture.context,
             now: () => 100,
             monotonicNow,
-            functionalDeadlineMonotonic: 50,
-            deadlineMonotonic: 100,
-            deadlineAt: 200,
+            functionalDeadlineMonotonic: 100_010,
+            deadlineMonotonic: 100_100,
+            deadlineAt: 100_200,
             signal: new AbortController().signal,
             requestHostCheckpoint: Object.assign(
               ({ request }: Parameters<RequestHostCheckpoint>[0]) =>

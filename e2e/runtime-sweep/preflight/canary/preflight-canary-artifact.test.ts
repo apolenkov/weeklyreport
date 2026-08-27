@@ -10,10 +10,12 @@ import {
   fakeManifestGit,
 } from "../../manifest/manifest-fixture.ts";
 import { revealTransitionFor } from "../../matrix/reveal-transition.ts";
+import { sha256Hex } from "../../support/ids.ts";
 import { runBrowserPreflightSegment } from "../execution/playwright-preflight.ts";
 import { revealPathFor, revealSurfaceFor } from "../reveal-path.ts";
 import {
   assertPreflightCanaryPassForSource,
+  createPreflightCanaryBudgetFailure,
   createPreflightCanaryFailure,
   createPreflightCanaryPass,
   parsePreflightCanaryArtifact,
@@ -103,6 +105,71 @@ describe("exact-state preflight canary artifact", () => {
           stateId: state.stateId,
         }),
       ).toThrow("not PASS");
+    });
+  });
+
+  it("rejects a tampered budget diagnostic even when its outer digest is rewritten", async () => {
+    await withSource((source) => {
+      const state = source.plan.states[0];
+      if (state === undefined) throw new Error("fixture has no states");
+      const selection = resolvePreflightCanarySelection({
+        source,
+        selector: { stateId: state.stateId },
+      });
+      const zeroDigest = "0".repeat(64);
+      const failure = createPreflightCanaryBudgetFailure({
+        source,
+        selection,
+        attemptId: "attempt-budget-fixture",
+        nextChildOrdinal: 7,
+        lastCheckpointDigest: "c".repeat(64),
+        lastCheckpointSequence: 7,
+        lastSampleSequence: 61,
+        grantDigest: zeroDigest,
+        frontier: null,
+        reducerStateDigest: zeroDigest,
+        chain: {
+          receiptHead: null,
+          receiptCount: 0,
+          chunkHead: null,
+          chunkCount: 0,
+          operationHead: null,
+          operationChunkCount: 0,
+          operationTotals: {
+            fullReplayActions: 0,
+            candidateActions: 0,
+            inverseActions: 0,
+            successfulRestorations: 0,
+            consumedLeases: 0,
+            physicalActions: 0,
+            chargedActions: 0,
+          },
+        },
+        functionalRemainingMs: 76_945,
+        requiredChildWindowMs: 100_000,
+        error: new Error("INSUFFICIENT_REMAINING_BUDGET"),
+        capturedAt: "2026-08-12T00:00:00.000Z",
+      });
+      const { canaryDigest: _canaryDigest, ...body } = failure;
+      const tampered = {
+        ...failure,
+        frontierDigest: "a".repeat(64),
+        canaryDigest: sha256Hex({ ...body, frontierDigest: "a".repeat(64) }),
+      };
+      expect(() => parsePreflightCanaryArtifact(tampered)).toThrow(
+        "budget failure bindings do not match contents",
+      );
+      const tamperedSequence = {
+        ...failure,
+        lastCheckpointSequence: 1,
+        canaryDigest: sha256Hex({
+          ...body,
+          lastCheckpointSequence: 1,
+        }),
+      };
+      expect(() => parsePreflightCanaryArtifact(tamperedSequence)).toThrow(
+        "checkpoint sequence does not match child ordinal",
+      );
     });
   });
 

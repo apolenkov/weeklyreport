@@ -1,13 +1,13 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { performance } from "node:perf_hooks";
 
+import type { ProcessGroupOwnership } from "./preflight-detached-process-group-ownership.ts";
 import {
   assertSpawnOwnership,
   groupOwnershipFor,
   leaderOwnershipFor,
   ownershipFor,
   ProcessGroupCleanupError,
-  type ProcessGroupOwnership,
   processGroupStatusFor,
   signalProcessGroup,
   terminateUnownedLeader,
@@ -16,10 +16,7 @@ import {
 export {
   assertSpawnOwnership,
   classifyProcessGroupPermission,
-  type ProcessGroupCleanupClassification,
   ProcessGroupCleanupError,
-  type ProcessGroupLeaderOwnership,
-  type ProcessGroupMemberOwnership,
   type ProcessGroupOwnership,
 } from "./preflight-detached-process-group-ownership.ts";
 
