@@ -2,12 +2,9 @@
 // Human-Driver mode — render the durable Scenario Catalog as a per-role
 // manual-UAT checklist.
 //
-// The catalog (e2e/catalog/<role>.yaml) drives two Driver modes that share one
-// report shape: the AI agent sweep (catalog-sweep.spec.ts) and THIS human
-// checklist. A human reviewer walks each role's routes/intents and records
-// pass/fail + notes — the same findings shape the automated sweep produces, so
-// manual-UAT findings feed back into the catalog (the intake loop in
-// e2e/catalog/README.md).
+// The catalog (e2e/catalog/<role>.yaml) also supports this optional human
+// checklist. A reviewer walks each role's routes/intents and records pass/fail
+// notes; confirmed findings feed back into focused deterministic tests.
 //
 // Pure Node, NO dependencies. Catalog parsing is shared with the drift gate via
 // catalog-parser.ts (one line-scan reader for the generator's deterministic
@@ -76,7 +73,7 @@ function renderChecklist(
   const header = [
     `# Manual UAT checklist — ${role}`,
     "",
-    `Human-Driver mode for the behavioral UI sweep. Source catalog: ` +
+    `Optional human review of the Scenario Catalog. Source catalog: ` +
       `\`e2e/catalog/${role}.yaml\`. Walk each route, perform each intent's ` +
       `**when** from its **given**, and confirm the **then**. Record the result.`,
     "",

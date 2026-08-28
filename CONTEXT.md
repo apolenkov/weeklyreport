@@ -1,4 +1,4 @@
-# CustomReport
+# WeeklyReport
 
 Weekly status reports for a software department: leads fill structured
 report sections, the head reviews/publishes/exports a unified report. This
@@ -14,49 +14,26 @@ doubt, the option that makes entry quicker and clearer wins.
 **Behavioral Scenario**:
 A human-readable description of observable behavior for a role on a route —
 `role + route + intent + Given/When/Then expected outcome`. Anchored to what the
-user sees, NOT to a code location, so it survives refactors. Executed live by a
-Driver on every run; only critical, stabilized paths are later frozen into
-deterministic Playwright specs.
+user sees, NOT to a code location, so it survives refactors. A scenario may be
+owned by focused deterministic coverage or remain a reviewed exploratory intent.
 _Avoid_: feature file (as a synonym for the catalog), test case, story.
 
 **Scenario Catalog**:
 The durable, high-level set of Behavioral Scenarios (`roles × routes × intents`)
 that a human reviews and maintains. Deliberately NOT an exhaustive enumeration of
-every element, state, or transition — that is structure-anchored and rots;
-exhaustive coverage is produced by the Driver exploring at run time, not stored
-as a frozen list. Distinct from the Coverage Catalog.
-_Avoid_: behavioral catalog, test plan.
+every element, state, or transition. Route health consumes its route surface;
+focused tests own detailed behavior.
+_Avoid_: exhaustive interaction graph, generated test matrix.
 
-**Driver**:
-The swappable executor that runs the Scenario Catalog against the live app —
-either a human (manual checklist) or an AI agent (drives the browser, supplies
-data, observes layout). Produces a report of what is broken, per role. Same
-catalog, two interchangeable drivers.
-_Avoid_: runner, executor (too generic), test bot.
+**Route health**:
+A bounded per-role check that every catalog route opens without an unclassified
+HTTP, page, console, network, or accessibility failure.
+_Avoid_: exhaustive sweep, full product acceptance.
 
-**Role sweep**:
-A per-role pass (`lead` / `head` / `admin` / `viewer`, via `/auth/dev-login`) in
-which a Driver exercises that role's Behavioral Scenarios in a live browser and
-reports anomalies (console errors, broken DOM/flow, layout, a11y). A reporting
-tool in phase 1, NOT a blocking gate; it becomes a gate only once critical paths
-are frozen into deterministic specs.
-_Avoid_: smoke test, e2e run (too generic).
-
-**Exhaustive Runtime Sweep**:
-A verification campaign that dynamically covers every role-reachable route,
-deterministic domain state, interactive control, intent, boundary, and pairwise
-transition inside its declared browser, viewport, and environment matrix. The
-Scenario Catalog remains the durable oracle; the sweep is a reproducible
-evidence snapshot, not an unbounded claim about every theoretically possible
-input or event sequence.
-_Avoid_: all possible cases, exhaustive Scenario Catalog.
-
-**Coverage Catalog**:
-A generated map binding each scenario to the `file:line` of the code it
-exercises, to detect uncovered entry-point surface. Brittle on an unstable
-codebase (the `file:line` links rot on the first refactor); deliberately
-deferred until the code stabilizes. Distinct from the Scenario Catalog.
-_Avoid_: scenario catalog (when you mean the durable behavioral set).
+**Lifecycle smoke**:
+One representative lead write, head publication, and viewer read-back that
+proves WeeklyReport's basic cross-role viability.
+_Avoid_: exhaustive journey matrix, complete regression suite.
 
 ## Reporting periods & submission
 

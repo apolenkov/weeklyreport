@@ -22,12 +22,7 @@
     "paths": {}
   },
   "include": ["scripts/**/*.ts", "tools/**/*.ts", "e2e/sweep/**/*.ts"],
-  // The Playwright-loaded half of e2e/sweep resolves @playwright/test out of
-  // apps/web's install and is typechecked by e2e/tsconfig.json, which carries
-  // that mapping. Only the plain-node entrypoints belong to this project.
-  "exclude": [
-    "e2e/sweep/**/*.spec.ts",
-    "e2e/sweep/playwright.config.ts",
-    "e2e/sweep/helpers/**"
-  ]
+  // Playwright-loaded E2E code is typechecked by e2e/tsconfig.json. Only the
+  // plain-node catalogue entrypoints belong to this project.
+  "exclude": ["e2e/sweep/**/*.spec.ts", "e2e/sweep/helpers/**"]
 }

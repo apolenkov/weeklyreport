@@ -90,7 +90,7 @@ describe("acceptance Playwright config", () => {
     expect(config.fullyParallel).toBe(false);
     expect(config.projects?.map(({ name }) => name)).toEqual([
       "route-health",
-      "critical-journeys",
+      "smoke-lifecycle",
     ]);
     expect(servers.map(({ url }) => url)).toEqual([
       "http://127.0.0.1:3122/health/ready",

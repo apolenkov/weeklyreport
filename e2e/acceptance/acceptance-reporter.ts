@@ -23,7 +23,7 @@ import {
 
 interface ReporterOptions {
   readonly apiPort: number;
-  readonly commandKind: "full" | "route-health" | "smoke";
+  readonly commandKind: "combined" | "route-health" | "smoke";
   readonly resultsRoot: string;
   readonly webPort: number;
   readonly webDistDir: string;

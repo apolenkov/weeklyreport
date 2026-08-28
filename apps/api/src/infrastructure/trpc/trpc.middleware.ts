@@ -7,7 +7,6 @@ import {
   ANONYMOUS_USER_ID,
   NO_CORRELATION_ID,
 } from "../../lib/actor-sentinels.js";
-import { runtimeApiWorkTracker } from "../health/runtime-api-work-tracker.js";
 import { trpcMetricsMiddleware as recordTrpcMetrics } from "../metrics/trpc-metrics.middleware.js";
 import { recordMutationAudit } from "./trpc.audit.js";
 import type { TrpcContext } from "./trpc.context.js";
@@ -38,10 +37,6 @@ const t = initTRPC.context<TrpcContext>().create({
     };
   },
 });
-
-const runtimeApiWorkMiddleware = t.middleware(({ next }) =>
-  runtimeApiWorkTracker.track(next),
-);
 
 // getRawInput() can throw on malformed or already-consumed bodies; callers that
 // only need a best-effort peek at the input skip it rather than crash.
@@ -151,7 +146,6 @@ export const captureMutationAuditInputMiddleware = t.middleware(
 );
 
 export const publicProcedure = t.procedure
-  .use(runtimeApiWorkMiddleware)
   .use(metricsMiddleware)
   .use(loggingMiddleware);
 
@@ -211,7 +205,6 @@ const pdfExportGuard = t.middleware(
 // logging → auth → pdfExportGuard → mutationAudit.
 function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
   return t.procedure
-    .use(runtimeApiWorkMiddleware)
     .use(metricsMiddleware)
     .use(loggingMiddleware)
     .use(authMiddleware)

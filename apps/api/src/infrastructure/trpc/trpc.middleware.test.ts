@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { runtimeApiWorkTracker } from "../health/runtime-api-work-tracker.js";
 import {
   adminProcedure,
   anyRoleProcedure,
@@ -48,26 +47,25 @@ describe("protected procedure chain-composition pins", () => {
     { name: "leadershipProcedure", chain: leadershipChain },
   ];
 
-  it("each protected builder carries exactly 6 middlewares", () => {
+  it("each protected builder carries exactly 5 middlewares", () => {
     for (const { name, chain } of protectedBuilders) {
-      expect(chain, `${name} middleware count`).toHaveLength(6);
+      expect(chain, `${name} middleware count`).toHaveLength(5);
     }
   });
 
-  it("slots 0-2 are reference-equal to publicProcedure's middlewares (work tracker + metrics + logging)", () => {
+  it("slots 0-1 are reference-equal to publicProcedure's middlewares (metrics + logging)", () => {
     for (const { name, chain } of protectedBuilders) {
-      expect(chain[0], `${name} slot 0 (work tracker)`).toBe(publicChain[0]);
-      expect(chain[1], `${name} slot 1 (metrics)`).toBe(publicChain[1]);
-      expect(chain[2], `${name} slot 2 (logging)`).toBe(publicChain[2]);
+      expect(chain[0], `${name} slot 0 (metrics)`).toBe(publicChain[0]);
+      expect(chain[1], `${name} slot 1 (logging)`).toBe(publicChain[1]);
     }
   });
 
-  it("slots 4-5 (pdfExportGuard, mutationAuditMiddleware) are reference-equal across all protected builders", () => {
+  it("slots 3-4 (pdfExportGuard, mutationAuditMiddleware) are reference-equal across all protected builders", () => {
     // Use headProcedure as the reference since the unexported middlewares
     // are not directly accessible.
     for (const { name, chain } of protectedBuilders) {
-      expect(chain[4], `${name} slot 4 (pdfExportGuard)`).toBe(headChain[4]);
-      expect(chain[5], `${name} slot 5 (mutationAudit)`).toBe(headChain[5]);
+      expect(chain[3], `${name} slot 3 (pdfExportGuard)`).toBe(headChain[3]);
+      expect(chain[4], `${name} slot 4 (mutationAudit)`).toBe(headChain[4]);
     }
   });
 });
@@ -77,9 +75,6 @@ const TEST_IP = "test-ip";
 
 const testRouter = router({
   publicRoute: publicProcedure.query(() => "public-ok"),
-  trackedRoute: publicProcedure.query(() =>
-    runtimeApiWorkTracker.activeCount(),
-  ),
   protectedRoute: protectedProcedure.query(() => "auth-ok"),
   headRoute: headProcedure.query(() => "head-ok"),
 });
@@ -148,11 +143,6 @@ function makeFakeLogger(): AppLogger & {
 }
 
 describe("tRPC auth middleware", () => {
-  it("tracks a public procedure until its resolver settles", async () => {
-    await expect(nullCaller.trackedRoute()).resolves.toBe(1);
-    expect(runtimeApiWorkTracker.activeCount()).toBe(0);
-  });
-
   it("publicProcedure allows null session", async () => {
     const result = await nullCaller.publicRoute();
     expect(result).toBe("public-ok");

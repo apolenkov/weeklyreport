@@ -25,7 +25,7 @@ export default defineConfig({
     },
   },
   test: {
-    // Runtime shard fixtures share deterministic repo-local roots. File-level
+    // Root E2E fixtures share deterministic repo-local roots. File-level
     // concurrency lets one fixture delete another and creates false timeouts.
     fileParallelism: false,
     include: [
@@ -34,7 +34,6 @@ export default defineConfig({
       "e2e/helpers/*.test.ts",
       "e2e/integration/*.test.ts",
       "e2e/runtime-api-server-command.test.ts",
-      "e2e/runtime-sweep/**/*.test.ts",
       "e2e/sweep/*.test.ts",
       "e2e/sweep/helpers/*.test.ts",
       "e2e/csp/*.test.ts",

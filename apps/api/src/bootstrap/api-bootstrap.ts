@@ -11,16 +11,12 @@ import { mountAuthIngress } from "./auth-ingress.js";
 import { configureHttpPipeline } from "./http-pipeline.js";
 import { createNestApp } from "./nest-app.js";
 import { registerProcessErrorHandlers } from "./process-error-handlers.js";
-import { runtimeShutdownCompletionWriter } from "./runtime-shutdown-completion.js";
 import { shutdownSentry } from "./sentry-bootstrap.js";
 
 export async function bootstrapApi(
   otelDecision: OtelBootstrapResult,
 ): Promise<void> {
   const env = validateEnv();
-  const writeCompletion = runtimeShutdownCompletionWriter(
-    env.RUNTIME_SWEEP_SHUTDOWN_COMPLETION,
-  );
   const { app, logger } = await createNestApp({ env, otelDecision });
   const { authLimiter, trpcLimiter, vitalsLimiter, shutdownRateLimitStore } =
     await configureHttpPipeline({
@@ -67,6 +63,5 @@ export async function bootstrapApi(
     shutdownRateLimitStore,
     shutdownOtel,
     shutdownSentry,
-    ...(writeCompletion === undefined ? {} : { writeCompletion }),
   });
 }

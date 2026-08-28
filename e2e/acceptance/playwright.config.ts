@@ -19,7 +19,7 @@ const commandKind =
   process.env.ACCEPTANCE_COMMAND_KIND === "smoke" ||
   process.env.ACCEPTANCE_COMMAND_KIND === "route-health"
     ? process.env.ACCEPTANCE_COMMAND_KIND
-    : "full";
+    : "combined";
 
 process.env.E2E_API_PORT = String(target.apiPort);
 process.env.E2E_WEB_PORT = String(target.webPort);
@@ -88,8 +88,8 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "critical-journeys",
-      testMatch: "critical-journeys/**/*.spec.ts",
+      name: "smoke-lifecycle",
+      testMatch: "smoke-lifecycle.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
   ],

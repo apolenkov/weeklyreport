@@ -7,7 +7,7 @@
       "file": "package.json",
       "rule": "unused-dev-dependency",
       "verdict": "overturn",
-      "rationale": "The project-relative package.json warning misclassifies @axe-core/playwright as unused: e2e/sweep/axe-detector.spec.ts and e2e/sweep/catalog-sweep.spec.ts import it, e2e/tsconfig.json maps the package to apps/web/node_modules, and the UAT/accessibility specs require that gate. Removing the apps/web devDependency would break an active e2e consumer."
+      "rationale": "The project-relative package.json warning misclassifies @axe-core/playwright as unused: e2e/acceptance/route-health.spec.ts and e2e/acceptance/route-health-axe-detector.spec.ts import it, e2e/tsconfig.json maps the package to apps/web/node_modules, and route-health acceptance requires that gate. Removing the apps/web devDependency would break an active E2E consumer."
     },
     {
       "id": "src/app/(app)/admin/page.tsx::3:1::react-doctor/no-barrel-import::e218d30fdfaeeca1009a24f92997ae353bcf97f782a154a46bb213a7aa521a73",

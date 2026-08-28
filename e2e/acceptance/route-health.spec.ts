@@ -3,9 +3,9 @@
  * and writes console, load, and a11y anomalies to per-role Markdown reports.
  * Each role report is preserved before any anomaly fails the test.
  *
- * This is WeeklyReport's bounded route-health acceptance. Critical mutations
- * live in the separate journey project; this file owns the complete route
- * census without compiling catalog prose into another test language.
+ * This is WeeklyReport's bounded route-health acceptance. One representative
+ * mutation lifecycle lives in the smoke project; focused suites own detailed
+ * behavior without compiling catalog prose into another test language.
  *
  * See openspec/specs/behavioral-ui-regression-gate/spec.md + docs/adr/0001 +
  * e2e/catalog/README.md.

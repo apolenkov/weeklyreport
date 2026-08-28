@@ -14,7 +14,7 @@ WeeklyReport needs trustworthy product acceptance, but the current exhaustive ru
 
 ### Non-goals
 
-- No change to WeeklyReport product behavior, production APIs, auth, or data model.
+- No change to WeeklyReport user-facing behavior, business APIs, auth, or data model. Runtime-sweep-only health, request-tracking, shutdown-receipt, and environment hooks are removed with their sole consumer.
 - No mobile work; the six owner-deferred mobile changes remain deferred.
 - No exhaustive interaction-graph traversal, combinatorial state proof, custom orchestration, or AI-owned acceptance authority.
 - No deletion of ordinary product tests that remain fast, deterministic, and behavior-focused.
@@ -35,4 +35,4 @@ WeeklyReport needs trustworthy product acceptance, but the current exhaustive ru
 
 ## Impact
 
-Primary impact is `e2e/`, package scripts, CI, gates, docs, OpenSpec, and external archive guidance. The change deletes roughly 142k lines, retires the incomplete `establish-exhaustive-runtime-sweep` track as superseded, and rewrites dependent closure tasks. Production code and schemas remain unchanged.
+Primary impact is `e2e/`, package scripts, CI, gates, docs, OpenSpec, and external archive guidance. The change deletes roughly 142k lines, retires the incomplete `establish-exhaustive-runtime-sweep` track as superseded, and rewrites dependent closure tasks. It also removes production-compiled hooks that existed only for the retired harness; business procedures and schemas remain unchanged.

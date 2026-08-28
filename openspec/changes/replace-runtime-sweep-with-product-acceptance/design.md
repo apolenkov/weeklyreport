@@ -2,7 +2,7 @@
 
 See `proposal.md` for motivation. The current browser surface is split between useful focused suites (`e2e/integration`, `e2e/sweep`, seed profiles, production-build/CSP) and an 859-file, ~141,620-line runtime platform. Forty-six files outside that platform mention `runtime-sweep`; most are historical OpenSpec records, while the live dependencies are package commands, structural gates, two sweep helpers, product-variant tooling, one health test, docs, and four active changes.
 
-The replacement must preserve the exact disposable-database guard, per-run consent, role-coverage gate, period dual-state invariant, and existing product behavior. It changes no request path, Prisma write, shared schema, credential, or production runtime.
+The replacement must preserve the exact disposable-database guard, per-run consent, role-coverage gate, period dual-state invariant, and existing product behavior. It removes the runtime-sweep-only health endpoint, tRPC work tracker, shutdown receipt, and environment keys, but changes no business procedure, Prisma write, shared schema, or credential.
 
 ## Goals / Non-Goals
 
@@ -92,7 +92,7 @@ Git SHA -> guarded reset/seed -> route health + one smoke lifecycle
         -> standard Playwright report/failure artifacts -> bounded cleanup result
 ```
 
-No WeeklyReport request, tRPC, or Prisma production data flow changes.
+No WeeklyReport business procedure or Prisma production data flow changes.
 
 ## Risks / Trade-offs
 

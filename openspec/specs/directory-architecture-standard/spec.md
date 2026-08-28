@@ -731,29 +731,6 @@ cross-slice edges grandfathered. After this relocation the
   imports another slice's internal, without a grandfathered `except` entry
 - **THEN** `import-x/no-restricted-paths` reports a web-slice-boundary error
 
-### Requirement: Runtime-sweep preflight modules MUST expose bounded ownership groups
-
-Each direct directory under `e2e/runtime-sweep/preflight/` MUST remain within
-the repository's existing 30-file ownership limit. Diagnostic sidecars, launch
-continuations, and reusable reveal-continuation contracts MUST live in explicit
-child ownership groups, with all imports and the runtime-sweep catalogue naming
-their physical canonical paths. The structural baseline MUST describe the final
-tree and MUST NOT relax the file-count limit.
-
-#### Scenario: Preflight ownership groups pass the directory gate
-
-- **WHEN** the directory-architecture gate counts direct files after the move
-- **THEN** `preflight/diagnostics`, `preflight/launch`, and
-  `preflight/reveal/continuation` each contain no more than 30 direct files
-- **AND** no new exception or higher limit is introduced
-
-#### Scenario: Catalogue and imports follow physical ownership
-
-- **WHEN** the moved runtime-sweep modules are resolved by tests, static imports,
-  and the scenario catalogue
-- **THEN** every consumer resolves the canonical child-directory path
-- **AND** no compatibility copy, shim, or duplicate module remains at the old path
-
 ### Requirement: The runtime import graph MUST be acyclic and gated
 
 The module graph of `apps/api/src`, `apps/web/src`, `packages/shared/src`, and `packages/ui/src` MUST contain zero runtime circular dependencies (`pnpm depcruise` — type-only imports excluded by config), and the check MUST run as part of `pnpm lint` so a new cycle fails the active gate.

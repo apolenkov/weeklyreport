@@ -157,7 +157,7 @@ max strictness. The a11y carve-outs
 (`jsx-a11y/no-noninteractive-element-interactions: off`,
 `jsx-a11y/label-has-associated-control: off`, and the test-file full-a11y-off
 override) MUST be **inherited as documented exclusions, not reopened** — reopening
-would collide with the active `verify-a11y-recommended-flip` runtime sweep. The
+would collide with the focused `verify-a11y-recommended-flip` gate. The
 existing non-preset warns MUST carry a per-rule disposition:
 `@typescript-eslint/no-non-null-assertion` → Phase-3 `error`;
 `react-hooks/exhaustive-deps` → Phase-3 `error`;

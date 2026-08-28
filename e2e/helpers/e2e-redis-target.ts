@@ -9,7 +9,6 @@ export interface E2eRedisResetEnvironment {
   readonly PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION?: string;
   readonly REDIS_HOST?: string;
   readonly REDIS_PORT?: string;
-  readonly RUNTIME_SWEEP_ARCHIVE?: string;
 }
 
 export interface E2eRedisResetTarget {
@@ -27,11 +26,6 @@ export function e2eRedisResetTarget(
   const enabled = environment.E2E_REDIS_FLUSH;
   if (enabled !== undefined && enabled !== "false" && enabled !== "true") {
     throw new E2eRedisSetupError("E2E_REDIS_FLUSH must be true or false");
-  }
-  if (environment.RUNTIME_SWEEP_ARCHIVE && enabled !== "true") {
-    throw new E2eRedisSetupError(
-      "Runtime sweep requires E2E_REDIS_FLUSH=true for deterministic transient state",
-    );
   }
   if (enabled !== "true") return null;
 

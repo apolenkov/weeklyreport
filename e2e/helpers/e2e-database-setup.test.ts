@@ -28,7 +28,7 @@ describe("E2E database setup", () => {
   it("builds a deterministic reset then named-profile plan", () => {
     const repoRoot = path.join("workspace", "customreport");
 
-    expect(e2eSetupCommands(repoRoot, "stress", "schema+seed")).toEqual([
+    expect(e2eSetupCommands(repoRoot, "stress")).toEqual([
       {
         executable: "pnpm",
         args: ["exec", "prisma", "migrate", "reset", "--force"],
@@ -53,7 +53,6 @@ describe("E2E database setup", () => {
         databaseUrl: "postgresql://localhost/customreport_dev",
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow(E2eDatabaseSetupError);
   });
@@ -70,7 +69,6 @@ describe("E2E database setup", () => {
           "postgresql://runner:other@127.0.0.1:5432/customreport_dev?pool=2",
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow(E2eDatabaseSetupError);
   });
@@ -94,7 +92,6 @@ describe("E2E database setup", () => {
         databaseUrl,
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow(E2eDatabaseSetupError);
   });
@@ -107,7 +104,6 @@ describe("E2E database setup", () => {
         databaseUrl: "postgresql://db.example.com/customreport",
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow(/host "db\.example\.com" is not loopback/u);
   });
@@ -121,7 +117,6 @@ describe("E2E database setup", () => {
         databaseUrl: "postgresql://localhost/customreport_prod",
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow(/database name "customreport_prod" looks like production\./iu);
   });
@@ -140,26 +135,9 @@ describe("E2E database setup", () => {
         databaseUrl,
         profile: "full",
         repoRoot: "/unused",
-        mode: "schema+seed",
       }),
     ).toThrow();
     expect(command.execute).not.toHaveBeenCalled();
-  });
-
-  it("keeps a profile-only reseed data-only", () => {
-    const repoRoot = path.join("workspace", "customreport");
-
-    expect(e2eSetupCommands(repoRoot, "stress", "profile-reseed")).toEqual([
-      {
-        executable: process.execPath,
-        args: [
-          "--import",
-          "tsx",
-          path.join(repoRoot, "prisma/seeds/profiles/seed-profile.ts"),
-          "stress",
-        ],
-      },
-    ]);
   });
 
   it("rechecks per-run consent immediately before the seed command", () => {
@@ -173,7 +151,6 @@ describe("E2E database setup", () => {
         databaseUrl: "postgresql://localhost/customreport_e2e",
         profile: "full",
         repoRoot: "/repo",
-        mode: "schema+seed",
       }),
     ).toThrow(/must equal "давай" exactly/u);
     expect(command.execute).toHaveBeenCalledTimes(1);
