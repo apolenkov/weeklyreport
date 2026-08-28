@@ -69,7 +69,7 @@ All rows below are live in `eslint.config.ts` today:
 | Area                                                                                                 | Ratified rule                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `max-lines` (skipBlankLines, skipComments)                                                           | **230** for maintained product source, enforced `error` across `apps/api/src`, `apps/web/src`, `packages/shared/src`, and `packages/ui/src`.                                                                                                                                                                                                             |
-| `max-lines-per-function`                                                                             | **57** for maintained product source, enforced `error`; tests and test utilities use their separately measured role policy.                                                                                                                                                                                                                              |
+| `max-lines-per-function`                                                                             | **57** for maintained product source, enforced `error`; tests, fixtures, harnesses, UAT and E2E have no structural size/complexity budgets.                                                                                                                                                                                                              |
 | `sonarjs/cognitive-complexity`                                                                       | **Below 10** for maintained product source (`9` is the configured maximum), enforced `error`.                                                                                                                                                                                                                                                            |
 | `complexity` (cyclomatic)                                                                            | **10** for maintained product source, enforced `error`.                                                                                                                                                                                                                                                                                                  |
 | `prefer-const` / `no-var`                                                                            | Global `error`.                                                                                                                                                                                                                                                                                                                                          |
@@ -103,9 +103,12 @@ external `~/work/customreport-archive/2026-07-30-exhaustive-style-audit/TOOLCHAI
 and verified against the current tree; where rules conflict, document a
 one-line WHY for the deliberate opt-out (never a blanket disable).
 
-Tests, fixtures, generated sources, config, and tooling use explicit
-separately measured role policies; they do not weaken the maintained-product
-floor and still keep their applicable type-aware safety rules.
+Tests, fixtures, harnesses, UAT and E2E stay outside production structural,
+complexity and immutability budgets and test-style preferences. They retain
+formatting plus applicable type-aware safety and failure-prevention rules such
+as rejecting focused tests, duplicate hooks and invalid asynchronous
+expectations. Generated sources, config and tooling keep their explicit role
+policies. None of these scopes weakens the maintained-product floor.
 
 ## 3. Rollout method (per folder — the proven sequence)
 

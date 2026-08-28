@@ -260,14 +260,21 @@
         "apps/api/src/**/*.{ts,tsx}",
         "apps/web/src/**/*.{ts,tsx}",
         "packages/shared/src/**/*.{ts,tsx}",
-        "packages/ui/src/**/*.{ts,tsx}",
-        "e2e/**/*.{ts,tsx}"
+        "packages/ui/src/**/*.{ts,tsx}"
       ],
       "ignores": [
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
         "**/__tests__/**",
-        "apps/*/src/test-utils/**"
+        "**/test-utils/**",
+        "**/__fixtures__/**",
+        "**/fixture/**",
+        "**/fixtures/**",
+        "**/*-harness.{ts,tsx}",
+        "**/*.fixture.{ts,tsx}",
+        "**/*.fixtures.{ts,tsx}",
+        "**/*-fixture.{ts,tsx}",
+        "**/*-test-fixture.{ts,tsx}"
       ],
       "positive": "apps/api/src/main.ts",
       "negative": "apps/api/src/app.module.fence.test.ts",
@@ -324,7 +331,20 @@
         "apps/api/src/modules/**/domain/**/*.ts",
         "packages/shared/src/**/*.ts"
       ],
-      "ignores": [],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "**/test-utils/**",
+        "**/__fixtures__/**",
+        "**/fixture/**",
+        "**/fixtures/**",
+        "**/*-harness.{ts,tsx}",
+        "**/*.fixture.{ts,tsx}",
+        "**/*.fixtures.{ts,tsx}",
+        "**/*-fixture.{ts,tsx}",
+        "**/*-test-fixture.{ts,tsx}"
+      ],
       "positive": "apps/api/src/modules/period/domain/period-transition.ts",
       "negative": "apps/api/src/modules/period/module.ts",
       "marker": {
@@ -340,7 +360,20 @@
       "id": "api-module-tacit-style",
       "classification": "enforcement",
       "files": ["apps/api/src/modules/**/*.ts"],
-      "ignores": [],
+      "ignores": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/__tests__/**",
+        "**/test-utils/**",
+        "**/__fixtures__/**",
+        "**/fixture/**",
+        "**/fixtures/**",
+        "**/*-harness.{ts,tsx}",
+        "**/*.fixture.{ts,tsx}",
+        "**/*.fixtures.{ts,tsx}",
+        "**/*-fixture.{ts,tsx}",
+        "**/*-test-fixture.{ts,tsx}"
+      ],
       "positive": "apps/api/src/modules/activity/activity.service.ts",
       "negative": "apps/api/src/main.ts",
       "marker": {
@@ -403,55 +436,65 @@
         "positive": "error",
         "negative": "absent"
       },
-      "evidence": "Tests replace unsafe generic method handling with Vitest-aware enforcement and use measured test-specific budgets rather than a blanket pass."
+      "evidence": "Tests keep Vitest-aware correctness checks but carry no production structure, complexity, immutability, compiler, or preference budgets."
     },
     {
       "configIndex": 25,
-      "id": "literal-data",
-      "classification": "policy",
-      "files": ["apps/api/src/test-utils/**"],
+      "id": "test-support-policy",
+      "classification": "specialization",
+      "files": [
+        "apps/*/src/test-utils/**",
+        "**/__fixtures__/**",
+        "**/fixture/**",
+        "**/fixtures/**",
+        "**/*-harness.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*.fixture.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*.fixtures.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*-fixture.{ts,tsx,js,jsx,mjs,cjs}",
+        "**/*-test-fixture.{ts,tsx,js,jsx,mjs,cjs}"
+      ],
       "ignores": [],
       "positive": "apps/api/src/test-utils/report-section-fixtures.ts",
       "negative": "apps/api/src/infrastructure/metrics/metrics.module.ts",
       "marker": {
         "kind": "rule",
-        "name": "@typescript-eslint/no-magic-numbers",
+        "name": "max-lines",
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "Test infrastructure contains fixture literals whose names would add indirection; production metrics and UI primitives remain under ordinary numeric-literal enforcement."
+      "evidence": "Test utilities, fixtures, and harnesses share the unrestricted test-contour structural policy while production source retains the strict floor."
     },
     {
       "configIndex": 26,
-      "id": "uat-fixture-vocabulary",
-      "classification": "policy",
-      "files": ["apps/web/uat-suite/inventory.mjs"],
+      "id": "uat-test-policy",
+      "classification": "specialization",
+      "files": ["apps/web/uat-suite/**"],
       "ignores": [],
       "positive": "apps/web/uat-suite/inventory.mjs",
-      "negative": "apps/web/uat-suite/helpers.mjs",
+      "negative": "apps/web/src/shared/lib/trpc/trpc.ts",
       "marker": {
         "kind": "rule",
-        "name": "sonarjs/no-duplicate-string",
+        "name": "max-lines",
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "Repeated strings are UAT fixture vocabulary (inventory.mjs only); helpers.mjs is the adjacent negative outside that override, while ordinary tooling remains under duplicate-string enforcement."
+      "evidence": "UAT is acceptance tooling and carries no production structural budgets; maintained web source retains the strict floor."
     },
     {
       "configIndex": 27,
-      "id": "uat-inline-inventory",
-      "classification": "policy",
-      "files": ["apps/web/uat-suite/inventory.mjs"],
+      "id": "e2e-test-policy",
+      "classification": "specialization",
+      "files": ["e2e/**"],
       "ignores": [],
-      "positive": "apps/web/uat-suite/inventory.mjs",
-      "negative": "apps/web/uat-suite/helpers.mjs",
+      "positive": "e2e/acceptance/tests/smoke-lifecycle.spec.ts",
+      "negative": "apps/web/src/shared/lib/trpc/trpc.ts",
       "marker": {
         "kind": "rule",
-        "name": "sonarjs/cognitive-complexity",
+        "name": "max-lines",
         "positive": "off",
         "negative": "error"
       },
-      "evidence": "The inventory classifier must remain inline because it executes inside page.evaluate; other UAT scripts retain the complexity ceiling."
+      "evidence": "Playwright helpers and scenarios carry no production structural budgets; maintained web source retains the strict floor."
     },
     {
       "configIndex": 28,
