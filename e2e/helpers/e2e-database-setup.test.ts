@@ -161,4 +161,21 @@ describe("E2E database setup", () => {
       },
     ]);
   });
+
+  it("rechecks per-run consent immediately before the seed command", () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://localhost/weeklyreport_dev");
+    command.execute.mockImplementationOnce(() => {
+      process.env.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION = "expired";
+    });
+
+    expect(() =>
+      setupE2eDatabase({
+        databaseUrl: "postgresql://localhost/customreport_e2e",
+        profile: "full",
+        repoRoot: "/repo",
+        mode: "schema+seed",
+      }),
+    ).toThrow(/must equal "давай" exactly/u);
+    expect(command.execute).toHaveBeenCalledTimes(1);
+  });
 });
