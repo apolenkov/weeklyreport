@@ -1,28 +1,44 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Final Acceptance Gate MUST Pass As A Bounded Product Chain
 
-The repository MUST pass a single final acceptance gate before WeeklyReport is declared release-ready. The gate consists of `pnpm typecheck`, `pnpm lint`, `pnpm test`, an explicitly configured production `pnpm build`, focused existing E2E suites, and `pnpm test:acceptance`; every command MUST exit 0. Browser acceptance is deliberately limited to route health plus one smoke lifecycle; it is not a second full product-test matrix.
+The repository MUST pass `pnpm typecheck`, `pnpm lint`, `pnpm test`, an explicitly configured production `pnpm build`, focused existing E2E suites, and `pnpm test:acceptance` before WeeklyReport is described as release-ready. Browser acceptance is limited to route health plus one lifecycle smoke.
 
 #### Scenario: The complete final gate is green
 
-- **WHEN** a maintainer runs the documented final acceptance command sequence at one exact Git SHA
-- **THEN** typecheck, lint, unit/integration tests, production build, focused E2E suites, and bounded smoke acceptance all exit 0
-- **AND** the acceptance report records the same SHA and a successful cleanup result
+- **WHEN** the final commands run at one exact Git SHA
+- **THEN** every command exits zero and the acceptance report records successful cleanup
 
 #### Scenario: A final gate command fails
 
-- **WHEN** any required command exits non-zero or acceptance cleanup is not proven
+- **WHEN** any required command fails or cleanup is not proven
 - **THEN** final acceptance fails
-- **AND** WeeklyReport is not described as release-ready
-
-## ADDED Requirements
 
 ### Requirement: Final acceptance MUST NOT depend on exhaustive runtime campaigns
 
-The final WeeklyReport verdict MUST be derivable from bounded deterministic gates and the product acceptance report. It MUST NOT require an exhaustive interaction graph, a source-manifest campaign, continuation chunks, a custom supervisor, an AI-import verdict, or a multi-hour canary.
+The final WeeklyReport verdict MUST NOT require an interaction graph, campaign manifest, continuation chunks, custom supervisor, AI-import verdict, or multi-hour canary.
 
 #### Scenario: Bounded acceptance is complete
 
-- **WHEN** all final deterministic gates and `pnpm test:acceptance` pass at one source SHA
-- **THEN** the browser acceptance denominator is complete without running any retired `test:runtime-*` command
+- **WHEN** deterministic gates and `pnpm test:acceptance` pass at one source SHA
+- **THEN** browser acceptance is complete without any retired runtime command
+
+## REMOVED Requirements
+
+### Requirement: Final Acceptance Gate MUST Pass As A Four-Command Chain
+
+**Reason**: The four-command wording omitted focused E2E and bounded browser acceptance ownership.
+
+**Migration**: Use the bounded product chain defined by this change.
+
+### Requirement: Final Playwright Re-Sweep MUST Show Zero Console Errors Per Role
+
+**Reason**: The old re-sweep command and harness were retired.
+
+**Migration**: `pnpm test:uat` runs four-role route health and fails on unclassified console errors.
+
+### Requirement: Visual Acceptance Reviews the Entire Enumerated Frame Set
+
+**Reason**: An exhaustive enumerated browser frame set conflicts with the owner-approved smoke-only contour.
+
+**Migration**: Keep targeted visual regressions in focused tests and reviewed product evidence.

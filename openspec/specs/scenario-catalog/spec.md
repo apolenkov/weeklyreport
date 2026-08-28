@@ -29,8 +29,8 @@ route-catalog surface and remain owned by their respective API/domain checks.
 
 - **WHEN** a page is an export or unauthenticated system surface rather than a
   role navigation intent
-- **THEN** it is named in `e2e/sweep/catalog-check.ts` `EXCLUDED_ROUTES` with a
-  reason instead of silently disappearing from the route census
+- **THEN** it is named in `e2e/sweep/catalog-check.ts` `EXCLUDED_ROUTES` with
+  a reason instead of silently disappearing from the route census
 
 ### Requirement: Every scenario has a machine-checkable outcome
 
@@ -41,24 +41,23 @@ mechanically checked MUST NOT be admitted to the catalog.
 
 #### Scenario: a non-assertable outcome is rejected
 
-- **WHEN** a scenario is authored with a `Then` that names no checkable condition
+- **WHEN** a scenario is authored with a `Then` that names no checkable
+  condition
 - **THEN** it is rejected from the catalog until the `Then` states a concrete
   assertion (field value, returned shape, visible text, or error count)
 
 ### Requirement: Every route has a reviewed behavioral intent
 
 Each catalog route MUST carry at least one reviewed intent with `id`, `given`,
-`when`, and `then` fields. The catalog intentionally carries no file/line,
-selector, or test-name links: those structural anchors rot on refactors. A
-Driver reads the intent against the live route, and route changes are detected
-by the drift gate rather than by intersecting source-file links.
+`when`, and `then` fields. The catalog intentionally carries no file, line,
+selector, or test-name links. Route changes are detected by the drift gate;
+focused deterministic tests own detailed behavior.
 
 #### Scenario: a route without an intent is rejected
 
 - **WHEN** a catalog route has no intent entry or omits a required behavioral
   field
-- **THEN** generation/checking rejects the catalog instead of treating the
-  route as covered
+- **THEN** catalog checking rejects it instead of treating the route as covered
 
 ### Requirement: A drift gate keeps the route catalog honest
 
@@ -76,22 +75,19 @@ from it.
 - **THEN** `pnpm catalog:check` exits non-zero in CI
 - **AND** it names the uncovered route
 
-### Requirement: Execution is route sweep plus within-route Driver exploration
+### Requirement: Execution is route health plus one bounded smoke lifecycle
 
-The catalog MUST drive the existing Layer-1 Playwright role sweep
-(`e2e/sweep/catalog-sweep.spec.ts`) for every catalog route. The sweep records
-navigation/load, page-error, console-error, network, and axe anomalies and writes
-per-role reports. Within-route interaction and intent judgement remain the
-swappable Driver's run-time job; this spec does not create an API tier or a
-second BDD runner for backend-only entry points.
+The catalog MUST drive four-role route health for every reachable catalog route.
+The blocking browser contour MUST add only one representative cross-role
+lifecycle; other product intents remain in focused tests or optional human
+review. No BDD runner or exhaustive interaction compiler may be introduced.
 
-#### Scenario: a role-reachable route is swept
+#### Scenario: A role-reachable route is checked
 
-- **WHEN** `pnpm test:uat` runs the catalog sweep
-- **THEN** each role catalog is loaded and each route is visited with its dynamic
-  report id resolved from the deterministic seed constants
-- **AND** the role report records every load, console, page-error, network, and
-  axe anomaly before the test outcome is asserted
+- **WHEN** `pnpm test:uat` or combined acceptance runs route health
+- **THEN** every role catalog route is visited with deterministic identifiers
+- **AND** HTTP, console, page, network, and axe anomalies are recorded before
+  verdict
 
 ### Requirement: The catalog is documentation, not a new test runner
 
@@ -103,31 +99,24 @@ competing test framework in the repo.
 #### Scenario: automation reuses the existing harness
 
 - **WHEN** a catalog scenario is automated
-- **THEN** the resulting test is added to the existing `e2e/` Playwright suite or
-  a Vitest suite
+- **THEN** the resulting test is added to the existing `e2e/` Playwright suite
+  or a Vitest suite
 - **AND** no BDD-runner dependency is added to the workspace
 
 ### Requirement: Catalog role tokens are validated against the canonical role set
 
 Every `role:` and `access:` token read from `e2e/catalog/*.yaml` MUST be
-validated against the canonical four-role set (`lead`, `head`, `admin`,
-`viewer`) before use. The shared plain-Node parser
-(`e2e/sweep/catalog-parser.ts`) is consumed by `catalog-check.ts`,
-`render-checklist.ts`, and `catalog-sweep.spec.ts`; it MUST throw immediately
-when an unrecognized token appears, rather than passing it through as an
-unchecked string.
+validated against `lead`, `head`, `admin`, and `viewer`. The shared parser
+is consumed by catalog checking, the optional human checklist, and acceptance
+route health; it MUST reject an unrecognized token before navigation.
 
 #### Scenario: an unrecognized role token fails the parse
 
-- **WHEN** a catalog YAML file's `role:` line or an `access: [...]` list
-  contains a token outside the canonical four-role set (a typo or a retired
-  role)
-- **THEN** the parser throws immediately, naming the bad token and its
-  location
-- **AND** both the CI-blocking drift gate (`catalog-check.ts`) and the
-  human checklist renderer (`render-checklist.ts`) surface the failure
-  instead of silently treating the row as having no role or an empty access
-  list
+- **WHEN** a catalog role or access list contains a token outside the canonical
+  set
+- **THEN** the parser names and rejects the token
+- **AND** catalog checking, the checklist, and route health all surface the
+  failure
 
 ### Requirement: Catalog intent prose cannot invent product or data behavior
 
@@ -152,5 +141,5 @@ requirement.
 - **WHEN** `admin-actions-view` describes expandable and copyable event details
 - **THEN** it names the whitelisted `admin.actionLog.list` metadata rather than
   a raw mutation, request, or response payload
-- **AND** its search and cursor-pagination prose matches the observable `/admin`
-  Action Log behavior
+- **AND** its search and cursor-pagination prose matches the observable
+  `/admin` Action Log behavior

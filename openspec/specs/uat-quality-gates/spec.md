@@ -6,75 +6,34 @@ Define final acceptance as green local quality gates plus honest four-role brows
 
 ## Requirements
 
-### Requirement: Final Acceptance Gate MUST Pass As A Four-Command Chain
+### Requirement: Final Acceptance Gate MUST Pass As A Bounded Product Chain
 
-The repository MUST pass a single final acceptance gate before the
-`defer-uat-codequality-vercel-2026-05-26` track is marked done. The gate
-consists of four commands that all exit 0:
-`pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-The chain MUST include `pnpm build` so the gate matches the production build.
-There is no Markdown lint command in the chain: `markdown-format-only` removed
-`lint:md`, so Markdown is formatted by Prettier on commit, not gated.
+The repository MUST pass `pnpm typecheck`, `pnpm lint`, `pnpm test`, an
+explicitly configured production `pnpm build`, focused existing E2E suites,
+and `pnpm test:acceptance` before WeeklyReport is described as release-ready.
+Browser acceptance is limited to route health plus one lifecycle smoke.
 
-#### Scenario: All four gate commands are green
+#### Scenario: The complete final gate is green
 
-- **WHEN** a maintainer runs
-  `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
-- **THEN** every command exits 0
-- **AND** the chain reports a single green result with no findings
+- **WHEN** the final commands run at one exact Git SHA
+- **THEN** every command exits zero and the acceptance report records successful
+  cleanup
 
-#### Scenario: A single gate command fails
+#### Scenario: A final gate command fails
 
-- **WHEN** any one of `typecheck`, `lint`, `test`, or `build` exits
-  non-zero
-- **THEN** the final acceptance gate is considered failed
-- **AND** the responsible earlier-wave change is reopened to fix the cause
-- **AND** no fix is patched under the acceptance-only final-gates change
+- **WHEN** any required command fails or cleanup is not proven
+- **THEN** final acceptance fails
 
-### Requirement: Final Playwright Re-Sweep MUST Show Zero Console Errors Per Role
+### Requirement: Final acceptance MUST NOT depend on exhaustive runtime campaigns
 
-A final Playwright re-sweep MUST run across all four roles (lead, head, admin,
-viewer) and MUST observe zero console ERRORS for each role. Console WARNINGS
-MUST be logged for the record but MUST NOT fail the sweep, and the
-favicon-404 request MUST be ignored as environmental noise.
+The final WeeklyReport verdict MUST NOT require an interaction graph, campaign
+manifest, continuation chunks, custom supervisor, AI-import verdict, or
+multi-hour canary.
 
-#### Scenario: Lead role re-sweep is clean
+#### Scenario: Bounded acceptance is complete
 
-- **WHEN** a re-sweep runs with the lead role via Playwright over the report
-  form, stage chips, and slides mode
-- **THEN** the captured console shows 0 ERRORS
-- **AND** any WARNINGS are logged but do not fail the sweep
-
-#### Scenario: Head role re-sweep is clean
-
-- **WHEN** a re-sweep runs with the head role via Playwright over the dashboard,
-  composite status, and publish/revoke flow
-- **THEN** the captured console shows 0 ERRORS
-
-#### Scenario: Admin role re-sweep is clean
-
-- **WHEN** a re-sweep runs with the admin role via Playwright over the admin
-  panel (periods, reminders, projects, action log)
-- **THEN** the captured console shows 0 ERRORS
-
-#### Scenario: Viewer role re-sweep is clean
-
-- **WHEN** a re-sweep runs with the viewer role via Playwright over the
-  published read-only report view
-- **THEN** the captured console shows 0 ERRORS
-
-#### Scenario: Favicon 404 is exempt
-
-- **WHEN** a role re-sweep records a 404 for the favicon request
-- **THEN** that 404 is ignored and does NOT count as a console ERROR
-
-#### Scenario: A real console error blocks sign-off
-
-- **WHEN** any role's re-sweep records a `console.error`, page error, or
-  uncaught exception that is not the exempt favicon 404
-- **THEN** the re-sweep fails for that role
-- **AND** the track is not marked done until the error is fixed in the
-  responsible wave's change
+- **WHEN** deterministic gates and `pnpm test:acceptance` pass at one source SHA
+- **THEN** browser acceptance is complete without any retired runtime command
 
 ### Requirement: All Four Roles MUST Pass UAT With Zero Console Errors
 
@@ -301,69 +260,3 @@ the required rule is disabled.
   meet the minimum contrast ratio
 - **THEN** the installed axe scanner reports `color-contrast`
 - **AND** the proof test passes only because the violation was detected
-
-### Requirement: Visual Acceptance Reviews the Entire Enumerated Frame Set
-
-A visual acceptance run MUST derive its pre-capture inventory from every
-changed or affected presentation, interaction, status variant, responsive
-breakpoint boundary, and owner requirement, then enumerate every resulting
-page, state, and viewport before capture. Any exclusion MUST be located,
-justified, and explicitly accepted by the owner before the run. The run MUST
-produce fresh evidence for every enumerated item after the last rendered-source
-edit and assign a verdict to every full frame. A narrower behavioral assertion
-MAY pass independently, but any visible product defect anywhere in an
-enumerated frame MUST block the overall visual acceptance verdict until it is
-repaired and recaptured or the owner explicitly accepts the located debt.
-Reviewers MUST distinguish a product defect from an evidence-capture defect;
-neither type may be silently relabelled as out of scope after it appears in an
-enumerated frame.
-
-Two fresh independent read-only reviewers MUST open every enumerated frame at
-original resolution without receiving an upstream PASS narrative first. Each
-reviewer MUST return separate verdicts for the scoped behavior, the whole
-captured surface, and evidence validity. One reviewer, a sample of frames, or
-model agreement without the deterministic evidence cannot close the gate.
-
-#### Scenario: Unrelated defect appears in a scoped repair screenshot
-
-- **WHEN** the intended focus behavior passes but the same captured frame
-  visibly clips a navigation destination or overflows the document
-- **THEN** the focus assertion MAY be recorded as passing
-- **AND** the overall visual acceptance verdict remains blocked by the located
-  product defect
-- **AND** the evidence ledger names the affected frame, severity, owner, next
-  action, and recapture required for closure
-
-#### Scenario: Every affected viewport and state receives an independent full-frame verdict
-
-- **WHEN** a responsive navigation change affects compact/wide presentations,
-  active and focused states, non-zero operational counts, and the 1024 CSS px
-  activation boundary
-- **THEN** the inventory includes representative widths plus both sides of the
-  boundary, every affected interaction/state, and the maximum-display count
-  variant
-- **AND** every resulting frame is captured fresh and opened directly by both
-  visual reviewers
-- **AND** each frame receives an explicit whole-frame inspection trace covering
-  layout, clipping, overflow, content reachability, active state, and focus
-  presentation
-- **AND** a sample or aggregate PASS cannot substitute for a missing per-frame
-  verdict
-
-#### Scenario: Convenient pre-enumeration cannot hide an affected state
-
-- **WHEN** a changed navigation has a compact variant, a wide variant,
-  operational badges, a disabled destination, and a breakpoint boundary
-- **THEN** the inventory is incomplete until all those affected variants and
-  boundary states are covered or an owner-approved exclusion names the omitted
-  state
-- **AND** the run cannot declare visual PASS by preselecting only the direct-URL
-  resting frame
-
-#### Scenario: Capture defect does not trigger a product edit
-
-- **WHEN** an image has the wrong dimensions, stale source identity, partial
-  compositing, or an invalid file signature
-- **THEN** the run classifies it as an evidence defect and recaptures it
-- **AND** the product source is not changed solely to compensate for the
-  defective evidence artifact

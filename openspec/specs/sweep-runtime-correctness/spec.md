@@ -308,3 +308,22 @@ race past the assertion.
   equivalent settled-state UI signal) before reading the count
 - **AND** the pre-write and expected post-write values are distinguishable,
   so a duplicate write reliably fails the assertion
+
+### Requirement: Runtime correctness MUST be proven without an exhaustive interaction platform
+
+The existing React warning, hydration, accessibility, console-source, and
+behavior-focused assertion requirements MUST be verified by focused
+unit/integration tests, the catalog route sweep, or the bounded smoke lifecycle.
+No correctness requirement in this capability may require a continuation graph,
+campaign ledger, per-control exhaustive traversal, or AI-import protocol as its
+sole evidence source.
+
+#### Scenario: A runtime correctness regression is introduced
+
+- **WHEN** a cataloged route or the smoke lifecycle emits a covered React
+  warning, hydration error, unclassified console/network failure, or targeted
+  accessibility violation
+- **THEN** a focused gate or bounded browser scenario fails and identifies the
+  affected product surface
+- **AND** no exhaustive interaction campaign is needed to reproduce the
+  regression

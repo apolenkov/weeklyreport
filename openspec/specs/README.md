@@ -1,4 +1,4 @@
-# CustomReport capability map
+# WeeklyReport capability map
 
 This index maps every durable capability to one canonical home. Product capabilities are organized by the primary user outcome and lifecycle stage; role tags name every role that experiences the behavior. Mixed capabilities stay in Product when the user outcome is primary. Architecture, security, operations, data integrity, testing, and repository rules live under Engineering governance.
 
@@ -193,15 +193,14 @@ Authority model:
 ### Testing and verification
 
 - [a11y-regression-coverage](./a11y-regression-coverage/spec.md) — Requires behavior-level regression coverage for keyboard, focus, Escape, tabindex, and decorative-SVG accessibility changes.
-- [ai-driver-coverage](./ai-driver-coverage/spec.md) — Drives every role catalog in a live browser and dispositions every confirmed behavioral finding.
-- [behavioral-ui-regression-gate](./behavioral-ui-regression-gate/spec.md) — Defines the durable scenario catalog, swappable driver boundary, role sweeps, and deferred deterministic gate.
+- [behavioral-ui-regression-gate](./behavioral-ui-regression-gate/spec.md) — Defines the durable scenario catalog, bounded route-health gate, and advisory review boundary.
+- [bounded-product-acceptance](./bounded-product-acceptance/spec.md) — Keeps browser acceptance to four-role route health and one deterministic lifecycle smoke.
 - [demo-seed-datasets](./demo-seed-datasets/spec.md) — Provides deterministic small, middle, and huge datasets that exercise realistic roles, statuses, co-ownership, and reminders.
-- [driver-env-feedback](./driver-env-feedback/spec.md) — Correlates post-run environment failures with the drive timeline and never reports a blind channel as clean.
 - [frontend-audit-memo](./frontend-audit-memo/spec.md) — Requires grounded frontend audit evidence before UI implementation or Core Web Vitals claims.
 - [manual-uat-reseed](./manual-uat-reseed/spec.md) — Resets manual-UAT data in foreign-key-safe order to a known baseline.
-- [scenario-catalog](./scenario-catalog/spec.md) — Maintains human-reviewed, outcome-checkable scenarios with code/test links, role validation, and drift detection.
+- [scenario-catalog](./scenario-catalog/spec.md) — Maintains human-reviewed, outcome-checkable route intents with role validation and drift detection.
 - [sweep-runtime-correctness](./sweep-runtime-correctness/spec.md) — Requires role-reachable routes and shared controls to run without confirmed React, console, or axe regressions.
-- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines the full deterministic gate chain and zero-console-error role acceptance sweep.
+- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines the full deterministic gate chain and bounded browser acceptance.
 - [web-test-timer-discipline](./web-test-timer-discipline/spec.md) — Keeps web tests deterministic by using framework timers and query primitives instead of hand-rolled tick loops.
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
 

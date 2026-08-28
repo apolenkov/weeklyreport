@@ -781,3 +781,16 @@ Report-history query/state and presentation MUST reside under `apps/web/src/feat
 - **THEN** query/state and role derivation reside in `features/period/model/`
 - **AND** the panel and toolbar reside in `features/period/ui/`
 - **AND** external consumers reach only the minimal exports in `features/period/index.ts`
+
+### Requirement: The browser acceptance contour MUST remain a bounded test layer
+
+The owned `e2e/acceptance/` tree MUST remain within the file and line budgets
+defined by `bounded-product-acceptance`. It MUST depend on existing test
+helpers and product contracts, and production modules MUST NOT import from it.
+
+#### Scenario: Acceptance architecture grows beyond its budget
+
+- **WHEN** a change adds acceptance files or non-generated lines beyond the
+  frozen bound
+- **THEN** the directory-architecture gate fails and reports the measured total
+- **AND** no nested-folder reshuffle may evade the whole-contour count
