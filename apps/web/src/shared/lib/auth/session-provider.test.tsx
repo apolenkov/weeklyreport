@@ -1,4 +1,10 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -139,6 +145,35 @@ describe("SessionProvider + useSession", () => {
       isLoading: false,
       isAuthenticated: false,
     });
+  });
+
+  it("blocks protected content and retries when auth.me fails", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      error: new Error("network unavailable"),
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      refetch,
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* expected client error telemetry */
+    });
+
+    render(
+      <SessionProvider>
+        <p>Protected report</p>
+      </SessionProvider>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not verify your session.",
+    );
+    expect(screen.queryByText("Protected report")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledOnce();
+    errorSpy.mockRestore();
   });
 
   it("throws a clear error when useSession() is called outside the provider", () => {
