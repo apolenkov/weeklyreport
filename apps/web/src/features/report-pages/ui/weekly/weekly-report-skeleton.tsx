@@ -8,7 +8,12 @@ import { SlideSkeleton } from "../../../slides";
 const PORTFOLIO_CARD_COUNT = 15;
 
 function HeaderTitleSkeleton() {
-  return <Skeleton className="h-8 w-40" />;
+  return (
+    <>
+      <h1 className="sr-only">Status Report</h1>
+      <Skeleton aria-hidden="true" className="h-8 w-40" />
+    </>
+  );
 }
 
 function HeaderContextSkeleton({

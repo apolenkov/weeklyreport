@@ -202,6 +202,10 @@ describe("WeeklyReportSkeleton", () => {
   it("exposes the loading status contract", () => {
     render(<WeeklyReportSkeleton />);
 
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Status Report" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     const root = screen.getByRole("status", {
       name: "Loading status report",
     });
