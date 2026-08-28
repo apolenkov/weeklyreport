@@ -72,6 +72,10 @@ source-bound evidence:
 - [ ] Schema promotion uses compatible migrations, a verified pre-deploy dump,
       post-migration smoke evidence, and an explicit fix-forward or restore
       decision.
+- [ ] The manual and automatic publish paths have a real production ingestion
+      consumer with an owned outcome and failure policy, or the durable
+      publish contract explicitly retires ingestion. Production composition
+      boots without `NoopIngestionQueue` or a missing-consumer guard.
 - [ ] Encrypted backups exist in an independent failure domain; an isolated
       restore drill proves schema, row, and checksum evidence and measures
       RPO/RTO.
