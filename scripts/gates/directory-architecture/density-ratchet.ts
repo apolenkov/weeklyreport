@@ -17,10 +17,7 @@ import {
 export { densityBaselineRatchetViolations } from "./baseline-schema.ts";
 
 const SCRIPTS_DIRECTORY = "scripts";
-const PREFLIGHT_DIRECTORY = "e2e/runtime-sweep/preflight";
 const FIXTURE_EXCEPTION_REASON = "fixture exception";
-const NEW_FIXTURE_EXCEPTION_REASON = "new fixture exception";
-const BASELINE_31 = 31;
 const BASELINE_32 = 32;
 const BASELINE_51 = 51;
 const BASELINE_96 = 96;
@@ -227,32 +224,6 @@ void test("density baseline history rejects an existing exception raised from 32
 
   assert.deepEqual(densityBaselineRatchetViolations(changed, predecessor), [
     `bounded-flat exception increased: ${SCRIPTS_DIRECTORY}=${BASELINE_51} > predecessor ${BASELINE_32}`,
-  ]);
-});
-
-void test("density baseline history rejects adding a 96-file exception", () => {
-  const predecessor = densityBaseline(densityFiles(BASELINE_31), [
-    {
-      directory: SCRIPTS_DIRECTORY,
-      baseline: BASELINE_31,
-      reason: FIXTURE_EXCEPTION_REASON,
-    },
-  ]);
-  const changed = densityBaseline(densityFiles(BASELINE_31), [
-    {
-      directory: SCRIPTS_DIRECTORY,
-      baseline: BASELINE_31,
-      reason: FIXTURE_EXCEPTION_REASON,
-    },
-    {
-      directory: PREFLIGHT_DIRECTORY,
-      baseline: BASELINE_96,
-      reason: NEW_FIXTURE_EXCEPTION_REASON,
-    },
-  ]);
-
-  assert.deepEqual(densityBaselineRatchetViolations(changed, predecessor), [
-    `bounded-flat exception added without predecessor: ${PREFLIGHT_DIRECTORY}=${BASELINE_96}`,
   ]);
 });
 

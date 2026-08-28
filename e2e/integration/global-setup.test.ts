@@ -4,11 +4,7 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  findRepoRoot,
-  runtimeDatabaseSetupMode,
-  selectedSeedProfile,
-} from "./global-setup.js";
+import { findRepoRoot, selectedSeedProfile } from "./global-setup.js";
 
 describe("findRepoRoot", () => {
   it("walks up from e2e/integration to the repo root", () => {
@@ -30,44 +26,11 @@ describe("findRepoRoot", () => {
 });
 
 describe("integration global setup profile selection", () => {
-  it("uses the runtime sweep profile when it is the only profile", () => {
-    expect(selectedSeedProfile({ RUNTIME_SWEEP_PROFILE: "minimal" })).toBe(
-      "minimal",
-    );
-  });
-
-  it("uses the integration profile when no runtime sweep is active", () => {
+  it("uses the explicit integration profile", () => {
     expect(selectedSeedProfile({ E2E_SEED_PROFILE: "stress" })).toBe("stress");
-  });
-
-  it("rejects conflicting profile selectors before touching the database", () => {
-    expect(() =>
-      selectedSeedProfile({
-        RUNTIME_SWEEP_PROFILE: "minimal",
-        E2E_SEED_PROFILE: "full",
-      }),
-    ).toThrow(/must match/iu);
   });
 
   it("defaults to full for the integration configuration", () => {
     expect(selectedSeedProfile({})).toBe("full");
-  });
-});
-
-describe("runtime database reuse", () => {
-  it("requires explicit true before using data-only profile reseeding", () => {
-    expect(runtimeDatabaseSetupMode({})).toBe("schema+seed");
-    expect(
-      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "false" }),
-    ).toBe("schema+seed");
-    expect(
-      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "true" }),
-    ).toBe("profile-reseed");
-  });
-
-  it("rejects a misspelled reuse value", () => {
-    expect(() =>
-      runtimeDatabaseSetupMode({ RUNTIME_SWEEP_REUSE_DATABASE: "yes" }),
-    ).toThrow(/must be true or false/iu);
   });
 });

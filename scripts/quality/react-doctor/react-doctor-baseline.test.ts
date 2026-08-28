@@ -70,8 +70,7 @@ void test("rejects vacuous or incomplete project scans", () => {
 
 void test("filters generated sweep builds from real full-scan diagnostics", () => {
   const fixtures = [
-    "apps/web/.next-sweep/react-doctor-regression-fixture",
-    "apps/web/.next-runtime-preflight-probe/react-doctor-regression-fixture",
+    "apps/web/.next-acceptance/react-doctor-regression-fixture",
   ].map((directory) => join(directory, "untrusted-redirect.js"));
   const pnpmExecPath = process.env.npm_execpath;
   if (pnpmExecPath === undefined) {
@@ -131,8 +130,7 @@ void test("filters generated sweep builds from real full-scan diagnostics", () =
     assert.equal(
       report.diagnostics.some(
         ({ filePath }) =>
-          filePath.includes(".next-sweep") ||
-          filePath.includes(".next-runtime-") ||
+          filePath.includes(".next-acceptance") ||
           filePath.includes("apps/web/openspec"),
       ),
       false,

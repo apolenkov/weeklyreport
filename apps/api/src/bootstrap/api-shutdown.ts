@@ -10,14 +10,12 @@ export interface ApiShutdownDependencies {
   readonly shutdownRateLimitStore: () => Promise<void>;
   readonly shutdownOtel: () => Promise<void>;
   readonly shutdownSentry: (timeoutMs: number) => Promise<void>;
-  readonly writeCompletion?: () => Promise<void>;
 }
 
 const CLOSE_TIMEOUT_MS = 3000;
 const LOG_FLUSH_TIMEOUT_MS = 1500;
 const OTEL_SHUTDOWN_TIMEOUT_MS = 2000;
 const SENTRY_FLUSH_TIMEOUT_MS = 1500;
-const COMPLETION_WRITE_TIMEOUT_MS = 1500;
 
 const withDeadline = async (
   label: string,
@@ -93,17 +91,6 @@ const runShutdownSequence = async (
   );
   if (failures.length > 0)
     throw new AggregateError(failures, "API shutdown telemetry drain failed");
-  const completionFailures = await attempt(
-    [],
-    "completion artifact",
-    COMPLETION_WRITE_TIMEOUT_MS,
-    () => dependencies.writeCompletion?.() ?? Promise.resolve(),
-  );
-  if (completionFailures.length > 0)
-    throw new AggregateError(
-      completionFailures,
-      "API shutdown completion write failed",
-    );
 };
 
 export const shutdownApi = async (

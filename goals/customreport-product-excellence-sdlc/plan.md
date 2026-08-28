@@ -32,8 +32,8 @@ allowed.
      the durable requirements in `openspec/specs/`. Group them by product
      surface: report record ordering; lead recovery; PDF export; admin
      navigation and products; action-log search; desktop composition and
-     hierarchy; mobile touch/overflow; confirmation dialogs; runtime-sweep
-     correctness; and repository-tooling boundaries.
+     hierarchy; mobile touch/overflow; confirmation dialogs; bounded browser
+     smoke correctness; and repository-tooling boundaries.
    - Use `docs/architecture/TARGET-STRUCTURE-2026-07-02.md`,
      `docs/exemplary-code-standard.md`, `docs/quality-program.md` and
      `docs/sdlc.md` as the current quality baseline. Record for each requirement
@@ -131,15 +131,12 @@ allowed.
 
 6. Use runtime and observability only to prove the product's resilience.
 
-   - Complete `establish-exhaustive-runtime-sweep` and its dependent reveal
-     changes with a new source SHA/tree after the r16 terminal packet. Derive
-     the outer canary budget from the aggregate partition plan, obtain a fresh
-     Sol pre-live gate, and never retry a terminal campaign.
-   - Run the complete applicable Chromium denominator only after static and
-     targeted product gates are green. Prove continuation lineage, empty
-     frontier, parent-authored PASS, Redis TOCTOU/outage/recovery behavior,
-     logs/traces/errors and zero residue. Do not treat a partial canary as
-     product acceptance.
+   - Keep browser acceptance to route health and one representative cross-role
+     lifecycle smoke. Do not recreate campaign, continuation, lane, matrix, or
+     AI-import infrastructure.
+   - Keep resilience, Redis outage/recovery, logs, traces, and errors in focused
+     deterministic tests and bounded operational rehearsals. Browser smoke is
+     one evidence class, not complete product acceptance by itself.
    - Keep databases, Redis, containers and telemetry isolated and disposable
      solely for this proof. Stop for owner direction if target identity is not
      provably disposable or if a production/shared resource is required.

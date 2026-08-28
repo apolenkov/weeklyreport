@@ -150,7 +150,6 @@ export async function runDefaultAcceptanceSetup(
     resetDatabase: () =>
       setupE2eDatabase({
         databaseUrl,
-        mode: "schema+seed",
         profile: "full",
         repoRoot,
       }),

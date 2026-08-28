@@ -42,10 +42,6 @@ const dependenciesFor = (
       order.push("sentry-close");
       return Promise.resolve();
     },
-    writeCompletion: () => {
-      order.push("completion-write");
-      return Promise.resolve();
-    },
     ...overrides,
   };
 };
@@ -91,7 +87,6 @@ describe("API shutdown", () => {
       "file-flush",
       "otel-shutdown",
       "sentry-close",
-      "completion-write",
     ]);
   });
 
@@ -113,7 +108,6 @@ describe("API shutdown", () => {
     expect(order).toContain("rate-limit-redis-shutdown");
     expect(order).toContain("otel-shutdown");
     expect(order).toContain("sentry-close");
-    expect(order).not.toContain("completion-write");
   });
 
   it("keeps the deadline alive and attempts every drain after a hung close", async () => {
@@ -139,24 +133,6 @@ describe("API shutdown", () => {
     expect(order).toContain("rate-limit-redis-shutdown");
     expect(order).toContain("otel-shutdown");
     expect(order).toContain("sentry-close");
-    expect(order).not.toContain("completion-write");
-  });
-
-  it("does not publish completion after a Sentry drain failure", async () => {
-    const order: string[] = [];
-    const dependencies = dependenciesFor(order, {
-      shutdownSentry: () => {
-        order.push("sentry-close-failed");
-        return Promise.reject(new Error("Sentry failed"));
-      },
-    });
-
-    await expect(shutdownApi(dependencies)).rejects.toThrow(
-      "API shutdown telemetry drain failed",
-    );
-
-    expect(order).toContain("log:API shutdown log barrier reached");
-    expect(order).not.toContain("completion-write");
   });
 
   it("attempts later drains when the rate-limit Redis shutdown fails", async () => {
@@ -175,7 +151,6 @@ describe("API shutdown", () => {
     expect(order).toContain("file-flush");
     expect(order).toContain("otel-shutdown");
     expect(order).toContain("sentry-close");
-    expect(order).not.toContain("completion-write");
   });
 
   it("attempts every drain when barrier logging throws", async () => {

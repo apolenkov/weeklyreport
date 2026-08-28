@@ -1,6 +1,5 @@
-// E2E and runtime-sweep destructive work has one deliberately narrow target
-// contract. Production restore is a separate shell entrypoint and does not
-// use this module.
+// E2E destructive work has one deliberately narrow target contract. Production
+// restore is a separate shell entrypoint and does not use this module.
 export const E2E_DESTRUCTIVE_CONSENT = "давай" as const;
 export const E2E_DATABASE_NAME = "customreport_e2e" as const;
 export const E2E_RUNTIME_DATABASE_PATTERN =

@@ -2,7 +2,6 @@ node_modules
 dist
 .next
 .next-e2e
-.next-sweep
 coverage
 .turbo
 prisma/generated

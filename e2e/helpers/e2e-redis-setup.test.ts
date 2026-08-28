@@ -2,19 +2,9 @@ import net from "node:net";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  e2eRedisResetTarget,
-  E2eRedisSetupError,
-  flushE2eRedis,
-} from "./e2e-redis-setup.js";
+import { e2eRedisResetTarget, flushE2eRedis } from "./e2e-redis-setup.js";
 
 describe("E2E Redis reset guard", () => {
-  it("requires an explicit flush for every runtime campaign", () => {
-    expect(() =>
-      e2eRedisResetTarget({ RUNTIME_SWEEP_ARCHIVE: "/archive/r35" }),
-    ).toThrow(E2eRedisSetupError);
-  });
-
   it("rejects non-loopback targets before opening a connection", () => {
     expect(() =>
       e2eRedisResetTarget({
