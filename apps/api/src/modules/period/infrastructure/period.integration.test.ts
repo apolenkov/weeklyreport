@@ -78,7 +78,6 @@ function createSpyRepository(
     [...reports.values()].find(match)?.id ?? null;
 
   return {
-    listSectionIds: () => Promise.resolve([]),
     getReportById(id: string) {
       const r = reports.get(id);
       return Promise.resolve(

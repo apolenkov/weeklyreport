@@ -105,14 +105,6 @@ export class PeriodPrismaRepository implements PeriodRepository {
     });
   }
 
-  async listSectionIds(reportId: string): Promise<string[]> {
-    const sections = await this.prisma.reportSection.findMany({
-      where: { reportId },
-      select: { id: true },
-    });
-    return sections.map((s) => s.id);
-  }
-
   async reopenPeriod(reportId: string): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {

@@ -2,10 +2,8 @@ import type { AssembledReport } from "@customreport/shared";
 import { MODULE_METADATA } from "@nestjs/common/constants.js";
 import { describe, expect, it, vi } from "vitest";
 
-import { createNullLogger } from "../../lib/logger.js";
 import { AnalyticsCache } from "../analytics/index.js";
 import {
-  NoopIngestionQueue,
   PUBLICATION_REPOSITORY,
   type PublicationRepository,
   PublicationService,
@@ -23,7 +21,6 @@ interface FactoryProvider {
   provide: unknown;
   useFactory: (
     repo: PublicationRepository,
-    ingestionQueue: NoopIngestionQueue,
     analyticsCache: Pick<AnalyticsCache, "invalidateAll">,
     telemetry: PublicationTelemetry,
   ) => PublicationService;
@@ -85,7 +82,6 @@ describe("PublicationModule wiring", () => {
     const provider = resolvePublicationServiceFactory();
     expect(provider.inject).toEqual([
       PUBLICATION_REPOSITORY,
-      NoopIngestionQueue,
       AnalyticsCache,
       PUBLICATION_TELEMETRY,
     ]);
@@ -104,7 +100,6 @@ describe("PublicationModule wiring", () => {
 
     const service = provider.useFactory(
       repository,
-      new NoopIngestionQueue(createNullLogger(), "test"),
       mockCache,
       NOOP_PUBLICATION_TELEMETRY,
     );

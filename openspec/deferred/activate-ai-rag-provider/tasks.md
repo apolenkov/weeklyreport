@@ -14,9 +14,9 @@ NOT STARTED — captured 2026-06-10.
 
 ## RAG ingestion + read path
 
-- **AI-T4** Implement the RAG ingestion consumer behind `IngestionPublishHook`
-  (`apps/api/src/modules/publication/publication.service.ts:23`); embed
-  published section content into a vector corpus on every successful publish
+- **AI-T4** Define consistency, retry, privacy, and retention contracts, then
+  implement a product-owned publish integration and RAG ingestion consumer;
+  do not restore the retired generic ingestion hook or no-op queue
 - **AI-T5** Implement the summary / extract-risk read procedure over the corpus
 - **AI-T6** Replace the inert "AI Summary" placeholder
   (`apps/web/src/components/admin/settings-integrations-sub-tab.tsx:150`)

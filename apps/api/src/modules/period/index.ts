@@ -9,10 +9,7 @@ export {
   isOpenBoundaryConflict,
   PeriodLifecycleIntegrityError,
 } from "./application/period-factory.js";
-export {
-  emitPublishSideEffects,
-  type IngestionPublishHook,
-} from "./application/publish-side-effects.js";
+export { emitPublishSideEffects } from "./application/publish-side-effects.js";
 export {
   buildTransition,
   initialPeriodState,

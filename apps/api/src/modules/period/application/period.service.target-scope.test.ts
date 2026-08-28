@@ -153,7 +153,6 @@ describe("PeriodService — publish target scope", () => {
       getReopenedNonArchivedId: () => Promise.resolve(null),
       publishPeriod,
       reopenPeriod: vi.fn(() => Promise.resolve()),
-      listSectionIds: () => Promise.resolve([]),
     };
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
       state: "published",
@@ -323,7 +322,6 @@ describe("PeriodService — reopen target scope", () => {
         Promise.resolve({ transitioned: true as const }),
       ),
       reopenPeriod,
-      listSectionIds: () => Promise.resolve([]),
     };
     const service = new PeriodService(repo, invalidate, noGatingReopenPolicy);
 
@@ -492,20 +490,18 @@ describe("PeriodService — archive-in-window publish outcome", () => {
       getReopenedNonArchivedId: () => Promise.resolve(null),
       publishPeriod: publish as PeriodRepository["publishPeriod"],
       reopenPeriod: () => Promise.resolve(),
-      listSectionIds: () => Promise.resolve(["s1"]),
     };
   }
 
   it("throws PeriodScopeError and emits no telemetry when the period was archived in the window", async () => {
-    const ingestion = vi.fn(() => Promise.resolve());
+    const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
     const publish = vi.fn(() =>
       Promise.resolve({ transitioned: false as const, reason: "archived" }),
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      noopInvalidate,
+      invalidateAnalyticsCache,
       noGatingReopenPolicy,
-      ingestion,
     );
 
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
@@ -516,7 +512,7 @@ describe("PeriodService — archive-in-window publish outcome", () => {
       service.publishPeriod(reportId, headSession),
     ).rejects.toBeInstanceOf(PeriodScopeError);
 
-    expect(ingestion).not.toHaveBeenCalled();
+    expect(invalidateAnalyticsCache).not.toHaveBeenCalled();
     expect(
       await getCounterValue(customreportReportsSubmittedTotal, {
         state: "published",
@@ -525,20 +521,19 @@ describe("PeriodService — archive-in-window publish outcome", () => {
   });
 
   it("returns idempotent success with no side-effects when a concurrent publish won (raced)", async () => {
-    const ingestion = vi.fn(() => Promise.resolve());
+    const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
     const publish = vi.fn(() =>
       Promise.resolve({ transitioned: false as const, reason: "raced" }),
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      noopInvalidate,
+      invalidateAnalyticsCache,
       noGatingReopenPolicy,
-      ingestion,
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
     );
-    expect(ingestion).not.toHaveBeenCalled();
+    expect(invalidateAnalyticsCache).not.toHaveBeenCalled();
   });
 });

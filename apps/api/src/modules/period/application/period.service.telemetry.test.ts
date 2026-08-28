@@ -33,7 +33,6 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
-      undefined,
       new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
@@ -65,7 +64,6 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
-      undefined,
       new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(
@@ -99,7 +97,6 @@ describe("PeriodService — manual-publish telemetry", () => {
       createSpyRepository(reports),
       noopInvalidate,
       noGatingReopenPolicy,
-      undefined,
       new PeriodPrometheusTelemetry(),
     );
     const before = await getCounterValue(
@@ -140,7 +137,6 @@ describe("PeriodService — manual-publish telemetry", () => {
         return Promise.reject(new Error("DB write failed"));
       }),
       reopenPeriod: vi.fn(() => Promise.resolve(undefined)),
-      listSectionIds: () => Promise.resolve([]),
     };
     const service = new PeriodService(
       repo,
@@ -174,11 +170,11 @@ describe("PeriodService — manual-publish telemetry", () => {
     ).toBe(transitionsBefore);
   });
 
-  it("emits no counters and runs no ingestion when the compare-and-set did not transition", async () => {
+  it("emits no counters or cache invalidation when the compare-and-set did not transition", async () => {
     // A concurrent publish already transitioned the period: getReportById still
     // reads "open" (it raced ahead of the winner's commit), the service clears
     // its fast-path, but the guarded write reports transitioned:false.
-    const ingestion = vi.fn(() => Promise.resolve());
+    const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
     const repo: PeriodRepository = {
       getReportById: () =>
         Promise.resolve({
@@ -194,13 +190,11 @@ describe("PeriodService — manual-publish telemetry", () => {
       publishPeriod: () =>
         Promise.resolve({ transitioned: false, reason: "raced" }),
       reopenPeriod: () => Promise.resolve(),
-      listSectionIds: () => Promise.resolve(["s1"]),
     };
     const service = new PeriodService(
       repo,
-      noopInvalidate,
+      invalidateAnalyticsCache,
       noGatingReopenPolicy,
-      ingestion,
     );
 
     const submittedBefore = await getCounterValue(
@@ -216,7 +210,7 @@ describe("PeriodService — manual-publish telemetry", () => {
       { success: true, reportId },
     );
 
-    expect(ingestion).not.toHaveBeenCalled();
+    expect(invalidateAnalyticsCache).not.toHaveBeenCalled();
     expect(
       await getCounterValue(customreportReportsSubmittedTotal, {
         state: "published",
@@ -228,106 +222,6 @@ describe("PeriodService — manual-publish telemetry", () => {
         to: "published",
       }),
     ).toBe(transitionsBefore);
-  });
-
-  // Pin: the ingestion hook receives section ids read AFTER the publish
-  // transaction (not before), so sections that raced in before commit are
-  // still picked up.
-  it("enqueues ingestion with the section ids read after the publish transaction", async () => {
-    const ingestion = vi.fn(() => Promise.resolve());
-    const reports = new Map<string, SpyReport>([
-      [
-        reportId,
-        {
-          id: reportId,
-          status: "draft",
-          periodStatus: "open",
-          publishedAt: null,
-        },
-      ],
-    ]);
-    const repo = createSpyRepository(reports);
-    const service = new PeriodService(
-      { ...repo, listSectionIds: () => Promise.resolve(["s1", "s2"]) },
-      noopInvalidate,
-      noGatingReopenPolicy,
-      ingestion,
-    );
-
-    await service.publishPeriod(reportId, headSession);
-
-    expect(ingestion).toHaveBeenCalledExactlyOnceWith(["s1", "s2"]);
-  });
-
-  // Characterization pin: an ingestion-hook failure is swallowed — the
-  // publish still resolves successfully (mirrors the discipline the
-  // publication module logs a warning for instead of throwing away silently).
-  it("swallows an ingestion hook failure without rejecting the publish", async () => {
-    const reports = new Map<string, SpyReport>([
-      [
-        reportId,
-        {
-          id: reportId,
-          status: "draft",
-          periodStatus: "open",
-          publishedAt: null,
-        },
-      ],
-    ]);
-    const onIngestionError = vi.fn();
-    const service = new PeriodService(
-      createSpyRepository(reports),
-      noopInvalidate,
-      noGatingReopenPolicy,
-      () => Promise.reject(new Error("queue down")),
-      undefined,
-      onIngestionError,
-    );
-
-    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
-      { success: true, reportId },
-    );
-    expect(onIngestionError).toHaveBeenCalledExactlyOnceWith(
-      new Error("queue down"),
-    );
-  });
-
-  // The post-commit section-id read shares the ingestion swallow: a transient
-  // read failure degrades ingestion, never the already-committed publish.
-  it("swallows a section-id read failure without rejecting the publish", async () => {
-    const reports = new Map<string, SpyReport>([
-      [
-        reportId,
-        {
-          id: reportId,
-          status: "draft",
-          periodStatus: "open",
-          publishedAt: null,
-        },
-      ],
-    ]);
-    const repo = createSpyRepository(reports);
-    const ingestion = vi.fn(() => Promise.resolve());
-    const onIngestionError = vi.fn();
-    const service = new PeriodService(
-      {
-        ...repo,
-        listSectionIds: () => Promise.reject(new Error("read blip")),
-      },
-      noopInvalidate,
-      noGatingReopenPolicy,
-      ingestion,
-      undefined,
-      onIngestionError,
-    );
-
-    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
-      { success: true, reportId },
-    );
-    expect(ingestion).not.toHaveBeenCalled();
-    expect(onIngestionError).toHaveBeenCalledExactlyOnceWith(
-      new Error("read blip"),
-    );
   });
 
   // A committed lifecycle write must not fail the API response because the
@@ -347,13 +241,15 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const repo = createSpyRepository(reports);
     const onSideEffectError = vi.fn();
+    const telemetry = {
+      recordPublishedReport: vi.fn(),
+      recordPeriodPublished: vi.fn(),
+    };
     const service = new PeriodService(
       repo,
       () => Promise.reject(new Error("cache down")),
       noGatingReopenPolicy,
-      () => Promise.resolve(),
-      undefined,
-      undefined,
+      telemetry,
       onSideEffectError,
     );
 
@@ -362,6 +258,10 @@ describe("PeriodService — manual-publish telemetry", () => {
     );
     expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
       new Error("cache down"),
+    );
+    expect(telemetry.recordPublishedReport).toHaveBeenCalledTimes(1);
+    expect(telemetry.recordPeriodPublished).toHaveBeenCalledExactlyOnceWith(
+      "open",
     );
   });
 
@@ -381,18 +281,17 @@ describe("PeriodService — manual-publish telemetry", () => {
     ]);
     const repo = createSpyRepository(reports);
     const onSideEffectError = vi.fn();
+    const invalidateAnalyticsCache = vi.fn(() => Promise.resolve());
     const service = new PeriodService(
       repo,
-      noopInvalidate,
+      invalidateAnalyticsCache,
       noGatingReopenPolicy,
-      () => Promise.resolve(),
       {
         recordPublishedReport: () => {
           throw new Error("telemetry blip");
         },
         recordPeriodPublished: () => undefined,
       },
-      undefined,
       onSideEffectError,
     );
 
@@ -402,5 +301,6 @@ describe("PeriodService — manual-publish telemetry", () => {
     expect(onSideEffectError).toHaveBeenCalledExactlyOnceWith(
       new Error("telemetry blip"),
     );
+    expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(1);
   });
 });

@@ -16,17 +16,14 @@ What exists today (all inert, no working path):
    `Provider` shown as "not configured" and `RAG corpus` as "empty"
    (`apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx`).
    No live activation marker exists there today.
-2. Publish-time ingestion seam: `IngestionPublishHook` is wired into both
-   `publishReport` and the scheduler auto-publish path, defaulting to a no-op
-   so the AI consumer can re-attach without touching publish
-   (`apps/api/src/modules/publication/publication.service.ts:23`, `:97`,
-   `:213`, `:264`; mirror seam at
-   `apps/api/src/modules/period/period.service.ts:58`).
+2. No publish-time ingestion seam exists in the MVP. The dormant hook and
+   no-op queue were retired because they had no selected provider, owned
+   outcome, or consumer. A future activation must own its integration design
+   instead of coupling current publishing to a speculative feature.
 3. Adapter-port pattern reference: the Telegram adapter token documents an
    `AI_ADAPTER` / `ai.adapter.ts` port pattern as the intended Phase 54 shape
    (`apps/api/src/modules/telegram/telegram.adapter.ts:43`). No `ai.adapter.ts`
-   file exists yet — the original AI/RAG consumer was removed and only the seam
-   remains.
+   file exists yet, and no ingestion seam remains.
 
 The provider itself is undecided: the placeholder names Anthropic / Yandex /
 Llama as candidates (`settings-integrations-sub-tab.tsx:151`).
@@ -38,8 +35,9 @@ Llama as candidates (`settings-integrations-sub-tab.tsx:151`).
 2. Implement `ai.adapter.ts` with an `AI_ADAPTER` injection token, mirroring
    the `TELEGRAM_ADAPTER` port pattern referenced at
    `telegram.adapter.ts:43`.
-3. Implement the RAG ingestion consumer behind `IngestionPublishHook`: embed
-   published section content into a vector corpus on every successful publish.
+3. Design and implement a product-owned publish integration only after defining
+   its consistency, retry, privacy, and retention contracts; then embed
+   published section content into a vector corpus on successful publish.
 4. Implement the summary/extract-risk read path and surface it; replace the
    inert "AI Summary" placeholder with a real provider/corpus status.
 5. Throw the loud stub `Error('Not implemented — see TODO(<ref>)')` at any
@@ -65,9 +63,7 @@ that direction is chosen and Phase 54 is unlocked.
 
 ## Status
 
-Deferred — no live `TODO(<ref>)` marker exists for the AI RAG activation yet;
-the integrations surface is at
-`apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx` and
-the publish-time ingestion seam at `publication.service.ts`. Re-establish a
-`TODO(activate-ai-rag-provider)` marker (to-be-planted, not live) at the
-activation point when this is picked up.
+Deferred — no live `TODO(<ref>)` marker or backend ingestion seam exists for AI
+RAG activation. The integrations surface remains at
+`apps/web/src/features/organization/ui/settings-integrations-sub-tab.tsx`. The
+future activation change owns both its marker and its integration architecture.

@@ -190,12 +190,11 @@ allowed.
      GitHub protection, dependency/security settings and any
      production release controls as external authority: inspect and record them,
      but request the owner before changing unavailable account-level controls.
-   - Resolve the publish-ingestion production boundary before claiming first
-     production readiness. Current composition intentionally refuses to boot in
-     `NODE_ENV=production`, and no real ingestion consumer exists in source.
-     The owner must choose either a defined consumer outcome to implement or
-     explicit retirement of the dormant ingestion contract; do not disguise a
-     no-op queue as production readiness.
+   - Keep the publish-ingestion boundary explicitly retired for the MVP, as
+     decided and implemented by `retire-dormant-publish-ingestion`. Manual and
+     automatic publishing depend only on owned telemetry and analytics-cache
+     side effects. Any future AI/RAG activation must define its own outcome and
+     integration architecture instead of restoring a no-op queue.
 
    Verification: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
    `pnpm test`, `pnpm build`, `openspec validate --all --strict`, exact
@@ -234,7 +233,6 @@ allowed.
   main merge and unavailable required remote authority are outside the standing
   repository workflow. Stop and request the owner before crossing any of those
   boundaries.
-- Implementing or retiring the currently unwired publish-ingestion capability
-  changes the durable product denominator. Keep local MVP work moving, but stop
-  for the owner's choice before changing that contract or claiming first
-  production/release readiness.
+- The dormant publish-ingestion capability is retired for the MVP. Restoring an
+  ingestion hook, queue, or production dependency changes the durable product
+  denominator and requires a new explicit owner decision.

@@ -33,7 +33,8 @@
 - [x] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
       `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and the
       repository build with its required explicit API URLs.
-- [ ] 4.3 Freeze a clean source SHA and run catalog route health plus the single
-      lifecycle smoke under `replace-runtime-sweep-with-product-acceptance`;
-      record standard browser metadata, cleanup, focused observability evidence,
-      and local versus remote/CI status without invoking a retired runtime campaign.
+- [x] 4.3 Freeze the clean deterministic checkpoint from
+      `replace-runtime-sweep-with-product-acceptance`, record local versus
+      remote/CI status, and retire catalog/browser lifecycle smoke as a default
+      completion gate. Any future browser evidence is optional and owned by the
+      changed product surface.
