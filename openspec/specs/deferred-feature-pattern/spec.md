@@ -4,6 +4,16 @@ The deferred-feature pattern governs how CustomReport signals roadmapped but not
 
 ## Requirements
 
+### Requirement: Slide-template selection leaves one canonical deferred trace
+
+Until selectable slide templates are implemented, the Head presentation context MUST render exactly one inert `Slide templates` control through the shared Coming-Soon pattern. It MUST NOT imply that a template can be selected or persist a hidden choice.
+
+#### Scenario: Head opens slides before templates are implemented
+
+- **WHEN** the Head views a report in slides mode
+- **THEN** one visible `Slide templates` Coming-Soon affordance renders beside the presentation context
+- **AND** activating it performs no navigation, mutation, or template change
+
 ### Requirement: UI-Deferred Features Use ComingSoonBadge
 
 The UI MUST render a visible, disabled control wrapped in a `ComingSoonBadge` from `@customreport/ui` for every deferred user-facing feature. The control MUST NOT be hidden behind a runtime feature flag or omitted from the DOM entirely.
