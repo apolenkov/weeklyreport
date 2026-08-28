@@ -1,6 +1,6 @@
 ## 1. Shared E2E foundation
 
-- [ ] 1.1 Freeze the live (non-historical) `e2e/runtime-sweep` consumer inventory and the exact four-role critical-journey denominator; verify every live consumer and every required outcome is listed before code moves.
+- [x] 1.1 Freeze the live (non-historical) `e2e/runtime-sweep` consumer inventory and the exact four-role critical-journey denominator; verify every live consumer and every required outcome is listed before code moves.
 - [ ] 1.2 Rewrite the generic navigation/route-resolution behavior needed by `e2e/sweep` and product variants under `e2e/helpers/` without importing runtime-sweep code; verify focused positive, redirect, abort, and failure tests pass.
 - [ ] 1.3 Create `e2e/acceptance/playwright.config.ts` with `route-health` and `critical-journeys` projects, one worker, explicit loopback ports, standard reporters, and failure artifacts; verify config tests reject missing/unsafe/equal database targets and invalid port values.
 - [ ] 1.4 Add acceptance global setup/teardown that records SHA/tree, applies the exact destructive guard and per-run consent immediately before reset/seed, closes test clients, and proves Playwright-owned listeners are gone; verify pass, setup-failure, test-failure, timeout, and interruption probes all produce the correct cleanup result.
