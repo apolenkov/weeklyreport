@@ -1,3 +1,13 @@
+## Superseded task boundary
+
+Owner direction retired this campaign in favor of
+`replace-runtime-sweep-with-product-acceptance`. Commit `42a5bd7b4` removed the
+runtime platform; the unlaunched r6 packet is
+`NOT_RUN_SUPERSEDED_BY_OWNER_DIRECTION` in the external archive. Every
+unchecked task below remains unchecked historical scope: it was not executed,
+is not waived, and MUST NOT be launched, resumed, checked, synced, or used as
+current WeeklyReport acceptance evidence.
+
 ## 1. Shared contracts and campaign identity
 
 - [x] 1.1 Add the `Exhaustive Runtime Sweep` glossary entry and ADR for one

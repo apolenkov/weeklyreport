@@ -1,4 +1,4 @@
-# Contributing to CustomReport
+# Contributing to WeeklyReport
 
 ## Setup
 

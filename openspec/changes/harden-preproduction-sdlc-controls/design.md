@@ -93,6 +93,6 @@ can replace it when GitHub teams and delegated ownership exist.
    isolation.
 2. Add negative and positive configuration-gate tests.
 3. Run targeted tests, strict OpenSpec validation, full lint/typecheck/test/
-   build, and the source-bound runtime campaign.
+   build, and source-bound bounded route health plus the single lifecycle smoke.
 4. Roll back by reverting the repository-only commit; no database, deployment,
    secret, or external GitHub setting is changed.

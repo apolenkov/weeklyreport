@@ -1,9 +1,10 @@
 #!/usr/bin/env sh
 
 # pre-push hook — mirrors the cheap, deterministic, no-services CI jobs
-# before a push leaves the machine: typecheck + lint + format:check +
-# catalog drift + mutation-consumer audit + unit tests. Heavier jobs (E2E,
-# migrate-reset, docker build) stay for the server-side gate. Skip locally
+# before a push leaves the machine: typecheck + lint (including the bounded
+# acceptance source budget and planted probes) + format:check + catalog drift +
+# mutation-consumer audit + unit tests. Service-dependent acceptance, E2E,
+# migrate-reset, and Docker build stay for the server-side gate. Skip locally
 # with `SKIP_PREPUSH=1 git push`.
 #
 # The skip condition is hook-specific on purpose: this hook only fires on

@@ -50,6 +50,7 @@ export default defineConfig({
           {
             apiPort: target.apiPort,
             commandKind,
+            repoRoot,
             resultsRoot,
             webPort: target.webPort,
             webDistDir,
@@ -68,6 +69,7 @@ export default defineConfig({
           {
             apiPort: target.apiPort,
             commandKind,
+            repoRoot,
             resultsRoot,
             webPort: target.webPort,
             webDistDir,
@@ -84,7 +86,7 @@ export default defineConfig({
   projects: [
     {
       name: "route-health",
-      testMatch: /route-health(?:-axe-detector)?\.spec\.ts$/u,
+      testMatch: "route-health.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
     {

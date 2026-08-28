@@ -1,3 +1,8 @@
+> **Superseded delta.** Retained for historical traceability only. Current
+> WeeklyReport acceptance is defined by
+> `replace-runtime-sweep-with-product-acceptance`; this delta MUST NOT be synced,
+> launched, resumed, or replayed as current authority.
+
 ## ADDED Requirements
 
 ### Requirement: The campaign declares a closed browser and coverage matrix

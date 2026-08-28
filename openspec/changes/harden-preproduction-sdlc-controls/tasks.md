@@ -33,5 +33,7 @@
 - [x] 4.2 Run `openspec validate harden-preproduction-sdlc-controls --strict`,
       `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and the
       repository build with its required explicit API URLs.
-- [ ] 4.3 Freeze a new source SHA and repeat source-bound preflight, visual,
-      observability, and exhaustive runtime evidence before final acceptance.
+- [ ] 4.3 Freeze a clean source SHA and run catalog route health plus the single
+      lifecycle smoke under `replace-runtime-sweep-with-product-acceptance`;
+      record standard browser metadata, cleanup, focused observability evidence,
+      and local versus remote/CI status without invoking a retired runtime campaign.

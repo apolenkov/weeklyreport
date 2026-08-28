@@ -1,6 +1,6 @@
 # Security Policy
 
-CustomReport is pre-production software in a private repository. Treat reports
+WeeklyReport is pre-production software in a private repository. Treat reports
 about credentials, authentication, authorization, personal data, CI/CD, and
 deployment infrastructure as confidential even when no production traffic
 exists.

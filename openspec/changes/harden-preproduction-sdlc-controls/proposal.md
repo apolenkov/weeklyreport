@@ -1,6 +1,6 @@
 ## Why
 
-CustomReport has strong local quality gates, but a contributor cannot yet tell
+WeeklyReport has strong local quality gates, but a contributor cannot yet tell
 which SDLC controls are enforced now and which are prerequisites for the first
 production point. The R59 primary-source review found avoidable pre-production
 gaps in GitHub Actions token scope, checkout credential retention, ownership,

@@ -1,6 +1,6 @@
 # Quality Program — how this repo is engineered and verified
 
-A summary of the quality system built into CustomReport: what is enforced,
+A summary of the quality system built into WeeklyReport: what is enforced,
 what has been measured, and what the ongoing program is. Every claim below is
 verifiable in this repository (commands, configs, and specs are linked).
 

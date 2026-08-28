@@ -11,6 +11,10 @@ import type {
   TestResult,
 } from "@playwright/test/reporter";
 
+import {
+  evaluateAcceptanceBudget,
+  measureAcceptanceSource,
+} from "./budget-gate.ts";
 import { waitForLoopbackPortsFree } from "./cleanup.ts";
 import {
   acceptanceResultFor,
@@ -24,6 +28,7 @@ import {
 interface ReporterOptions {
   readonly apiPort: number;
   readonly commandKind: "combined" | "route-health" | "smoke";
+  readonly repoRoot: string;
   readonly resultsRoot: string;
   readonly webPort: number;
   readonly webDistDir: string;
@@ -78,7 +83,21 @@ export default class AcceptanceReporter implements Reporter {
           .then(() => true)
           .catch(() => false)
       : false;
+    const teardownStartedAt = teardown?.startedAt
+      ? Date.parse(teardown.startedAt)
+      : Number.NaN;
+    const teardownDurationMs = Number.isFinite(teardownStartedAt)
+      ? Math.max(0, Date.now() - teardownStartedAt)
+      : Number.POSITIVE_INFINITY;
+    const sourceMeasurement = measureAcceptanceSource(this.options.repoRoot);
+    const budget = evaluateAcceptanceBudget({
+      ...sourceMeasurement,
+      commandKind: this.options.commandKind,
+      durationMs: result.duration,
+      teardownDurationMs,
+    });
     const verdict = acceptanceResultFor({
+      budgetValid: budget.status === "PASS",
       listenersFree,
       ownedFilesRemoved,
       playwrightStatus: result.status,
@@ -93,6 +112,15 @@ export default class AcceptanceReporter implements Reporter {
         ? { sha: source.sha, tree: source.tree }
         : { sha: "UNKNOWN", tree: "UNKNOWN" },
       browser: browserVersion(),
+      budget: {
+        ...budget,
+        measurements: {
+          commandDurationMs: result.duration,
+          fileCount: sourceMeasurement.fileCount,
+          lineCount: sourceMeasurement.lineCount,
+          teardownDurationMs,
+        },
+      },
       cleanup: {
         listenersFree,
         ownedFilesRemoved,

@@ -14,15 +14,16 @@ normal gate executes, proving that the layout now hides ownership and coverage.
   concern cannot silently regrow into a large flat directory.
 - Rehome `scripts` by gate family with colocated tests and owned ledgers; make
   every maintained test discoverable by an explicit aggregate gate.
-- Split runtime-sweep and Prisma into concern/family directories behind stable
-  entrypoints, preserving behavior, seed profiles, evidence formats, and CLI names.
+- Keep the replacement `e2e/acceptance` contour under one explicit ownership,
+  file-count, and line-count budget; keep Prisma grouped by concern/family
+  behind stable entrypoints.
 - Complete the canonical web migration for `report-pages`, root `lib`, hooks, and
   server code; repair the one test-only deep web import and API test-only deep
   module seams without weakening production boundaries.
 - Update every live consumer atomically: package scripts, Knip, TypeScript,
   Vitest/Playwright, ESLint/dependency rules, Docker/CI, current docs, and specs.
-- Re-freeze and rerun the exhaustive runtime campaign only after the new tree and
-  all local gates are green.
+- Revalidate route health, the single lifecycle smoke, and focused suites only
+  after the new tree and all local gates are green.
 
 Non-goals:
 
@@ -48,7 +49,10 @@ None.
 
 ## Impact
 
-Paths and internal imports change across `scripts/`, `e2e/runtime-sweep/`,
+Paths and internal imports change across `scripts/`, the historical
+`e2e/runtime-sweep/` tree, the replacement `e2e/acceptance/` contour,
 `prisma/`, selected `apps/web/src/` transitional roots, and API test harnesses.
-Public product APIs and runtime evidence schemas remain stable. The evidence base
-is `~/work/customreport-archive/2026-08-05-repository-structure-audit/`.
+Public product APIs remain stable. The historical runtime platform was later
+retired by `replace-runtime-sweep-with-product-acceptance`; it MUST NOT be
+restored to close this change. The evidence base is
+`~/work/customreport-archive/2026-08-05-repository-structure-audit/`.

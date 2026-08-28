@@ -1,3 +1,11 @@
+## Current closure boundary
+
+The runtime-sweep relocation below is retained as historical context for the
+completed source-layout migration. `replace-runtime-sweep-with-product-acceptance`
+later deleted that platform. Current closure MUST validate the bounded
+`e2e/acceptance/` contour and existing focused suites; it MUST NOT recreate,
+freeze, or execute the historical runtime campaign.
+
 ## Context
 
 The 2026-08-05 inventory found 4,328 tracked files and 2,027 TS/JS files.
@@ -141,12 +149,13 @@ must be named by exactly one repository-test manifest consumed by the aggregate
 lint gate. Discovery tests compare the tracked inventory to actual runners. The
 four currently orphaned Node tests enter that manifest before any move.
 
-### 7. Validate in slices, then invalidate and rebuild runtime evidence once
+### 7. Validate in slices, then rebuild bounded product evidence once
 
 Each concern move runs targeted typecheck/lint/tests and stale-path searches.
-After all moves, the full local gates run once, then runtime-sweep SOURCE,
-PREFLIGHT, MATRIX, and MANIFEST are rebuilt at the exact final SHA. The successful
-r29 preflight remains diagnostic historical evidence, not final evidence.
+After all moves, the full local gates run once, then route health and the single
+lifecycle smoke run under the replacement contour at the exact final SHA. The
+successful r29 preflight remains diagnostic historical evidence, not current
+acceptance evidence.
 
 ## Risks / Trade-offs
 
@@ -181,7 +190,7 @@ r29 preflight remains diagnostic historical evidence, not final evidence.
 6. Re-run the structural inventory and require no unexplained directory above the
    density threshold and no new deep production edge.
 7. Run Prettier, lint, typecheck, unit/integration/build/OpenSpec gates; freeze a
-   new source SHA and restart the full runtime campaign.
+   new source SHA and run bounded route health plus the single lifecycle smoke.
 
 Rollback is per concern slice with ordinary Git revert. No schema/data rollback
 is involved. The current branch and external r29 artifacts preserve the previous

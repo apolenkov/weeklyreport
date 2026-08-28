@@ -1,3 +1,13 @@
+## Superseded design boundary
+
+This design is historical and MUST NOT be executed or used as current
+acceptance authority. `replace-runtime-sweep-with-product-acceptance` replaced
+the campaign, continuation, lane, custom-ledger, and AI-import architecture with
+catalog route health, one representative lifecycle smoke, standard Playwright
+evidence, and existing focused suites. Historical fail-closed database guards
+remain durable product-test safety requirements; historical campaign mechanics
+do not.
+
 ## Context
 
 The current Playwright sweep starts the API/web app on isolated ports, walks the

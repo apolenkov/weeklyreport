@@ -48,6 +48,14 @@ const CHECKS: readonly Check[] = [
   { script: "lint:scripts:typecheck", what: "tsc — scripts/ + tools/ project" },
   { script: "lint:e2e:typecheck", what: "tsc — e2e/ project" },
   {
+    script: "lint:acceptance-budget:test",
+    what: "bounded acceptance budget planted probes",
+  },
+  {
+    script: "lint:acceptance-budget",
+    what: "bounded acceptance whole-contour file and line budget",
+  },
+  {
     script: "lint:e2e-helpers:test",
     what: "E2E resource-ownership planted probes",
   },
