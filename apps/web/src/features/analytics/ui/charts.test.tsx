@@ -8,7 +8,10 @@ import {
 } from "./analytics-chart-data";
 import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
-import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
+import {
+  formatTrafficLightStatusLevel,
+  TrafficLightHistoryChart,
+} from "./traffic-light-history.chart";
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {
@@ -44,6 +47,14 @@ describe("TrafficLightHistoryChart", () => {
       ],
     );
     expect(data[1]?.["11111111-1111-4111-8111-111111111111"]).toBeNull();
+  });
+
+  it("labels numeric status levels with their traffic-light meaning", () => {
+    expect([1, 2, 3].map(formatTrafficLightStatusLevel)).toEqual([
+      "Red",
+      "Yellow",
+      "Green",
+    ]);
   });
 });
 

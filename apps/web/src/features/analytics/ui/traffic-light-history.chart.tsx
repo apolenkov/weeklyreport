@@ -5,7 +5,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@customreport/ui/components/ui/chart";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { buildTrafficLightHistoryChartData } from "./analytics-chart-data";
 import { SERIES_PALETTE as COLORS } from "./chart-palette";
@@ -14,6 +14,15 @@ import { SERIES_PALETTE as COLORS } from "./chart-palette";
 const STATUS_LEVEL_GREEN = 3;
 const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
 const Y_AXIS_DOMAIN_MAX = 4;
+const STATUS_LEVEL_LABELS: Readonly<Record<number, string>> = {
+  1: "Red",
+  2: "Yellow",
+  [STATUS_LEVEL_GREEN]: "Green",
+};
+
+export function formatTrafficLightStatusLevel(value: number): string {
+  return STATUS_LEVEL_LABELS[value] ?? String(value);
+}
 
 export function TrafficLightHistoryChart({
   periods,
@@ -34,8 +43,14 @@ export function TrafficLightHistoryChart({
       <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="period" />
-        <YAxis ticks={STATUS_LEVEL_TICKS} domain={[0, Y_AXIS_DOMAIN_MAX]} />
+        <YAxis
+          ticks={STATUS_LEVEL_TICKS}
+          domain={[0, Y_AXIS_DOMAIN_MAX]}
+          tickFormatter={formatTrafficLightStatusLevel}
+          width={64}
+        />
         <ChartTooltip />
+        <Legend />
         {/* connectNulls={false}: periods a project did NOT report stay visible
             gaps instead of being bridged by a line through them. */}
         {series.map((s, idx) => (
