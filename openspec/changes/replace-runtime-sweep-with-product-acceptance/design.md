@@ -42,7 +42,7 @@ Alternative: chain multiple existing configs. Rejected because it fragments timi
 
 ### 3. External disposable services, Playwright-owned app processes
 
-Acceptance requires an already provisioned loopback PostgreSQL/Redis E2E target from the developer or CI service layer. It never creates or deletes containers or volumes. Global setup validates `E2E_DATABASE_URL`, proves it differs from `DATABASE_URL`, applies the existing destructive guard and per-run consent, resets/migrates/seeds once, and records the starting SHA. Playwright `webServer` owns API/web processes and ports; global teardown closes test clients and proves those ports have no run-owned listeners.
+Acceptance requires an already provisioned loopback PostgreSQL/Redis E2E target from the developer or CI service layer. It never creates or deletes containers or volumes. Global setup invalidates prior terminal receipts, assigns a unique run ID, validates `E2E_DATABASE_URL`, proves it differs from `DATABASE_URL`, applies the existing destructive guard and per-run consent, resets/migrates/seeds once, and records the starting SHA. Playwright `webServer` owns API/web processes and ports; the reporter performs final teardown only after Playwright has stopped those processes, proves the ports are free, resets the guarded database and reserved Redis DB 15, and binds the terminal receipt to the same run ID.
 
 Alternative: a Docker/shell supervisor. Rejected because it recreates custom orchestration and interruption edge cases. CI already owns service lifecycle; local onboarding already defines the disposable database boundary.
 

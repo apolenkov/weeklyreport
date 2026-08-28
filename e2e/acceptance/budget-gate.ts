@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
-import { sourceIdentityFor } from "./lifecycle.ts";
+import { isRunId, sourceIdentityFor } from "./lifecycle.ts";
 
 const COMBINED_DURATION_MINUTES = 15;
 const GIT_EXECUTABLE = "/usr/bin/git";
@@ -133,9 +133,7 @@ const sourceIdentityFrom = (
     expectedSource !== undefined &&
     (sha !== expectedSource.sha || tree !== expectedSource.tree)
   ) {
-    throw new Error(
-      "acceptance receipt source does not match current SHA/tree",
-    );
+    throw new Error("acceptance source does not match current SHA/tree");
   }
   return { sha, tree };
 };
@@ -156,7 +154,9 @@ const assertTerminalPass = (
   budget: Record<string, unknown>,
 ): void => {
   const violations = budget.violations;
+  const runId = receipt.runId;
   const passing =
+    isRunId(runId) &&
     receipt.overallStatus === "PASS" &&
     receipt.playwrightStatus === "passed" &&
     cleanup.status === "PASS" &&
@@ -166,7 +166,9 @@ const assertTerminalPass = (
     teardown.clients === "TRANSIENT_CLIENTS_CLOSED" &&
     teardown.containers === "NONE_CREATED" &&
     teardown.databaseState === "DETERMINISTIC_FULL_SEED" &&
+    teardown.listenersFree === true &&
     teardown.redisState === "RESERVED_DB_15_EMPTY" &&
+    teardown.runId === runId &&
     teardown.sourceUnchanged === true &&
     teardown.volumes === "NONE_CREATED" &&
     budget.status === "PASS" &&
