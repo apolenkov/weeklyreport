@@ -13,6 +13,7 @@ import { acceptanceEnvironmentFor } from "./config-environment.ts";
 const target = acceptanceEnvironmentFor(process.env);
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const resultsRoot = path.join(import.meta.dirname, ".results");
+const webDistDir = path.join(repoRoot, "apps", "web", ".next-acceptance");
 const queuePrefix = `weeklyreport-acceptance-${process.pid}-${Date.now()}`;
 const commandKind =
   process.env.ACCEPTANCE_COMMAND_KIND === "smoke" ||
@@ -51,6 +52,7 @@ export default defineConfig({
             commandKind,
             resultsRoot,
             webPort: target.webPort,
+            webDistDir,
           },
         ],
       ]
@@ -68,6 +70,7 @@ export default defineConfig({
             commandKind,
             resultsRoot,
             webPort: target.webPort,
+            webDistDir,
           },
         ],
       ],

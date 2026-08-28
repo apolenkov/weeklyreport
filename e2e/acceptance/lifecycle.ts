@@ -169,28 +169,31 @@ export async function runAcceptanceTeardown(
   resultsRoot: string,
 ): Promise<TeardownReceipt> {
   const paths = lifecyclePathsFor(resultsRoot);
-  const source = await readJson<SourceReceipt>(paths.source);
+  const source = await readJson<SourceReceipt>(paths.source).catch(
+    () => undefined,
+  );
   const current = sourceIdentityFor(repoRoot);
   const receipt = {
     clients: "NO_PERSISTENT_CLIENTS",
     recordedAt: new Date().toISOString(),
-    sourceUnchanged: current.sha === source.sha && current.tree === source.tree,
+    sourceUnchanged:
+      source?.sha === current.sha && source.tree === current.tree,
   } as const;
   await writeJson(paths.teardown, receipt);
-  if (!receipt.sourceUnchanged) {
-    throw new Error("WeeklyReport source identity changed before teardown.");
-  }
   return receipt;
 }
 
 export function acceptanceResultFor(input: {
   readonly listenersFree: boolean;
+  readonly ownedFilesRemoved: boolean;
   readonly playwrightStatus: AcceptanceResult["playwrightStatus"];
   readonly setupStatus: SourceReceipt["setupStatus"] | "MISSING";
   readonly teardownValid: boolean;
 }): AcceptanceResult {
   const cleanupStatus =
-    input.listenersFree && input.teardownValid ? "PASS" : "FAIL_NOT_PROVEN";
+    input.listenersFree && input.ownedFilesRemoved && input.teardownValid
+      ? "PASS"
+      : "FAIL_NOT_PROVEN";
   return {
     cleanupStatus,
     overallStatus:

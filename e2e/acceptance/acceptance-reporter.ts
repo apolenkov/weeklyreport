@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { rm } from "node:fs/promises";
 
 import { chromium } from "@playwright/test";
 import type {
@@ -25,6 +26,7 @@ interface ReporterOptions {
   readonly commandKind: "full" | "route-health" | "smoke";
   readonly resultsRoot: string;
   readonly webPort: number;
+  readonly webDistDir: string;
 }
 
 const browserVersion = (): string => {
@@ -71,8 +73,14 @@ export default class AcceptanceReporter implements Reporter {
       readJson<TeardownReceipt>(paths.teardown).catch(() => undefined),
       waitForLoopbackPortsFree([this.options.apiPort, this.options.webPort]),
     ]);
+    const ownedFilesRemoved = listenersFree
+      ? await rm(this.options.webDistDir, { force: true, recursive: true })
+          .then(() => true)
+          .catch(() => false)
+      : false;
     const verdict = acceptanceResultFor({
       listenersFree,
+      ownedFilesRemoved,
       playwrightStatus: result.status,
       setupStatus: source?.setupStatus ?? "MISSING",
       teardownValid:
@@ -87,6 +95,7 @@ export default class AcceptanceReporter implements Reporter {
       browser: browserVersion(),
       cleanup: {
         listenersFree,
+        ownedFilesRemoved,
         status: verdict.cleanupStatus,
       },
       commandKind: this.options.commandKind,
