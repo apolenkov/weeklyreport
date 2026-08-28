@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "generatedAt": "2026-08-27T12:53:18.000Z",
+  "generatedAt": "2026-08-28T12:41:12.000Z",
   "commands": [
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/infrastructure/bullmq/pdf-export.processor.test.ts src/modules/pdf-export/pdf-export.service.test.ts src/modules/pdf-export/pdf-export.download-handler.test.ts",
       "exitCode": 0,
-      "sourceDigest": "66cdcd240575370f349b3f28b9b2409b2c795adbe513ab6f0626f08acda6858b",
+      "sourceDigest": "d5d795a8db3c10423a002801d6c8cb9ea6042c73c477d083dae35152331f6704",
       "summary": "3 files and 64 PDF unit tests passed",
-      "rerunAt": "2026-08-27T12:51:24.000Z"
+      "rerunAt": "2026-08-28T12:40:15.000Z"
     },
     {
       "command": "E2E_DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e DATABASE_URL=postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test REDIS_HOST=127.0.0.1 REDIS_PORT=6396 NODE_ENV=test PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts pdf-export.integration.spec.ts",
       "exitCode": 0,
-      "sourceDigest": "1eaa08bda2176c56fc628ad25ee8a18180478525a5d13f8db8b7a086777a76b4",
+      "sourceDigest": "11efd6083a78ffe1121c5b809b119cdb99f3b6f9e7408e3d320d194a94041e29",
       "summary": "2 PDF integration tests passed against the reset disposable E2E database, including worker completion and a readable persisted artifact",
-      "rerunAt": "2026-08-27T12:52:46.000Z"
+      "rerunAt": "2026-08-28T12:40:56.000Z"
     },
     {
       "command": "pnpm --filter @customreport/api exec vitest run src/modules/auth/saml.samlify.test.ts src/modules/auth/saml.fixtures.test.ts src/modules/auth/auth.routes.saml-rejection.test.ts",
