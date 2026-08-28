@@ -4,6 +4,20 @@ import functional from "eslint-plugin-functional";
 
 const eslintCommentsPlugin = eslintComments as unknown as ESLint.Plugin;
 const functionalPlugin = functional as unknown as ESLint.Plugin;
+const TEST_CONTOUR_IGNORES = [
+  "**/*.test.{ts,tsx}",
+  "**/*.spec.{ts,tsx}",
+  "**/__tests__/**",
+  "**/test-utils/**",
+  "**/__fixtures__/**",
+  "**/fixture/**",
+  "**/fixtures/**",
+  "**/*-harness.{ts,tsx}",
+  "**/*.fixture.{ts,tsx}",
+  "**/*.fixtures.{ts,tsx}",
+  "**/*-fixture.{ts,tsx}",
+  "**/*-test-fixture.{ts,tsx}",
+] as const;
 
 export const immutabilityConfig: Linter.Config[] = [
   // ── Immutability regime: `let` ban for production source. ──
@@ -18,14 +32,8 @@ export const immutabilityConfig: Linter.Config[] = [
       "apps/web/src/**/*.{ts,tsx}",
       "packages/shared/src/**/*.{ts,tsx}",
       "packages/ui/src/**/*.{ts,tsx}",
-      "e2e/**/*.{ts,tsx}",
     ],
-    ignores: [
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "**/__tests__/**",
-      "apps/*/src/test-utils/**",
-    ],
+    ignores: [...TEST_CONTOUR_IGNORES],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -82,6 +90,7 @@ export const immutabilityConfig: Linter.Config[] = [
       "apps/api/src/modules/**/domain/**/*.ts",
       "packages/shared/src/**/*.ts",
     ],
+    ignores: [...TEST_CONTOUR_IGNORES],
     plugins: { functional: functionalPlugin },
     rules: {
       "functional/immutable-data": [
@@ -100,6 +109,7 @@ export const immutabilityConfig: Linter.Config[] = [
   // hazard of `.map(obj.method)`.
   {
     files: ["apps/api/src/modules/**/*.ts"],
+    ignores: [...TEST_CONTOUR_IGNORES],
     plugins: { functional: functionalPlugin },
     rules: { "functional/prefer-tacit": "error" },
   },

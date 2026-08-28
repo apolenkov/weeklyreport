@@ -43,6 +43,19 @@ const complexSource = `export function classify(values) {
   if (values[10]) return 10;
   return 11;
 }`;
+const testUnboundedProbe = (
+  id: string,
+  rule: string,
+  code: string,
+): PlantedProbe => ({
+  id,
+  positive: API_FENCE_TEST,
+  negative: API_MAIN,
+  rule,
+  code,
+  positiveReports: false,
+  negativeReports: true,
+});
 
 export const plantedScopeProbes: readonly PlantedProbe[] = [
   {
@@ -235,6 +248,13 @@ export const plantedScopeProbes: readonly PlantedProbe[] = [
     positiveReports: true,
     negativeReports: false,
   },
+  testUnboundedProbe("test-file-size-unbounded", "max-lines", longSource),
+  testUnboundedProbe("test-cyclomatic-unbounded", "complexity", complexSource),
+  testUnboundedProbe(
+    "test-cognitive-unbounded",
+    "sonarjs/cognitive-complexity",
+    complexSource,
+  ),
   {
     id: "test-policy",
     positive: API_FENCE_TEST,
@@ -245,18 +265,9 @@ export const plantedScopeProbes: readonly PlantedProbe[] = [
     negativeReports: false,
   },
   {
-    id: "literal-data-policy",
-    positive: "apps/api/src/test-utils/report-section-fixtures.ts",
-    negative: "apps/api/src/infrastructure/metrics/metrics.module.ts",
-    rule: "@typescript-eslint/no-magic-numbers",
-    code: "export function threshold(): number { return 37; }",
-    positiveReports: false,
-    negativeReports: true,
-  },
-  {
     id: "uat-vocabulary",
     positive: "apps/web/uat-suite/inventory.mjs",
-    negative: "apps/web/uat-suite/helpers.mjs",
+    negative: WEB_TRPC,
     rule: "sonarjs/no-duplicate-string",
     code: "export const a = 'fixture-vocabulary-long';\nexport const b = 'fixture-vocabulary-long';\nexport const c = 'fixture-vocabulary-long';\nexport const d = 'fixture-vocabulary-long';",
     positiveReports: false,
@@ -265,7 +276,7 @@ export const plantedScopeProbes: readonly PlantedProbe[] = [
   {
     id: "uat-inline-classifier",
     positive: "apps/web/uat-suite/inventory.mjs",
-    negative: "apps/web/uat-suite/helpers.mjs",
+    negative: WEB_TRPC,
     rule: "sonarjs/cognitive-complexity",
     code: complexSource,
     positiveReports: false,

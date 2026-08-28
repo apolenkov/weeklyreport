@@ -13,6 +13,11 @@ Mechanical code-style work is not an independent delivery stream. Existing
 ratchets may require a narrow extraction while landing a product fix, but the
 plan does not spend product time chasing file/function counts or wrapper shape
 without an observable behavior, architecture, security or operability outcome.
+Strict structural, complexity and immutability ratchets apply to maintained
+product code only. Tests, fixtures, harnesses, UAT and E2E remain free of those
+budgets and test-style preferences until a later test-quality campaign; they
+retain formatting, type safety and failure-prevention checks needed to keep
+results trustworthy.
 
 The accepted final standard is stricter than the current live ratchet. Current
 documentation describes production limits of 300 lines per file, 70 lines per
