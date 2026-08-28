@@ -78,7 +78,7 @@ export const rememberedRevealContinuationAsset = (input: {
 }): RevealContinuationAsset | undefined =>
   memoryAssets.get(`${input.artifact}:${input.ref}`);
 
-const assetDirectoryFor = (
+export const revealContinuationAssetDirectoryFor = (
   root: string,
   artifact: RevealContinuationAsset["artifact"],
 ): string => path.join(root, "continuation", "assets", artifact.toLowerCase());
@@ -105,7 +105,10 @@ const assetPathFor = (
 ): string => {
   assertAssetRef(ref);
   const root = path.resolve(archiveRoot);
-  const filePath = path.join(assetDirectoryFor(root, artifact), `${ref}.json`);
+  const filePath = path.join(
+    revealContinuationAssetDirectoryFor(root, artifact),
+    `${ref}.json`,
+  );
   const relative = path.relative(root, filePath);
   if (
     relative === "" ||
@@ -236,8 +239,20 @@ export const readRevealContinuationAsset = async (input: {
 }): Promise<RevealContinuationAsset> => {
   const filePath = assetPathFor(input.archiveRoot, input.artifact, input.ref);
   await assertPreflightArchivePath(path.resolve(input.archiveRoot), filePath);
-  const buffer = await readBoundedRegularFile({
+  return readRevealContinuationAssetFile({
     filePath,
+    artifact: input.artifact,
+    ref: input.ref,
+  });
+};
+
+const readRevealContinuationAssetFile = async (input: {
+  readonly filePath: string;
+  readonly artifact: RevealContinuationAsset["artifact"];
+  readonly ref: string;
+}): Promise<RevealContinuationAsset> => {
+  const buffer = await readBoundedRegularFile({
+    filePath: input.filePath,
     maxBytes: MAX_ASSET_BYTES,
     regularFileError: CONTENT_ASSET_REGULAR_FILE_ERROR,
     sizeError: CONTENT_ASSET_SIZE_ERROR,
@@ -264,6 +279,22 @@ export const readRevealContinuationAsset = async (input: {
     );
   return parsed;
 };
+
+/** Reads one asset after its containing directory boundary was verified. */
+export const readAndRememberRevealContinuationAssetWithinVerifiedDirectory =
+  async (input: {
+    readonly archiveRoot: string;
+    readonly artifact: RevealContinuationAsset["artifact"];
+    readonly ref: string;
+  }): Promise<RevealContinuationAsset> => {
+    const asset = await readRevealContinuationAssetFile({
+      filePath: assetPathFor(input.archiveRoot, input.artifact, input.ref),
+      artifact: input.artifact,
+      ref: input.ref,
+    });
+    memoryAssets.set(`${asset.artifact}:${asset.digest}`, asset);
+    return asset;
+  };
 
 /**
  * Re-checks the durable boundary without re-reading an immutable asset body.

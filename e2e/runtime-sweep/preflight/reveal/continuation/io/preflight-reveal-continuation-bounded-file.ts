@@ -61,7 +61,7 @@ export const readBoundedRegularFile = async (input: {
       throw new RevealContinuationError(input.sizeError);
     return await readBoundedBytes({
       handle,
-      maxBytes: input.maxBytes,
+      maxBytes: stats.size,
       sizeError: input.sizeError,
     });
   } finally {

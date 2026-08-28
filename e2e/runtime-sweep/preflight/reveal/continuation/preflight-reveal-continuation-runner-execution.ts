@@ -5,6 +5,7 @@ import {
 import { restoreRevealBranch } from "../interaction/preflight-reveal-branch-execution.ts";
 import type {
   RevealDiscoveryState,
+  RevealQueueChunkResult,
   RevealQueueInput,
 } from "../interaction/preflight-reveal-branches.ts";
 import {
@@ -76,10 +77,10 @@ const frozenNextFrontierFor = async (input: {
   };
 };
 
-export const chunkFor = (input: {
+const chunkFor = (input: {
   readonly input: RevealContinuationInput;
   readonly grant: RevealExecutionGrant | undefined;
-  readonly result: Readonly<{ readonly completed: boolean }>;
+  readonly result: RevealQueueChunkResult;
   readonly progress: RevealContinuationProgress;
   readonly operationRecorder: RevealOperationRecorder;
   readonly startingActionCount: number;

@@ -11,11 +11,8 @@ import {
   type RevealExecutionGrant,
   type RevealReceiptChunk,
 } from "./contracts/preflight-reveal-continuation-schemas.ts";
-import {
-  readRevealContinuationAsset,
-  rememberRevealContinuationAsset,
-  type RevealContinuationAsset,
-} from "./preflight-reveal-continuation-assets.ts";
+import { createRevealContinuationAssetHydrationReader } from "./io/preflight-reveal-continuation-asset-hydration-reader.ts";
+import type { RevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
 
 interface AssetQueue {
   readonly pending: {
@@ -25,7 +22,7 @@ interface AssetQueue {
   readonly queued: Set<string>;
 }
 
-type HydrationScope = "complete" | "execution-frontier";
+const HYDRATION_BATCH_SIZE = 128;
 
 const queueAsset = (
   queue: AssetQueue,
@@ -41,11 +38,7 @@ const queueAsset = (
 const queueBranch = (queue: AssetQueue, ref: string): void =>
   queueAsset(queue, PREFLIGHT_REVEAL_BRANCH, ref);
 
-const queueGrant = (
-  queue: AssetQueue,
-  grant: RevealExecutionGrant,
-  scope: HydrationScope,
-): void => {
+const queueGrant = (queue: AssetQueue, grant: RevealExecutionGrant): void => {
   for (const refs of [grant.genesis, grant.frontier]) {
     queueAsset(queue, PREFLIGHT_REVEAL_INVENTORY, refs.inventoryRef);
     queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, refs.surfaceRef);
@@ -53,8 +46,7 @@ const queueGrant = (
     queueBranch(queue, refs.branchRef);
     queueAsset(queue, PREFLIGHT_REVEAL_CANDIDATE_LIST, refs.candidateListRef);
   }
-  if (scope === "complete")
-    for (const ref of grant.frontier.queueRefs) queueBranch(queue, ref);
+  for (const ref of grant.frontier.queueRefs) queueBranch(queue, ref);
   queueAsset(
     queue,
     PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
@@ -137,7 +129,6 @@ const queuePathChildren = (
 const queueChildAssets = (
   queue: AssetQueue,
   asset: RevealContinuationAsset,
-  scope: HydrationScope,
 ): void => {
   switch (asset.artifact) {
     case PREFLIGHT_REVEAL_BRANCH:
@@ -146,7 +137,7 @@ const queueChildAssets = (
       queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.pathNodeRef);
       break;
     case PREFLIGHT_REVEAL_REDUCER_CHECKPOINT:
-      if (scope === "complete") queueCheckpointChildren(queue, asset);
+      queueCheckpointChildren(queue, asset);
       break;
     case PREFLIGHT_REVEAL_PATH_NODE:
       queuePathChildren(queue, asset);
@@ -162,24 +153,33 @@ export const hydrateRevealContinuationAssets = async (input: {
   readonly bootstrap?: RevealBootstrap;
   readonly grant?: RevealExecutionGrant;
   readonly chunk?: RevealReceiptChunk;
-  readonly scope?: HydrationScope;
 }): Promise<void> => {
-  const scope = input.scope ?? "complete";
   const queue: AssetQueue = { pending: [], queued: new Set<string>() };
+  const reader = createRevealContinuationAssetHydrationReader({
+    archiveRoot: input.archiveRoot,
+  });
   if (input.bootstrap !== undefined)
     queueGenesis(queue, input.bootstrap.genesis);
-  if (input.grant !== undefined) queueGrant(queue, input.grant, scope);
+  if (input.grant !== undefined) queueGrant(queue, input.grant);
   for (const receipt of input.chunk?.receipts ?? [])
     queueReceipt(queue, receipt);
-  while (queue.pending.length > 0) {
-    const next = queue.pending.shift();
-    if (next === undefined) break;
-    const asset = await readRevealContinuationAsset({
-      archiveRoot: input.archiveRoot,
-      artifact: next.artifact,
-      ref: next.ref,
-    });
-    rememberRevealContinuationAsset(asset);
-    queueChildAssets(queue, asset, scope);
+  const cursor = { value: 0 };
+  while (cursor.value < queue.pending.length) {
+    const batch = queue.pending.slice(
+      cursor.value,
+      cursor.value + HYDRATION_BATCH_SIZE,
+    );
+    cursor.value += batch.length;
+    const assets = await Promise.all(
+      batch.map(async (next) =>
+        reader.readAndRemember({
+          artifact: next.artifact,
+          ref: next.ref,
+        }),
+      ),
+    );
+    for (const asset of assets) {
+      queueChildAssets(queue, asset);
+    }
   }
 };

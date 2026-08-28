@@ -41,8 +41,6 @@ import {
   assertRevealExecutionGrantInput,
 } from "./preflight-reveal-continuation-runner-grant.ts";
 import { branchForRef } from "./receipts/preflight-reveal-continuation-receipts.ts";
-import { executeCompactRevealContinuationChunk } from "./runner/compact-execution.ts";
-import { compactResumedFrontierFor } from "./runner/compact-frontier.ts";
 
 export { assertRevealExecutionGrantInput } from "./preflight-reveal-continuation-runner-grant.ts";
 
@@ -89,7 +87,6 @@ export type RevealContinuationInput = Readonly<{
   readonly chunkBudgetMs?: number;
   readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
   readonly now?: () => number;
-  readonly compactResume?: boolean;
 }>;
 
 export type RevealContinuationInitialState = Readonly<{
@@ -257,22 +254,6 @@ export async function discoverRevealControlsChunk(
     initialState: initial.state,
     candidatesFor: queueInput.candidatesFor,
   });
-  if (input.compactResume === true && input.grant !== undefined) {
-    const compact = compactResumedFrontierFor({
-      grant: input.grant,
-      route: input.route,
-    });
-    return executeCompactRevealContinuationChunk({
-      input,
-      queueInput,
-      grant: input.grant,
-      branch: compact.branch,
-      candidates: compact.candidates,
-      nextCandidateIndex: input.grant.frontier.nextCandidateIndex,
-      deadlineAt,
-      now,
-    });
-  }
   const state =
     input.grant === undefined
       ? initial.state
