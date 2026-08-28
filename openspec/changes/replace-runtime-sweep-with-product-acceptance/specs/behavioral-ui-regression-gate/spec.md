@@ -1,12 +1,12 @@
 ## MODIFIED Requirements
 
-### Requirement: Deterministic gate covers only bounded critical journeys
+### Requirement: Deterministic browser gate remains smoke-only
 
-The blocking browser gate MUST freeze only reviewed, stabilized WeeklyReport critical journeys. Route-wide navigation, console, network, page-error, and axe checks remain catalog-driven; the gate MUST NOT enumerate every DOM control or compile an exhaustive state/interaction graph.
+The blocking browser gate MUST freeze only one reviewed, stabilized WeeklyReport lifecycle smoke. Route-wide navigation, console, network, page-error, and axe checks remain catalog-driven; detailed behaviors remain in focused tests. The gate MUST NOT enumerate every DOM control, duplicate all role journeys, or compile an exhaustive state/interaction graph.
 
-#### Scenario: A critical journey is frozen
+#### Scenario: The representative lifecycle is frozen
 
-- **WHEN** a lead, head, admin, or viewer journey is required for release acceptance
+- **WHEN** the representative write, publish, and read lifecycle is required for release acceptance
 - **THEN** one deterministic Playwright scenario asserts the user-visible outcome and required read-back
 - **AND** no exhaustive per-element expected-outcome model is added
 

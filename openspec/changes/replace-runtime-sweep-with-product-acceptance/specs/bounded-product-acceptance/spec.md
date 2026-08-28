@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines one compact, deterministic browser acceptance contour that protects WeeklyReport's critical user journeys without growing into a second orchestration platform.
+Defines one compact, deterministic browser smoke contour that protects WeeklyReport's basic viability without growing into a second orchestration platform.
 
 ## ADDED Requirements
 
@@ -8,29 +8,29 @@ Defines one compact, deterministic browser acceptance contour that protects Week
 
 The repository MUST expose one blocking `e2e/acceptance/` contour implemented with the existing Playwright runner. It MUST reuse the canonical scenario catalog, deterministic seed contracts, dev-auth helper, disposable-database guard, and integration resource helpers. It MUST NOT implement a second scenario compiler, interaction graph, continuation protocol, campaign state machine, lane orchestrator, AI report importer, or custom evidence ledger.
 
-#### Scenario: A new acceptance journey is added
+#### Scenario: New behavior is considered for browser acceptance
 
-- **WHEN** a critical WeeklyReport journey needs browser acceptance coverage
-- **THEN** the journey is added to `e2e/acceptance/` or an existing focused integration spec
+- **WHEN** a WeeklyReport behavior needs deterministic coverage
+- **THEN** it is added to an existing focused suite unless it replaces part of the single reviewed smoke lifecycle
 - **AND** no parallel runner, resumable campaign, or custom orchestration layer is introduced
 
-### Requirement: Critical product journeys MUST cover all four roles
+### Requirement: Browser acceptance MUST remain smoke-only
 
-The full acceptance command MUST exercise the lead, head, admin, and viewer roles through deterministic, machine-checkable outcomes. Coverage MUST include lead edit/autosave/submit, head review/publish/revoke/PDF, admin period/configuration/action-log behavior, viewer published read-only behavior, role authorization, and the cataloged route surface. Every state-changing journey MUST assert both the visible result and the persisted or API read-back when applicable.
+The acceptance contour MUST contain only basic four-role route health and one deterministic lead write -> head publish -> viewer read lifecycle. The lifecycle MUST assert both the visible result and persisted or API read-back. PDF, revoke, configuration, action-log, ordering, detailed authorization, and edge-case coverage MUST remain in existing focused unit, integration, seed-profile, or production-build suites rather than being duplicated into browser acceptance.
 
 #### Scenario: Full product acceptance runs
 
 - **WHEN** `pnpm test:acceptance` runs against the exact disposable WeeklyReport database
-- **THEN** every critical four-role journey completes with its visible and data outcomes proven
+- **THEN** the single smoke lifecycle completes with its visible and data outcomes proven
 - **AND** every cataloged role-reachable route is visited without an unclassified page, console, network, accessibility, or HTTP failure
 
 ### Requirement: Acceptance complexity and duration MUST be bounded
 
-The owned acceptance implementation MUST contain at most 50 source files and at most 8,000 non-generated lines. On the reference Mac, `pnpm test:acceptance:smoke` MUST complete within 10 minutes, `pnpm test:acceptance` MUST complete within 30 minutes, and teardown MUST complete within 2 minutes. The gate MUST fail when a measured budget is exceeded; raising a budget requires an explicit spec change with a measured product-coverage justification.
+The owned acceptance implementation MUST contain at most 25 source files and at most 4,000 non-generated lines. On the reference Mac, `pnpm test:acceptance:smoke` MUST complete within 10 minutes, `pnpm test:acceptance` MUST complete within 15 minutes, and teardown MUST complete within 2 minutes. The gate MUST fail when a measured budget is exceeded; raising a budget requires an explicit spec change with a measured product-coverage justification.
 
 #### Scenario: Acceptance exceeds a budget
 
-- **WHEN** the measured file count, line count, smoke duration, full duration, or teardown duration exceeds its bound
+- **WHEN** the measured file count, line count, smoke duration, combined duration, or teardown duration exceeds its bound
 - **THEN** the acceptance gate fails and names the exceeded budget
 - **AND** the overage cannot be hidden by excluding owned files or omitting failed timing receipts
 
