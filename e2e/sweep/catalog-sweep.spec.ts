@@ -25,14 +25,8 @@ import {
 // Import the seed ids directly from the source of truth. NOT via
 // e2e/integration/helpers/seed-ids (its `../../../../../` re-export path is
 // relative to that file's deeper location and does not resolve from here).
-import {
-  ACTIVE_REPORT_ID,
-  PUBLISHED_REPORT_ID,
-} from "../../prisma/seeds/support/seed-constants";
-import {
-  isExpectedNavigationAbort,
-  navigate,
-} from "../runtime-sweep/replay/navigation.ts";
+import { resolveCatalogRoute } from "../helpers/catalog-route.ts";
+import { isExpectedNavigationAbort, navigate } from "../helpers/navigation.ts";
 import {
   CANONICAL_ROLES,
   type Catalog,
@@ -71,18 +65,6 @@ const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
  * An unknown placeholder returns null so the walk records a skip-with-reason
  * instead of visiting a broken literal URL.
  */
-function resolveRoute(route: string, role: DbRole): string | null {
-  if (!route.includes("[")) {
-    return route;
-  }
-  const reportId =
-    role === "viewer" || route.startsWith("/reports/")
-      ? PUBLISHED_REPORT_ID
-      : ACTIVE_REPORT_ID;
-  const resolved = route.replace("[reportId]", reportId);
-  return resolved.includes("[") ? null : resolved;
-}
-
 function loadCatalogs(): Catalog[] {
   if (!fs.existsSync(CATALOG_DIR)) {
     return [];
@@ -178,18 +160,7 @@ for (const catalog of catalogs) {
     }
 
     for (const entry of loggedIn ? catalog.routes : []) {
-      const resolved = resolveRoute(entry.route, catalog.role);
-      if (resolved === null) {
-        results.push({
-          route: entry.route,
-          resolved,
-          access: entry.access,
-          anomalies: [],
-          warnings: [],
-          skipped: "unresolved route placeholder (no seed id mapping)",
-        });
-        continue;
-      }
+      const resolved = resolveCatalogRoute(entry.route, catalog.role);
 
       const anomalies: Anomaly[] = [];
       const warnings: string[] = [];
