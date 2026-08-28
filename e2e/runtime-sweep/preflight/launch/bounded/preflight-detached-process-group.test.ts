@@ -7,6 +7,7 @@ import {
   classifyProcessGroupPermission,
   combineFailures,
   ProcessGroupCleanupError,
+  waitForProcessGroupExit,
 } from "./preflight-detached-process-group.ts";
 import {
   processGroupStatusFor,
@@ -98,6 +99,49 @@ describe("detached process-group ownership classification", () => {
     expect((failure as ProcessGroupCleanupError).classification).toBe(
       "OWNERSHIP_UNPROVEN",
     );
+  });
+
+  it("waits for a transient exited-leader EPERM to become ESRCH", async () => {
+    const kill = vi.spyOn(process, "kill").mockImplementationOnce(() => {
+      throw Object.assign(new Error("permission denied"), { code: "EPERM" });
+    });
+    kill.mockImplementationOnce(() => {
+      throw Object.assign(new Error("gone"), { code: "ESRCH" });
+    });
+    try {
+      await expect(
+        waitForProcessGroupExit(
+          {
+            operationName: "reveal-child",
+            child: goneChild,
+            ownership: goneOwnership,
+          },
+          100,
+        ),
+      ).resolves.toBe(true);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it("keeps a persistent exited-leader EPERM fail-closed", async () => {
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+      throw Object.assign(new Error("permission denied"), { code: "EPERM" });
+    });
+    try {
+      await expect(
+        waitForProcessGroupExit(
+          {
+            operationName: "reveal-child",
+            child: goneChild,
+            ownership: goneOwnership,
+          },
+          25,
+        ),
+      ).rejects.toMatchObject({ classification: "OWNERSHIP_UNPROVEN" });
+    } finally {
+      kill.mockRestore();
+    }
   });
 
   it("keeps cleanup classification separate from the primary error", () => {

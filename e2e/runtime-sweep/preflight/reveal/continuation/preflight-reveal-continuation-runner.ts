@@ -23,29 +23,28 @@ import type {
   RevealExecutionHarness,
   RevealRoute,
 } from "../interaction/preflight-reveal-types.ts";
-import { strictRouteFor } from "./contracts/preflight-reveal-continuation-contract-factories.ts";
 import {
   assertCooperativeRevealContinuationLimits,
   type RevealContinuationCooperativeLimits,
 } from "./contracts/preflight-reveal-continuation-limits.ts";
-import type {
-  RevealContinuationRoute,
-  RevealExecutionGrant,
-} from "./contracts/preflight-reveal-continuation-schemas.ts";
+import type { RevealExecutionGrant } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { PREFLIGHT_REVEAL_CANDIDATE_LIST } from "./contracts/preflight-reveal-continuation-schemas.ts";
 import { rememberedRevealContinuationAsset } from "./preflight-reveal-continuation-assets.ts";
 import { canonicalCandidatesForList } from "./preflight-reveal-continuation-candidates.ts";
-import { assertFreshGenesis } from "./preflight-reveal-continuation-genesis.ts";
 import {
   reducerStateDigestFor,
   reducerStateForCheckpoint,
 } from "./preflight-reveal-continuation-reducer.ts";
 import { executeRevealContinuationChunk } from "./preflight-reveal-continuation-runner-execution.ts";
 import {
-  assertRevealExecutionGrantInput as assertGrantInput,
-  assertRevealExecutionGrantSource,
-} from "./preflight-reveal-continuation-validators.ts";
+  assertResumeGrant,
+  assertRevealExecutionGrantInput,
+} from "./preflight-reveal-continuation-runner-grant.ts";
 import { branchForRef } from "./receipts/preflight-reveal-continuation-receipts.ts";
+import { executeCompactRevealContinuationChunk } from "./runner/compact-execution.ts";
+import { compactResumedFrontierFor } from "./runner/compact-frontier.ts";
+
+export { assertRevealExecutionGrantInput } from "./preflight-reveal-continuation-runner-grant.ts";
 
 const MINUTES_PER_CHUNK = 30;
 const MILLISECONDS_PER_MINUTE = 60_000;
@@ -90,6 +89,7 @@ export type RevealContinuationInput = Readonly<{
   readonly chunkBudgetMs?: number;
   readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
   readonly now?: () => number;
+  readonly compactResume?: boolean;
 }>;
 
 export type RevealContinuationInitialState = Readonly<{
@@ -103,28 +103,6 @@ const assertBudget = (budgetMs: number): void => {
     throw new Error(
       "Reveal continuation chunk budget must be a positive integer",
     );
-};
-
-const routeForGrant = (route: RevealRoute): RevealContinuationRoute =>
-  strictRouteFor(route);
-
-export const assertRevealExecutionGrantInput = (input: {
-  readonly grant?: RevealExecutionGrant;
-  readonly expectedGrantDigest?: string;
-}): void => {
-  const hasGrant = input.grant !== undefined;
-  const hasExpectedDigest = input.expectedGrantDigest !== undefined;
-  if (hasGrant !== hasExpectedDigest)
-    throw new Error(
-      hasGrant
-        ? "Reveal continuation resume requires the parent-sealed grant digest"
-        : "Reveal continuation expected a sealed grant to resume",
-    );
-  if (input.grant !== undefined && input.expectedGrantDigest !== undefined)
-    assertGrantInput({
-      grant: input.grant,
-      expectedGrantDigest: input.expectedGrantDigest,
-    });
 };
 
 const reducerInputFor = (input: {
@@ -254,20 +232,6 @@ export async function discoverRevealControlsChunk(
   if (!Number.isSafeInteger(deadlineAt))
     throw new Error("Reveal continuation deadline must be a safe integer");
   const initial = initialStateFor(input);
-  const strictRoute = routeForGrant(input.route);
-  if (input.grant !== undefined) {
-    assertRevealExecutionGrantSource({
-      grant: input.grant,
-      source: input.source,
-      state: input.state,
-      route: strictRoute,
-      executionScope: input.executionScope,
-      attemptId: input.attemptId,
-      ...(input.expectedGrantDigest === undefined
-        ? {}
-        : { expectedGrantDigest: input.expectedGrantDigest }),
-    });
-  }
   if (now() >= deadlineAt)
     throw new Error(
       "Reveal continuation child deadline expired before the next candidate boundary",
@@ -280,12 +244,35 @@ export async function discoverRevealControlsChunk(
     controlFor: input.controlFor,
     source: input.source,
   });
-  if (input.grant !== undefined)
-    assertFreshGenesis({
-      state: initial.state,
-      candidatesFor: queueInput.candidatesFor,
+  assertResumeGrant({
+    ...(input.grant === undefined ? {} : { grant: input.grant }),
+    ...(input.expectedGrantDigest === undefined
+      ? {}
+      : { expectedGrantDigest: input.expectedGrantDigest }),
+    source: input.source,
+    state: input.state,
+    route: input.route,
+    executionScope: input.executionScope,
+    attemptId: input.attemptId,
+    initialState: initial.state,
+    candidatesFor: queueInput.candidatesFor,
+  });
+  if (input.compactResume === true && input.grant !== undefined) {
+    const compact = compactResumedFrontierFor({
       grant: input.grant,
+      route: input.route,
     });
+    return executeCompactRevealContinuationChunk({
+      input,
+      queueInput,
+      grant: input.grant,
+      branch: compact.branch,
+      candidates: compact.candidates,
+      nextCandidateIndex: input.grant.frontier.nextCandidateIndex,
+      deadlineAt,
+      now,
+    });
+  }
   const state =
     input.grant === undefined
       ? initial.state

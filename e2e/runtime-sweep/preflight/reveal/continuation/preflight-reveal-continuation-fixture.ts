@@ -213,6 +213,7 @@ interface RunChunkInput {
     readonly maxTerminalCandidates: number;
     readonly maxRevealActionDelta: number;
   }>;
+  readonly compactResume?: boolean;
 }
 
 const harnessInputFor = (input: RunChunkInput) => ({
@@ -272,6 +273,9 @@ const discoverInputFor = (
     ? {}
     : { cooperativeLimits: input.cooperativeLimits }),
   ...(input.now === undefined ? {} : { now: input.now }),
+  ...(input.compactResume === undefined
+    ? {}
+    : { compactResume: input.compactResume }),
 });
 
 export const runChunk = async (

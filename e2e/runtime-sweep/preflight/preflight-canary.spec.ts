@@ -134,7 +134,11 @@ test("exact-state preflight canary reuses the full segment runner", async ({
       grant,
       expectedGrantDigest: continuationExpectedGrantDigest,
     });
-    await hydrateRevealContinuationAssets({ archiveRoot, grant });
+    await hydrateRevealContinuationAssets({
+      archiveRoot,
+      grant,
+      scope: "execution-frontier",
+    });
   }
   const chunk = await runPlaywrightPreflightRevealContinuationChunk({
     source,
@@ -160,6 +164,7 @@ test("exact-state preflight canary reuses the full segment runner", async ({
       maxTerminalCandidates: continuationLimits.maxTerminalCandidates,
       maxRevealActionDelta: continuationLimits.maxRevealActionDelta,
     },
+    compactResume: grant !== undefined,
   });
   if (chunk.status === "BOOTSTRAP")
     await writeRevealBootstrap({
