@@ -16,10 +16,10 @@
 ## 3. Web product acceptance
 
 - [ ] 3.1 Move the catalog route-health behavior into the new acceptance project, remove its runtime-sweep navigation dependency, and preserve four-role HTTP/console/page-error/network/axe reporting; verify every catalog route is visited and the planted axe defect fails.
-- [ ] 3.2 Rename and constrain the second Playwright project to `smoke-lifecycle`; verify discovery contains exactly one representative lifecycle and no separate lead/head/admin/viewer/PDF journey matrix.
+- [x] 3.2 Rename and constrain the second Playwright project to `smoke-lifecycle`; verify discovery contains exactly one representative lifecycle and no separate lead/head/admin/viewer/PDF journey matrix.
 - [ ] 3.3 Implement the representative lead write -> head publish -> viewer read lifecycle with basic admin landing, visible outcomes, and persisted/API read-back; verify it passes from a fresh deterministic seed.
 - [ ] 3.4 Prove every omitted browser journey remains covered by an existing focused unit, integration, seed-profile, production-build, CSP, or authorization test; add focused tests only for an evidenced gap, not to the smoke contour.
-- [ ] 3.5 Verify `test:acceptance:smoke` discovers only the representative lifecycle and `test:acceptance` discovers route health plus that same lifecycle.
+- [x] 3.5 Verify `test:acceptance:smoke` discovers only the representative lifecycle and `test:acceptance` discovers route health plus that same lifecycle.
 
 ## 4. Tooling replacement and legacy deletion
 
