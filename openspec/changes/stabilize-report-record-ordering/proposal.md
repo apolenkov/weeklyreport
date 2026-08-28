@@ -15,17 +15,14 @@ observations but a permuted Decisions `visibleText`; the unordered relations in
   records deterministic primary and stable identities across reset/reseed.
 - Add regressions proving repeated equivalent reads and seeded rebuilds keep
   record order and occurrence-bound controls stable.
-- Bind each editable decision occurrence to its existing durable `stableId` in
-  the non-visible, content-addressed runtime inventory.
-- Keep the runtime-sweep genesis equality strict and improve its mismatch
-  diagnostic; ordering drift remains a blocking product finding.
+- Prove the user-visible ordering contract through focused API/seed tests and
+  WeeklyReport's bounded product acceptance contour.
 
 Non-goals:
 
 - Adding drag-and-drop/manual ranking, a new database position column, or a
   migration.
-- Sorting records by mutable user-facing text or silently canonicalizing away
-  meaningful DOM differences in the runtime harness.
+- Sorting records by mutable user-facing text.
 - Changing record authorization, write semantics, or published snapshot scope.
 
 ## Capabilities
@@ -42,9 +39,7 @@ None.
 ## Impact
 
 The change affects the Prisma report-section include contract, deterministic
-seed identities, focused repository/seed tests, and the R188/R193 genesis
-inventory contract. The lineage-aware inventory advances the continuation
-wire/hash domain from v4 to v5, so legacy v4 assets are intentionally rejected.
-It adds no API fields, dependency, migration, or production data operation.
-Evidence originates from
-`2026-08-15-exhaustive-runtime-sweep-r193-pro-b2ca739b` and remains outside Git.
+seed identities, and focused repository/seed tests. It adds no API field,
+dependency, migration, or production data operation. The historical R193
+runtime finding remains discovery evidence only; the retired runtime platform
+is not an acceptance dependency.
