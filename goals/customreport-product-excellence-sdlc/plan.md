@@ -9,6 +9,11 @@ infrastructure workstreams. Each increment owns one product surface, its
 OpenSpec requirements, its regression tests and its cleanup, and leaves the
 tree no weaker than it found it.
 
+Mechanical code-style work is not an independent delivery stream. Existing
+ratchets may require a narrow extraction while landing a product fix, but the
+plan does not spend product time chasing file/function counts or wrapper shape
+without an observable behavior, architecture, security or operability outcome.
+
 The accepted final standard is stricter than the current live ratchet. Current
 documentation describes production limits of 300 lines per file, 70 lines per
 function and cyclomatic complexity 20. The target is file length at most 230,
@@ -39,6 +44,12 @@ allowed.
   credentials, destructive work outside the exact guarded disposable targets,
   external publication, billable services, push, merge, or release. Those
   boundaries still require exact task-specific authority.
+- Product checkpoints landed on the current branch now cover readable and
+  assistive-technology-equivalent Trends charts, recoverable Trends queries,
+  recoverable Head publish controls, fail-closed session loading with retry,
+  and desktop Admin alert counts that distinguish unavailable data from a real
+  zero. Keep these as product evidence; do not turn them into a new browser or
+  lint campaign.
 
 ## Ordered plan
 
@@ -67,21 +78,20 @@ allowed.
    Verification: `openspec list`; `openspec validate --all --strict`; a
    requirement-to-evidence ledger with no unowned active item.
 
-2. Measure the current architecture and code-style debt before tightening it.
+2. Measure architecture or code-style debt only when it blocks a product slice.
 
    - Use `eslint-config/core.ts`, `eslint-config/overrides.ts`,
      `eslint-config/immutability.ts`, `eslint-config/boundaries.ts`,
      `.dependency-cruiser.cjs`, `scripts/gates/directory-architecture/` and
      `scripts/quality/exemplary/` as the enforcement owners.
-   - Following the exemplary-audit procedure, measure every proposed stricter
-     rule at its shipping options, prove every zero with a temporary planted
-     violation, and classify every signal as REAL, VACUOUS, CONFIG or NOISE.
-   - Produce a folder-by-folder baseline for `apps/api/src`, `apps/web/src`,
-     `packages/shared/src` and `packages/ui/src`: file length, function length,
-     cyclomatic and cognitive complexity, mutable writes, suppressions,
-     relaxed ESLint config, dependency cycles, fan-in and unreferenced product
-     paths. Classify generated, test, fixture and externally constrained
-     adapters explicitly.
+   - Apply the exemplary-audit procedure only to a rule proposed by an active
+     product or architecture change. Measure it at shipping options, prove a
+     zero with a planted violation, and classify the signal as REAL, VACUOUS,
+     CONFIG or NOISE before changing enforcement.
+   - Do not run a repository-wide style campaign while user-facing,
+     data-integrity, recovery or first-production work remains. Existing gates
+     continue to block regressions; a product commit that trips one receives
+     the smallest architectural repair that keeps the gate honest.
 
    Verification: the actual gate invocations and probe outputs are archived;
    all counts identify rule, options, file count and exit code; no claim relies
@@ -107,12 +117,12 @@ allowed.
    `pnpm depcruise`, affected typechecks, and a review of public imports and
    write paths against the target architecture.
 
-4. Land the strict code standard and remove product debt in the same increments.
+4. Apply the strict code standard inside product increments.
 
-   - Refactor each owned domain until every maintained production function is at
-     most 57 lines, every maintained production file is at most 230 lines,
-     cyclomatic complexity is at most 10 and cognitive complexity is below 10.
-     Extract named pure operations rather than splitting code mechanically.
+   - Refactor only the domain owned by the active product increment. Respect the
+     live function/file/complexity ratchets, but extract named operations only
+     when they clarify an actual product or architecture boundary; never split
+     code mechanically to manufacture a metric win.
    - Make product code immutable by default: eliminate `let`, parameter/property
      mutation and hidden state where a new value, reducer or narrow effect
      boundary is clearer. A remaining adapter mutation must be explicitly
@@ -181,6 +191,12 @@ allowed.
      product. Treat GitHub protection, dependency/security settings and any
      production release controls as external authority: inspect and record them,
      but request the owner before changing unavailable account-level controls.
+   - Resolve the publish-ingestion production boundary before claiming first
+     production readiness. Current composition intentionally refuses to boot in
+     `NODE_ENV=production`, and no real ingestion consumer exists in source.
+     The owner must choose either a defined consumer outcome to implement or
+     explicit retirement of the dormant ingestion contract; do not disguise a
+     no-op queue as production readiness.
 
    Verification: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
    `pnpm test`, `pnpm build`, `pnpm test:e2e:integration`, `pnpm test:uat`,
@@ -219,3 +235,7 @@ allowed.
   main merge and unavailable required remote authority are outside the standing
   repository workflow. Stop and request the owner before crossing any of those
   boundaries.
+- Implementing or retiring the currently unwired publish-ingestion capability
+  changes the durable product denominator. Keep local MVP work moving, but stop
+  for the owner's choice before changing that contract or claiming first
+  production/release readiness.
