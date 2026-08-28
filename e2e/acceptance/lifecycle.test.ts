@@ -4,6 +4,7 @@ import { waitForLoopbackPortsFree } from "./cleanup.ts";
 import {
   acceptanceResultFor,
   runAcceptanceSetup,
+  runAcceptanceTeardown,
   sourceIdentityFor,
   type SourceReceipt,
 } from "./lifecycle.ts";
@@ -62,6 +63,77 @@ describe("acceptance lifecycle", () => {
     expect(receipts.at(-1)).toMatchObject({
       setupError: "seed failed",
       setupStatus: "FAIL",
+    });
+  });
+
+  it("resets disposable database and Redis state before a PASS teardown receipt", async () => {
+    const order: string[] = [];
+    const receipts = [] as Awaited<ReturnType<typeof runAcceptanceTeardown>>[];
+
+    const receipt = await runAcceptanceTeardown({
+      now: () => "2026-08-28T00:00:00.000Z",
+      readSource: () => {
+        order.push("source");
+        return SOURCE;
+      },
+      readSourceReceipt: () =>
+        Promise.resolve({
+          ...SOURCE,
+          recordedAt: "2026-08-28T00:00:00.000Z",
+          setupStatus: "PASS",
+        }),
+      resetDatabase: () => order.push("database"),
+      resetRedis: () => {
+        order.push("redis");
+        return Promise.resolve();
+      },
+      write: (value) => {
+        receipts.push(value);
+        return Promise.resolve();
+      },
+    });
+
+    expect(order).toEqual(["database", "redis", "source"]);
+    expect(receipt).toMatchObject({
+      cleanupStatus: "PASS",
+      clients: "TRANSIENT_CLIENTS_CLOSED",
+      containers: "NONE_CREATED",
+      databaseState: "DETERMINISTIC_FULL_SEED",
+      redisState: "RESERVED_DB_15_EMPTY",
+      sourceUnchanged: true,
+      volumes: "NONE_CREATED",
+    });
+    expect(receipts).toEqual([receipt]);
+  });
+
+  it("records a failed teardown without promoting partial cleanup", async () => {
+    const receipts = [] as Awaited<ReturnType<typeof runAcceptanceTeardown>>[];
+    const failure = new Error("Redis cleanup failed");
+
+    await expect(
+      runAcceptanceTeardown({
+        now: () => "2026-08-28T00:00:00.000Z",
+        readSource: () => SOURCE,
+        readSourceReceipt: () =>
+          Promise.resolve({
+            ...SOURCE,
+            recordedAt: "2026-08-28T00:00:00.000Z",
+            setupStatus: "PASS",
+          }),
+        resetDatabase: () => undefined,
+        resetRedis: () => Promise.reject(failure),
+        write: (value) => {
+          receipts.push(value);
+          return Promise.resolve();
+        },
+      }),
+    ).rejects.toBe(failure);
+    expect(receipts.at(-1)).toMatchObject({
+      cleanupError: "Redis cleanup failed",
+      cleanupStatus: "FAIL",
+      databaseState: "NOT_PROVEN",
+      redisState: "NOT_PROVEN",
+      sourceUnchanged: false,
     });
   });
 

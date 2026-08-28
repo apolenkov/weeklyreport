@@ -68,7 +68,11 @@ class EmailReminderProcessor extends ProductionEmailReminderProcessor {
 
 // The processor reads env only in onModuleInit (not exercised here); a minimal
 // stub satisfies the constructor for the processJob-focused tests.
-const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+const STUB_ENV = {
+  REDIS_DB: 15,
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+} as EnvConfig;
 
 function createMockRemindersService() {
   return {

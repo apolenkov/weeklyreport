@@ -65,6 +65,13 @@ No command may use `DATABASE_URL`, production, shared, or unknown data as a
 destructive target. Playwright owns only its API/web processes and temporary
 outputs; it does not create or delete Docker containers or volumes.
 
+Redis isolation is separate and equally fail-closed. Every validated API
+connection requires `REDIS_DB`; ordinary environments use logical DB 0 and E2E
+uses the reserved logical DB 15. The reset helper must select DB 15 before
+`FLUSHDB`, and it still requires the exact disposable PostgreSQL target plus
+per-run consent. Acceptance resets DB 15 and the disposable PostgreSQL target
+in setup and teardown; it never flushes developer Redis DB 0.
+
 ## Acceptance scope
 
 The acceptance contour is smoke-only:

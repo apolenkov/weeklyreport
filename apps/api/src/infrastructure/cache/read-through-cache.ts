@@ -22,7 +22,10 @@ export interface RedisReadThroughCache {
 }
 
 export interface ReadThroughCacheOptions {
-  readonly connection: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
+  readonly connection: Pick<
+    EnvConfig,
+    "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"
+  >;
   readonly loggerName: string;
   readonly ttlSeconds: number;
   readonly keyPrefix: string;

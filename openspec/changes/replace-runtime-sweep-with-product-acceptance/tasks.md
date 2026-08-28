@@ -3,7 +3,7 @@
 - [x] 1.1 Freeze the live (non-historical) `e2e/runtime-sweep` consumer inventory and map product protections to route health, one smoke lifecycle, or an existing focused suite; verify every live consumer and required outcome has an owner before code moves.
 - [x] 1.2 Rewrite the generic navigation/route-resolution behavior needed by `e2e/sweep` and product variants under `e2e/helpers/` without importing runtime-sweep code; verify focused positive, redirect, abort, and failure tests pass.
 - [x] 1.3 Create the `e2e/acceptance/playwright.config.ts` foundation with `route-health` and one bounded second project, one worker, explicit loopback ports, standard reporters, and failure artifacts; verify config tests reject missing/unsafe/equal database targets and invalid port values.
-- [x] 1.4 Add acceptance global setup/teardown that records SHA/tree, applies the exact destructive guard and per-run consent immediately before reset/seed, closes test clients, and proves Playwright-owned listeners are gone; verify pass, setup-failure, test-failure, timeout, and interruption probes all produce the correct cleanup result.
+- [ ] 1.4 Add acceptance global setup/teardown that records SHA/tree, applies the exact destructive guard and per-run consent immediately before reset/seed, closes test clients, and proves Playwright-owned listeners are gone; verify pass, setup-failure, test-failure, timeout, and interruption probes all produce the correct cleanup result.
 - [x] 1.5 Add standard Playwright report metadata for SHA/tree, browser, command kind, duration, totals, and cleanup status without a custom ledger; verify a planted failing spec retains trace/screenshot/log evidence and a passing spec emits no per-action artifacts.
 - [x] 1.6 Add the whole-contour budget gate for 25 files, 4,000 lines, 10-minute smoke, 15-minute combined, and 2-minute teardown limits; verify planted file, line, duration, and missing-receipt violations fail the exact gate command.
 
@@ -11,7 +11,7 @@
 
 - [x] 2.1 Reuse the canonical API server command, health readiness, Redis configuration, PDF worker, and test log path from focused E2E infrastructure without runtime-sweep imports; verify the acceptance API boots from source and shuts down cleanly on the reserved port.
 - [x] 2.2 Expose only the test read-back needed for the representative report write/publication lifecycle through existing public tRPC/test seams; verify it parses responses and introduces zero production deep-import edges.
-- [x] 2.3 Prove destructive setup targets only the exact loopback `customreport_e2e` legacy technical database identifier of WeeklyReport and never `DATABASE_URL`; verify unsafe, production, encoded, query-bearing, and shared targets fail before any Prisma/Redis primitive.
+- [x] 2.3 Prove destructive setup targets only the exact loopback `customreport_e2e` or authorized `customreport_e2e_lane_[a-o]_test` legacy technical database identifiers of WeeklyReport and never `DATABASE_URL`; verify unsafe, production, encoded, query-bearing, and shared targets fail before any Prisma/Redis primitive.
 
 ## 3. Web product acceptance
 

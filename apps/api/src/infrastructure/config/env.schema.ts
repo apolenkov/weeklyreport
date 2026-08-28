@@ -3,6 +3,7 @@ import { z } from "zod";
 import { logLevelSchema } from "../../lib/logger.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
+const MAX_REDIS_LOGICAL_DATABASE = 15;
 
 // No `.default()` anywhere by design: every value is REQUIRED and supplied
 // explicitly per environment, so a misconfigured deploy fails boot loud instead
@@ -54,6 +55,7 @@ const envObjectSchema = z.object({
   // Redis (BullMQ)
   REDIS_HOST: z.string(),
   REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_DB: z.coerce.number().int().min(0).max(MAX_REDIS_LOGICAL_DATABASE),
   // Redis memory cap in bytes. Required, no default: the DLQ monitor derives
   // its memory-usage alert threshold from it, so it MUST track the redis
   // container's `--maxmemory`, or usage creeps toward OOM-kill unnoticed.

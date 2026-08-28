@@ -3,7 +3,7 @@ import {
   type DestructiveTargetEnv,
 } from "../../prisma/guards/_destructive-guard.ts";
 
-export interface E2eDatabaseIdentity {
+interface E2eDatabaseIdentity {
   readonly database: string;
   readonly host: string;
   readonly localScope: boolean;
@@ -85,9 +85,7 @@ const parsedE2eUrl = (databaseUrl: string): URL => {
   return url;
 };
 
-export const e2eDatabaseIdentity = (
-  databaseUrl: string,
-): E2eDatabaseIdentity => {
+const e2eDatabaseIdentity = (databaseUrl: string): E2eDatabaseIdentity => {
   try {
     const url = parsedE2eUrl(databaseUrl);
     const host = normalizeDatabaseHost(url.hostname);
@@ -112,10 +110,7 @@ export const e2eDatabaseIdentity = (
   }
 };
 
-export const sameE2eDatabaseTarget = (
-  leftUrl: string,
-  rightUrl: string,
-): boolean => {
+const sameE2eDatabaseTarget = (leftUrl: string, rightUrl: string): boolean => {
   const left = e2eDatabaseIdentity(leftUrl);
   const right = e2eDatabaseIdentity(rightUrl);
   const sameServer =

@@ -47,7 +47,6 @@ interface RouteResult {
   finalUrl?: string;
   status?: number | null;
   anomalies: Anomaly[];
-  warnings: string[];
 }
 
 const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
@@ -122,9 +121,6 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
         lines.push(`  - **${anomaly.kind}**: ${anomaly.detail}`);
       }
     }
-    for (const warning of result.warnings) {
-      lines.push(`- warning: ${warning}`);
-    }
     lines.push("");
   }
   return lines.join("\n");
@@ -154,7 +150,6 @@ for (const catalog of catalogs) {
             detail: `dev-auth login failed for role ${catalog.role}: ${String(error)}`,
           },
         ],
-        warnings: [],
       });
     }
 
@@ -162,7 +157,6 @@ for (const catalog of catalogs) {
       const resolved = resolveCatalogRoute(entry.route, catalog.role);
 
       const anomalies: Anomaly[] = [];
-      const warnings: string[] = [];
       const onConsole = (msg: ConsoleMessage): void => {
         const type = msg.type();
         if (type !== "error" && type !== "warning") {
@@ -172,11 +166,10 @@ for (const catalog of catalogs) {
         if (IGNORED_CONSOLE.some((re) => re.test(text))) {
           return;
         }
-        if (type === "warning") {
-          warnings.push(text);
-        } else {
-          anomalies.push({ kind: "console", detail: text });
-        }
+        anomalies.push({
+          kind: "console",
+          detail: type === "warning" ? `warning: ${text}` : text,
+        });
       };
       const onPageError = (err: Error): void => {
         anomalies.push({ kind: "pageerror", detail: err.message });
@@ -257,7 +250,6 @@ for (const catalog of catalogs) {
         finalUrl: page.url(),
         status,
         anomalies,
-        warnings,
       });
     }
 

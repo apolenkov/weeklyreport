@@ -4,16 +4,21 @@ import readline from "node:readline";
 
 import { assertE2eRuntimeDestructiveTarget } from "../../prisma/guards/_destructive-guard.ts";
 import {
+  E2E_REDIS_DATABASE,
   type E2eRedisResetEnvironment,
   type E2eRedisResetTarget,
   e2eRedisResetTarget,
   E2eRedisSetupError,
 } from "./e2e-redis-target.ts";
 
-export { e2eRedisResetTarget, E2eRedisSetupError } from "./e2e-redis-target.ts";
+export { e2eRedisResetTarget } from "./e2e-redis-target.ts";
 
 const RESET_TIMEOUT_MS = 5000;
 
+const selectCommand = Buffer.from(
+  `*2\r\n$6\r\nSELECT\r\n$2\r\n${E2E_REDIS_DATABASE}\r\n`,
+  "utf8",
+);
 const flushCommand = Buffer.from("*1\r\n$7\r\nFLUSHDB\r\n", "utf8");
 
 export function flushE2eRedis(
@@ -25,6 +30,11 @@ export function flushE2eRedis(
     environment.E2E_DATABASE_URL,
     environment,
   );
+  if (target.database !== E2E_REDIS_DATABASE) {
+    throw new E2eRedisSetupError(
+      `E2E Redis reset refuses logical database ${target.database}`,
+    );
+  }
   return flushE2eRedisConnection(net.createConnection(target));
 }
 
@@ -36,6 +46,15 @@ async function flushE2eRedisConnection(socket: net.Socket): Promise<void> {
   });
   try {
     await once(socket, "connect", { signal });
+    socket.write(selectCommand);
+    const [selectResponse] = (await once(lines, "line", {
+      signal,
+    })) as unknown as readonly [string];
+    if (selectResponse !== "+OK") {
+      throw new E2eRedisSetupError(
+        `E2E Redis SELECT failed: ${selectResponse}`,
+      );
+    }
     socket.write(flushCommand);
     const [response] = (await once(lines, "line", {
       signal,

@@ -53,7 +53,8 @@ vi.mock("ioredis", () => {
   return { default: FakeRedis };
 });
 
-const CONNECTION: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> = {
+const CONNECTION: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"> = {
+  REDIS_DB: 15,
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
 };

@@ -31,6 +31,7 @@ services:
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_DB: 0
       REDIS_MAXMEMORY_BYTES: 209715200
       PORT: 3002
       FRONTEND_URL: http://localhost:3000

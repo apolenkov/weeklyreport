@@ -127,6 +127,7 @@ jobs:
       DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e_lane_a_test
       REDIS_HOST: localhost
       REDIS_PORT: 6379
+      REDIS_DB: 15
       REDIS_MAXMEMORY_BYTES: 209715200
       NODE_ENV: test
       AUTH_DEV_MODE: "true"

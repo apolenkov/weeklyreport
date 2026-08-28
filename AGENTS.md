@@ -69,6 +69,10 @@ pnpm build              # turbo run build
   or blanket disposable-database authorization, and never bypass the guard.
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; run the required seed
   explicitly under the same consent after a successful reset.
+- Redis connections require explicit `REDIS_DB`. Product/dev environments use
+  logical DB 0; E2E uses reserved logical DB 15. Destructive E2E Redis cleanup
+  must select DB 15, pass the exact disposable PostgreSQL guard and per-run
+  consent, and must never flush DB 0.
 
 ## Load-Bearing Invariants
 

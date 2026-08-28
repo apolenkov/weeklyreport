@@ -1,10 +1,10 @@
 {
-  "filesOnFloor": 1003,
-  "productTotal": 1003,
+  "filesOnFloor": 1001,
+  "productTotal": 1001,
   "overrideBlocks": 22,
   "liveSuppressions": 5,
   "structural": {
-    "denominatorFileCount": 1001,
+    "denominatorFileCount": 999,
     "total": {
       "findingCount": 0,
       "affectedFileCount": 0,
@@ -283,6 +283,12 @@
       "from": 842,
       "to": 841,
       "reason": "Merged the A-class record-comment mutation hook into its A-class feature owner."
+    },
+    {
+      "counter": "filesOnFloor",
+      "from": 1003,
+      "to": 1001,
+      "reason": "Removed two A-class production-compiled hooks whose only consumer was the retired runtime-sweep test platform; the maintained product floor remains 100%."
     }
   ]
 }

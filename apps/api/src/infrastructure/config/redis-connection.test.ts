@@ -8,9 +8,14 @@ import {
 
 describe("buildRedisConnectionOptions", () => {
   it("returns the validated host and port unchanged", () => {
-    const env = { REDIS_HOST: "redis", REDIS_PORT: 6379 } as EnvConfig;
+    const env = {
+      REDIS_DB: 15,
+      REDIS_HOST: "redis",
+      REDIS_PORT: 6379,
+    } as EnvConfig;
 
     expect(buildRedisConnectionOptions(env)).toEqual({
+      db: 15,
       host: "redis",
       port: 6379,
     });
@@ -19,9 +24,14 @@ describe("buildRedisConnectionOptions", () => {
 
 describe("buildFailOpenRedisConnectionOptions", () => {
   it("queues the first lazy command only for the bounded connection window", () => {
-    const env = { REDIS_HOST: "redis", REDIS_PORT: 6379 } as EnvConfig;
+    const env = {
+      REDIS_DB: 15,
+      REDIS_HOST: "redis",
+      REDIS_PORT: 6379,
+    } as EnvConfig;
 
     expect(buildFailOpenRedisConnectionOptions(env)).toEqual({
+      db: 15,
       host: "redis",
       port: 6379,
       lazyConnect: true,
