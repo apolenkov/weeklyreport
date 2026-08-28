@@ -24,6 +24,46 @@ export function formatTrafficLightStatusLevel(value: number): string {
   return STATUS_LEVEL_LABELS[value] ?? String(value);
 }
 
+function formatTrafficLightStatus(
+  status: TrafficLightHistoryOutput["rows"][number]["statuses"][number],
+): string {
+  if (status === null) return "No data";
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
+}
+
+function TrafficLightHistoryDataTable({
+  periods,
+  rows,
+}: TrafficLightHistoryOutput) {
+  return (
+    <table className="sr-only">
+      <caption>Traffic-light history data</caption>
+      <thead>
+        <tr>
+          <th scope="col">Period</th>
+          {rows.map((row) => (
+            <th key={row.projectId} scope="col">
+              {row.projectName}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {periods.map((period, periodIndex) => (
+          <tr key={period}>
+            <th scope="row">{period}</th>
+            {rows.map((row) => (
+              <td key={row.projectId}>
+                {formatTrafficLightStatus(row.statuses[periodIndex] ?? null)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export function TrafficLightHistoryChart({
   periods,
   rows,
@@ -39,32 +79,36 @@ export function TrafficLightHistoryChart({
   const { data, series } = buildTrafficLightHistoryChartData(periods, rows);
 
   return (
-    <ChartContainer>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="period" />
-        <YAxis
-          ticks={STATUS_LEVEL_TICKS}
-          domain={[0, Y_AXIS_DOMAIN_MAX]}
-          tickFormatter={formatTrafficLightStatusLevel}
-          width={64}
-        />
-        <ChartTooltip />
-        <Legend />
-        {/* connectNulls={false}: periods a project did NOT report stay visible
-            gaps instead of being bridged by a line through them. */}
-        {series.map((s, idx) => (
-          <Line
-            key={s.dataKey}
-            dataKey={s.dataKey}
-            name={s.name}
-            stroke={COLORS[idx % COLORS.length] ?? "currentColor"}
-            strokeWidth={2}
-            connectNulls={false}
-            dot={{ r: 3 }}
+    <>
+      <ChartContainer aria-hidden="true">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="period" />
+          <YAxis
+            ticks={STATUS_LEVEL_TICKS}
+            domain={[0, Y_AXIS_DOMAIN_MAX]}
+            tickFormatter={formatTrafficLightStatusLevel}
+            width={64}
           />
-        ))}
-      </LineChart>
-    </ChartContainer>
+          <ChartTooltip />
+          <Legend />
+          {/* connectNulls={false}: periods a project did NOT report stay visible
+              gaps instead of being bridged by a line through them. */}
+          {series.map((s, idx) => (
+            <Line
+              key={s.dataKey}
+              dataKey={s.dataKey}
+              name={s.name}
+              stroke={COLORS[idx % COLORS.length] ?? "currentColor"}
+              strokeWidth={2}
+              connectNulls={false}
+              dot={{ r: 3 }}
+            />
+          ))}
+        </LineChart>
+      </ChartContainer>
+
+      <TrafficLightHistoryDataTable periods={periods} rows={rows} />
+    </>
   );
 }

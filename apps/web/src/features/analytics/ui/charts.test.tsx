@@ -19,7 +19,7 @@ describe("TrafficLightHistoryChart", () => {
     expect(screen.getByText(/no published periods/i)).toBeInTheDocument();
   });
 
-  it("renders the chart (not the empty state) for populated data", () => {
+  it("renders populated data through an accessible table", () => {
     render(
       <TrafficLightHistoryChart
         periods={["Apr 7", "Apr 14"]}
@@ -33,6 +33,12 @@ describe("TrafficLightHistoryChart", () => {
       />,
     );
     expect(screen.queryByText(/no published periods/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("table", { name: "Traffic-light history data" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Alpha" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "Green" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "No data" })).toBeVisible();
   });
 
   it("keeps a null status cell null in the series point", () => {
@@ -64,7 +70,7 @@ describe("LeadVelocityChart", () => {
     expect(screen.getByText(/no velocity data/i)).toBeInTheDocument();
   });
 
-  it("renders the chart (not the empty state) for populated rows", () => {
+  it("renders populated data through an accessible table", () => {
     render(
       <LeadVelocityChart
         rows={[
@@ -82,6 +88,13 @@ describe("LeadVelocityChart", () => {
       />,
     );
     expect(screen.queryByText(/no velocity data/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("table", {
+        name: "Lead velocity data in submitted sections",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Alex" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "3" })).toBeVisible();
   });
 });
 
