@@ -7,6 +7,11 @@
       "pathDigest": "15c1423d7cd8ab0d5a1734bc67b29de192c7ca1993e06134cc1d487d783eae0f",
       "trackedFiles": 85
     },
+    "e2e/acceptance": {
+      "gitTree": "eeba4897706d6dc95b02ad6917f6189103dcb431",
+      "pathDigest": "96188fbf6306dd2241b9efe1094dbfc2432842951196c13215e1d7040ca2ba6f",
+      "trackedFiles": 14
+    },
     "prisma": {
       "gitTree": "4d78c05530c608cb991c71a9bd9876d962ab2668",
       "pathDigest": "2790f0a5a2f26678a5dae456d0c39914dde42e71d74886243e3242af032476a2",
