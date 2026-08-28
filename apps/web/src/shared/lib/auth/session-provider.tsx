@@ -1,6 +1,12 @@
 "use client";
 
-import type { Role } from "@customreport/shared";
+import type { Role, UserSession } from "@customreport/shared";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@customreport/ui/components/ui/alert";
+import { Button } from "@customreport/ui/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
@@ -10,6 +16,7 @@ import {
   useMemo,
 } from "react";
 
+import { useQueryErrorHandler } from "../../hooks/query/use-query-error-handler";
 import { useTRPC } from "../trpc/trpc-context";
 import { writeLastRole } from "./last-role";
 
@@ -47,43 +54,87 @@ export interface SessionState {
 // useSession() still throws when context is absent.
 export const SessionContext = createContext<SessionState | null>(null);
 
+function mapSessionState(
+  data: UserSession | null | undefined,
+  isLoading: boolean,
+): SessionState {
+  if (!data) {
+    // undefined means loading; null means resolved unauthenticated.
+    return {
+      user: null,
+      organization: null,
+      isLoading,
+      isAuthenticated: false,
+    };
+  }
+  return {
+    user: {
+      id: data.userId,
+      name: data.name,
+      lastName: data.lastName,
+      firstName: data.firstName,
+      middleName: data.middleName,
+      email: data.email,
+      role: data.role,
+      reportingGroupName: data.reportingGroupName,
+    },
+    // Organization is optional because older JWTs may not carry it.
+    organization: data.organization
+      ? {
+          shortName: data.organization.shortName,
+          fullName: data.organization.fullName,
+        }
+      : null,
+    isLoading: false,
+    isAuthenticated: true,
+  };
+}
+
+function SessionLoadError({
+  isRetrying,
+  onRetry,
+}: {
+  readonly isRetrying: boolean;
+  readonly onRetry: () => void;
+}) {
+  return (
+    <main
+      id="main-content"
+      className="flex min-h-svh items-center justify-center p-6"
+    >
+      <Alert variant="destructive" className="max-w-md" role="alert">
+        <AlertTitle>Could not verify your session.</AlertTitle>
+        <AlertDescription>
+          WeeklyReport could not load your account. Your data is safe.
+        </AlertDescription>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3"
+          disabled={isRetrying}
+          onClick={onRetry}
+        >
+          {isRetrying ? "Retrying…" : "Try again"}
+        </Button>
+      </Alert>
+    </main>
+  );
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
-  const { data, isLoading } = useQuery(trpc.auth.me.queryOptions());
+  const query = useQuery(trpc.auth.me.queryOptions());
+  const { data, isLoading } = query;
+  useQueryErrorHandler(query, {
+    component: "SessionProvider",
+    event: "auth.session.load_failed",
+    procedure: "auth.me",
+  });
 
-  const value = useMemo<SessionState>(() => {
-    if (!data) {
-      // data === undefined → still loading
-      // data === null     → resolved unauthenticated
-      return {
-        user: null,
-        organization: null,
-        isLoading,
-        isAuthenticated: false,
-      };
-    }
-    return {
-      user: {
-        id: data.userId,
-        name: data.name,
-        lastName: data.lastName,
-        firstName: data.firstName,
-        middleName: data.middleName,
-        email: data.email,
-        role: data.role,
-        reportingGroupName: data.reportingGroupName,
-      },
-      // organization is optional in the schema (older JWTs may lack it).
-      organization: data.organization
-        ? {
-            shortName: data.organization.shortName,
-            fullName: data.organization.fullName,
-          }
-        : null,
-      isLoading: false,
-      isAuthenticated: true,
-    };
-  }, [data, isLoading]);
+  const value = useMemo(
+    () => mapSessionState(data, isLoading),
+    [data, isLoading],
+  );
 
   // Client-only write so the landing page can offer a 1-click resume hint.
   useEffect(() => {
@@ -94,6 +145,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       name: value.user.name,
     });
   }, [value.isAuthenticated, value.user]);
+
+  if (query.isError) {
+    return (
+      <SessionLoadError
+        isRetrying={query.isFetching}
+        onRetry={() => {
+          void query.refetch().catch(() => undefined);
+        }}
+      />
+    );
+  }
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
