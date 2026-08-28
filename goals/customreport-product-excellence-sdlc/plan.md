@@ -1,4 +1,4 @@
-# CustomReport product-excellence execution plan
+# WeeklyReport product-excellence execution plan
 
 ## Solution approach
 
@@ -19,6 +19,27 @@ standard. They will then be introduced through a measured baseline and
 monotonically shrinking exemptions; no unmeasured rule or blanket override is
 allowed.
 
+## Current owner decision and execution authority
+
+- WeeklyReport is the only product name. `customreport-*`, `@customreport/*`,
+  `customreport_e2e`, and existing archive paths are legacy technical
+  identifiers, not a separate product.
+- The verified 2026-08-27 planning snapshot contained 12 prioritized changes
+  and 40 unchecked non-mobile tasks. Re-read the live OpenSpec state at every
+  checkpoint because implementation and archive work may reduce that number.
+- Six `fix-mobile-*` changes and their 15 unchecked tasks are owner-deferred.
+  Preserve them in OpenSpec, but do not start, continue, delete, or claim them
+  complete without a later explicit owner decision. Mixed desktop/tablet work
+  remains active when it has independent non-mobile outcomes.
+- For this MVP, the owner authorizes autonomous local product, architecture,
+  code-quality, documentation, test, and DevOps changes inside the repository,
+  including focused verification and clean local checkpoint commits. Prefer
+  product implementation over building test infrastructure.
+- This standing local authority does not include production/shared data,
+  credentials, destructive work outside the exact guarded disposable targets,
+  external publication, billable services, push, merge, or release. Those
+  boundaries still require exact task-specific authority.
+
 ## Ordered plan
 
 1. Establish one product denominator and an owned backlog.
@@ -32,8 +53,8 @@ allowed.
      the durable requirements in `openspec/specs/`. Group them by product
      surface: report record ordering; lead recovery; PDF export; admin
      navigation and products; action-log search; desktop composition and
-     hierarchy; mobile touch/overflow; confirmation dialogs; bounded browser
-     smoke correctness; and repository-tooling boundaries.
+     hierarchy; owner-deferred mobile touch/overflow; confirmation dialogs;
+     bounded browser smoke correctness; and repository-tooling boundaries.
    - Use `docs/architecture/TARGET-STRUCTURE-2026-07-02.md`,
      `docs/exemplary-code-standard.md`, `docs/quality-program.md` and
      `docs/sdlc.md` as the current quality baseline. Record for each requirement
@@ -114,8 +135,9 @@ allowed.
    - Implement and verify the active user-facing OpenSpec changes: stable report
      ordering, disabled PDF-export reason and artifact race, lead-form load
      recovery, action-log search/detail behavior, admin responsive navigation,
-     desktop report composition/hierarchy, Radix confirmations, and every
-     mobile touch-target/overflow repair.
+     desktop report composition/hierarchy, and Radix confirmations. Keep the
+     six owner-deferred mobile touch-target/overflow changes out of the active
+     implementation denominator.
    - For each surface, update the relevant web feature, API module and shared
      contract before duplicating types; add a focused regression test that
      failed before the repair; then capture source-bound browser evidence for
@@ -141,12 +163,12 @@ allowed.
      solely for this proof. Stop for owner direction if target identity is not
      provably disposable or if a production/shared resource is required.
 
-   Verification: fresh SOURCE/SOURCE-VALIDATION/MATRIX/MANIFEST artifacts for
-   one SHA/tree; complete role/profile/route/state/control/transition/fault
-   coverage with zero missing, skipped or unknown cells; empty frontier and
-   parent PASS; browser/API/worker/database/Redis/Loki/OpenTelemetry/Bugsink
-   evidence; and teardown receipts proving no owned agents, processes, ports,
-   containers, volumes, worktrees or secrets remain.
+   Verification: one clean SHA/tree; the bounded four-role route-health census
+   plus one representative cross-role lifecycle; focused resilience and
+   observability checks owned by the affected product boundary; and teardown
+   receipts proving no owned processes, ports, transient clients, disposable
+   data, or secrets remain. Do not recreate SOURCE/MATRIX/frontier campaign
+   protocols.
 
 7. Make delivery and documentation match the finished product.
 
@@ -190,8 +212,9 @@ allowed.
 - The active OpenSpec list contains overlapping visual, mobile, runtime and
   tooling work. The denominator must be reconciled before closing any item, or
   duplicate changes will produce contradictory evidence.
-- The r16 canary is immutable `FAIL_NOT_PROVEN`; only a new source/tree, packet,
-  Sol gate and source-derived supervisor budget may create a new attempt.
+- Every retired runtime-sweep campaign and canary remains immutable historical
+  evidence and must not be retried. New acceptance uses only the bounded
+  route-health plus one-smoke contour and ordinary focused product suites.
 - Production/shared/unknown data, credentials, account-level GitHub controls,
   main merge and unavailable required remote authority are outside the standing
   repository workflow. Stop and request the owner before crossing any of those
