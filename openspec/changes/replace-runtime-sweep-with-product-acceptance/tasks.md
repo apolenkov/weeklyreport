@@ -24,7 +24,7 @@
 ## 4. Tooling replacement and legacy deletion
 
 - [x] 4.1 Add `test:acceptance`, `test:acceptance:smoke`, `lint:acceptance-budget`, and the transitional `test:uat` route-health alias; verify scripts use only pnpm/Playwright and expose no custom campaign runner.
-- [ ] 4.2 Update CI, pre-push, lint orchestration, Knip, TypeScript/Vitest discovery, and ownership catalogues for the new contour; verify planted unowned-file, missing-test, and budget failures reach the aggregate gate.
+- [x] 4.2 Update CI, pre-push, lint orchestration, Knip, TypeScript/Vitest discovery, and ownership catalogues for the new contour; verify planted unowned-file, missing-test, and budget failures reach the aggregate gate.
 - [x] 4.3 Rewrite or retire each live product-variant, health-test, gate, and documentation consumer of runtime-sweep code; verify non-historical source/config paths contain zero imports from `e2e/runtime-sweep/` before deletion.
 - [x] 4.4 Delete all 859 files under `e2e/runtime-sweep/` and remove every `test:runtime-*` command, runtime lane/source/manifest/driver entrypoint, and runtime-specific structural baseline; verify no compatibility shim, copied subsystem, orphan test, or live path remains.
 - [ ] 4.5 Run route health, the smoke lifecycle, and focused integration, seed-profile, production-build, CSP, and authorization suites after deletion; verify each assigned product protection and the reduced budgets remain green without the legacy tree.

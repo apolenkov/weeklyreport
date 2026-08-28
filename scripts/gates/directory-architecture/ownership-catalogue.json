@@ -29,6 +29,11 @@
       ]
     },
     {
+      "id": "acceptance",
+      "prefix": "e2e/acceptance/",
+      "allowedTargetPrefixes": ["e2e/acceptance/"]
+    },
+    {
       "id": "prisma",
       "prefix": "prisma/",
       "allowedTargetPrefixes": ["prisma/"]
@@ -94,6 +99,30 @@
     }
   ],
   "rules": [
+    {
+      "id": "acceptance-config",
+      "scope": "acceptance",
+      "pattern": "^e2e/acceptance/(playwright\\.config\\.ts)$",
+      "concern": "bounded-product-acceptance",
+      "role": "config",
+      "target": "e2e/acceptance/$1"
+    },
+    {
+      "id": "acceptance-tests",
+      "scope": "acceptance",
+      "pattern": "^e2e/acceptance/(.+\\.(?:test|spec)\\.ts)$",
+      "concern": "bounded-product-acceptance",
+      "role": "test",
+      "target": "e2e/acceptance/$1"
+    },
+    {
+      "id": "acceptance-implementation",
+      "scope": "acceptance",
+      "pattern": "^e2e/acceptance/((?!playwright\\.config\\.ts$)(?!.*\\.(?:test|spec)\\.ts$).+\\.ts)$",
+      "concern": "bounded-product-acceptance",
+      "role": "implementation",
+      "target": "e2e/acceptance/$1"
+    },
     {
       "id": "scripts-shared-implementation",
       "scope": "scripts",
