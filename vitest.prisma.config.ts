@@ -30,6 +30,7 @@ export default defineConfig({
     fileParallelism: false,
     include: [
       "prisma/**/*.test.ts",
+      "e2e/acceptance/*.test.ts",
       "e2e/helpers/*.test.ts",
       "e2e/integration/*.test.ts",
       "e2e/runtime-api-server-command.test.ts",
