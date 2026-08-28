@@ -92,4 +92,29 @@ describe("admin tab alert labels", () => {
     expect(count).toHaveClass("absolute");
     expect(screen.getByText("142 failed jobs in DLQ")).toHaveClass("sr-only");
   });
+
+  it("distinguishes unavailable operational counts from zero", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* expected client error telemetry */
+    });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      error: new Error("unavailable"),
+      isError: true,
+    });
+
+    const reopen = render(<ReopenTabLabel />);
+    expect(screen.getByTestId("reopen-tab-count")).toHaveTextContent("!");
+    expect(screen.getByText("Pending reopen count unavailable")).toHaveClass(
+      "sr-only",
+    );
+    reopen.unmount();
+
+    render(<JobsTabLabel />);
+    expect(screen.getByTestId("jobs-tab-count")).toHaveTextContent("!");
+    expect(screen.getByText("Failed job count unavailable")).toHaveClass(
+      "sr-only",
+    );
+    errorSpy.mockRestore();
+  });
 });
