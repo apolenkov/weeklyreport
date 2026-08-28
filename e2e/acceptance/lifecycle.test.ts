@@ -79,6 +79,7 @@ describe("acceptance lifecycle", () => {
       expect(
         acceptanceResultFor({
           listenersFree: true,
+          ownedFilesRemoved: true,
           playwrightStatus,
           setupStatus: "PASS",
           teardownValid: true,
@@ -95,6 +96,7 @@ describe("acceptance lifecycle", () => {
     expect(
       acceptanceResultFor({
         listenersFree: false,
+        ownedFilesRemoved: false,
         playwrightStatus: "passed",
         setupStatus: "MISSING",
         teardownValid: false,
@@ -109,6 +111,7 @@ describe("acceptance lifecycle", () => {
     expect(
       acceptanceResultFor({
         listenersFree: true,
+        ownedFilesRemoved: true,
         playwrightStatus: "passed",
         setupStatus: "PASS",
         teardownValid: true,
