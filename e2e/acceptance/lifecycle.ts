@@ -23,10 +23,16 @@ export interface SourceReceipt extends SourceIdentity {
 }
 
 export interface TeardownReceipt {
-  readonly clients: "NO_PERSISTENT_CLIENTS";
+  readonly cleanupError?: string;
+  readonly cleanupStatus: "FAIL" | "PASS";
+  readonly clients: string;
+  readonly containers: string;
+  readonly databaseState: "DETERMINISTIC_FULL_SEED" | "NOT_PROVEN";
   readonly recordedAt: string;
+  readonly redisState: "NOT_PROVEN" | "RESERVED_DB_15_EMPTY";
   readonly sourceUnchanged: boolean;
   readonly startedAt: string;
+  readonly volumes: string;
 }
 
 export interface AcceptanceResult {
@@ -35,7 +41,7 @@ export interface AcceptanceResult {
   readonly playwrightStatus: "passed" | "failed" | "timedout" | "interrupted";
 }
 
-export interface LifecyclePaths {
+interface LifecyclePaths {
   readonly result: string;
   readonly source: string;
   readonly teardown: string;
@@ -99,6 +105,15 @@ interface SetupDependencies {
   readonly resetDatabase: () => void;
   readonly resetRedis: () => Promise<void>;
   readonly write: (receipt: SourceReceipt) => Promise<void>;
+}
+
+interface TeardownDependencies {
+  readonly now: () => string;
+  readonly readSource: () => SourceIdentity;
+  readonly readSourceReceipt: () => Promise<SourceReceipt | undefined>;
+  readonly resetDatabase: () => void;
+  readonly resetRedis: () => Promise<void>;
+  readonly write: (receipt: TeardownReceipt) => Promise<void>;
 }
 
 export async function runAcceptanceSetup(
@@ -165,24 +180,80 @@ export async function runDefaultAcceptanceSetup(
 }
 
 export async function runAcceptanceTeardown(
+  dependencies: TeardownDependencies,
+): Promise<TeardownReceipt> {
+  const startedAt = dependencies.now();
+  const source = await dependencies.readSourceReceipt();
+  try {
+    if (source === undefined) {
+      throw new Error("Acceptance teardown is missing its source receipt.");
+    }
+    dependencies.resetDatabase();
+    await dependencies.resetRedis();
+    const current = dependencies.readSource();
+    if (source.sha !== current.sha || source.tree !== current.tree) {
+      throw new Error("WeeklyReport source identity changed during teardown.");
+    }
+    const receipt = {
+      cleanupStatus: "PASS",
+      clients: "TRANSIENT_CLIENTS_CLOSED",
+      containers: "NONE_CREATED",
+      databaseState: "DETERMINISTIC_FULL_SEED",
+      recordedAt: dependencies.now(),
+      redisState: "RESERVED_DB_15_EMPTY",
+      sourceUnchanged: true,
+      startedAt,
+      volumes: "NONE_CREATED",
+    } as const;
+    await dependencies.write(receipt);
+    return receipt;
+  } catch (error: unknown) {
+    const receipt = {
+      cleanupError: errorMessage(error),
+      cleanupStatus: "FAIL",
+      clients: "TRANSIENT_CLIENTS_CLOSED",
+      containers: "NONE_CREATED",
+      databaseState: "NOT_PROVEN",
+      recordedAt: dependencies.now(),
+      redisState: "NOT_PROVEN",
+      sourceUnchanged: false,
+      startedAt,
+      volumes: "NONE_CREATED",
+    } as const;
+    await dependencies.write(receipt);
+    throw error;
+  }
+}
+
+export async function runDefaultAcceptanceTeardown(
   repoRoot: string,
   resultsRoot: string,
+  environment: NodeJS.ProcessEnv = process.env,
 ): Promise<TeardownReceipt> {
-  const startedAt = new Date().toISOString();
+  const databaseUrl = environment.E2E_DATABASE_URL;
+  if (databaseUrl === undefined) {
+    throw new Error("E2E_DATABASE_URL must be set for acceptance teardown.");
+  }
   const paths = lifecyclePathsFor(resultsRoot);
-  const source = await readJson<SourceReceipt>(paths.source).catch(
-    () => undefined,
-  );
-  const current = sourceIdentityFor(repoRoot);
-  const receipt = {
-    clients: "NO_PERSISTENT_CLIENTS",
-    recordedAt: new Date().toISOString(),
-    sourceUnchanged:
-      source?.sha === current.sha && source.tree === current.tree,
-    startedAt,
-  } as const;
-  await writeJson(paths.teardown, receipt);
-  return receipt;
+  return runAcceptanceTeardown({
+    now: () => new Date().toISOString(),
+    readSource: () => sourceIdentityFor(repoRoot),
+    readSourceReceipt: () =>
+      readJson<SourceReceipt>(paths.source).catch(() => undefined),
+    resetDatabase: () =>
+      setupE2eDatabase({
+        databaseUrl,
+        profile: "full",
+        repoRoot,
+      }),
+    resetRedis: () =>
+      resetE2eRedis({
+        ...environment,
+        E2E_DATABASE_URL: databaseUrl,
+        E2E_REDIS_FLUSH: "true",
+      }),
+    write: (receipt) => writeJson(paths.teardown, receipt),
+  });
 }
 
 export function acceptanceResultFor(input: {

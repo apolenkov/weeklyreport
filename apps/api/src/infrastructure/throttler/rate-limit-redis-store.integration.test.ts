@@ -15,7 +15,8 @@ import { createRateLimits } from "./rate-limit.middleware";
 const silentLogger = createNullLogger();
 
 // A partial EnvConfig carrying only the fields the rate-limit store reads.
-const REDIS_ENV: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> = {
+const REDIS_ENV: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"> = {
+  REDIS_DB: Number(requireEnv(process.env, "REDIS_DB")),
   REDIS_HOST: requireEnv(process.env, "REDIS_HOST"),
   REDIS_PORT: Number(requireEnv(process.env, "REDIS_PORT")),
 };

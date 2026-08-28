@@ -131,8 +131,7 @@
     "typescript-eslint": "^8.65.0",
     "typescript-language-service": "npm:typescript@6.0.3",
     "vitest": "^4.1.10",
-    "yaml": "^2.9.0",
-    "zod": "catalog:"
+    "yaml": "^2.9.0"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [

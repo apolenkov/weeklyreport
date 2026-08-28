@@ -15,7 +15,11 @@ import {
 
 // Invoke private processJob via shim so the redis-less unit test stays hermetic.
 // Env is only read in onModuleInit (not exercised here).
-const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+const STUB_ENV = {
+  REDIS_DB: 15,
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+} as EnvConfig;
 
 class TestProcessor extends ProductionTelegramProcessor {
   constructor(

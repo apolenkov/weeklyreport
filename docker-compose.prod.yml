@@ -227,6 +227,7 @@ services:
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:?REDIS_DB is required}
       # Must match the redis `--maxmemory 200mb` above; the DLQ monitor derives
       # its 80%-of-cap memory alert from this value. Kept a literal (not an
       # overridable interpolation) so the two cannot drift.

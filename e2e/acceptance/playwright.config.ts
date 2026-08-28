@@ -24,6 +24,7 @@ const commandKind =
 process.env.E2E_API_PORT = String(target.apiPort);
 process.env.E2E_WEB_PORT = String(target.webPort);
 process.env.NEXT_PUBLIC_API_URL = target.apiUrl;
+process.env.REDIS_DB = "15";
 
 export default defineConfig({
   testDir: import.meta.dirname,
@@ -119,6 +120,7 @@ export default defineConfig({
         LOG_LEVEL: "warn",
         REDIS_HOST: process.env.REDIS_HOST ?? "127.0.0.1",
         REDIS_PORT: process.env.REDIS_PORT ?? "6379",
+        REDIS_DB: "15",
         REDIS_MAXMEMORY_BYTES: process.env.REDIS_MAXMEMORY_BYTES ?? "209715200",
         OTEL_SDK_DISABLED: "true",
         OTEL_TRACES_SAMPLER_ARG: "0",

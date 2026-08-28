@@ -9,6 +9,7 @@ describe("E2E Redis reset guard", () => {
     expect(() =>
       e2eRedisResetTarget({
         E2E_REDIS_FLUSH: "true",
+        REDIS_DB: "15",
         REDIS_HOST: "redis.example.com",
         REDIS_PORT: "6379",
       }),
@@ -18,15 +19,33 @@ describe("E2E Redis reset guard", () => {
   it("keeps ordinary integration runs non-mutating by default", () => {
     expect(e2eRedisResetTarget({})).toBeNull();
   });
+
+  it("rejects the ordinary developer Redis logical database", () => {
+    expect(() =>
+      e2eRedisResetTarget({
+        E2E_REDIS_FLUSH: "true",
+        REDIS_DB: "0",
+        REDIS_HOST: "127.0.0.1",
+        REDIS_PORT: "6379",
+      }),
+    ).toThrow(/reserved logical database 15/iu);
+  });
 });
 
 describe("E2E Redis reset command", () => {
-  it("sends one FLUSHDB command and requires an OK reply", async () => {
+  it("selects reserved DB 15 before FLUSHDB and requires OK replies", async () => {
     const received = Promise.withResolvers<string>();
+    const chunks: string[] = [];
     const server = net.createServer((socket) => {
-      socket.once("data", (chunk) => {
-        received.resolve(chunk.toString("utf8"));
-        socket.end("+OK\r\n");
+      socket.on("data", (chunk) => {
+        const command = chunk.toString("utf8");
+        chunks.push(command);
+        if (command.includes("SELECT")) {
+          socket.write("+OK\r\n");
+        } else {
+          received.resolve(chunks.join(""));
+          socket.end("+OK\r\n");
+        }
       });
     });
     await new Promise<void>((resolve) =>
@@ -41,16 +60,19 @@ describe("E2E Redis reset command", () => {
     try {
       await expect(
         flushE2eRedis(
-          { host: "127.0.0.1", port: address.port },
+          { database: 15, host: "127.0.0.1", port: address.port },
           {
             E2E_DATABASE_URL:
               "postgresql://user:pass@127.0.0.1:5432/customreport_e2e",
             NODE_ENV: "test",
             PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+            REDIS_DB: "15",
           },
         ),
       ).resolves.toBeUndefined();
-      await expect(received.promise).resolves.toBe("*1\r\n$7\r\nFLUSHDB\r\n");
+      await expect(received.promise).resolves.toBe(
+        "*2\r\n$6\r\nSELECT\r\n$2\r\n15\r\n*1\r\n$7\r\nFLUSHDB\r\n",
+      );
     } finally {
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),
@@ -74,12 +96,13 @@ describe("E2E Redis reset command", () => {
     try {
       expect(() =>
         flushE2eRedis(
-          { host: "127.0.0.1", port: address.port },
+          { database: 15, host: "127.0.0.1", port: address.port },
           {
             E2E_DATABASE_URL:
               "postgresql://user:pass@127.0.0.1:5432/customreport_dev",
             NODE_ENV: "test",
             PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+            REDIS_DB: "15",
           },
         ),
       ).toThrow(/not one of/u);

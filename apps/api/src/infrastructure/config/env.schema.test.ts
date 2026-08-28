@@ -16,6 +16,7 @@ const COMPLETE = {
   AUTH_JWT_SECRET: "a-production-secret-at-least-32-chars",
   REDIS_HOST: "localhost",
   REDIS_PORT: "6379",
+  REDIS_DB: "0",
   REDIS_MAXMEMORY_BYTES: "209715200",
   OTEL_SDK_DISABLED: "false",
   OTEL_TRACES_SAMPLER_ARG: "0.1",
@@ -49,6 +50,7 @@ describe("envSchema — no defaults, every product var required", () => {
     "AUTH_JWT_SECRET",
     "REDIS_HOST",
     "REDIS_PORT",
+    "REDIS_DB",
     "REDIS_MAXMEMORY_BYTES",
     "OTEL_SDK_DISABLED",
     "OTEL_TRACES_SAMPLER_ARG",
@@ -60,6 +62,15 @@ describe("envSchema — no defaults, every product var required", () => {
     const { [key]: _omit, ...without } = COMPLETE;
     expect(envSchema.safeParse(without).success).toBe(false);
   });
+
+  it.each(["-1", "16", "1.5", "not-a-number"] as const)(
+    "rejects an invalid REDIS_DB (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({ ...COMPLETE, REDIS_DB: value }).success,
+      ).toBe(false);
+    },
+  );
 
   it("rejects an AUTH_JWT_SECRET shorter than 32 chars", () => {
     expect(

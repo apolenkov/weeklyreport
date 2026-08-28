@@ -18,6 +18,7 @@ import { JobsService } from "./jobs.service";
 // from the live test env avoids validateEnv() (which parses the full schema
 // and process.exit(1)s under the minimal integration env).
 const REDIS_ENV = {
+  REDIS_DB: Number(requireEnv(process.env, "REDIS_DB")),
   REDIS_HOST: requireEnv(process.env, "REDIS_HOST"),
   REDIS_PORT: Number(requireEnv(process.env, "REDIS_PORT")),
 } as unknown as EnvConfig;

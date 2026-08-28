@@ -2,7 +2,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
+import { sourceIdentityFor } from "./lifecycle.ts";
+
 const COMBINED_DURATION_MINUTES = 15;
+const GIT_EXECUTABLE = "/usr/bin/git";
 const MINUTE_MS = 60_000;
 const SMOKE_DURATION_MINUTES = 10;
 
@@ -30,15 +33,24 @@ export interface AcceptanceBudgetResult {
 interface AcceptanceRuntimeReceipt {
   readonly commandKind: "combined" | "route-health" | "smoke";
   readonly durationMs: number;
+  readonly sha: string;
   readonly teardownDurationMs: number;
+  readonly tree: string;
 }
+
+interface ExpectedSourceIdentity {
+  readonly sha: string;
+  readonly tree: string;
+}
+
+const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 
 const generatedPath = (relativePath: string): boolean =>
   relativePath.startsWith("e2e/acceptance/.results/");
 
 export function acceptanceSourceFiles(repoRoot: string): readonly string[] {
   const output = execFileSync(
-    "/usr/bin/git",
+    GIT_EXECUTABLE,
     [
       "ls-files",
       "--cached",
@@ -87,32 +99,144 @@ const recordOf = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-export function parseAcceptanceRuntimeReceipt(
-  value: unknown,
-): AcceptanceRuntimeReceipt {
-  const receipt = recordOf(value);
-  const budget = recordOf(receipt.budget);
-  const measurements = recordOf(budget.measurements);
-  const commandKind = receipt.commandKind;
-  const durationMs = receipt.durationMs;
-  const teardownDurationMs = measurements.teardownDurationMs;
+const nonnegativeNumber = (value: unknown, label: string): number => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new TypeError(`acceptance receipt has an invalid ${label}`);
+  }
+  return value;
+};
+
+const nonnegativeInteger = (value: unknown, label: string): number => {
+  const parsed = nonnegativeNumber(value, label);
+  if (!Number.isInteger(parsed)) {
+    throw new TypeError(`acceptance receipt has a non-integer ${label}`);
+  }
+  return parsed;
+};
+
+const sourceIdentityFrom = (
+  receipt: Record<string, unknown>,
+  expectedSource: ExpectedSourceIdentity | undefined,
+): ExpectedSourceIdentity => {
+  const source = recordOf(receipt.source);
+  const sha = source.sha;
+  const tree = source.tree;
   if (
-    commandKind !== "combined" &&
-    commandKind !== "route-health" &&
-    commandKind !== "smoke"
+    typeof sha !== "string" ||
+    typeof tree !== "string" ||
+    !SHA_PATTERN.test(sha) ||
+    !SHA_PATTERN.test(tree)
   ) {
+    throw new TypeError("acceptance receipt has an invalid source SHA/tree");
+  }
+  if (
+    expectedSource !== undefined &&
+    (sha !== expectedSource.sha || tree !== expectedSource.tree)
+  ) {
+    throw new Error(
+      "acceptance receipt source does not match current SHA/tree",
+    );
+  }
+  return { sha, tree };
+};
+
+const commandKindFrom = (
+  value: unknown,
+): AcceptanceRuntimeReceipt["commandKind"] => {
+  if (value !== "combined" && value !== "route-health" && value !== "smoke") {
     throw new Error("acceptance receipt has an invalid commandKind");
   }
-  if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
-    throw new TypeError("acceptance receipt has an invalid durationMs");
+  return value;
+};
+
+const assertTerminalPass = (
+  receipt: Record<string, unknown>,
+  cleanup: Record<string, unknown>,
+  teardown: Record<string, unknown>,
+  budget: Record<string, unknown>,
+): void => {
+  const violations = budget.violations;
+  const passing =
+    receipt.overallStatus === "PASS" &&
+    receipt.playwrightStatus === "passed" &&
+    cleanup.status === "PASS" &&
+    cleanup.listenersFree === true &&
+    cleanup.ownedFilesRemoved === true &&
+    teardown.cleanupStatus === "PASS" &&
+    teardown.clients === "TRANSIENT_CLIENTS_CLOSED" &&
+    teardown.containers === "NONE_CREATED" &&
+    teardown.databaseState === "DETERMINISTIC_FULL_SEED" &&
+    teardown.redisState === "RESERVED_DB_15_EMPTY" &&
+    teardown.sourceUnchanged === true &&
+    teardown.volumes === "NONE_CREATED" &&
+    budget.status === "PASS" &&
+    Array.isArray(violations) &&
+    violations.length === 0;
+  if (!passing) {
+    throw new Error("acceptance receipt is not a terminal passing result");
   }
+};
+
+const assertPassingTestCounts = (tests: Record<string, unknown>): void => {
+  const total = nonnegativeInteger(tests.total, "test total");
+  const passed = nonnegativeInteger(tests.passed, "passed test count");
+  const failed = nonnegativeInteger(tests.failed, "failed test count");
+  const interrupted = nonnegativeInteger(
+    tests.interrupted,
+    "interrupted test count",
+  );
+  const skipped = nonnegativeInteger(tests.skipped, "skipped test count");
+  const timedOut = nonnegativeInteger(tests.timedOut, "timed-out test count");
   if (
-    typeof teardownDurationMs !== "number" ||
-    !Number.isFinite(teardownDurationMs)
+    total === 0 ||
+    passed !== total ||
+    failed !== 0 ||
+    interrupted !== 0 ||
+    skipped !== 0 ||
+    timedOut !== 0
   ) {
-    throw new TypeError("acceptance receipt has an invalid teardown duration");
+    throw new Error("acceptance receipt test totals are not fully passing");
   }
-  return { commandKind, durationMs, teardownDurationMs };
+};
+
+export function parseAcceptanceRuntimeReceipt(
+  value: unknown,
+  expectedSource?: ExpectedSourceIdentity,
+): AcceptanceRuntimeReceipt {
+  const receipt = recordOf(value);
+  if (receipt.schemaVersion !== 1) {
+    throw new Error("acceptance receipt has an unsupported schemaVersion");
+  }
+  const source = sourceIdentityFrom(receipt, expectedSource);
+  const cleanup = recordOf(receipt.cleanup);
+  const teardown = recordOf(cleanup.teardown);
+  const budget = recordOf(receipt.budget);
+  const measurements = recordOf(budget.measurements);
+  const tests = recordOf(receipt.tests);
+  const commandKind = commandKindFrom(receipt.commandKind);
+  const durationMs = nonnegativeNumber(receipt.durationMs, "durationMs");
+  const commandDurationMs = nonnegativeNumber(
+    measurements.commandDurationMs,
+    "command duration",
+  );
+  const teardownDurationMs = nonnegativeNumber(
+    measurements.teardownDurationMs,
+    "teardown duration",
+  );
+  if (durationMs !== commandDurationMs) {
+    throw new Error("acceptance receipt duration measurements disagree");
+  }
+  nonnegativeInteger(measurements.fileCount, "file count");
+  nonnegativeInteger(measurements.lineCount, "line count");
+  assertTerminalPass(receipt, cleanup, teardown, budget);
+  assertPassingTestCounts(tests);
+  return {
+    commandKind,
+    durationMs,
+    sha: source.sha,
+    teardownDurationMs,
+    tree: source.tree,
+  };
 }
 
 export function evaluateAcceptanceBudget(
@@ -149,7 +273,7 @@ export function evaluateAcceptanceBudget(
     );
   }
   return {
-    status: violations.length === 0 ? "PASS" : "FAIL",
+    status: violations.length > 0 ? "FAIL" : "PASS",
     violations,
   };
 }
@@ -172,6 +296,7 @@ const main = (): void => {
     inspectReceipt && existsSync(receiptPath)
       ? parseAcceptanceRuntimeReceipt(
           JSON.parse(readFileSync(receiptPath, "utf8")) as unknown,
+          sourceIdentityFor(repoRoot),
         )
       : undefined;
   if (requireReceipt && runtimeMeasurement === undefined) {

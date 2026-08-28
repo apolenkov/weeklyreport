@@ -11,7 +11,11 @@ import { RedisHealthIndicator } from "./redis.health.js";
 
 // lazyConnect keeps the constructed client from opening a socket; the tests
 // override the client anyway, so only the host/port shape is needed.
-const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+const STUB_ENV = {
+  REDIS_DB: 15,
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+} as EnvConfig;
 
 const explicitInjectionToken = (
   target: abstract new (...args: never[]) => unknown,

@@ -4,7 +4,7 @@ const CONNECT_TIMEOUT_MS = 250;
 const RELEASE_POLL_MS = 100;
 const DEFAULT_RELEASE_TIMEOUT_MS = 10_000;
 
-export const isLoopbackPortOpen = (port: number): Promise<boolean> =>
+const isLoopbackPortOpen = (port: number): Promise<boolean> =>
   new Promise((resolve) => {
     const socket = net.createConnection({ host: "127.0.0.1", port });
     const finish = (open: boolean): void => {

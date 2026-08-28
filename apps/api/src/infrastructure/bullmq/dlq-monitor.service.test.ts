@@ -17,7 +17,11 @@ import { QUEUE_NAMES, type QueueName } from "./queue-registry.js";
 
 // The service touches the registry/env only in onModuleInit (not exercised by
 // these Redis-free seam tests); minimal stubs satisfy the constructor.
-const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+const STUB_ENV = {
+  REDIS_DB: 15,
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
+} as EnvConfig;
 const STUB_REGISTRY: QueueRegistryLike = {
   get: () => {
     throw new Error("registry never read by these seam tests");

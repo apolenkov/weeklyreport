@@ -49,10 +49,8 @@ const REQUIRED_LANDING_ROUTES: Readonly<Record<Role, ReadonlySet<string>>> = {
   viewer: new Set([REPORT_PRESENT_ROUTE, REPORT_HISTORY_ROUTE]),
 };
 
-export const landingDeclarationRequiredFor = (
-  role: Role,
-  route: string,
-): boolean => REQUIRED_LANDING_ROUTES[role].has(route);
+const landingDeclarationRequiredFor = (role: Role, route: string): boolean =>
+  REQUIRED_LANDING_ROUTES[role].has(route);
 
 export interface ParsedLanding {
   readonly landing: string;

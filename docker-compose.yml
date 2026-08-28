@@ -93,6 +93,7 @@ services:
       PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_DB: 0
       REDIS_MAXMEMORY_BYTES: 209715200
       # This is the DEV compose (mailhog catch-all, exposed ports,
       # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.

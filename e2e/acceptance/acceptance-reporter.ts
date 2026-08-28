@@ -103,8 +103,13 @@ export default class AcceptanceReporter implements Reporter {
       playwrightStatus: result.status,
       setupStatus: source?.setupStatus ?? "MISSING",
       teardownValid:
-        teardown?.clients === "NO_PERSISTENT_CLIENTS" &&
-        teardown.sourceUnchanged,
+        teardown?.cleanupStatus === "PASS" &&
+        teardown.clients === "TRANSIENT_CLIENTS_CLOSED" &&
+        teardown.containers === "NONE_CREATED" &&
+        teardown.databaseState === "DETERMINISTIC_FULL_SEED" &&
+        teardown.redisState === "RESERVED_DB_15_EMPTY" &&
+        teardown.sourceUnchanged &&
+        teardown.volumes === "NONE_CREATED",
     });
     await writeJson(paths.result, {
       schemaVersion: 1,
@@ -125,6 +130,7 @@ export default class AcceptanceReporter implements Reporter {
         listenersFree,
         ownedFilesRemoved,
         status: verdict.cleanupStatus,
+        teardown: teardown ?? null,
       },
       commandKind: this.options.commandKind,
       durationMs: result.duration,

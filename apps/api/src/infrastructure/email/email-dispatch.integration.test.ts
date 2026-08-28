@@ -55,6 +55,7 @@ const SMTP_ENV = {
   SMTP_FROM: "test-integration@customreport.local",
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
+  REDIS_DB: 15,
 } as unknown as EnvConfig;
 
 let mailpitUp = false;

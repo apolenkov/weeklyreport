@@ -12,12 +12,12 @@ const APP_READY_TIMEOUT_MS = 10_000;
 const APP_READY_STABILITY_PASSES = 2;
 const NETWORK_IDLE_TIMEOUT_MS = 3000;
 
-export interface AppReadyArgument {
+interface AppReadyArgument {
   readonly rootSelector: string;
   readonly loadingSelector: string;
 }
 
-export interface AppReadyPage {
+interface AppReadyPage {
   readonly waitForFunction: (
     predicate: (argument: AppReadyArgument) => boolean,
     argument?: AppReadyArgument,
@@ -84,7 +84,7 @@ const waitForReadyPass = (page: AppReadyPage): Promise<unknown> =>
     { polling: "raf", timeout: APP_READY_TIMEOUT_MS },
   );
 
-export async function waitForAppReady(page: AppReadyPage): Promise<void> {
+async function waitForAppReady(page: AppReadyPage): Promise<void> {
   await Array.from({ length: APP_READY_STABILITY_PASSES }).reduce(
     async (previous) => {
       await previous;

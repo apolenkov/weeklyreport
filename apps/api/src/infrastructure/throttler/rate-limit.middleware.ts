@@ -36,7 +36,7 @@ const RATE_LIMIT_STANDARD_HEADERS = "draft-7" as const;
 interface RateLimitFactoryOptions {
   logger: AppLogger;
   isTest: boolean;
-  env?: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT">;
+  env?: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT">;
   redis?: Redis;
 }
 
@@ -52,7 +52,7 @@ interface RateLimitHandlers {
 // missing var fails at the boot fence; lazyConnect lets the factory own the
 // explicit readiness boundary below.
 function buildStoreClient(
-  env: Pick<EnvConfig, "REDIS_HOST" | "REDIS_PORT"> | undefined,
+  env: Pick<EnvConfig, "REDIS_DB" | "REDIS_HOST" | "REDIS_PORT"> | undefined,
 ): Redis | undefined {
   if (!env) {
     return undefined;
