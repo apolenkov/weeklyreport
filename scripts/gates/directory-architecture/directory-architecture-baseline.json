@@ -3,14 +3,9 @@
   "threshold": 30,
   "sourceIdentity": {
     "scripts": {
-      "gitTree": "a31efe14abb0adfaf420defc3e48d49f6f243732",
-      "pathDigest": "15c1423d7cd8ab0d5a1734bc67b29de192c7ca1993e06134cc1d487d783eae0f",
-      "trackedFiles": 85
-    },
-    "e2e/acceptance": {
-      "gitTree": "ba1664b0a3257dfcfb2a4cb3b935d3207028b328",
-      "pathDigest": "7277cc49ba44ad5e8544a0c49c98ca90d2b2fb3d414f0aadfcb32216d838d287",
-      "trackedFiles": 16
+      "gitTree": "8d8cdfe58e8c0b9c7083ccff14ad3e2ffbddb1c6",
+      "pathDigest": "5a7b13efd37db65ed0a489de02e81cdb3e51812bd597d7dddd4d6ba439302cc9",
+      "trackedFiles": 78
     },
     "prisma": {
       "gitTree": "4d78c05530c608cb991c71a9bd9876d962ab2668",

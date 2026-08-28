@@ -1,65 +1,37 @@
-## Purpose
-
-Defines one compact, deterministic browser smoke contour that protects WeeklyReport's basic viability without growing into a second orchestration platform.
-
-## ADDED Requirements
+## REMOVED Requirements
 
 ### Requirement: WeeklyReport MUST have one owned browser acceptance contour
 
-The repository MUST expose one blocking `e2e/acceptance/` contour implemented with the existing Playwright runner. It MUST reuse the canonical scenario catalog, deterministic seed contracts, dev-auth helper, disposable-database guard, and integration resource helpers. It MUST NOT implement a second scenario compiler, interaction graph, continuation protocol, campaign state machine, lane orchestrator, AI report importer, or custom evidence ledger.
+**Reason**: The owner retired the separate browser acceptance platform.
 
-#### Scenario: New behavior is considered for browser acceptance
-
-- **WHEN** a WeeklyReport behavior needs deterministic coverage
-- **THEN** it is added to an existing focused suite unless it replaces part of the single reviewed smoke lifecycle
-- **AND** no parallel runner, resumable campaign, or custom orchestration layer is introduced
+**Migration**: Keep verification colocated with product modules.
 
 ### Requirement: Browser acceptance MUST remain smoke-only
 
-The acceptance contour MUST contain only basic four-role route health and one deterministic lead write -> head publish -> viewer read lifecycle. The lifecycle MUST assert both the visible result and persisted or API read-back. PDF, revoke, configuration, action-log, ordering, detailed authorization, and edge-case coverage MUST remain in existing focused unit, integration, seed-profile, or production-build suites rather than being duplicated into browser acceptance.
+**Reason**: The replacement smoke is deleted with the harness.
 
-#### Scenario: Full product acceptance runs
-
-- **WHEN** `pnpm test:acceptance` runs against the exact disposable WeeklyReport database
-- **THEN** the single smoke lifecycle completes with its visible and data outcomes proven
-- **AND** every cataloged role-reachable route is visited without an unclassified page, console, network, accessibility, or HTTP failure
+**Migration**: Use focused product tests and human product review when needed.
 
 ### Requirement: Acceptance complexity and duration MUST be bounded
 
-The owned acceptance implementation MUST contain at most 25 source files and at most 4,000 non-generated lines. On the reference Mac, `pnpm test:acceptance:smoke` MUST complete within 10 minutes, `pnpm test:acceptance` MUST complete within 15 minutes, and teardown MUST complete within 2 minutes. The gate MUST fail when a measured budget is exceeded; raising a budget requires an explicit spec change with a measured product-coverage justification.
+**Reason**: The acceptance source tree and its numeric budget gate are deleted.
 
-#### Scenario: Acceptance exceeds a budget
-
-- **WHEN** the measured file count, line count, smoke duration, combined duration, or teardown duration exceeds its bound
-- **THEN** the acceptance gate fails and names the exceeded budget
-- **AND** the overage cannot be hidden by excluding owned files or omitting failed timing receipts
+**Migration**: Apply strict structural limits to product source, not test infrastructure.
 
 ### Requirement: Standard Playwright evidence MUST be sufficient
 
-Acceptance MUST use Playwright's standard list/HTML/JSON or JUnit reporting and built-in trace, screenshot, and video artifacts on failure. A release run MUST record the Git SHA, command, exit status, browser version, duration, scenario totals, and cleanup result. Passing runs MUST NOT generate per-action immutable assets, hash chains, continuation receipts, or AI-authored verdicts.
+**Reason**: No Playwright test runner remains.
 
-#### Scenario: A journey fails
-
-- **WHEN** an acceptance journey fails
-- **THEN** the standard Playwright report identifies the scenario and failure
-- **AND** its failure trace, screenshot, relevant logs, exact Git SHA, and cleanup result are retained without a custom evidence protocol
+**Migration**: Ordinary test output and product review evidence remain sufficient for their owning product slice.
 
 ### Requirement: Disposable state and cleanup MUST fail closed
 
-All destructive setup and teardown MUST target only the exact guarded loopback WeeklyReport E2E database, carry per-run consent immediately before the destructive primitive, and use uniquely owned local resources. Cleanup MUST run after pass, failure, timeout, or interruption and MUST prove that owned processes, containers, volumes, and listeners are absent before reporting terminal success.
+**Reason**: The browser acceptance lifecycle that owned destructive setup and cleanup is deleted.
 
-#### Scenario: Acceptance is interrupted
-
-- **WHEN** the runner receives a termination signal or a scenario times out
-- **THEN** the bounded teardown removes only resources owned by that run
-- **AND** a missing or failed cleanup proof makes the overall result `FAIL_NOT_PROVEN`
+**Migration**: Existing product-adjacent database tests and operations retain their exact destructive guards.
 
 ### Requirement: Acceptance MUST be rerunnable from the beginning
 
-Each acceptance run MUST start from deterministic seed state and MUST be independently rerunnable from the beginning. No run MAY resume a partial interaction graph or reuse a prior run's browser state, database state, checkpoint, or acceptance verdict.
+**Reason**: No browser acceptance run remains.
 
-#### Scenario: A prior run failed halfway
-
-- **WHEN** a maintainer starts the next acceptance run
-- **THEN** the next run creates fresh owned resources and deterministic state
-- **AND** it neither resumes nor promotes any partial evidence from the failed run
+**Migration**: Product-adjacent tests remain independently rerunnable under their own contracts.

@@ -11,6 +11,15 @@ const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
   yellow: 2,
   red: 1,
 };
+const STATUS_LEVEL_LABELS: Readonly<Record<number, string>> = {
+  1: "Red",
+  2: "Yellow",
+  3: "Green",
+};
+
+export function formatTrafficLightStatusLevel(value: number): string {
+  return STATUS_LEVEL_LABELS[value] ?? String(value);
+}
 
 export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
   readonly data: readonly ChartData[];

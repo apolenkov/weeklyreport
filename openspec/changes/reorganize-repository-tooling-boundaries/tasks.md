@@ -64,5 +64,5 @@
 - [x] 8.2 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and required single-worker integration suites; record exact commands/exits.
 - [x] 8.3 Run `openspec validate reorganize-repository-tooling-boundaries --strict` and `openspec validate establish-exhaustive-runtime-sweep --strict`.
 - [x] 8.4 Commit behavior-neutral slices, independently review exact-final-SHA moves, and require a clean worktree with preserved branch refs.
-- [ ] 8.5 Recompute the current ownership, density, repository-test, and bounded-acceptance file/line budgets after the runtime-platform deletion; classify r29 as superseded diagnostic evidence and require zero live ownership entry for `e2e/runtime-sweep/`.
-- [ ] 8.6 Run focused structural tests, the full repository gates, catalog route health, and the single lifecycle smoke under `replace-runtime-sweep-with-product-acceptance`; review the exact deletion/replacement diff and record archive/OpenSpec closeout without recreating a matrix, campaign, or AI-import path.
+- [ ] 8.5 Recompute the current ownership, density, and repository-test budgets after the test-platform deletion; classify r29 as superseded diagnostic evidence and require zero live ownership entry for the retired E2E/UAT platform.
+- [ ] 8.6 Run focused structural tests and the full deterministic repository gates under `replace-runtime-sweep-with-product-acceptance`; review the exact deletion diff and record archive/OpenSpec closeout without recreating a browser contour, matrix, campaign, or AI-import path.

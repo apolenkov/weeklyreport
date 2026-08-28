@@ -80,9 +80,8 @@ The split is the documented industry best practice, confirmed by research:
   same `import type` autofix would still merge green unless a human reads the
   report. A blocking guarantee arrives only with the phase-2 frozen gate. This is
   accepted knowingly.
-- The current UI e2e harness under `e2e/` is regenerated from the catalog; the
-  hard-won `dev-auth` role-login plumbing is recovered from git history, not
-  re-derived. Integration and unit tests stay.
+- Superseded on 2026-08-28: the separate browser harness and scenario catalog
+  were removed. Product tests remain colocated with their owning modules.
 
 ## Sources
 

@@ -110,24 +110,4 @@ export const overrideConfig: Linter.Config[] = [
     ],
     rules: unrestrictedTestContourRules,
   },
-  // UAT is acceptance tooling, not maintained product source.
-  {
-    files: ["apps/web/uat-suite/**"],
-    rules: {
-      ...unrestrictedTestContourRules,
-      "sonarjs/no-duplicate-string": "off",
-    },
-  },
-  // Playwright helpers and scenarios are acceptance tooling too.
-  {
-    files: ["e2e/**"],
-    rules: unrestrictedTestContourRules,
-  },
-  // Playwright's fixture contract is `async ({ deps }, use) => { … await use(x) }`.
-  // `use` is the provider callback the runner hands in, and react-hooks matches
-  // it by name alone — every hit in this tree is that shape, not a React hook.
-  {
-    files: ["e2e/**/*.ts"],
-    rules: { "react-hooks/rules-of-hooks": "off" },
-  },
 ];

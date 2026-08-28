@@ -16,7 +16,6 @@
         "scripts/gates/directory-architecture/",
         "scripts/gates/repository-tests/",
         "scripts/gates/orchestrator/",
-        "scripts/gates/critical-tests/",
         "scripts/gates/planning-provenance/",
         "scripts/gates/formatting/",
         "scripts/gates/type-system/",
@@ -24,14 +23,8 @@
         "scripts/gates/status-ssot/",
         "scripts/gates/vitest-rules/",
         "scripts/gates/environment/",
-        "scripts/gates/configuration/",
         "scripts/gates/web-coverage/"
       ]
-    },
-    {
-      "id": "acceptance",
-      "prefix": "e2e/acceptance/",
-      "allowedTargetPrefixes": ["e2e/acceptance/"]
     },
     {
       "id": "prisma",
@@ -99,30 +92,6 @@
     }
   ],
   "rules": [
-    {
-      "id": "acceptance-config",
-      "scope": "acceptance",
-      "pattern": "^e2e/acceptance/(playwright\\.config\\.ts)$",
-      "concern": "bounded-product-acceptance",
-      "role": "config",
-      "target": "e2e/acceptance/$1"
-    },
-    {
-      "id": "acceptance-tests",
-      "scope": "acceptance",
-      "pattern": "^e2e/acceptance/(.+\\.(?:test|spec)\\.ts)$",
-      "concern": "bounded-product-acceptance",
-      "role": "test",
-      "target": "e2e/acceptance/$1"
-    },
-    {
-      "id": "acceptance-implementation",
-      "scope": "acceptance",
-      "pattern": "^e2e/acceptance/((?!playwright\\.config\\.ts$)(?!.*\\.(?:test|spec)\\.ts$).+\\.ts)$",
-      "concern": "bounded-product-acceptance",
-      "role": "implementation",
-      "target": "e2e/acceptance/$1"
-    },
     {
       "id": "scripts-shared-implementation",
       "scope": "scripts",
@@ -348,30 +317,6 @@
       "target": "scripts/gates/orchestrator/$1"
     },
     {
-      "id": "scripts-gates-critical-tests-tests",
-      "scope": "scripts",
-      "pattern": "^scripts/(?:gates/critical-tests/)?((?:critical-test-marker-gate|p0-evidence-verifier)\\.test\\.ts)$",
-      "concern": "critical-test-evidence",
-      "role": "test",
-      "target": "scripts/gates/critical-tests/$1"
-    },
-    {
-      "id": "scripts-gates-critical-tests-implementation",
-      "scope": "scripts",
-      "pattern": "^scripts/(?:gates/critical-tests/)?((?:critical-test-marker-gate|p0-evidence-model)\\.ts)$",
-      "concern": "critical-test-evidence",
-      "role": "implementation",
-      "target": "scripts/gates/critical-tests/$1"
-    },
-    {
-      "id": "scripts-gates-critical-tests-entrypoint",
-      "scope": "scripts",
-      "pattern": "^scripts/(?:gates/critical-tests/)?(p0-evidence-verifier\\.ts)$",
-      "concern": "critical-test-evidence",
-      "role": "entrypoint",
-      "target": "scripts/gates/critical-tests/$1"
-    },
-    {
       "id": "scripts-gates-planning-provenance-tests",
       "scope": "scripts",
       "pattern": "^scripts/(?:gates/planning-provenance/)?((?:deferred-reference-gate|openspec-provenance-resolver)\\.test\\.ts)$",
@@ -450,22 +395,6 @@
       "concern": "environment-gate",
       "role": "entrypoint",
       "target": "scripts/gates/environment/$1"
-    },
-    {
-      "id": "scripts-gates-configuration-implementation",
-      "scope": "scripts",
-      "pattern": "^scripts/gates/configuration/(workflow-policy\\.ts)$",
-      "concern": "configuration-gate",
-      "role": "implementation",
-      "target": "scripts/gates/configuration/$1"
-    },
-    {
-      "id": "scripts-gates-configuration-test",
-      "scope": "scripts",
-      "pattern": "^scripts/(?:gates/configuration/)?(config-hygiene-gate\\.test\\.ts)$",
-      "concern": "configuration-gate",
-      "role": "test",
-      "target": "scripts/gates/configuration/$1"
     },
     {
       "id": "scripts-gates-web-coverage-test",

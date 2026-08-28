@@ -2,7 +2,12 @@
 // Assert mutation variables, cache invalidation, and toast on success.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -131,6 +136,12 @@ function renderPage(
   return { ...renderResult, captured };
 }
 
+async function waitForReadyPage(): Promise<void> {
+  await waitForElementToBeRemoved(() =>
+    screen.queryByTestId("weekly-report-skeleton"),
+  );
+}
+
 describe("WeeklyReportPage — async Export PDF button role gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -174,9 +185,8 @@ describe("WeeklyReportPage — shared period toolbar", () => {
 
   it("renders document actions on the header line and the context bar below it", async () => {
     renderPage(makeWeeklyReportData("open"));
-    const heading = await screen.findByRole("heading", {
-      name: /status report/i,
-    });
+    await waitForReadyPage();
+    const heading = screen.getByRole("heading", { name: /status report/i });
     // The bordered toolbar IS the Context-control bar (one labeled group).
     const toolbar = screen.getByTestId("report-toolbar");
     expect(toolbar).toBeInTheDocument();
@@ -221,7 +231,7 @@ describe("WeeklyReportPage — shared period toolbar", () => {
       undefined,
       <div data-testid="shell-context" />,
     );
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     const contextRow = screen.getByRole("group", { name: "Context controls" });
     expect(within(contextRow).getByTestId("shell-context")).toBeInTheDocument();
   });
@@ -255,7 +265,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
 
   it("renders exactly one Export-PDF, on the header line (not inside the toolbar)", async () => {
     renderPage(makeWeeklyReportData("published"));
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     const exportButtons = screen.getAllByRole("button", {
       name: /export pdf/i,
@@ -286,7 +296,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       }),
       submissionCount: 0,
     });
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // The spec pins PLACEMENT: the hint shares the status-pill cluster and must
     // NOT sit in the action cluster. Discriminate the two divs explicitly.
@@ -328,7 +338,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       undefined,
       "viewer",
     );
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     expect(
       screen.queryByText(/publish requires at least one submitted section/i),
     ).not.toBeInTheDocument();

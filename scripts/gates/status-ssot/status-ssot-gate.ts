@@ -5,7 +5,7 @@
 //
 // It drives ESLint's Linter API instead of living in eslint.config.ts because
 // that config already spends `no-restricted-syntax` on the `let` escape hatch,
-// and it globally ignores the e2e and Prisma trees this gate must cover.
+// and it globally ignores the Prisma tree this gate must cover.
 //
 // Usage:
 //   node scripts/gates/status-ssot/status-ssot-gate.ts --all            # whole tree
@@ -73,8 +73,6 @@ const ALLOWLIST = [
   "packages/shared/src/schemas/auth/auth.ts",
   // Presentation order intentionally differs from the role schema order.
   "apps/web/src/shared/ui/auth-runtime/role-switcher.tsx",
-  // Plain-Node catalog parsing cannot resolve the workspace package at runtime.
-  "e2e/sweep/catalog-parser.ts",
 ];
 
 // A vocabulary is re-declared as a TS union type, zod literal list, or a

@@ -296,7 +296,7 @@ void test("catalogue schema rejects unsafe or ambiguous rules", () => {
     () =>
       catalogueFixture(
         [scriptRoot()],
-        [scriptRule("outside-target", "^scripts/a.ts$", "e2e/$1")],
+        [scriptRule("outside-target", "^scripts/a.ts$", "generated/$1")],
       ),
     /outside allowed target homes/,
   );
@@ -350,8 +350,8 @@ void test("ownership validator catches missing, duplicate, and stale ownership",
         scriptRoot(),
         {
           id: "empty",
-          prefix: "e2e/empty/",
-          allowedTargetPrefixes: ["e2e/empty/"],
+          prefix: "generated/empty/",
+          allowedTargetPrefixes: ["generated/empty/"],
         },
       ],
       [

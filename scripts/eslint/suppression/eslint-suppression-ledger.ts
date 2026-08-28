@@ -25,6 +25,7 @@ const ownerOf = (path: string): string => {
   if (path.startsWith("apps/web/")) return "web";
   if (path.startsWith("packages/")) return "package";
   if (path.startsWith("prisma/")) return "seed";
+  // Historical owner needed to reproduce the immutable starting snapshot.
   if (path.startsWith("e2e/")) return "e2e";
   if (path.startsWith("scripts/") || path.startsWith("tools/"))
     return "tooling";

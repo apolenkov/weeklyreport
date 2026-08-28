@@ -18,8 +18,6 @@ test-results/
 .results
 .logs/
 
-e2e/.auth/
-
 apps/api/storage/
 
 apps/web/next-env.d.ts
@@ -40,7 +38,6 @@ scheduled_tasks.lock
 # CodeGraph local index (machine-specific, not part of repo)
 .codegraph/
 
-e2e/csp/.reports/
 # pnpm content-addressable store (local cache, never committed)
 .pnpm-store/
 

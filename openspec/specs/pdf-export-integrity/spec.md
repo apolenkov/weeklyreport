@@ -258,19 +258,24 @@ the other stale.
 - **THEN** exactly one implementation is found, imported by both the
   download handler and the repository
 
-### Requirement: PDF worker completion is an executed integration contract
+### Requirement: PDF export behavior has colocated product tests
 
-`e2e/integration/pdf-export.integration.spec.ts` MUST execute the real enqueue, worker, persistence, and artifact-read path without fixme/skip markers or a `networkidle` dependency.
+PDF repository persistence, authorization, queue payloads, render-ready
+coordination, and processor failure behavior MUST be covered by tests colocated
+with the API product modules. The repository MUST NOT require a separate browser
+integration harness for this contract.
 
-#### Scenario: Worker completes and persists an artifact
+#### Scenario: Repository persistence is exercised
 
-- **WHEN** an authorized user enqueues a PDF export in the integration environment
-- **THEN** the test observes terminal ready status, a persisted artifact URL owned by the request, and a readable non-empty PDF artifact
+- **WHEN** the API integration suite uses the real Prisma repository
+- **THEN** it verifies job creation, terminal state, artifact URL, checksum, and
+  requester-bound queue data through fresh reads
 
-#### Scenario: Browser devtools keep a connection open
+#### Scenario: Rendering does not depend on global network idle
 
-- **WHEN** unrelated browser connections remain open during the export
-- **THEN** completion waits on the job and render-ready contracts rather than global network idle
+- **WHEN** the processor reaches the print page's explicit ready contract
+- **THEN** its colocated tests verify capture proceeds without waiting for
+  unrelated browser connections
 
 #### Scenario: Worker or render fails
 

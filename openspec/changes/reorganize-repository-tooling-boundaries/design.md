@@ -2,9 +2,9 @@
 
 The runtime-sweep relocation below is retained as historical context for the
 completed source-layout migration. `replace-runtime-sweep-with-product-acceptance`
-later deleted that platform. Current closure MUST validate the bounded
-`e2e/acceptance/` contour and existing focused suites; it MUST NOT recreate,
-freeze, or execute the historical runtime campaign.
+later deleted that platform. Current closure MUST validate colocated product
+suites; it MUST NOT recreate, freeze, or execute a browser acceptance contour
+or the historical runtime campaign.
 
 ## Context
 
@@ -31,8 +31,8 @@ model, tRPC surface, or rendered UI is intentionally changed.
   visibly distinct but colocated by capability.
 - Make flat-directory debt and orphan repository tests machine-detectable.
 - Preserve existing command names and public facades while paths migrate.
-- Complete the high-value auxiliary and transitional web migrations before a new
-  immutable Playwright campaign is frozen.
+- Complete the high-value auxiliary and transitional web migrations without
+  creating a replacement browser campaign.
 
 **Non-Goals:**
 
@@ -149,13 +149,12 @@ must be named by exactly one repository-test manifest consumed by the aggregate
 lint gate. Discovery tests compare the tracked inventory to actual runners. The
 four currently orphaned Node tests enter that manifest before any move.
 
-### 7. Validate in slices, then rebuild bounded product evidence once
+### 7. Validate in slices, then close with deterministic product evidence
 
 Each concern move runs targeted typecheck/lint/tests and stale-path searches.
-After all moves, the full local gates run once, then route health and the single
-lifecycle smoke run under the replacement contour at the exact final SHA. The
-successful r29 preflight remains diagnostic historical evidence, not current
-acceptance evidence.
+After all moves, the full deterministic local gates run once at the exact final
+SHA. The successful r29 preflight remains diagnostic historical evidence, not
+current acceptance evidence; no browser replacement contour is created.
 
 ## Risks / Trade-offs
 
@@ -189,8 +188,8 @@ acceptance evidence.
    API test harness deep edges without moving healthy production modules.
 6. Re-run the structural inventory and require no unexplained directory above the
    density threshold and no new deep production edge.
-7. Run Prettier, lint, typecheck, unit/integration/build/OpenSpec gates; freeze a
-   new source SHA and run bounded route health plus the single lifecycle smoke.
+7. Run Prettier, lint, typecheck, unit/integration/build/OpenSpec gates and
+   freeze a new source SHA without a separate browser acceptance platform.
 
 Rollback is per concern slice with ordinary Git revert. No schema/data rollback
 is involved. The current branch and external r29 artifacts preserve the previous

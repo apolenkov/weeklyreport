@@ -6,27 +6,11 @@
       "prisma": {
         "config": []
       },
-      "entry": [
-        "eslint-config/*.ts",
-        "prisma/**/*.ts",
-        "e2e/playwright.integration.config.ts",
-        "e2e/playwright.seed-profiles.config.ts",
-        "e2e/playwright.prodbuild.config.ts",
-        "e2e/playwright.csp.config.ts",
-        "e2e/acceptance/playwright.config.ts",
-        "e2e/acceptance/acceptance-reporter.ts",
-        "e2e/acceptance/global-setup.ts",
-        "e2e/sweep/render-checklist.ts",
-        "e2e/**/*.spec.ts",
-        "e2e/integration/global-setup.ts",
-        "e2e/integration/global-teardown.ts",
-        "e2e/seed-profiles/global-setup.ts"
-      ],
+      "entry": ["eslint-config/*.ts", "prisma/**/*.ts"],
       "project": [
         "eslint-config/**/*.ts",
         "prisma/**/*.{ts,prisma}",
-        "scripts/**/*.{ts,mjs}",
-        "e2e/**/*.{ts,mjs}"
+        "scripts/**/*.{ts,mjs}"
       ]
     },
     "apps/api": {
@@ -41,8 +25,7 @@
         "src/**/*.test.{ts,tsx}",
         "src/test-utils/**"
       ],
-      "project": ["src/**/*.{ts,tsx,css}"],
-      "ignoreDependencies": ["@axe-core/playwright"]
+      "project": ["src/**/*.{ts,tsx,css}"]
     },
     "packages/shared": {
       "entry": ["src/**/*.test.ts"],

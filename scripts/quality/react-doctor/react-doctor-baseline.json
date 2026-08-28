@@ -3,13 +3,6 @@
   "reactDoctorVersion": "0.9.3",
   "diagnostics": [
     {
-      "id": "package.json::0:0::deslop/unused-dev-dependency::0235235cba6bcb9ce2d72444c0301d76203923dc83403578056dcc2fbad6bdd9",
-      "file": "package.json",
-      "rule": "unused-dev-dependency",
-      "verdict": "overturn",
-      "rationale": "The project-relative package.json warning misclassifies @axe-core/playwright as unused: e2e/acceptance/route-health.spec.ts and e2e/acceptance/route-health-axe-detector.spec.ts import it, e2e/tsconfig.json maps the package to apps/web/node_modules, and route-health acceptance requires that gate. Removing the apps/web devDependency would break an active E2E consumer."
-    },
-    {
       "id": "src/app/(app)/admin/page.tsx::3:1::react-doctor/no-barrel-import::e218d30fdfaeeca1009a24f92997ae353bcf97f782a154a46bb213a7aa521a73",
       "file": "src/app/(app)/admin/page.tsx",
       "rule": "no-barrel-import",
@@ -283,7 +276,7 @@
       "rationale": "This import intentionally uses a sibling feature's public index.ts barrel. The current web-slice boundary contract in eslint-config/boundaries.ts permits sibling index.ts imports and the directory-architecture spec makes those barrels the public API; replacing it with the suggested concrete internals would violate the repository's import boundary. React Doctor is treating the repository's enforced architecture as a bundle heuristic."
     },
     {
-      "id": "src/features/period/ui/head-publish-lock-action.tsx::12:1::react-doctor/no-barrel-import::f6050028f28702bec523e02095c89f59bcecdd01ea0bc0a04da72eaa8d174176",
+      "id": "src/features/period/ui/head-publish-lock-action.tsx::14:1::react-doctor/no-barrel-import::f6050028f28702bec523e02095c89f59bcecdd01ea0bc0a04da72eaa8d174176",
       "file": "src/features/period/ui/head-publish-lock-action.tsx",
       "rule": "no-barrel-import",
       "verdict": "overturn",
@@ -1060,7 +1053,7 @@
       "rationale": "draft is deliberately local state seeded from a server value: it tracks user edits, dirty state, markClean, and suppression of background refetches while a form is being edited. The warning confuses a user-editable draft with render-derived display data."
     },
     {
-      "id": "src/shared/lib/auth/session-provider.tsx::48:14::react-doctor/only-export-components::d28bf0bf5f0a1bf0803caa8209b2688941b11815c176999d2ea7cf586bb44aa5",
+      "id": "src/shared/lib/auth/session-provider.tsx::55:14::react-doctor/only-export-components::d28bf0bf5f0a1bf0803caa8209b2688941b11815c176999d2ea7cf586bb44aa5",
       "file": "src/shared/lib/auth/session-provider.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",
@@ -1100,55 +1093,6 @@
       "rule": "only-export-components",
       "verdict": "overturn",
       "rationale": "The module intentionally exposes a small composition contract used by sibling components. Splitting it only for Fast Refresh would add API churn without an observed runtime defect."
-    },
-    {
-      "id": "uat-suite/inventory.mjs::153:17::react-doctor/async-await-in-loop::24db5eed6cd2923504171fbb67fc8cacd8d7ae699e9f8244b2b932bbb21eee5a",
-      "file": "uat-suite/inventory.mjs",
-      "rule": "async-await-in-loop",
-      "verdict": "overturn",
-      "rationale": "Serial execution owns isolated browser resources and deterministic evidence order; parallelizing the UAT loop would change its operational contract and can overload the environment."
-    },
-    {
-      "id": "uat-suite/mutation-call-sites.mjs::135:5::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "uat-suite/mutation-call-sites.mjs",
-      "rule": "js-combine-iterations",
-      "verdict": "overturn",
-      "rationale": "This immutable filter/map or flatMap/map pipeline operates on bounded report, stage, author, or slide data and keeps distinct selection and projection rules auditable. No measured hot path justifies replacing the readable stages with a denser reducer or loop; the warning is not an actionable defect."
-    },
-    {
-      "id": "uat-suite/read-back-analysis.mjs::179:19::react-doctor/js-flatmap-filter::aec0d8debb76e76f50e0de55ddbd98e8f388eee7249d49beeb946f96e6272b52",
-      "file": "uat-suite/read-back-analysis.mjs",
-      "rule": "js-flatmap-filter",
-      "verdict": "overturn",
-      "rationale": "The map/filter pipeline preserves a semantic distinction between absent handlers and handlers that cannot be followed. FlatMap would collapse that distinction and make read-back diagnostics less explicit; the small handler list does not justify it."
-    },
-    {
-      "id": "uat-suite/read-back-analysis.mjs::185:20::react-doctor/js-flatmap-filter::aec0d8debb76e76f50e0de55ddbd98e8f388eee7249d49beeb946f96e6272b52",
-      "file": "uat-suite/read-back-analysis.mjs",
-      "rule": "js-flatmap-filter",
-      "verdict": "overturn",
-      "rationale": "The map/filter pipeline preserves a semantic distinction between absent handlers and handlers that cannot be followed. FlatMap would collapse that distinction and make read-back diagnostics less explicit; the small handler list does not justify it."
-    },
-    {
-      "id": "uat-suite/trpc-procedures.mjs::39:18::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "uat-suite/trpc-procedures.mjs",
-      "rule": "js-combine-iterations",
-      "verdict": "overturn",
-      "rationale": "The pipeline first filters source files by extension and then maps each path to a source descriptor. Those stages have distinct predicates and failure semantics; combining them would reduce readability in this UAT inventory script."
-    },
-    {
-      "id": "uat-suite/trpc-procedures.mjs::85:22::react-doctor/js-combine-iterations::b5fafc3325bac1edb7bba16ff6bbb47251153093600632d7548e5ca72e131133",
-      "file": "uat-suite/trpc-procedures.mjs",
-      "rule": "js-combine-iterations",
-      "verdict": "overturn",
-      "rationale": "The pipeline maps files to parsed declarations, flatMaps nested declaration lists, then reduces them into an index. Each stage corresponds to a different domain transformation, so a single reducer would obscure the model rather than improve it."
-    },
-    {
-      "id": "uat-suite/web-module-graph.mjs::173:3::react-doctor/js-combine-iterations::86f8632615fdfb3adc9efe484c1e1ab781c7771048e0b9f5c2d8b6920d63cb33",
-      "file": "uat-suite/web-module-graph.mjs",
-      "rule": "js-combine-iterations",
-      "verdict": "overturn",
-      "rationale": "Filtering to product files before parsing is intentional: it avoids parsing unrelated modules and protects parseModule from unsupported inputs. The subsequent map is a deliberate parse boundary, not an accidental extra pass."
     }
   ]
 }

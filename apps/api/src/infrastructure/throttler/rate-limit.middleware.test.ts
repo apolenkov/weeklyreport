@@ -311,7 +311,7 @@ describe("rate-limit middleware — fail-loud store policy", () => {
   });
 
   it("keeps MemoryStore in test mode without a Redis store", async () => {
-    // Test mode is the sanctioned MemoryStore exception (E2E/unit suites run
+    // Test mode is the sanctioned MemoryStore exception (unit suites run
     // without Redis); it must not trip the production fail-loud fence.
     const limiters = await createRateLimits({
       logger: silentLogger,

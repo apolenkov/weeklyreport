@@ -2,7 +2,7 @@
   "version": 1,
   "startingSnapshot": {
     "commit": "0128d686",
-    "overrideBlocks": 26
+    "overrideBlocks": 23
   },
   "entries": [
     {
@@ -43,8 +43,7 @@
       "files": [
         "apps/**/*.{ts,tsx,js,jsx,mjs}",
         "packages/**/*.{ts,tsx,js,jsx,mjs}",
-        "prisma/**/*.{ts,tsx,js,jsx,mjs}",
-        "e2e/**/*.{ts,tsx,js,jsx,mjs}"
+        "prisma/**/*.{ts,tsx,js,jsx,mjs}"
       ],
       "ignores": [],
       "positive": "apps/api/src/main.ts",
@@ -466,54 +465,6 @@
     },
     {
       "configIndex": 26,
-      "id": "uat-test-policy",
-      "classification": "specialization",
-      "files": ["apps/web/uat-suite/**"],
-      "ignores": [],
-      "positive": "apps/web/uat-suite/inventory.mjs",
-      "negative": "apps/web/src/shared/lib/trpc/trpc.ts",
-      "marker": {
-        "kind": "rule",
-        "name": "max-lines",
-        "positive": "off",
-        "negative": "error"
-      },
-      "evidence": "UAT is acceptance tooling and carries no production structural budgets; maintained web source retains the strict floor."
-    },
-    {
-      "configIndex": 27,
-      "id": "e2e-test-policy",
-      "classification": "specialization",
-      "files": ["e2e/**"],
-      "ignores": [],
-      "positive": "e2e/acceptance/tests/smoke-lifecycle.spec.ts",
-      "negative": "apps/web/src/shared/lib/trpc/trpc.ts",
-      "marker": {
-        "kind": "rule",
-        "name": "max-lines",
-        "positive": "off",
-        "negative": "error"
-      },
-      "evidence": "Playwright helpers and scenarios carry no production structural budgets; maintained web source retains the strict floor."
-    },
-    {
-      "configIndex": 28,
-      "id": "playwright-fixture-use",
-      "classification": "specialization",
-      "files": ["e2e/**/*.ts"],
-      "ignores": [],
-      "positive": "e2e/integration/fixtures.ts",
-      "negative": "apps/web/src/features/report-pages/ui/lead/shell/lead-form.tsx",
-      "marker": {
-        "kind": "rule",
-        "name": "react-hooks/rules-of-hooks",
-        "positive": "off",
-        "negative": "error"
-      },
-      "evidence": "Playwright names its provider callback use; React Hooks otherwise mistakes the fixture contract for a hook."
-    },
-    {
-      "configIndex": 29,
       "id": "maintained-product-structure",
       "classification": "enforcement",
       "files": [

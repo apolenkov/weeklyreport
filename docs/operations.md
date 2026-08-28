@@ -179,7 +179,7 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.github/workflows/ci.yml` runs lint + typecheck + unit tests, the integration
-E2E suite, a `prisma migrate reset` drift gate, and a production image build.
+`.github/workflows/ci.yml` runs lint + typecheck + unit tests, a
+`prisma migrate reset` drift gate, and a production image build.
 Local hooks (`.husky/pre-commit`, `.husky/pre-push`) remain the fast gate;
 `SKIP_PREPUSH=1` bypasses the slow one when you know why you are doing it.
