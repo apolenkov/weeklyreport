@@ -2,6 +2,7 @@ import { weeklyReportGetResponseSchema } from "@customreport/shared";
 import { expect, test } from "@playwright/test";
 
 import { decodeTrpcBatchPayload } from "../../apps/web/src/shared/server/transport/api-url";
+import { settleNavigation } from "../helpers/navigation";
 import { ACTIVE_REPORT_ID, SEED_EMAILS } from "../integration/helpers/seed-ids";
 import { performAndWaitForTrpcMutation } from "../integration/helpers/trpc-response";
 import { loginByCookie } from "../sweep/helpers/dev-auth";
@@ -14,8 +15,9 @@ test("lead write -> head publish -> viewer read, with admin landing", async ({
   await loginByCookie(page, {
     role: "lead",
     email: SEED_EMAILS.olga,
+    redirect: "/lead/report",
   });
-  await page.goto("/lead/report");
+  await settleNavigation(page);
 
   const editItem = page.getByRole("button", { name: /^Edit$/u }).first();
   await expect(editItem).toBeVisible({ timeout: 15_000 });
@@ -53,8 +55,11 @@ test("lead write -> head publish -> viewer read, with admin landing", async ({
   );
   await expect(submit).toHaveCount(0);
 
-  await loginByCookie(page, { role: "head" });
-  await page.goto(`/head/report/${ACTIVE_REPORT_ID}`);
+  await loginByCookie(page, {
+    role: "head",
+    redirect: `/head/report/${ACTIVE_REPORT_ID}`,
+  });
+  await settleNavigation(page);
   const publish = page.getByRole("button", { name: /publish.*lock/iu });
   await expect(publish).toBeVisible({ timeout: 15_000 });
   await performAndWaitForTrpcMutation(
@@ -70,14 +75,17 @@ test("lead write -> head publish -> viewer read, with admin landing", async ({
     { procedure: /publish/iu },
   );
 
-  await loginByCookie(page, { role: "admin" });
-  await page.goto("/admin");
+  await loginByCookie(page, { role: "admin", redirect: "/admin" });
+  await settleNavigation(page);
   await expect(page.getByRole("heading", { name: "Admin Panel" })).toBeVisible({
     timeout: 15_000,
   });
 
-  await loginByCookie(page, { role: "viewer" });
-  await page.goto(`/reports/${ACTIVE_REPORT_ID}`);
+  await loginByCookie(page, {
+    role: "viewer",
+    redirect: `/reports/${ACTIVE_REPORT_ID}`,
+  });
+  await settleNavigation(page);
   await expect(
     page.getByRole("heading", { name: "Status Report" }),
   ).toBeVisible({ timeout: 15_000 });
