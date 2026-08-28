@@ -14,10 +14,7 @@ import {
   type AnalyticsCachePort,
   AnalyticsPrismaRepository,
 } from "../../analytics/test-seams/index.js";
-import {
-  NoopIngestionQueue,
-  PublicationService,
-} from "../application/publication.service.js";
+import { PublicationService } from "../application/publication.service.js";
 import { PublicationPrismaRepository } from "./publication.prisma-repository.js";
 
 interface InvalidatableCache extends AnalyticsCachePort {
@@ -68,7 +65,6 @@ describe("PublicationService analytics invalidation (integration)", () => {
     const publication = new PublicationService(
       new PublicationPrismaRepository(prisma as never),
       createNullLogger(),
-      new NoopIngestionQueue(createNullLogger(), "test"),
       () => cache.invalidateAll(),
     );
     const session: UserSession = {

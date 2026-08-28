@@ -72,7 +72,6 @@ function createRepository(report: MockReport | null): PeriodRepository & {
     current && predicate(current) ? current.id : null;
 
   return {
-    listSectionIds: () => Promise.resolve([]),
     getReportById(id: string) {
       if (id !== current?.id) {
         return Promise.resolve(null);

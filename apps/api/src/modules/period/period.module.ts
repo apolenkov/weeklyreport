@@ -1,10 +1,5 @@
 import { Logger, Module } from "@nestjs/common";
 
-import {
-  ConfigModule,
-  ENV_CONFIG,
-} from "../../infrastructure/config/config.module.js";
-import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
@@ -47,7 +42,6 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
     AnalyticsModule,
     AdminModule,
     CarryOverModule,
-    ConfigModule,
     PublicationModule,
     WeeklyReportModule,
   ],
@@ -63,16 +57,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         admin: SnapshotAdminService,
         telemetry: PeriodTelemetry,
         logger: AppLogger,
-        env: EnvConfig,
       ) => {
-        // No AI ingestion collaborator is wired; production must not silently
-        // run on the loud-stub hook, so the manual publish path fails loud at
-        // composition until a real ingestion consumer is provided.
-        if (env.NODE_ENV === "production") {
-          throw new Error(
-            "Period publish-time ingestion is not wired; a real ingestion consumer is required in production (see TODO(ingestion-consumer)).",
-          );
-        }
         return new PeriodService(
           repo,
           () => cache.invalidateAll(),
@@ -86,13 +71,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
-          undefined,
           telemetry,
-          (error) => {
-            logger.warn("ingestion hook failed", {
-              error: error instanceof Error ? error.message : String(error),
-            });
-          },
           (error) => {
             logger.warn("publish side-effect failed", {
               error: error instanceof Error ? error.message : String(error),
@@ -106,7 +85,6 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         SnapshotAdminService,
         PERIOD_TELEMETRY,
         APP_LOGGER,
-        ENV_CONFIG,
       ],
     },
     // PolicyApplicatorService provided directly (depends only on PrismaService,

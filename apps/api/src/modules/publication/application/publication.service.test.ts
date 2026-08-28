@@ -16,7 +16,6 @@ import {
 import { PublicationPrometheusTelemetry } from "../infrastructure/publication-prometheus-telemetry.adapter.js";
 import {
   type AutoPublishResult,
-  NoopIngestionQueue,
   type PublicationRepository,
   PublicationService,
 } from "./publication.service";
@@ -26,7 +25,6 @@ import {
 /* ------------------------------------------------------------------ */
 
 const reportId = "22222222-2222-4222-8222-222222222222";
-const noopIngestionQueue = new NoopIngestionQueue(createNullLogger(), "test");
 const noopInvalidateAnalyticsCache = () => Promise.resolve();
 // Explicit publishAt from the domain boundary (the scheduler tick) — the
 // mapper must persist exactly this timestamp, never a freshly-minted Date.
@@ -196,7 +194,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -214,7 +211,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(null),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -261,7 +257,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
@@ -305,7 +300,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
@@ -324,7 +318,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
@@ -381,7 +374,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
@@ -440,7 +432,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(report),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
       const result = await service.getAssembledReport(reportId);
@@ -461,7 +452,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -479,7 +469,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -516,7 +505,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         repository,
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -539,7 +527,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         repository,
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
       );
 
@@ -560,7 +547,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         repository,
         createNullLogger(),
-        noopIngestionQueue,
         invalidateAnalyticsCache,
       );
 
@@ -576,7 +562,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         createRepository(assembledReport),
         createNullLogger(),
-        noopIngestionQueue,
         noopInvalidateAnalyticsCache,
         new PublicationPrometheusTelemetry(),
       );
@@ -606,9 +591,8 @@ describe("PublicationService", () => {
 
     // When the repo's CAS matches zero rows (period archived after selection),
     // publishAuto returns a skipped outcome and fires NONE of the publish
-    // success side-effects — no counter bump, no ingestion enqueue.
-    it("publishAuto skip: zero-row compare-and-set → no metrics, no ingestion", async () => {
-      const ingestion = vi.fn(() => Promise.resolve());
+    // success side-effects — no counter bump.
+    it("publishAuto skip: zero-row compare-and-set → no metrics", async () => {
       const repository: PublicationRepository = {
         ...createRepository(assembledReport),
         saveAutoPublishedReport() {
@@ -618,9 +602,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         repository,
         createNullLogger(),
-        {
-          enqueue: ingestion,
-        },
         noopInvalidateAnalyticsCache,
       );
       const submittedBefore = await getCounterValue(
@@ -635,7 +616,6 @@ describe("PublicationService", () => {
       const result = await service.publishAuto(reportId, publishAt);
 
       expect(result).toEqual({ published: false });
-      expect(ingestion).not.toHaveBeenCalled();
       expect(
         await getCounterValue(customreportReportsSubmittedTotal, {
           state: "published",
@@ -662,7 +642,6 @@ describe("PublicationService", () => {
       const service = new PublicationService(
         repository,
         createNullLogger(),
-        noopIngestionQueue,
         invalidateAnalyticsCache,
       );
 
@@ -670,72 +649,6 @@ describe("PublicationService", () => {
 
       expect(result).toEqual({ published: false });
       expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(0);
-    });
-
-    // Characterization pin: the shared side-effects module must call the
-    // ingestion enqueue with the just-published report's ids.
-    it("publishAuto enqueues ingestion with the published report's section ids", async () => {
-      const ingestion = vi.fn(() => Promise.resolve());
-      const service = new PublicationService(
-        createRepository(assembledReport),
-        createNullLogger(),
-        { enqueue: ingestion },
-        noopInvalidateAnalyticsCache,
-      );
-
-      const published = expectPublished(
-        await service.publishAuto(reportId, publishAt),
-      );
-
-      expect(ingestion).toHaveBeenCalledTimes(1);
-      expect(ingestion).toHaveBeenCalledWith(
-        published.sections.map((s) => s.reportSectionId),
-      );
-    });
-
-    // Characterization pin: publishAuto has never enqueued ingestion for a
-    // report with zero sections (the old inline enqueueIngestion guard).
-    it("publishAuto skips the ingestion hook when the published report has no sections", async () => {
-      const report = makeReport({ sections: [] });
-      const ingestion = vi.fn(() => Promise.resolve());
-      const service = new PublicationService(
-        createRepository(report),
-        createNullLogger(),
-        { enqueue: ingestion },
-        noopInvalidateAnalyticsCache,
-      );
-
-      await service.publishAuto(reportId, publishAt);
-
-      expect(ingestion).not.toHaveBeenCalled();
-    });
-
-    // Characterization pin: an ingestion-hook failure is logged, never
-    // rejected — the auto-publish still reports a published outcome.
-    it("publishAuto logs (and swallows) an ingestion hook failure", async () => {
-      const warn = vi.fn();
-      const logger = {
-        debug: () => undefined,
-        info: () => undefined,
-        warn,
-        error: () => undefined,
-        child: () => logger,
-      };
-      const ingestion = vi.fn(() => Promise.reject(new Error("queue down")));
-      const service = new PublicationService(
-        createRepository(assembledReport),
-        logger,
-        { enqueue: ingestion },
-        noopInvalidateAnalyticsCache,
-      );
-
-      const result = await service.publishAuto(reportId, publishAt);
-
-      expect(result.published).toBe(true);
-      expect(warn).toHaveBeenCalledWith(
-        "ingestion hook failed",
-        expect.objectContaining({ error: "queue down" }),
-      );
     });
   });
 });

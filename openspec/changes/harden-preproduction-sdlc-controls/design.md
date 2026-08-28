@@ -92,7 +92,8 @@ can replace it when GitHub teams and delegated ownership exist.
 1. Add policy files, SDLC documentation, workflow permissions, and checkout
    isolation.
 2. Add negative and positive configuration-gate tests.
-3. Run targeted tests, strict OpenSpec validation, full lint/typecheck/test/
-   build, and source-bound bounded route health plus the single lifecycle smoke.
+3. Run targeted tests, strict OpenSpec validation, and full
+   lint/typecheck/test/build. Bind the result to a clean source checkpoint;
+   browser evidence is optional and product-owned, not a maintained harness.
 4. Roll back by reverting the repository-only commit; no database, deployment,
    secret, or external GitHub setting is changed.

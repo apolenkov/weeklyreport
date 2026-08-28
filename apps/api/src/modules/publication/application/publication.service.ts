@@ -6,10 +6,7 @@ import {
 } from "@customreport/shared";
 
 import type { AppLogger } from "../../../lib/logger";
-import {
-  emitPublishSideEffects,
-  type IngestionPublishHook,
-} from "../../period/index.js";
+import { emitPublishSideEffects } from "../../period/index.js";
 import {
   NOOP_PUBLICATION_TELEMETRY,
   type PublicationTelemetry,
@@ -47,34 +44,6 @@ export interface PublicationRepository {
 // DI token binding the PublicationRepository port to its adapter at the module
 // boundary — the service depends on the port, not the concrete prisma class.
 export const PUBLICATION_REPOSITORY = Symbol("PublicationRepository");
-
-export interface PublicationIngestionQueue {
-  enqueue: IngestionPublishHook;
-}
-
-// Explicit dev-only no-op: publication-time ingestion is deferred, so this seam
-// must never be silent. Every enqueue logs a loud warning, and production
-// composition refuses to wire it until a real queue consumer is supplied.
-export class NoopIngestionQueue implements PublicationIngestionQueue {
-  constructor(
-    private readonly logger: AppLogger,
-    nodeEnv: string,
-  ) {
-    if (nodeEnv === "production") {
-      throw new Error(
-        "Publication-time ingestion is not wired; a real ingestion consumer is required in production (see TODO(ingestion-consumer)).",
-      );
-    }
-  }
-
-  enqueue(sectionIds: readonly string[]): Promise<void> {
-    this.logger.warn(
-      "ingestion is a no-op: no queue consumer wired; publication-time ingestion skipped",
-      { sectionIds: sectionIds.length },
-    );
-    return Promise.resolve();
-  }
-}
 
 function compareSections(
   left: ReportSectionReadModel,
@@ -136,7 +105,6 @@ export class PublicationService {
   constructor(
     private readonly repository: PublicationRepository,
     private readonly logger: AppLogger,
-    private readonly ingestionQueue: PublicationIngestionQueue,
     private readonly invalidateAnalyticsCache: () => Promise<void>,
     private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
   ) {}
@@ -179,8 +147,8 @@ export class PublicationService {
 
     if (!result.published) {
       // Compare-and-set matched zero rows: the period was archived (or already
-      // published) after candidate selection. Expected no-op — emit no metrics,
-      // invalidate no cache, and enqueue no ingestion.
+      // published) after candidate selection. Expected no-op — emit no metrics
+      // and invalidate no cache.
       this.logger.info("auto-publish skipped: archived after selection", {
         activeReportId,
       });
@@ -193,25 +161,15 @@ export class PublicationService {
     await emitPublishSideEffects(
       {
         telemetry: this.telemetry,
-        ingestionHook: (sectionIds) => this.ingestionQueue.enqueue(sectionIds),
         invalidateAnalyticsCache: this.invalidateAnalyticsCache,
         onSideEffectError: (error) => {
           this.logger.warn("publish side-effect failed", {
             error: error instanceof Error ? error.message : String(error),
           });
         },
-        onIngestionError: (error) => {
-          this.logger.warn("ingestion hook failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        },
-        // Skip ingestion when the report has zero sections.
-        skipIngestionWhenEmpty: true,
       },
       {
         priorStatus: "open",
-        getSectionIds: () =>
-          result.report.sections.map((s) => s.reportSectionId),
       },
     );
     return {

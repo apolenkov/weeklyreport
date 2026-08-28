@@ -9,10 +9,7 @@ import {
   NOOP_PERIOD_TELEMETRY,
   type PeriodTelemetry,
 } from "./period-telemetry.port.js";
-import {
-  emitPublishSideEffects,
-  type IngestionPublishHook,
-} from "./publish-side-effects.js";
+import { emitPublishSideEffects } from "./publish-side-effects.js";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {
@@ -56,7 +53,7 @@ export interface PeriodRepository {
     archived: boolean;
   } | null>;
   // Guarded compare-and-set keyed on `periodStatus != "published" AND
-  // archived = false`, so telemetry and ingestion run at most once per real
+  // archived = false`, so post-publish side effects run once per real
   // transition; PublishPeriodOutcome carries the zero-row split.
   publishPeriod(
     reportId: string,
@@ -72,9 +69,6 @@ export interface PeriodRepository {
   // active-reopen guard reads it so a head cannot hold two reopened periods
   // at once (which would let them walk back through history).
   getReopenedNonArchivedId(): Promise<string | null>;
-  // Section ids tied to a report, read by the post-publish ingestion seam so
-  // a future async consumer can enqueue per-section work after publishing.
-  listSectionIds(reportId: string): Promise<string[]>;
 }
 
 // DI token binding the PeriodRepository port to its adapter at the module
@@ -109,15 +103,7 @@ export class PeriodService {
     // Reopen-policy gate reader. Required — production wiring is done in
     // period.module.ts; the gate is always enforced.
     private readonly readReopenPolicy: ReopenPolicyReader,
-    // Called with the just-published period's section ids on every successful
-    // publish. The loud stub keeps a missing consumer observable instead of
-    // silently skipping ingestion (see TODO(ingestion-consumer)).
-    private readonly ingestionHook: IngestionPublishHook = () => {
-      throw new Error("Not implemented — see TODO(ingestion-consumer)");
-    },
     private readonly telemetry: PeriodTelemetry = NOOP_PERIOD_TELEMETRY,
-    private readonly onIngestionError: (error: unknown) => void = () =>
-      undefined,
     private readonly onSideEffectError: (error: unknown) => void = () =>
       undefined,
   ) {}
@@ -168,16 +154,11 @@ export class PeriodService {
     await emitPublishSideEffects(
       {
         telemetry: this.telemetry,
-        ingestionHook: this.ingestionHook,
         invalidateAnalyticsCache: this.invalidateAnalyticsCache,
-        onIngestionError: this.onIngestionError,
         onSideEffectError: this.onSideEffectError,
       },
       {
         priorStatus,
-        // Read AFTER the publish transaction so sections that raced into the
-        // period before commit are still picked up.
-        getSectionIds: () => this.repository.listSectionIds(reportId),
       },
     );
 
