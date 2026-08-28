@@ -35,7 +35,6 @@ void describe("classifyExemplaryFile", () => {
 
   void it("classifies tooling and configuration roots explicitly", () => {
     assert.equal(classifyExemplaryFile("scripts/check.ts"), "tooling");
-    assert.equal(classifyExemplaryFile("e2e/integration/flow.ts"), "tooling");
     assert.equal(classifyExemplaryFile("vitest.config.ts"), "config");
     assert.equal(classifyExemplaryFile("eslint-config/jsdoc.ts"), "config");
     assert.equal(classifyExemplaryFile("apps/api/src/config.ts"), "product");

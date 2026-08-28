@@ -22,11 +22,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "recharts"],
   },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  // Allow E2E to spawn a parallel dev server alongside the user's
-  // running dev process. Next.js 16 has a sibling-process guard that
-  // matches by repo dir (not port), so the E2E webServer must use a
-  // distinct .next dir to satisfy it. NEXT_DIST_DIR is set by
-  // playwright.config.ts.
+  // Docker development keeps its build output separate from native Next.js.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   turbopack: {
     root: resolve(__dirname, "../.."),

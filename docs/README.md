@@ -18,8 +18,7 @@ pre-commit guard enforces this; the policy lives in `AGENTS.md`.
 | `reviews/`                                    | Consolidated review reports that still drive open work; superseded reports move to the archive.  |
 | `ui-atlas/`                                   | Visual baseline: capture manifest, console baseline, role screenshots.                           |
 
-The executable test-contour guide lives in [`../e2e/README.md`](../e2e/README.md):
-it documents focused E2E suites, bounded WeeklyReport browser acceptance, the
-exact disposable-database boundary, budgets, and cleanup evidence.
+Product tests are colocated with the code they verify. The disposable-database
+boundary remains documented in `AGENTS.md` and `docs/onboarding.md`.
 
 Anything moved to the archive stays in git history; `git log --follow` finds it.

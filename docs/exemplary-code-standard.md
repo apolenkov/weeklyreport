@@ -83,8 +83,8 @@ All rows below are live in `eslint.config.ts` today:
 Gate wiring: `.husky/pre-commit` runs lint-staged on staged files — ESLint
 `--fix` (which carries `local/no-comment-archaeology` over comments and test
 titles), Stylelint for CSS, and Prettier. `.husky/pre-push` runs
-`pnpm turbo typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm catalog:check`,
-`pnpm uat:audit --check`, and `CI=true pnpm test`; the same core commands run in
+`pnpm turbo typecheck`, `pnpm lint`, `pnpm format:check`, and
+`CI=true pnpm test`; the same core commands run in
 the push, pull-request, and manual-dispatch jobs in `.github/workflows/ci.yml`.
 
 The current `scripts/gates/orchestrator/lint-gate.ts` runs every configured

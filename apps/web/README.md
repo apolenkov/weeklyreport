@@ -31,10 +31,8 @@ Next.js rewrites in `next.config.ts` proxy `/trpc/*` and `/auth/*` to the API se
 NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev
 ```
 
-## E2E Testing
+## Testing
 
 ```bash
-# Requires API + DB running
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-  pnpm exec playwright test    # 85 tests (journeys, visual, a11y, responsive)
+pnpm test
 ```

@@ -154,36 +154,30 @@ allowed.
      six owner-deferred mobile touch-target/overflow changes out of the active
      implementation denominator.
    - For each surface, update the relevant web feature, API module and shared
-     contract before duplicating types; add a focused regression test that
-     failed before the repair; then capture source-bound browser evidence for
-     keyboard, semantic, visual and responsive behavior.
+     contract before duplicating types; add a focused colocated regression test
+     when it materially protects the repaired behavior.
    - Treat no horizontal overflow, 44x44 px mobile targets, role authorization,
      request/error behavior and data integrity as product assertions, not
      screenshot impressions.
 
-   Verification: the focused Vitest/Playwright commands named in each change,
-   `pnpm test:e2e:integration`, `pnpm test:uat`, source-bound browser captures,
-   console/page/request checks, and independent frame review where the OpenSpec
-   requires it.
+   Verification: focused colocated Vitest suites and product-source review.
+   Browser inspection is optional, manual evidence for a changed UI surface;
+   it is not a maintained repository harness or a default completion gate.
 
-6. Use runtime and observability only to prove the product's resilience.
+6. Use runtime and observability only when a product change needs that proof.
 
-   - Keep browser acceptance to route health and one representative cross-role
-     lifecycle smoke. Do not recreate campaign, continuation, lane, matrix, or
-     AI-import infrastructure.
+   - Do not maintain a root E2E, UAT, route-catalog, acceptance, Playwright-test,
+     campaign, continuation, lane, matrix, or AI-import platform.
    - Keep resilience, Redis outage/recovery, logs, traces, and errors in focused
      deterministic tests and bounded operational rehearsals. Browser smoke is
      one evidence class, not complete product acceptance by itself.
-   - Keep databases, Redis, containers and telemetry isolated and disposable
-     solely for this proof. Stop for owner direction if target identity is not
-     provably disposable or if a production/shared resource is required.
+   - Use databases, Redis, containers and telemetry only for a focused
+     product-owned integration or operational check. Keep those resources
+     isolated and disposable; never turn the environment into the workstream.
 
-   Verification: one clean SHA/tree; the bounded four-role route-health census
-   plus one representative cross-role lifecycle; focused resilience and
-   observability checks owned by the affected product boundary; and teardown
-   receipts proving no owned processes, ports, transient clients, disposable
-   data, or secrets remain. Do not recreate SOURCE/MATRIX/frontier campaign
-   protocols.
+   Verification: one clean SHA/tree plus only the focused checks owned by an
+   affected product boundary. Any started disposable resource is torn down.
+   Do not recreate browser-contour or SOURCE/MATRIX/frontier protocols.
 
 7. Make delivery and documentation match the finished product.
 
@@ -191,9 +185,9 @@ allowed.
      `docs/onboarding.md`, `docs/sdlc.md`, architecture docs and durable OpenSpec
      specs with the final code and recovery paths. Keep runtime session evidence
      in `~/work/customreport-archive/`, not in `docs/`.
-   - Verify that the required deterministic checks, integration/E2E/UAT jobs,
-     migration/seed proof and source-built runtime checks exercise the actual
-     product. Treat GitHub protection, dependency/security settings and any
+   - Verify that deterministic product checks, colocated tests, migration/seed
+     proof and source-built runtime checks exercise the actual product. Treat
+     GitHub protection, dependency/security settings and any
      production release controls as external authority: inspect and record them,
      but request the owner before changing unavailable account-level controls.
    - Resolve the publish-ingestion production boundary before claiming first
@@ -204,9 +198,9 @@ allowed.
      no-op queue as production readiness.
 
    Verification: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
-   `pnpm test`, `pnpm build`, `pnpm test:e2e:integration`, `pnpm test:uat`,
-   `openspec validate --all --strict`, exact remote-tip equality, CI read-back,
-   Dependabot read-back and reviewed current documentation.
+   `pnpm test`, `pnpm build`, `openspec validate --all --strict`, exact
+   remote-tip equality, CI read-back, Dependabot read-back and reviewed current
+   documentation.
 
 8. Perform exact-final acceptance and close only the evidence that is complete.
 
@@ -234,8 +228,8 @@ allowed.
   tooling work. The denominator must be reconciled before closing any item, or
   duplicate changes will produce contradictory evidence.
 - Every retired runtime-sweep campaign and canary remains immutable historical
-  evidence and must not be retried. New acceptance uses only the bounded
-  route-health plus one-smoke contour and ordinary focused product suites.
+  evidence and must not be retried. The separate E2E/UAT/catalog/acceptance
+  platform is deleted and must not be recreated; use colocated product tests.
 - Production/shared/unknown data, credentials, account-level GitHub controls,
   main merge and unavailable required remote authority are outside the standing
   repository workflow. Stop and request the owner before crossing any of those

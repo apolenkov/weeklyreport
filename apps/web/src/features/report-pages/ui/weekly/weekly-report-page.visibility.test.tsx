@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { screen } from "@testing-library/react";
+import { screen, waitForElementToBeRemoved } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,6 +34,12 @@ describe("WeeklyReportPage visibility states", () => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
+
+  async function waitForReadyPage(): Promise<void> {
+    await waitForElementToBeRemoved(() =>
+      screen.queryByTestId("weekly-report-skeleton"),
+    );
+  }
 
   it("groups products under each lead for lead scope", async () => {
     renderWeeklyReportPage(makeWeeklyReportData("open"), {
@@ -139,7 +145,7 @@ describe("WeeklyReportPage visibility states", () => {
       },
       { authorId: AUTHOR_ID_A },
     );
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     expect(
       screen.queryByText("Draft task in progress"),
     ).not.toBeInTheDocument();
@@ -160,7 +166,7 @@ describe("WeeklyReportPage visibility states", () => {
     renderWeeklyReportPage(makeWeeklyReportData("published"), {
       role: "viewer",
     });
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     expect(
       screen.getByRole("button", { name: /export pdf/i }),
     ).toBeInTheDocument();

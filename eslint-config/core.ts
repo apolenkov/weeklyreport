@@ -19,17 +19,13 @@ export const coreConfig: Linter.Config[] = [
   globalIgnores([
     "**/node_modules/**",
     "**/dist/**",
-    // Any alternate Next dist dir (NEXT_DIST_DIR — e2e, sweep, ad-hoc source
-    // runs) is a build artifact, never lintable source.
+    // Any alternate Next dist dir is a build artifact, never lintable source.
     "**/.next*/**",
     // Codex/agent-council runtime artifacts are machine-local tools, not repo
     // source; linting them would make local assistant state a product gate.
     ".agents/**",
     "**/coverage/**",
     "**/.turbo/**",
-    // Playwright's HTML report ships minified vendor bundles; linting a
-    // generated artifact dir gates the repo on third-party build output.
-    "**/playwright-report/**",
     "**/prisma/generated/**",
     "openspec/**",
     // Workflow-harness scripts (the `Workflow` tool wraps these in an async
@@ -431,7 +427,6 @@ export const coreConfig: Linter.Config[] = [
       "apps/**/*.{ts,tsx,js,jsx,mjs}",
       "packages/**/*.{ts,tsx,js,jsx,mjs}",
       "prisma/**/*.{ts,tsx,js,jsx,mjs}",
-      "e2e/**/*.{ts,tsx,js,jsx,mjs}",
     ],
     plugins: { local: localPlugin },
     rules: { "local/no-comment-archaeology": "error" },

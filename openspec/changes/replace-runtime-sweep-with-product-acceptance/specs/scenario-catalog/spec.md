@@ -1,40 +1,49 @@
-## MODIFIED Requirements
+## REMOVED Requirements
+
+### Requirement: The catalog is anchored to the App Router route surface
+
+**Reason**: The route catalog duplicates product routes and OpenSpec requirements while creating a separate maintenance denominator.
+
+**Migration**: Use the App Router source as the route inventory and focused tests for behaviors that carry demonstrated risk.
+
+### Requirement: Every scenario has a machine-checkable outcome
+
+**Reason**: The scenario catalog is retired.
+
+**Migration**: Put machine-checkable outcomes directly in focused tests.
 
 ### Requirement: Every route has a reviewed behavioral intent
 
-Each catalog route MUST carry at least one reviewed intent with `id`, `given`, `when`, and `then` fields. The catalog intentionally carries no file, line, selector, or test-name links. Route changes are detected by the drift gate; focused deterministic tests own detailed behavior.
+**Reason**: OpenSpec owns durable behavior; a second per-route intent inventory is no longer maintained.
 
-#### Scenario: a route without an intent is rejected
+**Migration**: Record behavior in the owning OpenSpec capability and product implementation.
 
-- **WHEN** a catalog route has no intent entry or omits a required behavioral field
-- **THEN** catalog checking rejects it instead of treating the route as covered
+### Requirement: A drift gate keeps the route catalog honest
 
-### Requirement: Catalog role tokens are validated against the canonical role set
+**Reason**: The catalog and its drift gate are deleted together.
 
-Every `role:` and `access:` token read from `e2e/catalog/*.yaml` MUST be validated against `lead`, `head`, `admin`, and `viewer`. The shared parser is consumed by catalog checking, the optional human checklist, and acceptance route health; it MUST reject an unrecognized token before navigation.
-
-#### Scenario: an unrecognized role token fails the parse
-
-- **WHEN** a catalog role or access list contains a token outside the canonical set
-- **THEN** the parser names and rejects the token
-- **AND** catalog checking, the checklist, and route health all surface the failure
-
-## ADDED Requirements
+**Migration**: New routes follow ordinary product review and directly relevant tests.
 
 ### Requirement: Execution is route health plus one bounded smoke lifecycle
 
-The catalog MUST drive four-role route health for every reachable catalog route. The blocking browser contour MUST add only one representative cross-role lifecycle; other product intents remain in focused tests or optional human review. No BDD runner or exhaustive interaction compiler may be introduced.
+**Reason**: Route health and combined acceptance are retired by owner direction.
 
-#### Scenario: A role-reachable route is checked
+**Migration**: Run the one basic smoke when integration or release verification is required.
 
-- **WHEN** `pnpm test:uat` or combined acceptance runs route health
-- **THEN** every role catalog route is visited with deterministic identifiers
-- **AND** HTTP, console, page, network, and axe anomalies are recorded before verdict
+### Requirement: The catalog is documentation, not a new test runner
 
-## REMOVED Requirements
+**Reason**: The catalog became test-runner input despite this boundary and is removed.
 
-### Requirement: Execution is route sweep plus within-route Driver exploration
+**Migration**: OpenSpec and focused tests remain the only durable behavior and executable regression sources.
 
-**Reason**: The mandatory Driver and its exhaustive within-route exploration were retired.
+### Requirement: Catalog role tokens are validated against the canonical role set
 
-**Migration**: Use catalog-driven route health, one lifecycle smoke, and focused deterministic tests.
+**Reason**: No catalog consumer remains.
+
+**Migration**: Canonical role schemas and middleware builders continue to validate product authorization.
+
+### Requirement: Catalog intent prose cannot invent product or data behavior
+
+**Reason**: Deleting generated catalog prose removes this duplicate product-definition path.
+
+**Migration**: Product and data behavior requires accepted OpenSpec and implementation evidence.

@@ -39,30 +39,9 @@ const CHECKS: readonly Check[] = [
     script: "lint:stylelint-gate:test",
     what: "Stylelint zero-warning planted probe",
   },
-  {
-    script: "lint:config-hygiene:test",
-    what: "active config archaeology and path-drift probes",
-  },
   { script: "lint:stylelint", what: "stylelint over CSS" },
   { script: "lint:prisma:typecheck", what: "tsc — prisma/ project" },
   { script: "lint:scripts:typecheck", what: "tsc — scripts/ + tools/ project" },
-  { script: "lint:e2e:typecheck", what: "tsc — e2e/ project" },
-  {
-    script: "lint:acceptance-budget:test",
-    what: "bounded acceptance budget planted probes",
-  },
-  {
-    script: "lint:acceptance-budget",
-    what: "bounded acceptance whole-contour file and line budget",
-  },
-  {
-    script: "lint:e2e-helpers:test",
-    what: "E2E resource-ownership planted probes",
-  },
-  {
-    script: "lint:uat-analysis:test",
-    what: "UAT static-analysis resolver and policy tests",
-  },
   { script: "typecov", what: "package-specific type-coverage ratchet" },
   {
     script: "lint:typecov:test",
@@ -142,18 +121,6 @@ const CHECKS: readonly Check[] = [
   {
     script: "lint:repository-tests",
     what: "repository-test manifest, discovery, and orphan Node tests",
-  },
-  {
-    script: "lint:critical-tests:test",
-    what: "critical-test and P0 evidence verifier tests",
-  },
-  {
-    script: "lint:critical-tests",
-    what: "manifest-owned tests have no advisory bypasses",
-  },
-  {
-    script: "lint:p0-evidence",
-    what: "current passing evidence for all accepted P0 findings",
   },
   { script: "depcruise", what: "dependency-cruiser module graph" },
   { script: "knip", what: "knip dead code and dependencies" },

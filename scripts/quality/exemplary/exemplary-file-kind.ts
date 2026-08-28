@@ -26,7 +26,7 @@ const TEST_SUFFIXES = [
   ".spec.ts",
   ".spec.tsx",
 ] as const;
-const TOOLING_PREFIXES = ["scripts/", "tools/", "prisma/", "e2e/"] as const;
+const TOOLING_PREFIXES = ["scripts/", "tools/", "prisma/"] as const;
 const CONFIG_PREFIXES = ["eslint-config/"] as const;
 const SOURCE_EXTENSIONS = [
   ".ts",
@@ -82,9 +82,7 @@ const isFixtureSource = (file: string): boolean =>
 const isSeedSource = (file: string): boolean =>
   file === "prisma/seed.ts" ||
   file.startsWith("prisma/seeds/") ||
-  (file.startsWith("prisma/operations/") &&
-    sourceStem(file).includes(".seed")) ||
-  file.startsWith("e2e/seed-profiles/");
+  (file.startsWith("prisma/operations/") && sourceStem(file).includes(".seed"));
 
 export const exemplaryFileRoleMetadata: Readonly<
   Record<ExemplaryFileRoleId, RoleMetadata>

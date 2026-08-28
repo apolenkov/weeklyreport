@@ -94,21 +94,11 @@ web, чтобы заработала корреляция ошибок с тре
   лишних path-сегментов. Для каждой операции нужен отдельный
   `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; `ALLOW_PROD_DESTRUCTIVE`
   этот guard не обходит.
-- Ручные UAT/dev-операции также используют этот exact guard. Production restore
-  остаётся отдельным entrypoint и не меняется.
+- Локальные операции с одноразовой тестовой БД также используют этот exact
+  guard. Production restore остаётся отдельным entrypoint и не меняется.
 - Redis требует явный `REDIS_DB`: обычная разработка использует логическую DB
-  0, E2E — зарезервированную DB 15. E2E cleanup сначала выполняет `SELECT 15` и
-  только затем `FLUSHDB`; DB 0 не очищается.
-
-  Например, перед E2E reset/seed:
-
-  ```bash
-  NODE_ENV=test \
-  E2E_DATABASE_URL='postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e' \
-  DATABASE_URL='postgresql://customreport:localdev@127.0.0.1:5432/customreport_dev' \
-  PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
-  pnpm test:e2e:integration
-  ```
+  0, а одноразовые тестовые операции — зарезервированную DB 15. Очистка
+  сначала выполняет `SELECT 15` и только затем `FLUSHDB`; DB 0 не очищается.
 
 Подробные правила — в [`../AGENTS.md`](../AGENTS.md), разделы про disposable БД и
 Docker-базы.
@@ -173,12 +163,10 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 Типичный цикл: создать изменение → описать proposal/tasks/spec → реализовать по
 задачам → проверить → заархивировать (дельта вливается в `specs/`).
 
-Поведенческая проверка UI ограничена двумя слоями: `pnpm test:uat` проходит
-каталог маршрутов для четырёх ролей, а `pnpm test:acceptance:smoke` выполняет
-один сквозной жизненный цикл. `pnpm test:acceptance` запускает оба слоя. Это
-smoke-контур, а не исчерпывающий драйвер; подробные сценарии остаются в focused
-unit и E2E suites. Контракт и команды описаны в
-[`../e2e/README.md`](../e2e/README.md).
+Тесты живут рядом с продуктовым кодом. Корневой `pnpm test` запускает unit-тесты;
+интеграционные тесты API запускаются отдельно через
+`pnpm --filter @customreport/api test:integration`. Отдельной браузерной,
+каталожной или UAT-платформы в репозитории нет.
 
 ## 9. Отладка
 

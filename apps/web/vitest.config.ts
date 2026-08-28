@@ -19,9 +19,9 @@ const webConfig = defineConfig({
     // Restore every spy/mock to its original after each test so an installed
     // spy (e.g. a stderr silencer) never leaks into an unrelated test.
     restoreMocks: true,
-    exclude: ["e2e/**", "uat-suite/**", "node_modules/**"],
+    exclude: ["node_modules/**"],
     // Coverage floors. Web has more UI code than tests can drive without a
-    // full E2E layer, so the bar is lower than api.
+    // broad browser harness, so the bar is lower than api.
     coverage: {
       include: ["src/**/*.{ts,tsx}"],
       exclude: [

@@ -21,8 +21,5 @@
     // here would typecheck an import that fails at runtime.
     "paths": {}
   },
-  "include": ["scripts/**/*.ts", "tools/**/*.ts", "e2e/sweep/**/*.ts"],
-  // Playwright-loaded E2E code is typechecked by e2e/tsconfig.json. Only the
-  // plain-node catalogue entrypoints belong to this project.
-  "exclude": ["e2e/sweep/**/*.spec.ts", "e2e/sweep/helpers/**"]
+  "include": ["scripts/**/*.ts", "tools/**/*.ts"]
 }

@@ -10,7 +10,7 @@ unverified. A checked-in file is never proof that an external control is active.
 | Class      | Meaning                                                        | Example                                                    |
 | ---------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
 | Repository | A versioned file declares a control.                           | CI workflow, OpenSpec requirement, runbook.                |
-| Local      | A command ran against an exact commit and retained its result. | Lint, tests, build, bounded acceptance report.             |
+| Local      | A command ran against an exact commit and retained its result. | Lint, colocated tests, and build.                          |
 | External   | An authorized API or service confirms current state.           | Protected branch rule, deployment record, registry digest. |
 | Unverified | The control is unknown, unavailable, or blocked by access.     | An administrative API returns `403`.                       |
 
@@ -18,13 +18,11 @@ Reports MUST keep these classes separate. In particular, an active workflow is
 not the same thing as a required merge check, and a local backup is not an
 independent recovery copy.
 
-WeeklyReport browser acceptance is deliberately bounded: `pnpm test:uat`
-checks the four-role route catalog, `pnpm test:acceptance:smoke` runs one
-lead-write/head-publish/viewer-read lifecycle, and `pnpm test:acceptance` runs
-both. These commands require an exact guarded loopback E2E target. The
-`customreport_e2e` database name is a legacy technical identifier, not a second
-product name. Standard Playwright reports and the source-bound cleanup receipt
-are the acceptance evidence; retired runtime campaigns are not.
+WeeklyReport keeps verification adjacent to the product: unit tests live beside
+their modules, and API database integration tests live under `apps/api/src`.
+There is no separate browser/UAT/catalog acceptance platform. The
+`customreport_e2e` database name remains only as a legacy technical identifier
+for the guarded disposable test database; it is not a second product name.
 
 ## Lifecycle control map
 
@@ -32,7 +30,7 @@ are the acceptance evidence; retired runtime campaigns are not.
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Plan    | OpenSpec changes and durable specifications define non-trivial behavior.                                                                | Strict validation and traceable tasks.                                      | Production ownership, risk acceptance, and release boundary are named.                                                                 |
 | Build   | Node and pnpm are pinned; frozen lockfile and explicit build-script allowlists are used; runtime images and Actions are pinned.         | Reproducible install and production image build on an exact commit.         | Build once on a trusted hosted runner; retain immutable image digest.                                                                  |
-| Verify  | Lint, format, typecheck, unit, focused E2E, migration-reset, Docker build, route health, and lifecycle smoke exist.                     | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory focused suites and bounded acceptance pass on the release candidate.                  |
+| Verify  | Lint, format, typecheck, colocated unit/integration tests, migration reset, and Docker build exist.                                     | Exact commands, exit codes, source identity, failures, and artifacts.       | Stable required checks protect `main`; mandatory product suites pass on the release candidate.                                         |
 | Secure  | Dependabot covers npm, Docker, and Actions; a scheduled production-dependency audit runs; workflow tokens are read-only by declaration. | Workflow policy gate and audit results.                                     | Verify secret scanning, push protection, Dependabot security updates, CodeQL, dependency review, alert ownership, and incident access. |
 | Release | Tags exist, but there is no verified registry publication or GitHub release process.                                                    | No release claim is allowed yet.                                            | Publish one image digest, SBOM, signed provenance, migration list, and immutable release manifest.                                     |
 | Deploy  | Production Compose topology and a runbook exist; no production target exists.                                                           | Local rehearsal only, explicitly labelled.                                  | Protected staging/UAT/production environments promote the same verified digest with approvals and concurrency.                         |

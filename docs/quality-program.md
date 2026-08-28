@@ -21,8 +21,7 @@ verifiable in this repository (commands, configs, and specs are linked).
 - **Type coverage floors** per package: `packages/shared` 100%, `packages/ui`
   100%, `apps/api` 99.98%, and `apps/web` 99.8%.
 - **Hooks as the merge gate.** pre-commit: lint-staged; pre-push: typecheck,
-  full lint, format check, route-catalog drift gate, mutation-consumer audit,
-  full unit suite (~2100 tests: 1981 web + api suites).
+  full lint, format check, and the colocated unit suites.
 - **Spec-first workflow.** Behavior changes start as OpenSpec changes;
   146 requirement specs validate green (`openspec validate --specs`).
 
@@ -51,8 +50,9 @@ verifiable in this repository (commands, configs, and specs are linked).
   enforced by reference identity in a coverage test).
 - Destructive-operation guard for production databases; env config is
   fail-loud (required Zod schemas, no silent defaults).
-- E2E: Playwright integration suite + per-role route catalogs with a drift
-  gate — adding a route without a catalog scenario fails the push.
+- Product tests are colocated with their owning package. Test files keep
+  failure-prevention rules but do not inherit production structural,
+  complexity, or immutability budgets.
 
 ## Reading order (for a reviewer)
 

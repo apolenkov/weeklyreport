@@ -41,8 +41,10 @@ pnpm build              # turbo run build
   `PASS (0) FAIL (0)`, which hides the actual Vitest diagnostic.
 - If TS errors reference a known Prisma model (e.g. TS2339), run
   `pnpm --filter @customreport/api db:generate` — pnpm ops wipe the `.prisma` client.
-- E2E (Playwright, single-worker shared seed): `pnpm test:e2e:integration`.
-  Needs `E2E_DATABASE_URL` distinct from `DATABASE_URL`.
+- Product tests are colocated under each package. The root `pnpm test` runs the
+  unit suites; API database integration tests run with
+  `pnpm --filter @customreport/api test:integration` against an explicitly
+  guarded disposable database.
 
 ## Runtime
 
@@ -113,9 +115,7 @@ path must respect them and link the relevant `openspec/specs/` spec.
 ## Gates
 
 `.husky/pre-commit` runs lint-staged (eslint + stylelint + prettier on staged files).
-`.husky/pre-push` runs typecheck, the full lint gate, format check, catalog drift,
-mutation-consumer audit, and the full unit suite (skip with `SKIP_PREPUSH=1`).
+`.husky/pre-push` runs typecheck, the full lint gate, format check, and the full
+unit suite (skip with `SKIP_PREPUSH=1`).
 CI (`.github/workflows/ci.yml`) runs on every push to `main`, on pull requests,
 and on manual dispatch. Local hooks are the first gate, not the only one.
-Pushing a new app route trips the catalog-drift gate: add a scenario to
-`e2e/catalog/<role>.yaml` (or `EXCLUDED_ROUTES`) and re-run `pnpm catalog:check`.

@@ -29,7 +29,7 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `pre-commit` | `lint-staged`: strict ESLint and Prettier for staged TS/JS, Stylelint and Prettier for CSS, Prettier for JSON/Markdown/YAML | `git commit --no-verify`  |
 | `commit-msg` | `commitlint` on the subject line                                                                                            | `git commit --no-verify`  |
-| `pre-push`   | typecheck, full lint gate, format check, catalog drift, mutation-consumer audit, and the full unit suite                    | `SKIP_PREPUSH=1 git push` |
+| `pre-push`   | typecheck, full lint gate, format check, and the full unit suite                                                            | `SKIP_PREPUSH=1 git push` |
 
 The lint floor is zero warnings. Use hook bypasses only for an explicit recovery
 or diagnostic workflow; a bypass is not completion evidence.
@@ -41,26 +41,11 @@ Before relying on a push, verify the configured remote, authenticated private
 read access, the pushed commit, and the remote SHA. A successful local hook does
 not prove that GitHub accepted the update or ran CI.
 
-## Mutation Consumer Audit
-
-CI runs `pnpm uat:audit` on every push/PR. It catches the "tRPC mutation
-exists, fires a toast, but the row is never persisted / never displayed
-anywhere" pattern (see `.planning/INTERACTION-INVENTORY-2026-05-05.md`).
-
-If you intentionally add a cron-triggered or backend-only mutation, add
-it to `apps/web/uat-suite/mutation-audit.allowlist.json` with a one-line
-justification:
-
-```bash
-pnpm uat:audit:update    # adds the new black-hole entry with a TODO reason
-# then edit the file to replace TODO with the real justification
-```
-
 ## Common gotchas
 
-- **`pnpm test` requires a running Postgres** — for unit tests it's only
-  needed by integration specs (excluded from `pnpm test`); for `pnpm test:integration`
-  bring up `docker compose up -d postgres` first.
+- **`pnpm test` does not run database integration tests.** For the API's
+  colocated integration tests, start Postgres and run
+  `pnpm --filter @customreport/api test:integration`.
 - **`pnpm dev` starts both web (3000) + api (3002) in parallel** — if a
   port collides, kill both: `pkill -f 'turbo run dev'`.
 - **Prisma migrations on a fresh dev DB:** run

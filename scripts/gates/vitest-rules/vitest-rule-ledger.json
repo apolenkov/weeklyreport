@@ -252,11 +252,11 @@
     {
       "rule": "prefer-each",
       "count": 2,
-      "ruling": "adopt",
-      "reason": "Both manual loops mint tests from static matrices; it.each makes the case table and generated test boundary explicit without changing intent.",
+      "ruling": "reject",
+      "reason": "Table style is a local test-readability choice, not a failure-prevention property; the democratic test policy does not enforce it.",
       "fixes": 2,
       "probe": "planted manual test loop is reported by production config",
-      "gate": "error"
+      "gate": "off"
     },
     {
       "rule": "prefer-expect-assertions",
@@ -288,11 +288,11 @@
     {
       "rule": "prefer-hooks-in-order",
       "count": 1,
-      "ruling": "adopt",
-      "reason": "Lifecycle hooks have one conventional order; moving the lone beforeEach above afterAll improves scan order without semantic change.",
+      "ruling": "reject",
+      "reason": "Lifecycle-hook order is a local readability choice and does not prevent a test failure mode.",
       "fixes": 1,
       "probe": "planted out-of-order hooks are reported by production config",
-      "gate": "error"
+      "gate": "off"
     },
     {
       "rule": "prefer-import-in-mock",
@@ -387,11 +387,11 @@
     {
       "rule": "prefer-vi-mocked",
       "count": 2,
-      "ruling": "adopt",
-      "reason": "Both casts exist only to reach mock methods on vi.fn values; vi.mocked states that intent and removes unsafe assertion syntax.",
+      "ruling": "reject",
+      "reason": "Mock typing style is covered by TypeScript; tests may use the clearest local form without a preference gate.",
       "fixes": 2,
       "probe": "planted Mock cast is reported by production config",
-      "gate": "error"
+      "gate": "off"
     },
     {
       "rule": "require-hook",

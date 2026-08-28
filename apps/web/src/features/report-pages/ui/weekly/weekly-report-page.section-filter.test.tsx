@@ -2,7 +2,13 @@
 // Assert mutation variables, cache invalidation, and toast on success.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -225,6 +231,12 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     return document.getElementById(`report-product-${productId}`);
   }
 
+  async function waitForReadyPage(): Promise<void> {
+    await waitForElementToBeRemoved(() =>
+      screen.queryByTestId("weekly-report-skeleton"),
+    );
+  }
+
   it("defaults to submitted-only: a draft-only product is hidden until Show all reveals it", async () => {
     renderPage(
       makeWeeklyReportData("open", {
@@ -233,7 +245,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       }),
     );
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // Submitted product's accordion renders; the draft-only one does not.
     expect(accordionCard(PRODUCT_ID_A)).not.toBeNull();
@@ -271,7 +283,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       }),
     );
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     expect(accordionCard(PRODUCT_ID_B)).toBeNull();
 
     const draftCard = screen.getByRole("button", { name: /Product Beta/ });
@@ -308,7 +320,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       submissionCount: 0,
     });
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // The accordion is empty under submitted-only, but the period is NOT
     // content-less — so the signal shows, never the misleading empty-state.
@@ -358,7 +370,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       submissionCount: 0,
     });
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // The signal surfaces (not the misleading empty-state), and clicking
     // "Show all" reveals the activity-only draft section.
@@ -406,7 +418,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       "head",
     );
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // Published is never filtered: BOTH products' accordions render and the
     // toggle is absent.
@@ -439,7 +451,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       }),
     );
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // Only the draft carries activities, so under the submitted-only default
     // the strip self-suppresses — no draft status or note leaks.
@@ -494,7 +506,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       submissionCount: 1,
     });
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
 
     // The truly-empty-period empty-state must NOT show — there is real content.
     expect(
@@ -563,7 +575,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       "lead",
     );
 
-    await screen.findByRole("heading", { name: /status report/i });
+    await waitForReadyPage();
     expect(
       screen.queryByRole("group", { name: "Section filter" }),
     ).not.toBeInTheDocument();

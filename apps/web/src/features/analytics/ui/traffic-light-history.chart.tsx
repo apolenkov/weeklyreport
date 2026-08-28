@@ -7,23 +7,16 @@ import {
 } from "@customreport/ui/components/ui/chart";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 
-import { buildTrafficLightHistoryChartData } from "./analytics-chart-data";
+import {
+  buildTrafficLightHistoryChartData,
+  formatTrafficLightStatusLevel,
+} from "./analytics-chart-data";
 import { SERIES_PALETTE as COLORS } from "./chart-palette";
 
 // Domain max leaves headroom above green so the top line isn't clipped.
 const STATUS_LEVEL_GREEN = 3;
 const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
 const Y_AXIS_DOMAIN_MAX = 4;
-const STATUS_LEVEL_LABELS: Readonly<Record<number, string>> = {
-  1: "Red",
-  2: "Yellow",
-  [STATUS_LEVEL_GREEN]: "Green",
-};
-
-export function formatTrafficLightStatusLevel(value: number): string {
-  return STATUS_LEVEL_LABELS[value] ?? String(value);
-}
-
 function formatTrafficLightStatus(
   status: TrafficLightHistoryOutput["rows"][number]["statuses"][number],
 ): string {

@@ -5,13 +5,11 @@ import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   buildLeadVelocityChartData,
   buildTrafficLightHistoryChartData,
+  formatTrafficLightStatusLevel,
 } from "./analytics-chart-data";
 import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
-import {
-  formatTrafficLightStatusLevel,
-  TrafficLightHistoryChart,
-} from "./traffic-light-history.chart";
+import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {

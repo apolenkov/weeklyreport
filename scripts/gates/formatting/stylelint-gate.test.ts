@@ -37,8 +37,8 @@ void test("Stylelint exits nonzero when a configured warning fires", () => {
   assert.match(`${result.stdout}${result.stderr}`, /declaration-no-important/);
 });
 
-void test("Stylelint excludes generated Playwright report CSS", () => {
-  const fixture = resolve("playwright-report/stylelint-scope-probe/trace.css");
+void test("Stylelint excludes generated test-result CSS", () => {
+  const fixture = resolve("test-results/stylelint-scope-probe/trace.css");
   const [command, prefix] = pnpmCommand();
   try {
     mkdirSync(dirname(fixture), { recursive: true });
