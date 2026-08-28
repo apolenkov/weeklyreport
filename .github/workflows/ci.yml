@@ -128,6 +128,7 @@ jobs:
     env:
       # Compose requires all guarded values before it can render a build.
       DB_PASSWORD: ci-build-only
+      REDIS_DB: "0"
       FRONTEND_URL: http://localhost
       APP_BASE_URL: http://localhost
       NEXT_PUBLIC_API_URL: http://localhost
