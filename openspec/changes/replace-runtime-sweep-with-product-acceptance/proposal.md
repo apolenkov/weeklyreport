@@ -30,6 +30,8 @@ WeeklyReport needs trustworthy product acceptance, but the current exhaustive ru
 - `uat-quality-gates`: Replaces open-ended/runtime-sweep final acceptance with bounded smoke, existing deterministic suites, and standard Playwright evidence.
 - `scenario-catalog`: Makes the existing catalog the route-coverage source for the new contour without adding another execution framework.
 - `behavioral-ui-regression-gate`: Consolidates browser regression ownership under the bounded acceptance contour.
+- `ai-driver-coverage`: Retires mandatory AI-driven catalog coverage; human or model review becomes optional advisory input.
+- `driver-env-feedback`: Retires the unimplemented driver timeline and Bugsink/Loki collector contract.
 - `sweep-runtime-correctness`: Preserves runtime/accessibility correctness requirements while removing dependency on the retired exhaustive runtime system.
 - `directory-architecture-standard`: Removes runtime-sweep-specific structure and prevents a replacement test platform from regrowing without an explicit budget change.
 
