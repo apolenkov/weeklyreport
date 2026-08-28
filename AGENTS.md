@@ -2,8 +2,8 @@
 
 This file provides guidance to Codex when working with code in this repository.
 
-The global operating baseline (style, communication, working rules) lives in
-`~/.codex/AGENTS.md`. Keep this file limited to CustomReport-specific context.
+Global language and response-style preferences live in `~/.codex/AGENTS.md`.
+Keep this file limited to CustomReport-specific context.
 
 ## Project
 
