@@ -34,6 +34,7 @@ import {
 } from "../sweep/catalog-parser.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth";
 import { byName } from "../sweep/ordering.ts";
+import { isIgnoredRouteHealthConsoleMessage } from "./route-health-console.ts";
 
 type AnomalyKind = "console" | "pageerror" | "load" | "axe" | "network";
 interface Anomaly {
@@ -55,10 +56,6 @@ const REPORT_DIR = path.resolve(
   ".results",
   "route-health",
 );
-
-// Known-benign console noise that must NOT be reported as an anomaly.
-// Favicon 404s are expected under the sweep shell and are not product defects.
-const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
 
 /**
  * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
@@ -163,7 +160,7 @@ for (const catalog of catalogs) {
           return;
         }
         const text = msg.text();
-        if (IGNORED_CONSOLE.some((re) => re.test(text))) {
+        if (isIgnoredRouteHealthConsoleMessage(text)) {
           return;
         }
         anomalies.push({
