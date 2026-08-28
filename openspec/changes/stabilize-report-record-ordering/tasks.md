@@ -24,5 +24,5 @@ or acceptance requirements.
 
 - [x] 4.1 Run focused Vitest suites for the API include, seed identities, and continuation genesis, plus changed-file ESLint.
 - [x] 4.2 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`; record exact outcomes against the committed source.
-- [ ] 4.3 Reconcile the historical continuation-only evidence with `replace-runtime-sweep-with-product-acceptance`; verify strict OpenSpec validation passes and live source/config contains no dependency on the retired runtime platform without marking the historical canary as executed.
-- [ ] 4.4 Record focused product-ordering evidence, the latest bounded WeeklyReport smoke receipt, clean product-path digest parity, and `NOT_RUN_SUPERSEDED_BY_OWNER_DIRECTION` for the historical continuation canary in the external archive.
+- [x] 4.3 Reconcile the historical continuation-only evidence with `replace-runtime-sweep-with-product-acceptance`; verify strict OpenSpec validation passes and live source/config contains no dependency on the retired runtime platform without marking the historical canary as executed.
+- [x] 4.4 Record focused product-ordering evidence, the latest bounded WeeklyReport smoke receipt, clean product-path digest parity, and `NOT_RUN_SUPERSEDED_BY_OWNER_DIRECTION` for the historical continuation canary in the external archive.
