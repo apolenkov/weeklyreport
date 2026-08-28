@@ -5,10 +5,10 @@ WeeklyReport needs trustworthy product acceptance, but the current exhaustive ru
 ## What Changes
 
 - **BREAKING** Remove `e2e/runtime-sweep/`, all `test:runtime-*` commands, campaign supervisors, continuation/checkpoint protocols, custom evidence ledgers, lane orchestration, and AI report import.
-- Introduce one bounded `e2e/acceptance/` Playwright contour built from WeeklyReport user journeys and the existing route catalog.
+- Introduce one smoke-only `e2e/acceptance/` Playwright contour built from one representative WeeklyReport lifecycle and the existing route catalog.
 - Keep Vitest, focused integration E2E, seed-profile tests, production-build/CSP tests, and `e2e/sweep/`; reuse their proven helpers instead of creating another framework.
-- Cover all four roles and the critical lead, head, admin, viewer, PDF, authorization, accessibility, console/network, and cleanup outcomes.
-- Enforce hard complexity and duration budgets: at most 50 owned source files, at most 8,000 non-generated lines, 10-minute PR smoke, 30-minute full acceptance, and 2-minute teardown on the reference Mac.
+- Keep browser acceptance to basic role/route health plus one lead write -> head publish -> viewer read lifecycle with visible and persisted read-back assertions. Existing focused suites remain responsible for PDF, admin, detailed authorization, and edge-case coverage.
+- Enforce hard complexity and duration budgets: at most 25 owned source files, at most 4,000 non-generated lines, 10-minute smoke, 15-minute route-health-plus-smoke acceptance, and 2-minute teardown on the reference Mac.
 - Emit standard Playwright reports and failure artifacts only; bind release runs to Git SHA without custom hash chains or resumable campaigns.
 - Reconcile and supersede active tasks whose acceptance language requires the retired runtime sweep.
 
@@ -23,11 +23,11 @@ WeeklyReport needs trustworthy product acceptance, but the current exhaustive ru
 
 ### New Capabilities
 
-- `bounded-product-acceptance`: Defines the compact four-role WeeklyReport acceptance contour, budgets, evidence, ownership, and cleanup contract.
+- `bounded-product-acceptance`: Defines the compact WeeklyReport smoke contour, budgets, evidence, ownership, and cleanup contract.
 
 ### Modified Capabilities
 
-- `uat-quality-gates`: Replaces open-ended/runtime-sweep final acceptance with bounded product journeys and standard Playwright evidence.
+- `uat-quality-gates`: Replaces open-ended/runtime-sweep final acceptance with bounded smoke, existing deterministic suites, and standard Playwright evidence.
 - `scenario-catalog`: Makes the existing catalog the route-coverage source for the new contour without adding another execution framework.
 - `behavioral-ui-regression-gate`: Consolidates browser regression ownership under the bounded acceptance contour.
 - `sweep-runtime-correctness`: Preserves runtime/accessibility correctness requirements while removing dependency on the retired exhaustive runtime system.
