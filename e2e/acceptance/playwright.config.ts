@@ -81,7 +81,7 @@ export default defineConfig({
   projects: [
     {
       name: "route-health",
-      testMatch: "route-health.spec.ts",
+      testMatch: /route-health(?:-axe-detector)?\.spec\.ts$/u,
       use: { ...devices["Desktop Chrome"] },
     },
     {

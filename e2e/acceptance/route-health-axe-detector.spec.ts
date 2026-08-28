@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("the installed axe scanner detects planted low-contrast text", async ({
+test("the route-health axe scanner detects planted low-contrast text", async ({
   page,
 }) => {
   await page.setContent(`
