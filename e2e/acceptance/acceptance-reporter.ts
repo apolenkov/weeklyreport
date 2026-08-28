@@ -63,6 +63,8 @@ export default class AcceptanceReporter implements Reporter {
   }
 
   async onEnd(result: FullResult): Promise<{ status?: FullResult["status"] }> {
+    if (process.argv.includes("--list")) return {};
+
     const paths = lifecyclePathsFor(this.options.resultsRoot);
     const [source, teardown, listenersFree] = await Promise.all([
       readJson<SourceReceipt>(paths.source).catch(() => undefined),

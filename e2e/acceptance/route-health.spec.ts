@@ -3,9 +3,9 @@
  * and writes console, load, and a11y anomalies to per-role Markdown reports.
  * Each role report is preserved before any anomaly fails the test.
  *
- * This is the Layer-1 entry-point sweep ("does every role-reachable route load
- * cleanly?"). Within-route exhaustive exploration is the AI Driver's run-time
- * job, not this spec's.
+ * This is WeeklyReport's bounded route-health acceptance. Critical mutations
+ * live in the separate journey project; this file owns the complete route
+ * census without compiling catalog prose into another test language.
  *
  * See openspec/specs/behavioral-ui-regression-gate/spec.md + docs/adr/0001 +
  * e2e/catalog/README.md.
@@ -31,9 +31,9 @@ import {
   CANONICAL_ROLES,
   type Catalog,
   parseCatalog,
-} from "./catalog-parser.ts";
-import { loginByCookie } from "./helpers/dev-auth";
-import { byName } from "./ordering.ts";
+} from "../sweep/catalog-parser.ts";
+import { loginByCookie } from "../sweep/helpers/dev-auth";
+import { byName } from "../sweep/ordering.ts";
 
 type AnomalyKind = "console" | "pageerror" | "load" | "axe" | "network";
 interface Anomaly {
@@ -48,11 +48,14 @@ interface RouteResult {
   status?: number | null;
   anomalies: Anomaly[];
   warnings: string[];
-  skipped?: string;
 }
 
 const CATALOG_DIR = path.resolve(import.meta.dirname, "..", "catalog");
-const REPORT_DIR = path.resolve(import.meta.dirname, ".reports");
+const REPORT_DIR = path.resolve(
+  import.meta.dirname,
+  ".results",
+  "route-health",
+);
 
 // Known-benign console noise that must NOT be reported as an anomaly.
 // Favicon 404s are expected under the sweep shell and are not product defects.
@@ -62,8 +65,8 @@ const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
  * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
  * only ever see published reports; the `/reports/*` surface is the shared
  * published view; lead/head/admin land on the active report under `/lead/*`.
- * An unknown placeholder returns null so the walk records a skip-with-reason
- * instead of visiting a broken literal URL.
+ * Unknown placeholders fail route resolution so no catalog entry can be
+ * silently skipped.
  */
 function loadCatalogs(): Catalog[] {
   if (!fs.existsSync(CATALOG_DIR)) {
@@ -94,7 +97,7 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
     0,
   );
   const lines: string[] = [
-    `# UI sweep report — ${role}`,
+    `# WeeklyReport route-health — ${role}`,
     "",
     `Source catalog: \`e2e/catalog/${role}.yaml\` · blocking acceptance report.`,
     "",
@@ -105,10 +108,6 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
     lines.push(`## ${result.route}`);
     if (result.access && result.access.length > 0) {
       lines.push(`- access: ${result.access.join(", ")}`);
-    }
-    if (result.skipped) {
-      lines.push(`- skipped: ${result.skipped}`, "");
-      continue;
     }
     if (result.resolved) {
       lines.push(
@@ -134,7 +133,7 @@ function renderReport(role: DbRole, results: RouteResult[]): string {
 const catalogs = loadCatalogs();
 
 for (const catalog of catalogs) {
-  test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
+  test(`route-health: ${catalog.role}`, async ({ page }, testInfo) => {
     const results: RouteResult[] = [];
 
     // Report-only contract: a dev-auth login failure must NOT throw the test
@@ -269,7 +268,7 @@ for (const catalog of catalogs) {
       report,
       "utf8",
     );
-    await testInfo.attach(`sweep-${catalog.role}.md`, {
+    await testInfo.attach(`route-health-${catalog.role}.md`, {
       body: report,
       contentType: "text/markdown",
     });
@@ -279,11 +278,11 @@ for (const catalog of catalogs) {
       0,
     );
     testInfo.annotations.push({
-      type: "sweep",
+      type: "route-health",
       description: `${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes`,
     });
     console.log(
-      `[sweep] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes → e2e/sweep/.reports/${catalog.role}.md`,
+      `[route-health] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes`,
     );
     expect(totalAnomalies, report).toBe(0);
   });
