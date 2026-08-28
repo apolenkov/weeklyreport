@@ -1,9 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import { useContext } from "react";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { isHeadLike } from "../../../shared/lib/auth/role-predicates";
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
@@ -14,6 +16,28 @@ import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {
   readonly reportId: string;
+}
+
+function PublishStatusLoadError({
+  isRetrying,
+  onRetry,
+}: {
+  readonly isRetrying: boolean;
+  readonly onRetry: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Retry loading publish controls"
+      className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-transparent px-4 py-1.5 text-sm font-semibold text-[var(--color-destructive)] hover:bg-[var(--color-surface-hover)] disabled:cursor-wait disabled:opacity-60"
+      disabled={isRetrying}
+      onClick={onRetry}
+      title="Publish controls could not be loaded"
+    >
+      <RefreshCw aria-hidden="true" className="h-4 w-4" />
+      {isRetrying ? "Retrying…" : "Retry publish"}
+    </button>
+  );
 }
 
 // Publish and reopen flip the same period state, so both have to refresh the
@@ -34,6 +58,18 @@ function periodMutationCallbacks(
   };
 }
 
+function useWeeklyReportForPublish(reportId: string) {
+  const trpc = useTRPC();
+  const query = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+  useQueryErrorHandler(query, {
+    component: "HeadPublishLockAction",
+    context: { reportId },
+    event: "period.publish_controls.load_failed",
+    procedure: "weeklyReport.get",
+  });
+  return query;
+}
+
 export function HeadPublishLockAction({
   reportId,
 }: HeadPublishLockActionProps) {
@@ -43,7 +79,7 @@ export function HeadPublishLockAction({
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = isHeadLike(currentRole);
 
-  const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+  const weeklyQ = useWeeklyReportForPublish(reportId);
 
   const publishMut = useMutation(
     trpc.period.publish.mutationOptions(
@@ -64,6 +100,16 @@ export function HeadPublishLockAction({
   );
 
   if (!canMutatePeriod) return null;
+  if (weeklyQ.isError) {
+    return (
+      <PublishStatusLoadError
+        isRetrying={weeklyQ.isFetching}
+        onRetry={() => {
+          void weeklyQ.refetch().catch(() => undefined);
+        }}
+      />
+    );
+  }
   if (!weeklyQ.data || weeklyQ.data.status === "no-period") return null;
 
   const view = mapWeeklyReport(weeklyQ.data);

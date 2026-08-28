@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -43,14 +44,31 @@ vi.mock("./publish-lock-button", () => ({
 
 const pending = new Promise<never>(() => undefined);
 
+function makeBadRequestError(): TRPCClientError<never> {
+  const error = new TRPCClientError<never>("load failed");
+  Object.defineProperty(error, "data", {
+    configurable: true,
+    value: { code: "BAD_REQUEST", httpStatus: 400 },
+  });
+  return error;
+}
+
+function reportQueryFixture(input: unknown) {
+  const reportId = (input as { reportId: string }).reportId;
+  if (reportId === "report-a") {
+    return { status: "active", reportId: "report-a" };
+  }
+  if (reportId === "report-error") {
+    return Promise.reject(makeBadRequestError());
+  }
+  return pending;
+}
+
 function makeHarness() {
   const { proxy, captured } = createMockTRPC([
     {
       path: ["weeklyReport", "get"],
-      queryByInput: (input) =>
-        (input as { reportId: string }).reportId === "report-a"
-          ? { status: "active", reportId: "report-a" }
-          : pending,
+      queryByInput: reportQueryFixture,
     },
     { path: ["period", "publish"], mutation: true },
     { path: ["period", "reopen"], mutation: true },
@@ -142,6 +160,22 @@ async function mapsTransportFailure(): Promise<void> {
   expect(toast.error).toHaveBeenCalledWith("Failed to publish period");
 }
 
+async function exposesQueryRecovery(): Promise<void> {
+  const { Providers } = makeHarness();
+  render(<HeadPublishLockAction reportId="report-error" />, {
+    wrapper: Providers,
+  });
+
+  const retry = await screen.findByRole("button", {
+    name: "Retry loading publish controls",
+  });
+  expect(retry).toHaveTextContent("Retry publish");
+  expect(retry).toHaveAttribute(
+    "title",
+    "Publish controls could not be loaded",
+  );
+}
+
 describe("HeadPublishLockAction report-key transitions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -162,5 +196,9 @@ describe("HeadPublishLockAction report-key transitions", () => {
   it(
     "maps a transport failure to the publish-specific message",
     mapsTransportFailure,
+  );
+  it(
+    "keeps a visible recovery action after the report query fails",
+    exposesQueryRecovery,
   );
 });
