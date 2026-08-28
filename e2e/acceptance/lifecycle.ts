@@ -26,6 +26,7 @@ export interface TeardownReceipt {
   readonly clients: "NO_PERSISTENT_CLIENTS";
   readonly recordedAt: string;
   readonly sourceUnchanged: boolean;
+  readonly startedAt: string;
 }
 
 export interface AcceptanceResult {
@@ -167,6 +168,7 @@ export async function runAcceptanceTeardown(
   repoRoot: string,
   resultsRoot: string,
 ): Promise<TeardownReceipt> {
+  const startedAt = new Date().toISOString();
   const paths = lifecyclePathsFor(resultsRoot);
   const source = await readJson<SourceReceipt>(paths.source).catch(
     () => undefined,
@@ -177,12 +179,14 @@ export async function runAcceptanceTeardown(
     recordedAt: new Date().toISOString(),
     sourceUnchanged:
       source?.sha === current.sha && source.tree === current.tree,
+    startedAt,
   } as const;
   await writeJson(paths.teardown, receipt);
   return receipt;
 }
 
 export function acceptanceResultFor(input: {
+  readonly budgetValid: boolean;
   readonly listenersFree: boolean;
   readonly ownedFilesRemoved: boolean;
   readonly playwrightStatus: AcceptanceResult["playwrightStatus"];
@@ -198,6 +202,7 @@ export function acceptanceResultFor(input: {
     overallStatus:
       input.playwrightStatus === "passed" &&
       input.setupStatus === "PASS" &&
+      input.budgetValid &&
       cleanupStatus === "PASS"
         ? "PASS"
         : "FAIL_NOT_PROVEN",

@@ -65,9 +65,8 @@ jobs:
         run: pnpm turbo typecheck
 
       # This matches pre-push and includes the root Prisma-script suite that a
-      # bare `turbo test` omits.
-      # The root test also runs the runtime Playwright harness, so the browser
-      # must be installed in this job rather than relying on the later E2E job.
+      # bare `turbo test` omits. The root suite also proves the bounded
+      # route-health axe detector, so Chromium is required in this job.
       - name: Install Playwright browsers
         run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
 
@@ -193,13 +192,26 @@ jobs:
           PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
         run: pnpm test:e2e:integration
 
+      - name: Run bounded product acceptance
+        env:
+          E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+        run: pnpm test:acceptance
+
+      - name: Verify bounded acceptance receipt
+        run: >-
+          pnpm lint:acceptance-budget --require-receipt
+          --receipt e2e/acceptance/.results/acceptance-result.json
+
       # The GitHub reporter writes traces, screenshots, and videos here.
       - name: Upload Playwright failure artifacts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-artifacts
-          path: e2e/integration/.results/
+          path: |
+            e2e/integration/.results/
+            e2e/acceptance/.results/
           retention-days: 14
 
   # A clean rebuild catches schema/migration drift that deploy cannot detect.

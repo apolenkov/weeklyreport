@@ -3,11 +3,11 @@
 This file provides guidance to Codex when working with code in this repository.
 
 Global language and response-style preferences live in `~/.codex/AGENTS.md`.
-Keep this file limited to CustomReport-specific context.
+Keep this file limited to WeeklyReport-specific context.
 
 ## Project
 
-CustomReport automates weekly status reports for a software department.
+WeeklyReport automates weekly status reports for a software department.
 Leads fill structured report sections independently; the head reviews,
 publishes, and exports a unified report. pnpm + Turbo monorepo:
 

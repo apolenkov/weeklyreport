@@ -18,6 +18,14 @@ Reports MUST keep these classes separate. In particular, an active workflow is
 not the same thing as a required merge check, and a local backup is not an
 independent recovery copy.
 
+WeeklyReport browser acceptance is deliberately bounded: `pnpm test:uat`
+checks the four-role route catalog, `pnpm test:acceptance:smoke` runs one
+lead-write/head-publish/viewer-read lifecycle, and `pnpm test:acceptance` runs
+both. These commands require an exact guarded loopback E2E target. The
+`customreport_e2e` database name is a legacy technical identifier, not a second
+product name. Standard Playwright reports and the source-bound cleanup receipt
+are the acceptance evidence; retired runtime campaigns are not.
+
 ## Lifecycle control map
 
 | Stage   | Present control                                                                                                                         | Acceptance evidence now                                                     | First-production prerequisite                                                                                                          |

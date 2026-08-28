@@ -29,6 +29,8 @@
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",
     "lint:scripts:typecheck": "tsc --project tsconfig.scripts.json --noEmit",
     "lint:e2e:typecheck": "tsc --project e2e/tsconfig.json --noEmit",
+    "lint:acceptance-budget:test": "vitest run --config vitest.prisma.config.ts e2e/acceptance/budget-gate.test.ts",
+    "lint:acceptance-budget": "node e2e/acceptance/budget-gate.ts",
     "lint:e2e-helpers:test": "node --test e2e/integration/helpers/owned-resource.test.ts e2e/integration/helpers/trpc-response.test.ts",
     "lint:uat-analysis:test": "node --test apps/web/uat-suite/expression-resolver.test.mjs apps/web/uat-suite/mutation-allowlist.test.mjs apps/web/uat-suite/read-back-analysis.test.mjs apps/web/uat-suite/trpc-procedures.test.mjs",
     "lint:ssot-gate:test": "node --test scripts/gates/status-ssot/status-ssot-gate.test.ts",

@@ -2,18 +2,12 @@
 
 ### Requirement: Auxiliary repository roots MUST use deterministic concern ownership
 
-Every maintained file under `scripts/`, `e2e/runtime-sweep/`, and `prisma/`
-MUST have exactly one owner in a checked ownership catalogue. Its home MUST be a
+Every maintained file under `scripts/` and `prisma/` MUST have exactly one
+owner in a checked ownership catalogue. Its home MUST be a
 deterministic function of concern first and role second. Executable entrypoints,
 implementation, tests, and owned baseline/ledger data MUST remain inside the
 owning concern boundary; a generic flat root or generic repository-wide `data/`
 bucket MUST NOT be used as an ownership substitute.
-
-#### Scenario: A runtime matrix compiler is catalogued
-
-- **WHEN** a source file compiles or validates runtime matrix rows
-- **THEN** its catalogue owner is the runtime-sweep matrix concern
-- **AND** it resides below `e2e/runtime-sweep/matrix/`, not the harness root or an unrelated evidence directory
 
 #### Scenario: An ownership map is incomplete
 
@@ -41,20 +35,6 @@ count elsewhere in the same concern.
 - **WHEN** an intentionally flat module is listed with a baseline of N direct files
 - **THEN** the gate accepts a current count at or below N
 - **AND** rejects N+1 until the module is split or the durable architecture decision is explicitly changed
-
-### Requirement: Runtime-sweep sources MUST be grouped behind stable evidence contracts
-
-Runtime campaign declaration, source binding, manifest, matrix, preflight, live
-replay, evidence capture, exceptional scenarios, driver import, and process
-support MUST reside in distinct concern directories behind minimal entrypoints.
-Relocation MUST preserve serialized artifact schemas, digest computation,
-exact-source binding, external archive destinations, and exactly-once cell IDs.
-
-#### Scenario: Existing runtime artifacts are read after relocation
-
-- **WHEN** SOURCE, PREFLIGHT, MATRIX, or MANIFEST fixtures created before the move are validated
-- **THEN** their schemas and digests retain the same meaning
-- **AND** no source path rename is encoded as a product finding or new cell identity
 
 ### Requirement: Prisma code MUST separate stable entrypoints, guards, operations, and seed families
 

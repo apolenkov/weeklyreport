@@ -78,6 +78,7 @@ describe("acceptance lifecycle", () => {
     (playwrightStatus) => {
       expect(
         acceptanceResultFor({
+          budgetValid: true,
           listenersFree: true,
           ownedFilesRemoved: true,
           playwrightStatus,
@@ -95,6 +96,7 @@ describe("acceptance lifecycle", () => {
   it("fails closed when setup or listener cleanup is missing", () => {
     expect(
       acceptanceResultFor({
+        budgetValid: true,
         listenersFree: false,
         ownedFilesRemoved: false,
         playwrightStatus: "passed",
@@ -110,6 +112,7 @@ describe("acceptance lifecycle", () => {
   it("passes only when setup, tests, teardown, and listeners all pass", () => {
     expect(
       acceptanceResultFor({
+        budgetValid: true,
         listenersFree: true,
         ownedFilesRemoved: true,
         playwrightStatus: "passed",
@@ -119,6 +122,23 @@ describe("acceptance lifecycle", () => {
     ).toEqual({
       cleanupStatus: "PASS",
       overallStatus: "PASS",
+      playwrightStatus: "passed",
+    });
+  });
+
+  it("does not promote a passing Playwright run with a failed budget", () => {
+    expect(
+      acceptanceResultFor({
+        budgetValid: false,
+        listenersFree: true,
+        ownedFilesRemoved: true,
+        playwrightStatus: "passed",
+        setupStatus: "PASS",
+        teardownValid: true,
+      }),
+    ).toEqual({
+      cleanupStatus: "PASS",
+      overallStatus: "FAIL_NOT_PROVEN",
       playwrightStatus: "passed",
     });
   });

@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines the evidence boundary for every CustomReport lifecycle stage and the
+Defines the evidence boundary for every WeeklyReport lifecycle stage and the
 controls that must be real, verified, and reproducible before the first
 production point.
 

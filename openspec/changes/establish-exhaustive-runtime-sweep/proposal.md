@@ -1,3 +1,12 @@
+## Superseded status
+
+This change is retained as historical implementation and decision evidence. It
+no longer authorizes a runtime campaign or defines WeeklyReport acceptance.
+`replace-runtime-sweep-with-product-acceptance` owns the replacement contract
+and deleted the runtime platform. The unlaunched r6 packet is recorded as
+`NOT_RUN_SUPERSEDED_BY_OWNER_DIRECTION`; no unchecked task below is promoted to
+complete, and no historical packet may be replayed.
+
 ## Why
 
 The current catalog sweep proves that role-reachable pages load, but it does not

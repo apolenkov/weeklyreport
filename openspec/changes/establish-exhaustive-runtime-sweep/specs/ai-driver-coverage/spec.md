@@ -1,3 +1,8 @@
+> **Superseded delta.** Retained for historical traceability only. Current
+> WeeklyReport acceptance is defined by
+> `replace-runtime-sweep-with-product-acceptance`; this delta MUST NOT be synced
+> or executed as current authority.
+
 ## MODIFIED Requirements
 
 ### Requirement: Native AI review is bound to deterministic role coverage
