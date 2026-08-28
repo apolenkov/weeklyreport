@@ -55,11 +55,6 @@ export function e2eSetupCommands(
 
 export function setupE2eDatabase(input: E2eDatabaseSetup): void {
   assertDistinctE2eDatabaseTarget(input.databaseUrl, process.env.DATABASE_URL);
-  assertStrictNonProdDatabaseTarget(
-    "e2e-global-setup",
-    input.databaseUrl,
-    process.env.NODE_ENV,
-  );
 
   const env = {
     ...process.env,
@@ -72,6 +67,13 @@ export function setupE2eDatabase(input: E2eDatabaseSetup): void {
     input.profile,
     input.mode,
   )) {
+    // Consent and target identity are re-read immediately before every
+    // destructive primitive; a valid reset never authorizes the later seed.
+    assertStrictNonProdDatabaseTarget(
+      "e2e-global-setup",
+      input.databaseUrl,
+      process.env.NODE_ENV,
+    );
     execFileSync(command.executable, [...command.args], {
       cwd: input.repoRoot,
       env,

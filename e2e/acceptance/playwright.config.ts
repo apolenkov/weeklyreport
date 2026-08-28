@@ -14,6 +14,11 @@ const target = acceptanceEnvironmentFor(process.env);
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const resultsRoot = path.join(import.meta.dirname, ".results");
 const queuePrefix = `weeklyreport-acceptance-${process.pid}-${Date.now()}`;
+const commandKind =
+  process.env.ACCEPTANCE_COMMAND_KIND === "smoke" ||
+  process.env.ACCEPTANCE_COMMAND_KIND === "route-health"
+    ? process.env.ACCEPTANCE_COMMAND_KIND
+    : "full";
 
 process.env.E2E_API_PORT = String(target.apiPort);
 process.env.E2E_WEB_PORT = String(target.webPort);
@@ -23,6 +28,8 @@ export default defineConfig({
   testDir: import.meta.dirname,
   testIgnore: "**/*.test.ts",
   outputDir: path.join(resultsRoot, "artifacts"),
+  globalSetup: path.join(import.meta.dirname, "global-setup.ts"),
+  globalTeardown: path.join(import.meta.dirname, "global-teardown.ts"),
   timeout: 120_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
@@ -37,6 +44,15 @@ export default defineConfig({
           { open: "never", outputFolder: path.join(resultsRoot, "html") },
         ],
         ["json", { outputFile: path.join(resultsRoot, "results.json") }],
+        [
+          "./acceptance-reporter.ts",
+          {
+            apiPort: target.apiPort,
+            commandKind,
+            resultsRoot,
+            webPort: target.webPort,
+          },
+        ],
       ]
     : [
         ["list"],
@@ -45,6 +61,15 @@ export default defineConfig({
           { open: "never", outputFolder: path.join(resultsRoot, "html") },
         ],
         ["json", { outputFile: path.join(resultsRoot, "results.json") }],
+        [
+          "./acceptance-reporter.ts",
+          {
+            apiPort: target.apiPort,
+            commandKind,
+            resultsRoot,
+            webPort: target.webPort,
+          },
+        ],
       ],
   use: {
     baseURL: target.webUrl,
