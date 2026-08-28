@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import * as path from "node:path";
 
+import { appRouterRouteForPage } from "../helpers/app-router-route.ts";
 import {
   CANONICAL_ROLES,
   parseCatalog,
@@ -189,17 +190,7 @@ export const revealActionFor = (
   }
 };
 
-export const pageRouteFor = (appRoot: string, pagePath: string): string => {
-  const relative = path.relative(appRoot, pagePath).split(path.sep).join("/");
-  const segments = relative.split("/");
-  if (segments.at(-1) !== "page.tsx")
-    throw new ProductVariantSourceError(`Not an App Router page: ${pagePath}`);
-  segments.pop();
-  const routeSegments = segments.filter(
-    (segment) => !/^\([^/]+\)$/u.test(segment),
-  );
-  return routeSegments.length === 0 ? "/" : `/${routeSegments.join("/")}`;
-};
+export const pageRouteFor = appRouterRouteForPage;
 
 export const pageFiles = async (
   directory: string,

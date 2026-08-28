@@ -1,6 +1,6 @@
 import type { Role } from "./catalog-parser.ts";
 
-const CATALOG_URL_BASE = "https://runtime-sweep.invalid";
+const CATALOG_URL_BASE = "https://weeklyreport-acceptance.invalid";
 const ROUTE_VALUE_PATTERN = /^\/(?!\/)[^\s#]*$/u;
 const LEAD_REPORT_ROUTE = "/lead/report";
 const LEAD_HISTORY_ROUTE = "/lead/history";

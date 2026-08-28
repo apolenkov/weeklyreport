@@ -16,13 +16,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import type { Role as CspRole } from "@customreport/shared";
 import { errors, expect, test } from "@playwright/test";
 
+import { resolveCatalogRoute } from "../helpers/catalog-route.ts";
 import { parseCatalog } from "../sweep/catalog-parser.ts";
 import { loginByCookie } from "../sweep/helpers/dev-auth";
 import { byName } from "../sweep/ordering.ts";
 import { readCaddyCsp, stripReportUri } from "./caddy-policy.ts";
-import { type CspRole, resolveRoute } from "./route-resolution.ts";
 
 interface CspViolation {
   directive: string;
@@ -152,7 +153,7 @@ test.describe("Content-Security-Policy", () => {
       for (const route of routes) {
         // An unresolved dynamic token throws here instead of silently skipping
         // the route: a newly-catalogued dynamic route must not escape the walk.
-        const resolved = resolveRoute(route, role);
+        const resolved = resolveCatalogRoute(route, role);
 
         await page.goto(resolved, { waitUntil: "domcontentloaded" });
         // Violations from deferred/hydration work fire after the document is

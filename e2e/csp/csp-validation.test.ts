@@ -3,8 +3,8 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { resolveCatalogRoute } from "../helpers/catalog-route.ts";
 import { parseCaddyCsp, stripReportUri } from "./caddy-policy";
-import { resolveRoute } from "./route-resolution";
 
 const CADDYFILE = fs.readFileSync(
   path.resolve(import.meta.dirname, "..", "..", "deploy", "caddy", "Caddyfile"),
@@ -37,24 +37,26 @@ describe("caddy CSP derivation", () => {
 
 describe("CSP route resolution", () => {
   it("resolves [reportId] for lead/head/admin to the active report", () => {
-    expect(resolveRoute("/lead/report/[reportId]", "lead")).toBe(
+    expect(resolveCatalogRoute("/lead/report/[reportId]", "lead")).toBe(
       "/lead/report/a0000000-0000-4000-8000-000000000001",
     );
   });
 
   it("resolves [reportId] for viewer and /reports/ to the published report", () => {
-    expect(resolveRoute("/reports/[reportId]", "viewer")).toBe(
+    expect(resolveCatalogRoute("/reports/[reportId]", "viewer")).toBe(
       "/reports/a0000000-0000-4000-8000-000000000002",
     );
   });
 
   it("throws on any unresolved dynamic token instead of skipping the route", () => {
     expect(() =>
-      resolveRoute("/lead/report/[reportId]/[sectionId]", "lead"),
+      resolveCatalogRoute("/lead/report/[reportId]/[sectionId]", "lead"),
     ).toThrow(/Unresolved dynamic route token/);
   });
 
   it("passes non-dynamic routes through unchanged", () => {
-    expect(resolveRoute("/head/dashboard", "head")).toBe("/head/dashboard");
+    expect(resolveCatalogRoute("/head/dashboard", "head")).toBe(
+      "/head/dashboard",
+    );
   });
 });
