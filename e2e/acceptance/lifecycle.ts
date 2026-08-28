@@ -1,14 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 
 import { setupE2eDatabase } from "../helpers/e2e-database-setup.ts";
 import { resetE2eRedis } from "../helpers/e2e-redis-setup.ts";
+import { waitForLoopbackPortsFree } from "./cleanup.ts";
 
 const SOURCE_RECEIPT = "source.json";
 const TEARDOWN_RECEIPT = "teardown.json";
 const RESULT_RECEIPT = "acceptance-result.json";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
+const RUN_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const GIT_EXECUTABLE = "/usr/bin/git";
 
 export interface SourceIdentity {
@@ -18,6 +22,7 @@ export interface SourceIdentity {
 
 export interface SourceReceipt extends SourceIdentity {
   readonly recordedAt: string;
+  readonly runId: string;
   readonly setupStatus: "PASS" | "FAIL" | "STARTED";
   readonly setupError?: string;
 }
@@ -28,8 +33,10 @@ export interface TeardownReceipt {
   readonly clients: string;
   readonly containers: string;
   readonly databaseState: "DETERMINISTIC_FULL_SEED" | "NOT_PROVEN";
+  readonly listenersFree: boolean;
   readonly recordedAt: string;
   readonly redisState: "NOT_PROVEN" | "RESERVED_DB_15_EMPTY";
+  readonly runId: string;
   readonly sourceUnchanged: boolean;
   readonly startedAt: string;
   readonly volumes: string;
@@ -52,6 +59,9 @@ export const lifecyclePathsFor = (resultsRoot: string): LifecyclePaths => ({
   source: path.join(resultsRoot, SOURCE_RECEIPT),
   teardown: path.join(resultsRoot, TEARDOWN_RECEIPT),
 });
+
+export const isRunId = (value: unknown): value is string =>
+  typeof value === "string" && RUN_ID_PATTERN.test(value);
 
 type GitValue = (args: readonly string[], repoRoot: string) => string;
 
@@ -100,6 +110,8 @@ export async function readJson<T>(filePath: string): Promise<T> {
 }
 
 interface SetupDependencies {
+  readonly invalidatePriorRun: () => Promise<void>;
+  readonly newRunId: () => string;
   readonly now: () => string;
   readonly readSource: () => SourceIdentity;
   readonly resetDatabase: () => void;
@@ -113,6 +125,7 @@ interface TeardownDependencies {
   readonly readSourceReceipt: () => Promise<SourceReceipt | undefined>;
   readonly resetDatabase: () => void;
   readonly resetRedis: () => Promise<void>;
+  readonly verifyRuntimeStopped: () => Promise<boolean>;
   readonly write: (receipt: TeardownReceipt) => Promise<void>;
 }
 
@@ -120,9 +133,12 @@ export async function runAcceptanceSetup(
   dependencies: SetupDependencies,
 ): Promise<SourceReceipt> {
   const source = dependencies.readSource();
+  const runId = dependencies.newRunId();
+  await dependencies.invalidatePriorRun();
   await dependencies.write({
     ...source,
     recordedAt: dependencies.now(),
+    runId,
     setupStatus: "STARTED",
   });
   try {
@@ -135,6 +151,7 @@ export async function runAcceptanceSetup(
     const receipt = {
       ...source,
       recordedAt: dependencies.now(),
+      runId,
       setupStatus: "PASS",
     } as const;
     await dependencies.write(receipt);
@@ -143,6 +160,7 @@ export async function runAcceptanceSetup(
     await dependencies.write({
       ...source,
       recordedAt: dependencies.now(),
+      runId,
       setupError: errorMessage(error),
       setupStatus: "FAIL",
     });
@@ -161,6 +179,13 @@ export async function runDefaultAcceptanceSetup(
   }
   const paths = lifecyclePathsFor(resultsRoot);
   return runAcceptanceSetup({
+    invalidatePriorRun: async () => {
+      await Promise.all([
+        rm(paths.result, { force: true }),
+        rm(paths.teardown, { force: true }),
+      ]);
+    },
+    newRunId: randomUUID,
     now: () => new Date().toISOString(),
     readSource: () => sourceIdentityFor(repoRoot),
     resetDatabase: () =>
@@ -185,8 +210,13 @@ export async function runAcceptanceTeardown(
   const startedAt = dependencies.now();
   const source = await dependencies.readSourceReceipt();
   try {
-    if (source === undefined) {
-      throw new Error("Acceptance teardown is missing its source receipt.");
+    if (source?.setupStatus !== "PASS") {
+      throw new Error("Acceptance teardown requires a passing source receipt.");
+    }
+    if (!(await dependencies.verifyRuntimeStopped())) {
+      throw new Error(
+        "Acceptance teardown requires stopped runtime listeners.",
+      );
     }
     dependencies.resetDatabase();
     await dependencies.resetRedis();
@@ -199,8 +229,10 @@ export async function runAcceptanceTeardown(
       clients: "TRANSIENT_CLIENTS_CLOSED",
       containers: "NONE_CREATED",
       databaseState: "DETERMINISTIC_FULL_SEED",
+      listenersFree: true,
       recordedAt: dependencies.now(),
       redisState: "RESERVED_DB_15_EMPTY",
+      runId: source.runId,
       sourceUnchanged: true,
       startedAt,
       volumes: "NONE_CREATED",
@@ -211,11 +243,13 @@ export async function runAcceptanceTeardown(
     const receipt = {
       cleanupError: errorMessage(error),
       cleanupStatus: "FAIL",
-      clients: "TRANSIENT_CLIENTS_CLOSED",
+      clients: "NOT_PROVEN",
       containers: "NONE_CREATED",
       databaseState: "NOT_PROVEN",
+      listenersFree: false,
       recordedAt: dependencies.now(),
       redisState: "NOT_PROVEN",
+      runId: source?.runId ?? "UNKNOWN",
       sourceUnchanged: false,
       startedAt,
       volumes: "NONE_CREATED",
@@ -228,6 +262,7 @@ export async function runAcceptanceTeardown(
 export async function runDefaultAcceptanceTeardown(
   repoRoot: string,
   resultsRoot: string,
+  ownedPorts: readonly number[],
   environment: NodeJS.ProcessEnv = process.env,
 ): Promise<TeardownReceipt> {
   const databaseUrl = environment.E2E_DATABASE_URL;
@@ -252,6 +287,7 @@ export async function runDefaultAcceptanceTeardown(
         E2E_DATABASE_URL: databaseUrl,
         E2E_REDIS_FLUSH: "true",
       }),
+    verifyRuntimeStopped: () => waitForLoopbackPortsFree(ownedPorts),
     write: (receipt) => writeJson(paths.teardown, receipt),
   });
 }

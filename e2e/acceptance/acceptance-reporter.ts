@@ -15,11 +15,11 @@ import {
   evaluateAcceptanceBudget,
   measureAcceptanceSource,
 } from "./budget-gate.ts";
-import { waitForLoopbackPortsFree } from "./cleanup.ts";
 import {
   acceptanceResultFor,
   lifecyclePathsFor,
   readJson,
+  runDefaultAcceptanceTeardown,
   type SourceReceipt,
   type TeardownReceipt,
   writeJson,
@@ -43,6 +43,20 @@ const browserVersion = (): string => {
     return "UNKNOWN";
   }
 };
+
+const teardownValidFor = (
+  source: SourceReceipt | undefined,
+  teardown: TeardownReceipt | undefined,
+): boolean =>
+  teardown?.cleanupStatus === "PASS" &&
+  teardown.clients === "TRANSIENT_CLIENTS_CLOSED" &&
+  teardown.containers === "NONE_CREATED" &&
+  teardown.databaseState === "DETERMINISTIC_FULL_SEED" &&
+  teardown.listenersFree &&
+  teardown.redisState === "RESERVED_DB_15_EMPTY" &&
+  teardown.runId === source?.runId &&
+  teardown.sourceUnchanged &&
+  teardown.volumes === "NONE_CREATED";
 
 export default class AcceptanceReporter implements Reporter {
   private readonly counts = {
@@ -73,11 +87,18 @@ export default class AcceptanceReporter implements Reporter {
     if (process.argv.includes("--list")) return {};
 
     const paths = lifecyclePathsFor(this.options.resultsRoot);
-    const [source, teardown, listenersFree] = await Promise.all([
-      readJson<SourceReceipt>(paths.source).catch(() => undefined),
-      readJson<TeardownReceipt>(paths.teardown).catch(() => undefined),
-      waitForLoopbackPortsFree([this.options.apiPort, this.options.webPort]),
-    ]);
+    const source = await readJson<SourceReceipt>(paths.source).catch(
+      () => undefined,
+    );
+    await runDefaultAcceptanceTeardown(
+      this.options.repoRoot,
+      this.options.resultsRoot,
+      [this.options.apiPort, this.options.webPort],
+    ).catch(() => undefined);
+    const teardown = await readJson<TeardownReceipt>(paths.teardown).catch(
+      () => undefined,
+    );
+    const listenersFree = teardown?.listenersFree === true;
     const ownedFilesRemoved = listenersFree
       ? await rm(this.options.webDistDir, { force: true, recursive: true })
           .then(() => true)
@@ -102,17 +123,11 @@ export default class AcceptanceReporter implements Reporter {
       ownedFilesRemoved,
       playwrightStatus: result.status,
       setupStatus: source?.setupStatus ?? "MISSING",
-      teardownValid:
-        teardown?.cleanupStatus === "PASS" &&
-        teardown.clients === "TRANSIENT_CLIENTS_CLOSED" &&
-        teardown.containers === "NONE_CREATED" &&
-        teardown.databaseState === "DETERMINISTIC_FULL_SEED" &&
-        teardown.redisState === "RESERVED_DB_15_EMPTY" &&
-        teardown.sourceUnchanged &&
-        teardown.volumes === "NONE_CREATED",
+      teardownValid: teardownValidFor(source, teardown),
     });
     await writeJson(paths.result, {
       schemaVersion: 1,
+      runId: source?.runId ?? "UNKNOWN",
       source: source
         ? { sha: source.sha, tree: source.tree }
         : { sha: "UNKNOWN", tree: "UNKNOWN" },

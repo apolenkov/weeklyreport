@@ -26,6 +26,11 @@ pnpm lint:acceptance-budget --require-receipt \
   --receipt e2e/acceptance/.results/acceptance-result.json
 ```
 
+Global setup removes prior terminal and teardown receipts before assigning a
+fresh run ID. Final database and Redis cleanup runs from the reporter only after
+Playwright has stopped its owned API and web listeners; setup, teardown, and the
+terminal receipt must carry the same run ID.
+
 Production-build and CSP verification remain separate:
 
 ```bash

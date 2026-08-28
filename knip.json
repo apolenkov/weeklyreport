@@ -16,7 +16,6 @@
         "e2e/acceptance/playwright.config.ts",
         "e2e/acceptance/acceptance-reporter.ts",
         "e2e/acceptance/global-setup.ts",
-        "e2e/acceptance/global-teardown.ts",
         "e2e/sweep/render-checklist.ts",
         "e2e/**/*.spec.ts",
         "e2e/integration/global-setup.ts",

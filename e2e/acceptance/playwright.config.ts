@@ -31,7 +31,6 @@ export default defineConfig({
   testIgnore: "**/*.test.ts",
   outputDir: path.join(resultsRoot, "artifacts"),
   globalSetup: path.join(import.meta.dirname, "global-setup.ts"),
-  globalTeardown: path.join(import.meta.dirname, "global-teardown.ts"),
   timeout: 120_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,

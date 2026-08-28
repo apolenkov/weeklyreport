@@ -10,6 +10,7 @@ import {
 } from "./lifecycle.ts";
 
 const SOURCE = { sha: "a".repeat(40), tree: "b".repeat(40) } as const;
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("acceptance lifecycle", () => {
   it("records PASS only after database, Redis, and source read-back", async () => {
@@ -21,6 +22,11 @@ describe("acceptance lifecycle", () => {
     });
 
     const receipt = await runAcceptanceSetup({
+      invalidatePriorRun: () => {
+        order.push("invalidate");
+        return Promise.resolve();
+      },
+      newRunId: () => RUN_ID,
       now: () => "2026-08-28T00:00:00.000Z",
       readSource,
       resetDatabase: () => order.push("database"),
@@ -34,12 +40,19 @@ describe("acceptance lifecycle", () => {
       },
     });
 
-    expect(order).toEqual(["source", "database", "redis", "source"]);
+    expect(order).toEqual([
+      "source",
+      "invalidate",
+      "database",
+      "redis",
+      "source",
+    ]);
     expect(receipts.map(({ setupStatus }) => setupStatus)).toEqual([
       "STARTED",
       "PASS",
     ]);
     expect(receipt.setupStatus).toBe("PASS");
+    expect(receipt.runId).toBe(RUN_ID);
   });
 
   it("retains a setup failure without promoting it", async () => {
@@ -48,6 +61,8 @@ describe("acceptance lifecycle", () => {
 
     await expect(
       runAcceptanceSetup({
+        invalidatePriorRun: () => Promise.resolve(),
+        newRunId: () => RUN_ID,
         now: () => "2026-08-28T00:00:00.000Z",
         readSource: () => SOURCE,
         resetDatabase: () => {
@@ -66,6 +81,36 @@ describe("acceptance lifecycle", () => {
     });
   });
 
+  it("invalidates a same-SHA terminal receipt before an aborted rerun", async () => {
+    const order: string[] = [];
+    await expect(
+      runAcceptanceSetup({
+        invalidatePriorRun: () => {
+          order.push("invalidate-old-result-and-teardown");
+          return Promise.resolve();
+        },
+        newRunId: () => RUN_ID,
+        now: () => "2026-08-28T00:00:00.000Z",
+        readSource: () => SOURCE,
+        resetDatabase: () => {
+          order.push("reset-failed");
+          throw new Error("aborted rerun");
+        },
+        resetRedis: () => Promise.resolve(),
+        write: (receipt) => {
+          order.push(receipt.setupStatus);
+          return Promise.resolve();
+        },
+      }),
+    ).rejects.toThrow("aborted rerun");
+    expect(order).toEqual([
+      "invalidate-old-result-and-teardown",
+      "STARTED",
+      "reset-failed",
+      "FAIL",
+    ]);
+  });
+
   it("resets disposable database and Redis state before a PASS teardown receipt", async () => {
     const order: string[] = [];
     const receipts = [] as Awaited<ReturnType<typeof runAcceptanceTeardown>>[];
@@ -80,6 +125,7 @@ describe("acceptance lifecycle", () => {
         Promise.resolve({
           ...SOURCE,
           recordedAt: "2026-08-28T00:00:00.000Z",
+          runId: RUN_ID,
           setupStatus: "PASS",
         }),
       resetDatabase: () => order.push("database"),
@@ -87,19 +133,25 @@ describe("acceptance lifecycle", () => {
         order.push("redis");
         return Promise.resolve();
       },
+      verifyRuntimeStopped: () => {
+        order.push("listeners");
+        return Promise.resolve(true);
+      },
       write: (value) => {
         receipts.push(value);
         return Promise.resolve();
       },
     });
 
-    expect(order).toEqual(["database", "redis", "source"]);
+    expect(order).toEqual(["listeners", "database", "redis", "source"]);
     expect(receipt).toMatchObject({
       cleanupStatus: "PASS",
       clients: "TRANSIENT_CLIENTS_CLOSED",
       containers: "NONE_CREATED",
       databaseState: "DETERMINISTIC_FULL_SEED",
+      listenersFree: true,
       redisState: "RESERVED_DB_15_EMPTY",
+      runId: RUN_ID,
       sourceUnchanged: true,
       volumes: "NONE_CREATED",
     });
@@ -118,10 +170,12 @@ describe("acceptance lifecycle", () => {
           Promise.resolve({
             ...SOURCE,
             recordedAt: "2026-08-28T00:00:00.000Z",
+            runId: RUN_ID,
             setupStatus: "PASS",
           }),
         resetDatabase: () => undefined,
         resetRedis: () => Promise.reject(failure),
+        verifyRuntimeStopped: () => Promise.resolve(true),
         write: (value) => {
           receipts.push(value);
           return Promise.resolve();
@@ -132,9 +186,34 @@ describe("acceptance lifecycle", () => {
       cleanupError: "Redis cleanup failed",
       cleanupStatus: "FAIL",
       databaseState: "NOT_PROVEN",
+      listenersFree: false,
       redisState: "NOT_PROVEN",
       sourceUnchanged: false,
     });
+  });
+
+  it("does not reset state while owned runtime listeners remain open", async () => {
+    const resetDatabase = vi.fn();
+    const resetRedis = vi.fn(() => Promise.resolve());
+    await expect(
+      runAcceptanceTeardown({
+        now: () => "2026-08-28T00:00:00.000Z",
+        readSource: () => SOURCE,
+        readSourceReceipt: () =>
+          Promise.resolve({
+            ...SOURCE,
+            recordedAt: "2026-08-28T00:00:00.000Z",
+            runId: RUN_ID,
+            setupStatus: "PASS",
+          }),
+        resetDatabase,
+        resetRedis,
+        verifyRuntimeStopped: () => Promise.resolve(false),
+        write: () => Promise.resolve(),
+      }),
+    ).rejects.toThrow(/stopped runtime listeners/u);
+    expect(resetDatabase).not.toHaveBeenCalled();
+    expect(resetRedis).not.toHaveBeenCalled();
   });
 
   it("rejects dirty or changing source identity", () => {

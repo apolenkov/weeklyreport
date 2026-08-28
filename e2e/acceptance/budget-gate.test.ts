@@ -18,8 +18,10 @@ const WITHIN_BUDGET = {
 } as const;
 
 const SOURCE = { sha: "a".repeat(40), tree: "b".repeat(40) } as const;
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const PASSING_RECEIPT = {
   schemaVersion: 1,
+  runId: RUN_ID,
   source: SOURCE,
   cleanup: {
     listenersFree: true,
@@ -30,7 +32,9 @@ const PASSING_RECEIPT = {
       clients: "TRANSIENT_CLIENTS_CLOSED",
       containers: "NONE_CREATED",
       databaseState: "DETERMINISTIC_FULL_SEED",
+      listenersFree: true,
       redisState: "RESERVED_DB_15_EMPTY",
+      runId: RUN_ID,
       sourceUnchanged: true,
       volumes: "NONE_CREATED",
     },
@@ -156,6 +160,27 @@ describe("acceptance whole-contour budget", () => {
         overallStatus: "FAIL_NOT_PROVEN",
       }),
     ).toThrow(/not a terminal passing result/u);
+  });
+
+  it("rejects a stale or mismatched run identity", () => {
+    expect(() =>
+      parseAcceptanceRuntimeReceipt({
+        ...PASSING_RECEIPT,
+        runId: "not-a-run-id",
+      }),
+    ).toThrow(/terminal passing result/u);
+    expect(() =>
+      parseAcceptanceRuntimeReceipt({
+        ...PASSING_RECEIPT,
+        cleanup: {
+          ...PASSING_RECEIPT.cleanup,
+          teardown: {
+            ...PASSING_RECEIPT.cleanup.teardown,
+            runId: "22222222-2222-4222-8222-222222222222",
+          },
+        },
+      }),
+    ).toThrow(/terminal passing result/u);
   });
 
   it("the exact CLI fails when its required receipt is absent", () => {
