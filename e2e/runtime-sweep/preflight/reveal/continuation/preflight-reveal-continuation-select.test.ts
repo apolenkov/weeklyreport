@@ -156,9 +156,18 @@ describe("R188 select continuation", () => {
           expectedGrantDigest: sealed.grant.grantDigest,
           now: () => 0,
           deadlineAt: 10_000,
+          compactResume: true,
         });
-        expect(resumed.result.completed).toBe(true);
+        expect(resumed.result.completed).toBe(false);
         expect(resumed.result.chunk.receipts).toHaveLength(1);
+        const completed = reduceRevealReceiptSuffix({
+          queueInput: replay.queueInput,
+          state: reduced.state,
+          receipts: resumed.result.chunk.receipts,
+          predecessorCompletedCandidateCount: 1,
+          predecessorDigest: receipt.digest,
+        });
+        expect(completed.status).toBe("COMPLETE");
       } finally {
         await rm(archiveRoot, { recursive: true, force: true });
       }

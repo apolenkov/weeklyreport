@@ -50,6 +50,7 @@ interface ContinuationChunkInput {
   readonly chunkBudgetMs?: number;
   readonly cooperativeLimits?: RevealContinuationCooperativeLimits;
   readonly now?: () => number;
+  readonly compactResume?: boolean;
 }
 
 const assertExactSourceState = (input: ContinuationChunkInput): void => {
@@ -151,6 +152,9 @@ export async function runPlaywrightPreflightRevealContinuationChunk(
       ? {}
       : { cooperativeLimits: input.cooperativeLimits }),
     ...(input.now === undefined ? {} : { now: input.now }),
+    ...(input.compactResume === undefined
+      ? {}
+      : { compactResume: input.compactResume }),
   });
   if (
     result.controls !== undefined &&

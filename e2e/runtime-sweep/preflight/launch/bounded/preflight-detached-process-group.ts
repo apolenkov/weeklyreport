@@ -1,5 +1,4 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { performance } from "node:perf_hooks";
 
 import type { ProcessGroupOwnership } from "./preflight-detached-process-group-ownership.ts";
 import {
@@ -12,6 +11,7 @@ import {
   signalProcessGroup,
   terminateUnownedLeader,
 } from "./preflight-detached-process-group-ownership.ts";
+import { waitForProcessGroupExit } from "./preflight-detached-process-group-wait.ts";
 
 export {
   assertSpawnOwnership,
@@ -19,26 +19,9 @@ export {
   ProcessGroupCleanupError,
   type ProcessGroupOwnership,
 } from "./preflight-detached-process-group-ownership.ts";
+export { waitForProcessGroupExit } from "./preflight-detached-process-group-wait.ts";
 
-const PROCESS_POLL_MS = 20;
 const DEFAULT_CLOSE_GRACE_MS = 1000;
-
-const waitForProcessGroupExit = async (
-  input: {
-    readonly operationName: string;
-    readonly child: ChildProcess;
-    readonly ownership: ProcessGroupOwnership;
-  },
-  maxDurationMs: number,
-): Promise<boolean> => {
-  const deadline = performance.now() + maxDurationMs;
-  while (
-    processGroupStatusFor(input) === "LIVE" &&
-    performance.now() < deadline
-  )
-    await new Promise((resolve) => setTimeout(resolve, PROCESS_POLL_MS));
-  return processGroupStatusFor(input) === "GONE";
-};
 
 const errorFor = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));

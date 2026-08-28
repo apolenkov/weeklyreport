@@ -25,6 +25,8 @@ interface AssetQueue {
   readonly queued: Set<string>;
 }
 
+type HydrationScope = "complete" | "execution-frontier";
+
 const queueAsset = (
   queue: AssetQueue,
   artifact: RevealContinuationAsset["artifact"],
@@ -39,7 +41,11 @@ const queueAsset = (
 const queueBranch = (queue: AssetQueue, ref: string): void =>
   queueAsset(queue, PREFLIGHT_REVEAL_BRANCH, ref);
 
-const queueGrant = (queue: AssetQueue, grant: RevealExecutionGrant): void => {
+const queueGrant = (
+  queue: AssetQueue,
+  grant: RevealExecutionGrant,
+  scope: HydrationScope,
+): void => {
   for (const refs of [grant.genesis, grant.frontier]) {
     queueAsset(queue, PREFLIGHT_REVEAL_INVENTORY, refs.inventoryRef);
     queueAsset(queue, PREFLIGHT_REVEAL_SURFACE, refs.surfaceRef);
@@ -47,7 +53,8 @@ const queueGrant = (queue: AssetQueue, grant: RevealExecutionGrant): void => {
     queueBranch(queue, refs.branchRef);
     queueAsset(queue, PREFLIGHT_REVEAL_CANDIDATE_LIST, refs.candidateListRef);
   }
-  for (const ref of grant.frontier.queueRefs) queueBranch(queue, ref);
+  if (scope === "complete")
+    for (const ref of grant.frontier.queueRefs) queueBranch(queue, ref);
   queueAsset(
     queue,
     PREFLIGHT_REVEAL_REDUCER_CHECKPOINT,
@@ -130,6 +137,7 @@ const queuePathChildren = (
 const queueChildAssets = (
   queue: AssetQueue,
   asset: RevealContinuationAsset,
+  scope: HydrationScope,
 ): void => {
   switch (asset.artifact) {
     case PREFLIGHT_REVEAL_BRANCH:
@@ -138,7 +146,7 @@ const queueChildAssets = (
       queueAsset(queue, PREFLIGHT_REVEAL_PATH_NODE, asset.pathNodeRef);
       break;
     case PREFLIGHT_REVEAL_REDUCER_CHECKPOINT:
-      queueCheckpointChildren(queue, asset);
+      if (scope === "complete") queueCheckpointChildren(queue, asset);
       break;
     case PREFLIGHT_REVEAL_PATH_NODE:
       queuePathChildren(queue, asset);
@@ -154,11 +162,13 @@ export const hydrateRevealContinuationAssets = async (input: {
   readonly bootstrap?: RevealBootstrap;
   readonly grant?: RevealExecutionGrant;
   readonly chunk?: RevealReceiptChunk;
+  readonly scope?: HydrationScope;
 }): Promise<void> => {
+  const scope = input.scope ?? "complete";
   const queue: AssetQueue = { pending: [], queued: new Set<string>() };
   if (input.bootstrap !== undefined)
     queueGenesis(queue, input.bootstrap.genesis);
-  if (input.grant !== undefined) queueGrant(queue, input.grant);
+  if (input.grant !== undefined) queueGrant(queue, input.grant, scope);
   for (const receipt of input.chunk?.receipts ?? [])
     queueReceipt(queue, receipt);
   while (queue.pending.length > 0) {
@@ -170,6 +180,6 @@ export const hydrateRevealContinuationAssets = async (input: {
       ref: next.ref,
     });
     rememberRevealContinuationAsset(asset);
-    queueChildAssets(queue, asset);
+    queueChildAssets(queue, asset, scope);
   }
 };
