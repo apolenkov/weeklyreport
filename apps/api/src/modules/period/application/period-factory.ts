@@ -135,6 +135,19 @@ async function createPeriod(args: {
   };
 }
 
+async function recoverOverlappingCreate(
+  report: ReportDelegate,
+  periodStart: Date,
+  periodEnd: Date,
+  anchorDate: Date,
+): Promise<EnsuredPeriod> {
+  const exactWinner = await readBoundaryPeriod(report, periodStart, periodEnd);
+  if (exactWinner) return exactWinner;
+  const containingWinner = await readContainingPeriod(report, anchorDate);
+  if (containingWinner) return containingWinner;
+  throw new PeriodOverlapError();
+}
+
 // Find-or-create the draft reporting period for the week of `anchorDate` (login
 // passes `now`; the scheduler passes the day after the last period's end). `now`
 // bounds reminder materialisation to still-future instants.
@@ -179,10 +192,13 @@ export async function ensureCurrentPeriod(
     });
   } catch (error) {
     if (!isPeriodOverlapConflict(error)) throw error;
-    // Exact-boundary creators converge on their winner. A different overlapping
-    // range has no valid current-period result, so surface a typed domain error.
-    const won = await readBoundaryPeriod(prisma.report, periodStart, periodEnd);
-    if (!won) throw new PeriodOverlapError();
-    return won;
+    // Creators converge on an exact-boundary winner first, then on a manual
+    // range that committed around the anchor while this request was creating.
+    return recoverOverlappingCreate(
+      prisma.report,
+      periodStart,
+      periodEnd,
+      anchorDate,
+    );
   }
 }

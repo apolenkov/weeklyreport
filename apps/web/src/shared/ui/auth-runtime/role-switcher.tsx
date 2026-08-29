@@ -13,7 +13,8 @@ import {
 } from "@customreport/ui/components/ui/dropdown-menu";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
-import { useState } from "react";
+import type { RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 import { webEnv } from "../../lib/runtime/web-env";
@@ -21,18 +22,15 @@ import { useTRPC } from "../../lib/trpc/trpc-context";
 
 type DataResetVariant = "minimal" | "demo" | "full" | "stress";
 
-// Presentation order, hand-written on purpose (differs from the schema order).
-// Exported only for the completeness pin in its test.
 export const ROLE_ORDER = [
   "head",
   "admin",
   "lead",
   "viewer",
 ] as const satisfies readonly DbRole[];
+// Intentionally differs from schema order; exported only for the completeness test.
 const LOGOUT_FAILED_MESSAGE =
   "Logout failed — still signed in. Check the API and try again.";
-// The seeded dev user list changes only on a reseed, so refetching the dropdown
-// more than once a minute is pure noise.
 const DEV_USERS_STALE_TIME_MS = 60_000;
 const MOBILE_MENU_ITEM_CLASS = "max-md:min-h-[var(--touch-target-min)]";
 
@@ -43,7 +41,6 @@ interface RoleSwitcherUser {
   readonly role: string;
 }
 
-// One labelled block per role, in ROLE_ORDER; roles with no seeded user vanish.
 function RoleUserItems({
   users,
   onSelect,
@@ -81,33 +78,12 @@ function RoleUserItems({
   );
 }
 
-// Presentation order and testid suffix for each dev-only data reset.
 const DATA_RESET_ACTIONS = [
-  {
-    variant: "minimal",
-    label: "Wipe + Reseed (minimal)",
-    testId: "reseed-minimal",
-  },
-  {
-    variant: "demo",
-    label: "Wipe + Reseed (demo)",
-    testId: "reseed-demo",
-  },
-  {
-    variant: "full",
-    label: "Wipe + Reseed (full)",
-    testId: "reseed-full",
-  },
-  {
-    variant: "stress",
-    label: "Wipe + Reseed (stress)",
-    testId: "reseed-stress",
-  },
-] as const satisfies readonly {
-  variant: DataResetVariant;
-  label: string;
-  testId: string;
-}[];
+  ["minimal", "Wipe + Reseed (minimal)", "reseed-minimal"],
+  ["demo", "Wipe + Reseed (demo)", "reseed-demo"],
+  ["full", "Wipe + Reseed (full)", "reseed-full"],
+  ["stress", "Wipe + Reseed (stress)", "reseed-stress"],
+] as const satisfies readonly [DataResetVariant, string, string][];
 
 function DataResetItems({
   onReseed,
@@ -116,26 +92,31 @@ function DataResetItems({
 }) {
   return (
     <>
-      {DATA_RESET_ACTIONS.map((action) => (
+      {DATA_RESET_ACTIONS.map(([variant, label, testId]) => (
         <DropdownMenuItem
-          key={action.variant}
-          onSelect={() => onReseed(action.variant)}
-          data-testid={`dev-role-switcher-${action.testId}`}
+          key={variant}
+          onSelect={() => onReseed(variant)}
+          data-testid={`dev-role-switcher-${testId}`}
           className={MOBILE_MENU_ITEM_CLASS}
         >
-          {action.label}
+          {label}
         </DropdownMenuItem>
       ))}
     </>
   );
 }
 
-// Trigger stays a separate unit so the long Tailwind chain does not crowd the
-// menu structure below.
-function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
+function RoleSwitcherTrigger({
+  pending,
+  triggerRef,
+}: {
+  readonly pending: boolean;
+  readonly triggerRef: RefObject<HTMLButtonElement | null>;
+}) {
   return (
     <DropdownMenuTrigger asChild>
       <Button
+        ref={triggerRef}
         variant="outline"
         size="sm"
         disabled={pending}
@@ -150,10 +131,9 @@ function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
   );
 }
 
-// Hooks must run unconditionally, so the enabled gate is returned rather than
-// short-circuiting here; the component owns the early return.
 function useDevRoleSwitcher() {
   const [pending, setPending] = useState(false);
+  const [focusRecoveryToken, setFocusRecoveryToken] = useState(0);
   const trpc = useTRPC();
 
   const enabled = webEnv.devRoleSwitcher();
@@ -164,21 +144,21 @@ function useDevRoleSwitcher() {
     staleTime: DEV_USERS_STALE_TIME_MS,
   });
 
-  // On a failed logout, re-enable the controls (dev-only widget: a cheap alert
-  // matches the reseed-error style) so the visitor can retry.
-  const stayLoggedIn = () => {
+  const recoverFromFailure = () => {
     setPending(false);
+    setFocusRecoveryToken((token) => token + 1);
+  };
+  const stayLoggedIn = () => {
+    recoverFromFailure();
     alert(LOGOUT_FAILED_MESSAGE);
   };
   const logoutThen = (href: string) => logoutThenRedirect(href, stayLoggedIn);
 
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
-      // Logout then redirect to landing so the next role pick starts clean.
       onSuccess: () => logoutThen("/"),
       onError: (error) => {
-        setPending(false);
-        // dev-only widget: cheap alert is fine, we don't ship this in prod
+        recoverFromFailure();
         alert(`Reseed failed:\n${error.message}`);
       },
     }),
@@ -187,6 +167,7 @@ function useDevRoleSwitcher() {
   return {
     enabled,
     pending,
+    focusRecoveryToken,
     usersQ,
     users: usersQ.data ?? [],
     switchTo: (identity: { role: DbRole; email: string }) => {
@@ -209,21 +190,32 @@ function useDevRoleSwitcher() {
 }
 
 export function DevRoleSwitcher() {
-  const { enabled, pending, usersQ, users, switchTo, logout, reseed } =
-    useDevRoleSwitcher();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const {
+    enabled,
+    pending,
+    focusRecoveryToken,
+    usersQ,
+    users,
+    switchTo,
+    logout,
+    reseed,
+  } = useDevRoleSwitcher();
 
-  if (!enabled) {
-    return null;
-  }
+  useEffect(() => {
+    if (!pending && focusRecoveryToken > 0) triggerRef.current?.focus();
+  }, [focusRecoveryToken, pending]);
+
+  if (!enabled) return null;
 
   return (
     <div className="contents">
       <DropdownMenu>
-        <RoleSwitcherTrigger pending={pending} />
+        <RoleSwitcherTrigger pending={pending} triggerRef={triggerRef} />
         <DropdownMenuContent
           align="end"
           side="bottom"
-          className="max-h-[80vh] w-72 overflow-y-auto"
+          className="max-h-[80vh] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto"
         >
           <DropdownMenuLabel>Login as…</DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -239,8 +231,6 @@ export function DevRoleSwitcher() {
             </DropdownMenuItem>
           )}
           <RoleUserItems users={users} onSelect={switchTo} />
-          {/* Dev-only data reset — available to every role; the API side is
-              still double-gated on AUTH_DEV_MODE. */}
           <DropdownMenuLabel>Data</DropdownMenuLabel>
           <DataResetItems onReseed={reseed} />
           <DropdownMenuSeparator />

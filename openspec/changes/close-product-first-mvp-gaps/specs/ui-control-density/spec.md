@@ -26,3 +26,6 @@ compact desktop geometry MUST remain unchanged.
 - **WHEN** the development-only role switcher appears below 48 rem
 - **THEN** its trigger and every interactive role, reseed, and logout menu item
   measure at least 44 by 44 CSS pixels and preserve their menu semantics
+- **AND** its menu remains within the viewport at 280 CSS pixels wide
+- **AND** a failed logout or reseed re-enables the trigger before returning
+  keyboard focus to it

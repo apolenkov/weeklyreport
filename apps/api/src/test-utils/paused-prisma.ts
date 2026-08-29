@@ -42,6 +42,33 @@ export function pauseBeforeTransaction(
   });
 }
 
+// Pauses immediately before the next Report create statement.
+export function pauseBeforeReportCreate(
+  prisma: PrismaClient,
+  pause: () => Promise<void>,
+): PrismaClient {
+  const create = prisma.report.create.bind(prisma.report);
+  const report = new Proxy(prisma.report, {
+    get(target, property): unknown {
+      if (property === "create") {
+        return async (...args: Parameters<typeof prisma.report.create>) => {
+          await pause();
+          return create(...args);
+        };
+      }
+      return Reflect.get(target, property, target) as unknown;
+    },
+  });
+  return new Proxy(prisma, {
+    get(target, property): unknown {
+      if (property === "report") {
+        return report;
+      }
+      return Reflect.get(target, property, target) as unknown;
+    },
+  });
+}
+
 // Pauses immediately before the next ReportSection updateMany statement.
 export function pauseBeforeSectionUpdate(
   prisma: PrismaClient,

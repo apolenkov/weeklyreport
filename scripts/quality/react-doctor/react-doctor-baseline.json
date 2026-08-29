@@ -1060,7 +1060,7 @@
       "rationale": "The module intentionally exposes a small composition contract used by its sibling components, tests, or provider consumers. Splitting the local contract solely for the generic Fast Refresh heuristic would add API churn without an observed runtime state-preservation defect."
     },
     {
-      "id": "src/shared/ui/auth-runtime/role-switcher.tsx::26:14::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "id": "src/shared/ui/auth-runtime/role-switcher.tsx::25:14::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
       "file": "src/shared/ui/auth-runtime/role-switcher.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",

@@ -9,7 +9,8 @@ marked **untested in production**.
 
 ## The stack
 
-`docker compose -f docker-compose.prod.yml` brings up eight services:
+`docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
+eight services:
 
 | Service     | Role                                                                                                                                                                            |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,7 +67,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
 4. **Verify before announcing.**
 
    ```sh
-   docker compose -f docker-compose.prod.yml ps        # every service healthy
+   docker compose --env-file .env.production -f docker-compose.prod.yml ps        # every service healthy
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
@@ -89,12 +90,12 @@ Compose environment; do not hand-edit the container mount.
 
 Read the JSON body first: it names the failing indicator.
 
-| Indicator  | Likely cause and first move                                                                                                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `database` | pgbouncer or postgres down, or the pool is exhausted. `docker compose logs pgbouncer postgres`. Its healthcheck runs a real `SELECT 1` through the pooler, so a healthy pgbouncer means the path works. |
-| `redis`    | Redis evicting or out of memory. It runs `noeviction` on purpose — a full Redis fails writes loudly rather than dropping jobs. Check `INFO memory` against the 200 MB cap.                              |
-| `bullmq`   | Workers cannot reach Redis, or a queue is wedged. Inspect `/admin/queues` and the DLQ.                                                                                                                  |
-| `memory`   | Heap crossed the threshold. This sheds traffic on purpose, ahead of the container OOM-killer. Restart the api, then find what grew.                                                                     |
+| Indicator  | Likely cause and first move                                                                                                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `database` | pgbouncer or postgres down, or the pool is exhausted. `docker compose --env-file .env.production -f docker-compose.prod.yml logs pgbouncer postgres`. Its healthcheck runs a real `SELECT 1` through the pooler, so a healthy pgbouncer means the path works. |
+| `redis`    | Redis evicting or out of memory. It runs `noeviction` on purpose — a full Redis fails writes loudly rather than dropping jobs. Check `INFO memory` against the 200 MB cap.                                                                                    |
+| `bullmq`   | Workers cannot reach Redis, or a queue is wedged. Inspect `/admin/queues` and the DLQ.                                                                                                                                                                        |
+| `memory`   | Heap crossed the threshold. This sheds traffic on purpose, ahead of the container OOM-killer. Restart the api, then find what grew.                                                                                                                           |
 
 ## Backups
 
@@ -120,20 +121,20 @@ source exactly); **untested in production**.
 ```sh
 # 1. Stop everything that writes. pg_restore --clean must DROP objects, and an
 #    open api connection makes that hang halfway.
-docker compose -f docker-compose.prod.yml stop api web
+docker compose --env-file .env.production -f docker-compose.prod.yml stop api web
 
 # 2. Pick a dump.
-docker compose -f docker-compose.prod.yml run --rm backup ls -lh /backups
+docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backup ls -lh /backups
 
 # 3. Restore. The token binds environment, host, port, and database. Production
 #    additionally requires the repository-wide destructive consent.
-docker compose -f docker-compose.prod.yml run --rm \
+docker compose --env-file .env.production -f docker-compose.prod.yml run --rm \
   -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|customreport' \
   -e ALLOW_PROD_DESTRUCTIVE=yes \
   backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
 
 # 4. Bring the app back and confirm before serving traffic.
-docker compose -f docker-compose.prod.yml start api web
+docker compose --env-file .env.production -f docker-compose.prod.yml start api web
 curl -fsS https://<host>/health/ready
 ```
 
@@ -147,7 +148,8 @@ short-lived token the PDF renderer uses. Rotating either **invalidates every
 live session or in-flight export** — there is no dual-key grace period.
 
 1. Put the new value in the environment file.
-2. `docker compose … up -d api` (recreates the api only).
+2. `docker compose --env-file .env.production -f docker-compose.prod.yml up -d api`
+   (recreates the api only).
 3. Expect every signed-in user to be bounced to login. Announce it first.
 
 `DB_PASSWORD` is referenced by postgres, pgbouncer, migrate and backup, so
@@ -184,7 +186,7 @@ Images are the unit of rollback; the database is not.
   dump of your own first rather than trusting the cycle to have just run:
 
   ```sh
-  docker compose -f docker-compose.prod.yml exec backup sh -c \
+  docker compose --env-file .env.production -f docker-compose.prod.yml exec backup sh -c \
     'pg_dump --format=custom --compress=6 --file=/backups/predeploy-$(date -u +%Y%m%dT%H%M%SZ).dump'
   ```
 

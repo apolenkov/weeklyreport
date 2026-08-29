@@ -22,6 +22,14 @@ const rootPackage = JSON.parse(readFileSync("package.json", "utf8")) as {
   scripts: Record<string, string>;
 };
 
+const MIGRATE_DEPLOY_RUN =
+  "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma";
+const API_INTEGRATION_RUN = "pnpm --filter @customreport/api test:integration";
+const COVERAGE_RUN = "pnpm test:coverage";
+const MIGRATE_RESET_RUN = "pnpm exec tsx prisma/operations/migrate-reset.ts";
+const SEED_PROFILE_RUN =
+  "pnpm --dir apps/api exec tsx ../../prisma/seeds/profiles/seed-profile.ts full";
+
 const escapeRegex = (value: string): string =>
   value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
@@ -79,8 +87,30 @@ const replaceInJob = (
   );
 };
 
+const assertRequiredJobIsEnabled = (job: string): void => {
+  assert.doesNotMatch(job, /^\x20{4}if:/m);
+  assert.doesNotMatch(job, /^\x20{4}continue-on-error:/m);
+};
+
+const assertRequiredStep = (
+  job: string,
+  stepName: string,
+  expectedRun: string,
+): string => {
+  const step = stepBlock(job, stepName);
+  assert.doesNotMatch(step, /^\x20{8}if:/m);
+  assert.doesNotMatch(step, /^\x20{8}continue-on-error:/m);
+  assert.match(
+    step,
+    new RegExp(String.raw`^\x20{8}run: ${escapeRegex(expectedRun)}$`, "m"),
+    `${stepName} must run the exact required command`,
+  );
+  return step;
+};
+
 const assertApiIntegrationLane = (workflowText: string): void => {
   const job = jobBlock(workflowText, "api-integration");
+  assertRequiredJobIsEnabled(job);
   assert.match(job, /services:\n[\s\S]*^\x20{6}postgres:/m);
   assert.match(job, /services:\n[\s\S]*^\x20{6}redis:/m);
   assert.match(job, /services:\n[\s\S]*^\x20{6}mailpit:/m);
@@ -96,28 +126,49 @@ const assertApiIntegrationLane = (workflowText: string): void => {
   assert.match(job, /REQUIRED_INTEGRATION_DEPS: ["']?true["']?/);
   assert.match(job, /SMTP_HOST: localhost/);
   assert.match(job, /SMTP_PORT: ["']?1025["']?/);
-  assert.match(job, /pnpm --filter @customreport\/api test:integration/);
+  assertRequiredStep(
+    job,
+    "Apply migrations to exact disposable E2E database",
+    MIGRATE_DEPLOY_RUN,
+  );
+  assertRequiredStep(
+    job,
+    "API integration tests (serial files, required dependencies)",
+    API_INTEGRATION_RUN,
+  );
 };
 
 const assertCoverageLane = (workflowText: string): void => {
   const job = jobBlock(workflowText, "coverage");
+  assertRequiredJobIsEnabled(job);
   assert.match(job, /services:\n[\s\S]*^\x20{6}postgres:/m);
   assert.match(job, /services:\n[\s\S]*^\x20{6}redis:/m);
   assert.match(job, /services:\n[\s\S]*^\x20{6}mailpit:/m);
-  assert.match(
+  assertRequiredStep(
     job,
-    /pnpm exec prisma migrate deploy --schema=prisma\/schema\.prisma/,
+    "Apply migrations for serial API coverage",
+    MIGRATE_DEPLOY_RUN,
   );
-  assert.match(job, /pnpm test:coverage/);
+  assertRequiredStep(
+    job,
+    "API and Web coverage with non-empty evidence",
+    COVERAGE_RUN,
+  );
 };
 
 const assertMigrateResetSeed = (workflowText: string): void => {
   const job = jobBlock(workflowText, "migrate-reset");
-  const reset = stepBlock(
+  assertRequiredJobIsEnabled(job);
+  const reset = assertRequiredStep(
     job,
     "prisma migrate reset (exact disposable E2E DB)",
+    MIGRATE_RESET_RUN,
   );
-  const seed = stepBlock(job, "Seed canonical full profile after reset");
+  const seed = assertRequiredStep(
+    job,
+    "Seed canonical full profile after reset",
+    SEED_PROFILE_RUN,
+  );
   assert.match(reset, /PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"/);
   assert.match(reset, /pnpm exec tsx prisma\/operations\/migrate-reset\.ts/);
   assert.match(seed, /PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"/);
@@ -125,6 +176,11 @@ const assertMigrateResetSeed = (workflowText: string): void => {
     seed,
     /pnpm --dir apps\/api exec tsx \.\.\/\.\.\/prisma\/seeds\/profiles\/seed-profile\.ts full/,
   );
+};
+
+const assertDockerBuildFixture = (workflowText: string): void => {
+  const job = jobBlock(workflowText, "docker-build");
+  assert.match(job, /^\x20{6}CADDY_ACME_EMAIL: ci-build-only@example\.com$/m);
 };
 
 type CoverageMetric = "statements" | "branches" | "functions" | "lines";
@@ -238,6 +294,39 @@ void test("API integration assertions fail when their own job loses a required v
   assert.throws(() => assertApiIntegrationLane(mutated), /REDIS_DB/);
 });
 
+void test("API integration assertions reject an echo replacement for the required test step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "api-integration",
+    `        run: ${API_INTEGRATION_RUN}\n`,
+    '        run: echo "skipped"\n',
+  );
+  assert.throws(
+    () => assertApiIntegrationLane(mutated),
+    /API integration tests/,
+  );
+});
+
+void test("API integration assertions reject a skipped required test step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "api-integration",
+    `        run: ${API_INTEGRATION_RUN}\n`,
+    `        if: false\n        run: ${API_INTEGRATION_RUN}\n`,
+  );
+  assert.throws(() => assertApiIntegrationLane(mutated), /if/);
+});
+
+void test("API integration assertions reject a disabled job", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "api-integration",
+    "    steps:\n",
+    "    if: false\n\n    steps:\n",
+  );
+  assert.throws(() => assertApiIntegrationLane(mutated), /if/);
+});
+
 void test("CI exposes explicit API and Web coverage jobs without changing suite floors", () => {
   assertCoverageLane(workflow);
   assert.match(
@@ -283,7 +372,27 @@ void test("coverage assertions fail when the coverage job loses its migration", 
     jobBlock(mutated, "api-integration"),
     /pnpm exec prisma migrate deploy --schema=prisma\/schema\.prisma/,
   );
-  assert.throws(() => assertCoverageLane(mutated), /migrate deploy/);
+  assert.throws(() => assertCoverageLane(mutated), /Apply migrations/);
+});
+
+void test("coverage assertions reject an echo replacement for the migration step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "coverage",
+    `        run: ${MIGRATE_DEPLOY_RUN}\n`,
+    '        run: echo "skipped"\n',
+  );
+  assert.throws(() => assertCoverageLane(mutated), /Apply migrations/);
+});
+
+void test("coverage assertions reject continue-on-error on the evidence step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "coverage",
+    `        run: ${COVERAGE_RUN}\n`,
+    `        continue-on-error: true\n        run: ${COVERAGE_RUN}\n`,
+  );
+  assert.throws(() => assertCoverageLane(mutated), /continue-on-error/);
 });
 
 void test("the fast root test command remains the unit contour", () => {
@@ -313,6 +422,40 @@ void test("migrate-reset seed assertions fail when consent is removed from that 
     /PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"/,
   );
   assert.throws(() => assertMigrateResetSeed(mutated), /давай/);
+});
+
+void test("migrate-reset assertions reject an echo replacement for the seed step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "migrate-reset",
+    `        run: ${SEED_PROFILE_RUN}\n`,
+    '        run: echo "skipped"\n',
+  );
+  assert.throws(() => assertMigrateResetSeed(mutated), /Seed canonical/);
+});
+
+void test("migrate-reset assertions reject a skipped seed step", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "migrate-reset",
+    `        run: ${SEED_PROFILE_RUN}\n`,
+    `        if: false\n        run: ${SEED_PROFILE_RUN}\n`,
+  );
+  assert.throws(() => assertMigrateResetSeed(mutated), /if/);
+});
+
+void test("docker-build requires the Caddy ACME email fixture", () => {
+  assertDockerBuildFixture(workflow);
+});
+
+void test("docker-build fixture assertions fail when the ACME email is removed", () => {
+  const mutated = replaceInJob(
+    workflow,
+    "docker-build",
+    "      CADDY_ACME_EMAIL: ci-build-only@example.com\n",
+    "",
+  );
+  assert.throws(() => assertDockerBuildFixture(mutated), /CADDY_ACME_EMAIL/);
 });
 
 void test("API coverage config pins thresholds and critical exclusions", () => {

@@ -3,7 +3,8 @@
 # observability project and never the source-owned api/web services:
 #   pnpm observability:up
 #
-# Bugsink UI: http://localhost:8000 (no default credentials).
+# Bugsink UI: http://127.0.0.1:8000 (bound to loopback by default; no default
+# credentials). BUGSINK_PORT changes the host port but remains loopback-only.
 # After first start, create an admin user interactively:
 #   docker exec <bugsink-container> bugsink-manage createsuperuser
 # Then create a project and copy the DSN to SENTRY_DSN in .env
@@ -12,7 +13,7 @@ services:
   bugsink:
     image: bugsink/bugsink:latest@sha256:bc3a491edb7d94d42ae49be14f586a4b7eefa929389272c37f9bec112f232e78
     ports:
-      - "${BUGSINK_PORT:-8000}:8000"
+      - "127.0.0.1:${BUGSINK_PORT:-8000}:8000"
     volumes:
       - bugsinkdata:/app/data
     environment:
