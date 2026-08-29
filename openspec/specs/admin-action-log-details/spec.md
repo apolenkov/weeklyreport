@@ -117,14 +117,13 @@ search.
 ### Requirement: Action Log pagination is stable and demonstrable
 
 `admin.actionLog.list` MUST return events newest first using a stable composite
-cursor order, with a default UI page size of 20. Internal manual-proof rows
-MUST be excluded before applying the page budget. Deterministic acceptance data
-MUST contain more than 20 visible events so the `Load more` transition can be
+cursor order, with a default UI page size of 20. Deterministic seed data MUST
+contain more than 20 visible events so the `Load more` transition can be
 executed and verified without production data.
 
 #### Scenario: More than one page of real events exists
 
 - **WHEN** the first 20-event page is displayed and a further real event exists
 - **THEN** `Load more` is available
-- **AND** loading the next page adds the remaining events without a duplicate,
-  omission, or internal manual-proof row
+- **AND** loading the next page adds the remaining events without a duplicate or
+  omission

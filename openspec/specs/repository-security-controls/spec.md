@@ -1,10 +1,12 @@
+# repository-security-controls Specification
+
 ## Purpose
 
 Defines repository-level security controls that keep automated checks
 least-privileged, make sensitive-path ownership explicit, and preserve a tested
 private vulnerability-response path.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Read-only workflows MUST declare least privilege
 
@@ -44,8 +46,8 @@ necessary.
 ### Requirement: Sensitive repository paths MUST have explicit ownership
 
 The repository MUST declare an owner for the ownership policy itself, GitHub
-workflow configuration, Prisma schema and migrations, deployment configuration,
-security policy, and public shared contracts.
+workflow configuration, Prisma schema and migrations, deployment
+configuration, security policy, and public shared contracts.
 
 #### Scenario: A sensitive path changes
 
@@ -66,16 +68,3 @@ CI/CD compromise.
 - **THEN** the policy requires provider-side revocation or rotation before Git
   history cleanup
 - **AND** it requires evidence preservation and an impact review
-
-### Requirement: Repository security controls MUST be mechanically enforced
-
-The repository lint gate MUST reject a workflow that omits the read-only
-permission baseline, grants an unapproved write permission, or retains checkout
-credentials in a read-only job.
-
-#### Scenario: A workflow weakens its token boundary
-
-- **WHEN** a contributor removes the permission declaration or enables checkout
-  credential persistence
-- **THEN** the deterministic repository gate exits non-zero
-- **AND** local pre-push and CI quality execution expose the failure

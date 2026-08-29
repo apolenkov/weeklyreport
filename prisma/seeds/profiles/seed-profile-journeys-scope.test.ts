@@ -33,7 +33,6 @@ describe("seed journey scope ownership", () => {
     );
     for (const row of ACTION_LOG_ROWS) {
       expect(row.reason === null || /^[A-Z_]+$/.test(row.reason)).toBe(true);
-      expect(row.correlationId).not.toContain("manual-action-log-proof");
     }
   });
 

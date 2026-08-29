@@ -18,17 +18,7 @@ const entry = {
 };
 
 const ledger = (entries: readonly unknown[]): string =>
-  JSON.stringify({
-    version: 1,
-    startingSnapshot: {
-      commit: "deadbeef",
-      rawMatches: 1,
-      directives: 1,
-      noise: 0,
-    },
-    entries,
-    noiseEntries: [],
-  });
+  JSON.stringify({ version: 2, entries });
 
 void test("rejects unknown entry keys", () => {
   assert.throws(
@@ -41,5 +31,12 @@ void test("rejects duplicate suppression identities", () => {
   assert.throws(
     () => parseSuppressionLedger(ledger([entry, entry])),
     /Duplicate ESLint suppression ledger identity/,
+  );
+});
+
+void test("rejects historical verdicts", () => {
+  assert.throws(
+    () => parseSuppressionLedger(ledger([{ ...entry, verdict: "remove" }])),
+    /Invalid ESLint suppression ledger/,
   );
 });

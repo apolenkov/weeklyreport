@@ -2,63 +2,10 @@
 
 ## Purpose
 
-Require role-reachable routes and shared-shell controls to render without targeted runtime or accessibility defects and require tests to fail for the behavior they name.
+Require focused product tests to fail for the runtime, accessibility, and
+behavioral defects they claim to cover.
 
 ## Requirements
-
-### Requirement: Swept role-reachable routes MUST render without React runtime warnings
-
-Every route reachable in the behavioral UI sweep MUST render without React
-runtime correctness warnings — specifically no duplicate-`key` console warning
-and no hydration-mismatch `pageerror`. List renders MUST use a stable, unique key
-per item (not a value that repeats across siblings, such as a 1-based rank or a
-shared page index). Server-rendered client components MUST NOT diverge from their
-client render due to non-deterministic input (locale/date/`typeof window`).
-
-#### Scenario: a report list render uses unique keys
-
-- **WHEN** the sweep visits `/reports`, `/reports/[reportId]`, or
-  `/reports/[reportId]/present` for any role
-- **THEN** the console records no "Encountered two children with the same key"
-  warning
-- **AND** a regression test asserts the list render produces unique keys
-
-#### Scenario: the lead preview route hydrates cleanly
-
-- **WHEN** the sweep visits `/lead/report/[reportId]/preview`
-- **THEN** no hydration-mismatch `pageerror` is recorded
-- **AND** a regression test pins the previously non-deterministic value
-
-### Requirement: Shared-shell controls swept across roles MUST satisfy the axe rules they currently violate
-
-Shared navigation and report-shell components MUST pass the axe rules the
-2026-06-07 sweep flagged at scale across essentially every role-reachable route:
-`button-name`, `label`, `link-name`, `nested-interactive`, `region`,
-`aria-hidden-focus`, `page-has-heading-one`, and `scrollable-region-focusable`.
-`color-contrast` is explicitly excluded here (theme-token work, gated
-research-only). A fix at a shared-component source that clears the rule across all
-roles is preferred over per-route patching.
-
-#### Scenario: shared-shell axe violations clear across all roles
-
-- **WHEN** the sweep re-runs across `lead`/`head`/`admin`/`viewer` after the fix
-- **THEN** the targeted axe rule reports zero violations on every previously
-  failing route
-- **AND** `color-contrast` is left untouched and tracked as a separate gated item
-
-### Requirement: Sweep console noise MUST be filtered only with a confirmed source
-
-A console pattern MUST NOT be added to the sweep's `IGNORED_CONSOLE` allow-list
-until its source is identified. For failed-resource errors, the sweep MUST
-capture the failing request URL so the pattern can be classified as a real defect
-or genuine environment noise before it is silenced.
-
-#### Scenario: ERR_CONNECTION_REFUSED is classified before being filtered
-
-- **WHEN** the sweep records a `net::ERR_CONNECTION_REFUSED` console error
-- **THEN** the report includes the failed request URL
-- **AND** the pattern is added to `IGNORED_CONSOLE` only with a comment recording
-  the confirmed source, or fixed at source instead
 
 ### Requirement: Web tests and their subject doc comments MUST be able to fail for the behavior they name
 
@@ -269,61 +216,17 @@ calling through to it.
   procedure itself, or the shared function it delegates to, exported for
   direct testing), and the local reimplementation is deleted
 
-### Requirement: Integration and e2e specs MUST assert the behavior under test, not values the test itself wrote
-
-An `e2e/integration` spec MUST NOT rely solely on a database/API value the
-test's own setup wrote as proof that a UI-visible behavior occurred. When a
-test title claims a UI effect (a locked-state affordance, an updated view
-after navigation, a restored edit capability), the spec MUST assert that
-UI-visible effect directly, in addition to any underlying data-state check.
-A spec MUST navigate only to routes that exist in the application. A spec
-that asserts a count changed by an expected delta after a write MUST wait
-for that write's request/response (or an equivalent settled-state signal)
-before reading the count, so a genuine duplicate-write regression cannot
-race past the assertion.
-
-#### Scenario: A "lead sees locked" test asserts only the status the test wrote
-
-- **WHEN** a spec navigates to a role's page specifically to check that a
-  lifecycle state change is reflected in that role's UI
-- **THEN** the spec asserts the role's actual rendered UI state (e.g. a
-  locked banner, disabled controls, updated content) for that state
-- **AND** does not rely solely on re-reading the database/API value the test
-  itself wrote during setup
-
-#### Scenario: A spec navigates to a route that does not exist
-
-- **WHEN** a spec calls `goto()` (or equivalent navigation) with a path
-- **THEN** that path is a route the application actually serves
-- **AND** the spec asserts a render signal (e.g. a heading or a known
-  locator) so a 404 or failed render fails the test, not only a
-  seed-derived data assertion that is independent of whether the page
-  rendered
-
-#### Scenario: A count assertion races a pending write
-
-- **WHEN** a spec triggers a save/mutation via a UI action and then reads a
-  count that the mutation is expected to change by a known delta
-- **THEN** the spec waits for the mutation's request/response (or an
-  equivalent settled-state UI signal) before reading the count
-- **AND** the pre-write and expected post-write values are distinguishable,
-  so a duplicate write reliably fails the assertion
-
 ### Requirement: Runtime correctness MUST be proven without an exhaustive interaction platform
 
-The existing React warning, hydration, accessibility, console-source, and
-behavior-focused assertion requirements MUST be verified by focused
-unit/integration tests, the catalog route sweep, or the bounded smoke lifecycle.
-No correctness requirement in this capability may require a continuation graph,
-campaign ledger, per-control exhaustive traversal, or AI-import protocol as its
-sole evidence source.
+React warning, hydration, accessibility, console-source, and behavior-focused
+assertion requirements MUST be verified by focused tests colocated with product
+modules. No correctness requirement may require a root browser harness, route
+sweep, catalog, continuation graph, campaign ledger, per-control traversal, or
+AI-import protocol as its sole evidence source.
 
 #### Scenario: A runtime correctness regression is introduced
 
-- **WHEN** a cataloged route or the smoke lifecycle emits a covered React
-  warning, hydration error, unclassified console/network failure, or targeted
-  accessibility violation
-- **THEN** a focused gate or bounded browser scenario fails and identifies the
-  affected product surface
-- **AND** no exhaustive interaction campaign is needed to reproduce the
-  regression
+- **WHEN** a focused product test observes a covered React warning, hydration
+  error, console failure, or targeted accessibility defect
+- **THEN** the smallest owning test fails and identifies the product surface
+- **AND** no route matrix or exhaustive campaign is needed to reproduce it

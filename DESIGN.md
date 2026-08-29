@@ -375,9 +375,9 @@ action.
 - Respect `prefers-reduced-motion: reduce`; never add essential meaning that
   exists only in animation. Keep copy plain and preserve the skip-to-content
   link in the root layout.
-- The existing axe sweep is the objective browser gate for rendered routes;
-  static tests alone are not a substitute for keyboard, focus, or contrast
-  verification.
+- Focused product tests verify semantic accessibility behavior. Changed UI
+  surfaces also receive direct keyboard, focus and contrast review when the
+  product risk warrants it.
 
 ### Accepted Debt
 

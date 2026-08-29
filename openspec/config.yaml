@@ -20,7 +20,8 @@ context: |
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
   - Validation: Zod 4 shared schemas in `@customreport/shared`
-  - Testing: Vitest 4 (unit), Playwright 1.62 (E2E), Testing Library, MSW 2
+  - Testing: Vitest 4, Testing Library, MSW 2; Playwright is a production-only
+    dependency of the API PDF worker
   - Node: >=26 (Docker pins Node 26 images; API installs Chromium explicitly)
 
   # Workspace layout
@@ -36,7 +37,7 @@ context: |
               traffic lights); submits
   - head    — lead capabilities + review + publish + PDF export
   - viewer  — read-only access to published reports + PDF download
-  No runtime director role exists; director-facing UAT routes through viewer.
+  No runtime director role exists.
 
   # Domain model anchors
   Report (period) → ReportSection (per lead) → { ProjectStatus[], Item[]
@@ -68,13 +69,13 @@ context: |
   - Deferred user-facing features use `ComingSoonBadge` from
     `@customreport/ui`; deferred backend paths throw
     `Error('Not implemented — see TODO(<ref>)')`
-  - E2E destructive operations use the one exact validator in
+  - Disposable-database operations use the one exact validator in
     `prisma/guards/_destructive-guard.ts`: loopback only, raw URL path exactly
     `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, no query/fragment
     or encoded aliases, `NODE_ENV != production`, and exact per-run
     `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; no
     `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
-  - Manual UAT/dev operations use the same exact target contract; production
+  - Development operations use the same exact target contract; production
     restore remains a separate entrypoint and contract
   - Treat committed Prisma migrations as append-only. A history rewrite needs
     an explicit reviewed task and is allowed only for the exact disposable DB

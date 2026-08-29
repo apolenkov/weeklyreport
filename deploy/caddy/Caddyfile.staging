@@ -64,9 +64,7 @@
 		# embeds external imagery — currently same-origin only). Enforcing, and
 		# byte-identical to production apart from the report target: staging
 		# exists to catch what production would block, which a Report-Only
-		# header cannot do. The required in-browser validation now runs as a
-		# gate — `pnpm test:e2e:csp` walks every catalog route per role against
-		# production bundles under this exact policy.
+		# header cannot do.
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'"
 		-Server
 	}

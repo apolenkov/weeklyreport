@@ -111,7 +111,7 @@ Authority model:
 
 - `viewer-report-navigation` defines Status authority, including live drafts only for the current period.
 - `viewer-published-search` keeps Search authority published-only.
-- [Owned decision and implementation](../changes/sweep15-viewer-authority-labeling/proposal.md) labels those scopes explicitly; this index does not duplicate its delta requirements or tasks.
+- [Owned decision and implementation](../changes/archive/2026-07-17-sweep15-viewer-authority-labeling/proposal.md) labels those scopes explicitly; this index does not duplicate its delta requirements or tasks.
 
 ### Admin
 
@@ -152,6 +152,7 @@ Authority model:
 - [prod-security-hardening](./prod-security-hardening/spec.md) — Enforces production CSP, immutable base-image digests, and safe dev-auth build defaults.
 - [public-endpoint-resource-limits](./public-endpoint-resource-limits/spec.md) — Bounds unauthenticated API request rate and body size per public ingress surface.
 - [repository-scope-guard](./repository-scope-guard/spec.md) — Repositories fail closed when a read attempts to cross the caller's authorized product-group scope.
+- [repository-security-controls](./repository-security-controls/spec.md) — Enforces least-privilege workflows, non-persistent checkout credentials, sensitive-path ownership, and private vulnerability reporting.
 - [role-coverage-gate](./role-coverage-gate/spec.md) — Requires every tRPC procedure to use one of the canonical middleware builders by reference identity.
 - [role-model-consistency](./role-model-consistency/spec.md) — Keeps route role declarations aligned with the API authorization gate.
 - [section-save-payload-bounds](./section-save-payload-bounds/spec.md) — Applies the shared array-size bound to every client-supplied section-save collection.
@@ -177,6 +178,7 @@ Authority model:
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
 - [health-indicator-service-migration](./health-indicator-service-migration/spec.md) — Uses the supported health-indicator API while preserving live and ready response contracts.
 - [redis-connection-config](./redis-connection-config/spec.md) — Routes all Redis consumers through one validated, fail-loud host and port builder.
+- [sdlc-release-readiness](./sdlc-release-readiness/spec.md) — Separates evidence classes and keeps the first production point blocked until every external release, deployment, operation, and recovery control is proven.
 - [web-api-url-config](./web-api-url-config/spec.md) — Resolves the web API base URL and tRPC response decoding through explicit fail-loud seams.
 - [web-env-validation](./web-env-validation/spec.md) — Validates client environment values at build time and centralizes typed, inline-safe access.
 
@@ -193,14 +195,11 @@ Authority model:
 ### Testing and verification
 
 - [a11y-regression-coverage](./a11y-regression-coverage/spec.md) — Requires behavior-level regression coverage for keyboard, focus, Escape, tabindex, and decorative-SVG accessibility changes.
-- [behavioral-ui-regression-gate](./behavioral-ui-regression-gate/spec.md) — Defines the durable scenario catalog, bounded route-health gate, and advisory review boundary.
-- [bounded-product-acceptance](./bounded-product-acceptance/spec.md) — Keeps browser acceptance to four-role route health and one deterministic lifecycle smoke.
+- [behavioral-ui-regression-gate](./behavioral-ui-regression-gate/spec.md) — Keeps human and model product review advisory rather than making it a second acceptance authority.
 - [demo-seed-datasets](./demo-seed-datasets/spec.md) — Provides deterministic small, middle, and huge datasets that exercise realistic roles, statuses, co-ownership, and reminders.
 - [frontend-audit-memo](./frontend-audit-memo/spec.md) — Requires grounded frontend audit evidence before UI implementation or Core Web Vitals claims.
-- [manual-uat-reseed](./manual-uat-reseed/spec.md) — Resets manual-UAT data in foreign-key-safe order to a known baseline.
-- [scenario-catalog](./scenario-catalog/spec.md) — Maintains human-reviewed, outcome-checkable route intents with role validation and drift detection.
-- [sweep-runtime-correctness](./sweep-runtime-correctness/spec.md) — Requires role-reachable routes and shared controls to run without confirmed React, console, or axe regressions.
-- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines the full deterministic gate chain and bounded browser acceptance.
+- [sweep-runtime-correctness](./sweep-runtime-correctness/spec.md) — Requires focused product tests to fail for the runtime, accessibility, and behavioral defects they claim to cover.
+- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines deterministic product release gates, accessible confirmation behavior, and honest CI infrastructure evidence.
 - [web-test-timer-discipline](./web-test-timer-discipline/spec.md) — Keeps web tests deterministic by using framework timers and query primitives instead of hand-rolled tick loops.
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
 

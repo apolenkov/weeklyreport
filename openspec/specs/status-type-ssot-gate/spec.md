@@ -22,24 +22,16 @@ stay legal), or a literal set containing all four of `"lead"`, `"head"`,
 `"admin"`, `"viewer"` (extras allowed — the role vocabulary is declared once
 per axis as `Role`/`DbRole`, per the `role-type` spec's own exemptions:
 runtime validators/presentation-ordered lists enumerating VALUES while
-typing from shared, the Prisma seed toolchain's one commented literal
-mirror, the plain-Node catalog parser mirror, and catalog YAML).
+typing from shared and the Prisma seed toolchain's one commented literal
+mirror).
 
 The gate MUST cover test files. The only exemptions are the SSOT files
 themselves (`packages/shared/src/schemas/primitives/report-primitives.schema.ts`,
 `packages/shared/src/schemas/status/canonical-status.ts`,
 `packages/shared/src/schemas/auth/auth.ts`), the documented literal mirror
 `prisma/seeds/support/seed-constants.ts`, the presentation-order list
-`apps/web/src/shared/ui/auth-runtime/role-switcher.tsx`, and the plain-Node catalog mirror
-`e2e/sweep/catalog-parser.ts` — all hardcoded centrally in the gate, with no
-inline annotation escape.
-
-The gate DOES walk `e2e/**` (a union planted there is reported). Its one
-allowlisted role mirror, `e2e/sweep/catalog-parser.ts`, is an `as const` value
-list required by the plain-Node entrypoint compiled under the root
-`tsconfig.scripts.json`, whose `paths` is deliberately empty because Node
-resolves imports itself. Every other e2e reader takes the vocabulary from that
-parser or from `@customreport/shared`.
+`apps/web/src/shared/ui/auth-runtime/role-switcher.tsx` — all hardcoded centrally
+in the gate, with no inline annotation escape.
 
 The matching MUST be over the syntax tree rather than source text, and MUST
 run with inline configuration disabled so no comment can suppress a verdict; a

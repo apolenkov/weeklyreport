@@ -9,32 +9,6 @@ entry is the product's core job; every design choice serves making it effortless
 and stakeholder feedback returns to this constantly. When a design decision is in
 doubt, the option that makes entry quicker and clearer wins.
 
-## Testing & scenarios
-
-**Behavioral Scenario**:
-A human-readable description of observable behavior for a role on a route —
-`role + route + intent + Given/When/Then expected outcome`. Anchored to what the
-user sees, NOT to a code location, so it survives refactors. A scenario may be
-owned by focused deterministic coverage or remain a reviewed exploratory intent.
-_Avoid_: feature file (as a synonym for the catalog), test case, story.
-
-**Scenario Catalog**:
-The durable, high-level set of Behavioral Scenarios (`roles × routes × intents`)
-that a human reviews and maintains. Deliberately NOT an exhaustive enumeration of
-every element, state, or transition. Route health consumes its route surface;
-focused tests own detailed behavior.
-_Avoid_: exhaustive interaction graph, generated test matrix.
-
-**Route health**:
-A bounded per-role check that every catalog route opens without an unclassified
-HTTP, page, console, network, or accessibility failure.
-_Avoid_: exhaustive sweep, full product acceptance.
-
-**Lifecycle smoke**:
-One representative lead write, head publication, and viewer read-back that
-proves WeeklyReport's basic cross-role viability.
-_Avoid_: exhaustive journey matrix, complete regression suite.
-
 ## Reporting periods & submission
 
 **Reporting period**:
