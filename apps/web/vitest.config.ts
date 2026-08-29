@@ -32,13 +32,13 @@ const webConfig = defineConfig({
         // Only framework-thin redirect aliases are excluded wholesale — a page
         // that carries behavioral logic (client data loading, tab selection,
         // role-aware rendering) stays in the coverage numerator/denominator.
-        "src/app/(app)/admin/products/page.tsx",
-        "src/app/(app)/admin/activities/page.tsx",
-        "src/app/(app)/admin/settings/page.tsx",
-        "src/app/(app)/head/history/page.tsx",
-        "src/app/(app)/head/slides/page.tsx",
-        "src/app/(app)/lead/history/page.tsx",
-        "src/app/(app)/reports/history/page.tsx",
+        String.raw`src/app/\(app\)/admin/products/page.tsx`,
+        String.raw`src/app/\(app\)/admin/activities/page.tsx`,
+        String.raw`src/app/\(app\)/admin/settings/page.tsx`,
+        String.raw`src/app/\(app\)/head/history/page.tsx`,
+        String.raw`src/app/\(app\)/head/slides/page.tsx`,
+        String.raw`src/app/\(app\)/lead/history/page.tsx`,
+        String.raw`src/app/\(app\)/reports/history/page.tsx`,
       ],
       thresholds: {
         statements: 70,
