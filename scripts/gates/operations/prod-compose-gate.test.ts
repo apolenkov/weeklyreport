@@ -161,7 +161,11 @@ void test("the production template lists every required input as fail-closed", (
   }
 });
 
-void test("development Compose owns one fixed local database credential", () => {
+const DEV_APP_DATABASE_URL =
+  "postgresql://customreport:localdev@postgres:5432/customreport_e2e";
+const DEV_APP_DATABASE_ASSIGNMENT_COUNT = 5;
+
+void test("development Compose owns one exact guarded database target", () => {
   for (const [path, source] of [
     [devCompose, devContent],
     [devOverride, devOverrideContent],
@@ -174,9 +178,24 @@ void test("development Compose owns one fixed local database credential", () => 
     assert.doesNotMatch(source, /postgresql:\/\/customreport:\$\{/u);
   }
   assert.match(devContent, /POSTGRES_PASSWORD: localdev/u);
-  assert.match(
-    `${devContent}\n${devOverrideContent}`,
-    /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_dev/u,
+  assert.match(devContent, /POSTGRES_DB: customreport_e2e/u);
+  assert.match(devContent, /pg_isready -U customreport -d customreport_e2e/u);
+  const applicationDatabaseUrls = `${devContent}\n${devOverrideContent}`
+    .split("\n")
+    .map((line) => line.trim())
+    .flatMap((line) => {
+      for (const key of ["DATABASE_URL: ", "DIRECT_URL: "]) {
+        if (line.startsWith(key)) return [line.slice(key.length)];
+      }
+      return [];
+    });
+  assert.equal(
+    applicationDatabaseUrls.length,
+    DEV_APP_DATABASE_ASSIGNMENT_COUNT,
+  );
+  assert.deepEqual(
+    new Set(applicationDatabaseUrls),
+    new Set([DEV_APP_DATABASE_URL]),
   );
 });
 

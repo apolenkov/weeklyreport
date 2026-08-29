@@ -55,6 +55,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && vitest run --config vitest.prisma.config.ts",
     "test:coverage": "pnpm --filter @customreport/api test:coverage && pnpm --filter @customreport/web test:coverage",
+    "db:bootstrap:local": "node --import tsx prisma/operations/bootstrap-local.ts",
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seeds/profiles/seed-profile-proof.ts",
     "db:reset:hard": "pnpm --filter @customreport/api exec tsx ../../prisma/operations/reset-hard.ts",

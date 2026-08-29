@@ -83,9 +83,10 @@ cp .env.example .env
 #    Mailpit, Grafana, Bugsink). Команда не запускает api/web: их единственный владелец — pnpm dev.
 pnpm observability:up
 
-# 4. Залить схему и демо-данные в базу
-pnpm db:seed:profile minimal # быстрый минимальный сид
-# demo | full | stress       # возрастающие возможности и объём
+# 4. Создать точную disposable-базу, применить миграции и залить профиль
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+  pnpm db:bootstrap:local minimal
+# demo | full | stress — возрастающие возможности и объём
 
 # 5. Запустить web + api локально (в одном процессе, параллельно)
 pnpm dev
@@ -114,6 +115,7 @@ pnpm dev
 
 ```bash
 pnpm dev            # web + api в dev-режиме (turbo --parallel)
+pnpm db:bootstrap:local minimal # guarded create + migrate + seed
 pnpm typecheck      # проверка типов во всех пакетах
 pnpm lint           # полный набор проверок качества, отчёт по каждой
 pnpm test           # unit-тесты (Vitest)
@@ -130,7 +132,8 @@ pnpm format         # Prettier по всему дереву
 ```bash
 pnpm logs           # хвост лога API (apps/api/.logs/app.log)
 pnpm logs:errors    # только error/warn из лога API
-pnpm db:seed:profile demo # пересобрать базу и залить демонстрационный профиль
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+  pnpm db:bootstrap:local demo # пересобрать disposable-базу
 ```
 
 ## Куда смотреть дальше

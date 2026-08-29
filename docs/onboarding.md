@@ -31,7 +31,8 @@ WeeklyReport автоматизирует еженедельные статус-
 - **`apps/api`** — бэкенд на NestJS 11. Слой API — tRPC. Доступ к БД — Prisma.
 - **`packages/shared`** — Zod-схемы, типы, enum-ы. Общий контракт между web и api.
 - **`packages/ui`** — компоненты shadcn/ui и токены Tailwind.
-- **`prisma`** — схема БД, единственная init-миграция, сиды, защитные guard-ы.
+- **`prisma`** — схема БД, init и append-only integrity-миграции, сиды,
+  защитные guard-ы.
 - **`openspec`** — бэклог изменений и durable-контракты (см. раздел 8).
 
 Граница доменов на бэкенде — это Nest-модули (`apps/api/src/modules/*`) плюс
@@ -81,11 +82,31 @@ web, чтобы заработала корреляция ошибок с тре
 Обычные базы не считаются одноразовыми. Сброс и пересоздание разрешены только
 для точных loopback E2E-целей, которые принимает destructive guard.
 
-- Схема — `prisma/schema.prisma`. Меняешь её напрямую и пересобираешь; отдельные
-  alter-миграции не пишешь (есть единственная init-миграция, её держат в синхроне
-  со схемой вручную, когда Prisma не выражает конструкцию).
-- Залить данные: `pnpm db:seed:profile minimal` (быстрый smoke),
-  `demo`, `full` или `stress`. Профили образуют монотонную лестницу.
+Штатная локальная разработка из `.env.example` намеренно использует
+`customreport_e2e`: это единственная seedable-база, которую guard считает
+одноразовой. После `pnpm observability:up` выполни:
+
+```bash
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+  pnpm db:bootstrap:local minimal
+```
+
+Команда проверяет, что `DATABASE_URL` и `E2E_DATABASE_URL` указывают на одну
+точную loopback-базу, затем последовательно создаёт её, применяет миграции и
+заливает выбранный профиль. Каждый шаг повторно проверяет guard и согласие;
+при первой ошибке следующие шаги не запускаются.
+
+Альтернативный `pnpm dev:watch` поднимает свой Compose-проект: Postgres сам
+создаёт `customreport_e2e`, а one-shot `migrate` применяет схему до старта API.
+Когда контейнеры уже работают, данные можно залить из второго терминала через
+`pnpm db:seed:profile minimal` с тем же явным согласием; корневой `.env`
+указывает на опубликованный loopback-порт этой точной базы.
+
+- Схема — `prisma/schema.prisma`. Обычные изменения отражаются в схеме и init;
+  DB-native инварианты, которые Prisma не выражает, добавляются отдельной
+  append-only integrity-миграцией и закрепляются OpenSpec-контрактом.
+- Профили bootstrap: `minimal` (быстрый smoke), `demo`, `full` или `stress`.
+  Они образуют монотонную лестницу.
 - Единая публичная точка входа — `prisma/seeds/profiles/seed-profile.ts`; внутренние writers
   остаются раздельными.
 - Защита E2E-операций — `prisma/guards/_destructive-guard.ts`: exact guard
@@ -179,8 +200,8 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - Трейс запроса — в Grafana → Tempo (ищи по `traceId` из лога).
 - Ошибки с фронта и бэка — в Bugsink; оттуда переход к трейсу по общему id.
 - Письма (например, напоминания) — в Mailpit (http://localhost:8025).
-- Сломалась база или странные данные — пересобери:
-  `pnpm db:seed:profile demo`.
+- Сломалась локальная disposable-база или нужны другие демо-данные — останови
+  API и повтори guarded bootstrap с профилем `demo`.
 - `pnpm exec prisma generate`, если TypeScript «не видит» модель Prisma (клиент мог
   быть затёрт pnpm-операцией) — это регенерация, а не реальная ошибка.
 

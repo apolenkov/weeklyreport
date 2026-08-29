@@ -38,6 +38,7 @@
 - [x] 5.6 Route configured browser telemetry through a same-origin tunnel compatible with the enforced CSP; verify a repository check plus one-off browser error delivery succeeds without widening `connect-src`.
 - [x] 5.7 Record alert receivers, off-host encrypted backups, restore drills/RPO-RTO, platform protection, immutable artifacts, and release records as external read-back prerequisites; verify no local placeholder is reported as production PASS.
 - [x] 5.8 Replace unavailable Node 26 `corepack` setup in every Actions job with the exact `packageManager` pnpm pin, extend the runtime-sync guard to cover those jobs, and retire the obsolete Playwright-base-image sync requirement; verify the guard and strict dependency spec pass.
+- [x] 5.9 Replace the broken local seed quick-start with one guarded exact-target create/migrate/seed bootstrap; verify unsafe targets, missing consent, step failure, native docs, and Docker database consumers fail closed.
 
 ## 6. File accountability, cleanup, and OpenSpec
 
