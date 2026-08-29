@@ -17,6 +17,23 @@ set -u
 : "${BACKUP_INTERVAL_SECONDS:?BACKUP_INTERVAL_SECONDS is required}"
 : "${BACKUP_RETENTION_DAYS:?BACKUP_RETENTION_DAYS is required}"
 
+positive_integer() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+    *[1-9]*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+if ! positive_integer "$BACKUP_INTERVAL_SECONDS"; then
+  echo "BACKUP_INTERVAL_SECONDS must be a positive integer" >&2
+  exit 1
+fi
+if ! positive_integer "$BACKUP_RETENTION_DAYS"; then
+  echo "BACKUP_RETENTION_DAYS must be a positive integer" >&2
+  exit 1
+fi
+
 export PGHOST PGUSER PGPASSWORD PGDATABASE
 
 log() {

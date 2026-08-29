@@ -14,6 +14,7 @@ const entry: HistoryEntry = {
   dateRange: "May 11-17, 2026",
   status: "draft",
   archived: false,
+  submissionState: "not-submitted",
   submittedAt: null,
   createdAt: "May 15",
   lastEditAt: "2 hours ago",
@@ -55,6 +56,7 @@ describe("LeadHistoryList", () => {
           {
             ...entry,
             status: "submitted",
+            submissionState: "submitted",
             submittedAt: "3 hours ago",
             publishedAt: "1 hour ago",
           },
@@ -63,8 +65,26 @@ describe("LeadHistoryList", () => {
     );
 
     expect(screen.getByText("3 hours ago")).toBeInTheDocument();
-    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getAllByText("Published")).not.toHaveLength(0);
     expect(screen.getByText("1 hour ago")).toBeInTheDocument();
+  });
+
+  it("does not claim a compiled published period was not submitted", () => {
+    render(
+      <LeadHistoryList
+        entries={[
+          {
+            ...entry,
+            status: "published",
+            submissionState: "unavailable",
+            publishedAt: "1 hour ago",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByText("Published")).not.toHaveLength(0);
+    expect(screen.queryByText("Not submitted")).not.toBeInTheDocument();
   });
 
   it("exposes each traffic dot in the a11y tree as an image with its count label", () => {

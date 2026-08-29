@@ -111,6 +111,22 @@ const P2002_OPEN_BOUNDARY = {
   meta: { target: "Report_one_open_per_boundary" },
 };
 
+const P2039_PERIOD_OVERLAP = {
+  code: "P2039",
+  message:
+    'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
+  meta: {
+    driverAdapterError: {
+      cause: {
+        kind: "postgres",
+        originalCode: "23P01",
+        originalMessage:
+          'conflicting key value violates exclusion constraint "Report_no_live_period_overlap"',
+      },
+    },
+  },
+};
+
 function makeApplicator() {
   return {
     applyToPeriod: vi
@@ -316,6 +332,32 @@ describe("ensureCurrentPeriod", () => {
         },
       }),
     );
+  });
+
+  it("range-constraint collision on the exact boundary returns the winner", async () => {
+    const raced = makePeriodRow({ id: "period-range-winner" });
+    const { client } = makePrisma({
+      createThrows: P2039_PERIOD_OVERLAP,
+      raced,
+    });
+
+    await expect(
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+    ).resolves.toMatchObject({
+      created: false,
+      reportId: "period-range-winner",
+    });
+  });
+
+  it("range-constraint collision on a distinct boundary fails with a typed overlap error", async () => {
+    const { client } = makePrisma({ createThrows: P2039_PERIOD_OVERLAP });
+
+    await expect(
+      ensureCurrentPeriod(client, ANCHOR_MONDAY, ANCHOR_MONDAY, SETTINGS),
+    ).rejects.toMatchObject({
+      name: "PeriodOverlapError",
+      message: "A reporting period overlaps an existing period.",
+    });
   });
 
   it("re-throws a non-boundary error from create", async () => {

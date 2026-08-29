@@ -10,7 +10,6 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
-  ReportStatus,
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
@@ -203,12 +202,6 @@ export class AdminPrismaRepository implements AdminRepository {
     nextPeriodStatus: PeriodStatus;
   }> {
     return periodLifecycle.unarchivePeriod(this.prisma, periodId);
-  }
-
-  readReportForDelete(
-    reportId: string,
-  ): Promise<{ status: ReportStatus; periodStatus: PeriodStatus } | null> {
-    return periodQueries.readReportForDelete(this.prisma, reportId);
   }
 
   deleteReport(reportId: string): Promise<void> {

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -137,6 +138,8 @@ model Project {
   leadId           String
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
+  // Prisma maps PostgreSQL stored generated columns to dbgenerated defaults;
+  // the migration keeps the physical GENERATED ALWAYS AS definition.
   searchTsv        Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(name, ''::text))"))
   items            Item[]
   lead             User                     @relation(fields: [leadId], references: [id])
@@ -244,11 +247,11 @@ model Report {
   sections               ReportSection[]
   // review-acknowledgement: group-level seen receipts pinned to this period.
   reviewAcknowledgements ReviewAcknowledgement[]
-  // PARTIAL UNIQUE INDEX "Report_one_open_per_boundary" ON
-  // ("periodStart","periodEnd") WHERE "periodState" IN ('open','scheduled') —
-  // hand-written in the init migration because the Prisma schema DSL cannot
-  // express partial indexes. It guarantees at most one live pre-published row
-  // per boundary; published and archived rows remain unconstrained.
+  // Partial EXCLUDE constraint "Report_no_live_period_overlap" on the closed
+  // [periodStart, periodEnd] tsrange is hand-written in the append-only
+  // migration because Prisma cannot express PostgreSQL exclusion constraints.
+  // It keeps editable live ranges non-overlapping while allowing durable
+  // published/archived republish history to share an envelope.
 
   @@index([periodStart(sort: Desc)])
   @@index([publishedById])

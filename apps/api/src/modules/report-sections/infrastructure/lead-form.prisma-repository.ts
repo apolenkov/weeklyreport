@@ -8,7 +8,10 @@ import type {
   LeadFormRepository,
 } from "../application/lead-form.service";
 import { applyRevokeTransition } from "../application/revoke-transition";
-import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
+import {
+  LeadFormConstraintError,
+  type ReopenEligibilityFacts,
+} from "../domain/lead-form-shared";
 import {
   reopenBlockedMessage,
   ReopenRequestError,
@@ -141,7 +144,16 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // The caller's scoped read proved the id is in the caller's group, so the
     // write is by id only; the shared transition's `status: "submitted"` guard
     // keeps it race-safe. The changes_requested verdict reuses this transition.
-    await applyRevokeTransition(this.prisma, sectionId, revokedBy);
+    const count = await applyRevokeTransition(
+      this.prisma,
+      sectionId,
+      revokedBy,
+    );
+    if (count === 0) {
+      throw new LeadFormConstraintError(
+        "Cannot revoke a submission from a non-editable period.",
+      );
+    }
   }
 
   // Revoke every submitted section in a report.
@@ -157,7 +169,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       where: {
         reportId,
         status: "submitted",
-        report: { periodStatus: { in: ["open", "reopened"] } },
+        report: {
+          archived: false,
+          periodStatus: { in: ["open", "reopened"] },
+        },
         ...scope,
       },
       data: {

@@ -29,7 +29,6 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
     archived = false,
-    periodEnd: string = periodStart,
   ): Promise<void> {
     // Dual-state fixture: a reopened period keeps the published legacy status
     // while `periodState` reverts to 'open'; archived flips `periodState` only.
@@ -44,7 +43,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
       data: {
         id,
         periodStart: new Date(periodStart),
-        periodEnd: new Date(periodEnd),
+        periodEnd: new Date(periodStart),
         deadline: new Date(periodStart),
         status,
         periodStatus,
@@ -97,31 +96,5 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
     await createReport(PUBLISHED, "published", "2026-05-18T00:00:00.000Z");
 
     await expect(repository.getCurrentEditableId()).resolves.toBeNull();
-  });
-
-  it("breaks a same-periodStart tie deterministically (concurrent editable periods)", async () => {
-    // Two editable periods can still tie on periodStart while differing on
-    // periodEnd. The gate and the latestForViewer resolver call this helper
-    // SEPARATELY, so the id-desc tiebreak must resolve the same id every call.
-    await createReport(
-      OLD_OPEN,
-      "open",
-      "2026-05-18T00:00:00.000Z",
-      false,
-      "2026-05-24T00:00:00.000Z",
-    );
-    await createReport(
-      NEW_OPEN,
-      "reopened",
-      "2026-05-18T00:00:00.000Z",
-      false,
-      "2026-05-25T00:00:00.000Z",
-    );
-
-    const first = await repository.getCurrentEditableId();
-    const second = await repository.getCurrentEditableId();
-
-    expect(first).toBe(NEW_OPEN);
-    expect(second).toBe(first);
   });
 });

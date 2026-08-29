@@ -44,9 +44,8 @@ function isFactoryProvider(entry: unknown): entry is FactoryProvider {
   );
 }
 
-// `@nestjs/testing` is not a dependency of this package, so pin the Nest
-// factory wiring by reading PublicationModule's provider metadata and invoking
-// the same useFactory the module registers for PublicationService.
+// Read provider metadata directly so the test pins the exact factory and
+// injection order without booting unrelated PublicationModule dependencies.
 function resolvePublicationServiceFactory(): FactoryProvider {
   const providers = Reflect.getMetadata(
     MODULE_METADATA.PROVIDERS,

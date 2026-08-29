@@ -157,7 +157,7 @@ describe("lead-form published-period write locks (integration)", () => {
     await gate.paused;
     await publishTarget(prisma, testData);
     gate.release();
-    await revoke;
+    await expect(revoke).rejects.toBeInstanceOf(LeadFormConstraintError);
 
     await expect(
       prisma.reportSection.findUniqueOrThrow({

@@ -15,8 +15,7 @@
     },
     "apps/api": {
       "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts"],
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["tsx"]
+      "project": ["src/**/*.ts"]
     },
     "apps/web": {
       "entry": [

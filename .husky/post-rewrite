@@ -3,6 +3,8 @@
 # Runs only when the relevant files changed during the rewrite.
 # post-rewrite passes a reason ($1 = "rebase" | "amend") and rewritten
 # SHA pairs on stdin; we just diff the prior HEAD against the new one.
+set -e
+
 prev_head="$(git rev-parse 'HEAD@{1}' 2>/dev/null || true)"
 if [ -n "$prev_head" ]; then
   changed="$(git diff-tree -r --name-only --no-commit-id "$prev_head" HEAD 2>/dev/null || true)"

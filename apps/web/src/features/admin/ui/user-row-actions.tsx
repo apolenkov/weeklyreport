@@ -22,7 +22,7 @@ interface UserRowActionsProps {
 }
 
 const ROUTINE_ACTION_CLASS =
-  "btn-press inline-flex h-10 min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex h-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] min-w-10 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--card-surface-border)] bg-[var(--color-card)] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 function UserActivationButton(
   props: Pick<
@@ -87,7 +87,7 @@ function UserOverflowMenu({
       >
         <DropdownMenuItem
           variant="destructive"
-          className="min-h-10 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+          className="min-h-10 max-md:min-h-[var(--touch-target-min)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           onSelect={() => {
             const trigger = triggerRef.current;
             if (trigger) onDelete(user, trigger);

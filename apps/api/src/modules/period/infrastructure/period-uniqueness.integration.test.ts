@@ -1,23 +1,19 @@
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper";
-import { isOpenBoundaryConflict } from "../application/period-factory.js";
+import { isPeriodOverlapConflict } from "../application/period-factory.js";
 
-// Proves the hand-written partial unique index `Report_one_open_per_boundary`
-// has teeth against a real DB: at most one scheduled/open Report per boundary,
-// closed periods exempt. Integration-only — needs the `_test` DB with the index.
-describe("Report_one_open_per_boundary partial unique index (integration)", () => {
+const BASE_START = new Date("2026-08-03T00:00:00.000Z");
+const BASE_END = new Date("2026-08-09T23:59:59.999Z");
+const DEADLINE = new Date("2026-08-07T15:00:00.000Z");
+
+describe("Report_no_live_period_overlap exclusion constraint (integration)", () => {
   const prisma = createTestPrisma();
-
-  const periodStart = new Date("2026-08-03T00:00:00.000Z");
-  const periodEnd = new Date("2026-08-09T23:59:59.999Z");
-  const deadline = new Date("2026-08-07T15:00:00.000Z");
 
   beforeEach(async () => {
     await cleanDatabase();
@@ -28,35 +24,26 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     await disconnectTestPrisma();
   });
 
-  function createOpenReport() {
+  function createReport(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    periodState?: "scheduled" | "open" | "published" | "archived";
+  }) {
+    const periodState = input.periodState ?? "open";
+    const published = periodState === "published" || periodState === "archived";
     return prisma.report.create({
       data: {
-        periodStart,
-        periodEnd,
-        deadline,
-        status: "draft",
-        periodState: "open",
-        periodStatus: "open",
-        archived: false,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: DEADLINE,
+        status: published ? "published" : "draft",
+        periodState,
+        periodStatus: published ? "published" : "open",
+        archived: periodState === "archived",
       },
     });
   }
 
-  function createScheduledReport() {
-    return prisma.report.create({
-      data: {
-        periodStart,
-        periodEnd,
-        deadline,
-        status: "draft",
-        periodState: "scheduled",
-        periodStatus: "open",
-        archived: false,
-      },
-    });
-  }
-
-  // Resolve to the thrown error (or undefined if the promise resolves).
   async function captureError(run: () => Promise<unknown>): Promise<unknown> {
     return run().then(
       () => undefined,
@@ -64,72 +51,100 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     );
   }
 
-  it("rejects a second open Report on the same boundary with P2002", async () => {
-    await createOpenReport();
-
-    const error = await captureError(createOpenReport);
-
+  function expectOverlapError(error: unknown): void {
     expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     const known = error as Prisma.PrismaClientKnownRequestError;
-    expect(known.code).toBe("P2002");
-    // The REAL Postgres P2002 must be recognised by the production predicate —
-    // unit tests fabricate `meta.target`, so this proves the raw-partial-index
-    // violation matches `isOpenBoundaryConflict` on the actual driver shape.
-    expect(isOpenBoundaryConflict(known)).toBe(true);
+    expect(known.code).toBe("P2039");
+    expect(isPeriodOverlapConflict(known)).toBe(true);
+  }
 
-    // The shared guard must fire on the SAME live error, scoped to the boundary
-    // index — this is the real-DB proof the pg-adapter matcher works.
-    expect(
-      isUniqueViolation(known, {
-        index: "Report_one_open_per_boundary",
-        columns: ["periodStart", "periodEnd"],
-      }),
-    ).toBe(true);
-
-    // Under the pg driver adapter `meta.target` is UNSET on a real P2002, so a
-    // guard reading `meta.target` alone would miss this race — a switch to
-    // meta.target-only matching fails here.
-    expect(known.meta?.target).toBeUndefined();
-  });
-
-  it("rejects one of two concurrent scheduled Reports on the same boundary", async () => {
-    const errors = await Promise.all([
-      captureError(createScheduledReport),
-      captureError(createScheduledReport),
-    ]);
-
-    expect(errors.filter((error) => error === undefined)).toHaveLength(1);
-    const error = errors.find((candidate) => candidate !== undefined);
-    expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
-    const known = error as Prisma.PrismaClientKnownRequestError;
-    expect(known.code).toBe("P2002");
-    expect(isOpenBoundaryConflict(known)).toBe(true);
-    expect(
-      isUniqueViolation(known, {
-        index: "Report_one_open_per_boundary",
-        columns: ["periodStart", "periodEnd"],
-      }),
-    ).toBe(true);
-    expect(known.meta?.target).toBeUndefined();
-  });
-
-  it("allows a closed (published) period to share a boundary with a new open one", async () => {
-    await prisma.report.create({
-      data: {
-        periodStart,
-        periodEnd,
-        deadline,
-        status: "published",
-        periodState: "published",
-        periodStatus: "published",
-        archived: false,
-      },
-    });
-
-    // The partial index only constrains live pre-published states, so a new open
-    // period on the same boundary as a published one is not blocked.
-    await expect(createOpenReport()).resolves.toMatchObject({
+  it("rejects distinct overlapping live ranges", async () => {
+    await createReport({
+      periodStart: BASE_START,
+      periodEnd: BASE_END,
       periodState: "open",
     });
+
+    const error = await captureError(() =>
+      createReport({
+        periodStart: new Date("2026-08-05T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-11T23:59:59.999Z"),
+        periodState: "scheduled",
+      }),
+    );
+
+    expectOverlapError(error);
+  });
+
+  it("allows overlapping historical republish rows", async () => {
+    await createReport({
+      periodStart: BASE_START,
+      periodEnd: BASE_END,
+      periodState: "published",
+    });
+
+    await expect(
+      createReport({
+        periodStart: BASE_START,
+        periodEnd: BASE_END,
+        periodState: "archived",
+      }),
+    ).resolves.toMatchObject({ periodState: "archived" });
+  });
+
+  it("allows adjacent non-overlapping periods", async () => {
+    await createReport({ periodStart: BASE_START, periodEnd: BASE_END });
+
+    await expect(
+      createReport({
+        periodStart: new Date("2026-08-10T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-16T23:59:59.999Z"),
+      }),
+    ).resolves.toMatchObject({
+      periodStart: new Date("2026-08-10T00:00:00.000Z"),
+    });
+  });
+
+  it("allows only one of two concurrent overlapping creates", async () => {
+    const outcomes = await Promise.all([
+      captureError(() =>
+        createReport({ periodStart: BASE_START, periodEnd: BASE_END }),
+      ),
+      captureError(() =>
+        createReport({
+          periodStart: new Date("2026-08-06T00:00:00.000Z"),
+          periodEnd: new Date("2026-08-12T23:59:59.999Z"),
+          periodState: "scheduled",
+        }),
+      ),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome === undefined)).toHaveLength(1);
+    expectOverlapError(outcomes.find((outcome) => outcome !== undefined));
+  });
+
+  it("allows only one winner when create races an envelope update", async () => {
+    const existing = await createReport({
+      periodStart: BASE_START,
+      periodEnd: BASE_END,
+    });
+
+    const outcomes = await Promise.all([
+      captureError(() =>
+        prisma.report.update({
+          where: { id: existing.id },
+          data: { periodEnd: new Date("2026-08-12T23:59:59.999Z") },
+        }),
+      ),
+      captureError(() =>
+        createReport({
+          periodStart: new Date("2026-08-10T00:00:00.000Z"),
+          periodEnd: new Date("2026-08-16T23:59:59.999Z"),
+        }),
+      ),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome === undefined)).toHaveLength(1);
+    expectOverlapError(outcomes.find((outcome) => outcome !== undefined));
   });
 });

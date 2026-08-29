@@ -30,12 +30,8 @@ services:
     ports:
       - "5432:5432"
 
-  # Mailpit is a multi-arch fork by axllent — same SMTP :1025 + Web UI :8025
-  # contract as mailhog, native arm64 image, actively maintained, modern UI.
-  # Keep service name `mailhog` so existing SMTP_HOST=mailhog env wiring still
-  # works without
-  # touching every consumer.
-  mailhog:
+  # Mailpit is a multi-arch image by axllent — SMTP :1025 + Web UI :8025.
+  mailpit:
     image: axllent/mailpit:latest@sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6
     ports:
       - "1025:1025"
@@ -95,7 +91,7 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_MAXMEMORY_BYTES: 209715200
-      # This is the DEV compose (mailhog catch-all, exposed ports,
+      # This is the DEV compose (Mailpit catch-all, exposed ports,
       # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.
       # The boot fence in env.schema.ts now refuses to start when both
       # NODE_ENV=production AND AUTH_DEV_MODE=true; keeping NODE_ENV=development
@@ -115,7 +111,7 @@ services:
       # is layered on — it enables the SDK and pins its own 1.0.
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
-      SMTP_HOST: mailhog
+      SMTP_HOST: mailpit
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
       # Optional coverage vars (all .optional() in envSchema, each defaulting to

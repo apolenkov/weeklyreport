@@ -16,7 +16,7 @@ import type {
   PublishPeriodOutcome,
 } from "../application/period.service.js";
 import { PeriodScopeError } from "../application/period.service.js";
-import { isOpenBoundaryConflict } from "../application/period-factory.js";
+import { isPeriodOverlapConflict } from "../application/period-factory.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 @Injectable()
@@ -139,7 +139,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
       });
     } catch (error) {
       // Open-boundary unique index: surface as BAD_REQUEST, never 500.
-      if (isOpenBoundaryConflict(error)) {
+      if (isPeriodOverlapConflict(error)) {
         throw new AdminPeriodOverlapError(
           "A period already exists for these dates.",
         );

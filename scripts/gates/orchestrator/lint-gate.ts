@@ -151,9 +151,9 @@ const verdictOf = (outcome: SpawnSyncReturns<Buffer>): Verdict => {
   return { ok: false, detail: `exit ${outcome.status ?? "unknown"}` };
 };
 
-// npm_execpath is a directly-executable launcher under a standalone install and
-// a `.cjs` entry under corepack (what CI uses). Only the first can be spawned as
-// a command, so the second is handed to the Node that is already running.
+// npm_execpath can be a directly executable launcher or a `.cjs` entrypoint.
+// Only the first can be spawned as a command, so the second is handed to the
+// Node process that is already running.
 const launcher = (execPath: string): readonly [string, readonly string[]] =>
   /\.[cm]?js$/.test(execPath) ? [process.execPath, [execPath]] : [execPath, []];
 

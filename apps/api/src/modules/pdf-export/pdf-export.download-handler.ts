@@ -35,8 +35,9 @@ export interface PdfDownloadDeps {
   logger: AppLogger;
 }
 
-// Same-origin URL (`/pdfs/{jobId}.pdf`) so window.open carries the session
-// cookie; streams only to callers with a valid human session and report read.
+// Same-origin URL (`/pdfs/{jobId}.pdf`) so the attachment request carries the
+// session cookie. Streams only to callers with a valid human session and
+// report-read permission.
 export function createPdfDownloadHandler(
   deps: PdfDownloadDeps,
 ): RequestHandler {

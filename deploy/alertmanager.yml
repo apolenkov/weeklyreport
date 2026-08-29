@@ -10,7 +10,8 @@ route:
 receivers:
   - name: webhook-stub
     webhook_configs:
-      # The /api/alerts endpoint does not exist yet; alerting must not be activated until it does.
-      # Replace with Slack/PagerDuty/email config for production use.
+      # Template only: /api/alerts does not exist and this file is not loaded by
+      # the Compose stack. Replace with an owned external receiver and obtain
+      # delivery read-back before treating alerting as production-ready.
       - url: "http://api:3001/api/alerts"
         send_resolved: true

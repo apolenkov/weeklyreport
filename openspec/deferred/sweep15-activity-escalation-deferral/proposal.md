@@ -8,7 +8,7 @@ Activity-parented blocked items and unresolved risks are intentionally absent fr
 
 ## Decision
 
-Keep the current [`status-risk-unification`](../../../specs/status-risk-unification/spec.md) contract unchanged: activity-parented records do not emit per-item, per-risk, or product-level escalations. This asymmetry is intentional; it is a deliberate deferral, not a correctness bug and not implementation authorization. The docs-only [`sweep15-spec-product-map`](../../sweep15-spec-product-map/proposal.md) change owns this discoverability update.
+Keep the current [`status-risk-unification`](../../specs/status-risk-unification/spec.md) contract unchanged: activity-parented records do not emit per-item, per-risk, or product-level escalations. This asymmetry is intentional; it is a deliberate deferral, not a correctness bug and not implementation authorization. The docs-only [`sweep15-spec-product-map`](../../changes/archive/2026-07-17-sweep15-spec-product-map/proposal.md) change owns this discoverability update.
 
 Before activation, product design must decide:
 

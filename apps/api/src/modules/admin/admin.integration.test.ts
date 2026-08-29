@@ -5,6 +5,10 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  createPauseGate,
+  pauseBeforeTransaction,
+} from "../../test-utils/paused-prisma.js";
+import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
@@ -13,6 +17,7 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -28,6 +33,109 @@ describe("AdminPrismaRepository (integration)", () => {
   afterAll(async () => {
     await cleanDatabase();
     await disconnectTestPrisma();
+  });
+
+  it("deletes a draft report and cascades its dependent rows", async () => {
+    await repo.deleteReport(testData.report.id);
+
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.reportSection.count({ where: { reportId: testData.report.id } }),
+    ).resolves.toBe(0);
+  });
+
+  it.each([
+    [
+      "published",
+      {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+      },
+    ],
+    ["archived", { archived: true, periodState: "archived" }],
+  ] as const)("does not delete a %s report", async (_label, data) => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data,
+    });
+
+    await expect(repo.deleteReport(testData.report.id)).rejects.toBeInstanceOf(
+      AdminAccessError,
+    );
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.not.toBeNull();
+  });
+
+  it("rejects deletion when publication wins before the guarded transaction", async () => {
+    const gate = createPauseGate();
+    const pausedRepo = new AdminPrismaRepository(
+      pauseBeforeTransaction(prisma, gate.pause) as never,
+    );
+    const deletion = pausedRepo.deleteReport(testData.report.id);
+    await gate.paused;
+
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt: new Date(),
+      },
+    });
+    gate.release();
+
+    await expect(deletion).rejects.toBeInstanceOf(AdminAccessError);
+    await expect(
+      prisma.report.findUnique({ where: { id: testData.report.id } }),
+    ).resolves.not.toBeNull();
+  });
+
+  it("allows at most one winner when two deletes race", async () => {
+    const results = await Promise.allSettled([
+      repo.deleteReport(testData.report.id),
+      repo.deleteReport(testData.report.id),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const rejected = results.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+    expect(rejected?.reason).toBeInstanceOf(AdminPeriodNotFoundError);
+  });
+
+  it("lets the manual precheck and writer reuse a historical date range", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+      },
+    });
+
+    await expect(
+      repo.findOverlappingPeriod({
+        periodStart: testData.report.periodStart,
+        periodEnd: testData.report.periodEnd,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      repo.createPeriodManual({
+        periodStart: testData.report.periodStart,
+        periodEnd: testData.report.periodEnd,
+        deadline: new Date("2026-04-10T15:00:00.000Z"),
+        weekLabel: "Historical range reuse",
+        periodState: "open",
+      }),
+    ).resolves.toMatchObject({ periodState: "open" });
   });
 
   it("getSnapshot returns users, projects, periods, and rules", async () => {

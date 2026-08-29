@@ -24,7 +24,6 @@ type StubbedMethod =
   | "listStageAssignmentCounts"
   | "listStages"
   | "readPeriodById"
-  | "readReportForDelete"
   | "saveReminderPolicy"
   | "unarchivePeriod"
   | "updatePeriodManual";
@@ -68,7 +67,6 @@ export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
     listStageAssignmentCounts: vi.fn().mockResolvedValue([]),
     listStages: vi.fn().mockResolvedValue([]),
     readPeriodById: vi.fn().mockResolvedValue(null),
-    readReportForDelete: vi.fn().mockResolvedValue(null),
     saveReminderPolicy: vi.fn((policy) => Promise.resolve(policy)),
     unarchivePeriod: vi
       .fn()

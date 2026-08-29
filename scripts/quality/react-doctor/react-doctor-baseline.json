@@ -1074,7 +1074,7 @@
       "rationale": "DialogSurface uses the shared useDialogFocus hook, which traps Tab/Shift+Tab, handles Escape, restores focus, and tests role/aria-modal behavior. Native dialog is not a drop-in replacement for this established compatibility contract; the warning is a false positive."
     },
     {
-      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::29:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
+      "id": "src/shared/ui/report-shell/segmented-toggle.tsx::32:17::react-doctor/only-export-components::b67532f9eaa2aea207a4126da3b5e5fc616d55f7a85f0267a61f706fb60e2b30",
       "file": "src/shared/ui/report-shell/segmented-toggle.tsx",
       "rule": "only-export-components",
       "verdict": "overturn",

@@ -97,8 +97,8 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
   );
 });
 
-// Open-boundary P2002 → AdminPeriodOverlapError (BAD_REQUEST), never a raw 500.
-describe("AdminPrismaRepository period writers — open-boundary P2002 translation", () => {
+// Both rollout-era and current database guards map to the same domain outcome.
+describe("AdminPrismaRepository period writers — overlap translation", () => {
   function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
       "Unique constraint failed",
@@ -106,6 +106,26 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
         code: "P2002",
         clientVersion: "test",
         meta: { target: "Report_one_open_per_boundary" },
+      },
+    );
+  }
+
+  function periodOverlapP2039(): Prisma.PrismaClientKnownRequestError {
+    return new Prisma.PrismaClientKnownRequestError(
+      'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
+      {
+        code: "P2039",
+        clientVersion: "test",
+        meta: {
+          driverAdapterError: {
+            cause: {
+              kind: "postgres",
+              originalCode: "23P01",
+              originalMessage:
+                'conflicting key value violates exclusion constraint "Report_no_live_period_overlap"',
+            },
+          },
+        },
       },
     );
   }
@@ -132,6 +152,31 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
   it("updatePeriodManual: P2002 on the date-envelope edit → AdminPeriodOverlapError", async () => {
     const prisma = {
       report: { update: vi.fn(() => Promise.reject(openBoundaryP2002())) },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(
+      repo.updatePeriodManual({
+        reportId: "report-1",
+        data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("createPeriodManual: adapter range P2039 → AdminPeriodOverlapError", async () => {
+    const prisma = {
+      report: { create: vi.fn(() => Promise.reject(periodOverlapP2039())) },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.createPeriodManual(INPUT)).rejects.toBeInstanceOf(
+      AdminPeriodOverlapError,
+    );
+  });
+
+  it("updatePeriodManual: adapter range P2039 → AdminPeriodOverlapError", async () => {
+    const prisma = {
+      report: { update: vi.fn(() => Promise.reject(periodOverlapP2039())) },
     } as unknown as PrismaService;
     const repo = new AdminPrismaRepository(prisma);
 
@@ -181,6 +226,37 @@ describe("AdminPrismaRepository period writers — open-boundary P2002 translati
     await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
       "connection reset",
     );
+  });
+});
+
+describe("AdminPrismaRepository.findOverlappingPeriod", () => {
+  it("limits the friendly precheck to the same live states as the database constraint", async () => {
+    const findFirst = vi.fn(() => Promise.resolve(null));
+    const prisma = {
+      report: { findFirst },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+    const periodStart = new Date("2026-08-03T00:00:00.000Z");
+    const periodEnd = new Date("2026-08-09T23:59:59.999Z");
+
+    await expect(
+      repo.findOverlappingPeriod({
+        periodStart,
+        periodEnd,
+        excludeId: "report-being-edited",
+      }),
+    ).resolves.toBeNull();
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        periodState: { in: ["scheduled", "open"] },
+        periodStart: { lte: periodEnd },
+        periodEnd: { gte: periodStart },
+        NOT: { id: "report-being-edited" },
+      },
+      orderBy: { periodStart: "desc" },
+      select: { id: true, periodStart: true, periodEnd: true },
+    });
   });
 });
 

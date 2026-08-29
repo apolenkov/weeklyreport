@@ -59,10 +59,17 @@ const SMTP_ENV = {
 } as unknown as EnvConfig;
 
 let mailpitUp = false;
+const REQUIRED_INTEGRATION_DEPS =
+  process.env.REQUIRED_INTEGRATION_DEPS === "true";
 
 beforeAll(async () => {
   mailpitUp = await isMailpitUp();
   if (!mailpitUp) {
+    if (REQUIRED_INTEGRATION_DEPS) {
+      throw new Error(
+        "Required integration dependency unavailable: Mailpit at http://localhost:8025",
+      );
+    }
     console.warn(
       "[email-dispatch] Mailpit unreachable at http://localhost:8025 — start local stack to run live assertions.",
     );
@@ -99,6 +106,11 @@ describe("email-dispatch integration", () => {
     { timeout: SMTP_GREETING_HEADROOM_MS },
     async (ctx) => {
       if (!mailpitUp) {
+        if (REQUIRED_INTEGRATION_DEPS) {
+          throw new Error(
+            "Required integration dependency unavailable: Mailpit",
+          );
+        }
         ctx.skip();
         return;
       }
@@ -151,6 +163,11 @@ describe("email-dispatch integration", () => {
     { timeout: SMTP_GREETING_HEADROOM_MS },
     async (ctx) => {
       if (!mailpitUp) {
+        if (REQUIRED_INTEGRATION_DEPS) {
+          throw new Error(
+            "Required integration dependency unavailable: Mailpit",
+          );
+        }
         ctx.skip();
         return;
       }

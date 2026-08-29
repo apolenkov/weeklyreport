@@ -19,9 +19,12 @@ const ACTIVE_CLASS =
   "bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]";
 const INACTIVE_CLASS =
   "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]";
+const MOBILE_TOUCH_TARGET_CLASS = "max-md:min-h-[var(--touch-target-min)]";
+const MOBILE_ICON_TOUCH_TARGET_CLASS = "max-md:min-w-[var(--touch-target-min)]";
 
 interface SegmentOptions {
-  // Icon-only segment — square, no min-width. Consumer must supply aria-label.
+  // Icon-only segment — square on desktop; mobile adds the shared touch floor.
+  // Consumer must supply aria-label.
   readonly iconOnly?: boolean;
   readonly desktopLabels?: boolean;
 }
@@ -35,9 +38,9 @@ export function segmentClassName(
     : iconOnly
       ? "w-[calc(var(--toolbar-control-h)-0.25rem)]"
       : "min-w-[64px] px-3";
-  return `inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors ${shape} ${
-    active ? ACTIVE_CLASS : INACTIVE_CLASS
-  }`;
+  return `inline-flex h-full items-center justify-center gap-1 rounded-[var(--radius-pill)] text-xs font-semibold transition-colors ${MOBILE_TOUCH_TARGET_CLASS} ${
+    iconOnly ? MOBILE_ICON_TOUCH_TARGET_CLASS : ""
+  } ${shape} ${active ? ACTIVE_CLASS : INACTIVE_CLASS}`;
 }
 
 interface SegmentedToggleProps {

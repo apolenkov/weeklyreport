@@ -8,6 +8,7 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import { applySaveSection } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverConflictError } from "./carry-over.service";
 
@@ -435,6 +436,196 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       await prisma.decision.count({
         where: { reportSectionId: targetSection.id },
       }),
+    ).toBe(0);
+  });
+
+  it("rejects a submitted target re-read inside the transaction before any carry rows", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const staleTarget = (await repo.getTargetSections(targetReport.id))[0];
+    if (!staleTarget) throw new Error("target section read model missing");
+
+    await prisma.reportSection.update({
+      where: { id: targetSection.id },
+      data: { status: "submitted", submittedAt: new Date() },
+    });
+
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const carriedItemId = crypto.randomUUID();
+    const records = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: crypto.randomUUID(),
+        targetItemId: carriedItemId,
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const plannedTarget = {
+      ...staleTarget,
+      items: [
+        ...staleTarget.items,
+        {
+          id: carriedItemId,
+          stableId: crypto.randomUUID(),
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Must not be inserted",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+        },
+      ],
+    };
+
+    await expect(
+      repo.saveCarryOver(execution, records, [plannedTarget]),
+    ).rejects.toThrow(CarryOverConflictError);
+
+    expect(await prisma.carryOverExecution.count()).toBe(0);
+    expect(await prisma.carryOverRecord.count()).toBe(0);
+    expect(
+      await prisma.item.count({ where: { reportSectionId: targetSection.id } }),
+    ).toBe(0);
+  });
+
+  it("wins the submit-vs-carry-over race without a partial carry execution", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const targetRead = (await repo.getTargetSections(targetReport.id))[0];
+    if (!targetRead) throw new Error("target section read model missing");
+
+    const carriedItemId = crypto.randomUUID();
+    const plannedTarget = {
+      ...targetRead,
+      items: [
+        {
+          id: carriedItemId,
+          stableId: crypto.randomUUID(),
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Must not be inserted",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+        },
+      ],
+    };
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const records = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: crypto.randomUUID(),
+        targetItemId: carriedItemId,
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const submitted = {
+      ...targetRead,
+      status: "submitted" as const,
+      submittedAt: new Date(),
+    };
+    let releaseSubmit: (() => void) | undefined;
+    let signalSubmitReady: (() => void) | undefined;
+    const submitReady = new Promise<void>((resolve) => {
+      signalSubmitReady = resolve;
+    });
+    const holdSubmit = new Promise<void>((resolve) => {
+      releaseSubmit = resolve;
+    });
+
+    // Use the same repository transaction owner as a real submit, then hold
+    // its report lock long enough to start carry-over behind it. Carry-over
+    // must re-read the now-submitted section after the lock is released.
+    const submit = prisma.$transaction(async (tx) => {
+      await applySaveSection(tx, submitted, targetRead.version);
+      signalSubmitReady?.();
+      await holdSubmit;
+    });
+    await submitReady;
+    const carry = repo.saveCarryOver(execution, records, [plannedTarget]);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    releaseSubmit?.();
+
+    const [submitResult, carryResult] = await Promise.allSettled([
+      submit,
+      carry,
+    ]);
+    expect(submitResult.status).toBe("fulfilled");
+    expect(carryResult.status).toBe("rejected");
+    if (carryResult.status === "fulfilled") {
+      throw new Error("carry-over unexpectedly committed after submit");
+    }
+    expect(carryResult.reason).toBeInstanceOf(CarryOverConflictError);
+    expect(
+      await prisma.reportSection.findUnique({
+        where: { id: targetSection.id },
+      }),
+    ).toMatchObject({
+      status: "submitted",
+      version: 2,
+    });
+    expect(await prisma.carryOverExecution.count()).toBe(0);
+    expect(await prisma.carryOverRecord.count()).toBe(0);
+    expect(
+      await prisma.item.count({ where: { reportSectionId: targetSection.id } }),
     ).toBe(0);
   });
 });

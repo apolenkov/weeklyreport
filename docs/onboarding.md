@@ -44,8 +44,7 @@ WeeklyReport автоматизирует еженедельные статус-
 1. Браузер вызывает tRPC-клиент. URL запроса — относительный `/trpc`
    (`apps/web/src/shared/lib/trpc/trpc.ts`), то есть same-origin к web-серверу.
 2. Next.js по правилам из `apps/web/next.config.ts` (`rewrites`) проксирует
-   `/trpc`, `/auth`, `/health`, `/api` на бэкенд (`API_URL`, по умолчанию
-   `http://localhost:3002`).
+   `/trpc`, `/auth`, `/health`, `/api` на бэкенд через обязательный `API_URL`.
 3. На бэкенде tRPC примонтирован как Express-middleware на `/trpc`
    (`apps/api/src/main.ts`), роутер собирается в
    `apps/api/src/infrastructure/trpc/`.
@@ -105,10 +104,13 @@ Docker-базы.
 
 ## 6. Наблюдаемость (логи, трейсы, метрики, ошибки)
 
-Поднимается одной командой `pnpm observability:up`. Две половины:
+Инфраструктура поднимается командой `pnpm observability:up`; она не запускает
+`api` и `web`, поэтому `pnpm dev` остаётся их единственным владельцем портов.
+Две части наблюдаемости:
 
-1. **Grafana / otel-lgtm** (http://localhost:3003, `admin`/`admin`) — трейсы в
-   Tempo, логи в Loki, метрики в Prometheus. Бэкенд экспортирует через OTLP
+1. **Grafana / otel-lgtm** (http://localhost:3003, `admin` и пароль из
+   `GRAFANA_ADMIN_PASSWORD`) — трейсы в Tempo, логи в Loki, метрики в Prometheus.
+   Бэкенд экспортирует через OTLP
    (`apps/api/src/infrastructure/otel/otel.bootstrap.ts`).
 2. **Bugsink** (http://localhost:8000) — трекер ошибок, совместимый с Sentry.
    Сюда летят только ошибки (не трейсы и не транзакции).

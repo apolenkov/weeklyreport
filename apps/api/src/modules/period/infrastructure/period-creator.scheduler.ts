@@ -12,7 +12,10 @@ import {
 } from "../../carry-over/index.js";
 import { PolicyApplicatorService } from "../../reminders/index.js";
 import type { EnsuredPeriod } from "../application/period-factory.js";
-import { ensureCurrentPeriod } from "../application/period-factory.js";
+import {
+  ensureCurrentPeriod,
+  PeriodOverlapError,
+} from "../application/period-factory.js";
 import { buildTransition } from "../domain/period-transition.js";
 
 // The `report` delegate methods the scheduled→open flip needs.
@@ -58,6 +61,8 @@ type PeriodTickOutcome =
       deadline: Date;
       periodState: "scheduled" | "open";
     };
+
+const FUTURE_PERIOD_EXISTS = "future-period-exists" as const;
 
 export const PERIOD_AUTO_CARRY_OVER = Symbol("PeriodAutoCarryOver");
 
@@ -120,24 +125,34 @@ export class PeriodCreatorScheduler {
     });
 
     if (mostRecent && mostRecent.periodEnd.getTime() > now.getTime()) {
-      return { created: false, reason: "future-period-exists" };
+      return { created: false, reason: FUTURE_PERIOD_EXISTS };
     }
 
     // The factory owns deadline math, the lifecycle field set and reminder
     // materialisation, so this path stays identical to the lazy login-create;
     // an empty table falls back to `now` as the anchor.
-    const result = await ensureCurrentPeriod(
+    const result: EnsuredPeriod | null = await ensureCurrentPeriod(
       this.prisma,
       mostRecent ? new Date(mostRecent.periodEnd.getTime() + MS_PER_DAY) : now,
       now,
       settings,
       this.policyApplicator,
-    );
+    ).catch((error: unknown): null => {
+      if (!(error instanceof PeriodOverlapError)) throw error;
+      this.logger.warn(
+        "auto-create skipped: the computed period overlaps an existing range",
+      );
+      return null;
+    });
+
+    if (result === null) {
+      return { created: false, reason: FUTURE_PERIOD_EXISTS };
+    }
 
     // A concurrent login-create won the boundary; the winning path owns the
     // log and the audit line, so this tick reports the same as a no-op.
     if (!result.created) {
-      return { created: false, reason: "future-period-exists" };
+      return { created: false, reason: FUTURE_PERIOD_EXISTS };
     }
 
     this.logger.log(

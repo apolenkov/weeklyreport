@@ -416,6 +416,47 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.create).not.toHaveBeenCalled();
     expect(audit.periodAutoCreate).not.toHaveBeenCalled();
   });
+
+  it("treats a distinct range-overlap conflict as a safe create skip", async () => {
+    const prisma = makePrismaStub({
+      mostRecent: {
+        id: "period-old",
+        periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+      },
+    });
+    prisma.report.create.mockRejectedValue({
+      code: "P2039",
+      message:
+        'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
+      meta: {
+        driverAdapterError: {
+          cause: {
+            kind: "postgres",
+            originalCode: "23P01",
+            originalMessage:
+              'conflicting key value violates exclusion constraint "Report_no_live_period_overlap"',
+          },
+        },
+      },
+    });
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoCreate: vi.fn(),
+    };
+    const scheduler = createScheduler(
+      prisma,
+      { getSettings: vi.fn().mockResolvedValue(makeSettings()) },
+      audit,
+    );
+
+    await expect(
+      scheduler.runOnce(new Date("2026-05-12T00:05:00Z")),
+    ).resolves.toEqual({
+      created: false,
+      reason: "future-period-exists",
+    });
+    expect(audit.periodAutoCreate).not.toHaveBeenCalled();
+  });
 });
 
 const W = new Date("2026-05-11T00:00:00.000Z");

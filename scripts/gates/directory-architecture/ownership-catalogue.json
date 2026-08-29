@@ -232,7 +232,7 @@
     {
       "id": "scripts-quality-exemplary-implementation",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-file-kind|exemplary-floor-ratchet|exemplary-structure-contract|exemplary-structure-inventory|exemplary-structure-probe|exemplary-structure-baseline|exemplary-structure-final|exemplary-structural-snapshot)\\.ts)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-file-kind|exemplary-floor-ratchet|exemplary-structure-contract|exemplary-structure-inventory|exemplary-structure-probe|exemplary-structural-snapshot)\\.ts)$",
       "concern": "quality-exemplary",
       "role": "implementation",
       "target": "scripts/quality/exemplary/$1"
@@ -240,7 +240,7 @@
     {
       "id": "scripts-quality-exemplary-entrypoint",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue|exemplary-structure-cli|exemplary-structure-probe-cli)\\.ts)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-catalogue|exemplary-structure-probe-cli)\\.ts)$",
       "concern": "quality-exemplary",
       "role": "entrypoint",
       "target": "scripts/quality/exemplary/$1"
@@ -248,7 +248,7 @@
     {
       "id": "scripts-quality-exemplary-data",
       "scope": "scripts",
-      "pattern": "^scripts/(?:quality/exemplary/)?((?:exemplary-floor-baseline|exemplary-structure-baseline|exemplary-structure-final)\\.json)$",
+      "pattern": "^scripts/(?:quality/exemplary/)?(exemplary-floor-baseline\\.json)$",
       "concern": "quality-exemplary",
       "role": "data",
       "target": "scripts/quality/exemplary/$1"
@@ -376,7 +376,7 @@
     {
       "id": "scripts-gates-operations-tests",
       "scope": "scripts",
-      "pattern": "^scripts/(?:gates/operations/)?((?:prod-compose-gate|restore-guard)\\.test\\.ts)$",
+      "pattern": "^scripts/gates/operations/(.+\\.test\\.ts)$",
       "concern": "operations-gates",
       "role": "test",
       "target": "scripts/gates/operations/$1"

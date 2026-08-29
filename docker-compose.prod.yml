@@ -341,6 +341,7 @@ services:
       args:
         NEXT_PUBLIC_AUTH_STUB: "false"
         NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
         API_URL: http://api:3001
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
     environment:
@@ -380,8 +381,9 @@ services:
         max-file: "5"
 
   # Caddy edge — TLS termination + reverse-proxy + security headers.
-  # Routes /trpc, /auth, /health, /metrics, /admin/queues -> api; everything
-  # else -> web. WebSocket upgrade is automatic. Auto-HTTPS via Let's Encrypt
+  # Routes /trpc, /auth, /health, /admin/queues -> api; /metrics remains
+  # internal-only on the compose network; everything else -> web.
+  # WebSocket upgrade is automatic. Auto-HTTPS via Let's Encrypt
   # when CADDY_SITE_ADDRESS resolves publicly; swap deploy/caddy/Caddyfile
   # for Caddyfile.staging if you need caddy's internal CA instead.
   caddy:
@@ -395,7 +397,9 @@ services:
       # violation silently.
       CADDY_CSP_REPORT_URI: ${CADDY_CSP_REPORT_URI:?CADDY_CSP_REPORT_URI must be set (CSP violation-report collector URL)}
     volumes:
-      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Set CADDY_FILE=./deploy/caddy/Caddyfile.staging for the internal-CA
+      # staging profile; the default is the public production policy.
+      - ${CADDY_FILE:-./deploy/caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

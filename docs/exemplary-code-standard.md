@@ -145,7 +145,7 @@ global maintained-product authority only after every slice reached zero. New
 product paths inherit that authority immediately; there is no transitional
 per-folder override phase anymore.
 
-## 5. OpenSpec backlog (≈34 active changes)
+## 5. OpenSpec backlog
 
 `openspec list` shows the current backlog:
 

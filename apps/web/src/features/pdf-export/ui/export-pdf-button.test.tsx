@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 //
-// ExportPdfButton: popup-safe open, truthful success toast, poll-error recovery.
+// ExportPdfButton: current-page PDF delivery and retryable error recovery.
 
 import "@testing-library/jest-dom/vitest";
 
@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
@@ -16,12 +16,10 @@ import { createMockTRPC } from "../../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
 const toastError = vi.fn<(...args: unknown[]) => void>();
-const toastInfo = vi.fn<(...args: unknown[]) => void>();
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),
     error: (...args: unknown[]) => toastError(...args),
-    info: (...args: unknown[]) => toastInfo(...args),
   },
 }));
 
@@ -85,10 +83,14 @@ function renderButton(options: {
 }
 
 describe("ExportPdfButton", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     toastSuccess.mockClear();
     toastError.mockClear();
-    toastInfo.mockClear();
     vi.unstubAllGlobals();
   });
 
@@ -175,12 +177,8 @@ describe("ExportPdfButton", () => {
     expect(trigger).not.toHaveAttribute("aria-disabled");
   });
 
-  it("calls window.open synchronously in the click handler before the mutation", async () => {
-    const openMock = vi.fn(() => ({
-      location: { href: "" },
-      closed: false,
-      close: vi.fn(),
-    }));
+  it("does not open a browser tab when starting an export", async () => {
+    const openMock = vi.fn();
     vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
@@ -189,47 +187,36 @@ describe("ExportPdfButton", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
 
-    expect(openMock).toHaveBeenCalledTimes(1);
-    expect(openMock).toHaveBeenCalledWith("", "_blank");
+    expect(openMock).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(expectDefined(openMock.mock.invocationCallOrder[0])).toBeLessThan(
-      expectDefined(mutationFn.mock.invocationCallOrder[0]),
-    );
   });
 
-  it("navigates the held tab to the artifact URL and toasts success once", async () => {
-    const fakeTab = {
-      location: { href: "" },
-      closed: false,
-      close: vi.fn(),
-    };
-    vi.stubGlobal(
-      "open",
-      vi.fn(() => fakeTab),
-    );
+  it("keeps a request error retryable without opening a tab", async () => {
+    const openMock = vi.fn();
+    vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
-    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
-      jobId: JOB_ID,
-    });
+    const mutationFn = expectDefined(captured["pdfExport.request"]).mutationFn;
+    mutationFn.mockRejectedValueOnce(new Error("request failed"));
 
-    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    await userEvent.click(button);
 
     await waitFor(() => {
-      expect(fakeTab.location.href).toBe(ARTIFACT_URL);
+      expect(toastError).toHaveBeenCalledWith("request failed");
+      expect(button).not.toBeDisabled();
     });
-    expect(toastSuccess).toHaveBeenCalledTimes(1);
-    expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
+    expect(openMock).not.toHaveBeenCalled();
   });
 
-  it("renders a download link and announces fallback delivery when window.open is blocked", async () => {
-    vi.stubGlobal(
-      "open",
-      vi.fn(() => null),
-    );
-
+  it("attempts one attachment download and keeps a fallback link with the same URL", async () => {
+    const openMock = vi.fn();
+    vi.stubGlobal("open", openMock);
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
     const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
     expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
       jobId: JOB_ID,
@@ -240,49 +227,15 @@ describe("ExportPdfButton", () => {
     const link = await screen.findByRole("link", { name: "Download PDF" });
     expect(link).toHaveAttribute("href", ARTIFACT_URL);
     expect(link).toHaveAttribute("download");
-    expect(toastSuccess).not.toHaveBeenCalled();
-    expect(toastInfo).toHaveBeenCalledOnce();
-    expect(toastInfo).toHaveBeenCalledWith(
-      "PDF ready — use the download link.",
-    );
-  });
-
-  it("renders a download link when the held tab was closed before completion", async () => {
-    const fakeTab = {
-      location: { href: "" },
-      closed: true,
-      close: vi.fn(),
-    };
-    vi.stubGlobal(
-      "open",
-      vi.fn(() => fakeTab),
-    );
-
-    const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
-    expectDefined(captured["pdfExport.request"]).mutationFn.mockResolvedValue({
-      jobId: JOB_ID,
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
-
-    const link = await screen.findByRole("link", { name: "Download PDF" });
-    expect(link).toHaveAttribute("href", ARTIFACT_URL);
-    expect(fakeTab.location.href).toBe("");
-    expect(toastSuccess).not.toHaveBeenCalled();
-    expect(toastInfo).toHaveBeenCalledWith(
-      "PDF ready — use the download link.",
-    );
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(openMock).not.toHaveBeenCalled();
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
   });
 
   it("on status poll error: error toast fires and the button returns to idle", async () => {
-    vi.stubGlobal(
-      "open",
-      vi.fn(() => ({
-        location: { href: "" },
-        closed: false,
-        close: vi.fn(),
-      })),
-    );
+    const openMock = vi.fn();
+    vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({
       statusQuery: () => {
@@ -300,6 +253,7 @@ describe("ExportPdfButton", () => {
       expect(toastError).toHaveBeenCalled();
     });
     expect(toastError.mock.calls[0]?.[0]).toMatch(/status check failed/i);
+    expect(openMock).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(button).toHaveAttribute("aria-busy", "false");
@@ -307,16 +261,9 @@ describe("ExportPdfButton", () => {
     });
   });
 
-  it("on failed job status: error toast fires, the held tab closes, and the button returns to idle", async () => {
-    const fakeTab = {
-      location: { href: "" },
-      closed: false,
-      close: vi.fn(),
-    };
-    vi.stubGlobal(
-      "open",
-      vi.fn(() => fakeTab),
-    );
+  it("on failed job status: error toast fires and the button returns to idle without a tab", async () => {
+    const openMock = vi.fn();
+    vi.stubGlobal("open", openMock);
 
     const { captured } = renderButton({
       statusQuery: {
@@ -341,7 +288,7 @@ describe("ExportPdfButton", () => {
       expect(toastError).toHaveBeenCalled();
     });
     expect(toastError.mock.calls[0]?.[0]).toMatch(/pdf export failed/i);
-    expect(fakeTab.close).toHaveBeenCalledTimes(1);
+    expect(openMock).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(button).toHaveAttribute("aria-busy", "false");

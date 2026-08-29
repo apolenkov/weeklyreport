@@ -11,11 +11,16 @@ import type {
 } from "@prisma/client";
 
 import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "../report-sections/index.js";
+import {
   CarryOverConflictError,
   type CarryOverResult,
   isTargetEditable,
 } from "./carry-over.service";
 import {
+  mergePlannedCarriedRows,
   persistCarriedRowsForSection,
   requirePrimaryTargetSection,
 } from "./carry-over-row-writes";
@@ -78,14 +83,36 @@ export async function writeCarryOver(
 ): Promise<CarryOverResult> {
   await assertTargetEditable(tx, execution.targetReportId);
 
+  const currentTargetSections = await lockAndReadTargetSections(
+    tx,
+    execution.targetReportId,
+  );
+  const writableTargetSections = currentTargetSections.map((current) =>
+    mergePlannedCarriedRows(
+      current,
+      targetSections.find(
+        (planned) => planned.reportSectionId === current.reportSectionId,
+      ),
+    ),
+  );
+  const primaryTargetSection = requirePrimaryTargetSection(
+    writableTargetSections,
+  );
+
+  if (
+    writableTargetSections.some((section) => section.status === "submitted")
+  ) {
+    throw new CarryOverConflictError(
+      "Carry-over cannot overwrite a submitted target section.",
+    );
+  }
+
   const existing = await tx.carryOverExecution.findFirst({
     where: {
       sourceReportId: execution.sourceReportId,
       targetReportId: execution.targetReportId,
     },
   });
-
-  const primaryTargetSection = requirePrimaryTargetSection(targetSections);
 
   // A committed winner already persisted its rows; replaying it must stay a
   // read-only resolution, never re-execute the carried-row writes.
@@ -102,11 +129,40 @@ export async function writeCarryOver(
 
   // Persist carried rows for EVERY target section on the create path — the
   // inserts are idempotent (skipDuplicates + upstream lineage filtering).
-  for (const targetSection of targetSections) {
+  for (const targetSection of writableTargetSections) {
     await persistCarriedRowsForSection(tx, targetSection);
   }
 
   return result;
+}
+
+async function lockAndReadTargetSections(
+  tx: Prisma.TransactionClient,
+  targetReportId: string,
+): Promise<ReportSectionReadModel[]> {
+  const lockedRows = await tx.$queryRaw<{ id: string }[]>`
+    SELECT "id"
+    FROM "ReportSection"
+    WHERE "reportId" = ${targetReportId}
+    ORDER BY "id"
+    FOR UPDATE`;
+  if (lockedRows.length === 0) return [];
+
+  const rows = await tx.reportSection.findMany({
+    where: {
+      reportId: targetReportId,
+      id: { in: lockedRows.map((row) => row.id) },
+    },
+    include: reportSectionFullInclude,
+    relationLoadStrategy: "join",
+  });
+  const byId = new Map(
+    rows.map((row) => [row.id, mapPrismaToReportSection(row)]),
+  );
+  return lockedRows.flatMap((row) => {
+    const section = byId.get(row.id);
+    return section === undefined ? [] : [section];
+  });
 }
 
 // FOR UPDATE on Report closes the race with concurrent publish/archive.

@@ -18,6 +18,7 @@ function makeEntry(
     dateRange: "May 11-17, 2026",
     status,
     archived: status === "archived",
+    submissionState: status === "draft" ? "not-submitted" : "unavailable",
     submittedAt: null,
     createdAt: null,
     lastEditAt: null,

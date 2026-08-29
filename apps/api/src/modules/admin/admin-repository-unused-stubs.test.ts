@@ -21,7 +21,6 @@ describe("unusedAdminRepositoryStubs", () => {
       }),
     ).resolves.toBeNull();
     await expect(stubs.readPeriodById(ID)).resolves.toBeNull();
-    await expect(stubs.readReportForDelete(ID)).resolves.toBeNull();
     await expect(stubs.listGroupProducts(ID)).resolves.toEqual([]);
     await expect(stubs.listProductGroups(ID)).resolves.toEqual([]);
     await expect(stubs.listProductGroupOwnership([ID])).resolves.toEqual([

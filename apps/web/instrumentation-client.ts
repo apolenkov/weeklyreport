@@ -5,6 +5,7 @@ import "./src/shared/lib/runtime/zod-jitless";
 
 import * as Sentry from "@sentry/nextjs";
 
+import { BROWSER_SENTRY_TUNNEL } from "./sentry-options.config";
 import { webEnv } from "./src/shared/lib/runtime/web-env";
 
 // Non-zero sample rate so browserTracing emits sentry-trace on same-origin
@@ -13,6 +14,7 @@ const BROWSER_TRACES_SAMPLE_RATE = 1;
 
 Sentry.init({
   dsn: webEnv.sentryDsn(),
+  tunnel: BROWSER_SENTRY_TUNNEL,
   environment: process.env.NODE_ENV,
   integrations: [Sentry.browserTracingIntegration()],
   tracesSampleRate: BROWSER_TRACES_SAMPLE_RATE,

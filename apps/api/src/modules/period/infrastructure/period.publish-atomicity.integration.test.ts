@@ -7,6 +7,7 @@ import {
   disconnectTestPrisma,
 } from "../../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/index.js";
+import { buildTransition } from "../domain/period-transition.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
 
 // Real-Postgres coverage for the publish compare-and-set: two concurrent
@@ -135,5 +136,52 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
     expect(reloaded?.periodStatus).toBe("published");
     expect(reloaded?.publishedSnapshot).not.toBeNull();
+  });
+
+  it("rolls back the complete dual-state lifecycle tuple as one database write", async () => {
+    const lifecycleFields = {
+      status: true,
+      archived: true,
+      periodStatus: true,
+      periodState: true,
+      autoPublished: true,
+      autoArchived: true,
+      publishedAt: true,
+      publishedById: true,
+      reopenedAt: true,
+    } as const;
+    const before = await prisma.report.findUniqueOrThrow({
+      where: { id: REPORT },
+      select: lifecycleFields,
+    });
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await tx.report.update({
+          where: { id: REPORT },
+          data: buildTransition("publish", {
+            now: new Date("2026-05-29T12:00:00.000Z"),
+            userId: USER,
+          }),
+        });
+        const insideTransaction = await tx.report.findUniqueOrThrow({
+          where: { id: REPORT },
+          select: lifecycleFields,
+        });
+        expect(insideTransaction).toMatchObject({
+          status: "published",
+          periodStatus: "published",
+          periodState: "published",
+          publishedById: USER,
+        });
+        throw new Error("intentional dual-state rollback");
+      }),
+    ).rejects.toThrow("intentional dual-state rollback");
+
+    const after = await prisma.report.findUniqueOrThrow({
+      where: { id: REPORT },
+      select: lifecycleFields,
+    });
+    expect(after).toEqual(before);
   });
 });

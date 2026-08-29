@@ -117,8 +117,11 @@ describe("leadForm.revokeAllSubmitted — bulk group scope", () => {
     expect(firstCallWhere(reportSection.updateMany)).toEqual({
       reportId: REPORT_ID,
       status: "submitted",
-      // Published-period gate: closed published reports match zero rows.
-      report: { periodStatus: { in: ["open", "reopened"] } },
+      // Lifecycle gate: only non-archived editable reports match.
+      report: {
+        archived: false,
+        periodStatus: { in: ["open", "reopened"] },
+      },
       ...HEAD_SCOPE,
     });
   });
@@ -131,7 +134,10 @@ describe("leadForm.revokeAllSubmitted — bulk group scope", () => {
     expect(firstCallWhere(reportSection.updateMany)).toEqual({
       reportId: REPORT_ID,
       status: "submitted",
-      report: { periodStatus: { in: ["open", "reopened"] } },
+      report: {
+        archived: false,
+        periodStatus: { in: ["open", "reopened"] },
+      },
     });
   });
 });

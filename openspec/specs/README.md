@@ -10,6 +10,7 @@ This index maps every durable capability to one canonical home. Product capabili
 
 - [deferred-feature-pattern](./deferred-feature-pattern/spec.md) — Visible inert UI controls and loud backend stubs make deferred work explicit without pretending it is implemented. `[roles: Lead, Head, Viewer, Admin]`
 - [landing-page-hero](./landing-page-hero/spec.md) — The public landing hero presents the Weekly Report brand and rotates curated taglines without layout shift or decorative motion. `[roles: Shared]`
+- [mobile-navigation-touch-targets](./mobile-navigation-touch-targets/spec.md) — Signed-in navigation controls and loading placeholders provide 44 px mobile targets without sacrificing compact desktop geometry. `[roles: Lead, Head, Viewer, Admin]`
 - [saml-provisioning](./saml-provisioning/spec.md) — First SAML login creates a least-privilege viewer while later logins never overwrite locally governed identity or access fields. `[roles: Shared, Admin]`
 - [ui-role-route-access](./ui-role-route-access/spec.md) — Role denials use one in-page wall and return each visitor to the correct role home without redundant nested gates. `[roles: Lead, Head, Viewer, Admin]`
 - [user-name-display](./user-name-display/spec.md) — Each surface uses its canonical full or short user-name form, including cross-author owner labels. `[roles: Lead, Head, Viewer, Admin]`
@@ -21,7 +22,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [stage-label-canonicalization](./stage-label-canonicalization/spec.md) — Stored stage identifiers and displayed record labels stay aligned to the canonical stage vocabulary. `[roles: Lead, Head, Viewer, Admin]`
 - [status-color-semantics](./status-color-semantics/spec.md) — Status UI uses named tokens, one alarm hue, reserved accents, and consistent per-status color meaning. `[roles: Lead, Head, Viewer, Admin]`
 - [status-presentation-model](./status-presentation-model/spec.md) — One model owns canonical status vocabulary, tones, icons, dots, badges, and empty states. `[roles: Lead, Head, Viewer, Admin]`
-- [ui-control-density](./ui-control-density/spec.md) — Grouped controls share a target height and pipeline arrows align without bypassing the visual-research gate. `[roles: Lead, Head, Admin]`
+- [ui-control-density](./ui-control-density/spec.md) — Grouped controls share a target height, compact actions keep a 44 px touch floor, and pipeline arrows align without bypassing visual review. `[roles: Lead, Head, Admin]`
 
 #### Draft
 
@@ -36,7 +37,7 @@ This index maps every durable capability to one canonical home. Product capabili
 #### Consume/Search
 
 - [analytics-query-correctness](./analytics-query-correctness/spec.md) — Analytics results and cache keys stay correct under lead scoping, republished periods, and nested inputs. `[roles: Head, Admin]`
-- [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered print report, never a loading or error state. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered report, and completed exports download without opening a blank tab. `[roles: Lead, Head, Viewer, Admin]`
 - [trends-query-window](./trends-query-window/spec.md) — Trends derives its date window from the current date and shows an explicit empty state when no results exist. `[roles: Head, Admin]`
 
 ### Lead
@@ -56,6 +57,10 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-form-loaded-view-model](./lead-form-loaded-view-model/spec.md) — One view model derives cross-author visibility, activity alarms, and loaded lead-form affordances. `[roles: Lead]`
 - [lead-form-write-actions](./lead-form-write-actions/spec.md) — Lead writes share one action boundary while preserving conflicts, optimistic locking, and user-visible side effects. `[roles: Lead]`
 - [lead-item-card-uniformity](./lead-item-card-uniformity/spec.md) — Lead item cards keep uniform height and expose truncated content through a full-text tooltip. `[roles: Lead]`
+- [mobile-fill-touch-targets](./mobile-fill-touch-targets/spec.md) — Both Fill From actions provide 44 px mobile targets while preserving compact desktop toolbar behavior. `[roles: Lead]`
+- [mobile-lead-section-touch-targets](./mobile-lead-section-touch-targets/spec.md) — Section disclosures and sticky completion actions provide 44 px mobile targets without changing desktop behavior. `[roles: Lead]`
+- [mobile-report-card-layout](./mobile-report-card-layout/spec.md) — Current-week and next-week cards fit narrow boards with visible, operable 44 px actions and no nested overflow. `[roles: Lead]`
+- [mobile-report-filter-touch-targets](./mobile-report-filter-touch-targets/spec.md) — Ownership-filter options provide 44 px mobile targets while retaining selected-state and desktop geometry. `[roles: Lead]`
 - [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own Mine-scope stage completeness. `[roles: Lead]`
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
 - [lead-surface-name-resolution](./lead-surface-name-resolution/spec.md) — Lead cards resolve every report-known product name without placeholder fallback. `[roles: Lead]`
@@ -66,11 +71,11 @@ This index maps every durable capability to one canonical home. Product capabili
 
 #### Submit
 
-- [report-section-write-gates](./report-section-write-gates/spec.md) — Draft save and submit decide editability from canonical period state and reject writes after publication. `[roles: Lead]`
+- [report-section-write-gates](./report-section-write-gates/spec.md) — Save, submit, and revoke writers decide editability from canonical period and archive state and reject concurrent closure. `[roles: Lead]`
 
 #### Consume/Search
 
-- [lead-history-summary](./lead-history-summary/spec.md) — Lead history is period-ordered and aggregates only completed periods with matching denominators. `[roles: Lead]`
+- [lead-history-summary](./lead-history-summary/spec.md) — Lead history is period-ordered, aggregates only completed periods, and never fabricates a missing submission for compiled reports. `[roles: Lead]`
 - [lead-slide-by-product-grid](./lead-slide-by-product-grid/spec.md) — One auto-height by-product slide article renders lead, head, and viewer content with priorities, contributors, stages, and full record order. `[roles: Lead, Head, Viewer]`
 - [lead-toolbar-presentation](./lead-toolbar-presentation/spec.md) — Lead report and slide controls stay reachable, consistently shaped, and use an explicit Submit action. `[roles: Lead]`
 - [slide-inline-record-editing](./slide-inline-record-editing/spec.md) — Leads edit or delete their own slide rows through the existing form write path while read-only rows ignore activation. `[roles: Lead]`
@@ -118,6 +123,7 @@ Authority model:
 #### Configure
 
 - [admin-dialog-focus-management](./admin-dialog-focus-management/spec.md) — Admin CRUD dialogs move focus inside on open and restore it to the initiating control on close. `[roles: Admin]`
+- [mobile-admin-product-touch-targets](./mobile-admin-product-touch-targets/spec.md) — Product disclosure, Edit, and Archive controls provide 44 px mobile targets while the desktop table stays compact. `[roles: Admin]`
 - [admin-reminders-ui](./admin-reminders-ui/spec.md) — Admins configure reminder policies through plain-language cards, inline editing, presets, and explicit permanent removal. `[roles: Admin]`
 - [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides client-side sub-tabs, honest live policy fields, safe deferred controls, and resilient unsaved form state. `[roles: Admin]`
 - [admin-snapshot-restore](./admin-snapshot-restore/spec.md) — Whole-database snapshot restore preserves reporting-group head assignments. `[roles: Admin]`
@@ -147,7 +153,7 @@ Authority model:
 
 ### Security and authorization
 
-- [destructive-db-guard](./destructive-db-guard/spec.md) — Blocks destructive Prisma scripts against production-looking targets unless an explicit guarded escape hatch is present.
+- [destructive-db-guard](./destructive-db-guard/spec.md) — Allows destructive developer flows only for exact loopback disposable database names with explicit per-run consent; production restore stays separate.
 - [jwt-session-integrity](./jwt-session-integrity/spec.md) — Pins JWT verification algorithms, enforces secret strength, and documents stateless logout semantics.
 - [prod-security-hardening](./prod-security-hardening/spec.md) — Enforces production CSP, immutable base-image digests, and safe dev-auth build defaults.
 - [public-endpoint-resource-limits](./public-endpoint-resource-limits/spec.md) — Bounds unauthenticated API request rate and body size per public ingress surface.
@@ -165,18 +171,19 @@ Authority model:
 - [hot-path-query-performance](./hot-path-query-performance/spec.md) — Parallelizes independent reads, batches ownership and reconciliation, paginates archives, and removes write-on-read hot paths.
 - [manual-publish-telemetry](./manual-publish-telemetry/spec.md) — Emits publish counters only after a successful manual transition and records the real prior state.
 - [operational-logger-wiring](./operational-logger-wiring/spec.md) — Injects the shared operational logger into service factories instead of silently falling back to a null logger.
-- [period-scheduler-wiring](./period-scheduler-wiring/spec.md) — Makes scheduler dependencies mandatory and emits real audit events from scheduled period transitions.
+- [period-scheduler-wiring](./period-scheduler-wiring/spec.md) — Makes scheduler composition executable, rejects overlapping periods under concurrency, and emits committed transition audit events.
 - [prod-trace-sampling](./prod-trace-sampling/spec.md) — Configures production OTLP export, parent-aware sampling, and loud untraced boot logging.
 - [queue-reliability-monitoring](./queue-reliability-monitoring/spec.md) — Monitors DLQs, Redis memory, terminal Telegram failures, retention, and queue shutdown behavior.
 - [scope-accessed-audit](./scope-accessed-audit/spec.md) — Audits legitimate cross-group weekly-report reads without changing returned data.
 
 ### Deployment and configuration
 
-- [dependency-currency](./dependency-currency/spec.md) — Records and gates coordinated dependency upgrades, runtime alignment, image sync, and deliberate deprecated pins.
+- [dependency-currency](./dependency-currency/spec.md) — Records and gates coordinated dependency upgrades, Node/pnpm runtime alignment, image pinning, and deliberate deprecated pins.
 - [deploy-caddy-config](./deploy-caddy-config/spec.md) — Keeps staging and production proxy security headers and API routing behavior aligned.
 - [deploy-healthchecks](./deploy-healthchecks/spec.md) — Exercises real PgBouncer and API dependency paths rather than process-only liveness.
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
 - [health-indicator-service-migration](./health-indicator-service-migration/spec.md) — Uses the supported health-indicator API while preserving live and ready response contracts.
+- [operations-local-readiness](./operations-local-readiness/spec.md) — Keeps repository-owned operations instructions executable and fails closed without external production read-back.
 - [redis-connection-config](./redis-connection-config/spec.md) — Routes all Redis consumers through one validated, fail-loud host and port builder.
 - [sdlc-release-readiness](./sdlc-release-readiness/spec.md) — Separates evidence classes and keeps the first production point blocked until every external release, deployment, operation, and recovery control is proven.
 - [web-api-url-config](./web-api-url-config/spec.md) — Resolves the web API base URL and tRPC response decoding through explicit fail-loud seams.
@@ -188,6 +195,7 @@ Authority model:
 - [period-dual-state](./period-dual-state/spec.md) — Requires canonical and legacy Report period representations to change atomically through sanctioned lifecycle writers.
 - [prisma-unique-violation-guard](./prisma-unique-violation-guard/spec.md) — Centralizes constraint-aware Prisma unique-violation detection and proves it against the real adapter shape.
 - [publish-compare-and-set](./publish-compare-and-set/spec.md) — Publishes through one guarded compare-and-set and builds snapshots from a fresh in-transaction read.
+- [report-delete-integrity](./report-delete-integrity/spec.md) — Deletes only lifecycle-eligible reports through one atomic guard and preserves data when publication wins a race.
 - [reopen-compare-and-set](./reopen-compare-and-set/spec.md) — Guards reopen and manual archive transitions against zero-row and concurrent-writer races.
 - [schema-conventions](./schema-conventions/spec.md) — Standardizes Zod string-format validators and index coverage for foreign-key and cascade columns.
 - [seed-determinism](./seed-determinism/spec.md) — Keeps seed identifiers collision-free and covers the canonical item-status vocabulary.
@@ -197,9 +205,9 @@ Authority model:
 - [a11y-regression-coverage](./a11y-regression-coverage/spec.md) — Requires behavior-level regression coverage for keyboard, focus, Escape, tabindex, and decorative-SVG accessibility changes.
 - [behavioral-ui-regression-gate](./behavioral-ui-regression-gate/spec.md) — Keeps human and model product review advisory rather than making it a second acceptance authority.
 - [demo-seed-datasets](./demo-seed-datasets/spec.md) — Provides deterministic small, middle, and huge datasets that exercise realistic roles, statuses, co-ownership, and reminders.
-- [frontend-audit-memo](./frontend-audit-memo/spec.md) — Requires grounded frontend audit evidence before UI implementation or Core Web Vitals claims.
 - [sweep-runtime-correctness](./sweep-runtime-correctness/spec.md) — Requires focused product tests to fail for the runtime, accessibility, and behavioral defects they claim to cover.
-- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines deterministic product release gates, accessible confirmation behavior, and honest CI infrastructure evidence.
+- [test-evidence-integrity](./test-evidence-integrity/spec.md) — Requires non-skippable disposable-database integration and non-empty API/Web coverage evidence in CI.
+- [uat-quality-gates](./uat-quality-gates/spec.md) — Defines exact-SHA one-off browser acceptance, deterministic product release gates, and honest infrastructure evidence.
 - [web-test-timer-discipline](./web-test-timer-discipline/spec.md) — Keeps web tests deterministic by using framework timers and query primitives instead of hand-rolled tick loops.
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
 
@@ -208,9 +216,50 @@ Authority model:
 - [ci-merge-gate](./ci-merge-gate/spec.md) — Defines the server-side merge gate and the local pre-push substitute required before production.
 - [lint-max-strictness-standard](./lint-max-strictness-standard/spec.md) — Pins the type-aware lint baseline, size and complexity ratchets, import map, comment policy, and fix-first escalation path.
 - [lint-toolchain-ownership](./lint-toolchain-ownership/spec.md) — Assigns logic linting to ESLint, formatting to Prettier, CSS to stylelint, and Prisma checks to scoped TypeScript.
+- [repository-file-accountability](./repository-file-accountability/spec.md) — Gives every tracked file one evidence-backed disposition without adding a permanent catalogue harness.
 - [status-type-ssot-gate](./status-type-ssot-gate/spec.md) — Rejects duplicated status literal unions through both lint paths.
 - [surface-token-integrity](./surface-token-integrity/spec.md) — Prevents report UI from referencing undefined surface tokens.
 - [web-status-color-tokens](./web-status-color-tokens/spec.md) — Keeps the web status-token set complete, named, and free of hex fallbacks or unrelated color domains.
+
+### Additional durable capabilities
+
+- [admin-action-log-details](./admin-action-log-details/spec.md)
+- [admin-entity-write-integrity](./admin-entity-write-integrity/spec.md)
+- [archive-published-floor](./archive-published-floor/spec.md)
+- [audit-target-coverage](./audit-target-coverage/spec.md)
+- [cleanup-tail](./cleanup-tail/spec.md)
+- [compact-overflow-containment](./compact-overflow-containment/spec.md)
+- [dashboard-interaction-stability](./dashboard-interaction-stability/spec.md)
+- [dependency-cycle-elimination](./dependency-cycle-elimination/spec.md)
+- [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md)
+- [deploy-config-integrity](./deploy-config-integrity/spec.md)
+- [desktop-surface-composition](./desktop-surface-composition/spec.md)
+- [eslint-policy-scope-hygiene](./eslint-policy-scope-hygiene/spec.md)
+- [exemplary-repo-floor](./exemplary-repo-floor/spec.md)
+- [fill-from-write-lock](./fill-from-write-lock/spec.md)
+- [group-scope-isolation-gaps](./group-scope-isolation-gaps/spec.md)
+- [latent-robustness-gaps](./latent-robustness-gaps/spec.md)
+- [lead-form-draft-module](./lead-form-draft-module/spec.md)
+- [lead-section-draft-payload](./lead-section-draft-payload/spec.md)
+- [lint-suppression-adjudication](./lint-suppression-adjudication/spec.md)
+- [loading-layout-stability](./loading-layout-stability/spec.md)
+- [main-content-focus-presentation](./main-content-focus-presentation/spec.md)
+- [observability-metrics-coverage](./observability-metrics-coverage/spec.md)
+- [period-fill-from-ui](./period-fill-from-ui/spec.md)
+- [published-portfolio-snapshot](./published-portfolio-snapshot/spec.md)
+- [published-section-order-determinism](./published-section-order-determinism/spec.md)
+- [rate-limit-store-readiness](./rate-limit-store-readiness/spec.md)
+- [record-comment-save-coordination](./record-comment-save-coordination/spec.md)
+- [reminder-policy-timezone-validation](./reminder-policy-timezone-validation/spec.md)
+- [report-item-display-integrity](./report-item-display-integrity/spec.md)
+- [report-record-ordering](./report-record-ordering/spec.md)
+- [reset-script-redis-flush](./reset-script-redis-flush/spec.md)
+- [search-contract-precision](./search-contract-precision/spec.md)
+- [session-hydration-error-scoping](./session-hydration-error-scoping/spec.md)
+- [smtp-transport-security](./smtp-transport-security/spec.md)
+- [spec-archive-integrity](./spec-archive-integrity/spec.md)
+- [stage-step-shared-component](./stage-step-shared-component/spec.md)
+- [web-loading-performance](./web-loading-performance/spec.md)
 
 ## Verification
 
