@@ -148,9 +148,8 @@ function ExportSpinnerIcon() {
       height="14"
       viewBox="0 0 12 12"
       fill="none"
-      style={{ animation: "exportBtnSpin 1s linear infinite" }}
+      className="animate-spin motion-reduce:animate-none"
     >
-      <style>{`@keyframes exportBtnSpin { to { transform: rotate(360deg); } }`}</style>
       <circle
         cx="6"
         cy="6"

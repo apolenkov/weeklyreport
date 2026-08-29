@@ -2,6 +2,10 @@ import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  createPauseGate,
+  pauseBeforeReportCreate,
+} from "../../../test-utils/paused-prisma.js";
+import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
@@ -124,6 +128,31 @@ describe("Report_no_live_period_overlap exclusion constraint (integration)", () 
       created: false,
       reportId: manual.id,
     });
+  });
+
+  it("converges on a manual containing range that wins during canonical create", async () => {
+    const gate = createPauseGate();
+    const pausedPrisma = pauseBeforeReportCreate(prisma, gate.pause);
+    const ensure = ensureCurrentPeriod(
+      pausedPrisma,
+      new Date("2026-08-10T09:00:00.000Z"),
+      new Date("2026-08-10T09:00:00.000Z"),
+      FACTORY_SETTINGS,
+    );
+    await gate.paused;
+
+    const manual = await createReport({
+      periodStart: new Date("2026-08-09T00:00:00.000Z"),
+      periodEnd: new Date("2026-08-11T23:59:59.999Z"),
+      periodState: "open",
+    });
+    gate.release();
+
+    await expect(ensure).resolves.toMatchObject({
+      created: false,
+      reportId: manual.id,
+    });
+    await expect(prisma.report.count()).resolves.toBe(1);
   });
 
   it("surfaces an unrelated partial overlap instead of choosing it", async () => {

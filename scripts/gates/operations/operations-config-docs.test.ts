@@ -10,6 +10,8 @@ const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
+const caddyReadme = read("deploy/caddy/README.md");
+const errorsCompose = read("docker-compose.errors.yml");
 const packageJson = JSON.parse(read("package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
@@ -135,6 +137,30 @@ void test("production Caddy selection and Prometheus ownership are explicit", ()
     /not mounted by docker-compose\.observability\.yml/,
   );
   assert.match(read("deploy/prometheus-otel-lgtm.yml"), /Compose-owned/);
+});
+
+void test("production Compose examples always load the production environment", () => {
+  const examples = [operations, caddyReadme]
+    .flatMap((document) => document.split("\n"))
+    .filter(
+      (line) =>
+        line.includes("docker compose") &&
+        line.includes("docker-compose.prod.yml"),
+    );
+  assert.ok(examples.length > 0);
+  examples.forEach((line) =>
+    assert.match(
+      line,
+      /--env-file \.env\.production/,
+      `production Compose example lacks --env-file: ${line}`,
+    ),
+  );
+});
+
+void test("Bugsink is bound to loopback by default", () => {
+  assert.match(errorsCompose, /127\.0\.0\.1:\$\{BUGSINK_PORT:-8000\}:8000/);
+  assert.match(errorsCompose, /loopback/);
+  assert.match(caddyReadme, /\.env\.production/);
 });
 
 void test("production Caddy ACME email is fail-closed and documented", () => {

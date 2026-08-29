@@ -323,6 +323,7 @@ jobs:
       KEYCLOAK_SAML_ISSUER: ci-build-only
       KEYCLOAK_SAML_CERT: ci-build-only
       CADDY_SITE_ADDRESS: http://localhost
+      CADDY_ACME_EMAIL: ci-build-only@example.com
       CADDY_CSP_REPORT_URI: http://localhost/csp-report
       # Backup policy is required while rendering Compose.
       BACKUP_INTERVAL_SECONDS: "3600"

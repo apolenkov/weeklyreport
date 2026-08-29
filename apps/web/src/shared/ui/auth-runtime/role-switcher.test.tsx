@@ -28,6 +28,7 @@ vi.mock("../../lib/trpc/trpc-context", () => ({
 import type { DbRole } from "@customreport/shared";
 import { expectTypeOf } from "vitest";
 
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { DevRoleSwitcher, ROLE_ORDER } from "./role-switcher";
 
 const SEED_USER = {
@@ -93,6 +94,10 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     expect(
       screen.getByTestId("dev-role-switcher-reseed-stress"),
     ).toBeInTheDocument();
+    expect(screen.getByRole("menu")).toHaveClass(
+      "w-72",
+      "max-w-[calc(100vw-1rem)]",
+    );
   });
 
   it("shows the reset controls for a lead dev session too (dev-only tool)", async () => {
@@ -160,20 +165,54 @@ describe("DevRoleSwitcher — logout honesty", () => {
 
   it("does not redirect and re-enables controls when logout responds non-OK", async () => {
     primeHooks("admin");
-    fetchMock.mockResolvedValue({ ok: false });
+    const logoutResponse = {
+      resolve: undefined as ((response: { ok: boolean }) => void) | undefined,
+    };
+    fetchMock.mockReturnValue(
+      new Promise<{ ok: boolean }>((resolve) => {
+        logoutResponse.resolve = resolve;
+      }),
+    );
     const user = userEvent.setup();
 
     render(<DevRoleSwitcher />);
-    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    const trigger = screen.getByTestId("dev-role-switcher-trigger");
+    await user.click(trigger);
     await user.click(screen.getByTestId("dev-role-switcher-logout"));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(hrefAssign).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("dev-role-switcher-trigger"),
-      ).not.toBeDisabled(),
+    expect(trigger).toBeDisabled();
+    trigger.blur();
+    expectDefined(logoutResponse.resolve)({ ok: false });
+    await waitFor(() => expect(trigger).not.toBeDisabled());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("re-enables and restores trigger focus after reseed fails", async () => {
+    const reseedFailure = {
+      onError: undefined as ((error: Error) => void) | undefined,
+    };
+    primeHooks("admin");
+    useMutationMock.mockImplementation(
+      (options: { readonly onError?: (error: Error) => void }) => {
+        reseedFailure.onError = options.onError;
+        return { mutate: vi.fn() };
+      },
     );
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    const trigger = screen.getByTestId("dev-role-switcher-trigger");
+    await user.click(trigger);
+    await user.click(screen.getByTestId("dev-role-switcher-reseed-demo"));
+
+    expect(trigger).toBeDisabled();
+    trigger.blur();
+    expectDefined(reseedFailure.onError)(new Error("reseed failed"));
+
+    await waitFor(() => expect(trigger).not.toBeDisabled());
+    expect(trigger).toHaveFocus();
   });
 
   it("redirects home when logout responds OK", async () => {

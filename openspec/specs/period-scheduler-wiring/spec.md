@@ -207,7 +207,7 @@ tick; the sweep adds no guard of its own.
 
 ### Requirement: Current-period lookup selects only a coupled live tuple
 
-The login-time and scheduler current-period factory MUST select an existing report only when legacy status is draft, archived is false, canonical state is scheduled or open, and all lifecycle fields form a valid tuple for the requested boundary. The factory MUST first return the exact live scheduling boundary when one exists; when no exact boundary exists, it MUST return the single valid live `scheduled` or `open` manual range containing the anchor date rather than creating an overlapping canonical week. A live range that only partially overlaps the canonical week and does not contain the anchor MUST still surface the typed overlap error from the database write path.
+The login-time and scheduler current-period factory MUST select an existing report only when legacy status is draft, archived is false, canonical state is scheduled or open, and all lifecycle fields form a valid tuple for the requested boundary. The factory MUST first return the exact live scheduling boundary when one exists; when no exact boundary exists, it MUST return the single valid live `scheduled` or `open` manual range containing the anchor date rather than creating an overlapping canonical week. A live range that only partially overlaps the canonical week and does not contain the anchor MUST still surface the typed overlap error from the database write path. If a manual range commits after both lookups but before canonical creation, the overlap-error recovery MUST re-read the exact boundary and then the containing range before returning the typed conflict.
 
 #### Scenario: Archived draft occupies the requested boundary
 
@@ -224,6 +224,14 @@ The login-time and scheduler current-period factory MUST select an existing repo
 - **WHEN** no exact scheduler boundary exists and one valid live manual range
   contains the anchor date
 - **THEN** the factory returns that range without creating a new report
+
+#### Scenario: Manual range wins during canonical creation
+
+- **WHEN** both initial lookups find no row, a live manual range containing the
+  anchor commits, and canonical creation then hits the named overlap constraint
+- **THEN** recovery re-reads the exact boundary and containing range
+- **AND** the factory returns the committed manual range without creating a
+  second report
 
 #### Scenario: Partial overlap does not contain the anchor
 

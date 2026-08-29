@@ -27,7 +27,7 @@ import { ExportPdfButton } from "./export-pdf-button";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
-const ARTIFACT_URL = "https://example.test/artifact.pdf";
+const ARTIFACT_URL = `/pdfs/${JOB_ID}.pdf`;
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
 
 const COMPLETED_STATUS = {
@@ -227,6 +227,10 @@ describe("ExportPdfButton", () => {
     const link = await screen.findByRole("link", { name: "Download PDF" });
     expect(link).toHaveAttribute("href", ARTIFACT_URL);
     expect(link).toHaveAttribute("download");
+    const fallbackHref = expectDefined(link.getAttribute("href"));
+    const resolvedHref = new URL(fallbackHref, window.location.origin);
+    expect(resolvedHref.origin).toBe(window.location.origin);
+    expect(resolvedHref.pathname).toBe(`/pdfs/${JOB_ID}.pdf`);
     expect(link).toHaveClass(
       "max-md:min-h-[var(--touch-target-min)]",
       "focus-visible:ring-2",
@@ -235,6 +239,20 @@ describe("ExportPdfButton", () => {
     expect(openMock).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledTimes(1);
     expect(toastSuccess).toHaveBeenCalledWith("PDF ready");
+  });
+
+  it("uses a reduced-motion-safe spinner while the export request is pending", async () => {
+    const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
+    expectDefined(captured["pdfExport.request"]).mutationFn.mockImplementation(
+      () => new Promise<never>(() => undefined),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    const spinner = await screen.findByTestId("export-pdf-spinner");
+    expect(spinner).toHaveClass("animate-spin", "motion-reduce:animate-none");
+    expect(spinner).not.toHaveAttribute("style");
+    expect(spinner.querySelector("style")).not.toBeInTheDocument();
   });
 
   it("on status poll error: error toast fires and the button returns to idle", async () => {

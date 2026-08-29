@@ -39,11 +39,11 @@ forwards `Upgrade: websocket` headers without configuration.
 
 ## Verifying
 
-After `docker compose -f docker-compose.prod.yml up -d`:
+After `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`:
 
 ```bash
 # Inside the docker network (the pinned Caddy image provides wget):
-docker compose -f docker-compose.prod.yml exec caddy wget -q --spider http://localhost/health/live
+docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy wget -q --spider http://localhost/health/live
 
 # From a host that resolves CADDY_SITE_ADDRESS:
 curl -I https://customreport.example.com/health/live
@@ -56,7 +56,7 @@ curl -I https://customreport.example.com/trpc/health  # 200 from api
 Caddy renews automatically ~30 days before expiry. To force a renewal:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 ## Trust the staging CA
@@ -65,7 +65,7 @@ For `Caddyfile.staging` (caddy internal CA), browsers will warn until the root
 is trusted. Pull the root and import it on the client:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec caddy \
+docker compose --env-file .env.production -f docker-compose.prod.yml exec caddy \
   cat /data/caddy/pki/authorities/local/root.crt > caddy-staging-root.crt
 # Then import caddy-staging-root.crt into your OS / browser trust store.
 ```

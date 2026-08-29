@@ -61,13 +61,24 @@ one exists; when no exact boundary exists, it MUST return the single valid live
 `scheduled` or `open` manual range containing the anchor date rather than
 creating an overlapping canonical week. A live range that only partially
 overlaps the canonical week and does not contain the anchor MUST still surface
-the typed overlap error from the database write path.
+the typed overlap error from the database write path. If a manual range commits
+after both lookups but before canonical creation, the overlap-error recovery
+MUST re-read the exact boundary and then the containing range before returning
+the typed conflict.
 
 #### Scenario: Manual range contains the login anchor
 
 - **WHEN** no exact scheduler boundary exists and one valid live manual range
   contains the anchor date
 - **THEN** the factory returns that range without creating a new report
+
+#### Scenario: Manual range wins during canonical creation
+
+- **WHEN** both initial lookups find no row, a live manual range containing the
+  anchor commits, and canonical creation then hits the named overlap constraint
+- **THEN** recovery re-reads the exact boundary and containing range
+- **AND** the factory returns the committed manual range without creating a
+  second report
 
 #### Scenario: Partial overlap does not contain the anchor
 
