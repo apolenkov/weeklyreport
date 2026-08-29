@@ -34,6 +34,7 @@ const LOGOUT_FAILED_MESSAGE =
 // The seeded dev user list changes only on a reseed, so refetching the dropdown
 // more than once a minute is pure noise.
 const DEV_USERS_STALE_TIME_MS = 60_000;
+const MOBILE_MENU_ITEM_CLASS = "max-md:min-h-[var(--touch-target-min)]";
 
 interface RoleSwitcherUser {
   readonly id: string;
@@ -67,7 +68,7 @@ function RoleUserItems({
               key={u.id}
               onSelect={() => onSelect({ role, email: u.email })}
               data-testid={`dev-role-switcher-${role}-${u.email}`}
-              className="flex flex-col items-start gap-0.5"
+              className={`${MOBILE_MENU_ITEM_CLASS} flex flex-col items-start gap-0.5`}
             >
               <span className="font-medium">{u.name}</span>
               <span className="text-xs text-muted-foreground">{u.email}</span>
@@ -120,6 +121,7 @@ function DataResetItems({
           key={action.variant}
           onSelect={() => onReseed(action.variant)}
           data-testid={`dev-role-switcher-${action.testId}`}
+          className={MOBILE_MENU_ITEM_CLASS}
         >
           {action.label}
         </DropdownMenuItem>
@@ -245,6 +247,7 @@ export function DevRoleSwitcher() {
           <DropdownMenuItem
             onSelect={() => logout()}
             data-testid="dev-role-switcher-logout"
+            className={MOBILE_MENU_ITEM_CLASS}
           >
             Logout
           </DropdownMenuItem>

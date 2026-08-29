@@ -6,8 +6,10 @@
 # Not part of the prod-default compose — the org typically has a managed stack already.
 #
 # Usage:
-#   pnpm observability:up   # dev layering incl. docker-compose.observability.dev.yml (last)
-#   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+#   pnpm observability:up   # isolated project; dev layering is composed last
+#   pnpm observability:down # removes only that observability project
+#   docker compose --project-name customreport-production-observability \
+#     -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
 #
 # Grafana login: admin / the configured GRAFANA_ADMIN_PASSWORD  →  http://localhost:3003
 

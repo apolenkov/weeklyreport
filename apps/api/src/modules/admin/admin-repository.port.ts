@@ -108,6 +108,9 @@ export interface AdminRepository {
   // writes only the keys present in `data`); returns the readPeriodById projection.
   updatePeriodManual(input: {
     reportId: string;
+    // Expected state for envelope edits; the repository re-checks it while
+    // holding the report row lock so publish/archive races fail closed.
+    expectedPeriodState: PeriodState;
     data: {
       periodStart?: Date;
       periodEnd?: Date;

@@ -1,8 +1,4 @@
-import {
-  type AppSettings,
-  currentPeriodLifecycleSchema,
-  type PeriodState,
-} from "@customreport/shared";
+import { type AppSettings } from "@customreport/shared";
 import { Logger } from "@nestjs/common";
 import type { PrismaClient } from "@prisma/client";
 
@@ -18,6 +14,12 @@ import {
   buildTransition,
   initialPeriodState,
 } from "../domain/period-transition.js";
+import {
+  readBoundaryPeriod,
+  readContainingPeriod,
+  SELECT_PERIOD,
+} from "./period-factory-lookup.js";
+import type { EnsuredPeriod } from "./period-factory-types.js";
 
 // The single sanctioned period-creation writer: the period-creator cron and the
 // lazy login-create path both route through here, so the deadline formula and
@@ -37,19 +39,7 @@ export type PeriodFactorySettings = Pick<
   | "deadlineTime"
 >;
 
-export interface EnsuredPeriod {
-  // True when this call minted the row; false when it found an existing one.
-  readonly created: boolean;
-  readonly reportId: string;
-  readonly periodStart: Date;
-  readonly periodEnd: Date;
-  // Null only on a found (not minted) row whose deadline an admin explicitly
-  // cleared; a freshly minted period always carries one.
-  readonly deadline: Date | null;
-  // A draft period can only be `scheduled` or `open` (the legacy `status:"draft"`
-  // tuple maps to exactly those two states), so the public shape stays narrow.
-  readonly periodState: Extract<PeriodState, "scheduled" | "open">;
-}
+export type { EnsuredPeriod } from "./period-factory-types.js";
 
 // The Prisma `report` delegate surface the factory needs.
 type ReportDelegate = Pick<PrismaClient["report"], "findMany" | "create">;
@@ -57,28 +47,7 @@ type ReportDelegate = Pick<PrismaClient["report"], "findMany" | "create">;
 // Minimal applicator seam — injected so reminder-free tests need no mock.
 type ReminderApplicator = Pick<PolicyApplicatorService, "applyToPeriod">;
 
-const SELECT_PERIOD = {
-  id: true,
-  periodStart: true,
-  periodEnd: true,
-  deadline: true,
-  status: true,
-  periodState: true,
-  periodStatus: true,
-  archived: true,
-  autoPublished: true,
-  autoArchived: true,
-  publishedAt: true,
-  publishedById: true,
-  reopenedAt: true,
-} as const;
-
-export class PeriodLifecycleIntegrityError extends Error {
-  constructor() {
-    super("Stored period lifecycle is inconsistent.");
-    this.name = "PeriodLifecycleIntegrityError";
-  }
-}
+export { PeriodLifecycleIntegrityError } from "./period-factory-lookup.js";
 
 export class PeriodOverlapError extends Error {
   constructor() {
@@ -103,64 +72,6 @@ export function isPeriodOverlapConflict(error: unknown): boolean {
       }),
     )
   );
-}
-
-interface DraftPeriodRow {
-  readonly id: string;
-  readonly periodStart: Date;
-  readonly periodEnd: Date;
-  readonly deadline: Date | null;
-  readonly status: unknown;
-  readonly periodState: unknown;
-  readonly periodStatus: unknown;
-  readonly archived: unknown;
-  readonly autoPublished: unknown;
-  readonly autoArchived: unknown;
-  readonly publishedAt: unknown;
-  readonly publishedById: unknown;
-  readonly reopenedAt: unknown;
-}
-
-function toFoundPeriod(row: DraftPeriodRow): EnsuredPeriod {
-  const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
-  if (
-    !lifecycle.success ||
-    (lifecycle.data.periodState !== "scheduled" &&
-      lifecycle.data.periodState !== "open")
-  ) {
-    throw new PeriodLifecycleIntegrityError();
-  }
-  return {
-    created: false,
-    reportId: row.id,
-    periodStart: row.periodStart,
-    periodEnd: row.periodEnd,
-    deadline: row.deadline,
-    periodState: lifecycle.data.periodState,
-  };
-}
-
-async function readBoundaryPeriod(
-  report: ReportDelegate,
-  periodStart: Date,
-  periodEnd: Date,
-): Promise<EnsuredPeriod | null> {
-  const rows = await report.findMany({
-    where: { periodStart, periodEnd },
-    select: SELECT_PERIOD,
-  });
-  const liveRows = rows
-    .map((row) => {
-      const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
-      if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
-      return lifecycle.data.periodState === "scheduled" ||
-        lifecycle.data.periodState === "open"
-        ? row
-        : null;
-    })
-    .filter((row): row is (typeof rows)[number] => row !== null);
-  if (liveRows.length > 1) throw new PeriodLifecycleIntegrityError();
-  return liveRows[0] ? toFoundPeriod(liveRows[0]) : null;
 }
 
 // Best-effort: the period is the durable artifact, so failing to materialise the
@@ -245,6 +156,9 @@ export async function ensureCurrentPeriod(
     periodEnd,
   );
   if (existing) return existing;
+
+  const containing = await readContainingPeriod(prisma.report, anchorDate);
+  if (containing) return containing;
 
   const deadline = computeDeadline(
     periodStart,

@@ -54,6 +54,7 @@ function createRepository(row: SeedRow): AdminRepository & {
   const updatePeriodManual = vi.fn(
     (input: {
       reportId: string;
+      expectedPeriodState: PeriodState;
       data: {
         periodStart?: Date;
         periodEnd?: Date;
@@ -184,6 +185,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     expect(result.deadline).toBeNull();
     expect(repo.updatePeriodManual).toHaveBeenCalledWith({
       reportId: REPORT_ID,
+      expectedPeriodState: "open",
       data: { deadline: null },
     });
   });

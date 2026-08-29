@@ -17,6 +17,29 @@ function makeRequest(
   });
 }
 
+function makeStreamingRequest(headers: Record<string, string> = {}): {
+  request: Request;
+  wasCancelled: () => boolean;
+} {
+  let cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(SENTRY_TUNNEL_MAX_BODY_BYTES));
+      controller.enqueue(new Uint8Array(1));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const request = new Request("https://web.test/monitoring", {
+    method: "POST",
+    headers,
+    body: stream,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  return { request, wasCancelled: () => cancelled };
+}
+
 describe("same-origin Sentry tunnel route", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -83,6 +106,22 @@ describe("same-origin Sentry tunnel route", () => {
     );
 
     expect(res.status).toBe(413);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a chunked request", {}],
+    ["an invalid content length", { "content-length": "not-a-number" }],
+  ])("cancels %s before forwarding it", async (_label, headers) => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const streaming = makeStreamingRequest(headers);
+
+    const res = await POST(streaming.request);
+
+    expect(res.status).toBe(413);
+    expect(streaming.wasCancelled()).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

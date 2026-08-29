@@ -17,7 +17,12 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
-import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
+import {
+  AdminAccessError,
+  AdminPeriodNotFoundError,
+  AdminPeriodStaleStateError,
+} from "./admin-shared.js";
+import { PeriodAdminService } from "./period-admin.service.js";
 
 describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -93,6 +98,84 @@ describe("AdminPrismaRepository (integration)", () => {
     await expect(
       prisma.report.findUnique({ where: { id: testData.report.id } }),
     ).resolves.not.toBeNull();
+  });
+
+  it.each([
+    [
+      "publication",
+      {
+        status: "published" as const,
+        periodStatus: "published" as const,
+        periodState: "published" as const,
+        publishedAt: new Date("2026-08-07T15:00:00.000Z"),
+        expectedArchived: false,
+      },
+    ],
+    [
+      "archive",
+      {
+        archived: true,
+        periodState: "archived" as const,
+        expectedArchived: true,
+      },
+    ],
+  ] as const)(
+    "rejects a manual envelope edit when %s wins the race",
+    async (_label, data) => {
+      const gate = createPauseGate();
+      const pausedPrisma = pauseBeforeTransaction(prisma, gate.pause);
+      const service = new PeriodAdminService(
+        new AdminPrismaRepository(pausedPrisma as never),
+      );
+      const originalEnd = testData.report.periodEnd;
+      const update = service.updatePeriodManual({
+        reportId: testData.report.id,
+        periodEnd: new Date("2026-08-16T23:59:59.999Z"),
+      });
+      await gate.paused;
+
+      const { expectedArchived, ...lifecycleData } = data;
+      await prisma.report.update({
+        where: { id: testData.report.id },
+        data: lifecycleData,
+      });
+      gate.release();
+
+      await expect(update).rejects.toBeInstanceOf(AdminPeriodStaleStateError);
+      await expect(
+        prisma.report.findUnique({
+          where: { id: testData.report.id },
+          select: { periodEnd: true, periodState: true, archived: true },
+        }),
+      ).resolves.toMatchObject({
+        periodEnd: originalEnd,
+        periodState: data.periodState,
+        archived: expectedArchived,
+      });
+    },
+  );
+
+  it("allows a weekLabel-only edit after publication", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt: new Date("2026-08-07T15:00:00.000Z"),
+      },
+    });
+
+    await expect(
+      repo.updatePeriodManual({
+        reportId: testData.report.id,
+        expectedPeriodState: "published",
+        data: { weekLabel: "Published label" },
+      }),
+    ).resolves.toMatchObject({
+      weekLabel: "Published label",
+      periodState: "published",
+    });
   });
 
   it("allows at most one winner when two deletes race", async () => {

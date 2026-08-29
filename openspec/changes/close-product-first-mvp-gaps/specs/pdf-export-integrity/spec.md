@@ -7,8 +7,9 @@ The PDF export React action in `ExportPdfButton`
 the current page and MUST NOT create a temporary browser tab. After a
 completed owned job returns a valid artifact URL, it MUST attempt one
 same-origin attachment download and MUST expose a persistent fallback
-download link. Failed jobs MUST return the export control to a retryable error
-state without creating a tab.
+download link. Re-running the completion effect for the same job MUST NOT
+attempt a second download. Failed jobs MUST return the export control to a
+retryable error state without creating a tab.
 
 #### Scenario: Completed artifact is delivered in the current page
 

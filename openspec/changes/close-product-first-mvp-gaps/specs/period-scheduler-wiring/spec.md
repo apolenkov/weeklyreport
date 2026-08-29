@@ -8,7 +8,10 @@ overlap cannot both commit. Exact-boundary uniqueness alone MUST NOT establish
 this invariant. Published and archived rows MUST remain outside the database
 range constraint because legitimate republish history can share a period
 envelope; their date envelopes remain frozen until the lifecycle is made
-editable again.
+editable again. A manual envelope update MUST re-check the lifecycle tuple while
+holding the report row lock and MUST reject a date/deadline edit whose expected
+state is stale; `weekLabel`-only edits remain allowed for published and archived
+rows.
 
 #### Scenario: Concurrent overlapping creates
 
@@ -17,6 +20,16 @@ editable again.
 - **THEN** at most one range commits
 - **AND** the losing request returns the canonical typed overlap conflict
   without report or reminder side effects
+
+#### Scenario: Lifecycle transition wins before a manual envelope update
+
+- **GIVEN** a manual PATCH read an editable period and requested a date or
+  deadline change
+- **WHEN** publish or archive commits before the PATCH acquires its transaction
+  lock
+- **THEN** the PATCH returns the typed stale-state conflict
+- **AND** the period's date envelope remains unchanged
+- **AND** a `weekLabel`-only PATCH remains allowed after the transition
 
 #### Scenario: Non-overlapping ranges race
 
@@ -37,3 +50,27 @@ substitute for a real composition test.
   infrastructure providers
 - **THEN** all period services and schedulers resolve without an
   unknown-dependency or silent no-op fallback
+
+### Requirement: Current-period lookup selects only a coupled live tuple
+
+The login-time and scheduler current-period factory MUST select an existing
+report only when legacy status is draft, archived is false, canonical state is
+scheduled or open, and all lifecycle fields form a valid tuple for the requested
+boundary. The factory MUST first return the exact live scheduling boundary when
+one exists; when no exact boundary exists, it MUST return the single valid live
+`scheduled` or `open` manual range containing the anchor date rather than
+creating an overlapping canonical week. A live range that only partially
+overlaps the canonical week and does not contain the anchor MUST still surface
+the typed overlap error from the database write path.
+
+#### Scenario: Manual range contains the login anchor
+
+- **WHEN** no exact scheduler boundary exists and one valid live manual range
+  contains the anchor date
+- **THEN** the factory returns that range without creating a new report
+
+#### Scenario: Partial overlap does not contain the anchor
+
+- **WHEN** no exact boundary exists and a live manual range overlaps the
+  canonical week but ends before the anchor date
+- **THEN** canonical creation fails with the typed period-overlap error

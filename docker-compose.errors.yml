@@ -1,8 +1,7 @@
 # Optional error-tracking sidecar (Sentry-compatible via Bugsink).
-# Bring up alongside the main stack:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
-#     -f docker-compose.observability.yml -f docker-compose.errors.yml up -d
-# Or via: pnpm observability:up (root package.json script)
+# Bring up through the isolated root command, which owns only the
+# observability project and never the source-owned api/web services:
+#   pnpm observability:up
 #
 # Bugsink UI: http://localhost:8000 (no default credentials).
 # After first start, create an admin user interactively:

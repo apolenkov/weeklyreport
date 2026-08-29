@@ -122,28 +122,6 @@ The legacy (pre-`requestedBy`) PDF-export synthetic session MUST parse successfu
 - THEN every character outside the UUID's dash separators is a hex digit
   (`0-9`, `a-f`)
 
-### Requirement: The export button's success signal is gated on artifact delivery
-
-The export button MUST open the result tab synchronously within the
-triggering click handler (or via a held-open tab navigated once the
-artifact is ready), never from an asynchronous status-poll callback, so
-browser popup blockers do not silently discard the open request. This
-governs `ExportPdfButton`
-(`apps/web/src/features/pdf-export/ui/export-pdf-button.tsx`). The button
-MUST NOT report success (`toast.success`) unless the artifact was actually
-handed to the user — either the tab navigated to the artifact URL, or, when
-`window.open` returns `null`, a visible fallback download link was
-rendered.
-
-#### Scenario: Ready job opens without a false-success toast under a popup blocker
-
-- **GIVEN** a browser with default popup-blocker settings
-- **WHEN** a user clicks Export PDF and the job reaches `ready`
-- **THEN** either a new tab shows the PDF, or a visible download link
-  appears in the page
-- **AND** `toast.success` fires only in the branch that actually delivered
-  the artifact to the user
-
 ### Requirement: Status-poll failure recovers the button to a clickable state
 
 `ExportPdfButton`'s status-poll query MUST handle `isError` by clearing the
@@ -265,8 +243,9 @@ The PDF export React action in `ExportPdfButton`
 the current page and MUST NOT create a temporary browser tab. After a
 completed owned job returns a valid artifact URL, it MUST attempt one
 same-origin attachment download and MUST expose a persistent fallback
-download link. Failed jobs MUST return the export control to a retryable error
-state without creating a tab.
+download link. Re-running the completion effect for the same job MUST NOT
+attempt a second download. Failed jobs MUST return the export control to a
+retryable error state without creating a tab.
 
 #### Scenario: Completed artifact is delivered in the current page
 
