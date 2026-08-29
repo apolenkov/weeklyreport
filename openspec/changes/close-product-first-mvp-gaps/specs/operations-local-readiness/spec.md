@@ -38,7 +38,8 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** the development Compose stack is rendered
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
 - **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
-- **AND** the Postgres container creates and health-checks that same database before migrations run
+- **AND** an idempotent one-shot initializer ensures that database exists before migrations run
+- **AND** a legacy named volume containing only `customreport_dev` upgrades without deleting the volume
 
 #### Scenario: A fresh local product database is bootstrapped
 

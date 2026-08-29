@@ -179,7 +179,11 @@ void test("development Compose owns one exact guarded database target", () => {
   }
   assert.match(devContent, /POSTGRES_PASSWORD: localdev/u);
   assert.match(devContent, /POSTGRES_DB: customreport_e2e/u);
-  assert.match(devContent, /pg_isready -U customreport -d customreport_e2e/u);
+  assert.match(devContent, /pg_isready -U customreport -d postgres/u);
+  assert.match(
+    devContent,
+    /local-database-init:[\s\S]*migrate:[\s\S]*local-database-init:[\s\S]*condition: service_completed_successfully/u,
+  );
   const applicationDatabaseUrls = `${devContent}\n${devOverrideContent}`
     .split("\n")
     .map((line) => line.trim())

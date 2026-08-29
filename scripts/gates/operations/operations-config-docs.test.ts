@@ -14,6 +14,9 @@ const localEnvironment = read(".env.example");
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
 const localBootstrap = read("prisma/operations/bootstrap-local.ts");
+const localDatabaseInitializer = read(
+  "deploy/postgres/ensure-local-database.sql",
+);
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/caddy/README.md");
 const errorsCompose = read("docker-compose.errors.yml");
@@ -128,8 +131,17 @@ const assertLocalBootstrapContract = (
     /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_e2e/u,
   );
   assert.match(compose, /POSTGRES_DB: customreport_e2e/u);
-  assert.match(compose, /pg_isready -U customreport -d customreport_e2e/u);
+  assert.match(compose, /pg_isready -U customreport -d postgres/u);
   assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
+  assert.match(
+    compose,
+    /local-database-init:[\s\S]*ensure-local-database\.sql[\s\S]*migrate:[\s\S]*local-database-init:[\s\S]*condition: service_completed_successfully/u,
+  );
+  assert.match(localDatabaseInitializer, /CREATE DATABASE customreport_e2e/u);
+  assert.doesNotMatch(
+    localDatabaseInitializer,
+    /\b(?:DROP|DELETE|TRUNCATE)\b/iu,
+  );
 };
 
 void test("local quick start bootstraps one exact guarded database", () => {
