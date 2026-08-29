@@ -291,6 +291,19 @@ void test("the production image receives one release identity", () => {
   }
 });
 
+void test("production dependency layers retain a shared pnpm BuildKit cache", () => {
+  const cacheMount =
+    "--mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
+  assert.equal(apiDockerfile.split(cacheMount).length - 1, 2);
+  assert.equal(webDockerfile.split(cacheMount).length - 1, 1);
+  for (const dockerfile of [apiDockerfile, webDockerfile]) {
+    assert.match(
+      dockerfile,
+      /pnpm install[^\n]*--store-dir=\/pnpm\/store --network-concurrency=4/u,
+    );
+  }
+});
+
 void test("untracked environment variants stay ignored while examples remain tracked", () => {
   assert.match(gitIgnoreContent, /^\.env\.\*$/mu);
   assert.match(gitIgnoreContent, /^!\.env\.example$/mu);
