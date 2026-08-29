@@ -14,6 +14,7 @@
         "scripts/quality/react-doctor/",
         "scripts/quality/type-cycles/",
         "scripts/gates/directory-architecture/",
+        "scripts/gates/coverage/",
         "scripts/gates/repository-tests/",
         "scripts/gates/orchestrator/",
         "scripts/gates/planning-provenance/",
@@ -140,6 +141,14 @@
       "concern": "repository-test-ownership",
       "role": "test",
       "target": "scripts/gates/repository-tests/$1"
+    },
+    {
+      "id": "scripts-coverage-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/coverage/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "coverage-evidence",
+      "role": "implementation",
+      "target": "scripts/gates/coverage/$1"
     },
     {
       "id": "scripts-repository-tests-implementation",

@@ -5,8 +5,8 @@ import {
   carryOverRecordSchema,
   type ReportSectionReadModel,
 } from "@customreport/shared";
-import type {
-  CarryOverExecution as PrismaCarryOverExecutionRow,
+import {
+  type CarryOverExecution as PrismaCarryOverExecutionRow,
   Prisma,
 } from "@prisma/client";
 
@@ -86,6 +86,7 @@ export async function writeCarryOver(
   const currentTargetSections = await lockAndReadTargetSections(
     tx,
     execution.targetReportId,
+    targetSections.map((section) => section.reportSectionId),
   );
   const writableTargetSections = currentTargetSections.map((current) =>
     mergePlannedCarriedRows(
@@ -139,11 +140,14 @@ export async function writeCarryOver(
 async function lockAndReadTargetSections(
   tx: Prisma.TransactionClient,
   targetReportId: string,
+  targetSectionIds: readonly string[],
 ): Promise<ReportSectionReadModel[]> {
+  if (targetSectionIds.length === 0) return [];
   const lockedRows = await tx.$queryRaw<{ id: string }[]>`
     SELECT "id"
     FROM "ReportSection"
     WHERE "reportId" = ${targetReportId}
+      AND "id" IN (${Prisma.join(targetSectionIds)})
     ORDER BY "id"
     FOR UPDATE`;
   if (lockedRows.length === 0) return [];
@@ -151,7 +155,7 @@ async function lockAndReadTargetSections(
   const rows = await tx.reportSection.findMany({
     where: {
       reportId: targetReportId,
-      id: { in: lockedRows.map((row) => row.id) },
+      id: { in: [...targetSectionIds] },
     },
     include: reportSectionFullInclude,
     relationLoadStrategy: "join",

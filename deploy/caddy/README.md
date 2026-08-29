@@ -15,7 +15,14 @@ containers, and adds security headers.
 ```bash
 CADDY_SITE_ADDRESS=customreport.example.com   # or http://customreport.example.com for HTTP-only
 CADDY_ACME_EMAIL=ops@example.com
+CADDY_CSP_REPORT_URI=https://customreport.example.com/api/csp-report
 ```
+
+The production Compose contract also requires `HTTP_PORT`, `HTTPS_PORT`, and
+`HTTPS_PORT_QUIC`. See
+[`../environment/production.env.example`](../environment/production.env.example)
+for the complete names-only template. `CADDY_CSP_REPORT_URI` must point to an
+operator-owned collector; it is not a built-in Caddy endpoint.
 
 `CADDY_SITE_ADDRESS` accepts:
 
@@ -39,7 +46,7 @@ forwards `Upgrade: websocket` headers without configuration.
 
 ## Verifying
 
-After `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`:
+After `docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d`:
 
 ```bash
 # Inside the docker network (the pinned Caddy image provides wget):

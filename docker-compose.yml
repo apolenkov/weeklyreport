@@ -17,7 +17,7 @@ services:
       - "log_min_duration_statement=200"
     environment:
       POSTGRES_USER: customreport
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-localdev}
+      POSTGRES_PASSWORD: localdev
       POSTGRES_DB: customreport_dev
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -74,7 +74,7 @@ services:
       target: migrator
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +85,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
       PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379

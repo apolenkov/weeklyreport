@@ -15,6 +15,7 @@ const tunnelRoute = resolve("apps/web/src/app/monitoring/route.ts");
 const tunnelImplementation = resolve(
   "apps/web/src/app/monitoring/sentry-tunnel.ts",
 );
+const tunnelRouteSource = readFileSync(tunnelRoute, "utf8");
 const productionCaddy = readFileSync(resolve("deploy/caddy/Caddyfile"), "utf8");
 const stagingCaddy = readFileSync(
   resolve("deploy/caddy/Caddyfile.staging"),
@@ -33,6 +34,14 @@ void test("browser telemetry uses the repository same-origin tunnel", () => {
     readFileSync(tunnelImplementation, "utf8"),
     /resolveSentryEnvelopeEndpoint/,
   );
+});
+
+void test("the public tunnel has bounded per-client quota enforcement", () => {
+  const implementation = readFileSync(tunnelImplementation, "utf8");
+  assert.match(tunnelRouteSource, /consumeSentryTunnelQuota/);
+  assert.match(implementation, /SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW = 30/);
+  assert.match(implementation, /SENTRY_TUNNEL_MAX_CLIENT_BUCKETS = 1024/);
+  assert.match(implementation, /new Map<string, ClientQuotaBucket>/);
 });
 
 void test("the enforcing edge CSP keeps connect-src same-origin only", () => {

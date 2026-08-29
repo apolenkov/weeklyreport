@@ -24,12 +24,14 @@ const COMPLETE = {
   PDF_OUTPUT_DIR: "/var/lib/customreport/pdfs",
   PDF_EXPORT_JWT_SECRET: "a-production-pdf-secret-at-least-32-chars",
   SMTP_HOST: "smtp.example.com",
+  SMTP_PORT: "587",
   SMTP_FROM: "noreply@example.com",
   KEYCLOAK_SAML_CALLBACK_URL: "https://app.example.com/auth/saml/callback",
   KEYCLOAK_SAML_ENTRY_POINT: "https://idp.example.com/saml/sso",
   KEYCLOAK_SAML_ISSUER: "customreport",
   KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
+  OTEL_SERVICE_VERSION: "84221c6d",
 } as const;
 
 describe("envSchema — no defaults, every product var required", () => {
@@ -227,6 +229,11 @@ describe("envSchema — production fences", () => {
     expect(envSchema.safeParse(without).success).toBe(false);
   });
 
+  it("requires SMTP_PORT in production", () => {
+    const { SMTP_PORT: _omit, ...without } = COMPLETE;
+    expect(envSchema.safeParse(without).success).toBe(false);
+  });
+
   it("rejects whitespace-only SMTP_HOST/SMTP_FROM in production", () => {
     const result = envSchema.safeParse({
       ...COMPLETE,
@@ -236,17 +243,40 @@ describe("envSchema — production fences", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts production with both SMTP_HOST and SMTP_FROM set", () => {
+  it("accepts production with SMTP host, port, and sender set", () => {
     expect(envSchema.safeParse(COMPLETE).success).toBe(true);
   });
 
-  it("allows absent SMTP_HOST/SMTP_FROM outside production", () => {
-    const { SMTP_HOST: _host, SMTP_FROM: _from, ...without } = COMPLETE;
+  it("allows absent SMTP_HOST/SMTP_PORT/SMTP_FROM outside production", () => {
+    const {
+      SMTP_HOST: _host,
+      SMTP_PORT: _port,
+      SMTP_FROM: _from,
+      ...without
+    } = COMPLETE;
     const result = envSchema.safeParse({
       ...without,
       NODE_ENV: "development",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("requires a non-blank release version in production", () => {
+    const { OTEL_SERVICE_VERSION: _omit, ...without } = COMPLETE;
+    expect(envSchema.safeParse(without).success).toBe(false);
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        OTEL_SERVICE_VERSION: " ".repeat(3),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("allows the release version to be absent outside production", () => {
+    const { OTEL_SERVICE_VERSION: _omit, ...without } = COMPLETE;
+    expect(
+      envSchema.safeParse({ ...without, NODE_ENV: "development" }).success,
+    ).toBe(true);
   });
 
   // SAML config is required in production once dev-login is off, mirroring the

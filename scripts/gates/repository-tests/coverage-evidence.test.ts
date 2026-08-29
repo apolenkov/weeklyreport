@@ -17,6 +17,7 @@ void test("accepts a coverage summary with executed files and all metric denomin
       },
     },
     "fixture/coverage-summary.json",
+    "api",
   );
   assert.equal(evidence.fileCount, 1);
   assert.equal(evidence.totals.lines, 3);
@@ -36,7 +37,71 @@ void test("rejects an empty execution denominator even when the report is presen
           },
         },
         "fixture/coverage-summary.json",
+        "api",
       ),
     /empty lines denominator/,
   );
+});
+
+void test("rejects metadata and stray paths as file evidence", () => {
+  for (const strayKey of [
+    "coverageMap",
+    "package.json",
+    "src/example.test.ts",
+  ]) {
+    assert.throws(
+      () =>
+        assertNonEmptyCoverageSummary(
+          {
+            [strayKey]: {},
+            total: {
+              lines: metric(3),
+              statements: metric(3),
+              functions: metric(1),
+              branches: metric(2),
+            },
+          },
+          "fixture/coverage-summary.json",
+          "api",
+        ),
+      /metadata, stray, or excluded file key/,
+    );
+  }
+});
+
+void test("rejects a valid source path from the other package scope", () => {
+  assert.throws(
+    () =>
+      assertNonEmptyCoverageSummary(
+        {
+          "/workspace/apps/web/src/app/page.tsx": {},
+          total: {
+            lines: metric(3),
+            statements: metric(3),
+            functions: metric(1),
+            branches: metric(2),
+          },
+        },
+        "fixture/coverage-summary.json",
+        "api",
+      ),
+    /metadata, stray, or excluded file key/,
+  );
+});
+
+void test("accepts an absolute path inside the selected source scope", () => {
+  const evidence = assertNonEmptyCoverageSummary(
+    {
+      "/workspace/apps/api/src/modules/example.ts": {},
+      total: {
+        lines: metric(3),
+        statements: metric(3),
+        functions: metric(1),
+        branches: metric(2),
+      },
+    },
+    "fixture/coverage-summary.json",
+    "api",
+  );
+  assert.equal(evidence.fileCount, 1);
 });

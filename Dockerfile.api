@@ -30,6 +30,8 @@ RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport 
 # Compose/Kubernetes init jobs should use this target, not the production API
 # runner, because migrations require the Prisma CLI from devDependencies.
 FROM installer AS migrator
+ARG BUILD_VERSION
+LABEL org.opencontainers.image.revision=${BUILD_VERSION}
 CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 
 # Stage 5: Build
@@ -54,6 +56,8 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 # the web image (alpine, ~150MB); this one cannot meet it by construction, but
 # a slim base would still be worth measuring.
 FROM base AS runner
+ARG BUILD_VERSION
+LABEL org.opencontainers.image.revision=${BUILD_VERSION}
 WORKDIR /app
 
 # Manifests and the built app come from the build; every node_modules tree comes

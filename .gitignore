@@ -10,12 +10,18 @@ __pycache__/
 *.py[cod]
 
 coverage/
+# Keep generated coverage output ignored while tracking the repository-owned
+# evidence helper used by the test gates.
+!scripts/gates/coverage/
+scripts/gates/coverage/*
+!scripts/gates/coverage/coverage-evidence.ts
 playwright-report/
 test-results/
 
 .env
-.env.local
-.env.test
+.env.*
+!.env.example
+!.env.test.example
 
 .idea/
 

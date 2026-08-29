@@ -9,7 +9,8 @@
 #   pnpm observability:up   # isolated project; dev layering is composed last
 #   pnpm observability:down # removes only that observability project
 #   docker compose --project-name customreport-production-observability \
-#     -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+#     --env-file .env.production -f docker-compose.prod.yml \
+#     -f docker-compose.observability.yml up --build -d
 #
 # Grafana login: admin / the configured GRAFANA_ADMIN_PASSWORD  →  http://localhost:3003
 
@@ -18,6 +19,7 @@ services:
   # collector endpoint the base prod compose deliberately leaves unset.
   api:
     environment:
+      OTEL_SDK_DISABLED: "false"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
 
   otel-lgtm:
@@ -51,9 +53,10 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0@sha256:386b12d19eab2a37d7cd8ca8b4c7491cc7a830d9581f49af6c98a393da9605e6
     environment:
-      # POSTGRES_DB is a compose INTERPOLATION input, so it must come from the
-      # root .env or the shell — the copy in docker-compose.yml is service env,
-      # which ${POSTGRES_DB} never sees. Prod exports it at deploy time.
+      # POSTGRES_DB is a Compose interpolation input, so it must come from the
+      # root env file or shell. Dev uses the fixed local password from the base
+      # stack; production already requires DB_PASSWORD and rejects URL-reserved
+      # characters before postgres starts.
       DATA_SOURCE_NAME: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?sslmode=disable
     depends_on:
       postgres:

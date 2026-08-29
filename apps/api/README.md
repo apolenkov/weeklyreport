@@ -22,15 +22,19 @@ All API endpoints are tRPC procedures served at `/trpc`. Authentication uses `pr
 
 ## Development
 
+From the repository root, copy `.env.example` to `.env`, then run:
+
 ```bash
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-AUTH_DEV_MODE=true AUTH_JWT_SECRET="local-dev-secret-minimum-32-characters-long!!" \
-REDIS_HOST=localhost REDIS_PORT=6379 FRONTEND_URL=http://localhost:3000 PORT=3001 \
 pnpm dev
 ```
+
+The canonical native ports are API `3002` and web `3000`. The API environment
+is validated at boot; missing required values fail closed. For Docker-backed
+development use `pnpm dev:watch`.
 
 ## Testing
 
 ```bash
-pnpm test    # 68 Vitest tests across 9 service modules
+pnpm --filter @customreport/api test
+pnpm --filter @customreport/api test:integration  # requires .env.test and DB/Redis15
 ```

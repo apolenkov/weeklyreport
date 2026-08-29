@@ -10,7 +10,29 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { applySaveSection } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
-import { CarryOverConflictError } from "./carry-over.service";
+import { CarryOverConflictError, CarryOverService } from "./carry-over.service";
+
+const LOCK_WAIT_POLL_MS = 10;
+const LOCK_WAIT_MAX_POLLS = 100;
+
+async function carryOverLockIsWaiting(
+  prisma: ReturnType<typeof createTestPrisma>,
+): Promise<boolean> {
+  for (let poll = 0; poll < LOCK_WAIT_MAX_POLLS; poll += 1) {
+    const waiting = await prisma.$queryRaw<{ pid: number }[]>`
+      SELECT activity.pid
+      FROM pg_stat_activity AS activity
+      JOIN pg_locks AS lock
+        ON lock.pid = activity.pid AND NOT lock.granted
+      WHERE activity.datname = current_database()
+        AND activity.pid <> pg_backend_pid()
+        AND activity.query LIKE '%FROM "Report"%'
+        AND activity.query LIKE '%FOR UPDATE%'`;
+    if (waiting.length > 0) return true;
+    await new Promise((resolve) => setTimeout(resolve, LOCK_WAIT_POLL_MS));
+  }
+  return false;
+}
 
 describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races", () => {
   const prisma = createTestPrisma();
@@ -147,6 +169,69 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       where: { reportSectionId: { in: [sectionLead.id, sectionHead.id] } },
     });
     expect(persisted).toBe(execution.carriedItemCount);
+  });
+
+  it("carries matched authors without blocking on an unrelated submitted target", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const matchedTarget = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const unrelatedSubmitted = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.head.id,
+        status: "submitted",
+        submittedAt: new Date(),
+      },
+    });
+    const unrelatedBefore = await prisma.reportSection.findUnique({
+      where: { id: unrelatedSubmitted.id },
+    });
+    await prisma.item.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        type: "next",
+        text: "Carry only for the matched author",
+        tag: "feature",
+        workflowStatus: "planned",
+        carriedOver: false,
+      },
+    });
+
+    const result = await new CarryOverService(repo).executeCarryOver(
+      testData.report.id,
+      targetReport.id,
+    );
+
+    expect(result.records).toHaveLength(1);
+    expect(
+      await prisma.item.count({
+        where: { reportSectionId: matchedTarget.id },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.item.count({
+        where: { reportSectionId: unrelatedSubmitted.id },
+      }),
+    ).toBe(0);
+    await expect(
+      prisma.reportSection.findUnique({
+        where: { id: unrelatedSubmitted.id },
+      }),
+    ).resolves.toEqual(unrelatedBefore);
   });
 
   it("resolves the dedupeKey unique-constraint race to the existing execution (no 500)", async () => {
@@ -601,13 +686,18 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
     });
     await submitReady;
     const carry = repo.saveCarryOver(execution, records, [plannedTarget]);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    releaseSubmit?.();
+    let lockWaitObserved = false;
+    try {
+      lockWaitObserved = await carryOverLockIsWaiting(prisma);
+    } finally {
+      releaseSubmit?.();
+    }
 
     const [submitResult, carryResult] = await Promise.allSettled([
       submit,
       carry,
     ]);
+    expect(lockWaitObserved).toBe(true);
     expect(submitResult.status).toBe("fulfilled");
     expect(carryResult.status).toBe("rejected");
     if (carryResult.status === "fulfilled") {

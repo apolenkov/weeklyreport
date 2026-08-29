@@ -1,6 +1,9 @@
 import {
+  consumeSentryTunnelQuota,
   resolveSentryEnvelopeEndpoint,
+  resolveSentryTunnelClientKey,
   SENTRY_TUNNEL_MAX_BODY_BYTES,
+  SENTRY_TUNNEL_RETRY_AFTER_SECONDS,
 } from "./sentry-tunnel";
 
 function declaredBodyIsOversized(req: Request): boolean {
@@ -19,6 +22,15 @@ export async function POST(req: Request): Promise<Response> {
 
   const endpoint = resolveSentryEnvelopeEndpoint();
   if (!endpoint) return new Response(null, { status: 204 });
+
+  if (!consumeSentryTunnelQuota(resolveSentryTunnelClientKey(req))) {
+    return new Response(null, {
+      status: 429,
+      headers: {
+        "retry-after": String(SENTRY_TUNNEL_RETRY_AFTER_SECONDS),
+      },
+    });
+  }
 
   try {
     const body = await readBoundedBody(req);

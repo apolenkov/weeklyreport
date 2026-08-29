@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.api
       target: installer
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
 
   api:
     build:
@@ -27,8 +27,8 @@ services:
       - apilogs:/app/logs
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
-      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
+      DIRECT_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0

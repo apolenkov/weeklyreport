@@ -66,7 +66,8 @@ const envObjectSchema = z.object({
   // fails boot loud rather than letting a typo degrade the alert silently.
   DLQ_ALERT_THRESHOLD: z.coerce.number().int().positive().optional(),
 
-  // SMTP (email reminders)
+  // SMTP (email reminders). The fields stay optional for dev/test; the
+  // production fence below requires host, port, and sender together.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional(),
@@ -85,6 +86,8 @@ const envObjectSchema = z.object({
     .transform(Number)
     .pipe(z.number().min(0).max(1)),
   OTEL_SERVICE_NAME: z.string().optional(),
+  // Optional for dev/test; production requires an exact release identity even
+  // while export is disabled so later enablement cannot inherit "dev".
   OTEL_SERVICE_VERSION: z.string().optional(),
 
   // Error capture (Bugsink/Sentry-compatible). Optional: `main.ts` inits the
@@ -94,9 +97,9 @@ const envObjectSchema = z.object({
   // Browser → server log forwarder toggle (`main.ts`). Optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".
   CLIENT_LOG_FORWARDING: z.string().optional(),
-  // Telegram bot token. Optional: unset/blank →
-  // MockTelegramAdapter; a non-blank value activates real delivery. The
-  // configured-check is centralised in `isTelegramConfigured`.
+  // Telegram bot token. Optional: unset/blank selects MockTelegramAdapter;
+  // non-blank currently reaches the explicit deferred-feature error. The
+  // configured check is centralised in `isTelegramConfigured`.
   TG_BOT_TOKEN: z.string().optional(),
 
   // PDF generation
@@ -178,6 +181,30 @@ const addMissingSmtpIssues = (
   });
 };
 
+const addMissingSmtpPortIssue = (
+  data: ValidatedEnv,
+  ctx: z.RefinementCtx,
+): void => {
+  if (data.SMTP_PORT !== undefined) return;
+  ctx.addIssue({
+    code: "custom",
+    message: "SMTP_PORT is required when NODE_ENV=production",
+    path: ["SMTP_PORT"],
+  });
+};
+
+const addMissingReleaseVersionIssue = (
+  data: ValidatedEnv,
+  ctx: z.RefinementCtx,
+): void => {
+  if (data.OTEL_SERVICE_VERSION?.trim()) return;
+  ctx.addIssue({
+    code: "custom",
+    message: "OTEL_SERVICE_VERSION is required when NODE_ENV=production",
+    path: ["OTEL_SERVICE_VERSION"],
+  });
+};
+
 // SAML/Keycloak must be configured in production once dev-login is off. The
 // vars stay `.optional()` (dev-login boots without an IdP); this fence fails
 // boot loud before saml.strategy.ts's requireEnv would fail late.
@@ -208,6 +235,8 @@ export const envSchema = envObjectSchema.superRefine((data, ctx) => {
   addForbiddenDevModeIssue(data, ctx);
   addWildcardOriginIssue(data, ctx);
   addMissingSmtpIssues(data, ctx);
+  addMissingSmtpPortIssue(data, ctx);
+  addMissingReleaseVersionIssue(data, ctx);
   addMissingSamlIssues(data, ctx);
 });
 

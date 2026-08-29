@@ -306,6 +306,7 @@ jobs:
     env:
       # Compose requires all guarded values before it can render a build.
       DB_PASSWORD: ci-build-only
+      POSTGRES_DB: customreport
       REDIS_DB: "0"
       FRONTEND_URL: http://localhost
       APP_BASE_URL: http://localhost
@@ -334,6 +335,7 @@ jobs:
       PGBOUNCER_RESERVE_POOL_SIZE: "5"
       LOG_LEVEL: info
       OTEL_SDK_DISABLED: "true"
+      OTEL_SERVICE_VERSION: ${{ github.sha }}
       OTEL_TRACES_SAMPLER_ARG: "0"
       HTTP_PORT: "80"
       HTTPS_PORT: "443"
@@ -347,3 +349,12 @@ jobs:
 
       - name: Verify production Docker Compose builds
         run: docker compose -f docker-compose.prod.yml build
+
+      - name: Verify production image release identity
+        run: |
+          for service in backup migrate api web; do
+            image_id="$(docker compose -f docker-compose.prod.yml images -q "$service")"
+            test -n "$image_id"
+            revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_id")"
+            test "$revision" = "$OTEL_SERVICE_VERSION"
+          done

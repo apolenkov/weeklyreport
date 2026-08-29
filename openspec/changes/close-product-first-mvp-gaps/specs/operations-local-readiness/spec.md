@@ -13,6 +13,31 @@ The repository-owned development and operations instructions, including Compose,
 - **WHEN** the documented example environment is supplied to its Compose stack
 - **THEN** configuration rendering succeeds without a missing required variable or duplicate application port owner
 
+#### Scenario: An untouched production environment template is used
+
+- **WHEN** an operator copies the tracked production template without filling its required empty values
+- **THEN** Compose or runtime validation fails before a production service accepts traffic
+
+#### Scenario: A production image is built
+
+- **WHEN** CI or an operator builds the production API and Web images
+- **THEN** one exact release version identifies telemetry, the user-visible Web build, and every repository-built image label and tag
+
+#### Scenario: The observability overlay is composed
+
+- **WHEN** the production stack is rendered with the repository observability overlay
+- **THEN** the overlay supplies a collector endpoint and explicitly enables the telemetry SDK
+
+#### Scenario: Development database configuration is rendered
+
+- **WHEN** the development Compose stack is rendered
+- **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
+
+#### Scenario: Production database identity is unsafe for a connection URL
+
+- **WHEN** `DB_PASSWORD` contains a reserved URL character or `POSTGRES_DB` contains anything other than letters, digits, and underscores
+- **THEN** the configuration guard exits non-zero without logging either value and no database-dependent service starts
+
 #### Scenario: Metrics remain internal
 
 - **WHEN** an operator follows the observability runbook
@@ -31,6 +56,20 @@ The backup automation and repository post-update hooks MUST validate positive in
 
 - **WHEN** dependency installation or generated-client refresh fails
 - **THEN** the Git hook exits non-zero and exposes the failed step
+
+### Requirement: Repository-owned runtime surfaces are bounded and reproducible
+
+The production browser telemetry tunnel MUST enforce a bounded per-client quota, and the production backup service MUST run reviewed backup, health, and restore entrypoints baked into its image rather than host bind mounts.
+
+#### Scenario: Browser telemetry exceeds its local quota
+
+- **WHEN** one client exceeds the fixed request window or the bounded client registry is full
+- **THEN** the tunnel rejects excess envelopes without forwarding them or growing unbounded process state
+
+#### Scenario: The backup container starts
+
+- **WHEN** the production backup service is built and run
+- **THEN** all recovery entrypoints come from the reviewed image and no mutable host script is mounted over them
 
 ### Requirement: External production controls are not simulated
 

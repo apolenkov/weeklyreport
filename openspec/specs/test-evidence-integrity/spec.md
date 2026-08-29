@@ -24,6 +24,8 @@ The API integration CI lane MUST execute the API integration suite against an ac
 
 The API and Web merge gates MUST invoke their test runners with coverage enabled, enforce their declared thresholds without weakening exclusions, and prove that each produced report contains a non-zero execution denominator for its intended source scope.
 
+The coverage configuration MUST keep the complete source scope explicit: API MUST include `src/**/*.ts` and `src/**/*.tsx`, and Web MUST include `src/**/*.{ts,tsx}`. The repository-owned non-empty evidence helper and its repository tests MUST be tracked source so a fresh Git archive or checkout contains the files required by the gate.
+
 #### Scenario: Thresholds exist but coverage is not collected
 
 - **WHEN** a job omits coverage collection or emits an empty report
@@ -33,3 +35,8 @@ The API and Web merge gates MUST invoke their test runners with coverage enabled
 
 - **WHEN** both scoped reports are non-empty and meet their independently declared thresholds
 - **THEN** the coverage gate passes without changing thresholds or exclusions
+
+#### Scenario: Coverage scope and evidence helper survive a clean checkout
+
+- **WHEN** a fresh Git archive or checkout is created from the accepted revision
+- **THEN** the API and Web include globs remain complete and the tracked evidence helper and repository tests are present

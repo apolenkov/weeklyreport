@@ -10,54 +10,57 @@ marked **untested in production**.
 ## The stack
 
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
-eight services:
+nine services:
 
-| Service     | Role                                                                                                                                                                            |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `caddy`     | The only public entrypoint. TLS, security headers, routes `/trpc` `/auth` `/health` `/admin/queues` `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
-| `web`       | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                            |
-| `api`       | NestJS + tRPC. Not published to the host either.                                                                                                                                |
-| `migrate`   | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                             |
-| `pgbouncer` | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                              |
-| `postgres`  | The database. No host port; reachable only on the compose network.                                                                                                              |
-| `redis`     | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                               |
-| `backup`    | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                        |
+| Service        | Role                                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                        |
+| `caddy`        | The only public entrypoint. TLS, security headers, routes `/trpc` `/auth` `/health` `/admin/queues` `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
+| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                            |
+| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                |
+| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                             |
+| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                              |
+| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                              |
+| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                               |
+| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                        |
 
 `migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
 DDL and `pg_dump` both need a session that outlives a single transaction.
 
 ## First deploy
 
-1. **Write the environment file.** Every variable below is required — the api
-   refuses to boot without one, and compose refuses to even render. There are
-   no defaults by design (`AGENTS.md`: no silent defaults for product config).
+1. **Write the environment file.** Copy
+   `deploy/environment/production.env.example` to `.env.production`, then fill
+   every empty assignment. Compose or the api rejects an untouched template;
+   the few populated values are explicit repository policy, not hidden defaults.
 
-   | Variable                                                                                                | What it is                                                                          |
-   | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-   | `DB_PASSWORD`                                                                                           | Postgres password, shared by pgbouncer/migrate/backup.                              |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL`                                   | Public origins. `NEXT_PUBLIC_*` is baked at image build.                            |
-   | `API_URL`                                                                                               | Runtime server-side API origin (normally `http://api:3001`).                        |
-   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                              | Min 32 chars each, distinct, never the dev values.                                  |
-   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                          |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
-   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                           | ~75% of the api container memory limit (2 GB → `1610612736`).                       |
-   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                        | Public hostname, ACME account email, and CSP violation collector.                   |
-   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                           |
-   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                          |
-   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`                                 | Runtime policy values.                                                              |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Your RPO and history window. See [Backups](#backups).                               |
+   | Variable      | What it is                                                                      |
+   | ------------- | ------------------------------------------------------------------------------- |
+   | `DB_PASSWORD` | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`). |
 
-   Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
-   `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `TG_BOT_TOKEN`,
-   `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_VERSION`, `SMTP_USER`,
-   `SMTP_PASS`.
+| `POSTGRES_DB` | Database name shared by all consumers; letters, digits, and underscores only. |
+| `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL` | Public origins. `NEXT_PUBLIC_*` is baked at image build. |
+| `API_URL` | Runtime server-side API origin (normally `http://api:3001`). |
+| `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET` | Min 32 chars each, distinct, never the dev values. |
+| `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
+| `HEAP_HEALTH_THRESHOLD_BYTES` | ~75% of the api container memory limit (2 GB → `1610612736`). |
+| `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI` | Public hostname, ACME account email, and CSP violation collector. |
+| `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC` | Host ports for the public Caddy listener. |
+| `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE` | PgBouncer capacity limits. |
+| `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION` | Runtime policy and exact deployed release identity; the same version is shown by Web. |
+| `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS` | Your RPO and history window. See [Backups](#backups). |
+
+Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
+`SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `OTEL_EXPORTER_OTLP_ENDPOINT`,
+`SMTP_USER`, `SMTP_PASS`. Telegram delivery remains deferred; leave
+`TG_BOT_TOKEN` unset until that tracked capability is implemented.
 
 2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
    bundle, so a changed public origin needs a rebuild, not a restart.
 
    ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml build
-   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+   docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
    ```
 
 3. **Watch the boot order.** `migrate` must exit 0 before `api` starts; `api`
@@ -67,7 +70,7 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
 4. **Verify before announcing.**
 
    ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml ps        # every service healthy
+   docker compose --env-file .env.production -f docker-compose.prod.yml ps        # long-running services healthy; guards/migrate exited 0
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
@@ -103,6 +106,10 @@ The `backup` service dumps the database every `BACKUP_INTERVAL_SECONDS` into
 the `pgbackups` volume and deletes dumps older than `BACKUP_RETENTION_DAYS`.
 Both values are required: together they are the recovery-point objective, and a
 default would invent one nobody agreed to.
+Its pinned backup image contains the backup, health, and restore entrypoints;
+the production Compose file does not mount mutable host scripts into it. Every
+repository-built image is tagged and labelled with `OTEL_SERVICE_VERSION`; the
+documented `up --build` command prevents a stale local tag from being reused.
 
 Its healthcheck is deliberately not a liveness probe — it goes red when the
 newest dump is older than two intervals, because a loop whose every `pg_dump`
@@ -127,9 +134,10 @@ docker compose --env-file .env.production -f docker-compose.prod.yml stop api we
 docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backup ls -lh /backups
 
 # 3. Restore. The token binds environment, host, port, and database. Production
-#    additionally requires the repository-wide destructive consent.
+#    additionally requires the repository-wide destructive consent. Replace
+#    <POSTGRES_DB> below with the exact value from .env.production.
 docker compose --env-file .env.production -f docker-compose.prod.yml run --rm \
-  -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|customreport' \
+  -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|<POSTGRES_DB>' \
   -e ALLOW_PROD_DESTRUCTIVE=yes \
   backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
 
@@ -152,10 +160,13 @@ live session or in-flight export** — there is no dual-key grace period.
    (recreates the api only).
 3. Expect every signed-in user to be bounced to login. Announce it first.
 
-`DB_PASSWORD` is referenced by postgres, pgbouncer, migrate and backup, so
-rotating it means changing the role password in Postgres and recreating all
-four together. `NEXT_PUBLIC_*` changes need a **rebuild** — they are inlined at
-build time and a restart will not pick them up.
+`DB_PASSWORD` is referenced by the config guard, postgres, pgbouncer, migrate
+and backup, so rotating it means changing the role password in Postgres and
+recreating those services together. It must contain only URL-safe unreserved
+characters (`A-Z a-z 0-9 . - _ ~`); `POSTGRES_DB` must contain only letters,
+digits, and underscores. The config guard validates both before any
+database-dependent service starts. `NEXT_PUBLIC_*` changes need a **rebuild** —
+they are inlined at build time and a restart will not pick them up.
 
 ## Migrations
 
@@ -220,3 +231,7 @@ following remain **BLOCKED** until an authorized external read-back exists:
 
 The local `alertmanager.yml`, `pgbackups` volume, and checked-in workflows are
 templates or repository evidence only; none is a production PASS by itself.
+Off-box encrypted backup remains **BLOCKED** until an operator supplies a
+provider endpoint, repository identity, encryption key policy, retention policy,
+and a scheduled restore read-back. This repository deliberately does not invent
+those external inputs or claim a restic-style recovery PASS without them.

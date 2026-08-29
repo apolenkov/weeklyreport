@@ -1,7 +1,76 @@
 const BYTES_PER_KIBIBYTE = 1024;
 const MAX_BODY_KIBIBYTES = 1024;
+const MILLISECONDS_PER_SECOND = 1000;
 export const SENTRY_TUNNEL_MAX_BODY_BYTES =
   MAX_BODY_KIBIBYTES * BYTES_PER_KIBIBYTE;
+export const SENTRY_TUNNEL_WINDOW_MS = 60_000;
+export const SENTRY_TUNNEL_RETRY_AFTER_SECONDS =
+  SENTRY_TUNNEL_WINDOW_MS / MILLISECONDS_PER_SECOND;
+export const SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW = 30;
+export const SENTRY_TUNNEL_MAX_CLIENT_BUCKETS = 1024;
+const MAX_CLIENT_KEY_LENGTH = 128;
+
+interface ClientQuotaBucket {
+  windowStartedAt: number;
+  requests: number;
+}
+
+const clientQuotaBuckets = new Map<string, ClientQuotaBucket>();
+
+/**
+ * Resolves the edge-provided client identity for the process-local quota.
+ * Caddy overwrites X-Forwarded-For with the remote address at the edge.
+ */
+export function resolveSentryTunnelClientKey(req: Request): string {
+  const realAddress = req.headers.get("x-real-ip")?.trim();
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (realAddress || forwarded || "anonymous").slice(
+    0,
+    MAX_CLIENT_KEY_LENGTH,
+  );
+}
+
+/**
+ * Applies a bounded, process-local quota to the browser telemetry tunnel.
+ * External edge-wide rate limiting remains a deployment concern.
+ */
+export function consumeSentryTunnelQuota(
+  clientKey: string,
+  now = Date.now(),
+): boolean {
+  const normalizedKey =
+    clientKey.trim().slice(0, MAX_CLIENT_KEY_LENGTH) || "anonymous";
+  const current = clientQuotaBuckets.get(normalizedKey);
+
+  if (current && now - current.windowStartedAt < SENTRY_TUNNEL_WINDOW_MS) {
+    if (current.requests >= SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW) {
+      return false;
+    }
+    current.requests += 1;
+    return true;
+  }
+
+  for (const [key, bucket] of clientQuotaBuckets) {
+    if (now - bucket.windowStartedAt >= SENTRY_TUNNEL_WINDOW_MS) {
+      clientQuotaBuckets.delete(key);
+    }
+  }
+
+  if (!current && clientQuotaBuckets.size >= SENTRY_TUNNEL_MAX_CLIENT_BUCKETS) {
+    return false;
+  }
+
+  clientQuotaBuckets.set(normalizedKey, {
+    windowStartedAt: now,
+    requests: 1,
+  });
+  return true;
+}
+
+/** Clears process-local quota state between isolated route tests. */
+export function resetSentryTunnelQuota(): void {
+  clientQuotaBuckets.clear();
+}
 
 function configuredDsn(): string | undefined {
   const serverDsn = process.env.SENTRY_DSN?.trim();

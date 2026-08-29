@@ -31,9 +31,13 @@ FROM installer AS builder
 # localhost/internal fallback origin into the bundle.
 ARG API_URL
 ARG NEXT_PUBLIC_API_URL
-RUN test -n "$API_URL" || (echo "API_URL build arg is required" && exit 1) \
-  && test -n "$NEXT_PUBLIC_API_URL" \
-  || (echo "NEXT_PUBLIC_API_URL build arg is required" && exit 1)
+ARG NEXT_PUBLIC_APP_VERSION
+RUN test -n "$API_URL" \
+  || { echo "API_URL build arg is required" >&2; exit 1; }; \
+  test -n "$NEXT_PUBLIC_API_URL" \
+  || { echo "NEXT_PUBLIC_API_URL build arg is required" >&2; exit 1; }; \
+  test -n "$NEXT_PUBLIC_APP_VERSION" \
+  || { echo "NEXT_PUBLIC_APP_VERSION build arg is required" >&2; exit 1; }
 # Dev-auth flags default OFF so an un-argumented build (a direct `docker build`,
 # a CI job, or a compose file that omits build.args) never inlines the auth stub
 # or dev role switcher into a production-labeled bundle. Dev opts back in via
@@ -46,11 +50,14 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_AUTH_STUB=${NEXT_PUBLIC_AUTH_STUB}
 ENV NEXT_PUBLIC_DEV_ROLE_SWITCHER=${NEXT_PUBLIC_DEV_ROLE_SWITCHER}
 ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
 FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS runner
+ARG NEXT_PUBLIC_APP_VERSION
+LABEL org.opencontainers.image.revision=${NEXT_PUBLIC_APP_VERSION}
 RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
