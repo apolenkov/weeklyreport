@@ -7,15 +7,6 @@ import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
 
-type DeliveryMode = "tab" | "fallback";
-
-interface DeliveryModeRef {
-  current: DeliveryMode | null;
-}
-interface TabRef {
-  current: Window | null;
-}
-
 interface UsePdfExportJobArgs {
   readonly reportId: string;
   readonly periodStatus: PeriodStatus;
@@ -29,8 +20,6 @@ interface UsePdfExportJobResult {
   readonly handleExport: () => void;
 }
 
-// Open blank tab on click (user-gesture) so later nav is not a popup; poll
-// until completed/failed and fall back to a download link if open is blocked.
 export function usePdfExportJob({
   reportId,
   periodStatus,
@@ -45,11 +34,6 @@ export function usePdfExportJob({
   // One-shot guard: delivery fires exactly once per completed jobId regardless
   // of how many times tanstack-query re-runs the effect.
   const lastDownloadedJobIdRef = useRef<string | null>(null);
-  // Set synchronously in the click handler so the poll effect can navigate the
-  // same tab (or switch to fallback) without racing React state commits.
-  const openedTabRef = useRef<Window | null>(null);
-  const deliveryModeRef = useRef<DeliveryMode | null>(null);
-
   const requestMut = useMutation(trpc.pdfExport.request.mutationOptions());
 
   const statusQ = useJobStatusPoll(jobId);
@@ -60,14 +44,14 @@ export function usePdfExportJob({
     if (outcome === null) return;
 
     if (outcome.kind === "failed") {
-      settleFailedJob(outcome.message, deliveryModeRef, openedTabRef);
+      toast.error(outcome.message);
       setJobId(null);
       return;
     }
 
     if (lastDownloadedJobIdRef.current === outcome.jobId) return;
     lastDownloadedJobIdRef.current = outcome.jobId;
-    settleCompletedJob(outcome, deliveryModeRef, openedTabRef, setFallbackUrl);
+    deliverArtifact(outcome.artifactUrl, setFallbackUrl);
     setJobId(null);
   }, [statusQ.data, statusQ.isError, jobId]);
 
@@ -78,32 +62,20 @@ export function usePdfExportJob({
   function handleExport() {
     if (disabled) return;
     setFallbackUrl(null);
-    openDeliveryTab(deliveryModeRef, openedTabRef);
-    requestMut.mutate(
-      { reportId },
-      exportRequestHandlers(deliveryModeRef, openedTabRef, setJobId),
-    );
+    requestMut.mutate({ reportId }, exportRequestHandlers(setJobId));
   }
 
   return { isExportable, isGenerating, disabled, fallbackUrl, handleExport };
 }
 
-// A failed start must release the tab held since the click, otherwise the user
-// is left staring at a blank page with no explanation.
-function exportRequestHandlers(
-  deliveryModeRef: DeliveryModeRef,
-  openedTabRef: TabRef,
-  onStarted: (jobId: string) => void,
-) {
+function exportRequestHandlers(onStarted: (jobId: string) => void) {
   return {
     onSuccess: (job: { jobId: string }) => {
       onStarted(job.jobId);
     },
     onError: (err: unknown) => {
-      settleFailedJob(
+      toast.error(
         err instanceof Error ? err.message : "Failed to start PDF export",
-        deliveryModeRef,
-        openedTabRef,
       );
     },
   };
@@ -165,68 +137,19 @@ function readJobOutcome(
   return null;
 }
 
-// Must open before any await so the browser still treats this as a user
-// gesture; a blocked popup (null) switches delivery to the fallback link.
-function openDeliveryTab(
-  deliveryModeRef: DeliveryModeRef,
-  openedTabRef: TabRef,
-): void {
-  const tab = window.open("", "_blank");
-  deliveryModeRef.current = tab === null ? "fallback" : "tab";
-  openedTabRef.current = tab;
-}
-
-function closeHeldTab(ref: TabRef): void {
-  const tab = ref.current;
-  if (tab !== null && !tab.closed) {
-    tab.close();
-  }
-  ref.current = null;
-}
-
-function settleFailedJob(
-  message: string,
-  deliveryModeRef: DeliveryModeRef,
-  openedTabRef: TabRef,
-): void {
-  closeHeldTab(openedTabRef);
-  deliveryModeRef.current = null;
-  toast.error(message);
-}
-
-function settleCompletedJob(
-  outcome: Extract<JobOutcome, { kind: "completed" }>,
-  deliveryModeRef: DeliveryModeRef,
-  openedTabRef: TabRef,
-  setFallbackUrl: (url: string) => void,
-): void {
-  deliverArtifact(
-    outcome.artifactUrl,
-    deliveryModeRef,
-    openedTabRef,
-    setFallbackUrl,
-  );
-  deliveryModeRef.current = null;
-  openedTabRef.current = null;
-}
-
-// Prefer the held tab; if closed/blocked, fall back to download link + info
-// toast — never claim success for a delivery the user cannot see.
 function deliverArtifact(
   artifactUrl: string,
-  deliveryModeRef: DeliveryModeRef,
-  openedTabRef: TabRef,
   setFallbackUrl: (url: string) => void,
 ): void {
-  const mode = deliveryModeRef.current;
-  const tab = openedTabRef.current;
-  if (mode === "tab" && tab !== null && !tab.closed) {
-    tab.location.href = artifactUrl;
-    toast.success("PDF ready");
-    return;
+  const download = document.createElement("a");
+  download.href = artifactUrl;
+  download.download = "";
+  document.body.append(download);
+  try {
+    download.click();
+  } finally {
+    download.remove();
   }
-  if (mode === "tab" || mode === "fallback") {
-    setFallbackUrl(artifactUrl);
-    toast.info("PDF ready — use the download link.");
-  }
+  setFallbackUrl(artifactUrl);
+  toast.success("PDF ready");
 }

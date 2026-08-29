@@ -1,5 +1,5 @@
 ---
-# Custom Prometheus config for grafana/otel-lgtm (prod-true targets).
+# Compose-owned Prometheus config for grafana/otel-lgtm (prod targets).
 # Mounted to /otel-lgtm/prometheus.yaml inside the container.
 # Extends the otel-lgtm defaults with scrape configs for our exporters.
 # Dev overrides this mount with prometheus-otel-lgtm.dev.yml

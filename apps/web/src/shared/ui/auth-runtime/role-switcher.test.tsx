@@ -69,6 +69,17 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     ).toHaveAttribute("title", "Switch development role");
   });
 
+  it("keeps the compact trigger at the mobile touch-target floor", () => {
+    primeHooks("head");
+    render(<DevRoleSwitcher />);
+
+    expect(screen.getByTestId("dev-role-switcher-trigger")).toHaveClass(
+      "max-md:min-h-[var(--touch-target-min)]",
+      "max-md:min-w-[var(--touch-target-min)]",
+      "h-8",
+    );
+  });
+
   it("renders the reset controls for an admin dev session", async () => {
     primeHooks("admin");
     const user = userEvent.setup();

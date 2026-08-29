@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Runtime bytecode from packaged Python-based developer tools.
+__pycache__/
+*.py[cod]
+
 coverage/
 playwright-report/
 test-results/

@@ -3,8 +3,8 @@
 // be the one the shipped images actually execute. Before this guard the repo ran
 // three at once — .nvmrc 26, web image 25, api image 24 (inherited unnoticed from
 // the Playwright base) — so every gate passed on a runtime that shipped nowhere.
-// Also pins pnpm, which node:26 can no longer resolve from packageManager because
-// it stopped shipping corepack.
+// Also pins pnpm in images and Actions workflows because node:26 no longer
+// resolves packageManager through a bundled corepack binary.
 //
 // Usage: node scripts/gates/environment/check-runtime-node-sync.ts
 // Exits 0 when every declaration agrees, 1 (naming each) when they drift.
@@ -42,6 +42,10 @@ const ROOT_MANIFEST = "package.json";
 const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
+const ACTIONS_WORKFLOWS = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/dependency-scan.yml",
+];
 
 const readRootManifest = (): RootManifest =>
   JSON.parse(read(ROOT_MANIFEST)) as RootManifest;
@@ -76,8 +80,23 @@ const declarations = (): readonly Declaration[] => [
 const majorless = (packageManager: string): string | undefined =>
   /^pnpm@(\d+\.\d+\.\d+)$/.exec(packageManager)?.[1];
 
-// pnpm is installed with `npm install -g pnpm@<version>` in both images because
-// node:26 dropped corepack, which used to read packageManager for us.
+const workflowPnpmPins = (file: string): readonly Declaration[] => {
+  const content = read(file);
+  const setupCount = [...content.matchAll(/- name: Setup pnpm/g)].length;
+  const pins = [
+    ...content.matchAll(
+      /- name: Setup pnpm\s+run: npm install --global pnpm@(\d+\.\d+\.\d+)/g,
+    ),
+  ];
+
+  return Array.from({ length: setupCount }, (_, index) => ({
+    source: `${file} Setup pnpm ${index + 1}`,
+    value: pins[index]?.[1],
+  }));
+};
+
+// pnpm is installed explicitly everywhere Node 26 executes because corepack is
+// absent. Every setup step must carry the packageManager pin itself.
 const pnpmPins = (): readonly Declaration[] => [
   {
     source: "package.json packageManager",
@@ -87,6 +106,7 @@ const pnpmPins = (): readonly Declaration[] => [
     source: `${file} npm install -g`,
     value: /npm install -g pnpm@(\d+\.\d+\.\d+)/.exec(read(file))?.[1],
   })),
+  ...ACTIONS_WORKFLOWS.flatMap(workflowPnpmPins),
 ];
 
 const wasRead = (entry: Declaration): entry is ReadDeclaration =>

@@ -9,7 +9,7 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   buildTransition,
-  isOpenBoundaryConflict,
+  isPeriodOverlapConflict,
   PeriodLifecycleIntegrityError,
 } from "../period/index.js";
 import {
@@ -19,18 +19,15 @@ import {
   AdminPeriodStaleStateError,
 } from "./admin-shared.js";
 
-// Period (Report) lifecycle-transition writes for the Admin Periods tab:
-// create, update, archive, unarchive — every mutation through `buildTransition`
-// that can race the `Report_one_open_per_boundary` partial-unique index.
+// Period (Report) lifecycle-transition writes for the Admin Periods tab.
 
-// Run a period write that keeps a row at `periodState = 'open'`, translating
-// the boundary P2002 into the same friendly overlap error the pre-check raises
-// (→ BAD_REQUEST) instead of a raw 500; other errors re-throw unchanged.
-async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
+// Translate both the rollout-era exact-boundary index and the global range
+// exclusion constraint into the same public overlap error.
+async function periodOverlapGuarded<T>(write: () => Promise<T>): Promise<T> {
   try {
     return await write();
   } catch (error) {
-    if (isOpenBoundaryConflict(error)) {
+    if (isPeriodOverlapConflict(error)) {
       throw new AdminPeriodOverlapError(
         "A period already exists for these dates.",
       );
@@ -59,7 +56,7 @@ export async function createPeriodManual(
   periodState: DraftPeriodState;
 }> {
   const periodState = draftPeriodStateSchema.parse(input.periodState);
-  const created = await openBoundaryGuarded(() =>
+  const created = await periodOverlapGuarded(() =>
     prisma.report.create({
       data: {
         periodStart: input.periodStart,
@@ -120,7 +117,7 @@ export async function updatePeriodManual(
   weekLabel: string | null;
   periodState: PeriodState;
 }> {
-  const updated = await openBoundaryGuarded(() =>
+  const updated = await periodOverlapGuarded(() =>
     prisma.report.update({
       where: { id: input.reportId },
       data: input.data,
@@ -173,7 +170,7 @@ export async function unarchivePeriod(
   prisma: PrismaService,
   periodId: string,
 ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }> {
-  return openBoundaryGuarded(() =>
+  return periodOverlapGuarded(() =>
     prisma.$transaction(async (tx) => {
       const row = await tx.report.findUnique({
         where: { id: periodId },

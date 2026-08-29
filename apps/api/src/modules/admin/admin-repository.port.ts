@@ -11,7 +11,6 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
-  ReportStatus,
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
@@ -65,17 +64,12 @@ export interface AdminRepository {
   unarchivePeriod(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
-  // Delete a Report (period) and cascade-delete all child rows.
+  // Delete a Report only when its lifecycle is still draft/open/non-archived;
+  // throws a typed error when the guarded operation matches zero rows.
   deleteReport(reportId: string): Promise<void>;
-  // Read a Report for delete-guard checks (status, periodStatus to block published).
-  // Returns null if not found so the service can throw AdminAccessError.
-  readReportForDelete(reportId: string): Promise<{
-    status: ReportStatus;
-    periodStatus: PeriodStatus;
-  } | null>;
-  // Detect any Report overlapping the supplied half-open range, so the service
-  // can surface a friendly error before creating. Returns the first overlap
-  // (newest-first) or null; `excludeId` reruns the gate excluding the edited row.
+  // Detect a live scheduled/open Report overlapping the supplied closed range,
+  // matching the database exclusion constraint so historical rows remain valid.
+  // Returns the newest overlap or null; `excludeId` excludes the edited row.
   findOverlappingPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

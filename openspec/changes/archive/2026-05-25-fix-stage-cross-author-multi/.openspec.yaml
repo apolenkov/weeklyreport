@@ -1,4 +1,2 @@
-kind: change
-name: fix-stage-cross-author-multi
-status: active
+schema: spec-driven
 created: 2026-05-25

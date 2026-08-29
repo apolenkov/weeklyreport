@@ -18,7 +18,6 @@ import { computeDeadline } from "../../lib/business-date.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { initialPeriodState } from "../period/index.js";
 import {
-  AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   type AdminRepository,
@@ -236,17 +235,9 @@ export class PeriodAdminService {
     return { success: true, periodState: result.nextPeriodState };
   }
 
-  // Cannot delete published; maps to FORBIDDEN via trpc.error-mapper.
+  // The repository owns the atomic lifecycle guard; blocked existing rows map
+  // to FORBIDDEN and vanished rows map to NOT_FOUND via trpc.error-mapper.
   async deleteReport(reportId: string): Promise<{ success: true }> {
-    const report = await this.repository.readReportForDelete(reportId);
-    if (!report) {
-      throw new AdminAccessError(`Report ${reportId} not found.`);
-    }
-    if (report.status === "published" || report.periodStatus === "published") {
-      throw new AdminAccessError(
-        "Cannot delete a published period. Reopen it first if needed.",
-      );
-    }
     await this.repository.deleteReport(reportId);
     this.logger.info("deleted report", { reportId });
     return { success: true };

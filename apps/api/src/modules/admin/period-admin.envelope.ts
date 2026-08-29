@@ -107,9 +107,10 @@ export function computePeriodPatch(
   return { data, diff };
 }
 
-// A published period's date envelope is frozen content — reject envelope edits
-// like `deleteReport` rejects deleting a published period. `weekLabel` stays
-// editable; reopening reverts `periodState` to open and unblocks the edit.
+// A published or archived period's date envelope is frozen content — reject
+// envelope edits like `deleteReport` rejects deleting either lifecycle state.
+// `weekLabel` stays editable; reopening reverts `periodState` to open and
+// unblocks the edit.
 export function assertEnvelopeEditable(
   periodState: PeriodState,
   data: { periodStart?: Date; periodEnd?: Date; deadline?: Date | null },
@@ -118,9 +119,12 @@ export function assertEnvelopeEditable(
     data.periodStart !== undefined ||
     data.periodEnd !== undefined ||
     data.deadline !== undefined;
-  if (periodState === "published" && envelopeEdit) {
+  if (
+    (periodState === "published" || periodState === "archived") &&
+    envelopeEdit
+  ) {
     throw new AdminAccessError(
-      "Cannot edit a published period's dates. Reopen it first if needed.",
+      "Cannot edit a published or archived period's dates. Reopen or unarchive it first if needed.",
     );
   }
 }

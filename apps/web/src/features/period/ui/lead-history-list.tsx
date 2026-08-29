@@ -130,11 +130,11 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
       {entry.lastEditAt && (
         <TimelineRow label="Last edit" value={entry.lastEditAt} />
       )}
-      {entry.submittedAt ? (
+      {entry.submissionState === "submitted" && entry.submittedAt ? (
         <TimelineRow label="Submitted" value={entry.submittedAt} />
-      ) : (
+      ) : entry.submissionState === "not-submitted" ? (
         <TimelineRow label="Submitted" value="Not submitted" muted />
-      )}
+      ) : null}
       {entry.publishedAt ? (
         <TimelineRow label="Published" value={entry.publishedAt} />
       ) : null}

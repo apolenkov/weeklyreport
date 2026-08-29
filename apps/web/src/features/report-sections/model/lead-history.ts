@@ -13,6 +13,8 @@ import {
 } from "../../../shared/lib/format/format-date";
 
 // Self-contained presentation type so consumers don't depend on mock-data.ts.
+type HistorySubmissionState = "submitted" | "not-submitted" | "unavailable";
+
 export interface HistoryEntry {
   id: string;
   periodId: string;
@@ -21,6 +23,7 @@ export interface HistoryEntry {
   dateRange: string;
   status: "submitted" | "draft" | "published" | "archived";
   archived?: boolean | undefined;
+  submissionState: HistorySubmissionState;
   submittedAt: string | null;
   publishedAt?: string | null | undefined;
   createdAt: string | null;
@@ -52,6 +55,12 @@ export function mapHistoryEntries(
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.sectionStatus,
     archived: e.archived ?? false,
+    submissionState:
+      e.submittedAt !== null
+        ? "submitted"
+        : e.sectionStatus === "draft"
+          ? "not-submitted"
+          : "unavailable",
     submittedAt: formatHistoryTimestamp(e.submittedAt, now),
     publishedAt: formatHistoryTimestamp(e.publishedAt, now),
     createdAt: formatHistoryTimestamp(e.createdAt, now),
@@ -77,6 +86,7 @@ export function mapCompiledHistoryEntries(
     dateRange: formatPeriodRangeWithYear(e.periodStart, e.periodEnd),
     status: e.archived ? "archived" : "published",
     archived: e.archived,
+    submissionState: "unavailable",
     submittedAt: null,
     publishedAt: formatHistoryTimestamp(e.publishedAt, now),
     createdAt: null,

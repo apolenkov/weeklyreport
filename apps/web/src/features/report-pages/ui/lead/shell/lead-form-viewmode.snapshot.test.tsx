@@ -142,6 +142,12 @@ describe("LeadForm view-mode toggle", () => {
       "href",
       `/lead/report/${encodeURIComponent(REPORT_ID)}?mode=slides`,
     );
+    for (const link of [editLink, slidesLink]) {
+      expect(link).toHaveClass(
+        "max-md:min-h-[var(--touch-target-min)]",
+        "max-md:min-w-[var(--touch-target-min)]",
+      );
+    }
 
     // Snapshot the explicit segmented-control boundary so a missing wrapper
     // fails clearly instead of silently changing the snapshot subject.

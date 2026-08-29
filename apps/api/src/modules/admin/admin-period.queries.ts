@@ -1,11 +1,8 @@
-import type {
-  PeriodState,
-  PeriodStatus,
-  ReportStatus,
-} from "@customreport/shared";
+import type { PeriodState } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PeriodRowFromRepo } from "./admin-shared";
+import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
 // Read side of the Admin Periods tab; lifecycle-transition writes
 // (create/update/archive/unarchive) live in `admin-period-lifecycle.ts`.
@@ -97,8 +94,10 @@ export async function listPeriodsByState(
   return periods.map((period) => toPeriodRow(period, progress));
 }
 
-// Closed (inclusive) intersect: a.start <= b.end AND a.end >= b.start. Newest
-// match wins so the pre-create gate can name the blocking row's date span.
+// Closed (inclusive) live-range intersect: a.start <= b.end AND a.end >=
+// b.start. Historical published/archived rows are outside the database range
+// constraint and must not make the friendly precheck stricter than the writer.
+// Newest match wins so the gate can name the blocking row's date span.
 export async function findOverlappingPeriod(
   prisma: PrismaService,
   input: {
@@ -111,6 +110,7 @@ export async function findOverlappingPeriod(
 ): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null> {
   const row = await prisma.report.findFirst({
     where: {
+      periodState: { in: ["scheduled", "open"] },
       periodStart: { lte: input.periodEnd },
       periodEnd: { gte: input.periodStart },
       ...(input.excludeId ? { NOT: { id: input.excludeId } } : {}),
@@ -155,26 +155,33 @@ export async function readPeriodById(
   };
 }
 
-export async function readReportForDelete(
-  prisma: PrismaService,
-  reportId: string,
-): Promise<{ status: ReportStatus; periodStatus: PeriodStatus } | null> {
-  const row = await prisma.report.findUnique({
-    where: { id: reportId },
-    select: { status: true, periodStatus: true },
-  });
-  if (!row) return null;
-  return {
-    status: row.status,
-    periodStatus: row.periodStatus,
-  };
-}
-
-// Child rows (ReportSection, Item, Risk, Decision, Priority, …) go with it via
-// the schema's `onDelete: Cascade` relations — no explicit child cleanup here.
+// Delete only while the same database operation proves that the report is a
+// draft, open, and non-archived. The follow-up read is classification only;
+// it never authorizes a delete and therefore cannot reopen the TOCTOU window.
 export async function deleteReport(
   prisma: PrismaService,
   reportId: string,
 ): Promise<void> {
-  await prisma.report.delete({ where: { id: reportId } });
+  await prisma.$transaction(async (tx) => {
+    const deleted = await tx.report.deleteMany({
+      where: {
+        id: reportId,
+        status: "draft",
+        periodStatus: "open",
+        archived: false,
+      },
+    });
+    if (deleted.count > 0) return;
+
+    const current = await tx.report.findUnique({
+      where: { id: reportId },
+      select: { status: true, periodStatus: true, archived: true },
+    });
+    if (!current) {
+      throw new AdminPeriodNotFoundError(`Report ${reportId} not found.`);
+    }
+    throw new AdminAccessError(
+      "Cannot delete a published or archived period. Reopen it first if needed.",
+    );
+  });
 }

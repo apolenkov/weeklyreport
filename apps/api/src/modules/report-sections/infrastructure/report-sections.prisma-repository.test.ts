@@ -145,6 +145,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     // separate outer client.
     expect(tx.reportSection.findUnique).toHaveBeenCalledWith({
       where: { id: section.reportSectionId },
+      relationLoadStrategy: "join",
       include: expect.anything() as unknown,
     });
     // The returned read model reflects the post-increment re-read.

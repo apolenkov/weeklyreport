@@ -1,10 +1,7 @@
-# Prometheus scrape config for CustomReport prod stack.
-#
-# Brings up alongside docker-compose.observability.yml. The api service
-# exposes /metrics on its container bind port (3001); Prometheus scrapes it
-# over the internal compose network every 15s — NOT through the public Caddy
-# edge, which deliberately does not route /metrics. Adjust the targets list if
-# your prod compose maps different ports.
+# Standalone Prometheus scrape template for an externally managed Prometheus.
+# It is not mounted by docker-compose.observability.yml: that stack owns
+# deploy/prometheus-otel-lgtm.yml (and its dev sibling) as the LGTM config.
+# Both templates scrape /metrics over an internal network, never through Caddy.
 
 global:
   scrape_interval: 15s

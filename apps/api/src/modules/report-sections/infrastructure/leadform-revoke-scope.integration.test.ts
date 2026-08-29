@@ -8,6 +8,7 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
+import { LeadFormConstraintError } from "../domain/lead-form-shared.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 
 // BOLA: group-A scope must not read/write group-B section on the same report.
@@ -103,5 +104,40 @@ describe("lead-form revoke scope (integration)", () => {
       where: { id: SECTION_B },
     });
     expect(expectDefined(sectionB).status).toBe("draft");
+  });
+
+  it("rejects an individual revoke when the report is archived", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    await expect(
+      repo.revokeSectionSubmission(testData.section.id, testData.head.id),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(
+      prisma.reportSection.findUnique({
+        where: { id: testData.section.id },
+        select: { status: true },
+      }),
+    ).resolves.toEqual({ status: "submitted" });
+  });
+
+  it("returns zero and leaves all sections unchanged for an archived bulk revoke", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    await expect(
+      repo.revokeAllSubmitted(testData.report.id, testData.head.id, {}),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.reportSection.findMany({
+        where: { reportId: testData.report.id },
+        select: { status: true },
+        orderBy: { id: "asc" },
+      }),
+    ).resolves.toEqual([{ status: "submitted" }, { status: "submitted" }]);
   });
 });

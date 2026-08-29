@@ -1,5 +1,6 @@
 import { Logger, Module } from "@nestjs/common";
 
+import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
@@ -39,6 +40,7 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
 // DI (missing sink fails loud). See openspec/specs/period-scheduler-wiring.
 @Module({
   imports: [
+    ConfigModule,
     AnalyticsModule,
     AdminModule,
     CarryOverModule,

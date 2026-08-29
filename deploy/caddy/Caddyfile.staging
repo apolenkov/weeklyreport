@@ -6,12 +6,8 @@
 #   - you've hit Let's Encrypt rate limits in staging
 #   - you need to test inside an air-gapped network
 #
-# Mount this file in place of deploy/caddy/Caddyfile:
-#   docker compose -f docker-compose.prod.yml run --rm \
-#     -v $(pwd)/deploy/caddy/Caddyfile.staging:/etc/caddy/Caddyfile:ro \
-#     caddy ...
-#
-# Or override CADDY_FILE in your .env to point at this path.
+# Set CADDY_FILE=./deploy/caddy/Caddyfile.staging in `.env.production`; the
+# production Compose file mounts the selected file without another override.
 ################################################################################
 {
 	# Caddy's internal CA: self-signed root cert installed automatically in
@@ -65,7 +61,7 @@
 		# byte-identical to production apart from the report target: staging
 		# exists to catch what production would block, which a Report-Only
 		# header cannot do.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; report-uri {$CADDY_CSP_REPORT_URI}"
 		-Server
 	}
 

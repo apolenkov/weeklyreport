@@ -9,18 +9,18 @@ marked **untested in production**.
 
 ## The stack
 
-`docker compose -f docker-compose.prod.yml` brings up seven services:
+`docker compose -f docker-compose.prod.yml` brings up eight services:
 
-| Service     | Role                                                                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `caddy`     | The only public entrypoint. TLS, security headers, routes `/trpc` `/auth` `/health` `/metrics` `/admin/queues` `/pdfs` to the api and everything else to web. |
-| `web`       | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                          |
-| `api`       | NestJS + tRPC. Not published to the host either.                                                                                                              |
-| `migrate`   | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                           |
-| `pgbouncer` | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                            |
-| `postgres`  | The database. No host port; reachable only on the compose network.                                                                                            |
-| `redis`     | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                             |
-| `backup`    | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                      |
+| Service     | Role                                                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `caddy`     | The only public entrypoint. TLS, security headers, routes `/trpc` `/auth` `/health` `/admin/queues` `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
+| `web`       | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                            |
+| `api`       | NestJS + tRPC. Not published to the host either.                                                                                                                                |
+| `migrate`   | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                             |
+| `pgbouncer` | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                              |
+| `postgres`  | The database. No host port; reachable only on the compose network.                                                                                                              |
+| `redis`     | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                               |
+| `backup`    | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                        |
 
 `migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
 DDL and `pg_dump` both need a session that outlives a single transaction.
@@ -31,20 +31,25 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    refuses to boot without one, and compose refuses to even render. There are
    no defaults by design (`AGENTS.md`: no silent defaults for product config).
 
-   | Variable                                                              | What it is                                                                          |
-   | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-   | `DB_PASSWORD`                                                         | Postgres password, shared by pgbouncer/migrate/backup.                              |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL` | Public origins. `NEXT_PUBLIC_*` is baked at image build.                            |
-   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                            | Min 32 chars each, distinct, never the dev values.                                  |
-   | `KEYCLOAK_SAML_CALLBACK_URL`, `_ENTRY_POINT`, `_ISSUER`, `_CERT`      | The IdP. Required whenever `AUTH_DEV_MODE=false`.                                   |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                 | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
-   | `HEAP_HEALTH_THRESHOLD_BYTES`                                         | ~75% of the api container memory limit (2 GB → `1610612736`).                       |
-   | `CADDY_SITE_ADDRESS`, `CADDY_CSP_REPORT_URI`                          | Public hostname and the CSP violation collector.                                    |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                    | Your RPO and history window. See [Backups](#backups).                               |
+   | Variable                                                                                                | What it is                                                                          |
+   | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+   | `DB_PASSWORD`                                                                                           | Postgres password, shared by pgbouncer/migrate/backup.                              |
+   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`, `NEXT_PUBLIC_API_URL`                                   | Public origins. `NEXT_PUBLIC_*` is baked at image build.                            |
+   | `API_URL`                                                                                               | Runtime server-side API origin (normally `http://api:3001`).                        |
+   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                              | Min 32 chars each, distinct, never the dev values.                                  |
+   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT` | The IdP; all four are required when `AUTH_DEV_MODE=false`.                          |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                   | Reminder delivery. Without them the api drops mail silently, so boot fails instead. |
+   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                           | ~75% of the api container memory limit (2 GB → `1610612736`).                       |
+   | `CADDY_SITE_ADDRESS`, `CADDY_CSP_REPORT_URI`                                                            | Public hostname and the CSP violation collector.                                    |
+   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                            | Host ports for the public Caddy listener.                                           |
+   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                       | PgBouncer capacity limits.                                                          |
+   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`                                 | Runtime policy values.                                                              |
+   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                      | Your RPO and history window. See [Backups](#backups).                               |
 
    Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
-   `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `TG_BOT_TOKEN`, `LOG_LEVEL`,
-   `OTEL_EXPORTER_OTLP_ENDPOINT`.
+   `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `TG_BOT_TOKEN`,
+   `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_VERSION`, `SMTP_USER`,
+   `SMTP_PASS`, `CADDY_ACME_EMAIL`.
 
 2. **Build and start.** `NEXT_PUBLIC_*` values are compiled into the client
    bundle, so a changed public origin needs a rebuild, not a restart.
@@ -65,14 +70,18 @@ DDL and `pg_dump` both need a session that outlives a single transaction.
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
+The production Caddy mount defaults to `deploy/caddy/Caddyfile`. For a staging
+or air-gapped run set `CADDY_FILE=./deploy/caddy/Caddyfile.staging` in the
+Compose environment; do not hand-edit the container mount.
+
 ## Health and where to look
 
 - `GET /health/live` — the process is up. Says nothing about dependencies.
 - `GET /health/ready` — checks Postgres, Redis, BullMQ and heap against
   `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the container healthcheck and any
   load balancer should use.
-- `GET /metrics` — Prometheus. Deliberately **not** routed through caddy from
-  the public internet; scrape it on the compose network.
+- `GET /metrics` — Prometheus. Deliberately **not** routed through Caddy from
+  the public internet; scrape `api:3001/metrics` on the compose network.
 - `/admin/queues` — Bull Board. Session-authenticated, `head` role only.
 
 ### Red `/health/ready` — triage
@@ -160,8 +169,13 @@ destructive command. Leave `ALLOW_PROD_DESTRUCTIVE` unset.
 
 Images are the unit of rollback; the database is not.
 
-- **Application only**: redeploy the previous image tag. Safe when no migration
-  shipped between the two.
+- **Application only**: production image rollback is **BLOCKED** until the
+  delivery platform supplies immutable API/Web image references and read-back.
+  The repository-owned Compose file currently builds from the checked-out
+  source and has no image-tag input, so rebuilding an older commit is a
+  pre-production recovery exercise, not proof that the deployed artifact can
+  be restored. Do not describe a local rebuild or a dangling Docker image as a
+  production rollback.
 - **Migration shipped**: rolling the image back does not roll the schema back,
   and Prisma has no down-migrations here. Either fix forward with a new
   migration, or restore the pre-deploy dump and accept losing writes made
@@ -183,3 +197,21 @@ Images are the unit of rollback; the database is not.
 `prisma migrate reset` drift gate, and a production image build.
 Local hooks (`.husky/pre-commit`, `.husky/pre-push`) remain the fast gate;
 `SKIP_PREPUSH=1` bypasses the slow one when you know why you are doing it.
+
+## External first-production prerequisites
+
+Local Compose and repository tests prove only repository-owned readiness. The
+following remain **BLOCKED** until an authorized external read-back exists:
+
+- a real alert receiver, escalation owner, and tested end-to-end alert;
+- encrypted backups in an independent failure domain, retention/access audit,
+  and a scheduled restore drill with measured RPO/RTO;
+- protected `main`, required checks, security settings, and deployment
+  environments with approvals and concurrency;
+- an immutable image digest with SBOM and signed provenance, promoted without
+  rebuilding; and
+- an immutable release record binding commit, image, migrations, approvals,
+  deployment evidence, and rollback decision.
+
+The local `alertmanager.yml`, `pgbackups` volume, and checked-in workflows are
+templates or repository evidence only; none is a production PASS by itself.

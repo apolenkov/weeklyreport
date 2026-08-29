@@ -13,9 +13,12 @@ verifiable in this repository (commands, configs, and specs are linked).
   (`eslint.config.ts` holds only documented JUSTIFIED PERMANENT entries).
   `scripts/gates/orchestrator/lint-gate.ts` runs every configured check in one pass and reports each
   PASS/FAIL, so one failing check can no longer hide the ones behind it.
-- **Acyclic architecture.** dependency-cruiser gate: 0 runtime import cycles
-  across 812 modules / 2168 dependencies (was 41 cycles before the 2026-07
-  burn-down). Spec: `openspec/specs/directory-architecture-standard/`.
+- **Acyclic architecture.** The dependency-cruiser gate measures the current
+  graph and rejects every forbidden edge or runtime import cycle. The exact
+  module/edge denominator is live command output, not a durable documentation
+  constant; `pnpm depcruise --output-type json` is the source. The historical
+  2026-07 burn-down started from 41 cycles. Spec:
+  `openspec/specs/directory-architecture-standard/`.
 - **Dead-export gate.** knip fails the push on any exported symbol without an
   importer.
 - **Type coverage floors** per package: `packages/shared` 100%, `packages/ui`
@@ -23,7 +26,7 @@ verifiable in this repository (commands, configs, and specs are linked).
 - **Hooks as the merge gate.** pre-commit: lint-staged; pre-push: typecheck,
   full lint, format check, and the colocated unit suites.
 - **Spec-first workflow.** Behavior changes start as OpenSpec changes;
-  146 requirement specs validate green (`openspec validate --specs`).
+  the durable requirements validate green (`openspec validate --specs`).
 
 ## Measured, not asserted
 

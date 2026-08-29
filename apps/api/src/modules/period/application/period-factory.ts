@@ -11,6 +11,7 @@ import {
   getCurrentWeekBounds,
   parseDeadlineTime,
 } from "../../../lib/business-date.js";
+import { isPrismaConstraintViolation } from "../../../lib/prisma/constraint-violation.js";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
 import type { PolicyApplicatorService } from "../../reminders/index.js";
 import {
@@ -22,10 +23,9 @@ import {
 // lazy login-create path both route through here, so the deadline formula and
 // the coupled lifecycle write exist once (see period-dual-state spec).
 
-// Partial unique index (raw SQL in the init migration) constraining
-// `(periodStart, periodEnd)` across both `scheduled` and `open` rows, so racing
-// creators cannot persist two live pre-published rows.
-const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
+const LEGACY_OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
+const PERIOD_OVERLAP_CONSTRAINT = "Report_no_live_period_overlap";
+const PRISMA_DATABASE_CONSTRAINT_ERROR_CODES = ["P2004", "P2039"] as const;
 
 // Settings the factory reads; a structural subset of AppSettings.
 export type PeriodFactorySettings = Pick<
@@ -80,14 +80,29 @@ export class PeriodLifecycleIntegrityError extends Error {
   }
 }
 
-// Exported so every open-boundary writer — admin create/update, reopen,
-// unarchive, the scheduler flip and this factory — translates the SAME P2002
-// identically; the engine-dependent error shapes live in `isUniqueViolation`.
-export function isOpenBoundaryConflict(error: unknown): boolean {
-  return isUniqueViolation(error, {
-    index: OPEN_BOUNDARY_INDEX,
-    columns: ["periodStart", "periodEnd"],
-  });
+export class PeriodOverlapError extends Error {
+  constructor() {
+    super("A reporting period overlaps an existing period.");
+    this.name = "PeriodOverlapError";
+  }
+}
+
+// During rolling migration, writers can see the legacy exact-boundary P2002.
+// The range exclusion is P2004 through Prisma's engine path and P2039 through
+// adapter-pg. Scope every path by constraint identity so unrelated database
+// failures still propagate unchanged.
+export function isPeriodOverlapConflict(error: unknown): boolean {
+  return (
+    isUniqueViolation(error, {
+      index: LEGACY_OPEN_BOUNDARY_INDEX,
+      columns: ["periodStart", "periodEnd"],
+    }) ||
+    PRISMA_DATABASE_CONSTRAINT_ERROR_CODES.some((code) =>
+      isPrismaConstraintViolation(error, code, {
+        index: PERIOD_OVERLAP_CONSTRAINT,
+      }),
+    )
+  );
 }
 
 interface DraftPeriodRow {
@@ -249,13 +264,11 @@ export async function ensureCurrentPeriod(
       ...(policyApplicator === undefined ? {} : { policyApplicator }),
     });
   } catch (error) {
-    // Concurrent creators collide on the partial unique index; the loser returns
-    // the winner's row. Any other error re-throws.
-    if (!isOpenBoundaryConflict(error)) throw error;
-    // The race loser re-reads the winner, which may already have flipped from
-    // scheduled to open; the winner owns reminder materialisation.
+    if (!isPeriodOverlapConflict(error)) throw error;
+    // Exact-boundary creators converge on their winner. A different overlapping
+    // range has no valid current-period result, so surface a typed domain error.
     const won = await readBoundaryPeriod(prisma.report, periodStart, periodEnd);
-    if (!won) throw error;
+    if (!won) throw new PeriodOverlapError();
     return won;
   }
 }

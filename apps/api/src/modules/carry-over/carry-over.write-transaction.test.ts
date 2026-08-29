@@ -67,6 +67,30 @@ function targetSectionWithCarriedRow(): ReportSectionReadModel {
   };
 }
 
+function prismaSectionRow(section: ReportSectionReadModel) {
+  return {
+    id: section.reportSectionId,
+    reportId: section.reportId,
+    authorId: section.authorId,
+    version: section.version,
+    status: section.status,
+    submittedAt: section.submittedAt,
+    late: section.late,
+    author: {
+      name: section.authorName,
+      role: section.authorRole,
+      stageAssignments: [],
+    },
+    projectStatuses: [],
+    stageStatuses: [],
+    activityStatuses: [],
+    items: [],
+    risks: [],
+    decisions: [],
+    sectionReviews: [],
+  };
+}
+
 // Replaying a recorded execution must stay read-only: the winner already
 // persisted its carried rows, so no row write may re-run on a replay.
 describe("writeCarryOver — replay of a completed execution", () => {
@@ -76,7 +100,13 @@ describe("writeCarryOver — replay of a completed execution", () => {
     const tx = {
       $queryRaw: vi
         .fn()
-        .mockResolvedValue([{ periodStatus: "open", archived: false }]),
+        .mockResolvedValueOnce([{ periodStatus: "open", archived: false }])
+        .mockResolvedValueOnce([{ id: sectionId }]),
+      reportSection: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([prismaSectionRow(targetSectionWithCarriedRow())]),
+      },
       carryOverExecution: {
         findFirst: vi.fn().mockResolvedValue(existingExecution),
       },
@@ -108,7 +138,13 @@ describe("writeCarryOver — replay of a completed execution", () => {
     const tx = {
       $queryRaw: vi
         .fn()
-        .mockResolvedValue([{ periodStatus: "open", archived: false }]),
+        .mockResolvedValueOnce([{ periodStatus: "open", archived: false }])
+        .mockResolvedValueOnce([{ id: sectionId }]),
+      reportSection: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([prismaSectionRow(targetSectionWithCarriedRow())]),
+      },
       carryOverExecution: {
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue({}),

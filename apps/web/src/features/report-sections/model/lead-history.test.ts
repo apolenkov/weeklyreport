@@ -98,6 +98,7 @@ describe("mapHistoryEntries", () => {
     );
     expect(result).toHaveLength(1);
     expect(result[0]?.status).toBe("draft");
+    expect(result[0]?.submissionState).toBe("not-submitted");
     expect(result[0]?.submittedAt).toBeNull();
   });
 
@@ -108,6 +109,7 @@ describe("mapHistoryEntries", () => {
       now,
     );
     expect(result[0]?.status).toBe("submitted");
+    expect(result[0]?.submissionState).toBe("submitted");
     expect(result[0]?.submittedAt).toBe("2 min ago");
   });
 
@@ -252,6 +254,7 @@ describe("mapCompiledHistoryEntries", () => {
       dateRange: "May 4–10, 2026",
       status: "published",
       archived: false,
+      submissionState: "unavailable",
       submittedAt: null,
       publishedAt: "3 hours ago",
       trafficLights: { green: 2, yellow: 1, red: 0 },
@@ -271,5 +274,6 @@ describe("mapCompiledHistoryEntries", () => {
 
     expect(result[0]?.status).toBe("archived");
     expect(result[0]?.archived).toBe(true);
+    expect(result[0]?.submissionState).toBe("unavailable");
   });
 });

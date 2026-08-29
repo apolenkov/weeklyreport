@@ -46,7 +46,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: corepack enable
+        run: npm install --global pnpm@11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -66,6 +66,179 @@ jobs:
 
       - name: Unit Tests
         run: pnpm test
+
+  api-integration:
+    name: API serial integration (disposable services)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+        env:
+          POSTGRES_USER: customreport
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: customreport_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U customreport -d customreport_e2e"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      mailpit:
+        image: axllent/mailpit:latest@sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -q --spider http://localhost:8025"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # Keep the product URL distinct from the exact disposable E2E target;
+      # the integration helper rejects accidental same-target configuration.
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+      NODE_ENV: test
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      REDIS_DB: "15"
+      REDIS_MAXMEMORY_BYTES: "209715200"
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+      REQUIRED_INTEGRATION_DEPS: "true"
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_FROM: integration@customreport.local
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        run: npm install --global pnpm@11.17.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations to exact disposable E2E database
+        env:
+          DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+
+      - name: Verify Mailpit HTTP endpoint
+        run: curl --fail --retry 30 --retry-delay 1 http://localhost:8025/api/v1/messages
+
+      - name: API integration tests (serial files, required dependencies)
+        run: pnpm --filter @customreport/api test:integration
+
+  coverage:
+    name: API & Web coverage evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+        env:
+          POSTGRES_USER: customreport
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: customreport_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U customreport -d customreport_e2e"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      mailpit:
+        image: axllent/mailpit:latest@sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -q --spider http://localhost:8025"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_generate_only
+      E2E_DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+      NODE_ENV: test
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      REDIS_DB: "15"
+      REDIS_MAXMEMORY_BYTES: "209715200"
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай"
+      REQUIRED_INTEGRATION_DEPS: "true"
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_FROM: integration@customreport.local
+      NODE_OPTIONS: --max-old-space-size=8192
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        run: npm install --global pnpm@11.17.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations for serial API coverage
+        env:
+          DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_e2e
+        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+
+      - name: Verify Mailpit HTTP endpoint
+        run: curl --fail --retry 30 --retry-delay 1 http://localhost:8025/api/v1/messages
+
+      - name: API and Web coverage with non-empty evidence
+        run: pnpm test:coverage
 
   migrate-reset:
     name: Prisma migrate-reset gate
@@ -104,7 +277,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Setup pnpm
-        run: corepack enable
+        run: npm install --global pnpm@11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

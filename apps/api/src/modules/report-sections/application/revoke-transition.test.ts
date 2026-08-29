@@ -18,7 +18,10 @@ describe("applyRevokeTransition", () => {
       where: {
         id: "44444444-4444-4444-8444-444444444444",
         status: "submitted",
-        report: { periodStatus: { in: ["open", "reopened"] } },
+        report: {
+          archived: false,
+          periodStatus: { in: ["open", "reopened"] },
+        },
         version: 3,
       },
       data: {

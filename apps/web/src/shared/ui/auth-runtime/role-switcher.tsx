@@ -139,7 +139,7 @@ function RoleSwitcherTrigger({ pending }: { readonly pending: boolean }) {
         disabled={pending}
         aria-label="Switch development role"
         title="Switch development role"
-        className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-status-at-risk-border)] data-[state=open]:bg-[var(--color-status-at-risk-bg)] data-[state=open]:text-[var(--color-status-at-risk-fg)]"
+        className="inline-flex h-8 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-status-at-risk-border)] data-[state=open]:bg-[var(--color-status-at-risk-bg)] data-[state=open]:text-[var(--color-status-at-risk-fg)]"
         data-testid="dev-role-switcher-trigger"
       >
         <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

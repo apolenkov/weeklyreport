@@ -13,12 +13,14 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestru
 
 ### Requirement: Block on NODE_ENV=production
 
-The guard MUST refuse when `NODE_ENV === "production"`, regardless of `DATABASE_URL`.
+The guard MUST refuse when `NODE_ENV === "production"`, regardless of `DATABASE_URL`. No environment variable may bypass this refusal for disposable-database workflows.
+
+Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
 
 #### Scenario: Production environment variable is set
 
-- **WHEN** `NODE_ENV` is `"production"` and `DATABASE_URL` points to a non-prod database
-- **THEN** `assertNonProdDestructive` throws with a message containing `"NODE_ENV=production"` and a hint about `ALLOW_PROD_DESTRUCTIVE=yes`
+- **WHEN** `NODE_ENV` is `"production"` and `DATABASE_URL` points to any database
+- **THEN** the disposable-database guard throws before destructive work and MUST NOT advertise a bypass
 
 ### Requirement: Block when DATABASE_URL is absent
 
@@ -43,107 +45,42 @@ The guard MUST refuse when the database name (last path segment of `DATABASE_URL
 - **WHEN** `DATABASE_URL` ends in `/report_products` (substring, not a whole word)
 - **THEN** `assertNonProdDestructive` does NOT throw based on name alone
 
-### Requirement: Allow truly local hosts unconditionally
+### Requirement: Disposable targets use one exact allowlist and per-run consent
 
-Hosts `localhost` and `127.0.0.1` are physically unreachable from production. Hosts ending in `.local` are also treated as safe. The guard MUST allow these hosts regardless of database name suffix.
+Destructive development and integration workflows MUST accept only loopback PostgreSQL URLs whose raw database path is exactly `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, with no query, fragment, encoded alias, or credential disclosure. Each destructive invocation MUST also receive the exact per-run consent value required by repository policy.
 
-#### Scenario: localhost with no suffix
+Consumer surface: `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive` and the shared disposable-target validation used by destructive workflows.
 
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@localhost:5432/myapp`
-- **THEN** `assertNonProdDestructive` does not throw
+#### Scenario: Exact lane target and consent are present
 
-#### Scenario: 127.0.0.1 with no suffix
+- **WHEN** a loopback URL names `customreport_e2e_lane_a_test` exactly, `NODE_ENV` is not production, and the exact per-run consent is present
+- **THEN** the common guard may allow the requested disposable operation
 
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@127.0.0.1:5432/myapp`
-- **THEN** `assertNonProdDestructive` does not throw
+#### Scenario: Broad suffix target is supplied
 
-### Requirement: Require explicit non-prod suffix for non-local hosts
+- **WHEN** a URL names `customreport_test`, `customreport_uat`, `customreport_dev`, or any other non-allowlisted target
+- **THEN** the common guard refuses even if the host is local
 
-For hosts that are not `localhost`, `127.0.0.1`, or `*.local` — including the Docker Compose service name `postgres` — the database name MUST carry one of the suffixes `_uat`, `_dev`, `_test`, `_local`, or `_staging`. The Docker Compose service name `postgres` is intentionally excluded from the truly-local allowlist.
+#### Scenario: URL spelling obscures the target
 
-#### Scenario: Docker service name without suffix
-
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@postgres:5432/customreport`
-- **THEN** `assertNonProdDestructive` throws, citing host `"postgres"` and missing suffix
-
-#### Scenario: Docker service name with valid suffix
-
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@postgres:5432/customreport_uat`
-- **THEN** `assertNonProdDestructive` does not throw
-
-#### Scenario: Remote host without suffix
-
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@db.example.com:5432/customreport`
-- **THEN** `assertNonProdDestructive` throws
-
-#### Scenario: Remote host with valid suffix
-
-- **WHEN** `DATABASE_URL` is `postgresql://user:pass@db.example.com:5432/customreport_dev`
-- **THEN** `assertNonProdDestructive` does not throw
-
-### Requirement: ALLOW_PROD_DESTRUCTIVE escape hatch
-
-When `ALLOW_PROD_DESTRUCTIVE === "yes"`, the guard MUST skip all checks and allow the operation. This is the explicit override for production data migration scenarios.
-
-#### Scenario: Override env var set
-
-- **WHEN** `ALLOW_PROD_DESTRUCTIVE` is `"yes"` and `NODE_ENV` is `"production"`
-- **THEN** `assertNonProdDestructive` does not throw
-
-### Requirement: Integration-test cleanup asserts a \_test database name
-
-The integration-test cleanup helper MUST assert that the database name
-in `DATABASE_URL` (last path segment, before `?`) ends with `_test`
-before executing any destructive SQL, regardless of host. The helper is
-`cleanDatabase` in `apps/api/src/test-utils/prisma-test-helper.ts`.
-Localhost is NOT auto-trusted: the helper wipes every application
-table, so the weaker `assertNonProdDestructive` localhost allowance
-does not apply to it. The check is exposed as `assertTestDatabaseUrl`
-in the same module; its error MUST name the offending database name and
-MUST NOT echo credentials.
-
-Consumer surface: `apps/api/src/test-utils/prisma-test-helper.ts` —
-`cleanDatabase`, `assertTestDatabaseUrl`.
-
-#### Scenario: cleanDatabase against the dedicated test database
-
-- **WHEN** `DATABASE_URL` is
-  `postgresql://user:pass@localhost:5432/customreport_test`
-- **THEN** `cleanDatabase` proceeds without a guard error
-
-#### Scenario: cleanDatabase against a dev database on localhost
-
-- **WHEN** `DATABASE_URL` is
-  `postgresql://user:pass@localhost:5432/customreport_dev`
-- **THEN** `cleanDatabase` throws before executing any SQL
-- **AND** the error message contains `customreport_dev` and the
-  `_test` requirement
-
-#### Scenario: cleanDatabase against an unsuffixed database name
-
-- **WHEN** `DATABASE_URL` ends in `/customreport`
-- **THEN** `cleanDatabase` throws before executing any SQL
-
-#### Scenario: remote host with a \_test-suffixed database
-
-- **WHEN** `DATABASE_URL` is
-  `postgresql://user:pass@db.example.com:5432/customreport_test`
-- **THEN** `assertTestDatabaseUrl` does not throw — the suffix, not the
-  host, is the contract
+- **WHEN** the URL contains a query, fragment, encoded path alias, remote host, or missing exact consent
+- **THEN** the common guard refuses before destructive work without logging credentials
 
 ### Requirement: DATABASE_URL and POSTGRES_DB must be consistent
 
-Every compose file and env example MUST use the same database name in both `POSTGRES_DB` and the final path segment of `DATABASE_URL`. Divergence means the guard parses a different name than Postgres actually uses.
+Every Compose file and environment example used by a destructive disposable-database workflow MUST use the same accepted database name in both `POSTGRES_DB` and the raw final path segment of `DATABASE_URL`. The guard MUST validate the resolved URL itself; a safe-looking `POSTGRES_DB` value cannot override a different URL target.
+
+Consumer surface: destructive workflow Compose files and environment examples, plus `prisma/guards/_destructive-guard.ts` — `assertNonProdDestructive`.
 
 #### Scenario: Consistent naming
 
-- **WHEN** `POSTGRES_DB=customreport_uat` and `DATABASE_URL` ends in `/customreport_uat`
-- **THEN** the guard sees the correct suffixed name and allows the op
+- **WHEN** `POSTGRES_DB=customreport_e2e` and the raw `DATABASE_URL` path is exactly `/customreport_e2e`
+- **THEN** the naming-consistency check passes and the remaining guard checks still apply
 
 #### Scenario: Divergent naming
 
-- **WHEN** `POSTGRES_DB=customreport_uat` but `DATABASE_URL` ends in `/customreport`
-- **THEN** the guard refuses even though `POSTGRES_DB` has a safe suffix — it only reads `DATABASE_URL`
+- **WHEN** `POSTGRES_DB` names an accepted disposable target but `DATABASE_URL` resolves to another database
+- **THEN** the guard refuses before destructive work
 
 ### Requirement: Restore confirmation identifies the complete resolved target
 

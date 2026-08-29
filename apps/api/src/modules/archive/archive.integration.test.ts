@@ -352,12 +352,15 @@ describe("ArchivePrismaRepository (integration)", () => {
   ): Promise<{ id: string; publishedAt: Date }> {
     const report = await prisma.report.create({
       data: {
-        // Distinct period window per row — Report has a unique
-        // (periodStart, periodEnd) constraint.
+        // Historical archive rows do not participate in the live-period range
+        // constraint, but the fixture still carries a complete canonical and
+        // legacy lifecycle tuple.
         periodStart: new Date(periodEnd.getTime() - 6 * 86_400_000),
         periodEnd,
         deadline: periodEnd,
         status: "published",
+        periodState: "archived",
+        periodStatus: "published",
         publishedAt,
         publishedById: testData.head.id,
         archived: true,

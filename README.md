@@ -36,8 +36,9 @@
 
 Полная карта действующих контрактов по ролям и этапам находится в
 [`openspec/specs/README.md`](./openspec/specs/README.md). Элементы с пометкой
-`Coming Soon` и шесть отложенных изменений `fix-mobile-*` (15 задач) не входят
-в действующий набор возможностей MVP. Репозиторий доказывает реализацию и сборку, но не
+`Coming Soon` и явно отложенные владельцем функции не входят в действующий
+набор возможностей MVP. Мобильные сценарии входят в MVP и закреплены шестью
+контрактами `mobile-*`. Репозиторий доказывает реализацию и сборку, но не
 заменяет проверку конкретного production-развёртывания.
 
 ## Стек
@@ -78,6 +79,7 @@ pnpm install
 cp .env.example .env
 
 # 3. Поднять инфраструктуру в Docker (Postgres, Redis, Mailpit, Grafana, Bugsink)
+#    Команда не запускает api/web: их единственный владелец — pnpm dev ниже.
 pnpm observability:up
 
 # 4. Залить схему и демо-данные в базу
@@ -93,7 +95,8 @@ pnpm dev
 - Веб — http://localhost:3000
 - API — http://localhost:3002
 - Почта (Mailpit) — http://localhost:8025
-- Grafana (трейсы/логи/метрики) — http://localhost:3003 (`admin` / `admin`)
+- Grafana (трейсы/логи/метрики) — http://localhost:3003; логин `admin`, пароль
+  из `GRAFANA_ADMIN_PASSWORD` в `.env` (в примере — только локальный пароль)
 - Bugsink (ошибки) — http://localhost:8000
 
 ### Вход без реального SSO (dev)

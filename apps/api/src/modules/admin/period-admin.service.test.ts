@@ -131,6 +131,19 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     expect(repo.updatePeriodManual).not.toHaveBeenCalled();
   });
 
+  it("rejects a date-envelope edit on an archived period (no write)", async () => {
+    const repo = createRepository(seedRow("archived"));
+    const service = new PeriodAdminService(repo);
+
+    await expect(
+      service.updatePeriodManual({
+        reportId: REPORT_ID,
+        periodEnd: new Date("2026-05-12T23:59:59.999Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminAccessError);
+    expect(repo.updatePeriodManual).not.toHaveBeenCalled();
+  });
+
   it("allows a weekLabel-only edit on a published period", async () => {
     const repo = createRepository(seedRow("published"));
     const service = new PeriodAdminService(repo);
@@ -244,13 +257,6 @@ describe("PeriodAdminService — success logs settle only after the write", () =
     const logger = createLoggerSpy();
     const repo = {
       ...createRepository(seedRow("open")),
-      readReportForDelete: vi.fn(() =>
-        Promise.resolve({
-          id: REPORT_ID,
-          status: "draft" as const,
-          periodStatus: "open" as const,
-        }),
-      ),
       deleteReport: vi.fn(() => Promise.reject(new Error("delete failed"))),
     };
     const service = new PeriodAdminService(repo, logger);

@@ -17,7 +17,7 @@ services:
       sh -c "cd apps/api &&
       pnpm exec prisma generate --schema ../../prisma/schema.prisma &&
       exec node
-      --import @swc-node/register/esm-register
+      --import tsx
       --watch src/main.ts"
     volumes:
       - ./apps/api/src:/app/apps/api/src
@@ -41,7 +41,7 @@ services:
       PDF_BASE_URL: http://web:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
-      SMTP_HOST: mailhog
+      SMTP_HOST: mailpit
       LOG_LEVEL: debug
       LOG_DIR: /app/logs
       # host.docker.internal resolves to the Docker host on Mac/Windows —

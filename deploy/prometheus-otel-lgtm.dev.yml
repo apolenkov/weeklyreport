@@ -1,5 +1,5 @@
 ---
-# Custom Prometheus config for grafana/otel-lgtm (DEV override).
+# Compose-owned Prometheus config for grafana/otel-lgtm (development override).
 # Mounted to /otel-lgtm/prometheus.yaml inside the container.
 # Extends the otel-lgtm defaults with scrape configs for our exporters.
 # Mounted by docker-compose.dev.yml over the prod-true file: the api target

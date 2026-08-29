@@ -24,8 +24,7 @@ allowBuilds:
   "@prisma/engines": true
   "@sentry/cli": true
   # Declined deliberately: the postinstall only resolves a native binding that
-  # the platform-specific optional dependency already provides — the api boots
-  # under @swc-node/register with the script skipped (verified).
+  # the platform-specific optional dependency already provides (verified).
   "@swc/core": false
   esbuild: true
   msgpackr-extract: true

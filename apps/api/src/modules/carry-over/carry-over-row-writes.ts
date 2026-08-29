@@ -14,6 +14,46 @@ export function requirePrimaryTargetSection(
   return primary;
 }
 
+export function mergePlannedCarriedRows(
+  current: ReportSectionReadModel,
+  planned: ReportSectionReadModel | undefined,
+): ReportSectionReadModel {
+  if (planned === undefined) return current;
+
+  const existingItemKeys = new Set(
+    current.items.flatMap((item) =>
+      item.stableId === undefined ? [item.id] : [item.stableId],
+    ),
+  );
+  const carriedItems = planned.items.filter((item) => {
+    if (!item.carriedOver) return false;
+    const key = item.stableId ?? item.id;
+    if (existingItemKeys.has(key)) return false;
+    existingItemKeys.add(key);
+    return true;
+  });
+
+  const existingDecisionIds = new Set(
+    current.decisions.map((decision) => decision.id),
+  );
+  const carriedDecisions = planned.decisions.filter((decision) => {
+    if (decision.resolvedAt !== null && decision.resolvedAt !== undefined) {
+      return false;
+    }
+    if (decision.id === undefined || existingDecisionIds.has(decision.id)) {
+      return false;
+    }
+    existingDecisionIds.add(decision.id);
+    return true;
+  });
+
+  return {
+    ...current,
+    items: [...current.items, ...carriedItems],
+    decisions: [...current.decisions, ...carriedDecisions],
+  };
+}
+
 // skipDuplicates on stableId unique — defense-in-depth if lineage filter races.
 // Items land before decisions: the decision pass reads back existing rows, so
 // the two writes must stay sequential in this order.

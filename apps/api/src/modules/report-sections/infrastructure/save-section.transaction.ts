@@ -152,6 +152,7 @@ async function readBackSavedSection(
   const saved = await tx.reportSection.findUnique({
     where: { id: sectionId },
     include: reportSectionFullInclude,
+    relationLoadStrategy: "join",
   });
 
   if (!saved) {
