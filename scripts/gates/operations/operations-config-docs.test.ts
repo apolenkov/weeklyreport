@@ -25,14 +25,46 @@ const requiredProductionVariables = (): readonly string[] =>
     .flatMap((match) => (match[1] === undefined ? [] : [match[1]]))
     .filter((name, index, names) => names.indexOf(name) === index);
 
-void test("first-deploy documentation lists every required production variable", () => {
-  requiredProductionVariables().forEach((variable) => {
+const assertFirstDeployVariableTable = (document: string): void => {
+  const lines = document.split("\n");
+  const tableStart = lines.findIndex((line) =>
+    /^ {3}\| Variable\s+\|/u.test(line),
+  );
+  assert.notEqual(
+    tableStart,
+    -1,
+    "first deploy must contain an indented variable table",
+  );
+  const tableEndOffset = lines
+    .slice(tableStart)
+    .findIndex((line) => !/^ {3}\|/u.test(line));
+  const tableEnd =
+    tableEndOffset === -1 ? lines.length : tableStart + tableEndOffset;
+  const table = lines.slice(tableStart, tableEnd).join("\n");
+
+  for (const variable of requiredProductionVariables()) {
     assert.match(
-      operations,
+      table,
       new RegExp(String.raw`\b${variable}\b`),
-      `${variable} is required by docker-compose.prod.yml but missing from docs/operations.md`,
+      `${variable} is required by docker-compose.prod.yml but missing from the first-deploy variable table`,
     );
-  });
+  }
+};
+
+void test("first-deploy documentation lists every required production variable", () => {
+  assertFirstDeployVariableTable(operations);
+});
+
+void test("first-deploy variable-table assertion rejects a broken Markdown row", () => {
+  const malformed = operations.replace(
+    "\n   | `POSTGRES_DB`",
+    "\n\n| `POSTGRES_DB`",
+  );
+  assert.notEqual(malformed, operations, "the planted row must exist");
+  assert.throws(
+    () => assertFirstDeployVariableTable(malformed),
+    /POSTGRES_DB.*missing from the first-deploy variable table/,
+  );
 });
 
 void test("the observability command leaves api and web to source development", () => {
@@ -117,6 +149,11 @@ void test("both enforcing CSP policies report violations to the required collect
       /Content-Security-Policy[^\n]*report-uri \{\$CADDY_CSP_REPORT_URI\}/,
     );
   }
+  assert.match(caddyReadme, /external operator-owned collector/u);
+  assert.doesNotMatch(
+    caddyReadme,
+    /CADDY_CSP_REPORT_URI=https?:\/\/customreport\.example\.com/u,
+  );
 });
 
 void test("production Caddy selection and Prometheus ownership are explicit", () => {

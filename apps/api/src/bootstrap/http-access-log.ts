@@ -6,20 +6,34 @@ import type { AppLogger } from "../lib/logger";
 
 export const PDF_DOWNLOAD_ROUTE = "/pdfs/:file";
 export const CLIENT_LOGS_ROUTE = "/api/client-logs";
+export const ADMIN_QUEUES_ROUTE = "/admin/queues/*";
+export const UNKNOWN_HTTP_ROUTE = "/unmatched";
 
 const SERVER_ERROR_THRESHOLD = 500;
 const CLIENT_ERROR_THRESHOLD = 400;
 
-const UUID_SEGMENT_RE =
-  /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+const EXACT_HTTP_ROUTES = new Map<string, string>([
+  ["/health", "/health"],
+  ["/health/live", "/health/live"],
+  ["/health/ready", "/health/ready"],
+  ["/admin/queues", ADMIN_QUEUES_ROUTE],
+  ["/metrics", "/metrics"],
+  [CLIENT_LOGS_ROUTE, CLIENT_LOGS_ROUTE],
+]);
 
-function normalizeHttpRoute(path: string): string {
-  if (path.startsWith("/pdfs/")) return PDF_DOWNLOAD_ROUTE;
-  if (path.startsWith("/auth/")) return "/auth/*";
-  if (path.startsWith("/health/")) return path;
-  if (path === "/metrics") return "/metrics";
-  if (path === CLIENT_LOGS_ROUTE) return CLIENT_LOGS_ROUTE;
-  return path.replaceAll(UUID_SEGMENT_RE, ":id");
+const HTTP_ROUTE_PREFIXES = [
+  { prefix: "/pdfs/", route: PDF_DOWNLOAD_ROUTE },
+  { prefix: "/auth/", route: "/auth/*" },
+  { prefix: "/health/", route: "/health/*" },
+  { prefix: "/admin/queues/", route: ADMIN_QUEUES_ROUTE },
+] as const;
+
+export function normalizeHttpRoute(path: string): string {
+  return (
+    EXACT_HTTP_ROUTES.get(path) ??
+    HTTP_ROUTE_PREFIXES.find(({ prefix }) => path.startsWith(prefix))?.route ??
+    UNKNOWN_HTTP_ROUTE
+  );
 }
 
 type AccessLogLevel = "error" | "warn" | "debug" | "info";
@@ -52,10 +66,11 @@ export function createHttpAccessLog(logger: AppLogger): RequestHandler {
       const isHealthPath =
         req.path === "/health" || req.path.startsWith("/health/");
       const level = selectAccessLevel(status, isHealthPath);
+      const route = normalizeHttpRoute(req.path);
       logger[level]("http request", {
         phase: "http.request",
         method: req.method,
-        path: req.path,
+        path: route,
         status,
         duration,
         ip: req.ip,
@@ -64,7 +79,7 @@ export function createHttpAccessLog(logger: AppLogger): RequestHandler {
       httpRequestDurationSeconds.observe(
         {
           method: req.method,
-          route: normalizeHttpRoute(req.path),
+          route,
           status_code: String(status),
         },
         duration / MS_PER_SECOND,

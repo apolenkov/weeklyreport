@@ -23,6 +23,10 @@ export async function POST(req: Request): Promise<Response> {
   const endpoint = resolveSentryEnvelopeEndpoint();
   if (!endpoint) return new Response(null, { status: 204 });
 
+  // This is an admission quota, deliberately charged before reading a stream:
+  // otherwise oversized/chunked bodies could consume memory and sockets while
+  // bypassing the abuse bound. A declared oversized body is rejected above
+  // without a charge because it is known before any bytes are read.
   if (!consumeSentryTunnelQuota(resolveSentryTunnelClientKey(req))) {
     return new Response(null, {
       status: 429,

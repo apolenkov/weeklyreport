@@ -12,13 +12,14 @@ import { applySaveSection } from "../report-sections/test-seams/index.js";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
 import { CarryOverConflictError, CarryOverService } from "./carry-over.service";
 
-const LOCK_WAIT_POLL_MS = 10;
-const LOCK_WAIT_MAX_POLLS = 100;
+const LOCK_WAIT_POLL_MS = 25;
+const LOCK_WAIT_TIMEOUT_MS = 10_000;
 
-async function carryOverLockIsWaiting(
+async function waitForCarryOverLock(
   prisma: ReturnType<typeof createTestPrisma>,
-): Promise<boolean> {
-  for (let poll = 0; poll < LOCK_WAIT_MAX_POLLS; poll += 1) {
+): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
     const waiting = await prisma.$queryRaw<{ pid: number }[]>`
       SELECT activity.pid
       FROM pg_stat_activity AS activity
@@ -28,10 +29,12 @@ async function carryOverLockIsWaiting(
         AND activity.pid <> pg_backend_pid()
         AND activity.query LIKE '%FROM "Report"%'
         AND activity.query LIKE '%FOR UPDATE%'`;
-    if (waiting.length > 0) return true;
+    if (waiting.length > 0) return;
     await new Promise((resolve) => setTimeout(resolve, LOCK_WAIT_POLL_MS));
   }
-  return false;
+  throw new Error(
+    `Timed out after ${String(LOCK_WAIT_TIMEOUT_MS)}ms waiting for carry-over to block on the submitted report lock`,
+  );
 }
 
 describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races", () => {
@@ -686,9 +689,14 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
     });
     await submitReady;
     const carry = repo.saveCarryOver(execution, records, [plannedTarget]);
-    let lockWaitObserved = false;
+    let waitFailure: Error | undefined;
     try {
-      lockWaitObserved = await carryOverLockIsWaiting(prisma);
+      await waitForCarryOverLock(prisma);
+    } catch (error) {
+      waitFailure =
+        error instanceof Error
+          ? error
+          : new Error("Carry-over lock wait failed without an Error object");
     } finally {
       releaseSubmit?.();
     }
@@ -697,7 +705,7 @@ describe("CarryOverPrismaRepository (integration) — multi-lead fan-out & races
       submit,
       carry,
     ]);
-    expect(lockWaitObserved).toBe(true);
+    if (waitFailure !== undefined) throw waitFailure;
     expect(submitResult.status).toBe("fulfilled");
     expect(carryResult.status).toBe("rejected");
     if (carryResult.status === "fulfilled") {
