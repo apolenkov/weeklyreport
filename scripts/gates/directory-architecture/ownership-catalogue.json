@@ -519,9 +519,17 @@
       "target": "prisma/seeds/minimal/$1"
     },
     {
+      "id": "prisma-operation-tests",
+      "scope": "prisma",
+      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|bootstrap-local|create-e2e-database|migrate-deploy|migrate-reset|reset-hard)[^/]*\\.test\\.ts)$",
+      "concern": "database-operations",
+      "role": "test",
+      "target": "prisma/operations/$1"
+    },
+    {
       "id": "prisma-operations",
       "scope": "prisma",
-      "pattern": "^prisma/(?:operations/)?((?:backfill-policy-rules|create-e2e-database|migrate-deploy|migrate-reset|reset-hard)[^/]*)$",
+      "pattern": "^prisma/(?:operations/)?((?!.*\\.test\\.ts$)(?:backfill-policy-rules|bootstrap-local|create-e2e-database|migrate-deploy|migrate-reset|reset-hard)[^/]*)$",
       "concern": "database-operations",
       "role": "entrypoint",
       "target": "prisma/operations/$1"

@@ -37,6 +37,20 @@ The repository-owned development and operations instructions, including Compose,
 
 - **WHEN** the development Compose stack is rendered
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
+- **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
+- **AND** the Postgres container creates and health-checks that same database before migrations run
+
+#### Scenario: A fresh local product database is bootstrapped
+
+- **WHEN** an operator supplies the exact per-run consent and an explicit seed profile after starting local PostgreSQL
+- **THEN** one repository command verifies matching `DATABASE_URL` and `E2E_DATABASE_URL` targets
+- **AND** it creates exact `customreport_e2e`, applies migrations, and seeds the profile in order
+- **AND** every child operation repeats the exact guard before touching the database
+
+#### Scenario: A local bootstrap step fails
+
+- **WHEN** database creation, migration, or seeding exits non-zero
+- **THEN** the bootstrap exits non-zero and executes no later step
 
 #### Scenario: Development services publish host ports
 

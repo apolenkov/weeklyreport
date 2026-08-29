@@ -18,12 +18,12 @@ services:
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: localdev
-      POSTGRES_DB: customreport_dev
+      POSTGRES_DB: customreport_e2e
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/01-pg-stat-statements.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U customreport -d customreport_dev"]
+      test: ["CMD-SHELL", "pg_isready -U customreport -d customreport_e2e"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -74,7 +74,7 @@ services:
       target: migrator
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
-      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +85,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_dev
+      DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
       PORT: 3002
       API_HOST: 0.0.0.0
       REDIS_HOST: redis

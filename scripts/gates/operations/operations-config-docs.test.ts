@@ -10,8 +10,10 @@ const prodCompose = read("docker-compose.prod.yml");
 const operations = read("docs/operations.md");
 const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
+const localEnvironment = read(".env.example");
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
+const localBootstrap = read("prisma/operations/bootstrap-local.ts");
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/caddy/README.md");
 const errorsCompose = read("docker-compose.errors.yml");
@@ -90,6 +92,64 @@ void test("observability commands own an isolated Compose project", () => {
   assert.equal(
     packageJson.scripts["observability:down"],
     "pnpm observability:compose down",
+  );
+});
+
+const assertLocalBootstrapContract = (
+  environmentExample: string,
+  quickStart: string,
+): void => {
+  const target =
+    "postgresql://customreport:localdev@localhost:5432/customreport_e2e";
+  assert.ok(environmentExample.includes(`DATABASE_URL=${target}`));
+  assert.ok(environmentExample.includes(`DIRECT_URL=${target}`));
+  assert.ok(environmentExample.includes(`E2E_DATABASE_URL=${target}`));
+  assert.equal(
+    packageJson.scripts["db:bootstrap:local"],
+    "node --import tsx prisma/operations/bootstrap-local.ts",
+  );
+  assert.ok(
+    quickStart.includes(
+      "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \\\n  pnpm db:bootstrap:local minimal",
+    ),
+  );
+  assert.ok(
+    onboarding.includes("Каждый шаг повторно проверяет guard и согласие"),
+  );
+  for (const script of [
+    "create-e2e-database.ts",
+    "migrate-deploy.ts",
+    "seed-profile.ts",
+  ]) {
+    assert.ok(localBootstrap.includes(script));
+  }
+  assert.match(
+    `${compose}\n${devCompose}`,
+    /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_e2e/u,
+  );
+  assert.match(compose, /POSTGRES_DB: customreport_e2e/u);
+  assert.match(compose, /pg_isready -U customreport -d customreport_e2e/u);
+  assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
+};
+
+void test("local quick start bootstraps one exact guarded database", () => {
+  assertLocalBootstrapContract(localEnvironment, readme);
+});
+
+void test("local bootstrap contract rejects target and consent drift", () => {
+  const wrongTarget = localEnvironment.replaceAll(
+    "/customreport_e2e",
+    "/customreport_dev",
+  );
+  const wrongConsent = readme.replace(
+    "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'",
+    "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='yes'",
+  );
+  assert.notEqual(wrongTarget, localEnvironment);
+  assert.notEqual(wrongConsent, readme);
+  assert.throws(() => assertLocalBootstrapContract(wrongTarget, readme));
+  assert.throws(() =>
+    assertLocalBootstrapContract(localEnvironment, wrongConsent),
   );
 });
 
