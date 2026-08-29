@@ -19,7 +19,8 @@ COPY prisma ./prisma
 # The web typechecks against the API router source, so its dependency closure
 # is build-time-required even though the browser bundle never executes the API.
 # Exclude only the unrelated workspace root from this pruned image.
-RUN pnpm install --frozen-lockfile --filter @customreport/web...
+RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile --filter @customreport/web... --store-dir=/pnpm/store --network-concurrency=4
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 

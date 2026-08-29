@@ -20,7 +20,8 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 COPY prisma ./prisma
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile --store-dir=/pnpm/store --network-concurrency=4
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY prisma.config.ts ./prisma.config.ts
@@ -48,7 +49,8 @@ WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+    pnpm install --prod --frozen-lockfile --ignore-scripts --store-dir=/pnpm/store --network-concurrency=4
 
 # Stage 7: Production runner
 # ~4.3GB: a real Chromium plus the apt dependencies `playwright install
