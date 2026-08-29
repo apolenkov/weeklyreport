@@ -23,12 +23,32 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/01-pg-stat-statements.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U customreport -d customreport_e2e"]
+      # `postgres` exists on both legacy and fresh named volumes. The one-shot
+      # initializer below owns creation of the exact application database.
+      test: ["CMD-SHELL", "pg_isready -U customreport -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
     ports:
       - "127.0.0.1:5432:5432"
+
+  local-database-init:
+    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
+    command:
+      - "psql"
+      - "--host=postgres"
+      - "--username=customreport"
+      - "--dbname=postgres"
+      - "--set=ON_ERROR_STOP=1"
+      - "--file=/opt/customreport/ensure-local-database.sql"
+    environment:
+      PGPASSWORD: localdev
+    volumes:
+      - ./deploy/postgres/ensure-local-database.sql:/opt/customreport/ensure-local-database.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   # Mailpit is a multi-arch image by axllent — SMTP :1025 + Web UI :8025.
   mailpit:
@@ -76,8 +96,8 @@ services:
     environment:
       DATABASE_URL: postgresql://customreport:localdev@postgres:5432/customreport_e2e
     depends_on:
-      postgres:
-        condition: service_healthy
+      local-database-init:
+        condition: service_completed_successfully
     restart: "no"
 
   api:
