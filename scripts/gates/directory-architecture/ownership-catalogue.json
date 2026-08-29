@@ -19,6 +19,7 @@
         "scripts/gates/planning-provenance/",
         "scripts/gates/formatting/",
         "scripts/gates/type-system/",
+        "scripts/gates/documentation/",
         "scripts/gates/operations/",
         "scripts/gates/status-ssot/",
         "scripts/gates/vitest-rules/",
@@ -347,6 +348,30 @@
       "concern": "type-system-gates",
       "role": "test",
       "target": "scripts/gates/type-system/$1"
+    },
+    {
+      "id": "scripts-gates-documentation-tests",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/documentation/(.+\\.test\\.ts)$",
+      "concern": "documentation-gate",
+      "role": "test",
+      "target": "scripts/gates/documentation/$1"
+    },
+    {
+      "id": "scripts-gates-documentation-data",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/documentation/(.+\\.json)$",
+      "concern": "documentation-gate",
+      "role": "data",
+      "target": "scripts/gates/documentation/$1"
+    },
+    {
+      "id": "scripts-gates-documentation-implementation",
+      "scope": "scripts",
+      "pattern": "^scripts/gates/documentation/((?!.*\\.test\\.ts$).+\\.ts)$",
+      "concern": "documentation-gate",
+      "role": "implementation",
+      "target": "scripts/gates/documentation/$1"
     },
     {
       "id": "scripts-gates-operations-tests",

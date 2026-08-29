@@ -1,7 +1,9 @@
 # Head and viewer default to submitted-only on the live current period
 
-**Status:** proposed (locked via `grill-with-docs-codex` on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/review-acknowledgement`)
+**Status:** accepted and implemented (archived as
+`openspec/changes/archive/2026-07-02-review-acknowledgement`; current contract:
+`openspec/specs/report-routing/spec.md` and
+`openspec/specs/head-report-visibility/spec.md`)
 
 ## Context
 

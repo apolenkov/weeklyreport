@@ -1,6 +1,6 @@
 ## Purpose
 
-The deferred-feature pattern governs how CustomReport signals roadmapped but not-yet-implemented capabilities. UI-deferred features MUST surface a visible, inert control with a `ComingSoonBadge` tooltip so the user knows the feature is acknowledged; backend-deferred paths MUST throw a loud stub error so the caller fails fast rather than receiving silent mock data. Consumer surfaces enforcing this pattern are `apps/web/src/components/navigation/nav-bar.tsx` (UI side: `LanguageComingSoonControl`, `ThemeComingSoonControl`) and any NestJS service or tRPC procedure whose implementation is deferred (backend side).
+The deferred-feature pattern governs how CustomReport signals roadmapped but not-yet-implemented capabilities. UI-deferred features MUST surface a visible, inert control with a `ComingSoonBadge` tooltip so the user knows the feature is acknowledged; backend-deferred paths MUST throw a loud stub error so the caller fails fast rather than receiving silent mock data. Consumer surfaces enforcing this pattern are `apps/web/src/shared/ui/navigation/nav-bar.tsx` (UI side: `LanguageComingSoonControl`, `ThemeComingSoonControl`) and any NestJS service or tRPC procedure whose implementation is deferred (backend side).
 
 ## Requirements
 
@@ -31,7 +31,7 @@ The UI MUST render a visible, disabled control wrapped in a `ComingSoonBadge` fr
 #### Scenario: Version history is deferred after full removal
 
 - **WHEN** a lead opens their report toolbar while version history is removed and deferred to a future redesign (`TODO(versions-v2)`)
-- **THEN** `VersionComingSoonControl` in `apps/web/src/components/lead/version-coming-soon.tsx` renders a disabled, inert control wrapped in `ComingSoonBadge` that shows a tooltip explaining the feature is coming soon
+- **THEN** `VersionComingSoonControl` in `apps/web/src/features/admin/ui/version-coming-soon.tsx` renders a disabled, inert control wrapped in `ComingSoonBadge` that shows a tooltip explaining the feature is coming soon
 - **AND** no version list, snapshot view, restore action, or pin control exists anywhere in the UI
 - **AND** no runtime feature flag controls its visibility
 
@@ -122,7 +122,7 @@ Activating a deferred feature MUST remove the `ComingSoonBadge` wrapper or the `
 #### Scenario: Language switching is activated
 
 - **WHEN** the language-switching feature is fully implemented and ready for users
-- **THEN** `LanguageComingSoonControl` in `apps/web/src/components/navigation/nav-bar.tsx` is replaced with a functional language selector component and all `ComingSoonBadge` wrapping is removed; no feature flag toggle is introduced
+- **THEN** `LanguageComingSoonControl` in `apps/web/src/shared/ui/navigation/nav-bar.tsx` is replaced with a functional language selector component and all `ComingSoonBadge` wrapping is removed; no feature flag toggle is introduced
 
 #### Scenario: A deferred backend path is activated
 
@@ -283,7 +283,7 @@ geometry (via a `shape` variant on the icon-only export, or the `compact` densit
 flag on the labelled export), and, where the control is text-labelled, the visible
 label. Because the five controls share the primitive by composition, their parity
 holds by construction and the previous per-file parity source scans in
-`apps/web/src/components/coming-soon-style.test.tsx` no longer cover those five
+`apps/web/src/shared/ui/style/coming-soon-style.test.tsx` no longer cover those five
 files (the scans shrink to a holidays-only scope for the out-of-scope admin
 Holidays control).
 

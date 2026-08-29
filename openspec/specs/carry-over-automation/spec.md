@@ -2,19 +2,19 @@
 
 ## Purpose
 
-Carry unfinished work into a new reporting period automatically through one race-safe write, without a manual carry-over banner.
+Carry eligible unfinished work into a new reporting period automatically through one race-safe write, without a manual carry-over banner.
 
 ## Requirements
 
-### Requirement: Unfinished prior-period work carries into a new period automatically
+### Requirement: Eligible unfinished prior-period work carries into a new period automatically
 
-A lead's unfinished prior-period work MUST be carried forward into a new period
+A lead's eligible unfinished prior-period work MUST be carried forward into a new period
 automatically when the lead's section for that period is established, with no
 manual head action (head HF10). Carry-over MUST reuse the existing copy logic
 (`CarryOverService.executeCarryOver` in
-`apps/api/src/modules/carry-over/carry-over.service.ts`): an unfinished item
-(`type: "next"`, not already `carriedOver`, `workflowStatus !== "done"`, not
-`completed`) is cloned into the new section as a `current` item with
+`apps/api/src/modules/carry-over/carry-over.service.ts`): an eligible item
+(`type: "next"`, not already `carriedOver`, and `workflowStatus` is neither
+`done` nor `postponed`) is cloned into the new section as a `current` item with
 `carriedOver: true` and its `priorityRank` preserved; an unresolved decision (no
 `resolvedAt`, carrying a `productId`) is cloned with `resolvedAt: null`. This
 REVERSES the prior documented decision that "carry-over stays a conscious head
@@ -28,9 +28,9 @@ per-section lineage key (`@@unique([reportSectionId, stableId])`) and the
 introduced — the automatic path writes the same `CarryOverExecution` /
 `CarryOverRecord` rows the manual path wrote.
 
-#### Scenario: unfinished work is carried without a head click
+#### Scenario: eligible unfinished work is carried without a head click
 
-- **WHEN** a new period is opened and a lead — who had unfinished next-week items
+- **WHEN** a new period is opened and a lead — who had eligible unfinished next-week items
   and unresolved decisions in the prior period — has their new-period section
   established
 - **THEN** those items appear in the new section as `carriedOver` current items
@@ -44,9 +44,16 @@ introduced — the automatic path writes the same `CarryOverExecution` /
 
 #### Scenario: finished prior work is not carried
 
-- **WHEN** the prior-period section holds a next-week item that is `completed` or
+- **WHEN** the prior-period section holds a next-week item with
   `workflowStatus: "done"`
 - **THEN** that item is not carried into the new period
+
+#### Scenario: postponed prior work is replanned manually
+
+- **WHEN** the prior-period section holds a next-week item with
+  `workflowStatus: "postponed"`
+- **THEN** that item is not carried into the new period
+- **AND** the lead can replan it manually when it becomes relevant
 
 #### Scenario: re-establishing the section does not duplicate
 
@@ -66,7 +73,7 @@ introduced — the automatic path writes the same `CarryOverExecution` /
 The manual "Copy forward unfinished" banner MUST be removed from the head report
 surface, because carry-over now runs automatically (head HF10). `CarryOverBanner`
 (`apps/web/src/components/weekly-report/carry-over-banner.tsx`) and its mount in
-`apps/web/src/components/weekly-report/weekly-report-page.tsx` MUST NOT render, so
+`apps/web/src/features/report-pages/ui/weekly/weekly-report-page.tsx` MUST NOT render, so
 the head is not shown a manual copy-forward action that duplicates the now
 automatic behaviour.
 

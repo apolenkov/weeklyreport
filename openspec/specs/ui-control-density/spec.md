@@ -63,7 +63,7 @@ explicit user sign-off recorded in the change.
 
 The connector arrow between SDLC stage chips MUST be vertically
 centered on the chip box itself — not on the chip-plus-assignee-label
-column. Consumer surface: `apps/web/src/components/lead/sdlc-pipeline.tsx`
+column. Consumer surface: `apps/web/src/features/period/ui/sdlc-pipeline.tsx`
 with `stage-chip.tsx`, reused by the read-only head/report surfaces. The
 chip box and the arrow box MUST derive their height from one shared
 named constant (the same single-height-token property this capability

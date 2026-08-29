@@ -1,7 +1,9 @@
 # Review and acknowledgement is a cross-role capability; un-submit extends to designated reviewers
 
-**Status:** proposed (locked via `grill-with-docs-codex` on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/review-acknowledgement`)
+**Status:** accepted and implemented (archived as
+`openspec/changes/archive/2026-07-02-review-acknowledgement`; current contracts:
+`openspec/specs/review-verdict-integrity/spec.md` and
+`openspec/specs/review-acknowledge-placement/spec.md`)
 
 ## Context
 

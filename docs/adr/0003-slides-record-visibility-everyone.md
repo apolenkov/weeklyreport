@@ -74,9 +74,9 @@ The load-bearing no-leak property (Everyone never reaches a draft / submission /
 published snapshot / export) is pinned by concrete tests rather than the prose
 scenario alone:
 
-- `apps/web/src/components/slides/section-slide-utils.test.ts` — `mergeForeignSlideContent`
+- `apps/web/src/features/slides/model/section-slide-utils.test.ts` — `mergeForeignSlideContent`
   produces new objects and leaves the input section reference-unchanged.
-- `apps/web/src/components/lead/lead-form-visibility.test.tsx` (7d.5 / 7d.8) —
+- `apps/web/src/features/report-pages/ui/lead/shell/lead-form-visibility.test.tsx` (7d.5 / 7d.8) —
   the submitted payload carries own records only and is byte-identical in Mine
   vs Everyone.
 

@@ -1,7 +1,8 @@
 # The unified by-state view is a derived presentation projection, not new persisted state
 
-**Status:** proposed (locked via the demo-feedback grill on 2026-06-30; not yet
-implemented — tracked by `openspec/changes/unified-activity-entry`)
+**Status:** accepted and implemented (archived as
+`openspec/changes/archive/2026-07-02-unified-activity-entry`; current contract:
+`openspec/specs/lead-form-loaded-view-model/spec.md`)
 
 ## Context
 
@@ -11,8 +12,8 @@ deferred) instead of the classic Current-week / Next-week split. The obvious
 modelling adds a new persisted state enum to `Item`.
 
 That breaks on what the report already stores. An `Item` carries `type`
-(`current | next`), `workflowStatus`, `completed`, and `carriedOver` — the bucket
-is fully derivable from those four fields. A persisted bucket enum would:
+(`current | next`), `workflowStatus`, and `carriedOver` — the bucket is fully
+derivable from those fields. A persisted bucket enum would:
 
 - duplicate state that already exists, inviting divergence between the stored
   bucket and the fields it was derived from;
@@ -22,10 +23,10 @@ is fully derivable from those four fields. A persisted bucket enum would:
   `Item.type`, but the submit gate (≥1 current item) and the carry-over engine
   are — so the physical axis must stay authoritative.
 
-The fields are not orthogonal (a `completed` item is "done" regardless of
-`workflowStatus`), so any derivation needs an explicit precedence, and there is
-no `failed` bucket in the locked set. `carriedOver` means "arrived from the
-previous period as current" — it must not be presented as "deferred".
+The fields are not orthogonal (`type` constrains the allowed workflow statuses),
+so any derivation needs an explicit precedence, and there is no `failed` bucket
+in the locked set. `carriedOver` means "arrived from the previous period as
+current" — it must not be presented as "deferred".
 
 ## Decision
 
@@ -37,16 +38,16 @@ state:
   value is written.
 - Physical `Item.type` (`current | next`) storage is preserved unchanged, so the
   submit gate and the carry-over filter are unaffected.
-- The view is opt-in, gated behind an **org `AppSettings` flag** the head flips
+- The view is opt-in, gated behind an **org `AppSettings` flag** an administrator flips
   for the department (not client-only, not per-lead). With the flag off, the
   classic two-section format renders — that stays the default.
 - There is no `failed` bucket; `carriedOver` is bucketed by current workflow
   state, never surfaced as "deferred".
 
-The per-item move actions ("mark complete", "move to next week") mutate the
-existing row in place (same `Item.id`), so they change which bucket a row
-projects into without cloning — preserving any C1 `RecordComment` anchors and
-avoiding a duplicate the carry-over engine would re-clone.
+The per-item move actions ("mark complete", "move to next week") update the
+item's workflow fields without creating a second logical record. Save may
+recreate the database row, but it preserves `stableId`, so C1 `RecordComment`
+anchors and carry-over lineage remain attached to the same позиция.
 
 ## Consequences
 

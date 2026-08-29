@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "path": "apps/api/.logs/app.log",
+      "owners": [
+        "docs/onboarding.md",
+        "openspec/specs/client-error-policy/spec.md"
+      ],
+      "reason": "runtime-generated",
+      "rationale": "The API creates this local log output at runtime; it is not a tracked source file."
+    },
+    {
+      "path": "apps/api/src/modules/reminders/reminders.router.ts",
+      "owners": ["openspec/specs/architecture-refactor-backlog/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The closed dead-code requirement names the orphaned legacy router that must remain absent."
+    },
+    {
+      "path": "apps/web/.env",
+      "owners": ["docs/onboarding.md"],
+      "reason": "local-only",
+      "rationale": "Onboarding names a developer-created environment file that Git intentionally does not track."
+    },
+    {
+      "path": "apps/web/.env.local",
+      "owners": ["docs/onboarding.md"],
+      "reason": "local-only",
+      "rationale": "Onboarding names a developer-created local override that Git intentionally does not track."
+    },
+    {
+      "path": "apps/web/src/components/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired components root as a directory that must stay absent."
+    },
+    {
+      "path": "apps/web/src/components/admin/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired admin component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/auth/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired auth component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/charts/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired charts component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/dashboard/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The dashboard requirement explicitly forbids the legacy component tree from returning."
+    },
+    {
+      "path": "apps/web/src/components/dev/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired development component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/landing/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract uses the retired landing tree to define a completed relocation."
+    },
+    {
+      "path": "apps/web/src/components/lead/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired lead component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/navigation/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired navigation tree as a completed relocation source."
+    },
+    {
+      "path": "apps/web/src/components/report-shell/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract explicitly forbids the legacy report-shell tree from returning."
+    },
+    {
+      "path": "apps/web/src/components/review/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired review component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/search/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired search component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/ui/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract explicitly forbids the legacy local UI primitive tree."
+    },
+    {
+      "path": "apps/web/src/components/viewer/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the retired viewer component tree as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/components/weekly-report/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract explicitly forbids the legacy weekly-report component tree."
+    },
+    {
+      "path": "apps/web/src/components/weekly-report/carry-over-banner.tsx",
+      "owners": ["openspec/specs/carry-over-automation/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The carry-over requirement names the retired manual banner as a control that must remain absent."
+    },
+    {
+      "path": "apps/web/src/lib/mappers/",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The architecture contract names the dissolved mapper grab-bag as a negative boundary."
+    },
+    {
+      "path": "apps/web/src/shared/lib/dashboard-mock-data.ts",
+      "owners": ["openspec/specs/directory-architecture-standard/spec.md"],
+      "reason": "removed-path-example",
+      "rationale": "The reconciled dashboard requirement explicitly forbids the former mock-data contract."
+    },
+    {
+      "path": "docs/architecture/mapping/",
+      "owners": ["docs/architecture/TARGET-STRUCTURE-2026-07-02.md"],
+      "reason": "historical-contract",
+      "rationale": "The dated migration plan records the mapping packet used for the original landing slice."
+    },
+    {
+      "path": "prisma/generated",
+      "owners": ["openspec/specs/lint-max-strictness-standard/spec.md"],
+      "reason": "runtime-generated",
+      "rationale": "Prisma creates this ignored generated-client directory during dependency and type gates."
+    }
+  ]
+}

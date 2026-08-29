@@ -8,9 +8,9 @@ reports). Ensures leads are never confused about where to find version
 snapshots vs. previous periods.
 
 Consumer surfaces: `ReportToolbar` in
-`apps/web/src/components/weekly-report/report-toolbar.tsx` (History entry
+`apps/web/src/shared/ui/report-shell/report-toolbar.tsx` (History entry
 point), `ArchiveToggle` in
-`apps/web/src/components/weekly-report/archive-toggle.tsx` (Archive entry
+`apps/web/src/shared/ui/report-shell/archive-toggle.tsx` (Archive entry
 point).
 
 ## Requirements

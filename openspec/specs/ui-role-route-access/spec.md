@@ -46,7 +46,7 @@ receives the visitor's role).
 
 Every SSR role gate in the web app (per-layout or per-page) MUST be
 implemented by wrapping the gated content in the shared `RoleGate` server
-component (`apps/web/src/components/role-gate.tsx`), passing the route's
+component (`apps/web/src/shared/ui/auth-runtime/role-gate.tsx`), passing the route's
 allowed roles via its `allowedRoles` prop. New hand-rolled guard blocks
 (calling `getServerSession` and rendering `ForbiddenPage` directly inside
 a layout or page) MUST NOT be added. `RoleGate` MUST itself satisfy the
