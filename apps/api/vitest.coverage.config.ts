@@ -1,6 +1,11 @@
+import { config } from "dotenv";
 import { defineConfig, mergeConfig } from "vitest/config";
 
 import baseConfig from "../../vitest.base.config";
+
+// Match the dedicated integration runner locally while preserving explicit CI
+// environment values (`dotenv` does not override variables by default).
+config({ path: "../../.env.test" });
 
 // Coverage is a release-evidence contour, not the fast unit contour. It runs
 // unit and database integration suites in one serial process so repository

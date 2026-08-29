@@ -308,13 +308,13 @@ const WEB_EXCLUSIONS = [
   "src/**/__tests__/**",
   "src/**/types.ts",
   "src/app/**/layout.tsx",
-  "src/app/(app)/admin/products/page.tsx",
-  "src/app/(app)/admin/activities/page.tsx",
-  "src/app/(app)/admin/settings/page.tsx",
-  "src/app/(app)/head/history/page.tsx",
-  "src/app/(app)/head/slides/page.tsx",
-  "src/app/(app)/lead/history/page.tsx",
-  "src/app/(app)/reports/history/page.tsx",
+  String.raw`src/app/\\(app\\)/admin/products/page.tsx`,
+  String.raw`src/app/\\(app\\)/admin/activities/page.tsx`,
+  String.raw`src/app/\\(app\\)/admin/settings/page.tsx`,
+  String.raw`src/app/\\(app\\)/head/history/page.tsx`,
+  String.raw`src/app/\\(app\\)/head/slides/page.tsx`,
+  String.raw`src/app/\\(app\\)/lead/history/page.tsx`,
+  String.raw`src/app/\\(app\\)/reports/history/page.tsx`,
 ] as const;
 
 const WEB_INCLUDES = ["src/**/*.{ts,tsx}"] as const;
@@ -544,6 +544,11 @@ void test("docker-build fixture assertions reject a non-verifying image step", (
 });
 
 void test("API coverage config pins thresholds and critical exclusions", () => {
+  assert.match(
+    apiCoverageConfig,
+    /config\(\{\s*path:\s*["']\.\.\/\.\.\/\.env\.test["']\s*\}\)/,
+    "API coverage config must load the same local env file as integration tests",
+  );
   assertCoverageConfig(
     apiCoverageConfig,
     "API coverage config",
@@ -646,7 +651,7 @@ void test("coverage exclusion assertions fail when a critical API exclusion is r
 
 void test("coverage exclusion assertions fail when a critical Web exclusion is removed", () => {
   const mutated = webCoverageConfig.replace(
-    '        "src/app/(app)/admin/products/page.tsx",\n',
+    '        "src/app/\\\\(app\\\\)/admin/products/page.tsx",\n',
     "",
   );
   assert.throws(
